@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
-import { T } from "src/locale";
+import { T, intl } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
@@ -171,7 +171,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																				form.touched.forwardScheme
+																					form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -209,7 +209,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																			form.touched.forwardHost
+																				form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -240,7 +240,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																			form.touched.forwardPort
+																				form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -267,10 +267,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	</Label>
 																	<Input
 																		id="bandwidthLimit"
-																		placeholder="0 = Unlimited"
+																		placeholder={intl.formatMessage({ id: "form.placeholder.unlimited" })}
 																		className={
 																			form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
+																				form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -298,7 +298,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																			form.touched.forwardQuery
+																				form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}

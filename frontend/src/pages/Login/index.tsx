@@ -61,14 +61,14 @@ export default function Login() {
 				<ThemeSwitcher />
 			</div>
 
-			<div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+			<div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 				<div className="flex flex-col items-center justify-center mb-8">
 					<img className="h-16 w-auto mb-4 drop-shadow-2xl" src="/images/logo-256.png" alt="NPMplus" />
 				</div>
 
 				<Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-sm dark:bg-card/50 ring-1 ring-white/10 dark:ring-white/5">
 					<CardHeader className="space-y-1">
-						<CardTitle className="text-2xl font-bold text-center tracking-tight">
+						<CardTitle className="text-3xl font-bold text-center tracking-tight">
 							<T id="login.title" />
 						</CardTitle>
 						<CardDescription className="text-center">Enter your credentials to continue</CardDescription>
@@ -106,10 +106,8 @@ export default function Login() {
 														ref={emailRef}
 														type="email"
 														required
-														placeholder={intl.formatMessage({
-															id: "form.placeholder.email",
-														})}
-														className={`bg-background/50 ${errors.email && touched.email ? "border-destructive" : ""}`}
+														placeholder={intl.formatMessage({ id: "form.placeholder.email" })}
+														className={`bg-background/50 py-6 ${errors.email && touched.email ? "border-destructive" : ""}`}
 													/>
 													{errors.email && touched.email && (
 														<p className="text-sm text-destructive">{errors.email}</p>
@@ -133,7 +131,7 @@ export default function Login() {
 														required
 														maxLength={255}
 														placeholder="••••••••"
-														className={`bg-background/50 ${errors.password && touched.password ? "border-destructive" : ""}`}
+														className={`bg-background/50 py-6 ${errors.password && touched.password ? "border-destructive" : ""}`}
 													/>
 													{errors.password && touched.password && (
 														<p className="text-sm text-destructive">{errors.password}</p>
@@ -142,24 +140,17 @@ export default function Login() {
 											)}
 										</Field>
 									</div>
-									<Button
-										type="submit"
-										className="w-full bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25"
-										disabled={isSubmitting}
-									>
-										{isSubmitting ? (
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										) : (
-											<T id="sign-in" />
-										)}
+									<Button type="submit" size="lg" className="w-full py-6 text-lg bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25" disabled={isSubmitting}>
+										{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <T id="sign-in" />}
 									</Button>
 								</Form>
-							)}
-						</Formik>
-					</CardContent>
-				</Card>
+							)
+							}
+						</Formik >
+					</CardContent >
+				</Card >
 				<div className="text-center text-xs text-muted-foreground/50 mt-8 font-mono">{getVersion()}</div>
-			</div>
-		</div>
+			</div >
+		</div >
 	);
 }

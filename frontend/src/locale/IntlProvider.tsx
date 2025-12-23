@@ -14,6 +14,8 @@ import langSk from "./lang/sk.json";
 import langVi from "./lang/vi.json";
 import langZh from "./lang/zh.json";
 
+// Force HMR reload
+
 // first item of each array should be the language code,
 // not the country code
 // Remember when adding to this list, also update check-locales.js script
