@@ -106,7 +106,9 @@ export default function Login() {
 														ref={emailRef}
 														type="email"
 														required
-														placeholder={intl.formatMessage({ id: "form.placeholder.email" })}
+														placeholder={intl.formatMessage({
+															id: "form.placeholder.email",
+														})}
 														className={`bg-background/50 py-6 ${errors.email && touched.email ? "border-destructive" : ""}`}
 													/>
 													{errors.email && touched.email && (
@@ -140,17 +142,25 @@ export default function Login() {
 											)}
 										</Field>
 									</div>
-									<Button type="submit" size="lg" className="w-full py-6 text-lg bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25" disabled={isSubmitting}>
-										{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <T id="sign-in" />}
+									<Button
+										type="submit"
+										size="lg"
+										className="w-full py-6 text-lg bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25"
+										disabled={isSubmitting}
+									>
+										{isSubmitting ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<T id="sign-in" />
+										)}
 									</Button>
 								</Form>
-							)
-							}
-						</Formik >
-					</CardContent >
-				</Card >
+							)}
+						</Formik>
+					</CardContent>
+				</Card>
 				<div className="text-center text-xs text-muted-foreground/50 mt-8 font-mono">{getVersion()}</div>
-			</div >
-		</div >
+			</div>
+		</div>
 	);
 }
