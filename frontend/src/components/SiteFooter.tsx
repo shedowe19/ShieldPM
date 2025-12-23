@@ -40,7 +40,7 @@ export function SiteFooter() {
 							</a>
 						</span>
 						<a
-							href={`https://github.com/ZoeyVid/NPMplus/releases/tag/${getVersion()}`}
+							href={`https://github.com/shedowe19/NPMplus/commit/${getVersion()}`}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
@@ -49,7 +49,7 @@ export function SiteFooter() {
 						</a>
 						{versionData?.updateAvailable && versionData?.latest && (
 							<a
-								href={`https://github.com/ZoeyVid/NPMplus/releases/tag/${versionData.latest}`}
+								href={`https://github.com/shedowe19/NPMplus/releases/tag/${versionData.latest}`}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-sm font-bold text-yellow-500 hover:text-yellow-600"
@@ -61,7 +61,7 @@ export function SiteFooter() {
 					</div>
 					<div>
 						<a
-							href="https://github.com/ZoeyVid/NPMplus"
+							href="https://github.com/shedowe19/NPMplus"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
