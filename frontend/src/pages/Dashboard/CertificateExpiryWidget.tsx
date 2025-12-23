@@ -12,6 +12,13 @@ import { cn } from "src/lib/utils";
 export const CertificateExpiryWidget = () => {
 	const { data: certificates } = useCertificates();
 
+	// DEBUG: Check if keys exist in loaded messages
+	console.log('DEBUG: Loaded messages keys check:', {
+		'dashboard.status_ok': intl.messages['dashboard.status_ok'],
+		'proxy_hosts.count_label': intl.messages['proxy_hosts.count_label'],
+		'locale': intl.locale
+	});
+
 	if (!certificates) {
 		return null;
 	}

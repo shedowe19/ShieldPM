@@ -35,15 +35,17 @@ const localeOptions = [
 	["bg", "bg-BG", langBg],
 ];
 
-const loadMessages = (locale?: string): typeof langList & typeof langEn => {
-	const thisLocale = (locale || "en").slice(0, 2);
+// find language
+const found = localeOptions.find(([code]) => code === thisLocale);
+const messages = found ? found[2] : langEn;
 
-	// ensure this lang exists in localeOptions above, otherwise fallback to en
-	if (thisLocale === "en" || !localeOptions.some(([code]) => code === thisLocale)) {
-		return Object.assign({}, langList, langEn);
-	}
+console.log(`[IntlProvider] Loading locale: ${locale} -> ${thisLocale}`, {
+	found: !!found,
+	messageCount: Object.keys(messages).length,
+	sample: messages["proxy_hosts.count_label"]
+});
 
-	return Object.assign({}, langList, langEn, localeOptions.find(([code]) => code === thisLocale)?.[2]);
+return Object.assign({}, langList, langEn, messages);
 };
 
 const getFlagCodeForLocale = (locale?: string) => {
