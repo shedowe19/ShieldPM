@@ -29,11 +29,20 @@
 	"access-list.satisfy-any": {
 		"defaultMessage": "Удовлетворяване на което и да е"
 	},
+	"access-list.satisfy.none": {
+		"defaultMessage": "Няма"
+	},
+	"access-list.sso": {
+		"defaultMessage": "Единичен вход"
+	},
 	"access-list.subtitle": {
 		"defaultMessage": "{users} {users, plural, one {потребител} other {потребители}}, {rules} {rules, plural, one {правило} other {правила}} - Създадено: {date}"
 	},
 	"access-lists": {
 		"defaultMessage": "Списъци за достъп"
+	},
+	"accessList": {
+		"defaultMessage": "Списък за достъп"
 	},
 	"action.add": {
 		"defaultMessage": "Добавяне"
@@ -74,11 +83,38 @@
 	"action.view-details": {
 		"defaultMessage": "Преглед на детайли"
 	},
+	"advanced": {
+		"defaultMessage": "Разширени"
+	},
+	"advanced-config": {
+		"defaultMessage": "Разширена конфигурация"
+	},
+	"allowWebsocketUpgrade": {
+		"defaultMessage": "Разреши актуализация на Websocket"
+	},
 	"auditlogs": {
 		"defaultMessage": "Журнали за одит"
 	},
+	"authType": {
+		"defaultMessage": "Тип удостоверяване"
+	},
+	"authentikHost": {
+		"defaultMessage": "Authentik хост"
+	},
 	"auto": {
 		"defaultMessage": "Автоматично"
+	},
+	"avatar": {
+		"defaultMessage": "Аватар"
+	},
+	"bandwidthLimit": {
+		"defaultMessage": "Лимит на честотната лента"
+	},
+	"blockExploits": {
+		"defaultMessage": "Блокирай експлойти"
+	},
+	"cachingEnabled": {
+		"defaultMessage": "Кеширането е активирано"
 	},
 	"cancel": {
 		"defaultMessage": "Отказ"
@@ -112,6 +148,9 @@
 	},
 	"certificate.renew": {
 		"defaultMessage": "Подновяване на сертификат"
+	},
+	"certificateKey": {
+		"defaultMessage": "Ключ на сертификата"
 	},
 	"certificates": {
 		"defaultMessage": "Сертификати"
@@ -175,6 +214,9 @@
 	},
 	"certificates.request.title": {
 		"defaultMessage": "Заявка за нов сертификат"
+	},
+	"clients": {
+		"defaultMessage": "Клиенти"
 	},
 	"column.access": {
 		"defaultMessage": "Достъп"
@@ -245,11 +287,20 @@
 	"column.status": {
 		"defaultMessage": "Статус"
 	},
+	"confirm": {
+		"defaultMessage": "Потвърди"
+	},
 	"created-on": {
 		"defaultMessage": "Създадено: {date}"
 	},
+	"current": {
+		"defaultMessage": "Текущ"
+	},
 	"dashboard": {
 		"defaultMessage": "Табло"
+	},
+	"dashboard.status_ok": {
+		"defaultMessage": "Всичко изглежда наред!"
 	},
 	"dead-host": {
 		"defaultMessage": "404 хост"
@@ -260,8 +311,26 @@
 	"dead-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {404 хост} other {404 хостове}}"
 	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "404 Хостове"
+	},
+	"default-site": {
+		"defaultMessage": "Сайт по подразбиране"
+	},
+	"details": {
+		"defaultMessage": "Детайли"
+	},
 	"disabled": {
 		"defaultMessage": "Деактивиран"
+	},
+	"dnsChallenge": {
+		"defaultMessage": "DNS предизвикателство"
+	},
+	"dnsProvider": {
+		"defaultMessage": "DNS доставчик"
+	},
+	"dnsProviderCredentials": {
+		"defaultMessage": "Идентификационни данни на DNS доставчика"
 	},
 	"domain-names": {
 		"defaultMessage": "Домейн имена"
@@ -278,6 +347,9 @@
 	"domain-names.wildcards-not-supported": {
 		"defaultMessage": "Wildcard не се поддържа от това CA"
 	},
+	"domainNames": {
+		"defaultMessage": "Имена на домейни"
+	},
 	"domains.force-ssl": {
 		"defaultMessage": "Принудително SSL"
 	},
@@ -292,6 +364,9 @@
 	},
 	"domains.use-dns": {
 		"defaultMessage": "Използване на DNS Challenge"
+	},
+	"email": {
+		"defaultMessage": "Имейл"
 	},
 	"email-address": {
 		"defaultMessage": "Имейл адрес"
@@ -341,11 +416,68 @@
 	"error.required": {
 		"defaultMessage": "Това поле е задължително"
 	},
+	"error.unknown": {
+		"defaultMessage": "Неизвестна грешка"
+	},
 	"expires.on": {
 		"defaultMessage": "Изтича: {date}"
 	},
+	"expiresOn": {
+		"defaultMessage": "Изтича на"
+	},
 	"footer.github-fork": {
 		"defaultMessage": "Fork в GitHub"
+	},
+	"form.location": {
+		"defaultMessage": "Местоположение"
+	},
+	"form.placeholder.api-key": {
+		"defaultMessage": "Въведете API ключ..."
+	},
+	"form.placeholder.auth-host": {
+		"defaultMessage": "auth.example.com"
+	},
+	"form.placeholder.email": {
+		"defaultMessage": "потребител@example.com"
+	},
+	"form.placeholder.example-domain": {
+		"defaultMessage": "example.com"
+	},
+	"form.placeholder.forward-host-example": {
+		"defaultMessage": "192.168.1.100 или example.com"
+	},
+	"form.placeholder.port-example": {
+		"defaultMessage": "80"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = Неограничено"
+	},
+	"form.select-certificate": {
+		"defaultMessage": "Изберете сертификат..."
+	},
+	"forwardDomainName": {
+		"defaultMessage": "Име на препращащ домейн"
+	},
+	"forwardHost": {
+		"defaultMessage": "Препращащ хост"
+	},
+	"forwardHttpCode": {
+		"defaultMessage": "Код за HTTP препращане"
+	},
+	"forwardPort": {
+		"defaultMessage": "Препращащ порт"
+	},
+	"forwardQuery": {
+		"defaultMessage": "Препрати заявка"
+	},
+	"forwardScheme": {
+		"defaultMessage": "Схема за препращане"
+	},
+	"forwardingHost": {
+		"defaultMessage": "Препращащ хост"
+	},
+	"forwardingPort": {
+		"defaultMessage": "Препращащ порт"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Блокиране на често срещани експлойти"
@@ -371,8 +503,35 @@
 	"hosts": {
 		"defaultMessage": "Хостове"
 	},
+	"hstsEnabled": {
+		"defaultMessage": "HSTS активиран"
+	},
+	"hstsSubdomains": {
+		"defaultMessage": "HSTS поддомейни"
+	},
 	"http-only": {
 		"defaultMessage": "Само HTTP"
+	},
+	"http2Support": {
+		"defaultMessage": "HTTP/2 поддръжка"
+	},
+	"id": {
+		"defaultMessage": "ID"
+	},
+	"incomingPort": {
+		"defaultMessage": "Входящ порт"
+	},
+	"intermediateCertificate": {
+		"defaultMessage": "Междинен сертификат"
+	},
+	"isAdmin": {
+		"defaultMessage": "Е администратор"
+	},
+	"isDisabled": {
+		"defaultMessage": "Е деактивиран"
+	},
+	"items": {
+		"defaultMessage": "Елементи"
 	},
 	"lets-encrypt": {
 		"defaultMessage": "Let's Encrypt"
@@ -389,11 +548,26 @@
 	"login.title": {
 		"defaultMessage": "Вход в акаунта"
 	},
+	"name": {
+		"defaultMessage": "Име"
+	},
+	"navbar-menu": {
+		"defaultMessage": "Меню"
+	},
+	"new": {
+		"defaultMessage": "Нов"
+	},
 	"nginx-config.label": {
 		"defaultMessage": "Персонализирана Nginx конфигурация"
 	},
 	"nginx-config.placeholder": {
 		"defaultMessage": "# Въведете вашата персонализирана Nginx конфигурация на собствен риск!"
+	},
+	"niceName": {
+		"defaultMessage": "Приятелско име"
+	},
+	"nickname": {
+		"defaultMessage": "Прякор"
 	},
 	"no-permission-error": {
 		"defaultMessage": "Нямате достъп до тази страница."
@@ -464,14 +638,32 @@
 	"object.event.updated": {
 		"defaultMessage": "Актуализиран {object}"
 	},
+	"objectType": {
+		"defaultMessage": "Тип обект"
+	},
 	"offline": {
 		"defaultMessage": "Офлайн"
+	},
+	"oidcClientId": {
+		"defaultMessage": "OIDC Client ID"
+	},
+	"oidcClientSecret": {
+		"defaultMessage": "OIDC Client Secret"
+	},
+	"oidcDiscoveryUrl": {
+		"defaultMessage": "OIDC Discovery URL"
 	},
 	"online": {
 		"defaultMessage": "Онлайн"
 	},
 	"options": {
 		"defaultMessage": "Опции"
+	},
+	"owner": {
+		"defaultMessage": "Собственик"
+	},
+	"passAuth": {
+		"defaultMessage": "Препрати удостоверяване"
 	},
 	"password": {
 		"defaultMessage": "Парола"
@@ -503,11 +695,26 @@
 	"permissions.visibility.user": {
 		"defaultMessage": "Само създадените от потребителя"
 	},
+	"preservePath": {
+		"defaultMessage": "Запази път"
+	},
+	"propagationSeconds": {
+		"defaultMessage": "Секунди за разпространение"
+	},
+	"provider": {
+		"defaultMessage": "Доставчик"
+	},
 	"proxy-host": {
 		"defaultMessage": "Прокси хост"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "Лимит на честотната лента (напр. 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "Хост/IP за препращане"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "Препрати заявка (Скрито)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "Прокси хостове"
@@ -515,8 +722,20 @@
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {прокси хост} other {прокси хостове}}"
 	},
+	"proxyHostCount": {
+		"defaultMessage": "Брой прокси хостове"
+	},
+	"proxyHosts": {
+		"defaultMessage": "Прокси хостове"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "Прокси Хостове"
+	},
 	"public": {
 		"defaultMessage": "Публичен"
+	},
+	"redirect": {
+		"defaultMessage": "Пренасочване"
 	},
 	"redirection-host": {
 		"defaultMessage": "Хост за пренасочване"
@@ -551,14 +770,26 @@
 	"redirection-hosts.http-code.308": {
 		"defaultMessage": "308 Постоянно пренасочване"
 	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "Пренасочващи Хостове"
+	},
 	"role.admin": {
 		"defaultMessage": "Администратор"
 	},
 	"role.standard-user": {
 		"defaultMessage": "Обикновен потребител"
 	},
+	"roles": {
+		"defaultMessage": "Роли"
+	},
+	"satisfyAny": {
+		"defaultMessage": "Удовлетвори всяко"
+	},
 	"save": {
 		"defaultMessage": "Запазване"
+	},
+	"search.placeholder": {
+		"defaultMessage": "Търси..."
 	},
 	"setting": {
 		"defaultMessage": "Настройка"
@@ -599,8 +830,20 @@
 	"sign-in": {
 		"defaultMessage": "Вход"
 	},
+	"sr.switch-language": {
+		"defaultMessage": "Смени език"
+	},
+	"sr.toggle-navigation": {
+		"defaultMessage": "Превключи навигация"
+	},
+	"sr.toggle-theme": {
+		"defaultMessage": "Превключи тема"
+	},
 	"ssl-certificate": {
 		"defaultMessage": "SSL сертификат"
+	},
+	"sslForced": {
+		"defaultMessage": "SSL принудително"
 	},
 	"stream": {
 		"defaultMessage": "Поток"
@@ -620,20 +863,38 @@
 	"streams.count": {
 		"defaultMessage": "{count} {count, plural, one {поток} other {потоци}}"
 	},
+	"streams.count_label": {
+		"defaultMessage": "Потоци"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
 	"streams.udp": {
 		"defaultMessage": "UDP"
 	},
+	"tcpForwarding": {
+		"defaultMessage": "TCP препращане"
+	},
 	"test": {
 		"defaultMessage": "Тест"
+	},
+	"theme.dark": {
+		"defaultMessage": "Тъмна"
+	},
+	"theme.light": {
+		"defaultMessage": "Светла"
+	},
+	"udpForwarding": {
+		"defaultMessage": "UDP препращане"
 	},
 	"update-available": {
 		"defaultMessage": "Налична актуализация: {latestVersion}"
 	},
 	"user": {
 		"defaultMessage": "Потребител"
+	},
+	"user.avatar": {
+		"defaultMessage": "Аватар"
 	},
 	"user.change-password": {
 		"defaultMessage": "Смяна на парола"
@@ -661,6 +922,12 @@
 	},
 	"user.nickname": {
 		"defaultMessage": "Псевдоним"
+	},
+	"user.permissions.full-system-access": {
+		"defaultMessage": "Пълен системен достъп"
+	},
+	"user.permissions.prevent-login": {
+		"defaultMessage": "Предотврати вход"
 	},
 	"user.set-password": {
 		"defaultMessage": "Задаване на парола"

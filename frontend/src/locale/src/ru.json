@@ -236,6 +236,9 @@
 	"dashboard": {
 		"defaultMessage": "Обзор"
 	},
+	"dashboard.status_ok": {
+		"defaultMessage": "Все выглядит хорошо!"
+	},
 	"dead-host": {
 		"defaultMessage": "404-хост"
 	},
@@ -244,6 +247,9 @@
 	},
 	"dead-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {404-хост} few {404-хоста} many {404-хостов} other {404-хоста}}"
+	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "404 Хосты"
 	},
 	"disabled": {
 		"defaultMessage": "Выключен"
@@ -326,11 +332,17 @@
 	"error.required": {
 		"defaultMessage": "Обязательное поле"
 	},
+	"error.unknown": {
+		"defaultMessage": "Неизвестная ошибка"
+	},
 	"expires.on": {
 		"defaultMessage": "Истекает: {date}"
 	},
 	"footer.github-fork": {
 		"defaultMessage": "Сделать форк на GitHub"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = Неограничено"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Блокировать известные эксплойты"
@@ -491,14 +503,23 @@
 	"proxy-host": {
 		"defaultMessage": "Прокси-хост"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "Ограничение пропускной способности (например, 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "Хост / IP перенаправления"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "Передать запрос (Скрыто)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "Прокси-хосты"
 	},
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {прокси-хост} few {прокси-хоста} many {прокси-хостов} other {прокси-хоста}}"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "Прокси Хосты"
 	},
 	"public": {
 		"defaultMessage": "Общедоступный"
@@ -517,6 +538,9 @@
 	},
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {редирект-хост} few {редирект-хоста} many {редирект-хостов} other {редирект-хоста}}"
+	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "Хосты Перенаправления"
 	},
 	"role.admin": {
 		"defaultMessage": "Администратор"
@@ -584,6 +608,9 @@
 	"streams.count": {
 		"defaultMessage": "{count} {count, plural, one {поток} few {потока} many {потоков} other {потока}}"
 	},
+	"streams.count_label": {
+		"defaultMessage": "Потоки"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
@@ -595,6 +622,9 @@
 	},
 	"user": {
 		"defaultMessage": "Пользователь"
+	},
+	"user.avatar": {
+		"defaultMessage": "Аватар"
 	},
 	"user.change-password": {
 		"defaultMessage": "Изменить пароль"

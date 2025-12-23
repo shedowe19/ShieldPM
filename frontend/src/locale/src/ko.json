@@ -251,6 +251,9 @@
 	"dashboard": {
 		"defaultMessage": "대시보드"
 	},
+	"dashboard.status_ok": {
+		"defaultMessage": "모든 것이 좋아 보입니다!"
+	},
 	"dead-host": {
 		"defaultMessage": "404 호스트"
 	},
@@ -259,6 +262,9 @@
 	},
 	"dead-hosts.count": {
 		"defaultMessage": "{count}개의 404 호스트"
+	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "404 호스트"
 	},
 	"disabled": {
 		"defaultMessage": "비활성화"
@@ -341,11 +347,17 @@
 	"error.required": {
 		"defaultMessage": "필수 항목입니다."
 	},
+	"error.unknown": {
+		"defaultMessage": "알 수 없는 오류"
+	},
 	"expires.on": {
 		"defaultMessage": "만료일: {date}"
 	},
 	"footer.github-fork": {
 		"defaultMessage": "GitHub에서 포크하기"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = 무제한"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "일반적인 공격 차단"
@@ -506,14 +518,23 @@
 	"proxy-host": {
 		"defaultMessage": "프록시 호스트"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "대역폭 제한 (예: 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "전달할 호스트명 / IP"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "쿼리 전달 (숨김)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "프록시 호스트"
 	},
 	"proxy-hosts.count": {
 		"defaultMessage": "{count}개의 프록시 호스트"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "프록시 호스트"
 	},
 	"public": {
 		"defaultMessage": "공개"
@@ -550,6 +571,9 @@
 	},
 	"redirection-hosts.http-code.308": {
 		"defaultMessage": "308 Permanent redirect"
+	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "리디렉션 호스트"
 	},
 	"role.admin": {
 		"defaultMessage": "관리자"
@@ -620,6 +644,9 @@
 	"streams.count": {
 		"defaultMessage": "{count}개의 호스트 스트림"
 	},
+	"streams.count_label": {
+		"defaultMessage": "스트림"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
@@ -634,6 +661,9 @@
 	},
 	"user": {
 		"defaultMessage": "사용자"
+	},
+	"user.avatar": {
+		"defaultMessage": "아바타"
 	},
 	"user.change-password": {
 		"defaultMessage": "비밀번호 변경"

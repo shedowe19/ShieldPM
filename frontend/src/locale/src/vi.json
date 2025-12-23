@@ -236,6 +236,9 @@
 	"dashboard": {
 		"defaultMessage": "Bảng điều khiển"
 	},
+	"dashboard.status_ok": {
+		"defaultMessage": "Mọi thứ đều ổn!"
+	},
 	"dead-host": {
 		"defaultMessage": "Máy chủ 404"
 	},
@@ -244,6 +247,9 @@
 	},
 	"dead-hosts.count": {
 		"defaultMessage": "Số trang lỗi {count}"
+	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "Máy chủ 404"
 	},
 	"disabled": {
 		"defaultMessage": "Đã tắt"
@@ -326,11 +332,17 @@
 	"error.required": {
 		"defaultMessage": "Điều này là bắt buộc"
 	},
+	"error.unknown": {
+		"defaultMessage": "Lỗi không xác định"
+	},
 	"expires.on": {
 		"defaultMessage": "Hết hạn: {date}"
 	},
 	"footer.github-fork": {
 		"defaultMessage": "Fork dự án này trên Github"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = Không giới hạn"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Chặn các hoạt động khai thác phổ biến"
@@ -491,14 +503,23 @@
 	"proxy-host": {
 		"defaultMessage": "Máy chủ proxy"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "Giới hạn băng thông (ví dụ: 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "Chuyển tiếp Hostname / IP"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "Chuyển tiếp truy vấn (Ẩn)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "Máy chủ proxy"
 	},
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} máy chủ proxy"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "Máy chủ Proxy"
 	},
 	"public": {
 		"defaultMessage": "Công khai"
@@ -517,6 +538,9 @@
 	},
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} máy chủ chuyển hướng"
+	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "Máy chủ Chuyển hướng"
 	},
 	"role.admin": {
 		"defaultMessage": "Quản trị viên"
@@ -584,6 +608,9 @@
 	"streams.count": {
 		"defaultMessage": "Số Stream {count}"
 	},
+	"streams.count_label": {
+		"defaultMessage": "Luồng"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
@@ -598,6 +625,9 @@
 	},
 	"user": {
 		"defaultMessage": "Người dùng"
+	},
+	"user.avatar": {
+		"defaultMessage": "Hình đại diện"
 	},
 	"user.change-password": {
 		"defaultMessage": "Đổi Mật khẩu"

@@ -236,6 +236,9 @@
 	"dashboard": {
 		"defaultMessage": "Panel"
 	},
+	"dashboard.status_ok": {
+		"defaultMessage": "Všetko vyzerá dobre!"
+	},
 	"dead-host": {
 		"defaultMessage": "404 Hostiteľ"
 	},
@@ -244,6 +247,9 @@
 	},
 	"dead-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {404 hostiteľ} few {404 hostitelia} other {404 hostiteľov}}"
+	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "404 Hostitelia"
 	},
 	"disabled": {
 		"defaultMessage": "Deaktivované"
@@ -326,11 +332,17 @@
 	"error.required": {
 		"defaultMessage": "Toto pole je povinné"
 	},
+	"error.unknown": {
+		"defaultMessage": "Neznáma chyba"
+	},
 	"expires.on": {
 		"defaultMessage": "Platnosť do: {date}"
 	},
 	"footer.github-fork": {
 		"defaultMessage": "Forknite ma na GitHube"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = Neobmedzené"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Blokovať bežné exploity"
@@ -491,14 +503,23 @@
 	"proxy-host": {
 		"defaultMessage": "Proxy hostiteľa"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "Limit šírky pásma (napr. 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "Cieľový názov hostiteľa / IP"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "Presmerovať dotaz (Skryté)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "Proxy hostitelia"
 	},
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {proxy hostiteľ} few {proxy hostitelia} other {proxy hostiteľov}}"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "Proxy Hostitelia"
 	},
 	"public": {
 		"defaultMessage": "Verejné"
@@ -517,6 +538,9 @@
 	},
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {presmerovací hostiteľ} few {presmerovací hostitelia} other {presmerovacích hostiteľov}}"
+	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "Presmerovanie Hostiteľov"
 	},
 	"role.admin": {
 		"defaultMessage": "Administrátor"
@@ -584,6 +608,9 @@
 	"streams.count": {
 		"defaultMessage": "{count} {count, plural, one {stream} few {streamy} other {streamov}}"
 	},
+	"streams.count_label": {
+		"defaultMessage": "Streamy"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
@@ -595,6 +622,9 @@
 	},
 	"user": {
 		"defaultMessage": "používateľa"
+	},
+	"user.avatar": {
+		"defaultMessage": "Avatar"
 	},
 	"user.change-password": {
 		"defaultMessage": "Zmeniť heslo"

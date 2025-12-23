@@ -29,11 +29,20 @@
 	"access-list.satisfy-any": {
 		"defaultMessage": "Satisfacer Cualquiera"
 	},
+	"access-list.satisfy.none": {
+		"defaultMessage": "Ninguno"
+	},
+	"access-list.sso": {
+		"defaultMessage": "Inicio de sesión único"
+	},
 	"access-list.subtitle": {
 		"defaultMessage": "{users} {users, plural, one {Usuario} other {Usuarios}}, {rules} {rules, plural, one {Regla} other {Reglas}} - Creado: {date}"
 	},
 	"access-lists": {
 		"defaultMessage": "Listas de Acceso"
+	},
+	"accessList": {
+		"defaultMessage": "Lista de acceso"
 	},
 	"action.add": {
 		"defaultMessage": "Añadir"
@@ -74,11 +83,38 @@
 	"action.view-details": {
 		"defaultMessage": "Ver Detalles"
 	},
+	"advanced": {
+		"defaultMessage": "Avanzado"
+	},
+	"advanced-config": {
+		"defaultMessage": "Configuración avanzada"
+	},
+	"allowWebsocketUpgrade": {
+		"defaultMessage": "Permitir actualización de Websocket"
+	},
 	"auditlogs": {
 		"defaultMessage": "Registros de Auditoría"
 	},
+	"authType": {
+		"defaultMessage": "Tipo de autenticación"
+	},
+	"authentikHost": {
+		"defaultMessage": "Host Authentik"
+	},
 	"auto": {
 		"defaultMessage": "Auto"
+	},
+	"avatar": {
+		"defaultMessage": "Avatar"
+	},
+	"bandwidthLimit": {
+		"defaultMessage": "Límite de ancho de banda"
+	},
+	"blockExploits": {
+		"defaultMessage": "Bloquear exploits"
+	},
+	"cachingEnabled": {
+		"defaultMessage": "Caché habilitada"
 	},
 	"cancel": {
 		"defaultMessage": "Cancelar"
@@ -112,6 +148,9 @@
 	},
 	"certificate.renew": {
 		"defaultMessage": "Renovar Certificado"
+	},
+	"certificateKey": {
+		"defaultMessage": "Clave del certificado"
 	},
 	"certificates": {
 		"defaultMessage": "Certificados"
@@ -175,6 +214,9 @@
 	},
 	"certificates.request.title": {
 		"defaultMessage": "Solicitar un nuevo Certificado"
+	},
+	"clients": {
+		"defaultMessage": "Clientes"
 	},
 	"column.access": {
 		"defaultMessage": "Acceso"
@@ -245,11 +287,20 @@
 	"column.status": {
 		"defaultMessage": "Estado"
 	},
+	"confirm": {
+		"defaultMessage": "Confirmar"
+	},
 	"created-on": {
 		"defaultMessage": "Creado: {date}"
 	},
+	"current": {
+		"defaultMessage": "Actual"
+	},
 	"dashboard": {
 		"defaultMessage": "Panel de Control"
+	},
+	"dashboard.status_ok": {
+		"defaultMessage": "¡Todo se ve bien!"
 	},
 	"dead-host": {
 		"defaultMessage": "Host 404"
@@ -260,8 +311,26 @@
 	"dead-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host 404} other {Hosts 404}}"
 	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "Hosts 404"
+	},
+	"default-site": {
+		"defaultMessage": "Sitio predeterminado"
+	},
+	"details": {
+		"defaultMessage": "Detalles"
+	},
 	"disabled": {
 		"defaultMessage": "Deshabilitado"
+	},
+	"dnsChallenge": {
+		"defaultMessage": "Desafío DNS"
+	},
+	"dnsProvider": {
+		"defaultMessage": "Proveedor DNS"
+	},
+	"dnsProviderCredentials": {
+		"defaultMessage": "Credenciales del proveedor DNS"
 	},
 	"domain-names": {
 		"defaultMessage": "Nombres de Dominio"
@@ -278,6 +347,9 @@
 	"domain-names.wildcards-not-supported": {
 		"defaultMessage": "No se admiten comodines para esta CA"
 	},
+	"domainNames": {
+		"defaultMessage": "Nombres de dominio"
+	},
 	"domains.force-ssl": {
 		"defaultMessage": "Forzar SSL"
 	},
@@ -292,6 +364,9 @@
 	},
 	"domains.use-dns": {
 		"defaultMessage": "Usar Desafío DNS"
+	},
+	"email": {
+		"defaultMessage": "Correo electrónico"
 	},
 	"email-address": {
 		"defaultMessage": "Dirección de correo electrónico"
@@ -341,11 +416,68 @@
 	"error.required": {
 		"defaultMessage": "Este campo es obligatorio"
 	},
+	"error.unknown": {
+		"defaultMessage": "Error desconocido"
+	},
 	"expires.on": {
 		"defaultMessage": "Expira: {date}"
 	},
+	"expiresOn": {
+		"defaultMessage": "Expira el"
+	},
 	"footer.github-fork": {
 		"defaultMessage": "Bifúrcame en Github"
+	},
+	"form.location": {
+		"defaultMessage": "Ubicación"
+	},
+	"form.placeholder.api-key": {
+		"defaultMessage": "Ingrese la clave API..."
+	},
+	"form.placeholder.auth-host": {
+		"defaultMessage": "auth.example.com"
+	},
+	"form.placeholder.email": {
+		"defaultMessage": "usuario@example.com"
+	},
+	"form.placeholder.example-domain": {
+		"defaultMessage": "example.com"
+	},
+	"form.placeholder.forward-host-example": {
+		"defaultMessage": "192.168.1.100 o example.com"
+	},
+	"form.placeholder.port-example": {
+		"defaultMessage": "80"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = Ilimitado"
+	},
+	"form.select-certificate": {
+		"defaultMessage": "Seleccionar un certificado..."
+	},
+	"forwardDomainName": {
+		"defaultMessage": "Nombre de dominio de reenvío"
+	},
+	"forwardHost": {
+		"defaultMessage": "Host de reenvío"
+	},
+	"forwardHttpCode": {
+		"defaultMessage": "Código HTTP de reenvío"
+	},
+	"forwardPort": {
+		"defaultMessage": "Puerto de reenvío"
+	},
+	"forwardQuery": {
+		"defaultMessage": "Reenviar consulta"
+	},
+	"forwardScheme": {
+		"defaultMessage": "Esquema de reenvío"
+	},
+	"forwardingHost": {
+		"defaultMessage": "Host de reenvío"
+	},
+	"forwardingPort": {
+		"defaultMessage": "Puerto de reenvío"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Bloquear Exploits Comunes"
@@ -371,8 +503,35 @@
 	"hosts": {
 		"defaultMessage": "Hosts"
 	},
+	"hstsEnabled": {
+		"defaultMessage": "HSTS habilitado"
+	},
+	"hstsSubdomains": {
+		"defaultMessage": "Subdominios HSTS"
+	},
 	"http-only": {
 		"defaultMessage": "Solo HTTP"
+	},
+	"http2Support": {
+		"defaultMessage": "Soporte HTTP/2"
+	},
+	"id": {
+		"defaultMessage": "ID"
+	},
+	"incomingPort": {
+		"defaultMessage": "Puerto entrante"
+	},
+	"intermediateCertificate": {
+		"defaultMessage": "Certificado intermedio"
+	},
+	"isAdmin": {
+		"defaultMessage": "Es administrador"
+	},
+	"isDisabled": {
+		"defaultMessage": "Está deshabilitado"
+	},
+	"items": {
+		"defaultMessage": "Elementos"
 	},
 	"lets-encrypt": {
 		"defaultMessage": "Let's Encrypt"
@@ -389,11 +548,26 @@
 	"login.title": {
 		"defaultMessage": "Inicia sesión en tu cuenta"
 	},
+	"name": {
+		"defaultMessage": "Nombre"
+	},
+	"navbar-menu": {
+		"defaultMessage": "Menú"
+	},
+	"new": {
+		"defaultMessage": "Nuevo"
+	},
 	"nginx-config.label": {
 		"defaultMessage": "Configuración Personalizada de Nginx"
 	},
 	"nginx-config.placeholder": {
 		"defaultMessage": "# ¡Introduce aquí tu configuración personalizada de Nginx bajo tu propio riesgo!"
+	},
+	"niceName": {
+		"defaultMessage": "Nombre descriptivo"
+	},
+	"nickname": {
+		"defaultMessage": "Apodo"
 	},
 	"no-permission-error": {
 		"defaultMessage": "No tienes acceso para ver esto."
@@ -464,14 +638,32 @@
 	"object.event.updated": {
 		"defaultMessage": "{object} Actualizado"
 	},
+	"objectType": {
+		"defaultMessage": "Tipo de objeto"
+	},
 	"offline": {
 		"defaultMessage": "Desconectado"
+	},
+	"oidcClientId": {
+		"defaultMessage": "ID de cliente OIDC"
+	},
+	"oidcClientSecret": {
+		"defaultMessage": "Secreto de cliente OIDC"
+	},
+	"oidcDiscoveryUrl": {
+		"defaultMessage": "URL de descubrimiento OIDC"
 	},
 	"online": {
 		"defaultMessage": "Conectado"
 	},
 	"options": {
 		"defaultMessage": "Opciones"
+	},
+	"owner": {
+		"defaultMessage": "Propietario"
+	},
+	"passAuth": {
+		"defaultMessage": "Pasar autenticación"
 	},
 	"password": {
 		"defaultMessage": "Contraseña"
@@ -503,11 +695,26 @@
 	"permissions.visibility.user": {
 		"defaultMessage": "Solo Elementos Creados"
 	},
+	"preservePath": {
+		"defaultMessage": "Preservar ruta"
+	},
+	"propagationSeconds": {
+		"defaultMessage": "Segundos de propagación"
+	},
+	"provider": {
+		"defaultMessage": "Proveedor"
+	},
 	"proxy-host": {
 		"defaultMessage": "Host Proxy"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "Límite de ancho de banda (ej. 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "Nombre de Host / IP de Reenvío"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "Reenviar consulta (Oculto)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "Hosts Proxy"
@@ -515,8 +722,20 @@
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host Proxy} other {Hosts Proxy}}"
 	},
+	"proxyHostCount": {
+		"defaultMessage": "Cantidad de hosts proxy"
+	},
+	"proxyHosts": {
+		"defaultMessage": "Hosts proxy"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "Hosts Proxy"
+	},
 	"public": {
 		"defaultMessage": "Público"
+	},
+	"redirect": {
+		"defaultMessage": "Redirigir"
 	},
 	"redirection-host": {
 		"defaultMessage": "Host de Redirección"
@@ -551,14 +770,26 @@
 	"redirection-hosts.http-code.308": {
 		"defaultMessage": "308 Redirección permanente"
 	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "Hosts de Redirección"
+	},
 	"role.admin": {
 		"defaultMessage": "Administrador"
 	},
 	"role.standard-user": {
 		"defaultMessage": "Usuario Estándar"
 	},
+	"roles": {
+		"defaultMessage": "Roles"
+	},
+	"satisfyAny": {
+		"defaultMessage": "Satisfacer cualquiera"
+	},
 	"save": {
 		"defaultMessage": "Guardar"
+	},
+	"search.placeholder": {
+		"defaultMessage": "Buscar..."
 	},
 	"setting": {
 		"defaultMessage": "Configuración"
@@ -599,8 +830,20 @@
 	"sign-in": {
 		"defaultMessage": "Iniciar Sesión"
 	},
+	"sr.switch-language": {
+		"defaultMessage": "Cambiar idioma"
+	},
+	"sr.toggle-navigation": {
+		"defaultMessage": "Alternar navegación"
+	},
+	"sr.toggle-theme": {
+		"defaultMessage": "Alternar tema"
+	},
 	"ssl-certificate": {
 		"defaultMessage": "Certificado SSL"
+	},
+	"sslForced": {
+		"defaultMessage": "SSL forzado"
 	},
 	"stream": {
 		"defaultMessage": "Stream"
@@ -620,17 +863,35 @@
 	"streams.count": {
 		"defaultMessage": "{count} {count, plural, one {Stream} other {Streams}}"
 	},
+	"streams.count_label": {
+		"defaultMessage": "Streams"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
 	"streams.udp": {
 		"defaultMessage": "UDP"
 	},
+	"tcpForwarding": {
+		"defaultMessage": "Reenvío TCP"
+	},
 	"test": {
 		"defaultMessage": "Probar"
 	},
+	"theme.dark": {
+		"defaultMessage": "Oscuro"
+	},
+	"theme.light": {
+		"defaultMessage": "Claro"
+	},
+	"udpForwarding": {
+		"defaultMessage": "Reenvío UDP"
+	},
 	"user": {
 		"defaultMessage": "Usuario"
+	},
+	"user.avatar": {
+		"defaultMessage": "Avatar"
 	},
 	"user.change-password": {
 		"defaultMessage": "Cambiar Contraseña"
@@ -658,6 +919,12 @@
 	},
 	"user.nickname": {
 		"defaultMessage": "Apodo"
+	},
+	"user.permissions.full-system-access": {
+		"defaultMessage": "Acceso completo al sistema"
+	},
+	"user.permissions.prevent-login": {
+		"defaultMessage": "Impedir inicio de sesión"
 	},
 	"user.set-password": {
 		"defaultMessage": "Establecer Contraseña"

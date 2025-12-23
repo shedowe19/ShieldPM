@@ -236,6 +236,9 @@
 	"dashboard": {
 		"defaultMessage": "Dashboard"
 	},
+	"dashboard.status_ok": {
+		"defaultMessage": "Alles ziet er goed uit!"
+	},
 	"dead-host": {
 		"defaultMessage": "404 Host"
 	},
@@ -244,6 +247,9 @@
 	},
 	"dead-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {404 Host} other {404 Hosts}}"
+	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "404 Hosts"
 	},
 	"disabled": {
 		"defaultMessage": "Uitgezet"
@@ -326,11 +332,17 @@
 	"error.required": {
 		"defaultMessage": "Dit is verplicht"
 	},
+	"error.unknown": {
+		"defaultMessage": "Onbekende fout"
+	},
 	"expires.on": {
 		"defaultMessage": "Verloopt: {date}"
 	},
 	"footer.github-fork": {
 		"defaultMessage": "Maak een Fork op Github"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = Onbeperkt"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Blokkeer Veelvoorkomende Kwetsbaarheden"
@@ -491,14 +503,23 @@
 	"proxy-host": {
 		"defaultMessage": "Proxy Host"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "Bandbreedte limiet (bijv. 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "Hostname / IP Doorsturen"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "Query doorsturen (Verborgen)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "Proxy Hosts"
 	},
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Proxy Host} other {Proxy Hosts}}"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "Proxy Hosts"
 	},
 	"public": {
 		"defaultMessage": "Openbaar"
@@ -517,6 +538,9 @@
 	},
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Redirection Host} other {Redirection Hosts}}"
+	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "Omleidings Hosts"
 	},
 	"role.admin": {
 		"defaultMessage": "Beheerder"
@@ -584,6 +608,9 @@
 	"streams.count": {
 		"defaultMessage": "{count} {count, plural, one {Stream} other {Streams}}"
 	},
+	"streams.count_label": {
+		"defaultMessage": "Streams"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
@@ -598,6 +625,9 @@
 	},
 	"user": {
 		"defaultMessage": "Gebruiker"
+	},
+	"user.avatar": {
+		"defaultMessage": "Avatar"
 	},
 	"user.change-password": {
 		"defaultMessage": "Verander Wachtwoord"
