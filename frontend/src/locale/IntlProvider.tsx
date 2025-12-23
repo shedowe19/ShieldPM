@@ -35,17 +35,20 @@ const localeOptions = [
 	["bg", "bg-BG", langBg],
 ];
 
-// find language
-const found = localeOptions.find(([code]) => code === thisLocale);
-const messages = found ? found[2] : langEn;
+const loadMessages = (locale?: string): typeof langList & typeof langEn => {
+	const thisLocale = (locale || "en").slice(0, 2);
 
-console.log(`[IntlProvider] Loading locale: ${locale} -> ${thisLocale}`, {
-	found: !!found,
-	messageCount: Object.keys(messages).length,
-	sample: messages["proxy_hosts.count_label"]
-});
+	// find language
+	const found = localeOptions.find(([code]) => code === thisLocale);
+	const messages = found ? found[2] : langEn;
 
-return Object.assign({}, langList, langEn, messages);
+	console.log(`[IntlProvider] Loading locale: ${locale} -> ${thisLocale}`, {
+		found: !!found,
+		messageCount: Object.keys(messages).length,
+		sample: messages["proxy_hosts.count_label"]
+	});
+
+	return Object.assign({}, langList, langEn, messages);
 };
 
 const getFlagCodeForLocale = (locale?: string) => {
