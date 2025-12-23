@@ -113,8 +113,6 @@ router
 			});
 			res.status(200).send(row);
 		} catch (err) {
-			const fs = await import("fs");
-			fs.appendFileSync("/tmp/backend_error.log", `${new Date().toISOString()} - GET /:list_id Error: ${err.message}\n${err.stack}\n`);
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			next(err);
 		}
