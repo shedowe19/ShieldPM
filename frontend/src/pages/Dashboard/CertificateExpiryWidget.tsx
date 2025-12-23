@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import { Link } from "react-router-dom";
 import { HasPermission } from "src/components";
 import { useCertificates } from "src/hooks";
-import { T, intl } from "src/locale";
+import { T } from "src/locale";
 import { CERTIFICATES, VIEW } from "src/modules/Permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Avatar, AvatarFallback } from "src/components/ui/avatar";
@@ -11,13 +11,6 @@ import { cn } from "src/lib/utils";
 
 export const CertificateExpiryWidget = () => {
 	const { data: certificates } = useCertificates();
-
-	// DEBUG: Check if keys exist in loaded messages
-	console.log('DEBUG: Loaded messages keys check:', {
-		'dashboard.status_ok': intl.messages['dashboard.status_ok'],
-		'proxy_hosts.count_label': intl.messages['proxy_hosts.count_label'],
-		'locale': intl.locale
-	});
 
 	if (!certificates) {
 		return null;
