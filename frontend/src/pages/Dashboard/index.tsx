@@ -35,7 +35,7 @@ const Dashboard = () => {
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
 										<p className="text-sm font-medium text-muted-foreground">
-											<T id="proxy-hosts.count.label" />
+											<T id="proxy_hosts.count_label" />
 										</p>
 										<div className="text-3xl font-bold">
 											<T id="proxy-hosts.count" data={{ count: hostReport?.proxy }} />
@@ -59,7 +59,7 @@ const Dashboard = () => {
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
 										<p className="text-sm font-medium text-muted-foreground">
-											<T id="redirection-hosts.count.label" />
+											<T id="redirection_hosts.count_label" />
 										</p>
 										<div className="text-3xl font-bold">
 											<T id="redirection-hosts.count" data={{ count: hostReport?.redirection }} />
@@ -83,7 +83,7 @@ const Dashboard = () => {
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
 										<p className="text-sm font-medium text-muted-foreground">
-											<T id="streams.count.label" />
+											<T id="streams.count_label" />
 										</p>
 										<div className="text-3xl font-bold">
 											<T id="streams.count" data={{ count: hostReport?.stream }} />
@@ -107,7 +107,7 @@ const Dashboard = () => {
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
 										<p className="text-sm font-medium text-muted-foreground">
-											<T id="dead-hosts.count.label" />
+											<T id="dead_hosts.count_label" />
 										</p>
 										<div className="text-3xl font-bold">
 											<T id="dead-hosts.count" data={{ count: hostReport?.dead }} />

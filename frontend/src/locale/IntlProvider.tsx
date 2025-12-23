@@ -66,10 +66,10 @@ const getFlagCodeForLocale = (locale?: string) => {
 const getLocale = (short = false) => {
 	let loc = window.localStorage.getItem("locale");
 	if (!loc) {
-		loc = document.documentElement.lang;
+		loc = navigator.language || navigator.languages?.[0] || document.documentElement.lang;
 	}
 	if (short) {
-		return loc.slice(0, 2);
+		return loc ? loc.slice(0, 2) : "en";
 	}
 	// finally, fallback
 	if (!loc) {
