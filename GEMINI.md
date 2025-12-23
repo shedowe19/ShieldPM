@@ -168,7 +168,7 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
 2.  **API**: `routes/nginx/proxy_hosts.js` receives request.
 3.  **Controller**: Validates input using `lib/validator/`.
 4.  **Database**: Model `ProxyHost` saves data to `proxy_host` table.
-5.  **Nginx Config Generaton**:
+5.  **Nginx Config Generation**:
     *   `internal/nginx.js` -> `configure()` is triggered.
     *   Data is prepared (host object + env vars).
     *   **Template Rendering**: `backend/templates/proxy_host.conf` (LiquidJS) is rendered with the host data.
