@@ -104,7 +104,7 @@ export const CertificateExpiryWidget = () => {
 									<T id="dashboard.no-expiring-certificates" />
 								</p>
 								<p className="text-sm text-muted-foreground">
-									<T id="dashboard.everything-looks-good" />
+									<T id="dashboard.status_ok" />
 								</p>
 							</div>
 						</div>
