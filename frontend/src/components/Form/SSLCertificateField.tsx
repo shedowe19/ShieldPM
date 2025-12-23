@@ -1,29 +1,18 @@
-import { IconShield } from "@tabler/icons-react";
+import { IconShield, IconPlus } from "@tabler/icons-react";
 import { Field, useFormikContext } from "formik";
-import Select, { type ActionMeta, components, type OptionProps } from "react-select";
 import type { Certificate } from "src/api/backend";
 import { useCertificates } from "src/hooks";
 import { formatDateTime, intl, T } from "src/locale";
+import { Label } from "src/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
+import { Skeleton } from "src/components/ui/skeleton";
 
 interface CertOption {
-	readonly value: number | "new";
+	readonly value: string; // Ensure value is always string to work with Select
 	readonly label: string;
 	readonly subLabel: string;
 	readonly icon: React.ReactNode;
 }
-
-const Option = (props: OptionProps<CertOption>) => {
-	return (
-		<components.Option {...props}>
-			<div className="flex-fill">
-				<div className="font-weight-medium">
-					{props.data.icon} <strong>{props.data.label}</strong>
-				</div>
-				<div className="text-secondary mt-1 ps-3">{props.data.subLabel}</div>
-			</div>
-		</components.Option>
-	);
-};
 
 interface Props {
 	id?: string;
@@ -33,6 +22,7 @@ interface Props {
 	allowNew?: boolean;
 	forHttp?: boolean; // the sslForced, http2Support, hstsEnabled, hstsSubdomains fields
 }
+
 export function SSLCertificateField({
 	name = "certificateId",
 	label = "ssl-certificate",
@@ -45,8 +35,22 @@ export function SSLCertificateField({
 	const { values, setFieldValue } = useFormikContext();
 	const v: any = values || {};
 
-	const handleChange = (newValue: any, _actionMeta: ActionMeta<CertOption>) => {
-		setFieldValue(name, newValue?.value);
+	// Helper to convert value to string for Select component
+	// The certificate ID is number, "new" is string, "0" for none
+	const getValueString = (val: any) => {
+		if (val === undefined || val === null) return "0";
+		return String(val);
+	};
+
+	const handleChange = (newValue: string) => {
+		// Convert back to number if it's a numeric string, unless it's "new"
+		let val: number | string = newValue;
+		if (newValue !== "new") {
+			val = Number.parseInt(newValue, 10);
+			if (Number.isNaN(val)) val = 0;
+		}
+
+		setFieldValue(name, val);
 		const {
 			sslForced,
 			http2Support,
@@ -57,13 +61,14 @@ export function SSLCertificateField({
 			dnsProviderCredentials,
 			propagationSeconds,
 		} = v;
-		if (forHttp && !newValue?.value) {
+
+		if (forHttp && !val) {
 			sslForced && setFieldValue("sslForced", false);
 			http2Support && setFieldValue("http2Support", false);
 			hstsEnabled && setFieldValue("hstsEnabled", false);
 			hstsSubdomains && setFieldValue("hstsSubdomains", false);
 		}
-		if (newValue?.value !== "new") {
+		if (val !== "new") {
 			dnsChallenge && setFieldValue("dnsChallenge", undefined);
 			dnsProvider && setFieldValue("dnsProvider", undefined);
 			dnsProviderCredentials && setFieldValue("dnsProviderCredentials", undefined);
@@ -73,10 +78,10 @@ export function SSLCertificateField({
 
 	const options: CertOption[] =
 		data?.map((cert: Certificate) => ({
-			value: cert.id,
+			value: String(cert.id),
 			label: cert.niceName,
 			subLabel: `${cert.provider === "letsencrypt" ? intl.formatMessage({ id: "lets-encrypt" }) : cert.provider} — ${intl.formatMessage({ id: "expires.on" }, { date: cert.expiresOn ? formatDateTime(cert.expiresOn) : "N/A" })}`,
-			icon: <IconShield size={14} className="text-pink" />,
+			icon: <IconShield size={14} className="text-pink-500" />,
 		})) || [];
 
 	// Prepend the Add New option
@@ -85,52 +90,61 @@ export function SSLCertificateField({
 			value: "new",
 			label: intl.formatMessage({ id: "certificates.request.title" }),
 			subLabel: intl.formatMessage({ id: "certificates.request.subtitle" }),
-			icon: <IconShield size={14} className="text-lime" />,
+			icon: <IconPlus size={14} className="text-lime-500" />,
 		});
 	}
 
 	// Prepend the None option
 	if (!required) {
 		options?.unshift({
-			value: 0,
+			value: "0",
 			label: intl.formatMessage({ id: "certificate.none.title" }),
 			subLabel: forHttp
 				? intl.formatMessage({ id: "certificate.none.subtitle.for-http" })
 				: intl.formatMessage({ id: "certificate.none.subtitle" }),
-			icon: <IconShield size={14} className="text-red" />,
+			icon: <IconShield size={14} className="text-muted-foreground" />,
 		});
 	}
 
 	return (
 		<Field name={name}>
 			{({ field, form }: any) => (
-				<div className="mb-3">
-					<label className="form-label" htmlFor={id}>
+				<div className="mb-3 space-y-2">
+					<Label htmlFor={id}>
 						<T id={label} />
-					</label>
-					{isLoading ? <div className="placeholder placeholder-lg col-12 my-3 placeholder-glow" /> : null}
-					{isError ? <div className="invalid-feedback">{`${error}`}</div> : null}
-					{!isLoading && !isError ? (
-						<Select
-							className="react-select-container"
-							classNamePrefix="react-select"
-							defaultValue={options.find((o) => o.value === field.value) || options[0]}
-							options={options}
-							components={{ Option }}
-							styles={{
-								option: (base) => ({
-									...base,
-									height: "100%",
-								}),
-							}}
-							onChange={handleChange}
-						/>
-					) : null}
-					{form.errors[field.name] ? (
-						<div className="invalid-feedback">
-							{form.errors[field.name] && form.touched[field.name] ? form.errors[field.name] : null}
-						</div>
-					) : null}
+					</Label>
+					{isLoading ? (
+						<Skeleton className="h-10 w-full" />
+					) : isError ? (
+						<div className="text-destructive text-sm">{`${error}`}</div>
+					) : (
+						<Select value={getValueString(field.value)} onValueChange={handleChange}>
+							<SelectTrigger
+								id={id}
+								className={
+									form.errors[field.name] && form.touched[field.name] ? "border-destructive" : ""
+								}
+							>
+								<SelectValue placeholder={intl.formatMessage({ id: "form.select-certificate" })} />
+							</SelectTrigger>
+							<SelectContent>
+								{options.map((opt) => (
+									<SelectItem key={opt.value} value={opt.value}>
+										<div className="flex items-center gap-2">
+											{opt.icon}
+											<div className="flex flex-col text-left">
+												<span className="font-medium">{opt.label}</span>
+												<span className="text-xs text-muted-foreground">{opt.subLabel}</span>
+											</div>
+										</div>
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					)}
+					{form.errors[field.name] && form.touched[field.name] && (
+						<div className="text-destructive text-sm">{form.errors[field.name]}</div>
+					)}
 				</div>
 			)}
 		</Field>

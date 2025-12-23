@@ -5,6 +5,8 @@ import Select, { type ActionMeta, components, type OptionProps } from "react-sel
 import type { AccessList } from "src/api/backend";
 import { useAccessLists } from "src/hooks";
 import { formatDateTime, intl, T } from "src/locale";
+import { Label } from "src/components/ui/label";
+import { Skeleton } from "src/components/ui/skeleton";
 
 interface AccessOption {
 	readonly value: number;
@@ -16,11 +18,11 @@ interface AccessOption {
 const Option = (props: OptionProps<AccessOption>) => {
 	return (
 		<components.Option {...props}>
-			<div className="flex-fill">
-				<div className="font-weight-medium">
+			<div className="flex-1">
+				<div className="font-medium flex items-center gap-2">
 					{props.data.icon} <strong>{props.data.label}</strong>
 				</div>
-				<div className="text-secondary mt-1 ps-3">{props.data.subLabel}</div>
+				<div className="text-muted-foreground mt-1 pl-6">{props.data.subLabel}</div>
 			</div>
 		</components.Option>
 	);
@@ -51,7 +53,7 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 					date: item?.createdOn ? formatDateTime(item?.createdOn) : "N/A",
 				},
 			),
-			icon: <IconLock size={14} className="text-lime" />,
+			icon: <IconLock size={14} className="text-green-500" />,
 		})) || [];
 
 	// Public option
@@ -59,21 +61,21 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 		value: 0,
 		label: intl.formatMessage({ id: "access-list.public" }),
 		subLabel: intl.formatMessage({ id: "access-list.public.subtitle" }),
-		icon: <IconLockOpen2 size={14} className="text-red" />,
+		icon: <IconLockOpen2 size={14} className="text-red-500" />,
 	});
 
 	return (
 		<Field name={name}>
 			{({ field, form }: any) => (
-				<div className="mb-3">
-					<label className="form-label" htmlFor={id}>
+				<div className="space-y-2 mb-3">
+					<Label htmlFor={id}>
 						<T id={label} />
-					</label>
-					{isLoading ? <div className="placeholder placeholder-lg col-12 my-3 placeholder-glow" /> : null}
-					{isError ? <div className="invalid-feedback">{`${error}`}</div> : null}
+					</Label>
+					{isLoading ? <Skeleton className="h-10 w-full" /> : null}
+					{isError ? <div className="text-destructive text-sm font-medium">{`${error}`}</div> : null}
 					{!isLoading && !isError ? (
 						<Select
-							className="react-select-container"
+							className="react-select-container text-black"
 							classNamePrefix="react-select"
 							defaultValue={options.find((o) => o.value === field.value) || options[0]}
 							options={options}
@@ -82,15 +84,34 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 								option: (base) => ({
 									...base,
 									height: "100%",
+									backgroundColor: "transparent",
+									":hover": {
+										backgroundColor: "hsl(var(--accent))",
+										color: "hsl(var(--accent-foreground))",
+									},
+								}),
+								control: (baseStyles) => ({
+									...baseStyles,
+									backgroundColor: "hsl(var(--background))",
+									borderColor: "hsl(var(--input))",
+									color: "hsl(var(--foreground))",
+								}),
+								menu: (base) => ({
+									...base,
+									zIndex: 9999,
+									backgroundColor: "hsl(var(--background))",
+									border: "1px solid hsl(var(--border))",
+								}),
+								singleValue: (base) => ({
+									...base,
+									color: "hsl(var(--foreground))",
 								}),
 							}}
 							onChange={handleChange}
 						/>
 					) : null}
-					{form.errors[field.name] ? (
-						<div className="invalid-feedback">
-							{form.errors[field.name] && form.touched[field.name] ? form.errors[field.name] : null}
-						</div>
+					{form.errors[field.name] && form.touched[field.name] ? (
+						<div className="text-destructive text-sm font-medium">{form.errors[field.name] as string}</div>
 					) : null}
 				</div>
 			)}

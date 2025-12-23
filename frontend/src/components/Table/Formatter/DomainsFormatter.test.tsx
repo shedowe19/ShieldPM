@@ -23,7 +23,7 @@ describe("DomainsFormatter", () => {
 				<DomainsFormatter domains={["example.com"]} />
 			</Wrapper>,
 		);
-		const link = screen.getByText("example.com");
+		const link = screen.getByRole("link", { name: "example.com" });
 		expect(link).toBeInTheDocument();
 		expect(link).toHaveAttribute("href", "http://example.com");
 	});

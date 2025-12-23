@@ -1,12 +1,17 @@
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
 import { updateAuth } from "src/api/backend";
-import { Button } from "src/components";
+import { Button } from "src/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { IconDice, IconEye, IconEyeOff, IconLock } from "@tabler/icons-react";
+import { generate } from "generate-password-browser";
 
 const showChangePasswordModal = (id: number | "me") => {
 	EasyModal.show(ChangePasswordModal, { id });
@@ -18,6 +23,9 @@ interface Props extends InnerModalProps {
 const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [error, setError] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [showCurrent, setShowCurrent] = useState(false);
+	const [showNew, setShowNew] = useState(false);
+	const [showConfirm, setShowConfirm] = useState(false);
 
 	const onSubmit = async (values: any, { setSubmitting }: any) => {
 		if (values.new !== values.confirm) {
@@ -41,129 +49,190 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 	};
 
 	return (
-		<Modal show={visible} onHide={remove}>
-			<Formik
-				initialValues={
-					{
-						current: "",
-						new: "",
-						confirm: "",
-					} as any
-				}
-				onSubmit={onSubmit}
-			>
-				{() => (
-					<Form>
-						<Modal.Header closeButton>
-							<Modal.Title>
-								<T id="user.change-password" />
-							</Modal.Title>
-						</Modal.Header>
-						<Modal.Body>
-							<Alert variant="danger" show={!!error} onClose={() => setError(null)} dismissible>
-								{error}
-							</Alert>
-							<div className="mb-3">
+		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<DialogContent className="max-w-md">
+				<DialogHeader>
+					<DialogTitle className="flex items-center">
+						<IconLock className="mr-2 h-5 w-5" />
+						<T id="user.change-password" />
+					</DialogTitle>
+				</DialogHeader>
+
+				<Formik
+					initialValues={
+						{
+							current: "",
+							new: "",
+							confirm: "",
+						} as any
+					}
+					onSubmit={onSubmit}
+				>
+					{({ errors, touched, setFieldValue }) => (
+						<Form className="space-y-4">
+							{error && (
+								<Alert variant="destructive" className="mb-4">
+									<AlertCircle className="h-4 w-4" />
+									<AlertTitle>Error</AlertTitle>
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
+							)}
+
+							<div className="space-y-2">
+								<Label htmlFor="current">
+									<T id="user.current-password" />
+								</Label>
 								<Field name="current">
-									{({ field, form }: any) => (
-										<div className="form-floating mb-3">
-											<input
+									{({ field }: any) => (
+										<div className="relative">
+											<Input
 												id="current"
-												type="password"
+												type={showCurrent ? "text" : "password"}
 												autoComplete="current-password"
 												required
-												className={`form-control ${form.errors.current && form.touched.current ? "is-invalid" : ""}`}
 												placeholder={intl.formatMessage({
 													id: "user.current-password",
 												})}
+												className={
+													errors.current && touched.current
+														? "border-destructive pr-10"
+														: "pr-10"
+												}
 												{...field}
 											/>
-											<label htmlFor="current">
-												<T id="user.current-password" />
-											</label>
-											{form.errors.name ? (
-												<div className="invalid-feedback">
-													{form.errors.current && form.touched.current
-														? form.errors.current
-														: null}
-												</div>
-											) : null}
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+												onClick={() => setShowCurrent(!showCurrent)}
+												tabIndex={-1}
+											>
+												{showCurrent ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+											</Button>
 										</div>
 									)}
 								</Field>
+								{errors.current && touched.current && (
+									<p className="text-sm font-medium text-destructive">{errors.current as string}</p>
+								)}
 							</div>
-							<div className="mb-3">
+
+							<div className="space-y-2">
+								<Label htmlFor="new">
+									<T id="user.new-password" />
+								</Label>
 								<Field name="new" validate={validateString(8, 100)}>
-									{({ field, form }: any) => (
-										<div className="form-floating mb-3">
-											<input
-												id="new"
-												type="password"
-												autoComplete="new-password"
-												required
-												className={`form-control ${form.errors.new && form.touched.new ? "is-invalid" : ""}`}
-												placeholder={intl.formatMessage({ id: "user.new-password" })}
-												{...field}
-											/>
-											<label htmlFor="new">
-												<T id="user.new-password" />
-											</label>
-											{form.errors.new ? (
-												<div className="invalid-feedback">
-													{form.errors.new && form.touched.new ? form.errors.new : null}
-												</div>
-											) : null}
+									{({ field }: any) => (
+										<div className="flex gap-2">
+											<div className="relative flex-1">
+												<Input
+													id="new"
+													type={showNew ? "text" : "password"}
+													autoComplete="new-password"
+													required
+													placeholder={intl.formatMessage({ id: "user.new-password" })}
+													className={
+														errors.new && touched.new ? "border-destructive pr-10" : "pr-10"
+													}
+													{...field}
+												/>
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+													onClick={() => setShowNew(!showNew)}
+													tabIndex={-1}
+												>
+													{showNew ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+												</Button>
+											</div>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												title={intl.formatMessage({ id: "password.generate" })}
+												onClick={() => {
+													const newPass = generate({
+														length: 16,
+														numbers: true,
+														symbols: true,
+														strict: true,
+													});
+													setFieldValue(field.name, newPass);
+													setFieldValue("confirm", newPass);
+													setShowNew(true);
+													setShowConfirm(true);
+												}}
+											>
+												<IconDice size={16} />
+											</Button>
 										</div>
 									)}
 								</Field>
+								{errors.new && touched.new && (
+									<p className="text-sm font-medium text-destructive">{errors.new as string}</p>
+								)}
 							</div>
-							<div className="mb-3">
+
+							<div className="space-y-2">
+								<Label htmlFor="confirm">
+									<T id="user.confirm-password" />
+								</Label>
 								<Field name="confirm" validate={validateString(8, 100)}>
-									{({ field, form }: any) => (
-										<div className="form-floating mb-3">
-											<input
+									{({ field }: any) => (
+										<div className="relative">
+											<Input
 												id="confirm"
-												type="password"
+												type={showConfirm ? "text" : "password"}
 												autoComplete="new-password"
 												required
-												className={`form-control ${form.errors.confirm && form.touched.confirm ? "is-invalid" : ""}`}
 												placeholder={intl.formatMessage({ id: "user.confirm-password" })}
+												className={
+													errors.confirm && touched.confirm
+														? "border-destructive pr-10"
+														: "pr-10"
+												}
 												{...field}
 											/>
-											{form.errors.confirm ? (
-												<div className="invalid-feedback">
-													{form.errors.confirm && form.touched.confirm
-														? form.errors.confirm
-														: null}
-												</div>
-											) : null}
-											<label htmlFor="confirm">
-												<T id="user.confirm-password" />
-											</label>
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+												onClick={() => setShowConfirm(!showConfirm)}
+												tabIndex={-1}
+											>
+												{showConfirm ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+											</Button>
 										</div>
 									)}
 								</Field>
+								{errors.confirm && touched.confirm && (
+									<p className="text-sm font-medium text-destructive">{errors.confirm as string}</p>
+								)}
 							</div>
-						</Modal.Body>
-						<Modal.Footer>
-							<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-								<T id="cancel" />
-							</Button>
-							<Button
-								type="submit"
-								actionType="primary"
-								className="ms-auto"
-								data-bs-dismiss="modal"
-								isLoading={isSubmitting}
-								disabled={isSubmitting}
-							>
-								<T id="save" />
-							</Button>
-						</Modal.Footer>
-					</Form>
-				)}
-			</Formik>
-		</Modal>
+
+							<DialogFooter className="mt-6">
+								<Button variant="outline" onClick={remove} disabled={isSubmitting} type="button">
+									<T id="cancel" />
+								</Button>
+								<Button
+									type="submit"
+									variant="default"
+									disabled={isSubmitting}
+									className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
+								>
+									{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+									<T id="save" />
+								</Button>
+							</DialogFooter>
+						</Form>
+					)}
+				</Formik>
+			</DialogContent>
+		</Dialog>
 	);
 });
 

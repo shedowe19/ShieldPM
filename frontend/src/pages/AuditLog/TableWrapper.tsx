@@ -1,9 +1,12 @@
-import Alert from "react-bootstrap/Alert";
 import { LoadingPage } from "src/components";
+import { IconHistory } from "@tabler/icons-react";
 import { useAuditLogs } from "src/hooks";
 import { T } from "src/locale";
 import { showEventDetailsModal } from "src/modals";
 import Table from "./Table";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function TableWrapper() {
 	const { isFetching, isLoading, isError, error, data } = useAuditLogs(["user"]);
@@ -13,24 +16,26 @@ export default function TableWrapper() {
 	}
 
 	if (isError) {
-		return <Alert variant="danger">{error?.message || <T id="error.unknown" />}</Alert>;
+		return (
+			<Alert variant="destructive">
+				<AlertCircle className="h-4 w-4" />
+				<AlertTitle>Error</AlertTitle>
+				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
+			</Alert>
+		);
 	}
 
 	return (
-		<div className="card mt-4">
-			<div className="card-status-top bg-purple" />
-			<div className="card-table">
-				<div className="card-header">
-					<div className="row w-full">
-						<div className="col">
-							<h2 className="mt-1 mb-0">
-								<T id="auditlogs" />
-							</h2>
-						</div>
-					</div>
-				</div>
+		<Card className="mt-4 border-t-4 border-purple-500/50">
+			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+				<CardTitle className="text-2xl font-bold flex items-center gap-2">
+					<IconHistory className="h-6 w-6" />
+					<T id="auditlogs" />
+				</CardTitle>
+			</CardHeader>
+			<CardContent>
 				<Table data={data ?? []} isFetching={isFetching} onSelectItem={showEventDetailsModal} />
-			</div>
-		</div>
+			</CardContent>
+		</Card>
 	);
 }

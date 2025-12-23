@@ -1,20 +1,22 @@
-import cn from "classnames";
 import { Field, useFormikContext } from "formik";
 import { DNSProviderFields, DomainNamesField } from "src/components";
 import { T } from "src/locale";
+import { Switch } from "src/components/ui/switch";
+import { Label } from "src/components/ui/label";
 
 interface Props {
 	forHttp?: boolean; // the sslForced, http2Support, hstsEnabled, hstsSubdomains fields
 	forceDNSForNew?: boolean;
 	requireDomainNames?: boolean; // used for streams
-	color?: string;
+	color?: string; // Kept for compatibility but might need to map to Tailwind colors
 }
-export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomainNames, color = "bg-cyan" }: Props) {
+
+export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomainNames, color: _color }: Props) {
 	const { values, setFieldValue } = useFormikContext();
 	const v: any = values || {};
 
 	const newCertificate = v?.certificateId === "new";
-	const hasCertificate = newCertificate || (v?.certificateId && v?.certificateId > 0);
+	const hasCertificate = newCertificate || (v?.certificateId && v?.certificateId > 0 && v?.certificateId !== "0");
 	const { sslForced, http2Support, hstsEnabled, hstsSubdomains, meta } = v;
 	const { dnsChallenge } = meta || {};
 
@@ -22,92 +24,94 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 		setFieldValue("meta.dnsChallenge", true);
 	}
 
-	const handleToggleChange = (e: any, fieldName: string) => {
-		setFieldValue(fieldName, e.target.checked);
-		if (fieldName === "meta.dnsChallenge" && !e.target.checked) {
+	const handleToggleChange = (checked: boolean, fieldName: string) => {
+		setFieldValue(fieldName, checked);
+		if (fieldName === "meta.dnsChallenge" && !checked) {
 			setFieldValue("meta.dnsProvider", undefined);
 			setFieldValue("meta.dnsProviderCredentials", undefined);
 			setFieldValue("meta.propagationSeconds", undefined);
 		}
 	};
 
-	const toggleClasses = "form-check-input";
-	const toggleEnabled = cn(toggleClasses, color);
-
 	const getHttpOptions = () => (
-		<div>
-			<div className="row">
-				<div className="col-6">
+		<div className="space-y-4">
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
 					<Field name="sslForced">
 						{({ field }: any) => (
-							<label className="form-check form-switch mt-1">
-								<input
-									className={sslForced ? toggleEnabled : toggleClasses}
-									type="checkbox"
+							<div className="flex items-center space-x-2">
+								<Switch
+									id="sslForced"
 									checked={!!sslForced}
-									onChange={(e) => handleToggleChange(e, field.name)}
+									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={!hasCertificate}
 								/>
-								<span className="form-check-label">
+								<Label htmlFor="sslForced" className={!hasCertificate ? "text-muted-foreground" : ""}>
 									<T id="domains.force-ssl" />
-								</span>
-							</label>
+								</Label>
+							</div>
 						)}
 					</Field>
 				</div>
-				<div className="col-6">
+				<div>
 					<Field name="http2Support">
 						{({ field }: any) => (
-							<label className="form-check form-switch mt-1">
-								<input
-									className={http2Support ? toggleEnabled : toggleClasses}
-									type="checkbox"
+							<div className="flex items-center space-x-2">
+								<Switch
+									id="http2Support"
 									checked={!!http2Support}
-									onChange={(e) => handleToggleChange(e, field.name)}
+									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={!hasCertificate}
 								/>
-								<span className="form-check-label">
+								<Label
+									htmlFor="http2Support"
+									className={!hasCertificate ? "text-muted-foreground" : ""}
+								>
 									<T id="domains.http2-support" />
-								</span>
-							</label>
+								</Label>
+							</div>
 						)}
 					</Field>
 				</div>
 			</div>
-			<div className="row">
-				<div className="col-6">
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
 					<Field name="hstsEnabled">
 						{({ field }: any) => (
-							<label className="form-check form-switch mt-1">
-								<input
-									className={hstsEnabled ? toggleEnabled : toggleClasses}
-									type="checkbox"
+							<div className="flex items-center space-x-2">
+								<Switch
+									id="hstsEnabled"
 									checked={!!hstsEnabled}
-									onChange={(e) => handleToggleChange(e, field.name)}
+									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={!hasCertificate || !sslForced}
 								/>
-								<span className="form-check-label">
+								<Label
+									htmlFor="hstsEnabled"
+									className={!hasCertificate || !sslForced ? "text-muted-foreground" : ""}
+								>
 									<T id="domains.hsts-enabled" />
-								</span>
-							</label>
+								</Label>
+							</div>
 						)}
 					</Field>
 				</div>
-				<div className="col-6">
+				<div>
 					<Field name="hstsSubdomains">
 						{({ field }: any) => (
-							<label className="form-check form-switch mt-1">
-								<input
-									className={hstsSubdomains ? toggleEnabled : toggleClasses}
-									type="checkbox"
+							<div className="flex items-center space-x-2">
+								<Switch
+									id="hstsSubdomains"
 									checked={!!hstsSubdomains}
-									onChange={(e) => handleToggleChange(e, field.name)}
+									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={!hasCertificate || !hstsEnabled}
 								/>
-								<span className="form-check-label">
+								<Label
+									htmlFor="hstsSubdomains"
+									className={!hasCertificate || !hstsEnabled ? "text-muted-foreground" : ""}
+								>
 									<T id="domains.hsts-subdomains" />
-								</span>
-							</label>
+								</Label>
+							</div>
 						)}
 					</Field>
 				</div>
@@ -116,29 +120,28 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 	);
 
 	return (
-		<div>
+		<div className="space-y-4">
 			{forHttp ? getHttpOptions() : null}
 			{newCertificate ? (
-				<>
+				<div className="space-y-4">
 					<Field name="meta.dnsChallenge">
 						{({ field }: any) => (
-							<label className="form-check form-switch mt-1">
-								<input
-									className={dnsChallenge ? toggleEnabled : toggleClasses}
-									type="checkbox"
+							<div className="flex items-center space-x-2 mt-4 mb-2">
+								<Switch
+									id="dnsChallenge"
 									checked={forceDNSForNew ? true : !!dnsChallenge}
+									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={forceDNSForNew}
-									onChange={(e) => handleToggleChange(e, field.name)}
 								/>
-								<span className="form-check-label">
+								<Label htmlFor="dnsChallenge">
 									<T id="domains.use-dns" />
-								</span>
-							</label>
+								</Label>
+							</div>
 						)}
 					</Field>
 					{requireDomainNames ? <DomainNamesField isWildcardPermitted dnsProviderWildcardSupported /> : null}
 					{dnsChallenge ? <DNSProviderFields showBoundaryBox /> : null}
-				</>
+				</div>
 			) : null}
 		</div>
 	);

@@ -26,10 +26,19 @@
 	"access-list.satisfy-any": {
 		"defaultMessage": "いずれかを満たす"
 	},
+	"access-list.satisfy.none": {
+		"defaultMessage": "なし"
+	},
+	"access-list.sso": {
+		"defaultMessage": "シングルサインオン"
+	},
 	"access-list.subtitle": {
 		"defaultMessage": "{users} ユーザー, {rules} ルール - 作成日時: {date}"
 	},
 	"access-lists": {
+		"defaultMessage": "アクセスリスト"
+	},
+	"accessList": {
 		"defaultMessage": "アクセスリスト"
 	},
 	"action.add": {
@@ -65,8 +74,35 @@
 	"action.view-details": {
 		"defaultMessage": "詳細"
 	},
+	"advanced": {
+		"defaultMessage": "詳細設定"
+	},
+	"advanced-config": {
+		"defaultMessage": "詳細な構成"
+	},
+	"allowWebsocketUpgrade": {
+		"defaultMessage": "Websocketアップグレードを許可"
+	},
 	"auditlogs": {
 		"defaultMessage": "監査ログ"
+	},
+	"authType": {
+		"defaultMessage": "認証タイプ"
+	},
+	"authentikHost": {
+		"defaultMessage": "Authentikホスト"
+	},
+	"avatar": {
+		"defaultMessage": "アバター"
+	},
+	"bandwidthLimit": {
+		"defaultMessage": "帯域幅制限"
+	},
+	"blockExploits": {
+		"defaultMessage": "エクスプロイトをブロック"
+	},
+	"cachingEnabled": {
+		"defaultMessage": "キャッシュが有効"
 	},
 	"cancel": {
 		"defaultMessage": "キャンセル"
@@ -100,6 +136,9 @@
 	},
 	"certificate.renew": {
 		"defaultMessage": "証明書を更新"
+	},
+	"certificateKey": {
+		"defaultMessage": "証明書キー"
 	},
 	"certificates": {
 		"defaultMessage": "証明書"
@@ -160,6 +199,9 @@
 	},
 	"certificates.request.title": {
 		"defaultMessage": "新しい証明書を作成"
+	},
+	"clients": {
+		"defaultMessage": "クライアント"
 	},
 	"column.access": {
 		"defaultMessage": "アクセス"
@@ -230,11 +272,20 @@
 	"column.status": {
 		"defaultMessage": "ステータス"
 	},
+	"confirm": {
+		"defaultMessage": "確認"
+	},
 	"created-on": {
 		"defaultMessage": "作成日時: {date}"
 	},
+	"current": {
+		"defaultMessage": "現在"
+	},
 	"dashboard": {
 		"defaultMessage": "ダッシュボード"
+	},
+	"dashboard.status_ok": {
+		"defaultMessage": "すべて順調です！"
 	},
 	"dead-host": {
 		"defaultMessage": "404 ホスト"
@@ -245,8 +296,26 @@
 	"dead-hosts.count": {
 		"defaultMessage": "{count} 404 ホスト"
 	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "404 ホスト"
+	},
+	"default-site": {
+		"defaultMessage": "デフォルトサイト"
+	},
+	"details": {
+		"defaultMessage": "詳細"
+	},
 	"disabled": {
 		"defaultMessage": "無効化"
+	},
+	"dnsChallenge": {
+		"defaultMessage": "DNSチャレンジ"
+	},
+	"dnsProvider": {
+		"defaultMessage": "DNSプロバイダー"
+	},
+	"dnsProviderCredentials": {
+		"defaultMessage": "DNSプロバイダーの資格情報"
 	},
 	"domain-names": {
 		"defaultMessage": "ドメイン名"
@@ -263,6 +332,9 @@
 	"domain-names.wildcards-not-supported": {
 		"defaultMessage": "ワイルドカードはこのCAではサポートされていません"
 	},
+	"domainNames": {
+		"defaultMessage": "ドメイン名"
+	},
 	"domains.force-ssl": {
 		"defaultMessage": "SSLを強制"
 	},
@@ -277,6 +349,9 @@
 	},
 	"domains.use-dns": {
 		"defaultMessage": "DNSチャレンジを使用"
+	},
+	"email": {
+		"defaultMessage": "メール"
 	},
 	"email-address": {
 		"defaultMessage": "Emailアドレス"
@@ -326,11 +401,68 @@
 	"error.required": {
 		"defaultMessage": "必須項目です"
 	},
+	"error.unknown": {
+		"defaultMessage": "不明なエラー"
+	},
 	"expires.on": {
 		"defaultMessage": "有効期限: {date}"
 	},
+	"expiresOn": {
+		"defaultMessage": "期限切れ"
+	},
 	"footer.github-fork": {
 		"defaultMessage": "Fork me on Github"
+	},
+	"form.location": {
+		"defaultMessage": "場所"
+	},
+	"form.placeholder.api-key": {
+		"defaultMessage": "APIキーを入力..."
+	},
+	"form.placeholder.auth-host": {
+		"defaultMessage": "auth.example.com"
+	},
+	"form.placeholder.email": {
+		"defaultMessage": "user@example.com"
+	},
+	"form.placeholder.example-domain": {
+		"defaultMessage": "example.com"
+	},
+	"form.placeholder.forward-host-example": {
+		"defaultMessage": "192.168.1.100 または example.com"
+	},
+	"form.placeholder.port-example": {
+		"defaultMessage": "80"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = 無制限"
+	},
+	"form.select-certificate": {
+		"defaultMessage": "証明書を選択..."
+	},
+	"forwardDomainName": {
+		"defaultMessage": "転送ドメイン名"
+	},
+	"forwardHost": {
+		"defaultMessage": "転送ホスト"
+	},
+	"forwardHttpCode": {
+		"defaultMessage": "転送HTTPコード"
+	},
+	"forwardPort": {
+		"defaultMessage": "転送ポート"
+	},
+	"forwardQuery": {
+		"defaultMessage": "クエリを転送"
+	},
+	"forwardScheme": {
+		"defaultMessage": "転送スキーム"
+	},
+	"forwardingHost": {
+		"defaultMessage": "転送ホスト"
+	},
+	"forwardingPort": {
+		"defaultMessage": "転送ポート"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "一般的なエクスプロイトをブロックする"
@@ -356,8 +488,35 @@
 	"hosts": {
 		"defaultMessage": "ホスト"
 	},
+	"hstsEnabled": {
+		"defaultMessage": "HSTS有効"
+	},
+	"hstsSubdomains": {
+		"defaultMessage": "HSTSサブドメイン"
+	},
 	"http-only": {
 		"defaultMessage": "HTTP Only"
+	},
+	"http2Support": {
+		"defaultMessage": "HTTP/2サポート"
+	},
+	"id": {
+		"defaultMessage": "ID"
+	},
+	"incomingPort": {
+		"defaultMessage": "受信ポート"
+	},
+	"intermediateCertificate": {
+		"defaultMessage": "中間証明書"
+	},
+	"isAdmin": {
+		"defaultMessage": "管理者"
+	},
+	"isDisabled": {
+		"defaultMessage": "無効"
+	},
+	"items": {
+		"defaultMessage": "アイテム"
 	},
 	"lets-encrypt": {
 		"defaultMessage": "Let's Encrypt"
@@ -374,11 +533,26 @@
 	"login.title": {
 		"defaultMessage": "アカウントにログイン"
 	},
+	"name": {
+		"defaultMessage": "名前"
+	},
+	"navbar-menu": {
+		"defaultMessage": "メニュー"
+	},
+	"new": {
+		"defaultMessage": "新規"
+	},
 	"nginx-config.label": {
 		"defaultMessage": "カスタムNginx設定"
 	},
 	"nginx-config.placeholder": {
 		"defaultMessage": "# Enter your custom Nginx configuration here at your own risk!"
+	},
+	"niceName": {
+		"defaultMessage": "表示名"
+	},
+	"nickname": {
+		"defaultMessage": "ニックネーム"
 	},
 	"no-permission-error": {
 		"defaultMessage": "これを表示する権限がありません"
@@ -449,14 +623,32 @@
 	"object.event.updated": {
 		"defaultMessage": "{object}を更新済み"
 	},
+	"objectType": {
+		"defaultMessage": "オブジェクトタイプ"
+	},
 	"offline": {
 		"defaultMessage": "Offline"
+	},
+	"oidcClientId": {
+		"defaultMessage": "OIDCクライアントID"
+	},
+	"oidcClientSecret": {
+		"defaultMessage": "OIDCクライアントシークレット"
+	},
+	"oidcDiscoveryUrl": {
+		"defaultMessage": "OIDCディスカバリーURL"
 	},
 	"online": {
 		"defaultMessage": "Online"
 	},
 	"options": {
 		"defaultMessage": "Options"
+	},
+	"owner": {
+		"defaultMessage": "所有者"
+	},
+	"passAuth": {
+		"defaultMessage": "認証を渡す"
 	},
 	"password": {
 		"defaultMessage": "パスワード"
@@ -488,11 +680,26 @@
 	"permissions.visibility.user": {
 		"defaultMessage": "作成したもののみ"
 	},
+	"preservePath": {
+		"defaultMessage": "パスを保持"
+	},
+	"propagationSeconds": {
+		"defaultMessage": "伝播秒"
+	},
+	"provider": {
+		"defaultMessage": "プロバイダー"
+	},
 	"proxy-host": {
 		"defaultMessage": "プロキシホスト"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "帯域幅制限（例：100k、1m）"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "転送ホスト名/IP"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "クエリを転送（非表示）"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "プロキシホスト"
@@ -500,8 +707,20 @@
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} プロキシホスト"
 	},
+	"proxyHostCount": {
+		"defaultMessage": "プロキシホスト数"
+	},
+	"proxyHosts": {
+		"defaultMessage": "プロキシホスト"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "プロキシホスト"
+	},
 	"public": {
 		"defaultMessage": "Public"
+	},
+	"redirect": {
+		"defaultMessage": "リダイレクト"
 	},
 	"redirection-host": {
 		"defaultMessage": "リダイレクトホスト"
@@ -515,14 +734,26 @@
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} リダイレクトホスト"
 	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "リダイレクトホスト"
+	},
 	"role.admin": {
 		"defaultMessage": "管理者"
 	},
 	"role.standard-user": {
 		"defaultMessage": "一般ユーザー"
 	},
+	"roles": {
+		"defaultMessage": "役割"
+	},
+	"satisfyAny": {
+		"defaultMessage": "いずれかを満たす"
+	},
 	"save": {
 		"defaultMessage": "保存"
+	},
+	"search.placeholder": {
+		"defaultMessage": "検索..."
 	},
 	"setting": {
 		"defaultMessage": "設定"
@@ -563,8 +794,20 @@
 	"sign-in": {
 		"defaultMessage": "サインイン"
 	},
+	"sr.switch-language": {
+		"defaultMessage": "言語を切り替え"
+	},
+	"sr.toggle-navigation": {
+		"defaultMessage": "ナビゲーションを切り替え"
+	},
+	"sr.toggle-theme": {
+		"defaultMessage": "テーマを切り替え"
+	},
 	"ssl-certificate": {
 		"defaultMessage": "SSL証明書"
+	},
+	"sslForced": {
+		"defaultMessage": "SSL強制"
 	},
 	"stream": {
 		"defaultMessage": "ストリーム"
@@ -581,17 +824,35 @@
 	"streams.count": {
 		"defaultMessage": "{count} ストリーム"
 	},
+	"streams.count_label": {
+		"defaultMessage": "ストリーム"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
 	"streams.udp": {
 		"defaultMessage": "UDP"
 	},
+	"tcpForwarding": {
+		"defaultMessage": "TCP転送"
+	},
 	"test": {
 		"defaultMessage": "テスト"
 	},
+	"theme.dark": {
+		"defaultMessage": "ダーク"
+	},
+	"theme.light": {
+		"defaultMessage": "ライト"
+	},
+	"udpForwarding": {
+		"defaultMessage": "UDP転送"
+	},
 	"user": {
 		"defaultMessage": "ユーザー"
+	},
+	"user.avatar": {
+		"defaultMessage": "アバター"
 	},
 	"user.change-password": {
 		"defaultMessage": "変更するパスワード"
@@ -619,6 +880,12 @@
 	},
 	"user.nickname": {
 		"defaultMessage": "ニックネーム"
+	},
+	"user.permissions.full-system-access": {
+		"defaultMessage": "完全なシステムアクセス"
+	},
+	"user.permissions.prevent-login": {
+		"defaultMessage": "ログインを防止"
 	},
 	"user.set-password": {
 		"defaultMessage": "パスワードを設定"

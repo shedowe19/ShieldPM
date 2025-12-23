@@ -2,6 +2,14 @@ import { flexRender } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "framer-motion";
 import type { TableLayoutProps } from "src/components";
 import { EmptyRow } from "./EmptyRow";
+import { TableBody as ShadcnTableBody, TableRow, TableCell } from "src/components/ui/table";
+import React from "react";
+
+// Helper to use forwardRef with motion
+const TableRowWithRef = React.forwardRef<HTMLTableRowElement, any>((props, ref) => <TableRow ref={ref} {...props} />);
+TableRowWithRef.displayName = "TableRowWithRef";
+
+const MotionTableRow = motion(TableRowWithRef);
 
 function TableBody<T>(props: TableLayoutProps<T>) {
 	const { tableInstance, extraStyles, emptyState } = props;
@@ -9,18 +17,31 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 
 	if (rows.length === 0) {
 		return (
-			<tbody className="table-tbody">
-				{emptyState ? emptyState : <EmptyRow tableInstance={tableInstance} />}
-			</tbody>
+			<ShadcnTableBody>
+				{/* EmptyState needs to be wrapped in a tr/td or handle it differently inside ShadcnTableBody.
+				    Usually ShadcnTableBody expects TableRow.
+				    If emptyState provides a full tbody content, it might break.
+				    Let's inspect EmptyRow or assume we need to wrap it.
+				*/}
+				{emptyState ? (
+					<TableRow>
+						<TableCell colSpan={tableInstance.getVisibleFlatColumns().length} className="h-24 text-center">
+							{emptyState}
+						</TableCell>
+					</TableRow>
+				) : (
+					<EmptyRow tableInstance={tableInstance} />
+				)}
+			</ShadcnTableBody>
 		);
 	}
 
 	return (
-		<tbody className="table-tbody">
+		<ShadcnTableBody>
 			<AnimatePresence mode="popLayout" initial={false}>
 				{rows.map((row) => {
 					return (
-						<motion.tr
+						<MotionTableRow
 							key={row.id}
 							{...extraStyles?.row(row.original)}
 							initial={{ opacity: 0, x: -20 }}
@@ -32,16 +53,16 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 							{row.getVisibleCells().map((cell) => {
 								const { className } = (cell.column.columnDef.meta as any) ?? {};
 								return (
-									<td key={cell.id} className={className}>
+									<TableCell key={cell.id} className={className}>
 										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</td>
+									</TableCell>
 								);
 							})}
-						</motion.tr>
+						</MotionTableRow>
 					);
 				})}
 			</AnimatePresence>
-		</tbody>
+		</ShadcnTableBody>
 	);
 }
 

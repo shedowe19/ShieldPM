@@ -154,7 +154,7 @@ function Router() {
 		<BrowserRouter>
 			<Page>
 				<Sidebar />
-				<div className="page-wrapper">
+				<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
 					<SiteHeader />
 					<SiteContainer>
 						<Suspense fallback={<LoadingPage noLogo />}>

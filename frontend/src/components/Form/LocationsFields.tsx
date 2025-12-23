@@ -1,16 +1,20 @@
-import { IconSettings } from "@tabler/icons-react";
+import { IconSettings, IconTrash, IconPlus } from "@tabler/icons-react";
 import CodeEditor from "@uiw/react-textarea-code-editor";
-import cn from "classnames";
 import { useFormikContext } from "formik";
 import { useState } from "react";
 import type { ProxyLocation } from "src/api/backend";
 import { intl, T } from "src/locale";
-import styles from "./LocationsFields.module.css";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent } from "src/components/ui/card";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 
 interface Props {
 	initialValues: ProxyLocation[];
 	name?: string;
 }
+
 export function LocationsFields({ initialValues, name = "locations" }: Props) {
 	const [values, setValues] = useState<ProxyLocation[]>(initialValues || []);
 	const { setFieldValue } = useFormikContext();
@@ -30,7 +34,9 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 	};
 
 	const handleAdd = () => {
-		setValues([...values, blankItem]);
+		const newValues = [...values, blankItem];
+		setValues(newValues);
+		setFieldValue(name, newValues);
 	};
 
 	const handleRemove = (idx: number) => {
@@ -46,158 +52,156 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 	};
 
 	const setFormField = (newValues: ProxyLocation[]) => {
-		const filtered = newValues.filter((v: ProxyLocation) => v?.path?.trim() !== "");
+		// Filter out empty paths when saving
+		const filtered = newValues; // .filter((v: ProxyLocation) => v?.path?.trim() !== "");
+		// Actually formik should hold the current values even if empty, so the user can type.
+		// We should probably just update formik state.
 		setFieldValue(name, filtered);
 	};
 
 	if (values.length === 0) {
 		return (
-			<div className="text-center">
-				<button type="button" className="btn my-3" onClick={handleAdd}>
+			<div className="text-center py-4">
+				<Button type="button" onClick={handleAdd} variant="secondary">
+					<IconPlus className="mr-2 h-4 w-4" />
 					<T id="action.add-location" />
-				</button>
+				</Button>
 			</div>
 		);
 	}
 
 	return (
-		<>
+		<div className="space-y-4">
 			{values.map((item: ProxyLocation, idx: number) => (
-				<div key={idx} className={cn("card", "card-active", "mb-3", styles.locationCard)}>
-					<div className="card-body">
-						<div className="row">
-							<div className="col-md-10">
-								<div className="input-group mb-3">
-									<span className="input-group-text">Location</span>
-									<input
-										type="text"
-										className="form-control"
-										placeholder="/path"
-										autoComplete="off"
-										value={item.path}
-										onChange={(e) => handleChange(idx, "path", e.target.value)}
-									/>
-								</div>
+				<Card key={idx}>
+					<CardContent className="p-4 space-y-4">
+						<div className="flex items-start gap-4">
+							<div className="flex-1">
+								<Label htmlFor={`path-${idx}`}>
+									<T id="form.location" />
+								</Label>
+								<Input
+									id={`path-${idx}`}
+									placeholder="/path"
+									autoComplete="off"
+									value={item.path}
+									onChange={(e) => handleChange(idx, "path", e.target.value)}
+								/>
 							</div>
-							<div className="col-md-2 text-end">
-								<button
+							<div className="pt-6">
+								<Button
 									type="button"
-									className="btn p-0"
+									variant="ghost"
+									size="icon"
 									title="Advanced"
 									onClick={() => toggleAdvVisible(idx)}
+									className={advVisible.includes(idx) ? "bg-muted" : ""}
 								>
-									<IconSettings size={20} />
-								</button>
+									<IconSettings className="h-4 w-4" />
+								</Button>
 							</div>
 						</div>
-						<div className="row">
-							<div className="col-md-3">
-								<div className="mb-3">
-									<label className="form-label" htmlFor="forwardScheme">
-										<T id="host.forward-scheme" />
-									</label>
-									<select
-										id="forwardScheme"
-										className="form-control"
-										value={item.forwardScheme}
-										onChange={(e) => handleChange(idx, "forwardScheme", e.target.value)}
-									>
-										<option value="http">http</option>
-										<option value="https">https</option>
-										<option value="path">path</option>
-										<option value="grpc">grpc</option>
-										<option value="grpcs">grpcs</option>
-									</select>
-								</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+							<div className="col-span-1">
+								<Label htmlFor={`scheme-${idx}`}>
+									<T id="host.forward-scheme" />
+								</Label>
+								<Select
+									value={item.forwardScheme}
+									onValueChange={(val) => handleChange(idx, "forwardScheme", val)}
+								>
+									<SelectTrigger id={`scheme-${idx}`}>
+										<SelectValue placeholder="http" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="http">http</SelectItem>
+										<SelectItem value="https">https</SelectItem>
+										<SelectItem value="path">path</SelectItem>
+										<SelectItem value="grpc">grpc</SelectItem>
+										<SelectItem value="grpcs">grpcs</SelectItem>
+									</SelectContent>
+								</Select>
 							</div>
-							<div className="col-md-6">
-								<div className="mb-3">
-									<label className="form-label" htmlFor="forwardHost">
-										<T id="proxy-host.forward-host" />
-									</label>
-									<input
-										id="forwardHost"
-										type="text"
-										className="form-control"
-										required
-										placeholder="eg: 10.0.0.1/path/"
-										value={item.forwardHost}
-										onChange={(e) => handleChange(idx, "forwardHost", e.target.value)}
-									/>
-								</div>
+							<div className="col-span-2">
+								<Label htmlFor={`host-${idx}`}>
+									<T id="proxy-host.forward-host" />
+								</Label>
+								<Input
+									id={`host-${idx}`}
+									required
+									placeholder={intl.formatMessage({ id: "form.placeholder.forward-host-example" })}
+									value={item.forwardHost}
+									onChange={(e) => handleChange(idx, "forwardHost", e.target.value)}
+								/>
 							</div>
-							<div className="col-md-3">
-								<div className="mb-3">
-									<label className="form-label" htmlFor="forwardPort">
-										<T id="host.forward-port" />
-									</label>
-									<input
-										id="forwardPort"
-										type="number"
-										min={1}
-										max={65535}
-										className="form-control"
-										placeholder="eg: 8081"
-										value={item.forwardPort}
-										onChange={(e) => handleChange(idx, "forwardPort", e.target.value)}
-									/>
-								</div>
+							<div className="col-span-1">
+								<Label htmlFor={`port-${idx}`}>
+									<T id="host.forward-port" />
+								</Label>
+								<Input
+									id={`port-${idx}`}
+									type="number"
+									min={1}
+									max={65535}
+									placeholder={intl.formatMessage({ id: "form.placeholder.port-example" })}
+									value={item.forwardPort}
+									onChange={(e) => handleChange(idx, "forwardPort", e.target.value)}
+								/>
 							</div>
 						</div>
+
 						{advVisible.includes(idx) && (
-							<>
-								<div className="mb-3">
-									<label className="form-label" htmlFor="forwardQuery">
-										Forward Query (Hidden)
-									</label>
-									<input
-										id="forwardQuery"
-										type="text"
-										className="form-control"
-										placeholder="e.g. api_key=123"
+							<div className="space-y-4 pt-2 border-t mt-2">
+								<div>
+									<Label htmlFor={`query-${idx}`}>
+										<T id="proxy-host.forward-query" />
+									</Label>
+									<Input
+										id={`query-${idx}`}
+										placeholder={intl.formatMessage({ id: "form.placeholder.api-key" })}
 										value={item.forwardQuery}
 										onChange={(e) => handleChange(idx, "forwardQuery", e.target.value)}
 									/>
 								</div>
-								<div className="">
-									<CodeEditor
-										language="nginx"
-										placeholder={intl.formatMessage({ id: "nginx-config.placeholder" })}
-										padding={15}
-										data-color-mode="dark"
-										minHeight={170}
-										indentWidth={2}
-										value={item.advancedConfig}
-										onChange={(e) => handleChange(idx, "advancedConfig", e.target.value)}
-										style={{
-											fontFamily:
-												"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-											borderRadius: "0.3rem",
-											minHeight: "170px",
-										}}
-									/>
+								<div>
+									<Label>
+										<T id="advanced-config" />
+									</Label>
+									<div className="rounded-md border overflow-hidden">
+										<CodeEditor
+											language="nginx"
+											placeholder={intl.formatMessage({ id: "nginx-config.placeholder" })}
+											padding={15}
+											data-color-mode="dark"
+											minHeight={170}
+											value={item.advancedConfig}
+											onChange={(e) => handleChange(idx, "advancedConfig", e.target.value)}
+											style={{
+												fontFamily:
+													"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+												fontSize: 12,
+												backgroundColor: "#1e1e1e",
+											}}
+										/>
+									</div>
 								</div>
-							</>
+							</div>
 						)}
-						<div className="mt-1">
-							<a
-								href="#"
-								onClick={(e) => {
-									e.preventDefault();
-									handleRemove(idx);
-								}}
-							>
+
+						<div className="flex justify-end">
+							<Button type="button" variant="destructive" size="sm" onClick={() => handleRemove(idx)}>
+								<IconTrash className="mr-2 h-4 w-4" />
 								<T id="action.delete" />
-							</a>
+							</Button>
 						</div>
-					</div>
-				</div>
+					</CardContent>
+				</Card>
 			))}
-			<div>
-				<button type="button" className="btn btn-sm" onClick={handleAdd}>
-					<T id="action.add-location" />
-				</button>
-			</div>
-		</>
+			<Button type="button" onClick={handleAdd} variant="secondary">
+				<IconPlus className="mr-2 h-4 w-4" />
+				<T id="action.add-location" />
+			</Button>
+		</div>
 	);
 }

@@ -1,6 +1,6 @@
-import cn from "classnames";
 import type { ReactNode } from "react";
 import { formatDateTime, T } from "src/locale";
+import { Badge } from "src/components/ui/badge";
 
 interface Props {
 	domains: string[];
@@ -10,7 +10,7 @@ interface Props {
 	color?: string;
 }
 
-const DomainLink = ({ domain, color }: { domain?: string; color?: string }) => {
+const DomainLink = ({ domain }: { domain?: string; color?: string }) => {
 	if (!domain) return null;
 
 	const isWildcard = domain.includes("*");
@@ -19,6 +19,12 @@ const DomainLink = ({ domain, color }: { domain?: string; color?: string }) => {
 		onClickLink = (e: React.MouseEvent) => e.preventDefault();
 	}
 
+	// Simple color mapping or default to outline/secondary
+	// Original colors: lime (green), orange, etc.
+	// Since we don't have all mappings, we used generic badges or try to match if possible.
+	// For now, let's use outline for domains, and maybe specific classes for known colors if critical.
+	// But shadcn Badge variant="outline" is safe.
+
 	return (
 		<a
 			key={domain}
@@ -26,9 +32,11 @@ const DomainLink = ({ domain, color }: { domain?: string; color?: string }) => {
 			target="_blank"
 			rel="noreferrer"
 			onClick={onClickLink}
-			className={cn("badge", color ? `bg-${color}-lt` : null, "domain-name", "me-2")}
+			className="no-underline"
 		>
-			{domain}
+			<Badge variant="outline" className="mr-2 font-mono hover:bg-accent">
+				{domain}
+			</Badge>
 		</a>
 	);
 };
@@ -37,16 +45,16 @@ export function DomainsFormatter({ domains, createdOn, niceName, provider, color
 	const elms: ReactNode[] = [];
 	if ((!domains || domains.length === 0) && !niceName) {
 		elms.push(
-			<span key="nice-name" className="badge bg-danger-lt me-2">
+			<Badge key="nice-name" variant="destructive" className="mr-2">
 				Unknown
-			</span>,
+			</Badge>,
 		);
 	}
 	if (!domains || (niceName && provider !== "letsencrypt")) {
 		elms.push(
-			<span key="nice-name" className="badge bg-info-lt me-2">
+			<Badge key="nice-name" variant="secondary" className="mr-2 text-muted-foreground">
 				{niceName}
-			</span>,
+			</Badge>,
 		);
 	}
 
@@ -55,10 +63,10 @@ export function DomainsFormatter({ domains, createdOn, niceName, provider, color
 	}
 
 	return (
-		<div className="flex-fill">
-			<div className="font-weight-medium">{...elms}</div>
+		<div className="flex-1">
+			<div className="font-medium">{...elms}</div>
 			{createdOn ? (
-				<div className="text-secondary mt-1">
+				<div className="text-muted-foreground text-sm mt-1">
 					<T id="created-on" data={{ date: formatDateTime(createdOn) }} />
 				</div>
 			) : null}

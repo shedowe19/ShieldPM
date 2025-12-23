@@ -1,11 +1,15 @@
+import { IconWorld } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Form, Formik } from "formik";
+import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
 import { createCertificate } from "src/api/backend";
-import { Button, DNSProviderFields, DomainNamesField } from "src/components";
+import { DNSProviderFields, DomainNamesField } from "src/components";
+import { Button } from "src/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Alert, AlertTitle, AlertDescription } from "src/components/ui/alert";
+import { Card, CardContent } from "src/components/ui/card";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 
@@ -36,56 +40,63 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 	};
 
 	return (
-		<Modal show={visible} onHide={remove}>
-			<Formik
-				initialValues={
-					{
-						domainNames: [],
-						provider: "letsencrypt",
-						meta: {
-							dnsChallenge: true,
-						},
-					} as any
-				}
-				onSubmit={onSubmit}
-			>
-				{() => (
-					<Form>
-						<Modal.Header closeButton>
-							<Modal.Title>
-								<T id="object.add" tData={{ object: "lets-encrypt-via-dns" }} />
-							</Modal.Title>
-						</Modal.Header>
-						<Modal.Body className="p-0">
-							<Alert variant="danger" show={!!errorMsg} onClose={() => setErrorMsg(null)} dismissible>
-								{errorMsg}
-							</Alert>
-							<div className="card m-0 border-0">
-								<div className="card-body">
-									<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
-									<DNSProviderFields />
-								</div>
+		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<DialogContent className="sm:max-w-lg">
+				<Formik
+					initialValues={
+						{
+							domainNames: [],
+							provider: "letsencrypt",
+							meta: {
+								dnsChallenge: true,
+							},
+						} as any
+					}
+					onSubmit={onSubmit}
+				>
+					{({ handleSubmit }) => (
+						<Form onSubmit={handleSubmit}>
+							<DialogHeader>
+								<DialogTitle className="flex items-center gap-2">
+									<IconWorld className="h-5 w-5" />
+									<T id="object.add" tData={{ object: "lets-encrypt-via-dns" }} />
+								</DialogTitle>
+							</DialogHeader>
+
+							<div className="py-4 space-y-4">
+								{errorMsg && (
+									<Alert variant="destructive">
+										<AlertTitle>Error</AlertTitle>
+										<AlertDescription>{errorMsg}</AlertDescription>
+									</Alert>
+								)}
+
+								<Card className="border-dashed">
+									<CardContent className="p-4 space-y-4">
+										<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
+										<DNSProviderFields />
+									</CardContent>
+								</Card>
 							</div>
-						</Modal.Body>
-						<Modal.Footer>
-							<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-								<T id="cancel" />
-							</Button>
-							<Button
-								type="submit"
-								actionType="primary"
-								className="ms-auto bg-pink"
-								data-bs-dismiss="modal"
-								isLoading={isSubmitting}
-								disabled={isSubmitting}
-							>
-								<T id="save" />
-							</Button>
-						</Modal.Footer>
-					</Form>
-				)}
-			</Formik>
-		</Modal>
+
+							<DialogFooter>
+								<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
+									<T id="cancel" />
+								</Button>
+								<Button
+									type="submit"
+									disabled={isSubmitting}
+									className="bg-pink-600/90 hover:bg-pink-600 text-white shadow-sm"
+								>
+									{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+									<T id="save" />
+								</Button>
+							</DialogFooter>
+						</Form>
+					)}
+				</Formik>
+			</DialogContent>
+		</Dialog>
 	);
 });
 

@@ -1,9 +1,16 @@
+import { IconArrowsRightLeft } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
+import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
-import { Button, Loading, SSLCertificateField, SSLOptionsFields } from "src/components";
+import { Button } from "src/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Switch } from "src/components/ui/switch";
+import { Loading, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { useSetStream, useStream } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
@@ -21,6 +28,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { mutate: setStream } = useSetStream();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [activeTab, setActiveTab] = useState("details");
 
 	const onSubmit = async (values: any, { setSubmitting }: any) => {
 		if (isSubmitting) return;
@@ -46,276 +54,229 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	};
 
 	return (
-		<Modal show={visible} onHide={remove}>
-			{!isLoading && error && (
-				<Alert variant="danger" className="m-3">
-					{error?.message || "Unknown error"}
-				</Alert>
-			)}
-			{isLoading && <Loading noLogo />}
-			{!isLoading && data && (
-				<Formik
-					initialValues={
-						{
-							incomingPort: data?.incomingPort,
-							forwardingHost: data?.forwardingHost,
-							forwardingPort: data?.forwardingPort,
-							tcpForwarding: data?.tcpForwarding,
-							udpForwarding: data?.udpForwarding,
-							certificateId: data?.certificateId,
-							meta: data?.meta || {},
-						} as any
-					}
-					onSubmit={onSubmit}
-				>
-					{({ setFieldValue }: any) => (
-						<Form>
-							<Modal.Header closeButton>
-								<Modal.Title>
-									<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "stream" }} />
-								</Modal.Title>
-							</Modal.Header>
-							<Modal.Body className="p-0">
-								<Alert variant="danger" show={!!errorMsg} onClose={() => setErrorMsg(null)} dismissible>
-									{errorMsg}
-								</Alert>
+		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+				{isLoading && <Loading noLogo />}
 
-								<div className="card m-0 border-0">
-									<div className="card-header">
-										<ul className="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
-											<li className="nav-item" role="presentation">
-												<a
-													href="#tab-details"
-													className="nav-link active"
-													data-bs-toggle="tab"
-													aria-selected="true"
-													role="tab"
-												>
-													<T id="column.details" />
-												</a>
-											</li>
-											<li className="nav-item" role="presentation">
-												<a
-													href="#tab-ssl"
-													className="nav-link"
-													data-bs-toggle="tab"
-													aria-selected="false"
-													tabIndex={-1}
-													role="tab"
-												>
-													<T id="column.ssl" />
-												</a>
-											</li>
-										</ul>
-									</div>
-									<div className="card-body">
-										<div className="tab-content">
-											<div className="tab-pane active show" id="tab-details" role="tabpanel">
+				{!isLoading && error && (
+					<Alert variant="destructive" className="mb-4">
+						<AlertTitle>Error</AlertTitle>
+						<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+					</Alert>
+				)}
+
+				{!isLoading && data && (
+					<Formik
+						initialValues={
+							{
+								incomingPort: data?.incomingPort,
+								forwardingHost: data?.forwardingHost,
+								forwardingPort: data?.forwardingPort,
+								tcpForwarding: data?.tcpForwarding,
+								udpForwarding: data?.udpForwarding,
+								certificateId: data?.certificateId,
+								meta: data?.meta || {},
+							} as any
+						}
+						onSubmit={onSubmit}
+					>
+						{({ setFieldValue, errors, touched, handleSubmit }) => (
+							<Form onSubmit={handleSubmit} className="space-y-4">
+								<DialogHeader>
+									<DialogTitle className="flex items-center gap-2">
+										<IconArrowsRightLeft className="h-5 w-5" />
+										<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "stream" }} />
+									</DialogTitle>
+								</DialogHeader>
+
+								{errorMsg && (
+									<Alert variant="destructive">
+										<AlertTitle>Error</AlertTitle>
+										<AlertDescription>{errorMsg}</AlertDescription>
+									</Alert>
+								)}
+
+								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+									<TabsList className="grid w-full grid-cols-2">
+										<TabsTrigger value="details">
+											<T id="column.details" />
+										</TabsTrigger>
+										<TabsTrigger value="ssl">
+											<T id="column.ssl" />
+										</TabsTrigger>
+									</TabsList>
+
+									<div className="mt-4 p-1">
+										<TabsContent value="details" className="space-y-4">
+											<div className="space-y-2">
+												<Label htmlFor="incomingPort">
+													<T id="stream.incoming-port" />
+												</Label>
 												<Field name="incomingPort" validate={validateString(1, 11)}>
-													{({ field, form }: any) => (
-														<div className="mb-3">
-															<label className="form-label" htmlFor="incomingPort">
-																<T id="stream.incoming-port" />
-															</label>
-															<input
-																id="incomingPort"
-																type="text"
-																minlength={1}
-																maxlength={11}
-																className={`form-control ${form.errors.incomingPort && form.touched.incomingPort ? "is-invalid" : ""}`}
-																required
-																placeholder="eg: 8080"
-																{...field}
-															/>
-															{form.errors.incomingPort ? (
-																<div className="invalid-feedback">
-																	{form.errors.incomingPort &&
-																	form.touched.incomingPort
-																		? form.errors.incomingPort
-																		: null}
-																</div>
-															) : null}
-														</div>
+													{({ field }: any) => (
+														<Input
+															{...field}
+															id="incomingPort"
+															required
+															placeholder="eg: 8080"
+															className={
+																errors.incomingPort && touched.incomingPort
+																	? "border-destructive"
+																	: ""
+															}
+														/>
 													)}
 												</Field>
-												<div className="row">
-													<div className="col-md-8">
-														<Field name="forwardingHost" validate={validateString(1, 255)}>
-															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label
-																		className="form-label"
-																		htmlFor="forwardingHost"
-																	>
-																		<T id="stream.forward-host" />
-																	</label>
-																	<input
-																		id="forwardingHost"
-																		type="text"
-																		className={`form-control ${form.errors.forwardingHost && form.touched.forwardingHost ? "is-invalid" : ""}`}
-																		required
-																		placeholder={intl.formatMessage({
-																			id: "stream.forward-host.placeholder",
-																		})}
-																		{...field}
-																	/>
-																	{form.errors.forwardingHost ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardingHost &&
-																			form.touched.forwardingHost
-																				? form.errors.forwardingHost
-																				: null}
-																		</div>
-																	) : null}
-																</div>
+												{errors.incomingPort && touched.incomingPort && (
+													<div className="text-sm text-destructive">
+														{String(errors.incomingPort)}
+													</div>
+												)}
+											</div>
+
+											<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+												<div className="md:col-span-8 space-y-2">
+													<Label htmlFor="forwardingHost">
+														<T id="stream.forward-host" />
+													</Label>
+													<Field name="forwardingHost" validate={validateString(1, 255)}>
+														{({ field }: any) => (
+															<Input
+																{...field}
+																id="forwardingHost"
+																required
+																placeholder={intl.formatMessage({
+																	id: "stream.forward-host.placeholder",
+																})}
+																className={
+																	errors.forwardingHost && touched.forwardingHost
+																		? "border-destructive"
+																		: ""
+																}
+															/>
+														)}
+													</Field>
+													{errors.forwardingHost && touched.forwardingHost && (
+														<div className="text-sm text-destructive">
+															{String(errors.forwardingHost)}
+														</div>
+													)}
+												</div>
+												<div className="md:col-span-4 space-y-2">
+													<Label htmlFor="forwardingPort">
+														<T id="host.forward-port" />
+													</Label>
+													<Field name="forwardingPort" validate={validateString(0, 12)}>
+														{({ field }: any) => (
+															<Input
+																{...field}
+																id="forwardingPort"
+																placeholder="eg: 8081"
+																className={
+																	errors.forwardingPort && touched.forwardingPort
+																		? "border-destructive"
+																		: ""
+																}
+															/>
+														)}
+													</Field>
+													{errors.forwardingPort && touched.forwardingPort && (
+														<div className="text-sm text-destructive">
+															{String(errors.forwardingPort)}
+														</div>
+													)}
+												</div>
+											</div>
+
+											<div className="my-4">
+												<h3 className="text-lg font-medium py-2">
+													<T id="host.flags.protocols" />
+												</h3>
+												<div className="space-y-4">
+													<div className="flex items-center justify-between">
+														<Label
+															htmlFor="tcpForwarding"
+															className="cursor-pointer font-normal"
+														>
+															<T id="streams.tcp" />
+														</Label>
+														<Field name="tcpForwarding" type="checkbox">
+															{({ field }: any) => (
+																<Switch
+																	id="tcpForwarding"
+																	checked={field.value}
+																	onCheckedChange={(checked) => {
+																		setFieldValue(field.name, checked);
+																		if (!checked) {
+																			setFieldValue("udpForwarding", true);
+																		}
+																	}}
+																/>
 															)}
 														</Field>
 													</div>
-													<div className="col-md-4">
-														<Field name="forwardingPort" validate={validateString(0, 12)}>
-															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label
-																		className="form-label"
-																		htmlFor="forwardingPort"
-																	>
-																		<T id="host.forward-port" />
-																	</label>
-																	<input
-																		id="forwardingPort"
-																		type="text"
-																		maxlength={12}
-																		className={`form-control ${form.errors.forwardingPort && form.touched.forwardingPort ? "is-invalid" : ""}`}
-																		placeholder="eg: 8081"
-																		{...field}
-																	/>
-																	{form.errors.forwardingPort ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardingPort &&
-																			form.touched.forwardingPort
-																				? form.errors.forwardingPort
-																				: null}
-																		</div>
-																	) : null}
-																</div>
+													<div className="flex items-center justify-between">
+														<Label
+															htmlFor="udpForwarding"
+															className="cursor-pointer font-normal"
+														>
+															<T id="streams.udp" />
+														</Label>
+														<Field name="udpForwarding" type="checkbox">
+															{({ field }: any) => (
+																<Switch
+																	id="udpForwarding"
+																	checked={field.value}
+																	onCheckedChange={(checked) => {
+																		setFieldValue(field.name, checked);
+																		if (!checked) {
+																			setFieldValue("tcpForwarding", true);
+																		}
+																	}}
+																/>
 															)}
 														</Field>
 													</div>
 												</div>
-												<div className="my-3">
-													<h3 className="py-2">
-														<T id="host.flags.protocols" />
-													</h3>
-													<div className="divide-y">
-														<div>
-															<label className="row" htmlFor="tcpForwarding">
-																<span className="col">
-																	<T id="streams.tcp" />
-																</span>
-																<span className="col-auto">
-																	<Field name="tcpForwarding" type="checkbox">
-																		{({ field }: any) => (
-																			<label className="form-check form-check-single form-switch">
-																				<input
-																					id="tcpForwarding"
-																					className="form-check-input"
-																					type="checkbox"
-																					name={field.name}
-																					checked={field.value}
-																					onChange={(e: any) => {
-																						setFieldValue(
-																							field.name,
-																							e.target.checked,
-																						);
-																						if (!e.target.checked) {
-																							setFieldValue(
-																								"udpForwarding",
-																								true,
-																							);
-																						}
-																					}}
-																				/>
-																			</label>
-																		)}
-																	</Field>
-																</span>
-															</label>
-														</div>
-														<div>
-															<label className="row" htmlFor="udpForwarding">
-																<span className="col">
-																	<T id="streams.udp" />
-																</span>
-																<span className="col-auto">
-																	<Field name="udpForwarding" type="checkbox">
-																		{({ field }: any) => (
-																			<label className="form-check form-check-single form-switch">
-																				<input
-																					id="udpForwarding"
-																					className="form-check-input"
-																					type="checkbox"
-																					name={field.name}
-																					checked={field.value}
-																					onChange={(e: any) => {
-																						setFieldValue(
-																							field.name,
-																							e.target.checked,
-																						);
-																						if (!e.target.checked) {
-																							setFieldValue(
-																								"tcpForwarding",
-																								true,
-																							);
-																						}
-																					}}
-																				/>
-																			</label>
-																		)}
-																	</Field>
-																</span>
-															</label>
-														</div>
-													</div>
-												</div>
 											</div>
-											<div className="tab-pane" id="tab-ssl" role="tabpanel">
-												<SSLCertificateField
-													name="certificateId"
-													label="ssl-certificate"
-													allowNew
-													forHttp={false}
-												/>
-												<SSLOptionsFields
-													color="bg-blue"
-													forHttp={false}
-													forceDNSForNew
-													requireDomainNames
-												/>
-											</div>
-										</div>
+										</TabsContent>
+
+										<TabsContent value="ssl">
+											<SSLCertificateField
+												name="certificateId"
+												label="ssl-certificate"
+												allowNew
+												forHttp={false}
+											/>
+											<SSLOptionsFields
+												color="bg-blue"
+												forHttp={false}
+												forceDNSForNew
+												requireDomainNames
+											/>
+										</TabsContent>
 									</div>
-								</div>
-							</Modal.Body>
-							<Modal.Footer>
-								<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-									<T id="cancel" />
-								</Button>
-								<Button
-									type="submit"
-									actionType="primary"
-									className="ms-auto"
-									data-bs-dismiss="modal"
-									isLoading={isSubmitting}
-									disabled={isSubmitting}
-								>
-									<T id="save" />
-								</Button>
-							</Modal.Footer>
-						</Form>
-					)}
-				</Formik>
-			)}
-		</Modal>
+								</Tabs>
+
+								<DialogFooter>
+									<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
+										<T id="cancel" />
+									</Button>
+									<Button
+										type="submit"
+										className="bg-blue-600/90 hover:bg-blue-600 text-white shadow-sm"
+										disabled={isSubmitting}
+									>
+										{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+										<T id="save" />
+									</Button>
+								</DialogFooter>
+							</Form>
+						)}
+					</Formik>
+				)}
+			</DialogContent>
+		</Dialog>
 	);
 });
 

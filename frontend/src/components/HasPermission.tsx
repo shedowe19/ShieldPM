@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import Alert from "react-bootstrap/Alert";
+import { AlertCircle } from "lucide-react";
 import { Loading, LoadingPage } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useUser } from "src/hooks";
 import { T } from "src/locale";
 import { type ADMIN, hasPermission, type Permission, type Section } from "src/modules/Permissions";
@@ -43,8 +44,12 @@ function HasPermission({
 	}
 
 	return !hideError ? (
-		<Alert variant="danger">
-			<T id="no-permission-error" />
+		<Alert variant="destructive">
+			<AlertCircle className="h-4 w-4" />
+			<AlertTitle>Error</AlertTitle>
+			<AlertDescription>
+				<T id="no-permission-error" />
+			</AlertDescription>
 		</Alert>
 	) : null;
 }

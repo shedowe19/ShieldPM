@@ -1,7 +1,9 @@
+import { IconListDetails } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { AuditLog } from "src/api/backend";
 import { EventFormatter, GravatarFormatter } from "src/components";
+import { Button } from "src/components/ui/button";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { intl, T } from "src/locale";
 
@@ -33,22 +35,29 @@ export default function Table({ data, isFetching, onSelectItem }: Props) {
 			}),
 			columnHelper.display({
 				id: "id",
+				header: "",
 				cell: (info) => {
 					return (
-						<button
-							type="button"
-							className="btn btn-action btn-sm px-1"
-							onClick={(e) => {
-								e.preventDefault();
-								onSelectItem?.(info.row.original.id);
-							}}
-						>
-							<T id="action.view-details" />
-						</button>
+						<div className="text-right">
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={(e) => {
+									e.preventDefault();
+									onSelectItem?.(info.row.original.id);
+								}}
+								className="h-8 w-8 text-muted-foreground hover:text-foreground"
+							>
+								<IconListDetails className="h-4 w-4" />
+								<span className="sr-only">
+									<T id="action.view-details" />
+								</span>
+							</Button>
+						</div>
 					);
 				},
 				meta: {
-					className: "text-end w-1",
+					className: "w-[50px]",
 				},
 			}),
 		],

@@ -20,6 +20,15 @@ import {
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { intl, T } from "src/locale";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "src/components/ui/dropdown-menu";
+import { Button } from "src/components/ui/button";
 
 interface Props {
 	data: User[];
@@ -57,7 +66,7 @@ export default function Table({
 					return <GravatarFormatter url={value.avatar} name={value.name} />;
 				},
 				meta: {
-					className: "w-1",
+					className: "w-[50px]",
 				},
 			}),
 			columnHelper.accessor((row) => row, {
@@ -100,108 +109,74 @@ export default function Table({
 				id: "id",
 				cell: (info) => {
 					return (
-						<span className="dropdown">
-							<button
-								type="button"
-								className="btn dropdown-toggle btn-action btn-sm px-1"
-								data-bs-boundary="viewport"
-								data-bs-toggle="dropdown"
-								data-bs-popper-config='{"strategy":"fixed"}'
-							>
-								<IconDotsVertical />
-							</button>
-							<div className="dropdown-menu dropdown-menu-end">
-								<span className="dropdown-header">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 text-muted-foreground hover:text-foreground"
+								>
+									<span className="sr-only">Open menu</span>
+									<IconDotsVertical className="h-4 w-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
 										tData={{ object: "user" }}
 										data={{ id: info.row.original.id }}
 									/>
-								</span>
-								<a
-									className="dropdown-item"
-									href="#"
-									onClick={(e) => {
-										e.preventDefault();
-										onEditUser?.(info.row.original.id);
-									}}
-								>
-									<IconEdit size={16} />
+								</DropdownMenuLabel>
+								<DropdownMenuItem onClick={() => onEditUser?.(info.row.original.id)}>
+									<IconEdit className="mr-2 h-4 w-4" />
 									<T id="action.edit" />
-								</a>
-								{currentUserId !== info.row.original.id ? (
+								</DropdownMenuItem>
+								{currentUserId !== info.row.original.id && (
 									<>
-										<a
-											className="dropdown-item"
-											href="#"
-											onClick={(e) => {
-												e.preventDefault();
-												onEditPermissions?.(info.row.original.id);
-											}}
-										>
-											<IconShield size={16} />
+										<DropdownMenuItem onClick={() => onEditPermissions?.(info.row.original.id)}>
+											<IconShield className="mr-2 h-4 w-4" />
 											<T id="action.permissions" />
-										</a>
-										<a
-											className="dropdown-item"
-											href="#"
-											onClick={(e) => {
-												e.preventDefault();
-												onSetPassword?.(info.row.original.id);
-											}}
-										>
-											<IconLock size={16} />
+										</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => onSetPassword?.(info.row.original.id)}>
+											<IconLock className="mr-2 h-4 w-4" />
 											<T id="user.set-password" />
-										</a>
-										<a
-											className="dropdown-item"
-											href="#"
-											onClick={(e) => {
-												e.preventDefault();
-												onDisableToggle?.(info.row.original.id, info.row.original.isDisabled);
-											}}
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											onClick={() =>
+												onDisableToggle?.(info.row.original.id, info.row.original.isDisabled)
+											}
 										>
-											<IconPower size={16} />
+											<IconPower className="mr-2 h-4 w-4" />
 											<T id={info.row.original.isDisabled ? "action.enable" : "action.disable"} />
-										</a>
+										</DropdownMenuItem>
 										{info.row.original.isDisabled ? (
-											<div className="dropdown-item text-muted">
-												<IconLogin2 size={16} />
+											<DropdownMenuItem disabled>
+												<IconLogin2 className="mr-2 h-4 w-4" />
 												<T id="user.login-as" data={{ name: info.row.original.name }} />
-											</div>
+											</DropdownMenuItem>
 										) : (
-											<a
-												className="dropdown-item"
-												href="#"
-												onClick={(e) => {
-													e.preventDefault();
-													onLoginAs?.(info.row.original.id);
-												}}
-											>
-												<IconLogin2 size={16} />
+											<DropdownMenuItem onClick={() => onLoginAs?.(info.row.original.id)}>
+												<IconLogin2 className="mr-2 h-4 w-4" />
 												<T id="user.login-as" data={{ name: info.row.original.name }} />
-											</a>
+											</DropdownMenuItem>
 										)}
-										<div className="dropdown-divider" />
-										<a
-											className="dropdown-item"
-											href="#"
-											onClick={(e) => {
-												e.preventDefault();
-												onDeleteUser?.(info.row.original.id);
-											}}
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											className="text-red-600 focus:text-red-500"
+											onClick={() => onDeleteUser?.(info.row.original.id)}
 										>
-											<IconTrash size={16} />
+											<IconTrash className="mr-2 h-4 w-4" />
 											<T id="action.delete" />
-										</a>
+										</DropdownMenuItem>
 									</>
-								) : null}
-							</div>
-						</span>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
 					);
 				},
 				meta: {
-					className: "text-end w-1",
+					className: "w-[50px]",
 				},
 			}),
 		],
@@ -232,14 +207,7 @@ export default function Table({
 		<TableLayout
 			tableInstance={tableInstance}
 			emptyState={
-				<EmptyData
-					object="user"
-					objects="users"
-					tableInstance={tableInstance}
-					onNew={onNewUser}
-					isFiltered={isFiltered}
-					color="orange"
-				/>
+				<EmptyData object="user" objects="users" onNew={onNewUser} isFiltered={isFiltered} color="orange" />
 			}
 		/>
 	);

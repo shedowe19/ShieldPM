@@ -14,6 +14,8 @@ import langSk from "./lang/sk.json";
 import langVi from "./lang/vi.json";
 import langZh from "./lang/zh.json";
 
+// Force HMR reload
+
 // first item of each array should be the language code,
 // not the country code
 // Remember when adding to this list, also update check-locales.js script
@@ -36,12 +38,17 @@ const localeOptions = [
 const loadMessages = (locale?: string): typeof langList & typeof langEn => {
 	const thisLocale = (locale || "en").slice(0, 2);
 
-	// ensure this lang exists in localeOptions above, otherwise fallback to en
-	if (thisLocale === "en" || !localeOptions.some(([code]) => code === thisLocale)) {
-		return Object.assign({}, langList, langEn);
-	}
+	// find language
+	const found = localeOptions.find(([code]) => code === thisLocale);
+	const messages = found ? found[2] : langEn;
 
-	return Object.assign({}, langList, langEn, localeOptions.find(([code]) => code === thisLocale)?.[2]);
+	console.log(`[IntlProvider] Loading locale: ${locale} -> ${thisLocale}`, {
+		found: !!found,
+		messageCount: Object.keys(messages).length,
+		sample: (messages as any)["proxy_hosts.count_label"],
+	});
+
+	return Object.assign({}, langList, langEn, messages);
 };
 
 const getFlagCodeForLocale = (locale?: string) => {
@@ -64,10 +71,10 @@ const getFlagCodeForLocale = (locale?: string) => {
 const getLocale = (short = false) => {
 	let loc = window.localStorage.getItem("locale");
 	if (!loc) {
-		loc = document.documentElement.lang;
+		loc = navigator.language || navigator.languages?.[0] || document.documentElement.lang;
 	}
 	if (short) {
-		return loc.slice(0, 2);
+		return loc ? loc.slice(0, 2) : "en";
 	}
 	// finally, fallback
 	if (!loc) {

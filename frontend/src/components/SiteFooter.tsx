@@ -13,62 +13,61 @@ export function SiteFooter() {
 	};
 
 	return (
-		<footer className="footer d-print-none py-3">
-			<div className="container-xl">
-				<div className="row text-center align-items-center flex-row-reverse">
-					<div className="col-lg-auto ms-lg-auto">
-						<ul className="list-inline list-inline-dots mb-0">
-							<li className="list-inline-item">
-								<a
-									href="https://github.com/ZoeyVid/NPMplus"
-									target="_blank"
-									className="link-secondary"
-									rel="noopener"
-								>
-									<T id="footer.github-fork" />
-								</a>
-							</li>
-						</ul>
+		<footer className="border-t py-4 print:hidden">
+			<div className="container mx-auto px-4">
+				<div className="flex flex-col-reverse items-center justify-between gap-4 md:flex-row">
+					<div className="flex gap-4">
+						<span className="text-sm text-muted-foreground">
+							© 2025{" "}
+							<a
+								href="https://jc21.com"
+								target="_blank"
+								rel="noreferrer"
+								className="font-medium underline underline-offset-4 hover:text-primary"
+							>
+								jc21.com
+							</a>
+						</span>
+						<span className="text-sm text-muted-foreground">
+							Theme by{" "}
+							<a
+								href="https://ui.shadcn.com"
+								target="_blank"
+								rel="noreferrer"
+								className="font-medium underline underline-offset-4 hover:text-primary"
+							>
+								shadcn/ui
+							</a>
+						</span>
+						<a
+							href={`https://github.com/ZoeyVid/NPMplus/releases/tag/${getVersion()}`}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
+						>
+							{getVersion()}
+						</a>
+						{versionData?.updateAvailable && versionData?.latest && (
+							<a
+								href={`https://github.com/ZoeyVid/NPMplus/releases/tag/${versionData.latest}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-sm font-bold text-yellow-500 hover:text-yellow-600"
+								title={`New version ${versionData.latest} is available`}
+							>
+								<T id="update-available" data={{ latestVersion: versionData.latest }} />
+							</a>
+						)}
 					</div>
-					<div className="col-12 col-lg-auto mt-3 mt-lg-0">
-						<ul className="list-inline list-inline-dots mb-0">
-							<li className="list-inline-item">
-								© 2025{" "}
-								<a href="https://jc21.com" rel="noreferrer" target="_blank" className="link-secondary">
-									jc21.com
-								</a>
-							</li>
-							<li className="list-inline-item">
-								Theme by{" "}
-								<a href="https://tabler.io" rel="noreferrer" target="_blank" className="link-secondary">
-									Tabler
-								</a>
-							</li>
-							<li className="list-inline-item">
-								<a
-									href={`https://github.com/ZoeyVid/NPMplus/releases/tag/${getVersion()}`}
-									className="link-secondary"
-									target="_blank"
-									rel="noopener"
-								>
-									{" "}
-									{getVersion()}{" "}
-								</a>
-							</li>
-							{versionData?.updateAvailable && versionData?.latest && (
-								<li className="list-inline-item">
-									<a
-										href={`https://github.com/ZoeyVid/NPMplus/releases/tag/${versionData.latest}`}
-										className="link-warning fw-bold"
-										target="_blank"
-										rel="noopener"
-										title={`New version ${versionData.latest} is available`}
-									>
-										<T id="update-available" data={{ latestVersion: versionData.latest }} />
-									</a>
-								</li>
-							)}
-						</ul>
+					<div>
+						<a
+							href="https://github.com/ZoeyVid/NPMplus"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
+						>
+							<T id="footer.github-fork" />
+						</a>
 					</div>
 				</div>
 			</div>

@@ -236,6 +236,9 @@
 	"dashboard": {
 		"defaultMessage": "Panel"
 	},
+	"dashboard.status_ok": {
+		"defaultMessage": "Wszystko wygląda dobrze!"
+	},
 	"dead-host": {
 		"defaultMessage": "Host 404"
 	},
@@ -244,6 +247,9 @@
 	},
 	"dead-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host 404} few {Hosty 404} other {Hostów 404}}"
+	},
+	"dead_hosts.count_label": {
+		"defaultMessage": "Hosty 404"
 	},
 	"disabled": {
 		"defaultMessage": "Wyłączone"
@@ -326,11 +332,17 @@
 	"error.required": {
 		"defaultMessage": "To pole jest wymagane"
 	},
+	"error.unknown": {
+		"defaultMessage": "Nieznany błąd"
+	},
 	"expires.on": {
 		"defaultMessage": "Wygasa: {date}"
 	},
 	"footer.github-fork": {
 		"defaultMessage": "Forkuj mnie na Github"
+	},
+	"form.placeholder.unlimited": {
+		"defaultMessage": "0 = Nieograniczone"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Blokuj typowe exploity"
@@ -491,14 +503,23 @@
 	"proxy-host": {
 		"defaultMessage": "Host proxy"
 	},
+	"proxy-host.bandwidth-limit": {
+		"defaultMessage": "Limit przepustowości (np. 100k, 1m)"
+	},
 	"proxy-host.forward-host": {
 		"defaultMessage": "Przekieruj na hostname / IP"
+	},
+	"proxy-host.forward-query": {
+		"defaultMessage": "Przekaż zapytanie (Ukryte)"
 	},
 	"proxy-hosts": {
 		"defaultMessage": "Hosty proxy"
 	},
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host proxy} few {Hosty proxy} other {Hostów proxy}}"
+	},
+	"proxy_hosts.count_label": {
+		"defaultMessage": "Hosty Proxy"
 	},
 	"public": {
 		"defaultMessage": "Publiczne"
@@ -517,6 +538,9 @@
 	},
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host przekierowania} few {Hosty przekierowań} other {Hostów przekierowań}}"
+	},
+	"redirection_hosts.count_label": {
+		"defaultMessage": "Hosty Przekierowań"
 	},
 	"role.admin": {
 		"defaultMessage": "Administrator"
@@ -584,6 +608,9 @@
 	"streams.count": {
 		"defaultMessage": "{count} {count, plural, one {Strumień} few {Strumienie} other {Strumieni}}"
 	},
+	"streams.count_label": {
+		"defaultMessage": "Strumienie"
+	},
 	"streams.tcp": {
 		"defaultMessage": "TCP"
 	},
@@ -595,6 +622,9 @@
 	},
 	"user": {
 		"defaultMessage": "Użytkownik"
+	},
+	"user.avatar": {
+		"defaultMessage": "Awatar"
 	},
 	"user.change-password": {
 		"defaultMessage": "Zmień hasło"

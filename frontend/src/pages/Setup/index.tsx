@@ -1,14 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
-import cn from "classnames";
 import { Field, Form, Formik } from "formik";
 import { useState } from "react";
-import { Alert } from "react-bootstrap";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { createUser } from "src/api/backend";
-import { Button, LocalePicker, Page, ThemeSwitcher } from "src/components";
+import { LocalePicker, ThemeSwitcher } from "src/components";
+import { Button } from "src/components/ui/button";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { useAuthState } from "src/context";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
-import styles from "./index.module.css";
 
 interface Payload {
 	name: string;
@@ -59,134 +62,125 @@ export default function Setup() {
 	};
 
 	return (
-		<Page className="page page-center">
-			<div className={cn("d-none", "d-md-flex", styles.helperBtns)}>
+		<div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-background">
+			<div className="absolute top-4 right-4 flex gap-2">
 				<LocalePicker />
 				<ThemeSwitcher />
 			</div>
-			<div className="container container-tight py-4">
-				<div className="text-center mb-4">
-					<img className={styles.logo} src="/images/logo-text-horizontal-grey.png" alt="NPMplus" />
+
+			<div className="w-full max-w-md space-y-8">
+				<div className="flex justify-center">
+					<img
+						className="h-12 w-auto dark:invert"
+						src="/images/logo-text-horizontal-grey.png"
+						alt="NPMplus"
+					/>
 				</div>
-				<div className="card card-md">
-					<Alert variant="danger" show={!!errorMsg} onClose={() => setErrorMsg(null)} dismissible>
-						{errorMsg}
-					</Alert>
-					<Formik
-						initialValues={
-							{
-								name: "",
-								email: "",
-								password: "",
-							} as any
-						}
-						onSubmit={onSubmit}
-					>
-						{({ isSubmitting }) => (
-							<Form>
-								<div className="card-body text-center py-4 p-sm-5">
-									<h1 className="mt-5">
-										<T id="setup.title" />
-									</h1>
-									<p className="text-secondary">
-										<T id="setup.preamble" />
-									</p>
-								</div>
-								<hr />
-								<div className="card-body">
-									<div className="mb-3">
+
+				<Card>
+					<CardHeader className="text-center">
+						<CardTitle className="text-2xl">
+							<T id="setup.title" />
+						</CardTitle>
+						<CardDescription>
+							<T id="setup.preamble" />
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{errorMsg && (
+							<Alert variant="destructive" className="mb-6">
+								<AlertCircle className="h-4 w-4" />
+								<AlertTitle>Error</AlertTitle>
+								<AlertDescription>{errorMsg}</AlertDescription>
+							</Alert>
+						)}
+
+						<Formik
+							initialValues={
+								{
+									name: "",
+									email: "",
+									password: "",
+								} as any
+							}
+							onSubmit={onSubmit}
+						>
+							{({ isSubmitting, errors, touched }: any) => (
+								<Form className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="name">
+											<T id="user.full-name" />
+										</Label>
 										<Field name="name" validate={validateString(1, 50)}>
-											{({ field, form }: any) => (
-												<div className="form-floating mb-3">
-													<input
-														id="name"
-														className={`form-control ${form.errors.name && form.touched.name ? "is-invalid" : ""}`}
-														placeholder={intl.formatMessage({ id: "user.full-name" })}
-														{...field}
-													/>
-													<label htmlFor="name">
-														<T id="user.full-name" />
-													</label>
-													{form.errors.name ? (
-														<div className="invalid-feedback">
-															{form.errors.name && form.touched.name
-																? form.errors.name
-																: null}
-														</div>
-													) : null}
-												</div>
+											{({ field }: any) => (
+												<Input
+													{...field}
+													id="name"
+													placeholder={intl.formatMessage({ id: "user.full-name" })}
+													className={errors.name && touched.name ? "border-destructive" : ""}
+												/>
 											)}
 										</Field>
+										{errors.name && touched.name && (
+											<p className="text-sm text-destructive">{errors.name}</p>
+										)}
 									</div>
-									<div className="mb-3">
+
+									<div className="space-y-2">
+										<Label htmlFor="email">
+											<T id="email-address" />
+										</Label>
 										<Field name="email" validate={validateEmail()}>
-											{({ field, form }: any) => (
-												<div className="form-floating mb-3">
-													<input
-														id="email"
-														type="email"
-														className={`form-control ${form.errors.email && form.touched.email ? "is-invalid" : ""}`}
-														placeholder={intl.formatMessage({ id: "email-address" })}
-														{...field}
-													/>
-													<label htmlFor="email">
-														<T id="email-address" />
-													</label>
-													{form.errors.email ? (
-														<div className="invalid-feedback">
-															{form.errors.email && form.touched.email
-																? form.errors.email
-																: null}
-														</div>
-													) : null}
-												</div>
+											{({ field }: any) => (
+												<Input
+													{...field}
+													id="email"
+													type="email"
+													placeholder={intl.formatMessage({ id: "email-address" })}
+													className={
+														errors.email && touched.email ? "border-destructive" : ""
+													}
+												/>
 											)}
 										</Field>
+										{errors.email && touched.email && (
+											<p className="text-sm text-destructive">{errors.email}</p>
+										)}
 									</div>
-									<div className="mb-3">
+
+									<div className="space-y-2">
+										<Label htmlFor="password">
+											<T id="user.new-password" />
+										</Label>
 										<Field name="password" validate={validateString(8, 100)}>
-											{({ field, form }: any) => (
-												<div className="form-floating mb-3">
-													<input
-														id="password"
-														type="password"
-														autoComplete="new-password"
-														className={`form-control ${form.errors.password && form.touched.password ? "is-invalid" : ""}`}
-														placeholder={intl.formatMessage({ id: "user.new-password" })}
-														{...field}
-													/>
-													<label htmlFor="password">
-														<T id="user.new-password" />
-													</label>
-													{form.errors.password ? (
-														<div className="invalid-feedback">
-															{form.errors.password && form.touched.password
-																? form.errors.password
-																: null}
-														</div>
-													) : null}
-												</div>
+											{({ field }: any) => (
+												<Input
+													{...field}
+													id="password"
+													type="password"
+													autoComplete="new-password"
+													placeholder={intl.formatMessage({ id: "user.new-password" })}
+													className={
+														errors.password && touched.password ? "border-destructive" : ""
+													}
+												/>
 											)}
 										</Field>
+										{errors.password && touched.password && (
+											<p className="text-sm text-destructive">{errors.password}</p>
+										)}
 									</div>
-								</div>
-								<div className="text-center my-3 mx-3">
-									<Button
-										type="submit"
-										actionType="primary"
-										data-bs-dismiss="modal"
-										isLoading={isSubmitting}
-										disabled={isSubmitting}
-										className="w-100"
-									>
+
+									<Button type="submit" className="w-full" disabled={isSubmitting}>
+										{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 										<T id="save" />
 									</Button>
-								</div>
-							</Form>
-						)}
-					</Formik>
-				</div>
+								</Form>
+							)}
+						</Formik>
+					</CardContent>
+				</Card>
 			</div>
-		</Page>
+		</div>
 	);
 }

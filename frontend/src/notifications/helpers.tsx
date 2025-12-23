@@ -1,26 +1,30 @@
-import { toast } from "react-toastify";
+import { AlertCircle, Check } from "lucide-react";
+import { toast } from "src/hooks/use-toast";
 import { intl } from "src/locale";
-import { Msg } from "./Msg";
-import styles from "./Msg.module.css";
 
 const showSuccess = (message: string) => {
-	toast(Msg, {
-		className: styles.toaster,
-		data: {
-			type: "success",
-			title: intl.formatMessage({ id: "notification.success" }),
-			message,
-		},
+	toast({
+		className: "border-l-4 border-l-green-500",
+		title: (
+			<div className="flex items-center gap-2">
+				<Check className="h-4 w-4 text-green-500" />
+				<span>{intl.formatMessage({ id: "notification.success" })}</span>
+			</div>
+		) as any, // Cast to any to avoid type conflict if strict ReactNode check fails
+		description: message,
 	});
 };
 
 const showError = (message: string) => {
-	toast(<Msg />, {
-		data: {
-			type: "error",
-			title: intl.formatMessage({ id: "notification.error" }),
-			message,
-		},
+	toast({
+		variant: "destructive",
+		title: (
+			<div className="flex items-center gap-2">
+				<AlertCircle className="h-4 w-4" />
+				<span>{intl.formatMessage({ id: "notification.error" })}</span>
+			</div>
+		) as any,
+		description: message,
 	});
 };
 

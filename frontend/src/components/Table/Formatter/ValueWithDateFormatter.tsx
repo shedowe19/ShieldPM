@@ -7,12 +7,12 @@ interface Props {
 }
 export function ValueWithDateFormatter({ value, createdOn, disabled }: Props) {
 	return (
-		<div className="flex-fill">
-			<div className="font-weight-medium">
-				<div className={`font-weight-medium ${disabled ? "text-red" : ""}`}>{value}</div>
+		<div className="flex-1">
+			<div className="font-medium">
+				<div className={`font-medium ${disabled ? "text-destructive" : ""}`}>{value}</div>
 			</div>
 			{createdOn ? (
-				<div className={`text-secondary mt-1 ${disabled ? "text-red" : ""}`}>
+				<div className={`text-muted-foreground text-xs mt-1 ${disabled ? "text-destructive" : ""}`}>
 					<T id={disabled ? "disabled" : "created-on"} data={{ date: formatDateTime(createdOn) }} />
 				</div>
 			) : null}

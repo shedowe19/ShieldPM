@@ -2,12 +2,16 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { generate } from "generate-password-browser";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
 import { updateAuth } from "src/api/backend";
-import { Button } from "src/components";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Button } from "src/components/ui/button";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { IconDice, IconEye, IconEyeOff, IconLock } from "@tabler/icons-react";
 
 const showSetPasswordModal = (id: number) => {
 	EasyModal.show(SetPasswordModal, { id });
@@ -23,6 +27,7 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 	const onSubmit = async (values: any, { setSubmitting }: any) => {
 		if (isSubmitting) return;
+		setIsSubmitting(true);
 		setError(null);
 		try {
 			await updateAuth(id, values.new);
@@ -35,103 +40,116 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	};
 
 	return (
-		<Modal show={visible} onHide={remove}>
-			<Formik
-				initialValues={
-					{
-						new: "",
-					} as any
-				}
-				onSubmit={onSubmit}
-			>
-				{() => (
-					<Form>
-						<Modal.Header closeButton>
-							<Modal.Title>
-								<T id="user.set-password" />
-							</Modal.Title>
-						</Modal.Header>
-						<Modal.Body>
-							<Alert variant="danger" show={!!error} onClose={() => setError(null)} dismissible>
-								{error}
-							</Alert>
-							<div className="mb-3">
+		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<DialogContent className="sm:max-w-md">
+				<Formik
+					initialValues={
+						{
+							new: "",
+						} as any
+					}
+					onSubmit={onSubmit}
+				>
+					{({ errors, touched, setFieldValue }) => (
+						<Form>
+							<DialogHeader>
+								<DialogTitle className="flex items-center">
+									<IconLock className="mr-2 h-5 w-5" />
+									<T id="user.set-password" />
+								</DialogTitle>
+							</DialogHeader>
+
+							{error && (
+								<Alert variant="destructive" className="my-4">
+									<AlertCircle className="h-4 w-4" />
+									<AlertTitle>Error</AlertTitle>
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
+							)}
+
+							<div className="grid gap-4 py-4">
 								<Field name="new" validate={validateString(8, 100)}>
-									{({ field, form }: any) => (
-										<>
-											<p className="text-end">
-												<small>
-													<a
-														href="#"
-														onClick={(e) => {
-															e.preventDefault();
-															form.setFieldValue(
-																field.name,
-																generate({
-																	length: 12,
-																	numbers: true,
-																}),
-															);
-															setShowPassword(true);
-														}}
+									{({ field }: any) => (
+										<div className="space-y-2">
+											<Label htmlFor="new">
+												<T id="user.new-password" />
+											</Label>
+											<div className="flex gap-2">
+												<div className="relative flex-1">
+													<Input
+														id="new"
+														type={showPassword ? "text" : "password"}
+														required
+														className={
+															errors.new && touched.new
+																? "border-destructive pr-10"
+																: "pr-10"
+														}
+														placeholder={intl.formatMessage({ id: "user.new-password" })}
+														autoComplete="off"
+														{...field}
+													/>
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon"
+														className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+														onClick={() => setShowPassword(!showPassword)}
+														tabIndex={-1}
 													>
-														<T id="password.generate" />
-													</a>{" "}
-													&mdash;{" "}
-													<a
-														href="#"
-														className="text-xs"
-														onClick={(e) => {
-															e.preventDefault();
-															setShowPassword(!showPassword);
-														}}
-													>
-														<T id={showPassword ? "password.hide" : "password.show"} />
-													</a>
-												</small>
-											</p>
-											<div className="form-floating mb-3">
-												<input
-													id="new"
-													type={showPassword ? "text" : "password"}
-													required
-													className={`form-control ${form.errors.new && form.touched.new ? "is-invalid" : ""}`}
-													placeholder={intl.formatMessage({ id: "user.new-password" })}
-													{...field}
-												/>
-												<label htmlFor="new">
-													<T id="user.new-password" />
-												</label>
-												{form.errors.new ? (
-													<div className="invalid-feedback">
-														{form.errors.new && form.touched.new ? form.errors.new : null}
-													</div>
-												) : null}
+														{showPassword ? (
+															<IconEyeOff size={16} />
+														) : (
+															<IconEye size={16} />
+														)}
+													</Button>
+												</div>
+												<Button
+													type="button"
+													variant="outline"
+													size="icon"
+													title={intl.formatMessage({ id: "password.generate" })}
+													onClick={() => {
+														setFieldValue(
+															field.name,
+															generate({
+																length: 16,
+																numbers: true,
+																symbols: true,
+																strict: true,
+															}),
+														);
+														setShowPassword(true);
+													}}
+												>
+													<IconDice size={16} />
+												</Button>
 											</div>
-										</>
+											{errors.new && touched.new && (
+												<p className="text-sm text-destructive">{errors.new as string}</p>
+											)}
+										</div>
 									)}
 								</Field>
 							</div>
-						</Modal.Body>
-						<Modal.Footer>
-							<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-								<T id="cancel" />
-							</Button>
-							<Button
-								type="submit"
-								actionType="primary"
-								className="ms-auto"
-								data-bs-dismiss="modal"
-								isLoading={isSubmitting}
-								disabled={isSubmitting}
-							>
-								<T id="save" />
-							</Button>
-						</Modal.Footer>
-					</Form>
-				)}
-			</Formik>
-		</Modal>
+
+							<DialogFooter>
+								<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
+									<T id="cancel" />
+								</Button>
+								<Button
+									type="submit"
+									disabled={isSubmitting}
+									className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
+								>
+									{isSubmitting ? "..." : <T id="save" />}
+								</Button>
+							</DialogFooter>
+						</Form>
+					)}
+				</Formik>
+			</DialogContent>
+		</Dialog>
 	);
 });
 
