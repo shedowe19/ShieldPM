@@ -80,7 +80,11 @@ export default function TableWrapper() {
 					</Button>
 					<HasPermission section={DEAD_HOSTS} permission={MANAGE} hideError>
 						{data?.length ? (
-							<Button size="sm" className="bg-red-600/90 hover:bg-red-600 text-white shadow-sm" onClick={() => showDeadHostModal("new")}>
+							<Button
+								size="sm"
+								className="bg-red-600/90 hover:bg-red-600 text-white shadow-sm"
+								onClick={() => showDeadHostModal("new")}
+							>
 								<IconPlus className="mr-2 h-4 w-4" />
 								<T id="object.add" tData={{ object: "dead-host" }} />
 							</Button>
@@ -109,5 +113,3 @@ export default function TableWrapper() {
 		</Card>
 	);
 }
-
-

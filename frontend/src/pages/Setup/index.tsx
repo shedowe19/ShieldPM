@@ -70,7 +70,11 @@ export default function Setup() {
 
 			<div className="w-full max-w-md space-y-8">
 				<div className="flex justify-center">
-					<img className="h-12 w-auto dark:invert" src="/images/logo-text-horizontal-grey.png" alt="NPMplus" />
+					<img
+						className="h-12 w-auto dark:invert"
+						src="/images/logo-text-horizontal-grey.png"
+						alt="NPMplus"
+					/>
 				</div>
 
 				<Card>
@@ -104,7 +108,9 @@ export default function Setup() {
 							{({ isSubmitting, errors, touched }: any) => (
 								<Form className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="name"><T id="user.full-name" /></Label>
+										<Label htmlFor="name">
+											<T id="user.full-name" />
+										</Label>
 										<Field name="name" validate={validateString(1, 50)}>
 											{({ field }: any) => (
 												<Input
@@ -121,7 +127,9 @@ export default function Setup() {
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="email"><T id="email-address" /></Label>
+										<Label htmlFor="email">
+											<T id="email-address" />
+										</Label>
 										<Field name="email" validate={validateEmail()}>
 											{({ field }: any) => (
 												<Input
@@ -129,7 +137,9 @@ export default function Setup() {
 													id="email"
 													type="email"
 													placeholder={intl.formatMessage({ id: "email-address" })}
-													className={errors.email && touched.email ? "border-destructive" : ""}
+													className={
+														errors.email && touched.email ? "border-destructive" : ""
+													}
 												/>
 											)}
 										</Field>
@@ -139,7 +149,9 @@ export default function Setup() {
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="password"><T id="user.new-password" /></Label>
+										<Label htmlFor="password">
+											<T id="user.new-password" />
+										</Label>
 										<Field name="password" validate={validateString(8, 100)}>
 											{({ field }: any) => (
 												<Input
@@ -148,7 +160,9 @@ export default function Setup() {
 													type="password"
 													autoComplete="new-password"
 													placeholder={intl.formatMessage({ id: "user.new-password" })}
-													className={errors.password && touched.password ? "border-destructive" : ""}
+													className={
+														errors.password && touched.password ? "border-destructive" : ""
+													}
 												/>
 											)}
 										</Field>
@@ -157,11 +171,7 @@ export default function Setup() {
 										)}
 									</div>
 
-									<Button
-										type="submit"
-										className="w-full"
-										disabled={isSubmitting}
-									>
+									<Button type="submit" className="w-full" disabled={isSubmitting}>
 										{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 										<T id="save" />
 									</Button>

@@ -3,13 +3,7 @@ import CodeEditor from "@uiw/react-textarea-code-editor";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { EventFormatter, GravatarFormatter, Loading } from "src/components";
 import { Button } from "src/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useAuditLog } from "src/hooks";
 import { T } from "src/locale";

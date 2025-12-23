@@ -31,7 +31,10 @@ export function SiteHeader() {
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost" size="icon" className="rounded-full">
 							<Avatar className="h-8 w-8">
-								<AvatarImage src={currentUser?.avatar || "/images/default-avatar.jpg"} alt={currentUser?.nickname} />
+								<AvatarImage
+									src={currentUser?.avatar || "/images/default-avatar.jpg"}
+									alt={currentUser?.nickname}
+								/>
 								<AvatarFallback>{currentUser?.nickname?.substring(0, 2).toUpperCase()}</AvatarFallback>
 							</Avatar>
 							<span className="sr-only">Toggle user menu</span>
@@ -73,5 +76,3 @@ export function SiteHeader() {
 		</header>
 	);
 }
-
-

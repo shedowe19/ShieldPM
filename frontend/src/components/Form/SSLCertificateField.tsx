@@ -4,13 +4,7 @@ import type { Certificate } from "src/api/backend";
 import { useCertificates } from "src/hooks";
 import { formatDateTime, intl, T } from "src/locale";
 import { Label } from "src/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "src/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Skeleton } from "src/components/ui/skeleton";
 
 interface CertOption {
@@ -124,11 +118,13 @@ export function SSLCertificateField({
 					) : isError ? (
 						<div className="text-destructive text-sm">{`${error}`}</div>
 					) : (
-						<Select
-							value={getValueString(field.value)}
-							onValueChange={handleChange}
-						>
-							<SelectTrigger id={id} className={form.errors[field.name] && form.touched[field.name] ? "border-destructive" : ""}>
+						<Select value={getValueString(field.value)} onValueChange={handleChange}>
+							<SelectTrigger
+								id={id}
+								className={
+									form.errors[field.name] && form.touched[field.name] ? "border-destructive" : ""
+								}
+							>
 								<SelectValue placeholder={intl.formatMessage({ id: "form.select-certificate" })} />
 							</SelectTrigger>
 							<SelectContent>
@@ -154,4 +150,3 @@ export function SSLCertificateField({
 		</Field>
 	);
 }
-

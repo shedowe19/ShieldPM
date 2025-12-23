@@ -15,5 +15,3 @@ function EmptyRow({ tableInstance }: Props) {
 }
 
 export { EmptyRow };
-
-

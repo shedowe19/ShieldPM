@@ -49,10 +49,14 @@ export function BasicAuthFields({ initialValues, name = "items" }: Props) {
 		<div className="space-y-4">
 			<div className="grid grid-cols-12 gap-2 mb-2">
 				<div className="col-span-6">
-					<Label><T id="username" /></Label>
+					<Label>
+						<T id="username" />
+					</Label>
 				</div>
 				<div className="col-span-5">
-					<Label><T id="password" /></Label>
+					<Label>
+						<T id="password" />
+					</Label>
 				</div>
 			</div>
 			{values.map((item: AccessListItem, idx: number) => (
@@ -79,12 +83,7 @@ export function BasicAuthFields({ initialValues, name = "items" }: Props) {
 						/>
 					</div>
 					<div className="col-span-1 text-right">
-						<Button
-							type="button"
-							variant="destructive"
-							size="icon"
-							onClick={() => handleRemove(idx)}
-						>
+						<Button type="button" variant="destructive" size="icon" onClick={() => handleRemove(idx)}>
 							<IconX size={16} />
 						</Button>
 					</div>

@@ -8,14 +8,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "src/components/ui/select";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 
 interface Props {
 	initialValues: ProxyLocation[];
@@ -84,7 +77,9 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 					<CardContent className="p-4 space-y-4">
 						<div className="flex items-start gap-4">
 							<div className="flex-1">
-								<Label htmlFor={`path-${idx}`}><T id="form.location" /></Label>
+								<Label htmlFor={`path-${idx}`}>
+									<T id="form.location" />
+								</Label>
 								<Input
 									id={`path-${idx}`}
 									placeholder="/path"
@@ -109,7 +104,9 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 
 						<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 							<div className="col-span-1">
-								<Label htmlFor={`scheme-${idx}`}><T id="host.forward-scheme" /></Label>
+								<Label htmlFor={`scheme-${idx}`}>
+									<T id="host.forward-scheme" />
+								</Label>
 								<Select
 									value={item.forwardScheme}
 									onValueChange={(val) => handleChange(idx, "forwardScheme", val)}
@@ -127,7 +124,9 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 								</Select>
 							</div>
 							<div className="col-span-2">
-								<Label htmlFor={`host-${idx}`}><T id="proxy-host.forward-host" /></Label>
+								<Label htmlFor={`host-${idx}`}>
+									<T id="proxy-host.forward-host" />
+								</Label>
 								<Input
 									id={`host-${idx}`}
 									required
@@ -137,7 +136,9 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 								/>
 							</div>
 							<div className="col-span-1">
-								<Label htmlFor={`port-${idx}`}><T id="host.forward-port" /></Label>
+								<Label htmlFor={`port-${idx}`}>
+									<T id="host.forward-port" />
+								</Label>
 								<Input
 									id={`port-${idx}`}
 									type="number"
@@ -153,7 +154,9 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 						{advVisible.includes(idx) && (
 							<div className="space-y-4 pt-2 border-t mt-2">
 								<div>
-									<Label htmlFor={`query-${idx}`}><T id="proxy-host.forward-query" /></Label>
+									<Label htmlFor={`query-${idx}`}>
+										<T id="proxy-host.forward-query" />
+									</Label>
 									<Input
 										id={`query-${idx}`}
 										placeholder={intl.formatMessage({ id: "form.placeholder.api-key" })}
@@ -162,7 +165,9 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 									/>
 								</div>
 								<div>
-									<Label><T id="advanced-config" /></Label>
+									<Label>
+										<T id="advanced-config" />
+									</Label>
 									<div className="rounded-md border overflow-hidden">
 										<CodeEditor
 											language="nginx"
@@ -185,12 +190,7 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 						)}
 
 						<div className="flex justify-end">
-							<Button
-								type="button"
-								variant="destructive"
-								size="sm"
-								onClick={() => handleRemove(idx)}
-							>
+							<Button type="button" variant="destructive" size="sm" onClick={() => handleRemove(idx)}>
 								<IconTrash className="mr-2 h-4 w-4" />
 								<T id="action.delete" />
 							</Button>
@@ -205,4 +205,3 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 		</div>
 	);
 }
-

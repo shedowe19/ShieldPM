@@ -47,21 +47,43 @@ export const CertificateExpiryWidget = () => {
 								const isExpired = diff < 0;
 
 								return (
-									<div key={cert.id} className="flex items-center space-x-4 border-b pb-3 last:border-0 last:pb-0">
-										<Avatar className={cn("h-9 w-9", isExpired ? "bg-red-500/20 text-red-500" : "bg-yellow-500/20 text-yellow-500")}>
+									<div
+										key={cert.id}
+										className="flex items-center space-x-4 border-b pb-3 last:border-0 last:pb-0"
+									>
+										<Avatar
+											className={cn(
+												"h-9 w-9",
+												isExpired
+													? "bg-red-500/20 text-red-500"
+													: "bg-yellow-500/20 text-yellow-500",
+											)}
+										>
 											<AvatarFallback className="bg-transparent">
-												{isExpired ? <IconAlertTriangle className="h-5 w-5" /> : <IconCertificate className="h-5 w-5" />}
+												{isExpired ? (
+													<IconAlertTriangle className="h-5 w-5" />
+												) : (
+													<IconCertificate className="h-5 w-5" />
+												)}
 											</AvatarFallback>
 										</Avatar>
 										<div className="flex-1 space-y-1">
-											<Link to={"/certificates"} className="text-sm font-medium leading-none hover:underline">
+											<Link
+												to={"/certificates"}
+												className="text-sm font-medium leading-none hover:underline"
+											>
 												{cert.niceName || cert.domainNames.join(", ")}
 											</Link>
 											<p className="text-xs text-muted-foreground truncate">
 												{cert.domainNames.join(", ")}
 											</p>
 										</div>
-										<div className={cn("text-sm font-medium", isExpired ? "text-red-500" : "text-yellow-500")}>
+										<div
+											className={cn(
+												"text-sm font-medium",
+												isExpired ? "text-red-500" : "text-yellow-500",
+											)}
+										>
 											{isExpired ? (
 												<T id="dashboard.expired" />
 											) : (
@@ -92,5 +114,3 @@ export const CertificateExpiryWidget = () => {
 		</HasPermission>
 	);
 };
-
-

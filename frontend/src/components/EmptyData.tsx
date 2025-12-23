@@ -1,4 +1,3 @@
-
 import { FolderOpen } from "lucide-react";
 import type { ReactNode } from "react";
 import { HasPermission } from "src/components";
@@ -70,7 +69,9 @@ function EmptyData({
 							customAddBtn
 						) : (
 							<Button
-								className={color === "pink" ? "bg-pink-600 hover:bg-pink-700 text-white" : getColorClass(color)}
+								className={
+									color === "pink" ? "bg-pink-600 hover:bg-pink-700 text-white" : getColorClass(color)
+								}
 								onClick={onNew}
 								size="lg"
 							>

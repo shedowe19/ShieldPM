@@ -111,7 +111,11 @@ export default function Table({
 					return (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+								<Button
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 text-muted-foreground hover:text-foreground"
+								>
 									<span className="sr-only">Open menu</span>
 									<IconDotsVertical className="h-4 w-4" />
 								</Button>
@@ -203,13 +207,7 @@ export default function Table({
 		<TableLayout
 			tableInstance={tableInstance}
 			emptyState={
-				<EmptyData
-					object="user"
-					objects="users"
-					onNew={onNewUser}
-					isFiltered={isFiltered}
-					color="orange"
-				/>
+				<EmptyData object="user" objects="users" onNew={onNewUser} isFiltered={isFiltered} color="orange" />
 			}
 		/>
 	);

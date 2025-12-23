@@ -25,6 +25,3 @@ function TableHeader<T>(props: TableLayoutProps<T>) {
 }
 
 export { TableHeader };
-
-
-

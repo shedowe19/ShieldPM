@@ -1,4 +1,12 @@
-import { IconArrowsRightLeft, IconBolt, IconBoltOff, IconDisc, IconEye, IconLock, IconShield } from "@tabler/icons-react";
+import {
+	IconArrowsRightLeft,
+	IconBolt,
+	IconBoltOff,
+	IconDisc,
+	IconEye,
+	IconLock,
+	IconShield,
+} from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
@@ -7,13 +15,7 @@ import { setPermissions } from "src/api/backend";
 import { Loading } from "src/components";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Label } from "src/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -187,7 +189,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="proxy-hosts" />
 												</Label>
 												<Field name="proxyHosts">
-													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+													{({ field }: any) =>
+														getPermissionButtons(field, {
+															values,
+															setFieldValue,
+															...formikProps,
+														})
+													}
 												</Field>
 											</div>
 											<div className="space-y-2">
@@ -196,7 +204,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="redirection-hosts" />
 												</Label>
 												<Field name="redirectionHosts">
-													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+													{({ field }: any) =>
+														getPermissionButtons(field, {
+															values,
+															setFieldValue,
+															...formikProps,
+														})
+													}
 												</Field>
 											</div>
 											<div className="space-y-2">
@@ -205,7 +219,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="dead-hosts" />
 												</Label>
 												<Field name="deadHosts">
-													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+													{({ field }: any) =>
+														getPermissionButtons(field, {
+															values,
+															setFieldValue,
+															...formikProps,
+														})
+													}
 												</Field>
 											</div>
 											<div className="space-y-2">
@@ -214,7 +234,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="streams" />
 												</Label>
 												<Field name="streams">
-													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+													{({ field }: any) =>
+														getPermissionButtons(field, {
+															values,
+															setFieldValue,
+															...formikProps,
+														})
+													}
 												</Field>
 											</div>
 											<div className="space-y-2">
@@ -223,7 +249,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="access-lists" />
 												</Label>
 												<Field name="accessLists">
-													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+													{({ field }: any) =>
+														getPermissionButtons(field, {
+															values,
+															setFieldValue,
+															...formikProps,
+														})
+													}
 												</Field>
 											</div>
 											<div className="space-y-2">
@@ -232,7 +264,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="certificates" />
 												</Label>
 												<Field name="certificates">
-													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+													{({ field }: any) =>
+														getPermissionButtons(field, {
+															values,
+															setFieldValue,
+															...formikProps,
+														})
+													}
 												</Field>
 											</div>
 										</CardContent>

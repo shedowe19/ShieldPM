@@ -5,13 +5,7 @@ import type { AccessListClient } from "src/api/backend";
 import { intl, T } from "src/locale";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "src/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { cn } from "src/lib/utils";
 
 interface Props {
@@ -69,9 +63,13 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 								value={client.directive}
 								onValueChange={(val) => handleChange(idx, "directive", val)}
 							>
-								<SelectTrigger className={cn(
-									client.directive === "allow" ? "bg-green-100 dark:bg-green-900 border-green-200 dark:border-green-800 text-green-800 dark:text-green-100" : "bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-100"
-								)}>
+								<SelectTrigger
+									className={cn(
+										client.directive === "allow"
+											? "bg-green-100 dark:bg-green-900 border-green-200 dark:border-green-800 text-green-800 dark:text-green-100"
+											: "bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-100",
+									)}
+								>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -127,12 +125,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 								</SelectTrigger>
 							</Select>
 						</div>
-						<Input
-							value="all"
-							disabled
-							readOnly
-							className="flex-1"
-						/>
+						<Input value="all" disabled readOnly className="flex-1" />
 					</div>
 					<div className="w-10" /> {/* Spacer to match delete button width */}
 				</div>

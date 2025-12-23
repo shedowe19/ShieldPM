@@ -5,13 +5,7 @@ import { type ReactNode, useState } from "react";
 import { updateAuth } from "src/api/backend";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -86,7 +80,11 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														id="new"
 														type={showPassword ? "text" : "password"}
 														required
-														className={errors.new && touched.new ? "border-destructive pr-10" : "pr-10"}
+														className={
+															errors.new && touched.new
+																? "border-destructive pr-10"
+																: "pr-10"
+														}
 														placeholder={intl.formatMessage({ id: "user.new-password" })}
 														autoComplete="off"
 														{...field}
@@ -99,7 +97,11 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														onClick={() => setShowPassword(!showPassword)}
 														tabIndex={-1}
 													>
-														{showPassword ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+														{showPassword ? (
+															<IconEyeOff size={16} />
+														) : (
+															<IconEye size={16} />
+														)}
 													</Button>
 												</div>
 												<Button
@@ -152,5 +154,3 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 });
 
 export { showSetPasswordModal };
-
-

@@ -105,7 +105,7 @@ export function DomainNamesField({
 							multiValueRemove: (base) => ({
 								...base,
 								color: "hsl(var(--secondary-foreground))",
-								':hover': {
+								":hover": {
 									backgroundColor: "hsl(var(--destructive))",
 									color: "hsl(var(--destructive-foreground))",
 								},

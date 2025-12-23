@@ -17,29 +17,12 @@ import {
 	SSLCertificateField,
 	SSLOptionsFields,
 } from "src/components";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "src/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Switch } from "src/components/ui/switch";
-import {
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
-} from "src/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
 import { T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
@@ -93,7 +76,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						<AlertDescription>{error?.message || userError?.message || "Unknown error"}</AlertDescription>
 					</Alert>
 				)}
-				{isLoading || (userIsLoading && <div className="p-8"><Loading noLogo /></div>)}
+				{isLoading ||
+					(userIsLoading && (
+						<div className="p-8">
+							<Loading noLogo />
+						</div>
+					))}
 				{!isLoading && !userIsLoading && data && currentUser && (
 					<Formik
 						initialValues={
@@ -129,16 +117,25 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								<DialogHeader className="px-6 py-4 border-b">
 									<DialogTitle className="flex items-center gap-2">
 										<IconServer className="h-5 w-5" />
-										<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "proxy-host" }} />
+										<T
+											id={data?.id ? "object.edit" : "object.add"}
+											tData={{ object: "proxy-host" }}
+										/>
 									</DialogTitle>
 								</DialogHeader>
 
 								<Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
 									<div className="px-6 pt-4">
 										<TabsList className="w-full justify-start">
-											<TabsTrigger value="details"><T id="column.details" /></TabsTrigger>
-											<TabsTrigger value="locations"><T id="column.custom-locations" /></TabsTrigger>
-											<TabsTrigger value="ssl"><T id="column.ssl" /></TabsTrigger>
+											<TabsTrigger value="details">
+												<T id="column.details" />
+											</TabsTrigger>
+											<TabsTrigger value="locations">
+												<T id="column.custom-locations" />
+											</TabsTrigger>
+											<TabsTrigger value="ssl">
+												<T id="column.ssl" />
+											</TabsTrigger>
 											<TabsTrigger value="advanced" className="ml-auto">
 												<IconSettings size={20} />
 											</TabsTrigger>
@@ -165,10 +162,20 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<T id="host.forward-scheme" />
 																	</Label>
 																	<Select
-																		onValueChange={(val) => form.setFieldValue(field.name, val)}
+																		onValueChange={(val) =>
+																			form.setFieldValue(field.name, val)
+																		}
 																		value={field.value}
 																	>
-																		<SelectTrigger id="forwardScheme" className={form.errors.forwardScheme && form.touched.forwardScheme ? "border-destructive" : ""}>
+																		<SelectTrigger
+																			id="forwardScheme"
+																			className={
+																				form.errors.forwardScheme &&
+																				form.touched.forwardScheme
+																					? "border-destructive"
+																					: ""
+																			}
+																		>
 																			<SelectValue placeholder="http" />
 																		</SelectTrigger>
 																		<SelectContent>
@@ -179,9 +186,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectItem value="grpcs">grpcs</SelectItem>
 																		</SelectContent>
 																	</Select>
-																	{form.errors.forwardScheme && form.touched.forwardScheme && (
-																		<p className="text-sm font-medium text-destructive">{form.errors.forwardScheme}</p>
-																	)}
+																	{form.errors.forwardScheme &&
+																		form.touched.forwardScheme && (
+																			<p className="text-sm font-medium text-destructive">
+																				{form.errors.forwardScheme}
+																			</p>
+																		)}
 																</div>
 															)}
 														</Field>
@@ -197,12 +207,20 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		id="forwardHost"
 																		placeholder="example.com"
 																		autoComplete="off"
-																		className={form.errors.forwardHost && form.touched.forwardHost ? "border-destructive" : ""}
+																		className={
+																			form.errors.forwardHost &&
+																			form.touched.forwardHost
+																				? "border-destructive"
+																				: ""
+																		}
 																		{...field}
 																	/>
-																	{form.errors.forwardHost && form.touched.forwardHost && (
-																		<p className="text-sm font-medium text-destructive">{form.errors.forwardHost}</p>
-																	)}
+																	{form.errors.forwardHost &&
+																		form.touched.forwardHost && (
+																			<p className="text-sm font-medium text-destructive">
+																				{form.errors.forwardHost}
+																			</p>
+																		)}
 																</div>
 															)}
 														</Field>
@@ -220,12 +238,20 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		min={1}
 																		max={65535}
 																		placeholder="eg: 8081"
-																		className={form.errors.forwardPort && form.touched.forwardPort ? "border-destructive" : ""}
+																		className={
+																			form.errors.forwardPort &&
+																			form.touched.forwardPort
+																				? "border-destructive"
+																				: ""
+																		}
 																		{...field}
 																	/>
-																	{form.errors.forwardPort && form.touched.forwardPort && (
-																		<p className="text-sm font-medium text-destructive">{form.errors.forwardPort}</p>
-																	)}
+																	{form.errors.forwardPort &&
+																		form.touched.forwardPort && (
+																			<p className="text-sm font-medium text-destructive">
+																				{form.errors.forwardPort}
+																			</p>
+																		)}
 																</div>
 															)}
 														</Field>
@@ -236,16 +262,26 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Field name="bandwidthLimit">
 															{({ field, form }: any) => (
 																<div className="mb-3 space-y-2">
-																	<Label htmlFor="bandwidthLimit"><T id="proxy-host.bandwidth-limit" /></Label>
+																	<Label htmlFor="bandwidthLimit">
+																		<T id="proxy-host.bandwidth-limit" />
+																	</Label>
 																	<Input
 																		id="bandwidthLimit"
 																		placeholder="0 = Unlimited"
-																		className={form.errors.bandwidthLimit && form.touched.bandwidthLimit ? "border-destructive" : ""}
+																		className={
+																			form.errors.bandwidthLimit &&
+																			form.touched.bandwidthLimit
+																				? "border-destructive"
+																				: ""
+																		}
 																		{...field}
 																	/>
-																	{form.errors.bandwidthLimit && form.touched.bandwidthLimit && (
-																		<p className="text-sm font-medium text-destructive">{form.errors.bandwidthLimit}</p>
-																	)}
+																	{form.errors.bandwidthLimit &&
+																		form.touched.bandwidthLimit && (
+																			<p className="text-sm font-medium text-destructive">
+																				{form.errors.bandwidthLimit}
+																			</p>
+																		)}
 																</div>
 															)}
 														</Field>
@@ -260,12 +296,20 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<Input
 																		id="forwardQuery"
 																		placeholder="e.g. api_key=123"
-																		className={form.errors.forwardQuery && form.touched.forwardQuery ? "border-destructive" : ""}
+																		className={
+																			form.errors.forwardQuery &&
+																			form.touched.forwardQuery
+																				? "border-destructive"
+																				: ""
+																		}
 																		{...field}
 																	/>
-																	{form.errors.forwardQuery && form.touched.forwardQuery && (
-																		<p className="text-sm font-medium text-destructive">{form.errors.forwardQuery}</p>
-																	)}
+																	{form.errors.forwardQuery &&
+																		form.touched.forwardQuery && (
+																			<p className="text-sm font-medium text-destructive">
+																				{form.errors.forwardQuery}
+																			</p>
+																		)}
 																</div>
 															)}
 														</Field>
@@ -279,7 +323,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</h4>
 														<div className="space-y-4">
 															<div className="flex items-center justify-between">
-																<Label htmlFor="cachingEnabled" className="flex-1 cursor-pointer">
+																<Label
+																	htmlFor="cachingEnabled"
+																	className="flex-1 cursor-pointer"
+																>
 																	<T id="host.flags.cache-assets" />
 																</Label>
 																<Field name="cachingEnabled" type="checkbox">
@@ -287,13 +334,21 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<Switch
 																			id="cachingEnabled"
 																			checked={field.checked}
-																			onCheckedChange={(checked) => form.setFieldValue("cachingEnabled", checked)}
+																			onCheckedChange={(checked) =>
+																				form.setFieldValue(
+																					"cachingEnabled",
+																					checked,
+																				)
+																			}
 																		/>
 																	)}
 																</Field>
 															</div>
 															<div className="flex items-center justify-between">
-																<Label htmlFor="blockExploits" className="flex-1 cursor-pointer">
+																<Label
+																	htmlFor="blockExploits"
+																	className="flex-1 cursor-pointer"
+																>
 																	<T id="host.flags.block-exploits" />
 																</Label>
 																<Field name="blockExploits" type="checkbox">
@@ -301,13 +356,21 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<Switch
 																			id="blockExploits"
 																			checked={field.checked}
-																			onCheckedChange={(checked) => form.setFieldValue("blockExploits", checked)}
+																			onCheckedChange={(checked) =>
+																				form.setFieldValue(
+																					"blockExploits",
+																					checked,
+																				)
+																			}
 																		/>
 																	)}
 																</Field>
 															</div>
 															<div className="flex items-center justify-between">
-																<Label htmlFor="allowWebsocketUpgrade" className="flex-1 cursor-pointer">
+																<Label
+																	htmlFor="allowWebsocketUpgrade"
+																	className="flex-1 cursor-pointer"
+																>
 																	<T id="host.flags.websockets-upgrade" />
 																</Label>
 																<Field name="allowWebsocketUpgrade" type="checkbox">
@@ -315,7 +378,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<Switch
 																			id="allowWebsocketUpgrade"
 																			checked={field.checked}
-																			onCheckedChange={(checked) => form.setFieldValue("allowWebsocketUpgrade", checked)}
+																			onCheckedChange={(checked) =>
+																				form.setFieldValue(
+																					"allowWebsocketUpgrade",
+																					checked,
+																				)
+																			}
 																		/>
 																	)}
 																</Field>

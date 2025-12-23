@@ -85,7 +85,11 @@ export default function TableWrapper() {
 					</Button>
 					<HasPermission section={STREAMS} permission={MANAGE} hideError>
 						{data?.length ? (
-							<Button size="sm" className="bg-blue-600/90 hover:bg-blue-600 text-white shadow-sm" onClick={() => showStreamModal("new")}>
+							<Button
+								size="sm"
+								className="bg-blue-600/90 hover:bg-blue-600 text-white shadow-sm"
+								onClick={() => showStreamModal("new")}
+							>
 								<IconPlus className="mr-2 h-4 w-4" />
 								<T id="object.add" tData={{ object: "stream" }} />
 							</Button>
@@ -114,5 +118,3 @@ export default function TableWrapper() {
 		</Card>
 	);
 }
-
-

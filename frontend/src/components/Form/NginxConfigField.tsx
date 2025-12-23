@@ -29,7 +29,8 @@ export function NginxConfigField({
 							minHeight={200}
 							indentWidth={2}
 							style={{
-								fontFamily: "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+								fontFamily:
+									"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
 								// borderRadius: "0.3rem", // Handled by container
 								minHeight: "200px",
 								backgroundColor: "#1e1e1e",

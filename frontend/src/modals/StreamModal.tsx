@@ -4,13 +4,7 @@ import { Field, Form, Formik } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Button } from "src/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Input } from "src/components/ui/input";
@@ -104,14 +98,20 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 									<TabsList className="grid w-full grid-cols-2">
-										<TabsTrigger value="details"><T id="column.details" /></TabsTrigger>
-										<TabsTrigger value="ssl"><T id="column.ssl" /></TabsTrigger>
+										<TabsTrigger value="details">
+											<T id="column.details" />
+										</TabsTrigger>
+										<TabsTrigger value="ssl">
+											<T id="column.ssl" />
+										</TabsTrigger>
 									</TabsList>
 
 									<div className="mt-4 p-1">
 										<TabsContent value="details" className="space-y-4">
 											<div className="space-y-2">
-												<Label htmlFor="incomingPort"><T id="stream.incoming-port" /></Label>
+												<Label htmlFor="incomingPort">
+													<T id="stream.incoming-port" />
+												</Label>
 												<Field name="incomingPort" validate={validateString(1, 11)}>
 													{({ field }: any) => (
 														<Input
@@ -119,56 +119,87 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															id="incomingPort"
 															required
 															placeholder="eg: 8080"
-															className={errors.incomingPort && touched.incomingPort ? "border-destructive" : ""}
+															className={
+																errors.incomingPort && touched.incomingPort
+																	? "border-destructive"
+																	: ""
+															}
 														/>
 													)}
 												</Field>
 												{errors.incomingPort && touched.incomingPort && (
-													<div className="text-sm text-destructive">{String(errors.incomingPort)}</div>
+													<div className="text-sm text-destructive">
+														{String(errors.incomingPort)}
+													</div>
 												)}
 											</div>
 
 											<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 												<div className="md:col-span-8 space-y-2">
-													<Label htmlFor="forwardingHost"><T id="stream.forward-host" /></Label>
+													<Label htmlFor="forwardingHost">
+														<T id="stream.forward-host" />
+													</Label>
 													<Field name="forwardingHost" validate={validateString(1, 255)}>
 														{({ field }: any) => (
 															<Input
 																{...field}
 																id="forwardingHost"
 																required
-																placeholder={intl.formatMessage({ id: "stream.forward-host.placeholder" })}
-																className={errors.forwardingHost && touched.forwardingHost ? "border-destructive" : ""}
+																placeholder={intl.formatMessage({
+																	id: "stream.forward-host.placeholder",
+																})}
+																className={
+																	errors.forwardingHost && touched.forwardingHost
+																		? "border-destructive"
+																		: ""
+																}
 															/>
 														)}
 													</Field>
 													{errors.forwardingHost && touched.forwardingHost && (
-														<div className="text-sm text-destructive">{String(errors.forwardingHost)}</div>
+														<div className="text-sm text-destructive">
+															{String(errors.forwardingHost)}
+														</div>
 													)}
 												</div>
 												<div className="md:col-span-4 space-y-2">
-													<Label htmlFor="forwardingPort"><T id="host.forward-port" /></Label>
+													<Label htmlFor="forwardingPort">
+														<T id="host.forward-port" />
+													</Label>
 													<Field name="forwardingPort" validate={validateString(0, 12)}>
 														{({ field }: any) => (
 															<Input
 																{...field}
 																id="forwardingPort"
 																placeholder="eg: 8081"
-																className={errors.forwardingPort && touched.forwardingPort ? "border-destructive" : ""}
+																className={
+																	errors.forwardingPort && touched.forwardingPort
+																		? "border-destructive"
+																		: ""
+																}
 															/>
 														)}
 													</Field>
 													{errors.forwardingPort && touched.forwardingPort && (
-														<div className="text-sm text-destructive">{String(errors.forwardingPort)}</div>
+														<div className="text-sm text-destructive">
+															{String(errors.forwardingPort)}
+														</div>
 													)}
 												</div>
 											</div>
 
 											<div className="my-4">
-												<h3 className="text-lg font-medium py-2"><T id="host.flags.protocols" /></h3>
+												<h3 className="text-lg font-medium py-2">
+													<T id="host.flags.protocols" />
+												</h3>
 												<div className="space-y-4">
 													<div className="flex items-center justify-between">
-														<Label htmlFor="tcpForwarding" className="cursor-pointer font-normal"><T id="streams.tcp" /></Label>
+														<Label
+															htmlFor="tcpForwarding"
+															className="cursor-pointer font-normal"
+														>
+															<T id="streams.tcp" />
+														</Label>
 														<Field name="tcpForwarding" type="checkbox">
 															{({ field }: any) => (
 																<Switch
@@ -185,7 +216,12 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 													<div className="flex items-center justify-between">
-														<Label htmlFor="udpForwarding" className="cursor-pointer font-normal"><T id="streams.udp" /></Label>
+														<Label
+															htmlFor="udpForwarding"
+															className="cursor-pointer font-normal"
+														>
+															<T id="streams.udp" />
+														</Label>
 														<Field name="udpForwarding" type="checkbox">
 															{({ field }: any) => (
 																<Switch

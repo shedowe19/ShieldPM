@@ -22,7 +22,7 @@ interface ShowProps {
 	invalidations?: any[];
 }
 
-interface Props extends InnerModalProps, ShowProps { }
+interface Props extends InnerModalProps, ShowProps {}
 
 const showDeleteConfirmModal = (props: ShowProps) => {
 	EasyModal.show(DeleteConfirmModal, props);
@@ -80,11 +80,7 @@ const DeleteConfirmModal = EasyModal.create(
 						<Button variant="outline" onClick={remove} disabled={isSubmitting}>
 							<T id="cancel" />
 						</Button>
-						<Button
-							variant="destructive"
-							onClick={onSubmit}
-							disabled={isSubmitting}
-						>
+						<Button variant="destructive" onClick={onSubmit} disabled={isSubmitting}>
 							{isSubmitting ? "..." : <T id="action.delete" />}
 						</Button>
 					</DialogFooter>

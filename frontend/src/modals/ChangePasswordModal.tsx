@@ -3,13 +3,7 @@ import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
 import { updateAuth } from "src/api/backend";
 import { Button } from "src/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -99,7 +93,11 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 												placeholder={intl.formatMessage({
 													id: "user.current-password",
 												})}
-												className={errors.current && touched.current ? "border-destructive pr-10" : "pr-10"}
+												className={
+													errors.current && touched.current
+														? "border-destructive pr-10"
+														: "pr-10"
+												}
 												{...field}
 											/>
 											<Button
@@ -134,7 +132,9 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 													autoComplete="new-password"
 													required
 													placeholder={intl.formatMessage({ id: "user.new-password" })}
-													className={errors.new && touched.new ? "border-destructive pr-10" : "pr-10"}
+													className={
+														errors.new && touched.new ? "border-destructive pr-10" : "pr-10"
+													}
 													{...field}
 												/>
 												<Button
@@ -189,7 +189,11 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 												autoComplete="new-password"
 												required
 												placeholder={intl.formatMessage({ id: "user.confirm-password" })}
-												className={errors.confirm && touched.confirm ? "border-destructive pr-10" : "pr-10"}
+												className={
+													errors.confirm && touched.confirm
+														? "border-destructive pr-10"
+														: "pr-10"
+												}
 												{...field}
 											/>
 											<Button

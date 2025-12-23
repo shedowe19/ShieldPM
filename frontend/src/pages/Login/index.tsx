@@ -71,9 +71,7 @@ export default function Login() {
 						<CardTitle className="text-2xl font-bold text-center tracking-tight">
 							<T id="login.title" />
 						</CardTitle>
-						<CardDescription className="text-center">
-							Enter your credentials to continue
-						</CardDescription>
+						<CardDescription className="text-center">Enter your credentials to continue</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{formErr !== "" && (
@@ -108,7 +106,9 @@ export default function Login() {
 														ref={emailRef}
 														type="email"
 														required
-														placeholder={intl.formatMessage({ id: "form.placeholder.email" })}
+														placeholder={intl.formatMessage({
+															id: "form.placeholder.email",
+														})}
 														className={`bg-background/50 ${errors.email && touched.email ? "border-destructive" : ""}`}
 													/>
 													{errors.email && touched.email && (
@@ -142,8 +142,16 @@ export default function Login() {
 											)}
 										</Field>
 									</div>
-									<Button type="submit" className="w-full bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25" disabled={isSubmitting}>
-										{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <T id="sign-in" />}
+									<Button
+										type="submit"
+										className="w-full bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25"
+										disabled={isSubmitting}
+									>
+										{isSubmitting ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<T id="sign-in" />
+										)}
 									</Button>
 								</Form>
 							)}
@@ -155,5 +163,3 @@ export default function Login() {
 		</div>
 	);
 }
-
-

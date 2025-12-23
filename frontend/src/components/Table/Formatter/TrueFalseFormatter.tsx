@@ -9,11 +9,7 @@ interface Props {
 	falseLabel?: string;
 	falseColor?: string;
 }
-export function TrueFalseFormatter({
-	value,
-	trueLabel = "enabled",
-	falseLabel = "disabled",
-}: Props) {
+export function TrueFalseFormatter({ value, trueLabel = "enabled", falseLabel = "disabled" }: Props) {
 	// Map simple color names to variants or classes if needed
 	// For now assume trueColor/falseColor map to badge variants or use default logic
 
@@ -30,7 +26,9 @@ export function TrueFalseFormatter({
 
 	return (
 		<Badge variant={value ? "outline" : "destructive"} className={cn("font-normal", value && badgeClass)}>
-			<span className={cn("mr-1.5 h-2 w-2 rounded-full", value ? "bg-green-600 dark:bg-green-400" : "bg-white")} />
+			<span
+				className={cn("mr-1.5 h-2 w-2 rounded-full", value ? "bg-green-600 dark:bg-green-400" : "bg-white")}
+			/>
 			<T id={value ? trueLabel : falseLabel} />
 		</Badge>
 	);

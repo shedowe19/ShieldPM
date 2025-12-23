@@ -5,13 +5,7 @@ import { useState } from "react";
 import { Loading } from "src/components";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
@@ -136,7 +130,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											)}
 										</Field>
 										{errors.name && touched.name && (
-											<p className="text-sm font-medium text-destructive">{errors.name as string}</p>
+											<p className="text-sm font-medium text-destructive">
+												{errors.name as string}
+											</p>
 										)}
 									</div>
 									<div className="space-y-2">
@@ -149,13 +145,17 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<Input
 													id="nickname"
 													placeholder={intl.formatMessage({ id: "user.nickname" })}
-													className={errors.nickname && touched.nickname ? "border-destructive" : ""}
+													className={
+														errors.nickname && touched.nickname ? "border-destructive" : ""
+													}
 													{...field}
 												/>
 											)}
 										</Field>
 										{errors.nickname && touched.nickname && (
-											<p className="text-sm font-medium text-destructive">{errors.nickname as string}</p>
+											<p className="text-sm font-medium text-destructive">
+												{errors.nickname as string}
+											</p>
 										)}
 									</div>
 								</div>
@@ -189,11 +189,18 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<T id="options" />
 											</h4>
 											<div className="flex items-center justify-between">
-												<Label htmlFor="isAdmin" className="flex-1 cursor-pointer flex items-center gap-2">
+												<Label
+													htmlFor="isAdmin"
+													className="flex-1 cursor-pointer flex items-center gap-2"
+												>
 													<IconShield className="h-4 w-4 text-orange-500" />
 													<div className="flex flex-col">
-														<span><T id="role.admin" /></span>
-														<span className="text-xs text-muted-foreground font-normal"><T id="user.permissions.full-system-access" /></span>
+														<span>
+															<T id="role.admin" />
+														</span>
+														<span className="text-xs text-muted-foreground font-normal">
+															<T id="user.permissions.full-system-access" />
+														</span>
 													</div>
 												</Label>
 												<Switch
@@ -203,11 +210,18 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												/>
 											</div>
 											<div className="flex items-center justify-between">
-												<Label htmlFor="isDisabled" className="flex-1 cursor-pointer flex items-center gap-2">
+												<Label
+													htmlFor="isDisabled"
+													className="flex-1 cursor-pointer flex items-center gap-2"
+												>
 													<IconPower className="h-4 w-4 text-red-500" />
 													<div className="flex flex-col">
-														<span><T id="disabled" /></span>
-														<span className="text-xs text-muted-foreground font-normal"><T id="user.permissions.prevent-login" /></span>
+														<span>
+															<T id="disabled" />
+														</span>
+														<span className="text-xs text-muted-foreground font-normal">
+															<T id="user.permissions.prevent-login" />
+														</span>
 													</div>
 												</Label>
 												<Switch

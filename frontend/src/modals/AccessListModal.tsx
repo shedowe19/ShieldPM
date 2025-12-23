@@ -7,13 +7,7 @@ import { useAccessList, useSetAccessList } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -109,7 +103,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}));
 
 		setAccessList(payload, {
-			onError: (err: any) => setErrorMsg(typeof err === 'string' ? err : err.message),
+			onError: (err: any) => setErrorMsg(typeof err === "string" ? err : err.message),
 			onSuccess: () => {
 				showObjectSuccess("access-list", "saved");
 				remove();
@@ -200,51 +194,75 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 									<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 										<TabsList className="grid w-full grid-cols-4">
-											<TabsTrigger value="details"><T id="column.details" /></TabsTrigger>
-											<TabsTrigger value="auth"><T id="column.authorizations" /></TabsTrigger>
-											<TabsTrigger value="rules"><T id="column.rules" /></TabsTrigger>
-											<TabsTrigger value="sso"><T id="access-list.sso" /></TabsTrigger>
+											<TabsTrigger value="details">
+												<T id="column.details" />
+											</TabsTrigger>
+											<TabsTrigger value="auth">
+												<T id="column.authorizations" />
+											</TabsTrigger>
+											<TabsTrigger value="rules">
+												<T id="column.rules" />
+											</TabsTrigger>
+											<TabsTrigger value="sso">
+												<T id="access-list.sso" />
+											</TabsTrigger>
 										</TabsList>
 
 										<TabsContent value="details" className="space-y-4 pt-4">
 											<div className="space-y-2">
-												<Label htmlFor="name"><T id="column.name" /></Label>
+												<Label htmlFor="name">
+													<T id="column.name" />
+												</Label>
 												<Field name="name" validate={validateString(1, 255)}>
 													{({ field }: any) => (
 														<Input
 															{...field}
 															id="name"
 															autoComplete="off"
-															className={errors.name && touched.name ? "border-destructive" : ""}
+															className={
+																errors.name && touched.name ? "border-destructive" : ""
+															}
 														/>
 													)}
 												</Field>
-												{errors.name && touched.name && <div className="text-sm text-destructive">{errors.name}</div>}
+												{errors.name && touched.name && (
+													<div className="text-sm text-destructive">{errors.name}</div>
+												)}
 											</div>
 
 											<Card className="border-dashed">
 												<CardContent className="p-4 space-y-4">
-													<h3 className="font-medium"><T id="options" /></h3>
+													<h3 className="font-medium">
+														<T id="options" />
+													</h3>
 													<div className="flex items-center justify-between">
-														<Label htmlFor="satisfyAny" className="cursor-pointer"><T id="access-list.satisfy-any" /></Label>
+														<Label htmlFor="satisfyAny" className="cursor-pointer">
+															<T id="access-list.satisfy-any" />
+														</Label>
 														<Field name="satisfyAny">
 															{({ field }: any) => (
 																<Switch
 																	id="satisfyAny"
 																	checked={field.value}
-																	onCheckedChange={(checked) => setFieldValue("satisfyAny", checked)}
+																	onCheckedChange={(checked) =>
+																		setFieldValue("satisfyAny", checked)
+																	}
 																/>
 															)}
 														</Field>
 													</div>
 													<div className="flex items-center justify-between">
-														<Label htmlFor="passAuth" className="cursor-pointer"><T id="access-list.pass-auth" /></Label>
+														<Label htmlFor="passAuth" className="cursor-pointer">
+															<T id="access-list.pass-auth" />
+														</Label>
 														<Field name="passAuth">
 															{({ field }: any) => (
 																<Switch
 																	id="passAuth"
 																	checked={field.value}
-																	onCheckedChange={(checked) => setFieldValue("passAuth", checked)}
+																	onCheckedChange={(checked) =>
+																		setFieldValue("passAuth", checked)
+																	}
 																/>
 															)}
 														</Field>
@@ -257,10 +275,15 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											{isSsoEnabled && (
 												<Alert variant="default" className="mb-4 bg-muted border-primary/20">
 													<AlertTriangle className="h-4 w-4 text-primary" />
-													<AlertDescription>Authentication handled by SSO Provider.</AlertDescription>
+													<AlertDescription>
+														Authentication handled by SSO Provider.
+													</AlertDescription>
 												</Alert>
 											)}
-											<fieldset disabled={isSsoEnabled} className={isSsoEnabled ? "opacity-50" : ""}>
+											<fieldset
+												disabled={isSsoEnabled}
+												className={isSsoEnabled ? "opacity-50" : ""}
+											>
 												<BasicAuthFields initialValues={data?.items || []} />
 											</fieldset>
 										</TabsContent>
@@ -269,10 +292,15 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											{isSsoEnabled && (
 												<Alert variant="default" className="mb-4 bg-muted border-primary/20">
 													<AlertTriangle className="h-4 w-4 text-primary" />
-													<AlertDescription>Access Rules handled by SSO Provider.</AlertDescription>
+													<AlertDescription>
+														Access Rules handled by SSO Provider.
+													</AlertDescription>
 												</Alert>
 											)}
-											<fieldset disabled={isSsoEnabled} className={isSsoEnabled ? "opacity-50" : ""}>
+											<fieldset
+												disabled={isSsoEnabled}
+												className={isSsoEnabled ? "opacity-50" : ""}
+											>
 												<AccessClientFields initialValues={data?.clients || []} />
 											</fieldset>
 										</TabsContent>
@@ -287,12 +315,20 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															onValueChange={(val) => setFieldValue("authType", val)}
 														>
 															<SelectTrigger id="authType">
-																<SelectValue placeholder={intl.formatMessage({ id: "access-list.satisfy.none" })} />
+																<SelectValue
+																	placeholder={intl.formatMessage({
+																		id: "access-list.satisfy.none",
+																	})}
+																/>
 															</SelectTrigger>
 															<SelectContent>
 																<SelectItem value="none">None / Basic Auth</SelectItem>
-																<SelectItem value="authentik_proxy">Authentik Proxy (Forward Auth)</SelectItem>
-																<SelectItem value="oidc">OIDC (OpenID Connect)</SelectItem>
+																<SelectItem value="authentik_proxy">
+																	Authentik Proxy (Forward Auth)
+																</SelectItem>
+																<SelectItem value="oidc">
+																	OIDC (OpenID Connect)
+																</SelectItem>
 															</SelectContent>
 														</Select>
 													)}
@@ -307,12 +343,15 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															<Input
 																{...field}
 																id="authentikHost"
-																placeholder={intl.formatMessage({ id: "form.placeholder.auth-host" })}
+																placeholder={intl.formatMessage({
+																	id: "form.placeholder.auth-host",
+																})}
 															/>
 														)}
 													</Field>
 													<div className="text-sm text-muted-foreground">
-														Full URL to your Authentik instance. Uses Nginx `auth_request` to the Outpost.
+														Full URL to your Authentik instance. Uses Nginx `auth_request`
+														to the Outpost.
 													</div>
 												</div>
 											)}
@@ -334,12 +373,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<div className="space-y-2">
 														<Label htmlFor="oidcClientId">Client ID</Label>
 														<Field name="oidcClientId">
-															{({ field }: any) => (
-																<Input
-																	{...field}
-																	id="oidcClientId"
-																/>
-															)}
+															{({ field }: any) => <Input {...field} id="oidcClientId" />}
 														</Field>
 													</div>
 													<div className="space-y-2">
@@ -363,7 +397,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
 											<T id="cancel" />
 										</Button>
-										<Button type="submit" disabled={isSubmitting} className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm">
+										<Button
+											type="submit"
+											disabled={isSubmitting}
+											className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
+										>
 											{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 											<T id="save" />
 										</Button>

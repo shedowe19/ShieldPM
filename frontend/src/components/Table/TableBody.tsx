@@ -6,9 +6,7 @@ import { TableBody as ShadcnTableBody, TableRow, TableCell } from "src/component
 import React from "react";
 
 // Helper to use forwardRef with motion
-const TableRowWithRef = React.forwardRef<HTMLTableRowElement, any>((props, ref) => (
-	<TableRow ref={ref} {...props} />
-));
+const TableRowWithRef = React.forwardRef<HTMLTableRowElement, any>((props, ref) => <TableRow ref={ref} {...props} />);
 TableRowWithRef.displayName = "TableRowWithRef";
 
 const MotionTableRow = motion(TableRowWithRef);
@@ -69,5 +67,3 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 }
 
 export { TableBody };
-
-

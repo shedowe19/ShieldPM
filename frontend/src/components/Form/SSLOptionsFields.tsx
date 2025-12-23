@@ -63,7 +63,10 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={!hasCertificate}
 								/>
-								<Label htmlFor="http2Support" className={!hasCertificate ? "text-muted-foreground" : ""}>
+								<Label
+									htmlFor="http2Support"
+									className={!hasCertificate ? "text-muted-foreground" : ""}
+								>
 									<T id="domains.http2-support" />
 								</Label>
 							</div>
@@ -82,7 +85,10 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={!hasCertificate || !sslForced}
 								/>
-								<Label htmlFor="hstsEnabled" className={(!hasCertificate || !sslForced) ? "text-muted-foreground" : ""}>
+								<Label
+									htmlFor="hstsEnabled"
+									className={!hasCertificate || !sslForced ? "text-muted-foreground" : ""}
+								>
 									<T id="domains.hsts-enabled" />
 								</Label>
 							</div>
@@ -99,7 +105,10 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
 									disabled={!hasCertificate || !hstsEnabled}
 								/>
-								<Label htmlFor="hstsSubdomains" className={(!hasCertificate || !hstsEnabled) ? "text-muted-foreground" : ""}>
+								<Label
+									htmlFor="hstsSubdomains"
+									className={!hasCertificate || !hstsEnabled ? "text-muted-foreground" : ""}
+								>
 									<T id="domains.hsts-subdomains" />
 								</Label>
 							</div>
@@ -137,4 +146,3 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 		</div>
 	);
 }
-

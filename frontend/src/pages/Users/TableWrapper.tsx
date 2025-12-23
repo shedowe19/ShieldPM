@@ -91,7 +91,11 @@ export default function TableWrapper() {
 							/>
 						</div>
 
-						<Button size="sm" className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm" onClick={() => showUserModal("new")}>
+						<Button
+							size="sm"
+							className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
+							onClick={() => showUserModal("new")}
+						>
 							<IconPlus className="mr-2 h-4 w-4" />
 							<T id="object.add" tData={{ object: "user" }} />
 						</Button>
@@ -123,5 +127,3 @@ export default function TableWrapper() {
 		</Card>
 	);
 }
-
-

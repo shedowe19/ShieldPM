@@ -12,7 +12,11 @@ export function RolesFormatter({ roles }: Props) {
 	return (
 		<>
 			{r.map((role: string) => (
-				<Badge key={role} variant="secondary" className="mr-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800">
+				<Badge
+					key={role}
+					variant="secondary"
+					className="mr-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800"
+				>
 					<T id={`role.${role}`} />
 				</Badge>
 			))}

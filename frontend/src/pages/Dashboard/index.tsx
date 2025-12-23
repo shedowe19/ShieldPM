@@ -34,7 +34,9 @@ const Dashboard = () => {
 							<CardContent className="p-6">
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground"><T id="proxy-hosts.count.label" /></p>
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="proxy-hosts.count.label" />
+										</p>
 										<div className="text-3xl font-bold">
 											<T id="proxy-hosts.count" data={{ count: hostReport?.proxy }} />
 										</div>
@@ -56,7 +58,9 @@ const Dashboard = () => {
 							<CardContent className="p-6">
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground"><T id="redirection-hosts.count.label" /></p>
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="redirection-hosts.count.label" />
+										</p>
 										<div className="text-3xl font-bold">
 											<T id="redirection-hosts.count" data={{ count: hostReport?.redirection }} />
 										</div>
@@ -78,7 +82,9 @@ const Dashboard = () => {
 							<CardContent className="p-6">
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground"><T id="streams.count.label" /></p>
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="streams.count.label" />
+										</p>
 										<div className="text-3xl font-bold">
 											<T id="streams.count" data={{ count: hostReport?.stream }} />
 										</div>
@@ -100,7 +106,9 @@ const Dashboard = () => {
 							<CardContent className="p-6">
 								<div className="flex items-center justify-between space-x-4">
 									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground"><T id="dead-hosts.count.label" /></p>
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="dead-hosts.count.label" />
+										</p>
 										<div className="text-3xl font-bold">
 											<T id="dead-hosts.count" data={{ count: hostReport?.dead }} />
 										</div>

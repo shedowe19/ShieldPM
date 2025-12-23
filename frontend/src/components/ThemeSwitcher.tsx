@@ -22,17 +22,23 @@ function ThemeSwitcher({ className }: Props) {
 				<Button variant="ghost" size="icon" className={cn("h-8 w-8 px-0", className)}>
 					<IconSun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
 					<IconMoon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-					<span className="sr-only"><T id="sr.toggle-theme" /></span>
+					<span className="sr-only">
+						<T id="sr.toggle-theme" />
+					</span>
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
 				<DropdownMenuItem onClick={() => setTheme("light")}>
 					<IconSun className="mr-2 h-4 w-4" />
-					<span><T id="theme.light" /></span>
+					<span>
+						<T id="theme.light" />
+					</span>
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={() => setTheme("dark")}>
 					<IconMoon className="mr-2 h-4 w-4" />
-					<span><T id="theme.dark" /></span>
+					<span>
+						<T id="theme.dark" />
+					</span>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

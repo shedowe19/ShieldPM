@@ -112,23 +112,21 @@ const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }
 	const location = useLocation();
 	const [isOpen, setIsOpen] = useState(false);
 	const isActive = item.to ? location.pathname === item.to : false;
-	const isChildActive = item.items?.some(sub => sub.to && location.pathname === sub.to);
+	const isChildActive = item.items?.some((sub) => sub.to && location.pathname === sub.to);
 
 	if (item.items && item.items.length > 0) {
 		return (
-			<HasPermission
-				section={item.permissionSection}
-				permission={item.permission || VIEW}
-				hideError
-			>
+			<HasPermission section={item.permissionSection} permission={item.permission || VIEW} hideError>
 				<div className="space-y-1">
 					<Button
-						variant={(isActive || isChildActive) ? "secondary" : "ghost"}
+						variant={isActive || isChildActive ? "secondary" : "ghost"}
 						className="w-full justify-start"
 						onClick={() => setIsOpen(!isOpen)}
 					>
 						{item.icon && <item.icon className="mr-2 h-4 w-4" />}
-						<span className="flex-1 text-left"><T id={item.label} /></span>
+						<span className="flex-1 text-left">
+							<T id={item.label} />
+						</span>
 					</Button>
 					{isOpen || isChildActive ? (
 						<div className="ml-4 space-y-1 border-l pl-2">
@@ -143,11 +141,7 @@ const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }
 	}
 
 	return (
-		<HasPermission
-			section={item.permissionSection}
-			permission={item.permission || VIEW}
-			hideError
-		>
+		<HasPermission section={item.permissionSection} permission={item.permission || VIEW} hideError>
 			<Button
 				asChild
 				variant={isActive ? "secondary" : "ghost"}
@@ -172,7 +166,9 @@ export function Sidebar() {
 					<SheetTrigger asChild>
 						<Button variant="ghost" size="icon">
 							<IconMenu2 />
-							<span className="sr-only"><T id="sr.toggle-navigation" /></span>
+							<span className="sr-only">
+								<T id="sr.toggle-navigation" />
+							</span>
 						</Button>
 					</SheetTrigger>
 					<SheetContent side="left" className="w-[280px] p-0">

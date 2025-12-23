@@ -1,11 +1,7 @@
 import type { DeadHost, ProxyHost, RedirectionHost, Stream } from "src/api/backend";
 import { TrueFalseFormatter } from "src/components";
 import { T } from "src/locale";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "src/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "src/components/ui/popover";
 
 const getSection = (title: string, items: ProxyHost[] | RedirectionHost[] | DeadHost[]) => {
 	if (items.length === 0) {
@@ -63,7 +59,10 @@ export function CertificateInUseFormatter({ proxyHosts, redirectionHosts, deadHo
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
-				<button type="button" className="inline-flex items-center justify-center p-0 m-0 border-none bg-transparent cursor-pointer outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm">
+				<button
+					type="button"
+					className="inline-flex items-center justify-center p-0 m-0 border-none bg-transparent cursor-pointer outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
+				>
 					<TrueFalseFormatter value trueLabel="certificate.in-use" />
 				</button>
 			</PopoverTrigger>

@@ -11,7 +11,6 @@ interface TableLayoutProps<TFields> {
 	};
 }
 function TableLayout<TFields>(props: TableLayoutProps<TFields>) {
-
 	return (
 		<div className="rounded-md border">
 			<Table>
@@ -23,5 +22,3 @@ function TableLayout<TFields>(props: TableLayoutProps<TFields>) {
 }
 
 export { TableLayout, type TableLayoutProps };
-
-

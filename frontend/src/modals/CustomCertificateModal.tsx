@@ -7,13 +7,7 @@ import { type Certificate, createCertificate, uploadCertificate, validateCertifi
 import { T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -100,7 +94,10 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 
 							<Card className="border-dashed">
 								<CardContent className="p-4 space-y-4">
-									<Alert variant="default" className="bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400">
+									<Alert
+										variant="default"
+										className="bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
+									>
 										<IconAlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
 										<AlertDescription className="ml-2">
 											<T id="certificates.custom.warning" />
@@ -108,22 +105,30 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 									</Alert>
 
 									<div className="space-y-2">
-										<Label htmlFor="niceName"><T id="column.name" /></Label>
+										<Label htmlFor="niceName">
+											<T id="column.name" />
+										</Label>
 										<Field name="niceName" validate={validateString(1, 255)}>
 											{({ field }: any) => (
 												<Input
 													{...field}
 													id="niceName"
 													autoComplete="off"
-													className={errors.niceName && touched.niceName ? "border-destructive" : ""}
+													className={
+														errors.niceName && touched.niceName ? "border-destructive" : ""
+													}
 												/>
 											)}
 										</Field>
-										{errors.niceName && touched.niceName && <div className="text-sm text-destructive">{errors.niceName}</div>}
+										{errors.niceName && touched.niceName && (
+											<div className="text-sm text-destructive">{errors.niceName}</div>
+										)}
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="certificateKey"><T id="certificate.custom-certificate-key" /></Label>
+										<Label htmlFor="certificateKey">
+											<T id="certificate.custom-certificate-key" />
+										</Label>
 										<Input
 											id="certificateKey"
 											type="file"
@@ -138,11 +143,15 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 												);
 											}}
 										/>
-										{errors.certificateKey && touched.certificateKey && <div className="text-sm text-destructive">{errors.certificateKey}</div>}
+										{errors.certificateKey && touched.certificateKey && (
+											<div className="text-sm text-destructive">{errors.certificateKey}</div>
+										)}
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="certificate"><T id="certificate.custom-certificate" /></Label>
+										<Label htmlFor="certificate">
+											<T id="certificate.custom-certificate" />
+										</Label>
 										<Input
 											id="certificate"
 											type="file"
@@ -157,11 +166,15 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 												);
 											}}
 										/>
-										{errors.certificate && touched.certificate && <div className="text-sm text-destructive">{errors.certificate}</div>}
+										{errors.certificate && touched.certificate && (
+											<div className="text-sm text-destructive">{errors.certificate}</div>
+										)}
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="intermediateCertificate"><T id="certificate.custom-intermediate" /></Label>
+										<Label htmlFor="intermediateCertificate">
+											<T id="certificate.custom-intermediate" />
+										</Label>
 										<Input
 											id="intermediateCertificate"
 											type="file"
@@ -175,7 +188,11 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 												);
 											}}
 										/>
-										{errors.intermediateCertificate && touched.intermediateCertificate && <div className="text-sm text-destructive">{errors.intermediateCertificate}</div>}
+										{errors.intermediateCertificate && touched.intermediateCertificate && (
+											<div className="text-sm text-destructive">
+												{errors.intermediateCertificate}
+											</div>
+										)}
 									</div>
 								</CardContent>
 							</Card>
@@ -184,7 +201,11 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 								<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
 									<T id="cancel" />
 								</Button>
-								<Button type="submit" disabled={isSubmitting} className="bg-pink-600/90 hover:bg-pink-600 text-white shadow-sm">
+								<Button
+									type="submit"
+									disabled={isSubmitting}
+									className="bg-pink-600/90 hover:bg-pink-600 text-white shadow-sm"
+								>
 									{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 									<T id="save" />
 								</Button>

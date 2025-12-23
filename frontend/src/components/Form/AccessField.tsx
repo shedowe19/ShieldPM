@@ -71,9 +71,7 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 					<Label htmlFor={id}>
 						<T id={label} />
 					</Label>
-					{isLoading ? (
-						<Skeleton className="h-10 w-full" />
-					) : null}
+					{isLoading ? <Skeleton className="h-10 w-full" /> : null}
 					{isError ? <div className="text-destructive text-sm font-medium">{`${error}`}</div> : null}
 					{!isLoading && !isError ? (
 						<Select
@@ -87,7 +85,10 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 									...base,
 									height: "100%",
 									backgroundColor: "transparent",
-									":hover": { backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" },
+									":hover": {
+										backgroundColor: "hsl(var(--accent))",
+										color: "hsl(var(--accent-foreground))",
+									},
 								}),
 								control: (baseStyles) => ({
 									...baseStyles,
@@ -110,9 +111,7 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 						/>
 					) : null}
 					{form.errors[field.name] && form.touched[field.name] ? (
-						<div className="text-destructive text-sm font-medium">
-							{form.errors[field.name] as string}
-						</div>
+						<div className="text-destructive text-sm font-medium">{form.errors[field.name] as string}</div>
 					) : null}
 				</div>
 			)}

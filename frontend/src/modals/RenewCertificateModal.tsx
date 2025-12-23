@@ -5,13 +5,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { renewCertificate } from "src/api/backend";
 import { Loading } from "src/components";
 import { Button } from "src/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useCertificate } from "src/hooks";
 import { T } from "src/locale";

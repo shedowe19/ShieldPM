@@ -20,65 +20,65 @@ import { getCompiledSchema } from "./schema/index.js";
 // Monkey patch internalNginx
 internalNginx.test = async () => true;
 internalNginx.reload = async () => {
-    logger.info("MOCK: Nginx reload called");
-    return true;
+	logger.info("MOCK: Nginx reload called");
+	return true;
 };
 internalNginx.getConfigName = (host_type, host_id) => {
-    const dataPath = process.env.DATA_PATH;
-    if (host_type === "default") {
-        return `${dataPath}/nginx/default.conf`;
-    }
-    return `${dataPath}/nginx/${internalNginx.getFileFriendlyHostType(host_type)}/${host_id}.conf`;
+	const dataPath = process.env.DATA_PATH;
+	if (host_type === "default") {
+		return `${dataPath}/nginx/default.conf`;
+	}
+	return `${dataPath}/nginx/${internalNginx.getFileFriendlyHostType(host_type)}/${host_id}.conf`;
 };
 internalNginx.deleteFile = async (filename) => {
-    logger.info(`MOCK: Deleting file ${filename}`);
+	logger.info(`MOCK: Deleting file ${filename}`);
 };
 internalNginx.deleteConfig = async (host_type, host) => {
-    logger.info(`MOCK: Delete config for ${host_type}`);
+	logger.info(`MOCK: Delete config for ${host_type}`);
 };
 
 // Monkey patch utils.execFile
 const originalExecFile = utils.execFile;
 utils.execFile = async (cmd, args) => {
-    if (["nginx", "certbot", "nginxbeautifier", "pip"].includes(cmd) || cmd.includes("certbot-ocsp-fetcher")) {
-        logger.info(`MOCK: execFile ${cmd} ${args}`);
-        return "";
-    }
-    return originalExecFile(cmd, args);
+	if (["nginx", "certbot", "nginxbeautifier", "pip"].includes(cmd) || cmd.includes("certbot-ocsp-fetcher")) {
+		logger.info(`MOCK: execFile ${cmd} ${args}`);
+		return "";
+	}
+	return originalExecFile(cmd, args);
 };
 
 // Monkey patch internalCertificate timers
 internalCertificate.initTimer = () => {
-    logger.info("MOCK: Certificate timer init");
+	logger.info("MOCK: Certificate timer init");
 };
 
 // Monkey patch internalIpRanges
 internalIpRanges.initTimer = () => {
-    logger.info("MOCK: IP Ranges timer init");
+	logger.info("MOCK: IP Ranges timer init");
 };
 internalIpRanges.fetch = async () => {
-    logger.info("MOCK: IP Ranges fetch");
+	logger.info("MOCK: IP Ranges fetch");
 };
 
 async function start() {
-    try {
-        console.log("Starting DB Migration...");
-        await migrateUp();
-        console.log("Starting Setup...");
-        await setup();
-        console.log("Compiling Schema...");
-        await getCompiledSchema();
+	try {
+		console.log("Starting DB Migration...");
+		await migrateUp();
+		console.log("Starting Setup...");
+		await setup();
+		console.log("Compiling Schema...");
+		await getCompiledSchema();
 
-        const port = 3000;
-        app.listen(port, () => {
-            logger.info(`Backend listening on port ${port}`);
-            logger.info(`Admin: ${process.env.INITIAL_ADMIN_EMAIL} / ${process.env.INITIAL_ADMIN_PASSWORD}`);
-        });
-    } catch (err) {
-        logger.error("Startup Error", err);
-        console.error(err);
-        process.exit(1);
-    }
+		const port = 3000;
+		app.listen(port, () => {
+			logger.info(`Backend listening on port ${port}`);
+			logger.info(`Admin: ${process.env.INITIAL_ADMIN_EMAIL} / ${process.env.INITIAL_ADMIN_PASSWORD}`);
+		});
+	} catch (err) {
+		logger.error("Startup Error", err);
+		console.error(err);
+		process.exit(1);
+	}
 }
 
 start();

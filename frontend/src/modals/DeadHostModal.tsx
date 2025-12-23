@@ -3,21 +3,9 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Form, Formik } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import {
-	DomainNamesField,
-	Loading,
-	NginxConfigField,
-	SSLCertificateField,
-	SSLOptionsFields,
-} from "src/components";
+import { DomainNamesField, Loading, NginxConfigField, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { Button } from "src/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useDeadHost, useSetDeadHost } from "src/hooks";
@@ -94,7 +82,10 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								<DialogHeader>
 									<DialogTitle className="flex items-center gap-2">
 										<IconGhost className="h-5 w-5" />
-										<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "dead-host" }} />
+										<T
+											id={data?.id ? "object.edit" : "object.add"}
+											tData={{ object: "dead-host" }}
+										/>
 									</DialogTitle>
 								</DialogHeader>
 
@@ -107,8 +98,12 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 									<TabsList className="grid w-full grid-cols-3">
-										<TabsTrigger value="details"><T id="column.details" /></TabsTrigger>
-										<TabsTrigger value="ssl"><T id="column.ssl" /></TabsTrigger>
+										<TabsTrigger value="details">
+											<T id="column.details" />
+										</TabsTrigger>
+										<TabsTrigger value="ssl">
+											<T id="column.ssl" />
+										</TabsTrigger>
 										<TabsTrigger value="advanced">
 											<IconSettings size={16} className="mr-2" />
 											<span className="sr-only">Settings</span>

@@ -7,13 +7,7 @@ import { type ReactNode, useState } from "react";
 import { createCertificate, testHttpCertificate } from "src/api/backend";
 import { DomainNamesField } from "src/components";
 import { Button } from "src/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "src/components/ui/alert";
 import { Card, CardContent, CardFooter } from "src/components/ui/card";
 import { T } from "src/locale";
@@ -127,7 +121,10 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 
 								<Card className="border-dashed">
 									<CardContent className="p-4 space-y-4">
-										<Alert variant="default" className="bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400">
+										<Alert
+											variant="default"
+											className="bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
+										>
 											<IconAlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
 											<AlertDescription className="ml-2">
 												<T id="certificates.http.warning" />
@@ -154,7 +151,12 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 							</div>
 
 							<DialogFooter>
-								<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting || isTesting}>
+								<Button
+									type="button"
+									variant="ghost"
+									onClick={remove}
+									disabled={isSubmitting || isTesting}
+								>
 									<T id="cancel" />
 								</Button>
 								<div className="flex gap-2">

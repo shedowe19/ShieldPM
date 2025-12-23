@@ -3,18 +3,8 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { IconSettings } from "@tabler/icons-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
-import {
-	Alert,
-	AlertDescription,
-	AlertTitle,
-} from "src/components/ui/alert";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "src/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Loading } from "src/components";
@@ -60,9 +50,7 @@ export default function DefaultSite() {
 		return (
 			<div className="card-body">
 				<div className="mb-3">
-					<Alert variant="destructive">
-						{error.message}
-					</Alert>
+					<Alert variant="destructive">{error.message}</Alert>
 				</div>
 			</div>
 		);
@@ -114,18 +102,12 @@ export default function DefaultSite() {
 								<Field name="value">
 									{({ field, form }: any) => (
 										<>
-											{[
-												"congratulations",
-												"404",
-												"444",
-												"redirect",
-												"html"
-											].map((option) => (
+											{["congratulations", "404", "444", "redirect", "html"].map((option) => (
 												<label
 													key={option}
 													className={`
 														relative flex cursor-pointer rounded-lg border bg-card p-4 shadow-sm focus:outline-none 
-														${field.value === option ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-primary/50'}
+														${field.value === option ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/50"}
 													`}
 												>
 													<input
@@ -146,7 +128,7 @@ export default function DefaultSite() {
 													<div
 														className={`
 															ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border 
-															${field.value === option ? 'border-primary' : 'border-muted'}
+															${field.value === option ? "border-primary" : "border-muted"}
 														`}
 													>
 														{field.value === option && (
@@ -215,7 +197,11 @@ export default function DefaultSite() {
 							)}
 
 							<div className="flex justify-end pt-4">
-								<Button type="submit" disabled={isSubmitting} className="bg-slate-600/90 hover:bg-slate-600 text-white shadow-sm">
+								<Button
+									type="submit"
+									disabled={isSubmitting}
+									className="bg-slate-600/90 hover:bg-slate-600 text-white shadow-sm"
+								>
 									{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 									<T id="save" />
 								</Button>
@@ -223,8 +209,7 @@ export default function DefaultSite() {
 						</CardContent>
 					</Card>
 				</Form>
-			)
-			}
-		</Formik >
+			)}
+		</Formik>
 	);
 }

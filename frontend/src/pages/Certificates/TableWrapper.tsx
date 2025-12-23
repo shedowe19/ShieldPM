@@ -17,7 +17,7 @@ import { showError, showObjectSuccess } from "src/notifications";
 import Table from "./Table";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
-// import { Button } from "src/components/ui/button"; // Using src/components which might conflict, let's use shadcn button aliased if needed or rely on src/components Button if it is shadcn now? 
+// import { Button } from "src/components/ui/button"; // Using src/components which might conflict, let's use shadcn button aliased if needed or rely on src/components Button if it is shadcn now?
 // Actually src/components index likely exports a Button. Previous migrations imported Button from src/components/ui/button. I will do the same here.
 import { Button as ShadcnButton } from "src/components/ui/button";
 
@@ -29,7 +29,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "src/components/ui/dropdown-menu"
+} from "src/components/ui/dropdown-menu";
 
 export default function TableWrapper() {
 	const [search, setSearch] = useState("");
@@ -106,7 +106,10 @@ export default function TableWrapper() {
 						{data?.length ? (
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
-									<ShadcnButton size="sm" className="bg-pink-600/90 hover:bg-pink-600 text-white shadow-sm">
+									<ShadcnButton
+										size="sm"
+										className="bg-pink-600/90 hover:bg-pink-600 text-white shadow-sm"
+									>
 										<IconPlus className="mr-2 h-4 w-4" />
 										<T id="object.add" tData={{ object: "certificate" }} />
 										<IconChevronDown className="ml-2 h-4 w-4 opacity-50" />
@@ -149,5 +152,3 @@ export default function TableWrapper() {
 		</Card>
 	);
 }
-
-

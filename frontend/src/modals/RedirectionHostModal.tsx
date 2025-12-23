@@ -3,23 +3,12 @@ import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createRedirectionHost, updateRedirectionHost } from "src/api/backend";
-import {
-	DomainNamesField,
-	NginxConfigField,
-	SSLCertificateField,
-	SSLOptionsFields,
-} from "src/components";
+import { DomainNamesField, NginxConfigField, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { useRedirectionHost } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -28,13 +17,7 @@ import { Switch } from "src/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { IconRoute } from "@tabler/icons-react";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "src/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Card, CardContent } from "src/components/ui/card";
 
 const showRedirectionHostModal = (id: number | "new") => {
@@ -141,9 +124,15 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 									<TabsList className="grid w-full grid-cols-3">
-										<TabsTrigger value="details"><T id="details" /></TabsTrigger>
-										<TabsTrigger value="ssl"><T id="ssl-certificate" /></TabsTrigger>
-										<TabsTrigger value="advanced"><T id="advanced" /></TabsTrigger>
+										<TabsTrigger value="details">
+											<T id="details" />
+										</TabsTrigger>
+										<TabsTrigger value="ssl">
+											<T id="ssl-certificate" />
+										</TabsTrigger>
+										<TabsTrigger value="advanced">
+											<T id="advanced" />
+										</TabsTrigger>
 									</TabsList>
 
 									<TabsContent value="details" className="space-y-4 pt-4">
@@ -151,18 +140,31 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 										<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 											<div className="col-span-1 md:col-span-4">
-												<Label htmlFor="forwardScheme"><T id="host.forward-scheme" /></Label>
+												<Label htmlFor="forwardScheme">
+													<T id="host.forward-scheme" />
+												</Label>
 												<Field name="forwardScheme">
 													{({ field }: any) => (
 														<Select
 															value={field.value}
 															onValueChange={(val) => setFieldValue("forwardScheme", val)}
 														>
-															<SelectTrigger id="forwardScheme" className={errors.forwardScheme && touched.forwardScheme ? "border-destructive" : ""}>
-																<SelectValue placeholder={intl.formatMessage({ id: "auto" })} />
+															<SelectTrigger
+																id="forwardScheme"
+																className={
+																	errors.forwardScheme && touched.forwardScheme
+																		? "border-destructive"
+																		: ""
+																}
+															>
+																<SelectValue
+																	placeholder={intl.formatMessage({ id: "auto" })}
+																/>
 															</SelectTrigger>
 															<SelectContent>
-																<SelectItem value="auto"><T id="auto" /></SelectItem>
+																<SelectItem value="auto">
+																	<T id="auto" />
+																</SelectItem>
 																<SelectItem value="http">http</SelectItem>
 																<SelectItem value="https">https</SelectItem>
 															</SelectContent>
@@ -174,12 +176,21 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 												<Field name="forwardDomainName" validate={validateString(1, 255)}>
 													{({ field }: any) => (
 														<div className="space-y-2">
-															<Label htmlFor="forwardDomainName"><T id="redirection-host.forward-domain" /></Label>
+															<Label htmlFor="forwardDomainName">
+																<T id="redirection-host.forward-domain" />
+															</Label>
 															<Input
 																{...field}
 																id="forwardDomainName"
-																placeholder={intl.formatMessage({ id: "form.placeholder.example-domain" })}
-																className={errors.forwardDomainName && touched.forwardDomainName ? "border-destructive" : ""}
+																placeholder={intl.formatMessage({
+																	id: "form.placeholder.example-domain",
+																})}
+																className={
+																	errors.forwardDomainName &&
+																	touched.forwardDomainName
+																		? "border-destructive"
+																		: ""
+																}
 															/>
 														</div>
 													)}
@@ -188,23 +199,39 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 										</div>
 
 										<div>
-											<Label htmlFor="forwardHttpCode"><T id="redirection-host.forward-http-code" /></Label>
+											<Label htmlFor="forwardHttpCode">
+												<T id="redirection-host.forward-http-code" />
+											</Label>
 											<Field name="forwardHttpCode">
 												{({ field }: any) => (
 													<Select
 														value={String(field.value)}
-														onValueChange={(val) => setFieldValue("forwardHttpCode", Number.parseInt(val, 10))}
+														onValueChange={(val) =>
+															setFieldValue("forwardHttpCode", Number.parseInt(val, 10))
+														}
 													>
 														<SelectTrigger id="forwardHttpCode">
 															<SelectValue placeholder="301" />
 														</SelectTrigger>
 														<SelectContent>
-															<SelectItem value="300"><T id="redirection-hosts.http-code.300" /></SelectItem>
-															<SelectItem value="301"><T id="redirection-hosts.http-code.301" /></SelectItem>
-															<SelectItem value="302"><T id="redirection-hosts.http-code.302" /></SelectItem>
-															<SelectItem value="303"><T id="redirection-hosts.http-code.303" /></SelectItem>
-															<SelectItem value="307"><T id="redirection-hosts.http-code.307" /></SelectItem>
-															<SelectItem value="308"><T id="redirection-hosts.http-code.308" /></SelectItem>
+															<SelectItem value="300">
+																<T id="redirection-hosts.http-code.300" />
+															</SelectItem>
+															<SelectItem value="301">
+																<T id="redirection-hosts.http-code.301" />
+															</SelectItem>
+															<SelectItem value="302">
+																<T id="redirection-hosts.http-code.302" />
+															</SelectItem>
+															<SelectItem value="303">
+																<T id="redirection-hosts.http-code.303" />
+															</SelectItem>
+															<SelectItem value="307">
+																<T id="redirection-hosts.http-code.307" />
+															</SelectItem>
+															<SelectItem value="308">
+																<T id="redirection-hosts.http-code.308" />
+															</SelectItem>
 														</SelectContent>
 													</Select>
 												)}
@@ -213,27 +240,37 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 										<Card className="border-dashed">
 											<CardContent className="p-4 space-y-4">
-												<h4 className="font-medium"><T id="options" /></h4>
+												<h4 className="font-medium">
+													<T id="options" />
+												</h4>
 												<div className="flex items-center justify-between">
-													<Label htmlFor="preservePath" className="cursor-pointer"><T id="host.flags.preserve-path" /></Label>
+													<Label htmlFor="preservePath" className="cursor-pointer">
+														<T id="host.flags.preserve-path" />
+													</Label>
 													<Field name="preservePath">
 														{({ field }: any) => (
 															<Switch
 																id="preservePath"
 																checked={field.value}
-																onCheckedChange={(checked) => setFieldValue("preservePath", checked)}
+																onCheckedChange={(checked) =>
+																	setFieldValue("preservePath", checked)
+																}
 															/>
 														)}
 													</Field>
 												</div>
 												<div className="flex items-center justify-between">
-													<Label htmlFor="blockExploits" className="cursor-pointer"><T id="host.flags.block-exploits" /></Label>
+													<Label htmlFor="blockExploits" className="cursor-pointer">
+														<T id="host.flags.block-exploits" />
+													</Label>
 													<Field name="blockExploits">
 														{({ field }: any) => (
 															<Switch
 																id="blockExploits"
 																checked={field.value}
-																onCheckedChange={(checked) => setFieldValue("blockExploits", checked)}
+																onCheckedChange={(checked) =>
+																	setFieldValue("blockExploits", checked)
+																}
 															/>
 														)}
 													</Field>
@@ -243,11 +280,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 									</TabsContent>
 
 									<TabsContent value="ssl" className="pt-4">
-										<SSLCertificateField
-											name="certificateId"
-											label="ssl-certificate"
-											allowNew
-										/>
+										<SSLCertificateField name="certificateId" label="ssl-certificate" allowNew />
 										<SSLOptionsFields color="bg-yellow" />
 									</TabsContent>
 
@@ -260,7 +293,11 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 									<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
 										<T id="cancel" />
 									</Button>
-									<Button type="submit" disabled={isSubmitting} className="bg-yellow-600/90 hover:bg-yellow-600 text-white shadow-sm">
+									<Button
+										type="submit"
+										disabled={isSubmitting}
+										className="bg-yellow-600/90 hover:bg-yellow-600 text-white shadow-sm"
+									>
 										{isSubmitting ? "..." : <T id="save" />}
 									</Button>
 								</DialogFooter>

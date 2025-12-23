@@ -49,7 +49,9 @@ export default function Table({ data, isFetching, onSelectItem }: Props) {
 								className="h-8 w-8 text-muted-foreground hover:text-foreground"
 							>
 								<IconListDetails className="h-4 w-4" />
-								<span className="sr-only"><T id="action.view-details" /></span>
+								<span className="sr-only">
+									<T id="action.view-details" />
+								</span>
 							</Button>
 						</div>
 					);

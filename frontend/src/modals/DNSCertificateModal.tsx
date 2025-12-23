@@ -7,13 +7,7 @@ import { type ReactNode, useState } from "react";
 import { createCertificate } from "src/api/backend";
 import { DNSProviderFields, DomainNamesField } from "src/components";
 import { Button } from "src/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "src/components/ui/alert";
 import { Card, CardContent } from "src/components/ui/card";
 import { T } from "src/locale";

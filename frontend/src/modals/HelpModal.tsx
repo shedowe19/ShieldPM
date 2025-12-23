@@ -4,11 +4,7 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { getLocale, T } from "src/locale";
 import { getHelpFile } from "src/locale/src/HelpDoc";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
 import { ScrollArea } from "src/components/ui/scroll-area";
 
@@ -49,10 +45,16 @@ const HelpModal = EasyModal.create(({ section, visible, remove }: Props) => {
 										<h2 className="text-xl font-semibold tracking-tight">{children}</h2>
 									</div>
 								),
-								p: ({ children }) => <p className="mb-4 leading-relaxed text-muted-foreground">{children}</p>,
-								ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-2 text-muted-foreground">{children}</ul>,
+								p: ({ children }) => (
+									<p className="mb-4 leading-relaxed text-muted-foreground">{children}</p>
+								),
+								ul: ({ children }) => (
+									<ul className="list-disc pl-6 mb-4 space-y-2 text-muted-foreground">{children}</ul>
+								),
 								li: ({ children }) => <li>{children}</li>,
-								strong: ({ children }) => <span className="font-semibold text-foreground">{children}</span>,
+								strong: ({ children }) => (
+									<span className="font-semibold text-foreground">{children}</span>
+								),
 							}}
 						>
 							{markdownText}
@@ -60,11 +62,7 @@ const HelpModal = EasyModal.create(({ section, visible, remove }: Props) => {
 					</div>
 				</ScrollArea>
 				<DialogFooter>
-					<Button
-						type="button"
-						variant="outline"
-						onClick={remove}
-					>
+					<Button type="button" variant="outline" onClick={remove}>
 						<T id="action.close" />
 					</Button>
 				</DialogFooter>
@@ -74,5 +72,3 @@ const HelpModal = EasyModal.create(({ section, visible, remove }: Props) => {
 });
 
 export { showHelpModal };
-
-

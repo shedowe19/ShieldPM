@@ -27,7 +27,9 @@ function LocalePicker(_props: Props) {
 			<DropdownMenuTrigger asChild>
 				<Button variant="ghost" size="icon" className="h-8 w-8 px-0">
 					<Flag countryCode={getFlagCodeForLocale(locale)} />
-					<span className="sr-only"><T id="sr.switch-language" /></span>
+					<span className="sr-only">
+						<T id="sr.switch-language" />
+					</span>
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
@@ -38,7 +40,9 @@ function LocalePicker(_props: Props) {
 						className="cursor-pointer"
 					>
 						<Flag countryCode={getFlagCodeForLocale(item[0])} className="mr-2 h-4 w-4" />
-						<span className="flex-1"><T id={`locale-${item[1]}`} /></span>
+						<span className="flex-1">
+							<T id={`locale-${item[1]}`} />
+						</span>
 					</DropdownMenuItem>
 				))}
 			</DropdownMenuContent>

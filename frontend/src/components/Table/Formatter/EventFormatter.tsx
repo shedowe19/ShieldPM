@@ -72,7 +72,10 @@ export function EventFormatter({ row }: Props) {
 			<div className="font-medium flex items-center">
 				{getIcon(row)}
 				<T id={`object.event.${row.action}`} tData={{ object: row.objectType }} />
-				&nbsp; &mdash; <Badge variant="secondary" className="ml-2 font-normal">{getEventValue(row)}</Badge>
+				&nbsp; &mdash;{" "}
+				<Badge variant="secondary" className="ml-2 font-normal">
+					{getEventValue(row)}
+				</Badge>
 			</div>
 			<div className="text-muted-foreground text-sm mt-1">{formatDateTime(row.createdOn)}</div>
 		</div>

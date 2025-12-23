@@ -151,13 +151,7 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 								<Label htmlFor="propagationSeconds">
 									<T id="certificates.dns.propagation-seconds" />
 								</Label>
-								<Input
-									id="propagationSeconds"
-									type="number"
-									min={0}
-									max={7200}
-									{...field}
-								/>
+								<Input id="propagationSeconds" type="number" min={0} max={7200} {...field} />
 								<p className="text-sm text-muted-foreground">
 									<T id="certificates.dns.propagation-seconds-note" />
 								</p>
