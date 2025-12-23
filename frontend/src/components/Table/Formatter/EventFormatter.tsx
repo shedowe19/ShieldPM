@@ -2,6 +2,7 @@ import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc, IconLock, IconShield,
 import cn from "classnames";
 import type { AuditLog } from "src/api/backend";
 import { formatDateTime, T } from "src/locale";
+import { Badge } from "src/components/ui/badge";
 
 const getEventValue = (event: AuditLog) => {
 	switch (event.objectType) {
@@ -24,16 +25,16 @@ const getEventValue = (event: AuditLog) => {
 const getColorForAction = (action: string) => {
 	switch (action) {
 		case "created":
-			return "text-lime";
+			return "text-green-500";
 		case "deleted":
-			return "text-red";
+			return "text-destructive";
 		default:
-			return "text-blue";
+			return "text-blue-500";
 	}
 };
 
 const getIcon = (row: AuditLog) => {
-	const c = cn(getColorForAction(row.action), "me-1");
+	const c = cn(getColorForAction(row.action), "mr-1");
 	let ico = null;
 	switch (row.objectType) {
 		case "user":
@@ -67,13 +68,13 @@ interface Props {
 }
 export function EventFormatter({ row }: Props) {
 	return (
-		<div className="flex-fill">
-			<div className="font-weight-medium">
+		<div className="flex-1">
+			<div className="font-medium flex items-center">
 				{getIcon(row)}
 				<T id={`object.event.${row.action}`} tData={{ object: row.objectType }} />
-				&nbsp; &mdash; <span className="badge">{getEventValue(row)}</span>
+				&nbsp; &mdash; <Badge variant="secondary" className="ml-2 font-normal">{getEventValue(row)}</Badge>
 			</div>
-			<div className="text-secondary mt-1">{formatDateTime(row.createdOn)}</div>
+			<div className="text-muted-foreground text-sm mt-1">{formatDateTime(row.createdOn)}</div>
 		</div>
 	);
 }

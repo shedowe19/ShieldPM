@@ -1,6 +1,7 @@
 import type { Table as ReactTable } from "@tanstack/react-table";
 import { TableBody } from "./TableBody";
 import { TableHeader } from "./TableHeader";
+import { Table } from "src/components/ui/table";
 
 interface TableLayoutProps<TFields> {
 	tableInstance: ReactTable<TFields>;
@@ -10,15 +11,17 @@ interface TableLayoutProps<TFields> {
 	};
 }
 function TableLayout<TFields>(props: TableLayoutProps<TFields>) {
-	const hasRows = props.tableInstance.getRowModel().rows.length > 0;
+
 	return (
-		<div className="table-responsive">
-			<table className="table table-vcenter table-selectable mb-0">
-				{hasRows ? <TableHeader tableInstance={props.tableInstance} /> : null}
+		<div className="rounded-md border">
+			<Table>
+				<TableHeader tableInstance={props.tableInstance} />
 				<TableBody {...props} />
-			</table>
+			</Table>
 		</div>
 	);
 }
 
 export { TableLayout, type TableLayoutProps };
+
+

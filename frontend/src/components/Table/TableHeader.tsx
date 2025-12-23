@@ -1,26 +1,30 @@
 import type { TableLayoutProps } from "src/components";
+import { TableHeader as ShadcnTableHeader, TableRow, TableHead } from "src/components/ui/table";
 
 function TableHeader<T>(props: TableLayoutProps<T>) {
 	const { tableInstance } = props;
 	const headerGroups = tableInstance.getHeaderGroups();
 
 	return (
-		<thead>
+		<ShadcnTableHeader>
 			{headerGroups.map((headerGroup) => (
-				<tr key={headerGroup.id}>
+				<TableRow key={headerGroup.id}>
 					{headerGroup.headers.map((header) => {
 						const { column } = header;
 						const { className } = (column.columnDef.meta as any) ?? {};
 						return (
-							<th key={header.id} className={className}>
+							<TableHead key={header.id} className={className}>
 								{typeof column.columnDef.header === "string" ? `${column.columnDef.header}` : null}
-							</th>
+							</TableHead>
 						);
 					})}
-				</tr>
+				</TableRow>
 			))}
-		</thead>
+		</ShadcnTableHeader>
 	);
 }
 
 export { TableHeader };
+
+
+

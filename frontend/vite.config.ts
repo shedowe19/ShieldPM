@@ -1,48 +1,14 @@
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 import checker from "vite-plugin-checker";
 import tsconfigPaths from "vite-tsconfig-paths";
 import "vitest/config";
-import { execFile } from "node:child_process";
-
-const runLocaleScripts = () => {
-	execFile("yarn", ["formatjs", "compile-folder", "src/locale/src", "src/locale/lang"], (error, stdout, _stderr) => {
-		if (error) {
-			throw error;
-		}
-		console.log(stdout);
-		execFile("./src/locale/scripts/locale-sort.sh", (error, stdout, _stderr) => {
-			if (error) {
-				throw error;
-			}
-			console.log(stdout);
-		});
-	});
-};
 
 // https://vitejs.dev/config/
 export default defineConfig({
 	plugins: [
-		{
-			name: "run-on-start",
-			configureServer(_server) {
-				runLocaleScripts();
-			},
-		},
-		{
-			name: "trigger-on-reload",
-			configureServer(server) {
-				server.watcher.on("change", (file) => {
-					if (file.includes("locale/src")) {
-						console.log(`File changed: ${file}, running locale scripts...`);
-						runLocaleScripts();
-					}
-				});
-			},
-		},
 		react(),
 		checker({
-			// e.g. use TypeScript check
 			typescript: true,
 		}),
 		tsconfigPaths(),
@@ -51,7 +17,13 @@ export default defineConfig({
 		host: true,
 		port: 5173,
 		strictPort: true,
-		allowedHosts: true,
+		proxy: {
+			"/api": {
+				target: "http://localhost:3000",
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/api/, ""),
+			},
+		},
 	},
 	test: {
 		environment: "happy-dom",

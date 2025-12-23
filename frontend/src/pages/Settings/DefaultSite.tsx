@@ -1,8 +1,24 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { IconSettings } from "@tabler/icons-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import { Button, Loading } from "src/components";
+import {
+	Alert,
+	AlertDescription,
+	AlertTitle,
+} from "src/components/ui/alert";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "src/components/ui/card";
+import { Button } from "src/components/ui/button";
+import { Input } from "src/components/ui/input";
+import { Loading } from "src/components";
+import { Label } from "src/components/ui/label";
 import { useSetSetting, useSetting } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
@@ -44,7 +60,7 @@ export default function DefaultSite() {
 		return (
 			<div className="card-body">
 				<div className="mb-3">
-					<Alert variant="danger" show>
+					<Alert variant="destructive">
 						{error.message}
 					</Alert>
 				</div>
@@ -75,195 +91,140 @@ export default function DefaultSite() {
 		>
 			{({ values }) => (
 				<Form>
-					<div className="card-body">
-						<Alert variant="danger" show={!!errorMsg} onClose={() => setErrorMsg(null)} dismissible>
-							{errorMsg}
-						</Alert>
-						<Field name="value">
-							{({ field, form }: any) => (
-								<div className="mb-3">
-									<label className="form-label" htmlFor="setting-host-unknown">
-										<T id="settings.default-site.description" />
-									</label>
-									<div className="form-selectgroup form-selectgroup-boxes d-flex flex-column">
-										<label className="form-selectgroup-item flex-fill">
-											<input
-												type="radio"
-												name={field.name}
-												value="congratulations"
-												className="form-selectgroup-input"
-												checked={field.value === "congratulations"}
-												onChange={(e) => form.setFieldValue(field.name, e.target.value)}
-											/>
-											<div className="form-selectgroup-label d-flex align-items-center p-3">
-												<div className="me-3">
-													<span className="form-selectgroup-check" />
-												</div>
-												<div>
-													<T id="settings.default-site.congratulations" />
-												</div>
-											</div>
-										</label>
-										<label className="form-selectgroup-item flex-fill">
-											<input
-												type="radio"
-												name={field.name}
-												value="404"
-												className="form-selectgroup-input"
-												checked={field.value === "404"}
-												onChange={(e) => form.setFieldValue(field.name, e.target.value)}
-											/>
-											<div className="form-selectgroup-label d-flex align-items-center p-3">
-												<div className="me-3">
-													<span className="form-selectgroup-check" />
-												</div>
-												<div>
-													<T id="settings.default-site.404" />
-												</div>
-											</div>
-										</label>
-										<label className="form-selectgroup-item flex-fill">
-											<input
-												type="radio"
-												name={field.name}
-												value="444"
-												className="form-selectgroup-input"
-												checked={field.value === "444"}
-												onChange={(e) => form.setFieldValue(field.name, e.target.value)}
-											/>
-											<div className="form-selectgroup-label d-flex align-items-center p-3">
-												<div className="me-3">
-													<span className="form-selectgroup-check" />
-												</div>
-												<div>
-													<T id="settings.default-site.444" />
-												</div>
-											</div>
-										</label>
-										<label className="form-selectgroup-item flex-fill">
-											<input
-												type="radio"
-												name={field.name}
-												value="redirect"
-												className="form-selectgroup-input"
-												checked={field.value === "redirect"}
-												onChange={(e) => form.setFieldValue(field.name, e.target.value)}
-											/>
-											<div className="form-selectgroup-label d-flex align-items-center p-3">
-												<div className="me-3">
-													<span className="form-selectgroup-check" />
-												</div>
-												<div>
-													<T id="settings.default-site.redirect" />
-												</div>
-											</div>
-										</label>
-										<label className="form-selectgroup-item flex-fill">
-											<input
-												type="radio"
-												name={field.name}
-												value="html"
-												className="form-selectgroup-input"
-												checked={field.value === "html"}
-												onChange={(e) => form.setFieldValue(field.name, e.target.value)}
-											/>
-											<div className="form-selectgroup-label d-flex align-items-center p-3">
-												<div className="me-3">
-													<span className="form-selectgroup-check" />
-												</div>
-												<div>
-													<T id="settings.default-site.html" />
-												</div>
-											</div>
-										</label>
-									</div>
+					<Card className="border-t-4 border-slate-500/50">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<IconSettings className="h-6 w-6" />
+								<T id="settings.default-site" />
+							</CardTitle>
+							<CardDescription>
+								<T id="settings.default-site.description" />
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							{errorMsg && (
+								<Alert className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive">
+									<AlertCircle className="h-4 w-4" />
+									<AlertTitle>Error</AlertTitle>
+									<AlertDescription>{errorMsg}</AlertDescription>
+								</Alert>
+							)}
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<Field name="value">
+									{({ field, form }: any) => (
+										<>
+											{[
+												"congratulations",
+												"404",
+												"444",
+												"redirect",
+												"html"
+											].map((option) => (
+												<label
+													key={option}
+													className={`
+														relative flex cursor-pointer rounded-lg border bg-card p-4 shadow-sm focus:outline-none 
+														${field.value === option ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-primary/50'}
+													`}
+												>
+													<input
+														type="radio"
+														name={field.name}
+														value={option}
+														className="sr-only"
+														checked={field.value === option}
+														onChange={(e) => form.setFieldValue(field.name, e.target.value)}
+													/>
+													<span className="flex flex-1">
+														<span className="flex flex-col">
+															<span className="block text-sm font-medium text-foreground">
+																<T id={`settings.default-site.${option}`} />
+															</span>
+														</span>
+													</span>
+													<div
+														className={`
+															ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border 
+															${field.value === option ? 'border-primary' : 'border-muted'}
+														`}
+													>
+														{field.value === option && (
+															<div className="h-2.5 w-2.5 rounded-full bg-primary" />
+														)}
+													</div>
+												</label>
+											))}
+										</>
+									)}
+								</Field>
+							</div>
+
+							{values.value === "redirect" && (
+								<div className="space-y-2">
+									<Label htmlFor="redirect">
+										<T id="settings.default-site.redirect" />
+									</Label>
+									<Field name="redirect" validate={validateString(1, 255)}>
+										{({ field, form }: any) => (
+											<>
+												<Input
+													{...field}
+													id="redirect"
+													placeholder="https://example.com"
+													autoComplete="off"
+												/>
+												{form.errors.redirect && form.touched.redirect && (
+													<p className="text-sm text-destructive">{form.errors.redirect}</p>
+												)}
+											</>
+										)}
+									</Field>
 								</div>
 							)}
-						</Field>
-						{values.value === "redirect" && (
-							<Field name="redirect" validate={validateString(1, 255)}>
-								{({ field, form }: any) => (
-									<div className="mt-5 mb-3">
-										<label className="form-label" htmlFor="setting-host-unknown">
-											<T id="settings.default-site.redirect" />
-										</label>
-										<div>
-											<input
-												id="redirect"
-												type="text"
-												placeholder="https://"
-												required
-												autoComplete="off"
-												className="form-control"
-												{...field}
-											/>
-											{form.errors.redirect ? (
-												<div className="invalid-feedback">
-													{form.errors.redirect && form.touched.redirect
-														? form.errors.redirect
-														: null}
-												</div>
-											) : null}
-										</div>
-									</div>
-								)}
-							</Field>
-						)}
-						{values.value === "html" && (
-							<Field name="html" validate={validateString(1)}>
-								{({ field, form }: any) => (
-									<div className="mt-5 mb-3">
-										<label className="form-label" htmlFor="setting-host-unknown">
-											<T id="settings.default-site.html" />
-										</label>
-										<div>
-											<CodeEditor
-												// Believe it or not, 'html' sucks yet 'php' renders the html
-												// content much nicer.
-												language="php"
-												placeholder={intl.formatMessage({
-													id: "settings.default-site.html.placeholder",
-												})}
-												padding={15}
-												data-color-mode="dark"
-												minHeight={300}
-												indentWidth={2}
-												style={{
-													fontFamily:
-														"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-													borderRadius: "0.3rem",
-													minHeight: "300px",
-													backgroundColor: "var(--tblr-bg-surface-dark)",
-												}}
-												{...field}
-											/>
-											{form.errors.html ? (
-												<div className="invalid-feedback">
-													{form.errors.html && form.touched.html ? form.errors.html : null}
-												</div>
-											) : null}
-										</div>
-									</div>
-								)}
-							</Field>
-						)}
-					</div>
-					<div className="card-footer bg-transparent mt-auto">
-						<div className="btn-list justify-content-end">
-							<Button
-								type="submit"
-								actionType="primary"
-								className="ms-auto bg-teal"
-								data-bs-dismiss="modal"
-								isLoading={isSubmitting}
-								disabled={isSubmitting}
-							>
-								<T id="save" />
-							</Button>
-						</div>
-					</div>
+
+							{values.value === "html" && (
+								<div className="space-y-2">
+									<Label htmlFor="html">
+										<T id="settings.default-site.html" />
+									</Label>
+									<Field name="html" validate={validateString(1)}>
+										{({ field }: any) => (
+											<div className="rounded-md border overflow-hidden">
+												<CodeEditor
+													language="php"
+													placeholder={intl.formatMessage({
+														id: "settings.default-site.html.placeholder",
+													})}
+													padding={15}
+													data-color-mode="dark"
+													minHeight={300}
+													style={{
+														fontFamily:
+															"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+														fontSize: 14,
+														backgroundColor: "var(--bg-background)",
+													}}
+													{...field}
+												/>
+											</div>
+										)}
+									</Field>
+									{/* Formik error for html field if needed */}
+								</div>
+							)}
+
+							<div className="flex justify-end pt-4">
+								<Button type="submit" disabled={isSubmitting} className="bg-slate-600/90 hover:bg-slate-600 text-white shadow-sm">
+									{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+									<T id="save" />
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
 				</Form>
-			)}
-		</Formik>
+			)
+			}
+		</Formik >
 	);
 }

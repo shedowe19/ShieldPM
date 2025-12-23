@@ -1,9 +1,18 @@
-import { IconX } from "@tabler/icons-react";
-import cn from "classnames";
+import { IconX, IconPlus } from "@tabler/icons-react";
 import { useFormikContext } from "formik";
 import { useState } from "react";
 import type { AccessListClient } from "src/api/backend";
 import { intl, T } from "src/locale";
+import { Button } from "src/components/ui/button";
+import { Input } from "src/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "src/components/ui/select";
+import { cn } from "src/lib/utils";
 
 interface Props {
 	initialValues: AccessListClient[];
@@ -20,7 +29,9 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 	}
 
 	const handleAdd = () => {
-		setValues([...values, blankClient]);
+		const newValues = [...values, blankClient];
+		setValues(newValues);
+		setFormField(newValues);
 	};
 
 	const handleRemove = (idx: number) => {
@@ -46,92 +57,86 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 	};
 
 	return (
-		<>
-			<p className="text-muted">
+		<div className="space-y-4">
+			<p className="text-sm text-muted-foreground">
 				<T id="access-list.help.rules-order" />
 			</p>
 			{values.map((client: AccessListClient, idx: number) => (
-				<div className="row mb-1" key={idx}>
-					<div className="col-11">
-						<div className="input-group mb-2">
-							<span className="input-group-select">
-								<select
-									className={cn(
-										"form-select",
-										"m-0",
-										client.directive === "allow" ? "bg-lime-lt" : "bg-orange-lt",
-									)}
-									name={`clients[${idx}].directive`}
-									value={client.directive}
-									onChange={(e) => handleChange(idx, "directive", e.target.value)}
-								>
-									<option value="allow">
+				<div className="flex items-center gap-2" key={idx}>
+					<div className="flex-1 flex gap-2">
+						<div className="w-32 flex-shrink-0">
+							<Select
+								value={client.directive}
+								onValueChange={(val) => handleChange(idx, "directive", val)}
+							>
+								<SelectTrigger className={cn(
+									client.directive === "allow" ? "bg-green-100 dark:bg-green-900 border-green-200 dark:border-green-800 text-green-800 dark:text-green-100" : "bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-100"
+								)}>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="allow">
 										<T id="action.allow" />
-									</option>
-									<option value="deny">
+									</SelectItem>
+									<SelectItem value="deny">
 										<T id="action.deny" />
-									</option>
-								</select>
-							</span>
-							<input
-								name={`clients[${idx}].address`}
-								type="text"
-								className="form-control"
-								autoComplete="off"
-								value={client.address}
-								onChange={(e) => handleChange(idx, "address", e.target.value)}
-								placeholder={intl.formatMessage({ id: "access-list.rule-source.placeholder" })}
-							/>
+									</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
+						<Input
+							name={`clients[${idx}].address`}
+							type="text"
+							autoComplete="off"
+							value={client.address}
+							onChange={(e) => handleChange(idx, "address", e.target.value)}
+							placeholder={intl.formatMessage({ id: "access-list.rule-source.placeholder" })}
+							className="flex-1"
+						/>
 					</div>
-					<div className="col-1">
-						<a
-							role="button"
-							className="btn btn-ghost btn-danger p-0"
-							onClick={(e) => {
-								e.preventDefault();
-								handleRemove(idx);
-							}}
-						>
-							<IconX size={16} />
-						</a>
-					</div>
+					<Button
+						type="button"
+						variant="destructive"
+						size="icon"
+						onClick={() => handleRemove(idx)}
+						title={intl.formatMessage({ id: "action.delete" })}
+					>
+						<IconX size={16} />
+					</Button>
 				</div>
 			))}
 			<div className="mb-3">
-				<button type="button" className="btn btn-sm" onClick={handleAdd}>
+				<Button type="button" variant="secondary" size="sm" onClick={handleAdd}>
+					<IconPlus className="mr-2 h-4 w-4" />
 					<T id="action.add" />
-				</button>
+				</Button>
 			</div>
-			<div className="row mb-3">
-				<p className="text-muted">
+
+			<div className="border-t pt-4">
+				<p className="text-sm text-muted-foreground mb-2">
 					<T id="access-list.help-rules-last" />
 				</p>
-				<div className="col-11">
-					<div className="input-group mb-2">
-						<span className="input-group-select">
-							<select
-								className="form-select m-0 bg-orange-lt"
-								name="clients[last].directive"
-								value="deny"
-								disabled
-							>
-								<option value="deny">
-									<T id="action.deny" />
-								</option>
-							</select>
-						</span>
-						<input
-							name="clients[last].address"
-							type="text"
-							className="form-control"
-							autoComplete="off"
+				<div className="flex items-center gap-2 opacity-60">
+					<div className="flex-1 flex gap-2">
+						<div className="w-32 flex-shrink-0">
+							<Select value="deny" disabled>
+								<SelectTrigger className="bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-100">
+									<SelectValue>
+										<T id="action.deny" />
+									</SelectValue>
+								</SelectTrigger>
+							</Select>
+						</div>
+						<Input
 							value="all"
 							disabled
+							readOnly
+							className="flex-1"
 						/>
 					</div>
+					<div className="w-10"></div> {/* Spacer to match delete button width */}
 				</div>
 			</div>
-		</>
+		</div>
 	);
 }

@@ -3,13 +3,17 @@ import {
 	IconDeviceDesktop,
 	IconHome,
 	IconLock,
+	IconMenu2,
 	IconSettings,
 	IconShield,
 	IconUser,
 } from "@tabler/icons-react";
-import cn from "classnames";
-import React from "react";
-import { HasPermission, NavLink } from "src/components";
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Button } from "src/components/ui/button";
+import { ScrollArea } from "src/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "src/components/ui/sheet";
+import { HasPermission } from "src/components/HasPermission";
 import { T } from "src/locale";
 import {
 	ACCESS_LISTS,
@@ -23,7 +27,6 @@ import {
 	STREAMS,
 	VIEW,
 } from "src/modules/Permissions";
-import styles from "./SiteHeader.module.css";
 
 interface MenuItem {
 	label: string;
@@ -104,124 +107,115 @@ const menuItems: MenuItem[] = [
 	},
 ];
 
-const getMenuItem = (item: MenuItem, onClick?: () => void) => {
+const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }) => {
+	const location = useLocation();
+	const [isOpen, setIsOpen] = useState(false);
+	const isActive = item.to ? location.pathname === item.to : false;
+	const isChildActive = item.items?.some(sub => sub.to && location.pathname === sub.to);
+
 	if (item.items && item.items.length > 0) {
-		return getMenuDropown(item, onClick);
+		return (
+			<HasPermission
+				section={item.permissionSection}
+				permission={item.permission || VIEW}
+				hideError
+			>
+				<div className="space-y-1">
+					<Button
+						variant={(isActive || isChildActive) ? "secondary" : "ghost"}
+						className="w-full justify-start"
+						onClick={() => setIsOpen(!isOpen)}
+					>
+						{item.icon && <item.icon className="mr-2 h-4 w-4" />}
+						<span className="flex-1 text-left"><T id={item.label} /></span>
+					</Button>
+					{isOpen || isChildActive ? (
+						<div className="ml-4 space-y-1 border-l pl-2">
+							{item.items.map((subitem, idx) => (
+								<SidebarItem key={`${idx}-${subitem.to}`} item={subitem} onClick={onClick} />
+							))}
+						</div>
+					) : null}
+				</div>
+			</HasPermission>
+		);
 	}
 
 	return (
 		<HasPermission
-			key={`item-${item.label}`}
 			section={item.permissionSection}
 			permission={item.permission || VIEW}
 			hideError
 		>
-			<li className="nav-item">
-				<NavLink to={item.to} onClick={onClick}>
-					<span className="nav-link-icon d-md-none d-lg-inline-block">
-						{item.icon && React.createElement(item.icon, { height: 24, width: 24 })}
-					</span>
-					<span className="nav-link-title">
-						<T id={item.label} />
-					</span>
-				</NavLink>
-			</li>
-		</HasPermission>
-	);
-};
-
-const getMenuDropown = (item: MenuItem, onClick?: () => void) => {
-	const cns = cn("nav-item", "dropdown");
-	return (
-		<HasPermission
-			key={`item-${item.label}`}
-			section={item.permissionSection}
-			permission={item.permission || VIEW}
-			hideError
-		>
-			<li className={cns}>
-				<a
-					className="nav-link dropdown-toggle"
-					href="#navbar-extra"
-					data-bs-toggle="dropdown"
-					data-bs-auto-close="false"
-					role="button"
-					aria-expanded="false"
-				>
-					<span className="nav-link-icon d-md-none d-lg-inline-block">
-						{item.icon && React.createElement(item.icon, { height: 24, width: 24 })}
-					</span>
-					<span className="nav-link-title">
-						<T id={item.label} />
-					</span>
-				</a>
-				<div className="dropdown-menu">
-					<div className="dropdown-menu-columns">
-						<div className="dropdown-menu-column">
-							{item.items?.map((subitem, idx) => {
-								return (
-									<HasPermission
-										key={`${idx}-${subitem.to}`}
-										section={subitem.permissionSection}
-										permission={subitem.permission || VIEW}
-										hideError
-									>
-										<NavLink to={subitem.to} isDropdownItem onClick={onClick}>
-											<T id={subitem.label} />
-										</NavLink>
-									</HasPermission>
-								);
-							})}
-						</div>
-					</div>
-				</div>
-			</li>
+			<Button
+				asChild
+				variant={isActive ? "secondary" : "ghost"}
+				className="w-full justify-start"
+				onClick={onClick}
+			>
+				<Link to={item.to || "#"}>
+					{item.icon && <item.icon className="mr-2 h-4 w-4" />}
+					<T id={item.label} />
+				</Link>
+			</Button>
 		</HasPermission>
 	);
 };
 
 export function Sidebar() {
-	const closeMenu = () =>
-		setTimeout(() => {
-			const navbarToggler = document.querySelector<HTMLElement>(".navbar-toggler");
-			const navbarMenu = document.querySelector("#navbar-menu");
-			if (navbarToggler && navbarMenu?.classList.contains("show")) {
-				navbarToggler.click();
-			}
-		}, 300);
-
 	return (
-		<aside className="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
-			<div className="container-fluid">
-				<button
-					className="navbar-toggler"
-					type="button"
-					data-bs-toggle="collapse"
-					data-bs-target="#sidebar-menu"
-					aria-controls="sidebar-menu"
-					aria-expanded="false"
-					aria-label="Toggle navigation"
-				>
-					<span className="navbar-toggler-icon" />
-				</button>
-				<h1 className="navbar-brand navbar-brand-autodark">
-					<NavLink to="/">
-						<div className={styles.logo}>
-							<img
-								src="/images/logo-no-text.svg"
-								width={110}
-								height={32}
-								alt="Logo"
-								className="navbar-brand-image"
-							/>
+		<>
+			{/* Mobile Trigger */}
+			<div className="lg:hidden p-4 border-b flex items-center gap-4 bg-background">
+				<Sheet>
+					<SheetTrigger asChild>
+						<Button variant="ghost" size="icon">
+							<IconMenu2 />
+							<span className="sr-only"><T id="sr.toggle-navigation" /></span>
+						</Button>
+					</SheetTrigger>
+					<SheetContent side="left" className="w-[280px] p-0">
+						<div className="flex flex-col h-full bg-slate-950 text-slate-100 border-r-slate-800">
+							<div className="p-6">
+								<Link to="/" className="flex items-center gap-2 font-semibold">
+									<img src="/images/logo-no-text.svg" alt="NPMplus" className="h-8 w-8" />
+									<span className="text-lg">NPMplus</span>
+								</Link>
+							</div>
+							<ScrollArea className="flex-1 px-4">
+								<nav className="flex flex-col gap-2 py-4">
+									{menuItems.map((item, index) => (
+										<SidebarItem key={index} item={item} />
+									))}
+								</nav>
+							</ScrollArea>
 						</div>
-						NPMplus
-					</NavLink>
-				</h1>
-				<div className="collapse navbar-collapse" id="sidebar-menu">
-					<ul className="navbar-nav pt-lg-3">{menuItems.map((item) => getMenuItem(item, closeMenu))}</ul>
+					</SheetContent>
+				</Sheet>
+				<div className="flex-1">
+					<Link to="/" className="flex items-center gap-2 font-semibold">
+						<img src="/images/logo-no-text.svg" alt="NPMplus" className="h-6 w-6" />
+						<span className="text-lg">NPMplus</span>
+					</Link>
 				</div>
 			</div>
-		</aside>
+
+			{/* Desktop Sidebar */}
+			<div className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-[240px] bg-slate-950 text-slate-100 border-r border-slate-800 z-40">
+				<div className="p-6">
+					<Link to="/" className="flex items-center gap-2 font-semibold">
+						<img src="/images/logo-no-text.svg" alt="NPMplus" className="h-8 w-8" />
+						<span className="text-xl">NPMplus</span>
+					</Link>
+				</div>
+				<ScrollArea className="flex-1 px-4">
+					<nav className="flex flex-col gap-2 py-4">
+						{menuItems.map((item, index) => (
+							<SidebarItem key={index} item={item} />
+						))}
+					</nav>
+				</ScrollArea>
+			</div>
+		</>
 	);
 }

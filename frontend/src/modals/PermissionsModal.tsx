@@ -1,15 +1,25 @@
+import { IconArrowsRightLeft, IconBolt, IconBoltOff, IconDisc, IconEye, IconLock, IconShield } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
-import cn from "classnames";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
 import { setPermissions } from "src/api/backend";
-import { Button, Loading } from "src/components";
+import { Loading } from "src/components";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent } from "src/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "src/components/ui/dialog";
+import { Label } from "src/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useUser } from "src/hooks";
 import { T } from "src/locale";
-import styles from "./PermissionsModal.module.css";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 const showPermissionsModal = (id: number) => {
 	EasyModal.show(PermissionsModal, { id });
@@ -40,16 +50,11 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setIsSubmitting(false);
 	};
 
-	const getClasses = (active: boolean) => {
-		return cn("btn", active ? styles.active : null, {
-			active,
-			"bg-orange-lt": active,
-		});
-	};
-
 	// given the field and clicked permission, intelligently set the value, and
 	// other values that depends on it.
 	const handleChange = (form: any, field: any, perm: string) => {
+		if (!perm) return; // Toggle group can return undefined if unchecked
+
 		if (field.name === "proxyHosts" && perm !== "hidden" && form.values.accessLists === "hidden") {
 			form.setFieldValue("accessLists", "view");
 		}
@@ -66,10 +71,6 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	};
 
 	const getPermissionButtons = (field: any, form: any) => {
-		const isManage = field.value === "manage";
-		const isView = field.value === "view";
-		const isHidden = field.value === "hidden";
-
 		let hiddenDisabled = false;
 		if (field.name === "accessLists") {
 			hiddenDisabled = form.values.proxyHosts !== "hidden";
@@ -83,204 +84,181 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}
 
 		return (
-			<div>
-				<div className="btn-group w-100" role="group">
-					<input
-						type="radio"
-						className="btn-check"
-						name="btn-radio-basic"
-						id={`${field.name}-manage`}
-						autoComplete="off"
-						value="manage"
-						checked={field.value === "manage"}
-						onChange={() => handleChange(form, field, "manage")}
-					/>
-					<label htmlFor={`${field.name}-manage`} className={getClasses(isManage)}>
-						<T id="permissions.manage" />
-					</label>
-					<input
-						type="radio"
-						className="btn-check"
-						name="btn-radio-basic"
-						id={`${field.name}-view`}
-						autoComplete="off"
-						value="view"
-						checked={field.value === "view"}
-						onChange={() => handleChange(form, field, "view")}
-					/>
-					<label htmlFor={`${field.name}-view`} className={getClasses(isView)}>
-						<T id="permissions.view" />
-					</label>
-					<input
-						type="radio"
-						className="btn-check"
-						name="btn-radio-basic"
-						id={`${field.name}-hidden`}
-						autoComplete="off"
-						value="hidden"
-						checked={field.value === "hidden"}
-						disabled={hiddenDisabled}
-						onChange={() => handleChange(form, field, "hidden")}
-					/>
-					<label htmlFor={`${field.name}-hidden`} className={getClasses(isHidden)}>
-						<T id="permissions.hidden" />
-					</label>
-				</div>
-			</div>
+			<ToggleGroup
+				type="single"
+				value={field.value}
+				onValueChange={(val) => handleChange(form, field, val)}
+				className="justify-start w-full border rounded-md p-1"
+			>
+				<ToggleGroupItem value="manage" className="flex-1">
+					<T id="permissions.manage" />
+				</ToggleGroupItem>
+				<ToggleGroupItem value="view" className="flex-1">
+					<T id="permissions.view" />
+				</ToggleGroupItem>
+				<ToggleGroupItem value="hidden" disabled={hiddenDisabled} className="flex-1">
+					<T id="permissions.hidden" />
+				</ToggleGroupItem>
+			</ToggleGroup>
 		);
 	};
 
 	const isAdmin = data?.roles.indexOf("admin") !== -1;
 
 	return (
-		<Modal show={visible} onHide={remove}>
-			{!isLoading && error && (
-				<Alert variant="danger" className="m-3">
-					{error?.message || "Unknown error"}
-				</Alert>
-			)}
-			{isLoading && <Loading noLogo />}
-			{!isLoading && data && (
-				<Formik
-					initialValues={
-						{
-							visibility: data.permissions?.visibility,
-							accessLists: data.permissions?.accessLists,
-							certificates: data.permissions?.certificates,
-							deadHosts: data.permissions?.deadHosts,
-							proxyHosts: data.permissions?.proxyHosts,
-							redirectionHosts: data.permissions?.redirectionHosts,
-							streams: data.permissions?.streams,
-						} as any
-					}
-					onSubmit={onSubmit}
-				>
-					{() => (
-						<Form>
-							<Modal.Header closeButton>
-								<Modal.Title>
-									<T id="user.set-permissions" data={{ name: data?.name }} />
-								</Modal.Title>
-							</Modal.Header>
-							<Modal.Body>
-								<Alert variant="danger" show={!!error} onClose={() => setErrorMsg(null)} dismissible>
-									{errorMsg}
-								</Alert>
-								<div className="mb-3">
-									<label htmlFor="asd" className="form-label">
+		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<DialogContent className="max-w-lg">
+				<DialogHeader>
+					<DialogTitle className="flex items-center gap-2">
+						<IconShield className="h-5 w-5" />
+						<T id="user.set-permissions" data={{ name: data?.name }} />
+					</DialogTitle>
+				</DialogHeader>
+
+				{!isLoading && error && (
+					<Alert variant="destructive" className="mb-4">
+						<AlertCircle className="h-4 w-4" />
+						<AlertTitle>Error</AlertTitle>
+						<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+					</Alert>
+				)}
+
+				{isLoading && (
+					<div className="flex justify-center p-8">
+						<Loading noLogo />
+					</div>
+				)}
+
+				{!isLoading && data && (
+					<Formik
+						initialValues={
+							{
+								visibility: data.permissions?.visibility,
+								accessLists: data.permissions?.accessLists,
+								certificates: data.permissions?.certificates,
+								deadHosts: data.permissions?.deadHosts,
+								proxyHosts: data.permissions?.proxyHosts,
+								redirectionHosts: data.permissions?.redirectionHosts,
+								streams: data.permissions?.streams,
+							} as any
+						}
+						onSubmit={onSubmit}
+					>
+						{({ values, setFieldValue, ...formikProps }) => (
+							<Form className="space-y-4">
+								{errorMsg && (
+									<Alert variant="destructive" className="mb-4">
+										<AlertCircle className="h-4 w-4" />
+										<AlertTitle>Error</AlertTitle>
+										<AlertDescription>{errorMsg}</AlertDescription>
+									</Alert>
+								)}
+
+								<div className="space-y-2">
+									<Label className="flex items-center gap-2">
+										<IconEye className="h-4 w-4 text-muted-foreground" />
 										<T id="permissions.visibility.title" />
-									</label>
+									</Label>
 									<Field name="visibility">
-										{({ field, form }: any) => (
-											<div className="btn-group w-100" role="group">
-												<input
-													type="radio"
-													className="btn-check"
-													name="btn-radio-basic"
-													id={`${field.name}-user`}
-													autoComplete="off"
-													value="user"
-													checked={field.value === "user"}
-													onChange={() => form.setFieldValue(field.name, "user")}
-												/>
-												<label
-													htmlFor={`${field.name}-user`}
-													className={getClasses(field.value === "user")}
-												>
+										{({ field }: any) => (
+											<ToggleGroup
+												type="single"
+												value={field.value}
+												onValueChange={(val) => val && setFieldValue(field.name, val)}
+												className="justify-start w-full border rounded-md p-1"
+											>
+												<ToggleGroupItem value="user" className="flex-1">
 													<T id="permissions.visibility.user" />
-												</label>
-												<input
-													type="radio"
-													className="btn-check"
-													name="btn-radio-basic"
-													id={`${field.name}-all`}
-													autoComplete="off"
-													value="all"
-													checked={field.value === "all"}
-													onChange={() => form.setFieldValue(field.name, "all")}
-												/>
-												<label
-													htmlFor={`${field.name}-all`}
-													className={getClasses(field.value === "all")}
-												>
+												</ToggleGroupItem>
+												<ToggleGroupItem value="all" className="flex-1">
 													<T id="permissions.visibility.all" />
-												</label>
-											</div>
+												</ToggleGroupItem>
+											</ToggleGroup>
 										)}
 									</Field>
 								</div>
+
 								{!isAdmin && (
-									<>
-										<div className="mb-3">
-											<label htmlFor="ignored" className="form-label">
-												<T id="proxy-hosts" />
-											</label>
-											<Field name="proxyHosts">
-												{({ field, form }: any) => getPermissionButtons(field, form)}
-											</Field>
-										</div>
-										<div className="mb-3">
-											<label htmlFor="ignored" className="form-label">
-												<T id="redirection-hosts" />
-											</label>
-											<Field name="redirectionHosts">
-												{({ field, form }: any) => getPermissionButtons(field, form)}
-											</Field>
-										</div>
-										<div className="mb-3">
-											<label htmlFor="ignored" className="form-label">
-												<T id="dead-hosts" />
-											</label>
-											<Field name="deadHosts">
-												{({ field, form }: any) => getPermissionButtons(field, form)}
-											</Field>
-										</div>
-										<div className="mb-3">
-											<label htmlFor="ignored" className="form-label">
-												<T id="streams" />
-											</label>
-											<Field name="streams">
-												{({ field, form }: any) => getPermissionButtons(field, form)}
-											</Field>
-										</div>
-										<div className="mb-3">
-											<label htmlFor="ignored" className="form-label">
-												<T id="access-lists" />
-											</label>
-											<Field name="accessLists">
-												{({ field, form }: any) => getPermissionButtons(field, form)}
-											</Field>
-										</div>
-										<div className="mb-3">
-											<label htmlFor="ignored" className="form-label">
-												<T id="certificates" />
-											</label>
-											<Field name="certificates">
-												{({ field, form }: any) => getPermissionButtons(field, form)}
-											</Field>
-										</div>
-									</>
+									<Card className="border-dashed">
+										<CardContent className="p-4 grid grid-cols-1 gap-4">
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconBolt className="h-4 w-4 text-muted-foreground" />
+													<T id="proxy-hosts" />
+												</Label>
+												<Field name="proxyHosts">
+													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconArrowsRightLeft className="h-4 w-4 text-muted-foreground" />
+													<T id="redirection-hosts" />
+												</Label>
+												<Field name="redirectionHosts">
+													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconBoltOff className="h-4 w-4 text-muted-foreground" />
+													<T id="dead-hosts" />
+												</Label>
+												<Field name="deadHosts">
+													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconDisc className="h-4 w-4 text-muted-foreground" />
+													<T id="streams" />
+												</Label>
+												<Field name="streams">
+													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconLock className="h-4 w-4 text-muted-foreground" />
+													<T id="access-lists" />
+												</Label>
+												<Field name="accessLists">
+													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconShield className="h-4 w-4 text-muted-foreground" />
+													<T id="certificates" />
+												</Label>
+												<Field name="certificates">
+													{({ field }: any) => getPermissionButtons(field, { values, setFieldValue, ...formikProps })}
+												</Field>
+											</div>
+										</CardContent>
+									</Card>
 								)}
-							</Modal.Body>
-							<Modal.Footer>
-								<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-									<T id="cancel" />
-								</Button>
-								<Button
-									type="submit"
-									className="ms-auto btn-orange"
-									data-bs-dismiss="modal"
-									isLoading={isSubmitting}
-									disabled={isSubmitting}
-								>
-									<T id="save" />
-								</Button>
-							</Modal.Footer>
-						</Form>
-					)}
-				</Formik>
-			)}
-		</Modal>
+
+								<DialogFooter className="mt-6">
+									<Button variant="outline" onClick={remove} disabled={isSubmitting} type="button">
+										<T id="cancel" />
+									</Button>
+									<Button
+										type="submit"
+										variant="default"
+										disabled={isSubmitting}
+										className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
+									>
+										{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+										<T id="save" />
+									</Button>
+								</DialogFooter>
+							</Form>
+						)}
+					</Formik>
+				)}
+			</DialogContent>
+		</Dialog>
 	);
 });
 

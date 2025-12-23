@@ -4,6 +4,16 @@ import { useAuthState } from "src/context";
 import { useUser } from "src/hooks";
 import { T } from "src/locale";
 import { showChangePasswordModal, showUserModal } from "src/modals";
+import { Button } from "src/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "src/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "src/components/ui/avatar";
 
 export function SiteHeader() {
 	const { data: currentUser } = useUser("me");
@@ -11,108 +21,57 @@ export function SiteHeader() {
 	const { logout } = useAuthState();
 
 	return (
-		<header className="navbar navbar-expand-md d-print-none">
-			<div className="container-xl">
-				<button
-					className="navbar-toggler"
-					type="button"
-					data-bs-toggle="collapse"
-					data-bs-target="#sidebar-menu"
-					aria-controls="sidebar-menu"
-					aria-expanded="false"
-					aria-label="Toggle navigation"
-				>
-					<span className="navbar-toggler-icon" />
-				</button>
-				<div className="navbar-nav flex-row order-md-last ms-auto">
-					<div className="d-none d-md-flex">
-						<div className="nav-item">
-							<LocalePicker />
-						</div>
-						<div className="nav-item">
-							<ThemeSwitcher />
-						</div>
-					</div>
-					<div className="nav-item d-md-flex">
-						<div className="nav-item dropdown">
-							<a
-								href="/"
-								className="nav-link d-flex lh-1"
-								data-bs-toggle="dropdown"
-								aria-label="Open user menu"
-							>
-								<span
-									className="avatar avatar-sm"
-									style={{
-										backgroundImage: `url(${currentUser?.avatar || "/images/default-avatar.jpg"})`,
-									}}
-								/>
-								<div className="d-none d-xl-block ps-2">
-									<div>{currentUser?.nickname}</div>
-									<div className="mt-1 small text-secondary">
-										<T id={isAdmin ? "role.admin" : "role.standard-user"} />
-									</div>
-								</div>
-							</a>
-							<div className="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-								<div className="d-md-none">
-									{/* biome-ignore lint/a11y/noStaticElementInteractions lint/a11y/useKeyWithClickEvents: This div is not interactive. */}
-									<div
-										className="p-2 pb-1 pe-1 d-flex align-items-center"
-										onClick={(e) => e.stopPropagation()}
-									>
-										<div className="ps-2 pe-1 me-auto">
-											<div>{currentUser?.nickname}</div>
-											<div className="mt-1 small text-secondary text-nowrap">
-												<T id={isAdmin ? "role.admin" : "role.standard-user"} />
-											</div>
-										</div>
-										<div className="d-flex align-items-center">
-											<ThemeSwitcher className="me-n2" />
-											<LocalePicker menuAlign="end" />
-										</div>
-									</div>
-									<div className="dropdown-divider" />
-								</div>
-								<a
-									href="?"
-									className="dropdown-item"
-									onClick={(e) => {
-										e.preventDefault();
-										showUserModal("me");
-									}}
-								>
-									<IconUser width={18} />
-									<T id="user.edit-profile" />
-								</a>
-								<a
-									href="?"
-									className="dropdown-item"
-									onClick={(e) => {
-										e.preventDefault();
-										showChangePasswordModal("me");
-									}}
-								>
-									<IconLock width={18} />
-									<T id="user.change-password" />
-								</a>
-								<div className="dropdown-divider" />
-								<a
-									href="?"
-									className="dropdown-item"
-									onClick={(e) => {
-										e.preventDefault();
-										logout();
-									}}
-								>
-									<IconLogout width={18} />
-									<T id="user.logout" />
-								</a>
-							</div>
-						</div>
-					</div>
+		<header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 d-print-none">
+			<div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4 justify-end">
+				<div className="hidden md:flex gap-2">
+					<LocalePicker />
+					<ThemeSwitcher />
 				</div>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="ghost" size="icon" className="rounded-full">
+							<Avatar className="h-8 w-8">
+								<AvatarImage src={currentUser?.avatar || "/images/default-avatar.jpg"} alt={currentUser?.nickname} />
+								<AvatarFallback>{currentUser?.nickname?.substring(0, 2).toUpperCase()}</AvatarFallback>
+							</Avatar>
+							<span className="sr-only">Toggle user menu</span>
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuLabel className="font-normal">
+							<div className="flex flex-col space-y-1">
+								<p className="text-sm font-medium leading-none">{currentUser?.nickname}</p>
+								<p className="text-xs leading-none text-muted-foreground">
+									<T id={isAdmin ? "role.admin" : "role.standard-user"} />
+								</p>
+							</div>
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<div className="md:hidden">
+							<div className="flex items-center justify-between p-2">
+								<ThemeSwitcher />
+								<LocalePicker />
+							</div>
+							<DropdownMenuSeparator />
+						</div>
+						<DropdownMenuItem onClick={() => showUserModal("me")}>
+							<IconUser className="mr-2 h-4 w-4" />
+							<T id="user.edit-profile" />
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => showChangePasswordModal("me")}>
+							<IconLock className="mr-2 h-4 w-4" />
+							<T id="user.change-password" />
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem onClick={() => logout()}>
+							<IconLogout className="mr-2 h-4 w-4" />
+							<T id="user.logout" />
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
 		</header>
 	);
 }
+
+

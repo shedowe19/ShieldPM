@@ -1,14 +1,19 @@
 import { Field, Form, Formik } from "formik";
 import { useEffect, useRef, useState } from "react";
-import Alert from "react-bootstrap/Alert";
 import { claimOidcToken } from "src/api/backend";
-import { Button, LocalePicker, Page, ThemeSwitcher } from "src/components";
+import { LocalePicker, ThemeSwitcher } from "src/components";
 import { useAuthState } from "src/context";
 import { useHealth } from "src/hooks";
 import { intl, T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 import { validateEmail, validateString } from "src/modules/Validations";
-import styles from "./index.module.css";
+
+import { Button } from "src/components/ui/button";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 
 export default function Login() {
 	const emailRef = useRef<HTMLInputElement>(null);
@@ -50,21 +55,35 @@ export default function Login() {
 	};
 
 	return (
-		<Page className="page page-center">
-			<div className="container container-tight py-4">
-				<div className="d-flex justify-content-between align-items-center mb-4 ps-4 pe-3">
-					<img className={styles.logo} src="/images/logo-text-horizontal-grey.png" alt="NPMplus" />
-					<div className="d-flex align-items-center gap-1">
-						<LocalePicker />
-						<ThemeSwitcher />
-					</div>
+		<div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 dark:from-black dark:via-gray-900 dark:to-gray-950 p-4">
+			<div className="absolute top-4 right-4 flex gap-2">
+				<LocalePicker />
+				<ThemeSwitcher />
+			</div>
+
+			<div className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+				<div className="flex flex-col items-center justify-center mb-8">
+					<img className="h-16 w-auto mb-4 drop-shadow-2xl" src="/images/logo-256.png" alt="NPMplus" />
 				</div>
-				<div className="card card-md">
-					<div className="card-body">
-						<h2 className="h2 text-center mb-4">
+
+				<Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-sm dark:bg-card/50 ring-1 ring-white/10 dark:ring-white/5">
+					<CardHeader className="space-y-1">
+						<CardTitle className="text-2xl font-bold text-center tracking-tight">
 							<T id="login.title" />
-						</h2>
-						{formErr !== "" && <Alert variant="danger">{formErr}</Alert>}
+						</CardTitle>
+						<CardDescription className="text-center">
+							Enter your credentials to continue
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						{formErr !== "" && (
+							<Alert variant="destructive" className="mb-6">
+								<AlertCircle className="h-4 w-4" />
+								<AlertTitle>Error</AlertTitle>
+								<AlertDescription>{formErr}</AlertDescription>
+							</Alert>
+						)}
+
 						<Formik
 							initialValues={
 								{
@@ -74,59 +93,67 @@ export default function Login() {
 							}
 							onSubmit={onSubmit}
 						>
-							{({ isSubmitting }) => (
-								<Form>
-									<div className="mb-3">
+							{({ isSubmitting, errors, touched }: any) => (
+								<Form className="space-y-4">
+									<div className="space-y-2">
 										<Field name="email" validate={validateEmail()}>
-											{({ field, form }: any) => (
-												<label className="form-label">
-													<T id="email-address" />
-													<input
+											{({ field }: any) => (
+												<div className="grid gap-2">
+													<Label htmlFor="email">
+														<T id="email-address" />
+													</Label>
+													<Input
 														{...field}
+														id="email"
 														ref={emailRef}
 														type="email"
 														required
-														className={`form-control ${form.errors.email && form.touched.email ? " is-invalid" : ""}`}
-														placeholder={intl.formatMessage({ id: "email-address" })}
+														placeholder={intl.formatMessage({ id: "form.placeholder.email" })}
+														className={`bg-background/50 ${errors.email && touched.email ? "border-destructive" : ""}`}
 													/>
-													<div className="invalid-feedback">{form.errors.email}</div>
-												</label>
+													{errors.email && touched.email && (
+														<p className="text-sm text-destructive">{errors.email}</p>
+													)}
+												</div>
 											)}
 										</Field>
 									</div>
-									<div className="mb-2">
+									<div className="space-y-2">
 										<Field name="password" validate={validateString(8, 255)}>
-											{({ field, form }: any) => (
-												<>
-													<label className="form-label">
+											{({ field }: any) => (
+												<div className="grid gap-2">
+													<Label htmlFor="password">
 														<T id="password" />
-														<input
-															{...field}
-															type="password"
-															autoComplete="current-password"
-															required
-															maxLength={255}
-															className={`form-control ${form.errors.password && form.touched.password ? " is-invalid" : ""}`}
-															placeholder={intl.formatMessage({ id: "password" })}
-														/>
-														<div className="invalid-feedback">{form.errors.password}</div>
-													</label>
-												</>
+													</Label>
+													<Input
+														{...field}
+														id="password"
+														type="password"
+														autoComplete="current-password"
+														required
+														maxLength={255}
+														placeholder="••••••••"
+														className={`bg-background/50 ${errors.password && touched.password ? "border-destructive" : ""}`}
+													/>
+													{errors.password && touched.password && (
+														<p className="text-sm text-destructive">{errors.password}</p>
+													)}
+												</div>
 											)}
 										</Field>
 									</div>
-									<div className="form-footer">
-										<Button type="submit" fullWidth color="azure" isLoading={isSubmitting}>
-											<T id="sign-in" />
-										</Button>
-									</div>
+									<Button type="submit" className="w-full bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25" disabled={isSubmitting}>
+										{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <T id="sign-in" />}
+									</Button>
 								</Form>
 							)}
 						</Formik>
-					</div>
-				</div>
-				<div className="text-center text-secondary mt-3">{getVersion()}</div>
+					</CardContent>
+				</Card>
+				<div className="text-center text-xs text-muted-foreground/50 mt-8 font-mono">{getVersion()}</div>
 			</div>
-		</Page>
+		</div>
 	);
 }
+
+

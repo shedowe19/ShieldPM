@@ -1,14 +1,14 @@
-import { IconSettings } from "@tabler/icons-react";
-import cn from "classnames";
+import { IconSettings, IconServer } from "@tabler/icons-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
+
+import { Button } from "src/components/ui/button";
+import { Card, CardContent } from "src/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import {
 	AccessField,
-	AnimatedModalBody,
-	Button,
 	DomainNamesField,
 	HasPermission,
 	Loading,
@@ -17,6 +17,29 @@ import {
 	SSLCertificateField,
 	SSLOptionsFields,
 } from "src/components";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "src/components/ui/dialog";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "src/components/ui/select";
+import { Switch } from "src/components/ui/switch";
+import {
+	Tabs,
+	TabsContent,
+	TabsList,
+	TabsTrigger,
+} from "src/components/ui/tabs";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
 import { T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
@@ -61,197 +84,148 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	};
 
 	return (
-		<Modal show={visible} onHide={remove}>
-			{!isLoading && (error || userError) && (
-				<Alert variant="danger" className="m-3">
-					{error?.message || userError?.message || "Unknown error"}
-				</Alert>
-			)}
-			{isLoading || (userIsLoading && <Loading noLogo />)}
-			{!isLoading && !userIsLoading && data && currentUser && (
-				<Formik
-					initialValues={
-						{
-							// Details tab
-							domainNames: data?.domainNames || [],
-							forwardScheme: data?.forwardScheme || "http",
-							forwardHost: data?.forwardHost || "",
-							forwardPort: data?.forwardPort || undefined,
-							accessListId: data?.accessListId || 0,
-							cachingEnabled: data?.cachingEnabled || false,
-							blockExploits: data?.blockExploits || false,
-							allowWebsocketUpgrade: data?.allowWebsocketUpgrade || false,
-							// Locations tab
-							locations: data?.locations || [],
-							// SSL tab
-							certificateId: data?.certificateId || 0,
-							sslForced: data?.sslForced || false,
-							http2Support: data?.http2Support || false,
-							hstsEnabled: data?.hstsEnabled || false,
-							hstsSubdomains: data?.hstsSubdomains || false,
-							// Advanced tab
-							advancedConfig: data?.advancedConfig || "",
-							bandwidthLimit: data?.bandwidthLimit || "",
-							forwardQuery: data?.forwardQuery || "",
-							meta: data?.meta || {},
-						} as any
-					}
-					onSubmit={onSubmit}
-				>
-					{() => (
-						<Form>
-							<Modal.Header closeButton>
-								<Modal.Title>
-									<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "proxy-host" }} />
-								</Modal.Title>
-							</Modal.Header>
-							<AnimatedModalBody className="p-0">
-								<Alert variant="danger" show={!!errorMsg} onClose={() => setErrorMsg(null)} dismissible>
-									{errorMsg}
-								</Alert>
-								<div className="card m-0 border-0">
-									<div className="card-header">
-										<ul className="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
-											<li className="nav-item" role="presentation">
-												<a
-													href="#tab-details"
-													className="nav-link active"
-													data-bs-toggle="tab"
-													aria-selected="true"
-													role="tab"
-												>
-													<T id="column.details" />
-												</a>
-											</li>
-											<li className="nav-item" role="presentation">
-												<a
-													href="#tab-locations"
-													className="nav-link"
-													data-bs-toggle="tab"
-													aria-selected="false"
-													tabIndex={-1}
-													role="tab"
-												>
-													<T id="column.custom-locations" />
-												</a>
-											</li>
-											<li className="nav-item" role="presentation">
-												<a
-													href="#tab-ssl"
-													className="nav-link"
-													data-bs-toggle="tab"
-													aria-selected="false"
-													tabIndex={-1}
-													role="tab"
-												>
-													<T id="column.ssl" />
-												</a>
-											</li>
-											<li className="nav-item ms-auto" role="presentation">
-												<a
-													href="#tab-advanced"
-													className="nav-link"
-													title="Settings"
-													data-bs-toggle="tab"
-													aria-selected="false"
-													tabIndex={-1}
-													role="tab"
-												>
-													<IconSettings size={20} />
-												</a>
-											</li>
-										</ul>
+		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<DialogContent className="max-h-[90vh] max-w-4xl p-0 gap-0 overflow-hidden flex flex-col">
+				{!isLoading && (error || userError) && (
+					<Alert variant="destructive" className="m-3">
+						<AlertCircle className="h-4 w-4" />
+						<AlertTitle>Error</AlertTitle>
+						<AlertDescription>{error?.message || userError?.message || "Unknown error"}</AlertDescription>
+					</Alert>
+				)}
+				{isLoading || (userIsLoading && <div className="p-8"><Loading noLogo /></div>)}
+				{!isLoading && !userIsLoading && data && currentUser && (
+					<Formik
+						initialValues={
+							{
+								// Details tab
+								domainNames: data?.domainNames || [],
+								forwardScheme: data?.forwardScheme || "http",
+								forwardHost: data?.forwardHost || "",
+								forwardPort: data?.forwardPort || undefined,
+								accessListId: data?.accessListId || 0,
+								cachingEnabled: data?.cachingEnabled || false,
+								blockExploits: data?.blockExploits || false,
+								allowWebsocketUpgrade: data?.allowWebsocketUpgrade || false,
+								// Locations tab
+								locations: data?.locations || [],
+								// SSL tab
+								certificateId: data?.certificateId || 0,
+								sslForced: data?.sslForced || false,
+								http2Support: data?.http2Support || false,
+								hstsEnabled: data?.hstsEnabled || false,
+								hstsSubdomains: data?.hstsSubdomains || false,
+								// Advanced tab
+								advancedConfig: data?.advancedConfig || "",
+								bandwidthLimit: data?.bandwidthLimit || "",
+								forwardQuery: data?.forwardQuery || "",
+								meta: data?.meta || {},
+							} as any
+						}
+						onSubmit={onSubmit}
+					>
+						{() => (
+							<Form className="flex flex-col h-full overflow-hidden">
+								<DialogHeader className="px-6 py-4 border-b">
+									<DialogTitle className="flex items-center gap-2">
+										<IconServer className="h-5 w-5" />
+										<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "proxy-host" }} />
+									</DialogTitle>
+								</DialogHeader>
+
+								<Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+									<div className="px-6 pt-4">
+										<TabsList className="w-full justify-start">
+											<TabsTrigger value="details"><T id="column.details" /></TabsTrigger>
+											<TabsTrigger value="locations"><T id="column.custom-locations" /></TabsTrigger>
+											<TabsTrigger value="ssl"><T id="column.ssl" /></TabsTrigger>
+											<TabsTrigger value="advanced" className="ml-auto">
+												<IconSettings size={20} />
+											</TabsTrigger>
+										</TabsList>
 									</div>
-									<div className="card-body">
-										<div className="tab-content">
-											<div className="tab-pane active show" id="tab-details" role="tabpanel">
+
+									<div className="flex-1 overflow-y-auto">
+										<div className="px-6 py-4">
+											{errorMsg && (
+												<Alert variant="destructive" className="mb-4">
+													<AlertCircle className="h-4 w-4" />
+													<AlertTitle>Error</AlertTitle>
+													<AlertDescription>{errorMsg}</AlertDescription>
+												</Alert>
+											)}
+											<TabsContent value="details" className="mt-0 space-y-4">
 												<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
-												<div className="row">
-													<div className="col-md-3">
+												<div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+													<div className="md:col-span-3">
 														<Field name="forwardScheme">
 															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label
-																		className="form-label"
-																		htmlFor="forwardScheme"
-																	>
+																<div className="space-y-2">
+																	<Label htmlFor="forwardScheme">
 																		<T id="host.forward-scheme" />
-																	</label>
-																	<select
-																		id="forwardScheme"
-																		className={`form-control ${form.errors.forwardScheme && form.touched.forwardScheme ? "is-invalid" : ""}`}
-																		required
-																		{...field}
+																	</Label>
+																	<Select
+																		onValueChange={(val) => form.setFieldValue(field.name, val)}
+																		value={field.value}
 																	>
-																		<option value="http">http</option>
-																		<option value="https">https</option>
-																		<option value="path">path</option>
-																		<option value="grpc">grpc</option>
-																		<option value="grpcs">grpcs</option>
-																	</select>
-																	{form.errors.forwardScheme ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardScheme &&
-																			form.touched.forwardScheme
-																				? form.errors.forwardScheme
-																				: null}
-																		</div>
-																	) : null}
+																		<SelectTrigger id="forwardScheme" className={form.errors.forwardScheme && form.touched.forwardScheme ? "border-destructive" : ""}>
+																			<SelectValue placeholder="http" />
+																		</SelectTrigger>
+																		<SelectContent>
+																			<SelectItem value="http">http</SelectItem>
+																			<SelectItem value="https">https</SelectItem>
+																			<SelectItem value="path">path</SelectItem>
+																			<SelectItem value="grpc">grpc</SelectItem>
+																			<SelectItem value="grpcs">grpcs</SelectItem>
+																		</SelectContent>
+																	</Select>
+																	{form.errors.forwardScheme && form.touched.forwardScheme && (
+																		<p className="text-sm font-medium text-destructive">{form.errors.forwardScheme}</p>
+																	)}
 																</div>
 															)}
 														</Field>
 													</div>
-													<div className="col-md-6">
+													<div className="md:col-span-6">
 														<Field name="forwardHost" validate={validateString(1, 255)}>
 															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label className="form-label" htmlFor="forwardHost">
+																<div className="space-y-2">
+																	<Label htmlFor="forwardHost">
 																		<T id="proxy-host.forward-host" />
-																	</label>
-																	<input
+																	</Label>
+																	<Input
 																		id="forwardHost"
-																		type="text"
-																		className={`form-control ${form.errors.forwardHost && form.touched.forwardHost ? "is-invalid" : ""}`}
-																		required
 																		placeholder="example.com"
+																		autoComplete="off"
+																		className={form.errors.forwardHost && form.touched.forwardHost ? "border-destructive" : ""}
 																		{...field}
 																	/>
-																	{form.errors.forwardHost ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardHost &&
-																			form.touched.forwardHost
-																				? form.errors.forwardHost
-																				: null}
-																		</div>
-																	) : null}
+																	{form.errors.forwardHost && form.touched.forwardHost && (
+																		<p className="text-sm font-medium text-destructive">{form.errors.forwardHost}</p>
+																	)}
 																</div>
 															)}
 														</Field>
 													</div>
-													<div className="col-md-3">
+													<div className="md:col-span-3">
 														<Field name="forwardPort" validate={validateNumber(-1, 65535)}>
 															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label className="form-label" htmlFor="forwardPort">
+																<div className="space-y-2">
+																	<Label htmlFor="forwardPort">
 																		<T id="host.forward-port" />
-																	</label>
-																	<input
+																	</Label>
+																	<Input
 																		id="forwardPort"
 																		type="number"
 																		min={1}
 																		max={65535}
-																		className={`form-control ${form.errors.forwardPort && form.touched.forwardPort ? "is-invalid" : ""}`}
 																		placeholder="eg: 8081"
+																		className={form.errors.forwardPort && form.touched.forwardPort ? "border-destructive" : ""}
 																		{...field}
 																	/>
-																	{form.errors.forwardPort ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardPort &&
-																			form.touched.forwardPort
-																				? form.errors.forwardPort
-																				: null}
-																		</div>
-																	) : null}
+																	{form.errors.forwardPort && form.touched.forwardPort && (
+																		<p className="text-sm font-medium text-destructive">{form.errors.forwardPort}</p>
+																	)}
 																</div>
 															)}
 														</Field>
@@ -261,28 +235,17 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<div className="col-md-12">
 														<Field name="bandwidthLimit">
 															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label
-																		className="form-label"
-																		htmlFor="bandwidthLimit"
-																	>
-																		Bandwidth Limit (e.g. 100k, 1m)
-																	</label>
-																	<input
+																<div className="mb-3 space-y-2">
+																	<Label htmlFor="bandwidthLimit"><T id="proxy-host.bandwidth-limit" /></Label>
+																	<Input
 																		id="bandwidthLimit"
-																		type="text"
-																		className={`form-control ${form.errors.bandwidthLimit && form.touched.bandwidthLimit ? "is-invalid" : ""}`}
 																		placeholder="0 = Unlimited"
+																		className={form.errors.bandwidthLimit && form.touched.bandwidthLimit ? "border-destructive" : ""}
 																		{...field}
 																	/>
-																	{form.errors.bandwidthLimit ? (
-																		<div className="invalid-feedback">
-																			{form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
-																				? form.errors.bandwidthLimit
-																				: null}
-																		</div>
-																	) : null}
+																	{form.errors.bandwidthLimit && form.touched.bandwidthLimit && (
+																		<p className="text-sm font-medium text-destructive">{form.errors.bandwidthLimit}</p>
+																	)}
 																</div>
 															)}
 														</Field>
@@ -290,151 +253,117 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<div className="col-md-12">
 														<Field name="forwardQuery">
 															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label
-																		className="form-label"
-																		htmlFor="forwardQuery"
-																	>
-																		Forward Query (Hidden)
-																	</label>
-																	<input
+																<div className="mb-3 space-y-2">
+																	<Label htmlFor="forwardQuery">
+																		<T id="proxy-host.forward-query" />
+																	</Label>
+																	<Input
 																		id="forwardQuery"
-																		type="text"
-																		className={`form-control ${form.errors.forwardQuery && form.touched.forwardQuery ? "is-invalid" : ""}`}
 																		placeholder="e.g. api_key=123"
+																		className={form.errors.forwardQuery && form.touched.forwardQuery ? "border-destructive" : ""}
 																		{...field}
 																	/>
-																	{form.errors.forwardQuery ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardQuery &&
-																			form.touched.forwardQuery
-																				? form.errors.forwardQuery
-																				: null}
-																		</div>
-																	) : null}
+																	{form.errors.forwardQuery && form.touched.forwardQuery && (
+																		<p className="text-sm font-medium text-destructive">{form.errors.forwardQuery}</p>
+																	)}
 																</div>
 															)}
 														</Field>
 													</div>
 												</div>
 												<AccessField />
-												<div className="my-3">
-													<h4 className="py-2">
-														<T id="options" />
-													</h4>
-													<div className="divide-y">
-														<div>
-															<label className="row" htmlFor="cachingEnabled">
-																<span className="col">
+												<Card className="my-3 border-dashed">
+													<CardContent className="p-4">
+														<h4 className="pb-2 text-lg font-semibold">
+															<T id="options" />
+														</h4>
+														<div className="space-y-4">
+															<div className="flex items-center justify-between">
+																<Label htmlFor="cachingEnabled" className="flex-1 cursor-pointer">
 																	<T id="host.flags.cache-assets" />
-																</span>
-																<span className="col-auto">
-																	<Field name="cachingEnabled" type="checkbox">
-																		{({ field }: any) => (
-																			<label className="form-check form-check-single form-switch">
-																				<input
-																					{...field}
-																					id="cachingEnabled"
-																					className={cn("form-check-input", {
-																						"bg-lime": field.checked,
-																					})}
-																					type="checkbox"
-																				/>
-																			</label>
-																		)}
-																	</Field>
-																</span>
-															</label>
-														</div>
-														<div>
-															<label className="row" htmlFor="blockExploits">
-																<span className="col">
+																</Label>
+																<Field name="cachingEnabled" type="checkbox">
+																	{({ field, form }: any) => (
+																		<Switch
+																			id="cachingEnabled"
+																			checked={field.checked}
+																			onCheckedChange={(checked) => form.setFieldValue("cachingEnabled", checked)}
+																		/>
+																	)}
+																</Field>
+															</div>
+															<div className="flex items-center justify-between">
+																<Label htmlFor="blockExploits" className="flex-1 cursor-pointer">
 																	<T id="host.flags.block-exploits" />
-																</span>
-																<span className="col-auto">
-																	<Field name="blockExploits" type="checkbox">
-																		{({ field }: any) => (
-																			<label className="form-check form-check-single form-switch">
-																				<input
-																					{...field}
-																					id="blockExploits"
-																					className={cn("form-check-input", {
-																						"bg-lime": field.checked,
-																					})}
-																					type="checkbox"
-																				/>
-																			</label>
-																		)}
-																	</Field>
-																</span>
-															</label>
-														</div>
-														<div>
-															<label className="row" htmlFor="allowWebsocketUpgrade">
-																<span className="col">
+																</Label>
+																<Field name="blockExploits" type="checkbox">
+																	{({ field, form }: any) => (
+																		<Switch
+																			id="blockExploits"
+																			checked={field.checked}
+																			onCheckedChange={(checked) => form.setFieldValue("blockExploits", checked)}
+																		/>
+																	)}
+																</Field>
+															</div>
+															<div className="flex items-center justify-between">
+																<Label htmlFor="allowWebsocketUpgrade" className="flex-1 cursor-pointer">
 																	<T id="host.flags.websockets-upgrade" />
-																</span>
-																<span className="col-auto">
-																	<Field name="allowWebsocketUpgrade" type="checkbox">
-																		{({ field }: any) => (
-																			<label className="form-check form-check-single form-switch">
-																				<input
-																					{...field}
-																					id="allowWebsocketUpgrade"
-																					className={cn("form-check-input", {
-																						"bg-lime": field.checked,
-																					})}
-																					type="checkbox"
-																				/>
-																			</label>
-																		)}
-																	</Field>
-																</span>
-															</label>
+																</Label>
+																<Field name="allowWebsocketUpgrade" type="checkbox">
+																	{({ field, form }: any) => (
+																		<Switch
+																			id="allowWebsocketUpgrade"
+																			checked={field.checked}
+																			onCheckedChange={(checked) => form.setFieldValue("allowWebsocketUpgrade", checked)}
+																		/>
+																	)}
+																</Field>
+															</div>
 														</div>
-													</div>
-												</div>
-											</div>
-											<div className="tab-pane" id="tab-locations" role="tabpanel">
+													</CardContent>
+												</Card>
+											</TabsContent>
+											<TabsContent value="locations" className="mt-0">
 												<LocationsFields initialValues={data?.locations || []} />
-											</div>
-											<div className="tab-pane" id="tab-ssl" role="tabpanel">
+											</TabsContent>
+											<TabsContent value="ssl" className="mt-0">
 												<SSLCertificateField
 													name="certificateId"
 													label="ssl-certificate"
 													allowNew
 												/>
 												<SSLOptionsFields color="bg-lime" />
-											</div>
-											<div className="tab-pane" id="tab-advanced" role="tabpanel">
+											</TabsContent>
+											<TabsContent value="advanced" className="mt-0">
 												<NginxConfigField />
-											</div>
+											</TabsContent>
 										</div>
 									</div>
-								</div>
-							</AnimatedModalBody>
-							<Modal.Footer>
-								<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-									<T id="cancel" />
-								</Button>
-								<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
-									<Button
-										type="submit"
-										actionType="primary"
-										className="ms-auto bg-lime"
-										data-bs-dismiss="modal"
-										isLoading={isSubmitting}
-										disabled={isSubmitting}
-									>
-										<T id="save" />
+								</Tabs>
+
+								<DialogFooter className="px-6 py-4 border-t">
+									<Button variant="outline" onClick={() => remove()} type="button">
+										<T id="cancel" />
 									</Button>
-								</HasPermission>
-							</Modal.Footer>
-						</Form>
-					)}
-				</Formik>
-			)}
-		</Modal>
+									<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
+										<Button
+											type="submit"
+											variant="default"
+											className="bg-lime-600/90 text-white hover:bg-lime-600 shadow-sm"
+											disabled={isSubmitting}
+										>
+											{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+											<T id="save" />
+										</Button>
+									</HasPermission>
+								</DialogFooter>
+							</Form>
+						)}
+					</Formik>
+				)}
+			</DialogContent>
+		</Dialog>
 	);
 });
 

@@ -1,6 +1,7 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { Field } from "formik";
 import { intl, T } from "src/locale";
+import { Label } from "src/components/ui/label";
 
 interface Props {
 	id?: string;
@@ -15,25 +16,27 @@ export function NginxConfigField({
 	return (
 		<Field name={name}>
 			{({ field }: any) => (
-				<div className="mt-3">
-					<label htmlFor={id} className="form-label">
+				<div className="space-y-2 mt-4 ml-[1px]">
+					<Label htmlFor={id}>
 						<T id={label} />
-					</label>
-					<CodeEditor
-						language="nginx"
-						placeholder={intl.formatMessage({ id: "nginx-config.placeholder" })}
-						padding={15}
-						data-color-mode="dark"
-						minHeight={200}
-						indentWidth={2}
-						style={{
-							fontFamily: "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-							borderRadius: "0.3rem",
-							minHeight: "200px",
-							backgroundColor: "var(--tblr-bg-surface-dark)",
-						}}
-						{...field}
-					/>
+					</Label>
+					<div className="rounded-md border overflow-hidden">
+						<CodeEditor
+							language="nginx"
+							placeholder={intl.formatMessage({ id: "nginx-config.placeholder" })}
+							padding={15}
+							data-color-mode="dark"
+							minHeight={200}
+							indentWidth={2}
+							style={{
+								fontFamily: "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+								// borderRadius: "0.3rem", // Handled by container
+								minHeight: "200px",
+								backgroundColor: "#1e1e1e",
+							}}
+							{...field}
+						/>
+					</div>
 				</div>
 			)}
 		</Field>

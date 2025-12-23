@@ -13,6 +13,15 @@ import {
 import { TableLayout } from "src/components/Table/TableLayout";
 import { intl, T } from "src/locale";
 import { MANAGE, STREAMS } from "src/modules/Permissions";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "src/components/ui/dropdown-menu";
+import { Button } from "src/components/ui/button";
 
 interface Props {
 	data: Stream[];
@@ -92,62 +101,45 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 				id: "id",
 				cell: (info) => {
 					return (
-						<span className="dropdown">
-							<button
-								type="button"
-								className="btn dropdown-toggle btn-action btn-sm px-1"
-								data-bs-boundary="viewport"
-								data-bs-toggle="dropdown"
-								data-bs-popper-config='{"strategy":"fixed"}'
-							>
-								<IconDotsVertical />
-							</button>
-							<div className="dropdown-menu dropdown-menu-end">
-								<span className="dropdown-header">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" className="h-8 w-8 p-0">
+									<span className="sr-only">Open menu</span>
+									<IconDotsVertical className="h-4 w-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
 										tData={{ object: "stream" }}
 										data={{ id: info.row.original.id }}
 									/>
-								</span>
-								<a
-									className="dropdown-item"
-									href="#"
-									onClick={(e) => {
-										e.preventDefault();
-										onEdit?.(info.row.original.id);
-									}}
-								>
-									<IconEdit size={16} />
+								</DropdownMenuLabel>
+								<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
+									<IconEdit className="mr-2 h-4 w-4" />
 									<T id="action.edit" />
-								</a>
+								</DropdownMenuItem>
 								<HasPermission section={STREAMS} permission={MANAGE} hideError>
-									<a
-										className="dropdown-item"
-										href="#"
-										onClick={(e) => {
-											e.preventDefault();
-											onDisableToggle?.(info.row.original.id, !info.row.original.enabled);
-										}}
+									<DropdownMenuItem
+										onClick={() =>
+											onDisableToggle?.(info.row.original.id, !info.row.original.enabled)
+										}
 									>
-										<IconPower size={16} />
+										<IconPower className="mr-2 h-4 w-4" />
 										<T id="action.disable" />
-									</a>
-									<div className="dropdown-divider" />
-									<a
-										className="dropdown-item"
-										href="#"
-										onClick={(e) => {
-											e.preventDefault();
-											onDelete?.(info.row.original.id);
-										}}
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										className="text-red-600 focus:text-red-500"
+										onClick={() => onDelete?.(info.row.original.id)}
 									>
-										<IconTrash size={16} />
+										<IconTrash className="mr-2 h-4 w-4" />
 										<T id="action.delete" />
-									</a>
+									</DropdownMenuItem>
 								</HasPermission>
-							</div>
-						</span>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					);
 				},
 				meta: {
@@ -176,7 +168,6 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 				<EmptyData
 					object="stream"
 					objects="streams"
-					tableInstance={tableInstance}
 					onNew={onNew}
 					isFiltered={isFiltered}
 					color="blue"

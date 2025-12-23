@@ -1,22 +1,41 @@
-import { IconSettings } from "@tabler/icons-react";
-import cn from "classnames";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
+import { useQueryClient } from "@tanstack/react-query";
+import { createRedirectionHost, updateRedirectionHost } from "src/api/backend";
 import {
-	Button,
 	DomainNamesField,
-	Loading,
 	NginxConfigField,
 	SSLCertificateField,
 	SSLOptionsFields,
 } from "src/components";
-import { useRedirectionHost, useSetRedirectionHost } from "src/hooks";
-import { T } from "src/locale";
+import { useRedirectionHost } from "src/hooks";
+import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "src/components/ui/dialog";
+import { Button } from "src/components/ui/button";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Switch } from "src/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { IconRoute } from "@tabler/icons-react";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "src/components/ui/select";
+import { Card, CardContent } from "src/components/ui/card";
 
 const showRedirectionHostModal = (id: number | "new") => {
 	EasyModal.show(RedirectionHostModal, { id });
@@ -25,11 +44,13 @@ const showRedirectionHostModal = (id: number | "new") => {
 interface Props extends InnerModalProps {
 	id: number | "new";
 }
+
 const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
+	const queryClient = useQueryClient();
 	const { data, isLoading, error } = useRedirectionHost(id);
-	const { mutate: setRedirectionHost } = useSetRedirectionHost();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [activeTab, setActiveTab] = useState("details");
 
 	const onSubmit = async (values: any, { setSubmitting }: any) => {
 		if (isSubmitting) return;
@@ -41,310 +62,214 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 			...values,
 		};
 
-		setRedirectionHost(payload, {
-			onError: (err: any) => setErrorMsg(<T id={err.message} />),
-			onSuccess: () => {
-				showObjectSuccess("redirection-host", "saved");
-				remove();
-			},
-			onSettled: () => {
-				setIsSubmitting(false);
-				setSubmitting(false);
-			},
-		});
+		try {
+			if (id === "new") {
+				await createRedirectionHost(payload);
+			} else {
+				await updateRedirectionHost(payload);
+			}
+
+			showObjectSuccess("redirection-host", "saved");
+			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
+			if (id !== "new") {
+				queryClient.invalidateQueries({ queryKey: ["redirection-host", id] });
+			}
+			remove();
+		} catch (err: any) {
+			setErrorMsg(<T id={err.message} />);
+		} finally {
+			setIsSubmitting(false);
+			setSubmitting(false);
+		}
 	};
 
+	if (isLoading && id !== "new") {
+		return null;
+	}
+
 	return (
-		<Modal show={visible} onHide={remove}>
-			{!isLoading && error && (
-				<Alert variant="danger" className="m-3">
-					{error?.message || "Unknown error"}
-				</Alert>
-			)}
-			{isLoading && <Loading noLogo />}
-			{!isLoading && data && (
-				<Formik
-					initialValues={
-						{
-							// Details tab
-							domainNames: data?.domainNames || [],
-							forwardDomainName: data?.forwardDomainName || "",
-							forwardScheme: data?.forwardScheme || "auto",
-							forwardHttpCode: data?.forwardHttpCode || 301,
-							preservePath: data?.preservePath || false,
-							blockExploits: data?.blockExploits || false,
-							// SSL tab
-							certificateId: data?.certificateId || 0,
-							sslForced: data?.sslForced || false,
-							http2Support: data?.http2Support || false,
-							hstsEnabled: data?.hstsEnabled || false,
-							hstsSubdomains: data?.hstsSubdomains || false,
-							// Advanced tab
-							advancedConfig: data?.advancedConfig || "",
-							meta: data?.meta || {},
-						} as any
-					}
-					onSubmit={onSubmit}
-				>
-					{() => (
-						<Form>
-							<Modal.Header closeButton>
-								<Modal.Title>
-									<T
-										id={data?.id ? "object.edit" : "object.add"}
-										tData={{ object: "redirection-host" }}
-									/>
-								</Modal.Title>
-							</Modal.Header>
-							<Modal.Body className="p-0">
-								<Alert variant="danger" show={!!errorMsg} onClose={() => setErrorMsg(null)} dismissible>
-									{errorMsg}
-								</Alert>
-								<div className="card m-0 border-0">
-									<div className="card-header">
-										<ul className="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
-											<li className="nav-item" role="presentation">
-												<a
-													href="#tab-details"
-													className="nav-link active"
-													data-bs-toggle="tab"
-													aria-selected="true"
-													role="tab"
-												>
-													<T id="column.details" />
-												</a>
-											</li>
-											<li className="nav-item" role="presentation">
-												<a
-													href="#tab-ssl"
-													className="nav-link"
-													data-bs-toggle="tab"
-													aria-selected="false"
-													tabIndex={-1}
-													role="tab"
-												>
-													<T id="column.ssl" />
-												</a>
-											</li>
-											<li className="nav-item ms-auto" role="presentation">
-												<a
-													href="#tab-advanced"
-													className="nav-link"
-													title="Settings"
-													data-bs-toggle="tab"
-													aria-selected="false"
-													tabIndex={-1}
-													role="tab"
-												>
-													<IconSettings size={20} />
-												</a>
-											</li>
-										</ul>
-									</div>
-									<div className="card-body">
-										<div className="tab-content">
-											<div className="tab-pane active show" id="tab-details" role="tabpanel">
-												<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
-												<div className="row">
-													<div className="col-md-4">
-														<Field name="forwardScheme">
-															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label
-																		className="form-label"
-																		htmlFor="forwardScheme"
-																	>
-																		<T id="host.forward-scheme" />
-																	</label>
-																	<select
-																		id="forwardScheme"
-																		className={`form-control ${form.errors.forwardScheme && form.touched.forwardScheme ? "is-invalid" : ""}`}
-																		required
-																		{...field}
-																	>
-																		<option value="auto">
-																			<T id="auto" />
-																		</option>
-																		<option value="http">http</option>
-																		<option value="https">https</option>
-																	</select>
-																	{form.errors.forwardScheme ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardScheme &&
-																			form.touched.forwardScheme
-																				? form.errors.forwardScheme
-																				: null}
-																		</div>
-																	) : null}
-																</div>
-															)}
-														</Field>
-													</div>
-													<div className="col-md-8">
-														<Field
-															name="forwardDomainName"
-															validate={validateString(1, 255)}
+		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+			<DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+				<DialogHeader>
+					<DialogTitle className="flex items-center gap-2">
+						<IconRoute className="h-5 w-5" />
+						<T id={id === "new" ? "redirection-hosts.add" : "redirection-hosts.edit"} />
+					</DialogTitle>
+				</DialogHeader>
+
+				{!isLoading && error && (
+					<Alert variant="destructive" className="mb-4">
+						<AlertCircle className="h-4 w-4" />
+						<AlertTitle>Error</AlertTitle>
+						<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+					</Alert>
+				)}
+
+				{!isLoading && (data || id === "new") && (
+					<Formik
+						initialValues={
+							{
+								// Details tab
+								domainNames: data?.domainNames || [],
+								forwardDomainName: data?.forwardDomainName || "",
+								forwardScheme: data?.forwardScheme || "auto",
+								forwardHttpCode: data?.forwardHttpCode || 301,
+								preservePath: data?.preservePath || false,
+								blockExploits: data?.blockExploits || false,
+								// SSL tab
+								certificateId: data?.certificateId || 0,
+								sslForced: data?.sslForced || false,
+								http2Support: data?.http2Support || false,
+								hstsEnabled: data?.hstsEnabled || false,
+								hstsSubdomains: data?.hstsSubdomains || false,
+								// Advanced tab
+								advancedConfig: data?.advancedConfig || "",
+								meta: data?.meta || {},
+							} as any
+						}
+						onSubmit={onSubmit}
+					>
+						{({ setFieldValue, errors, touched }: any) => (
+							<Form className="space-y-4">
+								{errorMsg && (
+									<Alert variant="destructive">
+										<AlertCircle className="h-4 w-4" />
+										<AlertTitle>Error</AlertTitle>
+										<AlertDescription>{errorMsg}</AlertDescription>
+									</Alert>
+								)}
+
+								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+									<TabsList className="grid w-full grid-cols-3">
+										<TabsTrigger value="details"><T id="details" /></TabsTrigger>
+										<TabsTrigger value="ssl"><T id="ssl-certificate" /></TabsTrigger>
+										<TabsTrigger value="advanced"><T id="advanced" /></TabsTrigger>
+									</TabsList>
+
+									<TabsContent value="details" className="space-y-4 pt-4">
+										<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
+
+										<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+											<div className="col-span-1 md:col-span-4">
+												<Label htmlFor="forwardScheme"><T id="host.forward-scheme" /></Label>
+												<Field name="forwardScheme">
+													{({ field }: any) => (
+														<Select
+															value={field.value}
+															onValueChange={(val) => setFieldValue("forwardScheme", val)}
 														>
-															{({ field, form }: any) => (
-																<div className="mb-3">
-																	<label
-																		className="form-label"
-																		htmlFor="forwardDomainName"
-																	>
-																		<T id="redirection-host.forward-domain" />
-																	</label>
-																	<input
-																		id="forwardDomainName"
-																		type="text"
-																		className={`form-control ${form.errors.forwardDomainName && form.touched.forwardDomainName ? "is-invalid" : ""}`}
-																		required
-																		placeholder="example.com"
-																		{...field}
-																	/>
-																	{form.errors.forwardDomainName ? (
-																		<div className="invalid-feedback">
-																			{form.errors.forwardDomainName &&
-																			form.touched.forwardDomainName
-																				? form.errors.forwardDomainName
-																				: null}
-																		</div>
-																	) : null}
-																</div>
-															)}
-														</Field>
-													</div>
-												</div>
-												<Field name="forwardHttpCode">
-													{({ field, form }: any) => (
-														<div className="mb-3">
-															<label className="form-label" htmlFor="forwardHttpCode">
-																<T id="redirection-host.forward-http-code" />
-															</label>
-															<select
-																id="forwardHttpCode"
-																className={`form-control ${form.errors.forwardHttpCode && form.touched.forwardHttpCode ? "is-invalid" : ""}`}
-																required
+															<SelectTrigger id="forwardScheme" className={errors.forwardScheme && touched.forwardScheme ? "border-destructive" : ""}>
+																<SelectValue placeholder={intl.formatMessage({ id: "auto" })} />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="auto"><T id="auto" /></SelectItem>
+																<SelectItem value="http">http</SelectItem>
+																<SelectItem value="https">https</SelectItem>
+															</SelectContent>
+														</Select>
+													)}
+												</Field>
+											</div>
+											<div className="col-span-1 md:col-span-8">
+												<Field name="forwardDomainName" validate={validateString(1, 255)}>
+													{({ field }: any) => (
+														<div className="space-y-2">
+															<Label htmlFor="forwardDomainName"><T id="redirection-host.forward-domain" /></Label>
+															<Input
 																{...field}
-															>
-																<option value="300">
-																	<T id="redirection-hosts.http-code.300" />
-																</option>
-																<option value="301">
-																	<T id="redirection-hosts.http-code.301" />
-																</option>
-																<option value="302">
-																	<T id="redirection-hosts.http-code.302" />
-																</option>
-																<option value="303">
-																	<T id="redirection-hosts.http-code.303" />
-																</option>
-																<option value="307">
-																	<T id="redirection-hosts.http-code.307" />
-																</option>
-																<option value="308">
-																	<T id="redirection-hosts.http-code.308" />
-																</option>
-															</select>
-															{form.errors.forwardHttpCode ? (
-																<div className="invalid-feedback">
-																	{form.errors.forwardHttpCode &&
-																	form.touched.forwardHttpCode
-																		? form.errors.forwardHttpCode
-																		: null}
-																</div>
-															) : null}
+																id="forwardDomainName"
+																placeholder={intl.formatMessage({ id: "form.placeholder.example-domain" })}
+																className={errors.forwardDomainName && touched.forwardDomainName ? "border-destructive" : ""}
+															/>
 														</div>
 													)}
 												</Field>
-												<div className="my-3">
-													<h4 className="py-2">
-														<T id="options" />
-													</h4>
-													<div className="divide-y">
-														<div>
-															<label className="row" htmlFor="preservePath">
-																<span className="col">
-																	<T id="host.flags.preserve-path" />
-																</span>
-																<span className="col-auto">
-																	<Field name="preservePath" type="checkbox">
-																		{({ field }: any) => (
-																			<label className="form-check form-check-single form-switch">
-																				<input
-																					{...field}
-																					id="preservePath"
-																					className={cn("form-check-input", {
-																						"bg-yellow": field.checked,
-																					})}
-																					type="checkbox"
-																				/>
-																			</label>
-																		)}
-																	</Field>
-																</span>
-															</label>
-														</div>
-														<div>
-															<label className="row" htmlFor="blockExploits">
-																<span className="col">
-																	<T id="host.flags.block-exploits" />
-																</span>
-																<span className="col-auto">
-																	<Field name="blockExploits" type="checkbox">
-																		{({ field }: any) => (
-																			<label className="form-check form-check-single form-switch">
-																				<input
-																					{...field}
-																					id="blockExploits"
-																					className={cn("form-check-input", {
-																						"bg-yellow": field.checked,
-																					})}
-																					type="checkbox"
-																				/>
-																			</label>
-																		)}
-																	</Field>
-																</span>
-															</label>
-														</div>
-													</div>
-												</div>
-											</div>
-											<div className="tab-pane" id="tab-ssl" role="tabpanel">
-												<SSLCertificateField
-													name="certificateId"
-													label="ssl-certificate"
-													allowNew
-												/>
-												<SSLOptionsFields color="bg-yellow" />
-											</div>
-											<div className="tab-pane" id="tab-advanced" role="tabpanel">
-												<NginxConfigField />
 											</div>
 										</div>
-									</div>
-								</div>
-							</Modal.Body>
-							<Modal.Footer>
-								<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-									<T id="cancel" />
-								</Button>
-								<Button
-									type="submit"
-									actionType="primary"
-									className="ms-auto bg-yellow"
-									data-bs-dismiss="modal"
-									isLoading={isSubmitting}
-									disabled={isSubmitting}
-								>
-									<T id="save" />
-								</Button>
-							</Modal.Footer>
-						</Form>
-					)}
-				</Formik>
-			)}
-		</Modal>
+
+										<div>
+											<Label htmlFor="forwardHttpCode"><T id="redirection-host.forward-http-code" /></Label>
+											<Field name="forwardHttpCode">
+												{({ field }: any) => (
+													<Select
+														value={String(field.value)}
+														onValueChange={(val) => setFieldValue("forwardHttpCode", parseInt(val))}
+													>
+														<SelectTrigger id="forwardHttpCode">
+															<SelectValue placeholder="301" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="300"><T id="redirection-hosts.http-code.300" /></SelectItem>
+															<SelectItem value="301"><T id="redirection-hosts.http-code.301" /></SelectItem>
+															<SelectItem value="302"><T id="redirection-hosts.http-code.302" /></SelectItem>
+															<SelectItem value="303"><T id="redirection-hosts.http-code.303" /></SelectItem>
+															<SelectItem value="307"><T id="redirection-hosts.http-code.307" /></SelectItem>
+															<SelectItem value="308"><T id="redirection-hosts.http-code.308" /></SelectItem>
+														</SelectContent>
+													</Select>
+												)}
+											</Field>
+										</div>
+
+										<Card className="border-dashed">
+											<CardContent className="p-4 space-y-4">
+												<h4 className="font-medium"><T id="options" /></h4>
+												<div className="flex items-center justify-between">
+													<Label htmlFor="preservePath" className="cursor-pointer"><T id="host.flags.preserve-path" /></Label>
+													<Field name="preservePath">
+														{({ field }: any) => (
+															<Switch
+																id="preservePath"
+																checked={field.value}
+																onCheckedChange={(checked) => setFieldValue("preservePath", checked)}
+															/>
+														)}
+													</Field>
+												</div>
+												<div className="flex items-center justify-between">
+													<Label htmlFor="blockExploits" className="cursor-pointer"><T id="host.flags.block-exploits" /></Label>
+													<Field name="blockExploits">
+														{({ field }: any) => (
+															<Switch
+																id="blockExploits"
+																checked={field.value}
+																onCheckedChange={(checked) => setFieldValue("blockExploits", checked)}
+															/>
+														)}
+													</Field>
+												</div>
+											</CardContent>
+										</Card>
+									</TabsContent>
+
+									<TabsContent value="ssl" className="pt-4">
+										<SSLCertificateField
+											name="certificateId"
+											label="ssl-certificate"
+											allowNew
+										/>
+										<SSLOptionsFields color="bg-yellow" />
+									</TabsContent>
+
+									<TabsContent value="advanced" className="pt-4">
+										<NginxConfigField />
+									</TabsContent>
+								</Tabs>
+
+								<DialogFooter>
+									<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
+										<T id="cancel" />
+									</Button>
+									<Button type="submit" disabled={isSubmitting} className="bg-yellow-600/90 hover:bg-yellow-600 text-white shadow-sm">
+										{isSubmitting ? "..." : <T id="save" />}
+									</Button>
+								</DialogFooter>
+							</Form>
+						)}
+					</Formik>
+				)}
+			</DialogContent>
+		</Dialog>
 	);
 });
 

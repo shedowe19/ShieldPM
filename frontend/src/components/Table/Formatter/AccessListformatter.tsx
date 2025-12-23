@@ -1,6 +1,7 @@
 import type { AccessList } from "src/api/backend";
 import { T } from "src/locale";
 import { showAccessListModal } from "src/modals";
+import { Button } from "src/components/ui/button";
 
 interface Props {
 	access?: AccessList;
@@ -10,15 +11,17 @@ export function AccessListFormatter({ access }: Props) {
 		return <T id="public" />;
 	}
 	return (
-		<button
+		<Button
 			type="button"
-			className="btn btn-action btn-sm px-1"
+			variant="ghost"
+			size="sm"
+			className="h-auto p-0 px-2 font-normal hover:bg-muted"
 			onClick={(e) => {
 				e.preventDefault();
 				showAccessListModal(access?.id || 0);
 			}}
 		>
 			{access.name}
-		</button>
+		</Button>
 	);
 }

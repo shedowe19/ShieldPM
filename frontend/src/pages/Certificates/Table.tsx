@@ -14,6 +14,15 @@ import { TableLayout } from "src/components/Table/TableLayout";
 import { intl, T } from "src/locale";
 import { showCustomCertificateModal, showDNSCertificateModal, showHTTPCertificateModal } from "src/modals";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "src/components/ui/dropdown-menu";
+import { Button } from "src/components/ui/button";
 
 interface Props {
 	data: Certificate[];
@@ -99,62 +108,41 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 				id: "id",
 				cell: (info) => {
 					return (
-						<span className="dropdown">
-							<button
-								type="button"
-								className="btn dropdown-toggle btn-action btn-sm px-1"
-								data-bs-boundary="viewport"
-								data-bs-toggle="dropdown"
-								data-bs-popper-config='{"strategy":"fixed"}'
-							>
-								<IconDotsVertical />
-							</button>
-							<div className="dropdown-menu dropdown-menu-end">
-								<span className="dropdown-header">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" className="h-8 w-8 p-0">
+									<span className="sr-only">Open menu</span>
+									<IconDotsVertical className="h-4 w-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
 										tData={{ object: "certificate" }}
 										data={{ id: info.row.original.id }}
 									/>
-								</span>
-								<a
-									className="dropdown-item"
-									href="#"
-									onClick={(e) => {
-										e.preventDefault();
-										onRenew?.(info.row.original.id);
-									}}
-								>
-									<IconRefresh size={16} />
+								</DropdownMenuLabel>
+								<DropdownMenuItem onClick={() => onRenew?.(info.row.original.id)}>
+									<IconRefresh className="mr-2 h-4 w-4" />
 									<T id="action.renew" />
-								</a>
+								</DropdownMenuItem>
 								<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>
-									<a
-										className="dropdown-item"
-										href="#"
-										onClick={(e) => {
-											e.preventDefault();
-											onDownload?.(info.row.original.id);
-										}}
-									>
-										<IconDownload size={16} />
+									<DropdownMenuItem onClick={() => onDownload?.(info.row.original.id)}>
+										<IconDownload className="mr-2 h-4 w-4" />
 										<T id="action.download" />
-									</a>
-									<div className="dropdown-divider" />
-									<a
-										className="dropdown-item"
-										href="#"
-										onClick={(e) => {
-											e.preventDefault();
-											onDelete?.(info.row.original.id);
-										}}
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										className="text-red-600 focus:text-red-500"
+										onClick={() => onDelete?.(info.row.original.id)}
 									>
-										<IconTrash size={16} />
+										<IconTrash className="mr-2 h-4 w-4" />
 										<T id="action.delete" />
-									</a>
+									</DropdownMenuItem>
 								</HasPermission>
-							</div>
-						</span>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					);
 				},
 				meta: {
@@ -177,44 +165,25 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 	});
 
 	const customAddBtn = (
-		<div className="dropdown">
-			<button type="button" className="btn dropdown-toggle btn-pink my-3" data-bs-toggle="dropdown">
-				<T id="object.add" tData={{ object: "certificate" }} />
-			</button>
-			<div className="dropdown-menu">
-				<a
-					className="dropdown-item"
-					href="#"
-					onClick={(e) => {
-						e.preventDefault();
-						showHTTPCertificateModal();
-					}}
-				>
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button variant="default" className="bg-pink-600 hover:bg-pink-700 my-3">
+					<T id="object.add" tData={{ object: "certificate" }} />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent>
+				<DropdownMenuItem onClick={() => showHTTPCertificateModal()}>
 					<T id="lets-encrypt-via-http" />
-				</a>
-				<a
-					className="dropdown-item"
-					href="#"
-					onClick={(e) => {
-						e.preventDefault();
-						showDNSCertificateModal();
-					}}
-				>
+				</DropdownMenuItem>
+				<DropdownMenuItem onClick={() => showDNSCertificateModal()}>
 					<T id="lets-encrypt-via-dns" />
-				</a>
-				<div className="dropdown-divider" />
-				<a
-					className="dropdown-item"
-					href="#"
-					onClick={(e) => {
-						e.preventDefault();
-						showCustomCertificateModal();
-					}}
-				>
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={() => showCustomCertificateModal()}>
 					<T id="certificates.custom" />
-				</a>
-			</div>
-		</div>
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 
 	return (
@@ -224,7 +193,6 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 				<EmptyData
 					object="certificate"
 					objects="certificates"
-					tableInstance={tableInstance}
 					isFiltered={isFiltered}
 					color="pink"
 					customAddBtn={customAddBtn}

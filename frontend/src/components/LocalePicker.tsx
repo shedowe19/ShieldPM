@@ -1,17 +1,20 @@
-import cn from "classnames";
 import { Flag } from "src/components";
 import { useLocaleState } from "src/context";
-import { useTheme } from "src/hooks";
 import { changeLocale, getFlagCodeForLocale, localeOptions, T } from "src/locale";
-import styles from "./LocalePicker.module.css";
+import { Button } from "src/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "src/components/ui/dropdown-menu";
 
 interface Props {
 	menuAlign?: "start" | "end";
 }
 
-function LocalePicker({ menuAlign = "start" }: Props) {
+function LocalePicker({ }: Props) {
 	const { locale, setLocale } = useLocaleState();
-	const { getTheme } = useTheme();
 
 	const changeTo = (lang: string) => {
 		changeLocale(lang);
@@ -19,34 +22,27 @@ function LocalePicker({ menuAlign = "start" }: Props) {
 		location.reload();
 	};
 
-	const classes = ["btn", "dropdown-toggle", "btn-sm", styles.btn];
-	const cns = cn(...classes, getTheme() === "dark" ? "btn-ghost-dark" : "btn-ghost-light");
-
 	return (
-		<div className="dropdown">
-			<button type="button" className={cns} data-bs-toggle="dropdown">
-				<Flag countryCode={getFlagCodeForLocale(locale)} />
-			</button>
-			<div
-				className={cn("dropdown-menu", {
-					"dropdown-menu-end": menuAlign === "end",
-				})}
-			>
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button variant="ghost" size="icon" className="h-8 w-8 px-0">
+					<Flag countryCode={getFlagCodeForLocale(locale)} />
+					<span className="sr-only"><T id="sr.switch-language" /></span>
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
 				{localeOptions.map((item: any) => (
-					<a
-						className="dropdown-item"
-						href={`/locale/${item[0]}`}
+					<DropdownMenuItem
 						key={`locale-${item[0]}`}
-						onClick={(e) => {
-							e.preventDefault();
-							changeTo(item[0]);
-						}}
+						onClick={() => changeTo(item[0])}
+						className="cursor-pointer"
 					>
-						<Flag countryCode={getFlagCodeForLocale(item[0])} /> <T id={`locale-${item[1]}`} />
-					</a>
+						<Flag countryCode={getFlagCodeForLocale(item[0])} className="mr-2 h-4 w-4" />
+						<span className="flex-1"><T id={`locale-${item[1]}`} /></span>
+					</DropdownMenuItem>
 				))}
-			</div>
-		</div>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 

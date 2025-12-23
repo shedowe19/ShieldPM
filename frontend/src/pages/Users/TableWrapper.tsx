@@ -1,15 +1,19 @@
-import { IconSearch } from "@tabler/icons-react";
+import { IconSearch, IconPlus, IconUsers } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import Alert from "react-bootstrap/Alert";
 import { deleteUser, toggleUser } from "src/api/backend";
-import { Button, LoadingPage } from "src/components";
+import { LoadingPage } from "src/components";
 import { useAuthState } from "src/context";
 import { useUser, useUsers } from "src/hooks";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal, showUserModal } from "src/modals";
 import { showError, showObjectSuccess } from "src/notifications";
 import Table from "./Table";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import { Input } from "src/components/ui/input";
+import { Button } from "src/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
@@ -23,7 +27,13 @@ export default function TableWrapper() {
 	}
 
 	if (isError) {
-		return <Alert variant="danger">{error?.message || <T id="error.unknown" />}</Alert>;
+		return (
+			<Alert variant="destructive">
+				<AlertCircle className="h-4 w-4" />
+				<AlertTitle>Error</AlertTitle>
+				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
+			</Alert>
+		);
 	}
 
 	const handleLoginAs = async (id: number) => {
@@ -63,42 +73,32 @@ export default function TableWrapper() {
 	}
 
 	return (
-		<div className="card mt-4">
-			<div className="card-status-top bg-orange" />
-			<div className="card-table">
-				<div className="card-header">
-					<div className="row w-full">
-						<div className="col">
-							<h2 className="mt-1 mb-0">
-								<T id="users" />
-							</h2>
+		<Card className="mt-4 border-t-4 border-orange-500/50">
+			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+				<CardTitle className="text-2xl font-bold flex items-center gap-2">
+					<IconUsers className="h-6 w-6" />
+					<T id="users" />
+				</CardTitle>
+				{data?.length ? (
+					<div className="flex items-center space-x-2">
+						<div className="relative w-full max-w-sm">
+							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+							<Input
+								type="search"
+								placeholder={intl.formatMessage({ id: "search.placeholder" })}
+								className="pl-8 h-9"
+								onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}
+							/>
 						</div>
-						{data?.length ? (
-							<div className="col-md-auto col-sm-12">
-								<div className="ms-auto d-flex flex-wrap btn-list">
-									<div className="input-group input-group-flat w-auto">
-										<span className="input-group-text input-group-text-sm">
-											<IconSearch size={16} />
-										</span>
-										<input
-											id="advanced-table-search"
-											type="text"
-											className="form-control form-control-sm"
-											autoComplete="off"
-											onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-												setSearch(e.target.value.toLowerCase().trim())
-											}
-										/>
-									</div>
 
-									<Button size="sm" className="btn-orange" onClick={() => showUserModal("new")}>
-										<T id="object.add" tData={{ object: "user" }} />
-									</Button>
-								</div>
-							</div>
-						) : null}
+						<Button size="sm" className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm" onClick={() => showUserModal("new")}>
+							<IconPlus className="mr-2 h-4 w-4" />
+							<T id="object.add" tData={{ object: "user" }} />
+						</Button>
 					</div>
-				</div>
+				) : null}
+			</CardHeader>
+			<CardContent>
 				<Table
 					data={filtered ?? data ?? []}
 					isFiltered={!!search}
@@ -119,7 +119,9 @@ export default function TableWrapper() {
 					onNewUser={() => showUserModal("new")}
 					onLoginAs={handleLoginAs}
 				/>
-			</div>
-		</div>
+			</CardContent>
+		</Card>
 	);
 }
+
+

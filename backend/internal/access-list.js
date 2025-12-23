@@ -217,7 +217,7 @@ const internalAccessList = {
 	 */
 	get: async (access, data, skipMasking) => {
 		const thisData = data || {};
-		await access.can("access_lists:get", thisData.id);
+		const accessData = await access.can("access_lists:get", thisData.id);
 
 		const query = accessListModel
 			.query()

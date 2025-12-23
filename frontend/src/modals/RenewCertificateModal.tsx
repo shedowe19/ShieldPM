@@ -1,10 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
+import { Loader2 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
 import { renewCertificate } from "src/api/backend";
-import { Button, Loading } from "src/components";
+import { Loading } from "src/components";
+import { Button } from "src/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "src/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useCertificate } from "src/hooks";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
@@ -44,30 +52,46 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 	}, [id, data, isFresh, isSubmitting, remove, queryClient.invalidateQueries]);
 
 	return (
-		<Modal show={visible} onHide={isSubmitting ? undefined : remove}>
-			<Modal.Header closeButton={!isSubmitting}>
-				<Modal.Title>
-					<T id="certificate.renew" />
-				</Modal.Title>
-			</Modal.Header>
-			<Modal.Body>
-				<Alert variant="danger" show={!!errorMsg}>
-					{errorMsg}
-				</Alert>
-				{isLoading && <Loading noLogo />}
-				{!isLoading && error && (
-					<Alert variant="danger" className="m-3">
-						{error?.message || "Unknown error"}
-					</Alert>
-				)}
-				{data && isSubmitting && !errorMsg ? <p className="text-center mt-3">Please wait ...</p> : null}
-			</Modal.Body>
-			<Modal.Footer>
-				<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-					<T id="action.close" />
-				</Button>
-			</Modal.Footer>
-		</Modal>
+		<Dialog open={visible} onOpenChange={(open) => !open && !isSubmitting && remove()}>
+			<DialogContent className="sm:max-w-lg">
+				<DialogHeader>
+					<DialogTitle>
+						<T id="certificate.renew" />
+					</DialogTitle>
+				</DialogHeader>
+
+				<div className="py-4 space-y-4">
+					{errorMsg && (
+						<Alert variant="destructive">
+							<AlertTitle>Error</AlertTitle>
+							<AlertDescription>{errorMsg}</AlertDescription>
+						</Alert>
+					)}
+
+					{isLoading && <Loading noLogo />}
+
+					{!isLoading && error && (
+						<Alert variant="destructive">
+							<AlertTitle>Error</AlertTitle>
+							<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+						</Alert>
+					)}
+
+					{data && isSubmitting && !errorMsg ? (
+						<div className="flex flex-col items-center justify-center py-4 space-y-2">
+							<Loader2 className="h-8 w-8 animate-spin text-primary" />
+							<p className="text-sm text-muted-foreground">Please wait ...</p>
+						</div>
+					) : null}
+				</div>
+
+				<DialogFooter>
+					<Button variant="outline" onClick={remove} disabled={isSubmitting}>
+						<T id="action.close" />
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 });
 

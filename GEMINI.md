@@ -5,7 +5,7 @@ NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fri
 
 **Key Technologies:**
 *   **Backend:** Node.js, Express, Knex.js, Objection.js, SQLite (default), Better-SQLite3.
-*   **Frontend:** React (v19), Vite (v7), TypeScript, Tabler UI, React Query.
+*   **Frontend:** React (v19), Vite (v7), TypeScript, Tailwind CSS, shadcn/ui, React Query.
 *   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec.
 *   **Language:** JavaScript/TypeScript.
 

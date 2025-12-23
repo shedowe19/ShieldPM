@@ -1,10 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { type ReactNode, useState } from "react";
-import { Alert } from "react-bootstrap";
-import Modal from "react-bootstrap/Modal";
-import { Button } from "src/components";
 import { T } from "src/locale";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "src/components/ui/dialog";
+import { Button } from "src/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 
 interface ShowProps {
 	title?: ReactNode;
@@ -14,7 +22,7 @@ interface ShowProps {
 	invalidations?: any[];
 }
 
-interface Props extends InnerModalProps, ShowProps {}
+interface Props extends InnerModalProps, ShowProps { }
 
 const showDeleteConfirmModal = (props: ShowProps) => {
 	EasyModal.show(DeleteConfirmModal, props);
@@ -44,53 +52,44 @@ const DeleteConfirmModal = EasyModal.create(
 		};
 
 		return (
-			<Modal show={visible} onHide={remove}>
-				<Modal.Header closeButton>
-					<Modal.Title>{tTitle ? <T id={tTitle} /> : title ? title : null}</Modal.Title>
-				</Modal.Header>
-				<Modal.Body>
-					<Alert variant="danger" show={!!error} onClose={() => setError(null)} dismissible>
-						{error}
-					</Alert>
-					<div className="text-center mb-3">
-						<svg
-							role="img"
-							aria-label="warning icon"
-							xmlns="http://www.w3.org/2000/svg"
-							className="icon mb-2 text-danger icon-lg"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							fill="none"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						>
-							<path stroke="none" d="M0 0h24v24H0z" fill="none" />
-							<path d="M12 9v2m0 4v.01" />
-							<path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75" />
-						</svg>
+			<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+				<DialogContent className="sm:max-w-[425px]">
+					<DialogHeader>
+						<DialogTitle>{tTitle ? <T id={tTitle} /> : title ? title : null}</DialogTitle>
+						<DialogDescription>
+							{/* Description is required for accessibility, but children implies content.
+                                Leaving empty if children is provided in body
+                            */}
+						</DialogDescription>
+					</DialogHeader>
+
+					{error && (
+						<Alert variant="destructive" className="mb-4">
+							<AlertCircle className="h-4 w-4" />
+							<AlertTitle>Error</AlertTitle>
+							<AlertDescription>{error}</AlertDescription>
+						</Alert>
+					)}
+
+					<div className="flex flex-col items-center justify-center text-center p-4">
+						<AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+						<div className="text-center">{children}</div>
 					</div>
-					<div className="text-center mb-3">{children}</div>
-				</Modal.Body>
-				<Modal.Footer>
-					<Button data-bs-dismiss="modal" onClick={remove} disabled={isSubmitting}>
-						<T id="cancel" />
-					</Button>
-					<Button
-						type="submit"
-						actionType="primary"
-						className="ms-auto btn-red"
-						data-bs-dismiss="modal"
-						isLoading={isSubmitting}
-						disabled={isSubmitting}
-						onClick={onSubmit}
-					>
-						<T id="action.delete" />
-					</Button>
-				</Modal.Footer>
-			</Modal>
+
+					<DialogFooter>
+						<Button variant="outline" onClick={remove} disabled={isSubmitting}>
+							<T id="cancel" />
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={onSubmit}
+							disabled={isSubmitting}
+						>
+							{isSubmitting ? "..." : <T id="action.delete" />}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		);
 	},
 );

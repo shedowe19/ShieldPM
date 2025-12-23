@@ -1,4 +1,5 @@
 import { T } from "src/locale";
+import { Badge } from "src/components/ui/badge";
 
 interface Props {
 	roles: string[];
@@ -11,9 +12,9 @@ export function RolesFormatter({ roles }: Props) {
 	return (
 		<>
 			{r.map((role: string) => (
-				<span key={role} className="badge bg-yellow-lt me-1">
+				<Badge key={role} variant="secondary" className="mr-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:hover:bg-yellow-800">
 					<T id={`role.${role}`} />
-				</span>
+				</Badge>
 			))}
 		</>
 	);

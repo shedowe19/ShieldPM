@@ -1,8 +1,11 @@
-import { IconX } from "@tabler/icons-react";
+import { IconX, IconPlus } from "@tabler/icons-react";
 import { useFormikContext } from "formik";
 import { useState } from "react";
 import type { AccessListItem } from "src/api/backend";
 import { T } from "src/locale";
+import { Button } from "src/components/ui/button";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
 
 interface Props {
 	initialValues: AccessListItem[];
@@ -43,35 +46,29 @@ export function BasicAuthFields({ initialValues, name = "items" }: Props) {
 	};
 
 	return (
-		<>
-			<div className="row">
-				<div className="col-6">
-					<label className="form-label" htmlFor="...">
-						<T id="username" />
-					</label>
+		<div className="space-y-4">
+			<div className="grid grid-cols-12 gap-2 mb-2">
+				<div className="col-span-6">
+					<Label><T id="username" /></Label>
 				</div>
-				<div className="col-6">
-					<label className="form-label" htmlFor="...">
-						<T id="password" />
-					</label>
+				<div className="col-span-5">
+					<Label><T id="password" /></Label>
 				</div>
 			</div>
 			{values.map((item: AccessListItem, idx: number) => (
-				<div className="row mb-3" key={idx}>
-					<div className="col-6">
-						<input
+				<div className="grid grid-cols-12 gap-2 items-center" key={idx}>
+					<div className="col-span-6">
+						<Input
 							type="text"
 							autoComplete="off"
-							className="form-control input-sm"
 							value={item.username}
 							onChange={(e) => handleChange(idx, "username", e.target.value)}
 						/>
 					</div>
-					<div className="col-5">
-						<input
+					<div className="col-span-5">
+						<Input
 							type="password"
 							autoComplete="off"
-							className="form-control"
 							value={item.password}
 							placeholder={
 								initialValues.filter((iv: AccessListItem) => iv.username === item.username).length > 0
@@ -81,25 +78,24 @@ export function BasicAuthFields({ initialValues, name = "items" }: Props) {
 							onChange={(e) => handleChange(idx, "password", e.target.value)}
 						/>
 					</div>
-					<div className="col-1">
-						<a
-							role="button"
-							className="btn btn-ghost btn-danger p-0"
-							onClick={(e) => {
-								e.preventDefault();
-								handleRemove(idx);
-							}}
+					<div className="col-span-1 text-right">
+						<Button
+							type="button"
+							variant="destructive"
+							size="icon"
+							onClick={() => handleRemove(idx)}
 						>
 							<IconX size={16} />
-						</a>
+						</Button>
 					</div>
 				</div>
 			))}
 			<div>
-				<button type="button" className="btn btn-sm" onClick={handleAdd}>
+				<Button type="button" variant="secondary" size="sm" onClick={handleAdd}>
+					<IconPlus className="mr-2 h-4 w-4" />
 					<T id="action.add" />
-				</button>
+				</Button>
 			</div>
-		</>
+		</div>
 	);
 }
