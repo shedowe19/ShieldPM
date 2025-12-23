@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import { Link } from "react-router-dom";
 import { HasPermission } from "src/components";
 import { useCertificates } from "src/hooks";
-import { T } from "src/locale";
+import { T, intl } from "src/locale";
 import { CERTIFICATES, VIEW } from "src/modules/Permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Avatar, AvatarFallback } from "src/components/ui/avatar";
