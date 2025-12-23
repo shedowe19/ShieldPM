@@ -24,6 +24,10 @@ services:
 #      - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
     environment:
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
 #      - "DB_MYSQL_HOST=127.0.0.1" # MySQL/MariaDB Host
 #      - "DB_MYSQL_PORT=3306" # MySQL/MariaDB Port
 #      - "DB_MYSQL_USER=npm" # MySQL/MariaDB User
@@ -136,6 +140,11 @@ services:
 #      - "3306:3306"
 #    volumes:
 #      - "/opt/npmplus/mysql:/var/lib/mysql"
+#    healthcheck:
+#      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "npm", "--password=npm"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
 
 # This can be used to use Postgres instead of SQLite, you must also set DB_POSTGRES_HOST to 127.0.0.1 in the npmplus container
 #  db:
