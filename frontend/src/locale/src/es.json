@@ -299,6 +299,18 @@
 	"dashboard": {
 		"defaultMessage": "Panel de Control"
 	},
+	"dashboard.certificates-expiring": {
+		"defaultMessage": "Certificados que caducan pronto"
+	},
+	"dashboard.days-left": {
+		"defaultMessage": "Quedan {days} {days, plural, one {Día} other {Días}}"
+	},
+	"dashboard.expired": {
+		"defaultMessage": "Caducado"
+	},
+	"dashboard.no-expiring-certificates": {
+		"defaultMessage": "No hay certificados que caduquen pronto"
+	},
 	"dashboard.status_ok": {
 		"defaultMessage": "¡Todo se ve bien!"
 	},
@@ -886,6 +898,9 @@
 	},
 	"udpForwarding": {
 		"defaultMessage": "Reenvío UDP"
+	},
+	"update-available": {
+		"defaultMessage": "Actualización disponible: {latestVersion}"
 	},
 	"user": {
 		"defaultMessage": "Usuario"

@@ -299,6 +299,18 @@
 	"dashboard": {
 		"defaultMessage": "Табло"
 	},
+	"dashboard.certificates-expiring": {
+		"defaultMessage": "Сертификати изтичащи скоро"
+	},
+	"dashboard.days-left": {
+		"defaultMessage": "{days} {days, plural, one {Ден} other {Дни}} остават"
+	},
+	"dashboard.expired": {
+		"defaultMessage": "Изтекли"
+	},
+	"dashboard.no-expiring-certificates": {
+		"defaultMessage": "Няма скоро изтичащи сертификати"
+	},
 	"dashboard.status_ok": {
 		"defaultMessage": "Всичко изглежда наред!"
 	},

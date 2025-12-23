@@ -23,6 +23,9 @@
 	"access-list.public.subtitle": {
 		"defaultMessage": "Nessuna autenticazione base richiesta"
 	},
+	"access-list.rule-source.placeholder": {
+		"defaultMessage": "192.168.1.100 o 192.168.1.0/24 o 2001:0db8::/32"
+	},
 	"access-list.satisfy-any": {
 		"defaultMessage": "Soddisfa Qualsiasi"
 	},
@@ -47,11 +50,17 @@
 	"action.add-location": {
 		"defaultMessage": "Aggiungi Percorso"
 	},
+	"action.allow": {
+		"defaultMessage": "Consenti"
+	},
 	"action.close": {
 		"defaultMessage": "Chiudi"
 	},
 	"action.delete": {
 		"defaultMessage": "Elimina"
+	},
+	"action.deny": {
+		"defaultMessage": "Nega"
 	},
 	"action.disable": {
 		"defaultMessage": "Disabilita"
@@ -91,6 +100,9 @@
 	},
 	"authentikHost": {
 		"defaultMessage": "Host Authentik"
+	},
+	"auto": {
+		"defaultMessage": "Auto"
 	},
 	"avatar": {
 		"defaultMessage": "Avatar"
@@ -166,6 +178,9 @@
 	},
 	"certificates.dns.provider": {
 		"defaultMessage": "Provider DNS"
+	},
+	"certificates.dns.provider.placeholder": {
+		"defaultMessage": "Seleziona un provider..."
 	},
 	"certificates.dns.warning": {
 		"defaultMessage": "Questa sezione richiede conoscenze su Certbot e i relativi plugin DNS. Consulta la documentazione del plugin."
@@ -283,6 +298,18 @@
 	},
 	"dashboard": {
 		"defaultMessage": "Dashboard"
+	},
+	"dashboard.certificates-expiring": {
+		"defaultMessage": "Certificati in scadenza a breve"
+	},
+	"dashboard.days-left": {
+		"defaultMessage": "{days} {days, plural, one {Giorno} other {Giorni}} rimanenti"
+	},
+	"dashboard.expired": {
+		"defaultMessage": "Scaduto"
+	},
+	"dashboard.no-expiring-certificates": {
+		"defaultMessage": "Nessun certificato in scadenza a breve"
 	},
 	"dashboard.status_ok": {
 		"defaultMessage": "Tutto sembra a posto!"
@@ -737,6 +764,24 @@
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host di Reindirizzamento} other {Host di Reindirizzamento}}"
 	},
+	"redirection-hosts.http-code.300": {
+		"defaultMessage": "300 Scelta multipla"
+	},
+	"redirection-hosts.http-code.301": {
+		"defaultMessage": "301 Spostato permanentemente"
+	},
+	"redirection-hosts.http-code.302": {
+		"defaultMessage": "302 Spostato temporaneamente"
+	},
+	"redirection-hosts.http-code.303": {
+		"defaultMessage": "303 Vedi altro"
+	},
+	"redirection-hosts.http-code.307": {
+		"defaultMessage": "307 Reindirizzamento temporaneo"
+	},
+	"redirection-hosts.http-code.308": {
+		"defaultMessage": "308 Reindirizzamento permanente"
+	},
 	"redirection_hosts.count_label": {
 		"defaultMessage": "Host di Reindirizzamento"
 	},
@@ -817,6 +862,9 @@
 	},
 	"stream.forward-host": {
 		"defaultMessage": "Host di Destinazione"
+	},
+	"stream.forward-host.placeholder": {
+		"defaultMessage": "example.com o 10.0.0.1 o 2001:db8:3333:4444:5555:6666:7777:8888"
 	},
 	"stream.incoming-port": {
 		"defaultMessage": "Porta in Ingresso"
