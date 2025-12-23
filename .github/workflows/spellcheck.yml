@@ -19,5 +19,5 @@ jobs:
         with:
           check_filenames: true
           check_hidden: true
-          skip: yarn.lock,package-lock.json,./frontend/src/locale/src
+          skip: yarn.lock,package-lock.json,./frontend/src/locale/lang
           ignore_words_list: afterAll,alog,nd,devlop,trough
