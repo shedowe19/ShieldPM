@@ -24,6 +24,19 @@ services:
 #      - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
     environment:
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
+#      - "DB_MYSQL_HOST=127.0.0.1" # MySQL/MariaDB Host
+#      - "DB_MYSQL_PORT=3306" # MySQL/MariaDB Port
+#      - "DB_MYSQL_USER=npm" # MySQL/MariaDB User
+#      - "DB_MYSQL_PASSWORD=npm" # MySQL/MariaDB Password
+#      - "DB_MYSQL_NAME=npm" # MySQL/MariaDB Database Name
+#      - "DB_MYSQL_SSL=false" # Enable SSL for MySQL/MariaDB? default false
+#      - "DB_MYSQL_SSL_REJECT_UNAUTHORIZED=true" # Reject unauthorized SSL certificates? default true
+#      - "DB_MYSQL_SSL_VERIFY_IDENTITY=true" # Verify SSL certificate identity? default true
+#      - "DB_POSTGRES_HOST=127.0.0.1" # Postgres Host
+#      - "DB_POSTGRES_PORT=5432" # Postgres Port
+#      - "DB_POSTGRES_USER=npm" # Postgres User
+#      - "DB_POSTGRES_PASSWORD=npm" # Postgres Password
+#      - "DB_POSTGRES_NAME=npm" # Postgres Database Name
 #      - "ACME_EMAIL=your-email" # email address to use for acme, currently optional, may be required in the future, so I recommend entering your email here, optional for letsencrypt, but required for zerossl and google public ca
 #      - "ACME_SERVER=https://dv.acme-v02.api.pki.goog/directory (google public ca) / https://acme.zerossl.com/v2/DV90 (zerossl)" # acme server used when requesting/renewing certs using certbot, default: https://acme-v02.api.letsencrypt.org/directory (letsencrypt)
 #      - "ACME_EAB_KID=123456789abcdef" # Key Identifier for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
@@ -107,6 +120,37 @@ services:
 #      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
 #      - "/opt/npmplus/nginx:/opt/npmplus/nginx:ro"
 #      - "/opt/openappsec/logs:/opt/openappsec/logs:ro" # only uncomment if you also use the openappsec-agent container
+
+# This can be used to use MySQL/MariaDB instead of SQLite, you must also set DB_MYSQL_HOST to 127.0.0.1 in the npmplus container
+#  db:
+#    container_name: npmplus-db
+#    image: mysql:8 # or mariadb:10
+#    restart: always
+#    network_mode: bridge
+#    environment:
+#      - "MYSQL_ROOT_PASSWORD=npm"
+#      - "MYSQL_DATABASE=npm"
+#      - "MYSQL_USER=npm"
+#      - "MYSQL_PASSWORD=npm"
+#    ports:
+#      - "3306:3306"
+#    volumes:
+#      - "/opt/npmplus/mysql:/var/lib/mysql"
+
+# This can be used to use Postgres instead of SQLite, you must also set DB_POSTGRES_HOST to 127.0.0.1 in the npmplus container
+#  db:
+#    container_name: npmplus-db
+#    image: postgres:17-alpine
+#    restart: always
+#    network_mode: bridge
+#    environment:
+#      - "POSTGRES_DB=npm"
+#      - "POSTGRES_USER=npm"
+#      - "POSTGRES_PASSWORD=npm"
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - "/opt/npmplus/postgres:/var/lib/postgresql/data"
 
 # This can be used with GOA=true to keep the geoip database updated, environment variables must be configured
 #  geoipupdate:
