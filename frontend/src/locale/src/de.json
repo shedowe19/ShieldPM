@@ -23,6 +23,9 @@
 	"access-list.public.subtitle": {
 		"defaultMessage": "Keine Authentifizierung erforderlich"
 	},
+	"access-list.rule-source.placeholder": {
+		"defaultMessage": "192.168.1.100 oder 192.168.1.0/24 oder 2001:0db8::/32"
+	},
 	"access-list.satisfy-any": {
 		"defaultMessage": "Satisfy Any"
 	},
@@ -47,11 +50,17 @@
 	"action.add-location": {
 		"defaultMessage": "Pfad Hinzufügen"
 	},
+	"action.allow": {
+		"defaultMessage": "Erlauben"
+	},
 	"action.close": {
 		"defaultMessage": "Schließen"
 	},
 	"action.delete": {
 		"defaultMessage": "Löschen"
+	},
+	"action.deny": {
+		"defaultMessage": "Verweigern"
 	},
 	"action.disable": {
 		"defaultMessage": "Deaktivieren"
@@ -91,6 +100,9 @@
 	},
 	"authentikHost": {
 		"defaultMessage": "Authentik-Host"
+	},
+	"auto": {
+		"defaultMessage": "Automatisch"
 	},
 	"avatar": {
 		"defaultMessage": "Avatar"
@@ -166,6 +178,9 @@
 	},
 	"certificates.dns.provider": {
 		"defaultMessage": "DNS Provider"
+	},
+	"certificates.dns.provider.placeholder": {
+		"defaultMessage": "Wähle einen Anbieter..."
 	},
 	"certificates.dns.warning": {
 		"defaultMessage": "Dieser Abschnitt erfordert einige Kenntnisse über Certbot und seine DNS-Plugins. Bitte konsultieren Sie die jeweilige Plugin-Dokumentation."
@@ -283,6 +298,18 @@
 	},
 	"dashboard": {
 		"defaultMessage": "Dashboard"
+	},
+	"dashboard.certificates-expiring": {
+		"defaultMessage": "Zertifikate laufen bald ab"
+	},
+	"dashboard.days-left": {
+		"defaultMessage": "Noch {days} {days, plural, one {Tag} other {Tage}}"
+	},
+	"dashboard.expired": {
+		"defaultMessage": "Abgelaufen"
+	},
+	"dashboard.no-expiring-certificates": {
+		"defaultMessage": "Keine Zertifikate laufen bald ab"
 	},
 	"dashboard.status_ok": {
 		"defaultMessage": "Alles sieht gut aus!"
@@ -737,6 +764,24 @@
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Redirection Host} other {Redirection Hosts}}"
 	},
+	"redirection-hosts.http-code.300": {
+		"defaultMessage": "300 Mehrere Auswahlmöglichkeiten"
+	},
+	"redirection-hosts.http-code.301": {
+		"defaultMessage": "301 Dauerhaft verschoben"
+	},
+	"redirection-hosts.http-code.302": {
+		"defaultMessage": "302 Vorübergehend verschoben"
+	},
+	"redirection-hosts.http-code.303": {
+		"defaultMessage": "303 Siehe andere"
+	},
+	"redirection-hosts.http-code.307": {
+		"defaultMessage": "307 Temporäre Weiterleitung"
+	},
+	"redirection-hosts.http-code.308": {
+		"defaultMessage": "308 Permanente Weiterleitung"
+	},
 	"redirection_hosts.count_label": {
 		"defaultMessage": "Redirection Hosts"
 	},
@@ -818,6 +863,9 @@
 	"stream.forward-host": {
 		"defaultMessage": "Forward Host"
 	},
+	"stream.forward-host.placeholder": {
+		"defaultMessage": "example.com oder 10.0.0.1 oder 2001:db8:3333:4444:5555:6666:7777:8888"
+	},
 	"stream.incoming-port": {
 		"defaultMessage": "Incoming Port"
 	},
@@ -850,6 +898,9 @@
 	},
 	"udpForwarding": {
 		"defaultMessage": "UDP-Weiterleitung"
+	},
+	"update-available": {
+		"defaultMessage": "Update verfügbar: {latestVersion}"
 	},
 	"user": {
 		"defaultMessage": "User"

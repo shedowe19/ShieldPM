@@ -23,8 +23,17 @@
 	"access-list.public.subtitle": {
 		"defaultMessage": "Geen basisautentificatie vereist"
 	},
+	"access-list.rule-source.placeholder": {
+		"defaultMessage": "192.168.1.100 of 192.168.1.0/24 of 2001:0db8::/32"
+	},
 	"access-list.satisfy-any": {
 		"defaultMessage": "Voldoe aan elke"
+	},
+	"access-list.satisfy.none": {
+		"defaultMessage": "Geen"
+	},
+	"access-list.sso": {
+		"defaultMessage": "Single Sign-On"
 	},
 	"access-list.subtitle": {
 		"defaultMessage": "{users} {users, plural, one {Gebruiker} other {Gebruikers}}, {rules} {rules, plural, one {Regel} other {Regels}} - Aangemaakt: {date}"
@@ -32,17 +41,26 @@
 	"access-lists": {
 		"defaultMessage": "Toegangslijsten"
 	},
+	"accessList": {
+		"defaultMessage": "Toegangslijst"
+	},
 	"action.add": {
 		"defaultMessage": "Toevoegen"
 	},
 	"action.add-location": {
 		"defaultMessage": "Locatie Toevoegen"
 	},
+	"action.allow": {
+		"defaultMessage": "Toestaan"
+	},
 	"action.close": {
 		"defaultMessage": "Sluiten"
 	},
 	"action.delete": {
 		"defaultMessage": "Verwijderen"
+	},
+	"action.deny": {
+		"defaultMessage": "Weigeren"
 	},
 	"action.disable": {
 		"defaultMessage": "Uitzetten"
@@ -65,8 +83,38 @@
 	"action.view-details": {
 		"defaultMessage": "Bekijk Details"
 	},
+	"advanced": {
+		"defaultMessage": "Geavanceerd"
+	},
+	"advanced-config": {
+		"defaultMessage": "Geavanceerde configuratie"
+	},
+	"allowWebsocketUpgrade": {
+		"defaultMessage": "Websocket Upgrade Toestaan"
+	},
 	"auditlogs": {
 		"defaultMessage": "Logboeken"
+	},
+	"authType": {
+		"defaultMessage": "Authenticatietype"
+	},
+	"authentikHost": {
+		"defaultMessage": "Authentik Host"
+	},
+	"auto": {
+		"defaultMessage": "Auto"
+	},
+	"avatar": {
+		"defaultMessage": "Avatar"
+	},
+	"bandwidthLimit": {
+		"defaultMessage": "Bandbreedte Limiet"
+	},
+	"blockExploits": {
+		"defaultMessage": "Exploits Blokkeren"
+	},
+	"cachingEnabled": {
+		"defaultMessage": "Caching Ingeschakeld"
 	},
 	"cancel": {
 		"defaultMessage": "Annuleren"
@@ -101,6 +149,9 @@
 	"certificate.renew": {
 		"defaultMessage": "Certificaat Vernieuwen"
 	},
+	"certificateKey": {
+		"defaultMessage": "Certificaatsleutel"
+	},
 	"certificates": {
 		"defaultMessage": "Certificaten"
 	},
@@ -127,6 +178,9 @@
 	},
 	"certificates.dns.provider": {
 		"defaultMessage": "DNS Provider"
+	},
+	"certificates.dns.provider.placeholder": {
+		"defaultMessage": "Selecteer een provider..."
 	},
 	"certificates.dns.warning": {
 		"defaultMessage": "Deze sectie vereist wat informatie over Certbot en zijn DNS plugins. Gebruik de documentatie van de bijbehorende plugins."
@@ -160,6 +214,9 @@
 	},
 	"certificates.request.title": {
 		"defaultMessage": "Vraag een nieuwe Certificaat aan"
+	},
+	"clients": {
+		"defaultMessage": "Clients"
 	},
 	"column.access": {
 		"defaultMessage": "Toegang"
@@ -230,11 +287,29 @@
 	"column.status": {
 		"defaultMessage": "Status"
 	},
+	"confirm": {
+		"defaultMessage": "Bevestigen"
+	},
 	"created-on": {
 		"defaultMessage": "Aangemaakt: {date}"
 	},
+	"current": {
+		"defaultMessage": "Huidig"
+	},
 	"dashboard": {
 		"defaultMessage": "Dashboard"
+	},
+	"dashboard.certificates-expiring": {
+		"defaultMessage": "Certificaten verlopen binnenkort"
+	},
+	"dashboard.days-left": {
+		"defaultMessage": "Nog {days} {days, plural, one {dag} other {dagen}}"
+	},
+	"dashboard.expired": {
+		"defaultMessage": "Verlopen"
+	},
+	"dashboard.no-expiring-certificates": {
+		"defaultMessage": "Geen certificaten die binnenkort verlopen"
 	},
 	"dashboard.status_ok": {
 		"defaultMessage": "Alles ziet er goed uit!"
@@ -251,8 +326,23 @@
 	"dead_hosts.count_label": {
 		"defaultMessage": "404 Hosts"
 	},
+	"default-site": {
+		"defaultMessage": "Standaard Site"
+	},
+	"details": {
+		"defaultMessage": "Details"
+	},
 	"disabled": {
 		"defaultMessage": "Uitgezet"
+	},
+	"dnsChallenge": {
+		"defaultMessage": "DNS Challenge"
+	},
+	"dnsProvider": {
+		"defaultMessage": "DNS Provider"
+	},
+	"dnsProviderCredentials": {
+		"defaultMessage": "DNS Provider Gegevens"
 	},
 	"domain-names": {
 		"defaultMessage": "Domeinnamen"
@@ -269,6 +359,9 @@
 	"domain-names.wildcards-not-supported": {
 		"defaultMessage": "Wildcards zijn niet ondersteund voor deze CA"
 	},
+	"domainNames": {
+		"defaultMessage": "Domeinnamen"
+	},
 	"domains.force-ssl": {
 		"defaultMessage": "Forceer SSL"
 	},
@@ -283,6 +376,9 @@
 	},
 	"domains.use-dns": {
 		"defaultMessage": "Gebruik DNS Challenge"
+	},
+	"email": {
+		"defaultMessage": "E-mail"
 	},
 	"email-address": {
 		"defaultMessage": "E-mailadres"
@@ -338,11 +434,62 @@
 	"expires.on": {
 		"defaultMessage": "Verloopt: {date}"
 	},
+	"expiresOn": {
+		"defaultMessage": "Verloopt Op"
+	},
 	"footer.github-fork": {
 		"defaultMessage": "Maak een Fork op Github"
 	},
+	"form.location": {
+		"defaultMessage": "Locatie"
+	},
+	"form.placeholder.api-key": {
+		"defaultMessage": "Voer API sleutel in..."
+	},
+	"form.placeholder.auth-host": {
+		"defaultMessage": "auth.example.com"
+	},
+	"form.placeholder.email": {
+		"defaultMessage": "user@example.com"
+	},
+	"form.placeholder.example-domain": {
+		"defaultMessage": "example.com"
+	},
+	"form.placeholder.forward-host-example": {
+		"defaultMessage": "192.168.1.100 of example.com"
+	},
+	"form.placeholder.port-example": {
+		"defaultMessage": "80"
+	},
 	"form.placeholder.unlimited": {
 		"defaultMessage": "0 = Onbeperkt"
+	},
+	"form.select-certificate": {
+		"defaultMessage": "Selecteer een certificaat..."
+	},
+	"forwardDomainName": {
+		"defaultMessage": "Domeinnaam Doorsturen"
+	},
+	"forwardHost": {
+		"defaultMessage": "Host Doorsturen"
+	},
+	"forwardHttpCode": {
+		"defaultMessage": "HTTP Code Doorsturen"
+	},
+	"forwardPort": {
+		"defaultMessage": "Poort Doorsturen"
+	},
+	"forwardQuery": {
+		"defaultMessage": "Query Doorsturen"
+	},
+	"forwardScheme": {
+		"defaultMessage": "Schema Doorsturen"
+	},
+	"forwardingHost": {
+		"defaultMessage": "Doorstuur Host"
+	},
+	"forwardingPort": {
+		"defaultMessage": "Doorstuur Poort"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Blokkeer Veelvoorkomende Kwetsbaarheden"
@@ -368,8 +515,35 @@
 	"hosts": {
 		"defaultMessage": "Hosts"
 	},
+	"hstsEnabled": {
+		"defaultMessage": "HSTS Ingeschakeld"
+	},
+	"hstsSubdomains": {
+		"defaultMessage": "HSTS Subdomeinen"
+	},
 	"http-only": {
 		"defaultMessage": "Alleen HTTP"
+	},
+	"http2Support": {
+		"defaultMessage": "HTTP/2 Ondersteuning"
+	},
+	"id": {
+		"defaultMessage": "ID"
+	},
+	"incomingPort": {
+		"defaultMessage": "Inkomende Poort"
+	},
+	"intermediateCertificate": {
+		"defaultMessage": "Tussentijds Certificaat"
+	},
+	"isAdmin": {
+		"defaultMessage": "Is Beheerder"
+	},
+	"isDisabled": {
+		"defaultMessage": "Is Uitgeschakeld"
+	},
+	"items": {
+		"defaultMessage": "Items"
 	},
 	"lets-encrypt": {
 		"defaultMessage": "Let's Encrypt"
@@ -386,11 +560,26 @@
 	"login.title": {
 		"defaultMessage": "Inloggen"
 	},
+	"name": {
+		"defaultMessage": "Naam"
+	},
+	"navbar-menu": {
+		"defaultMessage": "Menu"
+	},
+	"new": {
+		"defaultMessage": "Nieuw"
+	},
 	"nginx-config.label": {
 		"defaultMessage": "Aangepaste Nginx Configuratie"
 	},
 	"nginx-config.placeholder": {
 		"defaultMessage": "# Voeg jouw aangepaste Nginx configuratie hier op eigen risico toe!"
+	},
+	"niceName": {
+		"defaultMessage": "Vriendelijke Naam"
+	},
+	"nickname": {
+		"defaultMessage": "Bijnaam"
 	},
 	"no-permission-error": {
 		"defaultMessage": "Jij hebt geen toegang om dit te bekijken."
@@ -461,14 +650,32 @@
 	"object.event.updated": {
 		"defaultMessage": "{object} is bijgewerkt"
 	},
+	"objectType": {
+		"defaultMessage": "Object Type"
+	},
 	"offline": {
 		"defaultMessage": "Offline"
+	},
+	"oidcClientId": {
+		"defaultMessage": "OIDC Client ID"
+	},
+	"oidcClientSecret": {
+		"defaultMessage": "OIDC Client Secret"
+	},
+	"oidcDiscoveryUrl": {
+		"defaultMessage": "OIDC Discovery URL"
 	},
 	"online": {
 		"defaultMessage": "Online"
 	},
 	"options": {
 		"defaultMessage": "Opties"
+	},
+	"owner": {
+		"defaultMessage": "Eigenaar"
+	},
+	"passAuth": {
+		"defaultMessage": "Authenticatie Doorsturen"
 	},
 	"password": {
 		"defaultMessage": "Wachtwoord"
@@ -500,6 +707,15 @@
 	"permissions.visibility.user": {
 		"defaultMessage": "Alleen Aangemaakte Items"
 	},
+	"preservePath": {
+		"defaultMessage": "Pad Behouden"
+	},
+	"propagationSeconds": {
+		"defaultMessage": "Propagatie Seconden"
+	},
+	"provider": {
+		"defaultMessage": "Provider"
+	},
 	"proxy-host": {
 		"defaultMessage": "Proxy Host"
 	},
@@ -518,11 +734,20 @@
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Proxy Host} other {Proxy Hosts}}"
 	},
+	"proxyHostCount": {
+		"defaultMessage": "Aantal Proxy Hosts"
+	},
+	"proxyHosts": {
+		"defaultMessage": "Proxy Hosts"
+	},
 	"proxy_hosts.count_label": {
 		"defaultMessage": "Proxy Hosts"
 	},
 	"public": {
 		"defaultMessage": "Openbaar"
+	},
+	"redirect": {
+		"defaultMessage": "Omleiden"
 	},
 	"redirection-host": {
 		"defaultMessage": "Redirection Host"
@@ -539,6 +764,24 @@
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Redirection Host} other {Redirection Hosts}}"
 	},
+	"redirection-hosts.http-code.300": {
+		"defaultMessage": "300 Multiple Choices"
+	},
+	"redirection-hosts.http-code.301": {
+		"defaultMessage": "301 Moved permanently"
+	},
+	"redirection-hosts.http-code.302": {
+		"defaultMessage": "302 Moved temporarily"
+	},
+	"redirection-hosts.http-code.303": {
+		"defaultMessage": "303 See other"
+	},
+	"redirection-hosts.http-code.307": {
+		"defaultMessage": "307 Temporary redirect"
+	},
+	"redirection-hosts.http-code.308": {
+		"defaultMessage": "308 Permanent redirect"
+	},
 	"redirection_hosts.count_label": {
 		"defaultMessage": "Omleidings Hosts"
 	},
@@ -548,8 +791,17 @@
 	"role.standard-user": {
 		"defaultMessage": "Standaard Gebruiker"
 	},
+	"roles": {
+		"defaultMessage": "Rollen"
+	},
+	"satisfyAny": {
+		"defaultMessage": "Satisfy Any"
+	},
 	"save": {
 		"defaultMessage": "Opslaan"
+	},
+	"search.placeholder": {
+		"defaultMessage": "Zoeken..."
 	},
 	"setting": {
 		"defaultMessage": "Instelling"
@@ -590,14 +842,29 @@
 	"sign-in": {
 		"defaultMessage": "Inloggen"
 	},
+	"sr.switch-language": {
+		"defaultMessage": "Taal Wisselen"
+	},
+	"sr.toggle-navigation": {
+		"defaultMessage": "Navigatie Wisselen"
+	},
+	"sr.toggle-theme": {
+		"defaultMessage": "Thema Wisselen"
+	},
 	"ssl-certificate": {
 		"defaultMessage": "SSL Certificaten"
+	},
+	"sslForced": {
+		"defaultMessage": "SSL Geforceerd"
 	},
 	"stream": {
 		"defaultMessage": "Stream"
 	},
 	"stream.forward-host": {
 		"defaultMessage": "Doorgestuurde Host"
+	},
+	"stream.forward-host.placeholder": {
+		"defaultMessage": "example.com of 10.0.0.1 of 2001:db8:3333:4444:5555:6666:7777:8888"
 	},
 	"stream.incoming-port": {
 		"defaultMessage": "Inkomende Poort"
@@ -617,8 +884,20 @@
 	"streams.udp": {
 		"defaultMessage": "UDP"
 	},
+	"tcpForwarding": {
+		"defaultMessage": "TCP Doorsturen"
+	},
 	"test": {
 		"defaultMessage": "Test"
+	},
+	"theme.dark": {
+		"defaultMessage": "Donker"
+	},
+	"theme.light": {
+		"defaultMessage": "Licht"
+	},
+	"udpForwarding": {
+		"defaultMessage": "UDP Doorsturen"
 	},
 	"update-available": {
 		"defaultMessage": "Update Beschikbaar: {latestVersion}"
@@ -655,6 +934,12 @@
 	},
 	"user.nickname": {
 		"defaultMessage": "Bijnaam"
+	},
+	"user.permissions.full-system-access": {
+		"defaultMessage": "Volledige Systeemtoegang"
+	},
+	"user.permissions.prevent-login": {
+		"defaultMessage": "Inloggen Voorkomen"
 	},
 	"user.set-password": {
 		"defaultMessage": "Zet Wachtwoord"

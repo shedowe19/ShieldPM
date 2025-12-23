@@ -23,8 +23,17 @@
 	"access-list.public.subtitle": {
 		"defaultMessage": "Nie wymaga uwierzytelnienia podstawowego"
 	},
+	"access-list.rule-source.placeholder": {
+		"defaultMessage": "192.168.1.100 lub 192.168.1.0/24 lub 2001:0db8::/32"
+	},
 	"access-list.satisfy-any": {
 		"defaultMessage": "Spełnij dowolny warunek"
+	},
+	"access-list.satisfy.none": {
+		"defaultMessage": "Brak"
+	},
+	"access-list.sso": {
+		"defaultMessage": "Pojedyncze logowanie (SSO)"
 	},
 	"access-list.subtitle": {
 		"defaultMessage": "{users} {users, plural, one {Użytkownik} few {Użytkowników} other {Użytkowników}}, {rules} {rules, plural, one {Reguła} few {Reguły} other {Reguł}} - Utworzono: {date}"
@@ -32,17 +41,26 @@
 	"access-lists": {
 		"defaultMessage": "Listy dostępu"
 	},
+	"accessList": {
+		"defaultMessage": "Lista dostępu"
+	},
 	"action.add": {
 		"defaultMessage": "Dodaj"
 	},
 	"action.add-location": {
 		"defaultMessage": "Dodaj lokalizację"
 	},
+	"action.allow": {
+		"defaultMessage": "Zezwól"
+	},
 	"action.close": {
 		"defaultMessage": "Zamknij"
 	},
 	"action.delete": {
 		"defaultMessage": "Usuń"
+	},
+	"action.deny": {
+		"defaultMessage": "Odmów"
 	},
 	"action.disable": {
 		"defaultMessage": "Wyłącz"
@@ -65,8 +83,38 @@
 	"action.view-details": {
 		"defaultMessage": "Pokaż szczegóły"
 	},
+	"advanced": {
+		"defaultMessage": "Zaawansowane"
+	},
+	"advanced-config": {
+		"defaultMessage": "Zaawansowana konfiguracja"
+	},
+	"allowWebsocketUpgrade": {
+		"defaultMessage": "Zezwól na aktualizację Websocket"
+	},
 	"auditlogs": {
 		"defaultMessage": "Logi audytu"
+	},
+	"authType": {
+		"defaultMessage": "Typ uwierzytelniania"
+	},
+	"authentikHost": {
+		"defaultMessage": "Host Authentik"
+	},
+	"auto": {
+		"defaultMessage": "Auto"
+	},
+	"avatar": {
+		"defaultMessage": "Awatar"
+	},
+	"bandwidthLimit": {
+		"defaultMessage": "Limit przepustowości"
+	},
+	"blockExploits": {
+		"defaultMessage": "Blokuj exploity"
+	},
+	"cachingEnabled": {
+		"defaultMessage": "Buforowanie włączone"
 	},
 	"cancel": {
 		"defaultMessage": "Anuluj"
@@ -101,6 +149,9 @@
 	"certificate.renew": {
 		"defaultMessage": "Odnów certyfikat"
 	},
+	"certificateKey": {
+		"defaultMessage": "Klucz certyfikatu"
+	},
 	"certificates": {
 		"defaultMessage": "Certyfikaty"
 	},
@@ -127,6 +178,9 @@
 	},
 	"certificates.dns.provider": {
 		"defaultMessage": "Dostawca DNS"
+	},
+	"certificates.dns.provider.placeholder": {
+		"defaultMessage": "Wybierz dostawcę..."
 	},
 	"certificates.dns.warning": {
 		"defaultMessage": "Ta sekcja wymaga pewnej wiedzy na temat Certbot i jego wtyczek DNS. Zapoznaj się z dokumentacją odpowiednich wtyczek."
@@ -160,6 +214,9 @@
 	},
 	"certificates.request.title": {
 		"defaultMessage": "Zamów nowy certyfikat"
+	},
+	"clients": {
+		"defaultMessage": "Klienci"
 	},
 	"column.access": {
 		"defaultMessage": "Dostęp"
@@ -230,11 +287,29 @@
 	"column.status": {
 		"defaultMessage": "Status"
 	},
+	"confirm": {
+		"defaultMessage": "Potwierdź"
+	},
 	"created-on": {
 		"defaultMessage": "Utworzono: {date}"
 	},
+	"current": {
+		"defaultMessage": "Obecny"
+	},
 	"dashboard": {
 		"defaultMessage": "Panel"
+	},
+	"dashboard.certificates-expiring": {
+		"defaultMessage": "Certyfikaty wkrótce wygasną"
+	},
+	"dashboard.days-left": {
+		"defaultMessage": "Pozostało {days} {days, plural, one {dzień} other {dni}}"
+	},
+	"dashboard.expired": {
+		"defaultMessage": "Wygasł"
+	},
+	"dashboard.no-expiring-certificates": {
+		"defaultMessage": "Brak certyfikatów, które wkrótce wygasną"
 	},
 	"dashboard.status_ok": {
 		"defaultMessage": "Wszystko wygląda dobrze!"
@@ -251,8 +326,23 @@
 	"dead_hosts.count_label": {
 		"defaultMessage": "Hosty 404"
 	},
+	"default-site": {
+		"defaultMessage": "Domyślna witryna"
+	},
+	"details": {
+		"defaultMessage": "Szczegóły"
+	},
 	"disabled": {
 		"defaultMessage": "Wyłączone"
+	},
+	"dnsChallenge": {
+		"defaultMessage": "Wyzwanie DNS"
+	},
+	"dnsProvider": {
+		"defaultMessage": "Dostawca DNS"
+	},
+	"dnsProviderCredentials": {
+		"defaultMessage": "Dane logowania dostawcy DNS"
 	},
 	"domain-names": {
 		"defaultMessage": "Nazwy domen"
@@ -269,6 +359,9 @@
 	"domain-names.wildcards-not-supported": {
 		"defaultMessage": "Symbole wieloznaczne nie są obsługiwane dla tego CA"
 	},
+	"domainNames": {
+		"defaultMessage": "Nazwy domen"
+	},
 	"domains.force-ssl": {
 		"defaultMessage": "Wymuś SSL"
 	},
@@ -283,6 +376,9 @@
 	},
 	"domains.use-dns": {
 		"defaultMessage": "Użyj wyzwania DNS"
+	},
+	"email": {
+		"defaultMessage": "E-mail"
 	},
 	"email-address": {
 		"defaultMessage": "Adres email"
@@ -338,11 +434,62 @@
 	"expires.on": {
 		"defaultMessage": "Wygasa: {date}"
 	},
+	"expiresOn": {
+		"defaultMessage": "Wygasa"
+	},
 	"footer.github-fork": {
 		"defaultMessage": "Forkuj mnie na Github"
 	},
+	"form.location": {
+		"defaultMessage": "Lokalizacja"
+	},
+	"form.placeholder.api-key": {
+		"defaultMessage": "Wprowadź klucz API..."
+	},
+	"form.placeholder.auth-host": {
+		"defaultMessage": "auth.example.com"
+	},
+	"form.placeholder.email": {
+		"defaultMessage": "uzytkownik@example.com"
+	},
+	"form.placeholder.example-domain": {
+		"defaultMessage": "example.com"
+	},
+	"form.placeholder.forward-host-example": {
+		"defaultMessage": "192.168.1.100 lub example.com"
+	},
+	"form.placeholder.port-example": {
+		"defaultMessage": "80"
+	},
 	"form.placeholder.unlimited": {
 		"defaultMessage": "0 = Nieograniczone"
+	},
+	"form.select-certificate": {
+		"defaultMessage": "Wybierz certyfikat..."
+	},
+	"forwardDomainName": {
+		"defaultMessage": "Przekaż nazwę domeny"
+	},
+	"forwardHost": {
+		"defaultMessage": "Przekaż hosta"
+	},
+	"forwardHttpCode": {
+		"defaultMessage": "Przekaż kod HTTP"
+	},
+	"forwardPort": {
+		"defaultMessage": "Przekaż port"
+	},
+	"forwardQuery": {
+		"defaultMessage": "Przekaż zapytanie"
+	},
+	"forwardScheme": {
+		"defaultMessage": "Przekaż schemat"
+	},
+	"forwardingHost": {
+		"defaultMessage": "Host przekazujący"
+	},
+	"forwardingPort": {
+		"defaultMessage": "Port przekazujący"
 	},
 	"host.flags.block-exploits": {
 		"defaultMessage": "Blokuj typowe exploity"
@@ -368,8 +515,35 @@
 	"hosts": {
 		"defaultMessage": "Hosty"
 	},
+	"hstsEnabled": {
+		"defaultMessage": "HSTS włączone"
+	},
+	"hstsSubdomains": {
+		"defaultMessage": "Subdomeny HSTS"
+	},
 	"http-only": {
 		"defaultMessage": "Tylko HTTP"
+	},
+	"http2Support": {
+		"defaultMessage": "Obsługa HTTP/2"
+	},
+	"id": {
+		"defaultMessage": "ID"
+	},
+	"incomingPort": {
+		"defaultMessage": "Port przychodzący"
+	},
+	"intermediateCertificate": {
+		"defaultMessage": "Certyfikat pośredni"
+	},
+	"isAdmin": {
+		"defaultMessage": "Jest administratorem"
+	},
+	"isDisabled": {
+		"defaultMessage": "Jest wyłączony"
+	},
+	"items": {
+		"defaultMessage": "Elementy"
 	},
 	"lets-encrypt": {
 		"defaultMessage": "Let's Encrypt"
@@ -386,11 +560,26 @@
 	"login.title": {
 		"defaultMessage": "Zaloguj się na swoje konto"
 	},
+	"name": {
+		"defaultMessage": "Nazwa"
+	},
+	"navbar-menu": {
+		"defaultMessage": "Menu"
+	},
+	"new": {
+		"defaultMessage": "Nowy"
+	},
 	"nginx-config.label": {
 		"defaultMessage": "Własna konfiguracja Nginx"
 	},
 	"nginx-config.placeholder": {
 		"defaultMessage": "# Wprowadź tutaj własną konfigurację Nginx na własną odpowiedzialność!"
+	},
+	"niceName": {
+		"defaultMessage": "Przyjazna nazwa"
+	},
+	"nickname": {
+		"defaultMessage": "Pseudonim"
 	},
 	"no-permission-error": {
 		"defaultMessage": "Nie masz uprawnień do wyświetlenia tego."
@@ -461,14 +650,32 @@
 	"object.event.updated": {
 		"defaultMessage": "Zaktualizowano {object}"
 	},
+	"objectType": {
+		"defaultMessage": "Typ obiektu"
+	},
 	"offline": {
 		"defaultMessage": "Offline"
+	},
+	"oidcClientId": {
+		"defaultMessage": "Identyfikator klienta OIDC"
+	},
+	"oidcClientSecret": {
+		"defaultMessage": "Sekret klienta OIDC"
+	},
+	"oidcDiscoveryUrl": {
+		"defaultMessage": "Adres URL odkrywania OIDC"
 	},
 	"online": {
 		"defaultMessage": "Online"
 	},
 	"options": {
 		"defaultMessage": "Opcje"
+	},
+	"owner": {
+		"defaultMessage": "Właściciel"
+	},
+	"passAuth": {
+		"defaultMessage": "Przekaż uwierzytelnianie"
 	},
 	"password": {
 		"defaultMessage": "Hasło"
@@ -500,6 +707,15 @@
 	"permissions.visibility.user": {
 		"defaultMessage": "Tylko utworzone elementy"
 	},
+	"preservePath": {
+		"defaultMessage": "Zachowaj ścieżkę"
+	},
+	"propagationSeconds": {
+		"defaultMessage": "Sekundy propagacji"
+	},
+	"provider": {
+		"defaultMessage": "Dostawca"
+	},
 	"proxy-host": {
 		"defaultMessage": "Host proxy"
 	},
@@ -518,11 +734,20 @@
 	"proxy-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host proxy} few {Hosty proxy} other {Hostów proxy}}"
 	},
+	"proxyHostCount": {
+		"defaultMessage": "Liczba hostów proxy"
+	},
+	"proxyHosts": {
+		"defaultMessage": "Hosty proxy"
+	},
 	"proxy_hosts.count_label": {
 		"defaultMessage": "Hosty Proxy"
 	},
 	"public": {
 		"defaultMessage": "Publiczne"
+	},
+	"redirect": {
+		"defaultMessage": "Przekierowanie"
 	},
 	"redirection-host": {
 		"defaultMessage": "Host przekierowania"
@@ -539,6 +764,24 @@
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} {count, plural, one {Host przekierowania} few {Hosty przekierowań} other {Hostów przekierowań}}"
 	},
+	"redirection-hosts.http-code.300": {
+		"defaultMessage": "300 Multiple Choices"
+	},
+	"redirection-hosts.http-code.301": {
+		"defaultMessage": "301 Moved permanently"
+	},
+	"redirection-hosts.http-code.302": {
+		"defaultMessage": "302 Moved temporarily"
+	},
+	"redirection-hosts.http-code.303": {
+		"defaultMessage": "303 See other"
+	},
+	"redirection-hosts.http-code.307": {
+		"defaultMessage": "307 Temporary redirect"
+	},
+	"redirection-hosts.http-code.308": {
+		"defaultMessage": "308 Permanent redirect"
+	},
 	"redirection_hosts.count_label": {
 		"defaultMessage": "Hosty Przekierowań"
 	},
@@ -548,8 +791,17 @@
 	"role.standard-user": {
 		"defaultMessage": "Standardowy użytkownik"
 	},
+	"roles": {
+		"defaultMessage": "Rolle"
+	},
+	"satisfyAny": {
+		"defaultMessage": "Spełnij dowolne"
+	},
 	"save": {
 		"defaultMessage": "Zapisz"
+	},
+	"search.placeholder": {
+		"defaultMessage": "Szukaj..."
 	},
 	"setting": {
 		"defaultMessage": "Ustawienie"
@@ -590,14 +842,29 @@
 	"sign-in": {
 		"defaultMessage": "Zaloguj się"
 	},
+	"sr.switch-language": {
+		"defaultMessage": "Zmień język"
+	},
+	"sr.toggle-navigation": {
+		"defaultMessage": "Przełącz nawigację"
+	},
+	"sr.toggle-theme": {
+		"defaultMessage": "Przełącz motyw"
+	},
 	"ssl-certificate": {
 		"defaultMessage": "Certyfikat SSL"
+	},
+	"sslForced": {
+		"defaultMessage": "Wymuszone SSL"
 	},
 	"stream": {
 		"defaultMessage": "Strumień"
 	},
 	"stream.forward-host": {
 		"defaultMessage": "Host docelowy"
+	},
+	"stream.forward-host.placeholder": {
+		"defaultMessage": "example.com lub 10.0.0.1 lub 2001:db8:3333:4444:5555:6666:7777:8888"
 	},
 	"stream.incoming-port": {
 		"defaultMessage": "Port przychodzący"
@@ -617,8 +884,23 @@
 	"streams.udp": {
 		"defaultMessage": "UDP"
 	},
+	"tcpForwarding": {
+		"defaultMessage": "Przekazywanie TCP"
+	},
 	"test": {
 		"defaultMessage": "Test"
+	},
+	"theme.dark": {
+		"defaultMessage": "Ciemny"
+	},
+	"theme.light": {
+		"defaultMessage": "Jasny"
+	},
+	"udpForwarding": {
+		"defaultMessage": "Przekazywanie UDP"
+	},
+	"update-available": {
+		"defaultMessage": "Aktualizacja dostępna: {latestVersion}"
 	},
 	"user": {
 		"defaultMessage": "Użytkownik"
@@ -652,6 +934,12 @@
 	},
 	"user.nickname": {
 		"defaultMessage": "Pseudonim"
+	},
+	"user.permissions.full-system-access": {
+		"defaultMessage": "Pełny dostęp do systemu"
+	},
+	"user.permissions.prevent-login": {
+		"defaultMessage": "Zablokuj logowanie"
 	},
 	"user.set-password": {
 		"defaultMessage": "Ustaw hasło"

@@ -23,6 +23,9 @@
 	"access-list.public.subtitle": {
 		"defaultMessage": "ベーシック認証を使用しません"
 	},
+	"access-list.rule-source.placeholder": {
+		"defaultMessage": "192.168.1.100 または 192.168.1.0/24 または 2001:0db8::/32"
+	},
 	"access-list.satisfy-any": {
 		"defaultMessage": "いずれかを満たす"
 	},
@@ -47,11 +50,17 @@
 	"action.add-location": {
 		"defaultMessage": "場所を追加"
 	},
+	"action.allow": {
+		"defaultMessage": "許可"
+	},
 	"action.close": {
 		"defaultMessage": "閉じる"
 	},
 	"action.delete": {
 		"defaultMessage": "削除"
+	},
+	"action.deny": {
+		"defaultMessage": "拒否"
 	},
 	"action.disable": {
 		"defaultMessage": "無効化"
@@ -91,6 +100,9 @@
 	},
 	"authentikHost": {
 		"defaultMessage": "Authentikホスト"
+	},
+	"auto": {
+		"defaultMessage": "自動"
 	},
 	"avatar": {
 		"defaultMessage": "アバター"
@@ -166,6 +178,9 @@
 	},
 	"certificates.dns.provider": {
 		"defaultMessage": "DNSプロバイダー"
+	},
+	"certificates.dns.provider.placeholder": {
+		"defaultMessage": "プロバイダーを選択..."
 	},
 	"certificates.dns.warning": {
 		"defaultMessage": "このセクションはCertbotとそのDNSプラグインの知識が必要です。各プラグインのドキュメントを参照してください。"
@@ -283,6 +298,18 @@
 	},
 	"dashboard": {
 		"defaultMessage": "ダッシュボード"
+	},
+	"dashboard.certificates-expiring": {
+		"defaultMessage": "もうすぐ期限切れになる証明書"
+	},
+	"dashboard.days-left": {
+		"defaultMessage": "残り {days} 日"
+	},
+	"dashboard.expired": {
+		"defaultMessage": "期限切れ"
+	},
+	"dashboard.no-expiring-certificates": {
+		"defaultMessage": "期限切れ間近の証明書はありません"
 	},
 	"dashboard.status_ok": {
 		"defaultMessage": "すべて順調です！"
@@ -728,11 +755,32 @@
 	"redirection-host.forward-domain": {
 		"defaultMessage": "転送ホスト"
 	},
+	"redirection-host.forward-http-code": {
+		"defaultMessage": "HTTP コード"
+	},
 	"redirection-hosts": {
 		"defaultMessage": "リダイレクトホスト"
 	},
 	"redirection-hosts.count": {
 		"defaultMessage": "{count} リダイレクトホスト"
+	},
+	"redirection-hosts.http-code.300": {
+		"defaultMessage": "300 複数の選択"
+	},
+	"redirection-hosts.http-code.301": {
+		"defaultMessage": "301 恒久的に移動"
+	},
+	"redirection-hosts.http-code.302": {
+		"defaultMessage": "302 一時的に移動"
+	},
+	"redirection-hosts.http-code.303": {
+		"defaultMessage": "303 他を参照"
+	},
+	"redirection-hosts.http-code.307": {
+		"defaultMessage": "307 一時的なリダイレクト"
+	},
+	"redirection-hosts.http-code.308": {
+		"defaultMessage": "308 恒久的なリダイレクト"
 	},
 	"redirection_hosts.count_label": {
 		"defaultMessage": "リダイレクトホスト"
@@ -815,6 +863,9 @@
 	"stream.forward-host": {
 		"defaultMessage": "転送ポート"
 	},
+	"stream.forward-host.placeholder": {
+		"defaultMessage": "example.com または 10.0.0.1 または 2001:db8:3333:4444:5555:6666:7777:8888"
+	},
 	"stream.incoming-port": {
 		"defaultMessage": "受信ポート"
 	},
@@ -847,6 +898,9 @@
 	},
 	"udpForwarding": {
 		"defaultMessage": "UDP転送"
+	},
+	"update-available": {
+		"defaultMessage": "アップデートが利用可能です: {latestVersion}"
 	},
 	"user": {
 		"defaultMessage": "ユーザー"
