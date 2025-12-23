@@ -13,7 +13,7 @@ interface Props {
 	menuAlign?: "start" | "end";
 }
 
-function LocalePicker({ }: Props) {
+function LocalePicker(_props: Props) {
 	const { locale, setLocale } = useLocaleState();
 
 	const changeTo = (lang: string) => {

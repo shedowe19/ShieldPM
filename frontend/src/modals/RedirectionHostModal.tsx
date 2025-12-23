@@ -193,7 +193,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 												{({ field }: any) => (
 													<Select
 														value={String(field.value)}
-														onValueChange={(val) => setFieldValue("forwardHttpCode", parseInt(val))}
+														onValueChange={(val) => setFieldValue("forwardHttpCode", Number.parseInt(val, 10))}
 													>
 														<SelectTrigger id="forwardHttpCode">
 															<SelectValue placeholder="301" />

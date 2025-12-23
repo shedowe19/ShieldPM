@@ -52,8 +52,8 @@ export function SSLCertificateField({
 		// Convert back to number if it's a numeric string, unless it's "new"
 		let val: number | string = newValue;
 		if (newValue !== "new") {
-			val = parseInt(newValue, 10);
-			if (isNaN(val)) val = 0;
+			val = Number.parseInt(newValue, 10);
+			if (Number.isNaN(val)) val = 0;
 		}
 
 		setFieldValue(name, val);

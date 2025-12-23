@@ -134,7 +134,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 							className="flex-1"
 						/>
 					</div>
-					<div className="w-10"></div> {/* Spacer to match delete button width */}
+					<div className="w-10" /> {/* Spacer to match delete button width */}
 				</div>
 			</div>
 		</div>

@@ -8,7 +8,8 @@ import {
 	IconShield,
 	IconUser,
 } from "@tabler/icons-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "src/components/ui/button";
 import { ScrollArea } from "src/components/ui/scroll-area";
