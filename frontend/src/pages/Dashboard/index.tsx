@@ -9,124 +9,155 @@ import { Card, CardContent } from "src/components/ui/card";
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
 
 const MotionCard = motion(Card);
+const container = {
+	hidden: { opacity: 0 },
+	show: {
+		opacity: 1,
+		transition: {
+			staggerChildren: 0.1,
+		},
+	},
+};
+
+const item = {
+	hidden: { opacity: 0, y: 20 },
+	show: { opacity: 1, y: 0 },
+};
 
 const Dashboard = () => {
 	const { data: hostReport } = useHostReport();
 	const navigate = useNavigate();
 
-	return (
-		<div className="space-y-6">
-			<div className="flex items-center space-x-2">
-				<IconDashboard className="h-8 w-8 text-primary" />
-				<h2 className="text-3xl font-bold tracking-tight">
-					<T id="dashboard" />
-				</h2>
-			</div>
-			<div className="flex flex-col gap-6">
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-					<HasPermission section={PROXY_HOSTS} permission={VIEW} hideError>
-						<MotionCard
-							className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-green-500"
-							onClick={() => navigate("/nginx/proxy")}
-							whileHover={{ scale: 1.02 }}
-							whileTap={{ scale: 0.98 }}
-						>
-							<CardContent className="p-6">
-								<div className="flex items-center justify-between space-x-4">
-									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground">
-											<T id="proxy_hosts.count_label" />
-										</p>
-										<div className="text-3xl font-bold">
-											<T id="proxy-hosts.count" data={{ count: hostReport?.proxy }} />
-										</div>
-									</div>
-									<div className="p-3 bg-green-500/10 rounded-full text-green-500">
-										<IconBolt className="h-8 w-8" />
-									</div>
-								</div>
-							</CardContent>
-						</MotionCard>
-					</HasPermission>
-					<HasPermission section={REDIRECTION_HOSTS} permission={VIEW} hideError>
-						<MotionCard
-							className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-yellow-500"
-							onClick={() => navigate("/nginx/redirection")}
-							whileHover={{ scale: 1.02 }}
-							whileTap={{ scale: 0.98 }}
-						>
-							<CardContent className="p-6">
-								<div className="flex items-center justify-between space-x-4">
-									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground">
-											<T id="redirection_hosts.count_label" />
-										</p>
-										<div className="text-3xl font-bold">
-											<T id="redirection-hosts.count" data={{ count: hostReport?.redirection }} />
-										</div>
-									</div>
-									<div className="p-3 bg-yellow-500/10 rounded-full text-yellow-500">
-										<IconArrowsCross className="h-8 w-8" />
-									</div>
-								</div>
-							</CardContent>
-						</MotionCard>
-					</HasPermission>
-					<HasPermission section={STREAMS} permission={VIEW} hideError>
-						<MotionCard
-							className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-blue-500"
-							onClick={() => navigate("/nginx/stream")}
-							whileHover={{ scale: 1.02 }}
-							whileTap={{ scale: 0.98 }}
-						>
-							<CardContent className="p-6">
-								<div className="flex items-center justify-between space-x-4">
-									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground">
-											<T id="streams.count_label" />
-										</p>
-										<div className="text-3xl font-bold">
-											<T id="streams.count" data={{ count: hostReport?.stream }} />
-										</div>
-									</div>
-									<div className="p-3 bg-blue-500/10 rounded-full text-blue-500">
-										<IconDisc className="h-8 w-8" />
-									</div>
-								</div>
-							</CardContent>
-						</MotionCard>
-					</HasPermission>
-					<HasPermission section={DEAD_HOSTS} permission={VIEW} hideError>
-						<MotionCard
-							className="cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-red-500"
-							onClick={() => navigate("/nginx/404")}
-							whileHover={{ scale: 1.02 }}
-							whileTap={{ scale: 0.98 }}
-						>
-							<CardContent className="p-6">
-								<div className="flex items-center justify-between space-x-4">
-									<div className="space-y-1">
-										<p className="text-sm font-medium text-muted-foreground">
-											<T id="dead_hosts.count_label" />
-										</p>
-										<div className="text-3xl font-bold">
-											<T id="dead-hosts.count" data={{ count: hostReport?.dead }} />
-										</div>
-									</div>
-									<div className="p-3 bg-red-500/10 rounded-full text-red-500">
-										<IconBoltOff className="h-8 w-8" />
-									</div>
-								</div>
-							</CardContent>
-						</MotionCard>
-					</HasPermission>
-				</div>
+	const date = new Date();
+	const hours = date.getHours();
+	let greeting = "";
+	if (hours < 12) greeting = "Good morning";
+	else if (hours < 18) greeting = "Good afternoon";
+	else greeting = "Good evening";
 
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					<CertificateExpiryWidget />
-				</div>
+	return (
+		<motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+			<div className="flex flex-col space-y-2">
+				<h2 className="text-3xl font-bold tracking-tight">
+					{greeting}, User
+				</h2>
+				<p className="text-muted-foreground">
+					{date.toLocaleDateString(undefined, {
+						weekday: "long",
+						year: "numeric",
+						month: "long",
+						day: "numeric",
+					})}
+				</p>
 			</div>
-		</div>
+
+			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+				<HasPermission section={PROXY_HOSTS} permission={VIEW} hideError>
+					<MotionCard
+						variants={item}
+						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-green-500/10 to-transparent dark:from-green-500/20"
+						onClick={() => navigate("/nginx/proxy")}
+						whileHover={{ scale: 1.02 }}
+						whileTap={{ scale: 0.98 }}
+					>
+						<CardContent className="p-6">
+							<div className="flex items-center justify-between space-x-4">
+								<div className="space-y-1">
+									<p className="text-sm font-medium text-muted-foreground">
+										<T id="proxy_hosts.count_label" />
+									</p>
+									<div className="text-4xl font-bold text-green-500">
+										<T id="proxy-hosts.count" data={{ count: hostReport?.proxy }} />
+									</div>
+								</div>
+								<div className="p-3 bg-green-500/20 rounded-xl text-green-500">
+									<IconBolt className="h-8 w-8" />
+								</div>
+							</div>
+						</CardContent>
+					</MotionCard>
+				</HasPermission>
+				<HasPermission section={REDIRECTION_HOSTS} permission={VIEW} hideError>
+					<MotionCard
+						variants={item}
+						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-yellow-500/10 to-transparent dark:from-yellow-500/20"
+						onClick={() => navigate("/nginx/redirection")}
+						whileHover={{ scale: 1.02 }}
+						whileTap={{ scale: 0.98 }}
+					>
+						<CardContent className="p-6">
+							<div className="flex items-center justify-between space-x-4">
+								<div className="space-y-1">
+									<p className="text-sm font-medium text-muted-foreground">
+										<T id="redirection_hosts.count_label" />
+									</p>
+									<div className="text-4xl font-bold text-yellow-500">
+										<T id="redirection-hosts.count" data={{ count: hostReport?.redirection }} />
+									</div>
+								</div>
+								<div className="p-3 bg-yellow-500/20 rounded-xl text-yellow-500">
+									<IconArrowsCross className="h-8 w-8" />
+								</div>
+							</div>
+						</CardContent>
+					</MotionCard>
+				</HasPermission>
+				<HasPermission section={STREAMS} permission={VIEW} hideError>
+					<MotionCard
+						variants={item}
+						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-blue-500/10 to-transparent dark:from-blue-500/20"
+						onClick={() => navigate("/nginx/stream")}
+						whileHover={{ scale: 1.02 }}
+						whileTap={{ scale: 0.98 }}
+					>
+						<CardContent className="p-6">
+							<div className="flex items-center justify-between space-x-4">
+								<div className="space-y-1">
+									<p className="text-sm font-medium text-muted-foreground">
+										<T id="streams.count_label" />
+									</p>
+									<div className="text-4xl font-bold text-blue-500">
+										<T id="streams.count" data={{ count: hostReport?.stream }} />
+									</div>
+								</div>
+								<div className="p-3 bg-blue-500/20 rounded-xl text-blue-500">
+									<IconDisc className="h-8 w-8" />
+								</div>
+							</div>
+						</CardContent>
+					</MotionCard>
+				</HasPermission>
+				<HasPermission section={DEAD_HOSTS} permission={VIEW} hideError>
+					<MotionCard
+						variants={item}
+						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-red-500/10 to-transparent dark:from-red-500/20"
+						onClick={() => navigate("/nginx/404")}
+						whileHover={{ scale: 1.02 }}
+						whileTap={{ scale: 0.98 }}
+					>
+						<CardContent className="p-6">
+							<div className="flex items-center justify-between space-x-4">
+								<div className="space-y-1">
+									<p className="text-sm font-medium text-muted-foreground">
+										<T id="dead_hosts.count_label" />
+									</p>
+									<div className="text-4xl font-bold text-red-500">
+										<T id="dead-hosts.count" data={{ count: hostReport?.dead }} />
+									</div>
+								</div>
+								<div className="p-3 bg-red-500/20 rounded-xl text-red-500">
+									<IconBoltOff className="h-8 w-8" />
+								</div>
+							</div>
+						</CardContent>
+					</MotionCard>
+				</HasPermission>
+			</div>
+
+			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+				<CertificateExpiryWidget />
+			</div>
+		</motion.div>
 	);
 };
 
