@@ -1,6 +1,7 @@
 import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { FormattedNumber } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { HasPermission } from "src/components";
 import { useHostReport, useUser } from "src/hooks";
@@ -93,7 +94,7 @@ const Dashboard = () => {
 										<T id="proxy_hosts.count_label" />
 									</p>
 									<div className="text-4xl font-bold text-green-500">
-										<T id="proxy-hosts.count" data={{ count: hostReport?.proxy }} />
+										<FormattedNumber value={hostReport?.proxy || 0} />
 									</div>
 								</div>
 								<div className="p-3 bg-green-500/20 rounded-xl text-green-500">
@@ -118,7 +119,7 @@ const Dashboard = () => {
 										<T id="redirection_hosts.count_label" />
 									</p>
 									<div className="text-4xl font-bold text-yellow-500">
-										<T id="redirection-hosts.count" data={{ count: hostReport?.redirection }} />
+										<FormattedNumber value={hostReport?.redirection || 0} />
 									</div>
 								</div>
 								<div className="p-3 bg-yellow-500/20 rounded-xl text-yellow-500">
@@ -143,7 +144,7 @@ const Dashboard = () => {
 										<T id="streams.count_label" />
 									</p>
 									<div className="text-4xl font-bold text-blue-500">
-										<T id="streams.count" data={{ count: hostReport?.stream }} />
+										<FormattedNumber value={hostReport?.stream || 0} />
 									</div>
 								</div>
 								<div className="p-3 bg-blue-500/20 rounded-xl text-blue-500">
@@ -168,7 +169,7 @@ const Dashboard = () => {
 										<T id="dead_hosts.count_label" />
 									</p>
 									<div className="text-4xl font-bold text-red-500">
-										<T id="dead-hosts.count" data={{ count: hostReport?.dead }} />
+										<FormattedNumber value={hostReport?.dead || 0} />
 									</div>
 								</div>
 								<div className="p-3 bg-red-500/20 rounded-xl text-red-500">
