@@ -1,9 +1,11 @@
 import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HasPermission } from "src/components";
-import { useHostReport } from "src/hooks";
+import { useHostReport, useUser } from "src/hooks";
 import { T } from "src/locale";
+import AuthStore from "src/modules/AuthStore";
 import { DEAD_HOSTS, PROXY_HOSTS, REDIRECTION_HOSTS, STREAMS, VIEW } from "src/modules/Permissions";
 import { Card, CardContent } from "src/components/ui/card";
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
@@ -27,6 +29,31 @@ const item = {
 const Dashboard = () => {
 	const { data: hostReport } = useHostReport();
 	const navigate = useNavigate();
+	const [userId, setUserId] = useState<number>(0);
+	const { data: userData } = useUser(userId, { enabled: userId !== 0 });
+
+	useEffect(() => {
+		const token = AuthStore.token?.token;
+		if (token) {
+			try {
+				const base64Url = token.split(".")[1];
+				const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+				const jsonPayload = decodeURIComponent(
+					window
+						.atob(base64)
+						.split("")
+						.map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
+						.join(""),
+				);
+				const payload = JSON.parse(jsonPayload);
+				if (payload?.attrs?.id) {
+					setUserId(payload.attrs.id);
+				}
+			} catch (e) {
+				console.error("Failed to decode token", e);
+			}
+		}
+	}, []);
 
 	const date = new Date();
 	const hours = date.getHours();
@@ -38,7 +65,7 @@ const Dashboard = () => {
 		<motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
 			<div className="flex flex-col space-y-2">
 				<h2 className="text-3xl font-bold tracking-tight">
-					<T id={greeting} />, User
+					<T id={greeting} />, {userData?.nickname || userData?.name || "User"}
 				</h2>
 				<p className="text-muted-foreground">
 					{date.toLocaleDateString(undefined, {
