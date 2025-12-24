@@ -1,5 +1,6 @@
 # NPMplus
 
+[![Wiki](https://img.shields.io/badge/docs-wiki-blue)](https://github.com/shedowe19/NPMplus/wiki)
 ![Version](https://img.shields.io/github/v/release/shedowe19/NPMplus?style=for-the-badge&color=blue)
 ![License](https://img.shields.io/github/license/shedowe19/NPMplus?style=for-the-badge&color=orange)
 ![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/NPMplus/docker.yml?style=for-the-badge)
