@@ -15,9 +15,11 @@
 *   **[Installation](Installation)**: Get started with Docker Compose and migration guides.
 *   **[Configuration](Configuration)**: detailed environment variables and database setup.
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
+*   **[Proxy Hosts](Proxy-Hosts)**: Detailed guide on configuring hosts, locations, and cache.
+*   **[SSL Certificates](SSL-Certificates)**: Let's Encrypt, Custom Certs, and HSTS best practices.
 *   **[Security](Security)**: Setup CrowdSec, ModSecurity, and other security features.
 *   **[User Management](User-Management)**: Managing users, permissions, and Access Lists.
-*   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, and custom Nginx configs.
+*   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, Streams, and custom configs.
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).
 *   **[Development](Development)**: How to build and test NPMplus locally.
 

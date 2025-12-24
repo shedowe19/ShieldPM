@@ -15,6 +15,7 @@ NPMplus includes **GoAccess**, a real-time web log analyzer.
 You can serve PHP applications directly through NPMplus.
 
 ### External PHP-FPM (Recommended)
+This approach keeps your containers clean and separated.
 1.  Run a separate PHP-FPM container (e.g., `php:8.2-fpm-alpine`).
 2.  In your Proxy Host's **Advanced Configuration**:
     ```nginx
@@ -39,19 +40,37 @@ You can serve PHP applications directly through NPMplus.
 ### Defined Locations
 You can add custom Nginx directives to specific locations in the **Locations** tab of a Proxy Host.
 
+*   **Example: Protecting a path**
+    Add a location `/admin`, and in the Custom Config gear icon:
+    ```nginx
+    allow 192.168.1.0/24;
+    deny all;
+    ```
+
 ### Custom Upstreams (Load Balancing)
 1.  Create `/opt/npmplus/custom_nginx/http_top.conf`.
 2.  Define your upstream block:
     ```nginx
     upstream my_backend {
+        least_conn;               # Load balancing strategy
         server 10.0.0.1:80;
         server 10.0.0.2:80;
+        server 10.0.0.3:80 down;  # Mark server as down
     }
     ```
 3.  In the UI, point your Proxy Host scheme to `http` and Forward Host to `my_backend`.
 
+### Stream Hosts (TCP/UDP Forwarding)
+NPMplus isn't just for HTTP/HTTPS. You can forward raw TCP/UDP traffic (e.g., Game Servers, Database ports).
+
+1.  Navigate to **Streams**.
+2.  **Incoming Port:** The port NPMplus will listen on (e.g., `25565` for Minecraft).
+    *   *Note:* This port must be mapped in your `compose.yaml` (Expose ports `25565:25565`).
+3.  **Forward Host/Port:** The destination server.
+4.  **Protocol:** TCP or UDP.
+
 ### Prerun Scripts
-Automate startup tasks.
+Automate startup tasks (e.g., installing extra packages, fixing permissions).
 1.  Create `/opt/npmplus/prerun/myscript.sh`.
-2.  Ensure it has `#!/usr/bin/env sh`.
+2.  Ensure it has `#!/usr/bin/env sh` and is executable.
 3.  Set `ENABLE_PRERUN: "true"` in `compose.yaml`.
