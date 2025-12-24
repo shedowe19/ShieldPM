@@ -34,15 +34,56 @@ Open `https://<your-ip>:81`
 
 ---
 
+
+---
+
+## 🔨 Development
+
+**Frontend:**
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+**Backend:**
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+**Testing:**
+Both projects use `vitest` for testing.
+```bash
+npm test
+```
+
+---
+
 ## 🛠️ Tech Stack
 
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express.js-404D59?style=flat-square&logo=express&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-729B1B?style=flat-square&logo=vitest&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-005C84?style=flat-square&logo=mysql&logoColor=white)
+![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=flat-square&logo=mariadb&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
+![OpenAppSec](https://img.shields.io/badge/OpenAppSec-141D2B?style=flat-square)
+![CrowdSec](https://img.shields.io/badge/CrowdSec-F8A51B?style=flat-square&logo=crowdsec&logoColor=white)
+![ModSecurity](https://img.shields.io/badge/ModSecurity-003545?style=flat-square&logo=owasp&logoColor=white)
+![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-000000?style=flat-square&logo=opentelemetry&logoColor=white)
+![MaxMind](https://img.shields.io/badge/MaxMind-031E37?style=flat-square)
+![Caddy](https://img.shields.io/badge/Caddy-1F88C0?style=flat-square&logo=caddy&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white)
+![GoAccess](https://img.shields.io/badge/GoAccess-373737?style=flat-square&logo=goaccess&logoColor=white)
 
 ---
 
@@ -64,11 +105,18 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **Protocol Optimization:** Only enables TLSv1.2 and TLSv1.3. HTTP/2 is always enabled.
 *   **Load Balancing:** Capabilities for complex upstream setups (requires custom configuration).
 *   **Upload Limits:** Allows infinite upload size (may be limited by ModSecurity).
+*   **Bandwidth Limiting:** built-in support for limiting bandwidth per host.
 *   **Header Security:** `Server` response header hidden by default. Basic security headers added when HSTS is enabled.
 *   **OpenAppSec:** Option to load OpenAppSec attachment module.
 *   **Punycode:** Full support for international domain names.
 
+### ⚙️ Host Management
+*   **Diverse Host Types:** specific support for Proxy, Redirection, Dead (404), and TCP/UDP Stream hosts.
+*   **Access Control:** Granular Access Lists (ACLs) with multi-user support.
+*   **Audit Log:** Comprehensive tracking of all administrative actions and system events.
+
 ### 💻 Usability & Administration
+*   **Internationalization:** Frontend available in multiple languages (English, German, Spanish, French, and more).
 *   **Lightweight:** Smaller Docker image based on **Alpine Linux**.
 *   **Secure Admin:** Admin backend and default page run securely with HTTPS.
 *   **Database:** Automatic **SQLite** vacuum and password reset utility.
@@ -141,7 +189,48 @@ To enable CrowdSec IPS integration:
 
 ---
 
-## 🔌 Feature Integrations
+## � Database Support
+
+While SQLite is the default and recommended database for most users, NPMplus supports external database backends for larger deployments.
+
+### Supported Databases
+*   **SQLite** (Default, zero-config)
+*   **MySQL** / **MariaDB**
+*   **PostgreSQL**
+
+### Configuration
+To use an external database, configure the following environment variables in `compose.yaml`:
+
+**MySQL / MariaDB**:
+```yaml
+DB_MYSQL_HOST=db
+DB_MYSQL_PORT=3306
+DB_MYSQL_USER=npm
+DB_MYSQL_PASSWORD=npm
+DB_MYSQL_NAME=npm
+```
+
+**PostgreSQL**:
+```yaml
+DB_POSTGRES_HOST=db
+DB_POSTGRES_PORT=5432
+DB_POSTGRES_USER=npm
+DB_POSTGRES_PASSWORD=npm
+DB_POSTGRES_NAME=npm
+```
+
+### 🔄 Auto-Migration
+NPMplus includes a built-in **Auto-Migration** feature. If you switch from SQLite to MySQL or PostgreSQL, the application will automatically:
+1.  Detect the new empty database connection.
+2.  Existing `database.sqlite` is found.
+3.  **Migrate all data** from SQLite to the new backend.
+4.  Rename `database.sqlite` to `database.sqlite.migrated`.
+
+This makes scaling up effortless!
+
+---
+
+## �🔌 Feature Integrations
 
 ### PHP-FPM
 <details>
