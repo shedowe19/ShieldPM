@@ -29,6 +29,11 @@ const generateDbConfig = () => {
 		migrations: {
 			tableName: "migrations",
 		},
+		pool: {
+			min: 2,
+			max: 10,
+			propagateCreateError: false,
+		},
 	};
 };
 
