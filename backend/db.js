@@ -1,5 +1,6 @@
 import knex from "knex";
 import { configGet, configHas } from "./lib/config.js";
+import { global as logger } from "./logger.js";
 
 let instance = null;
 
@@ -33,6 +34,13 @@ const generateDbConfig = () => {
 			min: 2,
 			max: 10,
 			propagateCreateError: false,
+			afterCreate: (connection, callback) => {
+				logger.debug("DB: New connection created");
+				connection.on("error", (err) => {
+					logger.error("DB: Connection Error", err);
+				});
+				callback(null, connection);
+			},
 		},
 	};
 };
