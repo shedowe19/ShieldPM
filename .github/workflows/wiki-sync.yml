@@ -1,0 +1,21 @@
+name: Wiki Sync
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - "docs/wiki/**"
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Sync Wiki
+        uses: spenserblack/actions-wiki-sync@v2
+        with:
+          run_only_on_paths: "docs/wiki"
+          wiki_folder: "docs/wiki"

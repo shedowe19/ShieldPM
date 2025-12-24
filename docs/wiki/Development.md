@@ -1,0 +1,53 @@
+# Development Guide
+
+Want to contribute or build NPMplus from source?
+
+## 🛠️ Prerequisites
+*   Node.js (matching `.nvmrc` or latest LTS)
+*   Yarn (for Frontend)
+*   Docker
+
+## 🏗️ Project Structure
+
+*   **/backend**: Node.js API server, database models, and Nginx generation logic.
+*   **/frontend**: React application (Vite + TypeScript).
+*   **/rootfs**: Filesystem overlays for the final Docker image.
+
+## 💻 Running Locally
+
+### Backend
+1.  Navigate to `backend/`.
+2.  Install dependencies: `npm install`.
+3.  Run development server:
+    ```bash
+    npm run dev
+    ```
+
+### Frontend
+1.  Navigate to `frontend/`.
+2.  Install dependencies: `yarn install`.
+3.  Run development server:
+    ```bash
+    yarn dev
+    ```
+
+## 🧪 Testing
+
+The project uses **Vitest** for unit and integration testing.
+
+```bash
+# Backend Tests
+cd backend && npm test
+
+# Frontend Tests
+cd frontend && npm test
+```
+
+## 🐳 Building the Docker Image
+
+To build the full image locally:
+
+```bash
+docker build -t npmplus:local .
+```
+This multi-stage build will compile the frontend, install backend dependencies, and assemble the final Alpine-based image.
