@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Sync Wiki
-        uses: JoeIzzard/ghaction-wiki-sync@v1.0.1
+        uses: JoeIzzard/ghaction-wiki-sync@master
         with:
           wiki_folder: "docs/wiki"
           owner: ${{ github.repository_owner }}
