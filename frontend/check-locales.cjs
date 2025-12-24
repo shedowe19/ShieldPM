@@ -57,7 +57,7 @@ spawnSync("yarn", ["formatjs", "extract", "'src/**/*.tsx'", "--out-file", tmpobj
 const allLocalesInProject = require(tmpobj.name);
 
 // get list og language names and locales
-const langList = require("./src/locale/src/lang-list.json");
+const langList = require("./src/locale/lang/lang-list.json");
 
 // store a list of all validation errors
 const allErrors = [];
@@ -138,7 +138,7 @@ const checkForMissing = (locale) => {
 // Local all locale data
 allLocales.map((locale, idx) => {
 	checkLangList(locale[1]);
-	allLocales[idx].data = require("./src/locale/src/" + locale[0] + ".json");
+	allLocales[idx].data = require("./src/locale/lang/" + locale[0] + ".json");
 	return null;
 });
 

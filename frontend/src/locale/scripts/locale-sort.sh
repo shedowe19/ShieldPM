@@ -2,7 +2,7 @@
 set -e
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$DIR/../src" || exit 1
+cd "$DIR/../lang" || exit 1
 
 if ! command -v jq > /dev/null 2>&1; then
 	echo "jq could not be found, please install it to sort JSON files."

@@ -67,10 +67,10 @@ export const CertificateExpiryWidget = () => {
 												)}
 											</AvatarFallback>
 										</Avatar>
-										<div className="flex-1 space-y-1">
+										<div className="flex-1 space-y-1 min-w-0">
 											<Link
 												to={"/certificates"}
-												className="text-sm font-medium leading-none hover:underline"
+												className="text-sm font-medium leading-none hover:underline truncate block"
 											>
 												{cert.niceName || cert.domainNames.join(", ")}
 											</Link>
@@ -80,7 +80,7 @@ export const CertificateExpiryWidget = () => {
 										</div>
 										<div
 											className={cn(
-												"text-sm font-medium",
+												"text-sm font-medium shrink-0",
 												isExpired ? "text-red-500" : "text-yellow-500",
 											)}
 										>
