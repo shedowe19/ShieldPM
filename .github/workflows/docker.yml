@@ -11,6 +11,8 @@ on:
       - frontend/**
       - backend/**
       - rootfs/**
+    tags:
+      - 'v*'
   pull_request:
     paths:
       - .github/workflows/docker.yml
