@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Sync Wiki
-        uses: Newrez/bi-directional-wiki-sync-action@v1
+        uses: Newrez/bi-directional-wiki-sync-action@v1.0.1
         with:
           source: docs/wiki
           destination: wiki
