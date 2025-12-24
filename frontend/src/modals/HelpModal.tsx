@@ -3,7 +3,7 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { getLocale, T } from "src/locale";
-import { getHelpFile } from "src/locale/src/HelpDoc";
+import { getHelpFile } from "src/locale/HelpDoc";
 import { Dialog, DialogContent, DialogFooter } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
 import { ScrollArea } from "src/components/ui/scroll-area";
