@@ -97,9 +97,15 @@
   "column.status": "Stato",
   "confirm": "Conferma",
   "created-on": "Creato: {date}",
-  "current": "Corrente",
-  "dashboard": "Dashboard",
-  "dashboard.certificates-expiring": "Certificati in scadenza a breve",
+  "current": "Attuale",
+  "dashboard": {
+    "certificates-expiring": "Certificati in scadenza",
+    "greeting": {
+      "morning": "Buongiorno",
+      "afternoon": "Buon pomeriggio",
+      "evening": "Buonasera"
+    }
+  },
   "dashboard.days-left": "{days} {days, plural, one {Giorno} other {Giorni}} rimanenti",
   "dashboard.expired": "Scaduto",
   "dashboard.no-expiring-certificates": "Nessun certificato in scadenza a breve",

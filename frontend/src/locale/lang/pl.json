@@ -98,12 +98,18 @@
   "confirm": "Potwierdź",
   "created-on": "Utworzono: {date}",
   "current": "Obecny",
-  "dashboard": "Panel",
-  "dashboard.certificates-expiring": "Certyfikaty wkrótce wygasną",
-  "dashboard.days-left": "Pozostało {days} {days, plural, one {dzień} other {dni}}",
-  "dashboard.expired": "Wygasł",
-  "dashboard.no-expiring-certificates": "Brak certyfikatów, które wkrótce wygasną",
-  "dashboard.status_ok": "Wszystko wygląda dobrze!",
+  "dashboard": {
+    "certificates-expiring": "Certyfikaty wkrótce wygasną",
+    "greeting": {
+      "morning": "Dzień dobry",
+      "afternoon": "Dzień dobry",
+      "evening": "Dobry wieczór"
+    },
+    "days-left": "Pozostało {days} {days, plural, one {dzień} other {dni}}",
+    "expired": "Wygasł",
+    "no-expiring-certificates": "Brak certyfikatów, które wkrótce wygasną",
+    "status_ok": "Wszystko wygląda dobrze!"
+  },
   "dead-host": "Host 404",
   "dead-hosts": "Hosty 404",
   "dead-hosts.count": "{count} {count, plural, one {Host 404} few {Hosty 404} other {Hostów 404}}",

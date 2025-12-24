@@ -97,9 +97,15 @@
   "column.status": "Stav",
   "confirm": "Potvrdiť",
   "created-on": "Vytvorené: {date}",
-  "current": "Prítomný",
-  "dashboard": "Panel",
-  "dashboard.certificates-expiring": "Platnosť certifikátov čoskoro vyprší",
+  "current": "Aktuálny",
+  "dashboard": {
+    "certificates-expiring": "Certifikáty, ktoré čoskoro vypršia",
+    "greeting": {
+      "morning": "Dobré ráno",
+      "afternoon": "Dobrý deň",
+      "evening": "Dobrý večer"
+    }
+  },
   "dashboard.days-left": "Zostáva {days} {days, plural, one {deň} few {dni} other {dní}}",
   "dashboard.expired": "Platnosť vypršala",
   "dashboard.no-expiring-certificates": "Žiadne certifikáty, ktorých platnosť čoskoro vyprší",
