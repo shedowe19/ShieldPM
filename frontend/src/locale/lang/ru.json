@@ -98,14 +98,11 @@
   "confirm": "Подтвердить",
   "created-on": "Создан: {date}",
   "current": "Текущий",
-  "dashboard": {
-    "certificates-expiring": "Сертификаты, истекающие в ближайшее время",
-    "greeting": {
-      "morning": "Доброе утро",
-      "afternoon": "Добрый день",
-      "evening": "Добрый вечер"
-    }
-  },
+  "dashboard": "Обзор",
+  "dashboard.certificates-expiring": "Сертификаты, истекающие в ближайшее время",
+  "dashboard.greeting.morning": "Доброе утро",
+  "dashboard.greeting.afternoon": "Добрый день",
+  "dashboard.greeting.evening": "Добрый вечер",
   "dashboard.days-left": "Осталось {days} {days, plural, one {день} few {дня} other {дней}}",
   "dashboard.expired": "Истек",
   "dashboard.no-expiring-certificates": "Нет сертификатов с истекающим сроком действия",

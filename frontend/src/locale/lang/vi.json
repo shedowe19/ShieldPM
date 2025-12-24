@@ -98,19 +98,15 @@
   "confirm": "Xác nhận",
   "created-on": "Đã tạo: {date}",
   "current": "Hiện tại",
-  "dashboard": {
-    "certificates-expiring": "Chứng chỉ sắp hết hạn",
-    "greeting": {
-      "morning": "Chào buổi sáng",
-      "afternoon": "Chào buổi chiều",
-      "evening": "Chào buổi tối"
-    },
-    "days-left": "Còn lại {days} {days, plural, one {ngày} other {ngày}}",
-    "expired": "Đã hết hạn",
-    "no-expiring-certificates": "Không có chứng chỉ nào sắp hết hạn",
-    "status_ok": "Mọi thứ đều ổn!",
-    "title": "Bảng điều khiển"
-  },
+  "dashboard": "Bảng điều khiển",
+  "dashboard.certificates-expiring": "Chứng chỉ sắp hết hạn",
+  "dashboard.greeting.morning": "Chào buổi sáng",
+  "dashboard.greeting.afternoon": "Chào buổi chiều",
+  "dashboard.greeting.evening": "Chào buổi tối",
+  "dashboard.days-left": "Còn lại {days} {days, plural, one {ngày} other {ngày}}",
+  "dashboard.expired": "Đã hết hạn",
+  "dashboard.no-expiring-certificates": "Không có chứng chỉ nào sắp hết hạn",
+  "dashboard.status_ok": "Mọi thứ đều ổn!",
   "dead-host": "Máy chủ 404",
   "dead-hosts": "Máy chủ 404",
   "dead-hosts.count": "Số trang lỗi {count}",

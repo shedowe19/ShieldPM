@@ -98,19 +98,15 @@
   "confirm": "Bevestigen",
   "created-on": "Aangemaakt: {date}",
   "current": "Huidig",
-  "dashboard": {
-    "title": "Dashboard",
-    "certificates-expiring": "Certificaten verlopen binnenkort",
-    "greeting": {
-      "morning": "Goedemorgen",
-      "afternoon": "Goedemiddag",
-      "evening": "Goedenavond"
-    },
-    "days-left": "Nog {days} {days, plural, one {dag} other {dagen}}",
-    "expired": "Verlopen",
-    "no-expiring-certificates": "Geen certificaten die binnenkort verlopen",
-    "status_ok": "Alles ziet er goed uit!"
-  },
+  "dashboard": "Dashboard",
+  "dashboard.certificates-expiring": "Certificaten verlopen binnenkort",
+  "dashboard.greeting.morning": "Goedemorgen",
+  "dashboard.greeting.afternoon": "Goedemiddag",
+  "dashboard.greeting.evening": "Goedenavond",
+  "dashboard.days-left": "Nog {days} {days, plural, one {dag} other {dagen}}",
+  "dashboard.expired": "Verlopen",
+  "dashboard.no-expiring-certificates": "Geen certificaten die binnenkort verlopen",
+  "dashboard.status_ok": "Alles ziet er goed uit!",
   "dead-host": "404 Host",
   "dead-hosts": "404 Hosts",
   "dead-hosts.count": "{count} {count, plural, one {404 Host} other {404 Hosts}}",

@@ -98,14 +98,11 @@
   "confirm": "Potvrdiť",
   "created-on": "Vytvorené: {date}",
   "current": "Aktuálny",
-  "dashboard": {
-    "certificates-expiring": "Certifikáty, ktoré čoskoro vypršia",
-    "greeting": {
-      "morning": "Dobré ráno",
-      "afternoon": "Dobrý deň",
-      "evening": "Dobrý večer"
-    }
-  },
+  "dashboard": "Panel",
+  "dashboard.certificates-expiring": "Certifikáty, ktoré čoskoro vypršia",
+  "dashboard.greeting.morning": "Dobré ráno",
+  "dashboard.greeting.afternoon": "Dobrý deň",
+  "dashboard.greeting.evening": "Dobrý večer",
   "dashboard.days-left": "Zostáva {days} {days, plural, one {deň} few {dni} other {dní}}",
   "dashboard.expired": "Platnosť vypršala",
   "dashboard.no-expiring-certificates": "Žiadne certifikáty, ktorých platnosť čoskoro vyprší",

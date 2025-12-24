@@ -98,19 +98,15 @@
   "confirm": "Confirmar",
   "created-on": "Creado: {date}",
   "current": "Actual",
-  "dashboard": {
-    "title": "Panel de Control",
-    "certificates-expiring": "Certificados que caducan pronto",
-    "greeting": {
-      "morning": "Buenos días",
-      "afternoon": "Buenas tardes",
-      "evening": "Buenas noches"
-    },
-    "days-left": "Quedan {days} {days, plural, one {Día} other {Días}}",
-    "expired": "Caducado",
-    "no-expiring-certificates": "No hay certificados que caduquen pronto",
-    "status_ok": "¡Todo se ve bien!"
-  },
+  "dashboard": "Panel de Control",
+  "dashboard.certificates-expiring": "Certificados que caducan pronto",
+  "dashboard.greeting.morning": "Buenos días",
+  "dashboard.greeting.afternoon": "Buenas tardes",
+  "dashboard.greeting.evening": "Buenas noches",
+  "dashboard.days-left": "Quedan {days} {days, plural, one {Día} other {Días}}",
+  "dashboard.expired": "Caducado",
+  "dashboard.no-expiring-certificates": "No hay certificados que caduquen pronto",
+  "dashboard.status_ok": "¡Todo se ve bien!",
   "dead-host": "Host 404",
   "dead-hosts": "Hosts 404",
   "dead-hosts.count": "{count} {count, plural, one {Host 404} other {Hosts 404}}",

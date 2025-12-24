@@ -98,14 +98,11 @@
   "confirm": "Conferma",
   "created-on": "Creato: {date}",
   "current": "Attuale",
-  "dashboard": {
-    "certificates-expiring": "Certificati in scadenza",
-    "greeting": {
-      "morning": "Buongiorno",
-      "afternoon": "Buon pomeriggio",
-      "evening": "Buonasera"
-    }
-  },
+  "dashboard": "Dashboard",
+  "dashboard.certificates-expiring": "Certificati in scadenza",
+  "dashboard.greeting.morning": "Buongiorno",
+  "dashboard.greeting.afternoon": "Buon pomeriggio",
+  "dashboard.greeting.evening": "Buonasera",
   "dashboard.days-left": "{days} {days, plural, one {Giorno} other {Giorni}} rimanenti",
   "dashboard.expired": "Scaduto",
   "dashboard.no-expiring-certificates": "Nessun certificato in scadenza a breve",

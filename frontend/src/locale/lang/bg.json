@@ -98,14 +98,11 @@
   "confirm": "Потвърди",
   "created-on": "Създадено: {date}",
   "current": "Текущ",
-  "dashboard": {
-    "certificates-expiring": "Сертификати изтичащи скоро",
-    "greeting": {
-      "morning": "Добро утро",
-      "afternoon": "Dobry den",
-      "evening": "Dobry vecer"
-    }
-  },
+  "dashboard": "Табло",
+  "dashboard.certificates-expiring": "Сертификати изтичащи скоро",
+  "dashboard.greeting.morning": "Добро утро",
+  "dashboard.greeting.afternoon": "Dobry den",
+  "dashboard.greeting.evening": "Dobry vecer",
   "dashboard.certificates-expiring": "Сертификати изтичащи скоро",
   "dashboard.days-left": "{days} {days, plural, one {Ден} other {Дни}} остават",
   "dashboard.expired": "Изтекли",

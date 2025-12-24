@@ -98,14 +98,11 @@
   "confirm": "確認",
   "created-on": "作成日時: {date}",
   "current": "現在",
-  "dashboard": {
-    "certificates-expiring": "もうすぐ期限切れになる証明書",
-    "greeting": {
-      "morning": "おはようございます",
-      "afternoon": "こんにちは",
-      "evening": "こんばんは"
-    }
-  },
+  "dashboard": "ダッシュボード",
+  "dashboard.certificates-expiring": "もうすぐ期限切れになる証明書",
+  "dashboard.greeting.morning": "おはようございます",
+  "dashboard.greeting.afternoon": "こんにちは",
+  "dashboard.greeting.evening": "こんばんは",
   "dashboard.days-left": "残り {days} 日",
   "dashboard.expired": "期限切れ",
   "dashboard.no-expiring-certificates": "期限切れ間近の証明書はありません",
