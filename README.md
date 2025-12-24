@@ -1,9 +1,9 @@
 # NPMplus
 
 ![Version](https://img.shields.io/github/v/release/shedowe19/NPMplus?style=for-the-badge&color=blue)
-![Docker Pulls](https://img.shields.io/docker/pulls/zoeyvid/npmplus?style=for-the-badge&color=green)
+![Docker Pulls](https://img.shields.io/docker/pulls/shedowe19/npmplus?style=for-the-badge&color=green)
 ![License](https://img.shields.io/github/license/shedowe19/NPMplus?style=for-the-badge&color=orange)
-![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/NPMplus/build.yml?style=for-the-badge)
+![CI Status]([https://img.shields.io/github/actions/workflow/status/shedowe19/NPMplus/docker.yml?style=for-the-badge])
 
 **NPMplus** is an advanced, security-focused fork of Nginx Proxy Manager (NPM). It empowers you to manage Nginx reverse proxies with a user-friendly web interface while integrating cutting-edge features like **HTTP/3 (QUIC)**, **CrowdSec IPS**, **ModSecurity (WAF)**, and **enhanced TLS certificate management**.
 
