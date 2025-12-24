@@ -16,11 +16,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Sync Wiki
-        uses: JoeIzzard/ghaction-wiki-sync@master
+        uses: Newrez/bi-directional-wiki-sync-action@v1.0.1
         with:
-          wiki_folder: "docs/wiki"
-          username: shedowe19
-          access_token: ${{ secrets.GITHUB_TOKEN }}
-          commit_username: 'GitHub Actions'
-          commit_email: 'actions@github.com'
-          commit_message: 'action: wiki sync'
+          source: docs/wiki
+          destination: wiki
+          token: ${{ secrets.GITHUB_TOKEN }}
+          gitAuthorName: ${{ github.actor }}
+          gitAuthorEmail: ${{ github.actor }}@users.noreply.github.com
