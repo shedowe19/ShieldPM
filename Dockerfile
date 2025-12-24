@@ -7,7 +7,7 @@ WORKDIR /app/frontend
 RUN apk upgrade --no-cache -a && \
     apk add --no-cache ca-certificates nodejs yarn && \
     yarn install --production=false && \
-    yarn formatjs compile-folder src/locale/src src/locale/lang && \
+
     yarn tsc && \
     yarn vite build
 
