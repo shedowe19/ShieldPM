@@ -20,6 +20,14 @@ The domain names that this proxy host will respond to. You can specify multiple 
 *   **Block Common Exploits:** Blocks common attack patterns (SQL injection, XSS) using basic Nginx rules.
 *   **Websockets Support:** Enables upgrade headers for Websocket connections. **Required** for many modern apps (Home Assistant, Nextcloud, etc.).
 
+### Advanced Features
+*   **Bandwidth Limit:** Dynamically throttles the bandwidth for clients.
+    *   *Usage:* Enter a value like `100k` (Kilobytes/s) or `1m` (Megabytes/s).
+    *   *Logic:* NPMplus uses dynamic damping. It allows bursts initially but slows down long downloads to the specified rate.
+*   **Forward Query:** Allows you to append additional query parameters to every request forwarded to the backend.
+    *   *Usage:* `foo=bar&baz=1`. Nginx appends this to the upstream request URL.
+    *   *Note:* Standard query parameters from the client are always forwarded. This field is for *injecting* extra ones.
+
 ## 📂 Locations
 
 Locations allow you to map specific URL paths to different backend services or configurations.
