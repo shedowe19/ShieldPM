@@ -17,6 +17,7 @@
 *   **[Configuration](Configuration)**: detailed environment variables and database setup.
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
 *   **[Prerequisites & Best Practices](Best-Practices)**: Backup strategies, security hardening, and performance tips.
+*   **[Cookbook & Recipes](Cookbook)**: Configuration guides for Nextcloud, Home Assistant, Jellyfin, and more.
 
 ### Host Management
 *   **[Proxy Hosts](Proxy-Hosts)**: Detailed guide on configuring hosts, locations, and cache.
@@ -30,6 +31,7 @@
 ### Advanced
 *   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, Streams, and custom configs.
 *   **[Architecture & Internals](Architecture)**: Data flow, file structure, and internal CLI tools.
+*   **[API Documentation](API-Docs)**: Developer reference for the REST API.
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).
 *   **[Development](Development)**: How to build and test NPMplus locally.
 
