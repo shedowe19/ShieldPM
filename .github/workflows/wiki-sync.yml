@@ -17,6 +17,8 @@ env:
 jobs:
   job-sync-docs-to-wiki:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
