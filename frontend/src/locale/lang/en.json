@@ -98,8 +98,14 @@
   "confirm": "Confirm",
   "created-on": "Created: {date}",
   "current": "Current",
-  "dashboard": "Dashboard",
-  "dashboard.certificates-expiring": "Certificates Expiring Soon",
+  "dashboard": {
+    "certificates-expiring": "Certificates expiring soon",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    }
+  },
   "dashboard.days-left": "{days} {days, plural, one {Day} other {Days}} Left",
   "dashboard.expired": "Expired",
   "dashboard.no-expiring-certificates": "No certificates expiring soon",

@@ -1,4 +1,4 @@
-import { IconArrowsCross, IconBolt, IconBoltOff, IconDashboard, IconDisc } from "@tabler/icons-react";
+import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { HasPermission } from "src/components";
@@ -30,16 +30,15 @@ const Dashboard = () => {
 
 	const date = new Date();
 	const hours = date.getHours();
-	let greeting = "";
-	if (hours < 12) greeting = "Good morning";
-	else if (hours < 18) greeting = "Good afternoon";
-	else greeting = "Good evening";
+	let greeting = "dashboard.greeting.evening";
+	if (hours < 12) greeting = "dashboard.greeting.morning";
+	else if (hours < 18) greeting = "dashboard.greeting.afternoon";
 
 	return (
 		<motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
 			<div className="flex flex-col space-y-2">
 				<h2 className="text-3xl font-bold tracking-tight">
-					{greeting}, User
+					<T id={greeting} />, User
 				</h2>
 				<p className="text-muted-foreground">
 					{date.toLocaleDateString(undefined, {
