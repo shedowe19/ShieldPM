@@ -52,4 +52,4 @@ In the **Access List** dialog, scroll to the Authorization section:
 5.  Nginx verifies the token, sets a session cookie, and allows access.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

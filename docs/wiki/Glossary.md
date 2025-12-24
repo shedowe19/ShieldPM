@@ -46,4 +46,4 @@ Common terms used in NPMplus and networking.
 *   **Wildcard Certificate:** An SSL certificate that covers a domain and all its subdomains (e.g., `*.example.com`).
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

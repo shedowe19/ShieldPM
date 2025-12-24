@@ -77,4 +77,4 @@ By default, these are printed to the docker logs. If you enabled `LOGROTATE=true
 *   **Check Logs:** Look for "ACME" or "Certbot" errors in the docker logs.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

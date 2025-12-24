@@ -77,4 +77,4 @@ Automate startup tasks (e.g., installing extra packages, fixing permissions).
 3.  Set `ENABLE_PRERUN: "true"` in `compose.yaml`.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

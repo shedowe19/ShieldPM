@@ -19,6 +19,7 @@
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
 *   **[Prerequisites & Best Practices](Best-Practices)**: Backup strategies, security hardening, and performance tips.
 *   **[Cookbook & Recipes](Cookbook)**: Configuration guides for Nextcloud, Home Assistant, Jellyfin, and more.
+*   **[Backup & Restore](Backup-Restore)**: Dedicated guide for backing up and restoring your instance.
 *   **[Glossary](Glossary)**: Definitions of common terms.
 
 ### Host Management
@@ -38,12 +39,12 @@
 *   **[API Documentation](API-Docs)**: Developer reference for the REST API.
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).
 *   **[Development](Development)**: How to build and test NPMplus locally.
+*   **[CLI Reference](CLI-Reference)**: Documentation for internal scripts and `cscli` usage.
 
 ## 🤝 Community & Support
 
 *   [GitHub Discussions](https://github.com/shedowe19/NPMplus/discussions)
-*   [Discord Server](https://discord.gg/y8DhYhv427)
 *   [Report a Bug](https://github.com/shedowe19/NPMplus/issues)
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

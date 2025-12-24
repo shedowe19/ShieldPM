@@ -73,4 +73,4 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR...
 Returns counts of all host types (proxy, redirection, dead, stream) and their status.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

@@ -43,4 +43,4 @@ Control how NPMplus listens on IPv6 via `compose.yaml`:
     *   *Fix:* Use the IPv4 address of the backend or fix Docker IPv6.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

@@ -38,4 +38,4 @@ If a legitimate request is blocked (403 Forbidden):
 You can enable CRS plugins (e.g., for WordPress / Nextcloud exclusions) by placing them in `/opt/npmplus/modsecurity/crs-plugins` and enabling them in the config.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

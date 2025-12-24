@@ -377,7 +377,6 @@ The container may initiate outbound connections to:
 ## 🤝 Contributing & Support
 
 *   **Support**: [GitHub Discussions](https://github.com/shedowe19/NPMplus/discussions)
-*   **Chat**: [Discord Server](https://discord.gg/y8DhYhv427)
 *   **Bugs**: [GitHub Issues](https://github.com/shedowe19/NPMplus/issues)
 
 **Maintained with ❤️ by the open source community.**

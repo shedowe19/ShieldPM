@@ -56,4 +56,4 @@ NPMplus is designed to be deployed using **Docker Compose**.
     Log in and check your hosts. If you are proxying NPMplus through itself, ensure the scheme is set to **HTTPS**.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

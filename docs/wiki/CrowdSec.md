@@ -72,4 +72,4 @@ docker exec crowdsec cscli collections install ZoeyVid/npmplus
 *   **Unban an IP:** `cscli decisions delete --ip 1.2.3.4`
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

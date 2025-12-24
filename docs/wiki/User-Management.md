@@ -30,4 +30,4 @@ The **Audit Log** tracks changes made within the NPMplus interface.
 *   **Usage:** Useful for troubleshooting "who changed what" and for security compliance.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

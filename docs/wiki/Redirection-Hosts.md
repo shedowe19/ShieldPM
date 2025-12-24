@@ -31,4 +31,4 @@ Use these to explicitly **block** a domain or handle wildcard catch-alls.
 This is excellent for security to prevent domain hijacking or scanning of undefined subdomains.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
