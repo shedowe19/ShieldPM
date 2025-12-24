@@ -18,6 +18,5 @@ jobs:
         uses: JoeIzzard/ghaction-wiki-sync@v1.0.1
         with:
           wiki_folder: "docs/wiki"
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.actor }}
+          access_token: ${{ secrets.GITHUB_TOKEN }}
