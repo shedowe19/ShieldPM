@@ -7,19 +7,25 @@ on:
     paths:
       - "docs/wiki/**"
   workflow_dispatch:
+  repository_dispatch:
+    types: [docs]
+
+env:
+  GIT_AUTHOR_NAME: Actionbot
+  GIT_AUTHOR_EMAIL: actions@github.com
 
 jobs:
-  sync-wiki:
+  job-sync-docs-to-wiki:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
 
-      - name: Sync Wiki
+      - name: Sync docs to wiki
         uses: newrelic/wiki-sync-action@main
         with:
           source: docs/wiki
           destination: wiki
           token: ${{ secrets.GITHUB_TOKEN }}
-          gitAuthorName: ${{ github.actor }}
-          gitAuthorEmail: ${{ github.actor }}@users.noreply.github.com
+          gitAuthorName: ${{ env.GIT_AUTHOR_NAME }}
+          gitAuthorEmail: ${{ env.GIT_AUTHOR_EMAIL }}
