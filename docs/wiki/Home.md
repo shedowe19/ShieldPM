@@ -15,6 +15,7 @@
 ### Basics
 *   **[Installation](Installation)**: Get started with Docker Compose and migration guides.
 *   **[Configuration](Configuration)**: detailed environment variables and database setup.
+*   **[IPv6 Configuration](IPv6)**: Setup guide for Docker and IPv6.
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
 *   **[Prerequisites & Best Practices](Best-Practices)**: Backup strategies, security hardening, and performance tips.
 *   **[Cookbook & Recipes](Cookbook)**: Configuration guides for Nextcloud, Home Assistant, Jellyfin, and more.
@@ -24,9 +25,11 @@
 *   **[Redirection & Dead Hosts](Redirection-Hosts)**: Managing 301/302 redirects and 404 blocks.
 *   **[SSL Certificates](SSL-Certificates)**: Let's Encrypt, Custom Certs, and HSTS best practices.
 
-### Security & Access
-*   **[Security](Security)**: Setup CrowdSec, ModSecurity, and other security features.
-*   **[User Management](User-Management)**: Managing users, permissions, and Access Lists.
+### Security
+*   **[Security Overview](Security)**: Introduction to security features.
+*   **[CrowdSec Deep Dive](CrowdSec)**: Setup, Bouncer, and Collections.
+*   **[ModSecurity Deep Dive](ModSecurity)**: OWASP CRS, Paranoia Levels, and Tuning.
+*   **[Access Lists](Access-Lists)**: Basic Auth, IP Ranges, and Authorization.
 
 ### Advanced
 *   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, Streams, and custom configs.

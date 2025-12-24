@@ -1,43 +1,24 @@
-# Security Features
+# Security Overview
 
-NPMplus puts security at the forefront.
+NPMplus integrates robust security features to protect your services.
 
-## 🛡️ Core Security
+## 🛡️ Core Features
+*   **HTTP/3 (QUIC) & TLS 1.3:** Modern, secure protocols enabled by default.
+*   **HSTS:** Enforce HTTPS security headers.
 
-*   **HTTP/3 (QUIC):** Enabled by default (requires UDP port 443 exposed). Provides faster connection establishment and better performance on unreliable networks.
-*   **HSTS:** HTTP Strict Transport Security is recommended. `NGINX_HSTS_SUBDOMAINS=true` enforces it for subdomains as well.
-*   **Protocol Optimization:** Only secure TLSv1.2 and TLSv1.3 are enabled. Weak ciphers are disabled.
-
-## 🦅 CrowdSec Integration (IPS)
-
-[CrowdSec](https://www.crowdsec.net/) is an open-source IPS that can block malicious IPs based on community intelligence.
-
-### Setup Guide
-1.  **Install CrowdSec** container (see `compose.yaml` example).
-2.  **Enable Logging:** Set `LOGROTATE: "true"` in NPMplus `compose.yaml`.
-3.  **Configure Acquisition:**
-    Create `/opt/crowdsec/conf/acquis.d/npmplus.yaml`:
-    ```yaml
-    filenames:
-      - /opt/npmplus/nginx/*.log
-    labels:
-      type: npmplus
-    ```
-4.  **Connect-Bouncer:**
-    Run `docker exec crowdsec cscli bouncers add npmplus -o raw` to get an API key, then add it to `/opt/npmplus/crowdsec/crowdsec.conf`.
+## 🦅 CrowdSec (IPS)
+Detect and block attacks using community-driven threat intelligence.
+👉 **[Read the CrowdSec Deep Dive](CrowdSec)**
 
 ## 🔥 ModSecurity (WAF)
+Inspect traffic for malicious payloads using OWASP Core Rule Set.
+👉 **[Read the ModSecurity Deep Dive](ModSecurity)**
 
-Web Application Firewall integration using the **OWASP Core Rule Set (CRS)**.
-
-### How to use
-1.  **Download Plugins:** Get the CRS plugin files.
-2.  **Place Files:** Put them in `/opt/npmplus/modsecurity/crs-plugins`.
-3.  **Activate:** Configure the specific `<plugin>-config.conf` files as needed.
-4.  **Enable in UI:** When creating a Proxy Host, toggle "ModSecurity" on.
+## 🛑 Access Control
+Restrict access using Basic Auth and IP ranges.
+👉 **[Read the Access Lists Guide](Access-Lists)**
 
 ## 🔐 OpenAppSec
-
-NPMplus supports [OpenAppSec](https://www.openappsec.io/) for advanced machine learning-based protection.
-*   Enable via `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`.
-*   Requires a dedicated `openappsec-agent` container (see `compose.yaml`).
+Machine Learning based WAF support.
+*   Requires `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`.
+*   See `compose.yaml` for container setup.
