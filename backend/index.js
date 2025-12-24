@@ -9,10 +9,13 @@ import { migrateUp } from "./migrate.js";
 import { getCompiledSchema } from "./schema/index.js";
 import setup from "./setup.js";
 
+import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
+
 const IP_RANGES_FETCH_ENABLED = process.env.SKIP_IP_RANGES === "false";
 
 async function appStart() {
 	try {
+		await migrateFromSqliteToNewDb();
 		await migrateUp();
 		await setup();
 		await getCompiledSchema();

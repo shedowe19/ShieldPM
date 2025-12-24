@@ -20,4 +20,4 @@ jobs:
           check_filenames: true
           check_hidden: true
           skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/src
-          ignore_words_list: afterAll,alog,nd,devlop,trough
+          ignore_words_list: afterAll,alog,nd,devlop,trough,hastable

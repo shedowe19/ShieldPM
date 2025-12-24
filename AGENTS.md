@@ -70,6 +70,11 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20240427161436_stream_ssl.js`: SSL support for Streams.
     *   `20251212000000_add_bandwidth_limit.js`: New bandwidth limiting feature.
 
+### Auto-Migration (SQLite to MySQL/Postgres)
+The application includes an auto-migration feature that detects if you are switching from the default SQLite database to MySQL or PostgreSQL.
+*   **Trigger**: Running the app with `DB_MYSQL_*` or `DB_POSTGRES_*` configured, an existing `database.sqlite` file present, and an empty target database.
+*   **Action**: Automatically migrates all data from SQLite to the new database on startup and renames the old SQLite file to `database.sqlite.migrated`.
+
 ## Frontend Routing (`/frontend/src/Router.tsx`)
 The application uses `react-router-dom` with the following route map:
 
