@@ -12,14 +12,24 @@
 
 ## 📚 Documentation Sections
 
+### Basics
 *   **[Installation](Installation)**: Get started with Docker Compose and migration guides.
 *   **[Configuration](Configuration)**: detailed environment variables and database setup.
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
+*   **[Prerequisites & Best Practices](Best-Practices)**: Backup strategies, security hardening, and performance tips.
+
+### Host Management
 *   **[Proxy Hosts](Proxy-Hosts)**: Detailed guide on configuring hosts, locations, and cache.
+*   **[Redirection & Dead Hosts](Redirection-Hosts)**: Managing 301/302 redirects and 404 blocks.
 *   **[SSL Certificates](SSL-Certificates)**: Let's Encrypt, Custom Certs, and HSTS best practices.
+
+### Security & Access
 *   **[Security](Security)**: Setup CrowdSec, ModSecurity, and other security features.
 *   **[User Management](User-Management)**: Managing users, permissions, and Access Lists.
+
+### Advanced
 *   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, Streams, and custom configs.
+*   **[Architecture & Internals](Architecture)**: Data flow, file structure, and internal CLI tools.
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).
 *   **[Development](Development)**: How to build and test NPMplus locally.
 
