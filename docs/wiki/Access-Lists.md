@@ -17,8 +17,8 @@ Restrict access to specific IP addresses or ranges.
 *   **Allow:** `192.168.1.5` (Single IP) or `10.0.0.0/24` (Subnet).
 *   **Deny:** Block specific malicious IPs.
 
-**Logic:**
-If *any* Allow rule exists, all other IPs are implicitly denied (unless they match another Allow rule). If only Deny rules exist, everyone else is allowed.
+> [!NOTE]
+> **Logic:** If *any* Allow rule exists, all other IPs are implicitly denied (unless they match another Allow rule). If only Deny rules exist, everyone else is allowed.
 
 ## 🔐 Advanced Authorization
 
@@ -50,3 +50,6 @@ In the **Access List** dialog, scroll to the Authorization section:
 3.  If missing, user is redirected to the IdP (e.g., "Sign in with Google").
 4.  After success, IdP redirects back to the callback URL.
 5.  Nginx verifies the token, sets a session cookie, and allows access.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

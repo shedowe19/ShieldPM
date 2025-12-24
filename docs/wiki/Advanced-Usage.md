@@ -40,12 +40,13 @@ This approach keeps your containers clean and separated.
 ### Defined Locations
 You can add custom Nginx directives to specific locations in the **Locations** tab of a Proxy Host.
 
-*   **Example: Protecting a path**
-    Add a location `/admin`, and in the Custom Config gear icon:
-    ```nginx
-    allow 192.168.1.0/24;
-    deny all;
-    ```
+> [!TIP]
+> **Example: Protecting a path**
+> Add a location `/admin`, and in the Custom Config gear icon:
+> ```nginx
+> allow 192.168.1.0/24;
+> deny all;
+> ```
 
 ### Custom Upstreams (Load Balancing)
 1.  Create `/opt/npmplus/custom_nginx/http_top.conf`.
@@ -74,3 +75,6 @@ Automate startup tasks (e.g., installing extra packages, fixing permissions).
 1.  Create `/opt/npmplus/prerun/myscript.sh`.
 2.  Ensure it has `#!/usr/bin/env sh` and is executable.
 3.  Set `ENABLE_PRERUN: "true"` in `compose.yaml`.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

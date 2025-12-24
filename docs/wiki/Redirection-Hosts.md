@@ -29,3 +29,6 @@ Use these to explicitly **block** a domain or handle wildcard catch-alls.
 3.  **Result:** Any request to this domain will immediately return a `404 Not Found` error page (or `444 No Response` if configured in `compose.yaml`), without hitting any backend.
 
 This is excellent for security to prevent domain hijacking or scanning of undefined subdomains.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

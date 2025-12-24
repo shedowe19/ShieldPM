@@ -4,6 +4,10 @@ This is the full reference `compose.yaml` file for NPMplus. You can use this to 
 
 ## 📝 compose.yaml
 
+> [!NOTE]
+> This is a comprehensive reference file containing all available `compose.yaml` options. You do not need to use all of them. Use the [Installation Guide](Installation) for a standard setup.
+
+
 ```yaml
 services:
   npmplus:
@@ -267,3 +271,6 @@ services:
 #       type: tmpfs
 #       device: tmpfs
 ```
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

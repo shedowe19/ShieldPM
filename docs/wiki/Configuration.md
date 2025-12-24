@@ -49,3 +49,6 @@ If you switch from SQLite to an external database (MySQL/Postgres) and start a f
 *   `IPV6_BINDING`: Bind to specific IPv6 (default: all).
 *   `DISABLE_IPV6`: Set to `true` to fully disable IPv6 listening.
 *   `network_mode: host`: Recommended for best performance and IP visibility (requires adjusting ports if they conflict).
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

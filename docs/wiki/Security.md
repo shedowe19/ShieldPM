@@ -22,3 +22,6 @@ Restrict access using Basic Auth and IP ranges.
 Machine Learning based WAF support.
 *   Requires `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`.
 *   See `compose.yaml` for container setup.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

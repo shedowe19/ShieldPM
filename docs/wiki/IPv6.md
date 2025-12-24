@@ -41,3 +41,6 @@ Control how NPMplus listens on IPv6 via `compose.yaml`:
 
 *   **"Host not found" / 502 Bad Gateway:** If your backend resolves to an IPv6 address but Docker doesn't support it, Nginx might try to connect via IPv6 and fail.
     *   *Fix:* Use the IPv4 address of the backend or fix Docker IPv6.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

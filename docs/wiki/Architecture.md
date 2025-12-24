@@ -41,3 +41,6 @@ docker exec -it npmplus node /usr/local/bin/sqlite-vaccum.js
 
 ### `clean-modules`
 Used during the build process to remove unnecessary files from `node_modules`, keeping the image size small.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

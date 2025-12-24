@@ -51,3 +51,6 @@ client_max_body_size 10G;
 ```nginx
 proxy_set_header X-Custom-Header "MyValue";
 ```
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

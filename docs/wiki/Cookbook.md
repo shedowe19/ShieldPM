@@ -59,3 +59,6 @@ Securing the AdGuard Home web interface.
 1.  **Scheme:** `http`
 2.  **Forward Port:** `80` (or `3000` depending on setup).
 3.  **Location:** If you want to host it under a subpath (e.g., `/adguard`), note that AdGuard Home does not natively support base URLs easily. It is **highly recommended** to use a subdomain (e.g., `dns.example.com`).
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

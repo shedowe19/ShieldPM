@@ -51,3 +51,6 @@ To build the full image locally:
 docker build -t npmplus:local .
 ```
 This multi-stage build will compile the frontend, install backend dependencies, and assemble the final Alpine-based image.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

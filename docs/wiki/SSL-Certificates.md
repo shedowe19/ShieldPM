@@ -38,3 +38,6 @@ Enabling HSTS tells browsers to *only* connect to your site via HTTPS for a spec
 
 ### OCSP Stapling
 NPMplus automatically handles OCSP stapling to improve privacy and connection speed. It checks the certificate validity with the issuer and serves this "stapled" response to the client.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

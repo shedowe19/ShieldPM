@@ -19,6 +19,7 @@
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
 *   **[Prerequisites & Best Practices](Best-Practices)**: Backup strategies, security hardening, and performance tips.
 *   **[Cookbook & Recipes](Cookbook)**: Configuration guides for Nextcloud, Home Assistant, Jellyfin, and more.
+*   **[Glossary](Glossary)**: Definitions of common terms.
 
 ### Host Management
 *   **[Proxy Hosts](Proxy-Hosts)**: Detailed guide on configuring hosts, locations, and cache.
@@ -43,3 +44,6 @@
 *   [GitHub Discussions](https://github.com/shedowe19/NPMplus/discussions)
 *   [Discord Server](https://discord.gg/y8DhYhv427)
 *   [Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

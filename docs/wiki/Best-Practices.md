@@ -31,3 +31,6 @@ Enable **HTTP/3** to improve performance, especially for mobile clients or on hi
 
 ### Caching
 For static sites (blogs, landing pages), enable **Cache Assets** in the Proxy Host configuration. This serves images and CSS directly from Nginx memory/disk, reducing load on your backend.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)

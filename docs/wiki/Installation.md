@@ -35,7 +35,8 @@ NPMplus is designed to be deployed using **Docker Compose**.
 
 ## 📦 Migration from Original NPM
 
-**⚠️ Important:** Migration is one-way. You cannot downgrade back to the original NPM easily. Always create a backup first!
+> [!IMPORTANT]
+> **Backup Required:** Migration is one-way. You cannot downgrade back to the original NPM easily. Always create a backup first!
 
 1.  **Backup Data:**
     Backup your existing `/data` and `/etc/letsencrypt` directories.
@@ -53,3 +54,6 @@ NPMplus is designed to be deployed using **Docker Compose**.
 
 5.  **Verify:**
     Log in and check your hosts. If you are proxying NPMplus through itself, ensure the scheme is set to **HTTPS**.
+
+---
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues) | [💬 Discord](https://discord.gg/y8DhYhv427)
