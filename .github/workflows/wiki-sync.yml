@@ -15,7 +15,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Sync Wiki
-        uses: spenserblack/actions-wiki-sync@v2
+        uses: JoeIzzard/ghaction-wiki-sync@v1.0.1
         with:
-          run_only_on_paths: "docs/wiki"
           wiki_folder: "docs/wiki"
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
