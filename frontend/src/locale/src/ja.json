@@ -302,6 +302,15 @@
 	"dashboard.certificates-expiring": {
 		"defaultMessage": "もうすぐ期限切れになる証明書"
 	},
+	"dashboard.greeting.afternoon": {
+		"defaultMessage": "こんにちは"
+	},
+	"dashboard.greeting.evening": {
+		"defaultMessage": "こんばんは"
+	},
+	"dashboard.greeting.morning": {
+		"defaultMessage": "おはようございます"
+	},
 	"dashboard.days-left": {
 		"defaultMessage": "残り {days} 日"
 	},

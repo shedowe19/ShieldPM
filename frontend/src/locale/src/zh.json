@@ -302,6 +302,15 @@
 	"dashboard.certificates-expiring": {
 		"defaultMessage": "证书即将过期"
 	},
+	"dashboard.greeting.afternoon": {
+		"defaultMessage": "下午好"
+	},
+	"dashboard.greeting.evening": {
+		"defaultMessage": "晚上好"
+	},
+	"dashboard.greeting.morning": {
+		"defaultMessage": "早上好"
+	},
 	"dashboard.days-left": {
 		"defaultMessage": "剩余 {days} {days, plural, one {天} other {天}}"
 	},

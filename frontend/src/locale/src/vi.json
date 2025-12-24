@@ -302,6 +302,15 @@
 	"dashboard.certificates-expiring": {
 		"defaultMessage": "Chứng chỉ sắp hết hạn"
 	},
+	"dashboard.greeting.afternoon": {
+		"defaultMessage": "Chào buổi chiều"
+	},
+	"dashboard.greeting.evening": {
+		"defaultMessage": "Chào buổi tối"
+	},
+	"dashboard.greeting.morning": {
+		"defaultMessage": "Chào buổi sáng"
+	},
 	"dashboard.days-left": {
 		"defaultMessage": "Còn lại {days} {days, plural, one {ngày} other {ngày}}"
 	},

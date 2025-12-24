@@ -302,6 +302,15 @@
 	"dashboard.certificates-expiring": {
 		"defaultMessage": "Сертификати изтичащи скоро"
 	},
+	"dashboard.greeting.afternoon": {
+		"defaultMessage": "Dobry den"
+	},
+	"dashboard.greeting.evening": {
+		"defaultMessage": "Dobry vecer"
+	},
+	"dashboard.greeting.morning": {
+		"defaultMessage": "Добро утро"
+	},
 	"dashboard.days-left": {
 		"defaultMessage": "{days} {days, plural, one {Ден} other {Дни}} остават"
 	},

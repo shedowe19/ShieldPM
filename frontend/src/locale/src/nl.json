@@ -302,6 +302,15 @@
 	"dashboard.certificates-expiring": {
 		"defaultMessage": "Certificaten verlopen binnenkort"
 	},
+	"dashboard.greeting.afternoon": {
+		"defaultMessage": "Goedemiddag"
+	},
+	"dashboard.greeting.evening": {
+		"defaultMessage": "Goedenavond"
+	},
+	"dashboard.greeting.morning": {
+		"defaultMessage": "Goedemorgen"
+	},
 	"dashboard.days-left": {
 		"defaultMessage": "Nog {days} {days, plural, one {dag} other {dagen}}"
 	},

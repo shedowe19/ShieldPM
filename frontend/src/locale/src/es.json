@@ -302,6 +302,15 @@
 	"dashboard.certificates-expiring": {
 		"defaultMessage": "Certificados que caducan pronto"
 	},
+	"dashboard.greeting.afternoon": {
+		"defaultMessage": "Buenas tardes"
+	},
+	"dashboard.greeting.evening": {
+		"defaultMessage": "Buenas noches"
+	},
+	"dashboard.greeting.morning": {
+		"defaultMessage": "Buenos días"
+	},
 	"dashboard.days-left": {
 		"defaultMessage": "Quedan {days} {days, plural, one {Día} other {Días}}"
 	},

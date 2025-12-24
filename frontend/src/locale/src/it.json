@@ -302,6 +302,15 @@
 	"dashboard.certificates-expiring": {
 		"defaultMessage": "Certificati in scadenza a breve"
 	},
+	"dashboard.greeting.afternoon": {
+		"defaultMessage": "Buon pomeriggio"
+	},
+	"dashboard.greeting.evening": {
+		"defaultMessage": "Buonasera"
+	},
+	"dashboard.greeting.morning": {
+		"defaultMessage": "Buongiorno"
+	},
 	"dashboard.days-left": {
 		"defaultMessage": "{days} {days, plural, one {Giorno} other {Giorni}} rimanenti"
 	},
