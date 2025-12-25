@@ -141,12 +141,7 @@ const setupCertbotPlugins = async () => {
 
 	// Ensure other certbot directories exist
 	try {
-		const dirs = [
-			"/data/certbot-log",
-			"/data/certbot-work",
-			"/data/acme-challenge",
-			"/data/tls/certbot",
-		];
+		const dirs = ["/data/certbot-log", "/data/certbot-work", "/data/acme-challenge", "/data/tls/certbot"];
 		for (const dir of dirs) {
 			if (!fs.existsSync(dir)) {
 				fs.mkdirSync(dir, { recursive: true });
