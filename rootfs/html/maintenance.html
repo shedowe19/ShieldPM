@@ -44,7 +44,6 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
-            /* Prevent scrollbars affecting layout */
         }
 
         body {
@@ -57,7 +56,7 @@
             position: relative;
         }
 
-        /* Background: Static now. No rotation. */
+        /* Static Background */
         .bg-mesh {
             position: absolute;
             inset: 0;
@@ -71,17 +70,15 @@
             pointer-events: none;
         }
 
+        /* Static Container */
         .container {
             position: relative;
             z-index: 10;
             width: 90%;
             max-width: 600px;
             background: var(--card-surface);
-
-            /* Remove backdrop filter if it causes perf/render issues on resize */
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
-
             border: 1px solid var(--card-border);
             border-radius: 24px;
             padding: 4rem;
@@ -89,16 +86,10 @@
                 0 0 0 1px rgba(255, 255, 255, 0.02),
                 0 24px 48px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
-
-            /* Ensure absolutely no transforms */
             transform: none !important;
         }
 
-        /* 
-           REMOVED: .shake animation
-           REMOVED: .animate-in check
-        */
-
+        /* Static Icon Area */
         .icon-area {
             width: 80px;
             height: 80px;
@@ -110,8 +101,6 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 0 30px var(--brand-glow), inset 0 0 20px rgba(139, 92, 246, 0.1);
-
-            /* REMOVED: floatIcon animation */
         }
 
         .icon-area svg {
@@ -179,12 +168,12 @@
             box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
         }
 
+        /* Re-enabled Pulsing for Error Dot */
         .dot.err {
             background: var(--danger);
             box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+            animation: pulseErr 2s infinite;
         }
-
-        /* Removed pulseErr */
 
         .connector {
             height: 2px;
@@ -201,12 +190,11 @@
             left: 0;
             width: 100%;
             height: 100%;
+            /* RESTORED FLOW ANIMATION */
             background: linear-gradient(90deg, transparent, var(--success), transparent);
-            left: 0;
-            /* Static fill */
-            background: var(--success);
-            /* Solid color instead of moving gradient */
-            opacity: 0.3;
+            transform: translateX(-100%);
+            animation: flow 2s infinite ease-in-out;
+            opacity: 0.5;
         }
 
         .connector.blocked {
@@ -258,16 +246,12 @@
             font-size: 1rem;
             cursor: pointer;
             transition: opacity 0.2s;
-            /* Only opacity, no transform */
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            /* Ensure text is centered */
             gap: 0.5rem;
             user-select: none;
-
-            /* FIXED WIDTH to prevent layout shift on text change */
             width: 220px;
             box-sizing: border-box;
         }
@@ -313,7 +297,29 @@
             }
         }
 
-        /* ALL OTHER ANIMATIONS REMOVED */
+        /* Re-introduced Pulse for Error Dot */
+        @keyframes pulseErr {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Re-introduced Flow for Connector Line */
+        @keyframes flow {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
     </style>
 </head>
 
@@ -334,6 +340,7 @@
             This is likely a momentary issue with the upstream server.
         </p>
 
+        <!-- Visualizer with Animations Restored -->
         <div class="visualizer">
             <div class="step">
                 <div class="dot ok"></div>
@@ -387,7 +394,6 @@
         </div>
     </div>
 
-    <!-- Logic Script: Handles Status Check ONLY -->
     <script>
         let isChecking = false;
 
@@ -398,12 +404,10 @@
             const btn = document.querySelector('.btn-retry');
             const originalText = 'Reload Service';
 
-            // Set loading state
             btn.innerHTML = '<div class="spinner"></div> Checking...';
             btn.disabled = true;
 
             try {
-                // Must be GET to inspect content
                 const response = await fetch(window.location.href, {
                     method: 'GET',
                     cache: 'no-cache'
@@ -411,7 +415,6 @@
 
                 const text = await response.text();
 
-                // UNIQUE ID CHECK
                 if (text.includes('maintenance_active_id_789')) {
                     throw new Error('Maintenance page served');
                 }
@@ -420,7 +423,6 @@
                     throw new Error('Bad Gateway status');
                 }
 
-                // SUCCESS
                 btn.innerHTML = 'Online! Reloading...';
                 btn.classList.add('success');
 
@@ -429,12 +431,10 @@
                 }, 500);
 
             } catch (e) {
-                // FAILED - Static reset (no shake)
                 setTimeout(() => {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                     isChecking = false;
-                    // No shake animation. Static feedback only.
                 }, 600);
             }
         }
