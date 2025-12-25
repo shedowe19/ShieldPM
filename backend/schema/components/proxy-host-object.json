@@ -24,7 +24,8 @@
 		"hsts_enabled",
 		"hsts_subdomains",
 		"bandwidth_limit",
-		"forward_query"
+		"forward_query",
+		"maintenance_on_failure"
 	],
 	"properties": {
 		"id": {
@@ -76,11 +77,17 @@
 			"example": ""
 		},
 		"bandwidth_limit": {
-			"type": ["string", "null"],
+			"type": [
+				"string",
+				"null"
+			],
 			"example": ""
 		},
 		"forward_query": {
-			"type": ["string", "null"],
+			"type": [
+				"string",
+				"null"
+			],
 			"example": "api_key=123"
 		},
 		"meta": {
@@ -190,6 +197,10 @@
 				}
 			],
 			"example": null
+		},
+		"maintenance_on_failure": {
+			"type": "boolean",
+			"example": false
 		}
 	}
 }

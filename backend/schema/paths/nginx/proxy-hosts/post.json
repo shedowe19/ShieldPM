@@ -82,6 +82,9 @@
 						},
 						"locations": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/locations"
+						},
+						"maintenance_on_failure": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/maintenance_on_failure"
 						}
 					}
 				},
