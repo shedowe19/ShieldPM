@@ -65,6 +65,11 @@
             pointer-events: none;
         }
 
+        /* 
+           CRITICAL FIX: Default state is VISIBLE and STABLE.
+           No transforms, no opacity 0.
+           This ensures F5 reload simply renders the element in place.
+        */
         .container {
             position: relative;
             z-index: 10;
@@ -80,22 +85,14 @@
                 0 0 0 1px rgba(255, 255, 255, 0.02),
                 0 24px 48px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
-
-            /* Default State (Hidden for animation) */
-            opacity: 0;
-            transform: translateY(20px) scale(0.96);
         }
 
-        /* Only animate if NOT seen before */
-        body:not(.animation-seen) .container {
+        /* Entrance animation Class - Only added if JS decides to */
+        .animate-in {
             animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        /* Persistent State logic handle via JS injected class */
-        body.animation-seen .container {
-            opacity: 1;
-            transform: none;
-            animation: none;
+            opacity: 0;
+            /* Only hidden IF we are about to animate */
+            transform: translateY(20px) scale(0.96);
         }
 
         .shake {
@@ -114,12 +111,6 @@
             justify-content: center;
             box-shadow: 0 0 30px var(--brand-glow), inset 0 0 20px rgba(139, 92, 246, 0.1);
             animation: floatIcon 6s ease-in-out infinite;
-        }
-
-        /* If static mode, reduce movement */
-        body.animation-seen .icon-area {
-            animation: floatIcon 6s ease-in-out infinite;
-            /* Keep float, simpler context */
         }
 
         .icon-area svg {
@@ -319,7 +310,7 @@
             }
         }
 
-        /* Initial Entrance Animation */
+        /* Initial Entrance Animation - Applied ONLY via .animate-in class */
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -396,30 +387,12 @@
             }
         }
     </style>
-
-    <!-- Inline Script to set class BEFORE first paint if possible -->
-    <script>
-        if (sessionStorage.getItem('npmplus_maintenance_seen')) {
-            document.documentElement.classList.add('animation-seen');
-            // We apply to documentElement (html tag) to ensure CSS applies early
-        }
-    </script>
 </head>
 
-<body class=""> <!-- Removed JS check from body, handled by html tag logic + JS below -->
-    <script>
-        // Fallback or double ensure body has class
-        if (sessionStorage.getItem('npmplus_maintenance_seen')) {
-            document.body.classList.add('animation-seen');
-        } else {
-            // Set it for next time
-            sessionStorage.setItem('npmplus_maintenance_seen', 'true');
-        }
-    </script>
-
+<body>
     <div class="bg-mesh"></div>
 
-    <div class="container">
+    <div class="container" id="main-card">
         <div class="icon-area">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -486,7 +459,21 @@
         </div>
     </div>
 
+    <!-- Logic Script: Handles Stability & Status Check -->
     <script>
+        // 1. ANIMATION LOGIC: Inverted to be stable by default.
+        // We only add the animation class if this is a fresh session.
+        const card = document.getElementById('main-card');
+        const hasSeen = sessionStorage.getItem('npmplus_maintenance_seen');
+
+        if (!hasSeen) {
+            // First visit: Add animation class and set flag
+            card.classList.add('animate-in');
+            sessionStorage.setItem('npmplus_maintenance_seen', 'true');
+        }
+        // Else: Do nothing. Default CSS is stable/visible.
+
+        // 2. STATUS CHECK LOGIC
         let isChecking = false;
 
         async function checkStatus() {
@@ -522,8 +509,7 @@
                 btn.innerHTML = 'Online! Reloading...';
                 btn.classList.add('success');
 
-                // Remove seen flag so animation plays FRESH on the reappearing app if desired?
-                // No, we want maintenance page to be fresh if it happens again later.
+                // Clear session flag so next time it breaks, user sees fresh animation
                 sessionStorage.removeItem('npmplus_maintenance_seen');
 
                 setTimeout(() => {
