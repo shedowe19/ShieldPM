@@ -1,3 +1,4 @@
+<!-- maintenance_active_id_789 -->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -84,7 +85,6 @@
             transition: transform 0.2s ease;
         }
 
-        /* Shake Animation for Failed Retry */
         .shake {
             animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
         }
@@ -250,6 +250,12 @@
             align-items: center;
             gap: 0.5rem;
             user-select: none;
+        }
+
+        .btn-retry.success {
+            background: var(--success);
+            color: white;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
         }
 
         .btn-retry:hover {
@@ -457,23 +463,37 @@
             btn.disabled = true;
 
             try {
-                // We assume same-origin check for the current page
+                // Must be GET to inspect content
                 const response = await fetch(window.location.href, {
-                    method: 'HEAD',
+                    method: 'GET',
                     cache: 'no-cache'
                 });
 
-                // If Nginx serves the maintenance page, it usually returns 502 or 504.
-                // If the backend is back, it should return 200 (or anything else).
-                if (response.status === 502 || response.status === 504) {
-                    throw new Error('Still down');
+                // Get text to verify content
+                const text = await response.text();
+
+                // UNIQUE ID CHECK
+                // If the response contains our unique maintenance ID comment, we are definitely still blocked.
+                if (text.includes('maintenance_active_id_789')) {
+                    throw new Error('Maintenance page served');
                 }
 
-                // If we get here, it's back up!
-                window.location.reload();
+                // If status is still Bad Gateway (even without ID, as fallback)
+                if (response.status === 502 || response.status === 504) {
+                    throw new Error('Bad Gateway status');
+                }
+
+                // SUCCESS: Upstream is reachable!
+                btn.innerHTML = 'Online! Reloading...';
+                btn.classList.add('success');
+
+                // Wait a tiny bit for user to see success state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
 
             } catch (e) {
-                // Add artificial delay for ux
+                // Failure animation
                 setTimeout(() => {
                     const container = document.querySelector('.container');
 
