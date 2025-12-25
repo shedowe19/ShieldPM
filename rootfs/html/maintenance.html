@@ -10,18 +10,13 @@
 
         :root {
             --bg-dark: #09090b;
-            /* Zinc 950 */
             --card-surface: rgba(24, 24, 27, 0.6);
             --card-border: rgba(255, 255, 255, 0.08);
-
             --text-title: #f4f4f5;
             --text-body: #a1a1aa;
             --text-muted: #52525b;
-
             --brand-primary: #8b5cf6;
-            /* Violet 500 */
             --brand-glow: rgba(139, 92, 246, 0.25);
-
             --success: #10b981;
             --danger: #ef4444;
         }
@@ -55,7 +50,6 @@
             position: relative;
         }
 
-        /* Subtle animated background mesh */
         .bg-mesh {
             position: absolute;
             inset: -50%;
@@ -75,7 +69,6 @@
             z-index: 10;
             width: 90%;
             max-width: 600px;
-            /* Wider for more content */
             background: var(--card-surface);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
@@ -88,9 +81,14 @@
             text-align: center;
             opacity: 0;
             animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transition: transform 0.2s ease;
         }
 
-        /* Header Icon Area */
+        /* Shake Animation for Failed Retry */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
         .icon-area {
             width: 80px;
             height: 80px;
@@ -130,7 +128,6 @@
             font-weight: 400;
         }
 
-        /* Connection Visualizer v2 - More Compact & Clean */
         .visualizer {
             display: flex;
             align-items: center;
@@ -199,15 +196,14 @@
             opacity: 0.5;
         }
 
-        .connector.blocked .connector-fill {
-            display: none;
-        }
-
         .connector.blocked {
             background: linear-gradient(90deg, #27272a 50%, rgba(239, 68, 68, 0.2) 100%);
         }
 
-        /* Description Details/List */
+        .connector.blocked .connector-fill {
+            display: none;
+        }
+
         .details-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -248,17 +244,37 @@
             font-weight: 600;
             font-size: 1rem;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            user-select: none;
         }
 
         .btn-retry:hover {
-            transform: scale(1.05);
+            transform: translateY(-2px);
             box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
         }
 
         .btn-retry:active {
-            transform: scale(0.98);
+            transform: translateY(0);
+            opacity: 0.9;
+        }
+
+        .btn-retry:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-left-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
         .footer {
@@ -323,6 +339,36 @@
                 transform: translateX(100%);
             }
         }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
     </style>
 </head>
 
@@ -332,8 +378,6 @@
     <div class="container">
         <div class="icon-area">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"
-                    style="display:none;" />
                 <path stroke-linecap="round" stroke-linejoin="round"
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -345,7 +389,6 @@
             This is likely a momentary issue with the upstream server.
         </p>
 
-        <!-- Visualizer -->
         <div class="visualizer">
             <div class="step">
                 <div class="dot ok"></div>
@@ -365,7 +408,6 @@
             </div>
         </div>
 
-        <!-- Details Grid -->
         <div class="details-grid">
             <div class="detail-item">
                 <div class="detail-title">
@@ -391,7 +433,7 @@
             </div>
         </div>
 
-        <button class="btn-retry" onclick="window.location.reload()">
+        <button class="btn-retry" onclick="checkStatus()">
             Reload Service
         </button>
 
@@ -399,6 +441,55 @@
             Error Code: 502 / 504 &bull; Powered by NPMplus
         </div>
     </div>
+
+    <script>
+        let isChecking = false;
+
+        async function checkStatus() {
+            if (isChecking) return;
+            isChecking = true;
+
+            const btn = document.querySelector('.btn-retry');
+            const originalText = 'Reload Service';
+
+            // Set loading state
+            btn.innerHTML = '<div class="spinner"></div> Checking...';
+            btn.disabled = true;
+
+            try {
+                // We assume same-origin check for the current page
+                const response = await fetch(window.location.href, {
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                });
+
+                // If Nginx serves the maintenance page, it usually returns 502 or 504.
+                // If the backend is back, it should return 200 (or anything else).
+                if (response.status === 502 || response.status === 504) {
+                    throw new Error('Still down');
+                }
+
+                // If we get here, it's back up!
+                window.location.reload();
+
+            } catch (e) {
+                // Add artificial delay for ux
+                setTimeout(() => {
+                    const container = document.querySelector('.container');
+
+                    // Reset button
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    isChecking = false;
+
+                    // Trigger shake animation
+                    container.classList.remove('shake');
+                    void container.offsetWidth; // Trigger reflow
+                    container.classList.add('shake');
+                }, 600);
+            }
+        }
+    </script>
 </body>
 
 </html>
