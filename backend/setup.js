@@ -113,6 +113,24 @@ const setupDefaultSettings = async () => {
  * @returns {Promise<void>}
  */
 const setupCertbotPlugins = async () => {
+	// Ensure directory exists
+	try {
+		if (!fs.existsSync("/data/certbot-credentials")) {
+			fs.mkdirSync("/data/certbot-credentials");
+		}
+	} catch (err) {
+		logger.error("Could not create /data/certbot-credentials: " + err.message);
+	}
+
+	// Symlink for legacy certificates
+	try {
+		if (!fs.existsSync("/tmp/certbot-credentials")) {
+			fs.symlinkSync("/data/certbot-credentials", "/tmp/certbot-credentials");
+		}
+	} catch (err) {
+		logger.error("Could not create symlink for legacy certs: " + err.message);
+	}
+
 	const certificates = await certificateModel.query().where("is_deleted", 0).andWhere("provider", "letsencrypt");
 
 	if (certificates?.length) {

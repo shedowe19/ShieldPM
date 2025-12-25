@@ -784,7 +784,7 @@ const internalCertificate = {
 			return result;
 		} catch (err) {
 			// Don't fail if file does not exist, so no need for action in the callback
-			fs.unlink(credentialsLocation, () => {});
+			// fs.unlink(credentialsLocation, () => {});
 			throw err;
 		}
 	},
