@@ -110,6 +110,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								meta: data?.meta || {},
 							} as any
 						}
+						enableReinitialize
 						onSubmit={onSubmit}
 					>
 						{() => (
@@ -401,7 +402,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	{({ field, form }: any) => (
 																		<Switch
 																			id="meta.maintenance_on_failure"
-																			checked={field.value === true}
+																			checked={!!field.value}
 																			onCheckedChange={(checked) =>
 																				form.setFieldValue(
 																					"meta.maintenance_on_failure",
