@@ -139,6 +139,23 @@ const setupCertbotPlugins = async () => {
 		logger.error(`Could not create symlink for legacy certs: ${err.message}`);
 	}
 
+	// Ensure other certbot directories exist
+	try {
+		const dirs = [
+			"/data/certbot-log",
+			"/data/certbot-work",
+			"/data/acme-challenge",
+			"/data/tls/certbot",
+		];
+		for (const dir of dirs) {
+			if (!fs.existsSync(dir)) {
+				fs.mkdirSync(dir, { recursive: true });
+			}
+		}
+	} catch (err) {
+		logger.error(`Could not create certbot directories: ${err.message}`);
+	}
+
 	const certificates = await certificateModel.query().where("is_deleted", 0).andWhere("provider", "letsencrypt");
 
 	if (certificates?.length) {
