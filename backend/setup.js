@@ -124,9 +124,17 @@ const setupCertbotPlugins = async () => {
 
 	// Symlink for legacy certificates
 	try {
-		if (!fs.existsSync("/tmp/certbot-credentials")) {
-			fs.symlinkSync("/data/certbot-credentials", "/tmp/certbot-credentials");
+		const linkPath = "/tmp/certbot-credentials";
+		if (fs.existsSync(linkPath)) {
+			const stats = fs.lstatSync(linkPath);
+			if (stats.isDirectory()) {
+				fs.rmSync(linkPath, { recursive: true, force: true });
+			} else {
+				// It's a file or symlink, remove it to be safe
+				fs.unlinkSync(linkPath);
+			}
 		}
+		fs.symlinkSync("/data/certbot-credentials", linkPath);
 	} catch (err) {
 		logger.error("Could not create symlink for legacy certs: " + err.message);
 	}
