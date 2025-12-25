@@ -6,26 +6,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Maintenance</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
         :root {
-            --bg-dark: #030712;
-            --card-glass: rgba(17, 24, 39, 0.75);
-            --card-border: rgba(255, 255, 255, 0.06);
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
-            --accent-primary: #8b5cf6;
-            --accent-glow: rgba(139, 92, 246, 0.15);
+            --bg-dark: #09090b;
+            /* Zinc 950 */
+            --card-surface: rgba(24, 24, 27, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+
+            --text-title: #f4f4f5;
+            --text-body: #a1a1aa;
+            --text-muted: #52525b;
+
+            --brand-primary: #8b5cf6;
+            /* Violet 500 */
+            --brand-glow: rgba(139, 92, 246, 0.25);
+
+            --success: #10b981;
+            --danger: #ef4444;
         }
 
         @media (prefers-color-scheme: light) {
             :root {
-                --bg-dark: #f8fafc;
-                --card-glass: rgba(255, 255, 255, 0.85);
-                --card-border: rgba(0, 0, 0, 0.05);
-                --text-main: #0f172a;
-                --text-muted: #64748b;
-                --accent-primary: #6366f1;
+                --bg-dark: #f0f9ff;
+                --card-surface: rgba(255, 255, 255, 0.8);
+                --card-border: rgba(0, 0, 0, 0.08);
+                --text-title: #18181b;
+                --text-body: #52525b;
+                --text-muted: #a1a1aa;
             }
         }
 
@@ -36,10 +44,10 @@
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
-            color: var(--text-main);
-            height: 100vh;
+            color: var(--text-title);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -47,269 +55,348 @@
             position: relative;
         }
 
-        /* Sophisticated Background */
-        .ambient-glow {
+        /* Subtle animated background mesh */
+        .bg-mesh {
             position: absolute;
-            width: 100%;
-            height: 100%;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
             background:
-                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(6, 182, 212, 0.1), transparent 25%);
+                radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(236, 72, 153, 0.05) 0%, transparent 50%);
+            animation: rotateBackground 60s linear infinite;
             z-index: 0;
             pointer-events: none;
         }
 
-        .grid-overlay {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 30px 30px;
-            opacity: 0.5;
-            mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
-            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
-            z-index: 0;
-        }
-
-        .card {
+        .container {
             position: relative;
             z-index: 10;
             width: 90%;
-            max-width: 520px;
-            padding: 3.5rem;
-            border-radius: 32px;
-            background: var(--card-glass);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
+            max-width: 600px;
+            /* Wider for more content */
+            background: var(--card-surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 4rem;
             box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.03),
-                0 32px 64px -16px rgba(0, 0, 0, 0.4);
+                0 0 0 1px rgba(255, 255, 255, 0.02),
+                0 24px 48px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
             opacity: 0;
-            animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            transform: translateY(20px);
+            animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        /* Icon Graphic */
-        .status-graphic {
-            position: relative;
+        /* Header Icon Area */
+        .icon-area {
             width: 80px;
             height: 80px;
-            margin: 0 auto 2.5rem;
+            margin: 0 auto 2rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 0 30px var(--brand-glow), inset 0 0 20px rgba(139, 92, 246, 0.1);
+            animation: floatIcon 6s ease-in-out infinite;
         }
 
-        .pulse-ring {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 2px solid var(--accent-primary);
-            opacity: 0;
-            animation: ripple 3s infinite cubic-bezier(0, 0, 0.2, 1);
-        }
-
-        .pulse-ring:nth-child(2) {
-            animation-delay: 0.5s;
-        }
-
-        .icon-circle {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, var(--accent-primary), #6d28d9);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 30px var(--accent-glow);
-            z-index: 2;
-        }
-
-        .icon-circle svg {
-            color: white;
-            width: 32px;
-            height: 32px;
+        .icon-area svg {
+            color: var(--brand-primary);
+            width: 40px;
+            height: 40px;
+            filter: drop-shadow(0 0 8px var(--brand-glow));
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.25rem;
             font-weight: 700;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.04em;
             margin-bottom: 1rem;
-            background: linear-gradient(to bottom, #fff, #94a3b8);
+            background: linear-gradient(to bottom right, var(--text-title), var(--text-muted));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        p {
-            font-size: 1.1rem;
+        .subtitle {
+            font-size: 1.125rem;
+            color: var(--text-body);
             line-height: 1.6;
-            color: var(--text-muted);
             margin-bottom: 3rem;
+            font-weight: 400;
         }
 
-        /* Connecting Lines Visualization */
-        .connection-status {
+        /* Connection Visualizer v2 - More Compact & Clean */
+        .visualizer {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 1.5rem;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            padding: 1.5rem;
+            border-radius: 16px;
             margin-bottom: 3rem;
-            opacity: 0.7;
         }
 
-        .node {
-            width: 8px;
-            height: 8px;
-            background: #374151;
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
+            background: #3f3f46;
             position: relative;
+            transition: all 0.5s;
         }
 
-        .node.active {
-            background: #10b981;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        .dot.ok {
+            background: var(--success);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
         }
 
-        .node.error {
-            background: #ef4444;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        .dot.err {
+            background: var(--danger);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+            animation: pulseErr 2s infinite;
         }
 
-        .line {
+        .connector {
             height: 2px;
-            flex: 1;
-            max-width: 60px;
-            background: rgba(255, 255, 255, 0.1);
+            width: 60px;
+            background: #27272a;
             position: relative;
             overflow: hidden;
+            border-radius: 2px;
         }
 
-        .line-dot {
+        .connector-fill {
             position: absolute;
             top: 0;
             left: 0;
-            width: 50%;
+            width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, white, transparent);
+            background: linear-gradient(90deg, transparent, var(--success), transparent);
             transform: translateX(-100%);
-            animation: traverse 2s infinite ease-in-out;
-            opacity: 0.2;
+            animation: flow 2s infinite ease-in-out;
+            opacity: 0.5;
         }
 
-        /* Button */
-        .btn-primary {
-            background: #f8fafc;
-            color: #0f172a;
-            border: none;
-            padding: 1rem 2.5rem;
+        .connector.blocked .connector-fill {
+            display: none;
+        }
+
+        .connector.blocked {
+            background: linear-gradient(90deg, #27272a 50%, rgba(239, 68, 68, 0.2) 100%);
+        }
+
+        /* Description Details/List */
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            text-align: left;
+            margin-bottom: 3rem;
+        }
+
+        .detail-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
             border-radius: 12px;
+        }
+
+        .detail-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-title);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .btn-retry {
+            background: var(--text-title);
+            color: var(--bg-dark);
+            border: none;
+            padding: 1rem 3rem;
+            border-radius: 9999px;
             font-weight: 600;
             font-size: 1rem;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -5px rgba(255, 255, 255, 0.15);
+        .btn-retry:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
         }
 
-        .btn-primary:active {
-            transform: translateY(0);
+        .btn-retry:active {
+            transform: scale(0.98);
         }
 
         .footer {
             margin-top: 3rem;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+            opacity: 0.5;
         }
 
-        @keyframes fadeIn {
+        @keyframes rotateBackground {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: scale(1);
             }
         }
 
-        @keyframes ripple {
-            0% {
-                transform: scale(0.8);
+        @keyframes floatIcon {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes pulseErr {
+
+            0%,
+            100% {
                 opacity: 1;
             }
 
-            100% {
-                transform: scale(2);
-                opacity: 0;
+            50% {
+                opacity: 0.5;
             }
         }
 
-        @keyframes traverse {
+        @keyframes flow {
             0% {
                 transform: translateX(-100%);
             }
 
             100% {
-                transform: translateX(200%);
+                transform: translateX(100%);
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="ambient-glow"></div>
-    <div class="grid-overlay"></div>
+    <div class="bg-mesh"></div>
 
-    <div class="card">
-        <div class="status-graphic">
-            <div class="pulse-ring"></div>
-            <div class="pulse-ring"></div>
-            <div class="icon-circle">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
-                </svg>
-            </div>
+    <div class="container">
+        <div class="icon-area">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"
+                    style="display:none;" />
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
         </div>
 
-        <h1>System Unreachable</h1>
-
-        <p>
-            We're unable to establish a connection to the upstream server.<br>
-            It might be down for maintenance or experiencing high traffic.
+        <h1>Temporarily Unavailable</h1>
+        <p class="subtitle">
+            The requested service is currently unreachable. <br>
+            This is likely a momentary issue with the upstream server.
         </p>
 
-        <div class="connection-status">
-            <div class="node active" title="You"></div>
-            <div class="line">
-                <div class="line-dot"></div>
+        <!-- Visualizer -->
+        <div class="visualizer">
+            <div class="step">
+                <div class="dot ok"></div>
+                <span class="step-label">You</span>
             </div>
-            <div class="node active" title="Proxy"></div>
-            <div class="line">
-                <div class="line-dot"></div>
+            <div class="connector">
+                <div class="connector-fill"></div>
             </div>
-            <div class="node error" title="Upstream (Down)"></div>
+            <div class="step">
+                <div class="dot ok"></div>
+                <span class="step-label">Proxy</span>
+            </div>
+            <div class="connector blocked"></div>
+            <div class="step">
+                <div class="dot err"></div>
+                <span class="step-label">Host</span>
+            </div>
         </div>
 
-        <button class="btn-primary" onclick="window.location.reload()">
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M4 4v5h.058M20 20v-5h-.058M4.05 9a9 9 0 0115.3-3.6M19.95 15a9 9 0 01-15.3 3.6" />
-            </svg>
-            Reconnect
+        <!-- Details Grid -->
+        <div class="details-grid">
+            <div class="detail-item">
+                <div class="detail-title">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Maintenance</span>
+                </div>
+                <div class="detail-desc">
+                    Scheduled updates or patches may be in progress.
+                </div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-title">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span>High Traffic</span>
+                </div>
+                <div class="detail-desc">
+                    The server might be overloaded with incoming requests.
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-retry" onclick="window.location.reload()">
+            Reload Service
         </button>
 
         <div class="footer">
-            Reference ID: 502_BAD_GATEWAY
+            Error Code: 502 / 504 &bull; Powered by NPMplus
         </div>
     </div>
 </body>
