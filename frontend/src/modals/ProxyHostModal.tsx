@@ -95,6 +95,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								cachingEnabled: data?.cachingEnabled || false,
 								blockExploits: data?.blockExploits || false,
 								allowWebsocketUpgrade: data?.allowWebsocketUpgrade || false,
+								maintenanceOnFailure: data?.maintenanceOnFailure || false,
 								// Locations tab
 								locations: data?.locations || [],
 								// SSL tab
@@ -110,6 +111,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								meta: data?.meta || {},
 							} as any
 						}
+						enableReinitialize
 						onSubmit={onSubmit}
 					>
 						{() => (
@@ -383,6 +385,28 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			onCheckedChange={(checked) =>
 																				form.setFieldValue(
 																					"allowWebsocketUpgrade",
+																					checked,
+																				)
+																			}
+																		/>
+																	)}
+																</Field>
+															</div>
+															<div className="flex items-center justify-between">
+																<Label
+																	htmlFor="maintenanceOnFailure"
+																	className="flex-1 cursor-pointer"
+																>
+																	<T id="host.flags.maintenance-on-failure" />
+																</Label>
+																<Field name="maintenanceOnFailure" type="checkbox">
+																	{({ field, form }: any) => (
+																		<Switch
+																			id="maintenanceOnFailure"
+																			checked={field.checked}
+																			onCheckedChange={(checked) =>
+																				form.setFieldValue(
+																					"maintenanceOnFailure",
 																					checked,
 																				)
 																			}

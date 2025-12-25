@@ -29,6 +29,7 @@ const internalCertificate = {
 	intervalTimeout: 1000 * 60 * 60 * Number.parseInt(process.env.CRT, 10),
 	interval: null,
 	intervalProcessing: false,
+	processing: false,
 
 	initTimer: () => {
 		logger.info("Certbot Renewal Timer initialized");
@@ -44,8 +45,9 @@ const internalCertificate = {
 	 * Triggered by a timer, this will check for expiring hosts and renew their tls certs if required
 	 */
 	processExpiringHosts: async () => {
-		if (!internalCertificate.intervalProcessing) {
+		if (!internalCertificate.intervalProcessing && !internalCertificate.processing) {
 			internalCertificate.intervalProcessing = true;
+			internalCertificate.processing = true;
 			logger.info("Renewing Certbot TLS certs close to expiry...");
 
 			try {
@@ -95,6 +97,7 @@ const internalCertificate = {
 				logger.error(err);
 			} finally {
 				internalCertificate.intervalProcessing = false;
+				internalCertificate.processing = false;
 			}
 		}
 	},
@@ -784,7 +787,7 @@ const internalCertificate = {
 			return result;
 		} catch (err) {
 			// Don't fail if file does not exist, so no need for action in the callback
-			fs.unlink(credentialsLocation, () => {});
+			// fs.unlink(credentialsLocation, () => {});
 			throw err;
 		}
 	},
@@ -832,41 +835,32 @@ const internalCertificate = {
 	 * @returns {Promise}
 	 */
 	renewCertbot: async (certificate) => {
+		if (internalCertificate.processing) {
+			throw new Error("Another Certbot process is currently running. Please try again later.");
+		}
+
+		internalCertificate.processing = true;
+
 		logger.info(
 			`Renewing Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
 		);
 
-		logger.info(`Command: ${certbotCommand} ${args ? args.join(" ") : ""}`);
-
 		try {
-			const revokeResult = await utils.execFile("certbot", [
+			const renewResult = await utils.execFile("certbot", [
 				"--config",
 				"/etc/certbot.ini",
-				"revoke",
+				"renew",
+				"--server",
+				process.env.ACME_SERVER,
 				"--cert-name",
 				`npm-${certificate.id}`,
-				"--reason",
-				"superseded",
-				"--no-delete-after-revoke",
+				"--force-renewal",
 			]);
-			logger.info(revokeResult);
-		} catch {
-			// do nothing
+			logger.info(renewResult);
+			return renewResult;
+		} finally {
+			internalCertificate.processing = false;
 		}
-
-		const renewResult = await utils.execFile("certbot", [
-			"--config",
-			"/etc/certbot.ini",
-			"renew",
-			"--server",
-			process.env.ACME_SERVER,
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--force-renewal",
-		]);
-		logger.info(renewResult);
-
-		return renewResult;
 	},
 
 	/**
@@ -874,8 +868,15 @@ const internalCertificate = {
 	 * @returns {Promise}
 	 */
 	renewCertbotWithDnsChallenge: async (certificate) => {
+		if (internalCertificate.processing) {
+			throw new Error("Another Certbot process is currently running. Please try again later.");
+		}
+
+		internalCertificate.processing = true;
+
 		const dnsPlugin = dnsPlugins[certificate.meta.dns_provider];
 		if (!dnsPlugin) {
+			internalCertificate.processing = false;
 			throw Error(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
 		}
 
@@ -884,33 +885,21 @@ const internalCertificate = {
 		);
 
 		try {
-			const revokeResult = await utils.execFile("certbot", [
+			const renewResult = await utils.execFile("certbot", [
 				"--config",
 				"/etc/certbot.ini",
-				"revoke",
+				"renew",
+				"--server",
+				process.env.ACME_SERVER,
 				"--cert-name",
 				`npm-${certificate.id}`,
-				"--reason",
-				"superseded",
-				"--no-delete-after-revoke",
+				"--force-renewal",
 			]);
-			logger.info(revokeResult);
-		} catch {
-			// do nothing
+			logger.info(renewResult);
+			return renewResult;
+		} finally {
+			internalCertificate.processing = false;
 		}
-
-		const renewResult = await utils.execFile("certbot", [
-			"--config",
-			"/etc/certbot.ini",
-			"renew",
-			"--server",
-			process.env.ACME_SERVER,
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--force-renewal",
-		]);
-		logger.info(renewResult);
-		return renewResult;
 	},
 
 	/**

@@ -113,6 +113,44 @@ const setupDefaultSettings = async () => {
  * @returns {Promise<void>}
  */
 const setupCertbotPlugins = async () => {
+	// Ensure directory exists
+	try {
+		if (!fs.existsSync("/data/certbot-credentials")) {
+			fs.mkdirSync("/data/certbot-credentials");
+		}
+	} catch (err) {
+		logger.error(`Could not create /data/certbot-credentials: ${err.message}`);
+	}
+
+	// Symlink for legacy certificates
+	try {
+		const linkPath = "/tmp/certbot-credentials";
+		if (fs.existsSync(linkPath)) {
+			const stats = fs.lstatSync(linkPath);
+			if (stats.isDirectory()) {
+				fs.rmSync(linkPath, { recursive: true, force: true });
+			} else {
+				// It's a file or symlink, remove it to be safe
+				fs.unlinkSync(linkPath);
+			}
+		}
+		fs.symlinkSync("/data/certbot-credentials", linkPath);
+	} catch (err) {
+		logger.error(`Could not create symlink for legacy certs: ${err.message}`);
+	}
+
+	// Ensure other certbot directories exist
+	try {
+		const dirs = ["/data/certbot-log", "/data/certbot-work", "/data/acme-challenge", "/data/tls/certbot"];
+		for (const dir of dirs) {
+			if (!fs.existsSync(dir)) {
+				fs.mkdirSync(dir, { recursive: true });
+			}
+		}
+	} catch (err) {
+		logger.error(`Could not create certbot directories: ${err.message}`);
+	}
+
 	const certificates = await certificateModel.query().where("is_deleted", 0).andWhere("provider", "letsencrypt");
 
 	if (certificates?.length) {

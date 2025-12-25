@@ -168,6 +168,7 @@
 	"forwardingPort": "Forwarding Port",
 	"host.flags.block-exploits": "Block Common Exploits",
 	"host.flags.cache-assets": "Cache Assets",
+	"host.flags.maintenance-on-failure": "Maintenance Page on Failure",
 	"host.flags.preserve-path": "Preserve Path",
 	"host.flags.protocols": "Protocols",
 	"host.flags.websockets-upgrade": "Websockets Support",
