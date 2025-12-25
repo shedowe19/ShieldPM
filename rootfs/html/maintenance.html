@@ -80,9 +80,22 @@
                 0 0 0 1px rgba(255, 255, 255, 0.02),
                 0 24px 48px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
+
+            /* Default State (Hidden for animation) */
             opacity: 0;
+            transform: translateY(20px) scale(0.96);
+        }
+
+        /* Only animate if NOT seen before */
+        body:not(.animation-seen) .container {
             animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            transition: transform 0.2s ease;
+        }
+
+        /* Persistent State logic handle via JS injected class */
+        body.animation-seen .container {
+            opacity: 1;
+            transform: none;
+            animation: none;
         }
 
         .shake {
@@ -101,6 +114,12 @@
             justify-content: center;
             box-shadow: 0 0 30px var(--brand-glow), inset 0 0 20px rgba(139, 92, 246, 0.1);
             animation: floatIcon 6s ease-in-out infinite;
+        }
+
+        /* If static mode, reduce movement */
+        body.animation-seen .icon-area {
+            animation: floatIcon 6s ease-in-out infinite;
+            /* Keep float, simpler context */
         }
 
         .icon-area svg {
@@ -300,15 +319,16 @@
             }
         }
 
+        /* Initial Entrance Animation */
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: scale(0.95);
+                transform: translateY(20px) scale(0.96);
             }
 
             to {
                 opacity: 1;
-                transform: scale(1);
+                transform: translateY(0) scale(1);
             }
         }
 
@@ -376,9 +396,27 @@
             }
         }
     </style>
+
+    <!-- Inline Script to set class BEFORE first paint if possible -->
+    <script>
+        if (sessionStorage.getItem('npmplus_maintenance_seen')) {
+            document.documentElement.classList.add('animation-seen');
+            // We apply to documentElement (html tag) to ensure CSS applies early
+        }
+    </script>
 </head>
 
-<body>
+<body class=""> <!-- Removed JS check from body, handled by html tag logic + JS below -->
+    <script>
+        // Fallback or double ensure body has class
+        if (sessionStorage.getItem('npmplus_maintenance_seen')) {
+            document.body.classList.add('animation-seen');
+        } else {
+            // Set it for next time
+            sessionStorage.setItem('npmplus_maintenance_seen', 'true');
+        }
+    </script>
+
     <div class="bg-mesh"></div>
 
     <div class="container">
@@ -469,42 +507,39 @@
                     cache: 'no-cache'
                 });
 
-                // Get text to verify content
                 const text = await response.text();
 
                 // UNIQUE ID CHECK
-                // If the response contains our unique maintenance ID comment, we are definitely still blocked.
                 if (text.includes('maintenance_active_id_789')) {
                     throw new Error('Maintenance page served');
                 }
 
-                // If status is still Bad Gateway (even without ID, as fallback)
                 if (response.status === 502 || response.status === 504) {
                     throw new Error('Bad Gateway status');
                 }
 
-                // SUCCESS: Upstream is reachable!
+                // SUCCESS
                 btn.innerHTML = 'Online! Reloading...';
                 btn.classList.add('success');
 
-                // Wait a tiny bit for user to see success state
+                // Remove seen flag so animation plays FRESH on the reappearing app if desired?
+                // No, we want maintenance page to be fresh if it happens again later.
+                sessionStorage.removeItem('npmplus_maintenance_seen');
+
                 setTimeout(() => {
                     window.location.reload();
                 }, 500);
 
             } catch (e) {
-                // Failure animation
                 setTimeout(() => {
                     const container = document.querySelector('.container');
 
-                    // Reset button
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                     isChecking = false;
 
-                    // Trigger shake animation
                     container.classList.remove('shake');
-                    void container.offsetWidth; // Trigger reflow
+                    void container.offsetWidth;
                     container.classList.add('shake');
                 }, 600);
             }
