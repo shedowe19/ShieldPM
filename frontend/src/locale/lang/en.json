@@ -171,6 +171,7 @@
 	"host.flags.preserve-path": "Preserve Path",
 	"host.flags.protocols": "Protocols",
 	"host.flags.websockets-upgrade": "Websockets Support",
+	"host.flags.maintenance-on-failure": "Maintenance Page on Failure",
 	"host.forward-port": "Forward Port",
 	"host.forward-scheme": "Scheme",
 	"hosts": "Hosts",

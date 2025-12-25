@@ -171,7 +171,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																				form.touched.forwardScheme
+																					form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -209,7 +209,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																			form.touched.forwardHost
+																				form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -240,7 +240,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																			form.touched.forwardPort
+																				form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -272,7 +272,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
+																				form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -300,7 +300,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																			form.touched.forwardQuery
+																				form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}
@@ -383,6 +383,28 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			onCheckedChange={(checked) =>
 																				form.setFieldValue(
 																					"allowWebsocketUpgrade",
+																					checked,
+																				)
+																			}
+																		/>
+																	)}
+																</Field>
+															</div>
+															<div className="flex items-center justify-between">
+																<Label
+																	htmlFor="meta.maintenance_on_failure"
+																	className="flex-1 cursor-pointer"
+																>
+																	<T id="host.flags.maintenance-on-failure" />
+																</Label>
+																<Field name="meta.maintenance_on_failure" type="checkbox">
+																	{({ field, form }: any) => (
+																		<Switch
+																			id="meta.maintenance_on_failure"
+																			checked={field.checked}
+																			onCheckedChange={(checked) =>
+																				form.setFieldValue(
+																					"meta.maintenance_on_failure",
 																					checked,
 																				)
 																			}
