@@ -119,6 +119,7 @@ export interface ProxyHost {
 	advancedConfig: string;
 	bandwidthLimit: string;
 	meta: Record<string, any>;
+	maintenanceOnFailure: boolean;
 	allowWebsocketUpgrade: boolean;
 	http2Support: boolean;
 	enabled: boolean;
