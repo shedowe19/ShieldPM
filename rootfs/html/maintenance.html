@@ -9,241 +9,251 @@
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
         :root {
-            /* Dark/Premium Theme */
-            --bg-gradient-start: #0f172a;
-            --bg-gradient-end: #1e293b;
+            /* Palette: Deep Space / Nebula */
+            --bg-dark: #020617;
+            --bg-light: #0f172a;
 
-            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-glass: rgba(15, 23, 42, 0.6);
             --card-border: rgba(255, 255, 255, 0.08);
 
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-accent: #c4b5fd;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
 
-            --primary-glow: rgba(139, 92, 246, 0.4);
-            --secondary-glow: rgba(6, 182, 212, 0.3);
+            --accent-primary: #8b5cf6;
+            /* Violet */
+            --accent-secondary: #06b6d4;
+            /* Cyan */
+            --accent-warn: #fbbf24;
+            /* Amber */
 
-            --btn-bg: #7c3aed;
-            --btn-text: #ffffff;
-            --btn-hover: #6d28d9;
+            --btn-grad-start: #7c3aed;
+            --btn-grad-end: #6d28d9;
         }
 
-        /* Light Theme Adaptation */
         @media (prefers-color-scheme: light) {
             :root {
-                --bg-gradient-start: #f1f5f9;
-                --bg-gradient-end: #e2e8f0;
-                --card-bg: rgba(255, 255, 255, 0.7);
+                --bg-dark: #f0f9ff;
+                --bg-light: #e0f2fe;
+                --card-glass: rgba(255, 255, 255, 0.7);
                 --card-border: rgba(255, 255, 255, 0.6);
-                --text-primary: #1e293b;
-                --text-secondary: #64748b;
-                --text-accent: #6366f1;
-                --btn-bg: #4f46e5;
-                --btn-text: #ffffff;
-                --btn-hover: #4338ca;
+                --text-main: #0f172a;
+                --text-muted: #64748b;
+                --accent-primary: #6366f1;
             }
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
 
         body {
             font-family: 'Outfit', sans-serif;
-            background: radial-gradient(circle at top center, var(--bg-gradient-end), var(--bg-gradient-start));
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
             overflow: hidden;
-            color: var(--text-primary);
+            position: relative;
         }
 
-        /* Ambient Background Effects */
-        .ambient-light {
+        /* Ambient Background with Noise */
+        .bg-noise {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
             z-index: 0;
+            pointer-events: none;
         }
 
         .orb {
             position: absolute;
             border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.5;
-            animation: float 25s infinite ease-in-out;
+            filter: blur(90px);
+            z-index: -1;
+            animation: float 20s infinite ease-in-out alternate;
         }
 
         .orb-1 {
-            background: var(--primary-glow);
-            width: 60vh;
-            height: 60vh;
+            width: 600px;
+            height: 600px;
+            background: var(--accent-primary);
+            opacity: 0.2;
             top: -20%;
             left: -10%;
         }
 
         .orb-2 {
-            background: var(--secondary-glow);
-            width: 50vh;
-            height: 50vh;
+            width: 500px;
+            height: 500px;
+            background: var(--accent-secondary);
+            opacity: 0.15;
             bottom: -10%;
             right: -10%;
-            animation-delay: -10s;
+            animation-delay: -5s;
         }
 
-        .container {
+        .card {
             position: relative;
             z-index: 10;
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            width: 90%;
+            max-width: 480px;
+            padding: 3rem;
+            border-radius: 24px;
+            background: var(--card-glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--card-border);
-            padding: 3.5rem 3rem;
-            border-radius: 2rem;
             box-shadow:
-                0 20px 40px -10px rgba(0, 0, 0, 0.4),
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
                 inset 0 0 0 1px rgba(255, 255, 255, 0.05);
             text-align: center;
-            max-width: 32rem;
-            width: 90%;
-            animation: slideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            transform: translateY(20px);
             opacity: 0;
-            transform: translateY(30px);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        /* Status Badge */
-        .status-badge {
-            display: inline-flex;
+        /* Hero Icon Animation */
+        .hero-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            position: relative;
+            display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.35rem 1rem;
-            background: rgba(255, 255, 255, 0.08);
-            /* Dark mode compatible glass frame */
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 9999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            color: var(--text-accent);
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            justify-content: center;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #fbbf24;
-            /* Amber for Warning/Maintenance */
+        .hero-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
-            box-shadow: 0 0 8px #fbbf24;
-            animation: blink 2s infinite ease-in-out;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+            animation: pulse-ring 3s infinite;
         }
 
+        .hero-svg {
+            width: 40px;
+            height: 40px;
+            color: var(--accent-primary);
+            z-index: 2;
+            filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.5));
+        }
+
+        /* Typography */
         h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
-            margin-bottom: 1rem;
-            letter-spacing: -0.02em;
-            background: linear-gradient(135deg, var(--text-primary) 30%, var(--text-secondary));
+            margin-bottom: 0.75rem;
+            background: linear-gradient(to right, #fff, #cbd5e1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
+            letter-spacing: -0.02em;
         }
 
         p {
-            font-size: 1.05rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-            font-weight: 400;
-        }
-
-        .divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--card-border), transparent);
-            margin: 2rem 0;
-            width: 100%;
-        }
-
-        /* Interactive Elements */
-        .retry-btn {
-            background: var(--btn-bg);
-            color: var(--btn-text) !important;
-            border: none;
-            padding: 0.9rem 2.8rem;
-            border-radius: 1rem;
             font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 20px -6px rgba(124, 58, 237, 0.4);
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+        }
+
+        /* Status Badge */
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            color: var(--accent-warn);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
         }
 
-        .retry-btn:hover {
-            background: var(--btn-hover);
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: currentColor;
+            border-radius: 50%;
+            box-shadow: 0 0 8px currentColor;
+            animation: blink 2s infinite;
+        }
+
+        /* Primary Button */
+        .btn-reload {
+            appearance: none;
+            border: none;
+            outline: none;
+            background: linear-gradient(135deg, var(--btn-grad-start), var(--btn-grad-end));
+            color: white;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 1rem 2.5rem;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.3, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-reload:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 25px -8px rgba(124, 58, 237, 0.5);
+            box-shadow: 0 12px 20px -8px rgba(124, 58, 237, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            filter: brightness(1.1);
         }
 
-        .retry-btn svg {
+        .btn-reload:active {
+            transform: translateY(0);
+        }
+
+        .btn-reload svg {
+            width: 20px;
+            height: 20px;
             transition: transform 0.5s ease;
         }
 
-        .retry-btn:hover svg {
+        .btn-reload:hover svg {
             transform: rotate(180deg);
         }
 
+        /* Footer */
         .footer {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            opacity: 0.6;
-            margin-top: 2rem;
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
             display: flex;
-            justify-content: center;
-            gap: 1.5rem;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            opacity: 0.7;
         }
 
-        .timer-text {
-            font-variant-numeric: tabular-nums;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-            display: block;
-            opacity: 0.8;
-        }
-
-        /* Animations */
         @keyframes float {
-
-            0%,
-            100% {
+            0% {
                 transform: translate(0, 0);
             }
 
-            50% {
-                transform: translate(20px, -20px);
-            }
-        }
-
-        @keyframes blink {
-
-            0%,
             100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.4;
-                transform: scale(0.85);
+                transform: translate(30px, -30px);
             }
         }
 
@@ -253,59 +263,75 @@
                 transform: translateY(0);
             }
         }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.95);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.2;
+            }
+
+            100% {
+                transform: scale(0.95);
+                opacity: 0.5;
+            }
+        }
     </style>
 </head>
 
 <body>
-    <div class="ambient-light">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-    </div>
+    <div class="bg-noise"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
 
-    <div class="container">
-        <div class="status-badge">
-            <div class="status-dot"></div>
+    <div class="card">
+        <div class="badge">
+            <div class="dot"></div>
             <span>Service Unreachable</span>
+        </div>
+
+        <div class="hero-icon">
+            <div class="hero-circle"></div>
+            <!-- Network/Disconnect Icon -->
+            <svg class="hero-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
         </div>
 
         <h1>Under Maintenance</h1>
 
         <p>
-            We are currently experiencing connectivity issues with the upstream service.
-            This could be due to scheduled maintenance or a temporary outage.
+            The upstream service is currently paused or unreachable.<br>
+            Please check back in a few moments.
         </p>
 
-        <p style="font-size: 0.95rem; opacity: 0.8;">
-            The system administrator has been notified.
-            Please try again in a few moments.
-        </p>
-
-        <div class="divider"></div>
-
-        <button class="retry-btn" onclick="window.location.reload()">
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <button class="btn-reload" onclick="window.location.reload()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round"
                     d="M4 4v5h.058M20 20v-5h-.058M4.05 9a9 9 0 0115.3-3.6M19.95 15a9 9 0 01-15.3 3.6" />
             </svg>
-            <span>Reload Page</span>
+            Reload Page
         </button>
-
-        <!-- Optional Javascript for Auto-Reload timer or similar feel -->
-        <script>
-            // Simple visual effect purely
-        </script>
 
         <div class="footer">
             <span>Powered by <strong>NPMplus</strong></span>
-            <span>&bull;</span>
-            <span id="timestamp">Checked: --:--</span>
+            <span id="timestamp">--:--:--</span>
         </div>
     </div>
 
     <script>
-        // Update timestamp label to make it feel responsive
-        const now = new Date();
-        document.getElementById('timestamp').innerText = 'Checked: ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById('timestamp').innerText = new Date().toLocaleTimeString();
     </script>
 </body>
 
