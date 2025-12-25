@@ -28,7 +28,6 @@ const internalCertificate = {
 	allowedSslFiles: ["certificate", "certificate_key", "intermediate_certificate"],
 	intervalTimeout: 1000 * 60 * 60 * Number.parseInt(process.env.CRT, 10),
 	interval: null,
-	interval: null,
 	intervalProcessing: false,
 	processing: false,
 

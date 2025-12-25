@@ -119,7 +119,7 @@ const setupCertbotPlugins = async () => {
 			fs.mkdirSync("/data/certbot-credentials");
 		}
 	} catch (err) {
-		logger.error("Could not create /data/certbot-credentials: " + err.message);
+		logger.error(`Could not create /data/certbot-credentials: ${err.message}`);
 	}
 
 	// Symlink for legacy certificates
@@ -136,7 +136,7 @@ const setupCertbotPlugins = async () => {
 		}
 		fs.symlinkSync("/data/certbot-credentials", linkPath);
 	} catch (err) {
-		logger.error("Could not create symlink for legacy certs: " + err.message);
+		logger.error(`Could not create symlink for legacy certs: ${err.message}`);
 	}
 
 	const certificates = await certificateModel.query().where("is_deleted", 0).andWhere("provider", "letsencrypt");
