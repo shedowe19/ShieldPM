@@ -93,7 +93,9 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
             topReferers,
             topUserAgents,
             topPaths,
-            recent
+            topPaths,
+            recent,
+            resultTotals
         ] = await Promise.all([
             // Top Countries
             knex("analytics_logs")
@@ -153,10 +155,30 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
                 .where("host_id", hostId)
                 .andWhere("time", ">=", sinceIso)
                 .orderBy("time", "desc")
-                .limit(20)
+                .limit(20),
+
+            // Aggregated Totals
+            AnalyticCount.query()
+                .where("proxy_host_id", hostId)
+                .andWhere("timestamp", ">=", sinceIso)
+                .sum("request_count as count")
+                .sum("status_code_2xx as s2xx")
+                .sum("status_code_3xx as s3xx")
+                .sum("status_code_4xx as s4xx")
+                .sum("status_code_5xx as s5xx")
+                .first()
         ]);
 
+        const totals = resultTotals || { count: 0, s2xx: 0, s3xx: 0, s4xx: 0, s5xx: 0 };
+
         res.json({
+            // KPI Data
+            count: Number(totals.count) || 0,
+            status_2xx: Number(totals.s2xx) || 0,
+            status_3xx: Number(totals.s3xx) || 0,
+            status_4xx: Number(totals.s4xx) || 0,
+            status_5xx: Number(totals.s5xx) || 0,
+            // Lists
             top_countries: topCountries,
             top_ips: topIps,
             top_referers: topReferers,

@@ -88,7 +88,10 @@ class AnalyticsService {
 			const data = JSON.parse(fixedLine);
 
 			// Resolve Host ID
-			const hostname = data.server_name || data.host;
+			let hostname = data.server_name;
+			if (!hostname || hostname === "_") {
+				hostname = data.http_host;
+			}
 			const hostId = this.hostCache.get(hostname) || 0; // 0 for unknown/unmatched
 
 			const status = Number.parseInt(data.status, 10) || 0;
