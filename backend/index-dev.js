@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
-process.env.DATA_PATH = process.cwd() + "/data";
+process.env.DATA_PATH = `${process.cwd()}/data`;
 process.env.INITIAL_ADMIN_EMAIL = "admin@example.com";
 process.env.INITIAL_ADMIN_PASSWORD = "changeme";
 process.env.INITIAL_DEFAULT_PAGE = "congratulations";
 
-import fs from "node:fs";
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
 import internalIpRanges from "./internal/ip_ranges.js";
@@ -14,7 +13,6 @@ import utils from "./lib/utils.js";
 import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";
 import setup from "./setup.js";
-import { installPlugins } from "./lib/certbot.js";
 import { getCompiledSchema } from "./schema/index.js";
 
 // Monkey patch internalNginx
@@ -33,7 +31,7 @@ internalNginx.getConfigName = (host_type, host_id) => {
 internalNginx.deleteFile = async (filename) => {
 	logger.info(`MOCK: Deleting file ${filename}`);
 };
-internalNginx.deleteConfig = async (host_type, host) => {
+internalNginx.deleteConfig = async (host_type, _host) => {
 	logger.info(`MOCK: Delete config for ${host_type}`);
 };
 

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import fs from "node:fs";
 
 // Mock dependencies to avoid side effects (db connection, file writing)
 vi.mock("../../models/certificate.js", () => ({ default: {} }));

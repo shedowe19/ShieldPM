@@ -4,7 +4,7 @@ import AnalyticsLogs from "../../models/analytics_logs.js";
 import ProxyHostModel from "../../models/proxy_host.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import dayjs from "dayjs";
-import { Model } from "objection";
+
 
 const router = express.Router({
     mergeParams: true,
@@ -17,7 +17,7 @@ const router = express.Router({
  */
 router.get("/:hostId", jwtdecode(), async (req, res, next) => {
     try {
-        const hostId = Number.parseInt(req.params.hostId);
+        const hostId = Number.parseInt(req.params.hostId, 10);
         const range = req.query.range || "24h";
 
         // Security: Check if user owns the host (or admin)
@@ -60,7 +60,7 @@ router.get("/:hostId", jwtdecode(), async (req, res, next) => {
  */
 router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
     try {
-        const hostId = Number.parseInt(req.params.hostId);
+        const hostId = Number.parseInt(req.params.hostId, 10);
         const range = req.query.range || "24h";
 
         // Access Check
@@ -92,7 +92,6 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
             topIps,
             topReferers,
             topUserAgents,
-            topPaths,
             topPaths,
             recent,
             resultTotals

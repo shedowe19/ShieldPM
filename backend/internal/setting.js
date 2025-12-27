@@ -38,7 +38,7 @@ const internalSetting = {
 				await internalNginx.generateConfig("default", updatedRow);
 				await internalNginx.test();
 				await internalNginx.reload();
-			} catch (err) {
+			} catch (_err) {
 				await internalNginx.deleteConfig("default");
 				await internalNginx.test();
 				await internalNginx.reload();

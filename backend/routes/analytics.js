@@ -30,12 +30,12 @@ router.get("/summary", async (req, res) => {
         const safeStats = { ...defaults, ...stats };
 
         res.json({
-            count: parseInt(safeStats.count || 0, 10),
-            bytes: parseInt(safeStats.bytes || 0, 10),
-            status_2xx: parseInt(safeStats.s2xx || 0, 10),
-            status_3xx: parseInt(safeStats.s3xx || 0, 10),
-            status_4xx: parseInt(safeStats.s4xx || 0, 10),
-            status_5xx: parseInt(safeStats.s5xx || 0, 10)
+            count: Number.parseInt(safeStats.count || 0, 10),
+            bytes: Number.parseInt(safeStats.bytes || 0, 10),
+            status_2xx: Number.parseInt(safeStats.s2xx || 0, 10),
+            status_3xx: Number.parseInt(safeStats.s3xx || 0, 10),
+            status_4xx: Number.parseInt(safeStats.s4xx || 0, 10),
+            status_5xx: Number.parseInt(safeStats.s5xx || 0, 10)
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -96,8 +96,8 @@ router.get("/series", async (req, res) => {
  */
 router.get("/top-hosts", async (req, res) => {
     try {
-        const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
-        const end = req.query.end || dayjs().toISOString();
+        const _start = req.query.start || dayjs().subtract(24, "hour").toISOString();
+        const _end = req.query.end || dayjs().toISOString();
 
         // We need raw KNEX for group by query usually, but let's try with Model if we can join ProxyHost
         // Since we didn't resolve IDs yet (set to NULL), this will be empty for now.
@@ -119,7 +119,7 @@ router.get("/top-hosts", async (req, res) => {
  * Returns real-time system status (Network Bandwidth)
  */
 import si from "systeminformation";
-router.get("/status", async (req, res) => {
+router.get("/status", async (_req, res) => {
     try {
         const net = await si.networkStats();
         // Sum up all interfaces or specifically 'eth0' if known?

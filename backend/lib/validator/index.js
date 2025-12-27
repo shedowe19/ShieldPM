@@ -25,19 +25,15 @@ const validator = async (schema, payload) => {
 		throw new errs.InternalValidationError("Payload is falsy");
 	}
 
-	try {
-		const validate = ajv.compile(schema);
-		const valid = validate(payload);
+	const validate = ajv.compile(schema);
+	const valid = validate(payload);
 
-		if (valid && !validate.errors) {
-			return _.cloneDeep(payload);
-		}
-
-		const message = ajv.errorsText(validate.errors);
-		throw new errs.InternalValidationError(message);
-	} catch (err) {
-		throw err;
+	if (valid && !validate.errors) {
+		return _.cloneDeep(payload);
 	}
+
+	const message = ajv.errorsText(validate.errors);
+	throw new errs.InternalValidationError(message);
 };
 
 export default validator;

@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import { Tail } from "tail";
 import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
@@ -144,7 +144,7 @@ class AnalyticsService {
 				duration: Math.floor(Number.parseFloat(data.request_time || 0) * 1000), // ms
 			});
 
-		} catch (err) {
+		} catch (_err) {
 			// Ignore parse errors
 		}
 	}

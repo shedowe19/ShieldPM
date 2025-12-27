@@ -90,7 +90,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -105,20 +105,14 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
 		await Promise.all(promises);
 
-		try {
-			await internalNginx.test();
-			await utils.execFile("nginx", ["-s", "reload"]);
-		} catch (err) {
-			// ignore reload errors if test passed? No, if test failed, we shouldn't reload.
-			// The original code was: test().then(() => execFile(...))
-			throw err;
-		}
+		await internalNginx.test();
+		await utils.execFile("nginx", ["-s", "reload"]);
 	},
 
 	/**

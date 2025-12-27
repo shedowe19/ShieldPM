@@ -763,33 +763,27 @@ const internalCertificate = {
 		const credentialsLocation = `/data/certbot-credentials/credentials-${certificate.id}`;
 		fs.writeFileSync(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
 
-		try {
-			const result = await utils.execFile("certbot", [
-				"--config",
-				"/etc/certbot.ini",
-				"certonly",
-				"--cert-name",
-				`npm-${certificate.id}`,
-				"--domains",
-				certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
-				"--server",
-				process.env.ACME_SERVER,
-				"--authenticator",
-				dnsPlugin.full_plugin_name,
-				`--${dnsPlugin.full_plugin_name}-credentials`,
-				credentialsLocation,
-				...(certificate.meta.propagation_seconds !== undefined
-					? [`--${dnsPlugin.full_plugin_name}-propagation-seconds`]
-					: []),
-				...(certificate.meta.propagation_seconds !== undefined ? [certificate.meta.propagation_seconds] : []),
-			]);
-			logger.info(result);
-			return result;
-		} catch (err) {
-			// Don't fail if file does not exist, so no need for action in the callback
-			// fs.unlink(credentialsLocation, () => {});
-			throw err;
-		}
+		const result = await utils.execFile("certbot", [
+			"--config",
+			"/etc/certbot.ini",
+			"certonly",
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--domains",
+			certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
+			"--server",
+			process.env.ACME_SERVER,
+			"--authenticator",
+			dnsPlugin.full_plugin_name,
+			`--${dnsPlugin.full_plugin_name}-credentials`,
+			credentialsLocation,
+			...(certificate.meta.propagation_seconds !== undefined
+				? [`--${dnsPlugin.full_plugin_name}-propagation-seconds`]
+				: []),
+			...(certificate.meta.propagation_seconds !== undefined ? [certificate.meta.propagation_seconds] : []),
+		]);
+		logger.info(result);
+		return result;
 	},
 
 	/**
