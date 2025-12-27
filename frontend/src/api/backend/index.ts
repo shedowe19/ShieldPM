@@ -18,6 +18,8 @@ export * from "./downloadCertificate";
 export * from "./expansions";
 export * from "./getAccessList";
 export * from "./getAccessLists";
+export * from "./getAnalyticsSeries";
+export * from "./getAnalyticsSummary";
 export * from "./getAuditLog";
 export * from "./getAuditLogs";
 export * from "./getCertificate";

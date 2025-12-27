@@ -3,7 +3,11 @@ import fileUpload from "express-fileupload";
 import helmet from "helmet";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
+import analyticsService from "./internal/analytics.js";
 import mainRoutes from "./routes/main.js";
+
+// Initialize Analytics Service (starts tailing logs)
+analyticsService.init();
 
 /**
  * App

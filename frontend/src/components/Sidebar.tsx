@@ -1,4 +1,5 @@
 import {
+	IconActivity,
 	IconBook,
 	IconDeviceDesktop,
 	IconHome,
@@ -43,6 +44,11 @@ const menuItems: MenuItem[] = [
 		to: "/",
 		icon: IconHome,
 		label: "dashboard",
+	},
+	{
+		to: "/analytics",
+		icon: IconActivity,
+		label: "analytics",
 	},
 	{
 		icon: IconDeviceDesktop,

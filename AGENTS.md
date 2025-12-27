@@ -1,7 +1,7 @@
 # NPMplus
 
 ## Project Overview
-NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-friendly web interface for managing Nginx reverse proxies, with a focus on security, performance, and ease of use. It includes features like HTTP/3 (QUIC) support, CrowdSec integration, ModSecurity (WAF), and improved TLS certificate management (including OCSP Stapling).
+NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-friendly web interface for managing Nginx reverse proxies, with a focus on security, performance, and ease of use. It includes features like HTTP/3 (QUIC) support, CrowdSec integration, ModSecurity (WAF), OIDC (OpenID Connect) for Access Lists, and improved TLS certificate management (including OCSP Stapling).
 
 **Key Technologies:**
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
@@ -68,7 +68,10 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20180618015850_initial.js`: Initial Schema.
     *   `20200410143839_access_list_client.js`: Multi-user Access Lists.
     *   `20240427161436_stream_ssl.js`: SSL support for Streams.
+    *   `20251111090000_redirect_auto_scheme.js`: Introduces "auto" scheme for Redirection Hosts.
     *   `20251212000000_add_bandwidth_limit.js`: New bandwidth limiting feature.
+    *   `20251213000000_add_forward_query.js`: Adds capability to forward query parameters in Proxy Hosts.
+    *   `20251225000000_add_maintenance_failure.js`: Adds "Maintenance Mode on Failure" feature for Proxy Hosts.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
 The application includes an auto-migration feature that detects if you are switching from the default SQLite database to MySQL or PostgreSQL.
@@ -111,12 +114,13 @@ The backend is a Node.js application responsible for the API, database managemen
     *   **`User`** (`user`):
         *   Authentication and permissions.
     *   **`AccessList`** (`access_list`):
-        *   Contains `clients` (Basic Auth users).
+        *   Contains `clients` (Basic Auth users). Supports OIDC/OAuth2 configuration via `meta` JSON.
     *   **`Certificate`** (`certificate`):
         *   Stores paths/metadata for SSL certs.
 *   **`routes/`**: Express.js (v5) Router.
     *   **`nginx/`**: RESTful endpoints for managing hosts.
         *   e.g., `GET /nginx/proxy-hosts`, `POST /nginx/proxy-hosts`.
+    *   **`oidc/`**: OpenID Connect authentication flow endpoints.
     *   **Root**: Auth (`/tokens`), User (`/users`), Settings (`/settings`).
 *   **`lib/`**: Shared utilities and helper functions.
     *   **Core**: `access.js` (Permissions), `config.js` (App Config), `logger.js`, `utils.js`.

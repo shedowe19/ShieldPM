@@ -18,6 +18,7 @@ import { useHealth } from "src/hooks";
 const Setup = lazy(() => import("src/pages/Setup"));
 const Login = lazy(() => import("src/pages/Login"));
 const Dashboard = lazy(() => import("src/pages/Dashboard"));
+const Analytics = lazy(() => import("src/pages/Analytics"));
 const Settings = lazy(() => import("src/pages/Settings"));
 const Certificates = lazy(() => import("src/pages/Certificates"));
 const Access = lazy(() => import("src/pages/Access"));
@@ -118,6 +119,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<Dashboard />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/analytics"
+					element={
+						<AnimatedPage>
+							<Analytics />
 						</AnimatedPage>
 					}
 				/>

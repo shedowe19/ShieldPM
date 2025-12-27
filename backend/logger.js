@@ -16,9 +16,10 @@ const setup = new signale.Signale({ scope: "Setup    ", ...opts });
 const ipRanges = new signale.Signale({ scope: "IP Ranges", ...opts });
 const remoteVersion = new signale.Signale({ scope: "Remote Version", ...opts });
 const oidc = new signale.Signale({ scope: "OIDC", ...opts });
+const analytics = new signale.Signale({ scope: "Analytics", ...opts });
 
 const debug = (logger, ...args) => {
 	logger.debug(...args);
 };
 
-export { debug, global, migrate, express, access, nginx, ssl, certbot, importer, setup, ipRanges, remoteVersion, oidc };
+export { debug, global, migrate, express, access, nginx, ssl, certbot, importer, setup, ipRanges, remoteVersion, oidc, analytics };
