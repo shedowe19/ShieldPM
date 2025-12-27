@@ -27,7 +27,6 @@ const Analytics = () => {
 			try {
 				// Fetch Summary
 				const summaryData = await getAnalyticsSummary();
-				console.log("FRONTEND SUMMARY DEBUG:", summaryData); // DEBUG
 				setSummary(summaryData);
 
 				// Fetch Series
