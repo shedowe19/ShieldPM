@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { getAnalyticsSummary, getAnalyticsSeries, type AnalyticsSummary, type TimeSeriesPoint } from "src/api/backend";
+import { T } from "src/locale";
 
 const formatBytes = (bytes: number, decimals = 2) => {
 	if (!bytes) return "0 B";
@@ -49,16 +50,24 @@ const Analytics = () => {
 	}, []);
 
 	if (loading && !summary) {
-		return <div className="p-8 text-center">Loading analytics...</div>;
+		return <div className="p-8 text-center"><T id="loading" /></div>;
 	}
 
-	const successRate = summary ? ((summary.status_2xx / (summary.count || 1)) * 100).toFixed(1) : "0";
+	const successRate = summary?.count
+		? ((summary.status_2xx / summary.count) * 100).toFixed(1)
+		: "0";
 
 	return (
-		<div className="space-y-6">
-			<div>
-				<h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
-				<p className="text-muted-foreground">Traffic overview for the last 24 hours.</p>
+		<div className="p-4 md:p-8 pt-6 space-y-6">
+			{/* Page Header matching Dashboard style */}
+			<div className="flex items-center justify-between space-y-2">
+				<div>
+					<h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
+					<p className="text-muted-foreground">Traffic overview for the last 24 hours.</p>
+				</div>
+				<div className="flex items-center space-x-2">
+					{/* Placeholder for actions */}
+				</div>
 			</div>
 
 			{/* KPI Cards */}
