@@ -168,27 +168,33 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
                 .first()
         ]);
 
-        const totals = resultTotals || { count: 0, s2xx: 0, s3xx: 0, s4xx: 0, s5xx: 0 };
+        ]);
 
-        res.json({
-            // KPI Data
-            count: Number(totals.count) || 0,
-            status_2xx: Number(totals.s2xx) || 0,
-            status_3xx: Number(totals.s3xx) || 0,
-            status_4xx: Number(totals.s4xx) || 0,
-            status_5xx: Number(totals.s5xx) || 0,
-            // Lists
-            top_countries: topCountries,
-            top_ips: topIps,
-            top_referers: topReferers,
-            top_user_agents: topUserAgents,
-            top_paths: topPaths,
-            recent_requests: recent
-        });
+const totals = resultTotals || { count: 0, s2xx: 0, s3xx: 0, s4xx: 0, s5xx: 0 };
+// DEBUG: Inspect aggregation keys
+console.log("Analytics Summary Totals Keys:", Object.keys(totals), totals);
+console.log("Top Countries Length:", topCountries.length);
+console.log("Recent Requests Length:", recent.length);
+
+res.json({
+    // KPI Data
+    count: Number(totals.count) || 0,
+    status_2xx: Number(totals.s2xx) || 0,
+    status_3xx: Number(totals.s3xx) || 0,
+    status_4xx: Number(totals.s4xx) || 0,
+    status_5xx: Number(totals.s5xx) || 0,
+    // Lists
+    top_countries: topCountries,
+    top_ips: topIps,
+    top_referers: topReferers,
+    top_user_agents: topUserAgents,
+    top_paths: topPaths,
+    recent_requests: recent
+});
 
     } catch (err) {
-        next(err);
-    }
+    next(err);
+}
 });
 
 export default router;
