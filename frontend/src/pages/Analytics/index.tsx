@@ -48,8 +48,8 @@ const Analytics = () => {
 			try {
 				const res = await fetch("/api/analytics/status", {
 					headers: {
-						"Authorization": `Bearer ${localStorage.getItem("token")}` // Simplified auth
-					}
+						Authorization: `Bearer ${localStorage.getItem("token")}`, // Simplified auth
+					},
 				});
 				if (res.ok) {
 					const data = await res.json();
@@ -75,15 +75,17 @@ const Analytics = () => {
 	}, []);
 
 	if (loading && !summary) {
-		return <div className="p-8 text-center"><T id="loading" /></div>;
+		return (
+			<div className="p-8 text-center">
+				<T id="loading" />
+			</div>
+		);
 	}
 
 	const count = Number(summary?.count) || 0;
 	// Handle potential key mismatch (backend sends status_2xx, frontend sees status2xx in some envs)
 	const s2xx = Number(summary?.status_2xx ?? summary?.status2xx) || 0;
-	const successRate = count > 0
-		? ((s2xx / count) * 100).toFixed(1)
-		: "0";
+	const successRate = count > 0 ? ((s2xx / count) * 100).toFixed(1) : "0";
 
 	return (
 		<div className="p-4 md:p-8 pt-6 space-y-6">
@@ -93,9 +95,7 @@ const Analytics = () => {
 					<h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
 					<p className="text-muted-foreground">Traffic overview for the last 24 hours.</p>
 				</div>
-				<div className="flex items-center space-x-2">
-					{/* Placeholder for actions */}
-				</div>
+				<div className="flex items-center space-x-2">{/* Placeholder for actions */}</div>
 			</div>
 
 			{/* KPI Cards */}
