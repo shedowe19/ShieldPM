@@ -9,6 +9,7 @@ import deadHostsRoutes from "./nginx/dead_hosts.js";
 import proxyHostsRoutes from "./nginx/proxy_hosts.js";
 import redirectionHostsRoutes from "./nginx/redirection_hosts.js";
 import streamsRoutes from "./nginx/streams.js";
+import nginxAnalyticsRoutes from "./nginx/analytics.js";
 import oidcRoutes from "./oidc.js";
 import reportsRoutes from "./reports.js";
 import schemaRoutes from "./schema.js";
@@ -53,7 +54,11 @@ router.use("/nginx/redirection-hosts", redirectionHostsRoutes);
 router.use("/nginx/dead-hosts", deadHostsRoutes);
 router.use("/nginx/streams", streamsRoutes);
 router.use("/nginx/access-lists", accessListsRoutes);
+// ... existing imports ...
+
+// ... existing mounts ...
 router.use("/nginx/certificates", certificatesHostsRoutes);
+router.use("/nginx/analytics", nginxAnalyticsRoutes);
 
 /**
  * API 404 for all other routes
