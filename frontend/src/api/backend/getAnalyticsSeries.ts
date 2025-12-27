@@ -19,15 +19,14 @@ export async function getAnalyticsSeries(hostId?: number, range = "24h"): Promis
 	// actually backend returns: timestamp, status_code_2xx, etc.
 	// Frontend expects: timestamp (or timeDisplay handled in index), s2xx
 
-	// Assuming backend returns array of objects
-	if (data.length > 0) console.log("First series item keys:", Object.keys(data[0]), data[0]);
+	// Backend returns camelCase (Objection/Knex default behavior implicitly active)
 	return data.map((d: any) => ({
 		timestamp: d.timestamp,
-		count: d.request_count,
-		bytes: d.bytes_sent,
-		s2xx: d.status_code_2xx,
-		s3xx: d.status_code_3xx,
-		s4xx: d.status_code_4xx,
-		s5xx: d.status_code_5xx
+		count: d.requestCount,
+		bytes: d.bytesSent,
+		s2xx: d.statusCode2xx,
+		s3xx: d.statusCode3xx,
+		s4xx: d.statusCode4xx,
+		s5xx: d.statusCode5xx
 	}));
 }
