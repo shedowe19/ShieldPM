@@ -20,6 +20,7 @@ export async function getAnalyticsSeries(hostId?: number, range = "24h"): Promis
 	// Frontend expects: timestamp (or timeDisplay handled in index), s2xx
 
 	// Assuming backend returns array of objects
+	if (data.length > 0) console.log("First series item keys:", Object.keys(data[0]), data[0]);
 	return data.map((d: any) => ({
 		timestamp: d.timestamp,
 		count: d.request_count,
