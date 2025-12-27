@@ -48,6 +48,7 @@ class AnalyticsService {
 	 */
 	processLine(line) {
 		try {
+			// logger.debug(`Line received: ${line.substring(0, 50)}...`); // debug
 			if (!line.trim()) return;
 			const data = JSON.parse(line);
 
@@ -109,8 +110,7 @@ class AnalyticsService {
 			else if (status >= 400 && status < 500) entry.status_4xx++;
 			else if (status >= 500) entry.status_5xx++;
 		} catch (err) {
-			// Reduce noise, maybe log only once in a while
-			// logger.debug(`Failed to parse log line: ${err.message}`);
+			logger.error(`Failed to parse log line: ${err.message} | Line: ${line}`);
 		}
 	}
 
