@@ -25,6 +25,8 @@ router.get("/summary", async (req, res) => {
             .sum("status_code_5xx as s5xx")
             .first() || {};
 
+        console.log("DEBUG ANALYTICS SUMMARY STATS:", stats); // DEBUG output
+
         const defaults = { count: 0, bytes: 0, s2xx: 0, s3xx: 0, s4xx: 0, s5xx: 0 };
         const safeStats = { ...defaults, ...stats };
 
