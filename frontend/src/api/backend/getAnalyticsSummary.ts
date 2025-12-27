@@ -7,6 +7,11 @@ export interface AnalyticsSummary {
 	status_3xx: number;
 	status_4xx: number;
 	status_5xx: number;
+	// Fallback keys observed in production
+	status2xx?: number;
+	status3xx?: number;
+	status4xx?: number;
+	status5xx?: number;
 }
 
 export async function getAnalyticsSummary(params = {}): Promise<AnalyticsSummary> {

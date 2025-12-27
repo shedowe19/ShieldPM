@@ -80,7 +80,8 @@ const Analytics = () => {
 	}
 
 	const count = Number(summary?.count) || 0;
-	const s2xx = Number(summary?.status_2xx) || 0;
+	// Handle potential key mismatch (backend sends status_2xx, frontend sees status2xx in some envs)
+	const s2xx = Number(summary?.status_2xx ?? summary?.status2xx) || 0;
 	const successRate = count > 0
 		? ((s2xx / count) * 100).toFixed(1)
 		: "0";
