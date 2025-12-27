@@ -5,7 +5,7 @@ import AnalyticCount from "../models/analytic_count.js";
 import dayjs from "dayjs";
 
 const LOG_FILE = "/data/nginx/json_access.log";
-const FLUSH_INTERVAL_MS = 60 * 1000; // 1 minute
+const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds
 
 class AnalyticsService {
 	constructor(logFile) {

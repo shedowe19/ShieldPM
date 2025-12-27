@@ -44,8 +44,8 @@ const Analytics = () => {
 		};
 
 		fetchData();
-		// Refresh every minute
-		const interval = setInterval(fetchData, 60000);
+		// Refresh every 10 seconds
+		const interval = setInterval(fetchData, 10000);
 		return () => clearInterval(interval);
 	}, []);
 
