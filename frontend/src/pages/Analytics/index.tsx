@@ -49,9 +49,12 @@ const Analytics = () => {
 				// Fetch Summary
 				const summaryData = await getAnalyticsSummary(hostId, range);
 				setSummary(summaryData);
+				// DEBUG: Log for user validation
+				console.log("[Analytics] Summary Data:", summaryData);
 
 				// Fetch Series
 				const seriesData = await getAnalyticsSeries(hostId, range);
+				console.log("[Analytics] Series Data:", seriesData);
 				// Format timestamp for chart
 				const formattedSeries = seriesData.map((d) => ({
 					...d,
