@@ -22,4 +22,19 @@ const debug = (logger, ...args) => {
 	logger.debug(...args);
 };
 
-export { debug, global, migrate, express, access, nginx, ssl, certbot, importer, setup, ipRanges, remoteVersion, oidc, analytics };
+export {
+	debug,
+	global,
+	migrate,
+	express,
+	access,
+	nginx,
+	ssl,
+	certbot,
+	importer,
+	setup,
+	ipRanges,
+	remoteVersion,
+	oidc,
+	analytics,
+};

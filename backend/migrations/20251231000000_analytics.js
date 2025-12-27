@@ -22,7 +22,7 @@ export const up = (knex) => {
 			table.integer("status_code_5xx").unsigned().defaultTo(0);
 			table.bigInteger("bytes_sent").unsigned().defaultTo(0);
 			table.integer("request_count").unsigned().defaultTo(0);
-			
+
 			// Index for faster time-range queries
 			table.index(["timestamp"]);
 			table.index(["proxy_host_id"]);
@@ -41,9 +41,7 @@ export const up = (knex) => {
 export const down = (knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 
-	return knex.schema
-		.dropTableIfExists("analytic_count")
-		.then(() => {
-			logger.info(`[${migrateName}] analytic_count Table dropped`);
-		});
+	return knex.schema.dropTableIfExists("analytic_count").then(() => {
+		logger.info(`[${migrateName}] analytic_count Table dropped`);
+	});
 };
