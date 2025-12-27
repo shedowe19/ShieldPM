@@ -5,7 +5,7 @@ import { deleteProxyHost, toggleProxyHost } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
 import { useProxyHosts } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal, showHelpModal, showProxyHostModal, AnalyticsModal } from "src/modals";
+import { showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "src/modals";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import Table from "./Table";
@@ -18,7 +18,6 @@ import { AlertCircle } from "lucide-react";
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
-	const [analyticsHostId, setAnalyticsHostId] = useState<number | null>(null);
 	const { isFetching, isLoading, isError, error, data } = useProxyHosts(["owner", "access_list", "certificate"]);
 
 	if (isLoading) {
@@ -61,67 +60,59 @@ export default function TableWrapper() {
 	}
 
 	return (
-		<>
-			<AnalyticsModal
-				hostId={analyticsHostId || 0}
-				open={!!analyticsHostId}
-				onOpenChange={(open) => !open && setAnalyticsHostId(null)}
-			/>
-			<Card className="mt-4 border-t-4 border-lime-500/50">
-				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<CardTitle className="text-2xl font-bold flex items-center gap-2">
-						<IconServer className="h-6 w-6" />
-						<T id="proxy-hosts" />
-					</CardTitle>
-					<div className="flex items-center space-x-2">
+		<Card className="mt-4 border-t-4 border-lime-500/50">
+			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+				<CardTitle className="text-2xl font-bold flex items-center gap-2">
+					<IconServer className="h-6 w-6" />
+					<T id="proxy-hosts" />
+				</CardTitle>
+				<div className="flex items-center space-x-2">
+					{data?.length ? (
+						<div className="relative w-full max-w-sm">
+							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+							<Input
+								type="search"
+								placeholder={intl.formatMessage({ id: "search.placeholder" })}
+								className="pl-8 h-9"
+								onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}
+							/>
+						</div>
+					) : null}
+					<Button variant="outline" size="icon" onClick={() => showHelpModal("ProxyHosts", "lime")}>
+						<IconHelp className="h-4 w-4" />
+					</Button>
+					<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
 						{data?.length ? (
-							<div className="relative w-full max-w-sm">
-								<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-								<Input
-									type="search"
-									placeholder={intl.formatMessage({ id: "search.placeholder" })}
-									className="pl-8 h-9"
-									onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}
-								/>
-							</div>
+							<Button
+								size="sm"
+								className="bg-lime-600/90 hover:bg-lime-600 text-white shadow-sm"
+								onClick={() => showProxyHostModal("new")}
+							>
+								<IconPlus className="mr-2 h-4 w-4" />
+								<T id="object.add" tData={{ object: "proxy-host" }} />
+							</Button>
 						) : null}
-						<Button variant="outline" size="icon" onClick={() => showHelpModal("ProxyHosts", "lime")}>
-							<IconHelp className="h-4 w-4" />
-						</Button>
-						<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
-							{data?.length ? (
-								<Button
-									size="sm"
-									className="bg-lime-600/90 hover:bg-lime-600 text-white shadow-sm"
-									onClick={() => showProxyHostModal("new")}
-								>
-									<IconPlus className="mr-2 h-4 w-4" />
-									<T id="object.add" tData={{ object: "proxy-host" }} />
-								</Button>
-							) : null}
-						</HasPermission>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<Table
-						data={filtered ?? data ?? []}
-						isFiltered={!!search}
-						isFetching={isFetching}
-						onEdit={(id: number) => showProxyHostModal(id)}
-						onDelete={(id: number) =>
-							showDeleteConfirmModal({
-								title: <T id="object.delete" tData={{ object: "proxy-host" }} />,
-								onConfirm: () => handleDelete(id),
-								invalidations: [["proxy-hosts"], ["proxy-host", id]],
-								children: <T id="object.delete.content" tData={{ object: "proxy-host" }} />,
-							})
-						}
-						onDisableToggle={handleDisableToggle}
-						onAnalytics={(id) => setAnalyticsHostId(id)}
-						onNew={() => showProxyHostModal("new")}
-					/>
-				</CardContent>
-			</Card>
-		</>
+					</HasPermission>
+				</div>
+			</CardHeader>
+			<CardContent>
+				<Table
+					data={filtered ?? data ?? []}
+					isFiltered={!!search}
+					isFetching={isFetching}
+					onEdit={(id: number) => showProxyHostModal(id)}
+					onDelete={(id: number) =>
+						showDeleteConfirmModal({
+							title: <T id="object.delete" tData={{ object: "proxy-host" }} />,
+							onConfirm: () => handleDelete(id),
+							invalidations: [["proxy-hosts"], ["proxy-host", id]],
+							children: <T id="object.delete.content" tData={{ object: "proxy-host" }} />,
+						})
+					}
+					onDisableToggle={handleDisableToggle}
+					onNew={() => showProxyHostModal("new")}
+				/>
+			</CardContent>
+		</Card>
 	);
 }
