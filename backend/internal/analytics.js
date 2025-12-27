@@ -48,9 +48,12 @@ class AnalyticsService {
 	 */
 	processLine(line) {
 		try {
-			// logger.debug(`Line received: ${line.substring(0, 50)}...`); // debug
 			if (!line.trim()) return;
-			const data = JSON.parse(line);
+			// Fix common Nginx JSON log errors (e.g. unquoted country code)
+			// "geoip_country_code":DE} -> "geoip_country_code":"DE"}
+			const fixedLine = line.replace(/"geoip_country_code":([A-Z]{2})}/g, '"geoip_country_code":"$1"}');
+
+			const data = JSON.parse(fixedLine);
 
 			// Extract relevant fields
 			// Note: upstream/host logic might need refinement depending on what $server_name captures
