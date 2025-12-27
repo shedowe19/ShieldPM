@@ -157,7 +157,7 @@ class AnalyticsService {
 
 			try {
 				// Chunking might be needed for very high traffic, but start simple
-				await AnalyticsLogs.query().insert(batch);
+				await AnalyticsLogs.knex().table("analytics_logs").insert(batch);
 			} catch (err) {
 				logger.error(`Failed to flush detailed logs: ${err.message}`);
 			}

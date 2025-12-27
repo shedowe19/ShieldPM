@@ -85,8 +85,8 @@ async function processLineAndInsert(line) {
         console.log(`geo: ip=${data.remote_addr} country=${data.geoip_country_code}`);
         console.log(`ua: ${data.http_user_agent}`);
 
-        // 4. TEST INSERT
-        console.log("💾 Attempting DB Insert (Detailed & Aggregated)...");
+        // 4. TEST INSERT (Batch Mode - Raw Knex)
+        console.log("💾 Attempting DB Insert (Batch Mode)...");
 
         // Detailed Log
         const logEntry = {
@@ -103,8 +103,9 @@ async function processLineAndInsert(line) {
             duration: duration,
         };
 
-        const insertedLog = await AnalyticsLogs.query().insert(logEntry);
-        console.log(`✅ Detailed Log Inserted! (ID: ${insertedLog.id})`);
+        // Use Knex directly to bypass Objection's "batch insert only works with..." on MySQL
+        await AnalyticsLogs.knex().table("analytics_logs").insert([logEntry]);
+        console.log(`✅ Detailed Log Batch Inserted!`);
 
         // Check Count
         const startOfMinute = logDate.startOf("minute").toISOString();
