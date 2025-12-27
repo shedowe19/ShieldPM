@@ -113,4 +113,28 @@ router.get("/top-hosts", async (req, res) => {
     }
 });
 
+/**
+ * GET /api/analytics/status
+ * Returns real-time system status (Network Bandwidth)
+ */
+import si from "systeminformation";
+router.get("/status", async (req, res) => {
+    try {
+        const net = await si.networkStats();
+        // Sum up all interfaces or specifically 'eth0' if known?
+        // Usually, the first non-internal interface is good.
+        // sum rx_sec and tx_sec (received/transferred bytes per second)
+        const rx = net.reduce((acc, iface) => acc + (iface.rx_sec || 0), 0);
+        const tx = net.reduce((acc, iface) => acc + (iface.tx_sec || 0), 0);
+
+        res.json({
+            rx_sec: rx,
+            tx_sec: tx,
+            total_sec: rx + tx
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 export default router;

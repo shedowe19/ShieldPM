@@ -19,6 +19,7 @@ const Analytics = () => {
 	const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
 	const [series, setSeries] = useState<(TimeSeriesPoint & { timeDisplay: string })[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [networkSpeed, setNetworkSpeed] = useState(0);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -43,10 +44,34 @@ const Analytics = () => {
 			}
 		};
 
+		const fetchLiveParams = async () => {
+			try {
+				const res = await fetch("/api/analytics/status", {
+					headers: {
+						"Authorization": `Bearer ${localStorage.getItem("token")}` // Simplified auth
+					}
+				});
+				if (res.ok) {
+					const data = await res.json();
+					setNetworkSpeed(data.total_sec || 0);
+				}
+			} catch (err) {
+				// quiet failure
+			}
+		};
+
 		fetchData();
-		// Refresh every 10 seconds
+		fetchLiveParams();
+
+		// Refresh main data every 10 seconds
 		const interval = setInterval(fetchData, 10000);
-		return () => clearInterval(interval);
+		// Refresh live stats every 2 seconds
+		const liveInterval = setInterval(fetchLiveParams, 2000);
+
+		return () => {
+			clearInterval(interval);
+			clearInterval(liveInterval);
+		};
 	}, []);
 
 	if (loading && !summary) {
@@ -97,12 +122,12 @@ const Analytics = () => {
 				</Card>
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Bandwidth</CardTitle>
+						<CardTitle className="text-sm font-medium">Bandwidth (Live)</CardTitle>
 						<IconChartBar className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">{formatBytes(summary?.bytes || 0)}</div>
-						<p className="text-xs text-muted-foreground">Total Data Transferred</p>
+						<div className="text-2xl font-bold">{formatBytes(networkSpeed)}/s</div>
+						<p className="text-xs text-muted-foreground">Current Throughput</p>
 					</CardContent>
 				</Card>
 			</div>
