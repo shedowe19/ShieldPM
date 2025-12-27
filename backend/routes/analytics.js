@@ -14,7 +14,8 @@ router.get("/summary", async (req, res) => {
         const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
         const end = req.query.end || dayjs().toISOString();
 
-        const stats = await AnalyticCount.query()
+        const stats = await AnalyticCount.knex()
+            .from("analytic_count")
             .where("timestamp", ">=", start)
             .andWhere("timestamp", "<=", end)
             .sum("request_count as count")
