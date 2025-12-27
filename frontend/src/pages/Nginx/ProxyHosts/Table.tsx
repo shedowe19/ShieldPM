@@ -1,4 +1,4 @@
-import { IconDotsVertical, IconEdit, IconPower, IconTrash } from "@tabler/icons-react";
+import { IconDotsVertical, IconEdit, IconPower, IconTrash, IconChartBar } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { ProxyHost } from "src/api/backend";
@@ -31,9 +31,10 @@ interface Props {
 	onEdit?: (id: number) => void;
 	onDelete?: (id: number) => void;
 	onDisableToggle?: (id: number, enabled: boolean) => void;
+	onAnalytics?: (id: number) => void;
 	onNew?: () => void;
 }
-export default function Table({ data, isFetching, onEdit, onDelete, onDisableToggle, onNew, isFiltered }: Props) {
+export default function Table({ data, isFetching, onEdit, onDelete, onDisableToggle, onAnalytics, onNew, isFiltered }: Props) {
 	const columnHelper = createColumnHelper<ProxyHost>();
 	const columns = useMemo(
 		() => [
@@ -103,6 +104,10 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
+								<DropdownMenuItem onClick={() => onAnalytics?.(info.row.original.id)}>
+									<IconChartBar className="mr-2 h-4 w-4" />
+									<T id="analytics.button" />
+								</DropdownMenuItem>
 								<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
 									<IconEdit className="mr-2 h-4 w-4" />
 									<T id="action.edit" />
