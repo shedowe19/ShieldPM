@@ -115,7 +115,7 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
                 .orderBy("count", "desc")
                 .limit(10),
 
-            // Top Referers
+            // Top Referrers
             knex("analytics_logs")
                 .select("referer")
                 .count("* as count")

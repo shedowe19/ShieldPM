@@ -55,7 +55,7 @@ const Analytics = () => {
 					const data = await res.json();
 					setNetworkSpeed(data.total_sec || 0);
 				}
-			} catch (err) {
+			} catch (_err) {
 				// quiet failure
 			}
 		};

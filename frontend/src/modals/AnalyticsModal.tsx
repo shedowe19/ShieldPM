@@ -26,33 +26,30 @@ export const AnalyticsModal = ({ hostId, open, onOpenChange }: Props) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (open && hostId) {
-            fetchData();
-        }
+        const fetchData = async () => {
+            if (!open || !hostId) return;
+            setLoading(true);
+            try {
+                const [sumData, serData] = await Promise.all([
+                    getAnalyticsSummary(hostId, range),
+                    getAnalyticsSeries(hostId, range)
+                ]);
+                setSummary(sumData);
+
+                // Format series for chart
+                setSeries(serData.map((d: any) => ({
+                    ...d,
+                    time_bucket: dayjs(d.timestamp).unix(),
+                })));
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
     }, [open, hostId, range]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [sumData, serData] = await Promise.all([
-                getAnalyticsSummary(hostId, range),
-                getAnalyticsSeries(hostId, range)
-            ]);
-            setSummary(sumData);
-
-            // Format series for chart
-            setSeries(serData.map((d: any) => ({
-                ...d,
-                time_bucket: dayjs(d.timestamp).unix(), // AnalyticsChart expects unix? Check component.
-                // AnalyticsChart expects 'time_bucket' as unix timestamp.
-                // Backend returns 'timestamp' as ISO string.
-            })));
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     // Map scale
     const maxCountryCount = summary?.top_countries?.[0]?.count || 0;
@@ -141,7 +138,7 @@ export const AnalyticsModal = ({ hostId, open, onOpenChange }: Props) => {
                                 </div>
                             </div>
                             <div className="border rounded-md p-4">
-                                <h3 className="font-bold mb-2">Top Referers</h3>
+                                <h3 className="font-bold mb-2">Top Referrers</h3>
                                 <div className="space-y-1">
                                     {summary?.top_referers?.map((r, idx) => (
                                         <div key={idx} className="flex justify-between text-xs">

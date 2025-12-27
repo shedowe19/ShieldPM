@@ -139,7 +139,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 				},
 			}),
 		],
-		[columnHelper, onEdit, onDisableToggle, onDelete],
+		[columnHelper, onEdit, onDisableToggle, onDelete, onAnalytics],
 	);
 
 	const tableInstance = useReactTable<ProxyHost>({
