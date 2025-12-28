@@ -168,19 +168,26 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
                 .first()
         ]);
 
-        const totals = resultTotals || { count: 0, s2xx: 0, s3xx: 0, s4xx: 0, s5xx: 0 };
+        const totals = resultTotals || {};
+
+        // Helper to safely get number from various casing/aliasing
+        const getNum = (obj, keys) => {
+            for (const k of keys) {
+                if (obj[k] !== undefined && obj[k] !== null) return Number(obj[k]);
+            }
+            return 0;
+        };
+
         // DEBUG: Inspect aggregation keys
-        console.log("Analytics Summary Totals Keys:", Object.keys(totals), totals);
-        console.log("Top Countries Length:", topCountries.length);
-        console.log("Recent Requests Length:", recent.length);
+        console.log("Analytics Summary Totals RAW:", totals);
 
         res.json({
             // KPI Data
-            count: Number(totals.count) || 0,
-            status_2xx: Number(totals.s2xx) || 0,
-            status_3xx: Number(totals.s3xx) || 0,
-            status_4xx: Number(totals.s4xx) || 0,
-            status_5xx: Number(totals.s5xx) || 0,
+            count: getNum(totals, ["count", "COUNT", "request_count"]),
+            status_2xx: getNum(totals, ["s2xx", "S2XX", "status_code_2xx"]),
+            status_3xx: getNum(totals, ["s3xx", "S3XX", "status_code_3xx"]),
+            status_4xx: getNum(totals, ["s4xx", "S4XX", "status_code_4xx"]),
+            status_5xx: getNum(totals, ["s5xx", "S5XX", "status_code_5xx"]),
             // Lists
             top_countries: topCountries,
             top_ips: topIps,
