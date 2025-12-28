@@ -9,7 +9,6 @@ import { getAnalyticsSummary, getAnalyticsSeries, type AnalyticsSummary, type Ti
 import { useProxyHosts } from "src/hooks";
 import { T } from "src/locale";
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
-import { scaleLinear } from "d3-scale";
 import { geoCentroid } from "d3-geo";
 import { Loading } from "src/components";
 
@@ -113,8 +112,7 @@ const Analytics = () => {
 	const successRate = count > 0 ? ((s2xx / count) * 100).toFixed(1) : "0";
 
 	// Map scale
-	const maxCountryCount = summary?.topCountries?.[0]?.count || 0;
-	const colorScale = scaleLinear<string>().domain([0, maxCountryCount]).range(["#EAEAEC", "#06b6d4"]);
+
 
 	return (
 		<div className="p-4 md:p-8 pt-6 space-y-6">
