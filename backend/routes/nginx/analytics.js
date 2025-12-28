@@ -160,14 +160,14 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
             AnalyticCount.query()
                 .where("proxy_host_id", hostId)
                 .andWhere("timestamp", ">=", sinceIso)
-                .sum("request_count as count")
-                .sum("status_code_2xx as s2xx")
-                .sum("status_code_3xx as s3xx")
-                .sum("status_code_4xx as s4xx")
-                .sum("status_code_5xx as s5xx")
+                .sum({
+                    count: "request_count",
+                    s2xx: "status_code_2xx",
+                    s3xx: "status_code_3xx",
+                    s4xx: "status_code_4xx",
+                    s5xx: "status_code_5xx"
+                })
                 .first()
-        ]);
-
         ]);
 
 const totals = resultTotals || { count: 0, s2xx: 0, s3xx: 0, s4xx: 0, s5xx: 0 };
