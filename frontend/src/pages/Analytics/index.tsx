@@ -99,11 +99,11 @@ const Analytics = () => {
 	}
 
 	const count = Number(summary?.count) || 0;
-	const s2xx = Number(summary?.status_2xx) || 0;
+	const s2xx = Number(summary?.status2xx) || 0;
 	const successRate = count > 0 ? ((s2xx / count) * 100).toFixed(1) : "0";
 
 	// Map scale
-	const maxCountryCount = summary?.top_countries?.[0]?.count || 0;
+	const maxCountryCount = summary?.topCountries?.[0]?.count || 0;
 	const colorScale = scaleLinear<string>().domain([0, maxCountryCount]).range(["#EAEAEC", "#06b6d4"]);
 
 	return (
@@ -276,7 +276,7 @@ const Analytics = () => {
 									<Geographies geography={GEO_URL}>
 										{({ geographies }) =>
 											geographies.map((geo) => {
-												const cur = summary?.top_countries?.find((s) => s.country_code === geo.properties.ISO_A2);
+												const cur = summary?.topCountries?.find((s) => s.countryCode === geo.properties.ISO_A2);
 												return (
 													<Geography
 														key={geo.rsmKey}
@@ -301,16 +301,16 @@ const Analytics = () => {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
-							{summary?.top_countries?.slice(0, 10).map((c) => (
-								<div key={c.country_code} className="flex justify-between text-sm items-center">
+							{summary?.topCountries?.slice(0, 10).map((c) => (
+								<div key={c.countryCode} className="flex justify-between text-sm items-center">
 									<div className="flex items-center gap-2">
-										<span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{c.country_code || "??"}</span>
+										<span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{c.countryCode || "??"}</span>
 									</div>
 									<div className="flex items-center gap-4">
 										<div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
 											<div
 												className="h-full bg-cyan-500"
-												style={{ width: `${(c.count / (summary?.top_countries?.[0]?.count || 1)) * 100}%` }}
+												style={{ width: `${(c.count / (summary?.topCountries?.[0]?.count || 1)) * 100}%` }}
 											/>
 										</div>
 										<span className="w-12 text-right">{c.count.toLocaleString()}</span>
@@ -330,7 +330,7 @@ const Analytics = () => {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
-							{summary?.top_ips?.map((i, idx) => (
+							{summary?.topIps?.map((i, idx) => (
 								<div key={idx} className="flex justify-between text-xs">
 									<span className="truncate max-w-[70%] font-mono">{i.ip}</span>
 									<span className="text-muted-foreground">{i.count}</span>
@@ -345,7 +345,7 @@ const Analytics = () => {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
-							{summary?.top_referers?.map((r, idx) => (
+							{summary?.topReferers?.map((r, idx) => (
 								<div key={idx} className="flex justify-between text-xs">
 									<span className="truncate max-w-[80%]" title={r.referer}>{r.referer}</span>
 									<span className="text-muted-foreground">{r.count}</span>
@@ -360,7 +360,7 @@ const Analytics = () => {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
-							{summary?.top_paths?.map((p, idx) => (
+							{summary?.topPaths?.map((p, idx) => (
 								<div key={idx} className="flex justify-between text-xs">
 									<span className="truncate max-w-[80%]" title={p.path}>{p.path}</span>
 									<span className="text-muted-foreground">{p.count}</span>
@@ -375,9 +375,9 @@ const Analytics = () => {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
-							{summary?.top_user_agents?.map((u, idx) => (
+							{summary?.topUserAgents?.map((u, idx) => (
 								<div key={idx} className="flex justify-between text-xs">
-									<span className="truncate max-w-[80%]" title={u.user_agent}>{u.user_agent}</span>
+									<span className="truncate max-w-[80%]" title={u.userAgent}>{u.userAgent}</span>
 									<span className="text-muted-foreground">{u.count}</span>
 								</div>
 							))}
@@ -405,7 +405,7 @@ const Analytics = () => {
 								</tr>
 							</thead>
 							<tbody className="[&_tr:last-child]:border-0">
-								{summary?.recent_requests?.map((req, idx) => (
+								{summary?.recentRequests?.map((req, idx) => (
 									<tr key={idx} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
 										<td className="p-4 align-middle">{dayjs(req.time).format("HH:mm:ss")}</td>
 										<td className="p-4 align-middle font-mono">{req.method}</td>
@@ -419,7 +419,7 @@ const Analytics = () => {
 											</span>
 										</td>
 										<td className="p-4 align-middle break-all max-w-[300px]">{req.path}</td>
-										<td className="p-4 align-middle font-mono">{req.ip} {req.country_code ? `(${req.country_code})` : ""}</td>
+										<td className="p-4 align-middle font-mono">{req.ip} {req.countryCode ? `(${req.countryCode})` : ""}</td>
 										<td className="p-4 align-middle text-right">{req.duration}ms</td>
 									</tr>
 								))}
