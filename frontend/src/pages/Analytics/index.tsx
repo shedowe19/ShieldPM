@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { getAnalyticsSummary, getAnalyticsSeries, type AnalyticsSummary, type TimeSeriesPoint } from "src/api/backend";
 import { useProxyHosts } from "src/hooks";
 import { T } from "src/locale";
-import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
 import { scaleLinear } from "d3-scale";
+import { geoCentroid } from "d3-geo";
 import { Loading } from "src/components";
 
 // GeoJSON url
@@ -23,6 +24,15 @@ const formatBytes = (bytes: number, decimals = 2) => {
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 	return `${Number.parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
 };
+
+// Pulse animation
+const pulseStyle = `
+@keyframes pulse {
+	0% { transform: scale(1); opacity: 1; }
+	50% { transform: scale(1.5); opacity: 0.5; }
+	100% { transform: scale(1); opacity: 1; }
+}
+`;
 
 const Analytics = () => {
 	const { data: hosts, isLoading: hostsLoading } = useProxyHosts();
@@ -265,25 +275,52 @@ const Analytics = () => {
 			{/* Map & Tables */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 				{/* World Map */}
-				<Card>
+				<Card className="overflow-hidden">
+					<style>{pulseStyle}</style>
 					<CardHeader>
 						<CardTitle>Requests by Country</CardTitle>
 					</CardHeader>
-					<CardContent>
-						<div className="h-[300px] w-full">
-							<ComposableMap projectionConfig={{ scale: 140 }}>
+					<CardContent className="p-0">
+						<div className="h-[400px] w-full bg-[#020817]">
+							<ComposableMap projectionConfig={{ scale: 160, rotate: [-10, 0, 0] }}>
 								<ZoomableGroup>
 									<Geographies geography={GEO_URL}>
 										{({ geographies }) =>
 											geographies.map((geo) => {
 												const cur = summary?.topCountries?.find((s) => s.countryCode === geo.properties.ISO_A2);
+												const centroid = geoCentroid(geo);
 												return (
-													<Geography
-														key={geo.rsmKey}
-														geography={geo}
-														fill={cur ? colorScale(cur.count) : "#F5F4F6"}
-														stroke="#D6D6DA"
-													/>
+													<g key={geo.rsmKey}>
+														<Geography
+															geography={geo}
+															fill="#1e293b"
+															stroke="#0f172a"
+															strokeWidth={0.5}
+															style={{
+																default: { outline: "none" },
+																hover: { outline: "none", fill: "#334155" },
+																pressed: { outline: "none" },
+															}}
+														/>
+														{cur && (
+															<Marker coordinates={centroid}>
+																<circle
+																	r={Math.max(3, Math.min(20, Math.sqrt(cur.count) / 2))}
+																	fill="#06b6d4"
+																	fillOpacity={0.6}
+																	stroke="#06b6d4"
+																	strokeWidth={1}
+																	style={{
+																		animation: "pulse 2s infinite ease-in-out",
+																		transformBox: "fill-box",
+																		transformOrigin: "center"
+																	}}
+																>
+																	<title>{geo.properties.NAME}: {cur.count.toLocaleString()}</title>
+																</circle>
+															</Marker>
+														)}
+													</g>
 												);
 											})
 										}
