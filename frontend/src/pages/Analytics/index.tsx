@@ -328,107 +328,106 @@ const Analytics = () => {
 					<CardHeader>
 						<CardTitle>Top IPs</CardTitle>
 					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topIps?.map((i, idx) => (
-								<div key={idx} className="flex justify-between text-xs">
-									<span className="truncate max-w-[70%] font-mono">{i.ip}</span>
-									<span className="text-muted-foreground">{i.count}</span>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>Top Referrers</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topReferers?.map((r, idx) => (
-								<div key={idx} className="flex justify-between text-xs">
-									<span className="truncate max-w-[80%]" title={r.referer}>{r.referer}</span>
-									<span className="text-muted-foreground">{r.count}</span>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>Top Paths</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topPaths?.map((p, idx) => (
-								<div key={idx} className="flex justify-between text-xs">
-									<span className="truncate max-w-[80%]" title={p.path}>{p.path}</span>
-									<span className="text-muted-foreground">{p.count}</span>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>Top User Agents</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topUserAgents?.map((u, idx) => (
-								<div key={idx} className="flex justify-between text-xs">
-									<span className="truncate max-w-[80%]" title={u.userAgent}>{u.userAgent}</span>
-									<span className="text-muted-foreground">{u.count}</span>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
-			</div>
-
-			{/* Recent Requests */}
+					<div className="space-y-3">
+						{summary?.topIps?.map((i, idx) => (
+							<div key={idx} className="flex justify-between text-xs items-center">
+								<span className="truncate flex-1 min-w-0 mr-2 font-mono" title={i.ip}>{i.ip}</span>
+								<span className="text-muted-foreground whitespace-nowrap">{i.count}</span>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
 			<Card>
 				<CardHeader>
-					<CardTitle>Recent Requests</CardTitle>
+					<CardTitle>Top Referrers</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="relative w-full overflow-auto">
-						<table className="w-full caption-bottom text-sm text-left">
-							<thead className="[&_tr]:border-b">
-								<tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-									<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
-									<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Method</th>
-									<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
-									<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Path</th>
-									<th className="h-12 px-4 align-middle font-medium text-muted-foreground">IP</th>
-									<th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Duration</th>
-								</tr>
-							</thead>
-							<tbody className="[&_tr:last-child]:border-0">
-								{summary?.recentRequests?.map((req, idx) => (
-									<tr key={idx} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-										<td className="p-4 align-middle">{dayjs(req.time).format("HH:mm:ss")}</td>
-										<td className="p-4 align-middle font-mono">{req.method}</td>
-										<td className="p-4 align-middle">
-											<span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-												${req.status >= 200 && req.status < 300 ? "text-green-500" :
-													req.status >= 300 && req.status < 400 ? "text-blue-500" :
-														req.status >= 400 && req.status < 500 ? "text-yellow-500" : "text-red-500"
-												}`}>
-												{req.status}
-											</span>
-										</td>
-										<td className="p-4 align-middle break-all max-w-[300px]">{req.path}</td>
-										<td className="p-4 align-middle font-mono">{req.ip} {req.countryCode ? `(${req.countryCode})` : ""}</td>
-										<td className="p-4 align-middle text-right">{req.duration}ms</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
+					<div className="space-y-3">
+						{summary?.topReferers?.map((r, idx) => (
+							<div key={idx} className="flex justify-between text-xs items-center">
+								<span className="truncate flex-1 min-w-0 mr-2" title={r.referer}>{r.referer}</span>
+								<span className="text-muted-foreground whitespace-nowrap">{r.count}</span>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
+			<Card>
+				<CardHeader>
+					<CardTitle>Top Paths</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="space-y-3">
+						{summary?.topPaths?.map((p, idx) => (
+							<div key={idx} className="flex justify-between text-xs items-center">
+								<span className="truncate flex-1 min-w-0 mr-2" title={p.path}>{p.path}</span>
+								<span className="text-muted-foreground whitespace-nowrap">{p.count}</span>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
+			<Card>
+				<CardHeader>
+					<CardTitle>Top User Agents</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="space-y-3">
+						{summary?.topUserAgents?.map((u, idx) => (
+							<div key={idx} className="flex justify-between text-xs items-center">
+								<span className="truncate flex-1 min-w-0 mr-2" title={u.userAgent}>{u.userAgent}</span>
+								<span className="text-muted-foreground whitespace-nowrap">{u.count}</span>
+							</div>
+						))}
 					</div>
 				</CardContent>
 			</Card>
 		</div>
+
+			{/* Recent Requests */ }
+	<Card>
+		<CardHeader>
+			<CardTitle>Recent Requests</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<div className="relative w-full overflow-auto">
+				<table className="w-full caption-bottom text-sm text-left">
+					<thead className="[&_tr]:border-b">
+						<tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+							<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
+							<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Method</th>
+							<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
+							<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Path</th>
+							<th className="h-12 px-4 align-middle font-medium text-muted-foreground">IP</th>
+							<th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Duration</th>
+						</tr>
+					</thead>
+					<tbody className="[&_tr:last-child]:border-0">
+						{summary?.recentRequests?.map((req, idx) => (
+							<tr key={idx} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+								<td className="p-4 align-middle">{dayjs(req.time).format("HH:mm:ss")}</td>
+								<td className="p-4 align-middle font-mono">{req.method}</td>
+								<td className="p-4 align-middle">
+									<span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
+												${req.status >= 200 && req.status < 300 ? "text-green-500" :
+											req.status >= 300 && req.status < 400 ? "text-blue-500" :
+												req.status >= 400 && req.status < 500 ? "text-yellow-500" : "text-red-500"
+										}`}>
+										{req.status}
+									</span>
+								</td>
+								<td className="p-4 align-middle break-all max-w-[300px]">{req.path}</td>
+								<td className="p-4 align-middle font-mono">{req.ip} {req.countryCode ? `(${req.countryCode})` : ""}</td>
+								<td className="p-4 align-middle text-right">{req.duration}ms</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+		</CardContent>
+	</Card>
+		</div >
 	);
 };
 
