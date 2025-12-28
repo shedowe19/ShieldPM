@@ -287,6 +287,10 @@ const Analytics = () => {
 											geographies.map((geo) => {
 												const cur = summary?.topCountries?.find((s) => s.countryCode === geo.properties.ISO_A2);
 												const centroid = geoCentroid(geo);
+												// Debug logs for first few items
+												if (summary?.topCountries?.length && cur) {
+													console.log("Map Debug:", { country: geo.properties.NAME, iso: geo.properties.ISO_A2, curValue: cur.count, centroid });
+												}
 												return (
 													<g key={geo.rsmKey}>
 														<Geography
