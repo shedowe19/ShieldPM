@@ -11,6 +11,10 @@ import { T } from "src/locale";
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
 import { geoCentroid } from "d3-geo";
 import { Loading } from "src/components";
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countries.registerLocale(enLocale);
 
 // GeoJSON url
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -285,12 +289,9 @@ const Analytics = () => {
 									<Geographies geography={GEO_URL}>
 										{({ geographies }) =>
 											geographies.map((geo) => {
-												const cur = summary?.topCountries?.find((s) => s.countryCode === geo.properties.ISO_A2);
+												const code = countries.numericToAlpha2(geo.id);
+												const cur = summary?.topCountries?.find((s) => s.countryCode === code);
 												const centroid = geoCentroid(geo);
-												// Debug logs for first few items
-												if (summary?.topCountries?.length && cur) {
-													console.log("Map Debug:", { country: geo.properties.NAME, iso: geo.properties.ISO_A2, curValue: cur.count, centroid });
-												}
 												return (
 													<g key={geo.rsmKey}>
 														<Geography
