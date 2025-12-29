@@ -11,11 +11,11 @@ const migrateName = "add_disable_buffering";
  * @returns {Promise}
  */
 const up = (knex) => {
-    logger.info(`[${migrateName}] Migrating Up...`);
+	logger.info(`[${migrateName}] Migrating Up...`);
 
-    return knex.schema.table("proxy_host", (table) => {
-        table.integer("disable_buffering").notNull().unsigned().defaultTo(0);
-    });
+	return knex.schema.table("proxy_host", (table) => {
+		table.integer("disable_buffering").notNull().unsigned().defaultTo(0);
+	});
 };
 
 /**
@@ -25,11 +25,11 @@ const up = (knex) => {
  * @returns {Promise}
  */
 const down = (knex) => {
-    logger.info(`[${migrateName}] Migrating Down...`);
+	logger.info(`[${migrateName}] Migrating Down...`);
 
-    return knex.schema.table("proxy_host", (table) => {
-        table.dropColumn("disable_buffering");
-    });
+	return knex.schema.table("proxy_host", (table) => {
+		table.dropColumn("disable_buffering");
+	});
 };
 
 export { up, down };
