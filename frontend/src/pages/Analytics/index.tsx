@@ -292,31 +292,36 @@ const Analytics = () => {
 												const code = countries.numericToAlpha2(geo.id);
 												const cur = summary?.topCountries?.find((s) => s.countryCode === code);
 												const centroid = geoCentroid(geo);
+												const maxCount = summary?.topCountries?.[0]?.count || 1;
+												const intensity = cur ? Math.max(0.2, (Math.log(cur.count + 1) / Math.log(maxCount + 1))) : 0;
+												const fillColor = cur ? `rgba(6, 182, 212, ${intensity * 0.8 + 0.2})` : "#1e293b";
+
 												return (
 													<g key={geo.rsmKey}>
 														<Geography
 															geography={geo}
-															fill="#1e293b"
+															fill={fillColor}
 															stroke="#0f172a"
 															strokeWidth={0.5}
 															style={{
-																default: { outline: "none" },
-																hover: { outline: "none", fill: "#334155" },
+																default: { outline: "none", transition: "all 250ms" },
+																hover: { outline: "none", fill: "#0891b2", cursor: "pointer" },
 																pressed: { outline: "none" },
 															}}
 														/>
 														{cur && (
 															<Marker coordinates={centroid}>
 																<circle
-																	r={Math.max(2, Math.min(12, Math.log(cur.count) * 3))}
-																	fill="#06b6d4"
-																	fillOpacity={0.6}
+																	r={Math.max(2, Math.min(4, Math.log(cur.count) * 1.5))}
+																	fill="#ffffff"
+																	fillOpacity={0.9}
 																	stroke="#06b6d4"
 																	strokeWidth={1}
 																	style={{
 																		animation: "pulse 2s infinite ease-in-out",
 																		transformBox: "fill-box",
-																		transformOrigin: "center"
+																		transformOrigin: "center",
+																		pointerEvents: "none"
 																	}}
 																>
 																	<title>{geo.properties.NAME}: {cur.count.toLocaleString()}</title>
