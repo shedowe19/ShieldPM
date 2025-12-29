@@ -10,7 +10,7 @@ const migrateName = "add_req_limit";
  * @param   {Object} knex
  * @returns {Promise}
  */
-const up = (knex) => {
+const up = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Up...`);
 
 	const hasRate = await knex.schema.hasColumn("proxy_host", "adv_limit_req_rate");
