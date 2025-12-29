@@ -11,8 +11,8 @@ const migrateName = "add_req_limit_legacy_placeholder";
  * @returns {Promise}
  */
 const up = (knex) => {
-    logger.info(`[${migrateName}] Placeholder for corrupted migration check. Doing nothing.`);
-    return Promise.resolve();
+	logger.info(`[${migrateName}] Placeholder for corrupted migration check. Doing nothing.`);
+	return Promise.resolve();
 };
 
 /**
@@ -22,8 +22,8 @@ const up = (knex) => {
  * @returns {Promise}
  */
 const down = (knex) => {
-    logger.info(`[${migrateName}] Placeholder for corrupted migration check. Doing nothing.`);
-    return Promise.resolve();
+	logger.info(`[${migrateName}] Placeholder for corrupted migration check. Doing nothing.`);
+	return Promise.resolve();
 };
 
 export { up, down };
