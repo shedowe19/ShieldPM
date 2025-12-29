@@ -40,7 +40,7 @@ export function SiteFooter() {
 							</a>
 						</span>
 						<a
-							href={`https://github.com/shedowe19/NPMplus/commit/${getVersion()}`}
+							href={`https://github.com/shedowe19/NPMplus/releases/tag/${getVersion()}`}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
