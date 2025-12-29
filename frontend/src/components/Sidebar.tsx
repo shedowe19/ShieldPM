@@ -48,7 +48,7 @@ const menuItems: MenuItem[] = [
 	{
 		to: "/analytics",
 		icon: IconActivity,
-		label: "analytics",
+		label: "analytics.title",
 	},
 	{
 		icon: IconDeviceDesktop,
