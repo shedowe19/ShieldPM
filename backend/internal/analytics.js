@@ -143,7 +143,6 @@ class AnalyticsService {
 				user_agent: data.http_user_agent || null,
 				duration: Math.floor(Number.parseFloat(data.request_time || 0) * 1000), // ms
 			});
-
 		} catch (_err) {
 			// Ignore parse errors
 		}

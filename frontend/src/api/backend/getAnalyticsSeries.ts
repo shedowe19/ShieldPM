@@ -15,7 +15,7 @@ export interface TimeSeriesPoint {
 export async function getAnalyticsSeries(hostId?: number, range = "24h"): Promise<TimeSeriesPoint[]> {
 	const url = hostId ? `/nginx/analytics/${hostId}` : "/nginx/analytics/global";
 	const data = await get({ url, params: { range } });
-	// Map backend snake_case to frontend expected format if needed, 
+	// Map backend snake_case to frontend expected format if needed,
 	// actually backend returns: timestamp, status_code_2xx, etc.
 	// Frontend expects: timestamp (or timeDisplay handled in index), s2xx
 
@@ -27,6 +27,6 @@ export async function getAnalyticsSeries(hostId?: number, range = "24h"): Promis
 		s2xx: d.statusCode2xx,
 		s3xx: d.statusCode3xx,
 		s4xx: d.statusCode4xx,
-		s5xx: d.statusCode5xx
+		s5xx: d.statusCode5xx,
 	}));
 }

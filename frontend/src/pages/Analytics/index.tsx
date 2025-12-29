@@ -90,8 +90,8 @@ const Analytics = () => {
 			try {
 				const res = await fetch("/api/analytics/status", {
 					headers: {
-						"Authorization": `Bearer ${localStorage.getItem("token")}`
-					}
+						Authorization: `Bearer ${localStorage.getItem("token")}`,
+					},
 				});
 				if (res.ok) {
 					const data = await res.json();
@@ -108,7 +108,11 @@ const Analytics = () => {
 	}, []);
 
 	if ((loading && !summary) || hostsLoading) {
-		return <div className="p-8 text-center"><Loading /></div>;
+		return (
+			<div className="p-8 text-center">
+				<Loading />
+			</div>
+		);
 	}
 
 	const count = Number(summary?.count) || 0;
@@ -117,14 +121,17 @@ const Analytics = () => {
 
 	// Map scale
 
-
 	return (
 		<div className="p-4 md:p-8 pt-6 space-y-6">
 			{/* Page Header */}
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 				<div>
-					<h2 className="text-3xl font-bold tracking-tight"><T id="analytics.title" /></h2>
-					<p className="text-muted-foreground"><T id="analytics.traffic-overview" tData={{ range: `analytics.range.${range}` }} /></p>
+					<h2 className="text-3xl font-bold tracking-tight">
+						<T id="analytics.title" />
+					</h2>
+					<p className="text-muted-foreground">
+						<T id="analytics.traffic-overview" tData={{ range: `analytics.range.${range}` }} />
+					</p>
 				</div>
 				<div className="flex items-center space-x-2">
 					<Select value={selectedHostId} onValueChange={setSelectedHostId}>
@@ -133,7 +140,7 @@ const Analytics = () => {
 							<SelectValue placeholder="Select Host" />
 						</SelectTrigger>
 						<SelectContent>
-							{hosts?.map(host => (
+							{hosts?.map((host) => (
 								<SelectItem key={host.id} value={String(host.id)}>
 									{host.domainNames[0]}
 								</SelectItem>
@@ -161,7 +168,9 @@ const Analytics = () => {
 			<div className="grid gap-4 md:grid-cols-3">
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium"><T id="analytics.total-requests" /></CardTitle>
+						<CardTitle className="text-sm font-medium">
+							<T id="analytics.total-requests" />
+						</CardTitle>
 						<IconActivity className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
@@ -173,22 +182,30 @@ const Analytics = () => {
 				</Card>
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium"><T id="analytics.success-rate" /></CardTitle>
+						<CardTitle className="text-sm font-medium">
+							<T id="analytics.success-rate" />
+						</CardTitle>
 						<div className="h-4 w-4 rounded-full border border-green-500 bg-green-500/20" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{successRate}%</div>
-						<p className="text-xs text-muted-foreground"><T id="analytics.responses" data={{ count: s2xx }} /></p>
+						<p className="text-xs text-muted-foreground">
+							<T id="analytics.responses" data={{ count: s2xx }} />
+						</p>
 					</CardContent>
 				</Card>
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium"><T id="analytics.bandwidth-live" /></CardTitle>
+						<CardTitle className="text-sm font-medium">
+							<T id="analytics.bandwidth-live" />
+						</CardTitle>
 						<IconChartBar className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
 						<div className="text-2xl font-bold">{formatBytes(networkSpeed)}/s</div>
-						<p className="text-xs text-muted-foreground"><T id="analytics.current-throughput" /></p>
+						<p className="text-xs text-muted-foreground">
+							<T id="analytics.current-throughput" />
+						</p>
 					</CardContent>
 				</Card>
 			</div>
@@ -197,7 +214,9 @@ const Analytics = () => {
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
 				<Card className="col-span-4">
 					<CardHeader>
-						<CardTitle><T id="analytics.requests-over-time" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.requests-over-time" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent className="pl-2">
 						<div className="h-[350px] flex items-center justify-center">
@@ -252,7 +271,9 @@ const Analytics = () => {
 
 				<Card className="col-span-3">
 					<CardHeader>
-						<CardTitle><T id="analytics.status-codes" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.status-codes" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="h-[350px] flex items-center justify-center">
@@ -271,10 +292,22 @@ const Analytics = () => {
 											cursor={{ fill: "transparent" }}
 											contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
 										/>
-										<Bar dataKey="s2xx" name="2xx" stackId="a" fill="#22c55e" radius={[0, 0, 4, 4]} />
+										<Bar
+											dataKey="s2xx"
+											name="2xx"
+											stackId="a"
+											fill="#22c55e"
+											radius={[0, 0, 4, 4]}
+										/>
 										<Bar dataKey="s3xx" name="3xx" stackId="a" fill="#3b82f6" />
 										<Bar dataKey="s4xx" name="4xx" stackId="a" fill="#eab308" />
-										<Bar dataKey="s5xx" name="5xx" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+										<Bar
+											dataKey="s5xx"
+											name="5xx"
+											stackId="a"
+											fill="#ef4444"
+											radius={[4, 4, 0, 0]}
+										/>
 									</BarChart>
 								</ResponsiveContainer>
 							) : (
@@ -294,7 +327,9 @@ const Analytics = () => {
 				<Card className="overflow-hidden">
 					<style>{pulseStyle}</style>
 					<CardHeader>
-						<CardTitle><T id="analytics.requests-by-country" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.requests-by-country" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent className="p-0">
 						<div className="h-[400px] w-full bg-[#020817]">
@@ -307,8 +342,12 @@ const Analytics = () => {
 												const cur = summary?.topCountries?.find((s) => s.countryCode === code);
 												const centroid = geoCentroid(geo);
 												const maxCount = summary?.topCountries?.[0]?.count || 1;
-												const intensity = cur ? Math.max(0.2, (Math.log(cur.count + 1) / Math.log(maxCount + 1))) : 0;
-												const fillColor = cur ? `rgba(6, 182, 212, ${intensity * 0.8 + 0.2})` : "#1e293b";
+												const intensity = cur
+													? Math.max(0.2, Math.log(cur.count + 1) / Math.log(maxCount + 1))
+													: 0;
+												const fillColor = cur
+													? `rgba(6, 182, 212, ${intensity * 0.8 + 0.2})`
+													: "#1e293b";
 
 												return (
 													<g key={geo.rsmKey}>
@@ -319,14 +358,21 @@ const Analytics = () => {
 															strokeWidth={0.5}
 															style={{
 																default: { outline: "none", transition: "all 250ms" },
-																hover: { outline: "none", fill: "#0891b2", cursor: "pointer" },
+																hover: {
+																	outline: "none",
+																	fill: "#0891b2",
+																	cursor: "pointer",
+																},
 																pressed: { outline: "none" },
 															}}
 														/>
 														{cur && (
 															<Marker coordinates={centroid}>
 																<circle
-																	r={Math.max(2, Math.min(4, Math.log(cur.count) * 1.5))}
+																	r={Math.max(
+																		2,
+																		Math.min(4, Math.log(cur.count) * 1.5),
+																	)}
 																	fill="#ffffff"
 																	fillOpacity={0.9}
 																	stroke="#06b6d4"
@@ -335,10 +381,13 @@ const Analytics = () => {
 																		animation: "pulse 2s infinite ease-in-out",
 																		transformBox: "fill-box",
 																		transformOrigin: "center",
-																		pointerEvents: "none"
+																		pointerEvents: "none",
 																	}}
 																>
-																	<title>{geo.properties.NAME}: {cur.count.toLocaleString()}</title>
+																	<title>
+																		{geo.properties.NAME}:{" "}
+																		{cur.count.toLocaleString()}
+																	</title>
 																</circle>
 															</Marker>
 														)}
@@ -356,7 +405,9 @@ const Analytics = () => {
 				{/* Top Countries List */}
 				<Card>
 					<CardHeader>
-						<CardTitle><T id="analytics.top-countries" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.top-countries" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
@@ -364,13 +415,17 @@ const Analytics = () => {
 								summary.topCountries.slice(0, 10).map((c) => (
 									<div key={c.countryCode} className="flex justify-between text-sm items-center">
 										<div className="flex items-center gap-2">
-											<span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{c.countryCode || "??"}</span>
+											<span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">
+												{c.countryCode || "??"}
+											</span>
 										</div>
 										<div className="flex items-center gap-4">
 											<div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
 												<div
 													className="h-full bg-cyan-500"
-													style={{ width: `${(c.count / (summary?.topCountries?.[0]?.count || 1)) * 100}%` }}
+													style={{
+														width: `${(c.count / (summary?.topCountries?.[0]?.count || 1)) * 100}%`,
+													}}
 												/>
 											</div>
 											<span className="w-12 text-right">{c.count.toLocaleString()}</span>
@@ -391,14 +446,18 @@ const Analytics = () => {
 			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 				<Card>
 					<CardHeader>
-						<CardTitle><T id="analytics.top-ips" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.top-ips" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topIps && summary.topIps.length > 0 ? (
 								summary.topIps.map((i, idx) => (
 									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2 font-mono" title={i.ip}>{i.ip}</span>
+										<span className="truncate flex-1 min-w-0 mr-2 font-mono" title={i.ip}>
+											{i.ip}
+										</span>
 										<span className="text-muted-foreground whitespace-nowrap">{i.count}</span>
 									</div>
 								))
@@ -412,14 +471,18 @@ const Analytics = () => {
 				</Card>
 				<Card>
 					<CardHeader>
-						<CardTitle><T id="analytics.top-referrers" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.top-referrers" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topReferers && summary.topReferers.length > 0 ? (
 								summary.topReferers.map((r, idx) => (
 									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2" title={r.referer}>{r.referer}</span>
+										<span className="truncate flex-1 min-w-0 mr-2" title={r.referer}>
+											{r.referer}
+										</span>
 										<span className="text-muted-foreground whitespace-nowrap">{r.count}</span>
 									</div>
 								))
@@ -433,14 +496,18 @@ const Analytics = () => {
 				</Card>
 				<Card>
 					<CardHeader>
-						<CardTitle><T id="analytics.top-paths" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.top-paths" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topPaths && summary.topPaths.length > 0 ? (
 								summary.topPaths.map((p, idx) => (
 									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2" title={p.path}>{p.path}</span>
+										<span className="truncate flex-1 min-w-0 mr-2" title={p.path}>
+											{p.path}
+										</span>
 										<span className="text-muted-foreground whitespace-nowrap">{p.count}</span>
 									</div>
 								))
@@ -454,14 +521,18 @@ const Analytics = () => {
 				</Card>
 				<Card>
 					<CardHeader>
-						<CardTitle><T id="analytics.top-user-agents" /></CardTitle>
+						<CardTitle>
+							<T id="analytics.top-user-agents" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topUserAgents && summary.topUserAgents.length > 0 ? (
 								summary.topUserAgents.map((u, idx) => (
 									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2" title={u.userAgent}>{u.userAgent}</span>
+										<span className="truncate flex-1 min-w-0 mr-2" title={u.userAgent}>
+											{u.userAgent}
+										</span>
 										<span className="text-muted-foreground whitespace-nowrap">{u.count}</span>
 									</div>
 								))
@@ -478,7 +549,9 @@ const Analytics = () => {
 			{/* Recent Requests */}
 			<Card>
 				<CardHeader>
-					<CardTitle><T id="analytics.recent-requests" /></CardTitle>
+					<CardTitle>
+						<T id="analytics.recent-requests" />
+					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					{summary?.recentRequests && summary.recentRequests.length > 0 ? (
@@ -486,30 +559,52 @@ const Analytics = () => {
 							<table className="w-full caption-bottom text-sm text-left">
 								<thead className="[&_tr]:border-b">
 									<tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Time</th>
-										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Method</th>
-										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
-										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">Path</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+											Time
+										</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+											Method
+										</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+											Status
+										</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+											Path
+										</th>
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">IP</th>
-										<th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Duration</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">
+											Duration
+										</th>
 									</tr>
 								</thead>
 								<tbody className="[&_tr:last-child]:border-0">
 									{summary.recentRequests.map((req, idx) => (
-										<tr key={idx} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+										<tr
+											key={idx}
+											className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+										>
 											<td className="p-4 align-middle">{dayjs(req.time).format("HH:mm:ss")}</td>
 											<td className="p-4 align-middle font-mono">{req.method}</td>
 											<td className="p-4 align-middle">
-												<span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-													${req.status >= 200 && req.status < 300 ? "text-green-500" :
-														req.status >= 300 && req.status < 400 ? "text-blue-500" :
-															req.status >= 400 && req.status < 500 ? "text-yellow-500" : "text-red-500"
-													}`}>
+												<span
+													className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
+													${
+														req.status >= 200 && req.status < 300
+															? "text-green-500"
+															: req.status >= 300 && req.status < 400
+																? "text-blue-500"
+																: req.status >= 400 && req.status < 500
+																	? "text-yellow-500"
+																	: "text-red-500"
+													}`}
+												>
 													{req.status}
 												</span>
 											</td>
 											<td className="p-4 align-middle break-all max-w-[300px]">{req.path}</td>
-											<td className="p-4 align-middle font-mono">{req.ip} {req.countryCode ? `(${req.countryCode})` : ""}</td>
+											<td className="p-4 align-middle font-mono">
+												{req.ip} {req.countryCode ? `(${req.countryCode})` : ""}
+											</td>
 											<td className="p-4 align-middle text-right">{req.duration}ms</td>
 										</tr>
 									))}
@@ -523,7 +618,7 @@ const Analytics = () => {
 					)}
 				</CardContent>
 			</Card>
-		</div >
+		</div>
 	);
 };
 

@@ -90,7 +90,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => { }),
+					.catch(() => {}),
 			);
 		}
 
@@ -105,7 +105,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => { }),
+					.catch(() => {}),
 			);
 		}
 
