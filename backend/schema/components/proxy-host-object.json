@@ -25,7 +25,11 @@
 		"hsts_subdomains",
 		"bandwidth_limit",
 		"forward_query",
-		"maintenance_on_failure"
+		"maintenance_on_failure",
+		"adv_limit_req_rate",
+		"adv_limit_req_unit",
+		"adv_limit_req_burst"
+
 	],
 	"properties": {
 		"id": {
@@ -201,6 +205,36 @@
 		"maintenance_on_failure": {
 			"type": "boolean",
 			"example": false
+		},
+		"adv_limit_req_rate": {
+			"type": [
+				"integer",
+				"null"
+			],
+			"minimum": 0,
+			"maximum": 100000,
+			"example": 10
+		},
+		"adv_limit_req_unit": {
+			"type": [
+				"string",
+				"null"
+			],
+			"enum": [
+				"s",
+				"m"
+			],
+			"example": "s"
+		},
+		"adv_limit_req_burst": {
+			"type": [
+				"integer",
+				"null"
+			],
+			"minimum": 0,
+			"maximum": 100000,
+			"example": 20
 		}
+
 	}
 }
