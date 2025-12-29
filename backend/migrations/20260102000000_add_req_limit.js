@@ -15,9 +15,15 @@ const up = (knex) => {
 
 	return knex.schema
 		.table("proxy_host", async (table) => {
-			await table.integer("adv_limit_req_rate").nullable().defaultTo(null);
-			await table.string("adv_limit_req_unit").nullable().defaultTo(null);
-			await table.integer("adv_limit_req_burst").nullable().defaultTo(null);
+			if (!(await knex.schema.hasColumn("proxy_host", "adv_limit_req_rate"))) {
+				table.integer("adv_limit_req_rate").nullable().defaultTo(null);
+			}
+			if (!(await knex.schema.hasColumn("proxy_host", "adv_limit_req_unit"))) {
+				table.string("adv_limit_req_unit").nullable().defaultTo(null);
+			}
+			if (!(await knex.schema.hasColumn("proxy_host", "adv_limit_req_burst"))) {
+				table.integer("adv_limit_req_burst").nullable().defaultTo(null);
+			}
 		})
 		.then(() => {
 			logger.info(`[${migrateName}] proxy_host Table altered`);
