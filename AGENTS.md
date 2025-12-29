@@ -73,6 +73,9 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20251213000000_add_forward_query.js`: Adds capability to forward query parameters in Proxy Hosts.
     *   `20251225000000_add_maintenance_failure.js`: Adds "Maintenance Mode on Failure" feature for Proxy Hosts.
     *   `20251230000000_add_disable_buffering.js`: Adds "Disable Buffering" option for Proxy Hosts.
+    *   `20251231000000_analytics.js`: Adds database tables for Advanced Analytics.
+    *   `20260102000000_add_req_limit.js`: Adds Request Rate Limiting fields to Proxy Hosts.
+    *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
 The application includes an auto-migration feature that detects if you are switching from the default SQLite database to MySQL or PostgreSQL.
