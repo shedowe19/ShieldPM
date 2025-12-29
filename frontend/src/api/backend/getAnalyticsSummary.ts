@@ -1,22 +1,20 @@
-import * as api from "./base";
+import { get } from "./base";
 
 export interface AnalyticsSummary {
-	count: number;
-	bytes: number;
-	status_2xx: number;
-	status_3xx: number;
-	status_4xx: number;
-	status_5xx: number;
-	// Fallback keys observed in production
+	count?: number; // legacy/global support
 	status2xx?: number;
 	status3xx?: number;
 	status4xx?: number;
 	status5xx?: number;
+	topCountries?: { countryCode: string; count: number }[];
+	topIps?: { ip: string; countryCode: string; count: number }[];
+	topReferers?: { referer: string; count: number }[];
+	topUserAgents?: { userAgent: string; count: number }[];
+	topPaths?: { path: string; count: number }[];
+	recentRequests?: any[];
 }
 
-export async function getAnalyticsSummary(params = {}): Promise<AnalyticsSummary> {
-	return await api.get({
-		url: "/analytics/summary",
-		params: params,
-	});
-}
+export const getAnalyticsSummary = (hostId?: number, range = "24h"): Promise<AnalyticsSummary> => {
+	const url = hostId ? `/nginx/analytics/${hostId}/summary` : "/nginx/analytics/global/summary";
+	return get({ url, params: { range } });
+};

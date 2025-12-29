@@ -95,7 +95,7 @@ router
 			let decrypted;
 			try {
 				decrypted = decrypt(encryptedToken);
-			} catch (e) {
+			} catch (_e) {
 				throw new errs.AuthError("Invalid OIDC cookie");
 			}
 

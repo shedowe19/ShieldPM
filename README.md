@@ -99,6 +99,7 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 ### 🛡️ Core Security
 *   **HTTP/3 (QUIC) Support:** Leverage the latest web protocol for faster, more efficient connections. Requires exposing HTTPS with UDP.
 *   **CrowdSec Integration:** Enhanced security with IPS capabilities to block malicious IPs.
+*   **Advanced Analytics:** Built-in dashboard for real-time traffic monitoring and statistics.
 *   **ModSecurity (WAF):** Web Application Firewall with CoreRuleSet support for added protection.
 *   **Improved TLS Management:**
     *   Faster certificate creation by minimizing Nginx reloads.

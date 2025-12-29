@@ -151,7 +151,7 @@ const internalRedirectionHost = {
 
 		thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);
 
-		const saved_row = await redirectionHostModel
+		const _saved_row = await redirectionHostModel
 			.query()
 			.patchAndFetchById(thisData.id, thisData)
 			.then(utils.omitRow(omissions())); // Ensure we omit rows here if needed, though patchAndFetchById returns object

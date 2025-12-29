@@ -1,24 +1,35 @@
-import fs from "fs";
+import fs from "node:fs";
 import { Tail } from "tail";
 import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
+import AnalyticsLogs from "../models/analytics_logs.js";
+import ProxyHost from "../models/proxy_host.js";
 import dayjs from "dayjs";
 
 const LOG_FILE = "/data/nginx/json_access.log";
-const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds
+const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds flush
+const RETENTION_INTERVAL_MS = 60 * 60 * 1000; // 1 hour check
+const RETENTION_HOURS = 24; // Default retention
 
 class AnalyticsService {
 	constructor(logFile) {
 		this.logFile = logFile || LOG_FILE;
 		this.tail = null;
-		// buffer structure: { "host_id:timestamp_minute": { ...stats } }
-		this.buffer = new Map();
+
+		// Map for aggregation: { "host_id:timestamp_minute": { ...stats } }
+		this.aggregationBuffer = new Map();
+
+		// Array for detailed logs
+		this.detailedLogBuffer = [];
+
+		// Caches
+		this.hostCache = new Map(); // hostname -> id
 		this.flushTimer = null;
+		this.retentionTimer = null;
 	}
 
-	init() {
+	async init() {
 		if (!fs.existsSync(this.logFile)) {
-			// If file doesn't exist, create it so tail doesn't crash
 			try {
 				fs.closeSync(fs.openSync(this.logFile, "w"));
 			} catch (err) {
@@ -29,6 +40,11 @@ class AnalyticsService {
 
 		logger.info(`Starting Analytics Service, watching ${this.logFile}...`);
 
+		// Load initial domains
+		await this.loadDomains();
+		// Refresh domains every 10 min
+		setInterval(() => this.loadDomains(), 10 * 60 * 1000);
+
 		// Tail the log file
 		try {
 			this.tail = new Tail(this.logFile);
@@ -38,63 +54,63 @@ class AnalyticsService {
 			logger.error(`Failed to initialize tail: ${err.message}`);
 		}
 
-		// Start flush timer
+		// Start timers
 		this.flushTimer = setInterval(() => this.flush(), FLUSH_INTERVAL_MS);
+		this.retentionTimer = setInterval(() => this.runRetention(), RETENTION_INTERVAL_MS);
+
+		// Run retention once on startup
+		this.runRetention();
 	}
 
-	/**
-	 * Parse a single log line and add to buffer
-	 * @param {string} line
-	 */
+	async loadDomains() {
+		try {
+			const hosts = await ProxyHost.query().where("is_deleted", 0).select("id", "domain_names");
+			const newMap = new Map();
+			for (const host of hosts) {
+				if (host.domain_names && Array.isArray(host.domain_names)) {
+					for (const domain of host.domain_names) {
+						newMap.set(domain, host.id);
+					}
+				}
+			}
+			this.hostCache = newMap;
+			logger.info(`Loaded ${this.hostCache.size} domains for analytics.`);
+		} catch (err) {
+			logger.error("Failed to load domains for analytics:", err);
+		}
+	}
+
 	processLine(line) {
 		try {
 			if (!line.trim()) return;
-			// Fix common Nginx JSON log errors (e.g. unquoted country code)
-			// "geoip_country_code":DE} -> "geoip_country_code":"DE"}
+			// Fix common Nginx JSON log errors if any (e.g. unquoted country code)
 			const fixedLine = line.replace(/"geoip_country_code":([A-Z]{2})}/g, '"geoip_country_code":"$1"}');
-
 			const data = JSON.parse(fixedLine);
 
-			// Extract relevant fields
-			// Note: upstream/host logic might need refinement depending on what $server_name captures
-			// In NPM, usually we can map by 'server_name' if it matches a proxy host domain,
-			// but we don't have a direct ID in the log unless we added a custom header or mapped it.
-			// For now, allow null host_id or try to find it if possible, but let's stick to simple aggregation first.
+			// Resolve Host ID
+			let hostname = data.server_name;
+			if (!hostname || hostname === "_") {
+				hostname = data.http_host;
+			}
+			const hostId = this.hostCache.get(hostname) || 0; // 0 for unknown/unmatched
 
-			// We will group by 'server_name' (hostname) for now as we might not have ID easily without DB lookup every time.
-			// Actually, to keep it fast, we can just store by hostname or try to infer ID later?
-			// Let's assume for v1 we create stats per timestamp, and maybe link to host if we can.
-			// WAIT, the prompt plan said "proxy_host_id".
-			// But the log contains keys like `server_name` or `http_host`.
-			// We can cache the hostname -> ID mapping in memory to make this fast.
-
-			// For this MVP step: Let's assume we map by hostname later or just store 0 if unknown.
-			// To implement this correctly efficiently:
-			// 1. We need a cache of hostname -> proxy_host_id.
-			// 2. But for now, let's just aggregate by Hostname string if model allowed it?
-			// The model asks for `proxy_host_id`.
-			// Let's skip ID resolution for this exact moment to avoid huge code complexity in this file
-			// and treat 'proxy_host_id' as nullable, and maybe redundant if we can't resolve it.
-			// However, looking at the logs, we don't have ID.
-			// We will proceed with aggregating global stats + per-host stats IF we can resolve it.
-			// For simplicity and speed: We will aggregate based on `server_name` (the domain).
-			// Then in `flush()`, we can try to resolve `server_name` to an ID.
-
-			const status = Number.parseInt(data.status, 10);
+			const status = Number.parseInt(data.status, 10) || 0;
 			const bytes = Number.parseInt(data.body_bytes_sent, 10) || 0;
-			const time = dayjs(data.time_iso8601 || new Date())
-				.startOf("minute")
-				.toISOString();
+			// Nginx time is usually ISO8601
+			const dayjsTime = dayjs(data.time_iso8601 || new Date());
+			// For DB timestamp (ISO string for sqlite usually, or could use unix)
+			// Detailed logs use specific time, Aggregation uses minute start
+			const detailedTime = dayjsTime.toISOString();
+			const startOfMinute = dayjsTime.startOf("minute").toISOString();
 
-			// Temporary Key for grouping: time + server_name
-			// We use server_name from nginx log which should match domain names
-			const hostname = data.server_name || "unknown";
-			const key = `${time}|${hostname}`;
+			// --- 1. Aggregation Buffer ---
+			// Key: "hostId|minuteISO"
+			const aggKey = `${hostId}|${startOfMinute}`;
 
-			if (!this.buffer.has(key)) {
-				this.buffer.set(key, {
-					timestamp: time,
-					hostname: hostname,
+			if (!this.aggregationBuffer.has(aggKey)) {
+				this.aggregationBuffer.set(aggKey, {
+					host_id: hostId,
+					timestamp: startOfMinute,
 					count: 0,
 					bytes: 0,
 					status_2xx: 0,
@@ -104,78 +120,85 @@ class AnalyticsService {
 				});
 			}
 
-			const entry = this.buffer.get(key);
-			entry.count++;
-			entry.bytes += bytes;
+			const aggEntry = this.aggregationBuffer.get(aggKey);
+			aggEntry.count++;
+			aggEntry.bytes += bytes;
 
-			if (status >= 200 && status < 300) entry.status_2xx++;
-			else if (status >= 300 && status < 400) entry.status_3xx++;
-			else if (status >= 400 && status < 500) entry.status_4xx++;
-			else if (status >= 500) entry.status_5xx++;
-		} catch (err) {
-			logger.error(`Failed to parse log line: ${err.message} | Line: ${line}`);
+			if (status >= 200 && status < 300) aggEntry.status_2xx++;
+			else if (status >= 300 && status < 400) aggEntry.status_3xx++;
+			else if (status >= 400 && status < 500) aggEntry.status_4xx++;
+			else if (status >= 500) aggEntry.status_5xx++;
+
+			// --- 2. Detailed Log Buffer ---
+			this.detailedLogBuffer.push({
+				host_id: hostId,
+				time: detailedTime,
+				method: data.request_method,
+				path: data.request_uri,
+				status: status,
+				bytes: bytes,
+				ip: data.remote_addr,
+				country_code: data.geoip_country_code || null,
+				referer: data.http_referer || null,
+				user_agent: data.http_user_agent || null,
+				duration: Math.floor(Number.parseFloat(data.request_time || 0) * 1000), // ms
+			});
+		} catch (_err) {
+			// Ignore parse errors
 		}
 	}
 
 	async flush() {
-		if (this.buffer.size === 0) return;
+		// 1. Flush Detailed Logs
+		if (this.detailedLogBuffer.length > 0) {
+			const batch = [...this.detailedLogBuffer];
+			this.detailedLogBuffer = []; // Clear immediately
 
-		const entries = Array.from(this.buffer.values());
-		this.buffer.clear(); // Clear immediately to allow new incoming data
-
-		// TODO: Resolve hostnames to IDs if possible.
-		// For now, we will just insert. We need to fetch ProxyHosts to map hostname -> ID.
-		// Importing Model here to avoid circular dependency issues at top level if any
-		const ProxyHost = (await import("../models/proxy_host.js")).default;
-
-		// Fetch all domains (this might be heavy? Cache it!)
-		// Simple optimization: Cache the mapping.
-		if (!this.hostCache) {
-			this.hostCache = new Map(); // hostname -> id
+			try {
+				// Chunking might be needed for very high traffic, but start simple
+				await AnalyticsLogs.knex().table("analytics_logs").insert(batch);
+			} catch (err) {
+				logger.error(`Failed to flush detailed logs: ${err.message}`);
+			}
 		}
 
-		// Refresh cache periodically or if miss?
-		// Let's just do a quick lookup for now or lazy load.
-		// For strict correctness, let's query the DB for the hosts we found.
-		const hostnames = [...new Set(entries.map((e) => e.hostname))];
+		// 2. Flush Aggregation
+		if (this.aggregationBuffer.size > 0) {
+			const entries = Array.from(this.aggregationBuffer.values());
+			this.aggregationBuffer.clear();
 
-		// We can optimize this by keeping a synced list, but for now let's just query.
-		// A better approach for NPM is strict mapping.
-		// Let's assume we proceed without ID if not found.
+			try {
+				await AnalyticCount.knex().transaction(async (trx) => {
+					for (const entry of entries) {
+						// Note: We might want to "upsert" here if the same minute is flushed twice (e.g. restart),
+						// but standard insert is safer for now. We can handle summing in query.
+						await AnalyticCount.query(trx).insert({
+							proxy_host_id: entry.host_id === 0 ? null : entry.host_id,
+							timestamp: entry.timestamp,
+							status_code_2xx: entry.status_2xx,
+							status_code_3xx: entry.status_3xx,
+							status_code_4xx: entry.status_4xx,
+							status_code_5xx: entry.status_5xx,
+							bytes_sent: entry.bytes,
+							request_count: entry.count,
+						});
+					}
+				});
+			} catch (err) {
+				logger.error(`Failed to flush aggregated counts: ${err.message}`);
+			}
+		}
+	}
 
-		// Find IDs
-		const hosts = await ProxyHost.query().whereIn("domain_names", hostnames);
-		// Wait, domain_names is often JSON array ["example.com", "www.example.com"] in sqlite.
-		// Searching this efficiently in SQL is hard without JSON extensions.
-		// For MVP: Let's try to do a best-effort mapping or just store NULL id.
-
-		// Re-mapping logic:
-		// Actually, Nginx `server_name` variable in the log is usually the FIRST domain name defined.
-		// But it can also be the request Host header if unchecked.
-		// Let's skip the complex resolution for this first step and use NULL ID.
-		// We will improve this later.
-
+	async runRetention() {
 		try {
-			await AnalyticCount.knex().transaction(async (trx) => {
-				for (const entry of entries) {
-					// Try to resolve ID from cache or just leave null
-					const proxy_host_id = null;
-
-					await AnalyticCount.query(trx).insert({
-						proxy_host_id: proxy_host_id,
-						timestamp: entry.timestamp,
-						status_code_2xx: entry.status_2xx,
-						status_code_3xx: entry.status_3xx,
-						status_code_4xx: entry.status_4xx,
-						status_code_5xx: entry.status_5xx,
-						bytes_sent: entry.bytes,
-						request_count: entry.count,
-					});
-				}
-			});
-			logger.info(`Flushed ${entries.length} analytic records.`);
+			const cutoff = dayjs().subtract(RETENTION_HOURS, "hour").toISOString();
+			const deleted = await AnalyticsLogs.query().where("time", "<", cutoff).delete();
+			if (deleted > 0) {
+				logger.info(`Analytics Retention: Cleaned up ${deleted} old log entries.`);
+			}
 		} catch (err) {
-			logger.error(`Failed to flush analytics: ${err.message}`);
+			logger.error(`Failed to run retention: ${err.message}`);
 		}
 	}
 }

@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import Knex from "knex";
 import { isSqlite } from "./config.js";
 import db from "../db.js";
@@ -44,7 +43,7 @@ const migrateFromSqliteToNewDb = async () => {
 				return;
 			}
 		}
-	} catch (err) {
+	} catch (_err) {
 		// If table doesn't exist, we can proceed
 	}
 

@@ -97,8 +97,8 @@ router.get("/series", async (req, res) => {
  */
 router.get("/top-hosts", async (req, res) => {
 	try {
-		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
-		const end = req.query.end || dayjs().toISOString();
+		const _start = req.query.start || dayjs().subtract(24, "hour").toISOString();
+		const _end = req.query.end || dayjs().toISOString();
 
 		// We need raw KNEX for group by query usually, but let's try with Model if we can join ProxyHost
 		// Since we didn't resolve IDs yet (set to NULL), this will be empty for now.
@@ -120,7 +120,7 @@ router.get("/top-hosts", async (req, res) => {
  * Returns real-time system status (Network Bandwidth)
  */
 import si from "systeminformation";
-router.get("/status", async (req, res) => {
+router.get("/status", async (_req, res) => {
 	try {
 		const net = await si.networkStats();
 		// Sum up all interfaces or specifically 'eth0' if known?
