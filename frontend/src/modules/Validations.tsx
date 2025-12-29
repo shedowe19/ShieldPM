@@ -27,7 +27,11 @@ const validateNumber = (min = -1, max = -1) => {
 
 	return (value: string): string | undefined => {
 		const int: number = +value;
-		if (min > -1 && !int) {
+
+		if (min > -1 && (typeof value === "undefined" || value === "" || value === null)) {
+			return intl.formatMessage({ id: "error.required" });
+		}
+		if (min > -1 && isNaN(int)) {
 			return intl.formatMessage({ id: "error.required" });
 		}
 		if (min > -1 && int < min) {

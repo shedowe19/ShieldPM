@@ -81,6 +81,7 @@ ARG NHG2M_VER=3.4
 
 ARG LRC_VER=v0.1.32
 ARG LRL_VER=v0.15
+ARG LRLT_VER=v0.09
 
 ARG OT_VER=v1.24.0
 
@@ -191,6 +192,9 @@ RUN cd /src/nginx && \
     make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1 && \
     git clone --depth 1 https://github.com/openresty/lua-resty-lrucache --branch "$LRL_VER" /src/lua-resty-lrucache && \
     cd /src/lua-resty-lrucache && \
+    make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1 && \
+    git clone --depth 1 https://github.com/openresty/lua-resty-limit-traffic --branch "$LRLT_VER" /src/lua-resty-limit-traffic && \
+    cd /src/lua-resty-limit-traffic && \
     make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1
 
 # openappsec attachment
@@ -309,6 +313,7 @@ RUN apk upgrade --no-cache -a && \
     luarocks-5.1 install lua-resty-openssl && \
     luarocks-5.1 install lua-resty-openidc && \
     luarocks-5.1 install lua-resty-session && \
+
     apk del --no-cache luarocks5.1 lua5.1-dev lua5.1-sec git yarn clang lld && \
     ln -s /app/password-reset.js /usr/local/bin/password-reset.js && \
     ln -s /app/sqlite-vaccum.js /usr/local/bin/sqlite-vaccum.js && \

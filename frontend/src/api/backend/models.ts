@@ -120,7 +120,11 @@ export interface ProxyHost {
 	bandwidthLimit: string;
 	meta: Record<string, any>;
 	maintenanceOnFailure: boolean;
+	advLimitReqRate?: number;
+	advLimitReqUnit?: string;
+	advLimitReqBurst?: number;
 	allowWebsocketUpgrade: boolean;
+
 	http2Support: boolean;
 	enabled: boolean;
 	locations?: ProxyLocation[];

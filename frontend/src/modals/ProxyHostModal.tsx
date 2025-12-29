@@ -1,4 +1,5 @@
-import { IconSettings, IconServer } from "@tabler/icons-react";
+import { IconSettings, IconServer, IconShieldLock } from "@tabler/icons-react";
+
 import { Loader2, AlertCircle } from "lucide-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
@@ -67,7 +68,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	};
 
 	return (
-		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+		<Dialog open={visible} onOpenChange={(open: boolean) => !open && remove()}>
 			<DialogContent className="max-h-[90vh] max-w-4xl p-0 gap-0 overflow-hidden flex flex-col">
 				{!isLoading && (error || userError) && (
 					<Alert variant="destructive" className="m-3">
@@ -107,6 +108,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								// Advanced tab
 								advancedConfig: data?.advancedConfig || "",
 								bandwidthLimit: data?.bandwidthLimit || "",
+								advLimitReqRate: data?.advLimitReqRate || undefined,
+								advLimitReqUnit: data?.advLimitReqUnit || "s",
+								advLimitReqBurst: data?.advLimitReqBurst || undefined,
 								forwardQuery: data?.forwardQuery || "",
 								meta: data?.meta || {},
 							} as any
@@ -138,6 +142,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<TabsTrigger value="ssl">
 												<T id="column.ssl" />
 											</TabsTrigger>
+											<TabsTrigger value="security">
+												<IconShieldLock size={20} />
+											</TabsTrigger>
 											<TabsTrigger value="advanced" className="ml-auto">
 												<IconSettings size={20} />
 											</TabsTrigger>
@@ -164,7 +171,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<T id="host.forward-scheme" />
 																	</Label>
 																	<Select
-																		onValueChange={(val) =>
+																		onValueChange={(val: string) =>
 																			form.setFieldValue(field.name, val)
 																		}
 																		value={field.value}
@@ -338,7 +345,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<Switch
 																			id="cachingEnabled"
 																			checked={field.checked}
-																			onCheckedChange={(checked) =>
+																			onCheckedChange={(checked: boolean) =>
 																				form.setFieldValue(
 																					"cachingEnabled",
 																					checked,
@@ -360,7 +367,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<Switch
 																			id="blockExploits"
 																			checked={field.checked}
-																			onCheckedChange={(checked) =>
+																			onCheckedChange={(checked: boolean) =>
 																				form.setFieldValue(
 																					"blockExploits",
 																					checked,
@@ -382,7 +389,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<Switch
 																			id="allowWebsocketUpgrade"
 																			checked={field.checked}
-																			onCheckedChange={(checked) =>
+																			onCheckedChange={(checked: boolean) =>
 																				form.setFieldValue(
 																					"allowWebsocketUpgrade",
 																					checked,
@@ -404,7 +411,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		<Switch
 																			id="maintenanceOnFailure"
 																			checked={field.checked}
-																			onCheckedChange={(checked) =>
+																			onCheckedChange={(checked: boolean) =>
 																				form.setFieldValue(
 																					"maintenanceOnFailure",
 																					checked,
@@ -429,6 +436,108 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												/>
 												<SSLOptionsFields color="bg-lime" />
 											</TabsContent>
+											<TabsContent value="security" className="mt-0 space-y-4">
+												<Alert variant="default" className="bg-muted/50">
+													<IconShieldLock className="h-4 w-4" />
+													<AlertTitle>
+														<T id="proxy-host.rate-limiting.title" />
+													</AlertTitle>
+													<AlertDescription>
+														<T id="proxy-host.rate-limiting.description" />
+													</AlertDescription>
+												</Alert>
+
+												<div className="grid grid-cols-12 gap-4">
+													<div className="col-span-12 md:col-span-4">
+														<Field
+															name="advLimitReqRate"
+															validate={validateNumber(0, 100000)}
+														>
+															{({ field, form }: any) => (
+																<div className="space-y-2">
+																	<Label htmlFor="advLimitReqRate">
+																		<T id="proxy-host.rate-limiting.rate" />
+																	</Label>
+																	<Input
+																		id="advLimitReqRate"
+																		type="number"
+																		min={0}
+																		placeholder={intl.formatMessage({
+																			id: "proxy-host.rate-limiting.rate.placeholder",
+																		})}
+																		className={
+																			form.errors.advLimitReqRate &&
+																			form.touched.advLimitReqRate
+																				? "border-destructive"
+																				: ""
+																		}
+																		{...field}
+																	/>
+																</div>
+															)}
+														</Field>
+													</div>
+													<div className="col-span-12 md:col-span-4">
+														<Field name="advLimitReqUnit">
+															{({ field, form }: any) => (
+																<div className="space-y-2">
+																	<Label htmlFor="advLimitReqUnit">
+																		<T id="proxy-host.rate-limiting.unit" />
+																	</Label>
+																	<Select
+																		onValueChange={(val: string) =>
+																			form.setFieldValue(field.name, val)
+																		}
+																		value={field.value}
+																	>
+																		<SelectTrigger>
+																			<SelectValue />
+																		</SelectTrigger>
+																		<SelectContent>
+																			<SelectItem value="s">
+																				<T id="proxy-host.rate-limiting.unit.second" />
+																			</SelectItem>
+																			<SelectItem value="m">
+																				<T id="proxy-host.rate-limiting.unit.minute" />
+																			</SelectItem>
+																		</SelectContent>
+																	</Select>
+																</div>
+															)}
+														</Field>
+													</div>
+													<div className="col-span-12 md:col-span-4">
+														<Field
+															name="advLimitReqBurst"
+															validate={validateNumber(0, 100000)}
+														>
+															{({ field, form }: any) => (
+																<div className="space-y-2">
+																	<Label htmlFor="advLimitReqBurst">
+																		<T id="proxy-host.rate-limiting.burst" />
+																	</Label>
+																	<Input
+																		id="advLimitReqBurst"
+																		type="number"
+																		min={0}
+																		placeholder={intl.formatMessage({
+																			id: "proxy-host.rate-limiting.burst.placeholder",
+																		})}
+																		className={
+																			form.errors.advLimitReqBurst &&
+																			form.touched.advLimitReqBurst
+																				? "border-destructive"
+																				: ""
+																		}
+																		{...field}
+																	/>
+																</div>
+															)}
+														</Field>
+													</div>
+												</div>
+											</TabsContent>
+
 											<TabsContent value="advanced" className="mt-0">
 												<NginxConfigField />
 											</TabsContent>

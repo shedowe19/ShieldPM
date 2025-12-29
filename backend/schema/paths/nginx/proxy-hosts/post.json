@@ -85,6 +85,15 @@
 						},
 						"maintenance_on_failure": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/maintenance_on_failure"
+						},
+						"adv_limit_req_rate": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/adv_limit_req_rate"
+						},
+						"adv_limit_req_unit": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/adv_limit_req_unit"
+						},
+						"adv_limit_req_burst": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/adv_limit_req_burst"
 						}
 					}
 				},
