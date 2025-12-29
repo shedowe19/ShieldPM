@@ -180,7 +180,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																					form.touched.forwardScheme
+																				form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -218,7 +218,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																				form.touched.forwardHost
+																			form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -249,7 +249,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																				form.touched.forwardPort
+																			form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -281,7 +281,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.bandwidthLimit &&
-																				form.touched.bandwidthLimit
+																			form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -309,7 +309,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																				form.touched.forwardQuery
+																			form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}
@@ -439,7 +439,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<TabsContent value="security" className="mt-0 space-y-4">
 												<Alert variant="default" className="bg-muted/50">
 													<IconShieldLock className="h-4 w-4" />
-													<AlertTitle><T id="proxy-host.rate-limiting.title" /></AlertTitle>
+													<AlertTitle>
+														<T id="proxy-host.rate-limiting.title" />
+													</AlertTitle>
 													<AlertDescription>
 														<T id="proxy-host.rate-limiting.description" />
 													</AlertDescription>
@@ -453,7 +455,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														>
 															{({ field, form }: any) => (
 																<div className="space-y-2">
-																	<Label htmlFor="advLimitReqRate"><T id="proxy-host.rate-limiting.rate" /></Label>
+																	<Label htmlFor="advLimitReqRate">
+																		<T id="proxy-host.rate-limiting.rate" />
+																	</Label>
 																	<Input
 																		id="advLimitReqRate"
 																		type="number"
@@ -463,7 +467,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqRate &&
-																				form.touched.advLimitReqRate
+																			form.touched.advLimitReqRate
 																				? "border-destructive"
 																				: ""
 																		}
@@ -477,7 +481,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Field name="advLimitReqUnit">
 															{({ field, form }: any) => (
 																<div className="space-y-2">
-																	<Label htmlFor="advLimitReqUnit"><T id="proxy-host.rate-limiting.unit" /></Label>
+																	<Label htmlFor="advLimitReqUnit">
+																		<T id="proxy-host.rate-limiting.unit" />
+																	</Label>
 																	<Select
 																		onValueChange={(val: string) =>
 																			form.setFieldValue(field.name, val)
@@ -488,8 +494,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectValue />
 																		</SelectTrigger>
 																		<SelectContent>
-																			<SelectItem value="s"><T id="proxy-host.rate-limiting.unit.second" /></SelectItem>
-																			<SelectItem value="m"><T id="proxy-host.rate-limiting.unit.minute" /></SelectItem>
+																			<SelectItem value="s">
+																				<T id="proxy-host.rate-limiting.unit.second" />
+																			</SelectItem>
+																			<SelectItem value="m">
+																				<T id="proxy-host.rate-limiting.unit.minute" />
+																			</SelectItem>
 																		</SelectContent>
 																	</Select>
 																</div>
@@ -503,7 +513,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														>
 															{({ field, form }: any) => (
 																<div className="space-y-2">
-																	<Label htmlFor="advLimitReqBurst"><T id="proxy-host.rate-limiting.burst" /></Label>
+																	<Label htmlFor="advLimitReqBurst">
+																		<T id="proxy-host.rate-limiting.burst" />
+																	</Label>
 																	<Input
 																		id="advLimitReqBurst"
 																		type="number"
@@ -513,7 +525,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqBurst &&
-																				form.touched.advLimitReqBurst
+																			form.touched.advLimitReqBurst
 																				? "border-destructive"
 																				: ""
 																		}
@@ -525,7 +537,6 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 												</div>
 											</TabsContent>
-
 
 											<TabsContent value="advanced" className="mt-0">
 												<NginxConfigField />
