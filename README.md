@@ -112,6 +112,7 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **Load Balancing:** Capabilities for complex upstream setups (requires custom configuration).
 *   **Upload Limits:** Allows infinite upload size (may be limited by ModSecurity).
 *   **Bandwidth Limiting:** built-in support for limiting bandwidth per host.
+*   **Disable Buffering:** Toggle to disable proxy buffering for streaming (Jellyfin/Plex).
 *   **Header Security:** `Server` response header hidden by default. Basic security headers added when HSTS is enabled.
 *   **OpenAppSec:** Option to load OpenAppSec attachment module.
 *   **Punycode:** Full support for international domain names.
