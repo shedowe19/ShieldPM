@@ -457,8 +457,27 @@ const internalAccessList = {
 					}
 				}
 			}
-			logger.success(`Built Access file #${list.id} for: ${list.name}`);
 		}
+
+		// 4. mTLS Certificate Handling
+		const crtFile = `${htpasswdFile}.crt`;
+		if (list.mtls_enabled && list.mtls_certificate) {
+			logger.info(`Writing mTLS Certificate for Access List #${list.id}`);
+			try {
+				await fs.promises.writeFile(crtFile, list.mtls_certificate, { encoding: "utf8" });
+			} catch (err) {
+				logger.error(`Failed to write mTLS certificate for Access List #${list.id}`, err);
+			}
+		} else {
+			// Clean up if disabled or content missing
+			try {
+				await fs.promises.unlink(crtFile);
+			} catch (_err) {
+				// file might not exist, ignore
+			}
+		}
+
+		logger.success(`Built Access file #${list.id} for: ${list.name}`);
 	},
 };
 

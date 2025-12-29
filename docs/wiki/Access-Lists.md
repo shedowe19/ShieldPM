@@ -51,5 +51,22 @@ In the **Access List** dialog, scroll to the Authorization section:
 4.  After success, IdP redirects back to the callback URL.
 5.  Nginx verifies the token, sets a session cookie, and allows access.
 
+## 🛡️ Mutual TLS (mTLS) 🆕
+> **Available since v3.0.0.19**
+
+Strictly require clients to present a valid SSL Certificate to access your service. This is ideal for Zero-Trust environments or private APIs.
+
+### Configuration
+1.  **Generate a CA:** Create a private Certificate Authority (CA) and sign client certificates.
+2.  **Enable mTLS:** In the Access List modal, go to the **mTLS** tab.
+3.  **Client CA:** Paste the **Public Certificate** of your CA (in PEM format).
+    *   Do NOT paste the Private Key!
+4.  **Save & Apply:** Assign the list to a Proxy Host.
+
+### Behavior
+*   **Enforcement:** Nginx immediately rejects connections during the TLS Handshake if the client does not provide a valid certificate signed by the configured CA.
+*   **Browser:** Users will be prompted by their browser to select a certificate.
+*   **API/CLI:** Use `--cert client.crt --key client.key` (e.g. with curl).
+
 ---
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)

@@ -18,6 +18,7 @@ import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { IconShieldLock } from "@tabler/icons-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Card, CardContent } from "src/components/ui/card";
+import { Textarea } from "src/components/ui/textarea";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -40,7 +41,8 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			values.items?.length === 0 &&
 			values.clients?.length === 0 &&
 			!values.authentikHost &&
-			values.authType !== "oidc"
+			values.authType !== "oidc" &&
+			!values.mtlsEnabled
 		) {
 			return intl.formatMessage({ id: "error.access.at-least-one" });
 		}
@@ -49,6 +51,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			if (!values.oidcClientId) return "Client ID is required";
 			if (!values.oidcClientSecret) return "Client Secret is required";
 			if (!values.oidcDiscoveryUrl) return "Discovery URL is required";
+		}
+
+		if (values.mtlsEnabled && !values.mtlsContent) {
+			return "mTLS Certificate Content is required when mTLS is enabled";
 		}
 
 		// ensure the items don't contain the same username twice
@@ -80,6 +86,9 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			name: values.name,
 			satisfy_any: values.satisfyAny,
 			pass_auth: values.passAuth,
+			// mTLS
+			mtls_enabled: values.mtlsEnabled,
+			mtls_certificate: values.mtlsEnabled ? values.mtlsContent : undefined,
 			meta: {
 				...data?.meta,
 				auth_type: authType,
@@ -170,12 +179,17 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								oidcDiscoveryUrl: meta.oidc_discovery_url || meta.oidcDiscoveryUrl || "",
 								oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
 								oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
+								// mTLS
+								mtlsEnabled: !!(data as any).mtls_enabled,
+								mtlsContent: (data as any).mtls_certificate || "",
 							} as AccessList & {
 								authType: string;
 								authentikHost: string;
 								oidcDiscoveryUrl: string;
 								oidcClientId: string;
 								oidcClientSecret: string;
+								mtlsEnabled: boolean;
+								mtlsContent: string;
 							}
 						}
 						onSubmit={onSubmit}
@@ -193,7 +207,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									)}
 
 									<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-										<TabsList className="grid w-full grid-cols-4">
+										<TabsList className="grid w-full grid-cols-5">
 											<TabsTrigger value="details">
 												<T id="column.details" />
 											</TabsTrigger>
@@ -205,6 +219,9 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</TabsTrigger>
 											<TabsTrigger value="sso">
 												<T id="access-list.sso" />
+											</TabsTrigger>
+											<TabsTrigger value="mtls">
+												mTLS
 											</TabsTrigger>
 										</TabsList>
 
@@ -389,6 +406,56 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 												</>
+											)}
+										</TabsContent>
+
+										{/* mTLS Tab */}
+										<TabsContent value="mtls" className="pt-4 space-y-4">
+											<div className="flex items-center justify-between">
+												<div className="space-y-0.5">
+													<Label htmlFor="mtlsEnabled" className="text-base">
+														Enable mTLS (Mutual TLS)
+													</Label>
+													<p className="text-sm text-muted-foreground">
+														Require clients to present a valid certificate signed by the CA below.
+													</p>
+												</div>
+												<Field name="mtlsEnabled">
+													{({ field }: any) => (
+														<Switch
+															id="mtlsEnabled"
+															checked={field.value}
+															onCheckedChange={(checked) =>
+																setFieldValue("mtlsEnabled", checked)
+															}
+														/>
+													)}
+												</Field>
+											</div>
+
+											{values.mtlsEnabled && (
+												<div className="space-y-2">
+													<Label htmlFor="mtlsContent">
+														CA Certificate Content (PEM)
+													</Label>
+													<Field name="mtlsContent">
+														{({ field }: any) => (
+															<Textarea
+																{...field}
+																id="mtlsContent"
+																placeholder="-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----"
+																className="font-mono text-xs h-64"
+															/>
+														)}
+													</Field>
+													<div className="text-sm text-muted-foreground">
+														Paste the content of your Certificate Authority (CA) public certificate here.
+														Nginx will use this to verify client certificates.
+														Does NOT support full chain or intermediate files, stick to the Root CA or the specific signing CA.
+													</div>
+												</div>
 											)}
 										</TabsContent>
 									</Tabs>

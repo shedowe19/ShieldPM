@@ -96,3 +96,4 @@ class AccessList extends Model {
 }
 
 export default AccessList;
+
