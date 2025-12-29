@@ -13,21 +13,28 @@ const migrateName = "add_req_limit";
 const up = (knex) => {
 	logger.info(`[${migrateName}] Migrating Up...`);
 
-	return knex.schema
-		.table("proxy_host", async (table) => {
-			if (!(await knex.schema.hasColumn("proxy_host", "adv_limit_req_rate"))) {
-				table.integer("adv_limit_req_rate").nullable().defaultTo(null);
-			}
-			if (!(await knex.schema.hasColumn("proxy_host", "adv_limit_req_unit"))) {
-				table.string("adv_limit_req_unit").nullable().defaultTo(null);
-			}
-			if (!(await knex.schema.hasColumn("proxy_host", "adv_limit_req_burst"))) {
-				table.integer("adv_limit_req_burst").nullable().defaultTo(null);
-			}
-		})
-		.then(() => {
-			logger.info(`[${migrateName}] proxy_host Table altered`);
+	const hasRate = await knex.schema.hasColumn("proxy_host", "adv_limit_req_rate");
+	if (!hasRate) {
+		await knex.schema.table("proxy_host", (table) => {
+			table.integer("adv_limit_req_rate").nullable().defaultTo(null);
 		});
+	}
+
+	const hasUnit = await knex.schema.hasColumn("proxy_host", "adv_limit_req_unit");
+	if (!hasUnit) {
+		await knex.schema.table("proxy_host", (table) => {
+			table.string("adv_limit_req_unit").nullable().defaultTo(null);
+		});
+	}
+
+	const hasBurst = await knex.schema.hasColumn("proxy_host", "adv_limit_req_burst");
+	if (!hasBurst) {
+		await knex.schema.table("proxy_host", (table) => {
+			table.integer("adv_limit_req_burst").nullable().defaultTo(null);
+		});
+	}
+
+	logger.info(`[${migrateName}] proxy_host Table altered`);
 };
 
 /**
