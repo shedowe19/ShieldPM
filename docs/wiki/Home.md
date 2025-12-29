@@ -35,6 +35,7 @@
 *   **[Access Lists](Access-Lists)**: Basic Auth, IP Ranges, and Authorization.
 
 ### Advanced
+*   **[Advanced Analytics](Analytics)**: Real-time traffic insights and status code breakdown.
 *   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, Streams, and custom configs.
 *   **[Architecture & Internals](Architecture)**: Data flow, file structure, and internal CLI tools.
 *   **[API Documentation](API-Docs)**: Developer reference for the REST API.
