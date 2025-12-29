@@ -35,7 +35,7 @@ const generateDbConfig = () => {
 			max: 10,
 			propagateCreateError: false,
 			afterCreate: (connection, callback) => {
-				logger.debug("DB: New connection created");
+
 				connection.on("error", (err) => {
 					logger.error("DB: Connection Error", err);
 				});

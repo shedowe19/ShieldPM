@@ -178,8 +178,7 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
             return 0;
         };
 
-        // DEBUG: Inspect aggregation keys
-        console.log("Analytics Summary Totals RAW:", totals);
+
 
         res.json({
             // KPI Data
