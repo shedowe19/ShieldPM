@@ -45,6 +45,8 @@
 	"analytics.requests-over-time": "Requests over Time",
 	"analytics.status-codes": "Status Codes",
 	"analytics.success-rate": "Success Rate",
+	"analytics.no-data": "No data available",
+	"analytics.no-data-list": "No data to display",
 	"analytics.title": "Analytics",
 	"analytics.top-countries": "Top Countries",
 	"analytics.top-ips": "Top IPs",
