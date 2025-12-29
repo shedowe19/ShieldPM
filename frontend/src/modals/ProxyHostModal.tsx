@@ -447,9 +447,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<TabsContent value="security" className="mt-0 space-y-4">
 												<Alert variant="default" className="bg-muted/50">
 													<IconShieldLock className="h-4 w-4" />
-													<AlertTitle>Rate Limiting</AlertTitle>
+													<AlertTitle><T id="proxy-host.rate-limiting.title" /></AlertTitle>
 													<AlertDescription>
-														Protect your host from abuse by limiting the number of requests per IP address.
+														<T id="proxy-host.rate-limiting.description" />
 													</AlertDescription>
 												</Alert>
 
@@ -458,12 +458,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Field name="advLimitReqRate" validate={validateNumber(0, 100000)}>
 															{({ field, form }: any) => (
 																<div className="space-y-2">
-																	<Label htmlFor="advLimitReqRate">Rate (Requests)</Label>
+																	<Label htmlFor="advLimitReqRate"><T id="proxy-host.rate-limiting.rate" /></Label>
 																	<Input
 																		id="advLimitReqRate"
 																		type="number"
 																		min={0}
-																		placeholder="e.g. 10 (0 to disable)"
+																		placeholder={intl.formatMessage({
+																			id: "proxy-host.rate-limiting.rate.placeholder",
+																		})}
 																		className={
 																			form.errors.advLimitReqRate && form.touched.advLimitReqRate
 																				? "border-destructive"
@@ -479,7 +481,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Field name="advLimitReqUnit">
 															{({ field, form }: any) => (
 																<div className="space-y-2">
-																	<Label htmlFor="advLimitReqUnit">Per</Label>
+																	<Label htmlFor="advLimitReqUnit"><T id="proxy-host.rate-limiting.unit" /></Label>
 																	<Select
 																		onValueChange={(val: string) => form.setFieldValue(field.name, val)}
 																		value={field.value}
@@ -489,8 +491,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectValue />
 																		</SelectTrigger>
 																		<SelectContent>
-																			<SelectItem value="s">Second</SelectItem>
-																			<SelectItem value="m">Minute</SelectItem>
+																			<SelectItem value="s"><T id="proxy-host.rate-limiting.unit.second" /></SelectItem>
+																			<SelectItem value="m"><T id="proxy-host.rate-limiting.unit.minute" /></SelectItem>
 																		</SelectContent>
 																	</Select>
 																</div>
@@ -501,12 +503,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Field name="advLimitReqBurst" validate={validateNumber(0, 100000)}>
 															{({ field, form }: any) => (
 																<div className="space-y-2">
-																	<Label htmlFor="advLimitReqBurst">Burst</Label>
+																	<Label htmlFor="advLimitReqBurst"><T id="proxy-host.rate-limiting.burst" /></Label>
 																	<Input
 																		id="advLimitReqBurst"
 																		type="number"
 																		min={0}
-																		placeholder="e.g. 20"
+																		placeholder={intl.formatMessage({
+																			id: "proxy-host.rate-limiting.burst.placeholder",
+																		})}
 																		className={
 																			form.errors.advLimitReqBurst && form.touched.advLimitReqBurst
 																				? "border-destructive"
@@ -520,6 +524,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 												</div>
 											</TabsContent>
+
 
 											<TabsContent value="advanced" className="mt-0">
 												<NginxConfigField />
