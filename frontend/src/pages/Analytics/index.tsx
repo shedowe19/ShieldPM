@@ -308,7 +308,7 @@ const Analytics = () => {
 														{cur && (
 															<Marker coordinates={centroid}>
 																<circle
-																	r={Math.max(3, Math.min(20, Math.sqrt(cur.count) / 2))}
+																	r={Math.max(2, Math.min(12, Math.log(cur.count) * 3))}
 																	fill="#06b6d4"
 																	fillOpacity={0.6}
 																	stroke="#06b6d4"
