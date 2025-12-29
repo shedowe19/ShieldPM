@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "404 Hosts",
 	"default-site": "Standaard Site",
 	"details": "Details",
+	"disableBuffering": "Bufferen uitschakelen",
 	"disabled": "Uitgezet",
 	"dnsChallenge": "DNS Challenge",
 	"dnsProvider": "DNS Provider",

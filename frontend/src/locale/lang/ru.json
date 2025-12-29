@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "404 Хосты",
 	"default-site": "Сайт по умолчанию",
 	"details": "Детали",
+	"disableBuffering": "Отключить буферизацию",
 	"disabled": "Выключен",
 	"dnsChallenge": "DNS Challenge",
 	"dnsProvider": "DNS-провайдер",

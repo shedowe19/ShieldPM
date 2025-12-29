@@ -94,6 +94,9 @@
 						},
 						"adv_limit_req_burst": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/adv_limit_req_burst"
+						},
+						"disable_buffering": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/disable_buffering"
 						}
 					}
 				},

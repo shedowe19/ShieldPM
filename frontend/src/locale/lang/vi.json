@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "Máy chủ 404",
 	"default-site": "Trang web mặc định",
 	"details": "Chi tiết",
+	"disableBuffering": "Tắt bộ đệm",
 	"disabled": "Đã tắt",
 	"dnsChallenge": "Thử thách DNS",
 	"dnsProvider": "Nhà cung cấp DNS",

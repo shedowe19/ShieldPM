@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "404 主机",
 	"default-site": "默认站点",
 	"details": "详情",
+	"disableBuffering": "禁用缓冲",
 	"disabled": "已禁用",
 	"dnsChallenge": "DNS 验证",
 	"dnsProvider": "DNS 提供商",

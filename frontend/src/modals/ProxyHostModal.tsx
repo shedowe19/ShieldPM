@@ -36,6 +36,8 @@ const showProxyHostModal = (id: number | "new") => {
 
 interface Props extends InnerModalProps {
 	id: number | "new";
+	visible: boolean;
+	remove: () => void;
 }
 const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
@@ -94,6 +96,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								forwardPort: data?.forwardPort || undefined,
 								accessListId: data?.accessListId || 0,
 								cachingEnabled: data?.cachingEnabled || false,
+								disableBuffering: data?.disableBuffering || false,
 								blockExploits: data?.blockExploits || false,
 								allowWebsocketUpgrade: data?.allowWebsocketUpgrade || false,
 								maintenanceOnFailure: data?.maintenanceOnFailure || false,
@@ -348,6 +351,28 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			onCheckedChange={(checked: boolean) =>
 																				form.setFieldValue(
 																					"cachingEnabled",
+																					checked,
+																				)
+																			}
+																		/>
+																	)}
+																</Field>
+															</div>
+															<div className="flex items-center justify-between">
+																<Label
+																	htmlFor="disableBuffering"
+																	className="flex-1 cursor-pointer"
+																>
+																	<T id="disableBuffering" />
+																</Label>
+																<Field name="disableBuffering" type="checkbox">
+																	{({ field, form }: any) => (
+																		<Switch
+																			id="disableBuffering"
+																			checked={field.checked}
+																			onCheckedChange={(checked: boolean) =>
+																				form.setFieldValue(
+																					"disableBuffering",
 																					checked,
 																				)
 																			}

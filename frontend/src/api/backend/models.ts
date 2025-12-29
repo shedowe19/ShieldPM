@@ -115,6 +115,7 @@ export interface ProxyHost {
 	certificateId: number;
 	sslForced: boolean;
 	cachingEnabled: boolean;
+	disableBuffering: boolean;
 	blockExploits: boolean;
 	advancedConfig: string;
 	bandwidthLimit: string;

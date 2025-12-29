@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "Hosts 404",
 	"default-site": "Sitio predeterminado",
 	"details": "Detalles",
+	"disableBuffering": "Desactivar búfer",
 	"disabled": "Deshabilitado",
 	"dnsChallenge": "Desafío DNS",
 	"dnsProvider": "Proveedor DNS",

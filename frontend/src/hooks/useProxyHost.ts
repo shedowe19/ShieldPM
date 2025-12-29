@@ -26,6 +26,7 @@ const fetchProxyHost = (id: number | "new") => {
 			hstsEnabled: false,
 			hstsSubdomains: false,
 			maintenanceOnFailure: false,
+			disableBuffering: false,
 		} as ProxyHost);
 	}
 	return getProxyHost(id, ["owner"]);

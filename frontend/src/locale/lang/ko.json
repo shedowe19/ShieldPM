@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "404 호스트",
 	"default-site": "기본 사이트",
 	"details": "상세 정보",
+	"disableBuffering": "버퍼링 비활성화",
 	"disabled": "비활성화",
 	"dnsChallenge": "DNS 챌린지",
 	"dnsProvider": "DNS 공급자",

@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "404 Hostitelia",
 	"default-site": "Predvolená stránka",
 	"details": "Podrobnosti",
+	"disableBuffering": "Vypnúť ukladanie do vyrovnávacej pamäte",
 	"disabled": "Deaktivované",
 	"dnsChallenge": "Výzva DNS",
 	"dnsProvider": "Poskytovateľ DNS",

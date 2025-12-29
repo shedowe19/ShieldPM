@@ -54,7 +54,7 @@ describe("SiteFooter", () => {
 
 		// Check Version link
 		const versionLink = screen.getByText("1.2.3").closest("a");
-		expect(versionLink).toHaveAttribute("href", "https://github.com/shedowe19/NPMplus/commit/1.2.3");
+		expect(versionLink).toHaveAttribute("href", "https://github.com/shedowe19/NPMplus/releases/tag/1.2.3");
 	});
 
 	it("renders update available link when update is available", async () => {

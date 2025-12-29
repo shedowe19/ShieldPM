@@ -136,6 +136,7 @@
 	"dead_hosts.count_label": "404 ホスト",
 	"default-site": "デフォルトサイト",
 	"details": "詳細",
+	"disableBuffering": "バッファリングを無効にする",
 	"disabled": "無効化",
 	"dnsChallenge": "DNSチャレンジ",
 	"dnsProvider": "DNSプロバイダー",
