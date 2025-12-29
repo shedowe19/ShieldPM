@@ -309,6 +309,7 @@ RUN apk upgrade --no-cache -a && \
     luarocks-5.1 install lua-resty-openssl && \
     luarocks-5.1 install lua-resty-openidc && \
     luarocks-5.1 install lua-resty-session && \
+    luarocks-5.1 install lua-resty-limit-traffic && \
     apk del --no-cache luarocks5.1 lua5.1-dev lua5.1-sec git yarn clang lld && \
     ln -s /app/password-reset.js /usr/local/bin/password-reset.js && \
     ln -s /app/sqlite-vaccum.js /usr/local/bin/sqlite-vaccum.js && \
