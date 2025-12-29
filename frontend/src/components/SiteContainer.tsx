@@ -1,12 +1,21 @@
+import * as React from "react";
+import { useLocation } from "react-router-dom";
+
 interface Props {
 	children: React.ReactNode;
 }
 
-import { useLocation } from "react-router-dom";
-
 export function SiteContainer({ children }: Props) {
 	const location = useLocation();
-	const isFullWidth = location.pathname === "/analytics";
+	const isFullWidth =
+		location.pathname === "/analytics" ||
+		location.pathname === "/" ||
+		location.pathname === "/access" ||
+		location.pathname === "/certificates" ||
+		location.pathname === "/users" ||
+		location.pathname === "/audit-log" ||
+		location.pathname === "/settings" ||
+		location.pathname.startsWith("/nginx/");
 
 	const className = isFullWidth
 		? "p-4 min-w-0 overflow-x-auto flex-1 w-full"
