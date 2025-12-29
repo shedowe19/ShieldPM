@@ -11,17 +11,17 @@ const migrateName = "add_req_limit";
  * @returns {Promise}
  */
 const up = (knex) => {
-    logger.info(`[${migrateName}] Migrating Up...`);
+	logger.info(`[${migrateName}] Migrating Up...`);
 
-    return knex.schema
-        .table("proxy_host", async (table) => {
-            await table.integer("adv_limit_req_rate").nullable().defaultTo(null);
-            await table.string("adv_limit_req_unit").nullable().defaultTo(null);
-            await table.integer("adv_limit_req_burst").nullable().defaultTo(null);
-        })
-        .then(() => {
-            logger.info(`[${migrateName}] proxy_host Table altered`);
-        });
+	return knex.schema
+		.table("proxy_host", async (table) => {
+			await table.integer("adv_limit_req_rate").nullable().defaultTo(null);
+			await table.string("adv_limit_req_unit").nullable().defaultTo(null);
+			await table.integer("adv_limit_req_burst").nullable().defaultTo(null);
+		})
+		.then(() => {
+			logger.info(`[${migrateName}] proxy_host Table altered`);
+		});
 };
 
 /**
@@ -31,17 +31,17 @@ const up = (knex) => {
  * @returns {Promise}
  */
 const down = (knex) => {
-    logger.info(`[${migrateName}] Migrating Down...`);
+	logger.info(`[${migrateName}] Migrating Down...`);
 
-    return knex.schema
-        .table("proxy_host", async (table) => {
-            await table.dropColumn("adv_limit_req_rate");
-            await table.dropColumn("adv_limit_req_unit");
-            await table.dropColumn("adv_limit_req_burst");
-        })
-        .then(() => {
-            logger.info(`[${migrateName}] proxy_host Table altered`);
-        });
+	return knex.schema
+		.table("proxy_host", async (table) => {
+			await table.dropColumn("adv_limit_req_rate");
+			await table.dropColumn("adv_limit_req_unit");
+			await table.dropColumn("adv_limit_req_burst");
+		})
+		.then(() => {
+			logger.info(`[${migrateName}] proxy_host Table altered`);
+		});
 };
 
 export { up, down };
