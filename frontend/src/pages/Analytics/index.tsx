@@ -516,6 +516,11 @@ const Analytics = () => {
 								</tbody>
 							</table>
 						</div>
+					) : (
+						<div className="text-sm text-muted-foreground text-center p-4">
+							<T id="analytics.no-data-list" />
+						</div>
+					)}
 				</CardContent>
 			</Card>
 		</div >
