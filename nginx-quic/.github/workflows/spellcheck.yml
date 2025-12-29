@@ -3,10 +3,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-
-permissions:
-  contents: read
-
 jobs:
   spellcheck:
     name: spellcheck
@@ -19,6 +15,4 @@ jobs:
         with:
           check_filenames: true
           check_hidden: true
-          skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/HelpDoc
-          ignore_words_list: afterAll,alog,nd,devlop,trough,hastable,elease,eleases,ublish,Paket,paket
-
+          skip: .git,.gitignore

@@ -11,6 +11,8 @@ on:
       - frontend/**
       - backend/**
       - rootfs/**
+      - nginx-quic/**
+
     tags:
       - 'v*'
   pull_request:
@@ -21,6 +23,8 @@ on:
       - frontend/**
       - backend/**
       - rootfs/**
+      - nginx-quic/**
+
   workflow_dispatch:
 
 env:
@@ -103,6 +107,31 @@ jobs:
 
       # --- Build Steps (Jetzt mit Anführungszeichen!) ---
 
+      - name: "📦 Build Stage: Nginx Build"
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: nginx-build
+          push: false
+          build-args: |
+            ${{ matrix.flags }}
+          cache-from: type=gha,scope=${{ matrix.arch }}-nginx-build
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-nginx-build
+
+      - name: "📦 Build Stage: Certbot"
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: certbot
+          push: false
+          build-args: |
+            ${{ matrix.flags }}
+          cache-from: type=gha,scope=${{ matrix.arch }}-certbot
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-certbot
+
+
       - name: "📦 Build Stage: Frontend"
         uses: docker/build-push-action@v6
         with:
@@ -152,7 +181,10 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-frontend
             type=gha,scope=${{ matrix.arch }}-backend
             type=gha,scope=${{ matrix.arch }}-crowdsec
+            type=gha,scope=${{ matrix.arch }}-nginx-build
+            type=gha,scope=${{ matrix.arch }}-certbot
             type=gha,scope=${{ matrix.arch }}-final
+
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
   # ---------------------------------------------------------
