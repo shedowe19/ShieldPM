@@ -122,6 +122,7 @@
 	"created-on": "Erstelldatum: {date}",
 	"current": "Aktuell",
 	"dashboard": "Dashboard",
+	"disableBuffering": "Pufferung deaktivieren",
 	"dashboard.certificates-expiring": "Zertifikate laufen bald ab",
 	"dashboard.days-left": "Noch {days} {days, plural, one {Tag} other {Tage}}",
 	"dashboard.expired": "Abgelaufen",

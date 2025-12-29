@@ -122,6 +122,7 @@
 	"created-on": "생성일: {date}",
 	"current": "현재",
 	"dashboard": "대시보드",
+	"disableBuffering": "버퍼링 비활성화",
 	"dashboard.certificates-expiring": "곧 만료되는 인증서",
 	"dashboard.days-left": "{days} {days, plural, one {일} other {일}} 남음",
 	"dashboard.expired": "만료됨",

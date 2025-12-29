@@ -60,6 +60,7 @@
 	"avatar": "Avatar",
 	"bandwidthLimit": "Bandwidth Limit",
 	"blockExploits": "Block Exploits",
+	"disableBuffering": "Disable Buffering",
 	"cachingEnabled": "Caching Enabled",
 	"cancel": "Cancel",
 	"certificate": "Certificate",

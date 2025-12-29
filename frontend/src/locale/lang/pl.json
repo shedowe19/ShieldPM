@@ -122,6 +122,7 @@
 	"created-on": "Utworzono: {date}",
 	"current": "Obecny",
 	"dashboard": "Panel",
+	"disableBuffering": "Wyłącz buforowanie",
 	"dashboard.certificates-expiring": "Certyfikaty wkrótce wygasną",
 	"dashboard.days-left": "Pozostało {days} {days, plural, one {dzień} other {dni}}",
 	"dashboard.expired": "Wygasł",

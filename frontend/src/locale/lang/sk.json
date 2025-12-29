@@ -122,6 +122,7 @@
 	"created-on": "Vytvorené: {date}",
 	"current": "Prítomný",
 	"dashboard": "Panel",
+	"disableBuffering": "Vypnúť ukladanie do vyrovnávacej pamäte",
 	"dashboard.certificates-expiring": "Platnosť certifikátov čoskoro vyprší",
 	"dashboard.days-left": "Zostáva {days} {days, plural, one {deň} few {dni} other {dní}}",
 	"dashboard.expired": "Platnosť vypršala",

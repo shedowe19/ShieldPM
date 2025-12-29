@@ -28,8 +28,8 @@
 		"maintenance_on_failure",
 		"adv_limit_req_rate",
 		"adv_limit_req_unit",
-		"adv_limit_req_burst"
-
+		"adv_limit_req_burst",
+		"disable_buffering"
 	],
 	"properties": {
 		"id": {
@@ -234,7 +234,10 @@
 			"minimum": 0,
 			"maximum": 100000,
 			"example": 20
+		},
+		"disable_buffering": {
+			"type": "boolean",
+			"example": false
 		}
-
 	}
 }

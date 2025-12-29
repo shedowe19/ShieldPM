@@ -122,6 +122,7 @@
 	"created-on": "Создан: {date}",
 	"current": "Текущий",
 	"dashboard": "Обзор",
+	"disableBuffering": "Отключить буферизацию",
 	"dashboard.certificates-expiring": "Сертификаты скоро истекают",
 	"dashboard.days-left": "Осталось {days} {days, plural, one {день} few {дня} other {дней}}",
 	"dashboard.expired": "Истек",

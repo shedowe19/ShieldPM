@@ -122,6 +122,7 @@
 	"created-on": "Đã tạo: {date}",
 	"current": "Hiện tại",
 	"dashboard": "Bảng điều khiển",
+	"disableBuffering": "Tắt bộ đệm",
 	"dashboard.certificates-expiring": "Chứng chỉ sắp hết hạn",
 	"dashboard.days-left": "Còn lại {days} {days, plural, one {ngày} other {ngày}}",
 	"dashboard.expired": "Đã hết hạn",
