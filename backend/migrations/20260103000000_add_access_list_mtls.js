@@ -11,8 +11,8 @@ const migrateName = "20260103000000_add_access_list_mtls";
  * @returns {Promise}
  */
 const up = async (knex) => {
-    logger.info(`[${migrateName}] Restored as dummy to fix migration corruption.`);
-    return Promise.resolve();
+	logger.info(`[${migrateName}] Restored as dummy to fix migration corruption.`);
+	return Promise.resolve();
 };
 
 /**
@@ -22,7 +22,7 @@ const up = async (knex) => {
  * @returns {Promise}
  */
 const down = (knex) => {
-    return Promise.resolve();
+	return Promise.resolve();
 };
 
 export { up, down };
