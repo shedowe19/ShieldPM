@@ -329,12 +329,6 @@ RUN apk upgrade --no-cache -a && \
     mkdir -p /var/log/nginx && \
     yarn global add nginxbeautifier && \
     yarn cache clean && \
-    luarocks-5.1 install lua-cjson && \
-    luarocks-5.1 install lua-resty-http && \
-    luarocks-5.1 install lua-resty-string && \
-    luarocks-5.1 install lua-resty-openssl && \
-    luarocks-5.1 install lua-resty-openidc && \
-    luarocks-5.1 install lua-resty-session && \
     apk del --no-cache luarocks5.1 git make yarn && \
     ln -s /app/password-reset.js /usr/local/bin/password-reset.js && \
     ln -s /app/sqlite-vaccum.js /usr/local/bin/sqlite-vaccum.js && \
