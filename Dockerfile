@@ -337,9 +337,9 @@ RUN apk upgrade --no-cache -a && \
     pip install --no-cache-dir --upgrade pip certbot && \
     \
     # Helper Scripts
-    wget -q https://raw.githubusercontent.com/tomwassenberg/certbot-ocsp-fetcher/refs/heads/main/certbot-ocsp-fetcher -O - | sed "s|/live||g" > /usr/local/bin/certbot-ocsp-fetcher.sh && \
-    wget -q https://raw.githubusercontent.com/vasilevich/nginxbeautifier/5cee8db2a505f2a253e24691399c828c043071fc/index.js -O /usr/local/bin/nginxbeautifier && \
-    wget -q https://raw.githubusercontent.com/vasilevich/nginxbeautifier/5cee8db2a505f2a253e24691399c828c043071fc/nginxbeautifier.js -O /usr/local/bin/nginxbeautifier.js && \
+    curl -sSL https://raw.githubusercontent.com/tomwassenberg/certbot-ocsp-fetcher/refs/heads/main/certbot-ocsp-fetcher | sed "s|/live||g" > /usr/local/bin/certbot-ocsp-fetcher.sh && \
+    curl -sSL https://raw.githubusercontent.com/vasilevich/nginxbeautifier/5cee8db2a505f2a253e24691399c828c043071fc/index.js -o /usr/local/bin/nginxbeautifier && \
+    curl -sSL https://raw.githubusercontent.com/vasilevich/nginxbeautifier/5cee8db2a505f2a253e24691399c828c043071fc/nginxbeautifier.js -o /usr/local/bin/nginxbeautifier.js && \
     \
     # Symlinks & Permissions
     ln -s /usr/local/nginx/sbin/nginx /usr/local/bin/nginx && \
