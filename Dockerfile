@@ -174,7 +174,7 @@ RUN cd /src/nginx && \
     mkdir -p /usr/local/nginx/conf/conf.d/include && \
     mv /src/lua-cs-bouncer/templates/captcha.html /usr/local/nginx/conf/conf.d/include/captcha.html && \
     mv /src/lua-cs-bouncer/templates/ban.html /usr/local/nginx/conf/conf.d/include/ban.html && \
-    mv /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
+    mv /src/lua-cs-bouncer/config_example.conf /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     \
     # Core Rule Set (Coreruleset)
     git clone --depth 1 https://github.com/coreruleset/coreruleset --branch "$CRS_VER" /tmp/coreruleset && \
