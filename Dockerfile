@@ -273,7 +273,7 @@ RUN apk upgrade --no-cache -a && \
                        luarocks5.1 git make \
                        nodejs yarn \
                        python3 py3-pip \
-                       libxml2 libargon2 libedit && \
+                       libxml2 argon2-libs libedit && \
     \
     # Lua Rocks
     luarocks-5.1 install lua-resty-http && \
