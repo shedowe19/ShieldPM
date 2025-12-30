@@ -305,7 +305,7 @@ RUN apk upgrade --no-cache -a && \
     # Python Venv & Certbot Tools
     python3 -m venv /opt/certbot && \
     /opt/certbot/bin/pip install --no-cache-dir --upgrade pip certbot && \
-    ln -s /opt/certbot/bin/certbot /usr/local/bin/certbot && \
+    ln -sf /opt/certbot/bin/certbot /usr/local/bin/certbot && \
     \
     # Helper Scripts
     curl -sSL https://raw.githubusercontent.com/tomwassenberg/certbot-ocsp-fetcher/refs/heads/main/certbot-ocsp-fetcher | sed "s|/live||g" > /usr/local/bin/certbot-ocsp-fetcher.sh && \
