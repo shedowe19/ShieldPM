@@ -180,8 +180,8 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
 								oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
 								// mTLS
-								mtlsEnabled: !!(data as any).mtls_enabled,
-								mtlsContent: (data as any).mtls_certificate || "",
+								mtlsEnabled: !!data.mtlsEnabled,
+								mtlsContent: data.mtlsCertificate || "",
 							} as AccessList & {
 								authType: string;
 								authentikHost: string;
