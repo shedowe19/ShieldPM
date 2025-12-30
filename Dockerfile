@@ -296,24 +296,7 @@ RUN apk upgrade --no-cache -a && \
                        python3 \
                        libxml2 argon2-libs libedit lmdb yajl libatomic_ops && \
     \
-    # Lua Rocks
-    luarocks-5.1 install lua-resty-http && \
-    luarocks-5.1 install lua-resty-string && \
-    luarocks-5.1 install lua-resty-openssl && \
-    luarocks-5.1 install lua-resty-openidc && \
-    luarocks-5.1 install lua-resty-session && \
-    \
-    \
-    # CrowdSec Bouncer
-    git clone --depth 1 https://github.com/crowdsecurity/lua-cs-bouncer --branch "$LCSB_VER" /src/lua-cs-bouncer && \
-    mv /src/lua-cs-bouncer/lib/* /usr/local/share/lua/5.1 && \
-    mv /src/lua-cs-bouncer/templates/captcha.html /usr/local/nginx/conf/conf.d/include/captcha.html && \
-    mv /src/lua-cs-bouncer/templates/ban.html /usr/local/nginx/conf/conf.d/include/ban.html && \
-    mv /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
-    \
-    cd && \
-    rm -rf /src /tmp/luarocks_local_cache-* && \
-    \
+
     # Fix CrowdSec Version in Config
     sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     \
