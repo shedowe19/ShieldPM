@@ -34,6 +34,8 @@ ARG LUAJIT_LIB=/usr/lib
 ARG LRC_VER=v0.1.32R1
 ARG LRL_VER=v0.15
 ARG LRLT_VER=v0.09
+ARG LCSB_VER=v1.0.13
+ARG CRS_VER=v4.21.0
 
 
 # --- Build Arguments: Compiler Flags ---
@@ -157,6 +159,31 @@ RUN cd /src/nginx && \
     make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1 && \
     git clone --depth 1 https://github.com/openresty/lua-resty-limit-traffic --branch "$LRLT_VER" /src/lua-resty-limit-traffic && \
     cd /src/lua-resty-limit-traffic && \
+    make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1 && \
+    \
+    # Lua Rocks
+    luarocks-5.1 install lua-resty-http && \
+    luarocks-5.1 install lua-resty-string && \
+    luarocks-5.1 install lua-resty-openssl && \
+    luarocks-5.1 install lua-resty-openidc && \
+    luarocks-5.1 install lua-resty-session && \
+    \
+    # CrowdSec Bouncer
+    git clone --depth 1 https://github.com/crowdsecurity/lua-cs-bouncer --branch "$LCSB_VER" /src/lua-cs-bouncer && \
+    mv /src/lua-cs-bouncer/lib/* /usr/local/share/lua/5.1 && \
+    mkdir -p /usr/local/nginx/conf/conf.d/include && \
+    mv /src/lua-cs-bouncer/templates/captcha.html /usr/local/nginx/conf/conf.d/include/captcha.html && \
+    mv /src/lua-cs-bouncer/templates/ban.html /usr/local/nginx/conf/conf.d/include/ban.html && \
+    mv /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
+    \
+    # Core Rule Set (Coreruleset)
+    git clone --depth 1 https://github.com/coreruleset/coreruleset --branch "$CRS_VER" /tmp/coreruleset && \
+    mkdir -v /usr/local/nginx/conf/conf.d/include/coreruleset && \
+    mv -v /tmp/coreruleset/crs-setup.conf.example /usr/local/nginx/conf/conf.d/include/coreruleset/crs-setup.conf.example && \
+    mv -v /tmp/coreruleset/plugins /usr/local/nginx/conf/conf.d/include/coreruleset/plugins && \
+    mv -v /tmp/coreruleset/rules /usr/local/nginx/conf/conf.d/include/coreruleset/rules && \
+    curl -sSL https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/modsecurity.conf-recommended -o /usr/local/nginx/conf/conf.d/include/modsecurity.conf.example && \
+    \
     make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1
 
 # --- Build Step 4: OpenAppSec Attachment ---
@@ -235,10 +262,6 @@ FROM alpine:3.23.2
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
 
-# --- Args ---
-
-ARG LCSB_VER=v1.0.13
-ARG CRS_VER=v4.21.0
 
 # --- Copy Artifacts ---
 # From Nginx
@@ -250,6 +273,7 @@ COPY --from=nginx /src/ModSecurity/modsecurity.conf-recommended                 
 COPY --from=nginx /src/attachment/core/shmem_ipc/libosrc_shmem_ipc.so                                      /usr/local/lib/libosrc_shmem_ipc.so
 COPY --from=nginx /src/attachment/core/compression/libosrc_compression_utils.so                            /usr/local/lib/libosrc_compression_utils.so
 COPY --from=nginx /src/attachment/attachments/nginx/nginx_attachment_util/libosrc_nginx_attachment_util.so /usr/local/lib/libosrc_nginx_attachment_util.so
+COPY --from=nginx /usr/local/lib/lua/5.1                                                                     /usr/local/lib/lua/5.1
 
 # From Certbot
 COPY --from=certbot /usr/local /usr/local
@@ -267,9 +291,7 @@ RUN apk upgrade --no-cache -a && \
     apk add --no-cache tzdata tini \
                        luajit pcre2 zlib brotli zstd libssl3 libcrypto3 geoip libmaxminddb-libs libldap lua5.1-cjson \
                        curl coreutils findutils grep jq openssl shadow su-exec util-linux-misc \
-                       bash bash-completion nano \
                        logrotate goaccess fcgi \
-                       luarocks5.1 git make \
                        nodejs \
                        python3 \
                        libxml2 argon2-libs libedit lmdb yajl libatomic_ops && \
@@ -310,15 +332,7 @@ RUN apk upgrade --no-cache -a && \
     \
     chmod +x /usr/local/bin/* && \
     \
-    # Core Rule Set (Coreruleset)
-    git clone --depth 1 https://github.com/coreruleset/coreruleset --branch "$CRS_VER" /tmp/coreruleset && \
-    mkdir -v /usr/local/nginx/conf/conf.d/include/coreruleset && \
-    mv -v /tmp/coreruleset/crs-setup.conf.example /usr/local/nginx/conf/conf.d/include/coreruleset/crs-setup.conf.example && \
-    mv -v /tmp/coreruleset/plugins /usr/local/nginx/conf/conf.d/include/coreruleset/plugins && \
-    mv -v /tmp/coreruleset/rules /usr/local/nginx/conf/conf.d/include/coreruleset/rules && \
-    curl -sSL https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/modsecurity.conf-recommended -o /usr/local/nginx/conf/conf.d/include/modsecurity.conf.example && \
     mkdir -p /var/log/nginx && \
-    apk del --no-cache luarocks5.1 git make && \
     rm -r /tmp/*
 
 ENTRYPOINT ["tini", "--", "entrypoint.sh"]
