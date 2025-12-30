@@ -271,7 +271,7 @@ RUN apk upgrade --no-cache -a && \
                        bash bash-completion nano \
                        logrotate goaccess fcgi \
                        luarocks5.1 git make \
-                       nodejs yarn \
+                       nodejs \
                        python3 py3-pip \
                        libxml2 argon2-libs libedit lmdb yajl libatomic_ops && \
     \
@@ -330,9 +330,7 @@ RUN apk upgrade --no-cache -a && \
     mv -v /tmp/coreruleset/rules /usr/local/nginx/conf/conf.d/include/coreruleset/rules && \
     curl -sSL https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/modsecurity.conf-recommended -o /usr/local/nginx/conf/conf.d/include/modsecurity.conf.example && \
     mkdir -p /var/log/nginx && \
-    yarn global add nginxbeautifier && \
-    yarn cache clean && \
-    apk del --no-cache luarocks5.1 git make yarn && \
+    apk del --no-cache luarocks5.1 git make && \
     rm -r /tmp/*
 
 ENTRYPOINT ["tini", "--", "entrypoint.sh"]
