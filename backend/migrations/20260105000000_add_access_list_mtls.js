@@ -13,10 +13,20 @@ const migrateName = "20260105000000_add_access_list_mtls";
 const up = async (knex) => {
     logger.info(`[${migrateName}] Migrating Up...`);
 
-    await knex.schema.table("access_list", (table) => {
-        table.boolean("mtls_enabled").notNullable().defaultTo(false);
-        table.text("mtls_certificate").notNullable().defaultTo("");
-    });
+    // Check if columns exist before adding to be idempotent
+    const hasEnabled = await knex.schema.hasColumn("access_list", "mtls_enabled");
+    const hasCert = await knex.schema.hasColumn("access_list", "mtls_certificate");
+
+    if (!hasEnabled || !hasCert) {
+        await knex.schema.table("access_list", (table) => {
+            if (!hasEnabled) {
+                table.boolean("mtls_enabled").notNullable().defaultTo(false);
+            }
+            if (!hasCert) {
+                table.text("mtls_certificate").notNullable().defaultTo("");
+            }
+        });
+    }
 
     // Migrate existing data from meta if any
     const rows = await knex("access_list").select("id", "meta");
