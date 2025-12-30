@@ -271,7 +271,7 @@ RUN apk upgrade --no-cache -a && \
                        bash bash-completion nano \
                        logrotate goaccess fcgi \
                        luarocks5.1 git make \
-                       nodejs && \
+                       nodejs yarn && \
     \
     # Lua Rocks
     luarocks-5.1 install lua-resty-http && \
@@ -297,7 +297,6 @@ RUN apk upgrade --no-cache -a && \
     \
     cd && \
     rm -rf /src /tmp/luarocks_local_cache-* && \
-    apk del --no-cache luarocks5.1 git make && \
     \
     # Fix CrowdSec Version in Config
     sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled && \
@@ -336,7 +335,7 @@ RUN apk upgrade --no-cache -a && \
     luarocks-5.1 install lua-resty-openssl && \
     luarocks-5.1 install lua-resty-openidc && \
     luarocks-5.1 install lua-resty-session && \
-    apk del --no-cache luarocks5.1 lua5.1-dev lua5.1-sec git yarn clang lld && \
+    apk del --no-cache luarocks5.1 git make yarn && \
     ln -s /app/password-reset.js /usr/local/bin/password-reset.js && \
     ln -s /app/sqlite-vaccum.js /usr/local/bin/sqlite-vaccum.js && \
     ln -s /app/index.js /usr/local/bin/index.js && \
