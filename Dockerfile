@@ -296,7 +296,7 @@ RUN apk upgrade --no-cache -a && \
     mv /src/lua-cs-bouncer/templates/ban.html /etc/ban.html.original && \
     \
     cd && \
-    rm -r /src /tmp/luarocks_local_cache-* && \
+    rm -rf /src /tmp/luarocks_local_cache-* && \
     apk del --no-cache luarocks5.1 git make && \
     \
     # Fix CrowdSec Version in Config
