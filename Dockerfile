@@ -273,10 +273,7 @@ RUN apk upgrade --no-cache -a && \
                        luarocks5.1 git make \
                        nodejs yarn \
                        python3 py3-pip \
-                       libxml2 libargon2 libedit \
-                       php84 php84-fpm php84-openssl php84-sqlite3 php84-pdo_sqlite php84-mysqlnd php84-pdo_mysql php84-pgsql php84-pdo_pgsql \
-                       php84-bcmath php84-gd php84-mbstring php84-xml php84-opcache php84-pecl-apcu php84-intl php84-zip php84-ctype \
-                       php84-session php84-tokenizer php84-simplexml php84-dom php84-xmlwriter php84-xmlreader php84-phar php84-iconv php84-curl && \
+                       libxml2 libargon2 libedit && \
     \
     # Lua Rocks
     luarocks-5.1 install lua-resty-http && \
