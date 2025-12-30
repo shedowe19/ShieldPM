@@ -272,7 +272,7 @@ RUN apk upgrade --no-cache -a && \
                        logrotate goaccess fcgi \
                        luarocks5.1 git make \
                        nodejs \
-                       python3 py3-pip \
+                       python3 \
                        libxml2 argon2-libs libedit lmdb yajl libatomic_ops && \
     \
     # Lua Rocks
@@ -304,10 +304,7 @@ RUN apk upgrade --no-cache -a && \
     # Fix CrowdSec Version in Config
     sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     \
-    # Python Venv & Certbot Tools
-    python3 -m venv /opt/certbot && \
-    /opt/certbot/bin/pip install --no-cache-dir --upgrade pip certbot && \
-    ln -sf /opt/certbot/bin/certbot /usr/local/bin/certbot && \
+    \
     \
     # Helper Scripts
     curl -sSL https://raw.githubusercontent.com/tomwassenberg/certbot-ocsp-fetcher/refs/heads/main/certbot-ocsp-fetcher | sed "s|/live||g" > /usr/local/bin/certbot-ocsp-fetcher.sh && \
