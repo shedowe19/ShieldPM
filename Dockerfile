@@ -330,9 +330,6 @@ RUN apk upgrade --no-cache -a && \
     yarn global add nginxbeautifier && \
     yarn cache clean && \
     apk del --no-cache luarocks5.1 git make yarn && \
-    ln -s /app/password-reset.js /usr/local/bin/password-reset.js && \
-    ln -s /app/sqlite-vaccum.js /usr/local/bin/sqlite-vaccum.js && \
-    ln -s /app/index.js /usr/local/bin/index.js && \
     rm -r /tmp/*
 
 ENTRYPOINT ["tini", "--", "entrypoint.sh"]
