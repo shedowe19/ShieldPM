@@ -58,7 +58,7 @@ COPY nginx-quic/attachment.patch /src/attachment.patch
 RUN apk upgrade --no-cache -a && \
     apk add --no-cache ca-certificates build-base clang lld cmake ninja git \
                        linux-headers libatomic_ops-dev luajit-dev pcre2-dev zlib-dev brotli-dev zstd-dev openssl-dev geoip-dev libmaxminddb-dev openldap-dev \
-                       autoconf automake libtool lmdb-dev libxml2-dev yajl-dev curl-dev luarocks
+                       autoconf automake libtool lmdb-dev libxml2-dev yajl-dev curl-dev curl luarocks
 
 # --- Build Step 1: ModSecurity ---
 RUN git clone --depth 1 --shallow-submodules --recurse-submodules https://github.com/owasp-modsecurity/ModSecurity --branch "$MODSEC_VER" /src/ModSecurity && \
@@ -74,11 +74,11 @@ RUN git clone --depth 1 --shallow-submodules --recurse-submodules https://github
 # --- Build Step 2: Clone & Patch Nginx ---
 RUN git clone --depth 1 https://github.com/nginx/nginx --branch "$NGINX_VER" /src/nginx && \
     cd /src/nginx && \
-    wget -q https://raw.githubusercontent.com/nginx-modules/ngx_http_tls_dyn_size/refs/heads/master/nginx__dynamic_tls_records_"$DTR_VER"%2B.patch -O /src/nginx/1.patch && \
+    curl -sSL https://raw.githubusercontent.com/nginx-modules/ngx_http_tls_dyn_size/refs/heads/master/nginx__dynamic_tls_records_"$DTR_VER"%2B.patch -o /src/nginx/1.patch && \
     git apply /src/nginx/1.patch && \
-    wget -q https://raw.githubusercontent.com/openresty/openresty/refs/heads/master/patches/nginx/"$RCP_VER"/nginx-"$RCP_VER"-resolver_conf_parsing.patch -O /src/nginx/2.patch && \
+    curl -sSL https://raw.githubusercontent.com/openresty/openresty/refs/heads/master/patches/nginx/"$RCP_VER"/nginx-"$RCP_VER"-resolver_conf_parsing.patch -o /src/nginx/2.patch && \
     git apply /src/nginx/2.patch && \
-    wget -q https://patch-diff.githubusercontent.com/raw/nginx/nginx/pull/689.patch -O /src/nginx/3.patch && \
+    curl -sSL https://patch-diff.githubusercontent.com/raw/nginx/nginx/pull/689.patch -o /src/nginx/3.patch && \
     git apply /src/nginx/3.patch && \
     sed -i "s|nginx/|NPMplus/|g" /src/nginx/src/core/nginx.h && \
     sed -i "s|Server: nginx|Server: NPMplus|g" /src/nginx/src/http/ngx_http_header_filter_module.c && \
@@ -92,7 +92,7 @@ RUN git clone --depth 1 https://github.com/nginx/nginx --branch "$NGINX_VER" /sr
     git apply /src/ngx_unbrotli.patch && \
     git clone --depth 1 https://github.com/tokers/zstd-nginx-module --branch "$ZNM_VER" /src/zstd-nginx-module && \
     cd /src/zstd-nginx-module && \
-    wget -q https://patch-diff.githubusercontent.com/raw/tokers/zstd-nginx-module/pull/44.patch -O /src/zstd-nginx-module/1.patch && \
+    curl -sSL https://patch-diff.githubusercontent.com/raw/tokers/zstd-nginx-module/pull/44.patch -o /src/zstd-nginx-module/1.patch && \
     git apply /src/zstd-nginx-module.patch && \
     git apply /src/zstd-nginx-module/1.patch && \
     git clone --depth 1 https://github.com/Zoey2936/ngx-fancyindex --branch "$NF_VER" /src/ngx-fancyindex && \
