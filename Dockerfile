@@ -56,9 +56,9 @@ COPY nginx-quic/attachment.patch /src/attachment.patch
 
 # --- Preparation: Install Dependencies ---
 RUN apk upgrade --no-cache -a && \
-    apk add --no-cache ca-certificates build-base clang lld cmake ninja git \
-                       linux-headers libatomic_ops-dev luajit-dev pcre2-dev zlib-dev brotli-dev zstd-dev openssl-dev geoip-dev libmaxminddb-dev openldap-dev \
-                       autoconf automake libtool lmdb-dev libxml2-dev yajl-dev curl-dev curl luarocks
+    apk add --no-cache autoconf automake brotli-dev build-base ca-certificates clang cmake curl curl-dev geoip-dev git \
+                       libatomic_ops-dev libmaxminddb-dev libol-dev libtool libxml2-dev linux-headers lmdb-dev luajit-dev luarocks \
+                       ninja openldap-dev openssl-dev pcre2-dev yajl-dev zlib-dev zstd-dev
 
 # --- Build Step 1: ModSecurity ---
 RUN git clone --depth 1 --shallow-submodules --recurse-submodules https://github.com/owasp-modsecurity/ModSecurity --branch "$MODSEC_VER" /src/ModSecurity && \
@@ -288,13 +288,9 @@ COPY rootfs /
 # --- Setup ---
 WORKDIR /app
 RUN apk upgrade --no-cache -a && \
-    apk add --no-cache tzdata tini \
-                       luajit pcre2 zlib brotli zstd libssl3 libcrypto3 geoip libmaxminddb-libs libldap lua5.1-cjson \
-                       curl coreutils findutils grep jq openssl shadow su-exec util-linux-misc \
-                       logrotate goaccess fcgi \
-                       nodejs \
-                       python3 \
-                       libxml2 argon2-libs libedit lmdb yajl libatomic_ops && \
+    apk add --no-cache argon2-libs bash bash-completion brotli coreutils curl fcgi findutils geoip goaccess grep jq \
+                       libatomic_ops libcrypto3 libedit libldap libmaxminddb-libs libssl3 libxml2 lmdb logrotate lua5.1-cjson luajit \
+                       nano nodejs openssl pcre2 python3 shadow su-exec tini tzdata util-linux-misc yajl zlib zstd && \
     \
 
     # Fix CrowdSec Version in Config
