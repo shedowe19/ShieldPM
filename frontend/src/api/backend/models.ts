@@ -45,6 +45,8 @@ export interface AccessList {
 	ownerUserId: number;
 	name: string;
 	meta: Record<string, any>;
+	mtlsEnabled?: boolean;
+	mtlsCertificate?: string;
 	satisfyAny: boolean;
 	passAuth: boolean;
 	proxyHostCount?: number;

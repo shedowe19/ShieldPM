@@ -51,7 +51,16 @@
 						},
 						"meta": {
 							"type": "object",
+							"description": "Meta data for the access list",
 							"additionalProperties": true
+						},
+						"mtls_enabled": {
+							"type": "boolean",
+							"description": "Whether mTLS is enabled for this access list"
+						},
+						"mtls_certificate": {
+							"type": "string",
+							"description": "The CA certificate content for mTLS verification"
 						}
 					}
 				},

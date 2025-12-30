@@ -8,7 +8,7 @@
 *   **Security First:** Integrated **CrowdSec** (IPS) and **ModSecurity** (WAF) support.
 *   **Advanced TLS:** OCSP Stapling, Must-Staple, and support for various ACME providers.
 *   **Database Flexibility:** SQLite (default), MySQL, MariaDB, and PostgreSQL support with Auto-Migration.
-*   **Enhanced Management:** Access Lists, Audit Logs, and Stream/Redirection hosts.
+*   **Enhanced Management:** Access Lists (incl. **mTLS**), Audit Logs, and Stream/Redirection hosts.
 
 ## 📚 Documentation Sections
 
