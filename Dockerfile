@@ -57,7 +57,7 @@ COPY nginx-quic/attachment.patch /src/attachment.patch
 # --- Preparation: Install Dependencies ---
 RUN apk upgrade --no-cache -a && \
     apk add --no-cache autoconf automake brotli-dev build-base ca-certificates clang cmake curl curl-dev geoip-dev git \
-                       libatomic_ops-dev libmaxminddb-dev libtool libxml2-dev linux-headers lmdb-dev luajit-dev luarocks \
+                       libatomic_ops-dev libmaxminddb-dev libtool libxml2-dev linux-headers lld lmdb-dev luajit-dev luarocks \
                        ninja openldap-dev openssl-dev pcre2-dev yajl-dev zlib-dev zstd-dev
 
 # --- Build Step 1: ModSecurity ---
