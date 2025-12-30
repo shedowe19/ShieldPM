@@ -66,6 +66,7 @@ RUN git clone --depth 1 --shallow-submodules --recurse-submodules https://github
     sed -i "s|SecRuleEngine .*|SecRuleEngine On|g" /src/ModSecurity/modsecurity.conf-recommended && \
     sed -i "s|^SecAudit|#SecAudit|g" /src/ModSecurity/modsecurity.conf-recommended && \
     sed -i "s|unicode.mapping|/usr/local/nginx/conf/conf.d/include/unicode.mapping|g" /src/ModSecurity/modsecurity.conf-recommended && \
+    sed -i "1i #include <stdint.h>" headers/modsecurity/collection/collection.h && \
     /src/ModSecurity/build.sh && \
     /src/ModSecurity/configure --with-pcre2 --with-lmdb && \
     make -j "$(nproc)" install
