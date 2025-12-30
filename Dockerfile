@@ -291,6 +291,7 @@ RUN apk upgrade --no-cache -a && \
                        libatomic_ops libcrypto3 libedit libldap libmaxminddb-libs libssl3 libxml2 lmdb logrotate lua5.1-cjson luajit \
                        nano nodejs openssl pcre2 python3 shadow su-exec tini tzdata util-linux-misc yajl zlib zstd && \
     # Fix CrowdSec Version in Config
+    mv /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     # Helper Scripts
     curl -sSL https://raw.githubusercontent.com/tomwassenberg/certbot-ocsp-fetcher/refs/heads/main/certbot-ocsp-fetcher | sed "s|/live||g" > /usr/local/bin/certbot-ocsp-fetcher.sh && \
