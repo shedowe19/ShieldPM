@@ -272,7 +272,6 @@ COPY --from=nginx /src/ModSecurity/modsecurity.conf-recommended                 
 COPY --from=nginx /src/attachment/core/shmem_ipc/libosrc_shmem_ipc.so                                      /usr/local/lib/libosrc_shmem_ipc.so
 COPY --from=nginx /src/attachment/core/compression/libosrc_compression_utils.so                            /usr/local/lib/libosrc_compression_utils.so
 COPY --from=nginx /src/attachment/attachments/nginx/nginx_attachment_util/libosrc_nginx_attachment_util.so /usr/local/lib/libosrc_nginx_attachment_util.so
-COPY --from=nginx /usr/local/lib/lua/5.1                                                                     /usr/local/lib/lua/5.1
 
 # From Certbot
 COPY --from=certbot /usr/local /usr/local
