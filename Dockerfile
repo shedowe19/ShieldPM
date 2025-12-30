@@ -35,8 +35,6 @@ ARG LRC_VER=v0.1.32
 ARG LRL_VER=v0.15
 ARG LRLT_VER=v0.09
 
-# OpenTelemetry
-ARG OT_VER=v1.24.0
 
 # --- Build Arguments: Compiler Flags ---
 ARG FLAGS
@@ -169,26 +167,11 @@ RUN git clone --depth 1 https://github.com/openappsec/attachment /src/attachment
     ninja && \
     mv -v /src/attachment/attachments/nginx/ngx_module/libngx_module.so /usr/local/nginx/modules/libngx_module.so
 
-# --- Build Step 5: OpenTelemetry ---
-# OTel Lib
-RUN git clone --depth 1 https://github.com/open-telemetry/opentelemetry-cpp --branch "$OT_VER" /src/opentelemetry-cpp && \
-    cd /src/opentelemetry-cpp && \
-    cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DWITH_OTLP_HTTP=ON -G Ninja && \
-    ninja install
-
-
-
-RUN git clone --depth 1 https://github.com/open-telemetry/opentelemetry-cpp-contrib /src/opentelemetry-cpp-contrib && \
-    cd /src/opentelemetry-cpp-contrib/instrumentation/nginx && \
-    cmake -G Ninja && \
-    ninja && \
-    mv -v /src/opentelemetry-cpp-contrib/instrumentation/nginx/otel_ngx_module.so /usr/local/nginx/modules/otel_ngx_module.so
 
 # --- Cleanup: Strip Libraries ---
 RUN find /usr/local/nginx/modules -name "*.so" -exec strip -s {} \; && \
     strip -s /usr/local/nginx/sbin/nginx && \
     strip -s /src/ModSecurity/src/.libs/libmodsecurity.so.3 && \
-    strip -s /src/opentelemetry-cpp/libopentelemetry_proto.so && \
     strip -s /src/attachment/core/shmem_ipc/libosrc_shmem_ipc.so && \
     strip -s /src/attachment/core/compression/libosrc_compression_utils.so && \
     strip -s /src/attachment/attachments/nginx/nginx_attachment_util/libosrc_nginx_attachment_util.so && \
@@ -196,7 +179,6 @@ RUN find /usr/local/nginx/modules -name "*.so" -exec strip -s {} \; && \
     find /usr/local/nginx/modules -name "*.so" -exec file {} \; && \
     file /usr/local/nginx/sbin/nginx && \
     file /src/ModSecurity/src/.libs/libmodsecurity.so.3 && \
-    file /src/opentelemetry-cpp/libopentelemetry_proto.so && \
     file /src/attachment/core/shmem_ipc/libosrc_shmem_ipc.so && \
     file /src/attachment/core/compression/libosrc_compression_utils.so && \
     file /src/attachment/attachments/nginx/nginx_attachment_util/libosrc_nginx_attachment_util.so && \
@@ -267,7 +249,6 @@ COPY --from=nginx /usr/local/share/lua/5.1                                      
 COPY --from=nginx /src/ModSecurity/src/.libs/libmodsecurity.so.3                                           /usr/local/lib/libmodsecurity.so.3
 COPY --from=nginx /src/ModSecurity/unicode.mapping                                                         /usr/local/nginx/conf/conf.d/include/unicode.mapping
 COPY --from=nginx /src/ModSecurity/modsecurity.conf-recommended                                            /usr/local/nginx/conf/conf.d/include/modsecurity.conf.example
-COPY --from=nginx /src/opentelemetry-cpp/libopentelemetry_proto.so                                         /usr/local/lib/libopentelemetry_proto.so
 COPY --from=nginx /src/attachment/core/shmem_ipc/libosrc_shmem_ipc.so                                      /usr/local/lib/libosrc_shmem_ipc.so
 COPY --from=nginx /src/attachment/core/compression/libosrc_compression_utils.so                            /usr/local/lib/libosrc_compression_utils.so
 COPY --from=nginx /src/attachment/attachments/nginx/nginx_attachment_util/libosrc_nginx_attachment_util.so /usr/local/lib/libosrc_nginx_attachment_util.so

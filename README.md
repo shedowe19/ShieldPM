@@ -84,7 +84,6 @@ npm test
 ![OpenAppSec](https://img.shields.io/badge/OpenAppSec-141D2B?style=flat-square)
 ![CrowdSec](https://img.shields.io/badge/CrowdSec-F8A51B?style=flat-square&logo=crowdsec&logoColor=white)
 ![ModSecurity](https://img.shields.io/badge/ModSecurity-003545?style=flat-square&logo=owasp&logoColor=white)
-![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-000000?style=flat-square&logo=opentelemetry&logoColor=white)
 ![MaxMind](https://img.shields.io/badge/MaxMind-031E37?style=flat-square)
 ![Caddy](https://img.shields.io/badge/Caddy-1F88C0?style=flat-square&logo=caddy&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white)
