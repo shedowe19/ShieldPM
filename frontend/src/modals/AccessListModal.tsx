@@ -54,7 +54,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}
 
 		if (values.mtlsEnabled && !values.mtlsContent) {
-			return "mTLS Certificate Content is required when mTLS is enabled";
+			return intl.formatMessage({ id: "error.access.mtls_content_required" });
 		}
 
 		// ensure the items don't contain the same username twice
@@ -221,7 +221,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<T id="access-list.sso" />
 											</TabsTrigger>
 											<TabsTrigger value="mtls">
-												mTLS
+												<T id="access-list.mtls.tab" />
 											</TabsTrigger>
 										</TabsList>
 
@@ -414,10 +414,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<div className="flex items-center justify-between">
 												<div className="space-y-0.5">
 													<Label htmlFor="mtlsEnabled" className="text-base">
-														Enable mTLS (Mutual TLS)
+														<T id="access-list.mtls.enable" />
 													</Label>
 													<p className="text-sm text-muted-foreground">
-														Require clients to present a valid certificate signed by the CA below.
+														<T id="access-list.mtls.enable_desc" />
 													</p>
 												</div>
 												<Field name="mtlsEnabled">
@@ -436,24 +436,22 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											{values.mtlsEnabled && (
 												<div className="space-y-2">
 													<Label htmlFor="mtlsContent">
-														CA Certificate Content (PEM)
+														<T id="access-list.mtls.certificate" />
 													</Label>
 													<Field name="mtlsContent">
 														{({ field }: any) => (
 															<Textarea
 																{...field}
 																id="mtlsContent"
-																placeholder="-----BEGIN CERTIFICATE-----
-...
------END CERTIFICATE-----"
+																placeholder={intl.formatMessage({
+																	id: "access-list.mtls.certificate.placeholder",
+																})}
 																className="font-mono text-xs h-64"
 															/>
 														)}
 													</Field>
 													<div className="text-sm text-muted-foreground">
-														Paste the content of your Certificate Authority (CA) public certificate here.
-														Nginx will use this to verify client certificates.
-														Does NOT support full chain or intermediate files, stick to the Root CA or the specific signing CA.
+														<T id="access-list.mtls.certificate_desc" />
 													</div>
 												</div>
 											)}
