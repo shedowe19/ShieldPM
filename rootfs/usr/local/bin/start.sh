@@ -487,6 +487,7 @@ fi
 
 if [ "$REGENERATE_ALL" = "true" ]; then
     find /data/nginx -name "*.conf" -delete
+    touch /data/nginx/ip_ranges.conf
 fi
 
 if [ "$LOGROTATE" = "true" ]; then
