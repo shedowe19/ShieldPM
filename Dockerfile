@@ -31,7 +31,7 @@ ARG NHG2M_VER=3.4
 # Lua Libraries
 ARG LUAJIT_INC=/usr/include/luajit-2.1
 ARG LUAJIT_LIB=/usr/lib
-ARG LRC_VER=v0.1.32
+ARG LRC_VER=v0.1.32R1
 ARG LRL_VER=v0.15
 ARG LRLT_VER=v0.09
 
@@ -236,8 +236,7 @@ SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
 
 # --- Args ---
-ARG LRC_VER=v0.1.32R1
-ARG LRL_VER=v0.15
+
 ARG LCSB_VER=v1.0.13
 ARG CRS_VER=v4.21.0
 
@@ -282,14 +281,6 @@ RUN apk upgrade --no-cache -a && \
     luarocks-5.1 install lua-resty-openidc && \
     luarocks-5.1 install lua-resty-session && \
     \
-    # OpenResty Libraries
-    git clone --depth 1 https://github.com/openresty/lua-resty-core --branch "$LRC_VER" /src/lua-resty-core && \
-    cd /src/lua-resty-core && \
-    make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1 && \
-    \
-    git clone --depth 1 https://github.com/openresty/lua-resty-lrucache --branch "$LRL_VER" /src/lua-resty-lrucache && \
-    cd /src/lua-resty-lrucache && \
-    make -j "$(nproc)" install LUA_LIB_DIR=/usr/local/share/lua/5.1 && \
     \
     # CrowdSec Bouncer
     git clone --depth 1 https://github.com/crowdsecurity/lua-cs-bouncer --branch "$LCSB_VER" /src/lua-cs-bouncer && \
