@@ -27,6 +27,8 @@ const internalAccessList = {
 			name: data.name,
 			satisfy_any: data.satisfy_any,
 			pass_auth: data.pass_auth,
+			mtls_enabled: data.mtls_enabled || false,
+			mtls_certificate: data.mtls_certificate || "",
 			meta: data.meta,
 			owner_user_id: access.token.getUserId(1),
 		});
@@ -100,7 +102,7 @@ const internalAccessList = {
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
-		await access.can("access_lists:update", data.id);
+		await access.can("access_lists:update", data);
 		const row = await internalAccessList.get(access, { id: data.id });
 		if (row.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
