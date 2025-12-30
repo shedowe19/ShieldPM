@@ -220,18 +220,18 @@ RUN apk upgrade --no-cache -a && \
 # ==========================================
 # Stage 4: Certbot
 # ==========================================
-FROM python:3.14.0-alpine3.22 AS certbot
+FROM alpine:3.23.2 AS certbot
 COPY nginx-quic/requirements.txt /tmp/requirements.txt
 RUN apk upgrade --no-cache -a && \
-    apk add --no-cache ca-certificates build-base libffi-dev && \
+    apk add --no-cache ca-certificates build-base libffi-dev python3 py3-pip && \
     python3 -m venv /usr/local && \
-    pip install --no-cache-dir -r /tmp/requirements.txt
+    /usr/local/bin/pip install --no-cache-dir -r /tmp/requirements.txt
 
 
 # ==========================================
 # Final Stage
 # ==========================================
-FROM python:3.14.0-alpine3.22
+FROM alpine:3.23.2
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
 
@@ -271,7 +271,12 @@ RUN apk upgrade --no-cache -a && \
                        bash bash-completion nano \
                        logrotate goaccess fcgi \
                        luarocks5.1 git make \
-                       nodejs yarn && \
+                       nodejs yarn \
+                       python3 py3-pip \
+                       libxml2 libargon2 libedit \
+                       php84 php84-fpm php84-openssl php84-sqlite3 php84-pdo_sqlite php84-mysqlnd php84-pdo_mysql php84-pgsql php84-pdo_pgsql \
+                       php84-bcmath php84-gd php84-mbstring php84-xml php84-opcache php84-pecl-apcu php84-intl php84-zip php84-ctype \
+                       php84-session php84-tokenizer php84-simplexml php84-dom php84-xmlwriter php84-xmlreader php84-phar php84-iconv php84-curl && \
     \
     # Lua Rocks
     luarocks-5.1 install lua-resty-http && \
@@ -292,14 +297,15 @@ RUN apk upgrade --no-cache -a && \
     # CrowdSec Bouncer
     git clone --depth 1 https://github.com/crowdsecurity/lua-cs-bouncer --branch "$LCSB_VER" /src/lua-cs-bouncer && \
     mv /src/lua-cs-bouncer/lib/* /usr/local/share/lua/5.1 && \
-    mv /src/lua-cs-bouncer/templates/captcha.html /etc/captcha.html.original && \
-    mv /src/lua-cs-bouncer/templates/ban.html /etc/ban.html.original && \
+    mv /src/lua-cs-bouncer/templates/captcha.html /usr/local/nginx/conf/conf.d/include/captcha.html && \
+    mv /src/lua-cs-bouncer/templates/ban.html /usr/local/nginx/conf/conf.d/include/ban.html && \
+    mv /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     \
     cd && \
     rm -rf /src /tmp/luarocks_local_cache-* && \
     \
     # Fix CrowdSec Version in Config
-    sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled && \
+    sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     \
     # Python Venv & Certbot Tools
     python3 -m venv /opt/certbot && \
