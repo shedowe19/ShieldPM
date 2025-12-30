@@ -303,7 +303,7 @@ RUN apk upgrade --no-cache -a && \
     ln -s /app/index.js /usr/local/bin/index.js && \
     chmod +x /usr/local/bin/* && \
     mkdir -p /var/log/nginx && \
-    rm -r /tmp/*
+    find /tmp -mindepth 1 -delete
 
 ENTRYPOINT ["tini", "--", "entrypoint.sh"]
 HEALTHCHECK CMD healthcheck.sh
