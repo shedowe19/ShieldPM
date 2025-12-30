@@ -57,7 +57,8 @@ COPY nginx-quic/attachment.patch /src/attachment.patch
 # --- Preparation: Install Dependencies ---
 RUN apk upgrade --no-cache -a && \
     apk add --no-cache ca-certificates build-base clang lld cmake ninja git \
-                       linux-headers libatomic_ops-dev luajit-dev pcre2-dev zlib-dev brotli-dev zstd-dev openssl-dev geoip-dev libmaxminddb-dev openldap-dev
+                       linux-headers libatomic_ops-dev luajit-dev pcre2-dev zlib-dev brotli-dev zstd-dev openssl-dev geoip-dev libmaxminddb-dev openldap-dev \
+                       autoconf automake libtool lmdb-dev libxml2-dev yajl-dev curl-dev
 
 # --- Build Step 1: ModSecurity ---
 RUN git clone --depth 1 --shallow-submodules --recurse-submodules https://github.com/owasp-modsecurity/ModSecurity --branch "$MODSEC_VER" /src/ModSecurity && \
