@@ -170,25 +170,13 @@ RUN git clone --depth 1 https://github.com/openappsec/attachment /src/attachment
     mv -v /src/attachment/attachments/nginx/ngx_module/libngx_module.so /usr/local/nginx/modules/libngx_module.so
 
 # --- Build Step 5: OpenTelemetry ---
-# Re-define CC/CXX/FLAGS for OTel (GCC)
-ARG CC=gcc
-ARG CFLAGS="$FLAGS -Wtrampolines -Wbidi-chars=any -O2 -pipe -funroll-loops -ffunction-sections -fdata-sections -fstrict-flex-arrays=3 -fstack-clash-protection -fstack-protector-strong -ftrivial-auto-var-init=zero -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing -fno-plt -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS=1 -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST -Wformat=2 -Werror=format-security"
-ARG CXX=g++
-ARG CXXFLAGS="$FLAGS -Wtrampolines -Wbidi-chars=any -O2 -pipe -funroll-loops -ffunction-sections -fdata-sections -fstrict-flex-arrays=3 -fstack-clash-protection -fstack-protector-strong -ftrivial-auto-var-init=zero -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing -fno-plt -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS=1 -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST -Wformat=2 -Werror=format-security"
-ARG LDFLAGS="-Wl,-s -Wl,-O1 -Wl,--gc-sections -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -Wl,--as-needed -Wl,--no-copy-dt-needed-entries -Wl,--sort-common -Wl,-z,pack-relative-relocs"
-
 # OTel Lib
 RUN git clone --depth 1 https://github.com/open-telemetry/opentelemetry-cpp --branch "$OT_VER" /src/opentelemetry-cpp && \
     cd /src/opentelemetry-cpp && \
     cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DWITH_OTLP_HTTP=ON -G Ninja && \
     ninja install
 
-# OTel Module (Clang)
-ARG CC=clang
-ARG CFLAGS="$FLAGS -m64 -O3 -pipe -flto=thin -fstack-clash-protection -fstack-protector-strong -ftrivial-auto-var-init=zero -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing -fno-plt -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -Wformat=2 -Werror=format-security -Wno-sign-compare"
-ARG CXX=clang++
-ARG CXXFLAGS="$FLAGS -m64 -O3 -pipe -flto=thin -fstack-clash-protection -fstack-protector-strong -ftrivial-auto-var-init=zero -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing -fno-plt -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS=1 -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST -Wformat=2 -Werror=format-security -Wno-sign-compare"
-ARG LDFLAGS="-fuse-ld=lld -m64 -Wl,-s -Wl,-O1 -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -Wl,--as-needed -Wl,-z,pack-relative-relocs"
+
 
 RUN git clone --depth 1 https://github.com/open-telemetry/opentelemetry-cpp-contrib /src/opentelemetry-cpp-contrib && \
     cd /src/opentelemetry-cpp-contrib/instrumentation/nginx && \
