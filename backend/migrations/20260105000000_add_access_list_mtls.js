@@ -34,7 +34,7 @@ const up = async (knex) => {
 		let meta = {};
 		try {
 			meta = JSON.parse(row.meta);
-		} catch (e) {
+		} catch (_e) {
 			// ignore invalid json
 		}
 

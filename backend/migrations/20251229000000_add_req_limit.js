@@ -7,21 +7,21 @@ const migrateName = "add_req_limit_legacy_placeholder";
  * The original file was renamed, but the DB expects this file to exist.
  * This does nothing as the actual changes are now in 20260102000000_add_req_limit.js
  *
- * @param   {Object} knex
+ * @param   {Object} _knex
  * @returns {Promise}
  */
-const up = (knex) => {
+const up = (_knex) => {
 	logger.info(`[${migrateName}] Placeholder for corrupted migration check. Doing nothing.`);
 	return Promise.resolve();
 };
 
 /**
- * Undo Migrate
+ * Migrate Down.
  *
- * @param   {Object} knex
+ * @param { Object } _knex
  * @returns {Promise}
  */
-const down = (knex) => {
+const down = (_knex) => {
 	logger.info(`[${migrateName}] Placeholder for corrupted migration check. Doing nothing.`);
 	return Promise.resolve();
 };
