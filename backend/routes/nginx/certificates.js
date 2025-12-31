@@ -105,6 +105,47 @@ router
 		}
 	});
 
+router
+	.route("/internal/client")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(jwtdecode())
+	.post(async (req, res, next) => {
+		try {
+			// Basic validation inline for now, or add to schema later
+			const { common_name, password, years } = req.body;
+			if (!common_name || !password) {
+				throw new errs.ValidationError("Common Name and Password are required");
+			}
+
+			// Create a temp dir for this generation
+			const tmpDir = `/tmp/client-cert-${Date.now()}`;
+
+			const p12Path = await internalPki.createClientCert({
+				common_name,
+				password,
+				years: Number(years) || 1,
+			}, tmpDir);
+
+			res.download(p12Path, `${common_name}.p12`, (err) => {
+				// Cleanup after download
+				try {
+					import("node:fs").then(fs => fs.rmSync(tmpDir, { recursive: true, force: true }));
+				} catch (e) {
+					console.error("Cleanup failed", e);
+				}
+				if (err) {
+					next(err);
+				}
+			});
+
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	});
+
 /**
  * /api/nginx/certificates/dns-providers
  */

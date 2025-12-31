@@ -4,7 +4,7 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
 import { type Certificate, createCertificate } from "src/api/backend";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
 import { Label } from "src/components/ui/label";
@@ -13,6 +13,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { Card, CardContent } from "src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Textarea } from "src/components/ui/textarea";
+import { Input } from "src/components/ui/input";
 import { showObjectSuccess } from "src/notifications";
 
 const showInternalCertificateModal = () => {
@@ -30,16 +31,52 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 		setErrorMsg(null);
 
 		try {
-			await createCertificate({
-				provider: "internal",
-				domain_names: values.domain_names.split(/\s+|,/).filter((d: string) => d.trim().length > 0),
-				meta: {
-					years: Number.parseInt(values.years, 10),
-				},
-			} as unknown as Certificate);
+			if (values.type === "client") {
+				// Client Certificate Download
+				const token = localStorage.getItem("token"); // Quick hack, better to use axios/api client helper but need blob
+				const response = await fetch("/api/nginx/certificates/internal/client", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${token}`,
+					},
+					body: JSON.stringify({
+						common_name: values.domain_names, // Reusing field
+						password: values.password,
+						years: Number.parseInt(values.years, 10),
+					}),
+				});
 
-			showObjectSuccess("certificate", "saved");
-			remove();
+				if (!response.ok) {
+					const err = await response.json();
+					throw new Error(err.error?.message || "Failed to generate certificate");
+				}
+
+				// Trigger Download
+				const blob = await response.blob();
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement("a");
+				a.href = url;
+				a.download = `${values.domain_names}.p12`;
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+
+				showObjectSuccess("certificate", "downloaded"); // Custom message?
+				remove();
+			} else {
+				// Server Certificate (Existing Logic)
+				await createCertificate({
+					provider: "internal",
+					domain_names: values.domain_names.split(/\s+|,/).filter((d: string) => d.trim().length > 0),
+					meta: {
+						years: Number.parseInt(values.years, 10),
+					},
+				} as unknown as Certificate);
+
+				showObjectSuccess("certificate", "saved");
+				remove();
+			}
 		} catch (err: any) {
 			setErrorMsg(err.message || "An error occurred");
 		}
@@ -63,7 +100,9 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 
 				<Formik
 					initialValues={{
+						type: "server",
 						domain_names: "",
+						password: "",
 						years: "10",
 					}}
 					onSubmit={onSubmit}
@@ -93,27 +132,64 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 									</Alert>
 
 									<div className="space-y-2">
+										<Label htmlFor="type"><T id="certificates.internal.type" /></Label>
+										<Select
+											onValueChange={(val) => setFieldValue("type", val)}
+											defaultValue={values.type}
+										>
+											<SelectTrigger>
+												<SelectValue placeholder={intl.formatMessage({ id: "certificates.internal.type" })} />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="server"><T id="certificates.internal.type.server" /></SelectItem>
+												<SelectItem value="client"><T id="certificates.internal.type.client" /></SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+
+									<div className="space-y-2">
 										<Label htmlFor="domain_names">
-											<T id="domain-names" />
+											{values.type === "client" ? <T id="certificates.internal.identity_name" /> : <T id="domain-names" />}
 										</Label>
 										<Field name="domain_names">
 											{({ field }: any) => (
 												<Textarea
 													{...field}
 													id="domain_names"
-													placeholder="example.internal, svc.local"
+													placeholder={values.type === "client" ? "my-laptop" : "example.internal, svc.local"}
 													className={
 														errors.domain_names && touched.domain_names
 															? "border-destructive"
 															: ""
 													}
+													rows={values.type === "client" ? 1 : 3}
 												/>
 											)}
 										</Field>
 										<p className="text-sm text-muted-foreground">
-											<T id="certificates.internal.domain_names_help" />
+											{values.type === "client" ? <T id="certificates.internal.identity_help" /> : <T id="certificates.internal.domain_names_help" />}
 										</p>
 									</div>
+
+									{values.type === "client" && (
+										<div className="space-y-2">
+											<Label htmlFor="password"><T id="certificates.internal.password" /></Label>
+											<Field name="password">
+												{({ field }: any) => (
+													<Input
+														{...field}
+														type="password"
+														id="password"
+														placeholder="VerySecurePassword123!"
+														autoComplete="new-password"
+													/>
+												)}
+											</Field>
+											<p className="text-sm text-muted-foreground">
+												<T id="certificates.internal.password_help" />
+											</p>
+										</div>
+									)}
 
 									<div className="space-y-2">
 										<Label htmlFor="years">
