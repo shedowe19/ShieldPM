@@ -2,6 +2,7 @@
 // http://vincit.github.io/objection.js/
 
 import { Model } from "objection";
+import dayjs from "dayjs";
 import db from "../db.js";
 import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
 import AccessList from "./access_list.js";
@@ -41,10 +42,15 @@ class ProxyHost extends Model {
 			this.meta = {};
 		}
 
-		if (this.maintenance_start === "") {
+		if (this.maintenance_start) {
+			this.maintenance_start = dayjs(this.maintenance_start).format("YYYY-MM-DD HH:mm:ss");
+		} else {
 			this.maintenance_start = null;
 		}
-		if (this.maintenance_end === "") {
+
+		if (this.maintenance_end) {
+			this.maintenance_end = dayjs(this.maintenance_end).format("YYYY-MM-DD HH:mm:ss");
+		} else {
 			this.maintenance_end = null;
 		}
 	}
@@ -52,10 +58,15 @@ class ProxyHost extends Model {
 	$beforeUpdate() {
 		this.modified_on = now();
 
-		if (this.maintenance_start === "") {
+		if (this.maintenance_start) {
+			this.maintenance_start = dayjs(this.maintenance_start).format("YYYY-MM-DD HH:mm:ss");
+		} else {
 			this.maintenance_start = null;
 		}
-		if (this.maintenance_end === "") {
+
+		if (this.maintenance_end) {
+			this.maintenance_end = dayjs(this.maintenance_end).format("YYYY-MM-DD HH:mm:ss");
+		} else {
 			this.maintenance_end = null;
 		}
 	}
