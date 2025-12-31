@@ -40,10 +40,24 @@ class ProxyHost extends Model {
 		if (typeof this.meta === "undefined") {
 			this.meta = {};
 		}
+
+		if (this.maintenance_start === "") {
+			this.maintenance_start = null;
+		}
+		if (this.maintenance_end === "") {
+			this.maintenance_end = null;
+		}
 	}
 
 	$beforeUpdate() {
 		this.modified_on = now();
+
+		if (this.maintenance_start === "") {
+			this.maintenance_start = null;
+		}
+		if (this.maintenance_end === "") {
+			this.maintenance_end = null;
+		}
 	}
 
 	$parseDatabaseJson(json) {
