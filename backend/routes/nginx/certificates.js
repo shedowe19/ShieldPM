@@ -1,6 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import internalCertificate from "../../internal/certificate.js";
+import internalPki from "../../internal/pki.js";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
@@ -35,6 +36,28 @@ router
 		res.sendStatus(204);
 	})
 	.all(jwtdecode())
+
+	/**
+	 * GET /api/nginx/certificates/root-ca
+	 *
+	 * Download Root CA
+	 */
+	.get("/root-ca", async (req, res, next) => {
+		try {
+			const certContent = await internalPki.getRootCa();
+			res
+				.status(200)
+				.header("Content-Type", "application/x-pem-file")
+				.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
+				.send(certContent);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	})
+
+	/**
+	 * GET /api/nginx/certificates
 
 	/**
 	 * GET /api/nginx/certificates

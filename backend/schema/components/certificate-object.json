@@ -84,6 +84,10 @@
 				"propagation_seconds": {
 					"type": "integer",
 					"minimum": 0
+				},
+				"years": {
+					"type": "integer",
+					"minimum": 1
 				}
 			},
 			"example": {

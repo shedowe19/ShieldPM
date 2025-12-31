@@ -15,6 +15,7 @@ export * from "./deleteRedirectionHost";
 export * from "./deleteStream";
 export * from "./deleteUser";
 export * from "./downloadCertificate";
+export * from "./downloadRootCa";
 export * from "./expansions";
 export * from "./getAccessList";
 export * from "./getAccessLists";

@@ -90,7 +90,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -105,7 +105,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -251,6 +251,10 @@ const internalNginx = {
 		}
 
 		host.env = process.env;
+
+		if (host.certificate && host.certificate.provider === "internal") {
+			host.use_ml_kem = true;
+		}
 
 		try {
 			const config_text = await renderEngine.parseAndRender(template, host);

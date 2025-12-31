@@ -82,11 +82,11 @@ export interface Certificate {
 	createdOn: string;
 	modifiedOn: string;
 	ownerUserId: number;
-	provider: string;
+	provider: "letsencrypt" | "other" | "internal" | string;
 	niceName: string;
 	domainNames: string[];
 	expiresOn: string;
-	meta: Record<string, any>;
+	meta: Record<string, any> & { years?: number };
 	owner?: User;
 	proxyHosts?: ProxyHost[];
 	deadHosts?: DeadHost[];

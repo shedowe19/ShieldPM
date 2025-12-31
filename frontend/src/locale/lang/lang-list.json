@@ -1,15 +1,15 @@
 {
-  "locale-bg-BG": "Български",
-  "locale-de-DE": "German",
-  "locale-en-US": "English",
-  "locale-es-ES": "Español",
-  "locale-it-IT": "Italiano",
-  "locale-ja-JP": "日本語",
-  "locale-ko-KR": "한국어",
-  "locale-nl-NL": "Nederlands",
-  "locale-pl-PL": "Polski",
-  "locale-ru-RU": "Русский",
-  "locale-sk-SK": "Slovenčina",
-  "locale-vi-VN": "Tiếng Việt",
-  "locale-zh-CN": "中文"
+	"locale-bg-BG": "Български",
+	"locale-de-DE": "German",
+	"locale-en-US": "English",
+	"locale-es-ES": "Español",
+	"locale-it-IT": "Italiano",
+	"locale-ja-JP": "日本語",
+	"locale-ko-KR": "한국어",
+	"locale-nl-NL": "Nederlands",
+	"locale-pl-PL": "Polski",
+	"locale-ru-RU": "Русский",
+	"locale-sk-SK": "Slovenčina",
+	"locale-vi-VN": "Tiếng Việt",
+	"locale-zh-CN": "中文"
 }
