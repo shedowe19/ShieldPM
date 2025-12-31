@@ -36,3 +36,14 @@ Before your browser or devices will trust these certificates, you must install t
 *   **Key Algorithm**: ECDSA P-384 (secp384r1) - Matches standard Let's Encrypt security level.
 *   **Key Exchange**: `X25519MLKEM768` (Post-Quantum Hybrid) prioritized, falling back to `X25519`.
 *   **Storage Path**: `/data/tls/internal/`
+
+## mTLS Client Verification
+
+You can also use the Internal Root CA to verify client certificates (mTLS).
+
+1.  Generate a client certificate signed by the Internal Root CA (currently requires manual OpenSSL commands using the root key in `/data/tls/internal/`).
+2.  Install this client certificate (and the Root CA) on your device/browser.
+3.  Create an **Access List**, enable **mTLS**, and switch on **"Use Internal CA"**.
+4.  Assign this Access List to a Proxy Host.
+
+Only clients with a valid certificate signed by your Internal CA will be allowed access.
