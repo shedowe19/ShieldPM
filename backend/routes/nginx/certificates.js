@@ -45,8 +45,7 @@ router
 	.get("/root-ca", async (req, res, next) => {
 		try {
 			const certContent = await internalPki.getRootCa();
-			res
-				.status(200)
+			res.status(200)
 				.header("Content-Type", "application/x-pem-file")
 				.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
 				.send(certContent);

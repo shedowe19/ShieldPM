@@ -96,7 +96,9 @@ export default function TableWrapper() {
 								type="search"
 								placeholder={intl.formatMessage({ id: "search.placeholder" })}
 								className="pl-8 h-9"
-								onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value.toLowerCase().trim())}
+								onChange={(e: ChangeEvent<HTMLInputElement>) =>
+									setSearch(e.target.value.toLowerCase().trim())
+								}
 							/>
 						</div>
 					) : null}
@@ -104,7 +106,11 @@ export default function TableWrapper() {
 						<IconHelp className="h-4 w-4" />
 					</ShadcnButton>
 					<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>
-						<ShadcnButton variant="outline" onClick={() => downloadRootCa()} title={intl.formatMessage({ id: "certificates.download_root_ca" })}>
+						<ShadcnButton
+							variant="outline"
+							onClick={() => downloadRootCa()}
+							title={intl.formatMessage({ id: "certificates.download_root_ca" })}
+						>
 							<IconCertificate className="mr-2 h-4 w-4" />
 							<T id="certificates.root_ca" />
 						</ShadcnButton>
