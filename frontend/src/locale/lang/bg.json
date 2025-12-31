@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Активиране на mTLS (Mutual TLS)",
 	"access-list.mtls.enable_desc": "Изискване клиентите да представят валиден сертификат, подписан от посочения по-долу CA.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Използвай Вътрешен CA",
+	"access-list.mtls.use_internal_desc": "Проверка на клиенти, използващи сертификати, подписани от вътрешния Root CA (не се изисква ръчно качване).",
 	"access-list.pass-auth": "Предаване на автентикация към Upstream",
 	"access-list.public": "Публичен достъп",
 	"access-list.public.subtitle": "Без базова автентикация",

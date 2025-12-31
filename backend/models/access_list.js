@@ -12,7 +12,7 @@ import User from "./user.js";
 
 Model.knex(db());
 
-const boolFields = ["is_deleted", "satisfy_any", "pass_auth", "mtls_enabled"];
+const boolFields = ["is_deleted", "satisfy_any", "pass_auth", "mtls_enabled", "mtls_use_internal"];
 
 class AccessList extends Model {
 	$beforeInsert() {

@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "启用 mTLS (双向 TLS)",
 	"access-list.mtls.enable_desc": "要求客户端提供由以下 CA 签名的有效证书。",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "使用内部 CA",
+	"access-list.mtls.use_internal_desc": "使用由内部根 CA 签名的证书验证客户端（无需手动上传）。",
 	"access-list.pass-auth": "将认证传递给上游",
 	"access-list.public": "公开可访问",
 	"access-list.public.subtitle": "无需基本认证",

@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Bật mTLS (Mutual TLS)",
 	"access-list.mtls.enable_desc": "Yêu cầu ứng dụng khách xuất trình chứng chỉ hợp lệ được ký bởi CA bên dưới.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Sử dụng CA nội bộ",
+	"access-list.mtls.use_internal_desc": "Xác minh khách hàng sử dụng chứng chỉ được ký bởi CA gốc nội bộ (không cần tải lên thủ công).",
 	"access-list.pass-auth": "Chuyển Xác thực tới Upstream",
 	"access-list.public": "Có thể truy cập công khai",
 	"access-list.public.subtitle": "Không cần xác thực cơ bản",

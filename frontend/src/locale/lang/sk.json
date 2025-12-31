@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Povoliť mTLS (Vzájomné TLS)",
 	"access-list.mtls.enable_desc": "Vyžadovať od klientov predloženie platného certifikátu podpísaného nižšie uvedenou CA.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Použiť internú CA",
+	"access-list.mtls.use_internal_desc": "Overte klientov pomocou certifikátov podpísaných internou koreňovou CA (nevyžaduje sa manuálne nahrávanie).",
 	"access-list.pass-auth": "Odoslať overenie na Upstream",
 	"access-list.public": "Verejne prístupné",
 	"access-list.public.subtitle": "Nie je potrebné základné overenie",

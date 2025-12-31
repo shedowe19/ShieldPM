@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Включить mTLS (Взаимный TLS)",
 	"access-list.mtls.enable_desc": "Требовать от клиентов предъявления действительного сертификата, подписанного указанным ниже CA.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Использовать Внутренний CA",
+	"access-list.mtls.use_internal_desc": "Проверять клиентов с использованием сертификатов, подписанных Внутренним Root CA (загрузка не требуется).",
 	"access-list.pass-auth": "Передать авторизацию вышестоящему (Upstream) серверу",
 	"access-list.public": "Общедоступный",
 	"access-list.public.subtitle": "Без аутентификации",

@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Enable mTLS (Mutual TLS)",
 	"access-list.mtls.enable_desc": "Require clients to present a valid certificate signed by the CA below.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Use Internal CA",
+	"access-list.mtls.use_internal_desc": "Verify clients using certificates signed by the Internal Root CA (no manual upload required).",
 	"access-list.pass-auth": "Pass Auth to Upstream",
 	"access-list.public": "Publicly Accessible",
 	"access-list.public.subtitle": "No basic auth required",

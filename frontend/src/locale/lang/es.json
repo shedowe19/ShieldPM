@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Habilitar mTLS (TLS Mutuo)",
 	"access-list.mtls.enable_desc": "Requerir que los clientes presenten un certificado válido firmado por la CA a continuación.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Usar CA Interna",
+	"access-list.mtls.use_internal_desc": "Verificar clientes usando certificados firmados por la CA Raíz Interna (no requiere subida manual).",
 	"access-list.pass-auth": "Pasar autenticación al servidor principal",
 	"access-list.public": "Accesible Públicamente",
 	"access-list.public.subtitle": "No se requiere autenticación básica",

@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "mTLS (Mutual TLS) aktivieren",
 	"access-list.mtls.enable_desc": "Erfordert, dass Clients ein gültiges Zertifikat vorlegen, das von der untenstehenden CA signiert wurde.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Interne CA nutzen",
+	"access-list.mtls.use_internal_desc": "Clients mit Zertifikaten der internen Root CA verifizieren (kein Upload nötig).",
 	"access-list.pass-auth": "Authentifizierung an Upstream weiterleiten",
 	"access-list.public": "Öffentlich",
 	"access-list.public.subtitle": "Keine Authentifizierung erforderlich",

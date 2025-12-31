@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "mTLS(상호 TLS) 활성화",
 	"access-list.mtls.enable_desc": "클라이언트가 아래 CA에 의해 서명된 유효한 인증서를 제시하도록 요구합니다.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "내부 CA 사용",
+	"access-list.mtls.use_internal_desc": "내부 루트 CA가 서명한 인증서를 사용하여 클라이언트를 확인합니다(수동 업로드 필요 없음).",
 	"access-list.pass-auth": "인증 정보를 원본 서버로 전달",
 	"access-list.public": "누구나 접근 가능",
 	"access-list.public.subtitle": "기본 인증 필요 없음",

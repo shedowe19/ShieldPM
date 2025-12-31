@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Abilita mTLS (Mutual TLS)",
 	"access-list.mtls.enable_desc": "Richiedi ai client di presentare un certificato valido firmato dalla CA qui sotto.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Usa CA Interna",
+	"access-list.mtls.use_internal_desc": "Verifica i client utilizzando certificati firmati dalla Root CA Interna (nessun caricamento manuale richiesto).",
 	"access-list.pass-auth": "Passare l'autenticazione a Monte",
 	"access-list.public": "Accessibile Pubblicamente",
 	"access-list.public.subtitle": "Nessuna autenticazione base richiesta",

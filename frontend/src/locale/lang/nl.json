@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "mTLS (Mutual TLS) inschakelen",
 	"access-list.mtls.enable_desc": "Vereis dat cliënten een geldig certificaat presenteren dat is ondertekend door de onderstaande CA.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Gebruik Interne CA",
+	"access-list.mtls.use_internal_desc": "Verifieer clients met certificaten ondertekend door de Interne Root CA (geen handmatige upload vereist).",
 	"access-list.pass-auth": "Verificatie Doorsturen naar Upstream",
 	"access-list.public": "Publiekelijk toegankelijk",
 	"access-list.public.subtitle": "Geen basisautentificatie vereist",

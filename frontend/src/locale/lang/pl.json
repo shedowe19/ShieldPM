@@ -10,6 +10,8 @@
 	"access-list.mtls.enable": "Włącz mTLS (Wzajemne TLS)",
 	"access-list.mtls.enable_desc": "Wymagaj od klientów przedstawienia ważnego certyfikatu podpisanego przez poniższe CA.",
 	"access-list.mtls.tab": "mTLS",
+	"access-list.mtls.use_internal": "Użyj Wewnętrznego CA",
+	"access-list.mtls.use_internal_desc": "Weryfikuj klientów za pomocą certyfikatów podpisanych przez Wewnętrzne Root CA (bez ręcznego przesyłania).",
 	"access-list.pass-auth": "Przekaż uwierzytelnienie do serwera docelowego",
 	"access-list.public": "Publicznie dostępne",
 	"access-list.public.subtitle": "Nie wymaga uwierzytelnienia podstawowego",
