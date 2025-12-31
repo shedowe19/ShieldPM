@@ -53,7 +53,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			if (!values.oidcDiscoveryUrl) return "Discovery URL is required";
 		}
 
-		if (values.mtlsEnabled && !values.mtlsContent) {
+		if (values.mtlsEnabled && !values.mtlsUseInternal && !values.mtlsContent) {
 			return intl.formatMessage({ id: "error.access.mtls_content_required" });
 		}
 
@@ -88,7 +88,8 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			pass_auth: values.passAuth,
 			// mTLS
 			mtls_enabled: values.mtlsEnabled,
-			mtls_certificate: values.mtlsEnabled ? values.mtlsContent : undefined,
+			mtls_use_internal: values.mtlsUseInternal,
+			mtls_certificate: values.mtlsEnabled && !values.mtlsUseInternal ? values.mtlsContent : "",
 			meta: {
 				...data?.meta,
 				auth_type: authType,
@@ -182,6 +183,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								// mTLS
 								mtlsEnabled: !!data.mtlsEnabled,
 								mtlsContent: data.mtlsCertificate || "",
+								mtlsUseInternal: !!data.mtlsUseInternal,
 							} as AccessList & {
 								authType: string;
 								authentikHost: string;
@@ -190,6 +192,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								oidcClientSecret: string;
 								mtlsEnabled: boolean;
 								mtlsContent: string;
+								mtlsUseInternal: boolean;
 							}
 						}
 						onSubmit={onSubmit}
@@ -433,7 +436,29 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</Field>
 											</div>
 
-											{values.mtlsEnabled && (
+											<div className="flex items-center justify-between mt-4">
+												<div className="space-y-0.5">
+													<Label htmlFor="mtlsUseInternal" className="text-base">
+														<T id="access-list.mtls.use_internal" />
+													</Label>
+													<p className="text-sm text-muted-foreground">
+														<T id="access-list.mtls.use_internal_desc" />
+													</p>
+												</div>
+												<Field name="mtlsUseInternal">
+													{({ field }: any) => (
+														<Switch
+															id="mtlsUseInternal"
+															checked={field.value}
+															onCheckedChange={(checked) =>
+																setFieldValue("mtlsUseInternal", checked)
+															}
+														/>
+													)}
+												</Field>
+											</div>
+
+											{values.mtlsEnabled && !values.mtlsUseInternal && (
 												<div className="space-y-2">
 													<Label htmlFor="mtlsContent">
 														<T id="access-list.mtls.certificate" />

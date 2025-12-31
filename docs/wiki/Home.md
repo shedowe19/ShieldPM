@@ -35,6 +35,7 @@
 *   **[ModSecurity Deep Dive](ModSecurity)**: OWASP CRS, Paranoia Levels, and Tuning.
 *   **[Access Lists](Access-Lists)**: Basic Auth, IP Ranges, and Authorization.
 *   **[Request Rate Limiting](Request-Rate-Limiting)**: Protect hosts from abuse and DDoS.
+*   **[Internal PKI & ML-KEM](Internal-PKI)**: Setup and use the internal Certificate Authority with Post-Quantum security.
 
 
 ### Advanced

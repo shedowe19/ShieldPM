@@ -1,6 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import internalCertificate from "../../internal/certificate.js";
+import internalPki from "../../internal/pki.js";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
@@ -29,6 +30,25 @@ const downloadLimiter = rateLimit({
 /**
  * /api/nginx/certificates
  */
+
+/**
+ * GET /api/nginx/certificates/root-ca
+ *
+ * Download Root CA
+ */
+router.get("/root-ca", async (req, res, next) => {
+	try {
+		const certContent = await internalPki.getRootCa();
+		res.status(200)
+			.header("Content-Type", "application/x-pem-file")
+			.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
+			.send(certContent);
+	} catch (err) {
+		debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+		next(err);
+	}
+});
+
 router
 	.route("/")
 	.options((_, res) => {
@@ -79,6 +99,49 @@ router
 			req.setTimeout(900000); // 15 minutes timeout
 			const result = await internalCertificate.create(res.locals.access, payload);
 			res.status(201).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	});
+
+router
+	.route("/internal/client")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(jwtdecode())
+	.post(async (req, res, next) => {
+		try {
+			// Basic validation inline for now, or add to schema later
+			const { common_name, password, years } = req.body;
+			if (!common_name || !password) {
+				throw new errs.ValidationError("Common Name and Password are required");
+			}
+
+			// Create a temp dir for this generation
+			const tmpDir = `/tmp/client-cert-${Date.now()}`;
+
+			const p12Path = await internalPki.createClientCert(
+				{
+					common_name,
+					password,
+					years: Number(years) || 1,
+				},
+				tmpDir,
+			);
+
+			res.download(p12Path, `${common_name}.p12`, (err) => {
+				// Cleanup after download
+				try {
+					import("node:fs").then((fs) => fs.rmSync(tmpDir, { recursive: true, force: true }));
+				} catch (e) {
+					console.error("Cleanup failed", e);
+				}
+				if (err) {
+					next(err);
+				}
+			});
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			next(err);

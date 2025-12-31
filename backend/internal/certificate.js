@@ -17,6 +17,7 @@ import certificateModel from "../models/certificate.js";
 import pjson from "../package.json" with { type: "json" };
 import internalAuditLog from "./audit-log.js";
 import internalNginx from "./nginx.js";
+import internalPki from "./pki.js";
 
 dayjs.extend(customParseFormat);
 
@@ -111,7 +112,7 @@ const internalCertificate = {
 		await access.can("certificates:create", data);
 		data.owner_user_id = access.token.getUserId(1);
 
-		if (data.provider === "letsencrypt") {
+		if (data.provider === "letsencrypt" || data.provider === "internal") {
 			data.nice_name = data.domain_names.join(", ");
 		}
 
@@ -150,6 +151,36 @@ const internalCertificate = {
 					return savedRow;
 				} catch (err) {
 					// Delete the certificate from the database if it was not created successfully
+					await certificateModel.query().deleteById(certificate.id);
+					throw err;
+				}
+			} else if (certificate.provider === "internal") {
+				try {
+					const outDir = `/data/tls/internal/npm-${certificate.id}`;
+					const result = await internalPki.createLeadCert(
+						{
+							domain_names: certificate.domain_names,
+							years: Number.parseInt(certificate.meta.years, 10) || 10,
+						},
+						outDir,
+					);
+
+					// Get Cert Info to set expiry properly
+					const certInfo = await internalCertificate.getCertificateInfoFromFile(result.fullchain);
+					const savedRow = await certificateModel
+						.query()
+						.patchAndFetchById(certificate.id, {
+							expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss"),
+							meta: _.assign({}, certificate.meta, {
+								certificate: result.fullchain,
+								certificate_key: result.privkey,
+							}),
+						})
+						.then(utils.omitRow(omissions()));
+
+					await internalCertificate.addCreatedAuditLog(access, certificate.id, savedRow);
+					return savedRow;
+				} catch (err) {
 					await certificateModel.query().deleteById(certificate.id);
 					throw err;
 				}

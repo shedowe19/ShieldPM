@@ -14,3 +14,4 @@ export * from "./RenewCertificateModal";
 export * from "./SetPasswordModal";
 export * from "./StreamModal";
 export * from "./UserModal";
+export * from "./InternalCertificateModal";

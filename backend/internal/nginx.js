@@ -252,6 +252,10 @@ const internalNginx = {
 
 		host.env = process.env;
 
+		if (host.certificate && host.certificate.provider === "internal") {
+			host.use_ml_kem = true;
+		}
+
 		try {
 			const config_text = await renderEngine.parseAndRender(template, host);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });

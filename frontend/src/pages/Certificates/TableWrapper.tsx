@@ -1,6 +1,6 @@
-import { IconHelp, IconSearch, IconChevronDown, IconCertificate, IconPlus } from "@tabler/icons-react";
-import { useState } from "react";
-import { deleteCertificate, downloadCertificate } from "src/api/backend";
+import { IconHelp, IconSearch, IconChevronDown, IconCertificate, IconPlus, IconShieldLock } from "@tabler/icons-react";
+import { type ChangeEvent, useState } from "react";
+import { type Certificate, deleteCertificate, downloadCertificate, downloadRootCa } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
 import { useCertificates } from "src/hooks";
 import { intl, T } from "src/locale";
@@ -10,6 +10,7 @@ import {
 	showDNSCertificateModal,
 	showHelpModal,
 	showHTTPCertificateModal,
+	showInternalCertificateModal,
 	showRenewCertificateModal,
 } from "src/modals";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
@@ -71,7 +72,7 @@ export default function TableWrapper() {
 	let filtered = null;
 	if (search && data) {
 		filtered = data?.filter(
-			(item) =>
+			(item: Certificate) =>
 				item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
 				item.niceName.toLowerCase().includes(search),
 		);
@@ -95,7 +96,9 @@ export default function TableWrapper() {
 								type="search"
 								placeholder={intl.formatMessage({ id: "search.placeholder" })}
 								className="pl-8 h-9"
-								onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}
+								onChange={(e: ChangeEvent<HTMLInputElement>) =>
+									setSearch(e.target.value.toLowerCase().trim())
+								}
 							/>
 						</div>
 					) : null}
@@ -103,6 +106,14 @@ export default function TableWrapper() {
 						<IconHelp className="h-4 w-4" />
 					</ShadcnButton>
 					<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>
+						<ShadcnButton
+							variant="outline"
+							onClick={() => downloadRootCa()}
+							title={intl.formatMessage({ id: "certificates.download_root_ca" })}
+						>
+							<IconCertificate className="mr-2 h-4 w-4" />
+							<T id="certificates.root_ca" />
+						</ShadcnButton>
 						{data?.length ? (
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -125,6 +136,11 @@ export default function TableWrapper() {
 									<DropdownMenuSeparator />
 									<DropdownMenuItem onClick={() => showCustomCertificateModal()}>
 										<T id="certificates.custom" />
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem onClick={() => showInternalCertificateModal()}>
+										<IconShieldLock className="mr-2 h-4 w-4" />
+										<T id="certificates.internal" />
 									</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>

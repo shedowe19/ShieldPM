@@ -28,6 +28,7 @@ const internalAccessList = {
 			satisfy_any: data.satisfy_any,
 			pass_auth: data.pass_auth,
 			mtls_enabled: data.mtls_enabled || false,
+			mtls_use_internal: data.mtls_use_internal || false,
 			mtls_certificate: data.mtls_certificate || "",
 			meta: data.meta,
 			owner_user_id: access.token.getUserId(1),
@@ -118,6 +119,8 @@ const internalAccessList = {
 				name: data.name,
 				satisfy_any: data.satisfy_any,
 				pass_auth: data.pass_auth,
+				mtls_enabled: data.mtls_enabled,
+				mtls_use_internal: data.mtls_use_internal,
 				meta: data.meta,
 			});
 		}
@@ -463,7 +466,7 @@ const internalAccessList = {
 
 		// 4. mTLS Certificate Handling
 		const crtFile = `${htpasswdFile}.crt`;
-		if (list.mtls_enabled && list.mtls_certificate) {
+		if (list.mtls_enabled && !list.mtls_use_internal && list.mtls_certificate) {
 			logger.info(`Writing mTLS Certificate for Access List #${list.id}`);
 			try {
 				await fs.promises.writeFile(crtFile, list.mtls_certificate, { encoding: "utf8" });

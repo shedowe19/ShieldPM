@@ -59,8 +59,9 @@ Strictly require clients to present a valid SSL Certificate to access your servi
 ### Configuration
 1.  **Generate a CA:** Create a private Certificate Authority (CA) and sign client certificates.
 2.  **Enable mTLS:** In the Access List modal, go to the **mTLS** tab.
-3.  **Client CA:** Paste the **Public Certificate** of your CA (in PEM format).
-    *   Do NOT paste the Private Key!
+3.  **Choose CA Source:**
+    *   **Option A (Internal CA):** Enable the **"Use Internal CA"** switch. Nginx will verify clients using your built-in Internal Root CA. No file upload needed.
+    *   **Option B (Custom CA):** Paste the **Public Certificate** of your external CA (in PEM format).
 4.  **Save & Apply:** Assign the list to a Proxy Host.
 
 ### Behavior
