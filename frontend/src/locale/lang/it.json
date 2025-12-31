@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "È stato trovato un server su questo dominio ma ha restituito dati imprevisti. È il server NPMplus? Controlla che il dominio punti correttamente all'IP.",
 	"certificates.http.test-results": "Risultati Test",
 	"certificates.http.warning": "Questi domini devono già essere configurati per puntare a questa installazione.",
-	"certificates.internal": "Interno (ML-KEM)",
+	"certificates.internal": "Interno (ECDSA)",
 	"certificates.internal.add": "Aggiungi Certificato Interno",
 	"certificates.internal.domain_names_help": "Inserisci i nomi di dominio separati da spazi o virgola. I caratteri jolly sono supportati.",
 	"certificates.internal.post_quantum_desc": "L'handshake Quantum-Safe (ML-KEM) sarà abilitato per questo certificato.",

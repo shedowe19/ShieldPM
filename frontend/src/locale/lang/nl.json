@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "Er is een server gevonden op deze domeinnaam, maar heeft een onverwachte gegevens teruggegeven. Is dat de NPMplus server? Zorg ervoor dat je domein naar het IP waar je NPMplus instance draait wijst.",
 	"certificates.http.test-results": "Testresultaten",
 	"certificates.http.warning": "Deze domeinen moeten al worden geconfigureerd om naar deze installatie te wijzen.",
-	"certificates.internal": "Intern (ML-KEM)",
+	"certificates.internal": "Intern (ECDSA)",
 	"certificates.internal.add": "Intern certificaat toevoegen",
 	"certificates.internal.domain_names_help": "Voer domeinnamen in, gescheiden door spaties of keomma's. Wildcards worden ondersteund.",
 	"certificates.internal.post_quantum_desc": "Quantum-Safe Handshake (ML-KEM) wordt ingeschakeld voor dit certificaat.",

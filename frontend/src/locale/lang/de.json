@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "Unter dieser Domain wurde ein Server gefunden, der jedoch unerwartete Daten zurückgegeben hat. Handelt es sich um den NPMplus-Server? Bitte stellen Sie sicher, dass Ihre Domain auf die IP-Adresse verweist, unter der Ihre NPMplus-Instanz ausgeführt wird.",
 	"certificates.http.test-results": "Test Ergeniss",
 	"certificates.http.warning": "Diese Domänen müssen bereits so konfiguriert sein, dass sie auf diese Installation verweisen.",
-	"certificates.internal": "Intern (ML-KEM)",
+	"certificates.internal": "Intern (ECDSA)",
 	"certificates.internal.add": "Internes Zertifikat hinzufügen",
 	"certificates.internal.domain_names_help": "Geben Sie Domänennamen durch Leerzeichen oder Kommas getrennt ein. Wildcards werden unterstützt.",
 	"certificates.internal.post_quantum_desc": "Für dieses Zertifikat wird der quantensichere Handshake (ML-KEM) aktiviert.",

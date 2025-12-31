@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "このドメインでサーバーが見つかりましたが予期しないデータを返しました. NPMplusサーバーが動いていますか? ドメインがこのNPMplusインスタンスを指していることを確認してください。",
 	"certificates.http.test-results": "テスト結果",
 	"certificates.http.warning": "これらのドメインは、すでにこのインストール先を指すように設定されている必要がありますあ.",
-	"certificates.internal": "内部 (ML-KEM)",
+	"certificates.internal": "内部 (ECDSA)",
 	"certificates.internal.add": "内部証明書を追加",
 	"certificates.internal.domain_names_help": "ドメイン名をスペースまたはカンマで区切って入力してください。ワイルドカードもサポートされています。",
 	"certificates.internal.post_quantum_desc": "この証明書に対して耐量子ハンドシェイク (ML-KEM) が有効になります。",

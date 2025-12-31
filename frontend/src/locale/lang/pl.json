@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "Znaleziono serwer pod tą domeną, ale zwrócił nieoczekiwane dane. Czy to serwer NPMplus? Upewnij się, że twoja domena wskazuje na adres IP, gdzie działa twoja instancja NPMplus.",
 	"certificates.http.test-results": "Wyniki testu",
 	"certificates.http.warning": "Te domeny muszą być już skonfigurowane tak, aby wskazywały na ten serwer www",
-	"certificates.internal": "Wewnętrzny (ML-KEM)",
+	"certificates.internal": "Wewnętrzny (ECDSA)",
 	"certificates.internal.add": "Dodaj certyfikat wewnętrzny",
 	"certificates.internal.domain_names_help": "Wprowadź nazwy domen oddzielone spacjami lub przecinkami. Obsługiwane są symbole wieloznaczne.",
 	"certificates.internal.post_quantum_desc": "Dla tego certyfikatu zostanie włączony handshake odporny na ataki kwantowe (ML-KEM).",

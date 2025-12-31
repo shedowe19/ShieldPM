@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "Намерен е сървър, но върна неочаквани данни. Това NPM ли е? Уверете се, че домейнът сочи към вашия NPM сървър.",
 	"certificates.http.test-results": "Резултати от теста",
 	"certificates.http.warning": "Тези домейни трябва вече да сочат към тази инсталация.",
-	"certificates.internal": "Вътрешен (ML-KEM)",
+	"certificates.internal": "Вътрешен (ECDSA)",
 	"certificates.internal.add": "Добавяне на вътрешен сертификат",
 	"certificates.internal.domain_names_help": "Въведете имена на домейни, разделени с интервали или запетаи. Поддържат се заместващи символи.",
 	"certificates.internal.post_quantum_desc": "За този сертификат ще бъде включен квантово-безопасен обмен (ML-KEM).",

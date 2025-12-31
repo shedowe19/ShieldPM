@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "Có một máy chủ được tìm thấy ở miền này nhưng nó trả về một dữ liệu không mong muốn. Đây có phải là máy chủ NPMplus không? Vui lòng đảm bảo tên miền của bạn trỏ đến IP nơi phiên bản NPMplus của bạn đang chạy.",
 	"certificates.http.test-results": "Kết quả kiểm tra",
 	"certificates.http.warning": "Các miền này phải được cấu hình sẵn để trỏ đến cài đặt này.",
-	"certificates.internal": "Nội bộ (ML-KEM)",
+	"certificates.internal": "Nội bộ (ECDSA)",
 	"certificates.internal.add": "Thêm chứng chỉ nội bộ",
 	"certificates.internal.domain_names_help": "Nhập tên miền cách nhau bằng dấu cách hoặc dấu phẩy. Ký tự đại diện được hỗ trợ.",
 	"certificates.internal.post_quantum_desc": "Bắt tay an toàn lượng tử (ML-KEM) sẽ được bật cho chứng chỉ này.",

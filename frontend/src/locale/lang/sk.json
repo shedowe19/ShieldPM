@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "Na tejto doméne bol nájdený server, ale vrátil neočakávané údaje. Je to NPMplus server? Uistite sa, že doména smeruje na IP, kde beží vaša inštancia NPMplus.",
 	"certificates.http.test-results": "Výsledky testu",
 	"certificates.http.warning": "Tieto domény musia byť už nakonfigurované tak, aby smerovali na túto inštaláciu.",
-	"certificates.internal": "Interný (ML-KEM)",
+	"certificates.internal": "Interný (ECDSA)",
 	"certificates.internal.add": "Pridať interný certifikát",
 	"certificates.internal.domain_names_help": "Zadajte doménové mená oddelené medzerami alebo čiarkami. Podporované sú zástupné znaky.",
 	"certificates.internal.post_quantum_desc": "Pre tento certifikát bude povolený kvantovo bezpečný handshake (ML-KEM).",
