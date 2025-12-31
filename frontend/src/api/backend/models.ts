@@ -134,6 +134,10 @@ export interface ProxyHost {
 	locations?: ProxyLocation[];
 	hstsEnabled: boolean;
 	hstsSubdomains: boolean;
+	maintenanceActive: boolean;
+	maintenanceStart?: string;
+	maintenanceEnd?: string;
+	maintenanceReason?: string;
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;

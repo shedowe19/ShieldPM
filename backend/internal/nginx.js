@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
@@ -90,7 +91,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -105,7 +106,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -254,6 +255,19 @@ const internalNginx = {
 
 		if (host.certificate && host.certificate.provider === "internal") {
 			host.use_ml_kem = true;
+		}
+
+		// Maintenance Mode Logic
+		const now = dayjs();
+		host.maintenance_mode = false;
+		if (host.maintenance_active) {
+			host.maintenance_mode = true;
+		} else if (host.maintenance_start && host.maintenance_end) {
+			const start = dayjs(host.maintenance_start);
+			const end = dayjs(host.maintenance_end);
+			if (now.isAfter(start) && now.isBefore(end)) {
+				host.maintenance_mode = true;
+			}
 		}
 
 		try {

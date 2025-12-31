@@ -8,6 +8,7 @@ import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";
 import { getCompiledSchema } from "./schema/index.js";
 import setup from "./setup.js";
+import internalMaintenance from "./internal/maintenance.js";
 
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 
@@ -33,6 +34,7 @@ async function appStart() {
 		}
 
 		internalCertificate.initTimer();
+		internalMaintenance.initTimer();
 		internalNginx.reload();
 
 		const server = app.listen("/run/npmplus.sock", () => {

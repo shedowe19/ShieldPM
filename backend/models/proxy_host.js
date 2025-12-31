@@ -23,6 +23,7 @@ const boolFields = [
 	"hsts_subdomains",
 	"maintenance_on_failure",
 	"disable_buffering",
+	"maintenance_active",
 ];
 
 class ProxyHost extends Model {
