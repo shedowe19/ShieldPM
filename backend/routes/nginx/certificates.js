@@ -30,6 +30,25 @@ const downloadLimiter = rateLimit({
 /**
  * /api/nginx/certificates
  */
+
+/**
+ * GET /api/nginx/certificates/root-ca
+ *
+ * Download Root CA
+ */
+router.get("/root-ca", async (req, res, next) => {
+	try {
+		const certContent = await internalPki.getRootCa();
+		res.status(200)
+			.header("Content-Type", "application/x-pem-file")
+			.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
+			.send(certContent);
+	} catch (err) {
+		debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+		next(err);
+	}
+});
+
 router
 	.route("/")
 	.options((_, res) => {
