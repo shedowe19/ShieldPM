@@ -132,31 +132,49 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 									</Alert>
 
 									<div className="space-y-2">
-										<Label htmlFor="type"><T id="certificates.internal.type" /></Label>
+										<Label htmlFor="type">
+											<T id="certificates.internal.type" />
+										</Label>
 										<Select
 											onValueChange={(val) => setFieldValue("type", val)}
 											defaultValue={values.type}
 										>
 											<SelectTrigger>
-												<SelectValue placeholder={intl.formatMessage({ id: "certificates.internal.type" })} />
+												<SelectValue
+													placeholder={intl.formatMessage({
+														id: "certificates.internal.type",
+													})}
+												/>
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="server"><T id="certificates.internal.type.server" /></SelectItem>
-												<SelectItem value="client"><T id="certificates.internal.type.client" /></SelectItem>
+												<SelectItem value="server">
+													<T id="certificates.internal.type.server" />
+												</SelectItem>
+												<SelectItem value="client">
+													<T id="certificates.internal.type.client" />
+												</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
 
 									<div className="space-y-2">
 										<Label htmlFor="domain_names">
-											{values.type === "client" ? <T id="certificates.internal.identity_name" /> : <T id="domain-names" />}
+											{values.type === "client" ? (
+												<T id="certificates.internal.identity_name" />
+											) : (
+												<T id="domain-names" />
+											)}
 										</Label>
 										<Field name="domain_names">
 											{({ field }: any) => (
 												<Textarea
 													{...field}
 													id="domain_names"
-													placeholder={values.type === "client" ? "my-laptop" : "example.internal, svc.local"}
+													placeholder={
+														values.type === "client"
+															? "my-laptop"
+															: "example.internal, svc.local"
+													}
 													className={
 														errors.domain_names && touched.domain_names
 															? "border-destructive"
@@ -167,13 +185,19 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 											)}
 										</Field>
 										<p className="text-sm text-muted-foreground">
-											{values.type === "client" ? <T id="certificates.internal.identity_help" /> : <T id="certificates.internal.domain_names_help" />}
+											{values.type === "client" ? (
+												<T id="certificates.internal.identity_help" />
+											) : (
+												<T id="certificates.internal.domain_names_help" />
+											)}
 										</p>
 									</div>
 
 									{values.type === "client" && (
 										<div className="space-y-2">
-											<Label htmlFor="password"><T id="certificates.internal.password" /></Label>
+											<Label htmlFor="password">
+												<T id="certificates.internal.password" />
+											</Label>
 											<Field name="password">
 												{({ field }: any) => (
 													<Input

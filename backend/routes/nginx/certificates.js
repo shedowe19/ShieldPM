@@ -122,16 +122,19 @@ router
 			// Create a temp dir for this generation
 			const tmpDir = `/tmp/client-cert-${Date.now()}`;
 
-			const p12Path = await internalPki.createClientCert({
-				common_name,
-				password,
-				years: Number(years) || 1,
-			}, tmpDir);
+			const p12Path = await internalPki.createClientCert(
+				{
+					common_name,
+					password,
+					years: Number(years) || 1,
+				},
+				tmpDir,
+			);
 
 			res.download(p12Path, `${common_name}.p12`, (err) => {
 				// Cleanup after download
 				try {
-					import("node:fs").then(fs => fs.rmSync(tmpDir, { recursive: true, force: true }));
+					import("node:fs").then((fs) => fs.rmSync(tmpDir, { recursive: true, force: true }));
 				} catch (e) {
 					console.error("Cleanup failed", e);
 				}
@@ -139,7 +142,6 @@ router
 					next(err);
 				}
 			});
-
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			next(err);

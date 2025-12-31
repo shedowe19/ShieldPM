@@ -15,7 +15,7 @@ const addColumnSafe = async (knex, columnName, columnTypeCallback) => {
 			err.code === "ER_DUP_FIELDNAME" ||
 			err.errno === 1060 ||
 			err.errno === 1060 ||
-			(err.message?.includes("duplicate column name"))
+			err.message?.includes("duplicate column name")
 		) {
 			logger.info(`[${migrateName}] Column ${columnName} already exists. Skipping.`);
 		} else {
