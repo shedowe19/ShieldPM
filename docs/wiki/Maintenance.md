@@ -33,5 +33,37 @@ The default design includes:
 
 ### Technical Details
 
-*   **Database:** Uses a dedicated `maintenance_on_failure` boolean column in the `proxy_host` table.
 *   **Nginx Config:** Adds `proxy_intercept_errors on;` and an `error_page` directive to your host configuration.
+
+---
+
+## Scheduled Maintenance Mode
+
+Starting with version `3.0.0.22`, you can schedule planned maintenance windows or manually trigger maintenance mode for your hosts. This serves the same beautiful maintenance page but with added context for your users.
+
+### Key Features
+
+*   **Manual Toggle:** Instantly enable maintenance mode with a single click.
+*   **Scheduling:** Set a **Start Date** and **End Date** (UTC). The maintenance page will automatically appear and disappear at the specified times.
+*   **Reason:** Provide a custom reason (e.g., "System Upgrade", "Database Migration") which is displayed on the maintenance page.
+*   **Countdown Timer:** If an End Date is set, a live countdown timer is shown to visitors.
+*   **Auto-Reload:** The maintenance page automatically checks status and reloads when the maintenance window is over, reconnecting users to your site without them needing to refresh.
+
+### How to Use
+
+1.  Edit any **Proxy Host**.
+2.  Navigate to the new **Maintenance** tab.
+3.  **To Manually Enable:** Toggle "Maintenance Active".
+4.  **To Schedule:**
+    *   Enter a **Start Date** (when the site goes down).
+    *   Enter an **End Date** (when the site comes back up).
+    *   (Optional) Enter a **Reason**.
+5.  Click **Save**.
+
+The system handles the Nginx reloads automatically based on your schedule.
+
+### Technical Details
+
+*   **Database:** Uses `maintenance_active`, `maintenance_start`, `maintenance_end`, and `maintenance_reason` columns in `proxy_host`.
+*   **Scheduler:** A backend timer checks every minute for maintenance windows starting or ending and triggers Nginx reloads only when state changes are needed.
+

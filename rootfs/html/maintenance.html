@@ -117,6 +117,7 @@
             margin-bottom: 1rem;
             background: linear-gradient(to bottom right, var(--text-title), var(--text-muted));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -325,6 +326,7 @@
 
 <body>
     <div class="bg-mesh"></div>
+    <!-- maintenance_data_injection_point -->
 
     <div class="container" id="main-card">
         <div class="icon-area">
@@ -339,6 +341,11 @@
             The requested service is currently unreachable. <br>
             This is likely a momentary issue with the upstream server.
         </p>
+        <p id="maintenance-reason" style="display:none; margin-top:10px; color: var(--text-body); font-style:italic;">
+        </p>
+        <div id="maintenance-timer"
+            style="display:none; font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0; color: var(--brand-primary);">
+        </div>
 
         <!-- Visualizer with Animations Restored -->
         <div class="visualizer">
@@ -438,6 +445,67 @@
                 }, 600);
             }
         }
+    </script>
+    <script>
+        (function () {
+            var mData = document.getElementById('m-data');
+            if (!mData) return;
+
+            var reason = mData.getAttribute('data-reason');
+            var end = mData.getAttribute('data-end');
+
+            if (reason) {
+                var el = document.getElementById('maintenance-reason');
+                if (el) {
+                    el.innerText = reason;
+                    el.style.display = 'block';
+                }
+            }
+
+            if (end) {
+                // Parse SQL datetime (YYYY-MM-DD HH:mm:ss) or ISO
+                // Safari/Firefox might need 'T' separator if SQL format is used
+                // Assuming backend sends common format. appending 'Z' or replacing space with T might be needed if naive.
+                // But usually 'YYYY-MM-DD HH:mm:ss' works in Chrome, maybe not others.
+                var cleanEnd = end.replace(" ", "T");
+                var endDate = new Date(cleanEnd).getTime();
+                // Fallback check
+                if (isNaN(endDate)) {
+                    endDate = new Date(end).getTime();
+                }
+
+                var timerEl = document.getElementById('maintenance-timer');
+                if (endDate && !isNaN(endDate) && timerEl) {
+                    timerEl.style.display = 'block';
+
+                    function updateTimer() {
+                        var now = new Date().getTime();
+                        var distance = endDate - now;
+                        if (distance < 0) {
+                            timerEl.innerHTML = "Maintenance Complete. Reloading...";
+                            setTimeout(function () { window.location.reload(); }, 2000);
+                            return true;
+                        }
+                        var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                        var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                        var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                        var text = "";
+                        if (days > 0) text += days + "d ";
+                        if (hours > 0) text += hours + "h ";
+                        text += minutes + "m " + seconds + "s";
+
+                        timerEl.innerHTML = text;
+                        return false;
+                    }
+
+                    if (!updateTimer()) {
+                        setInterval(updateTimer, 1000);
+                    }
+                }
+            }
+        })();
     </script>
 </body>
 

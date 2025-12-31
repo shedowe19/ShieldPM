@@ -131,6 +131,7 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **Diverse Host Types:** specific support for Proxy, Redirection, Dead (404), and TCP/UDP Stream hosts (with Proxy Protocol v1/v2 support).
 *   **Access Control:** Granular Access Lists (ACLs) with multi-user support.
 *   **Audit Log:** Comprehensive tracking of all administrative actions and system events.
+*   **Scheduled Maintenance Mode:** Plan maintenance windows or manually trigger maintenance mode per host, serving a custom 503 page with a countdown.
 
 ### 💻 Usability & Administration
 *   **Internationalization:** Frontend available in multiple languages (English, German, Spanish, French, and more).

@@ -105,6 +105,18 @@
 						},
 						"disable_buffering": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/disable_buffering"
+						},
+						"maintenance_active": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/maintenance_active"
+						},
+						"maintenance_start": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/maintenance_start"
+						},
+						"maintenance_end": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/maintenance_end"
+						},
+						"maintenance_reason": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/maintenance_reason"
 						}
 					}
 				}

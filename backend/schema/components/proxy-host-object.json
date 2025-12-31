@@ -238,6 +238,31 @@
 		"disable_buffering": {
 			"type": "boolean",
 			"example": false
+		},
+		"maintenance_active": {
+			"type": "boolean",
+			"example": false
+		},
+		"maintenance_start": {
+			"type": [
+				"string",
+				"null"
+			],
+			"example": "2026-01-01 10:00:00"
+		},
+		"maintenance_end": {
+			"type": [
+				"string",
+				"null"
+			],
+			"example": "2026-01-01 12:00:00"
+		},
+		"maintenance_reason": {
+			"type": [
+				"string",
+				"null"
+			],
+			"example": "System Upgrade"
 		}
 	}
 }

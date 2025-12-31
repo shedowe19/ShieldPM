@@ -1,7 +1,7 @@
 # NPMplus
 
 ## Project Overview
-NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-friendly web interface for managing Nginx reverse proxies, with a focus on security, performance, and ease of use. It includes features like HTTP/3 (QUIC) support, CrowdSec integration, ModSecurity (WAF), OIDC (OpenID Connect) for Access Lists, **Mutual TLS (mTLS)**, **Advanced Analytics**, improved TLS certificate management (including OCSP Stapling), **Internal PKI**, and **Disable Buffering**.
+NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-friendly web interface for managing Nginx reverse proxies, with a focus on security, performance, and ease of use. It includes features like HTTP/3 (QUIC) support, CrowdSec integration, ModSecurity (WAF), OIDC (OpenID Connect) for Access Lists, **Mutual TLS (mTLS)**, **Advanced Analytics**, improved TLS certificate management (including OCSP Stapling), **Internal PKI**, **Disable Buffering**, and **Scheduled Maintenance Mode**.
 
 **Key Technologies:**
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
@@ -78,6 +78,7 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20260102000000_add_req_limit.js`: Adds Request Rate Limiting fields to Proxy Hosts.
     *   `20260103000000_add_access_list_mtls.js`: Adds mTLS configuration to Access Lists.
     *   `20260106000000_add_access_list_mtls_internal.js`: Adds Internal CAs for mTLS Access Lists.
+    *   `20260107000000_add_maintenance_schedule.js`: Adds Scheduled Maintenance Mode fields to Proxy Hosts.
     *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
