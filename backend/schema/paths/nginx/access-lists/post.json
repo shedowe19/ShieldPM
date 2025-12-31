@@ -51,6 +51,13 @@
 						"mtls_certificate": {
 							"type": "string",
 							"description": "The CA certificate content for mTLS verification"
+						},
+						"mtls_use_internal": {
+							"type": [
+								"boolean",
+								"number"
+							],
+							"description": "Whether to use Internal CA for mTLS"
 						}
 					}
 				},
