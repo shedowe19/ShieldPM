@@ -41,7 +41,12 @@ Before your browser or devices will trust these certificates, you must install t
 
 You can also use the Internal Root CA to verify client certificates (mTLS).
 
-1.  Generate a client certificate signed by the Internal Root CA (currently requires manual OpenSSL commands using the root key in `/data/tls/internal/`).
+1.  **Generate a Client Certificate**:
+    *   Go to **SSL Certificates** -> **Add Certificate** -> **Internal (ECDSA)**.
+    *   Select **Certificate Type**: **Client Identity (mTLS)**.
+    *   **Identity Name**: Enter a name (e.g., `my-laptop`, `iphone-user`).
+    *   **P12 Export Password**: Set a password. This is required to import the certificate securely.
+    *   Click **Save**. Your browser will automatically download a `.p12` file.
 2.  Install this client certificate (and the Root CA) on your device/browser.
 3.  Create an **Access List**, enable **mTLS**, and switch on **"Use Internal CA"**.
 4.  Assign this Access List to a Proxy Host.
