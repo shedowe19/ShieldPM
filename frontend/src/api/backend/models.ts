@@ -46,6 +46,7 @@ export interface AccessList {
 	name: string;
 	meta: Record<string, any>;
 	mtlsEnabled?: boolean;
+	mtlsUseInternal?: boolean;
 	mtlsCertificate?: string;
 	satisfyAny: boolean;
 	passAuth: boolean;
