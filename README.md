@@ -112,6 +112,7 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
     *   **OCSP Stapling/Must-Staple** support for enhanced security.
     *   Automatic cleaning of old, invalid Certbot certificates.
     *   Support for different ACME servers and **ML-KEM**.
+    *   **Internal PKI**: Built-in ECDSA CA for issuing internal certificates and client certificates.
 
 ### ⚡ Performance & Nginx Configuration
 *   **Protocol Optimization:** Only enables TLSv1.2 and TLSv1.3. HTTP/2 is always enabled.
@@ -120,7 +121,7 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **Bandwidth Limiting:** built-in support for limiting bandwidth per host.
 *   **Request Rate Limiting:** granular control over request rates per host.
 *   **Advanced Analytics:** GoAccess-based real-time analytics.
-*   **Mutual TLS (mTLS):** Enforce client certificate authentication for specific access lists.
+*   **Mutual TLS (mTLS):** Enforce client certificate authentication for specific access lists (supports custom and internal CAs).
 *   **Disable Buffering:** Support for streaming applications (Plex/Jellyfin) by disabling Nginx buffering.
 *   **Header Security:** `Server` response header hidden by default. Basic security headers added when HSTS is enabled.
 *   **OpenAppSec:** Option to load OpenAppSec attachment module.

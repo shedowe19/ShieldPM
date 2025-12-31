@@ -7,7 +7,7 @@ NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fri
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
 *   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
 *   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics.
+*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**.
 *   **Language:** JavaScript/TypeScript (ES Modules).
 
 ## Building and Running
@@ -76,6 +76,8 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20251230000000_add_disable_buffering.js`: Adds "Disable Buffering" option for Proxy Hosts.
     *   `20251231000000_analytics.js`: Adds database tables for Advanced Analytics.
     *   `20260102000000_add_req_limit.js`: Adds Request Rate Limiting fields to Proxy Hosts.
+    *   `20260103000000_add_access_list_mtls.js`: Adds mTLS configuration to Access Lists.
+    *   `20260106000000_add_access_list_mtls_internal.js`: Adds Internal CAs for mTLS Access Lists.
     *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
