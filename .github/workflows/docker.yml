@@ -112,12 +112,12 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          target: nginx-build
+          target: nginx
           push: false
           build-args: |
             ${{ matrix.flags }}
-          cache-from: type=gha,scope=${{ matrix.arch }}-nginx-build
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-nginx-build
+          cache-from: type=gha,scope=${{ matrix.arch }}-nginx
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-nginx
 
       - name: "📦 Build Stage: Certbot"
         uses: docker/build-push-action@v6
@@ -156,17 +156,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
-      - name: "📦 Build Stage: Crowdsec"
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          target: crowdsec
-          push: false
-          build-args: |
-            ${{ matrix.flags }}
-          cache-from: type=gha,scope=${{ matrix.arch }}-crowdsec
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-crowdsec
+
 
       - name: "🚀 Build Final & Push"
         uses: docker/build-push-action@v6
@@ -180,8 +170,7 @@ jobs:
           cache-from: |
             type=gha,scope=${{ matrix.arch }}-frontend
             type=gha,scope=${{ matrix.arch }}-backend
-            type=gha,scope=${{ matrix.arch }}-crowdsec
-            type=gha,scope=${{ matrix.arch }}-nginx-build
+            type=gha,scope=${{ matrix.arch }}-nginx
             type=gha,scope=${{ matrix.arch }}-certbot
             type=gha,scope=${{ matrix.arch }}-final
 

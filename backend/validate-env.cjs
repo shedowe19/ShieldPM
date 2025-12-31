@@ -207,7 +207,6 @@ const boolDefaults = {
     'PHP83': 'false',
     'PHP84': 'false',
     'NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE': 'false',
-    'NGINX_LOAD_OPENTELEMETRY_MODULE': 'false',
     'NGINX_LOAD_GEOIP2_MODULE': 'false',
     'NGINX_LOAD_NJS_MODULE': 'false',
     'NGINX_LOAD_NTLM_MODULE': 'false',
