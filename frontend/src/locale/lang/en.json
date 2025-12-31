@@ -99,7 +99,7 @@
 	"certificates.http.reachability-wrong-data": "There is a server found at this domain but it returned an unexpected data. Is it the NPMplus server? Please make sure your domain points to the IP where your NPMplus instance is running.",
 	"certificates.http.test-results": "Test Results",
 	"certificates.http.warning": "These domains must be already configured to point to this installation.",
-	"certificates.internal": "Internal (ML-KEM)",
+	"certificates.internal": "Internal (ECDSA)",
 	"certificates.internal.add": "Add Internal Certificate",
 	"certificates.internal.domain_names_help": "Enter domain names separated by spaces or commas. Wildcards are supported.",
 	"certificates.internal.post_quantum_desc": "Quantum-Safe Handshake (ML-KEM) will be enabled for this certificate.",
