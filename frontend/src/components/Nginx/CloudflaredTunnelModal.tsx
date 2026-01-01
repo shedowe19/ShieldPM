@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -10,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { useCloudflaredTunnel } from "@/hooks/useCloudflaredTunnel";
 import type { CloudflaredTunnel } from "@/api/backend";
 import { Cloud, Loader2 } from "lucide-react";
+import { T, intl } from "@/locale";
 
 const formSchema = z.object({
-	name: z.string().min(1, "Name is required"),
-	token: z.string().min(1, "Token is required"),
+	name: z.string().min(1, intl.formatMessage({ id: "error.required_field" })),
+	token: z.string().min(1, intl.formatMessage({ id: "error.required_field" })),
 });
 
 interface CloudflaredTunnelModalProps {
@@ -23,7 +23,6 @@ interface CloudflaredTunnelModalProps {
 }
 
 export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: CloudflaredTunnelModalProps) {
-	const { t } = useTranslation();
 	const { create, update } = useCloudflaredTunnel();
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -66,7 +65,7 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 				<DialogHeader className="px-6 py-4 border-b">
 					<DialogTitle className="flex items-center gap-2">
 						<Cloud className="h-5 w-5" />
-						{tunnel ? t("cloudflared.edit") : t("cloudflared.add")}
+						<T id={tunnel ? "cloudflared.edit" : "cloudflared.add"} />
 					</DialogTitle>
 				</DialogHeader>
 				<Form {...form}>
@@ -77,7 +76,7 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 								name="name"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>{t("name")}</FormLabel>
+										<FormLabel><T id="name" /></FormLabel>
 										<FormControl>
 											<Input placeholder="My Tunnel" {...field} />
 										</FormControl>
@@ -90,7 +89,7 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 								name="token"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>{t("cloudflared.token")}</FormLabel>
+										<FormLabel><T id="cloudflared.token" /></FormLabel>
 										<FormControl>
 											<Input type="password" placeholder="eyJhIjoi..." {...field} />
 										</FormControl>
@@ -101,7 +100,7 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 						</div>
 						<DialogFooter className="px-6 py-4 border-t bg-muted/10">
 							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-								{t("cancel")}
+								<T id="cancel" />
 							</Button>
 							<Button
 								type="submit"
@@ -109,7 +108,7 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 								className="bg-orange-600/90 text-white hover:bg-orange-600 shadow-sm"
 							>
 								{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-								{t("save")}
+								<T id="save" />
 							</Button>
 						</DialogFooter>
 					</form>
