@@ -203,9 +203,12 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
         *   Create/Update model in `backend/models/`.
         *   Add relationship mappings if needed.
     3.  **API Schema & Routes**:
-        *   Define OpenAPI schema in `backend/schema/paths/`.
-        *   Create Controller/Router in `backend/routes/`.
-        *   Register route in `backend/index.js` (or relevant sub-router).
+        *   **Schema**: Create schema files in `backend/schema/paths/<feature>/` (or similar structure).
+            *   Create separate JSON files for each method: `get.json` (List/Read), `post.json` (Create), `put.json` (Update), `delete.json` (Delete).
+            *   Ensure schemas follow OpenAPI specs (tags, parameters, responses) to enable strict validation.
+        *   **Controller/Router**: Create `backend/routes/<feature>.js`.
+            *   Implement routes matching your schema: `router.get(...)`, `router.put(...)`, etc.
+        *   **Registration**: Register route in `backend/index.js` (for root routes) or `backend/routes/nginx.js` (for nginx sub-routes).
     4.  **Frontend API Client**:
         *   Add type definition in `frontend/src/api/backend/models.ts`.
         *   Create fetch functions in `frontend/src/api/backend/`.
