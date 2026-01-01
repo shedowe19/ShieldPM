@@ -76,7 +76,9 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 								name="name"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel><T id="name" /></FormLabel>
+										<FormLabel>
+											<T id="name" />
+										</FormLabel>
 										<FormControl>
 											<Input placeholder="My Tunnel" {...field} />
 										</FormControl>
@@ -89,7 +91,9 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 								name="token"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel><T id="cloudflared.token" /></FormLabel>
+										<FormLabel>
+											<T id="cloudflared.token" />
+										</FormLabel>
 										<FormControl>
 											<Input type="password" placeholder="eyJhIjoi..." {...field} />
 										</FormControl>
