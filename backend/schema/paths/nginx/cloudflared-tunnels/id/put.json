@@ -1,0 +1,66 @@
+{
+    "operationId": "updateCloudflaredTunnel",
+    "summary": "Update a Cloudflared Tunnel",
+    "tags": [
+        "cloudflared-tunnels"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "proxy_hosts.manage"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer"
+            },
+            "required": true
+        }
+    ],
+    "requestBody": {
+        "description": "Cloudflared Tunnel Payload",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "name": {
+                            "$ref": "../../../../components/cloudflared-tunnel-object.json#/properties/name"
+                        },
+                        "token": {
+                            "$ref": "../../../../components/cloudflared-tunnel-object.json#/properties/token"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/cloudflared-tunnel-object.json"
+                    }
+                }
+            }
+        },
+        "404": {
+            "description": "404 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/error-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

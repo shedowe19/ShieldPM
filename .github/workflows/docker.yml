@@ -156,6 +156,18 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
+      - name: "📦 Build Stage: Cloudflared"
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: cloudflared
+          push: false
+          build-args: |
+            ${{ matrix.flags }}
+          cache-from: type=gha,scope=${{ matrix.arch }}-cloudflared
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-cloudflared
+
 
 
       - name: "🚀 Build Final & Push"
@@ -172,6 +184,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-backend
             type=gha,scope=${{ matrix.arch }}-nginx
             type=gha,scope=${{ matrix.arch }}-certbot
+            type=gha,scope=${{ matrix.arch }}-cloudflared
             type=gha,scope=${{ matrix.arch }}-final
 
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final

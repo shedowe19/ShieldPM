@@ -28,6 +28,7 @@ const ProxyHosts = lazy(() => import("src/pages/Nginx/ProxyHosts"));
 const RedirectionHosts = lazy(() => import("src/pages/Nginx/RedirectionHosts"));
 const DeadHosts = lazy(() => import("src/pages/Nginx/DeadHosts"));
 const Streams = lazy(() => import("src/pages/Nginx/Streams"));
+const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
 
 function Content() {
 	const location = useLocation();
@@ -111,6 +112,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<Streams />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/nginx/cloudflared"
+					element={
+						<AnimatedPage>
+							<CloudflaredTunnels />
 						</AnimatedPage>
 					}
 				/>

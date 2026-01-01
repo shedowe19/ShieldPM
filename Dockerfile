@@ -255,6 +255,11 @@ RUN apk upgrade --no-cache -a && \
 
 
 # ==========================================
+# Stage 5: Cloudflared
+# ==========================================
+FROM cloudflare/cloudflared:2025.11.1 AS cloudflared
+
+# ==========================================
 # Final Stage
 # ==========================================
 FROM alpine:3.23.2
@@ -279,6 +284,7 @@ COPY --from=certbot /usr/local /usr/local
 # From Backend & Frontend
 COPY --from=backend  /app      /app
 COPY --from=frontend /app/dist /html/frontend
+COPY --from=cloudflared /usr/local/bin/cloudflared /usr/local/bin/cloudflared
 
 # Static Files
 COPY rootfs /

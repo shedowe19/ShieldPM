@@ -118,6 +118,25 @@
 				"$ref": "./paths/nginx/certificates/validate/post.json"
 			}
 		},
+		"/nginx/cloudflared-tunnels": {
+			"get": {
+				"$ref": "./paths/nginx/cloudflared-tunnels/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/cloudflared-tunnels/post.json"
+			}
+		},
+		"/nginx/cloudflared-tunnels/{id}": {
+			"get": {
+				"$ref": "./paths/nginx/cloudflared-tunnels/id/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/cloudflared-tunnels/id/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/cloudflared-tunnels/id/delete.json"
+			}
+		},
 		"/nginx/certificates/test-http": {
 			"post": {
 				"$ref": "./paths/nginx/certificates/test-http/post.json"

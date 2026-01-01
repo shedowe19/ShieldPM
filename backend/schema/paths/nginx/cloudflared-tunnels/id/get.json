@@ -1,0 +1,46 @@
+{
+    "operationId": "getCloudflaredTunnel",
+    "summary": "Get a specific Cloudflared Tunnel",
+    "tags": [
+        "cloudflared-tunnels"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "proxy_hosts.list"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer"
+            },
+            "required": true
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/cloudflared-tunnel-object.json"
+                    }
+                }
+            }
+        },
+        "404": {
+            "description": "404 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/error-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -117,10 +117,20 @@ const getKeys = () => {
 	} else {
 		logger.info("Keys file exists OK");
 	}
+
 	try {
 		// Load this json keysFile synchronously and return the json object
 		const rawData = fs.readFileSync(keysFile);
-		return JSON.parse(rawData);
+		const keys = JSON.parse(rawData);
+
+		// Migration: Add encryptionKey if missing
+		if (!keys.encryptionKey) {
+			logger.info("Migrating keys file: Adding encryptionKey...");
+			keys.encryptionKey = crypto.randomBytes(32).toString("hex");
+			fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2));
+		}
+
+		return keys;
 	} catch (err) {
 		logger.error(`Could not read JWT key pair from config file: ${keysFile}`, err);
 		process.exit(1);
@@ -145,6 +155,7 @@ const generateKeys = () => {
 	const keys = {
 		key: privateKey,
 		pub: publicKey,
+		encryptionKey: crypto.randomBytes(32).toString("hex"),
 	};
 
 	// Write keys config
@@ -157,84 +168,70 @@ const generateKeys = () => {
 	logger.info(`Wrote JWT key pair to config file: ${keysFile}`);
 };
 
+import _ from "lodash";
+
 /**
+ * Checks if the config has a key
  *
- * @param   {string}  key   ie: 'database' or 'database.engine'
+ * @param {string}     key
  * @returns {boolean}
  */
 const configHas = (key) => {
 	instance === null && configure();
-	const keys = key.split(".");
-	let level = instance;
-	let has = true;
-	keys.forEach((keyItem) => {
-		if (typeof level[keyItem] === "undefined") {
-			has = false;
-		} else {
-			level = level[keyItem];
-		}
-	});
-
-	return has;
+	return _.has(instance, key);
 };
 
 /**
- * Gets a specific key from the top level
+ * Returns a config value
  *
- * @param {string} key
- * @returns {*}
+ * @param {string}     key
+ * @returns {any}
  */
 const configGet = (key) => {
 	instance === null && configure();
-	if (key && typeof instance[key] !== "undefined") {
-		return instance[key];
-	}
-	return instance;
+	return _.get(instance, key);
 };
 
 /**
- * Is this a sqlite configuration?
- *
+ * @returns {boolean}
+ */
+const isDestructiveTestMode = () => {
+	return false;
+};
+
+/**
  * @returns {boolean}
  */
 const isSqlite = () => {
 	instance === null && configure();
-	return instance.database.knex && instance.database.knex.client === sqliteClientName;
+	return instance.database.engine === "knex-native";
 };
 
 /**
- * Is this a mysql configuration?
- *
  * @returns {boolean}
  */
 const isMysql = () => {
 	instance === null && configure();
-	return instance.database.engine === mysqlEngine;
+	return instance.database.engine === "mysql" || instance.database.engine === "mysql2";
 };
 
 /**
- * Is this a postgres configuration?
- *
  * @returns {boolean}
  */
 const isPostgres = () => {
 	instance === null && configure();
-	return instance.database.engine === postgresEngine;
+	return instance.database.engine === "pg";
 };
 
 /**
- * Are we running in Destructive Test Mode?
- * This is used for CI/Testing to enable endpoints that can delete all data.
- * Requires both CI and explicit opt-in env var.
- *
- * @returns {boolean}
+ * @returns {string}
  */
-const isDestructiveTestMode = () =>
-	process.env.CI === "true" && process.env.NPM_CI_ENABLE_DESTRUCTIVE_TEST_MODE === "true";
+const getPrivateKey = () => {
+	instance === null && configure();
+	return instance.keys.key;
+};
 
 /**
- * Returns a public key
- *
  * @returns {string}
  */
 const getPublicKey = () => {
@@ -243,13 +240,23 @@ const getPublicKey = () => {
 };
 
 /**
- * Returns a private key
+ * Returns the encryption key
  *
  * @returns {string}
  */
-const getPrivateKey = () => {
+const getEncryptionKey = () => {
 	instance === null && configure();
-	return instance.keys.key;
+	return instance.keys.encryptionKey;
 };
 
-export { isDestructiveTestMode, configHas, configGet, isSqlite, isMysql, isPostgres, getPrivateKey, getPublicKey };
+export {
+	isDestructiveTestMode,
+	configHas,
+	configGet,
+	isSqlite,
+	isMysql,
+	isPostgres,
+	getPrivateKey,
+	getPublicKey,
+	getEncryptionKey,
+};

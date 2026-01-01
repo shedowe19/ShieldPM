@@ -1,0 +1,38 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "example": 1
+        },
+        "created_on": {
+            "type": "string",
+            "example": "2025-10-30T01:12:05.000Z"
+        },
+        "modified_on": {
+            "type": "string",
+            "example": "2025-10-30T01:12:05.000Z"
+        },
+        "owner_user_id": {
+            "type": "integer",
+            "example": 1
+        },
+        "name": {
+            "type": "string",
+            "example": "my-tunnel"
+        },
+        "token": {
+            "type": "string",
+            "example": "eyJhIj..."
+        },
+        "status": {
+            "type": "integer",
+            "description": "0: stopped, 1: starting, 2: running, 3: error",
+            "example": 2
+        },
+        "meta": {
+            "type": "object",
+            "additionalProperties": true
+        }
+    }
+}

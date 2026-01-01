@@ -64,6 +64,12 @@ Both projects use `vitest` for testing.
 npm test
 ```
 
+### Protocol & Structure
+*   **`nginx-quic/`**: Contains patches used to build Nginx with HTTP/3 support (no longer a base image).
+*   **`backend/`**: Node.js/Express API.
+*   **`frontend/`**: React/Vite SPA.
+*   **`rootfs/`**: Docker filesystem overlays.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -85,6 +91,7 @@ npm test
 ![CrowdSec](https://img.shields.io/badge/CrowdSec-F8A51B?style=flat-square&logo=crowdsec&logoColor=white)
 ![ModSecurity](https://img.shields.io/badge/ModSecurity-003545?style=flat-square&logo=owasp&logoColor=white)
 ![MaxMind](https://img.shields.io/badge/MaxMind-031E37?style=flat-square)
+![Cloudflare](https://img.shields.io/badge/Cloudflare_Tunnels-F38020?style=flat-square&logo=cloudflare&logoColor=white)
 ![Caddy](https://img.shields.io/badge/Caddy-1F88C0?style=flat-square&logo=caddy&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white)
 ![GoAccess](https://img.shields.io/badge/GoAccess-373737?style=flat-square&logo=goaccess&logoColor=white)
@@ -120,19 +127,11 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **Upload Limits:** Allows infinite upload size (may be limited by ModSecurity).
 *   **Bandwidth Limiting:** built-in support for limiting bandwidth per host.
 *   **Request Rate Limiting:** granular control over request rates per host.
-*   **Advanced Analytics:** GoAccess-based real-time analytics.
 *   **Mutual TLS (mTLS):** Enforce client certificate authentication for specific access lists (supports custom and internal CAs).
 *   **Disable Buffering:** Support for streaming applications (Plex/Jellyfin) by disabling Nginx buffering.
 *   **Header Security:** `Server` response header hidden by default. Basic security headers added when HSTS is enabled.
 *   **OpenAppSec:** Option to load OpenAppSec attachment module.
 *   **Punycode:** Full support for international domain names.
-
-### ⚙️ Host Management
-*   **Diverse Host Types:** specific support for Proxy, Redirection, Dead (404), and TCP/UDP Stream hosts (with Proxy Protocol v1/v2 support).
-*   **Access Control:** Granular Access Lists (ACLs) with multi-user support.
-*   **Audit Log:** Comprehensive tracking of all administrative actions and system events.
-*   **Scheduled Maintenance Mode:** Plan maintenance windows or manually trigger maintenance mode per host, serving a custom 503 page with a countdown.
-
 ### 💻 Usability & Administration
 *   **Internationalization:** Frontend available in multiple languages (English, German, Spanish, French, and more).
 *   **Lightweight:** Smaller Docker image based on **Alpine Linux**.
@@ -141,7 +140,15 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **Networking:** Many environment options optimized for `network_mode: host`.
 *   **Security Secrets:** DNS secrets are saved in the DB and rewritten on container start (no external mounts needed).
 *   **GoAccess:** Real-time web log analyzer (accessible on `:91`).
+*   **Cloudflare Tunnels:** Integrated management of `cloudflared` tunnels (Zero Trust).
 *   **PHP:** Optional PHP-FPM integration (8.2/8.3/8.4).
+
+### ☁️ Cloudflare Tunnels (Zero Trust)
+NPMplus integrates `cloudflared` directly, allowing you to create and manage tunnels from the UI without needing a separate container.
+*   **Manage Tunnels:** List, Create, Delete tunnels.
+*   **Security:** Tunnel tokens are encrypted at rest using `aes-256-gcm`.
+*   **Status Monitoring:** Real-time online/offline status.
+
 
 ---
 

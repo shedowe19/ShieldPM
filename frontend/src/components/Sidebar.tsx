@@ -73,6 +73,10 @@ const menuItems: MenuItem[] = [
 				permission: VIEW,
 			},
 			{
+				to: "/nginx/cloudflared",
+				label: "cloudflared.title",
+			},
+			{
 				to: "/nginx/404",
 				label: "dead-hosts",
 				permissionSection: DEAD_HOSTS,
