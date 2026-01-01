@@ -168,7 +168,76 @@ const generateKeys = () => {
 	logger.info(`Wrote JWT key pair to config file: ${keysFile}`);
 };
 
-// ... existing code ...
+import _ from "lodash";
+
+/**
+ * Checks if the config has a key
+ *
+ * @param {string}     key
+ * @returns {boolean}
+ */
+const configHas = (key) => {
+	instance === null && configure();
+	return _.has(instance, key);
+};
+
+/**
+ * Returns a config value
+ *
+ * @param {string}     key
+ * @returns {any}
+ */
+const configGet = (key) => {
+	instance === null && configure();
+	return _.get(instance, key);
+};
+
+/**
+ * @returns {boolean}
+ */
+const isDestructiveTestMode = () => {
+	return false;
+};
+
+/**
+ * @returns {boolean}
+ */
+const isSqlite = () => {
+	instance === null && configure();
+	return instance.database.engine === "knex-native";
+};
+
+/**
+ * @returns {boolean}
+ */
+const isMysql = () => {
+	instance === null && configure();
+	return instance.database.engine === "mysql" || instance.database.engine === "mysql2";
+};
+
+/**
+ * @returns {boolean}
+ */
+const isPostgres = () => {
+	instance === null && configure();
+	return instance.database.engine === "pg";
+};
+
+/**
+ * @returns {string}
+ */
+const getPrivateKey = () => {
+	instance === null && configure();
+	return instance.keys.key;
+};
+
+/**
+ * @returns {string}
+ */
+const getPublicKey = () => {
+	instance === null && configure();
+	return instance.keys.pub;
+};
 
 /**
  * Returns the encryption key
