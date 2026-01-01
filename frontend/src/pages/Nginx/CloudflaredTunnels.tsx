@@ -73,9 +73,8 @@ export function CloudflaredTunnels() {
 					<T id="cloudflared.title" />
 				</h1>
 				<div className="flex gap-2">
-					<Button variant="outline" size="sm" onClick={() => refetch()}>
-						<IconRefresh className="mr-2 h-4 w-4" />
-						<T id="action.view-details" />
+					<Button variant="outline" size="icon" onClick={() => refetch()}>
+						<IconRefresh className="h-4 w-4" />
 					</Button>
 					<Button size="sm" onClick={handleAdd}>
 						<IconPlus className="mr-2 h-4 w-4" />
@@ -106,13 +105,13 @@ export function CloudflaredTunnels() {
 						{isLoading ? (
 							<TableRow>
 								<TableCell colSpan={4} className="text-center py-8">
-									Loading...
+									<T id="loading" />
 								</TableCell>
 							</TableRow>
 						) : tunnels?.length === 0 ? (
 							<TableRow>
 								<TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-									No tunnels found.
+									<T id="object.empty" tData={{ objects: "Tunnels" }} />
 								</TableCell>
 							</TableRow>
 						) : (
