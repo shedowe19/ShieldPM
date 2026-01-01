@@ -114,7 +114,7 @@ The application uses `react-router-dom` with the following route map:
 *   **`package.json`**: Root scripts (if any) and workspace definitions.
 *   **`docs/`**: Documentation source.
     *   **`wiki/`**: Markdown files for the project Wiki.
-*   **`nginx-quic/`**: Custom Nginx build context (Dockerfile and patches) for HTTP/3 support.
+*   **`nginx-quic/`**: Contains patches and resources used by the main Dockerfile to build Nginx with HTTP/3 support.
 *   **`rootfs/`**: Filesystem overlays for Docker.
     *   **`etc/`**: Configuration files (e.g., `s6-overlay`, `nginx`, `certbot`).
     *   **`usr/`**: Binary overlays and scripts.
