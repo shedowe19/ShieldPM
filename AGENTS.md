@@ -132,9 +132,14 @@ The backend is a Node.js application responsible for the API, database managemen
         *   Stores paths/metadata for SSL certs.
     *   **`CloudflaredTunnel`** (`cloudflared_tunnel`):
         *   Stores Tunnel Name, Token (Encrypted), and Status.
+    *   **`RedirectionHost`** / **`Stream`** / **`DeadHost`**:
+        *   Models for other host types.
+    *   **`Setting`** / **`AuditLog`**:
+        *   System settings and event logs.
 *   **`routes/`**: Express.js (v5) Router.
     *   **`nginx/`**: RESTful endpoints for managing hosts.
         *   e.g., `GET /nginx/proxy-hosts`, `POST /nginx/proxy-hosts`, `GET /nginx/cloudflared-tunnels`.
+        *   Also: `redirection-hosts`, `streams`, `dead-hosts`, `certificates`, `access-lists`.
     *   **`oidc/`**: OpenID Connect authentication flow endpoints.
     *   **`analytics.js`**: Analytics data endpoints.
     *   **Root**: Auth (`/tokens`), User (`/users`), Settings (`/settings`).
