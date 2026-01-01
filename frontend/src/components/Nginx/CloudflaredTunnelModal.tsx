@@ -106,7 +106,7 @@ export function CloudflaredTunnelModal({ open, onOpenChange, tunnel }: Cloudflar
 							<Button
 								type="submit"
 								disabled={isSubmitting}
-								className="bg-lime-600/90 text-white hover:bg-lime-600 shadow-sm"
+								className="bg-orange-600/90 text-white hover:bg-orange-600 shadow-sm"
 							>
 								{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 								{t("save")}
