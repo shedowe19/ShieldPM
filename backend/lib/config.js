@@ -180,4 +180,14 @@ const getEncryptionKey = () => {
 	return instance.keys.encryptionKey;
 };
 
-export { isDestructiveTestMode, configHas, configGet, isSqlite, isMysql, isPostgres, getPrivateKey, getPublicKey, getEncryptionKey };
+export {
+	isDestructiveTestMode,
+	configHas,
+	configGet,
+	isSqlite,
+	isMysql,
+	isPostgres,
+	getPrivateKey,
+	getPublicKey,
+	getEncryptionKey,
+};
