@@ -107,6 +107,18 @@ The application uses `react-router-dom` with the following route map:
 
 ## Project Structure
 
+### Repository Root (`/`)
+*   **`compose.yaml`**: Main Docker Compose configuration for production.
+*   **`Dockerfile`**: Multi-stage Docker build definition.
+*   **`knexfile.js`**: Database configuration for Knex.js.
+*   **`package.json`**: Root scripts (if any) and workspace definitions.
+*   **`docs/`**: Documentation source.
+    *   **`wiki/`**: Markdown files for the project Wiki.
+*   **`nginx-quic/`**: Custom Nginx build context (Dockerfile and patches) for HTTP/3 support.
+*   **`rootfs/`**: Filesystem overlays for Docker.
+    *   **`etc/`**: Configuration files (e.g., `s6-overlay`, `nginx`, `certbot`).
+    *   **`usr/`**: Binary overlays and scripts.
+
 ### Backend (`/backend`)
 The backend is a Node.js application responsible for the API, database management, and Nginx configuration generation.
 
@@ -156,11 +168,7 @@ The backend is a Node.js application responsible for the API, database managemen
     *   **Helpers**: `helpers.js`, `certbot.js`, `error.js`.
 *   **`templates/`**: EJS templates used to generate the actual Nginx configuration files (e.g., `proxy_host.ejs`).
 *   **`migrations/`**: Knex.js database migration files used to initialize and update the database schema.
-*   **`rootfs/`**: Filesystem overlays for Docker.
-    *   **`etc/`**: Configuration files (e.g., `s6-overlay`, `nginx`, `certbot`).
-    *   **`usr/`**: Binary overlays and scripts.
-*   **`knexfile.js`**: Database configuration for Knex.js.
-*   **`index.js`**: Entry point.
+
 
 ### Frontend (`/frontend`)
 The frontend is a React Single Page Application (SPA) built with Vite, utilizing React Query for state management.
