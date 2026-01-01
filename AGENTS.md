@@ -120,6 +120,8 @@ The backend is a Node.js application responsible for the API, database managemen
         *   `requestCertbot(certificate)`: Executes Certbot for Let's Encrypt issuance.
     *   **`cloudflared.js`**:
         *   Manages the `cloudflared` binary process (start, stop, restart) and token validation.
+    *   **Logic Modules**:
+        *   `access-list.js`, `analytics.js`, `audit-log.js`, `dead-host.js`, `host.js`, `ip_ranges.js`, `maintenance.js`, `pki.js`, `proxy-host.js`, `redirection-host.js`, `remote-version.js`, `report.js`, `setting.js`, `stream.js`, `token.js`, `user.js` - Business logic for respective entities.
 *   **`models/`**: [Objection.js](https://vincit.github.io/objection.js/) ORM models.
     *   **`ProxyHost`** (`proxy_host`):
         *   Relates to `User` (owner), `AccessList`, `Certificate`.
@@ -145,9 +147,10 @@ The backend is a Node.js application responsible for the API, database managemen
     *   **Root**: Auth (`/tokens`), User (`/users`), Settings (`/settings`).
 *   **`lib/`**: Shared utilities and helper functions.
     *   **Core**: `access.js` (Permissions), `config.js` (App Config), `logger.js`, `utils.js`.
+    *   **Database**: `db-migrate.js`, `migrate_template.js` (Migration helpers).
     *   **Security**: `encryption.js`, `auth.js`.
     *   **Validators**: `validator/` directory.
-    *   **Helpers**: `helpers.js`, `certbot.js`.
+    *   **Helpers**: `helpers.js`, `certbot.js`, `error.js`.
 *   **`templates/`**: EJS templates used to generate the actual Nginx configuration files (e.g., `proxy_host.ejs`).
 *   **`migrations/`**: Knex.js database migration files used to initialize and update the database schema.
 *   **`rootfs/`**: Filesystem overlays for Docker.
