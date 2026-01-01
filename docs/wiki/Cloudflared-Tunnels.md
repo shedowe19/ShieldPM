@@ -62,7 +62,34 @@ This allows you to still use Nginx features like Access Lists, ModSecurity, and 
 
 ---
 
-## 🛠️ Troubleshooting
+## � Advanced: HTTPS & mTLS
+
+### Using HTTPS Backends
+If you want the connection between Cloudflare and NPMplus to be encrypted (HTTPS), follow these steps:
+
+1.  In Cloudflare Dashboard (Public Hostname), set **Service Type** to `HTTPS` and URL to `localhost:443`.
+2.  Under **Additional application settings** > **TLS**:
+    *   Enable **No TLS Verify**. This is required because NPMplus uses self-signed or internal certificates for localhost, which Cloudflare cannot verify by default.
+3.  In NPMplus Proxy Host:
+    *   Ensure **Scheme** is `https`.
+    *   **SSL Certificate:** You can use "None" (fallback to default) or a self-signed cert, as Cloudflare is the only client.
+
+### Integration with Internal PKI & mTLS
+NPMplus includes a powerful **Internal Public Key Infrastructure (PKI)** and **Mutual TLS (mTLS)** feature. However, using this with Cloudflare Tunnels requires understanding how traffic is handled.
+
+**The Limitation:**
+Cloudflare Tunnel (in HTTP mode) terminates the SSL connection at the Cloudflare Edge. This means the client (visitor) performs the TLS handshake with Cloudflare, not with NPMplus.
+*   **Result:** Nginx **cannot** request a Client Certificate from the visitor because the connection it sees comes from `cloudflared` (localhost).
+*   **Impact:** If you enable "mTLS" in an Access List on a host served via Tunnel, visitors will get a 400 Bad Request or 403 Forbidden because they cannot present a certificate to Nginx.
+
+**Recommended Solutions:**
+1.  **Use Cloudflare Access (mTLS):** Configure mTLS enforcement in the Cloudflare Zero Trust dashboard. Cloudflare will validate the client certificate at the edge and then forward the request to your tunnel.
+2.  **Use Internal CA for Backend Security:** You can still use the NPMplus Internal CA to issue certificates for your backend services (the apps NPMplus points to).
+3.  **For pure mTLS (End-to-End):** You would need to use Cloudflare Tunnel in **TCP Mode** (arbitrary TCP logging), which passes the raw encrypted packets to Nginx. Note that this bypasses Cloudflare's WAF and requires `cloudflared` on the client side or specific enterprise setups.
+
+---
+
+## �🛠️ Troubleshooting
 
 *   **Status stays Offline:** Check your internet connection and ensuring the provided token is correct. Check the container logs `docker logs npmplus` for `cloudflared` errors.
 *   **Maintenance:** If you delete a tunnel in NPMplus, the process is stopped immediately.
