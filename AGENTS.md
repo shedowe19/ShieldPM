@@ -103,6 +103,7 @@ The application uses `react-router-dom` with the following route map:
 | `/users` | `Users` | User management. |
 | `/settings` | `Settings` | Global App Settings. |
 | `/audit-log` | `AuditLog` | View system events. |
+| `/analytics` | `Analytics` | Analytics Dashboard. |
 
 ## Project Structure
 
@@ -135,6 +136,7 @@ The backend is a Node.js application responsible for the API, database managemen
     *   **`nginx/`**: RESTful endpoints for managing hosts.
         *   e.g., `GET /nginx/proxy-hosts`, `POST /nginx/proxy-hosts`, `GET /nginx/cloudflared-tunnels`.
     *   **`oidc/`**: OpenID Connect authentication flow endpoints.
+    *   **`analytics.js`**: Analytics data endpoints.
     *   **Root**: Auth (`/tokens`), User (`/users`), Settings (`/settings`).
 *   **`lib/`**: Shared utilities and helper functions.
     *   **Core**: `access.js` (Permissions), `config.js` (App Config), `logger.js`, `utils.js`.
@@ -166,6 +168,7 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
         *   **`Access/`**: `AccessLists`.
         *   **`Certificates/`**: `Certificates` list and management.
         *   **`Dashboard/`**: Main `Dashboard` view.
+        *   **`Analytics/`**: `Analytics` Dashboard.
         *   **`Users/`**: `User` management.
         *   **`Settings/`**: `AuditLog` and general `Settings`.
         *   **`Login/`**: Login page.
@@ -179,7 +182,7 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
     *   **`modals/`**: Complex task-specific modals.
         *   **Hosts**: `ProxyHostModal`, `RedirectionHostModal`, `DeadHostModal`, `StreamModal`, `CloudflaredTunnelModal`.
         *   **Security**: `AccessListModal`, `PermissionsModal`.
-        *   **Certificates**: `CustomCertificateModal`, `DNSCertificateModal`, `HTTPCertificateModal`, `RenewCertificateModal`.
+        *   **Certificates**: `CustomCertificateModal`, `DNSCertificateModal`, `HTTPCertificateModal`, `InternalCertificateModal`, `RenewCertificateModal`.
         *   **User**: `UserModal`, `ChangePasswordModal`.
     *   **`locale/`**: Internationalization (i18n) JSON files (en, de, fr, etc.).
     *   **`Router.tsx`**: Main application routing configuration defining which Page loads for which URL.
