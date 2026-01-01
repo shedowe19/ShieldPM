@@ -69,7 +69,6 @@ export function CloudflaredTunnels() {
 	};
 
 	return (
-	return (
 		<Card className="mt-4 border-t-4 border-orange-500/50">
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 				<CardTitle className="text-2xl font-bold flex items-center gap-2">
@@ -152,8 +151,6 @@ export function CloudflaredTunnels() {
 
 			<CloudflaredTunnelModal open={isModalOpen} onOpenChange={setIsModalOpen} tunnel={selectedTunnel} />
 		</Card>
-	);
-}
 	);
 }
 
