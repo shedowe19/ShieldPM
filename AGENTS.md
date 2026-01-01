@@ -116,6 +116,8 @@ The backend is a Node.js application responsible for the API, database managemen
     *   **`certificate.js`**:
         *   `processExpiringHosts()`: Timer-based job to check and renew certificates.
         *   `requestCertbot(certificate)`: Executes Certbot for Let's Encrypt issuance.
+    *   **`cloudflared.js`**:
+        *   Manages the `cloudflared` binary process (start, stop, restart) and token validation.
 *   **`models/`**: [Objection.js](https://vincit.github.io/objection.js/) ORM models.
     *   **`ProxyHost`** (`proxy_host`):
         *   Relates to `User` (owner), `AccessList`, `Certificate`.
@@ -126,9 +128,11 @@ The backend is a Node.js application responsible for the API, database managemen
         *   Contains `clients` (Basic Auth users). Supports OIDC/OAuth2 configuration via `meta` JSON.
     *   **`Certificate`** (`certificate`):
         *   Stores paths/metadata for SSL certs.
+    *   **`CloudflaredTunnel`** (`cloudflared_tunnel`):
+        *   Stores Tunnel Name, Token (Encrypted), and Status.
 *   **`routes/`**: Express.js (v5) Router.
     *   **`nginx/`**: RESTful endpoints for managing hosts.
-        *   e.g., `GET /nginx/proxy-hosts`, `POST /nginx/proxy-hosts`.
+        *   e.g., `GET /nginx/proxy-hosts`, `POST /nginx/proxy-hosts`, `GET /nginx/cloudflared-tunnels`.
     *   **`oidc/`**: OpenID Connect authentication flow endpoints.
     *   **Root**: Auth (`/tokens`), User (`/users`), Settings (`/settings`).
 *   **`lib/`**: Shared utilities and helper functions.
@@ -157,7 +161,7 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
         *   **`Table/`**: Components for data tables.
         *   **Layouts**: `Sidebar.tsx`, `SiteHeader.tsx`, `SiteFooter.tsx`.
     *   **`pages/`**: React components representing full pages (routed views).
-        *   **`Nginx/`**: `ProxyHosts`, `RedirectionHosts`, `Streams`, `DeadHosts`.
+        *   **`Nginx/`**: `ProxyHosts`, `RedirectionHosts`, `Streams`, `DeadHosts`, `CloudflaredTunnels`.
         *   **`Access/`**: `AccessLists`.
         *   **`Certificates/`**: `Certificates` list and management.
         *   **`Dashboard/`**: Main `Dashboard` view.
@@ -165,14 +169,14 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
         *   **`Settings/`**: `AuditLog` and general `Settings`.
         *   **`Login/`**: Login page.
     *   **`hooks/`**: Custom React hooks.
-        *   **Data Hooks** (React Query wrappers): `useProxyHosts`, `useProxyHost`, `useCertificates`, `useAccessLists`, `useUsers`, `useAuditLogs`, etc.
+        *   **Data Hooks** (React Query wrappers): `useProxyHosts`, `useProxyHost`, `useCertificates`, `useAccessLists`, `useUsers`, `useAuditLogs`, `useCloudflaredTunnel`.
         *   **UI Hooks**: `use-toast.ts` (Notifications), `useTheme.ts` (Dark mode).
     *   **`context/`**: React Context providers.
         *   `AuthContext.tsx`: Manages user login state and permissions.
         *   `ThemeContext.tsx`: Manages light/dark mode.
         *   `LocaleContext.tsx`: Manages language settings.
     *   **`modals/`**: Complex task-specific modals.
-        *   **Hosts**: `ProxyHostModal`, `RedirectionHostModal`, `DeadHostModal`, `StreamModal`.
+        *   **Hosts**: `ProxyHostModal`, `RedirectionHostModal`, `DeadHostModal`, `StreamModal`, `CloudflaredTunnelModal`.
         *   **Security**: `AccessListModal`, `PermissionsModal`.
         *   **Certificates**: `CustomCertificateModal`, `DNSCertificateModal`, `HTTPCertificateModal`, `RenewCertificateModal`.
         *   **User**: `UserModal`, `ChangePasswordModal`.
