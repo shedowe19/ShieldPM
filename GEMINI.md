@@ -207,7 +207,9 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
             *   Create separate JSON files for each method: `get.json` (List/Read), `post.json` (Create), `put.json` (Update), `delete.json` (Delete).
             *   Ensure schemas follow OpenAPI specs (tags, parameters, responses) to enable strict validation.
         *   **Controller/Router**: Create `backend/routes/<feature>.js`.
-            *   Implement routes matching your schema: `router.get(...)`, `router.put(...)`, etc.
+            *   Implement routes matching your schema: `router.get('/', jwtAuth, ...)` or `router.put('/:id', jwtAuth, ...)`
+            *   **Security**: Always use `jwtAuth` middleware (or `checkPerm`) to secure endpoints.
+            *   **Validation**: Validation is handled **automatically** by the schema. You do not need manual validation logic in the controller.
         *   **Registration**: Register route in `backend/index.js` (for root routes) or `backend/routes/nginx.js` (for nginx sub-routes).
     4.  **Frontend API Client**:
         *   Add type definition in `frontend/src/api/backend/models.ts`.
