@@ -1,0 +1,52 @@
+{
+    "operationId": "deleteCloudflaredTunnel",
+    "summary": "Delete a Cloudflared Tunnel",
+    "tags": [
+        "cloudflared-tunnels"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "proxy_hosts.manage"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer"
+            },
+            "required": true
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "OK"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "404": {
+            "description": "404 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/error-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

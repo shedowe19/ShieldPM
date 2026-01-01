@@ -1,0 +1,50 @@
+{
+    "operationId": "createCloudflaredTunnel",
+    "summary": "Create a Cloudflared Tunnel",
+    "tags": [
+        "cloudflared-tunnels"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "proxy_hosts.manage"
+            ]
+        }
+    ],
+    "requestBody": {
+        "description": "Cloudflared Tunnel Payload",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "name",
+                        "token"
+                    ],
+                    "properties": {
+                        "name": {
+                            "$ref": "../../../components/cloudflared-tunnel-object.json#/properties/name"
+                        },
+                        "token": {
+                            "$ref": "../../../components/cloudflared-tunnel-object.json#/properties/token"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "201": {
+            "description": "201 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../components/cloudflared-tunnel-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

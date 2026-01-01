@@ -9,6 +9,7 @@ import { migrateUp } from "./migrate.js";
 import { getCompiledSchema } from "./schema/index.js";
 import setup from "./setup.js";
 import internalMaintenance from "./internal/maintenance.js";
+import internalCloudflared from "./internal/cloudflared.js";
 
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 
@@ -36,6 +37,7 @@ async function appStart() {
 		internalCertificate.initTimer();
 		internalMaintenance.initTimer();
 		internalNginx.reload();
+		internalCloudflared.init();
 
 		const server = app.listen("/run/npmplus.sock", () => {
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);

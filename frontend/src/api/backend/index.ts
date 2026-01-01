@@ -64,3 +64,8 @@ export * from "./updateStream";
 export * from "./updateUser";
 export * from "./uploadCertificate";
 export * from "./validateCertificate";
+export * from "./getCloudflaredTunnels";
+export * from "./createCloudflaredTunnel";
+export * from "./updateCloudflaredTunnel";
+export * from "./deleteCloudflaredTunnel";
+

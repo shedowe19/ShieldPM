@@ -218,3 +218,15 @@ export interface DNSProvider {
 	name: string;
 	credentials: string;
 }
+
+export interface CloudflaredTunnel {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	userId: number;
+	name: string;
+	token: string;
+	status: number;
+	meta: Record<string, any>;
+	owner?: User;
+}

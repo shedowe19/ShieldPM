@@ -10,6 +10,7 @@ import proxyHostsRoutes from "./nginx/proxy_hosts.js";
 import redirectionHostsRoutes from "./nginx/redirection_hosts.js";
 import streamsRoutes from "./nginx/streams.js";
 import nginxAnalyticsRoutes from "./nginx/analytics.js";
+import cloudflaredRoutes from "./nginx/cloudflared.js";
 import oidcRoutes from "./oidc.js";
 import reportsRoutes from "./reports.js";
 import schemaRoutes from "./schema.js";
@@ -59,6 +60,7 @@ router.use("/nginx/access-lists", accessListsRoutes);
 // ... existing mounts ...
 router.use("/nginx/certificates", certificatesHostsRoutes);
 router.use("/nginx/analytics", nginxAnalyticsRoutes);
+router.use("/nginx/cloudflared-tunnels", cloudflaredRoutes);
 
 /**
  * API 404 for all other routes

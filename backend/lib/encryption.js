@@ -1,10 +1,9 @@
 import crypto from "node:crypto";
+import { getEncryptionKey } from "./config.js";
 
-// Generate a random key on startup.
-// This implies that if the server restarts, all pending encrypted cookies (e.g. OIDC tokens waiting to be claimed) become invalid.
-// This is acceptable for short-lived login flows.
+// Uses the persistent key from keys.json
 const algorithm = "aes-256-gcm";
-const key = crypto.randomBytes(32);
+const key = Buffer.from(getEncryptionKey(), "hex");
 
 export const encrypt = (text) => {
 	const iv = crypto.randomBytes(12);
