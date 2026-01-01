@@ -141,6 +141,7 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **Networking:** Many environment options optimized for `network_mode: host`.
 *   **Security Secrets:** DNS secrets are saved in the DB and rewritten on container start (no external mounts needed).
 *   **GoAccess:** Real-time web log analyzer (accessible on `:91`).
+*   **Cloudflare Tunnels:** Integrated management of `cloudflared` tunnels (Zero Trust).
 *   **PHP:** Optional PHP-FPM integration (8.2/8.3/8.4).
 
 ---

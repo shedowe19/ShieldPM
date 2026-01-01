@@ -6,8 +6,8 @@ NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fri
 **Key Technologies:**
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
 *   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
-*   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**.
+*   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared.
+*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**.
 *   **Language:** JavaScript/TypeScript (ES Modules).
 
 ## Building and Running
@@ -193,11 +193,36 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
 6.  **Reload**: `nginx -s reload` is executed via `internal/nginx.js` -> `reload()`.
 
 ### Developer Cookbook
+*   **Adding a New Full-Stack Feature (Best Practices)**:
+    1.  **Database Migration**:
+        *   Create migration: `knex migrate:make add_my_feature_table`.
+        *   Define schema in `backend/migrations/YYYYMMDDHHMMSS_add_my_feature_table.js`.
+        *   **Important**: Use `table.text()` for long strings (like tokens/keys) instead of `table.string()`.
+    2.  **Backend Model**:
+        *   Create/Update model in `backend/models/`.
+        *   Add relationship mappings if needed.
+    3.  **API Schema & Routes**:
+        *   Define OpenAPI schema in `backend/schema/paths/`.
+        *   Create Controller/Router in `backend/routes/`.
+        *   Register route in `backend/index.js` (or relevant sub-router).
+    4.  **Frontend API Client**:
+        *   Add type definition in `frontend/src/api/backend/models.ts`.
+        *   Create fetch functions in `frontend/src/api/backend/`.
+    5.  **Frontend Hook**:
+        *   Create a React Query hook in `frontend/src/hooks/` (e.g., `useMyFeature.ts`) to manage data fetching and mutations.
+    6.  **UI Implementation**:
+        *   Create components in `frontend/src/components/` or pages in `frontend/src/pages/`.
+        *   Use `shadcn/ui` components for consistency.
+        *   **Localization**: consistently use `<T id="..." />` component and `intl` object. **Do NOT use `react-i18next/useTranslation` directly**.
+        *   Add translation keys to `frontend/src/locale/lang/en.json` first, then others.
+    7.  **Documentation**:
+        *   Update `AGENTS.md`, `README.md`, and Wiki.
+
 *   **Adding a New Field to a Host**:
     1.  **Migration**: Create a Knex migration in `backend/migrations` to add the column.
-    2.  **Model**: Update `backend/models/proxy_host.js` to include the field (if validation/parsing needed).
+    2.  **Model**: Update `backend/models/proxy_host.js` to include the field.
     3.  **Frontend**: Update `ProxyHostModal.tsx` to include the form field.
-    4.  **Backend Logic**: If special handling needed, update `backend/internal/proxy-host.js`.
+    4.  **Backend Logic**: If special handling needed (e.g. config generation), update `backend/internal/proxy-host.js` or `backend/internal/nginx.js`.
     5.  **Nginx**: Update `backend/templates/proxy_host.conf` to use the new variable (e.g., `{{ my_new_field }}`).
 
 *   **Debugging Nginx Generation**:
