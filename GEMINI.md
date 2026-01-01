@@ -96,6 +96,7 @@ The application uses `react-router-dom` with the following route map:
 | `/nginx/proxy` | `ProxyHosts` | Manage Proxy Hosts. |
 | `/nginx/redirection` | `RedirectionHosts` | Manage Redirection Hosts. |
 | `/nginx/stream` | `Streams` | Manage TCP/UDP Streams. |
+| `/nginx/cloudflared` | `CloudflaredTunnels` | Manage Cloudflare Tunnels. |
 | `/nginx/404` | `DeadHosts` | Manage 404 Hosts. |
 | `/access` | `Access` | Admin Control Lists (ACLs). |
 | `/certificates` | `Certificates` | SSL/TLS Certificate management. |
