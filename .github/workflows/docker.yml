@@ -186,7 +186,6 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-certbot
             type=gha,scope=${{ matrix.arch }}-cloudflared
             type=gha,scope=${{ matrix.arch }}-final
-            type=gha,scope=${{ matrix.arch }}-final
 
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
