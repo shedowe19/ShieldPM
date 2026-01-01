@@ -218,6 +218,7 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
         *   Create a React Query hook in `frontend/src/hooks/` (e.g., `useMyFeature.ts`) to manage data fetching and mutations.
     6.  **UI Implementation**:
         *   Create components in `frontend/src/components/` or pages in `frontend/src/pages/`.
+        *   **Routing**: If adding a new page, register the route in `frontend/src/Router.tsx` (add lazy import and `<Route />`).
         *   Use `shadcn/ui` components for consistency.
         *   **Localization**: consistently use `<T id="..." />` component and `intl` object. **Do NOT use `react-i18next/useTranslation` directly**.
         *   Add translation keys to `frontend/src/locale/lang/en.json` first, then others.
