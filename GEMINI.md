@@ -145,6 +145,9 @@ The backend is a Node.js application responsible for the API, database managemen
     *   **`oidc/`**: OpenID Connect authentication flow endpoints.
     *   **`analytics.js`**: Analytics data endpoints.
     *   **Root**: Auth (`/tokens`), User (`/users`), Settings (`/settings`).
+*   **`schema/`**: OpenAPI/AJV validation schemas.
+    *   **`paths/`**: Request/Response schemas per endpoint (e.g. `nginx/proxy-hosts`).
+    *   **`components/`**: Shared schema definitions.
 *   **`lib/`**: Shared utilities and helper functions.
     *   **Core**: `access.js` (Permissions), `config.js` (App Config), `logger.js`, `utils.js`.
     *   **Database**: `db-migrate.js`, `migrate_template.js` (Migration helpers).
@@ -156,6 +159,8 @@ The backend is a Node.js application responsible for the API, database managemen
 *   **`rootfs/`**: Filesystem overlays for Docker.
     *   **`etc/`**: Configuration files (e.g., `s6-overlay`, `nginx`, `certbot`).
     *   **`usr/`**: Binary overlays and scripts.
+*   **`knexfile.js`**: Database configuration for Knex.js.
+*   **`index.js`**: Entry point.
 
 ### Frontend (`/frontend`)
 The frontend is a React Single Page Application (SPA) built with Vite, utilizing React Query for state management.
@@ -194,6 +199,9 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
         *   **User**: `UserModal`, `ChangePasswordModal`.
     *   **`locale/`**: Internationalization (i18n) JSON files (en, de, fr, etc.).
     *   **`Router.tsx`**: Main application routing configuration defining which Page loads for which URL.
+*   **`vite.config.ts`**: Vite configuration (proxy setup, plugins).
+*   **`tailwind.config.js`**: Tailwind CSS configuration.
+*   **`tsconfig.json`**: TypeScript configuration.
 
 ## Agent Knowledge Base & Cookbook
 
