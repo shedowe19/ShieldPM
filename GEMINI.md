@@ -79,6 +79,7 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20260103000000_add_access_list_mtls.js`: Adds mTLS configuration to Access Lists.
     *   `20260106000000_add_access_list_mtls_internal.js`: Adds Internal CAs for mTLS Access Lists.
     *   `20260107000000_add_maintenance_schedule.js`: Adds Scheduled Maintenance Mode fields to Proxy Hosts.
+    *   `20260108000000_add_cloudflared_tunnel.js`: Adds Cloudflare Tunnels table.
     *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
