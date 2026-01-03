@@ -46,7 +46,7 @@
 	"ai.description": "Configure the AI Administrator capabilities.",
 	"ai.enable": "Enable AI Agent",
 	"ai.fetch_models": "Fetch Models",
-	"ai.kv_cache": "KV Cache Type",
+	"ai.keep_alive": "Keep Alive (Duration)",
 	"ai.model": "Model Name",
 	"ai.model.placeholder": "e.g. gemini-1.5-flash",
 	"ai.provider": "Provider",

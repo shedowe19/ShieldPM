@@ -240,7 +240,7 @@ export interface AiConfig {
 	num_ctx?: number;
 	num_batch?: number;
 	num_thread?: number;
-	kv_cache_type?: string;
+	keep_alive?: string;
 }
 
 export interface AiChatMessage {

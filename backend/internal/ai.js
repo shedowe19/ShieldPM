@@ -53,7 +53,7 @@ const ai = {
             if (!meta.num_ctx) meta.num_ctx = 8192;
             if (!meta.num_batch) meta.num_batch = 512;
             if (!meta.num_thread) meta.num_thread = 4;
-            if (!meta.kv_cache_type) meta.kv_cache_type = "f16";
+            if (!meta.keep_alive) meta.keep_alive = "5m";
             return meta;
         } catch (err) {
             // Return default config if not found
@@ -66,7 +66,7 @@ const ai = {
                 num_ctx: 8192,
                 num_batch: 512,
                 num_thread: 4,
-                kv_cache_type: "f16"
+                keep_alive: "5m"
             };
         }
     },
@@ -1770,11 +1770,11 @@ Current Time: ${new Date().toISOString()}`;
                 model: config.model || "gpt-3.5-turbo",
                 messages,
                 stream: false,
+                keep_alive: config.keep_alive || "5m",
                 options: {
                     num_ctx: config.num_ctx || 8192,
                     num_batch: config.num_batch || 512,
-                    num_thread: config.num_thread || 4,
-                    kv_cache_type: config.kv_cache_type || "f16"
+                    num_thread: config.num_thread || 4
                 },
                 tools: tools.length > 0 ? tools.map(t => ({
                     type: "function",
@@ -1787,11 +1787,11 @@ Current Time: ${new Date().toISOString()}`;
                 model: config.model || "gpt-3.5-turbo",
                 messages,
                 // Note: OpenAI spec ignores 'options', but some compatible servers might read it
+                keep_alive: config.keep_alive || "5m", // Try sending top-level for compat
                 options: {
                     num_ctx: config.num_ctx || 8192,
                     num_batch: config.num_batch || 512,
-                    num_thread: config.num_thread || 4,
-                    kv_cache_type: config.kv_cache_type || "f16"
+                    num_thread: config.num_thread || 4
                 },
                 tools: tools.length > 0 ? tools.map(t => ({
                     type: "function",
@@ -1897,8 +1897,7 @@ Current Time: ${new Date().toISOString()}`;
         const options = {
             num_ctx: config.num_ctx || 8192,
             num_batch: config.num_batch || 512,
-            num_thread: config.num_thread || 4,
-            kv_cache_type: config.kv_cache_type || "f16"
+            num_thread: config.num_thread || 4
         };
 
         if (isOllamaNative) {
@@ -1906,12 +1905,14 @@ Current Time: ${new Date().toISOString()}`;
                 model: config.model,
                 messages,
                 stream: false,
+                keep_alive: config.keep_alive || "5m",
                 options
             };
         } else {
             payload = {
                 model: config.model,
                 messages,
+                keep_alive: config.keep_alive || "5m",
                 options
             };
         }

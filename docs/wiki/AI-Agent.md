@@ -56,9 +56,11 @@ For local models, performance tuning is crucial. NPMplus allows you to configure
 *   **Batch Size (`num_batch`)** (Default: `512`):
     *   Controls parallel token processing.
 *   **CPU Threads (`num_thread`)** (Default: `4`):
-    *   Number of CPU threads to use for inference. Set this to the number of physical cores available for the best performance.
-*   **KV Cache Type (`kv_cache_type`)** (Default: `f16`):
-    *   Precision of the Key-Value cache. `f16` is standard. `q8_0` or `q4_0` use less VRAM but might reduce quality slightly.
+    *   Number of CPU threads to use for inference.
+*   **Keep Alive (`keep_alive`)** (Default: `5m`):
+    *   Controls how long the model stays loaded in VRAM after a request.
+    *   **Values**: `5m` (5 minutes), `1h` (1 hour), `-1` (Indefinitely).
+    *   **Impact**: Setting this allows **Context Caching** behavior in Ollama, speeding up subsequent requests significantly.
 
 ### System Prompt
 You can customize the **System Prompt** to change how the AI behaves. The default prompt is optimized for a helpful "AI Administrator" persona that prioritizes executing tools over chatting.

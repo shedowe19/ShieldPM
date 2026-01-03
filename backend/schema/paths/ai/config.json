@@ -51,15 +51,9 @@
                             "type": "integer",
                             "default": 4
                         },
-                        "kv_cache_type": {
+                        "keep_alive": {
                             "type": "string",
-                            "enum": [
-                                "f16",
-                                "f32",
-                                "q8_0",
-                                "q4_0"
-                            ],
-                            "default": "f16"
+                            "default": "5m"
                         }
                     }
                 }

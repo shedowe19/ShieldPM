@@ -46,7 +46,7 @@
 	"ai.description": "Konfigurieren Sie die Fähigkeiten des KI-Administrators.",
 	"ai.enable": "KI-Agent aktivieren",
 	"ai.fetch_models": "Modelle abrufen",
-	"ai.kv_cache": "KV-Cache Typ",
+	"ai.keep_alive": "Keep Alive (Dauer)",
 	"ai.model": "Modellname",
 	"ai.model.placeholder": "z.B. gemini-1.5-flash",
 	"ai.provider": "Anbieter",
