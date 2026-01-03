@@ -40,7 +40,7 @@
 	"ai.api_key": "Klucz API",
 	"ai.base_url": "Bazowy URL",
 	"ai.configuration": "Konfiguracja AI",
-	"ai.description": "Skonfiguruj możliwości administratora AI.",
+	"ai.description": "Skonfiguruj możliwości Administratora AI.",
 	"ai.enable": "Włącz Agenta AI",
 	"ai.fetch_models": "Pobierz Modele",
 	"ai.model": "Nazwa Modelu",
