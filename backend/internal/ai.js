@@ -212,7 +212,7 @@ Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
 PROXY HOSTS:
 - "disable cdn.ex.com" → get_proxy_hosts, find ID, disable_proxy_host
 - "enable cdn.ex.com" → get_proxy_hosts, find ID, enable_proxy_host
-- "create proxy app.ex.com to 192.168.1.10:3000" → create_proxy_host
+- "create proxy app.ex.com to 192.168.1.10:3000" → create_proxy_host with domain_names, forward_scheme: "http", forward_host, forward_port
 - "update proxy cdn.ex.com forward to 10.0.0.5:8080" → get_proxy_hosts, find ID, update_proxy_host
 - "delete proxy old.ex.com" → get_proxy_hosts, find ID, delete_proxy_host
 
@@ -642,6 +642,11 @@ Time: ${new Date().toISOString()}`;
                                 items: { type: "string" },
                                 description: "List of domain names (e.g. example.com)",
                             },
+                            forward_scheme: {
+                                type: "string",
+                                enum: ["http", "https"],
+                                description: "Forwarding scheme"
+                            },
                             forward_host: { type: "string", description: "Internal IP or hostname to forward to" },
                             forward_port: { type: "integer", description: "Internal Port to forward to" },
                             locations: {
@@ -690,7 +695,7 @@ Time: ${new Date().toISOString()}`;
                             advanced_config: { type: "string" },
                             meta: { type: "object" },
                         },
-                        required: ["domain_names", "forward_host", "forward_port"],
+                        required: ["domain_names", "forward_scheme", "forward_host", "forward_port"],
                     },
                 },
             },
