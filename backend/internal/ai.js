@@ -1854,9 +1854,15 @@ Current Time: ${new Date().toISOString()}`;
 
     _callLocalWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
         const baseUrl = config.base_url || "http://localhost:11434";
+        const isOllamaNative = baseUrl.includes(":11434") && !baseUrl.includes("/v1");
+
         let targetUrl;
         try {
-            targetUrl = new URL("v1/chat/completions", baseUrl);
+            if (isOllamaNative) {
+                targetUrl = new URL("api/chat", baseUrl);
+            } else {
+                targetUrl = new URL("v1/chat/completions", baseUrl);
+            }
         } catch (err) {
             throw new Error(`Invalid base_url: ${err.message}`);
         }
@@ -1887,23 +1893,50 @@ Current Time: ${new Date().toISOString()}`;
             }))
         ];
 
-        const payload = {
-            model: config.model,
-            messages
+        let payload;
+        const options = {
+            num_ctx: config.num_ctx || 8192,
+            num_batch: config.num_batch || 512,
+            num_thread: config.num_thread || 4,
+            kv_cache_type: config.kv_cache_type || "f16"
         };
+
+        if (isOllamaNative) {
+            payload = {
+                model: config.model,
+                messages,
+                stream: false,
+                options
+            };
+        } else {
+            payload = {
+                model: config.model,
+                messages,
+                options
+            };
+        }
 
         const res = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${config.api_key}`
+            },
             body: JSON.stringify(payload)
         });
 
-        if (!res.ok) throw new Error("Local LLM Error (Tool Result)");
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(`Local LLM Result Error: ${res.status} - ${err}`);
+        }
+
         const json = await res.json();
-        return {
-            role: "assistant",
-            content: json.choices?.[0]?.message?.content
-        };
+
+        if (isOllamaNative) {
+            return { content: json.message?.content || "" };
+        }
+
+        return { content: json.choices?.[0]?.message?.content || "" };
     }
 };
 
