@@ -356,7 +356,22 @@
 		},
 		"/ai/config": {
 			"get": {
-				"$ref": "./paths/ai/config.json"
+				"tags": [
+					"AI"
+				],
+				"summary": "Get AI Configuration",
+				"responses": {
+					"200": {
+						"description": "Configuration object",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object"
+								}
+							}
+						}
+					}
+				}
 			},
 			"put": {
 				"$ref": "./paths/ai/config.json"

@@ -1,35 +1,59 @@
 {
-    "description": "Configuration usage for the AI Agent",
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-        "enabled",
-        "provider"
+    "tags": [
+        "AI"
     ],
-    "properties": {
-        "enabled": {
-            "type": "boolean"
-        },
-        "provider": {
-            "schema": {
-                "$ref": "../../components/error.json"
-            },
-            "enum": [
-                "gemini",
-                "local"
-            ]
-        },
-        "apiKey": {
-            "type": "string"
-        },
-        "baseUrl": {
-            "type": "string"
-        },
-        "model": {
-            "type": "string"
-        },
-        "system_prompt": {
-            "type": "string"
+    "summary": "Update AI Configuration",
+    "operationId": "updateAiConfig",
+    "requestBody": {
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "description": "Configuration usage for the AI Agent",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "enabled",
+                        "provider"
+                    ],
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "provider": {
+                            "type": "string",
+                            "enum": [
+                                "gemini",
+                                "local"
+                            ]
+                        },
+                        "apiKey": {
+                            "type": "string"
+                        },
+                        "baseUrl": {
+                            "type": "string"
+                        },
+                        "model": {
+                            "type": "string"
+                        },
+                        "system_prompt": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "Config Updated",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object"
+                    }
+                }
+            }
         }
     }
 }
