@@ -20,10 +20,10 @@
                             ],
                             "default": "gemini"
                         },
-                        "apiKey": {
+                        "api_key": {
                             "type": "string"
                         },
-                        "baseUrl": {
+                        "base_url": {
                             "type": "string"
                         }
                     },
@@ -33,7 +33,7 @@
                 },
                 "example": {
                     "provider": "gemini",
-                    "apiKey": "AIza..."
+                    "api_key": "AIza..."
                 }
             }
         }

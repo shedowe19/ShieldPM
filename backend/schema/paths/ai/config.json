@@ -27,10 +27,10 @@
                                 "local"
                             ]
                         },
-                        "apiKey": {
+                        "api_key": {
                             "type": "string"
                         },
-                        "baseUrl": {
+                        "base_url": {
                             "type": "string"
                         },
                         "model": {

@@ -41,11 +41,11 @@ const ai = {
         try {
             const row = await internalSetting.get(access, { id: AI_CONFIG_ID });
             const meta = row.meta;
-            if (meta.apiKey) {
+            if (meta.api_key) {
                 try {
-                    meta.apiKey = decrypt(meta.apiKey);
+                    meta.api_key = decrypt(meta.api_key);
                 } catch (err) {
-                    // Ignore decryption error, useful if key was not encrypted yet or invalid
+                    // Ignore decryption error
                 }
             }
             return meta;
@@ -54,8 +54,8 @@ const ai = {
             return {
                 enabled: false,
                 provider: "gemini",
-                apiKey: "",
-                baseUrl: "",
+                api_key: "",
+                base_url: "",
                 model: ""
             };
         }
@@ -70,8 +70,8 @@ const ai = {
         await access.can("settings:update", AI_CONFIG_ID);
 
         const dataToSave = { ...data };
-        if (dataToSave.apiKey) {
-            dataToSave.apiKey = encrypt(dataToSave.apiKey);
+        if (dataToSave.api_key) {
+            dataToSave.api_key = encrypt(dataToSave.api_key);
         }
 
         // Check if setting exists, create if not
@@ -85,9 +85,6 @@ const ai = {
                 meta: dataToSave
             });
         } catch (err) {
-            // Create (using a direct model query or ensuring the setting architecture supports creation)
-            // Since internalSetting.update assumes existence usually, we might need a creates mechanism. 
-            // However, settings are usually pre-seeded. If not, we use the Model directly here for safety.
             const SettingModel = (await import("../models/setting.js")).default;
             await SettingModel.query().insert({
                 id: AI_CONFIG_ID,
@@ -109,43 +106,38 @@ const ai = {
     getModels: async (access, config) => {
         await access.can("settings:list");
 
-        // Use provided config or fetch stored if empty (handled by caller usually, but specific overrides here)
-        // Actually, for "Test/Fetch" we usually use the DRAFT config from UI.
-
         if (config.provider === "gemini") {
-            if (!config.apiKey) throw new Error("API Key is required");
-            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`;
+            if (!config.api_key) throw new Error("API Key is required");
+            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${config.api_key}`;
             try {
                 const res = await fetch(url);
                 if (!res.ok) throw new Error(`Gemini Error: ${res.status} ${res.statusText}`);
                 const data = await res.json();
-                // Gemini returns { models: [ { name: "models/gemini-1.5-flash", ... } ] }
                 return (data.models || [])
-                    .filter(m => m.name.includes("gemini")) // Optional filter
+                    .filter(m => m.name.includes("gemini"))
                     .map(m => ({
-                        id: m.name.replace("models/", ""), // Strip prefix for cleaner usage
+                        id: m.name.replace("models/", ""),
                         name: m.displayName || m.name
                     }))
-                    .sort((a, b) => b.id.localeCompare(a.id)); // Newer versions usually higher
+                    .sort((a, b) => b.id.localeCompare(a.id));
             } catch (err) {
                 throw new Error(`Failed to fetch Gemini models: ${err.message}`);
             }
         } else {
             // Local / OpenAI
-            const baseUrl = config.baseUrl || "http://localhost:11434";
+            const baseUrl = config.base_url || "http://localhost:11434";
             const url = `${baseUrl}/v1/models`;
             try {
                 const headers = {};
-                if (config.apiKey) headers["Authorization"] = `Bearer ${config.apiKey}`;
+                if (config.api_key) headers["Authorization"] = `Bearer ${config.api_key}`;
 
                 const res = await fetch(url, { headers });
                 if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
                 const data = await res.json();
-                // OpenAI/Ollama returns { data: [ { id: "llama3", ... } ] }
                 return (data.data || [])
                     .map(m => ({
                         id: m.id,
-                        name: m.id // Local models often just have ID
+                        name: m.id
                     }))
                     .sort((a, b) => a.id.localeCompare(b.id));
             } catch (err) {

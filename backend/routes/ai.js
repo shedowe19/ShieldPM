@@ -42,9 +42,7 @@ router.put("/config", jwtdecode(), async (req, res, next) => {
  */
 router.post("/models", jwtdecode(), async (req, res, next) => {
     try {
-        console.log("DEBUG /models req.body:", JSON.stringify(req.body, null, 2));
         const payload = await apiValidator(getValidationSchema("/ai/models", "post"), req.body);
-        console.log("DEBUG /models payload:", JSON.stringify(payload, null, 2));
         const result = await internalAi.getModels(res.locals.access, payload);
         res.status(200).send(result);
     } catch (err) {
