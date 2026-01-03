@@ -75,11 +75,6 @@ const ai = {
             dataToSave.api_key = encrypt(dataToSave.api_key);
         }
 
-        // Sanitization: Ensure Local provider doesn't save a Gemini model
-        if (dataToSave.provider === "local" && dataToSave.model && dataToSave.model.includes("gemini")) {
-            dataToSave.model = "gpt-3.5-turbo";
-        }
-
         // Check if setting exists, create if not
         try {
             await internalSetting.get(access, { id: AI_CONFIG_ID });
