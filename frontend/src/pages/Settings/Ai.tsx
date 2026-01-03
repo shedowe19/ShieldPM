@@ -10,235 +10,299 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { getAiConfig, updateAiConfig } from "src/api/backend/ai";
-import { AiConfig } from "src/api/backend/models";
+import type { AiConfig } from "src/api/backend/models";
 import { showObjectSuccess } from "src/notifications";
 import { Loading } from "src/components";
 import { T } from "src/locale";
 
 export default function AiConfigPage() {
-    const [config, setConfig] = useState<AiConfig | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [fetchedModels, setFetchedModels] = useState<{ id: string, name: string }[]>([]);
+	const [config, setConfig] = useState<AiConfig | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [fetchedModels, setFetchedModels] = useState<{ id: string; name: string }[]>([]);
 
-    useEffect(() => {
-        getAiConfig()
-            .then(setConfig)
-            .catch(err => setError(err.message))
-            .finally(() => setIsLoading(false));
-    }, []);
+	useEffect(() => {
+		getAiConfig()
+			.then(setConfig)
+			.catch((err) => setError(err.message))
+			.finally(() => setIsLoading(false));
+	}, []);
 
-    const { formatMessage } = useIntl();
+	const { formatMessage } = useIntl();
 
-    const onSubmit = async (values: AiConfig, { setSubmitting }: any) => {
-        try {
-            const res = await updateAiConfig(values);
-            setConfig(res);
-            showObjectSuccess("setting", "saved");
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
+	const onSubmit = async (values: AiConfig, { setSubmitting }: any) => {
+		try {
+			const res = await updateAiConfig(values);
+			setConfig(res);
+			showObjectSuccess("setting", "saved");
+		} catch (err: any) {
+			setError(err.message);
+		} finally {
+			setSubmitting(false);
+		}
+	};
 
-    if (isLoading) return <Loading noLogo />;
+	if (isLoading) return <Loading noLogo />;
 
-    const initialValues: AiConfig = config || {
-        enabled: false,
-        provider: "gemini",
-        api_key: "",
-        base_url: "",
-        model: ""
-    };
+	const initialValues: AiConfig = config || {
+		enabled: false,
+		provider: "gemini",
+		api_key: "",
+		base_url: "",
+		model: "",
+	};
 
-    return (
-        <Formik initialValues={initialValues} onSubmit={onSubmit}>
-            {({ values, setFieldValue, isSubmitting }) => (
-                <Form>
-                    <Card className="border-t-4 border-indigo-500/50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <IconRobot className="h-6 w-6" />
-                                <T id="ai.title" />
-                            </CardTitle>
-                            <CardDescription>
-                                <T id="ai.description" />
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {error && (
-                                <Alert variant="destructive">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle><T id="notification.error" /></AlertTitle>
-                                    <AlertDescription>{error}</AlertDescription>
-                                </Alert>
-                            )}
+	return (
+		<Formik initialValues={initialValues} onSubmit={onSubmit}>
+			{({ values, setFieldValue, isSubmitting }) => (
+				<Form>
+					<Card className="border-t-4 border-indigo-500/50">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<IconRobot className="h-6 w-6" />
+								<T id="ai.title" />
+							</CardTitle>
+							<CardDescription>
+								<T id="ai.description" />
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							{error && (
+								<Alert variant="destructive">
+									<AlertCircle className="h-4 w-4" />
+									<AlertTitle>
+										<T id="notification.error" />
+									</AlertTitle>
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
+							)}
 
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    checked={values.enabled}
-                                    onCheckedChange={(checked) => setFieldValue("enabled", checked)}
-                                    id="enabled"
-                                />
-                                <Label htmlFor="enabled"><T id="ai.enable" /></Label>
-                            </div>
+							<div className="flex items-center space-x-2">
+								<Switch
+									checked={values.enabled}
+									onCheckedChange={(checked) => setFieldValue("enabled", checked)}
+									id="enabled"
+								/>
+								<Label htmlFor="enabled">
+									<T id="ai.enable" />
+								</Label>
+							</div>
 
-                            <div className="space-y-2">
-                                <Label><T id="ai.provider" /></Label>
-                                <div className="flex gap-4">
-                                    {["gemini", "local"].map((option) => (
-                                        <label
-                                            key={option}
-                                            className={`
+							<div className="space-y-2">
+								<Label>
+									<T id="ai.provider" />
+								</Label>
+								<div className="flex gap-4">
+									{["gemini", "local"].map((option) => (
+										<label
+											key={option}
+											className={`
                                                 relative flex cursor-pointer rounded-lg border bg-card p-4 shadow-sm focus:outline-none 
                                                 ${values.provider === option ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/50"}
                                             `}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="provider"
-                                                value={option}
-                                                className="sr-only"
-                                                checked={values.provider === option}
-                                                onChange={() => {
-                                                    setFieldValue("provider", option);
-                                                    // Set default model based on provider to avoid invalid state
-                                                    setFieldValue("model", option === "gemini" ? "gemini-1.5-flash" : "gpt-3.5-turbo");
-                                                }}
-                                            />
-                                            <span className="capitalize">{option === "gemini" ? "Google Gemini" : "Local LLM / OpenAI"}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
+										>
+											<input
+												type="radio"
+												name="provider"
+												value={option}
+												className="sr-only"
+												checked={values.provider === option}
+												onChange={() => {
+													setFieldValue("provider", option);
+													// Set default model based on provider to avoid invalid state
+													setFieldValue(
+														"model",
+														option === "gemini" ? "gemini-1.5-flash" : "gpt-3.5-turbo",
+													);
+												}}
+											/>
+											<span className="capitalize">
+												{option === "gemini" ? "Google Gemini" : "Local LLM / OpenAI"}
+											</span>
+										</label>
+									))}
+								</div>
+							</div>
 
-                            {values.provider === "gemini" && (
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="api_key"><T id="ai.api_key" /></Label>
-                                        <Field name="api_key" as={Input} type="password" placeholder="AIza..." />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <Label htmlFor="model"><T id="ai.model" /></Label>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                type="button"
-                                                onClick={async () => {
-                                                    if (!values.api_key) { showObjectSuccess("API Key Required", ""); return; }
-                                                    try {
-                                                        // @ts-ignore
-                                                        const models = await import("src/api/backend/ai").then(m => m.getAiModels(values));
-                                                        // @ts-ignore
-                                                        setFetchedModels(models);
-                                                        showObjectSuccess("Models Loaded", "");
-                                                    } catch (e: any) { setError(e.message); }
-                                                }}
-                                            >
-                                                <T id="ai.fetch_models" />
-                                            </Button>
-                                        </div>
-                                        {fetchedModels.length > 0 ? (
-                                            <Field as="select" name="model" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                                                <option value="" disabled>{formatMessage({ id: "frames.select_placeholder" }) || "Select a model"}</option>
-                                                {fetchedModels.map((m: any) => (
-                                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                                ))}
-                                            </Field>
-                                        ) : (
-                                            <Field name="model" as={Input} placeholder={formatMessage({ id: "ai.model.placeholder" })} />
-                                        )}
-                                        <p className="text-xs text-muted-foreground">Default: gemini-1.5-flash</p>
-                                    </div>
-                                </div>
-                            )}
+							{values.provider === "gemini" && (
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="api_key">
+											<T id="ai.api_key" />
+										</Label>
+										<Field name="api_key" as={Input} type="password" placeholder="AIza..." />
+									</div>
+									<div className="space-y-2">
+										<div className="flex justify-between items-center">
+											<Label htmlFor="model">
+												<T id="ai.model" />
+											</Label>
+											<Button
+												variant="outline"
+												size="sm"
+												type="button"
+												onClick={async () => {
+													if (!values.api_key) {
+														showObjectSuccess("API Key Required", "");
+														return;
+													}
+													try {
+														// @ts-expect-error
+														const models = await import("src/api/backend/ai").then((m) =>
+															m.getAiModels(values),
+														);
+														// @ts-expect-error
+														setFetchedModels(models);
+														showObjectSuccess("Models Loaded", "");
+													} catch (e: any) {
+														setError(e.message);
+													}
+												}}
+											>
+												<T id="ai.fetch_models" />
+											</Button>
+										</div>
+										{fetchedModels.length > 0 ? (
+											<Field
+												as="select"
+												name="model"
+												className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+											>
+												<option value="" disabled>
+													{formatMessage({ id: "frames.select_placeholder" }) ||
+														"Select a model"}
+												</option>
+												{fetchedModels.map((m: any) => (
+													<option key={m.id} value={m.id}>
+														{m.name}
+													</option>
+												))}
+											</Field>
+										) : (
+											<Field
+												name="model"
+												as={Input}
+												placeholder={formatMessage({ id: "ai.model.placeholder" })}
+											/>
+										)}
+										<p className="text-xs text-muted-foreground">Default: gemini-1.5-flash</p>
+									</div>
+								</div>
+							)}
 
-                            {values.provider === "local" && (
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="base_url"><T id="ai.base_url" /></Label>
-                                        <Field name="base_url" as={Input} placeholder="http://localhost:11434" />
-                                        <p className="text-xs text-muted-foreground">Ollama: http://localhost:11434 | OpenAI: https://api.openai.com</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="api_key"><T id="ai.api_key" /> (Optional)</Label>
-                                        <Field name="api_key" as={Input} type="password" placeholder="sk-..." />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <Label htmlFor="model"><T id="ai.model" /></Label>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                type="button"
-                                                onClick={async () => {
-                                                    try {
-                                                        // @ts-ignore
-                                                        const models = await import("src/api/backend/ai").then(m => m.getAiModels(values));
-                                                        // @ts-ignore
-                                                        setFetchedModels(models);
-                                                        showObjectSuccess("Models Loaded", "");
-                                                    } catch (e: any) { setError(e.message); }
-                                                }}
-                                            >
-                                                <T id="ai.fetch_models" />
-                                            </Button>
-                                        </div>
+							{values.provider === "local" && (
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="base_url">
+											<T id="ai.base_url" />
+										</Label>
+										<Field name="base_url" as={Input} placeholder="http://localhost:11434" />
+										<p className="text-xs text-muted-foreground">
+											Ollama: http://localhost:11434 | OpenAI: https://api.openai.com
+										</p>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="api_key">
+											<T id="ai.api_key" /> (Optional)
+										</Label>
+										<Field name="api_key" as={Input} type="password" placeholder="sk-..." />
+									</div>
+									<div className="space-y-2">
+										<div className="flex justify-between items-center">
+											<Label htmlFor="model">
+												<T id="ai.model" />
+											</Label>
+											<Button
+												variant="outline"
+												size="sm"
+												type="button"
+												onClick={async () => {
+													try {
+														// @ts-expect-error
+														const models = await import("src/api/backend/ai").then((m) =>
+															m.getAiModels(values),
+														);
+														// @ts-expect-error
+														setFetchedModels(models);
+														showObjectSuccess("Models Loaded", "");
+													} catch (e: any) {
+														setError(e.message);
+													}
+												}}
+											>
+												<T id="ai.fetch_models" />
+											</Button>
+										</div>
 
-                                        {fetchedModels.length > 0 ? (
-                                            <Field as="select" name="model" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                                                <option value="" disabled>{formatMessage({ id: "frames.select_placeholder" }) || "Select a model"}</option>
-                                                {fetchedModels.map((m: any) => (
-                                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                                ))}
-                                            </Field>
-                                        ) : (
-                                            <Field name="model" as={Input} placeholder="llama3" />
-                                        )}
-                                    </div>
+										{fetchedModels.length > 0 ? (
+											<Field
+												as="select"
+												name="model"
+												className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+											>
+												<option value="" disabled>
+													{formatMessage({ id: "frames.select_placeholder" }) ||
+														"Select a model"}
+												</option>
+												{fetchedModels.map((m: any) => (
+													<option key={m.id} value={m.id}>
+														{m.name}
+													</option>
+												))}
+											</Field>
+										) : (
+											<Field name="model" as={Input} placeholder="llama3" />
+										)}
+									</div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="num_ctx"><T id="ai.context_window" /></Label>
-                                        <Field name="num_ctx" as={Input} type="number" placeholder="8192" />
-                                        <p className="text-xs text-muted-foreground">Default: 8192</p>
-                                    </div>
+									<div className="space-y-2">
+										<Label htmlFor="num_ctx">
+											<T id="ai.context_window" />
+										</Label>
+										<Field name="num_ctx" as={Input} type="number" placeholder="8192" />
+										<p className="text-xs text-muted-foreground">Default: 8192</p>
+									</div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="num_batch"><T id="ai.batch_size" /></Label>
-                                        <Field name="num_batch" as={Input} type="number" placeholder="512" />
-                                        <p className="text-xs text-muted-foreground">Default: 512</p>
-                                    </div>
+									<div className="space-y-2">
+										<Label htmlFor="num_batch">
+											<T id="ai.batch_size" />
+										</Label>
+										<Field name="num_batch" as={Input} type="number" placeholder="512" />
+										<p className="text-xs text-muted-foreground">Default: 512</p>
+									</div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="num_thread"><T id="ai.cpu_threads" /></Label>
-                                        <Field name="num_thread" as={Input} type="number" placeholder="4" />
-                                        <p className="text-xs text-muted-foreground">Default: 4</p>
-                                    </div>
+									<div className="space-y-2">
+										<Label htmlFor="num_thread">
+											<T id="ai.cpu_threads" />
+										</Label>
+										<Field name="num_thread" as={Input} type="number" placeholder="4" />
+										<p className="text-xs text-muted-foreground">Default: 4</p>
+									</div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="keep_alive"><T id="ai.keep_alive" /></Label>
-                                        <Field name="keep_alive" as={Input} placeholder="5m" />
-                                        <p className="text-xs text-muted-foreground">Default: 5m (e.g. 5m, 1h, -1)</p>
-                                    </div>
-                                </div>
-                            )}
+									<div className="space-y-2">
+										<Label htmlFor="keep_alive">
+											<T id="ai.keep_alive" />
+										</Label>
+										<Field name="keep_alive" as={Input} placeholder="5m" />
+										<p className="text-xs text-muted-foreground">Default: 5m (e.g. 5m, 1h, -1)</p>
+									</div>
+								</div>
+							)}
 
-                            <div className="flex justify-end pt-4">
-                                <Button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                                >
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    <T id="save" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </Form>
-            )}
-        </Formik>
-    );
+							<div className="flex justify-end pt-4">
+								<Button
+									type="submit"
+									disabled={isSubmitting}
+									className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+								>
+									{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+									<T id="save" />
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</Form>
+			)}
+		</Formik>
+	);
 }

@@ -6,12 +6,12 @@
  * @returns {Promise}
  */
 const up = async (knex) => {
-    // Update the ai-config setting to clear the old system_prompt
-    await knex("setting")
-        .where("id", "ai-config")
-        .update({
-            meta: knex.raw(`json_remove(meta, '$.system_prompt')`)
-        });
+	// Update the ai-config setting to clear the old system_prompt
+	await knex("setting")
+		.where("id", "ai-config")
+		.update({
+			meta: knex.raw(`json_remove(meta, '$.system_prompt')`),
+		});
 };
 
 /**
@@ -21,8 +21,8 @@ const up = async (knex) => {
  * @returns {Promise}
  */
 const down = (knex) => {
-    // No rollback needed - users can re-enter custom prompts if desired
-    return Promise.resolve();
+	// No rollback needed - users can re-enter custom prompts if desired
+	return Promise.resolve();
 };
 
 export { up, down };
