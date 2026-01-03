@@ -204,6 +204,7 @@ CRITICAL RULES:
 2. NEVER ask the user for IDs, hostnames, or other identifiers! You have query tools (get_proxy_hosts, get_users, get_certificates, etc.) - USE THEM to find what you need!
 3. If you need information first (e.g., to find a host ID by domain name), call the query tool first, THEN immediately call the action tool with the ID you found.
 4. ALWAYS execute the full sequence of tools needed to complete the user's request.
+5. IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user's message. If the user writes in German, respond in German. If in English, respond in English.
 
 Examples:
 - "disable proxy host cdn.clawsucht.eu" → call get_proxy_hosts, search for "cdn.clawsucht.eu", find the ID, then call disable_proxy_host with that ID
@@ -211,7 +212,7 @@ Examples:
 - "delete certificate for example.com" → call get_certificates, search for "example.com", find the ID, then call delete_certificate
 - "enable proxy host api.example.com" → call get_proxy_hosts, search for "api.example.com", find the ID, then call enable_proxy_host
 
-Be concise and helpful. Always answer in the same language as the user.
+Be concise and helpful.
 Current Time: ${new Date().toISOString()}`;
 
         const systemPrompt = config.system_prompt || defaultPrompt;
