@@ -216,6 +216,13 @@ CRITICAL RULES:
    - If you are unsure which item matches, ask the user for clarification
 8. BEFORE executing ANY delete operation, tell the user WHICH domain you found and ask for confirmation!
 
+✅ CREATE OPERATIONS - Just do it:
+9. For CREATE commands (create_proxy_host, create_redirection_host, etc.):
+   - DO NOT ask for confirmation - just CREATE it immediately!
+   - If user says "with made-up data" or similar, generate realistic example data yourself
+   - If domain already exists, use a different one (add numbers like example2.com)
+   - After creation, tell the user what you created
+
 Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
 
 PROXY HOSTS:
