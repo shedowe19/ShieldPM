@@ -353,6 +353,24 @@
 			"post": {
 				"$ref": "./paths/users/userID/login/post.json"
 			}
+		},
+		"/ai/config": {
+			"get": {
+				"$ref": "./paths/ai/config.json"
+			},
+			"put": {
+				"$ref": "./paths/ai/config.json"
+			}
+		},
+		"/ai/models": {
+			"post": {
+				"$ref": "./paths/ai/models.json"
+			}
+		},
+		"/ai/chat": {
+			"post": {
+				"$ref": "./paths/ai/chat.json"
+			}
 		}
 	}
 }
