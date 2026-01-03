@@ -1772,7 +1772,9 @@ Current Time: ${new Date().toISOString()}`;
                 stream: false,
                 options: {
                     num_ctx: config.num_ctx || 8192,
-                    num_batch: config.num_batch || 512
+                    num_batch: config.num_batch || 512,
+                    num_thread: config.num_thread || 4,
+                    kv_cache_type: config.kv_cache_type || "f16"
                 },
                 tools: tools.length > 0 ? tools.map(t => ({
                     type: "function",
@@ -1787,7 +1789,9 @@ Current Time: ${new Date().toISOString()}`;
                 // Note: OpenAI spec ignores 'options', but some compatible servers might read it
                 options: {
                     num_ctx: config.num_ctx || 8192,
-                    num_batch: config.num_batch || 512
+                    num_batch: config.num_batch || 512,
+                    num_thread: config.num_thread || 4,
+                    kv_cache_type: config.kv_cache_type || "f16"
                 },
                 tools: tools.length > 0 ? tools.map(t => ({
                     type: "function",
