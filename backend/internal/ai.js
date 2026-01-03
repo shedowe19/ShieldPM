@@ -127,6 +127,18 @@ const ai = {
         } else {
             // Local / OpenAI
             const baseUrl = config.base_url || "http://localhost:11434";
+
+            // Validate URL to prevent SSRF (only allow http/https, reject file:// etc.)
+            let parsedUrl;
+            try {
+                parsedUrl = new URL(baseUrl);
+                if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                    throw new Error("Only HTTP/HTTPS protocols are allowed for base_url");
+                }
+            } catch (err) {
+                throw new Error(`Invalid base_url: ${err.message}`);
+            }
+
             const url = `${baseUrl}/v1/models`;
             try {
                 const headers = {};
