@@ -47,8 +47,8 @@ export default function AiConfigPage() {
     const initialValues: AiConfig = config || {
         enabled: false,
         provider: "gemini",
-        apiKey: "",
-        baseUrl: "",
+        api_key: "",
+        base_url: "",
         model: ""
     };
 
