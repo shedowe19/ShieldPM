@@ -210,6 +210,23 @@ export default function AiConfigPage() {
                                         <Field name="num_batch" as={Input} type="number" placeholder="512" />
                                         <p className="text-xs text-muted-foreground">Default: 512</p>
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="num_thread"><T id="ai.cpu_threads" /></Label>
+                                        <Field name="num_thread" as={Input} type="number" placeholder="4" />
+                                        <p className="text-xs text-muted-foreground">Default: 4</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="kv_cache_type"><T id="ai.kv_cache" /></Label>
+                                        <Field as="select" name="kv_cache_type" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <option value="f16">f16 (Default)</option>
+                                            <option value="f32">f32</option>
+                                            <option value="q8_0">q8_0</option>
+                                            <option value="q4_0">q4_0</option>
+                                        </Field>
+                                        <p className="text-xs text-muted-foreground">Default: f16</p>
+                                    </div>
                                 </div>
                             )}
 

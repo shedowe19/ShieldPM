@@ -51,12 +51,14 @@ Connects to any OpenAI-compatible API (e.g., Ollama, LocalAI, LM Studio) or your
 ### Advanced Settings (Local LLM)
 For local models, performance tuning is crucial. NPMplus allows you to configure:
 
-*   **Context Window (`num_ctx`)**:
-    *   **Default**: `8192`
-    *   Determines how much "memory" the AI has for the current conversation and loaded tools. Increase this (e.g., `16384` or `32768`) if you have many hosts/logs, but ensure your hardware (VRAM) supports it.
-*   **Batch Size (`num_batch`)**:
-    *   **Default**: `512`
-    *   Controls how many tokens are processed in parallel. Lower values save VRAM; higher values might be faster on powerful GPUs.
+*   **Context Window (`num_ctx`)** (Default: `8192`):
+    *   Determines how much "memory" the AI has. Increase for complex tasks if hardware permits.
+*   **Batch Size (`num_batch`)** (Default: `512`):
+    *   Controls parallel token processing.
+*   **CPU Threads (`num_thread`)** (Default: `4`):
+    *   Number of CPU threads to use for inference. Set this to the number of physical cores available for the best performance.
+*   **KV Cache Type (`kv_cache_type`)** (Default: `f16`):
+    *   Precision of the Key-Value cache. `f16` is standard. `q8_0` or `q4_0` use less VRAM but might reduce quality slightly.
 
 ### System Prompt
 You can customize the **System Prompt** to change how the AI behaves. The default prompt is optimized for a helpful "AI Administrator" persona that prioritizes executing tools over chatting.

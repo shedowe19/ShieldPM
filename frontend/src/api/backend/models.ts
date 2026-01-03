@@ -239,6 +239,8 @@ export interface AiConfig {
 	model?: string;
 	num_ctx?: number;
 	num_batch?: number;
+	num_thread?: number;
+	kv_cache_type?: string;
 }
 
 export interface AiChatMessage {

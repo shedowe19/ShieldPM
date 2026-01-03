@@ -49,9 +49,11 @@ const ai = {
                     // Ignore decryption error
                 }
             }
-            // Ensure num_ctx exists
+            // Ensure defaults exist
             if (!meta.num_ctx) meta.num_ctx = 8192;
             if (!meta.num_batch) meta.num_batch = 512;
+            if (!meta.num_thread) meta.num_thread = 4;
+            if (!meta.kv_cache_type) meta.kv_cache_type = "f16";
             return meta;
         } catch (err) {
             // Return default config if not found
@@ -62,7 +64,9 @@ const ai = {
                 base_url: "",
                 model: "",
                 num_ctx: 8192,
-                num_batch: 512
+                num_batch: 512,
+                num_thread: 4,
+                kv_cache_type: "f16"
             };
         }
     },

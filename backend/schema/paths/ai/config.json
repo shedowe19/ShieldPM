@@ -46,6 +46,20 @@
                         "num_batch": {
                             "type": "integer",
                             "default": 512
+                        },
+                        "num_thread": {
+                            "type": "integer",
+                            "default": 4
+                        },
+                        "kv_cache_type": {
+                            "type": "string",
+                            "enum": [
+                                "f16",
+                                "f32",
+                                "q8_0",
+                                "q4_0"
+                            ],
+                            "default": "f16"
                         }
                     }
                 }
