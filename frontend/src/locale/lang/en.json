@@ -40,6 +40,7 @@
 	"ai.api_key": "API Key",
 	"ai.base_url": "Base URL",
 	"ai.configuration": "AI Configuration",
+	"ai.context_window": "Context Window",
 	"ai.description": "Configure the AI Administrator capabilities.",
 	"ai.enable": "Enable AI Agent",
 	"ai.fetch_models": "Fetch Models",

@@ -198,6 +198,12 @@ export default function AiConfigPage() {
                                             <Field name="model" as={Input} placeholder="llama3" />
                                         )}
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="num_ctx"><T id="ai.context_window" /></Label>
+                                        <Field name="num_ctx" as={Input} type="number" placeholder="8192" />
+                                        <p className="text-xs text-muted-foreground">Default: 8192</p>
+                                    </div>
                                 </div>
                             )}
 

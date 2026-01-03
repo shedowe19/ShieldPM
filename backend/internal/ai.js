@@ -1751,6 +1751,10 @@ Current Time: ${new Date().toISOString()}`;
         const payload = {
             model: config.model || "gpt-3.5-turbo",
             messages,
+            // Ollama / Local specific options
+            options: {
+                num_ctx: config.num_ctx || 8192
+            },
             tools: tools.length > 0 ? tools.map(t => ({
                 type: "function",
                 function: t.function

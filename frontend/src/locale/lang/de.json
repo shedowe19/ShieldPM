@@ -40,6 +40,7 @@
 	"ai.api_key": "API-Schlüssel",
 	"ai.base_url": "Basis-URL",
 	"ai.configuration": "KI-Konfiguration",
+	"ai.context_window": "Kontextfenster",
 	"ai.description": "Konfigurieren Sie die Fähigkeiten des KI-Administrators.",
 	"ai.enable": "KI-Agent aktivieren",
 	"ai.fetch_models": "Modelle abrufen",
