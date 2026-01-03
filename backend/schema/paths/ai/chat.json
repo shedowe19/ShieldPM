@@ -37,11 +37,24 @@
                                             },
                                             "content": {
                                                 "type": "string"
+                                            },
+                                            "toolCalls": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object",
+                                                    "additionalProperties": true
+                                                }
+                                            },
+                                            "rawParts": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object",
+                                                    "additionalProperties": true
+                                                }
                                             }
                                         },
                                         "required": [
-                                            "role",
-                                            "content"
+                                            "role"
                                         ]
                                     },
                                     {
