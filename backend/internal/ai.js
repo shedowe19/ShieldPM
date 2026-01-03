@@ -212,24 +212,32 @@ PROXY HOSTS:
 - "disable cdn.ex.com" → get_proxy_hosts, find ID, disable_proxy_host
 - "create proxy app.ex.com to 192.168.1.10:3000" → create_proxy_host
 - "update proxy cdn.ex.com forward to 10.0.0.5:8080" → get_proxy_hosts, find ID, update_proxy_host
+- "delete proxy old.ex.com" → get_proxy_hosts, find ID, delete_proxy_host
 
 REDIRECTION HOSTS:
 - "create redirect from old.ex.com to new.ex.com" → create_redirection_host
+- "update redirect scheme to 302" → get_redirection_hosts, find ID, update_redirection_host
 - "disable redirect old.ex.com" → get_redirection_hosts, find ID, disable_redirection_host
 - "delete redirect" → get_redirection_hosts, find ID, delete_redirection_host
 
 DEAD HOSTS (404):
 - "create 404 host for unused.ex.com" → create_dead_host
+- "update 404 host certificate" → get_dead_hosts, find ID, update_dead_host
 - "disable 404 host" → get_dead_hosts, find ID, disable_dead_host
+- "delete 404 host" → get_dead_hosts, find ID, delete_dead_host
 
 STREAMS (TCP/UDP):
 - "create stream port 3306 to db.local:3306" → create_stream
+- "update stream port 3306 forwarding" → get_streams, find ID, update_stream
 - "disable stream on port 3306" → get_streams, find ID, disable_stream
 - "delete stream port 5432" → get_streams, find ID, delete_stream
 
 CERTIFICATES:
 - "create certificate for app.ex.com" → create_certificate with provider, domain_names
 - "renew certificate ex.com" → get_certificates, find ID, update_certificate
+- "get certificate details for ex.com" → get_certificates, find ID, get_certificate_details
+- "test HTTP challenge for ex.com" → test_http_challenge with domains
+- "list DNS providers" → get_dns_providers
 - "delete certificate" → get_certificates, find ID, delete_certificate
 - "create client cert for admin" → create_client_certificate with common_name, password
 
@@ -238,11 +246,13 @@ ACCESS LISTS:
 - "update access list to add password" → get_access_lists, find ID, update_access_list
 - "delete access list" → get_access_lists, find ID, delete_access_list
 
-USERS:
+USERS & AUTH:
 - "create user john@ex.com" → create_user with name, email, roles, auth
 - "reset password for alice@ex.com" → get_users, find ID, update_user_password
 - "update user permissions" → get_users, find ID, update_user_permissions
 - "delete user bob@ex.com" → get_users, find ID, delete_user
+- "login as user alice@ex.com" → get_users, find ID, login_as_user
+- "create API token for monitoring" → create_api_token with identity
 
 CLOUDFLARE TUNNELS:
 - "create tunnel MyTunnel with token ABC123" → create_cloudflared_tunnel
