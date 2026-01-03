@@ -641,7 +641,7 @@ Time: ${new Date().toISOString()}`;
                                 items: { type: "string" },
                                 description: "List of domain names (e.g. example.com)",
                             },
-                            forward_ip: { type: "string", description: "Internal IP to forward to" },
+                            forward_host: { type: "string", description: "Internal IP or hostname to forward to" },
                             forward_port: { type: "integer", description: "Internal Port to forward to" },
                             locations: {
                                 type: "array",
@@ -697,7 +697,7 @@ Time: ${new Date().toISOString()}`;
                             },
                             meta: { type: "object" },
                         },
-                        required: ["domain_names", "forward_ip", "forward_port"],
+                        required: ["domain_names", "forward_host", "forward_port"],
                     },
                 },
             },
@@ -723,7 +723,7 @@ Time: ${new Date().toISOString()}`;
                         properties: {
                             id: { type: "integer" },
                             domain_names: { type: "array", items: { type: "string" } },
-                            forward_ip: { type: "string" },
+                            forward_host: { type: "string" },
                             forward_port: { type: "integer" },
                             locations: {
                                 type: "array",
@@ -1211,8 +1211,10 @@ Time: ${new Date().toISOString()}`;
                                 hosts.map((h) => ({
                                     id: h.id,
                                     domain_names: h.domain_names,
-                                    forward_ip: h.forward_ip,
+                                    forward_scheme: h.forward_scheme,
+                                    forward_host: h.forward_host,
                                     forward_port: h.forward_port,
+                                    access_list_id: h.access_list_id,
                                     enabled: h.enabled,
                                 })),
                             );
@@ -1344,9 +1346,9 @@ Time: ${new Date().toISOString()}`;
                                 streams.map((s) => ({
                                     id: s.id,
                                     incoming_port: s.incoming_port,
-                                    forward_ip: s.forward_ip,
-                                    forward_port: s.forward_port,
-                                    tcp: s.tcp_forwarding,
+                                    forwarding_host: s.forwarding_host,
+                                    forwarding_port: s.forwarding_port,
+                                    tcp_forwarding: s.tcp_forwarding,
                                     udp: s.udp_forwarding,
                                     enabled: s.enabled,
                                 })),
