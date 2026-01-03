@@ -37,7 +37,7 @@
                     {
                         "$ref": "../../components/error.json"
                     }
-                },
+                ],
                 "required": [
                     "role",
                     "content"
