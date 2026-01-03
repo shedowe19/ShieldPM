@@ -406,7 +406,7 @@ Time: ${new Date().toISOString()}`;
                             },
                             is_disabled: { type: "boolean" },
                         },
-                        required: ["name", "email", "roles"],
+                        required: ["name", "nickname", "email"],
                     },
                 },
             },
