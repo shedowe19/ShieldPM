@@ -1022,9 +1022,9 @@ Current Time: ${new Date().toISOString()}`;
                         properties: { id: { type: "integer" } },
                         required: ["id"]
                     }
-                }
-            }
         ];
+
+        console.log("[AI Chat] Calling LLM:", { provider: config.provider, messageLength: message.length, toolsCount: tools.length });
 
         // 3. Call Provider
         let response;
@@ -1034,8 +1034,11 @@ Current Time: ${new Date().toISOString()}`;
             response = await ai._callLocalLLM(config, systemPrompt, message, history, tools);
         }
 
+        console.log("[AI Chat] LLM Response:", { hasContent: !!response.content, hasToolCalls: !!response.toolCalls, contentLength: response.content?.length || 0 });
+
         // 4. Handle Tool Calls
         if (response.toolCalls && response.toolCalls.length > 0) {
+            console.log("[AI Chat] Executing tools:", response.toolCalls.map(tc => tc.name));
             const toolResults = [];
             for (const call of response.toolCalls) {
                 try {
@@ -1587,6 +1590,8 @@ Current Time: ${new Date().toISOString()}`;
                 }
             }
 
+            console.log("[AI Chat] Tool results:", toolResults.map(tr => ({ name: tr.name, resultLength: tr.result?.length || 0 })));
+
             // Call LLM again with results
             if (config.provider === "gemini") {
                 return await ai._callGeminiWithResults(config, systemPrompt, message, history, response, toolResults, tools);
@@ -1594,6 +1599,8 @@ Current Time: ${new Date().toISOString()}`;
                 return await ai._callLocalWithResults(config, systemPrompt, message, history, response, toolResults);
             }
         }
+
+        console.log("[AI Chat] Returning response:", { role: "assistant", contentLength: response.content?.length || 0 });
 
         return {
             role: "assistant",
