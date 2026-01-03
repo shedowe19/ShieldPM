@@ -1972,14 +1972,28 @@ Current Time: ${new Date().toISOString()}`;
             {
                 role: "assistant",
                 content: previousResponse.content,
-                tool_calls: previousResponse.toolCalls.map((tc) => ({
-                    id: tc.id,
-                    type: "function",
-                    function: {
-                        name: tc.name, // Local/OpenAI usually needs json string args
-                        arguments: JSON.stringify(tc.args),
-                    },
-                })),
+                tool_calls: previousResponse.toolCalls.map((tc) => {
+                    // Ollama Native expects arguments as JSON object, not string
+                    if (isOllamaNative) {
+                        return {
+                            id: tc.id,
+                            type: "function",
+                            function: {
+                                name: tc.name,
+                                arguments: tc.args, // Already an object
+                            },
+                        };
+                    }
+                    // OpenAI Compatible expects JSON string
+                    return {
+                        id: tc.id,
+                        type: "function",
+                        function: {
+                            name: tc.name,
+                            arguments: JSON.stringify(tc.args),
+                        },
+                    };
+                }),
             },
             // Tool Outputs
             ...toolResults.map((tr, idx) => ({
