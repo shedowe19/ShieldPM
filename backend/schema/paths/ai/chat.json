@@ -60,7 +60,7 @@
                                     {
                                         "$ref": "../../components/error.json"
                                     }
-                                }
+                                ]
                             ]
                         }
                     }
