@@ -71,6 +71,36 @@ const ai = {
     },
 
     /**
+     * Get AI Config for chat (internal, no admin permission required)
+     * This is used by the chat function so all authenticated users can chat
+     */
+    _getConfigForChat: async () => {
+        try {
+            const SettingModel = (await import("../models/setting.js")).default;
+            const row = await SettingModel.query().where("id", AI_CONFIG_ID).first();
+            if (!row) {
+                return { enabled: false };
+            }
+            const meta = row.meta;
+            if (meta.api_key) {
+                try {
+                    meta.api_key = decrypt(meta.api_key);
+                } catch (err) {
+                    // Ignore decryption error
+                }
+            }
+            // Ensure defaults exist
+            if (!meta.num_ctx) meta.num_ctx = 8192;
+            if (!meta.num_batch) meta.num_batch = 512;
+            if (!meta.num_thread) meta.num_thread = 4;
+            if (!meta.keep_alive) meta.keep_alive = "5m";
+            return meta;
+        } catch (err) {
+            return { enabled: false };
+        }
+    },
+
+    /**
      * Update AI Configuration
      * @param {Access} access
      * @param {Object} data
@@ -179,8 +209,8 @@ const ai = {
      * @param {Array} history
      */
     chat: async (access, message, history = []) => {
-        // 1. Get Config
-        const config = await ai.getConfig(access);
+        // 1. Get Config (using internal method that doesn't require admin permission)
+        const config = await ai._getConfigForChat();
         if (!config.enabled) {
             throw new Error("AI Agent is disabled.");
         }
