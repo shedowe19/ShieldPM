@@ -688,14 +688,6 @@ Time: ${new Date().toISOString()}`;
                             maintenance_end: { type: "string", description: "ISO 8601 Datetime end" },
                             maintenance_reason: { type: "string", description: "Reason displayed to user" },
                             advanced_config: { type: "string" },
-                            request_ssl: {
-                                type: "boolean",
-                                description: "Set to true to Request a Let's Encrypt SSL Certificate",
-                            },
-                            email: {
-                                type: "string",
-                                description: "Email for Let's Encrypt, required if request_ssl is true",
-                            },
                             meta: { type: "object" },
                         },
                         required: ["domain_names", "forward_host", "forward_port"],
