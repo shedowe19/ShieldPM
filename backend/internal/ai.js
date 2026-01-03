@@ -1589,7 +1589,7 @@ Current Time: ${new Date().toISOString()}`;
 
             // Call LLM again with results
             if (config.provider === "gemini") {
-                return await ai._callGeminiWithResults(config, systemPrompt, message, history, response, toolResults);
+                return await ai._callGeminiWithResults(config, systemPrompt, message, history, response, toolResults, tools);
             } else {
                 return await ai._callLocalWithResults(config, systemPrompt, message, history, response, toolResults);
             }
@@ -1667,9 +1667,18 @@ Current Time: ${new Date().toISOString()}`;
         return { content: textPart };
     },
 
-    _callGeminiWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
+    _callGeminiWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults, tools) => {
         if (!config.api_key) throw new Error("Gemini API Key is missing");
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || "gemini-1.5-flash"}:generateContent?key=${config.api_key}`;
+
+        // Map Tools to Gemini Format (same as _callGemini)
+        const geminiTools = tools.length > 0 ? [{
+            function_declarations: tools.map(t => ({
+                name: t.function.name,
+                description: t.function.description,
+                parameters: t.function.parameters
+            }))
+        }] : undefined;
 
         // Construct the conversation flow for tool response
         const contents = [
@@ -1703,14 +1712,7 @@ Current Time: ${new Date().toISOString()}`;
         const payload = {
             contents,
             system_instruction: { parts: [{ text: systemPrompt }] },
-            // Don't need tools def again in follow-up usually, but good practice to keep context
-            tools: [{
-                function_declarations: [{
-                    name: "get_proxy_hosts",
-                    description: "Get a list of all Proxy Hosts",
-                    parameters: { type: "object", properties: {} }
-                }]
-            }]
+            tools: geminiTools
         };
 
         const res = await fetch(url, {
