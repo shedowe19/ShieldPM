@@ -1935,9 +1935,28 @@ Time: ${new Date().toISOString()}`;
             contentLength: response.content?.length || 0,
         });
 
+        // HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
+        let finalContent = response.content || "";
+        const actionWords = [
+            // German
+            /gelöscht/i, /erstellt/i, /aktiviert/i, /deaktiviert/i, /aktualisiert/i,
+            // English
+            /deleted/i, /created/i, /enabled/i, /disabled/i, /updated/i,
+            /removed/i, /added/i,
+        ];
+        const toolsExecuted = response.toolCalls && response.toolCalls.length > 0;
+
+        if (!toolsExecuted && finalContent) {
+            const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
+            if (claimsAction) {
+                console.log("[AI Chat] WARNING: AI claims action but no tool was executed!");
+                finalContent = `⚠️ WARNUNG: Die KI behauptet eine Aktion durchgeführt zu haben, aber es wurde kein Tool ausgeführt. Bitte manuell überprüfen!\n\n---\n\n${finalContent}`;
+            }
+        }
+
         return {
             role: "assistant",
-            content: response.content,
+            content: finalContent,
         };
     },
 
