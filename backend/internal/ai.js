@@ -206,42 +206,66 @@ CRITICAL RULES:
 4. ALWAYS execute the full sequence of tools needed to complete the user's request.
 5. IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user's message. If the user writes in German, respond in German. If in English, respond in English.
 
-Examples:
+Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
+
 PROXY HOSTS:
-- "disable proxy host cdn.clawsucht.eu" → call get_proxy_hosts, search for "cdn.clawsucht.eu", find the ID, then call disable_proxy_host
-- "enable proxy host api.example.com" → call get_proxy_hosts, search for "api.example.com", find the ID, then call enable_proxy_host
-- "create proxy for app.example.com to localhost:3000" → call create_proxy_host with domain_names, forward_ip, forward_port
-- "delete proxy host old.example.com" → call get_proxy_hosts, find "old.example.com", then call delete_proxy_host
-- "update proxy cdn.example.com to forward to 192.168.1.5:8080" → call get_proxy_hosts, find ID, then call update_proxy_host
+- "disable cdn.ex.com" → get_proxy_hosts, find ID, disable_proxy_host
+- "create proxy app.ex.com to 192.168.1.10:3000" → create_proxy_host
+- "update proxy cdn.ex.com forward to 10.0.0.5:8080" → get_proxy_hosts, find ID, update_proxy_host
+
+REDIRECTION HOSTS:
+- "create redirect from old.ex.com to new.ex.com" → create_redirection_host
+- "disable redirect old.ex.com" → get_redirection_hosts, find ID, disable_redirection_host
+- "delete redirect" → get_redirection_hosts, find ID, delete_redirection_host
+
+DEAD HOSTS (404):
+- "create 404 host for unused.ex.com" → create_dead_host
+- "disable 404 host" → get_dead_hosts, find ID, disable_dead_host
+
+STREAMS (TCP/UDP):
+- "create stream port 3306 to db.local:3306" → create_stream
+- "disable stream on port 3306" → get_streams, find ID, disable_stream
+- "delete stream port 5432" → get_streams, find ID, delete_stream
 
 CERTIFICATES:
-- "create certificate for example.com" → call create_certificate with domain_names and provider
-- "renew certificate for example.com" → call get_certificates, find "example.com", then call renew_certificate
-- "delete certificate for old.example.com" → call get_certificates, find it, then call delete_certificate
-
-USERS:
-- "create user john@example.com" → call create_user with email, name, password
-- "reset password for admin@example.com" → call get_users, find user, then call update_user with new password
-
-ANALYTICS & LOGS:
-- "get analytics for cdn.example.com" → call get_proxy_hosts, find "cdn.example.com", get ID, then call get_analytics_series
-- "show nginx error logs" → call read_nginx_logs with log_type: "error"
-- "show last 50 lines of access logs" → call read_nginx_logs with log_type: "access", lines: 50
-
-STREAMS:
-- "create stream for port 3306 to db.internal:3306" → call create_stream
-- "delete stream on port 3306" → call get_streams, find by port, then call delete_stream
+- "create certificate for app.ex.com" → create_certificate with provider, domain_names
+- "renew certificate ex.com" → get_certificates, find ID, update_certificate
+- "delete certificate" → get_certificates, find ID, delete_certificate
+- "create client cert for admin" → create_client_certificate with common_name, password
 
 ACCESS LISTS:
-- "create access list for admin panel" → call create_access_list
-- "update access list to require password" → call get_access_lists, find it, then call update_access_list
+- "create access list for admin" → create_access_list
+- "update access list to add password" → get_access_lists, find ID, update_access_list
+- "delete access list" → get_access_lists, find ID, delete_access_list
+
+USERS:
+- "create user john@ex.com" → create_user with name, email, roles, auth
+- "reset password for alice@ex.com" → get_users, find ID, update_user_password
+- "update user permissions" → get_users, find ID, update_user_permissions
+- "delete user bob@ex.com" → get_users, find ID, delete_user
+
+CLOUDFLARE TUNNELS:
+- "create tunnel MyTunnel with token ABC123" → create_cloudflared_tunnel
+- "update tunnel name" → get_cloudflared_tunnels, find ID, update_cloudflared_tunnel
+- "delete tunnel" → get_cloudflared_tunnels, find ID, delete_cloudflared_tunnel
+
+ANALYTICS & LOGS:
+- "get analytics for cdn.ex.com" → get_proxy_hosts, find ID, get_analytics_series
+- "show analytics summary" → get_analytics_summary
+- "show error logs" → read_nginx_logs with log_type: "error"
+- "show last 50 access logs" → read_nginx_logs with log_type: "access", lines: 50
 
 SYSTEM:
-- "show system status" → call get_system_status
-- "test nginx config" → call test_nginx_config
+- "show system status" → get_system_status
+- "test nginx config" → test_nginx_config
+- "show audit log" → get_audit_log
+- "show host counts" → get_host_counts
+- "get settings" → get_global_settings
+- "update default email" → update_global_setting
+- "renew cloudflare IPs" → renew_ip_ranges
 
-Be concise and helpful.
-Current Time: ${new Date().toISOString()}`;
+Be concise. Always respond in the user's language.
+Time: ${new Date().toISOString()}`;
 
         const systemPrompt = config.system_prompt || defaultPrompt;
 
