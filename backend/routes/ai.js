@@ -57,11 +57,14 @@ router.post("/models", jwtdecode(), async (req, res, next) => {
  */
 router.post("/chat", jwtdecode(), async (req, res, next) => {
     try {
+        console.log("AI Chat request received:", { message: req.body.message, historyLength: req.body.history?.length || 0 });
         const payload = await apiValidator(getValidationSchema("/ai/chat", "post"), req.body);
         const { message, history } = payload;
         const result = await internalAi.chat(res.locals.access, message, history);
+        console.log("AI Chat response:", result);
         res.status(200).send(result);
     } catch (err) {
+        console.error("AI Chat error:", err);
         next(err);
     }
 });

@@ -35,10 +35,13 @@ export function AiChat() {
             // Filter history to exclude failed/loading states if any, 
             // but here we just pass the valid history
             const history = messages;
+            console.log("Sending chat request:", { message: userMsg.content, historyLength: history.length });
 
             const response = await sendAiChat(userMsg.content, history);
+            console.log("Received chat response:", response);
             setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: response.content }]);
         } catch (err: any) {
+            console.error("Chat error:", err);
             setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
         } finally {
             setLoading(false);
