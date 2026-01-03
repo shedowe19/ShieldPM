@@ -128,23 +128,28 @@ const ai = {
             // Local / OpenAI
             const baseUrl = config.base_url || "http://localhost:11434";
 
-            // Validate URL to prevent SSRF (only allow http/https, reject file:// etc.)
-            let parsedUrl;
+            let targetUrl;
             try {
-                parsedUrl = new URL(baseUrl);
-                if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                // Parse and validate base URL
+                const parsedBase = new URL(baseUrl);
+
+                // Security check: Only allow HTTP/HTTPS
+                if (!['http:', 'https:'].includes(parsedBase.protocol)) {
                     throw new Error("Only HTTP/HTTPS protocols are allowed for base_url");
                 }
+
+                // Safely construct the final URL using URL constructor
+                // This handles slash consistency and prevents some path traversal issues
+                targetUrl = new URL("v1/models", parsedBase);
             } catch (err) {
                 throw new Error(`Invalid base_url: ${err.message}`);
             }
 
-            const url = `${baseUrl}/v1/models`;
             try {
                 const headers = {};
                 if (config.api_key) headers["Authorization"] = `Bearer ${config.api_key}`;
 
-                const res = await fetch(url, { headers });
+                const res = await fetch(targetUrl.toString(), { headers });
                 if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
                 const data = await res.json();
                 return (data.data || [])
