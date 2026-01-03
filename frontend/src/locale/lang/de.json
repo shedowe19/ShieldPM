@@ -52,6 +52,8 @@
 	"ai.provider": "Anbieter",
 	"ai.system_prompt": "System-Prompt",
 	"ai.title": "KI-Agent",
+	"ai.chat.welcome": "Wie kann ich Ihnen heute bei der Verwaltung Ihrer Proxy-Hosts helfen?",
+	"ai.chat.placeholder": "Fragen Sie die KI, um Hosts aufzulisten, Logs zu prüfen...",
 	"allowWebsocketUpgrade": "Websocket-Upgrade erlauben",
 	"analytics.bandwidth-live": "Bandbreite (Live)",
 	"analytics.current-throughput": "Aktueller Durchsatz",

@@ -9,7 +9,7 @@ import { AiMessage } from "./AiMessage";
 import type { AiChatMessage } from "src/api/backend/models";
 import { sendAiChat } from "src/api/backend/ai";
 import { cn } from "src/lib/utils";
-import { T } from "src/locale";
+import { T, useIntl } from "src/locale";
 
 export function AiChat() {
 	const [open, setOpen] = useState(false);
@@ -17,6 +17,7 @@ export function AiChat() {
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const intl = useIntl();
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Scroll should trigger on new messages
 	useEffect(() => {
@@ -90,7 +91,7 @@ export function AiChat() {
 					{messages.length === 0 && (
 						<div className="h-full flex flex-col items-center justify-center text-muted-foreground text-center p-4">
 							<IconRobot className="h-12 w-12 mb-4 opacity-20" />
-							<p>How can I help you manage your proxy hosts today?</p>
+							<p><T id="ai.chat.welcome" /></p>
 						</div>
 					)}
 					{messages.map((m: AiChatMessage, i: number) => (
@@ -110,7 +111,7 @@ export function AiChat() {
 						value={input}
 						onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
 						onKeyDown={handleKeyDown}
-						placeholder="Ask AI to list hosts, check logs..."
+						placeholder={intl.formatMessage({ id: "ai.chat.placeholder" })}
 						disabled={loading}
 						autoFocus
 					/>

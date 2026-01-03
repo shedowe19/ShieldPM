@@ -52,6 +52,8 @@
 	"ai.provider": "Provider",
 	"ai.system_prompt": "System Prompt",
 	"ai.title": "AI Agent",
+	"ai.chat.welcome": "How can I help you manage your proxy hosts today?",
+	"ai.chat.placeholder": "Ask AI to list hosts, check logs...",
 	"allowWebsocketUpgrade": "Allow Websocket Upgrade",
 	"analytics.bandwidth-live": "Bandwidth (Live)",
 	"analytics.current-throughput": "Current Throughput",
