@@ -49,18 +49,24 @@ Connects to any OpenAI-compatible API (e.g., Ollama, LocalAI, LM Studio) or your
     *   *Tip*: Use the **"Fetch Models"** button to list available models from your server.
 
 ### Advanced Settings (Local LLM)
-For local models, performance tuning is crucial. NPMplus allows you to configure:
+**These settings are designed specifically for Ollama and may not work with OpenAI-compatible endpoints.**
+
+When using Ollama (port 11434), NPMplus automatically detects the native API and applies these performance tuning options:
 
 *   **Context Window (`num_ctx`)** (Default: `8192`):
     *   Determines how much "memory" the AI has. Increase for complex tasks if hardware permits.
+    *   **Ollama only** - ignored by OpenAI-compatible servers.
 *   **Batch Size (`num_batch`)** (Default: `512`):
     *   Controls parallel token processing.
+    *   **Ollama only** - ignored by OpenAI-compatible servers.
 *   **CPU Threads (`num_thread`)** (Default: `4`):
     *   Number of CPU threads to use for inference.
+    *   **Ollama only** - ignored by OpenAI-compatible servers.
 *   **Keep Alive (`keep_alive`)** (Default: `5m`):
     *   Controls how long the model stays loaded in VRAM after a request.
     *   **Values**: `5m` (5 minutes), `1h` (1 hour), `-1` (Indefinitely).
-    *   **Impact**: Setting this allows **Context Caching** behavior in Ollama, speeding up subsequent requests significantly.
+    *   **Impact**: Enables **Context Caching** in Ollama, speeding up subsequent requests significantly.
+    *   **Ollama only** - ignored by OpenAI-compatible servers.
 
 ### System Prompt
 You can customize the **System Prompt** to change how the AI behaves. The default prompt is optimized for a helpful "AI Administrator" persona that prioritizes executing tools over chatting.
