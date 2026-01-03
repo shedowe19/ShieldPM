@@ -1659,7 +1659,8 @@ Current Time: ${new Date().toISOString()}`;
                 toolCalls: [{
                     name: functionCallPart.functionCall.name,
                     args: functionCallPart.functionCall.args
-                }]
+                }],
+                rawParts: parts
             };
         }
 
@@ -1680,7 +1681,8 @@ Current Time: ${new Date().toISOString()}`;
             { role: "user", parts: [{ text: message }] },
             // The model's call
             {
-                role: "model", parts: previousResponse.toolCalls.map(tc => ({
+                role: "model",
+                parts: previousResponse.rawParts || previousResponse.toolCalls.map(tc => ({
                     functionCall: {
                         name: tc.name,
                         args: tc.args
