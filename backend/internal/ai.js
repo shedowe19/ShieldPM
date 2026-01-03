@@ -1315,8 +1315,16 @@ Time: ${new Date().toISOString()}`;
                             break;
                         }
                         case "delete_proxy_host": {
-                            await internalProxyHost.delete(access, { id: call.args.id });
-                            result = `Deleted Proxy Host ID: ${call.args.id}`;
+                            const deletedId = call.args.id;
+                            await internalProxyHost.delete(access, { id: deletedId });
+                            // Auto-verify: Check if host is really gone
+                            const remainingHosts = await internalProxyHost.getAll(access);
+                            const stillExists = remainingHosts.some((h) => h.id === deletedId);
+                            if (stillExists) {
+                                result = `ERROR: Delete failed! Proxy Host ID ${deletedId} still exists!`;
+                            } else {
+                                result = `Deleted and VERIFIED: Proxy Host ID ${deletedId} no longer exists.`;
+                            }
                             break;
                         }
                         case "enable_proxy_host": {
@@ -1367,8 +1375,16 @@ Time: ${new Date().toISOString()}`;
                             break;
                         }
                         case "delete_redirection_host": {
-                            await internalRedirectionHost.delete(access, { id: call.args.id });
-                            result = `Deleted Redirection Host ID: ${call.args.id}`;
+                            const deletedId = call.args.id;
+                            await internalRedirectionHost.delete(access, { id: deletedId });
+                            // Auto-verify
+                            const remainingRedir = await internalRedirectionHost.getAll(access);
+                            const stillExistsRedir = remainingRedir.some((h) => h.id === deletedId);
+                            if (stillExistsRedir) {
+                                result = `ERROR: Delete failed! Redirection Host ID ${deletedId} still exists!`;
+                            } else {
+                                result = `Deleted and VERIFIED: Redirection Host ID ${deletedId} no longer exists.`;
+                            }
                             break;
                         }
                         // Dead Hosts
@@ -1400,8 +1416,16 @@ Time: ${new Date().toISOString()}`;
                             break;
                         }
                         case "delete_dead_host": {
-                            await internalDeadHost.delete(access, { id: call.args.id });
-                            result = `Deleted 404 Host ID: ${call.args.id}`;
+                            const deletedId = call.args.id;
+                            await internalDeadHost.delete(access, { id: deletedId });
+                            // Auto-verify
+                            const remainingDead = await internalDeadHost.getAll(access);
+                            const stillExistsDead = remainingDead.some((h) => h.id === deletedId);
+                            if (stillExistsDead) {
+                                result = `ERROR: Delete failed! 404 Host ID ${deletedId} still exists!`;
+                            } else {
+                                result = `Deleted and VERIFIED: 404 Host ID ${deletedId} no longer exists.`;
+                            }
                             break;
                         }
                         // Streams
@@ -1430,8 +1454,16 @@ Time: ${new Date().toISOString()}`;
                             break;
                         }
                         case "delete_stream": {
-                            await internalStream.delete(access, { id: call.args.id });
-                            result = `Deleted Stream ID: ${call.args.id}`;
+                            const deletedId = call.args.id;
+                            await internalStream.delete(access, { id: deletedId });
+                            // Auto-verify
+                            const remainingStreams = await internalStream.getAll(access);
+                            const stillExistsStream = remainingStreams.some((s) => s.id === deletedId);
+                            if (stillExistsStream) {
+                                result = `ERROR: Delete failed! Stream ID ${deletedId} still exists!`;
+                            } else {
+                                result = `Deleted and VERIFIED: Stream ID ${deletedId} no longer exists.`;
+                            }
                             break;
                         }
                         // Global Settings
