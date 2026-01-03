@@ -1852,8 +1852,10 @@ Current Time: ${new Date().toISOString()}`;
 
         if (isOllamaNative) {
             // Ollama Native Format
+            if (!config.model) throw new Error("No Model selected. Please configure a Model in Settings -> AI Agent");
+
             payload = {
-                model: config.model || "gpt-3.5-turbo",
+                model: config.model,
                 messages,
                 stream: false,
                 keep_alive: config.keep_alive || "5m",
@@ -1872,8 +1874,10 @@ Current Time: ${new Date().toISOString()}`;
             };
         } else {
             // OpenAI Compatible Format
+            if (!config.model) throw new Error("No Model selected. Please configure a Model in Settings -> AI Agent");
+
             payload = {
-                model: config.model || "gpt-3.5-turbo",
+                model: config.model,
                 messages,
                 // Note: OpenAI spec ignores 'options', but some compatible servers might read it
                 keep_alive: config.keep_alive || "5m", // Try sending top-level for compat
