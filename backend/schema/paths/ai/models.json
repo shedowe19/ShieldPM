@@ -1,0 +1,94 @@
+{
+    "post": {
+        "tags": [
+            "AI"
+        ],
+        "summary": "Fetch available models from the provider",
+        "description": "Connects to the AI provider using provided credentials and returns a list of available models",
+        "operationId": "getAiModels",
+        "requestBody": {
+            "required": true,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "provider": {
+                                "type": "string",
+                                "enum": [
+                                    "gemini",
+                                    "local"
+                                ],
+                                "default": "gemini"
+                            },
+                            "apiKey": {
+                                "type": "string"
+                            },
+                            "baseUrl": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "provider"
+                        ]
+                    },
+                    "example": {
+                        "provider": "gemini",
+                        "apiKey": "AIza..."
+                    }
+                }
+            }
+        },
+        "responses": {
+            "200": {
+                "description": "List of models",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "id"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "400": {
+                "description": "Bad Request",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            },
+            "401": {
+                "description": "Unauthorized",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/Error"
+                        }
+                    }
+                }
+            }
+        },
+        "security": [
+            {
+                "jwt": []
+            }
+        ]
+    }
+}

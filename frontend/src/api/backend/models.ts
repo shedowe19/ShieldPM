@@ -230,3 +230,21 @@ export interface CloudflaredTunnel {
 	meta: Record<string, any>;
 	owner?: User;
 }
+
+export interface AiConfig {
+	enabled: boolean;
+	provider: "gemini" | "local";
+	apiKey?: string;
+	baseUrl?: string;
+	model?: string;
+}
+
+export interface AiChatMessage {
+	role: "user" | "assistant" | "model";
+	content: string;
+}
+
+export interface AiChatResponse {
+	role: "assistant";
+	content: string;
+}

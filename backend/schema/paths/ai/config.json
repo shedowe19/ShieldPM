@@ -1,0 +1,33 @@
+{
+    "description": "Configuration usage for the AI Agent",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "enabled",
+        "provider"
+    ],
+    "properties": {
+        "enabled": {
+            "type": "boolean"
+        },
+        "provider": {
+            "type": "string",
+            "enum": [
+                "gemini",
+                "local"
+            ]
+        },
+        "apiKey": {
+            "type": "string"
+        },
+        "baseUrl": {
+            "type": "string"
+        },
+        "model": {
+            "type": "string"
+        },
+        "system_prompt": {
+            "type": "string"
+        }
+    }
+}

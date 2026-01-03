@@ -42,6 +42,7 @@
 *   **[Advanced Analytics](Analytics)**: Real-time traffic insights and status code breakdown.
 *   **[Cloudflare Tunnels](Cloudflared-Tunnels)**: Native support for exposing services via Cloudflare Zero Trust.
 *   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, Streams, and custom configs.
+*   **[AI Agent (Administrator)](AI-Agent)**: Configuring and using the AI Co-Pilot.
 *   **[Architecture & Internals](Architecture)**: Data flow, file structure, and internal CLI tools.
 *   **[API Documentation](API-Docs)**: Developer reference for the REST API.
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).

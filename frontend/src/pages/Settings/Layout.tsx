@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { T } from "src/locale";
 import DefaultSite from "./DefaultSite";
+import { IconSettings, IconRobot } from "@tabler/icons-react";
+import AiConfigPage from "./Ai";
 
 export default function Layout() {
-	// Taken from https://preview.tabler.io/settings.html
-	// Refer to that when updating this content
+	const [activeTab, setActiveTab] = useState<"default-site" | "ai">("default-site");
 
 	return (
 		<div className="container mx-auto py-6">
@@ -13,17 +15,25 @@ export default function Layout() {
 						<h2 className="text-2xl font-bold tracking-tight mb-4 hidden lg:block">
 							<T id="settings" />
 						</h2>
-						<a
-							href="#"
-							className="justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2"
-							onClick={(e) => e.preventDefault()}
+						<button
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "default-site" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab("default-site")}
 						>
+							<IconSettings className="mr-2 h-4 w-4" />
 							<T id="settings.default-site" />
-						</a>
+						</button>
+						<button
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "ai" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab("ai")}
+						>
+							<IconRobot className="mr-2 h-4 w-4" />
+							AI Agent
+						</button>
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
-					<DefaultSite />
+					{activeTab === "default-site" && <DefaultSite />}
+					{activeTab === "ai" && <AiConfigPage />}
 				</div>
 			</div>
 		</div>

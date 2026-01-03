@@ -29,6 +29,7 @@ import {
 	STREAMS,
 	VIEW,
 } from "src/modules/Permissions";
+import { AiChat } from "src/components/AiChat/AiChat";
 
 interface MenuItem {
 	label: string;
@@ -194,6 +195,9 @@ export function Sidebar() {
 									{menuItems.map((item, index) => (
 										<SidebarItem key={index} item={item} />
 									))}
+									<div className="pt-4 border-t border-slate-800 mt-2">
+										<AiChat />
+									</div>
 								</nav>
 							</ScrollArea>
 						</div>
@@ -220,6 +224,9 @@ export function Sidebar() {
 						{menuItems.map((item, index) => (
 							<SidebarItem key={index} item={item} />
 						))}
+						<div className="pt-4 border-t border-slate-800 mt-2">
+							<AiChat />
+						</div>
 					</nav>
 				</ScrollArea>
 			</div>
