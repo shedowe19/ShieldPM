@@ -20,6 +20,7 @@ export function AiChat() {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
+        // biome-ignore lint/correctness/useExhaustiveDependencies: Scroll should trigger on new messages
     }, [messages, loading]);
 
     const handleSend = async () => {

@@ -16,6 +16,7 @@ export default function Layout() {
 							<T id="settings" />
 						</h2>
 						<button
+							type="button"
 							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "default-site" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
 							onClick={() => setActiveTab("default-site")}
 						>
@@ -23,6 +24,7 @@ export default function Layout() {
 							<T id="settings.default-site" />
 						</button>
 						<button
+							type="button"
 							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "ai" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
 							onClick={() => setActiveTab("ai")}
 						>

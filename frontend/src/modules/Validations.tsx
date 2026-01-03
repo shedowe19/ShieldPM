@@ -31,7 +31,7 @@ const validateNumber = (min = -1, max = -1) => {
 		if (min > -1 && (typeof value === "undefined" || value === "" || value === null)) {
 			return intl.formatMessage({ id: "error.required" });
 		}
-		if (min > -1 && isNaN(int)) {
+		if (min > -1 && Number.isNaN(int)) {
 			return intl.formatMessage({ id: "error.required" });
 		}
 		if (min > -1 && int < min) {
