@@ -24,8 +24,8 @@ const up = async (knex) => {
             meta: {
                 enabled: false,
                 provider: "gemini",
-                apiKey: "",
-                baseUrl: "",
+                api_key: "",
+                base_url: "",
                 model: "",
                 system_prompt: "You are the AI Administrator for NPMplus. You have access to tools to control the server. Always use tools when actions are requested. Be concise. IMPORTANT: Always answer in the same language as the user.",
             },
