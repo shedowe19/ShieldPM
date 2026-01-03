@@ -1950,7 +1950,7 @@ Time: ${new Date().toISOString()}`;
             const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
             if (claimsAction) {
                 console.log("[AI Chat] WARNING: AI claims action but no tool was executed!");
-                finalContent = `⚠️ WARNUNG: Die KI behauptet eine Aktion durchgeführt zu haben, aber es wurde kein Tool ausgeführt. Bitte manuell überprüfen!\n\n---\n\n${finalContent}`;
+                finalContent = `⚠️ WARNING: The AI claims to have performed an action, but no tool was executed. Please verify manually!\n\n---\n\n${finalContent}`;
             }
         }
 
