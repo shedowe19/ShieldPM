@@ -238,7 +238,10 @@ STREAMS (TCP/UDP):
 
 CERTIFICATES:
 - "create certificate for app.ex.com" → create_certificate with provider, domain_names
-- "renew certificate ex.com" → get_certificates, find ID, update_certificate
+- "renew certificate ex.com" → get_certificates, find ID, renew_certificate
+- "update certificate nickname" → get_certificates, find ID, update_certificate
+- "upload custom certificate" → upload_certificate with certificate, certificate_key
+- "validate certificate files" → validate_certificate with certificate, certificate_key
 - "get certificate details for ex.com" → get_certificates, find ID, get_certificate_details
 - "test HTTP challenge for ex.com" → test_http_challenge with domains
 - "list DNS providers" → get_dns_providers
@@ -252,6 +255,7 @@ ACCESS LISTS:
 
 USERS & AUTH:
 - "create user john@ex.com" → create_user with name, email, roles, auth
+- "update user email" → get_users, find ID, update_user
 - "reset password for alice@ex.com" → get_users, find ID, update_user_password
 - "update user permissions" → get_users, find ID, update_user_permissions
 - "delete user bob@ex.com" → get_users, find ID, delete_user
@@ -272,6 +276,7 @@ ANALYTICS & LOGS:
 SYSTEM:
 - "show system status" → get_system_status
 - "test nginx config" → test_nginx_config
+- "reload nginx" → force_nginx_reload
 - "show audit log" → get_audit_log
 - "show host counts" → get_host_counts
 - "get settings" → get_global_settings
