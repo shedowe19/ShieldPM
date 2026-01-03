@@ -1735,11 +1735,16 @@ Current Time: ${new Date().toISOString()}`;
     },
 
     _callLocalLLM: async (config, systemPrompt, message, history, tools) => {
-        // OpenAI Compatible
         const baseUrl = config.base_url || "http://localhost:11434";
+        const isOllamaNative = baseUrl.includes(":11434") && !baseUrl.includes("/v1");
+
         let targetUrl;
         try {
-            targetUrl = new URL("v1/chat/completions", baseUrl);
+            if (isOllamaNative) {
+                targetUrl = new URL("api/chat", baseUrl);
+            } else {
+                targetUrl = new URL("v1/chat/completions", baseUrl);
+            }
         } catch (err) {
             throw new Error(`Invalid base_url: ${err.message}`);
         }
@@ -1751,18 +1756,37 @@ Current Time: ${new Date().toISOString()}`;
             { role: "user", content: message }
         ];
 
-        const payload = {
-            model: config.model || "gpt-3.5-turbo",
-            messages,
-            // Ollama / Local specific options
-            options: {
-                num_ctx: config.num_ctx || 8192
-            },
-            tools: tools.length > 0 ? tools.map(t => ({
-                type: "function",
-                function: t.function
-            })) : undefined
-        };
+        let payload;
+
+        if (isOllamaNative) {
+            // Ollama Native Format
+            payload = {
+                model: config.model || "gpt-3.5-turbo",
+                messages,
+                stream: false,
+                options: {
+                    num_ctx: config.num_ctx || 8192
+                },
+                tools: tools.length > 0 ? tools.map(t => ({
+                    type: "function",
+                    function: t.function
+                })) : undefined
+            };
+        } else {
+            // OpenAI Compatible Format
+            payload = {
+                model: config.model || "gpt-3.5-turbo",
+                messages,
+                // Note: OpenAI spec ignores 'options', but some compatible servers might read it
+                options: {
+                    num_ctx: config.num_ctx || 8192
+                },
+                tools: tools.length > 0 ? tools.map(t => ({
+                    type: "function",
+                    function: t.function
+                })) : undefined
+            };
+        }
 
         const res = await fetch(url, {
             method: "POST",
@@ -1779,21 +1803,41 @@ Current Time: ${new Date().toISOString()}`;
         }
 
         const json = await res.json();
-        const choice = json.choices?.[0];
-        const msg = choice?.message;
+        let content = "";
+        let toolCalls = [];
 
-        if (msg.tool_calls) {
-            return {
-                content: msg.content,
-                toolCalls: msg.tool_calls.map(tc => ({
+        if (isOllamaNative) {
+            // Parse Ollama Response
+            content = json.message?.content || "";
+            if (json.message?.tool_calls) {
+                toolCalls = json.message.tool_calls.map(tc => ({
+                    name: tc.function.name,
+                    args: tc.function.arguments, // Ollama returns object, not string
+                    id: tc.function.name // Ollama might not have ID, use name fallback
+                }));
+            }
+        } else {
+            // Parse OpenAI Response
+            const choice = json.choices?.[0];
+            const msg = choice?.message;
+            content = msg?.content || "";
+            if (msg?.tool_calls) {
+                toolCalls = msg.tool_calls.map(tc => ({
                     name: tc.function.name,
                     args: JSON.parse(tc.function.arguments),
                     id: tc.id
-                }))
+                }));
+            }
+        }
+
+        if (toolCalls.length > 0) {
+            return {
+                content,
+                toolCalls
             };
         }
 
-        return { content: msg.content };
+        return { content };
     },
 
     _callLocalWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
