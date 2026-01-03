@@ -16,11 +16,11 @@ export function AiChat() {
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Scroll should trigger on new messages
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-        // biome-ignore lint/correctness/useExhaustiveDependencies: Scroll should trigger on new messages
     }, [messages, loading]);
 
     const handleSend = async () => {
