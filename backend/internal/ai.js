@@ -189,10 +189,6 @@ const ai = {
 
 
         // FAIL-SAFE: If switching providers left a Gemini model name, clear it for Local
-        // Logs for debugging
-        console.log("[DEBUG] AI Chat Config:", { provider: config.provider, model: config.model, baseUrl: config.base_url });
-
-        // FAIL-SAFE: If switching providers left a Gemini model name, clear it for Local
         if (config.provider === "local" && config.model && config.model.includes("gemini")) {
             // Logs for debugging
             console.log(`[AI] Sanitzing model for Local provider. Invalid model: ${config.model}`);
