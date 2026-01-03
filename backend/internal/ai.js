@@ -1726,7 +1726,14 @@ Current Time: ${new Date().toISOString()}`;
 
     _callLocalLLM: async (config, systemPrompt, message, history, tools) => {
         // OpenAI Compatible
-        const url = `${config.base_url}/v1/chat/completions`;
+        const baseUrl = config.base_url || "http://localhost:11434";
+        let targetUrl;
+        try {
+            targetUrl = new URL("v1/chat/completions", baseUrl);
+        } catch (err) {
+            throw new Error(`Invalid base_url: ${err.message}`);
+        }
+        const url = targetUrl.toString();
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -1776,7 +1783,14 @@ Current Time: ${new Date().toISOString()}`;
     },
 
     _callLocalWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
-        const url = `${config.base_url}/v1/chat/completions`;
+        const baseUrl = config.base_url || "http://localhost:11434";
+        let targetUrl;
+        try {
+            targetUrl = new URL("v1/chat/completions", baseUrl);
+        } catch (err) {
+            throw new Error(`Invalid base_url: ${err.message}`);
+        }
+        const url = targetUrl.toString();
 
         const messages = [
             { role: "system", content: systemPrompt },

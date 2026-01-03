@@ -65,14 +65,14 @@ export function AiChat() {
                     )}
                 >
                     <IconRobot className="mr-2 h-4 w-4" />
-                    <span>AI Agent</span>
+                    <span><T id="ai.title" /></span>
                 </div>
             </SheetTrigger>
             <SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full" side="right">
                 <SheetHeader className="flex flex-row justify-between items-center sm:text-left text-left">
                     <SheetTitle className="flex items-center gap-2">
                         <IconRobot className="h-5 w-5" />
-                        AI Administrator
+                        <T id="ai.title" />
                     </SheetTitle>
                     <Button variant="ghost" size="icon" onClick={() => setMessages([])} title="Clear Chat">
                         <Trash2 className="h-4 w-4" />
