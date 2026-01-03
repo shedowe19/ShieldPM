@@ -1667,7 +1667,7 @@ Current Time: ${new Date().toISOString()}`;
         return { content: response.text() || "" };
     },
 
-    _callGeminiWithResults: async (config, systemPrompt, message, history, previous Response, toolResults, tools) => {
+    _callGeminiWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults, tools) => {
         // If we have a chat session from the previous call, use it
         if (previousResponse.chat) {
             console.log("[Gemini SDK] Sending tool results via chat session");
