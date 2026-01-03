@@ -50,6 +50,7 @@
 	"ai.model": "Modellname",
 	"ai.model.placeholder": "z.B. gemini-1.5-flash",
 	"ai.provider": "Anbieter",
+	"ai.system_prompt": "System-Prompt",
 	"ai.title": "KI-Agent",
 	"allowWebsocketUpgrade": "Websocket-Upgrade erlauben",
 	"analytics.bandwidth-live": "Bandbreite (Live)",

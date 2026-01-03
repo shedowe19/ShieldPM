@@ -282,6 +282,22 @@ export default function AiConfigPage() {
 										<Field name="keep_alive" as={Input} placeholder="5m" />
 										<p className="text-xs text-muted-foreground">Default: 5m (e.g. 5m, 1h, -1)</p>
 									</div>
+
+									<div className="space-y-2">
+										<Label htmlFor="system_prompt">
+											<T id="ai.system_prompt" />
+										</Label>
+										<Field
+											name="system_prompt"
+											as="textarea"
+											rows={8}
+											className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+											placeholder="Leave empty to use default prompt..."
+										/>
+										<p className="text-xs text-muted-foreground">
+											Customize how the AI behaves. Leave empty for default.
+										</p>
+									</div>
 								</div>
 							)}
 
