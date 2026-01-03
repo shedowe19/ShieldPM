@@ -9,15 +9,12 @@ import { AiMessage } from "./AiMessage";
 import type { AiChatMessage } from "src/api/backend/models";
 import { sendAiChat } from "src/api/backend/ai";
 import { cn } from "src/lib/utils";
-import { T, useIntl } from "src/locale";
+import { T, intl } from "src/locale";
 
 export function AiChat() {
 	const [open, setOpen] = useState(false);
 	const [messages, setMessages] = useState<AiChatMessage[]>([]);
-	const [input, setInput] = useState("");
-	const [loading, setLoading] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
-	const intl = useIntl();
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Scroll should trigger on new messages
 	useEffect(() => {
