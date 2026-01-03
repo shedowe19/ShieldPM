@@ -210,6 +210,7 @@ Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
 
 PROXY HOSTS:
 - "disable cdn.ex.com" → get_proxy_hosts, find ID, disable_proxy_host
+- "enable cdn.ex.com" → get_proxy_hosts, find ID, enable_proxy_host
 - "create proxy app.ex.com to 192.168.1.10:3000" → create_proxy_host
 - "update proxy cdn.ex.com forward to 10.0.0.5:8080" → get_proxy_hosts, find ID, update_proxy_host
 - "delete proxy old.ex.com" → get_proxy_hosts, find ID, delete_proxy_host
@@ -217,18 +218,21 @@ PROXY HOSTS:
 REDIRECTION HOSTS:
 - "create redirect from old.ex.com to new.ex.com" → create_redirection_host
 - "update redirect scheme to 302" → get_redirection_hosts, find ID, update_redirection_host
+- "enable redirect old.ex.com" → get_redirection_hosts, find ID, enable_redirection_host
 - "disable redirect old.ex.com" → get_redirection_hosts, find ID, disable_redirection_host
 - "delete redirect" → get_redirection_hosts, find ID, delete_redirection_host
 
 DEAD HOSTS (404):
 - "create 404 host for unused.ex.com" → create_dead_host
 - "update 404 host certificate" → get_dead_hosts, find ID, update_dead_host
+- "enable 404 host" → get_dead_hosts, find ID, enable_dead_host
 - "disable 404 host" → get_dead_hosts, find ID, disable_dead_host
 - "delete 404 host" → get_dead_hosts, find ID, delete_dead_host
 
 STREAMS (TCP/UDP):
 - "create stream port 3306 to db.local:3306" → create_stream
 - "update stream port 3306 forwarding" → get_streams, find ID, update_stream
+- "enable stream on port 3306" → get_streams, find ID, enable_stream
 - "disable stream on port 3306" → get_streams, find ID, disable_stream
 - "delete stream port 5432" → get_streams, find ID, delete_stream
 
