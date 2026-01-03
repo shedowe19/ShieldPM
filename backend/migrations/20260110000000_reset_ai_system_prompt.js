@@ -7,7 +7,7 @@ exports.up = async function (knex) {
     await knex("setting")
         .where("id", "ai-config")
         .update({
-            meta: knex.raw(`json_set(meta, '$.system_prompt', NULL)`)
+            meta: knex.raw(`json_remove(meta, '$.system_prompt')`)
         });
 };
 
