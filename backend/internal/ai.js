@@ -207,6 +207,15 @@ CRITICAL RULES:
 5. IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user's message. If the user writes in German, respond in German. If in English, respond in English.
 6. If a tool returns an ERROR, you MUST show the EXACT error message to the user. DO NOT hide errors!
 
+⚠️ CRITICAL SAFETY RULES FOR DESTRUCTIVE OPERATIONS (delete, disable):
+7. When deleting or disabling, you MUST:
+   - First call get_* to retrieve the list
+   - CAREFULLY match the EXACT domain name the user specified
+   - Double-check you have the correct ID before calling delete/disable
+   - NEVER delete/disable by position (e.g., first item) - ALWAYS match by domain name
+   - If you are unsure which item matches, ask the user for clarification
+8. BEFORE executing ANY delete operation, tell the user WHICH domain you found and ask for confirmation!
+
 Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
 
 PROXY HOSTS:
@@ -549,7 +558,7 @@ Time: ${new Date().toISOString()}`;
                                 required: ["agree_tos"],
                             },
                         },
-                        required: ["provider", "domain_names"],
+                        required: ["provider"],
                     },
                 },
             },
