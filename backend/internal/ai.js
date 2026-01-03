@@ -1667,8 +1667,8 @@ Current Time: ${new Date().toISOString()}`;
     },
 
     _callGeminiWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
-        if (!config.apiKey) throw new Error("Gemini API Key is missing");
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || "gemini-1.5-flash"}:generateContent?key=${config.apiKey}`;
+        if (!config.api_key) throw new Error("Gemini API Key is missing");
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || "gemini-1.5-flash"}:generateContent?key=${config.api_key}`;
 
         // Construct the conversation flow for tool response
         const contents = [
