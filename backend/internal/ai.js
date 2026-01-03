@@ -1672,13 +1672,17 @@ Current Time: ${new Date().toISOString()}`;
         if (previousResponse.chat) {
             console.log("[Gemini SDK] Sending tool results via chat session");
 
-            // Format tool results for SDK
-            const functionResponses = toolResults.map(tr => ({
-                name: tr.name,
-                response: tr.result
+            // Format tool results for SDK - must use functionResponse structure
+            const functionResponseParts = toolResults.map(tr => ({
+                functionResponse: {
+                    name: tr.name,
+                    response: {
+                        content: tr.result
+                    }
+                }
             }));
 
-            const result = await previousResponse.chat.sendMessage(functionResponses);
+            const result = await previousResponse.chat.sendMessage(functionResponseParts);
             const response = result.response;
 
             console.log("[Gemini SDK] Final response after tools:", { textLength: response.text()?.length || 0 });
