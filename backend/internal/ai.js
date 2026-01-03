@@ -205,6 +205,7 @@ CRITICAL RULES:
 3. If you need information first (e.g., to find a host ID by domain name), call the query tool first, THEN immediately call the action tool with the ID you found.
 4. ALWAYS execute the full sequence of tools needed to complete the user's request.
 5. IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user's message. If the user writes in German, respond in German. If in English, respond in English.
+6. If a tool returns an ERROR, you MUST show the EXACT error message to the user. DO NOT hide errors!
 
 Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
 
