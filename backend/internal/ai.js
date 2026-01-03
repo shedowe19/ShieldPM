@@ -109,12 +109,12 @@ const ai = {
 
         if (config.provider === "gemini") {
             if (!config.api_key) throw new Error("API Key is required");
-
+            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${config.api_key}`;
             try {
-                const genAI = new GoogleGenerativeAI(config.api_key);
-                const models = await genAI.listModels();
-
-                return models
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`Gemini Error: ${res.status} ${res.statusText}`);
+                const data = await res.json();
+                return (data.models || [])
                     .filter(m => m.name.includes("gemini"))
                     .map(m => ({
                         id: m.name.replace("models/", ""),
