@@ -5,7 +5,7 @@
  * @param   {Object} knex
  * @returns {Promise}
  */
-export const up = async function (knex) {
+const up = async (knex) => {
     // Update the ai-config setting to clear the old system_prompt
     await knex("setting")
         .where("id", "ai-config")
@@ -20,7 +20,9 @@ export const up = async function (knex) {
  * @param   {Object} knex
  * @returns {Promise}
  */
-export const down = function (knex) {
+const down = (knex) => {
     // No rollback needed - users can re-enter custom prompts if desired
     return Promise.resolve();
 };
+
+export { up, down };
