@@ -147,11 +147,9 @@ export default function AiConfigPage() {
 														return;
 													}
 													try {
-														// @ts-expect-error
 														const models = await import("src/api/backend/ai").then((m) =>
 															m.getAiModels(values),
 														);
-														// @ts-expect-error
 														setFetchedModels(models);
 														showObjectSuccess("Models Loaded", "");
 													} catch (e: any) {
@@ -218,11 +216,9 @@ export default function AiConfigPage() {
 												type="button"
 												onClick={async () => {
 													try {
-														// @ts-expect-error
 														const models = await import("src/api/backend/ai").then((m) =>
 															m.getAiModels(values),
 														);
-														// @ts-expect-error
 														setFetchedModels(models);
 														showObjectSuccess("Models Loaded", "");
 													} catch (e: any) {
