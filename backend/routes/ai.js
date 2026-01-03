@@ -14,7 +14,7 @@ const router = express.Router();
 router.get("/config", jwtdecode(), async (req, res, next) => {
     try {
         const result = await internalAi.getConfig(res.locals.access);
-        res.status(200).send(result);
+        res.status(200).json(result);
     } catch (err) {
         next(err);
     }
@@ -29,7 +29,7 @@ router.put("/config", jwtdecode(), async (req, res, next) => {
     try {
         const payload = await apiValidator(getValidationSchema("/ai/config", "put"), req.body);
         const result = await internalAi.setConfig(res.locals.access, payload);
-        res.status(200).send(result);
+        res.status(200).json(result);
     } catch (err) {
         next(err);
     }
@@ -44,7 +44,7 @@ router.post("/models", jwtdecode(), async (req, res, next) => {
     try {
         const payload = await apiValidator(getValidationSchema("/ai/models", "post"), req.body);
         const result = await internalAi.getModels(res.locals.access, payload);
-        res.status(200).send(result);
+        res.status(200).json(result);
     } catch (err) {
         next(err);
     }
@@ -62,7 +62,7 @@ router.post("/chat", jwtdecode(), async (req, res, next) => {
         const { message, history } = payload;
         const result = await internalAi.chat(res.locals.access, message, history);
         console.log("AI Chat response:", result);
-        res.status(200).send(result);
+        res.status(200).json(result);
     } catch (err) {
         console.error("AI Chat error:", err);
         next(err);
