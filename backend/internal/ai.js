@@ -1734,7 +1734,7 @@ Current Time: ${new Date().toISOString()}`;
 
     _callLocalLLM: async (config, systemPrompt, message, history, tools) => {
         // OpenAI Compatible
-        const url = `${config.baseUrl}/v1/chat/completions`;
+        const url = `${config.base_url}/v1/chat/completions`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -1755,7 +1755,7 @@ Current Time: ${new Date().toISOString()}`;
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${config.apiKey}` // Optional for some local LLMs
+                "Authorization": `Bearer ${config.api_key}` // Optional for some local LLMs
             },
             body: JSON.stringify(payload)
         });
@@ -1784,7 +1784,7 @@ Current Time: ${new Date().toISOString()}`;
     },
 
     _callLocalWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
-        const url = `${config.baseUrl}/v1/chat/completions`;
+        const url = `${config.base_url}/v1/chat/completions`;
 
         const messages = [
             { role: "system", content: systemPrompt },
