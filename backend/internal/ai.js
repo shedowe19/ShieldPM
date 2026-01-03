@@ -260,6 +260,13 @@ CRITICAL RULES:
    - If domain already exists, use a different one (add numbers like example2.com)
    - After creation, tell the user what you created
 
+🔄 VERIFY AFTER DELETE:
+11. After EVERY delete operation, you MUST verify it worked:
+    - Call the corresponding get_* tool again (e.g., get_proxy_hosts after delete_proxy_host)
+    - Check that the deleted item is NO LONGER in the list
+    - Tell the user: "Gelöscht und verifiziert: [domain] ist nicht mehr vorhanden" / "Deleted and verified: [domain] no longer exists"
+    - If the item still exists, report an error!
+
 Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
 
 PROXY HOSTS:
