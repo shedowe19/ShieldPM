@@ -23,6 +23,7 @@ import internalPki from "./pki.js";
 import internalNginx from "./nginx.js";
 import si from "systeminformation";
 import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const AI_CONFIG_ID = "ai-config";
 
@@ -1615,134 +1616,81 @@ Current Time: ${new Date().toISOString()}`;
     _callGemini: async (config, systemPrompt, message, history, tools) => {
         if (!config.api_key) throw new Error("Gemini API Key is missing");
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || "gemini-1.5-flash"}:generateContent?key=${config.api_key}`;
+        const genAI = new GoogleGenerativeAI(config.api_key);
+        const model = genAI.getGenerativeModel({
+            model: config.model || "gemini-1.5-flash",
+            systemInstruction: systemPrompt
+        });
 
-        // Map Tools to Gemini Format
-        const geminiTools = tools.length > 0 ? [{
-            function_declarations: tools.map(t => ({
+        // Convert tools to SDK format
+        const geminiTools = tools.length > 0 ? tools.map(t => ({
+            functionDeclarations: [{
                 name: t.function.name,
                 description: t.function.description,
                 parameters: t.function.parameters
-            }))
-        }] : undefined;
+            }]
+        })) : undefined;
 
-        const contents = [
-            { role: "user", parts: [{ text: systemPrompt }] }, // System prompt as first user msg mostly works for Gemini REST, or use system_instruction
-            ...history.map(h => ({
+        // Start chat session with history
+        const chat = model.startChat({
+            history: history.map(h => ({
                 role: h.role === "assistant" ? "model" : "user",
-                parts: [{ text: h.content }]
+                parts: [{ text: h.content || "" }]
             })),
-            { role: "user", parts: [{ text: message }] }
-        ];
-
-        // Use system_instruction if model supports it (Gemini 1.5 does)
-        const payload = {
-            contents,
-            system_instruction: { parts: [{ text: systemPrompt }] },
             tools: geminiTools
-        };
-
-        const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
         });
 
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`Gemini API Error: ${res.status} - ${errText}`);
-        }
+        console.log("[Gemini SDK] Sending message with tools:", geminiTools?.length || 0);
 
-        const json = await res.json();
-        const candidate = json.candidates?.[0];
+        const result = await chat.sendMessage(message);
+        const response = result.response;
 
-        if (!candidate) throw new Error("No response from Gemini");
+        console.log("[Gemini SDK] Response:", {
+            hasText: !!response.text(),
+            hasFunctionCalls: !!(response.functionCalls() && response.functionCalls().length > 0)
+        });
 
-        const parts = candidate.content.parts || [];
-        const textPart = parts.find(p => p.text)?.text || "";
-        const functionCallPart = parts.find(p => p.functionCall);
-
-        if (functionCallPart) {
+        // Check for function calls
+        const functionCalls = response.functionCalls();
+        if (functionCalls && functionCalls.length > 0) {
+            console.log("[Gemini SDK] Tool calls detected:", functionCalls.map(fc => fc.name));
             return {
-                content: textPart, // Might be empty or valid
-                toolCalls: [{
-                    name: functionCallPart.functionCall.name,
-                    args: functionCallPart.functionCall.args
-                }],
-                rawParts: parts
+                content: response.text() || "",
+                toolCalls: functionCalls.map(fc => ({
+                    name: fc.name,
+                    args: fc.args
+                })),
+                chat: chat  // Store chat session for follow-up
             };
         }
 
-        return { content: textPart };
+        return { content: response.text() || "" };
     },
 
-    _callGeminiWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults, tools) => {
-        if (!config.api_key) throw new Error("Gemini API Key is missing");
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || "gemini-1.5-flash"}:generateContent?key=${config.api_key}`;
+    _callGeminiWithResults: async (config, systemPrompt, message, history, previous Response, toolResults, tools) => {
+        // If we have a chat session from the previous call, use it
+        if (previousResponse.chat) {
+            console.log("[Gemini SDK] Sending tool results via chat session");
 
-        // Map Tools to Gemini Format (same as _callGemini)
-        const geminiTools = tools.length > 0 ? [{
-            function_declarations: tools.map(t => ({
-                name: t.function.name,
-                description: t.function.description,
-                parameters: t.function.parameters
-            }))
-        }] : undefined;
+            // Format tool results for SDK
+            const functionResponses = toolResults.map(tr => ({
+                name: tr.name,
+                response: tr.result
+            }));
 
-        // Construct the conversation flow for tool response
-        const contents = [
-            // Original conversation...
-            ...history.map(h => ({
-                role: h.role === "assistant" ? "model" : "user",
-                parts: [{ text: h.content }]
-            })),
-            { role: "user", parts: [{ text: message }] },
-            // The model's call
-            {
-                role: "model",
-                parts: previousResponse.rawParts || previousResponse.toolCalls.map(tc => ({
-                    functionCall: {
-                        name: tc.name,
-                        args: tc.args
-                    }
-                }))
-            },
-            // The tool result
-            {
-                role: "function", parts: toolResults.map(tr => ({
-                    functionResponse: {
-                        name: tr.name,
-                        response: { result: tr.result } // Gemini expects an object here usually
-                    }
-                }))
-            }
-        ];
+            const result = await previousResponse.chat.sendMessage(functionResponses);
+            const response = result.response;
 
-        const payload = {
-            contents,
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            tools: geminiTools
-        };
+            console.log("[Gemini SDK] Final response after tools:", { textLength: response.text()?.length || 0 });
 
-        const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-            const err = await res.text();
-            throw new Error(`Gemini API Error (Tool Result): ${res.status} - ${err}`);
+            return {
+                role: "assistant",
+                content: response.text() || ""
+            };
         }
 
-        const json = await res.json();
-        const candidate = json.candidates?.[0];
-        const textPart = candidate?.content?.parts?.find(p => p.text)?.text || "";
-
-        return {
-            role: "assistant",
-            content: textPart
-        };
+        // Fallback: No chat session (shouldn't happen with SDK, but keep for safety)
+        throw new Error("No chat session available for tool results");
     },
 
     _callLocalLLM: async (config, systemPrompt, message, history, tools) => {

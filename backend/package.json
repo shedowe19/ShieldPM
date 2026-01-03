@@ -8,6 +8,7 @@
 	"type": "module",
 	"dependencies": {
 		"@apidevtools/json-schema-ref-parser": "15.1.3",
+		"@google/generative-ai": "^0.24.1",
 		"ajv": "8.17.1",
 		"archiver": "7.0.1",
 		"batchflow": "0.4.0",
