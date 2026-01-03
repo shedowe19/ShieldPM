@@ -23,44 +23,38 @@
                         "history": {
                             "type": "array",
                             "items": {
-                                "oneOf": [
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "role": {
-                                                "type": "string",
-                                                "enum": [
-                                                    "user",
-                                                    "assistant",
-                                                    "model"
-                                                ]
-                                            },
-                                            "content": {
-                                                "type": "string"
-                                            },
-                                            "toolCalls": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "additionalProperties": true
-                                                }
-                                            },
-                                            "rawParts": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "additionalProperties": true
-                                                }
-                                            }
-                                        },
-                                        "required": [
-                                            "role"
+                                "type": "object",
+                                "properties": {
+                                    "role": {
+                                        "type": "string",
+                                        "enum": [
+                                            "user",
+                                            "assistant",
+                                            "model"
                                         ]
                                     },
-                                    {
-                                        "$ref": "../../components/error.json"
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "toolCalls": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    },
+                                    "rawParts": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
                                     }
-                                ]
+                                },
+                                "required": [
+                                    "role"
+                                ],
+                                "additionalProperties": false
                             }
                         }
                     }
