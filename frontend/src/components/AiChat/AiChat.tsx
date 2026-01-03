@@ -8,6 +8,7 @@ import { AiMessage } from "./AiMessage";
 import { AiChatMessage } from "src/api/backend/models";
 import { sendAiChat } from "src/api/backend/ai";
 import { cn } from "src/lib/utils";
+import { T } from "src/locale";
 
 export function AiChat() {
     const [open, setOpen] = useState(false);
