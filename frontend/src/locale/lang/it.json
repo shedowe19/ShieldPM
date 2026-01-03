@@ -401,5 +401,12 @@
 	"user.switch-dark": "Passa alla modalità Scura",
 	"user.switch-light": "Passa alla modalità Chiara",
 	"username": "Nome Utente",
-	"users": "Utenti"
+	"users": "Utenti",
+	"ai.batch_size": "Dimensione batch",
+	"ai.context_window": "Finestracontesto",
+	"ai.cpu_threads": "Thread CPU",
+	"ai.keep_alive": "Mantieni attivo (Durata)",
+	"ai.system_prompt": "Prompt di sistema",
+	"ai.chat.welcome": "Come posso aiutarti a gestire i tuoi host proxy oggi?",
+	"ai.chat.placeholder": "Chiedi all'IA di elencare host, controllare i log..."
 }

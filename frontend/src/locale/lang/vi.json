@@ -401,5 +401,12 @@
 	"user.switch-dark": "Chuyển sang chế độ tối",
 	"user.switch-light": "Chuyển sang chế độ sáng",
 	"username": "Tên người dùng",
-	"users": "Danh sách người dùng"
+	"users": "Danh sách người dùng",
+	"ai.batch_size": "Kích thước lô",
+	"ai.context_window": "Cửa sổ ngữ cảnh",
+	"ai.cpu_threads": "Luồng CPU",
+	"ai.keep_alive": "Duy trì kết nối (Thời lượng)",
+	"ai.system_prompt": "Lời nhắc hệ thống",
+	"ai.chat.welcome": "Hôm nay tôi có thể giúp bạn quản lý các máy chủ proxy như thế nào?",
+	"ai.chat.placeholder": "Hỏi AI để liệt kê các host, kiểm tra nhật ký..."
 }

@@ -401,5 +401,12 @@
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
-	"users": "ユーザー"
+	"users": "ユーザー",
+	"ai.batch_size": "バッチサイズ",
+	"ai.context_window": "コンテキストウィンドウ",
+	"ai.cpu_threads": "CPUスレッド",
+	"ai.keep_alive": "キープアライブ（継続時間）",
+	"ai.system_prompt": "システムプロンプト",
+	"ai.chat.welcome": "今日はプロキシホストの管理をどのようにお手伝いしましょうか？",
+	"ai.chat.placeholder": "AIにホストのリスト表示やログの確認を依頼..."
 }

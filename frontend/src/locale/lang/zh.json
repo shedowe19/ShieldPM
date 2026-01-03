@@ -401,5 +401,12 @@
 	"user.switch-dark": "切换到深色模式",
 	"user.switch-light": "切换到浅色模式",
 	"username": "用户名",
-	"users": "用户列表"
+	"users": "用户列表",
+	"ai.batch_size": "批处理大小",
+	"ai.context_window": "上下文窗口",
+	"ai.cpu_threads": "CPU线程",
+	"ai.keep_alive": "保持连接（持续时间）",
+	"ai.system_prompt": "系统提示",
+	"ai.chat.welcome": "今天我可以如何帮助您管理代理主机？",
+	"ai.chat.placeholder": "询问AI列出主机、检查日志..."
 }

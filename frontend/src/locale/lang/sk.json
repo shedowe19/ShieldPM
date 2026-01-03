@@ -401,5 +401,12 @@
 	"user.switch-dark": "Prepnúť na tmavý režim",
 	"user.switch-light": "Prepnúť na svetlý režim",
 	"username": "Používateľské meno",
-	"users": "Používatelia"
+	"users": "Používatelia",
+	"ai.batch_size": "Veľkosť dávky",
+	"ai.context_window": "Kontextové okno",
+	"ai.cpu_threads": "CPU vlákna",
+	"ai.keep_alive": "Udržiavanie spojenia (Trvanie)",
+	"ai.system_prompt": "Systémová výzva",
+	"ai.chat.welcome": "Ako vám môžem pomôcť spravovať vaše proxy hosty dnes?",
+	"ai.chat.placeholder": "Spýtajte sa AI na zoznam hostov, kontrolu logov..."
 }

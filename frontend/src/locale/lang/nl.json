@@ -401,5 +401,12 @@
 	"user.switch-dark": "Verander naar donkere modus",
 	"user.switch-light": "Verander naar lichte modus",
 	"username": "Gebruikersnaam",
-	"users": "Gebruikers"
+	"users": "Gebruikers",
+	"ai.batch_size": "Batchgrootte",
+	"ai.context_window": "Contextvenster",
+	"ai.cpu_threads": "CPU-threads",
+	"ai.keep_alive": "Verbinding handhaven (Duur)",
+	"ai.system_prompt": "Systeem prompt",
+	"ai.chat.welcome": "Hoe kan ik je helpen met het beheren van je proxy hosts vandaag?",
+	"ai.chat.placeholder": "Vraag AI om hosts te lijsten, logs te controleren..."
 }

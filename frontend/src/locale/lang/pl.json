@@ -401,5 +401,12 @@
 	"user.switch-dark": "Przełącz na tryb ciemny",
 	"user.switch-light": "Przełącz na tryb jasny",
 	"username": "Nazwa użytkownika",
-	"users": "Użytkownicy"
+	"users": "Użytkownicy",
+	"ai.batch_size": "Rozmiar partii",
+	"ai.context_window": "Okno kontekstu",
+	"ai.cpu_threads": "Wątki CPU",
+	"ai.keep_alive": "Utrzymywanie aktywności (Czas trwania)",
+	"ai.system_prompt": "Monit systemowy",
+	"ai.chat.welcome": "Jak mogę pomóc w zarządzaniu hostami proxy dzisiaj?",
+	"ai.chat.placeholder": "Zapytaj AI o listę hostów, sprawdzenie logów..."
 }
