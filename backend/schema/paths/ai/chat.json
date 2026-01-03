@@ -60,33 +60,30 @@
                                     {
                                         "$ref": "../../components/error.json"
                                     }
-                                ],
-                                "required": [
-                                    "role",
-                                    "content"
-                                ]
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    },
-    "responses": {
-        "200": {
-            "description": "AI Response",
-            "content": {
-                "application/json": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "content": {
-                                "type": "string"
-                            }
+                                }
+                            ]
                         }
                     }
                 }
             }
         }
     }
+},
+"responses": {
+    "200": {
+        "description": "AI Response",
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "content": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 }
