@@ -51,6 +51,7 @@ const ai = {
             }
             // Ensure num_ctx exists
             if (!meta.num_ctx) meta.num_ctx = 8192;
+            if (!meta.num_batch) meta.num_batch = 512;
             return meta;
         } catch (err) {
             // Return default config if not found
@@ -60,7 +61,8 @@ const ai = {
                 api_key: "",
                 base_url: "",
                 model: "",
-                num_ctx: 8192
+                num_ctx: 8192,
+                num_batch: 512
             };
         }
     },
@@ -1765,7 +1767,8 @@ Current Time: ${new Date().toISOString()}`;
                 messages,
                 stream: false,
                 options: {
-                    num_ctx: config.num_ctx || 8192
+                    num_ctx: config.num_ctx || 8192,
+                    num_batch: config.num_batch || 512
                 },
                 tools: tools.length > 0 ? tools.map(t => ({
                     type: "function",
@@ -1779,7 +1782,8 @@ Current Time: ${new Date().toISOString()}`;
                 messages,
                 // Note: OpenAI spec ignores 'options', but some compatible servers might read it
                 options: {
-                    num_ctx: config.num_ctx || 8192
+                    num_ctx: config.num_ctx || 8192,
+                    num_batch: config.num_batch || 512
                 },
                 tools: tools.length > 0 ? tools.map(t => ({
                     type: "function",

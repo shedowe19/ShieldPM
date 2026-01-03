@@ -204,6 +204,12 @@ export default function AiConfigPage() {
                                         <Field name="num_ctx" as={Input} type="number" placeholder="8192" />
                                         <p className="text-xs text-muted-foreground">Default: 8192</p>
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="num_batch"><T id="ai.batch_size" /></Label>
+                                        <Field name="num_batch" as={Input} type="number" placeholder="512" />
+                                        <p className="text-xs text-muted-foreground">Default: 512</p>
+                                    </div>
                                 </div>
                             )}
 

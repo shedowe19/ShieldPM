@@ -238,6 +238,7 @@ export interface AiConfig {
 	base_url?: string;
 	model?: string;
 	num_ctx?: number;
+	num_batch?: number;
 }
 
 export interface AiChatMessage {

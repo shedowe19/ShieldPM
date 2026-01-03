@@ -39,6 +39,7 @@
 	"advanced-config": "Advanced Configuration",
 	"ai.api_key": "API Key",
 	"ai.base_url": "Base URL",
+	"ai.batch_size": "Batch Size",
 	"ai.configuration": "AI Configuration",
 	"ai.context_window": "Context Window",
 	"ai.description": "Configure the AI Administrator capabilities.",

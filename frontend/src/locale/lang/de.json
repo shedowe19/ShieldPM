@@ -39,6 +39,7 @@
 	"advanced-config": "Erweiterte Konfiguration",
 	"ai.api_key": "API-Schlüssel",
 	"ai.base_url": "Basis-URL",
+	"ai.batch_size": "Batch-Größe",
 	"ai.configuration": "KI-Konfiguration",
 	"ai.context_window": "Kontextfenster",
 	"ai.description": "Konfigurieren Sie die Fähigkeiten des KI-Administrators.",
