@@ -242,6 +242,8 @@ export interface AiConfig {
 export interface AiChatMessage {
 	role: "user" | "assistant" | "model";
 	content: string;
+	toolCalls?: any[];
+	rawParts?: any[];
 }
 
 export interface AiChatResponse {
