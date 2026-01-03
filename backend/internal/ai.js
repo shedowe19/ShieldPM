@@ -177,6 +177,13 @@ const ai = {
             throw new Error("AI Agent is disabled.");
         }
 
+        // FAIL-SAFE: If switching providers left a Gemini model name, clear it for Local
+        if (config.provider === "local" && config.model && config.model.includes("gemini")) {
+            // Logs for debugging
+            console.log(`[AI] Sanitzing model for Local provider. Invalid model: ${config.model}`);
+            config.model = ""; // Will fallback to default in _callLocalLLM
+        }
+
         // 2. Prepare System Prompt & Tools
         const defaultPrompt = `You are the AI Administrator for NPMplus, a powerful Nginx Proxy Manager.
 You have access to tools to control the server.

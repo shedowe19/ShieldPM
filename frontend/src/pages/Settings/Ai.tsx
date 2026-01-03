@@ -101,7 +101,10 @@ export default function AiConfigPage() {
                                                 value={option}
                                                 className="sr-only"
                                                 checked={values.provider === option}
-                                                onChange={() => setFieldValue("provider", option)}
+                                                onChange={() => {
+                                                    setFieldValue("provider", option);
+                                                    setFieldValue("model", ""); // Clear model on provider switch
+                                                }}
                                             />
                                             <span className="capitalize">{option === "gemini" ? "Google Gemini" : "Local LLM / OpenAI"}</span>
                                         </label>
