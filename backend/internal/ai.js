@@ -124,29 +124,28 @@ const ai = {
             } catch (err) {
                 throw new Error(`Failed to fetch Gemini models: ${err.message}`);
             }
-        }
-    } else {
-        // Local / OpenAI
-        const baseUrl = config.base_url || "http://localhost:11434";
-        const url = `${baseUrl}/v1/models`;
-        try {
-            const headers = {};
-            if(config.api_key) headers["Authorization"] = `Bearer ${config.api_key}`;
+        } else {
+            // Local / OpenAI
+            const baseUrl = config.base_url || "http://localhost:11434";
+            const url = `${baseUrl}/v1/models`;
+            try {
+                const headers = {};
+                if (config.api_key) headers["Authorization"] = `Bearer ${config.api_key}`;
 
-            const res = await fetch(url, { headers });
-            if(!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
-            const data = await res.json();
-            return(data.data || [])
+                const res = await fetch(url, { headers });
+                if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
+                const data = await res.json();
+                return (data.data || [])
                     .map(m => ({
-                id: m.id,
-                name: m.id
-            }))
-                .sort((a, b) => a.id.localeCompare(b.id));
-        } catch(err) {
-            throw new Error(`Failed to fetch Local models: ${err.message}`);
+                        id: m.id,
+                        name: m.id
+                    }))
+                    .sort((a, b) => a.id.localeCompare(b.id));
+            } catch (err) {
+                throw new Error(`Failed to fetch Local models: ${err.message}`);
+            }
         }
-    }
-},
+    },
 
     /**
      * Main Chat Entry point
@@ -1612,185 +1611,185 @@ Current Time: ${new Date().toISOString()}`;
         };
     },
 
-        // --- Private Provider Implementations ---
+    // --- Private Provider Implementations ---
 
-        _callGemini: async (config, systemPrompt, message, history, tools) => {
-            if (!config.api_key) throw new Error("Gemini API Key is missing");
+    _callGemini: async (config, systemPrompt, message, history, tools) => {
+        if (!config.api_key) throw new Error("Gemini API Key is missing");
 
-            const genAI = new GoogleGenerativeAI(config.api_key);
-            const model = genAI.getGenerativeModel({
-                model: config.model || "gemini-1.5-flash",
-                systemInstruction: systemPrompt
-            });
+        const genAI = new GoogleGenerativeAI(config.api_key);
+        const model = genAI.getGenerativeModel({
+            model: config.model || "gemini-1.5-flash",
+            systemInstruction: systemPrompt
+        });
 
-            // Convert tools to SDK format
-            const geminiTools = tools.length > 0 ? tools.map(t => ({
-                functionDeclarations: [{
-                    name: t.function.name,
-                    description: t.function.description,
-                    parameters: t.function.parameters
-                }]
-            })) : undefined;
+        // Convert tools to SDK format
+        const geminiTools = tools.length > 0 ? tools.map(t => ({
+            functionDeclarations: [{
+                name: t.function.name,
+                description: t.function.description,
+                parameters: t.function.parameters
+            }]
+        })) : undefined;
 
-            // Start chat session with history
-            const chat = model.startChat({
-                history: history.map(h => ({
-                    role: h.role === "assistant" ? "model" : "user",
-                    parts: [{ text: h.content || "" }]
+        // Start chat session with history
+        const chat = model.startChat({
+            history: history.map(h => ({
+                role: h.role === "assistant" ? "model" : "user",
+                parts: [{ text: h.content || "" }]
+            })),
+            tools: geminiTools
+        });
+
+        console.log("[Gemini SDK] Sending message with tools:", geminiTools?.length || 0);
+
+        const result = await chat.sendMessage(message);
+        const response = result.response;
+
+        console.log("[Gemini SDK] Response:", {
+            hasText: !!response.text(),
+            hasFunctionCalls: !!(response.functionCalls() && response.functionCalls().length > 0)
+        });
+
+        // Check for function calls
+        const functionCalls = response.functionCalls();
+        if (functionCalls && functionCalls.length > 0) {
+            console.log("[Gemini SDK] Tool calls detected:", functionCalls.map(fc => fc.name));
+            return {
+                content: response.text() || "",
+                toolCalls: functionCalls.map(fc => ({
+                    name: fc.name,
+                    args: fc.args
                 })),
-                tools: geminiTools
-            });
+                chat: chat  // Store chat session for follow-up
+            };
+        }
 
-            console.log("[Gemini SDK] Sending message with tools:", geminiTools?.length || 0);
+        return { content: response.text() || "" };
+    },
 
-            const result = await chat.sendMessage(message);
+    _callGeminiWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults, tools) => {
+        // If we have a chat session from the previous call, use it
+        if (previousResponse.chat) {
+            console.log("[Gemini SDK] Sending tool results via chat session");
+
+            // Format tool results for SDK
+            const functionResponses = toolResults.map(tr => ({
+                name: tr.name,
+                response: tr.result
+            }));
+
+            const result = await previousResponse.chat.sendMessage(functionResponses);
             const response = result.response;
 
-            console.log("[Gemini SDK] Response:", {
-                hasText: !!response.text(),
-                hasFunctionCalls: !!(response.functionCalls() && response.functionCalls().length > 0)
-            });
+            console.log("[Gemini SDK] Final response after tools:", { textLength: response.text()?.length || 0 });
 
-            // Check for function calls
-            const functionCalls = response.functionCalls();
-            if (functionCalls && functionCalls.length > 0) {
-                console.log("[Gemini SDK] Tool calls detected:", functionCalls.map(fc => fc.name));
-                return {
-                    content: response.text() || "",
-                    toolCalls: functionCalls.map(fc => ({
-                        name: fc.name,
-                        args: fc.args
-                    })),
-                    chat: chat  // Store chat session for follow-up
-                };
-            }
+            return {
+                role: "assistant",
+                content: response.text() || ""
+            };
+        }
 
-            return { content: response.text() || "" };
-        },
+        // Fallback: No chat session (shouldn't happen with SDK, but keep for safety)
+        throw new Error("No chat session available for tool results");
+    },
 
-            _callGeminiWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults, tools) => {
-                // If we have a chat session from the previous call, use it
-                if (previousResponse.chat) {
-                    console.log("[Gemini SDK] Sending tool results via chat session");
+    _callLocalLLM: async (config, systemPrompt, message, history, tools) => {
+        // OpenAI Compatible
+        const url = `${config.base_url}/v1/chat/completions`;
 
-                    // Format tool results for SDK
-                    const functionResponses = toolResults.map(tr => ({
-                        name: tr.name,
-                        response: tr.result
-                    }));
+        const messages = [
+            { role: "system", content: systemPrompt },
+            ...history,
+            { role: "user", content: message }
+        ];
 
-                    const result = await previousResponse.chat.sendMessage(functionResponses);
-                    const response = result.response;
+        const payload = {
+            model: config.model || "gpt-3.5-turbo",
+            messages,
+            tools: tools.length > 0 ? tools.map(t => ({
+                type: "function",
+                function: t.function
+            })) : undefined
+        };
 
-                    console.log("[Gemini SDK] Final response after tools:", { textLength: response.text()?.length || 0 });
-
-                    return {
-                        role: "assistant",
-                        content: response.text() || ""
-                    };
-                }
-
-                // Fallback: No chat session (shouldn't happen with SDK, but keep for safety)
-                throw new Error("No chat session available for tool results");
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${config.api_key}` // Optional for some local LLMs
             },
+            body: JSON.stringify(payload)
+        });
 
-                _callLocalLLM: async (config, systemPrompt, message, history, tools) => {
-                    // OpenAI Compatible
-                    const url = `${config.base_url}/v1/chat/completions`;
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(`Local LLM Error: ${res.status} - ${err}`);
+        }
 
-                    const messages = [
-                        { role: "system", content: systemPrompt },
-                        ...history,
-                        { role: "user", content: message }
-                    ];
+        const json = await res.json();
+        const choice = json.choices?.[0];
+        const msg = choice?.message;
 
-                    const payload = {
-                        model: config.model || "gpt-3.5-turbo",
-                        messages,
-                        tools: tools.length > 0 ? tools.map(t => ({
-                            type: "function",
-                            function: t.function
-                        })) : undefined
-                    };
+        if (msg.tool_calls) {
+            return {
+                content: msg.content,
+                toolCalls: msg.tool_calls.map(tc => ({
+                    name: tc.function.name,
+                    args: JSON.parse(tc.function.arguments),
+                    id: tc.id
+                }))
+            };
+        }
 
-                    const res = await fetch(url, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${config.api_key}` // Optional for some local LLMs
-                        },
-                        body: JSON.stringify(payload)
-                    });
+        return { content: msg.content };
+    },
 
-                    if (!res.ok) {
-                        const err = await res.text();
-                        throw new Error(`Local LLM Error: ${res.status} - ${err}`);
+    _callLocalWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
+        const url = `${config.base_url}/v1/chat/completions`;
+
+        const messages = [
+            { role: "system", content: systemPrompt },
+            ...history,
+            { role: "user", content: message },
+            // Initial Assistant Response with Tool Calls
+            {
+                role: "assistant",
+                content: previousResponse.content,
+                tool_calls: previousResponse.toolCalls.map(tc => ({
+                    id: tc.id,
+                    type: "function",
+                    function: {
+                        name: tc.name, // Local/OpenAI usually needs json string args
+                        arguments: JSON.stringify(tc.args)
                     }
+                }))
+            },
+            // Tool Outputs
+            ...toolResults.map((tr, idx) => ({
+                role: "tool",
+                tool_call_id: previousResponse.toolCalls[idx].id, // Need to match ID
+                content: tr.result
+            }))
+        ];
 
-                    const json = await res.json();
-                    const choice = json.choices?.[0];
-                    const msg = choice?.message;
+        const payload = {
+            model: config.model,
+            messages
+        };
 
-                    if (msg.tool_calls) {
-                        return {
-                            content: msg.content,
-                            toolCalls: msg.tool_calls.map(tc => ({
-                                name: tc.function.name,
-                                args: JSON.parse(tc.function.arguments),
-                                id: tc.id
-                            }))
-                        };
-                    }
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
 
-                    return { content: msg.content };
-                },
-
-                    _callLocalWithResults: async (config, systemPrompt, message, history, previousResponse, toolResults) => {
-                        const url = `${config.base_url}/v1/chat/completions`;
-
-                        const messages = [
-                            { role: "system", content: systemPrompt },
-                            ...history,
-                            { role: "user", content: message },
-                            // Initial Assistant Response with Tool Calls
-                            {
-                                role: "assistant",
-                                content: previousResponse.content,
-                                tool_calls: previousResponse.toolCalls.map(tc => ({
-                                    id: tc.id,
-                                    type: "function",
-                                    function: {
-                                        name: tc.name, // Local/OpenAI usually needs json string args
-                                        arguments: JSON.stringify(tc.args)
-                                    }
-                                }))
-                            },
-                            // Tool Outputs
-                            ...toolResults.map((tr, idx) => ({
-                                role: "tool",
-                                tool_call_id: previousResponse.toolCalls[idx].id, // Need to match ID
-                                content: tr.result
-                            }))
-                        ];
-
-                        const payload = {
-                            model: config.model,
-                            messages
-                        };
-
-                        const res = await fetch(url, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!res.ok) throw new Error("Local LLM Error (Tool Result)");
-                        const json = await res.json();
-                        return {
-                            role: "assistant",
-                            content: json.choices?.[0]?.message?.content
-                        };
-                    }
+        if (!res.ok) throw new Error("Local LLM Error (Tool Result)");
+        const json = await res.json();
+        return {
+            role: "assistant",
+            content: json.choices?.[0]?.message?.content
+        };
+    }
 };
 
 export default ai;
