@@ -90,7 +90,9 @@ export function AiChat() {
 					{messages.length === 0 && (
 						<div className="h-full flex flex-col items-center justify-center text-muted-foreground text-center p-4">
 							<IconRobot className="h-12 w-12 mb-4 opacity-20" />
-							<p><T id="ai.chat.welcome" /></p>
+							<p>
+								<T id="ai.chat.welcome" />
+							</p>
 						</div>
 					)}
 					{messages.map((m: AiChatMessage, i: number) => (

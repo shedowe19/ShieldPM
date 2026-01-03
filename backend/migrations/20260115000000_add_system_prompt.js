@@ -9,28 +9,28 @@ const migrateName = "add_system_prompt";
  * @returns {Promise}
  */
 const up = async (knex) => {
-    logger.info(`[${migrateName}] Migrating Up...`);
+	logger.info(`[${migrateName}] Migrating Up...`);
 
-    const row = await knex("setting").where("id", "ai-config").first();
-    if (row && row.meta) {
-        let meta = {};
-        try {
-            meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
-        } catch (e) {
-            // ignore
-        }
+	const row = await knex("setting").where("id", "ai-config").first();
+	if (row && row.meta) {
+		let meta = {};
+		try {
+			meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
+		} catch (e) {
+			// ignore
+		}
 
-        // Add system_prompt if not present
-        if (!meta.system_prompt) {
-            meta.system_prompt = "";
-            await knex("setting")
-                .where("id", "ai-config")
-                .update({
-                    meta: JSON.stringify(meta),
-                });
-            logger.info(`[${migrateName}] Added system_prompt to ai-config`);
-        }
-    }
+		// Add system_prompt if not present
+		if (!meta.system_prompt) {
+			meta.system_prompt = "";
+			await knex("setting")
+				.where("id", "ai-config")
+				.update({
+					meta: JSON.stringify(meta),
+				});
+			logger.info(`[${migrateName}] Added system_prompt to ai-config`);
+		}
+	}
 };
 
 /**
@@ -40,25 +40,25 @@ const up = async (knex) => {
  * @returns {Promise}
  */
 const down = async (knex) => {
-    logger.info(`[${migrateName}] Migrating Down...`);
-    const row = await knex("setting").where("id", "ai-config").first();
-    if (row && row.meta) {
-        let meta = {};
-        try {
-            meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
-        } catch (e) {
-            // ignore
-        }
+	logger.info(`[${migrateName}] Migrating Down...`);
+	const row = await knex("setting").where("id", "ai-config").first();
+	if (row && row.meta) {
+		let meta = {};
+		try {
+			meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
+		} catch (e) {
+			// ignore
+		}
 
-        if (meta.system_prompt !== undefined) {
-            delete meta.system_prompt;
-            await knex("setting")
-                .where("id", "ai-config")
-                .update({
-                    meta: JSON.stringify(meta),
-                });
-        }
-    }
+		if (meta.system_prompt !== undefined) {
+			delete meta.system_prompt;
+			await knex("setting")
+				.where("id", "ai-config")
+				.update({
+					meta: JSON.stringify(meta),
+				});
+		}
+	}
 };
 
 export { up, down };
