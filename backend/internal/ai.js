@@ -1604,9 +1604,9 @@ Current Time: ${new Date().toISOString()}`;
     // --- Private Provider Implementations ---
 
     _callGemini: async (config, systemPrompt, message, history, tools) => {
-        if (!config.apiKey) throw new Error("Gemini API Key is missing");
+        if (!config.api_key) throw new Error("Gemini API Key is missing");
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || "gemini-1.5-flash"}:generateContent?key=${config.apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model || "gemini-1.5-flash"}:generateContent?key=${config.api_key}`;
 
         // Map Tools to Gemini Format
         const geminiTools = tools.length > 0 ? [{
