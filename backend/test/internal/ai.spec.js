@@ -44,7 +44,7 @@ describe('internal/ai.js', () => {
 
         it('should calls Gemini API', async () => {
             internalSetting.get.mockResolvedValue({
-                meta: { enabled: true, provider: 'gemini', apiKey: 'test' }
+                meta: { enabled: true, provider: 'gemini', api_key: 'test' }
             });
 
             const mockGeminiResponse = {
@@ -70,7 +70,7 @@ describe('internal/ai.js', () => {
 
         it('should handle Tool Calls (mocked)', async () => {
             internalSetting.get.mockResolvedValue({
-                meta: { enabled: true, provider: 'gemini', apiKey: 'test' }
+                meta: { enabled: true, provider: 'gemini', api_key: 'test' }
             });
 
             // 1. Tool Call Response

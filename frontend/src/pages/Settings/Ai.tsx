@@ -112,8 +112,8 @@ export default function AiConfigPage() {
                             {values.provider === "gemini" && (
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="apiKey"><T id="ai.api_key" /></Label>
-                                        <Field name="apiKey" as={Input} type="password" placeholder="AIza..." />
+                                        <Label htmlFor="api_key"><T id="ai.api_key" /></Label>
+                                        <Field name="api_key" as={Input} type="password" placeholder="AIza..." />
                                     </div>
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">
@@ -123,7 +123,7 @@ export default function AiConfigPage() {
                                                 size="sm"
                                                 type="button"
                                                 onClick={async () => {
-                                                    if (!values.apiKey) { showObjectSuccess("API Key Required", ""); return; }
+                                                    if (!values.api_key) { showObjectSuccess("API Key Required", ""); return; }
                                                     try {
                                                         // @ts-ignore
                                                         const models = await import("src/api/backend/ai").then(m => m.getAiModels(values));
@@ -154,8 +154,13 @@ export default function AiConfigPage() {
                             {values.provider === "local" && (
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="baseUrl"><T id="ai.base_url" /></Label>
-                                        <Field name="baseUrl" as={Input} placeholder="http://localhost:11434" />
+                                        <Label htmlFor="base_url"><T id="ai.base_url" /></Label>
+                                        <Field name="base_url" as={Input} placeholder="http://localhost:11434" />
+                                        <p className="text-xs text-muted-foreground">Ollama: http://localhost:11434 | OpenAI: https://api.openai.com</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="api_key"><T id="ai.api_key" /> (Optional)</Label>
+                                        <Field name="api_key" as={Input} type="password" placeholder="sk-..." />
                                     </div>
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">

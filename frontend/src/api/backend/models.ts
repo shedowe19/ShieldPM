@@ -234,8 +234,8 @@ export interface CloudflaredTunnel {
 export interface AiConfig {
 	enabled: boolean;
 	provider: "gemini" | "local";
-	apiKey?: string;
-	baseUrl?: string;
+	api_key?: string;
+	base_url?: string;
 	model?: string;
 }
 
