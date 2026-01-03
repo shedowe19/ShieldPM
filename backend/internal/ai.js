@@ -1259,6 +1259,40 @@ Time: ${new Date().toISOString()}`;
             contentLength: response.content?.length || 0,
         });
 
+        // FALLBACK: Detect tool calls embedded in text response (small models sometimes output JSON as text)
+        if ((!response.toolCalls || response.toolCalls.length === 0) && response.content) {
+            const toolCallPatterns = [
+                // Pattern 1: {"name": "tool_name", "arguments": {...}}
+                /\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
+                // Pattern 2: function call format
+                /(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
+            ];
+
+            for (const pattern of toolCallPatterns) {
+                const matches = [...response.content.matchAll(pattern)];
+                if (matches.length > 0) {
+                    console.log("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
+                    response.toolCalls = response.toolCalls || [];
+                    for (const match of matches) {
+                        try {
+                            const toolName = match[1];
+                            const argsStr = match[2] || "{}";
+                            const args = JSON.parse(argsStr.replace(/'/g, '"'));
+                            response.toolCalls.push({ name: toolName, args });
+                            console.log(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
+                        } catch (e) {
+                            console.log("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
+                        }
+                    }
+                    // Clear the text content since we extracted tool calls
+                    if (response.toolCalls.length > 0) {
+                        response.content = "";
+                    }
+                    break;
+                }
+            }
+        }
+
         // 4. Handle Tool Calls
         if (response.toolCalls && response.toolCalls.length > 0) {
             console.log(
