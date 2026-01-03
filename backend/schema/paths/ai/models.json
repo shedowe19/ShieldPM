@@ -69,7 +69,7 @@
                 "content": {
                     "application/json": {
                         "schema": {
-                            "$ref": "#/components/schemas/Error"
+                            "$ref": "../../components/error.json"
                         }
                     }
                 }
@@ -79,7 +79,7 @@
                 "content": {
                     "application/json": {
                         "schema": {
-                            "$ref": "#/components/schemas/Error"
+                            "$ref": "../../components/error.json"
                         }
                     }
                 }
