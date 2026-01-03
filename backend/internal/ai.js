@@ -39,18 +39,9 @@ const ai = {
     getConfig: async (access) => {
         // Verify permissions (admin only for config)
         await access.can("settings:list");
-        let meta = {
-            enabled: false,
-            provider: "gemini",
-            api_key: "",
-            base_url: "",
-            model: "",
-            num_ctx: 8192
-        };
-
         try {
             const row = await internalSetting.get(access, { id: AI_CONFIG_ID });
-            meta = { ...meta, ...row.meta };
+            const meta = row.meta;
             if (meta.api_key) {
                 try {
                     meta.api_key = decrypt(meta.api_key);
@@ -58,21 +49,20 @@ const ai = {
                     // Ignore decryption error
                 }
             }
+            // Ensure num_ctx exists
+            if (!meta.num_ctx) meta.num_ctx = 8192;
+            return meta;
         } catch (err) {
-            // Ignore if main config not found
+            // Return default config if not found
+            return {
+                enabled: false,
+                provider: "gemini",
+                api_key: "",
+                base_url: "",
+                model: "",
+                num_ctx: 8192
+            };
         }
-
-        // Fetch num_ctx from dedicated row (not meta)
-        try {
-            const ctxRow = await internalSetting.get(access, { id: "ai-num-ctx" });
-            if (ctxRow && ctxRow.value) {
-                meta.num_ctx = parseInt(ctxRow.value, 10);
-            }
-        } catch (err) {
-            // Ignore if not found, default to 8192
-        }
-
-        return meta;
     },
 
     /**
@@ -83,10 +73,7 @@ const ai = {
     setConfig: async (access, data) => {
         await access.can("settings:update", AI_CONFIG_ID);
 
-        // Split num_ctx from main config
-        const { num_ctx, ...mainData } = data;
-        const dataToSave = { ...mainData };
-
+        const dataToSave = { ...data };
         if (dataToSave.api_key) {
             dataToSave.api_key = encrypt(dataToSave.api_key);
         }
@@ -108,26 +95,6 @@ const ai = {
                 description: "AI Agent Configuration",
                 value: data.enabled ? "true" : "false",
                 meta: dataToSave
-            });
-        }
-
-        // Save num_ctx to separate row (value column, not meta)
-        const ctxValue = String(num_ctx || 8192);
-        try {
-            await internalSetting.get(access, { id: "ai-num-ctx" });
-            await internalSetting.update(access, {
-                id: "ai-num-ctx",
-                description: "AI Local Context Window",
-                value: ctxValue,
-                meta: {}
-            });
-        } catch (err) {
-            const SettingModel = (await import("../models/setting.js")).default;
-            await SettingModel.query().insert({
-                id: "ai-num-ctx",
-                description: "AI Local Context Window",
-                value: ctxValue,
-                meta: {}
             });
         }
 
