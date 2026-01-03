@@ -103,7 +103,8 @@ export default function AiConfigPage() {
                                                 checked={values.provider === option}
                                                 onChange={() => {
                                                     setFieldValue("provider", option);
-                                                    setFieldValue("model", ""); // Clear model on provider switch
+                                                    // Set default model based on provider to avoid invalid state
+                                                    setFieldValue("model", option === "gemini" ? "gemini-1.5-flash" : "gpt-3.5-turbo");
                                                 }}
                                             />
                                             <span className="capitalize">{option === "gemini" ? "Google Gemini" : "Local LLM / OpenAI"}</span>
