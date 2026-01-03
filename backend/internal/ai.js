@@ -208,6 +208,7 @@ CRITICAL RULES:
 
 Examples:
 - "disable proxy host cdn.clawsucht.eu" → call get_proxy_hosts, search for "cdn.clawsucht.eu", find the ID, then call disable_proxy_host with that ID
+- "get analytics for cdn.example.com" → call get_proxy_hosts, find "cdn.example.com", get the ID, then call get_analytics_series
 - "create a user john@example.com" → call create_user with all required parameters
 - "delete certificate for example.com" → call get_certificates, search for "example.com", find the ID, then call delete_certificate
 - "enable proxy host api.example.com" → call get_proxy_hosts, search for "api.example.com", find the ID, then call enable_proxy_host
