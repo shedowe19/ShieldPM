@@ -1022,6 +1022,8 @@ Current Time: ${new Date().toISOString()}`;
                         properties: { id: { type: "integer" } },
                         required: ["id"]
                     }
+                }
+            }
         ];
 
         console.log("[AI Chat] Calling LLM:", { provider: config.provider, messageLength: message.length, toolsCount: tools.length });
