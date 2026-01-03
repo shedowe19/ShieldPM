@@ -34,7 +34,7 @@ export function AiChat() {
         try {
             // Filter history to exclude failed/loading states if any, 
             // but here we just pass the valid history
-            const history = messages.map((m: AiChatMessage) => ({ role: m.role, content: m.content }));
+            const history = messages;
 
             const response = await sendAiChat(userMsg.content, history);
             setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: response.content }]);
