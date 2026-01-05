@@ -408,5 +408,7 @@
 	"user.switch-dark": "Chuyển sang chế độ tối",
 	"user.switch-light": "Chuyển sang chế độ sáng",
 	"username": "Tên người dùng",
-	"users": "Danh sách người dùng"
+	"users": "Danh sách người dùng",
+	"ai.local_warning_title": "Khuyến nghị kích thước mô hình",
+	"ai.local_warning_text": "Để gọi công cụ đáng tin cậy, hãy sử dụng các mô hình có 7B+ tham số (ví dụ: qwen2.5:7b, llama3.1:8b, mistral:7b). Các mô hình nhỏ hơn (3B) có thể ảo giác hành động mà không thực sự thực hiện chúng."
 }

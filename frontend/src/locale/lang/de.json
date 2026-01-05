@@ -53,6 +53,8 @@
 	"ai.model.placeholder": "z.B. gemini-1.5-flash",
 	"ai.provider": "Anbieter",
 	"ai.system_prompt": "System-Prompt",
+	"ai.local_warning_title": "Empfehlung zur Modellgröße",
+	"ai.local_warning_text": "Für zuverlässiges Tool-Calling verwenden Sie Modelle mit 7B+ Parametern (z.B. qwen2.5:7b, llama3.1:8b, mistral:7b). Kleinere Modelle (3B) können Aktionen halluzinieren ohne sie tatsächlich auszuführen.",
 	"ai.title": "KI-Agent",
 	"allowWebsocketUpgrade": "Websocket-Upgrade erlauben",
 	"analytics.bandwidth-live": "Bandbreite (Live)",

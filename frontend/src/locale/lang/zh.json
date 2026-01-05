@@ -408,5 +408,7 @@
 	"user.switch-dark": "切换到深色模式",
 	"user.switch-light": "切换到浅色模式",
 	"username": "用户名",
-	"users": "用户列表"
+	"users": "用户列表",
+	"ai.local_warning_title": "模型大小建议",
+	"ai.local_warning_text": "为了可靠的工具调用，请使用7B+参数的模型（例如qwen2.5:7b、llama3.1:8b、mistral:7b）。较小的模型（3B）可能会在不实际执行的情况下产生幻觉。"
 }

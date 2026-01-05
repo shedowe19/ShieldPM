@@ -408,5 +408,7 @@
 	"user.switch-dark": "Przełącz na tryb ciemny",
 	"user.switch-light": "Przełącz na tryb jasny",
 	"username": "Nazwa użytkownika",
-	"users": "Użytkownicy"
+	"users": "Użytkownicy",
+	"ai.local_warning_title": "Zalecenie rozmiaru modelu",
+	"ai.local_warning_text": "Dla niezawodnego wywoływania narzędzi użyj modeli z 7B+ parametrami (np. qwen2.5:7b, llama3.1:8b, mistral:7b). Mniejsze modele (3B) mogą halucynować akcje bez ich faktycznego wykonania."
 }

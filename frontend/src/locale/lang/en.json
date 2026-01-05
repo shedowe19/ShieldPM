@@ -53,6 +53,8 @@
 	"ai.model.placeholder": "e.g. gemini-1.5-flash",
 	"ai.provider": "Provider",
 	"ai.system_prompt": "System Prompt",
+	"ai.local_warning_title": "Model Size Recommendation",
+	"ai.local_warning_text": "For reliable tool calling, use models with 7B+ parameters (e.g. qwen2.5:7b, llama3.1:8b, mistral:7b). Smaller models (3B) may hallucinate actions without actually executing them.",
 	"ai.title": "AI Agent",
 	"allowWebsocketUpgrade": "Allow Websocket Upgrade",
 	"analytics.bandwidth-live": "Bandwidth (Live)",

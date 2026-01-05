@@ -206,6 +206,20 @@ export default function AiConfigPage() {
 											Ollama: http://localhost:11434 | OpenAI: https://api.openai.com
 										</p>
 									</div>
+									{/* Model Size Warning */}
+									<div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
+										<div className="flex items-start gap-3">
+											<AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+											<div className="text-sm">
+												<p className="font-medium text-amber-500 mb-1">
+													<T id="ai.local_warning_title" />
+												</p>
+												<p className="text-muted-foreground">
+													<T id="ai.local_warning_text" />
+												</p>
+											</div>
+										</div>
+									</div>
 									<div className="space-y-2">
 										<Label htmlFor="api_key">
 											<T id="ai.api_key" /> (Optional)

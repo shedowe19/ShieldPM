@@ -408,5 +408,7 @@
 	"user.switch-dark": "Cambiar a modo Oscuro",
 	"user.switch-light": "Cambiar a modo Claro",
 	"username": "Nombre de Usuario",
-	"users": "Usuarios"
+	"users": "Usuarios",
+	"ai.local_warning_title": "Recomendación de tamaño del modelo",
+	"ai.local_warning_text": "Para llamadas de herramientas confiables, use modelos con 7B+ parámetros (ej. qwen2.5:7b, llama3.1:8b, mistral:7b). Los modelos más pequeños (3B) pueden alucinar acciones sin ejecutarlas realmente."
 }

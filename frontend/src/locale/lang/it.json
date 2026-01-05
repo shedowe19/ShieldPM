@@ -408,5 +408,7 @@
 	"user.switch-dark": "Passa alla modalità Scura",
 	"user.switch-light": "Passa alla modalità Chiara",
 	"username": "Nome Utente",
-	"users": "Utenti"
+	"users": "Utenti",
+	"ai.local_warning_title": "Raccomandazione dimensione modello",
+	"ai.local_warning_text": "Per chiamate strumenti affidabili, usa modelli con 7B+ parametri (es. qwen2.5:7b, llama3.1:8b, mistral:7b). I modelli più piccoli (3B) possono allucinare azioni senza eseguirle."
 }
