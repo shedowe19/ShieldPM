@@ -49,6 +49,8 @@
 	"ai.enable": "Povoliť AI Agenta",
 	"ai.fetch_models": "Načítať modely",
 	"ai.keep_alive": "Udržiavanie spojenia (Trvanie)",
+	"ai.local_warning_text": "Pre spoľahlivé volanie nástrojov použite modely s 7B+ parametrami (napr. qwen2.5:7b, llama3.1:8b, mistral:7b). Menšie modely (3B) môžu halucinovať akcie bez ich skutočného vykonania.",
+	"ai.local_warning_title": "Odporúčanie veľkosti modelu",
 	"ai.model": "Názov modelu",
 	"ai.model.placeholder": "napr. gemini-1.5-flash",
 	"ai.provider": "Poskytovateľ",
@@ -408,7 +410,5 @@
 	"user.switch-dark": "Prepnúť na tmavý režim",
 	"user.switch-light": "Prepnúť na svetlý režim",
 	"username": "Používateľské meno",
-	"users": "Používatelia",
-	"ai.local_warning_title": "Odporúčanie veľkosti modelu",
-	"ai.local_warning_text": "Pre spoľahlivé volanie nástrojov použite modely s 7B+ parametrami (napr. qwen2.5:7b, llama3.1:8b, mistral:7b). Menšie modely (3B) môžu halucinovať akcie bez ich skutočného vykonania."
+	"users": "Používatelia"
 }

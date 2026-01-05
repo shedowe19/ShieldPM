@@ -49,6 +49,8 @@
 	"ai.enable": "Schakel AI Agent in",
 	"ai.fetch_models": "Modellen Ophalen",
 	"ai.keep_alive": "Verbinding handhaven (Duur)",
+	"ai.local_warning_text": "Voor betrouwbare tool-aanroepen, gebruik modellen met 7B+ parameters (bijv. qwen2.5:7b, llama3.1:8b, mistral:7b). Kleinere modellen (3B) kunnen acties hallucineren zonder ze daadwerkelijk uit te voeren.",
+	"ai.local_warning_title": "Modelgrootte aanbeveling",
 	"ai.model": "Modelnaam",
 	"ai.model.placeholder": "bijv. gemini-1.5-flash",
 	"ai.provider": "Provider",
@@ -408,7 +410,5 @@
 	"user.switch-dark": "Verander naar donkere modus",
 	"user.switch-light": "Verander naar lichte modus",
 	"username": "Gebruikersnaam",
-	"users": "Gebruikers",
-	"ai.local_warning_title": "Modelgrootte aanbeveling",
-	"ai.local_warning_text": "Voor betrouwbare tool-aanroepen, gebruik modellen met 7B+ parameters (bijv. qwen2.5:7b, llama3.1:8b, mistral:7b). Kleinere modellen (3B) kunnen acties hallucineren zonder ze daadwerkelijk uit te voeren."
+	"users": "Gebruikers"
 }

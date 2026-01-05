@@ -49,6 +49,8 @@
 	"ai.enable": "Włącz Agenta AI",
 	"ai.fetch_models": "Pobierz Modele",
 	"ai.keep_alive": "Utrzymywanie aktywności (Czas trwania)",
+	"ai.local_warning_text": "Dla niezawodnego wywoływania narzędzi użyj modeli z 7B+ parametrami (np. qwen2.5:7b, llama3.1:8b, mistral:7b). Mniejsze modele (3B) mogą halucynować akcje bez ich faktycznego wykonania.",
+	"ai.local_warning_title": "Zalecenie rozmiaru modelu",
 	"ai.model": "Nazwa Modelu",
 	"ai.model.placeholder": "np. gemini-1.5-flash",
 	"ai.provider": "Dostawca",
@@ -408,7 +410,5 @@
 	"user.switch-dark": "Przełącz na tryb ciemny",
 	"user.switch-light": "Przełącz na tryb jasny",
 	"username": "Nazwa użytkownika",
-	"users": "Użytkownicy",
-	"ai.local_warning_title": "Zalecenie rozmiaru modelu",
-	"ai.local_warning_text": "Dla niezawodnego wywoływania narzędzi użyj modeli z 7B+ parametrami (np. qwen2.5:7b, llama3.1:8b, mistral:7b). Mniejsze modele (3B) mogą halucynować akcje bez ich faktycznego wykonania."
+	"users": "Użytkownicy"
 }

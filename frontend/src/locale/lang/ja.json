@@ -49,6 +49,8 @@
 	"ai.enable": "AIエージェントを有効化",
 	"ai.fetch_models": "モデルを取得",
 	"ai.keep_alive": "キープアライブ（継続時間）",
+	"ai.local_warning_text": "信頼性の高いツール呼び出しには、7B以上のパラメータを持つモデル（qwen2.5:7b、llama3.1:8b、mistral:7bなど）を使用してください。小さいモデル（3B）は実際に実行せずにアクションを幻覚することがあります。",
+	"ai.local_warning_title": "モデルサイズの推奨",
 	"ai.model": "モデル名",
 	"ai.model.placeholder": "例: gemini-1.5-flash",
 	"ai.provider": "プロバイダー",
@@ -408,7 +410,5 @@
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
-	"users": "ユーザー",
-	"ai.local_warning_title": "モデルサイズの推奨",
-	"ai.local_warning_text": "信頼性の高いツール呼び出しには、7B以上のパラメータを持つモデル（qwen2.5:7b、llama3.1:8b、mistral:7bなど）を使用してください。小さいモデル（3B）は実際に実行せずにアクションを幻覚することがあります。"
+	"users": "ユーザー"
 }
