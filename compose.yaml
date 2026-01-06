@@ -54,8 +54,8 @@ services:
 #      - "CUSTOM_OCSP_STAPLING=true" # enables ocsp stapling for custom certs, default false, I recommend enabling this if your custom certs support it
 #      - "PUID=1000" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
 #      - "PGID=1000" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID
-#      - "NPM_PORT=82" # Port the ShieldPM UI should be bound to, default 81, change this if you want to run multiple npm instances in network mode host
-#      - "GOA_PORT=92" # Port for goaccess, default 91, change this if you want to run multiple npm with goaccess instances in network mode host
+#      - "NPM_PORT=82" # Port the ShieldPM UI should be bound to, default 81, change this if you want to run multiple shieldpm instances in network mode host
+#      - "GOA_PORT=92" # Port for goaccess, default 91, change this if you want to run multiple shieldpm with goaccess instances in network mode host
 #      - "IPV4_BINDING=127.0.0.1" # IPv4 address to bind, defaults to all
 #      - "NPM_IPV4_BINDING=127.0.0.1" # IPv4 address to bind for the ShieldPM UI, defaults to all
 #      - "GOA_IPV4_BINDING=127.0.0.1" # IPv4 address to bind for goaccess, defaults to all
