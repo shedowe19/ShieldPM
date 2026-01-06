@@ -234,11 +234,11 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
 3.  Present the options to the user and **wait for confirmation** before making changes.
 4.  Example prompt:
     ```
-    Aktuelle Version: **3.1.0**
+    Current version: **3.1.0**
     
-    Auf welche Version soll ich aktualisieren?
+    Which version should I update to?
     - **3.1.1** (Patch)
     - **3.2.0** (Minor)
-    - Oder eine spezifische Versionsnummer?
+    - Or a specific version number?
     ```
 5.  After user confirms, update all three files: `backend/package.json`, `frontend/package.json`, `.version`.
