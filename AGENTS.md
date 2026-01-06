@@ -7,7 +7,7 @@ ShieldPM is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fr
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
 *   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
 *   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**.
+*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **AI Agent (Co-Pilot)**.
 *   **Language:** JavaScript/TypeScript (ES Modules).
 
 ## Building and Running
@@ -80,6 +80,13 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20260106000000_add_access_list_mtls_internal.js`: Adds Internal CAs for mTLS Access Lists.
     *   `20260107000000_add_maintenance_schedule.js`: Adds Scheduled Maintenance Mode fields to Proxy Hosts.
     *   `20260108000000_add_cloudflared_tunnel.js`: Adds Cloudflare Tunnels table.
+    *   `20260109000000_add_ai_config.js`: Adds AI Agent configuration settings.
+    *   `20260110000000_reset_ai_system_prompt.js`: Resets AI system prompt defaults.
+    *   `20260111000000_add_ai_num_ctx.js`: Adds AI context window size configuration.
+    *   `20260112000000_add_ai_num_batch.js`: Adds AI batch size configuration.
+    *   `20260113000000_add_ai_advanced_options.js`: Adds advanced AI model options.
+    *   `20260114000000_update_ai_options.js`: Updates AI options structure.
+    *   `20260115000000_add_system_prompt.js`: Adds customizable system prompt for AI.
     *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
