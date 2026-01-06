@@ -62,257 +62,164 @@ The application is configured primarily through Environment Variables (handled i
 *   **Data Path:**
     *   `DATA_PATH` (default: `/data`) - Base directory for all data.
 
+---
+
 ## Database & Migrations
 Database schema evolution is handled by **Knex.js** migrations in `backend/migrations`.
 *   **Engine Support:** SQLite (default), MySQL (`mysql2`), PostgreSQL (`pg`).
-*   **Key Migrations:**
-    *   `20180618015850_initial.js`: Initial Schema.
-    *   `20200410143839_access_list_client.js`: Multi-user Access Lists.
-    *   `20240427161436_stream_ssl.js`: SSL support for Streams.
-    *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
-    *   `20251111090000_redirect_auto_scheme.js`: Introduces "auto" scheme for Redirection Hosts.
-    *   `20251212000000_add_bandwidth_limit.js`: New bandwidth limiting feature.
-    *   `20251213000000_add_forward_query.js`: Adds capability to forward query parameters in Proxy Hosts.
-    *   `20251225000000_add_maintenance_failure.js`: Adds "Maintenance Mode on Failure" feature for Proxy Hosts.
-    *   `20251230000000_add_disable_buffering.js`: Adds "Disable Buffering" option for Proxy Hosts.
-    *   `20251231000000_analytics.js`: Adds database tables for Advanced Analytics.
-    *   `20260102000000_add_req_limit.js`: Adds Request Rate Limiting fields to Proxy Hosts.
-    *   `20260103000000_add_access_list_mtls.js`: Adds mTLS configuration to Access Lists.
-    *   `20260106000000_add_access_list_mtls_internal.js`: Adds Internal CAs for mTLS Access Lists.
-    *   `20260107000000_add_maintenance_schedule.js`: Adds Scheduled Maintenance Mode fields to Proxy Hosts.
-    *   `20260108000000_add_cloudflared_tunnel.js`: Adds Cloudflare Tunnels table.
-    *   `20260109000000_add_ai_config.js`: Adds AI Agent configuration settings.
-    *   `20260110000000_reset_ai_system_prompt.js`: Resets AI system prompt defaults.
-    *   `20260111000000_add_ai_num_ctx.js`: Adds AI context window size configuration.
-    *   `20260112000000_add_ai_num_batch.js`: Adds AI batch size configuration.
-    *   `20260113000000_add_ai_advanced_options.js`: Adds advanced AI model options.
-    *   `20260114000000_update_ai_options.js`: Updates AI options structure.
-    *   `20260115000000_add_system_prompt.js`: Adds customizable system prompt for AI.
+
+### Key Migrations
+| Migration | Description |
+|-----------|-------------|
+| `20180618015850_initial.js` | Initial Schema |
+| `20200410143839_access_list_client.js` | Multi-user Access Lists |
+| `20240427161436_stream_ssl.js` | SSL support for Streams |
+| `20250627140440_stream_proxy_protocol_forwarding.js` | Proxy Protocol Forwarding for Streams |
+| `20251111090000_redirect_auto_scheme.js` | "auto" scheme for Redirection Hosts |
+| `20251212000000_add_bandwidth_limit.js` | Bandwidth limiting feature |
+| `20251213000000_add_forward_query.js` | Forward query parameters in Proxy Hosts |
+| `20251225000000_add_maintenance_failure.js` | Maintenance Mode on Failure |
+| `20251230000000_add_disable_buffering.js` | Disable Buffering option |
+| `20251231000000_analytics.js` | Advanced Analytics tables |
+| `20260102000000_add_req_limit.js` | Request Rate Limiting |
+| `20260103000000_add_access_list_mtls.js` | mTLS for Access Lists |
+| `20260106000000_add_access_list_mtls_internal.js` | Internal CAs for mTLS |
+| `20260107000000_add_maintenance_schedule.js` | Scheduled Maintenance Mode |
+| `20260108000000_add_cloudflared_tunnel.js` | Cloudflare Tunnels table |
+| `20260109000000_add_ai_config.js` | AI Agent configuration |
+| `20260110000000_reset_ai_system_prompt.js` | AI system prompt reset |
+| `20260111000000_add_ai_num_ctx.js` | AI context window size |
+| `20260112000000_add_ai_num_batch.js` | AI batch size |
+| `20260113000000_add_ai_advanced_options.js` | Advanced AI options |
+| `20260114000000_update_ai_options.js` | AI options structure update |
+| `20260115000000_add_system_prompt.js` | Customizable AI system prompt |
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
 The application includes an auto-migration feature that detects if you are switching from the default SQLite database to MySQL or PostgreSQL.
 *   **Trigger**: Running the app with `DB_MYSQL_*` or `DB_POSTGRES_*` configured, an existing `database.sqlite` file present, and an empty target database.
 *   **Action**: Automatically migrates all data from SQLite to the new database on startup and renames the old SQLite file to `database.sqlite.migrated`.
 
+---
+
 ## Frontend Routing (`/frontend/src/Router.tsx`)
 The application uses `react-router-dom` with the following route map:
 
 | URL Path | Component | Description |
 | :--- | :--- | :--- |
-| `/` | `Dashboard` | Main overview. |
-| `/nginx/proxy` | `ProxyHosts` | Manage Proxy Hosts. |
-| `/nginx/redirection` | `RedirectionHosts` | Manage Redirection Hosts. |
-| `/nginx/stream` | `Streams` | Manage TCP/UDP Streams. |
-| `/nginx/cloudflared` | `CloudflaredTunnels` | Manage Cloudflare Tunnels. |
-| `/nginx/404` | `DeadHosts` | Manage 404 Hosts. |
-| `/access` | `Access` | Admin Control Lists (ACLs). |
-| `/certificates` | `Certificates` | SSL/TLS Certificate management. |
-| `/users` | `Users` | User management. |
-| `/settings` | `Settings` | Global App Settings. |
-| `/audit-log` | `AuditLog` | View system events. |
-| `/analytics` | `Analytics` | Analytics Dashboard. |
+| `/` | `Dashboard` | Main overview |
+| `/nginx/proxy` | `ProxyHosts` | Manage Proxy Hosts |
+| `/nginx/redirection` | `RedirectionHosts` | Manage Redirection Hosts |
+| `/nginx/stream` | `Streams` | Manage TCP/UDP Streams |
+| `/nginx/cloudflared` | `CloudflaredTunnels` | Manage Cloudflare Tunnels |
+| `/nginx/404` | `DeadHosts` | Manage 404 Hosts |
+| `/access` | `Access` | Admin Control Lists (ACLs) |
+| `/certificates` | `Certificates` | SSL/TLS Certificate management |
+| `/users` | `Users` | User management |
+| `/settings` | `Settings` | Global App Settings |
+| `/audit-log` | `AuditLog` | View system events |
+| `/analytics` | `Analytics` | Analytics Dashboard |
+
+---
 
 ## Project Structure
 
 ### Repository Root (`/`)
-*   **`compose.yaml`**: Main Docker Compose configuration for production.
-*   **`Dockerfile`**: Multi-stage Docker build definition.
-*   **`knexfile.js`**: Database configuration for Knex.js.
-*   **`package.json`**: Root scripts (if any) and workspace definitions.
-*   **`docs/`**: Documentation source.
-    *   **`wiki/`**: Markdown files for the project Wiki.
-*   **`nginx-quic/`**: Contains patches and resources used by the main Dockerfile to build Nginx with HTTP/3 support.
-*   **`rootfs/`**: Filesystem overlays for Docker.
-    *   **`etc/`**: Configuration files (e.g., `s6-overlay`, `nginx`, `certbot`).
-    *   **`usr/`**: Binary overlays and scripts.
+| Path | Description |
+|------|-------------|
+| `compose.yaml` | Main Docker Compose configuration |
+| `Dockerfile` | Multi-stage Docker build definition |
+| `knexfile.js` | Database configuration for Knex.js |
+| `package.json` | Root scripts and workspace definitions |
+| `docs/wiki/` | Documentation markdown files |
+| `nginx-quic/` | Nginx HTTP/3 build patches |
+| `rootfs/` | Docker filesystem overlays |
 
 ### Backend (`/backend`)
 The backend is a Node.js application responsible for the API, database management, and Nginx configuration generation.
 
-*   **`internal/`**: Core business logic.
-    *   **`nginx.js`**:
-        *   `configure(model, host_type, host)`: Orchestrates config generation, testing, and reloading.
-        *   `generateConfig(host_type, host)`: Renders EJS templates (`templates/`) to `rootfs/etc/nginx/conf.d`.
-        *   `reload()`: Triggers Nginx reload command.
-    *   **`certificate.js`**:
-        *   `processExpiringHosts()`: Timer-based job to check and renew certificates.
-        *   `requestCertbot(certificate)`: Executes Certbot for Let's Encrypt issuance.
-    *   **`cloudflared.js`**:
-        *   Manages the `cloudflared` binary process (start, stop, restart) and token validation.
-    *   **Logic Modules**:
-        *   `access-list.js`, `analytics.js`, `audit-log.js`, `dead-host.js`, `host.js`, `ip_ranges.js`, `maintenance.js`, `pki.js`, `proxy-host.js`, `redirection-host.js`, `remote-version.js`, `report.js`, `setting.js`, `stream.js`, `token.js`, `user.js` - Business logic for respective entities.
-*   **`models/`**: [Objection.js](https://vincit.github.io/objection.js/) ORM models.
-    *   **`ProxyHost`** (`proxy_host`):
-        *   Relates to `User` (owner), `AccessList`, `Certificate`.
-        *   Stores `domain_names` (JSON), `meta` (JSON), `locations` (JSON).
-    *   **`User`** (`user`):
-        *   Authentication and permissions.
-    *   **`AccessList`** (`access_list`):
-        *   Contains `clients` (Basic Auth users). Supports OIDC/OAuth2 configuration via `meta` JSON.
-    *   **`Certificate`** (`certificate`):
-        *   Stores paths/metadata for SSL certs.
-    *   **`CloudflaredTunnel`** (`cloudflared_tunnel`):
-        *   Stores Tunnel Name, Token (Encrypted), and Status.
-    *   **`RedirectionHost`** / **`Stream`** / **`DeadHost`**:
-        *   Models for other host types.
-    *   **`Setting`** / **`AuditLog`**:
-        *   System settings and event logs.
-*   **`routes/`**: Express.js (v5) Router.
-    *   **`nginx/`**: RESTful endpoints for managing hosts.
-        *   e.g., `GET /nginx/proxy-hosts`, `POST /nginx/proxy-hosts`, `GET /nginx/cloudflared-tunnels`.
-        *   Also: `redirection-hosts`, `streams`, `dead-hosts`, `certificates`, `access-lists`.
-    *   **`oidc/`**: OpenID Connect authentication flow endpoints.
-    *   **`analytics.js`**: Analytics data endpoints.
-    *   **Root**: Auth (`/tokens`), User (`/users`), Settings (`/settings`).
-*   **`schema/`**: OpenAPI/AJV validation schemas.
-    *   **`paths/`**: Request/Response schemas per endpoint (e.g. `nginx/proxy-hosts`).
-    *   **`components/`**: Shared schema definitions.
-*   **`lib/`**: Shared utilities and helper functions.
-    *   **Core**: `access.js` (Permissions), `config.js` (App Config), `logger.js`, `utils.js`.
-    *   **Database**: `db-migrate.js`, `migrate_template.js` (Migration helpers).
-    *   **Security**: `encryption.js`, `auth.js`.
-    *   **Validators**: `validator/` directory.
-    *   **Helpers**: `helpers.js`, `certbot.js`, `error.js`.
-*   **`templates/`**: EJS templates used to generate the actual Nginx configuration files (e.g., `proxy_host.ejs`).
-*   **`migrations/`**: Knex.js database migration files used to initialize and update the database schema.
-
+| Directory | Description |
+|-----------|-------------|
+| `internal/` | Core business logic (`nginx.js`, `certificate.js`, `cloudflared.js`, `ai.js`, etc.) |
+| `models/` | Objection.js ORM models (`ProxyHost`, `User`, `AccessList`, `Certificate`, etc.) |
+| `routes/` | Express.js Router (RESTful endpoints) |
+| `schema/` | OpenAPI/AJV validation schemas |
+| `lib/` | Shared utilities (`access.js`, `config.js`, `encryption.js`, etc.) |
+| `templates/` | EJS templates for Nginx config generation |
+| `migrations/` | Knex.js database migration files |
 
 ### Frontend (`/frontend`)
 The frontend is a React Single Page Application (SPA) built with Vite, utilizing React Query for state management.
 
-*   **`src/`**: Main source code directory.
-    *   **`api/`**: Strongly-typed API Client.
-        *   **`backend/`**:
-            *   One file per API endpoint (matches Backend Routes).
-            *   e.g., `getProxyHosts.ts` returns `Promise<ProxyHost[]>`.
-            *   Uses `fetch` wrapper with Auth header injection.
-    *   **`components/`**: Reusable UI components.
-        *   **`ui/`**: **shadcn/ui** primitives (Button, Input, Dialog, etc.).
-        *   **`Form/`**: Wrapper components for forms (e.g., `FormCheckbox`, `FormInput`).
-        *   **`Table/`**: Components for data tables.
-        *   **Layouts**: `Sidebar.tsx`, `SiteHeader.tsx`, `SiteFooter.tsx`.
-    *   **`pages/`**: React components representing full pages (routed views).
-        *   **`Nginx/`**: `ProxyHosts`, `RedirectionHosts`, `Streams`, `DeadHosts`, `CloudflaredTunnels`.
-        *   **`Access/`**: `AccessLists`.
-        *   **`Certificates/`**: `Certificates` list and management.
-        *   **`Dashboard/`**: Main `Dashboard` view.
-        *   **`Analytics/`**: `Analytics` Dashboard.
-        *   **`Users/`**: `User` management.
-        *   **`Settings/`**: `AuditLog` and general `Settings`.
-        *   **`Login/`**: Login page.
-    *   **`hooks/`**: Custom React hooks.
-        *   **Data Hooks** (React Query wrappers): `useProxyHosts`, `useProxyHost`, `useCertificates`, `useAccessLists`, `useUsers`, `useAuditLogs`, `useCloudflaredTunnel`.
-        *   **UI Hooks**: `use-toast.ts` (Notifications), `useTheme.ts` (Dark mode).
-    *   **`context/`**: React Context providers.
-        *   `AuthContext.tsx`: Manages user login state and permissions.
-        *   `ThemeContext.tsx`: Manages light/dark mode.
-        *   `LocaleContext.tsx`: Manages language settings.
-    *   **`modals/`**: Complex task-specific modals.
-        *   **Hosts**: `ProxyHostModal`, `RedirectionHostModal`, `DeadHostModal`, `StreamModal`, `CloudflaredTunnelModal`.
-        *   **Security**: `AccessListModal`, `PermissionsModal`.
-        *   **Certificates**: `CustomCertificateModal`, `DNSCertificateModal`, `HTTPCertificateModal`, `InternalCertificateModal`, `RenewCertificateModal`.
-        *   **User**: `UserModal`, `ChangePasswordModal`.
-    *   **`locale/`**: Internationalization (i18n) JSON files (en, de, fr, etc.).
-    *   **`Router.tsx`**: Main application routing configuration defining which Page loads for which URL.
-*   **`vite.config.ts`**: Vite configuration (proxy setup, plugins).
-*   **`tailwind.config.js`**: Tailwind CSS configuration.
-*   **`tsconfig.json`**: TypeScript configuration.
+| Directory | Description |
+|-----------|-------------|
+| `src/api/` | Strongly-typed API Client |
+| `src/components/` | Reusable UI components (shadcn/ui) |
+| `src/pages/` | React page components |
+| `src/hooks/` | Custom React hooks (React Query wrappers) |
+| `src/context/` | React Context providers |
+| `src/modals/` | Complex task-specific modals |
+| `src/locale/` | Internationalization (i18n) JSON files |
+
+---
 
 ## Agent Knowledge Base & Cookbook
 
 ### Data Flow: Lifecycle of a Proxy Host Change
-1.  **Frontend**: User submits form. `createProxyHost.ts` calls `POST /api/nginx/proxy-hosts`.
-2.  **API**: `routes/nginx/proxy_hosts.js` receives request.
-3.  **Controller**: Validates input using `lib/validator/`.
-4.  **Database**: Model `ProxyHost` saves data to `proxy_host` table.
-5.  **Nginx Config Generation**:
-    *   `internal/nginx.js` -> `configure()` is triggered.
-    *   Data is prepared (host object + env vars).
-    *   **Template Rendering**: `backend/templates/proxy_host.conf` (LiquidJS) is rendered with the host data.
-    *   **Output**: Config written to `/data/nginx/proxy_host/{id}.conf`.
-6.  **Reload**: `nginx -s reload` is executed via `internal/nginx.js` -> `reload()`.
+1.  **Frontend**: User submits form → `createProxyHost.ts` calls `POST /api/nginx/proxy-hosts`
+2.  **API**: `routes/nginx/proxy_hosts.js` receives request
+3.  **Controller**: Validates input using schema
+4.  **Database**: Model `ProxyHost` saves data to `proxy_host` table
+5.  **Nginx Config**: `internal/nginx.js` → `configure()` renders EJS template
+6.  **Reload**: `nginx -s reload` is executed
 
 ### Developer Cookbook
-*   **Adding a New Full-Stack Feature (Best Practices)**:
-    1.  **Database Migration**:
-        *   Create migration: `knex migrate:make add_my_feature_table`.
-        *   Define schema in `backend/migrations/YYYYMMDDHHMMSS_add_my_feature_table.js`.
-        *   **Important**: Use `table.text()` for long strings (like tokens/keys) instead of `table.string()`.
-    2.  **Backend Model**:
-        *   Create/Update model in `backend/models/`.
-        *   Add relationship mappings if needed.
-    3.  **API Schema & Routes**:
-        *   **Schema**: Create schema files in `backend/schema/paths/<feature>/` (or similar structure).
-            *   Create separate JSON files for each method: `get.json` (List/Read), `post.json` (Create), `put.json` (Update), `delete.json` (Delete).
-            *   Ensure schemas follow OpenAPI specs (tags, parameters, responses) to enable strict validation.
-        *   **Controller/Router**: Create `backend/routes/<feature>.js`.
-            *   Implement routes matching your schema: `router.get('/', jwtAuth, ...)` or `router.put('/:id', jwtAuth, ...)`
-            *   **Security**: Always use `jwtAuth` middleware (or `checkPerm`) to secure endpoints.
-            *   **Validation**: Validation is handled **automatically** by the schema. You do not need manual validation logic in the controller.
-        *   **Registration**: Register route in `backend/index.js` (for root routes) or `backend/routes/nginx.js` (for nginx sub-routes).
-    4.  **Frontend API Client**:
-        *   Add type definition in `frontend/src/api/backend/models.ts`.
-        *   Create fetch functions in `frontend/src/api/backend/`.
-    5.  **Frontend Hook**:
-        *   Create a React Query hook in `frontend/src/hooks/` (e.g., `useMyFeature.ts`) to manage data fetching and mutations.
-    6.  **UI Implementation**:
-        *   Create components in `frontend/src/components/` or pages in `frontend/src/pages/`.
-        *   **Routing**: If adding a new page, register the route in `frontend/src/Router.tsx` (add lazy import and `<Route />`).
-        *   Use `shadcn/ui` components for consistency.
-        *   **Localization**: consistently use `<T id="..." />` component and `intl` object. **Do NOT use `react-i18next/useTranslation` directly**.
-        *   Add translation keys to `frontend/src/locale/lang/en.json` first, then others.
-    7.  **Documentation**:
-        *   Update `AGENTS.md`, `README.md`, and Wiki.
 
-*   **Adding a New Field to a Host**:
-    1.  **Migration**: Create a Knex migration in `backend/migrations` to add the column.
-    2.  **Model**: Update `backend/models/proxy_host.js` to include the field.
-    3.  **Frontend**: Update `ProxyHostModal.tsx` to include the form field.
-    4.  **Backend Logic**: If special handling needed (e.g. config generation), update `backend/internal/proxy-host.js` or `backend/internal/nginx.js`.
-    5.  **Nginx**: Update `backend/templates/proxy_host.conf` to use the new variable (e.g., `{{ my_new_field }}`).
+#### Adding a New Full-Stack Feature
+1.  **Database Migration**: `knex migrate:make add_my_feature_table`
+2.  **Backend Model**: Create/Update model in `backend/models/`
+3.  **API Schema & Routes**: Create schemas in `backend/schema/paths/<feature>/` and routes in `backend/routes/`
+4.  **Frontend API Client**: Add types and fetch functions in `frontend/src/api/backend/`
+5.  **Frontend Hook**: Create React Query hook in `frontend/src/hooks/`
+6.  **UI Implementation**: Create components/pages using shadcn/ui
+7.  **Documentation**: Update `AGENTS.md`, `README.md`, and Wiki
 
-*   **Debugging Nginx Generation**:
-    *   Check `backend/internal/nginx.js` -> `generateConfig`.
-    *   Enable `DISABLE_NGINX_BEAUTIFIER=true` to see raw template output if beautifier fails.
-    *   Logs are output via `backend/lib/logger.js`.
+#### Adding a New Field to a Host
+1.  Create Knex migration to add column
+2.  Update model in `backend/models/`
+3.  Update modal in `frontend/src/modals/`
+4.  Update Nginx template in `backend/templates/`
 
-*   **Adding a New Locale**:
-    1.  Create `frontend/src/locale/lang/XX.json`.
-    2.  Update `frontend/src/locale/index.ts` to include the new language.
+#### Adding a New Locale
+1.  Create `frontend/src/locale/lang/XX.json`
+2.  Update `frontend/src/locale/index.ts`
 
+### File Persistence & Data Paths (`/data`)
+| Path | Description |
+|------|-------------|
+| `/data/nginx/{host_type}/{id}.conf` | Generated Nginx Configs |
+| `/data/tls/certbot/live` | Let's Encrypt Certificates |
+| `/data/tls/custom` | Custom Certificates |
+| `/data/access/{id}` | Htpasswd files |
+| `/data/logs/` | Nginx error/access logs |
 
+### Validation & Schema
+*   **Backend**: Uses **AJV** and **OpenAPI** schemas in `backend/schema/`
+*   **Frontend**: Uses **Zod** or manual validation
 
-### Deep Technical Internals
+### React Query Keys
+| Key | Description |
+|-----|-------------|
+| `["proxy-hosts", { expand }]` | List of proxy hosts |
+| `["proxy-hosts", id, { expand }]` | Single host details |
+| `["users"]` | User list |
+| `["settings"]` | Global settings |
+| `["health"]` | System health check |
 
-#### File Persistence & Data Paths (`/data`)
-*   **Configs**: `/data/nginx/{host_type}/{id}.conf` (Generated Nginx Configs).
-*   **Certificates**:
-    *   Let's Encrypt: `/data/tls/certbot/live`
-    *   Custom: `/data/tls/custom`
-*   **Access Lists**: `/data/access/{id}` (Htpasswd files).
-*   **Logs**:
-    *   Audit: Database (`audit_log` table).
-    *   Error/Access: `/data/logs/` (Standard Nginx logs).
+### Docker Infrastructure
+*   **Container**: Single container architecture (s6-overlay)
+*   **Services**: `nginx` (Web server), `node` (Backend API), `crond` (Certificate renewal)
 
-#### Validation & Schema
-*   **Backend**: Uses **AJV** (via `ajv-formats`) and **OpenAPI** schemas located in `backend/schema/`.
-    *   Endpoints validate request bodies against `backend/schema/paths`.
-*   **Frontend**: Uses **Zod** (in `Form` components) or manual validation matching backend constraints.
-
-#### React Query (Frontend State)
-The frontend uses consistent Query Keys for caching and invalidation:
-*   `["proxy-hosts", { expand }]`: List of proxy hosts.
-*   `["proxy-hosts", id, { expand }]`: Single host details.
-*   `["users"]`: User list.
-*   `["settings"]`: Global settings.
-*   `["health"]`: System health check.
-
-#### Docker Infrastructure
-*   **Container**: Single container architecture (s6-overlay).
-*   **Services**:
-    *   `nginx`: Web server / Proxy.
-    *   `node`: Backend API.
-    *   `crond`: Certificate renewal jobs.
+---
 
 ## Version Bump Workflow
 
