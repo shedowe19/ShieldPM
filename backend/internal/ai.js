@@ -1550,7 +1550,7 @@ Time: ${new Date().toISOString()}`;
 						case "update_proxy_host": {
 							// We need to fetch existing to merge, or internalProxyHost.update handles partials?
 							// Usually update requires full object or specific logic.
-							// Standard NPMplus update logic often replaces lists. Be careful.
+							// Standard ShieldPM update logic often replaces lists. Be careful.
 							// However, let's assume standard update.
 							await internalProxyHost.update(access, { id: call.args.id, ...call.args });
 							result = `Updated Proxy Host ID: ${call.args.id}`;
@@ -1993,14 +1993,14 @@ Time: ${new Date().toISOString()}`;
 		const geminiTools =
 			tools.length > 0
 				? tools.map((t) => ({
-						functionDeclarations: [
-							{
-								name: t.function.name,
-								description: t.function.description,
-								parameters: t.function.parameters,
-							},
-						],
-					}))
+					functionDeclarations: [
+						{
+							name: t.function.name,
+							description: t.function.description,
+							parameters: t.function.parameters,
+						},
+					],
+				}))
 				: undefined;
 
 		// Start chat session with history
@@ -2109,9 +2109,9 @@ Time: ${new Date().toISOString()}`;
 				tools:
 					tools.length > 0
 						? tools.map((t) => ({
-								type: "function",
-								function: t.function,
-							}))
+							type: "function",
+							function: t.function,
+						}))
 						: undefined,
 			};
 		} else {
@@ -2131,9 +2131,9 @@ Time: ${new Date().toISOString()}`;
 				tools:
 					tools.length > 0
 						? tools.map((t) => ({
-								type: "function",
-								function: t.function,
-							}))
+							type: "function",
+							function: t.function,
+						}))
 						: undefined,
 			};
 		}

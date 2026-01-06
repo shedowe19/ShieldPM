@@ -664,7 +664,7 @@ const internalCertificate = {
 		try {
 			const result = await utils.execFile("openssl", ["x509", "-in", certificateFile, "-subject", "-noout"]);
 			// Examples:
-			// subject=CN = *.jc21.com
+			// subject=CN = *.shieldpm.eu
 			// subject=CN = something.example.com
 			const regex = /(?:subject=)?[^=]+=\s*(\S+)/gim;
 			const match = regex.exec(result);
