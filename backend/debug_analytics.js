@@ -40,7 +40,7 @@ async function loadDomains() {
 						hostCache.set(domain, host.id);
 					}
 				}
-			} catch (_e) { }
+			} catch (_e) {}
 		}
 	} catch (err) {
 		console.error("❌ Database Connection Failed:", err.message);
