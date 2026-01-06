@@ -47,10 +47,15 @@ describe("SiteFooter", () => {
 		// Check for specific text
 		expect(screen.getByText("Fork me on Github")).toBeInTheDocument();
 		expect(screen.getByText("1.2.3")).toBeInTheDocument();
+		expect(screen.getByText("Powered by")).toBeInTheDocument();
 
 		// Check "Fork me on Github" link
 		const forkLink = screen.getByText("Fork me on Github").closest("a");
 		expect(forkLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM");
+
+		// Check "ShieldPM" link
+		const shieldPmLink = screen.getByText("ShieldPM").closest("a");
+		expect(shieldPmLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM");
 
 		// Check Version link
 		const versionLink = screen.getByText("1.2.3").closest("a");

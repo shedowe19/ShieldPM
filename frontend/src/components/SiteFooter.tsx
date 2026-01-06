@@ -18,14 +18,14 @@ export function SiteFooter() {
 				<div className="flex flex-col-reverse items-center justify-between gap-4 md:flex-row">
 					<div className="flex gap-4">
 						<span className="text-sm text-muted-foreground">
-							© 2025{" "}
+							Powered by{" "}
 							<a
-								href="https://jc21.com"
+								href="https://github.com/shedowe19/ShieldPM"
 								target="_blank"
 								rel="noreferrer"
 								className="font-medium underline underline-offset-4 hover:text-primary"
 							>
-								jc21.com
+								ShieldPM
 							</a>
 						</span>
 						<span className="text-sm text-muted-foreground">
