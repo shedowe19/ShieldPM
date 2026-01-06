@@ -260,6 +260,9 @@ if [ ! -s /data/modsecurity/modsecurity-default.conf ]; then
       cp -van /usr/local/nginx/conf/conf.d/include/modsecurity.conf.example /data/modsecurity/modsecurity-default.conf
 fi
 cp -a /usr/local/nginx/conf/conf.d/include/modsecurity.conf.example /data/modsecurity/modsecurity-default.conf.example
+if [ -s /data/modsecurity/modsecurity-default.conf ]; then
+    sed -i "s|SecUnicodeMapFile unicode.mapping|SecUnicodeMapFile /usr/local/nginx/conf/conf.d/include/unicode.mapping|g" /data/modsecurity/modsecurity-default.conf
+fi
 
 if [ ! -s /data/modsecurity/crs-setup.conf ]; then
       cp -van /usr/local/nginx/conf/conf.d/include/coreruleset/crs-setup.conf.example /data/modsecurity/crs-setup.conf
