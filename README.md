@@ -413,7 +413,7 @@ The container may initiate outbound connections to:
 
 ## 🙏 Acknowledgments
 
-Special thanks to **ZoeyVid** for their incredible foundational work on NPMplus.
+Special thanks to **[@ZoeyVid](https://github.com/ZoeyVid)** for their incredible foundational work on NPMplus.
 ShieldPM builds upon this robust legacy with a renewed focus on:
 *   **Feature Expansion**: Bringing more power and flexibility to your fingertips.
 *   **Automation**: Streamlining workflows to save you time.
