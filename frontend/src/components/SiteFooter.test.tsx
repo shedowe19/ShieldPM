@@ -45,13 +45,14 @@ describe("SiteFooter", () => {
 		render(<SiteFooter />);
 
 		// Check for specific text
-		expect(screen.getByText("Fork me on Github")).toBeInTheDocument();
+		expect(screen.queryByText("Fork me on Github")).not.toBeInTheDocument();
 		expect(screen.getByText("1.2.3")).toBeInTheDocument();
 		expect(screen.getByText("Powered by")).toBeInTheDocument();
+		// We need to use a regex or partial match for the dynamic copyright year if we don't mock Date, 
+		// but typically verifying the static part "Private & Internal Use Only" is enough.
+		expect(screen.getByText(/Private & Internal Use Only/)).toBeInTheDocument();
 
-		// Check "Fork me on Github" link
-		const forkLink = screen.getByText("Fork me on Github").closest("a");
-		expect(forkLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM");
+		// Check "ShieldPM" link
 
 		// Check "ShieldPM" link
 		const shieldPmLink = screen.getByText("ShieldPM").closest("a");

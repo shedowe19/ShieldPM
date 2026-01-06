@@ -29,6 +29,9 @@ export function SiteFooter() {
 							</a>
 						</span>
 						<span className="text-sm text-muted-foreground">
+							&copy; {new Date().getFullYear()} ShieldPM. Private & Internal Use Only.
+						</span>
+						<span className="text-sm text-muted-foreground">
 							Theme by{" "}
 							<a
 								href="https://ui.shadcn.com"
@@ -59,16 +62,7 @@ export function SiteFooter() {
 							</a>
 						)}
 					</div>
-					<div>
-						<a
-							href="https://github.com/shedowe19/ShieldPM"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
-						>
-							<T id="footer.github-fork" />
-						</a>
-					</div>
+
 				</div>
 			</div>
 		</footer>
