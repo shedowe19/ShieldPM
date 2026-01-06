@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 // Mock dependencies
 vi.mock("src/locale", () => ({
 	T: ({ id }: { id: string }) => {
-
 		if (id === "update-available") return "Update Available";
 		return id;
 	},
