@@ -228,6 +228,9 @@ const ai = {
             config.model = ""; // Will fallback to default in _callLocalLLM
         }
 
+	// Mark access as AI-initiated for Audit Log
+		access.is_ai = true;
+
         // 2. Prepare System Prompt & Tools
         const defaultPrompt = `You are the AI Administrator for **ShieldPM**, a specific fork of Nginx Proxy Manager.
 Your goal is to help the user manage their Nginx proxy hosts, certificates, and settings through this chat interface.

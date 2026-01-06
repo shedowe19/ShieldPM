@@ -89,7 +89,10 @@ const internalAuditLog = {
 			action: data.action,
 			object_type: data.object_type || "",
 			object_id: data.object_id || 0,
-			meta: data.meta || {},
+			meta: {
+				...(data.meta || {}),
+				...(access.is_ai ? { ai_initiated: true } : {}),
+			},
 		});
 	},
 };
