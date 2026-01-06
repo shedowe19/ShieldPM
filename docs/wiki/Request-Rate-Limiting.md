@@ -1,6 +1,6 @@
 # Request Rate Limiting
 
-NPMplus includes a built-in Request Rate Limiting feature to protect your services from abuse, scraping, and brute-force attacks. This feature allows you to define a maximum number of requests a single IP address can make within a specified timeframe.
+ShieldPM includes a built-in Request Rate Limiting feature to protect your services from abuse, scraping, and brute-force attacks. This feature allows you to define a maximum number of requests a single IP address can make within a specified timeframe.
 
 ## How it Works
 

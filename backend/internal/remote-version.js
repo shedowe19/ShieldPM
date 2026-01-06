@@ -3,7 +3,7 @@ import { ProxyAgent } from "proxy-agent";
 import { remoteVersion as logger } from "../logger.js";
 import pjson from "../package.json" with { type: "json" };
 
-const VERSION_URL = "https://api.github.com/repos/ZoeyVid/NPMplus/releases/latest";
+const VERSION_URL = "https://api.github.com/repos/shedowe19/ShieldPM/releases/latest";
 
 const internalRemoteVersion = {
 	cache_timeout: 1000 * 60 * 60 * 24, // 1 day
@@ -38,7 +38,7 @@ const internalRemoteVersion = {
 	fetchUrl: (url) => {
 		const agent = new ProxyAgent();
 		const headers = {
-			"User-Agent": `NPMplus/${pjson.version}`,
+			"User-Agent": `ShieldPM/${pjson.version}`,
 		};
 
 		return new Promise((resolve, reject) => {

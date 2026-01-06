@@ -9,7 +9,7 @@ If you are using SQLite (default):
 
 1.  Access the container:
     ```bash
-    docker exec -it npmplus sh
+    docker exec -it shieldpm sh
     ```
 2.  Run the password reset utility:
     ```bash
@@ -22,7 +22,7 @@ If you are using SQLite (default):
 This usually means Nginx cannot reach your upstream service.
 
 > [!TIP]
-> **Check Docker Network:** If `npmplus` is in `network_mode: host`, it can reach other containers on `localhost:<port>` ONLY if those containers also map ports to the host.
+> **Check Docker Network:** If `shieldpm` is in `network_mode: host`, it can reach other containers on `localhost:<port>` ONLY if those containers also map ports to the host.
 
 > [!TIP]
 > **Check IP:** Ensure you are using the correct internal IP or container name (if unrelated to host mode).
@@ -57,13 +57,13 @@ Logs are your best friend when debugging.
 ### Container Logs
 Check the main output for startup errors or crashes:
 ```bash
-docker logs -f npmplus
+docker logs -f shieldpm
 ```
 
 ### Nginx Access/Error Logs
 By default, these are printed to the docker logs. If you enabled `LOGROTATE=true`, they are written to disk:
-*   `/opt/npmplus/nginx/access.log`
-*   `/opt/npmplus/nginx/error.log`
+*   `/opt/shieldpm/nginx/access.log`
+*   `/opt/shieldpm/nginx/error.log`
 
 </details>
 
@@ -77,4 +77,4 @@ By default, these are printed to the docker logs. If you enabled `LOGROTATE=true
 *   **Check Logs:** Look for "ACME" or "Certbot" errors in the docker logs.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

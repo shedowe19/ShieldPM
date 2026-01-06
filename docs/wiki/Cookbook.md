@@ -40,7 +40,7 @@ Home Assistant relies heavily on Websockets for real-time updates.
     *   Scheme: `http`
     *   Forward Port: `8123`
 3.  **trusted_proxies:**
-    In your `configuration.yaml` of Home Assistant, you must add the IP of the NPMplus container (or the docker gateway IP) to `http.trusted_proxies` and `use_x_forwarded_for: true`.
+    In your `configuration.yaml` of Home Assistant, you must add the IP of the ShieldPM container (or the docker gateway IP) to `http.trusted_proxies` and `use_x_forwarded_for: true`.
 
 ## 🍿 Jellyfin / Plex / Emby
 
@@ -61,4 +61,4 @@ Securing the AdGuard Home web interface.
 3.  **Location:** If you want to host it under a subpath (e.g., `/adguard`), note that AdGuard Home does not natively support base URLs easily. It is **highly recommended** to use a subdomain (e.g., `dns.example.com`).
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

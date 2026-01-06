@@ -1,93 +1,92 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Default Page</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="application-name" content="NPMplus" />
-    <meta name="author" content="ZoeyVid" />
-    <meta name="description" content="Default Page of NPMplus" />
-    <meta name="keywords" content="NPMplus, default" />
-    <!-- TODO: Icon -->
-    <link rel="icon" type="image/webp" href="/favicon.webp" />
-  </head>
-  <body>
-    <style>
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: rgb(17 24 39);
-          color: white;
-        }
+<html lang="en">
 
-        #box {
-          background-color: rgb(31 41 55);
-        }
-      }
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="application-name" content="ShieldPM" />
+  <meta name="description" content="Default Page of ShieldPM" />
+  <meta name="keywords" content="ShieldPM, default" />
+  <title>Congratulations!</title>
+  <style>
+    body {
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+      color: #333;
+      background-color: #f8f9fa;
+    }
 
-      @media (prefers-color-scheme: light) {
-        body {
-          background-color: white;
-          color: black;
-        }
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 30px;
+      text-align: center;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-        #box {
-          background-color: rgb(229 231 235);
-        }
-      }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      color: #28a745;
+    }
 
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 30px;
+    }
+
+    #notice {
+      font-size: 0.9rem;
+      color: #6c757d;
+      margin-top: 40px;
+    }
+
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (prefers-color-scheme: dark) {
       body {
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        text-align: center;
+        background-color: #1a1a1a;
+        color: #e0e0e0;
       }
 
-      #box {
-        border-radius: 2rem;
-        position: absolute;
-        padding: 1rem;
-        padding-right: 5rem;
-        padding-left: 5rem;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+      .container {
+        background-color: #2d2d2d;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
       }
 
       h1 {
-        font-size: 64px;
-      }
-
-      p {
-        font-size: 24px;
+        color: #4cd964;
       }
 
       #notice {
-        font-size: 12px;
-        position: fixed;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
+        color: #adb5bd;
       }
 
-      @media (max-width: 600px) {
-        h1 {
-          font-size: 32px;
-        }
-
-        p {
-          font-size: 16px;
-        }
-
-        #box {
-          padding-right: 2rem;
-          padding-left: 2rem;
-        }
+      a {
+        color: #4da3ff;
       }
-    </style>
-    <div id="box">
-      <h1>Congratulations!</h1>
-      <p>You've successfully started NPMplus.</p>
-      <p>If you're seeing this site then you're trying to access a host that isn't set up yet.</p>
-      <p>Log in to the Admin panel to get started.</p>
-    </div>
-    <p id="notice">Powered by <a href="https://github.com/ZoeyVid/NPMplus">NPMplus</a></p>
-  </body>
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Congratulations!</h1>
+    <p>You've successfully started ShieldPM.</p>
+    <p>If you're seeing this page, it means you haven't configured a host for this domain yet.</p>
+    <p id="notice">Powered by <a href="https://github.com/shedowe19/ShieldPM">ShieldPM</a></p>
+  </div>
+</body>
+
 </html>

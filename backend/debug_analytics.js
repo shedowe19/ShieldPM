@@ -1,5 +1,5 @@
 /**
- * Debug Script for NPMplus Analytics Log Parsing & DB Connectivity
+ * Debug Script for ShieldPM Analytics Log Parsing & DB Connectivity
  * Run with: node debug_analytics.js
  *
  * This script will:
@@ -40,7 +40,7 @@ async function loadDomains() {
 						hostCache.set(domain, host.id);
 					}
 				}
-			} catch (_e) {}
+			} catch (_e) { }
 		}
 	} catch (err) {
 		console.error("❌ Database Connection Failed:", err.message);

@@ -1,6 +1,6 @@
-# Welcome to the NPMplus Wiki!
+# Welcome to the ShieldPM Wiki!
 
-**NPMplus** is an advanced fork of Nginx Proxy Manager (NPM), designed to provide a secure, high-performance, and user-friendly way to manage your Nginx reverse proxies.
+**ShieldPM** is an advanced fork of Nginx Proxy Manager (NPM), designed to provide a secure, high-performance, and user-friendly way to manage your Nginx reverse proxies.
 
 ## 🚀 Key Features at a Glance
 
@@ -46,13 +46,13 @@
 *   **[Architecture & Internals](Architecture)**: Data flow, file structure, and internal CLI tools.
 *   **[API Documentation](API-Docs)**: Developer reference for the REST API.
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).
-*   **[Development](Development)**: How to build and test NPMplus locally.
+*   **[Development](Development)**: How to build and test ShieldPM locally.
 *   **[CLI Reference](CLI-Reference)**: Documentation for internal scripts and `cscli` usage.
 
 ## 🤝 Community & Support
 
-*   [GitHub Discussions](https://github.com/shedowe19/NPMplus/discussions)
-*   [Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+*   [GitHub Discussions](https://github.com/shedowe19/ShieldPM/discussions)
+*   [Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

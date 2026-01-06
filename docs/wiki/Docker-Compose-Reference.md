@@ -1,6 +1,6 @@
 # Docker Compose Reference
 
-This is the full reference `compose.yaml` file for NPMplus. You can use this to understand all available configuration options.
+This is the full reference `compose.yaml` file for ShieldPM. You can use this to understand all available configuration options.
 
 ## 📝 compose.yaml
 
@@ -10,9 +10,9 @@ This is the full reference `compose.yaml` file for NPMplus. You can use this to 
 
 ```yaml
 services:
-  npmplus:
-    container_name: npmplus
-    image: ghcr.io/shedowe19/npmplus:latest
+  shieldpm:
+    container_name: shieldpm
+    image: ghcr.io/shedowe19/shieldpm:latest
     restart: always
     network_mode: host
 #    ipc: host # required when you want to use the openappsec attachment module
@@ -29,8 +29,8 @@ services:
 #      - 2a10:50c0::bad1:ff # Public AdGuard DNS
 #      - 2a10:50c0::bad2:ff # Public AdGuard DNS
     volumes:
-      - "/opt/npmplus:/data"
-#      - "/var/www:/var/www" # optional, if you want to use NPMplus directly as a webserver for html/php
+      - "/opt/shieldpm:/data"
+#      - "/var/www:/var/www" # optional, if you want to use ShieldPM directly as a webserver for html/php
 #      - "/path/to/old/npm/letsencrypt/folder:/etc/letsencrypt" # Only needed for initial migration from original nginx-proxy-manager to this fork, remove after migration
 #      - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
     environment:
@@ -82,7 +82,7 @@ services:
 #      - "DISABLE_HTTP=true" # prevents nginx from listening on port 80, default false
 #      - "LISTEN_PROXY_PROTOCOL=true" # should listeners of http(s) hosts (proxy/redirect/dead and default) use proxy protocol instead of http(s)? default false, overrides DISABLE_H3_QUIC to true
 #      - "DISABLE_H3_QUIC=true" # prevents nginx from listening on port 443 udp for default host and all your hosts, this will fully disable HTTP/3 and QUIC, even if you enable it inside the UI, not recommended, default false
-#      - "NGINX_QUIC_BPF=true" # enables nginx's quic_bpf (https://nginx.org/en/docs/http/ngx_http_v3_module.html#quic_bpf), you must also add caps to the NPMplus container (see cap_add of this compose file) to use this, recommended, default false
+#      - "NGINX_QUIC_BPF=true" # enables nginx's quic_bpf (https://nginx.org/en/docs/http/ngx_http_v3_module.html#quic_bpf), you must also add caps to the ShieldPM container (see cap_add of this compose file) to use this, recommended, default false
 #      - "NGINX_LOG_NOT_FOUND=true" # Log 404 errors to the docker logs, unrelated to access logs, default false
 #      - "NGINX_404_REDIRECT=true" # Redirect to / instead of showing a 404 error page, default false
 #      - "NGINX_HSTS_SUBDOMAINS=false" # when enabling security headers, also enable hsts for subdomains, recommended, default true
@@ -92,12 +92,12 @@ services:
 #      - "NGINX_WORKER_CONNECTIONS=1024" # value of worker_connections, default: 512
 #      - "DISABLE_NGINX_BEAUTIFIER=true" # disables nginxbeautifier, useful when it fails parsing non-standard custom/advanced configs, default false
 #      - "FULLCLEAN=true" # Cleans unused config folders, default false
-#      - "LOGROTATE=true" # Enables writing http access logs to /opt/npmplus/nginx/access.log, stream access logs to /opt/npmplus/nginx/stream.log and enables daily logrotation, default false
+#      - "LOGROTATE=true" # Enables writing http access logs to /opt/shieldpm/nginx/access.log, stream access logs to /opt/shieldpm/nginx/stream.log and enables daily logrotation, default false
 #      - "LOGROTATIONS=7" # Set how often the access.log should be rotated until it is deleted, default 3
 #      - "SKIP_IP_RANGES=false" # Skip fetching/whitelisting ip ranges from cloudflare, default true
 #      - "IPRT=3" # Set how many hours should be between updating ip ranges from aws and cloudflare, default 1, ignored when SKIP_IP_RANGES is true
 #      - "CRT=72" # Set how many hours should be between certbot trying to renew your certs, default 23
-#      - "GOA=true" # Enables goaccess (and overrides LOGROTATE to true), default false --- if you download the GeoLite2-Country.mmdb, GeoLite2-City.mmdb AND GeoLite2-ASN.mmdb file from MaxMind and place them in /opt/npmplus/goaccess/geoip it will automatically enable GeoIP in goaccess after restarting NPMplus (no need to change GOACLA below), you may also enable the geoipupdate container below (please change the timezone)
+#      - "GOA=true" # Enables goaccess (and overrides LOGROTATE to true), default false --- if you download the GeoLite2-Country.mmdb, GeoLite2-City.mmdb AND GeoLite2-ASN.mmdb file from MaxMind and place them in /opt/shieldpm/goaccess/geoip it will automatically enable GeoIP in goaccess after restarting ShieldPM (no need to change GOACLA below), you may also enable the geoipupdate container below (please change the timezone)
 #      - "GOACLA=--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=2 --keep-last=7 --with-output-resolver --no-query-string" # Arguments that should be passed to goaccess, default: --agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string
 #      - "PHP82=true" # Activate PHP82, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
 #      - "PHP82_APKS=php82-curl php82-openssl" # Add php extensions, also enables PHP82, see available packages here: https://pkgs.alpinelinux.org/packages?branch=v3.21&repo=community&arch=x86_64&name=php82-*, default none, requires PHP82
@@ -106,11 +106,11 @@ services:
 #      - "PHP84=true" # Activate PHP84, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
 #      - "PHP84_APKS=php84-curl php84-openssl" # Add php extensions, also enables PHP84, see available packages here: https://pkgs.alpinelinux.org/packages?branch=v3.21&repo=community&arch=x86_64&name=php84-*, default none, requires PHP84
 #      - "PHP_APKS=php-pecl-apcu php-pecl-redis" # Add php extensions, see available packages here: https://pkgs.alpinelinux.org/packages?branch=v3.21&repo=community&arch=x86_64&name=php-*, default none, requires PHP82, PHP83 and/or PHP84, not recommended, please use PHP82_APKS, PHP83_APKS or PHP84_APKS
-#      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # email to use instead of admin@example.org on first start of NPMplus for the initial user
-#      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # password to use instead of a random password which is logged on first start of NPMplus for the initial user
-#      - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start of NPMplus for the initial user, default congratulations, can be one of: 404, 444, redirect, congratulations or html
+#      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # email to use instead of admin@example.org on first start of ShieldPM for the initial user
+#      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # password to use instead of a random password which is logged on first start of ShieldPM for the initial user
+#      - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start of ShieldPM for the initial user, default congratulations, can be one of: 404, 444, redirect, congratulations or html
 #      - "ENABLE_PRERUN=true" # see readme, default off
-#      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" # loads the openappsec attachment module, you must also set ipc and enable the shm-volume for NPMplus in this compose file, this will fully disable brotli, default false
+#      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" # loads the openappsec attachment module, you must also set ipc and enable the shm-volume for ShieldPM in this compose file, this will fully disable brotli, default false
 #      - "NGINX_LOAD_GEOIP2_MODULE=true" # loads the geoip2 module, requires manual configuration, default false
 #      - "NGINX_LOAD_NJS_MODULE=true" # loads the njs module (nginx JavaScript module), requires manual configuration, default false
 #      - "NGINX_LOAD_NTLM_MODULE=true" # loads the ntlm module, requires manual configuration, default false
@@ -128,16 +128,16 @@ services:
 #    environment:
 #      - "TZ=your-timezone" # needs to be changed
 #      - "USE_WAL=true"
-#      - "COLLECTIONS=ZoeyVid/npmplus"
+#      - "COLLECTIONS=shedowe19/shieldpm"
 #    volumes:
 #      - "/opt/crowdsec/conf:/etc/crowdsec"
 #      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
-#      - "/opt/npmplus/nginx:/opt/npmplus/nginx:ro"
+#      - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro"
 #      - "/opt/openappsec/logs:/opt/openappsec/logs:ro" # only uncomment if you also use the openappsec-agent container
 
-# This can be used to use MySQL/MariaDB instead of SQLite, you must also set DB_MYSQL_HOST to 127.0.0.1 in the npmplus container
+# This can be used to use MySQL/MariaDB instead of SQLite, you must also set DB_MYSQL_HOST to 127.0.0.1 in the shieldpm container
 #  db:
-#    container_name: npmplus-db
+#    container_name: shieldpm-db
 #    image: mysql:8 # or mariadb:10
 #    restart: always
 #    network_mode: bridge
@@ -151,9 +151,9 @@ services:
 #    volumes:
 #      - "db_data:/var/lib/mysql"
 
-# This can be used to use Postgres instead of SQLite, you must also set DB_POSTGRES_HOST to 127.0.0.1 in the npmplus container
+# This can be used to use Postgres instead of SQLite, you must also set DB_POSTGRES_HOST to 127.0.0.1 in the shieldpm container
 #  db:
-#    container_name: npmplus-db
+#    container_name: shieldpm-db
 #    image: postgres:17-alpine
 #    restart: always
 #    network_mode: bridge
@@ -164,11 +164,11 @@ services:
 #    ports:
 #      - "5432:5432"
 #    volumes:
-#      - "/opt/npmplus/postgres:/var/lib/postgresql/data"
+#      - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
 
 # This can be used with GOA=true to keep the geoip database updated, environment variables must be configured
 #  geoipupdate:
-#    container_name: npmplus-geoipupdate
+#    container_name: shieldpm-geoipupdate
 #    image: ghcr.io/maxmind/geoipupdate:latest
 #    restart: always
 #    network_mode: bridge
@@ -179,9 +179,9 @@ services:
 #      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>" # needs to be changed
 #      - "GEOIPUPDATE_FREQUENCY=24"
 #    volumes:
-#      - "/opt/npmplus/goaccess/geoip:/usr/share/GeoIP"
+#      - "/opt/shieldpm/goaccess/geoip:/usr/share/GeoIP"
 
-# This can be used to run openappsec, you must also set NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE to true and set ipc for NPMplus
+# This can be used to run openappsec, you must also set NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE to true and set ipc for ShieldPM
 #  openappsec-agent:
 #    container_name: openappsec-agent
 #    image: ghcr.io/openappsec/agent:latest
@@ -197,7 +197,7 @@ services:
 #    environment:
 #      - "TZ=your-timezone" # needs to be changed
 #      - "autoPolicyLoad=true"
-#      - "registered_server=NPMplus"
+#      - "registered_server=ShieldPM"
 #      - "user_email=your-email" # optional, from their docs: "This allows the open-appsec team to provide you easy assistance in case of any issues you might have with your specific deployment in the future and also to provide you information proactively regarding open-appsec in general or regarding your specific deployment. [...] If we send automatic emails there will also be an opt-out option included for receiving similar communication in the future."
 #      - "AGENT_TOKEN=" # optional, you can specify an openappsec deployment profile token for connecting to their central webinterface  at https://my.openappsec.io, if you leave this commented, make sure to uncomment all other openappsec containers below, see: https://docs.openappsec.io/getting-started/using-the-web-ui-saas/create-a-profile
 #      - "SHARED_STORAGE_HOST=openappsec-shared-storage" # uncomment if you don't set AGENT_TOKEN
@@ -252,9 +252,9 @@ services:
 #      - "/opt/openappsec/pgdb:/var/lib/postgresql/data"
 
 # This can be used with DISABLE_HTTP=true, to force HTTPS redirects for every host
-#  npmplus-caddy:
-#    container_name: npmplus-caddy
-#    image: ghcr.io/shedowe19/npmplus:caddy
+#  shieldpm-caddy:
+#    container_name: shieldpm-caddy
+#    image: ghcr.io/shedowe19/shieldpm:caddy
 #    restart: always
 #    network_mode: bridge
 #    ports:
@@ -272,4 +272,4 @@ services:
 ```
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

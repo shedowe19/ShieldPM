@@ -1,6 +1,6 @@
 # Glossary
 
-Common terms used in NPMplus and networking.
+Common terms used in ShieldPM and networking.
 
 ## A
 *   **A Record:** A DNS record that points a domain name to an IPv4 address.
@@ -24,7 +24,7 @@ Common terms used in NPMplus and networking.
 *   **IPS:** Intrusion Prevention System. A system that actively blocks detected threats (e.g., CrowdSec).
 
 ## J
-*   **JWT:** JSON Web Token. A compact, URL-safe means of representing claims to be transferred between two parties. Used for API authentication in NPMplus.
+*   **JWT:** JSON Web Token. A compact, URL-safe means of representing claims to be transferred between two parties. Used for API authentication in ShieldPM.
 
 ## L
 *   **Let's Encrypt:** A free, automated, and open certificate authority (CA).
@@ -46,4 +46,4 @@ Common terms used in NPMplus and networking.
 *   **Wildcard Certificate:** An SSL certificate that covers a domain and all its subdomains (e.g., `*.example.com`).
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

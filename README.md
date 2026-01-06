@@ -1,15 +1,25 @@
-# NPMplus
+# ShieldPM (formerly NPMplus)
 
-![Version](https://img.shields.io/github/v/release/shedowe19/NPMplus?style=for-the-badge&color=blue)
-![License](https://img.shields.io/github/license/shedowe19/NPMplus?style=for-the-badge&color=orange)
-![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/NPMplus/docker.yml?style=for-the-badge)
+> [!CAUTION]
+> **MIGRATION WARNING**
+> This project has been renamed from **NPMplus** to **ShieldPM**.
+>
+> 1.  **Docker Image**: You **MUST** update your `compose.yaml` to use `ghcr.io/shedowe19/shieldpm:latest`.
+> 2.  **Data Path**: Internal data is now stored in `/data/shieldpm`.
+>     *   **Auto-Migration**: When you start the new container, it will **automatically move** your existing data from `/data/npmplus` to `/data/shieldpm`.
+>     *   **Action Required**: If you mount the data volume to a host path (e.g., `./data:/data`), you may want to rename your host folder for clarity, but it is not strictly required as the mapping handles it.
+> 3.  **Downgrade**: Migration is **one-way**. Back up your data before upgrading!
+
+![Version](https://img.shields.io/github/v/release/shedowe19/ShieldPM?style=for-the-badge&color=blue)
+![License](https://img.shields.io/github/license/shedowe19/ShieldPM?style=for-the-badge&color=orange)
+![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/ShieldPM/docker.yml?style=for-the-badge)
 
 ## 📚 Documentation
 
-Detailed documentation is available in the **[Wiki](https://github.com/shedowe19/NPMplus/wiki)**.
+Detailed documentation is available in the **[Wiki](https://github.com/shedowe19/ShieldPM/wiki)**.
 It covers installation, configuration, and advanced usage examples.
 
-**NPMplus** is an advanced, security-focused fork of Nginx Proxy Manager (NPM). It empowers you to manage Nginx reverse proxies with a user-friendly web interface while integrating cutting-edge features like **HTTP/3 (QUIC)**, **CrowdSec IPS**, **ModSecurity (WAF)**, and **enhanced TLS certificate management**.
+**ShieldPM** is an advanced, security-focused fork of Nginx Proxy Manager (NPM). It empowers you to manage Nginx reverse proxies with a user-friendly web interface while integrating cutting-edge features like **HTTP/3 (QUIC)**, **CrowdSec IPS**, **ModSecurity (WAF)**, and **enhanced TLS certificate management**.
 
 ---
 
@@ -19,7 +29,7 @@ Get up and running in seconds with Docker Compose.
 
 **1. Download Configuration**
 ```bash
-curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/NPMplus/refs/heads/develop/compose.yaml
+curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
 ```
 
 **2. Configure**
@@ -35,7 +45,7 @@ docker compose up -d
 **4. Access Admin UI**
 Open `https://<your-ip>:81`
 *   **Email:** `admin@example.org`
-*   **Password:** Check logs (`docker logs npmplus`) for the unique initial password.
+*   **Password:** Check logs (`docker logs shieldpm`) for the unique initial password.
 
 ---
 
@@ -107,7 +117,7 @@ npm test
 
 ## ✨ Key Features
 
-NPMplus extends the original Nginx Proxy Manager with significant enhancements:
+ShieldPM extends the original Nginx Proxy Manager with significant enhancements:
 
 ### 🛡️ Core Security
 *   **HTTP/3 (QUIC) Support:** Leverage the latest web protocol for faster, more efficient connections. Requires exposing HTTPS with UDP.
@@ -144,7 +154,7 @@ NPMplus extends the original Nginx Proxy Manager with significant enhancements:
 *   **PHP:** Optional PHP-FPM integration (8.2/8.3/8.4).
 
 ### ☁️ Cloudflare Tunnels (Zero Trust)
-NPMplus integrates `cloudflared` directly, allowing you to create and manage tunnels from the UI without needing a separate container.
+ShieldPM integrates `cloudflared` directly, allowing you to create and manage tunnels from the UI without needing a separate container.
 *   **Manage Tunnels:** List, Create, Delete tunnels.
 *   **Security:** Tunnel tokens are encrypted at rest using `aes-256-gcm`.
 *   **Status Monitoring:** Real-time online/offline status.
@@ -166,9 +176,9 @@ NPMplus integrates `cloudflared` directly, allowing you to create and manage tun
 1.  **Backup** `/data` and `/etc/letsencrypt`.
 2.  **Stop** old NPM container.
 3.  **Update** `compose.yaml` volumes to point to your data.
-4.  **Deploy** NPMplus (`docker compose up -d`).
+4.  **Deploy** ShieldPM (`docker compose up -d`).
 5.  **Clean up**: Remove `/etc/letsencrypt` volume after first run (moved to `/data`).
-6.  **Verify**: Check all host settings and update Proxy Scheme to HTTPS if proxying NPMplus through itself.
+6.  **Verify**: Check all host settings and update Proxy Scheme to HTTPS if proxying ShieldPM through itself.
 
 ---
 
@@ -180,17 +190,17 @@ To enable CrowdSec IPS integration:
 <details>
 <summary>Click to view setup instructions</summary>
 
-1.  **Install Collection**: Install CrowdSec and the `shedowe19/npmplus` collection.
+1.  **Install Collection**: Install CrowdSec and the `shedowe19/shieldpm` collection.
 2.  **Enable Logging**: Set `LOGROTATE: "true"` in `compose.yaml`.
-3.  **Configure Acquisition**: Create/update `/opt/crowdsec/conf/acquis.d/npmplus.yaml`:
+3.  **Configure Acquisition**: Create/update `/opt/crowdsec/conf/acquis.d/shieldpm.yaml`:
     ```yaml
     filenames:
-      - /opt/npmplus/nginx/*.log
+      - /opt/shieldpm/nginx/*.log
     labels:
-      type: npmplus
+      type: shieldpm
     ---
     filenames:
-      - /opt/npmplus/nginx/*.log
+      - /opt/shieldpm/nginx/*.log
     labels:
       type: modsecurity
     ---
@@ -203,20 +213,20 @@ To enable CrowdSec IPS integration:
     ```
 4.  **Host Network**: Ensure `network_mode: host` is used.
 5.  **Bouncer**: Run `docker exec crowdsec cscli bouncers add npmplus -o raw` and save the key.
-6.  **Config**: Edit `/opt/npmplus/crowdsec/crowdsec.conf`, set `ENABLED=true` and `API_KEY`.
+6.  **Config**: Edit `/opt/shieldpm/crowdsec/crowdsec.conf`, set `ENABLED=true` and `API_KEY`.
 7.  **Firewall Bouncer**: Recommended for optimal protection.
 </details>
 
 ### ModSecurity (WAF) CoreRuleSet
 1.  **Download** plugin files (`-before.conf`, `-config.conf`, etc.).
-2.  **Place** them in `/opt/npmplus/modsecurity/crs-plugins`.
+2.  **Place** them in `/opt/shieldpm/modsecurity/crs-plugins`.
 3.  **Configure** the `<plugin-name>-config.conf`.
 
 ---
 
 ## � Database Support
 
-While SQLite is the default and recommended database for most users, NPMplus supports external database backends for larger deployments.
+While SQLite is the default and recommended database for most users, ShieldPM supports external database backends for larger deployments.
 
 ### Supported Databases
 *   **SQLite** (Default, zero-config)
@@ -245,7 +255,7 @@ DB_POSTGRES_NAME=npm
 ```
 
 ### 🔄 Auto-Migration
-NPMplus includes a built-in **Auto-Migration** feature. If you switch from SQLite to MySQL or PostgreSQL, the application will automatically:
+ShieldPM includes a built-in **Auto-Migration** feature. If you switch from SQLite to MySQL or PostgreSQL, the application will automatically:
 1.  Detect the new empty database connection.
 2.  Existing `database.sqlite` is found.
 3.  **Migrate all data** from SQLite to the new backend.
@@ -283,7 +293,7 @@ This makes scaling up effortless!
 </details>
 
 ### Load Balancing
-Define upstream servers in `/opt/npmplus/custom_nginx/http_top.conf`:
+Define upstream servers in `/opt/shieldpm/custom_nginx/http_top.conf`:
 ```nginx
 upstream my_app {
     server 10.0.0.1:80;
@@ -294,14 +304,14 @@ upstream my_app {
 Then point your Proxy Host to `http://my_app` (or use specific ports as needed).
 
 ### Prerun Scripts
-Create `/opt/npmplus/prerun/` and place shell scripts (`.sh`) there.
+Create `/opt/shieldpm/prerun/` and place shell scripts (`.sh`) there.
 *   Ensure shebang is present (`#!/usr/bin/env sh`).
 *   Set `ENABLE_PRERUN: "true"` in `compose.yaml`.
 
 ---
 
 ## 🔐 Auth Requests (SSO) configuration
-NPMplus supports easy integration with auth providers via `auth_request`.
+ShieldPM supports easy integration with auth providers via `auth_request`.
 
 <details>
 <summary><strong>Authentik</strong></summary>
@@ -353,10 +363,10 @@ Add `auth_request /tinyauth;` to custom location `/`.
 ---
 
 ## ⚠️ Notes on Cloudflare
-It is **not recommended** to use Cloudflare proxy (`users <=> Cloudflare <=> NPMplus`) in front of NPMplus.
+It is **not recommended** to use Cloudflare proxy (`users <=> Cloudflare <=> ShieldPM`) in front of ShieldPM.
 
 *   **MITM:** Cloudflare acts as a Man-in-the-Middle, decrypting traffic.
-*   **Features:** Breaks HTTP/3 between user and NPMplus.
+*   **Features:** Breaks HTTP/3 between user and ShieldPM.
 *   **Overrides:** Overrides HSTS and TLS settings.
 *   **Uploads:** 100MB upload limit on free plans.
 *   **Privacy:** Cannot protect if real IP is known; does not protect non-HTTP ports.
@@ -401,7 +411,7 @@ The container may initiate outbound connections to:
 
 ## 🤝 Contributing & Support
 
-*   **Support**: [GitHub Discussions](https://github.com/shedowe19/NPMplus/discussions)
-*   **Bugs**: [GitHub Issues](https://github.com/shedowe19/NPMplus/issues)
+*   **Support**: [GitHub Discussions](https://github.com/shedowe19/ShieldPM/discussions)
+*   **Bugs**: [GitHub Issues](https://github.com/shedowe19/ShieldPM/issues)
 
 **Maintained with ❤️ by the open source community.**

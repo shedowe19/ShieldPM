@@ -97,7 +97,7 @@ const setupDefaultSettings = async () => {
 		await settingModel.query().insert({
 			id: "oidc-config",
 			name: "Open ID Connect",
-			description: "Sign in to NPMplus with an external Identity Provider",
+			description: "Sign in to ShieldPM with an external Identity Provider",
 			value: "metadata",
 			meta: {},
 		});

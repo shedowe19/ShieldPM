@@ -1,6 +1,6 @@
 # CLI Reference
 
-NPMplus includes several internal CLI tools and scripts to help manage the application, logs, and security.
+ShieldPM includes several internal CLI tools and scripts to help manage the application, logs, and security.
 
 ## Global Commands
 
@@ -50,4 +50,4 @@ Manually tests the Nginx configuration and reloads the service if successful.
 *   **Usage:** `/etc/s6-overlay/s6-rc.d/prepare/30-nginx.sh` (Internal script)
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

@@ -1,6 +1,6 @@
 # Configuration
 
-NPMplus is primarily configured via **Environment Variables** in your `compose.yaml`.
+ShieldPM is primarily configured via **Environment Variables** in your `compose.yaml`.
 
 ## 🌍 General Settings
 
@@ -38,7 +38,7 @@ DB_POSTGRES_NAME=npm
 
 ### 🔄 Auto-Migration
 If you switch from SQLite to an external database (MySQL/Postgres) and start a fresh container:
-1.  NPMplus detects the empty target database.
+1.  ShieldPM detects the empty target database.
 2.  It finds the existing `database.sqlite` in `/data`.
 3.  It automatically migrates all data to the new database.
 4.  It renames the old file to `database.sqlite.migrated`.
@@ -51,4 +51,4 @@ If you switch from SQLite to an external database (MySQL/Postgres) and start a f
 *   `network_mode: host`: Recommended for best performance and IP visibility (requires adjusting ports if they conflict).
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

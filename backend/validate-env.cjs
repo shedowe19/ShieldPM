@@ -69,10 +69,10 @@ const ensureDefault = (key, defaultVal) => {
 
 // Deprecated Env Checks
 const deprecated = [
-    { key: 'NPM_DISABLE_IPV6', msg: 'NPM_DISABLE_IPV6 env is not supported. DISABLE_IPV6 now also disables IPv6 for the NPMplus web UI.' },
+    { key: 'NPM_DISABLE_IPV6', msg: 'NPM_DISABLE_IPV6 env is not supported. DISABLE_IPV6 now also disables IPv6 for the ShieldPM web UI.' },
     { key: 'GOA_DISABLE_IPV6', msg: 'GOA_DISABLE_IPV6 env is not supported. DISABLE_IPV6 now also disables IPv6 for goaccess.' },
-    { key: 'NIBEP', msg: 'NIBEP env is not supported. NPMplus now uses a unix socket instead.' },
-    { key: 'GOAIWSP', msg: 'GOAIWSP env is not supported. NPMplus now uses a unix socket instead.' },
+    { key: 'NIBEP', msg: 'NIBEP env is not supported. ShieldPM now uses a unix socket instead.' },
+    { key: 'GOAIWSP', msg: 'GOAIWSP env is not supported. ShieldPM now uses a unix socket instead.' },
     { key: 'NGINX_HSTS_SUBDMAINS', msg: 'NGINX_HSTS_SUBDMAINS env is replaced by NGINX_HSTS_SUBDOMAINS, please change it to NGINX_HSTS_SUBDOMAINS' },
     { key: 'LE_SERVER', msg: 'LE_SERVER env is replaced by ACME_SERVER, please change it to ACME_SERVER' },
     { key: 'LE_STAGING', msg: 'LE_STAGING env is not supported, please use ACME_SERVER.' },
@@ -361,7 +361,7 @@ if (currentGoacla.includes('geoip-database') === false) {
     // Only export if changed and not already exported by ensureDefault
     // Actually, ensureDefault might have set it. We should update exportsMap if different.
     if (currentGoacla !== getEnv('GOACLA')) {
-         setExport('GOACLA', currentGoacla);
+        setExport('GOACLA', currentGoacla);
     }
 }
 

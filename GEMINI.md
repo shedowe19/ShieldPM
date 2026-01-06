@@ -1,7 +1,7 @@
-# NPMplus
+# ShieldPM
 
 ## Project Overview
-NPMplus is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-friendly web interface for managing Nginx reverse proxies, with a focus on security, performance, and ease of use. It includes features like HTTP/3 (QUIC) support, CrowdSec integration, ModSecurity (WAF), OIDC (OpenID Connect) for Access Lists, **Advanced Analytics**, improved TLS certificate management (including OCSP Stapling), **Disable Buffering**, and **Scheduled Maintenance Mode**.
+ShieldPM is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-friendly web interface for managing Nginx reverse proxies, with a focus on security, performance, and ease of use. It includes features like HTTP/3 (QUIC) support, CrowdSec integration, ModSecurity (WAF), OIDC (OpenID Connect) for Access Lists, **Advanced Analytics**, improved TLS certificate management (including OCSP Stapling), **Disable Buffering**, and **Scheduled Maintenance Mode**.
 
 **Key Technologies:**
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
@@ -28,7 +28,7 @@ docker compose up -d
 The project uses a multi-stage `Dockerfile`.
 *   **Frontend:** Built in the `frontend` stage using `yarn vite build`.
 *   **Backend:** Dependencies installed in the `backend` stage.
-*   **Final Image:** Combines frontend assets, backend code, and Nginx configuration into an Alpine-based image (`zoeyvid/nginx-quic`).
+*   **Final Image:** Combines frontend assets, backend code, and Nginx configuration into an Alpine-based image (`shedowe19/nginx-quic`).
 
 **Key Scripts (Backend):**
 *   `test`: `vitest` - Runs unit tests.
@@ -46,7 +46,7 @@ The project uses a multi-stage `Dockerfile`.
     *   `backend/`: Contains the Node.js API server, database models, and Nginx configuration logic.
     *   `frontend/`: Contains the React-based user interface.
     *   `rootfs/`: Contains filesystem overlays for the Docker image (e.g., Nginx configs, scripts).
-    *   `caddy/`: Separate directory for Caddy-related configuration (alternative to NPMplus web GUI).
+    *   `caddy/`: Separate directory for Caddy-related configuration (alternative to ShieldPM web GUI).
 *   **Contribution:** New features should ideally include tests. Changes to the Nginx configuration generation logic should be carefully tested.
 
 ## Configuration & Environment
@@ -56,9 +56,9 @@ The application is configured primarily through Environment Variables (handled i
 *   **Database:**
     *   `DB_MYSQL_HOST`, `DB_MYSQL_USER`, `DB_MYSQL_PASSWORD`, `DB_MYSQL_NAME`, `DB_MYSQL_PORT`
     *   `DB_POSTGRES_HOST`, `DB_POSTGRES_USER`, `DB_POSTGRES_PASSWORD`, `DB_POSTGRES_NAME`, `DB_POSTGRES_PORT`
-    *   *Default*: SQLite (`/data/npmplus/database.sqlite`)
+    *   *Default*: SQLite (`/data/shieldpm/database.sqlite`)
 *   **Keys:**
-    *   Managed automatically in `/data/npmplus/keys.json` (RSA 2048-bit for JWT).
+    *   Managed automatically in `/data/shieldpm/keys.json` (RSA 2048-bit for JWT).
 *   **Data Path:**
     *   `DATA_PATH` (default: `/data`) - Base directory for all data.
 

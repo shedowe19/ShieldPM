@@ -9,7 +9,7 @@ if [ "$NC_AIO" = "true" ] && [ ! -f /data/aio.lock ]; then
         echo
     else
         echo
-        echo "There was an error creating the TLS certificate for AIO. Please try to create the cert yourself in the NPMplus UI and update the AIO proxy host to use this cert, see the NPMplus config in the AIO reverse proxy guide as an example for the TLS tab."
+        echo "There was an error creating the TLS certificate for AIO. Please try to create the cert yourself in the ShieldPM UI and update the AIO proxy host to use this cert, see the ShieldPM config in the AIO reverse proxy guide as an example for the TLS tab."
         echo
     fi
     touch /data/aio.lock

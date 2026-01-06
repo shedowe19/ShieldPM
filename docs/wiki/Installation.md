@@ -1,6 +1,6 @@
 # Installation
 
-NPMplus is designed to be deployed using **Docker Compose**.
+ShieldPM is designed to be deployed using **Docker Compose**.
 
 ## Prerequisites
 *   Docker Engine
@@ -10,7 +10,7 @@ NPMplus is designed to be deployed using **Docker Compose**.
 
 1.  **Download the Compose File:**
     ```bash
-    curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/NPMplus/refs/heads/develop/compose.yaml
+    curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
     ```
 
 2.  **Configure Environment:**
@@ -28,7 +28,7 @@ NPMplus is designed to be deployed using **Docker Compose**.
     *   **Default Email:** `admin@example.org`
     *   **Default Password:** Check the logs for the unique initial password:
         ```bash
-        docker logs npmplus
+        docker logs shieldpm
         ```
 
 ---
@@ -46,14 +46,14 @@ NPMplus is designed to be deployed using **Docker Compose**.
     docker stop nginx-proxy-manager
     ```
 
-3.  **Deploy NPMplus:**
-    Update your `docker-compose.yml` to use `ghcr.io/shedowe19/npmplus:latest` and point the volumes to your existing data.
+3.  **Deploy ShieldPM:**
+    Update your `docker-compose.yml` to use `ghcr.io/shedowe19/shieldpm:latest` and point the volumes to your existing data.
 
 4.  **Cleanup:**
     After the first successful start, the `/etc/letsencrypt` volume is no longer needed (certs are moved to `/data`). You can verify this and remove the volume mapping.
 
 5.  **Verify:**
-    Log in and check your hosts. If you are proxying NPMplus through itself, ensure the scheme is set to **HTTPS**.
+    Log in and check your hosts. If you are proxying ShieldPM through itself, ensure the scheme is set to **HTTPS**.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

@@ -1,6 +1,6 @@
 # User Management
 
-Manage who can access your NPMplus instance and how they access your services.
+Manage who can access your ShieldPM instance and how they access your services.
 
 ## 👥 Users & Permissions
 
@@ -20,7 +20,7 @@ Access Lists allow you to protect your Proxy Hosts with Basic Authentication or 
 
 ## 📜 Audit Log
 
-The **Audit Log** tracks changes made within the NPMplus interface.
+The **Audit Log** tracks changes made within the ShieldPM interface.
 
 *   **What is logged?**
     *   creation/update/deletion of Hosts.
@@ -30,4 +30,4 @@ The **Audit Log** tracks changes made within the NPMplus interface.
 *   **Usage:** Useful for troubleshooting "who changed what" and for security compliance.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

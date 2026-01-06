@@ -50,11 +50,11 @@ describe("SiteFooter", () => {
 
 		// Check "Fork me on Github" link
 		const forkLink = screen.getByText("Fork me on Github").closest("a");
-		expect(forkLink).toHaveAttribute("href", "https://github.com/shedowe19/NPMplus");
+		expect(forkLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM");
 
 		// Check Version link
 		const versionLink = screen.getByText("1.2.3").closest("a");
-		expect(versionLink).toHaveAttribute("href", "https://github.com/shedowe19/NPMplus/releases/tag/1.2.3");
+		expect(versionLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM/releases/tag/1.2.3");
 	});
 
 	it("renders update available link when update is available", async () => {
@@ -73,6 +73,6 @@ describe("SiteFooter", () => {
 
 		// Check Update link
 		const updateLink = screen.getByText("Update Available").closest("a");
-		expect(updateLink).toHaveAttribute("href", "https://github.com/shedowe19/NPMplus/releases/tag/2.0.0");
+		expect(updateLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM/releases/tag/2.0.0");
 	});
 });

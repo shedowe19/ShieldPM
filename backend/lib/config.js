@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { global as logger } from "../logger.js";
 
 const dataPath = process.env.DATA_PATH || "/data";
-const keysFile = `${dataPath}/npmplus/keys.json`;
+const keysFile = `${dataPath}/shieldpm/keys.json`;
 const mysqlEngine = "mysql2";
 const postgresEngine = "pg";
 const sqliteClientName = "better-sqlite3";
@@ -13,7 +13,7 @@ let instance = null;
 // 1. Load from config file first (not recommended anymore)
 // 2. Use config env variables next
 const configure = () => {
-	const filename = `${dataPath}/npmplus/default.json`;
+	const filename = `${dataPath}/shieldpm/default.json`;
 	if (fs.existsSync(filename)) {
 		let configData;
 		try {
@@ -92,7 +92,7 @@ const configure = () => {
 		return;
 	}
 
-	const envSqliteFile = `${dataPath}/npmplus/database.sqlite`;
+	const envSqliteFile = `${dataPath}/shieldpm/database.sqlite`;
 	logger.info(`Using Sqlite: ${envSqliteFile}`);
 	instance = {
 		database: {

@@ -1,6 +1,6 @@
 # Architecture & Internals
 
-Understanding how NPMplus works under the hood can help with debugging and advanced hacking.
+Understanding how ShieldPM works under the hood can help with debugging and advanced hacking.
 
 ## 🔄 Data Flow
 
@@ -30,17 +30,17 @@ These scripts are available inside the container for maintenance.
 ### `npm-reset-password`
 Resets the `admin@example.org` user's password if you are locked out.
 ```bash
-docker exec -it npmplus npm-reset-password
+docker exec -it shieldpm npm-reset-password
 ```
 
 ### `sqlite-vaccum.js`
 Optimizes the SQLite database file by running the `VACUUM` command to reclaim unused space.
 ```bash
-docker exec -it npmplus node /usr/local/bin/sqlite-vaccum.js
+docker exec -it shieldpm node /usr/local/bin/sqlite-vaccum.js
 ```
 
 ### `clean-modules`
 Used during the build process to remove unnecessary files from `node_modules`, keeping the image size small.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

@@ -4,7 +4,7 @@
 
 ## 🏗️ Installation
 
-Top enable CrowdSec with NPMplus, you need two components: the **Agent** (analyzes logs) and the **Bouncer** (enforces blocks in Nginx).
+Top enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyzes logs) and the **Bouncer** (enforces blocks in Nginx).
 
 ### 1. The Agent
 Add the CrowdSec container to your `compose.yaml`:
@@ -17,52 +17,52 @@ Add the CrowdSec container to your `compose.yaml`:
     network_mode: bridge
     environment:
       - "TZ=Europe/Berlin"
-      - "COLLECTIONS=ZoeyVid/npmplus"
+      - "COLLECTIONS=shedowe19/shieldpm"
     volumes:
       - "/opt/crowdsec/conf:/etc/crowdsec"
       - "/opt/crowdsec/data:/var/lib/crowdsec/data"
-      - "/opt/npmplus/nginx:/opt/npmplus/nginx:ro" # Read logs from NPMplus
+      - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro" # Read logs from ShieldPM
 ```
 
-### 2. Connect NPMplus (The Bouncer)
-NPMplus has a built-in Nginx Bouncer.
+### 2. Connect ShieldPM (The Bouncer)
+ShieldPM has a built-in Nginx Bouncer.
 
 1.  **Generate API Key:**
     Inside the *CrowdSec container*:
     ```bash
-    docker exec crowdsec cscli bouncers add npmplus
+    docker exec crowdsec cscli bouncers add shieldpm
     ```
     *Copy the API Key printed.*
 
-2.  **Configure NPMplus:**
-    Edit `/opt/npmplus/crowdsec/crowdsec.conf` (created after first run):
+2.  **Configure ShieldPM:**
+    Edit `/opt/shieldpm/crowdsec/crowdsec.conf` (created after first run):
     ```ini
     API_KEY=your-generated-key
     API_URL=http://<crowdsec-container-ip>:8080
     ```
 
-3.  **Restart NPMplus:**
+3.  **Restart ShieldPM:**
     ```bash
-    docker restart npmplus
+    docker restart shieldpm
     ```
 
 ## ⚙️ Configuration
 
 ### Acquisition
-Tell CrowdSec where to find the logs. Create `<crowdsec-conf-vol>/acquis.d/npmplus.yaml`:
+Tell CrowdSec where to find the logs. Create `<crowdsec-conf-vol>/acquis.d/shieldpm.yaml`:
 
 ```yaml
 filenames:
-  - /opt/npmplus/nginx/*.log
+  - /opt/shieldpm/nginx/*.log
 labels:
-  type: npmplus
+  type: shieldpm
 ```
 
 ### Collections
-The `ZoeyVid/npmplus` collection includes parser rules specifically for Nginx Proxy Manager logs.
+The `shedowe19/shieldpm` collection includes parser rules specifically for Nginx Proxy Manager logs.
 It should be installed automatically if you set `COLLECTIONS` env var. If not:
 ```bash
-docker exec crowdsec cscli collections install ZoeyVid/npmplus
+docker exec crowdsec cscli collections install shedowe19/shieldpm
 ```
 
 ## 🕹️ Management (cscli)
@@ -72,4 +72,4 @@ docker exec crowdsec cscli collections install ZoeyVid/npmplus
 *   **Unban an IP:** `cscli decisions delete --ip 1.2.3.4`
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

@@ -39,7 +39,7 @@ async function appStart() {
 		internalNginx.reload();
 		internalCloudflared.init();
 
-		const server = app.listen("/run/npmplus.sock", () => {
+		const server = app.listen("/run/shieldpm.sock", () => {
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);
 
 			process.on("SIGTERM", () => {

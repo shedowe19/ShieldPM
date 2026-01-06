@@ -28,7 +28,7 @@ const up = async (knex) => {
 				base_url: "",
 				model: "",
 				system_prompt:
-					"You are the AI Administrator for NPMplus. You have access to tools to control the server. Always use tools when actions are requested. Be concise. IMPORTANT: Always answer in the same language as the user.",
+					"You are the AI Administrator for ShieldPM. You have access to tools to control the server. Always use tools when actions are requested. Be concise. IMPORTANT: Always answer in the same language as the user.",
 				num_ctx: 8192,
 			},
 		});

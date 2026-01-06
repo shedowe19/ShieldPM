@@ -1,10 +1,10 @@
 # Backup & Restore
 
-It is critical to maintain backups of your NPMplus instance to recover from failures or migrations.
+It is critical to maintain backups of your ShieldPM instance to recover from failures or migrations.
 
 ## What to Backup
 
-All persistent data for NPMplus is stored in the volume mounted to `/data` inside the container.
+All persistent data for ShieldPM is stored in the volume mounted to `/data` inside the container.
 
 ### 1. `/data` Directory
 This directory contains everything you need:
@@ -21,10 +21,10 @@ If you mapped a local folder to `/data`:
 
 ```bash
 # 1. Stop the container to ensure database consistency
-docker compose stop npmplus
+docker compose stop shieldpm
 
 # 2. Create a standardized archive
-tar -czvf npmplus-backup-$(date +%F).tar.gz /path/to/your/npmplus/data
+tar -czvf shieldpm-backup-$(date +%F).tar.gz /path/to/your/shieldpm/data
 
 # 3. Start the container
 docker compose up -d
@@ -35,12 +35,12 @@ If you are using an external database, you **must** backup that database separat
 
 **MySQL:**
 ```bash
-docker exec npmplus-db mysqldump -u npm -pnpm npm > dump.sql
+docker exec shieldpm-db mysqldump -u npm -pnpm npm > dump.sql
 ```
 
 **PostgreSQL:**
 ```bash
-docker exec npmplus-db pg_dump -U npm npm > dump.sql
+docker exec shieldpm-db pg_dump -U npm npm > dump.sql
 ```
 
 ## Restore Procedures
@@ -52,7 +52,7 @@ docker exec npmplus-db pg_dump -U npm npm > dump.sql
 
 2.  **Extract Archive:**
     ```bash
-    tar -xzvf npmplus-backup-2023-01-01.tar.gz -C /path/to/your/npmplus/data
+    tar -xzvf shieldpm-backup-2023-01-01.tar.gz -C /path/to/your/shieldpm/data
     ```
 
 3.  **Fix Permissions (Optional but Recommended):**
@@ -64,12 +64,12 @@ docker exec npmplus-db pg_dump -U npm npm > dump.sql
     ```
 
 5.  **Verify:**
-    *   Check logs: `docker compose logs -f npmplus`
+    *   Check logs: `docker compose logs -f shieldpm`
     *   Login to the web interface.
     *   Run `fullclean` inside the container to ensure config consistency:
         ```bash
-        docker exec -it npmplus fullclean
+        docker exec -it shieldpm fullclean
         ```
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

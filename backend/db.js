@@ -7,7 +7,7 @@ let instance = null;
 const generateDbConfig = () => {
 	if (!configHas("database")) {
 		throw new Error(
-			"Database config does not exist! Please read the instructions: https://github.com/ZoeyVid/NPMplus",
+			"Database config does not exist! Please read the instructions: https://github.com/shedowe19/ShieldPM",
 		);
 	}
 

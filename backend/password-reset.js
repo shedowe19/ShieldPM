@@ -9,7 +9,7 @@ import Database from "better-sqlite3";
 function usage() {
 	console.log(`usage: node ${process.argv[1]} USER_EMAIL PASSWORD
 
-Reset password of a NPMplus user.
+Reset password of a ShieldPM user.
 
 Arguments:
   USER_EMAIL      Email address of the user to reset the password.

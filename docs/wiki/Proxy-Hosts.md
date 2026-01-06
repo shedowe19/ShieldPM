@@ -1,6 +1,6 @@
 # Proxy Hosts
 
-Proxy Hosts are the core feature of NPMplus. They define how incoming traffic for a specific domain is forwarded to your internal services.
+Proxy Hosts are the core feature of ShieldPM. They define how incoming traffic for a specific domain is forwarded to your internal services.
 
 ## 📝 Configuration Fields
 
@@ -11,7 +11,7 @@ The domain names that this proxy host will respond to. You can specify multiple 
 ### Scheme, Forward Host, Forward Port
 *   **Scheme:** The protocol used to talk to the *internal* service (`http` or `https`).
 *   **Forward Host:** The IP address or hostname of your internal service (e.g., `192.168.1.50` or a container name like `nextcloud`).
-    *   *Tip:* If using `network_mode: host` for NPMplus, use `127.0.0.1` to access services on the same machine running on host ports.
+    *   *Tip:* If using `network_mode: host` for ShieldPM, use `127.0.0.1` to access services on the same machine running on host ports.
     *   *Tip:* If using Docker networks, use the container name.
 *   **Forward Port:** The port your internal service is listening on (e.g., `8080`).
 
@@ -23,7 +23,7 @@ The domain names that this proxy host will respond to. You can specify multiple 
 ### Advanced Features
 *   **Bandwidth Limit:** Dynamically throttles the bandwidth for clients.
     *   *Usage:* Enter a value like `100k` (Kilobytes/s) or `1m` (Megabytes/s).
-    *   *Logic:* NPMplus uses dynamic damping. It allows bursts initially but slows down long downloads to the specified rate.
+    *   *Logic:* ShieldPM uses dynamic damping. It allows bursts initially but slows down long downloads to the specified rate.
 *   **Forward Query:** Allows you to append additional query parameters to every request forwarded to the backend.
     *   *Usage:* `foo=bar&baz=1`. Nginx appends this to the upstream request URL.
     *   *Note:* Standard query parameters from the client are always forwarded. This field is for *injecting* extra ones.
@@ -53,4 +53,4 @@ proxy_set_header X-Custom-Header "MyValue";
 ```
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

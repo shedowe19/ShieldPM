@@ -1,18 +1,18 @@
 # Advanced Usage
 
-Unlock the full potential of NPMplus with these advanced configurations.
+Unlock the full potential of ShieldPM with these advanced configurations.
 
 ## 📊 GoAccess Analytics
 
-NPMplus includes **GoAccess**, a real-time web log analyzer.
+ShieldPM includes **GoAccess**, a real-time web log analyzer.
 
 *   **Enable:** Set `GOA=true` in `compose.yaml`.
 *   **Access:** Open `http://<your-server-ip>:91` (Port 91 by default).
-*   **GeoIP:** To enable GeoIP stats, download the MaxMind GeoLite2 databases (Country, City, ASN) into `/opt/npmplus/goaccess/geoip`.
+*   **GeoIP:** To enable GeoIP stats, download the MaxMind GeoLite2 databases (Country, City, ASN) into `/opt/shieldpm/goaccess/geoip`.
 
 ## 🐘 PHP-FPM Integration
 
-You can serve PHP applications directly through NPMplus.
+You can serve PHP applications directly through ShieldPM.
 
 ### External PHP-FPM (Recommended)
 This approach keeps your containers clean and separated.
@@ -49,7 +49,7 @@ You can add custom Nginx directives to specific locations in the **Locations** t
 > ```
 
 ### Custom Upstreams (Load Balancing)
-1.  Create `/opt/npmplus/custom_nginx/http_top.conf`.
+1.  Create `/opt/shieldpm/custom_nginx/http_top.conf`.
 2.  Define your upstream block:
     ```nginx
     upstream my_backend {
@@ -62,19 +62,19 @@ You can add custom Nginx directives to specific locations in the **Locations** t
 3.  In the UI, point your Proxy Host scheme to `http` and Forward Host to `my_backend`.
 
 ### Stream Hosts (TCP/UDP Forwarding)
-NPMplus isn't just for HTTP/HTTPS. You can forward raw TCP/UDP traffic (e.g., Game Servers, Database ports).
+ShieldPM isn't just for HTTP/HTTPS. You can forward raw TCP/UDP traffic (e.g., Game Servers, Database ports).
 
 1.  Navigate to **Streams**.
-2.  **Incoming Port:** The port NPMplus will listen on (e.g., `25565` for Minecraft).
+2.  **Incoming Port:** The port ShieldPM will listen on (e.g., `25565` for Minecraft).
     *   *Note:* This port must be mapped in your `compose.yaml` (Expose ports `25565:25565`).
 3.  **Forward Host/Port:** The destination server.
 4.  **Protocol:** TCP or UDP.
 
 ### Prerun Scripts
 Automate startup tasks (e.g., installing extra packages, fixing permissions).
-1.  Create `/opt/npmplus/prerun/myscript.sh`.
+1.  Create `/opt/shieldpm/prerun/myscript.sh`.
 2.  Ensure it has `#!/usr/bin/env sh` and is executable.
 3.  Set `ENABLE_PRERUN: "true"` in `compose.yaml`.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

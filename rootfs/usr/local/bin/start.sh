@@ -121,7 +121,7 @@ mkdir -p /data/acme-challenge \
          /data/certbot-credentials
 mkdir -vp /data/tls/certbot/renewal \
           /data/tls/custom \
-          /data/npmplus \
+          /data/shieldpm \
           /data/html \
           /data/access \
           /data/crowdsec \
@@ -156,22 +156,22 @@ rm -vrf /data/etc
 
 #tmp
 if [ -n "$(ls -A /data/npm 2> /dev/null)" ]; then
-    cp -van /data/npm/* /data/npmplus
+    cp -van /data/npm/* /data/shieldpm
 fi
 rm -vrf /data/npm
 
 #tmp
 if [ -s /data/database.sqlite ]; then
-    mv -vn /data/database.sqlite /data/npmplus/database.sqlite
+    mv -vn /data/database.sqlite /data/shieldpm/database.sqlite
 fi
 
-if [ -s /data/npmplus/database.sqlite ]; then
+if [ -s /data/shieldpm/database.sqlite ]; then
     sqlite-vaccum.js
 fi
 
 
 if [ -s /data/keys.json ]; then
-    mv -vn /data/keys.json /data/npmplus/keys.json
+    mv -vn /data/keys.json /data/shieldpm/keys.json
 fi
 
 
@@ -384,11 +384,11 @@ if [ -s "$DEFAULT_STAPLING_FILE" ]; then
     sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /app/templates/default.conf
 fi
 
-sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/npmplus.conf
-sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/npmplus.conf
+sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
+sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
 if [ -s "$DEFAULT_STAPLING_FILE" ]; then
-    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /usr/local/nginx/conf/conf.d/npmplus.conf
-    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/npmplus.conf
+    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
+    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
 fi
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
@@ -398,15 +398,15 @@ if [ -s "$DEFAULT_STAPLING_FILE" ]; then
     sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 fi
 
-sed -i "s|#\?listen 0.0.0.0:81 |listen $NPM_IPV4_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/npmplus.conf
+sed -i "s|#\?listen 0.0.0.0:81 |listen $NPM_IPV4_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
 sed -i "s|#\?listen 0.0.0.0:91 |listen $GOA_IPV4_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 
 if [ "$DISABLE_IPV6" = "true" ]; then
     sed -i "s|ipv6=on;|ipv6=off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|#\?listen \[::\]:81 |#listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/npmplus.conf
+    sed -i "s|#\?listen \[::\]:81 |#listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
     sed -i "s|#\?listen \[::\]:91 |#listen $GOA_IPV6_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 else
-    sed -i "s|#\?listen \[::\]:81 |listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/npmplus.conf
+    sed -i "s|#\?listen \[::\]:81 |listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
     sed -i "s|#\?listen \[::\]:91 |listen $GOA_IPV6_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 fi
 
@@ -510,7 +510,7 @@ fi
 
 find /data/tls \
      /data/access \
-     /data/npmplus \
+     /data/shieldpm \
      -not -perm 770 \
      -exec chmod 770 {} \;
 

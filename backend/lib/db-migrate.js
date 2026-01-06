@@ -26,7 +26,7 @@ const migrateFromSqliteToNewDb = async () => {
 		return;
 	}
 
-	const sqliteFile = "/data/npmplus/database.sqlite";
+	const sqliteFile = "/data/shieldpm/database.sqlite";
 
 	// 2. Check if sqlite exists
 	if (!fs.existsSync(sqliteFile)) {

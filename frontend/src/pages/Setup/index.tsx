@@ -73,7 +73,7 @@ export default function Setup() {
 					<img
 						className="h-12 w-auto dark:invert"
 						src="/images/logo-text-horizontal-grey.png"
-						alt="NPMplus"
+						alt="ShieldPM"
 					/>
 				</div>
 

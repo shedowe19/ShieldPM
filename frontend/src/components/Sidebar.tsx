@@ -186,8 +186,8 @@ export function Sidebar() {
 						<div className="flex flex-col h-full bg-slate-950 text-slate-100 border-r-slate-800">
 							<div className="p-6">
 								<Link to="/" className="flex items-center gap-2 font-semibold">
-									<img src="/images/logo-no-text.svg" alt="NPMplus" className="h-8 w-8" />
-									<span className="text-lg">NPMplus</span>
+									<img src="/images/logo-no-text.svg" alt="ShieldPM" className="h-8 w-8" />
+									<span className="text-lg">ShieldPM</span>
 								</Link>
 							</div>
 							<ScrollArea className="flex-1 px-4">
@@ -205,8 +205,8 @@ export function Sidebar() {
 				</Sheet>
 				<div className="flex-1">
 					<Link to="/" className="flex items-center gap-2 font-semibold">
-						<img src="/images/logo-no-text.svg" alt="NPMplus" className="h-6 w-6" />
-						<span className="text-lg">NPMplus</span>
+						<img src="/images/logo-no-text.svg" alt="ShieldPM" className="h-6 w-6" />
+						<span className="text-lg">ShieldPM</span>
 					</Link>
 				</div>
 			</div>
@@ -215,8 +215,8 @@ export function Sidebar() {
 			<div className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-[240px] bg-slate-950 text-slate-100 border-r border-slate-800 z-40">
 				<div className="p-6">
 					<Link to="/" className="flex items-center gap-2 font-semibold">
-						<img src="/images/logo-no-text.svg" alt="NPMplus" className="h-8 w-8" />
-						<span className="text-xl">NPMplus</span>
+						<img src="/images/logo-no-text.svg" alt="ShieldPM" className="h-8 w-8" />
+						<span className="text-xl">ShieldPM</span>
 					</Link>
 				</div>
 				<ScrollArea className="flex-1 px-4">

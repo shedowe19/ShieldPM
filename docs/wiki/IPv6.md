@@ -1,13 +1,13 @@
 # IPv6 Configuration
 
-NPMplus fully supports IPv6, but Docker's IPv6 handling can be tricky.
+ShieldPM fully supports IPv6, but Docker's IPv6 handling can be tricky.
 
 ## 🐳 Docker & IPv6
 
 By default, Docker containers **do not** have IPv6 connectivity, and the bridge network is IPv4 only.
 
 ### Network Mode: Host
-If you use `network_mode: host`, NPMplus shares the network stack of your host server.
+If you use `network_mode: host`, ShieldPM shares the network stack of your host server.
 *   **Pros:** IPv6 works out of the box (if your server has it). No port mapping needed.
 *   **Cons:** No network isolation.
 
@@ -30,9 +30,9 @@ To use IPv6 with a bridge network:
             - subnet: 2001:db8:1::/64
     ```
 
-## ⚙️ NPMplus Settings
+## ⚙️ ShieldPM Settings
 
-Control how NPMplus listens on IPv6 via `compose.yaml`:
+Control how ShieldPM listens on IPv6 via `compose.yaml`:
 
 *   **`IPV6_BINDING=[::1]`**: Bind to a specific address.
 *   **`DISABLE_IPV6=true`**: Completely disable IPv6 listeners. Use this if your environment explicitly does not support IPv6 to avoid "Address family not supported by protocol" errors.
@@ -43,4 +43,4 @@ Control how NPMplus listens on IPv6 via `compose.yaml`:
     *   *Fix:* Use the IPv4 address of the backend or fix Docker IPv6.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

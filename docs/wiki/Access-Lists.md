@@ -25,7 +25,7 @@ Restrict access to specific IP addresses or ranges.
 ### Pass Basic Auth to Backend
 If your backend service *also* supports Basic Auth, you might want to pass the credentials through.
 *   **Option:** Check **Pass Auth to Host**.
-*   **Effect:** NPMplus verifies the credentials, then sends the `Authorization: Basic ...` header to the backend.
+*   **Effect:** ShieldPM verifies the credentials, then sends the `Authorization: Basic ...` header to the backend.
 
 ### Satisfy Any
 By default, if you have both Auth and IP rules, Nginx usually requires **all** conditions.
@@ -33,7 +33,7 @@ By default, if you have both Auth and IP rules, Nginx usually requires **all** c
 
 ## 🔑 OpenID Connect (OIDC) / OAuth2
 
-NPMplus supports modern Single Sign-On using OpenID Connect (supported by Keycloak, Google, Authentik, Authelia, etc.).
+ShieldPM supports modern Single Sign-On using OpenID Connect (supported by Keycloak, Google, Authentik, Authelia, etc.).
 
 ### Configuration
 In the **Access List** dialog, scroll to the Authorization section:
@@ -70,4 +70,4 @@ Strictly require clients to present a valid SSL Certificate to access your servi
 *   **API/CLI:** Use `--cert client.crt --key client.key` (e.g. with curl).
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

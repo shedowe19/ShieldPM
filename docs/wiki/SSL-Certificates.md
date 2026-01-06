@@ -1,11 +1,11 @@
 # SSL Certificates
 
-NPMplus makes managing SSL/TLS certificates easy, primarily using **Let's Encrypt**.
+ShieldPM makes managing SSL/TLS certificates easy, primarily using **Let's Encrypt**.
 
 ## 🆕 Requesting a Certificate
 
 ### HTTP-01 Challenge
-*   **Prerequisite:** Port 80 must be forwarded from your router to NPMplus and accessible from the public internet.
+*   **Prerequisite:** Port 80 must be forwarded from your router to ShieldPM and accessible from the public internet.
 *   **Usage:** Simplest method. Just toggle "SSL" in the Proxy Host and select "Request a new SSL Certificate".
 
 ### DNS-01 Challenge
@@ -34,10 +34,10 @@ Enabling HSTS tells browsers to *only* connect to your site via HTTPS for a spec
 
 ### HTTP/2 and HTTP/3
 *   **HTTP/2:** Enabled by default for all HTTPS hosts.
-*   **HTTP/3 (QUIC):** Enabled by default in NPMplus if you have exposed UDP port 443. Faster and more reliable on mobile networks.
+*   **HTTP/3 (QUIC):** Enabled by default in ShieldPM if you have exposed UDP port 443. Faster and more reliable on mobile networks.
 
 ### OCSP Stapling
-NPMplus automatically handles OCSP stapling to improve privacy and connection speed. It checks the certificate validity with the issuer and serves this "stapled" response to the client.
+ShieldPM automatically handles OCSP stapling to improve privacy and connection speed. It checks the certificate validity with the issuer and serves this "stapled" response to the client.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

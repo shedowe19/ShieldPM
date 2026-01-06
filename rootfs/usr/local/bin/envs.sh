@@ -33,7 +33,7 @@ touch /data/.env
 # shellcheck source=/dev/null
 . /data/.env
 if [ -s /tmp/env.sha512sum ] && [ "$(cat /tmp/env.sha512sum)" != "$(sha512sum < /data/.env)" ]; then
-    echo "You need to recreate the NPMplus container after changing the .env file, restarting the container after changing the .env file is not supported"
+    echo "You need to recreate the ShieldPM container after changing the .env file, restarting the container after changing the .env file is not supported"
     sleep inf
 fi
 sha512sum < /data/.env > /tmp/env.sha512sum
@@ -56,7 +56,7 @@ eval "$VALIDATION_OUTPUT"
 
 # Template Version Hash Check (kept in shell for simplicity as it involves piping many unix tools)
 export TV="5c"
-if [ ! -s /data/npmplus/env.sha512sum ] || [ "$(cat /data/npmplus/env.sha512sum)" != "$( (grep "env\.[A-Z0-9_]\+" -roh /app/templates | sed "s|env.||g" | sort | uniq | xargs printenv; echo "$TV") | tr -d "\n" | sha512sum | cut -d" " -f1)" ]; then
+if [ ! -s /data/shieldpm/env.sha512sum ] || [ "$(cat /data/shieldpm/env.sha512sum)" != "$( (grep "env\.[A-Z0-9_]\+" -roh /app/templates | sed "s|env.||g" | sort | uniq | xargs printenv; echo "$TV") | tr -d "\n" | sha512sum | cut -d" " -f1)" ]; then
     echo "At least one env or the template version changed, all hosts will be regenerated."
     export REGENERATE_ALL="true"
 fi

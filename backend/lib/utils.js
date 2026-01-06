@@ -26,7 +26,7 @@ const writeHash = () => {
 			.map((varName) => process.env[varName])
 			.join("") + process.env.TV;
 	const hash = crypto.createHash("sha512").update(uniqueEnvVars).digest("hex");
-	fs.writeFileSync("/data/npmplus/env.sha512sum", hash);
+	fs.writeFileSync("/data/shieldpm/env.sha512sum", hash);
 };
 
 /**

@@ -1003,7 +1003,7 @@ const internalCertificate = {
 		const options = {
 			method: "POST",
 			headers: {
-				"User-Agent": `NPMplus/${pjson.version}`,
+				"User-Agent": `ShieldPM/${pjson.version}`,
 				"Content-Type": "application/x-www-form-urlencoded",
 				"Content-Length": Buffer.byteLength(formBody),
 			},

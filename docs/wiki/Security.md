@@ -1,6 +1,6 @@
 # Security Overview
 
-NPMplus integrates robust security features to protect your services.
+ShieldPM integrates robust security features to protect your services.
 
 ## 🛡️ Core Features
 *   **HTTP/3 (QUIC) & TLS 1.3:** Modern, secure protocols enabled by default.
@@ -24,4 +24,4 @@ Machine Learning based WAF support.
 *   See `compose.yaml` for container setup.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

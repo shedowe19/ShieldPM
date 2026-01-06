@@ -9,7 +9,7 @@ ModSecurity is a Web Application Firewall that inspects incoming HTTP requests f
 
 ## ⚙️ Configuration
 
-ModSecurity configuration files are located in `/opt/npmplus/modsecurity`.
+ModSecurity configuration files are located in `/opt/shieldpm/modsecurity`.
 
 ### CRS Setup
 The Core Rule Set is located in `/usr/local/nginx/conf/conf.d/include/coreruleset`.
@@ -24,7 +24,7 @@ To change it, you typically need to edit the `crs-setup.conf` (if exposed) or in
 ### Handling False Positives
 If a legitimate request is blocked (403 Forbidden):
 
-1.  **Check Logs:** Look at `/opt/npmplus/nginx/error.log`. Search for `ModSecurity: Access denied`.
+1.  **Check Logs:** Look at `/opt/shieldpm/nginx/error.log`. Search for `ModSecurity: Access denied`.
 2.  **Identify Rule ID:** Note the `id "xxxxxx"`.
 3.  **Exclude Rule:**
     You can disable a specific rule for a specific host using **Custom Nginx Config**:
@@ -35,7 +35,7 @@ If a legitimate request is blocked (403 Forbidden):
     ```
 
 ## 🧩 Plugins
-You can enable CRS plugins (e.g., for WordPress / Nextcloud exclusions) by placing them in `/opt/npmplus/modsecurity/crs-plugins` and enabling them in the config.
+You can enable CRS plugins (e.g., for WordPress / Nextcloud exclusions) by placing them in `/opt/shieldpm/modsecurity/crs-plugins` and enabling them in the config.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This project (NPMplus) incorporates the following third-party components. The licenses are extracted directly from the NPM Registry API for the specified versions. This list includes both production dependencies and development dependencies from the backend and frontend package.json files.
+This project (ShieldPM) incorporates the following third-party components. The licenses are extracted directly from the NPM Registry API for the specified versions. This list includes both production dependencies and development dependencies from the backend and frontend package.json files.
 
 For verification, each entry links to the NPM package page (e.g., https://www.npmjs.com/package/<package>/v/<version>), where the license can be confirmed in the package metadata. Note: Transitive dependencies (dependencies of dependencies) are not included, as this focuses on direct dependencies.
 

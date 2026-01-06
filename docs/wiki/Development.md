@@ -1,6 +1,6 @@
 # Development Guide
 
-Want to contribute or build NPMplus from source?
+Want to contribute or build ShieldPM from source?
 
 ## 🛠️ Prerequisites
 *   Node.js (matching `.nvmrc` or latest LTS)
@@ -48,9 +48,9 @@ cd frontend && npm test
 To build the full image locally:
 
 ```bash
-docker build -t npmplus:local .
+docker build -t shieldpm:local .
 ```
 This multi-stage build will compile the frontend, install backend dependencies, and assemble the final Alpine-based image.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

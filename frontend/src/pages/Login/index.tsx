@@ -63,7 +63,7 @@ export default function Login() {
 
 			<div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 				<div className="flex flex-col items-center justify-center mb-8">
-					<img className="h-16 w-auto mb-4 drop-shadow-2xl" src="/images/logo-256.png" alt="NPMplus" />
+					<img className="h-16 w-auto mb-4 drop-shadow-2xl" src="/images/logo-256.png" alt="ShieldPM" />
 				</div>
 
 				<Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-sm dark:bg-card/50 ring-1 ring-white/10 dark:ring-white/5">

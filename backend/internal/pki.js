@@ -58,7 +58,7 @@ const ensureRootCa = async () => {
 		"-out",
 		rootCaCrt,
 		"-subj",
-		"/CN=NPMplus Internal CA/O=NPMplus/C=US",
+		"/CN=ShieldPM Internal CA/O=ShieldPM/C=US",
 	]);
 };
 

@@ -1,6 +1,6 @@
 # API Documentation
 
-NPMplus provides a RESTful API that allows you to automate almost every aspect of the application.
+ShieldPM provides a RESTful API that allows you to automate almost every aspect of the application.
 
 ## 🔐 Authentication
 
@@ -73,4 +73,4 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR...
 Returns counts of all host types (proxy, redirection, dead, stream) and their status.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/NPMplus/issues)
+[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

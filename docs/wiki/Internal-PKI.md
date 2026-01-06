@@ -1,6 +1,6 @@
 # Internal PKI & Post-Quantum Security
 
-NPMplus includes a built-in Internal Certificate Authority (CA) that allows you to issue trusted certificates for your internal services without relying on external providers like Let's Encrypt. This is particularly useful for services that are not exposed to the public internet.
+ShieldPM includes a built-in Internal Certificate Authority (CA) that allows you to issue trusted certificates for your internal services without relying on external providers like Let's Encrypt. This is particularly useful for services that are not exposed to the public internet.
 
 ## Features
 

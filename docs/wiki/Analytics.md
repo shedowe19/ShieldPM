@@ -1,6 +1,6 @@
 # Advanced Analytics
 
-NPMplus includes a powerful, privacy-friendly analytics dashboard directly integrated into the interface. This feature provides real-time insights into your proxy traffic without relying on third-party services.
+ShieldPM includes a powerful, privacy-friendly analytics dashboard directly integrated into the interface. This feature provides real-time insights into your proxy traffic without relying on third-party services.
 
 ## Key Features
 

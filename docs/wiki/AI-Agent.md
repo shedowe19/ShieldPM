@@ -1,12 +1,12 @@
 # AI Agent (Administrator)
 
-**NPMplus** introduces a powerful embedded AI Agent that acts as a co-administrator for your server. It allows you to manage your Nginx Proxy Manager instance using natural language commands.
+**ShieldPM** introduces a powerful embedded AI Agent that acts as a co-administrator for your server. It allows you to manage your Nginx Proxy Manager instance using natural language commands.
 
 ![AI Agent Interface](/images/wiki/ai-chat.png)
 
 ## Features
 
-The AI Agent is not just a chatbot; it has **direct access** to the NPMplus internals and can perform the following actions for you:
+The AI Agent is not just a chatbot; it has **direct access** to the ShieldPM internals and can perform the following actions for you:
 
 *   **Hosts Management**:
     *   **Proxy Hosts**: Create, Update, Delete, Enable, Disable, List, Search.
@@ -43,7 +43,7 @@ Connects to any OpenAI-compatible API (e.g., Ollama, LocalAI, LM Studio) or your
 
 *   **Base URL**: The URL of your LLM server.
     *   *Examples*: `http://localhost:11434` (Ollama), `http://proserver:8080/v1` (LocalAI).
-    *   **Smart Ollama Support**: If you provide an Ollama URL (port 11434) without `/v1` suffix, NPMplus automatically uses the **Ollama Native API** (`/api/chat`). This enables advanced features like precise context window control.
+    *   **Smart Ollama Support**: If you provide an Ollama URL (port 11434) without `/v1` suffix, ShieldPM automatically uses the **Ollama Native API** (`/api/chat`). This enables advanced features like precise context window control.
 *   **API Key**: Optional. Required if your local server enables auth, or if using real OpenAI APIs (`sk-...`).
 *   **Model**: The name of the model to use (e.g., `llama3`, `mistral`, `deepseek-coder`).
     *   *Tip*: Use the **"Fetch Models"** button to list available models from your server.
@@ -51,7 +51,7 @@ Connects to any OpenAI-compatible API (e.g., Ollama, LocalAI, LM Studio) or your
 ### Advanced Settings (Local LLM)
 **These settings are designed specifically for Ollama and may not work with OpenAI-compatible endpoints.**
 
-When using Ollama (port 11434), NPMplus automatically detects the native API and applies these performance tuning options:
+When using Ollama (port 11434), ShieldPM automatically detects the native API and applies these performance tuning options:
 
 *   **Context Window (`num_ctx`)** (Default: `8192`):
     *   Determines how much "memory" the AI has. Increase for complex tasks if hardware permits.
