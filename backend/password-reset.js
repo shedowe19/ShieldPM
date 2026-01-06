@@ -38,10 +38,10 @@ if (!PASSWORD) {
 }
 
 async function run() {
-	if (fs.existsSync("/data/npmplus/database.sqlite")) {
+	if (fs.existsSync("/data/shieldpm/database.sqlite")) {
 		try {
 			const PASSWORD_HASH = await bcrypt.hash(PASSWORD, 13);
-			const db = new Database("/data/npmplus/database.sqlite");
+			const db = new Database("/data/shieldpm/database.sqlite");
 
 			try {
 				const stmt = db.prepare(`

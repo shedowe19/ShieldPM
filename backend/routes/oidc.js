@@ -82,7 +82,7 @@ router
 			const cookies = req.headers.cookie.split(";");
 			for (const cookie of cookies) {
 				const [name, value] = cookie.split("=");
-				if (name.trim() === "npmplus_oidc") {
+				if (name.trim() === "shieldpm_oidc") {
 					encryptedToken = value;
 					break;
 				}
@@ -105,7 +105,7 @@ router
 				throw new errs.AuthError("Invalid token data in cookie");
 			}
 
-			res.clearCookie("npmplus_oidc", { secure: true, sameSite: "Strict" });
+			res.clearCookie("shieldpm_oidc", { secure: true, sameSite: "Strict" });
 			res.status(200).send({ token, expires });
 		} catch (err) {
 			res.status(400).send({ error: { message: err.message } });
@@ -159,7 +159,7 @@ const parseValuesFromCookie = (req) => {
 	let state;
 	const cookies = req.headers.cookie.split(";");
 	for (const cookie of cookies) {
-		if (cookie.split("=")[0].trim() === "npmplus_oidc") {
+		if (cookie.split("=")[0].trim() === "shieldpm_oidc") {
 			const raw = cookie.split("=")[1];
 			const val = raw.split("___");
 			nonce = val[0].trim();
@@ -197,20 +197,20 @@ const validateCallback = async (req, settings) => {
 };
 
 const redirectToAuthorizationURL = (res, params) => {
-	res.cookie("npmplus_oidc", `${params.nonce}___${params.state}`, { secure: true, sameSite: "Strict" });
+	res.cookie("shieldpm_oidc", `${params.nonce}___${params.state}`, { secure: true, sameSite: "Strict" });
 	res.redirect(params.url);
 };
 
 const redirectWithJwtToken = (res, token) => {
 	const payload = `${token.token}---${token.expires}`;
 	const encrypted = encrypt(payload);
-	res.cookie("npmplus_oidc", encrypted, { secure: true, sameSite: "Strict" });
+	res.cookie("shieldpm_oidc", encrypted, { secure: true, sameSite: "Strict" });
 	res.redirect("/login");
 };
 
 const redirectWithError = (res, error) => {
 	logger.error(`Callback error:  ${error.message}`);
-	res.cookie("npmplus_oidc_error", error.message, { secure: true, sameSite: "Strict" });
+	res.cookie("shieldpm_oidc_error", error.message, { secure: true, sameSite: "Strict" });
 	res.redirect("/login");
 };
 
