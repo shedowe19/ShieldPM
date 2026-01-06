@@ -187,7 +187,7 @@ services:
 #    environment:
 #      - "TZ=your-timezone" # needs to be changed
 #      - "autoPolicyLoad=true"
-#      - "registered_server=NPMplus"
+#      - "registered_server=ShieldPM"
 #      - "user_email=your-email" # optional, from their docs: "This allows the open-appsec team to provide you easy assistance in case of any issues you might have with your specific deployment in the future and also to provide you information proactively regarding open-appsec in general or regarding your specific deployment. [...] If we send automatic emails there will also be an opt-out option included for receiving similar communication in the future."
 #      - "AGENT_TOKEN=" # optional, you can specify an openappsec deployment profile token for connecting to their central webinterface  at https://my.openappsec.io, if you leave this commented, make sure to uncomment all other openappsec containers below, see: https://docs.openappsec.io/getting-started/using-the-web-ui-saas/create-a-profile
 #      - "SHARED_STORAGE_HOST=openappsec-shared-storage" # uncomment if you don't set AGENT_TOKEN
