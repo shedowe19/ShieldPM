@@ -69,7 +69,7 @@
 								],
 								"expires_on": "2025-01-07T04:34:18.000Z",
 								"meta": {
-									"letsencrypt_email": "jc@jc21.com",
+									"letsencrypt_email": "shieldpm@clawsucht.eu",
 									"letsencrypt_agree": true,
 									"dns_challenge": false
 								}
