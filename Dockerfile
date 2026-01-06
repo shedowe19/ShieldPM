@@ -35,7 +35,7 @@ ARG LRC_VER=v0.1.32R1
 ARG LRL_VER=v0.15
 ARG LRLT_VER=v0.09
 ARG LCSB_VER=v1.0.13
-ARG CRS_VER=v4.21.0
+ARG CRS_VER=v4.22.0
 
 
 # --- Build Arguments: Compiler Flags ---
