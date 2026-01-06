@@ -212,7 +212,7 @@ To enable CrowdSec IPS integration:
       type: appsec
     ```
 4.  **Host Network**: Ensure `network_mode: host` is used.
-5.  **Bouncer**: Run `docker exec crowdsec cscli bouncers add npmplus -o raw` and save the key.
+5.  **Bouncer**: Run `docker exec crowdsec cscli bouncers add shieldpm -o raw` and save the key.
 6.  **Config**: Edit `/opt/shieldpm/crowdsec/crowdsec.conf`, set `ENABLED=true` and `API_KEY`.
 7.  **Firewall Bouncer**: Recommended for optimal protection.
 </details>

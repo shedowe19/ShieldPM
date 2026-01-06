@@ -79,7 +79,7 @@ const deprecated = [
     { key: 'DEBUG', msg: 'DEBUG env is not supported.' },
     { key: 'SKIP_CERTBOT_OWNERSHIP', msg: 'SKIP_CERTBOT_OWNERSHIP env is not supported.' },
     { key: 'IP_RANGES_FETCH_ENABLED', msg: 'IP_RANGES_FETCH_ENABLED env is not supported, please use SKIP_IP_RANGES.' },
-    { key: 'DB_SQLITE_FILE', msg: 'DB_SQLITE_FILE env is not supported, the database needs to be in /data/npmplus/database.sqlite.' },
+    { key: 'DB_SQLITE_FILE', msg: 'DB_SQLITE_FILE env is not supported, the database needs to be in /data/shieldpm/database.sqlite.' },
 ];
 
 deprecated.forEach(item => {

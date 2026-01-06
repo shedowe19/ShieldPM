@@ -1,7 +1,7 @@
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA512
 
-Contact: mailto:zoeyvid@zvcdn.de
+Contact: https://github.com/shedowe19/ShieldPM
 Encryption: https://zvcdn.de/publickey.asc
 Preferred-Languages: de, en
 Canonical: https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/frontend/public/.well-known/security.txt

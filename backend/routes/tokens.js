@@ -43,7 +43,7 @@ router
 				scope: typeof req.query.scope !== "undefined" ? req.query.scope : null,
 			});
 			// clear this temporary cookie following a successful oidc authentication
-			res.clearCookie("npmplus_oidc");
+			res.clearCookie("shieldpm_oidc");
 			res.status(200).send(data);
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
