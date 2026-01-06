@@ -48,9 +48,9 @@ describe("SiteFooter", () => {
 		expect(screen.queryByText("Fork me on Github")).not.toBeInTheDocument();
 		expect(screen.getByText("1.2.3")).toBeInTheDocument();
 		expect(screen.getByText("Powered by")).toBeInTheDocument();
-		// We need to use a regex or partial match for the dynamic copyright year if we don't mock Date, 
-		// but typically verifying the static part "Private & Internal Use Only" is enough.
-		expect(screen.getByText(/Private & Internal Use Only/)).toBeInTheDocument();
+		// Check for the explicit text "© 2026 ShieldPM. Private & Internal Use Only."
+		// Note: Use a regex to match the copyright symbol or just partial text safely
+		expect(screen.getByText(/2026 ShieldPM. Private & Internal Use Only/)).toBeInTheDocument();
 
 		// Check "ShieldPM" link
 

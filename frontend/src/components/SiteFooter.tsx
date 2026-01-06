@@ -29,7 +29,7 @@ export function SiteFooter() {
 							</a>
 						</span>
 						<span className="text-sm text-muted-foreground">
-							&copy; {new Date().getFullYear()} ShieldPM. Private & Internal Use Only.
+							&copy; 2026 ShieldPM. Private & Internal Use Only.
 						</span>
 						<span className="text-sm text-muted-foreground">
 							Theme by{" "}
