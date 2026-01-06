@@ -306,3 +306,25 @@ The frontend uses consistent Query Keys for caching and invalidation:
     *   `nginx`: Web server / Proxy.
     *   `node`: Backend API.
     *   `crond`: Certificate renewal jobs.
+
+## Version Bump Workflow
+
+**IMPORTANT**: After completing any significant work (features, bug fixes, refactoring, releases), you MUST ask the user about updating the project version.
+
+### Procedure
+1.  Check the current version in `backend/package.json`, `frontend/package.json`, and `.version`.
+2.  Suggest appropriate version bumps based on [Semantic Versioning](https://semver.org/):
+    *   **Patch (x.y.Z)**: Bug fixes, small changes, documentation updates.
+    *   **Minor (x.Y.0)**: New features, non-breaking changes.
+    *   **Major (X.0.0)**: Breaking changes, major rewrites.
+3.  Present the options to the user and **wait for confirmation** before making changes.
+4.  Example prompt:
+    ```
+    Aktuelle Version: **3.1.0**
+    
+    Auf welche Version soll ich aktualisieren?
+    - **3.1.1** (Patch)
+    - **3.2.0** (Minor)
+    - Oder eine spezifische Versionsnummer?
+    ```
+5.  After user confirms, update all three files: `backend/package.json`, `frontend/package.json`, `.version`.
