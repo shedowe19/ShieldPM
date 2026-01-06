@@ -69,6 +69,7 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20180618015850_initial.js`: Initial Schema.
     *   `20200410143839_access_list_client.js`: Multi-user Access Lists.
     *   `20240427161436_stream_ssl.js`: SSL support for Streams.
+    *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
     *   `20251111090000_redirect_auto_scheme.js`: Introduces "auto" scheme for Redirection Hosts.
     *   `20251212000000_add_bandwidth_limit.js`: New bandwidth limiting feature.
     *   `20251213000000_add_forward_query.js`: Adds capability to forward query parameters in Proxy Hosts.
@@ -87,7 +88,6 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
     *   `20260113000000_add_ai_advanced_options.js`: Adds advanced AI model options.
     *   `20260114000000_update_ai_options.js`: Updates AI options structure.
     *   `20260115000000_add_system_prompt.js`: Adds customizable system prompt for AI.
-    *   `20250627140440_stream_proxy_protocol_forwarding.js`: Adds Proxy Protocol Forwarding for Streams.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
 The application includes an auto-migration feature that detects if you are switching from the default SQLite database to MySQL or PostgreSQL.
