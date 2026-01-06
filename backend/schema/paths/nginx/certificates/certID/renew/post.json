@@ -40,7 +40,7 @@
 								"provider": "letsencrypt",
 								"nice_name": "My Test Cert",
 								"domain_names": [
-									"test.jc21.supernerd.pro"
+									"example.shieldpm.eu"
 								],
 								"meta": {
 									"dns_challenge": false
