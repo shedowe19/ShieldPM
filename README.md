@@ -224,7 +224,7 @@ To enable CrowdSec IPS integration:
 
 ---
 
-## � Database Support
+## 💾 Database Support
 
 While SQLite is the default and recommended database for most users, ShieldPM supports external database backends for larger deployments.
 
@@ -265,7 +265,7 @@ This makes scaling up effortless!
 
 ---
 
-## �🔌 Feature Integrations
+## 🔌 Feature Integrations
 
 ### PHP-FPM
 <details>
