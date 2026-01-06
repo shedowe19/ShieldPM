@@ -1,6 +1,45 @@
-MIT License
+SHIELDPM LICENSE
+Copyright (c) 2025 ShieldPM Contributors. All Rights Reserved.
 
-Copyright (c) 2017-2025 ShieldPM Contributors
+1. PROPRIETARY LICENSE (WITH INTERNAL USE ALLOWED)
+   Permission is hereby granted to use this software for private and internal business 
+   purposes.
+   
+   However, the use of this software to provide a commercial managed service (SaaS), 
+   hosting service, or as a basis for a competing commercial product offered to third 
+   parties is STRICTLY PROHIBITED without the express written permission of the 
+   copyright holder.
+
+2. LIMITED SOURCE AVAILABILITY & CONTRIBUTIONS
+   Permission is hereby granted to view and modify the source code of this software 
+   SOLELY for the following purposes:
+   a) Private and internal business use (as defined in Section 1).
+   b) Creating bug fixes, improvements, or enhancements ("Contributions") to be submitted 
+      back to the official ShieldPM repository via Pull Requests.
+
+   By submitting a Contribution (e.g., Pull Request), you grant the ShieldPM Contributors 
+   a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable license 
+   to use, reproduce, modify, merge, publish, distribute, and sublicense your Contribution 
+   as part of the software.
+
+3. RESTRICTIONS
+   You may NOT redistribute this software, in source or binary form, to third parties 
+   outside of the official ShieldPM repository channels without prior written permission.
+
+---
+
+PORTIONS OF THIS SOFTWARE ARE BASED ON OPEN SOURCE PROJECTS:
+
+This product includes software originally developed as "Nginx Proxy Manager" and "NPMplus". 
+These components are subject to the MIT License provided below.
+
+1. Nginx Proxy Manager
+   Copyright (c) 2017-2021 Jamie Curnow <jc@jc21.com>
+
+2. NPMplus
+   Copyright (c) 2023-2024 ZoeyVid
+
+MIT License Permission Notice:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
