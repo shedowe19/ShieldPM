@@ -219,7 +219,6 @@
 	"error.unknown": "Lỗi không xác định",
 	"expires.on": "Hết hạn: {date}",
 	"expiresOn": "Hết hạn vào",
-	"footer.github-fork": "Fork dự án này trên Github",
 	"form.location": "Địa điểm",
 	"form.placeholder.api-key": "Nhập khóa API...",
 	"form.placeholder.auth-host": "auth.example.com",

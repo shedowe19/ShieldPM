@@ -219,7 +219,6 @@
 	"error.unknown": "Nieznany błąd",
 	"expires.on": "Wygasa: {date}",
 	"expiresOn": "Wygasa",
-	"footer.github-fork": "Forkuj mnie na Github",
 	"form.location": "Lokalizacja",
 	"form.placeholder.api-key": "Wprowadź klucz API...",
 	"form.placeholder.auth-host": "auth.example.com",

@@ -219,7 +219,6 @@
 	"error.unknown": "Onbekende fout",
 	"expires.on": "Verloopt: {date}",
 	"expiresOn": "Verloopt Op",
-	"footer.github-fork": "Maak een Fork op Github",
 	"form.location": "Locatie",
 	"form.placeholder.api-key": "Voer API sleutel in...",
 	"form.placeholder.auth-host": "auth.example.com",

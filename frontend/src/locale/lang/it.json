@@ -219,7 +219,6 @@
 	"error.unknown": "Errore sconosciuto",
 	"expires.on": "Scade: {date}",
 	"expiresOn": "Scade il",
-	"footer.github-fork": "Forkami su GitHub",
 	"form.location": "Posizione",
 	"form.placeholder.api-key": "Inserisci chiave API...",
 	"form.placeholder.auth-host": "auth.example.com",

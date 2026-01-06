@@ -220,7 +220,6 @@
 	"error.unknown": "Unknown error",
 	"expires.on": "Expires: {date}",
 	"expiresOn": "Expires On",
-	"footer.github-fork": "Fork me on Github",
 	"form.location": "Location",
 	"form.placeholder.api-key": "Enter API key...",
 	"form.placeholder.auth-host": "auth.example.com",

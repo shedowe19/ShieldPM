@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 // Mock dependencies
 vi.mock("src/locale", () => ({
 	T: ({ id }: { id: string }) => {
-		if (id === "footer.github-fork") return "Fork me on Github";
+
 		if (id === "update-available") return "Update Available";
 		return id;
 	},

@@ -219,7 +219,6 @@
 	"error.unknown": "Error desconocido",
 	"expires.on": "Expira: {date}",
 	"expiresOn": "Expira el",
-	"footer.github-fork": "Bifúrcame en Github",
 	"form.location": "Ubicación",
 	"form.placeholder.api-key": "Ingrese la clave API...",
 	"form.placeholder.auth-host": "auth.example.com",

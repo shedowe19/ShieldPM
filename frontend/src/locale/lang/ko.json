@@ -219,7 +219,6 @@
 	"error.unknown": "알 수 없는 오류",
 	"expires.on": "만료일: {date}",
 	"expiresOn": "만료일",
-	"footer.github-fork": "GitHub에서 포크하기",
 	"form.location": "위치",
 	"form.placeholder.api-key": "API 키 입력...",
 	"form.placeholder.auth-host": "auth.example.com",
