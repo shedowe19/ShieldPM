@@ -2,8 +2,9 @@
 	"name": "shieldpm",
 	"version": "3.1.0",
 	"description": "A beautiful interface for creating Nginx endpoints",
-	"author": "Jamie Curnow <jc@jc21.com> and shedowe19",
-	"license": "SEE LICENSE IN LICENSE",
+	"author": "ShieldPM Contributors (based on work by Jamie Curnow and ZoeyVid)",
+	"license": "UNLICENSED",
+	"private": true,
 	"type": "module",
 	"lint-staged": {
 		"*.{js,ts,tsx}": [
