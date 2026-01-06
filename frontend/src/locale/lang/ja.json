@@ -219,7 +219,6 @@
 	"error.unknown": "不明なエラー",
 	"expires.on": "有効期限: {date}",
 	"expiresOn": "期限切れ",
-	"footer.github-fork": "Fork me on Github",
 	"form.location": "場所",
 	"form.placeholder.api-key": "APIキーを入力...",
 	"form.placeholder.auth-host": "auth.example.com",

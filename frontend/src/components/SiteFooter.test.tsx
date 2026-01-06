@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 // Mock dependencies
 vi.mock("src/locale", () => ({
 	T: ({ id }: { id: string }) => {
-		if (id === "footer.github-fork") return "Fork me on Github";
 		if (id === "update-available") return "Update Available";
 		return id;
 	},
@@ -45,12 +44,18 @@ describe("SiteFooter", () => {
 		render(<SiteFooter />);
 
 		// Check for specific text
-		expect(screen.getByText("Fork me on Github")).toBeInTheDocument();
+		expect(screen.queryByText("Fork me on Github")).not.toBeInTheDocument();
 		expect(screen.getByText("1.2.3")).toBeInTheDocument();
+		expect(screen.getByText("Powered by")).toBeInTheDocument();
+		// Check for the explicit text "© 2026 ShieldPM. Private & Internal Use Only."
+		// Note: Use a regex to match the copyright symbol or just partial text safely
+		expect(screen.getByText(/2026 ShieldPM. Private & Internal Use Only/)).toBeInTheDocument();
 
-		// Check "Fork me on Github" link
-		const forkLink = screen.getByText("Fork me on Github").closest("a");
-		expect(forkLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM");
+		// Check "ShieldPM" link
+
+		// Check "ShieldPM" link
+		const shieldPmLink = screen.getByText("ShieldPM").closest("a");
+		expect(shieldPmLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM");
 
 		// Check Version link
 		const versionLink = screen.getByText("1.2.3").closest("a");

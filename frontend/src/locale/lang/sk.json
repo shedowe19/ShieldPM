@@ -219,7 +219,6 @@
 	"error.unknown": "Neznáma chyba",
 	"expires.on": "Platnosť do: {date}",
 	"expiresOn": "Platnosť končí",
-	"footer.github-fork": "Forknite ma na GitHube",
 	"form.location": "Poloha",
 	"form.placeholder.api-key": "Zadajte kľúč API...",
 	"form.placeholder.auth-host": "auth.example.com",

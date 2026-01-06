@@ -219,7 +219,6 @@
 	"error.unknown": "Unbekannter Fehler",
 	"expires.on": "Ablauf am: {date}",
 	"expiresOn": "Läuft ab am",
-	"footer.github-fork": "Fork me on Github",
 	"form.location": "Standort",
 	"form.placeholder.api-key": "API-Schlüssel eingeben...",
 	"form.placeholder.auth-host": "auth.example.com",

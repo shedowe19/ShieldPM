@@ -1550,7 +1550,7 @@ Time: ${new Date().toISOString()}`;
 						case "update_proxy_host": {
 							// We need to fetch existing to merge, or internalProxyHost.update handles partials?
 							// Usually update requires full object or specific logic.
-							// Standard NPMplus update logic often replaces lists. Be careful.
+							// Standard ShieldPM update logic often replaces lists. Be careful.
 							// However, let's assume standard update.
 							await internalProxyHost.update(access, { id: call.args.id, ...call.args });
 							result = `Updated Proxy Host ID: ${call.args.id}`;

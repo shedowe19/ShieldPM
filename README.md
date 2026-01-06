@@ -11,7 +11,7 @@
 > 3.  **Downgrade**: Migration is **one-way**. Back up your data before upgrading!
 
 ![Version](https://img.shields.io/github/v/release/shedowe19/ShieldPM?style=for-the-badge&color=blue)
-![License](https://img.shields.io/github/license/shedowe19/ShieldPM?style=for-the-badge&color=orange)
+![License](https://img.shields.io/badge/license-Proprietary-red?style=for-the-badge)
 ![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/ShieldPM/docker.yml?style=for-the-badge)
 
 ## 📚 Documentation
@@ -426,4 +426,4 @@ ShieldPM builds upon this robust legacy with a renewed focus on:
 *   **Support**: [GitHub Discussions](https://github.com/shedowe19/ShieldPM/discussions)
 *   **Bugs**: [GitHub Issues](https://github.com/shedowe19/ShieldPM/issues)
 
-**Maintained with ❤️ by the open source community.**
+**Maintained with ❤️ by the ShieldPM Contributors.**

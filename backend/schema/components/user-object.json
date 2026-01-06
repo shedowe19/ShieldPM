@@ -40,7 +40,7 @@
 			"description": "Email",
 			"pattern": "@",
 			"minLength": 3,
-			"example": "jc@jc21.com"
+			"example": "shieldpm@clawsucht.eu"
 		},
 		"name": {
 			"type": "string",

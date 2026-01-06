@@ -219,7 +219,6 @@
 	"error.unknown": "Неизвестна грешка",
 	"expires.on": "Изтича: {date}",
 	"expiresOn": "Изтича на",
-	"footer.github-fork": "Fork в GitHub",
 	"form.location": "Местоположение",
 	"form.placeholder.api-key": "Въведете API ключ...",
 	"form.placeholder.auth-host": "auth.example.com",

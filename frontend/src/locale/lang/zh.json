@@ -219,7 +219,6 @@
 	"error.unknown": "未知错误",
 	"expires.on": "过期时间: {date}",
 	"expiresOn": "过期时间",
-	"footer.github-fork": "在 Github 上复刻 (Fork) 本项目",
 	"form.location": "位置",
 	"form.placeholder.api-key": "输入 API 密钥...",
 	"form.placeholder.auth-host": "auth.example.com",
