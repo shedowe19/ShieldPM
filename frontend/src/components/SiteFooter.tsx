@@ -40,7 +40,7 @@ export function SiteFooter() {
 							</a>
 						</span>
 						<a
-							href={`https://github.com/shedowe19/ShieldPM/releases/tag/${getVersion()}`}
+							href={`https://github.com/shedowe19/ShieldPM/releases/tag/v${getVersion()}`}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
@@ -49,7 +49,7 @@ export function SiteFooter() {
 						</a>
 						{versionData?.updateAvailable && versionData?.latest && (
 							<a
-								href={`https://github.com/shedowe19/ShieldPM/releases/tag/${versionData.latest}`}
+								href={`https://github.com/shedowe19/ShieldPM/releases/tag/v${versionData.latest}`}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-sm font-bold text-yellow-500 hover:text-yellow-600"
