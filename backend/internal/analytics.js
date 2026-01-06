@@ -29,10 +29,12 @@ class AnalyticsService {
 	}
 
 	async init() {
-		if (!fs.existsSync(this.logFile)) {
-			try {
-				fs.closeSync(fs.openSync(this.logFile, "w"));
-			} catch (err) {
+		try {
+			// Using 'wx' flag (write, exclusive) to create file atomically.
+			// If file exists, it fails with EEXIST, which we ignore.
+			fs.closeSync(fs.openSync(this.logFile, "wx"));
+		} catch (err) {
+			if (err.code !== "EEXIST") {
 				logger.error(`Could not create log file: ${err.message}`);
 				return;
 			}
