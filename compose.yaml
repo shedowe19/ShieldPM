@@ -105,6 +105,7 @@ services:
 #      - "NGINX_LOAD_NJS_MODULE=true" # loads the njs module (nginx JavaScript module), requires manual configuration, default false
 #      - "NGINX_LOAD_NTLM_MODULE=true" # loads the ntlm module, requires manual configuration, default false
 #      - "NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE=true" # loads the virtual host traffic status module, requires manual configuration, default false
+#      - "DOCKER_HOSTS=tcp://10.10.10.1:2375,tcp://10.10.10.2:2375" # Optional: Connect to additional remote Docker hosts (local socket is always monitored)
 
 # This can be used to enable crowdsec, see README for a guide
 #  crowdsec:

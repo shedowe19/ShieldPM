@@ -46,6 +46,13 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 					className: "w-1",
 				},
 			}),
+			columnHelper.accessor("id", {
+				id: "certificateId",
+				header: "ID",
+				meta: {
+					className: "w-1 font-mono text-xs",
+				},
+			}),
 			columnHelper.accessor((row) => row, {
 				id: "domainNames",
 				header: intl.formatMessage({ id: "column.name" }),
