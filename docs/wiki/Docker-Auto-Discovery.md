@@ -4,7 +4,20 @@ ShieldPM supports **Docker Auto-Discovery**, a feature that allows you to automa
 
 ## How it Works
 
-ShieldPM listens to the Docker Socket (`/var/run/docker.sock`) for container events.
+ShieldPM### Prerequisites
+- Docker Socket mounted (`/var/run/docker.sock`) **OR** `DOCKER_HOSTS` configured.
+
+### Multiple Remote Docker Hosts (Option A - ENV)
+You can connect ShieldPM to multiple remote Docker daemons by setting the `DOCKER_HOSTS` environment variable.
+Remote hosts must have their Docker socket exposed via TCP (usually port 2375).
+
+**Environment Variable:**
+`DOCKER_HOSTS="tcp://10.0.0.2:2375, tcp://10.0.0.3:2375"`
+
+**Note:**
+- ShieldPM will prefer the *remote host IP* as the target address.
+- It will try to find the *mapped public port* for the container.
+- If no port mapping exists, it will fallback to the internal `shieldpm.port`. for container events.
 -   **On Container Start**: Checks for specific labels. If found, creates a new Proxy Host or updates an existing one (specifically for that container).
 -   **On Container Stop**: Automatically **disables** the associated Proxy Host. This preserves logs, statistics, and SSL certificates but stops traffic forwarding.
 
