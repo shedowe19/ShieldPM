@@ -10,6 +10,7 @@ import { getCompiledSchema } from "./schema/index.js";
 import setup from "./setup.js";
 import internalMaintenance from "./internal/maintenance.js";
 import internalCloudflared from "./internal/cloudflared.js";
+import internalDocker from "./internal/docker.js";
 
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 
@@ -38,6 +39,7 @@ async function appStart() {
 		internalMaintenance.initTimer();
 		internalNginx.reload();
 		internalCloudflared.init();
+		internalDocker.init();
 
 		const server = app.listen("/run/shieldpm.sock", () => {
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);

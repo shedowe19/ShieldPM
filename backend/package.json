@@ -35,7 +35,8 @@
 		"signale": "1.4.0",
 		"systeminformation": "^5.28.3",
 		"tail": "^2.2.6",
-		"temp-write": "6.0.0"
+		"temp-write": "6.0.0",
+		"dockerode": "^4.0.0"
 	},
 	"devDependencies": {
 		"@apidevtools/swagger-parser": "12.1.0",
