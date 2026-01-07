@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Button } from "src/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { getAnalyticsSummary, getAnalyticsSeries, type AnalyticsSummary, type TimeSeriesPoint } from "src/api/backend";
-import { useProxyHosts } from "src/hooks";
+import { useProxyHosts, useHealth } from "src/hooks";
 import { T } from "src/locale";
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
 import { geoCentroid } from "d3-geo";
@@ -45,6 +45,8 @@ const Analytics = () => {
 	const [series, setSeries] = useState<(TimeSeriesPoint & { timeDisplay: string })[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [networkSpeed, setNetworkSpeed] = useState(0);
+	const health = useHealth();
+	const isDemo = health.data?.demo;
 
 	// Select first host by default
 	useEffect(() => {
@@ -455,8 +457,8 @@ const Analytics = () => {
 							{summary?.topIps && summary.topIps.length > 0 ? (
 								summary.topIps.map((i, idx) => (
 									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2 font-mono" title={i.ip}>
-											{i.ip}
+										<span className="truncate flex-1 min-w-0 mr-2 font-mono" title={isDemo ? "Hidden IP" : i.ip}>
+											{isDemo ? "Hidden IP" : i.ip}
 										</span>
 										<span className="text-muted-foreground whitespace-nowrap">{i.count}</span>
 									</div>
@@ -588,22 +590,21 @@ const Analytics = () => {
 											<td className="p-4 align-middle">
 												<span
 													className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-													${
-														req.status >= 200 && req.status < 300
+													${req.status >= 200 && req.status < 300
 															? "text-green-500"
 															: req.status >= 300 && req.status < 400
 																? "text-blue-500"
 																: req.status >= 400 && req.status < 500
 																	? "text-yellow-500"
 																	: "text-red-500"
-													}`}
+														}`}
 												>
 													{req.status}
 												</span>
 											</td>
 											<td className="p-4 align-middle break-all max-w-[300px]">{req.path}</td>
 											<td className="p-4 align-middle font-mono">
-												{req.ip} {req.countryCode ? `(${req.countryCode})` : ""}
+												{isDemo ? "Hidden IP" : req.ip} {req.countryCode ? `(${req.countryCode})` : ""}
 											</td>
 											<td className="p-4 align-middle text-right">{req.duration}ms</td>
 										</tr>

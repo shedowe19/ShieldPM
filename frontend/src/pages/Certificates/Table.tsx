@@ -12,7 +12,7 @@ import {
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { intl, T } from "src/locale";
-import { showCustomCertificateModal, showDNSCertificateModal, showHTTPCertificateModal } from "src/modals";
+import { showCustomCertificateModal, showDNSCertificateModal, showHTTPCertificateModal, showInternalCertificateModal } from "src/modals";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
 import {
 	DropdownMenu,
@@ -188,6 +188,10 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={() => showCustomCertificateModal()}>
 					<T id="certificates.custom" />
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={() => showInternalCertificateModal()}>
+					<T id="certificates.internal" />
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

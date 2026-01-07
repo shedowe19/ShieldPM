@@ -9,9 +9,11 @@ import { useCloudflaredTunnels, useCloudflaredTunnel } from "@/hooks/useCloudfla
 import type { CloudflaredTunnel } from "@/api/backend";
 import { T } from "@/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Cloud } from "lucide-react";
+import { Cloud, Lock } from "lucide-react";
+import { useHealth } from "@/hooks/useHealth";
 
 export function CloudflaredTunnels() {
+	const health = useHealth();
 	const { data: tunnels, isLoading, refetch } = useCloudflaredTunnels();
 	const { remove } = useCloudflaredTunnel();
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,36 +39,55 @@ export function CloudflaredTunnels() {
 		switch (status) {
 			case 0:
 				return (
-					<Badge variant="secondary">
+					<Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
 						<T id="disabled" />
 					</Badge>
 				);
 			case 1:
 				return (
-					<Badge variant="warning">
+					<Badge className="bg-yellow-500 text-white hover:bg-yellow-600">
 						<T id="loading" />
 					</Badge>
 				);
 			case 2:
 				return (
-					<Badge variant="success">
+					<Badge className="bg-green-500 text-white hover:bg-green-600">
 						<T id="online" />
 					</Badge>
 				);
 			case 3:
 				return (
-					<Badge variant="destructive">
+					<Badge className="bg-red-500 text-white hover:bg-red-600">
 						<T id="error.unknown" />
 					</Badge>
 				);
 			default:
 				return (
-					<Badge variant="outline">
+					<Badge className="text-foreground">
 						<T id="offline" />
 					</Badge>
 				);
 		}
 	};
+
+	if (health.data?.demo) {
+		return (
+			<Card className="mt-4 border-t-4 border-red-500/50">
+				<CardHeader>
+					<CardTitle className="text-2xl font-bold flex items-center gap-2 text-red-500">
+						<Lock className="h-6 w-6" />
+						Access Denied
+					</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="p-8 text-center text-muted-foreground">
+						<p className="text-lg font-semibold">This feature is disabled in Demo Mode.</p>
+						<p className="mt-2">Cloudflare Tunnels are restricted for security reasons.</p>
+					</div>
+				</CardContent>
+			</Card>
+		);
+	}
 
 	return (
 		<Card className="mt-4 border-t-4 border-orange-500/50">

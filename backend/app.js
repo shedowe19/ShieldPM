@@ -47,6 +47,9 @@ app.enable("strict routing");
 // pretty print JSON when not live
 app.set("json spaces", 2);
 
+import checkDemoMode from "./lib/express/demo.js";
+app.use(checkDemoMode);
+
 app.use(jwt());
 app.use("/", mainRoutes);
 

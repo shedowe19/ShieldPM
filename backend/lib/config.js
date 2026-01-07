@@ -202,6 +202,13 @@ const isDestructiveTestMode = () => {
 /**
  * @returns {boolean}
  */
+const isDemoMode = () => {
+	return process.env.DEMO_MODE === "true";
+};
+
+/**
+ * @returns {boolean}
+ */
 const isSqlite = () => {
 	instance === null && configure();
 	return instance.database.engine === "knex-native";
@@ -259,4 +266,5 @@ export {
 	getPrivateKey,
 	getPublicKey,
 	getEncryptionKey,
+	isDemoMode,
 };

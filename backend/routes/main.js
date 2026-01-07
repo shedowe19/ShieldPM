@@ -2,6 +2,7 @@ import express from "express";
 import errs from "../lib/error.js";
 import pjson from "../package.json" with { type: "json" };
 import { isSetup } from "../setup.js";
+import { isDemoMode } from "../lib/config.js";
 import auditLogRoutes from "./audit-log.js";
 import accessListsRoutes from "./nginx/access_lists.js";
 import certificatesHostsRoutes from "./nginx/certificates.js";
@@ -39,6 +40,7 @@ router.get("/", async (_, res /*, next*/) => {
 		status: "OK",
 		setup,
 		version,
+		demo: isDemoMode(),
 	});
 });
 

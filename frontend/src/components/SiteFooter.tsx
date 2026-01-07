@@ -61,6 +61,11 @@ export function SiteFooter() {
 								<T id="update-available" data={{ latestVersion: versionData.latest }} />
 							</a>
 						)}
+						{health.data?.demo && (
+							<span className="rounded bg-orange-500 px-2 py-0.5 text-xs font-bold text-white">
+								DEMO MODE
+							</span>
+						)}
 					</div>
 				</div>
 			</div>

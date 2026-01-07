@@ -2,6 +2,7 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
 import { updateAuth } from "src/api/backend";
+import { useHealth } from "src/hooks";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
@@ -47,6 +48,32 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 		setIsSubmitting(false);
 		setSubmitting(false);
 	};
+
+	const health = useHealth();
+
+	if (health.data?.demo) {
+		return (
+			<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+				<DialogContent className="max-w-md border-red-500 border-2">
+					<DialogHeader>
+						<DialogTitle className="flex items-center text-red-500">
+							<IconLock className="mr-2 h-5 w-5" />
+							Access Denied
+						</DialogTitle>
+					</DialogHeader>
+					<div className="p-4 text-center text-muted-foreground">
+						<p className="font-semibold">Password changes are disabled in Demo Mode.</p>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={remove}>
+							<T id="close" />
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		);
+	}
+
 
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>

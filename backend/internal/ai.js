@@ -24,8 +24,68 @@ import internalNginx from "./nginx.js";
 import si from "systeminformation";
 import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { isDemoMode } from "../lib/config.js";
+import ipaddr from "ipaddr.js";
 
 const AI_CONFIG_ID = "ai-config";
+
+/**
+ * Validate host data in Demo Mode - blocks private IPs and advanced config
+ * @param {Object} data - Host data (forward_host, advanced_config, etc.)
+ * @throws {Error} if validation fails in Demo Mode
+ */
+const validateDemoModeHost = (data) => {
+	if (!isDemoMode()) return;
+
+	// Block Advanced Config
+	if (data.advanced_config && data.advanced_config.trim().length > 0) {
+		throw new Error("Advanced Nginx Configuration is disabled in Demo Mode.");
+	}
+
+	// Block Path forwarding
+	if (data.forward_scheme === "path") {
+		throw new Error("Local Path forwarding is disabled in Demo Mode.");
+	}
+
+	// Block Internal Hostnames
+	const forbiddenHosts = ["localhost", "db", "app", "redis", "postgres", "mysql"];
+	if (data.forward_host) {
+		if (forbiddenHosts.includes(data.forward_host) || data.forward_host.endsWith(".local")) {
+			throw new Error("Forwarding to internal services (localhost/db/local) is disabled in Demo Mode.");
+		}
+
+		// Block Private IPs
+		try {
+			if (ipaddr.isValid(data.forward_host)) {
+				const addr = ipaddr.parse(data.forward_host);
+				const range = addr.range();
+				const blockedRanges = ["loopback", "private", "linkLocal", "uniqueLocal", "carrierGradeNat", "reserved", "broadcast", "multicast"];
+
+				if (blockedRanges.includes(range)) {
+					throw new Error(`Forwarding to ${range} IP (${data.forward_host}) is disabled in Demo Mode.`);
+				}
+
+				// IPv4-mapped IPv6 addresses
+				if (addr.kind() === "ipv6" && addr.isIPv4MappedAddress()) {
+					const v4 = addr.toIPv4Address();
+					if (blockedRanges.includes(v4.range())) {
+						throw new Error(`Forwarding to mapped ${v4.range()} IP (${data.forward_host}) is disabled in Demo Mode.`);
+					}
+				}
+			}
+		} catch (err) {
+			if (err.message.includes("Demo Mode")) throw err;
+			// Not a valid IP, ignore
+		}
+	}
+
+	// Check locations (for proxy hosts)
+	if (data.locations && Array.isArray(data.locations)) {
+		for (const loc of data.locations) {
+			validateDemoModeHost(loc);
+		}
+	}
+};
 
 /**
  * AI Service for handling Chat and Tool Execution
@@ -367,7 +427,7 @@ Time: ${new Date().toISOString()}`;
 
 		const systemPrompt = config.system_prompt || defaultPrompt;
 
-		const tools = [
+		let tools = [
 			{
 				function: {
 					name: "get_proxy_hosts",
@@ -1312,6 +1372,34 @@ Time: ${new Date().toISOString()}`;
 			for (const call of response.toolCalls) {
 				try {
 					let result = "";
+
+					// Check for Demo Mode restrictions
+					if (isDemoMode()) {
+						const blockedTools = [
+							"update_user_password",
+							"update_user_permissions",
+							"update_user", // Block general user updates (roles/email)
+							"create_user",
+							"delete_user",
+							"get_users", // Privacy: Don't list other users
+							"update_global_setting",
+							"get_global_settings", // Security: Don't reveal secrets
+							"create_api_token",
+							"login_as_user",
+							"read_nginx_logs", // Privacy: Don't reveal IPs
+							"get_audit_log", // Privacy: Don't reveal user actions
+							"create_cloudflared_tunnel",
+							"update_cloudflared_tunnel",
+							"delete_cloudflared_tunnel",
+							"get_cloudflared_tunnels"
+						];
+						if (blockedTools.includes(call.name)) {
+							result = "Error: This action is prohibited in the public Demo Mode.";
+							toolResults.push({ name: call.name, result });
+							continue;
+						}
+					}
+
 					switch (call.name) {
 						case "get_proxy_hosts": {
 							const hosts = await internalProxyHost.getAll(access);
@@ -1329,6 +1417,9 @@ Time: ${new Date().toISOString()}`;
 							break;
 						}
 						case "create_proxy_host": {
+							// Demo Mode: Block private IPs, advanced config, etc.
+							validateDemoModeHost(call.args);
+
 							// Determine certificate ID based on user intent
 							let certId = 0;
 							let meta = {};
@@ -1349,9 +1440,10 @@ Time: ${new Date().toISOString()}`;
 								ssl_forced: call.args.ssl_forced || false,
 								caching_enabled: false,
 								block_exploits: true,
-								advanced_config: "",
 								meta: meta,
 								...call.args,
+								// Ensure these are always valid (override any nulls from AI)
+								advanced_config: "",
 							};
 							const newHost = await internalProxyHost.create(access, data);
 							result = `Created Proxy Host ID: ${newHost.id}`;
@@ -1488,6 +1580,9 @@ Time: ${new Date().toISOString()}`;
 							break;
 						}
 						case "create_stream": {
+							// Demo Mode: Block private IPs
+							validateDemoModeHost(call.args);
+
 							const newStream = await internalStream.create(access, {
 								certificate_id: 0,
 								meta: {},
@@ -1548,27 +1643,37 @@ Time: ${new Date().toISOString()}`;
 						}
 						// Missing CRUD Implementations
 						case "update_proxy_host": {
-							// We need to fetch existing to merge, or internalProxyHost.update handles partials?
-							// Usually update requires full object or specific logic.
-							// Standard ShieldPM update logic often replaces lists. Be careful.
-							// However, let's assume standard update.
+							// Demo Mode: Block private IPs, advanced config, etc.
+							validateDemoModeHost(call.args);
+
+							// Standard update
 							await internalProxyHost.update(access, { id: call.args.id, ...call.args });
 							result = `Updated Proxy Host ID: ${call.args.id}`;
 							break;
 						}
 						case "delete_user": {
-							// Soft delete usually implemented as update is_deleted=1, or delete impl
+							// Demo Mode: Block user management
+							if (isDemoMode()) {
+								throw new Error("User management is disabled in Demo Mode.");
+							}
 							await internalUser.delete(access, { id: call.args.id });
 							result = `Deleted User ID: ${call.args.id}`;
 							break;
 						}
 						case "update_user": {
+							// Demo Mode: Block user management
+							if (isDemoMode()) {
+								throw new Error("User management is disabled in Demo Mode.");
+							}
 							await internalUser.update(access, { id: call.args.id, ...call.args });
 							result = `Updated User ID: ${call.args.id}`;
 							break;
 						}
 						case "delete_cloudflared_tunnel": {
-							// Use imported Model
+							// Demo Mode: Block tunnel management
+							if (isDemoMode()) {
+								throw new Error("Cloudflare Tunnel management is disabled in Demo Mode.");
+							}
 							await CloudflaredTunnel.query().deleteById(call.args.id);
 							result = `Deleted Tunnel ID: ${call.args.id}`;
 							break;
@@ -1919,6 +2024,8 @@ Time: ${new Date().toISOString()}`;
 				}
 			}
 
+
+
 			console.log(
 				"[AI Chat] Tool results:",
 				toolResults.map((tr) => ({ name: tr.name, resultLength: tr.result?.length || 0 })),
@@ -1993,14 +2100,14 @@ Time: ${new Date().toISOString()}`;
 		const geminiTools =
 			tools.length > 0
 				? tools.map((t) => ({
-						functionDeclarations: [
-							{
-								name: t.function.name,
-								description: t.function.description,
-								parameters: t.function.parameters,
-							},
-						],
-					}))
+					functionDeclarations: [
+						{
+							name: t.function.name,
+							description: t.function.description,
+							parameters: t.function.parameters,
+						},
+					],
+				}))
 				: undefined;
 
 		// Start chat session with history
@@ -2109,9 +2216,9 @@ Time: ${new Date().toISOString()}`;
 				tools:
 					tools.length > 0
 						? tools.map((t) => ({
-								type: "function",
-								function: t.function,
-							}))
+							type: "function",
+							function: t.function,
+						}))
 						: undefined,
 			};
 		} else {
@@ -2131,9 +2238,9 @@ Time: ${new Date().toISOString()}`;
 				tools:
 					tools.length > 0
 						? tools.map((t) => ({
-								type: "function",
-								function: t.function,
-							}))
+							type: "function",
+							function: t.function,
+						}))
 						: undefined,
 			};
 		}
