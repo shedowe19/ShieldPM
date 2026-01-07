@@ -60,6 +60,14 @@ These labels toggle features (true/false or 1/0).
 | `shieldpm.disable_buffering` | Disable Buffering | `false` |
 | `shieldpm.maintenance_active` | Maintenance Mode Active | `false` |
 | `shieldpm.maintenance_on_failure` | Maintenance Mode on Failure | `false` |
+| `shieldpm.forward_query` | Forward Query Parameters | `false` (or `true`) |
+
+### Bandwidth Limiting
+Limit the bandwidth for this host.
+
+| Label | Description | Example |
+| :--- | :--- | :--- |
+| `shieldpm.bandwidth_limit` | Bandwidth Limit. | `100k`, `1m` |
 
 ### Advanced Configuration / Custom Nginx
 Inject custom Nginx configuration snippet.
