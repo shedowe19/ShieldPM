@@ -74,7 +74,7 @@ These labels toggle features (true/false or 1/0).
 | `shieldpm.disable_buffering` | Disable Buffering | `false` |
 | `shieldpm.maintenance_active` | Maintenance Mode Active | `false` |
 | `shieldpm.maintenance_on_failure` | Maintenance Mode on Failure | `false` |
-| `shieldpm.forward_query` | Forward Query Parameters | `false` (or `true`) |
+| `shieldpm.forward_query` | Forward Query String (e.g. `?api_key=123`) | - |
 
 ### Bandwidth Limiting
 Limit the bandwidth for this host.
