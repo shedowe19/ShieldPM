@@ -81,6 +81,9 @@ Automatically request a Let's Encrypt certificate or use an existing one.
 > [!TIP]
 > **Cloudflare / DNS Validation**: If you need a certificate with DNS validation (e.g., for Cloudflare or Wildcards), create the certificate manually in the ShieldPM UI first. Then, note its ID (found in the URL or list) and use `shieldpm.certificate_id=<ID>` in your container labels.
 
+> [!IMPORTANT]
+> **DNS Resolution**: When using `shieldpm.ssl_provider=letsencrypt` (HTTP Challenge), you **must ensure** that your domain name(s) already point to the external IP address of your ShieldPM instance. If Let's Encrypt cannot reach ShieldPM via the domain, certificate generation will fail.
+
 ### Rate Limiting
 Configure Nginx Rate Limiting.
 
