@@ -1,11 +1,8 @@
 import Docker from "dockerode";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
-import AccessList from "../models/access_list.js";
-import Certificate from "../models/certificate.js";
 import internalCertificate from "./certificate.js";
 import internalNginx from "./nginx.js";
-import { Model } from "objection";
 
 const mockAccess = {
 	token: {
