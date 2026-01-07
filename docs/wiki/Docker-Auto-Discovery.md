@@ -69,13 +69,17 @@ Inject custom Nginx configuration snippet.
 | `shieldpm.advanced_config` | Custom Nginx config block. | `proxy_set_header X-Custom "Value";` |
 
 ### SSL / Let's Encrypt
-Automatically request a Let's Encrypt certificate.
+Automatically request a Let's Encrypt certificate or use an existing one.
 
 | Label | Description | Example |
 | :--- | :--- | :--- |
 | `shieldpm.ssl_provider` | Set to `letsencrypt` to enable auto-request. | `letsencrypt` |
 | `shieldpm.ssl_email` | Email for Let's Encrypt registration. | `admin@example.com` |
 | `shieldpm.force_new_cert` | Force request new cert even if one exists (Use with caution). | `true` |
+| `shieldpm.certificate_id` | **Manually specify a Certificate ID**. Useful for Wildcard/DNS Certs. | `5` |
+
+> [!TIP]
+> **Cloudflare / DNS Validation**: If you need a certificate with DNS validation (e.g., for Cloudflare or Wildcards), create the certificate manually in the ShieldPM UI first. Then, note its ID (found in the URL or list) and use `shieldpm.certificate_id=<ID>` in your container labels.
 
 ### Rate Limiting
 Configure Nginx Rate Limiting.
@@ -89,6 +93,9 @@ Configure Nginx Rate Limiting.
 ### Security
 > [!WARNING]
 > Mounting `/var/run/docker.sock` gives ShieldPM full root access to your host. Ensure ShieldPM is isolated and trusted.
+
+> [!CAUTION]
+> **Manual Changes Overwritten**: Any changes made manually to an auto-discovered Host via the ShieldPM UI will be **overwritten** the next time the container restarts or the auto-discovery service syncs. Always configure via labels!
 
 ### Troubleshooting
 *   **Logs**: Check the ShieldPM container logs (`docker logs shieldpm`) for "Docker Auto-Discovery" messages.
