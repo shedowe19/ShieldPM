@@ -348,6 +348,9 @@ class DockerService {
                 payload.advanced_config = advancedConfig || "";
                 payload.locations = [];
 
+                if (bandwidthLimit) payload.bandwidth_limit = bandwidthLimit;
+                if (forwardQuery) payload.forward_query = forwardQuery;
+
                 const newHost = await ProxyHost.query().insert(payload);
                 logger.info(`Docker Auto-Discovery: Created host #${newHost.id}`);
             }
