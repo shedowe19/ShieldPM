@@ -45,9 +45,43 @@ volumes:
   - /var/run/docker.sock:/var/run/docker.sock:ro
 ```
 
-> **Warning**: Giving a container access to the Docker socket effectively grants it root privileges on the host system. Ensure you trust the ShieldPM application and restrict access to its management interface.
+> **Warning**: Giving a container access to the Docker socket effectively grants it root privileges on the host system.### Advanced Configuration
+These labels toggle features (true/false or 1/0).
 
-## Troubleshooting
+| Label | Description | Default |
+| :--- | :--- | :--- |
+| `shieldpm.ssl_forced` | Force SSL (HTTPS Redirect) | `false` |
+| `shieldpm.http2_support` | Enable HTTP/2 Support | `false` |
+| `shieldpm.hsts_enabled` | Enable HSTS | `false` |
+| `shieldpm.hsts_subdomains` | Enable HSTS Subdomains | `false` |
+| `shieldpm.block_exploits` | Block Common Exploits | `false` |
+| `shieldpm.caching_enabled` | Enable Caching | `false` |
+| `shieldpm.allow_websocket_upgrade` | Allow Websocket Upgrade | `true` |
+| `shieldpm.disable_buffering` | Disable Buffering | `false` |
 
--   **Host not appearing?** Check the ShieldPM logs (`docker logs shieldpm`). Look for `Docker Auto-Discovery`.
--   **Permissions?** Ensure the user running ShieldPM inside the container has permission to read the socket (usually `root` or `docker` group).
+### SSL / Let's Encrypt
+Automatically request a Let's Encrypt certificate.
+
+| Label | Description | Example |
+| :--- | :--- | :--- |
+| `shieldpm.ssl_provider` | Set to `letsencrypt` to enable auto-request. | `letsencrypt` |
+| `shieldpm.ssl_email` | Email for Let's Encrypt registration. | `admin@example.com` |
+| `shieldpm.force_new_cert` | Force request new cert even if one exists (Use with caution). | `true` |
+
+### Rate Limiting
+Configure Nginx Rate Limiting.
+
+| Label | Description | Example |
+| :--- | :--- | :--- |
+| `shieldpm.limit_rate` | Request limit rate (requests per unit). | `10` |
+| `shieldpm.limit_unit` | Unit for rate (`second`, `minute`, `hour`). | `second` |
+| `shieldpm.limit_burst` | Burst size (queue length). | `20` |
+
+### Security
+> [!WARNING]
+> Mounting `/var/run/docker.sock` gives ShieldPM full root access to your host. Ensure ShieldPM is isolated and trusted.
+
+### Troubleshooting
+*   **Logs**: Check the ShieldPM container logs (`docker logs shieldpm`) for "Docker Auto-Discovery" messages.
+*   **Collision**: If you see "Collision detected!", it means a manually created host already uses the domain. ShieldPM will NOT overwrite it.
+*   **SSL Failures**: Ensuring your domain points to the ShieldPM server before starting the container is crucial for Let's Encrypt. Check logs for ACME errors.
