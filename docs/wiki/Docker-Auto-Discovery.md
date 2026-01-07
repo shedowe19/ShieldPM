@@ -58,6 +58,15 @@ These labels toggle features (true/false or 1/0).
 | `shieldpm.caching_enabled` | Enable Caching | `false` |
 | `shieldpm.allow_websocket_upgrade` | Allow Websocket Upgrade | `true` |
 | `shieldpm.disable_buffering` | Disable Buffering | `false` |
+| `shieldpm.maintenance_active` | Maintenance Mode Active | `false` |
+| `shieldpm.maintenance_on_failure` | Maintenance Mode on Failure | `false` |
+
+### Advanced Configuration / Custom Nginx
+Inject custom Nginx configuration snippet.
+
+| Label | Description | Example |
+| :--- | :--- | :--- |
+| `shieldpm.advanced_config` | Custom Nginx config block. | `proxy_set_header X-Custom "Value";` |
 
 ### SSL / Let's Encrypt
 Automatically request a Let's Encrypt certificate.
