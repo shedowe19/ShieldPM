@@ -20,7 +20,7 @@
 ## 🎮 Live Demo
 
 Try out the securely locked-down **Public Demo**:  
-👉 **[https://demo.shieldpm.clawsucht.eu](https://demo.shieldpm.clawsucht.eu)**
+👉 **[https://demo-shieldpm.clawsucht.eu](https://demo-shieldpm.clawsucht.eu)**
 
 ### 🔑 Credentials
 *   **Email:** `demo.shieldpm@clawsucht.eu`
