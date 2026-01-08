@@ -24,7 +24,9 @@ export default function Layout() {
 					<CardContent>
 						<div className="p-8 text-center text-muted-foreground">
 							<p className="text-lg font-semibold">Global Settings are disabled in Demo Mode.</p>
-							<p className="mt-2">For security reasons, changing global configurations is not permitted.</p>
+							<p className="mt-2">
+								For security reasons, changing global configurations is not permitted.
+							</p>
 						</div>
 					</CardContent>
 				</Card>

@@ -59,7 +59,16 @@ const validateDemoModeHost = (data) => {
 			if (ipaddr.isValid(data.forward_host)) {
 				const addr = ipaddr.parse(data.forward_host);
 				const range = addr.range();
-				const blockedRanges = ["loopback", "private", "linkLocal", "uniqueLocal", "carrierGradeNat", "reserved", "broadcast", "multicast"];
+				const blockedRanges = [
+					"loopback",
+					"private",
+					"linkLocal",
+					"uniqueLocal",
+					"carrierGradeNat",
+					"reserved",
+					"broadcast",
+					"multicast",
+				];
 
 				if (blockedRanges.includes(range)) {
 					throw new Error(`Forwarding to ${range} IP (${data.forward_host}) is disabled in Demo Mode.`);
@@ -69,7 +78,9 @@ const validateDemoModeHost = (data) => {
 				if (addr.kind() === "ipv6" && addr.isIPv4MappedAddress()) {
 					const v4 = addr.toIPv4Address();
 					if (blockedRanges.includes(v4.range())) {
-						throw new Error(`Forwarding to mapped ${v4.range()} IP (${data.forward_host}) is disabled in Demo Mode.`);
+						throw new Error(
+							`Forwarding to mapped ${v4.range()} IP (${data.forward_host}) is disabled in Demo Mode.`,
+						);
 					}
 				}
 			}
@@ -427,7 +438,7 @@ Time: ${new Date().toISOString()}`;
 
 		const systemPrompt = config.system_prompt || defaultPrompt;
 
-		let tools = [
+		const tools = [
 			{
 				function: {
 					name: "get_proxy_hosts",
@@ -1391,7 +1402,7 @@ Time: ${new Date().toISOString()}`;
 							"create_cloudflared_tunnel",
 							"update_cloudflared_tunnel",
 							"delete_cloudflared_tunnel",
-							"get_cloudflared_tunnels"
+							"get_cloudflared_tunnels",
 						];
 						if (blockedTools.includes(call.name)) {
 							result = "Error: This action is prohibited in the public Demo Mode.";
@@ -2024,8 +2035,6 @@ Time: ${new Date().toISOString()}`;
 				}
 			}
 
-
-
 			console.log(
 				"[AI Chat] Tool results:",
 				toolResults.map((tr) => ({ name: tr.name, resultLength: tr.result?.length || 0 })),
@@ -2100,14 +2109,14 @@ Time: ${new Date().toISOString()}`;
 		const geminiTools =
 			tools.length > 0
 				? tools.map((t) => ({
-					functionDeclarations: [
-						{
-							name: t.function.name,
-							description: t.function.description,
-							parameters: t.function.parameters,
-						},
-					],
-				}))
+						functionDeclarations: [
+							{
+								name: t.function.name,
+								description: t.function.description,
+								parameters: t.function.parameters,
+							},
+						],
+					}))
 				: undefined;
 
 		// Start chat session with history
@@ -2216,9 +2225,9 @@ Time: ${new Date().toISOString()}`;
 				tools:
 					tools.length > 0
 						? tools.map((t) => ({
-							type: "function",
-							function: t.function,
-						}))
+								type: "function",
+								function: t.function,
+							}))
 						: undefined,
 			};
 		} else {
@@ -2238,9 +2247,9 @@ Time: ${new Date().toISOString()}`;
 				tools:
 					tools.length > 0
 						? tools.map((t) => ({
-							type: "function",
-							function: t.function,
-						}))
+								type: "function",
+								function: t.function,
+							}))
 						: undefined,
 			};
 		}

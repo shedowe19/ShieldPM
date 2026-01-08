@@ -74,7 +74,6 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 		);
 	}
 
-
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
 			<DialogContent className="max-w-md">

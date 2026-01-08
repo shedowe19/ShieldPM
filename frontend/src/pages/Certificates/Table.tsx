@@ -12,7 +12,12 @@ import {
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { intl, T } from "src/locale";
-import { showCustomCertificateModal, showDNSCertificateModal, showHTTPCertificateModal, showInternalCertificateModal } from "src/modals";
+import {
+	showCustomCertificateModal,
+	showDNSCertificateModal,
+	showHTTPCertificateModal,
+	showInternalCertificateModal,
+} from "src/modals";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
 import {
 	DropdownMenu,
