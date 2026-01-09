@@ -61,4 +61,4 @@ services:
     volumes:
       - /data/shieldpm/crowdsec/conf:/etc/crowdsec
       - /data/shieldpm/crowdsec/data:/var/lib/crowdsec/data
-      - /data/shieldpm/logs:/var/log/nginx:ro
+      - /data/shieldpm/nginx:/var/log/nginx:ro
