@@ -113,4 +113,4 @@ volumes:
 Try the public demo at: **https://demo-shieldpm.clawsucht.eu**
 
 -   **Email:** `demo.shieldpm@clawsucht.eu`
--   **Password:** `demo.shieldpm`
+-   **Password:** `ShieldPM`
