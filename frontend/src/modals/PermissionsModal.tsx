@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "src/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { useUser } from "src/hooks";
+import { useUser, useHealth } from "src/hooks";
 import { T } from "src/locale";
 import { AlertCircle, Loader2 } from "lucide-react";
 
@@ -106,6 +106,30 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	};
 
 	const isAdmin = data?.roles.indexOf("admin") !== -1;
+	const health = useHealth();
+
+	if (health.data?.demo) {
+		return (
+			<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+				<DialogContent className="max-w-lg border-red-500 border-2">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-red-500">
+							<IconShield className="h-5 w-5" />
+							Access Denied
+						</DialogTitle>
+					</DialogHeader>
+					<div className="p-8 text-center text-muted-foreground">
+						<p className="text-lg font-semibold">Changing permissions is disabled in Demo Mode.</p>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={remove}>
+							<T id="close" />
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		);
+	}
 
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>

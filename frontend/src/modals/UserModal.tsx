@@ -11,7 +11,7 @@ import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { useSetUser, useUser } from "src/hooks";
+import { useSetUser, useUser, useHealth } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
@@ -65,6 +65,31 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			},
 		});
 	};
+
+	const health = useHealth();
+
+	if (health.data?.demo) {
+		return (
+			<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
+				<DialogContent className="max-w-lg border-red-500 border-2">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-red-500">
+							<IconShield className="h-5 w-5" />
+							Access Denied
+						</DialogTitle>
+					</DialogHeader>
+					<div className="p-8 text-center text-muted-foreground">
+						<p className="text-lg font-semibold">User modification is disabled in Demo Mode.</p>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={remove}>
+							<T id="close" />
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		);
+	}
 
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>

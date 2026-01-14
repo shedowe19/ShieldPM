@@ -7,8 +7,18 @@ ShieldPM is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fr
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
 *   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
 *   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **AI Agent (Co-Pilot)**.
+*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**.
 *   **Language:** JavaScript/TypeScript (ES Modules).
+
+## Secure Demo Mode Architecture
+The project supports a public "Demo Mode" toggled via `DEMO_MODE=true`.
+*   **Purpose**: Allows public testing without compromising security.
+*   **Restrictions**:
+    *   **Frontend**: Restricted menus (e.g., Cloudflare Tunnels) and visual indicator.
+    *   **Backend**: Middleware (`demo.js`) blocks sensitive write operations (User, Settings, Nginx Config).
+    *   **Nginx**: ModSecurity enabled, filesystem access blocked (`forward_scheme: path` disallowed).
+    *   **Network**: `ipaddr.js` blocks standard "Anti-SSRF" targets (Private IPs, Localhost, etc.).
+    *   **Infrastructure**: Auto-reset sidecar container wipes database every 60 minutes.
 
 ## Building and Running
 

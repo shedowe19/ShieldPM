@@ -4,6 +4,7 @@ export interface HealthResponse {
 	status: string;
 	version: string;
 	setup: boolean;
+	demo: boolean;
 }
 
 export interface TokenResponse {

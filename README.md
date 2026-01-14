@@ -10,9 +10,50 @@
 >     *   **Action Required**: If you mount the data volume to a host path (e.g., `./data:/data`), you may want to rename your host folder for clarity, but it is not strictly required as the mapping handles it.
 > 3.  **Downgrade**: Migration is **one-way**. Back up your data before upgrading!
 
+
 ![Version](https://img.shields.io/github/v/release/shedowe19/ShieldPM?style=for-the-badge&color=blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red?style=for-the-badge)
 ![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/ShieldPM/docker.yml?style=for-the-badge)
+
+---
+
+## 🎮 Live Demo
+
+Try out the securely locked-down **Public Demo**:  
+👉 **[https://demo-shieldpm.clawsucht.eu](https://demo-shieldpm.clawsucht.eu)**
+
+### 🔑 Credentials
+*   **Email:** `demo.shieldpm@clawsucht.eu`
+*   **Password:** `ShieldPM`
+*   **Reset Schedule:** The database is automatically wiped and restored **every 60 minutes**. ⏳
+
+### 📖 The "Can I Click This?" Guide
+
+**✅ The Fun Stuff (Allowed):**
+*   **Spin it up:** Create Proxy Hosts (forward to `example.com` or `8.8.8.8`).
+*   **Bring your own Domain:** Point your DNS (A Record) to **`37.221.92.8`** and add it to the demo to test real traffic!
+*   **Secure it:** Generate Let's Encrypt certificates (staging) or self-signed ones.
+*   **Watch it:** Stare at the **Advanced Analytics** dashboard until the numbers make sense.
+*   **Chat with it:** Ask the **AI Agent** about Nginx config (it loves talking shop).
+
+**🚫 The "Don't Even Think About It" List (Blocked):**
+*   ❌ **No Home Calls:** Forwarding to `localhost`, `127.0.0.1`, `192.168.x.x`, or internal Docker buddies (`db`, `app`) is a hard no.
+*   ❌ **No Jailbreaking:** Advanced Nginx Configs are locked away in a vault.
+*   ❌ **No God Mode:** You can't change passwords, create admins, or nuke the settings.
+*   ❌ **No Secret Tunnels:** Cloudflare Tunnels are for display purposes only.
+
+> [!CAUTION]
+> # 🚨 BAN HAMMER & AI OVERLORD ONLINE 🚨
+>
+> Listen up! This environment is tighter than a drum. It is **aggressively defended**.
+>
+> *   🤖 **The AI Watcher:** Our AI never sleeps. It analyzes your behavior in real-time. If you act sus, it *will* know.
+> *   🔨 **CrowdSec Enforcer:** Thinking about running a scanner or fuzzer? **Don't.** You will be **PERMANENTLY BANNED** across our entire infrastructure faster than you can say `sudo`. No appeals. No mercy.
+> *   🛡️ **Paranoid WAF:** ModSecurity is eating exploits for breakfast.
+>
+> **TL;DR:** Play nice, or enjoy the void. We ❤️ security researchers, but we ban attackers. �
+
+---
 
 ## 📚 Documentation
 
@@ -22,6 +63,8 @@ It covers installation, configuration, and advanced usage examples.
 **ShieldPM** is an advanced, security-focused fork of Nginx Proxy Manager (NPM). It empowers you to manage Nginx reverse proxies with a user-friendly web interface while integrating cutting-edge features like **HTTP/3 (QUIC)**, **CrowdSec IPS**, **ModSecurity (WAF)**, and **enhanced TLS certificate management**.
 
 ---
+
+
 
 ## 🚀 Quick Start
 

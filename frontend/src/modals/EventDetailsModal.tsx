@@ -5,7 +5,7 @@ import { EventFormatter, GravatarFormatter, Loading } from "src/components";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { useAuditLog } from "src/hooks";
+import { useAuditLog, useHealth } from "src/hooks";
 import { T } from "src/locale";
 
 const showEventDetailsModal = (id: number) => {
@@ -17,6 +17,28 @@ interface Props extends InnerModalProps {
 }
 const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useAuditLog(id);
+	const health = useHealth();
+
+	const maskSensitiveData = (obj: any): any => {
+		if (!health.data?.demo) return obj;
+		if (typeof obj !== "object" || obj === null) return obj;
+
+		if (Array.isArray(obj)) {
+			return obj.map(maskSensitiveData);
+		}
+
+		const masked = { ...obj };
+		const sensitiveKeys = ["ip", "client_ip", "remote_addr", "address", "ip_address"];
+
+		for (const key in masked) {
+			if (sensitiveKeys.includes(key.toLowerCase())) {
+				masked[key] = "Hidden (Demo)";
+			} else {
+				masked[key] = maskSensitiveData(masked[key]);
+			}
+		}
+		return masked;
+	};
 
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
@@ -64,7 +86,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											lineHeight: 1.5,
 										}}
 										readOnly
-										value={JSON.stringify(data.meta, null, 2)}
+										value={JSON.stringify(maskSensitiveData(data.meta), null, 2)}
 									/>
 								</div>
 							</div>

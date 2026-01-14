@@ -4,7 +4,7 @@ import { useState } from "react";
 import { deleteUser, toggleUser } from "src/api/backend";
 import { LoadingPage } from "src/components";
 import { useAuthState } from "src/context";
-import { useUser, useUsers } from "src/hooks";
+import { useUser, useUsers, useHealth } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal, showUserModal } from "src/modals";
 import { showError, showObjectSuccess } from "src/notifications";
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { Button } from "src/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Lock } from "lucide-react";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
@@ -21,6 +21,26 @@ export default function TableWrapper() {
 	const [search, setSearch] = useState("");
 	const { isFetching, isLoading, isError, error, data } = useUsers(["permissions"]);
 	const { data: currentUser } = useUser("me");
+	const health = useHealth();
+
+	if (health.data?.demo) {
+		return (
+			<Card className="mt-4 border-t-4 border-red-500/50">
+				<CardHeader>
+					<CardTitle className="text-2xl font-bold flex items-center gap-2 text-red-500">
+						<Lock className="h-6 w-6" />
+						Access Denied
+					</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="p-8 text-center text-muted-foreground">
+						<p className="text-lg font-semibold">User Management is disabled in Demo Mode.</p>
+						<p className="mt-2">For security reasons, managing users is not permitted.</p>
+					</div>
+				</CardContent>
+			</Card>
+		);
+	}
 
 	if (isLoading) {
 		return <LoadingPage />;

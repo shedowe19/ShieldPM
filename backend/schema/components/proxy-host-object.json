@@ -155,6 +155,12 @@
 					"forward_port": {
 						"$ref": "#/properties/forward_port"
 					},
+					"forward_query": {
+						"type": [
+							"string",
+							"null"
+						]
+					},
 					"advanced_config": {
 						"type": "string"
 					}

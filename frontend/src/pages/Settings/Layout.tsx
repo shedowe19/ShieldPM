@@ -3,9 +3,36 @@ import { T } from "src/locale";
 import DefaultSite from "./DefaultSite";
 import { IconSettings, IconRobot } from "@tabler/icons-react";
 import AiConfigPage from "./Ai";
+import { useHealth } from "@/hooks/useHealth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Lock } from "lucide-react";
 
 export default function Layout() {
+	const health = useHealth();
 	const [activeTab, setActiveTab] = useState<"default-site" | "ai">("default-site");
+
+	if (health.data?.demo) {
+		return (
+			<div className="container mx-auto py-6">
+				<Card className="border-t-4 border-red-500/50">
+					<CardHeader>
+						<CardTitle className="text-2xl font-bold flex items-center gap-2 text-red-500">
+							<Lock className="h-6 w-6" />
+							Access Denied
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="p-8 text-center text-muted-foreground">
+							<p className="text-lg font-semibold">Global Settings are disabled in Demo Mode.</p>
+							<p className="mt-2">
+								For security reasons, changing global configurations is not permitted.
+							</p>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
 
 	return (
 		<div className="container mx-auto py-6">
