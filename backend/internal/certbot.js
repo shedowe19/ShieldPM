@@ -5,12 +5,12 @@
 
 import fs from "node:fs";
 import https from "node:https";
+import punycode from "node:punycode";
 import { ProxyAgent } from "proxy-agent";
-import punycode from "punycode";
-import { ssl as logger } from "../logger.js";
-import utils from "../lib/utils.js";
-import { installPlugin } from "../lib/certbot.js";
 import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
+import { installPlugin } from "../lib/certbot.js";
+import utils from "../lib/utils.js";
+import { ssl as logger } from "../logger.js";
 import pjson from "../package.json" with { type: "json" };
 
 // State variable for processing lock
@@ -74,12 +74,12 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 		`npm-${certificate.id}`,
 		"--domains",
 		certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
-		dnsPlugin.full_plugin_name ? "--authenticator" : "--dns-" + certificate.meta.dns_provider,
+		dnsPlugin.full_plugin_name ? "--authenticator" : `--dns-${certificate.meta.dns_provider}`,
 		...(dnsPlugin.full_plugin_name ? [dnsPlugin.full_plugin_name] : []),
-		"--" + dnsPlugin.credentials_argument,
+		`--${dnsPlugin.credentials_argument}`,
 		credentialsLocation,
 		...(certificate.meta.propagation_seconds
-			? ["--dns-" + certificate.meta.dns_provider + "-propagation-seconds", certificate.meta.propagation_seconds]
+			? [`--dns-${certificate.meta.dns_provider}-propagation-seconds`, certificate.meta.propagation_seconds]
 			: []),
 		"--server",
 		process.env.ACME_SERVER,

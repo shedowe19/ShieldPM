@@ -16,13 +16,34 @@ Model.knex(db());
 const boolFields = ["is_deleted"];
 
 class Certificate extends Model {
+	/** @type {number} */
+	id;
+	/** @type {number} */
+	owner_user_id;
+	/** @type {string} */
+	provider;
+	/** @type {string} */
+	nice_name;
+	/** @type {string[]} */
+	domain_names;
+	/** @type {string} */
+	expires_on;
+	/** @type {number} */
+	is_deleted;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+	/** @type {Object} */
+	meta;
+
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for expires_on
 		if (typeof this.expires_on === "undefined") {
-			this.expires_on = now();
+			this.expires_on = /** @type {any} */ (now());
 		}
 
 		// Default for domain_names
@@ -37,7 +58,7 @@ class Certificate extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	$parseDatabaseJson(json) {

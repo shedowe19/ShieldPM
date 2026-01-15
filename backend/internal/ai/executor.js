@@ -3,30 +3,29 @@
  * Handles the execution of AI tool calls by interfacing with internal backend modules.
  */
 
-import internalProxyHost from "../proxy-host.js";
-import internalRedirectionHost from "../redirection-host.js";
-import internalDeadHost from "../dead-host.js";
-import internalStream from "../stream.js";
+import { exec } from "node:child_process";
+import util from "node:util";
+import dayjs from "dayjs";
+import ipaddr from "ipaddr.js";
+import si from "systeminformation";
+import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
+import { isDemoMode } from "../../lib/config.js";
+import AnalyticCount from "../../models/analytic_count.js";
+import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
-import internalSetting from "../setting.js";
-import internalReport from "../report.js";
-import internalUser from "../user.js";
-import internalToken from "../token.js";
-import internalPki from "../pki.js";
-import internalNginx from "../nginx.js";
 import internalCertificate from "../certificate.js";
+import internalDeadHost from "../dead-host.js";
 import internalIpRanges from "../ip_ranges.js";
-import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
-import AnalyticCount from "../../models/analytic_count.js";
-import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
-import si from "systeminformation";
-import { exec } from "child_process";
-import util from "util";
-import dayjs from "dayjs";
-import { isDemoMode } from "../../lib/config.js";
-import ipaddr from "ipaddr.js";
-import * as aiTools from "./tools.js"; // In case we need shared definitions, but currently logic is separate
+import internalNginx from "../nginx.js";
+import internalPki from "../pki.js";
+import internalProxyHost from "../proxy-host.js";
+import internalRedirectionHost from "../redirection-host.js";
+import internalReport from "../report.js";
+import internalSetting from "../setting.js";
+import internalStream from "../stream.js";
+import internalToken from "../token.js";
+import internalUser from "../user.js";
 
 const execAsync = util.promisify(exec);
 
@@ -76,8 +75,8 @@ const validateDemoModeHost = (data) => {
 				}
 
 				// IPv4-mapped IPv6 addresses
-				if (addr.kind() === "ipv6" && addr.isIPv4MappedAddress()) {
-					const v4 = addr.toIPv4Address();
+				if (addr.kind() === "ipv6" && /** @type {any} */ (addr).isIPv4MappedAddress()) {
+					const v4 = /** @type {any} */ (addr).toIPv4Address();
 					if (blockedRanges.includes(v4.range())) {
 						throw new Error(
 							`Forwarding to mapped ${v4.range()} IP (${data.forward_host}) is disabled in Demo Mode.`,
@@ -108,7 +107,7 @@ const validateDemoModeHost = (data) => {
 export const executeTools = async (access, toolCalls) => {
 	const toolResults = [];
 
-	for (const call of toolCalls) {
+	for (const call of /** @type {any[]} */ (toolCalls)) {
 		try {
 			let result = "";
 
@@ -141,9 +140,9 @@ export const executeTools = async (access, toolCalls) => {
 
 			switch (call.name) {
 				case "get_proxy_hosts": {
-					const hosts = await internalProxyHost.getAll(access);
+					const hosts = await internalProxyHost.getAll(access, [], "");
 					result = JSON.stringify(
-						hosts.map((h) => ({
+						hosts.map((/** @type {any} */ h) => ({
 							id: h.id,
 							domain_names: h.domain_names,
 							forward_scheme: h.forward_scheme,
@@ -164,7 +163,7 @@ export const executeTools = async (access, toolCalls) => {
 					let meta = {};
 
 					if (call.args.request_ssl) {
-						certId = "new";
+						certId = /** @type {any} */ ("new");
 						meta = {
 							letsencrypt_email: call.args.email || "admin@example.com", // Default or require from user
 							letsencrypt_agree: true,
@@ -184,7 +183,7 @@ export const executeTools = async (access, toolCalls) => {
 						// Ensure these are always valid (override any nulls from AI)
 						advanced_config: "",
 					};
-					const newHost = await internalProxyHost.create(access, data);
+					const newHost = await internalProxyHost.create(access, /** @type {any} */ (data));
 					result = `Created Proxy Host ID: ${newHost.id}`;
 					break;
 				}
@@ -192,7 +191,7 @@ export const executeTools = async (access, toolCalls) => {
 					const deletedId = call.args.id;
 					await internalProxyHost.delete(access, { id: deletedId });
 					// Auto-verify: Check if host is really gone
-					const remainingHosts = await internalProxyHost.getAll(access);
+					const remainingHosts = await internalProxyHost.getAll(access, [], "");
 					const stillExists = remainingHosts.some((h) => h.id === deletedId);
 					if (stillExists) {
 						result = `ERROR: Delete failed! Proxy Host ID ${deletedId} still exists!`;
@@ -215,7 +214,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "get_redirection_hosts": {
 					const hosts = await internalRedirectionHost.getAll(access);
 					result = JSON.stringify(
-						hosts.map((h) => ({
+						hosts.map((/** @type {any} */ h) => ({
 							id: h.id,
 							domain_names: h.domain_names,
 							forward_http_code: h.forward_http_code,
@@ -227,86 +226,110 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_redirection_host": {
+					validateDemoModeHost(call.args);
 					let certId = 0;
 					let meta = {};
+
 					if (call.args.request_ssl) {
-						certId = "new";
+						certId = /** @type {any} */ ("new");
 						meta = {
 							letsencrypt_email: call.args.email || "admin@example.com",
 							letsencrypt_agree: true,
 							dns_challenge: false,
 						};
 					}
-					const newHost = await internalRedirectionHost.create(access, {
+
+					const data = {
 						certificate_id: certId,
-						ssl_forced: false,
+						ssl_forced: call.args.ssl_forced || false,
+						hsts_enabled: call.args.hsts_enabled || false,
+						hsts_subdomains: call.args.hsts_subdomains || false,
 						block_exploits: true,
 						advanced_config: "",
 						meta: meta,
 						...call.args,
-					});
+					};
+					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
 					break;
 				}
 				case "delete_redirection_host": {
 					const deletedId = call.args.id;
 					await internalRedirectionHost.delete(access, { id: deletedId });
-					// Auto-verify
-					const remainingRedir = await internalRedirectionHost.getAll(access);
-					const stillExistsRedir = remainingRedir.some((h) => h.id === deletedId);
-					if (stillExistsRedir) {
-						result = `ERROR: Delete failed! Redirection Host ID ${deletedId} still exists!`;
-					} else {
-						result = `Deleted and VERIFIED: Redirection Host ID ${deletedId} no longer exists.`;
-					}
+					result = `Deleted Redirection Host ID: ${deletedId}`;
+					break;
+				}
+				case "enable_redirection_host": {
+					await internalRedirectionHost.enable(access, { id: call.args.id });
+					result = `Enabled Redirection Host ID: ${call.args.id}`;
+					break;
+				}
+				case "disable_redirection_host": {
+					await internalRedirectionHost.disable(access, { id: call.args.id });
+					result = `Disabled Redirection Host ID: ${call.args.id}`;
 					break;
 				}
 				// Dead Hosts
 				case "get_dead_hosts": {
 					const hosts = await internalDeadHost.getAll(access);
-					result = JSON.stringify(hosts);
+					result = JSON.stringify(
+						hosts.map((h) => ({
+							id: h.id,
+							domain_names: h.domain_names,
+							enabled: h.enabled,
+						})),
+					);
 					break;
 				}
 				case "create_dead_host": {
+					validateDemoModeHost(call.args);
 					let certId = 0;
 					let meta = {};
+
 					if (call.args.request_ssl) {
-						certId = "new";
+						certId = /** @type {any} */ ("new");
 						meta = {
 							letsencrypt_email: call.args.email || "admin@example.com",
 							letsencrypt_agree: true,
 							dns_challenge: false,
 						};
 					}
-					const newHost = await internalDeadHost.create(access, {
+
+					const data = {
 						certificate_id: certId,
-						ssl_forced: false,
+						ssl_forced: call.args.ssl_forced || false,
+						hsts_enabled: call.args.hsts_enabled || false,
+						hsts_subdomains: call.args.hsts_subdomains || false,
 						block_exploits: true,
 						advanced_config: "",
 						meta: meta,
 						...call.args,
-					});
+					};
+					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
 					result = `Created 404 Host ID: ${newHost.id}`;
 					break;
 				}
 				case "delete_dead_host": {
 					const deletedId = call.args.id;
 					await internalDeadHost.delete(access, { id: deletedId });
-					// Auto-verify
-					const remainingDead = await internalDeadHost.getAll(access);
-					const stillExistsDead = remainingDead.some((h) => h.id === deletedId);
-					if (stillExistsDead) {
-						result = `ERROR: Delete failed! 404 Host ID ${deletedId} still exists!`;
-					} else {
-						result = `Deleted and VERIFIED: 404 Host ID ${deletedId} no longer exists.`;
-					}
+					result = `Deleted 404 Host ID: ${deletedId}`;
+					break;
+				}
+				case "enable_dead_host": {
+					await internalDeadHost.enable(access, { id: call.args.id });
+					result = `Enabled 404 Host ID: ${call.args.id}`;
+					break;
+				}
+				case "disable_dead_host": {
+					await internalDeadHost.disable(access, { id: call.args.id });
+					result = `Disabled 404 Host ID: ${call.args.id}`;
 					break;
 				}
 				// Streams
 				case "get_streams": {
 					const streams = await internalStream.getAll(access);
 					result = JSON.stringify(
-						streams.map((s) => ({
+						streams.map((/** @type {any} */ s) => ({
 							id: s.id,
 							incoming_port: s.incoming_port,
 							forwarding_host: s.forwarding_host,
@@ -346,7 +369,7 @@ export const executeTools = async (access, toolCalls) => {
 				// Global Settings
 				case "get_global_settings": {
 					const settings = await internalSetting.getAll(access);
-					result = JSON.stringify(settings.map((s) => ({ id: s.id, value: s.value })));
+					result = JSON.stringify(settings.map((/** @type {any} */ s) => ({ id: s.id, value: s.value })));
 					break;
 				}
 				// Reports
@@ -367,7 +390,7 @@ export const executeTools = async (access, toolCalls) => {
 				// Access Lists
 				case "get_access_lists": {
 					const lists = await internalAccessList.getAll(access);
-					result = JSON.stringify(lists.map((l) => ({ id: l.id, name: l.name })));
+					result = JSON.stringify(lists.map((/** @type {any} */ l) => ({ id: l.id, name: l.name })));
 					break;
 				}
 				case "create_access_list": {
@@ -459,7 +482,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "get_certificates": {
 					const certs = await internalCertificate.getAll(access);
 					result = JSON.stringify(
-						certs.map((c) => ({
+						certs.map((/** @type {any} */ c) => ({
 							id: c.id,
 							nice_name: c.nice_name,
 							provider: c.provider,
@@ -559,9 +582,12 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "test_http_challenge": {
-					const testResult = await internalCertificate.testHttpsChallenge(access, {
-						domain_names: call.args.domains,
-					});
+					const testResult = await internalCertificate.testHttpsChallenge(
+						access,
+						/** @type {any} */ ({
+							domains: call.args.domains,
+						}),
+					);
 					result = JSON.stringify(testResult);
 					break;
 				}
@@ -608,26 +634,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				// Consistent Enable/Disable
-				case "enable_redirection_host": {
-					await internalRedirectionHost.enable(access, { id: call.args.id });
-					result = `Enabled Redirection Host ID: ${call.args.id}`;
-					break;
-				}
-				case "disable_redirection_host": {
-					await internalRedirectionHost.disable(access, { id: call.args.id });
-					result = `Disabled Redirection Host ID: ${call.args.id}`;
-					break;
-				}
-				case "enable_dead_host": {
-					await internalDeadHost.enable(access, { id: call.args.id });
-					result = `Enabled Dead Host ID: ${call.args.id}`;
-					break;
-				}
-				case "disable_dead_host": {
-					await internalDeadHost.disable(access, { id: call.args.id });
-					result = `Disabled Dead Host ID: ${call.args.id}`;
-					break;
-				}
+
 				case "enable_stream": {
 					await internalStream.enable(access, { id: call.args.id });
 					result = `Enabled Stream ID: ${call.args.id}`;
@@ -703,14 +710,19 @@ export const executeTools = async (access, toolCalls) => {
 				case "get_users": {
 					const users = await internalUser.getAll(access);
 					result = JSON.stringify(
-						users.map((u) => ({ id: u.id, name: u.name, email: u.email, roles: u.roles })),
+						users.map((/** @type {any} */ u) => ({
+							id: u.id,
+							name: u.name,
+							email: u.email,
+							roles: u.roles,
+						})),
 					);
 					break;
 				}
 				case "get_audit_log": {
 					const logs = await internalAuditLog.getAll(access, ["user"]);
 					result = JSON.stringify(
-						logs.map((l) => ({
+						logs.map((/** @type {any} */ l) => ({
 							action: l.action,
 							user: l.user ? l.user.name : "System",
 							time: l.created_on,
@@ -732,17 +744,16 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "get_analytics_summary": {
-					const start = dayjs().subtract(24, "hour").toISOString();
-					const end = dayjs().toISOString();
-
-					// Simple summary logic
+					const start = dayjs().subtract(24, "hour").format("YYYY-MM-DD HH:mm:ss");
+					const end = dayjs().format("YYYY-MM-DD HH:mm:ss");
+					/** @type {any} */
 					const totalRequests = await AnalyticCount.query()
 						.where("timestamp", ">=", start)
 						.andWhere("timestamp", "<=", end)
 						.count("id as count")
 						.first();
 
-					result = `Analytics (24h) - Total Requests: ${totalRequests.count || 0}`;
+					result = `Analytics (24h) - Total Requests: ${/** @type {any} */ (totalRequests).count || 0}`;
 					break;
 				}
 

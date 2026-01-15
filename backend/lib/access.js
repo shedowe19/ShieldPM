@@ -150,7 +150,7 @@ export default function (tokenString) {
 	 * Creates a schema object on the fly with the IDs and other values required to be checked against the permissionSchema
 	 *
 	 * @param   {String} permissionLabel
-	 * @returns {Object}
+	 * @returns {Promise<Object>}
 	 */
 	this.getObjectSchema = async (permissionLabel) => {
 		const baseObjectType = permissionLabel.split(":").shift();
@@ -261,7 +261,7 @@ export default function (tokenString) {
 
 				permissionSchema.properties[permission] = permissionSchemaCache[permission];
 
-				const ajv = new Ajv({
+				const ajv = new /** @type {any} */ (Ajv)({
 					verbose: true,
 					allErrors: true,
 					breakOnError: true,

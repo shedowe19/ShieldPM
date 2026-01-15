@@ -12,9 +12,34 @@ Model.knex(db());
 const boolFields = ["is_deleted", "is_disabled"];
 
 class User extends Model {
+	/** @type {number} */
+	id;
+	/** @type {string} */
+	name;
+	/** @type {string} */
+	nickname;
+	/** @type {string} */
+	email;
+	/** @type {string[]} */
+	roles;
+	/** @type {number} */
+	is_deleted;
+	/** @type {number} */
+	is_disabled;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+	/** @type {import("./user_permission.js").default} */
+	permissions;
+	/** @type {string} */
+	avatar;
+	/** @type {number} */
+	count;
+
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for roles
 		if (typeof this.roles === "undefined") {
@@ -23,7 +48,7 @@ class User extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	$parseDatabaseJson(json) {

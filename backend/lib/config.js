@@ -19,7 +19,7 @@ const configure = () => {
 		try {
 			// Load this json  synchronously
 			const rawData = fs.readFileSync(filename);
-			configData = JSON.parse(rawData);
+			configData = JSON.parse(rawData.toString());
 		} catch (_) {
 			// do nothing
 		}
@@ -121,7 +121,7 @@ const getKeys = () => {
 	try {
 		// Load this json keysFile synchronously and return the json object
 		const rawData = fs.readFileSync(keysFile);
-		const keys = JSON.parse(rawData);
+		const keys = JSON.parse(rawData.toString());
 
 		// Migration: Add encryptionKey if missing
 		if (!keys.encryptionKey) {

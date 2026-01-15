@@ -2,10 +2,10 @@
 // http://vincit.github.io/objection.js/
 
 import { Model } from "objection";
-import { encrypt, decrypt } from "../lib/encryption.js";
-import { global as logger } from "../logger.js";
-import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
 import db from "../db.js";
+import { decrypt, encrypt } from "../lib/encryption.js";
+import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
+import { global as logger } from "../logger.js";
 import now from "./now_helper.js";
 import User from "./user.js";
 
@@ -14,9 +14,28 @@ Model.knex(db());
 const boolFields = ["is_deleted"];
 
 class CloudflaredTunnel extends Model {
+	/** @type {number} */
+	id;
+	/** @type {string} */
+	name;
+	/** @type {string} */
+	token;
+	/** @type {number} */
+	status;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+	/** @type {Object} */
+	meta;
+	/** @type {number} */
+	is_deleted;
+	/** @type {number} */
+	owner_user_id;
+
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for meta
 		if (typeof this.meta === "undefined") {
@@ -25,7 +44,7 @@ class CloudflaredTunnel extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	$parseDatabaseJson(json) {

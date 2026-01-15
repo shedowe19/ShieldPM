@@ -14,8 +14,25 @@ const omissions = () => {
 
 const internalProxyHost = {
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
+	 * @param   {Array<string>} data.domain_names
+	 * @param   {string}  data.forward_scheme
+	 * @param   {string}  data.forward_host
+	 * @param   {number}  data.forward_port
+	 * @param   {number}  [data.access_list_id]
+	 * @param   {number|string}  [data.certificate_id]
+	 * @param   {boolean} [data.ssl_forced]
+	 * @param   {boolean} [data.hsts_enabled]
+	 * @param   {boolean} [data.hsts_subdomains]
+	 * @param   {boolean} [data.http2_support]
+	 * @param   {boolean} [data.block_exploits]
+	 * @param   {boolean} [data.caching_enabled]
+	 * @param   {boolean} [data.allow_websocket_upgrade]
+	 * @param   {string}  [data.advanced_config]
+	 * @param   {Object}  [data.meta]
+	 * @param   {Array<Object>} [data.locations]
+	 * @param   {number}  [data.owner_user_id]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
@@ -54,7 +71,7 @@ const internalProxyHost = {
 			thisData.advanced_config = "";
 		}
 
-		let row = await proxyHostModel.query().insertAndFetch(thisData);
+		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -90,9 +107,25 @@ const internalProxyHost = {
 	},
 
 	/**
-	 * @param  {Access}  access
+	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
-	 * @param  {Number}  data.id
+	 * @param  {number}  data.id
+	 * @param  {Array<string>} [data.domain_names]
+	 * @param  {string}  [data.forward_scheme]
+	 * @param  {string}  [data.forward_host]
+	 * @param  {number}  [data.forward_port]
+	 * @param  {number}  [data.access_list_id]
+	 * @param  {number|string}  [data.certificate_id]
+	 * @param  {boolean} [data.ssl_forced]
+	 * @param  {boolean} [data.hsts_enabled]
+	 * @param  {boolean} [data.hsts_subdomains]
+	 * @param  {boolean} [data.http2_support]
+	 * @param  {boolean} [data.block_exploits]
+	 * @param  {boolean} [data.caching_enabled]
+	 * @param  {boolean} [data.allow_websocket_upgrade]
+	 * @param  {string}  [data.advanced_config]
+	 * @param  {Object}  [data.meta]
+	 * @param  {Array<Object>} [data.locations]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
@@ -151,7 +184,10 @@ const internalProxyHost = {
 
 		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
 
-		let saved_row = await proxyHostModel.query().where({ id: thisData.id }).patch(thisData);
+		let _saved_row = await proxyHostModel
+			.query()
+			.where({ id: thisData.id })
+			.patch(/** @type {any} */ (thisData));
 
 		// fetch updated row to be safe and consistent with previous logic if patch returns count
 		// wait, patch returns count. We need to fetch it or rely on logic.
@@ -177,8 +213,10 @@ const internalProxyHost = {
 		// Let's assume I should fetch the row again or return `row` with merged data.
 		// But for safety, I will use `patchAndFetchById`.
 
-		saved_row = await proxyHostModel.query().patchAndFetchById(thisData.id, thisData);
-		saved_row = utils.omitRow(omissions())(saved_row);
+		const new_saved_row = /** @type {any} */ (
+			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+		);
+		_saved_row = utils.omitRow(omissions())(new_saved_row);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -205,7 +243,7 @@ const internalProxyHost = {
 	},
 
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {Number}   data.id
 	 * @param  {Array}    [data.expand]
@@ -213,7 +251,7 @@ const internalProxyHost = {
 	 * @return {Promise}
 	 */
 	get: async (access, data) => {
-		const thisData = data || {};
+		const thisData = /** @type {any} */ (data || {});
 
 		const access_data = await access.can("proxy_hosts:get", thisData.id);
 
@@ -247,7 +285,7 @@ const internalProxyHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -261,12 +299,17 @@ const internalProxyHost = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await proxyHostModel.query().where("id", row.id).patch({
-			is_deleted: 1,
-		});
+		await proxyHostModel
+			.query()
+			.where("id", row.id)
+			.patch(
+				/** @type {any} */ ({
+					is_deleted: 1,
+				}),
+			);
 
 		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", row);
+		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
 		await internalNginx.reload();
 
 		// Add to audit log
@@ -281,7 +324,7 @@ const internalProxyHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -322,7 +365,7 @@ const internalProxyHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -363,12 +406,12 @@ const internalProxyHost = {
 	/**
 	 * All Hosts
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
 	 * @returns {Promise}
 	 */
-	getAll: async (access, expand, searchQuery) => {
+	getAll: async (access, expand, search_query) => {
 		const accessData = await access.can("proxy_hosts:list");
 		const query = proxyHostModel
 			.query()
@@ -382,9 +425,9 @@ const internalProxyHost = {
 		}
 
 		// Query is used for searching
-		if (typeof searchQuery === "string" && searchQuery.length > 0) {
+		if (typeof search_query === "string") {
 			query.where(function () {
-				this.where(castJsonIfNeed("domain_names"), "like", `%${searchQuery}%`);
+				this.where("domain_names", "like", `%${search_query}%`);
 			});
 		}
 
@@ -392,12 +435,20 @@ const internalProxyHost = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		let rows = await query;
-		rows = utils.omitRows(omissions())(rows);
+		const rows = await query;
 
-		if (typeof expand !== "undefined" && expand !== null && expand.indexOf("certificate") !== -1) {
-			return internalHost.cleanAllRowsCertificateMeta(rows);
+		// return rows with count
+		if (rows) {
+			rows.map((row) => {
+				row.access_list_id = Number.parseInt(String(row.access_list_id), 10);
+				// @ts-expect-error
+				row.connected_tunnels = /** @type {any} */ (row).count || 0;
+				// @ts-expect-error
+				delete row.count;
+				return row;
+			});
 		}
+
 		return rows;
 	},
 
@@ -416,7 +467,7 @@ const internalProxyHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(row.count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 };
 

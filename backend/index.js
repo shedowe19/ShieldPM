@@ -2,17 +2,16 @@
 
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
+import internalCloudflared from "./internal/cloudflared.js";
+import internalDocker from "./internal/docker.js";
 import internalIpRanges from "./internal/ip_ranges.js";
+import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
+import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";
 import { getCompiledSchema } from "./schema/index.js";
 import setup from "./setup.js";
-import internalMaintenance from "./internal/maintenance.js";
-import internalCloudflared from "./internal/cloudflared.js";
-import internalDocker from "./internal/docker.js";
-
-import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 
 const IP_RANGES_FETCH_ENABLED = process.env.SKIP_IP_RANGES === "false";
 

@@ -126,7 +126,7 @@ router
 		}
 	})
 
-	.delete(async (req, res) => {
+	.delete(async (_req, res) => {
 		res.clearCookie("shieldpm_jwt");
 		res.sendStatus(204);
 	});

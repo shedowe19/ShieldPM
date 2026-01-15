@@ -7,6 +7,17 @@ import db from "../db.js";
 Model.knex(db());
 
 class Setting extends Model {
+	/** @type {string} */
+	id;
+	/** @type {string} */
+	name;
+	/** @type {string} */
+	description;
+	/** @type {any} */
+	value;
+	/** @type {Object} */
+	meta;
+
 	$beforeInsert() {
 		// Default for meta
 		if (typeof this.meta === "undefined") {

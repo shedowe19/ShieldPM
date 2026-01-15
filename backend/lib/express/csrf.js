@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 /**
  * CSRF Protection Middleware using Double Submit Cookie Pattern

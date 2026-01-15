@@ -9,9 +9,26 @@ import User from "./user.js";
 Model.knex(db());
 
 class AuditLog extends Model {
+	/** @type {number} */
+	id;
+	/** @type {string} */
+	action;
+	/** @type {number} */
+	user_id;
+	/** @type {number} */
+	object_id;
+	/** @type {string} */
+	object_type;
+	/** @type {Object} */
+	meta;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for meta
 		if (typeof this.meta === "undefined") {
@@ -20,7 +37,7 @@ class AuditLog extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	static get name() {

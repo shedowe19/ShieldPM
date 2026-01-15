@@ -1,12 +1,32 @@
 import Docker from "dockerode";
+import { SYSTEM_USER_ID } from "../lib/constants.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
 import internalNginx from "./nginx.js";
 
+/**
+ * @typedef {Object} AccessToken
+ * @property {() => number} getUserId
+ */
+
+/**
+ * @typedef {Object} Access
+ * @property {AccessToken} token
+ * @property {() => Promise<any>} can
+ */
+
+/**
+ * Mock Access Object for internal system operations
+ * @type {import("../lib/types.js").Access}
+ */
 const mockAccess = {
 	token: {
-		getUserId: () => 1,
+		getUserId: () => SYSTEM_USER_ID,
+		// @ts-expect-error
+		getScope: () => [],
+		get: () => null,
+		hasScope: () => true,
 	},
 	can: () => Promise.resolve({ permission_visibility: "all" }),
 };
@@ -84,7 +104,7 @@ class DockerService {
 				const dockerConfig = {
 					host: url.hostname,
 					port: url.port || 2375,
-					protocol: url.protocol.replace(":", ""),
+					protocol: /** @type {"http"|"https"|"ssh"} */ (url.protocol.replace(":", "")),
 				};
 
 				if (url.protocol === "tcp:") {
@@ -160,7 +180,7 @@ class DockerService {
 								try {
 									const container = await client.docker.getContainer(containerId).inspect();
 									await this.processContainer(container, client);
-								} catch (inspectErr) {
+								} catch (_inspectErr) {
 									// Container might have stopped immediately
 								}
 							} else if (["die", "pause"].includes(event.Action)) {
@@ -204,7 +224,7 @@ class DockerService {
 				.withGraphFetched("[owner,access_list,certificate]")
 				.where("is_deleted", 0);
 
-			if (host && host.enabled) {
+			if (host?.enabled) {
 				// This generates the config file on disk
 				await internalNginx.generateConfig("proxy_host", host);
 			} else if (host) {
@@ -238,8 +258,8 @@ class DockerService {
 		const portLabel = labels["shieldpm.port"]; // Internal port
 
 		// Auth
-		const authUser = labels["shieldpm.auth_user"];
-		const authPass = labels["shieldpm.auth_pass"];
+		const _authUser = labels["shieldpm.auth_user"];
+		const _authPass = labels["shieldpm.auth_pass"];
 		const accessListId = labels["shieldpm.access_list_id"];
 
 		// Advanced Options (Booleans)
@@ -313,7 +333,7 @@ class DockerService {
 			let collisionHost = null;
 
 			for (const h of allHosts) {
-				if (h.meta && h.meta.auto_discovered && h.meta.docker_container_id === container.Id) {
+				if (h.meta?.auto_discovered && h.meta.docker_container_id === container.Id) {
 					existingHost = h;
 					break;
 				}
@@ -321,7 +341,7 @@ class DockerService {
 				if (!existingHost) {
 					const intersect = h.domain_names.filter((d) => domains.includes(d));
 					if (intersect.length > 0) {
-						if (h.meta && h.meta.auto_discovered) {
+						if (h.meta?.auto_discovered) {
 							existingHost = h;
 						} else {
 							collisionHost = h;
@@ -345,7 +365,7 @@ class DockerService {
 
 			if (manualCertId) {
 				certificateId = Number.parseInt(manualCertId, 10);
-			} else if (existingHost && existingHost.certificate_id) {
+			} else if (existingHost?.certificate_id) {
 				certificateId = existingHost.certificate_id;
 			}
 
@@ -439,7 +459,7 @@ class DockerService {
 				logger.info(`Docker Auto-Discovery: Updated host #${existingHost.id}`);
 			} else {
 				// Create
-				payload.owner_user_id = 1;
+				payload.owner_user_id = SYSTEM_USER_ID;
 				payload.locations = [];
 
 				const newHost = await ProxyHost.query().insertAndFetch(payload);
@@ -462,7 +482,7 @@ class DockerService {
 			const hosts = await ProxyHost.query().where("is_deleted", 0);
 			let existingHost = null;
 			for (const h of hosts) {
-				if (h.meta && h.meta.auto_discovered && h.meta.docker_container_id === containerId) {
+				if (h.meta?.auto_discovered && h.meta.docker_container_id === containerId) {
 					existingHost = h;
 					break;
 				}

@@ -13,9 +13,38 @@ Model.knex(db());
 const boolFields = ["is_deleted", "ssl_forced", "http2_support", "enabled", "hsts_enabled", "hsts_subdomains"];
 
 class DeadHost extends Model {
+	/** @type {number} */
+	id;
+	/** @type {number} */
+	owner_user_id;
+	/** @type {string[]} */
+	domain_names;
+	/** @type {number} */
+	certificate_id;
+	/** @type {number} */
+	ssl_forced;
+	/** @type {number} */
+	hsts_enabled;
+	/** @type {number} */
+	hsts_subdomains;
+	/** @type {number} */
+	http2_support;
+	/** @type {number} */
+	block_exploits;
+	/** @type {string} */
+	advanced_config;
+	/** @type {Object} */
+	meta;
+	/** @type {number} */
+	is_deleted;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for domain_names
 		if (typeof this.domain_names === "undefined") {
@@ -29,7 +58,7 @@ class DeadHost extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	$parseDatabaseJson(json) {

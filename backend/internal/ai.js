@@ -1,11 +1,10 @@
-import internalSetting from "./setting.js";
-import { encrypt, decrypt } from "../lib/encryption.js";
-
-// Modular AI components (SRP refactoring)
-import { getToolDefinitions } from "./ai/tools.js";
+import { decrypt, encrypt } from "../lib/encryption.js";
+import { executeTools } from "./ai/executor.js";
 import { getSystemPrompt } from "./ai/prompt.js";
 import * as aiProviders from "./ai/providers.js";
-import { executeTools } from "./ai/executor.js";
+// Modular AI components (SRP refactoring)
+import { getToolDefinitions } from "./ai/tools.js";
+import internalSetting from "./setting.js";
 
 const AI_CONFIG_ID = "ai-config";
 
@@ -15,7 +14,7 @@ const AI_CONFIG_ID = "ai-config";
 const ai = {
 	/**
 	 * Get the current AI Configuration
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 */
 	getConfig: async (access) => {
 		// Verify permissions (admin only for config)
@@ -26,7 +25,7 @@ const ai = {
 			if (meta.api_key) {
 				try {
 					meta.api_key = decrypt(meta.api_key);
-				} catch (err) {
+				} catch (_err) {
 					// Ignore decryption error
 				}
 			}
@@ -36,7 +35,7 @@ const ai = {
 			if (!meta.num_thread) meta.num_thread = 4;
 			if (!meta.keep_alive) meta.keep_alive = "5m";
 			return meta;
-		} catch (err) {
+		} catch (_err) {
 			// Return default config if not found
 			return {
 				enabled: false,
@@ -67,7 +66,7 @@ const ai = {
 			if (meta.api_key) {
 				try {
 					meta.api_key = decrypt(meta.api_key);
-				} catch (err) {
+				} catch (_err) {
 					// Ignore decryption error
 				}
 			}
@@ -77,14 +76,14 @@ const ai = {
 			if (!meta.num_thread) meta.num_thread = 4;
 			if (!meta.keep_alive) meta.keep_alive = "5m";
 			return meta;
-		} catch (err) {
+		} catch (_err) {
 			return { enabled: false };
 		}
 	},
 
 	/**
 	 * Update AI Configuration
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {Object} data
 	 */
 	setConfig: async (access, data) => {
@@ -99,13 +98,16 @@ const ai = {
 		try {
 			await internalSetting.get(access, { id: AI_CONFIG_ID });
 			// Update
-			await internalSetting.update(access, {
-				id: AI_CONFIG_ID,
-				description: "AI Agent Configuration",
-				value: data.enabled ? "true" : "false",
-				meta: dataToSave,
-			});
-		} catch (err) {
+			await internalSetting.update(
+				access,
+				/** @type {any} */ ({
+					id: AI_CONFIG_ID,
+					description: "AI Agent Configuration",
+					value: data.enabled ? "true" : "false",
+					meta: dataToSave,
+				}),
+			);
+		} catch (_err) {
 			const SettingModel = (await import("../models/setting.js")).default;
 			await SettingModel.query().insert({
 				id: AI_CONFIG_ID,
@@ -121,7 +123,7 @@ const ai = {
 
 	/**
 	 * Get Models from Provider
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {Object} config
 	 */
 	getModels: async (access, config) => {
@@ -167,9 +169,9 @@ const ai = {
 
 			try {
 				const headers = {};
-				if (config.api_key) headers["Authorization"] = `Bearer ${config.api_key}`;
+				if (config.api_key) headers.Authorization = `Bearer ${config.api_key}`;
 
-				const res = await fetch(targetUrl.toString(), { headers });
+				const res = await fetch(targetUrl.toString(), { headers: /** @type {any} */ (headers) });
 				if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
 				const data = await res.json();
 				return (data.data || [])
@@ -186,7 +188,7 @@ const ai = {
 
 	/**
 	 * Main Chat Entry point
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {String} message
 	 * @param {Array} history
 	 */

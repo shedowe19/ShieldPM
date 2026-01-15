@@ -14,7 +14,7 @@ const omissions = () => {
 
 const internalDeadHost = {
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
 	 * @returns {Promise}
 	 */
@@ -92,56 +92,60 @@ const internalDeadHost = {
 	},
 
 	/**
-	 * @param  {Access}  access
-	 * @param  {Object}  data
-	 * @param  {Number}  data.id
+	 * @param  {import("../lib/types.js").Access}  access
+	 * @param  {any}  data
+	 * @param  {any}  data
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
-		const createCertificate = data.certificate_id === "new";
+		let thisData = /** @type {any} */ (data);
+		const createCertificate = thisData.certificate_id === "new";
 		if (createCertificate) {
-			delete data.certificate_id;
+			delete thisData.certificate_id;
 		}
 
-		await access.can("dead_hosts:update", data.id);
+		await access.can("dead_hosts:update", thisData.id);
 
 		// Get a list of the domain names and check each of them against existing records
 		const domainNameCheckPromises = [];
-		if (typeof data.domain_names !== "undefined") {
-			data.domain_names.map((domainName) => {
-				domainNameCheckPromises.push(internalHost.isHostnameTaken(domainName, "dead", data.id));
+		if (typeof thisData.domain_names !== "undefined") {
+			thisData.domain_names.map((/** @type {any} */ domainName) => {
+				domainNameCheckPromises.push(internalHost.isHostnameTaken(domainName, "dead", thisData.id));
 				return true;
 			});
 
 			const checkResults = await Promise.all(domainNameCheckPromises);
-			checkResults.map((result) => {
+			checkResults.map((/** @type {any} */ result) => {
 				if (result.is_taken) {
 					throw new errs.ValidationError(`${result.hostname} is already in use`);
 				}
 				return true;
 			});
 		}
-		const row = await internalDeadHost.get(access, { id: data.id });
+		const row = await internalDeadHost.get(access, { id: thisData.id });
 
-		if (row.id !== data.id) {
+		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
 			throw new errs.InternalValidationError(
-				`404 Host could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
+				`404 Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
 			);
 		}
 
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, {
-				domain_names: data.domain_names || row.domain_names,
-				meta: _.assign({}, row.meta, data.meta),
-			});
+			const cert = await internalCertificate.createQuickCertificate(
+				access,
+				/** @type {any} */ ({
+					domain_names: thisData.domain_names || row.domain_names,
+					meta: _.assign({}, row.meta, thisData.meta),
+				}),
+			);
 
 			// update host with cert id
-			data.certificate_id = cert.id;
+			thisData.certificate_id = cert.id;
 		}
 
 		// Add domain_names to the data in case it isn't there, so that the audit log renders correctly. The order is important here.
-		let thisData = _.assign(
+		thisData = _.assign(
 			{},
 			{
 				domain_names: row.domain_names,
@@ -174,7 +178,7 @@ const internalDeadHost = {
 	},
 
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {Number}   data.id
 	 * @param  {Array}    [data.expand]
@@ -182,11 +186,12 @@ const internalDeadHost = {
 	 * @return {Promise}
 	 */
 	get: async (access, data) => {
-		const accessData = await access.can("dead_hosts:get", data.id);
+		const thisData = /** @type {any} */ (data || {});
+		const accessData = await access.can("dead_hosts:get", thisData.id);
 		const query = deadHostModel
 			.query()
 			.where("is_deleted", 0)
-			.andWhere("id", data.id)
+			.andWhere("id", thisData.id)
 			.allowGraph("[owner,certificate]")
 			.first();
 
@@ -194,37 +199,38 @@ const internalDeadHost = {
 			query.andWhere("owner_user_id", access.token.getUserId(1));
 		}
 
-		if (typeof data.expand !== "undefined" && data.expand !== null) {
-			query.withGraphFetched(`[${data.expand.join(", ")}]`);
+		if (typeof thisData.expand !== "undefined" && thisData.expand !== null) {
+			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 		}
 
 		let row = await query;
 
 		if (!row || !row.id) {
-			throw new errs.ItemNotFoundError(data.id);
+			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
 		row = utils.omitRow(omissions())(row);
 
 		// Custom omissions
-		if (typeof data.omit !== "undefined" && data.omit !== null) {
-			return _.omit(row, data.omit);
+		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
+			return _.omit(row, thisData.omit);
 		}
 		return row;
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
 	 * @returns {Promise}
 	 */
 	delete: async (access, data) => {
-		await access.can("dead_hosts:delete", data.id);
-		const row = await internalDeadHost.get(access, { id: data.id });
+		const thisData = /** @type {any} */ (data);
+		await access.can("dead_hosts:delete", thisData.id);
+		const row = await internalDeadHost.get(access, { id: thisData.id });
 		if (!row || !row.id) {
-			throw new errs.ItemNotFoundError(data.id);
+			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
 		await deadHostModel.query().where("id", row.id).patch({
@@ -246,20 +252,21 @@ const internalDeadHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
 	 * @returns {Promise}
 	 */
 	enable: async (access, data) => {
-		await access.can("dead_hosts:update", data.id);
+		const thisData = /** @type {any} */ (data);
+		await access.can("dead_hosts:update", thisData.id);
 		const row = await internalDeadHost.get(access, {
-			id: data.id,
+			id: thisData.id,
 			expand: ["certificate", "owner"],
 		});
 		if (!row || !row.id) {
-			throw new errs.ItemNotFoundError(data.id);
+			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		if (row.enabled) {
 			throw new errs.ValidationError("Host is already enabled");
@@ -267,9 +274,14 @@ const internalDeadHost = {
 
 		row.enabled = 1;
 
-		await deadHostModel.query().where("id", row.id).patch({
-			enabled: 1,
-		});
+		await deadHostModel
+			.query()
+			.where("id", row.id)
+			.patch(
+				/** @type {any} */ ({
+					enabled: 1,
+				}),
+			);
 
 		// Configure nginx
 		await internalNginx.configure(deadHostModel, "dead_host", row);
@@ -285,17 +297,18 @@ const internalDeadHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
 	 * @returns {Promise}
 	 */
 	disable: async (access, data) => {
-		await access.can("dead_hosts:update", data.id);
-		const row = await internalDeadHost.get(access, { id: data.id });
+		const thisData = /** @type {any} */ (data);
+		await access.can("dead_hosts:update", thisData.id);
+		const row = await internalDeadHost.get(access, { id: thisData.id });
 		if (!row || !row.id) {
-			throw new errs.ItemNotFoundError(data.id);
+			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		if (!row.enabled) {
 			throw new errs.ValidationError("Host is already disabled");
@@ -303,9 +316,14 @@ const internalDeadHost = {
 
 		row.enabled = 0;
 
-		await deadHostModel.query().where("id", row.id).patch({
-			enabled: 0,
-		});
+		await deadHostModel
+			.query()
+			.where("id", row.id)
+			.patch(
+				/** @type {any} */ ({
+					enabled: 0,
+				}),
+			);
 
 		// Delete Nginx Config
 		await internalNginx.deleteConfig("dead_host", row);
@@ -324,7 +342,7 @@ const internalDeadHost = {
 	/**
 	 * All Hosts
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [searchQuery]
 	 * @returns {Promise}
@@ -377,7 +395,7 @@ const internalDeadHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(row.count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 };
 

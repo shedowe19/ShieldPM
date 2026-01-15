@@ -126,7 +126,7 @@ export default () => {
 
 		/**
 		 * @param   [defaultValue]
-		 * @returns {Integer}
+		 * @returns {number}
 		 */
 		getUserId: (defaultValue) => {
 			const attrs = self.get("attrs");

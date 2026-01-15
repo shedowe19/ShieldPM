@@ -1,24 +1,18 @@
 import fs from "node:fs";
-import https from "node:https";
 import path from "path";
 import archiver from "archiver";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import _ from "lodash";
-import { ProxyAgent } from "proxy-agent";
-import punycode from "punycode.js";
 import tempWrite from "temp-write";
-import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
-import { installPlugin } from "../lib/certbot.js";
 import error from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
 import certificateModel from "../models/certificate.js";
-import pjson from "../package.json" with { type: "json" };
 import internalAuditLog from "./audit-log.js";
+import * as certbot from "./certbot.js";
 import internalNginx from "./nginx.js";
 import internalPki from "./pki.js";
-import * as certbot from "./certbot.js";
 
 dayjs.extend(customParseFormat);
 
@@ -86,7 +80,9 @@ const internalCertificate = {
 								.where("id", certificate.id)
 								.andWhere("provider", "letsencrypt")
 								.patch({
-									expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss"),
+									expires_on: /** @type {any} */ (
+										dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
+									),
 								});
 						} catch (err) {
 							// Don't want to stop the train here, just log the error
@@ -105,20 +101,26 @@ const internalCertificate = {
 	},
 
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
+	 * @param   {string}  data.provider
+	 * @param   {Array<string>} data.domain_names
+	 * @param   {string}  [data.nice_name]
+	 * @param   {Object}  [data.meta]
+	 * @param   {number}  [data.owner_user_id]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		await access.can("certificates:create", data);
-		data.owner_user_id = access.token.getUserId(1);
+		const thisData = /** @type {any} */ (data);
+		await access.can("certificates:create", thisData);
+		thisData.owner_user_id = access.token.getUserId(1);
 
-		if (data.provider === "letsencrypt" || data.provider === "internal") {
-			data.nice_name = data.domain_names.join(", ");
+		if (thisData.provider === "letsencrypt" || thisData.provider === "internal") {
+			thisData.nice_name = thisData.domain_names.join(", ");
 		}
 
 		// this command really should clean up and delete the cert if it can't fully succeed
-		const certificate = await certificateModel.query().insertAndFetch(data);
+		const certificate = await certificateModel.query().insertAndFetch(/** @type {any} */ (thisData));
 
 		try {
 			if (certificate.provider === "letsencrypt") {
@@ -138,9 +140,11 @@ const internalCertificate = {
 					const savedRow = await certificateModel
 						.query()
 						.patchAndFetchById(certificate.id, {
-							expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss"),
+							expires_on: /** @type {any} */ (
+								dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
+							),
 						})
-						.then(utils.omitRow(omissions()));
+						.then(/** @type {any} */ (utils.omitRow(omissions())));
 
 					// Add cert data for audit log
 					savedRow.meta = _.assign({}, savedRow.meta, {
@@ -171,13 +175,15 @@ const internalCertificate = {
 					const savedRow = await certificateModel
 						.query()
 						.patchAndFetchById(certificate.id, {
-							expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss"),
+							expires_on: /** @type {any} */ (
+								dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
+							),
 							meta: _.assign({}, certificate.meta, {
 								certificate: result.fullchain,
 								certificate_key: result.privkey,
 							}),
 						})
-						.then(utils.omitRow(omissions()));
+						.then(/** @type {any} */ (utils.omitRow(omissions())));
 
 					await internalCertificate.addCreatedAuditLog(access, certificate.id, savedRow);
 					return savedRow;
@@ -197,7 +203,9 @@ const internalCertificate = {
 		// Add to audit log
 		await internalCertificate.addCreatedAuditLog(access, certificate.id, utils.omitRow(omissions())(data));
 
-		return utils.omitRow(omissions())(certificate);
+		// @ts-expect-error
+		rows = rows.map(utils.omitRow(omissions()));
+		certificate;
 	},
 
 	addCreatedAuditLog: async (access, certificate_id, meta) => {
@@ -210,37 +218,44 @@ const internalCertificate = {
 	},
 
 	/**
-	 * @param  {Access}  access
+	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
 	 * @param  {Number}  data.id
 	 * @param  {String}  [data.email]
-	 * @param  {String}  [data.name]
+	 * @param  {import("../lib/types.js").Access}  access
+	 * @param  {Object}  data
+	 * @param  {number}  data.id
+	 * @param  {string}  [data.email]
+	 * @param  {string}  [data.name]
+	 * @param  {string}  [data.nice_name]
+	 * @param  {Object}  [data.meta]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
-		await access.can("certificates:update", data.id);
-		const row = await internalCertificate.get(access, { id: data.id });
+		const thisData = /** @type {any} */ (data);
+		await access.can("certificates:update", thisData.id);
+		const row = await internalCertificate.get(access, { id: thisData.id });
 
-		if (row.id !== data.id) {
+		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
 			throw new error.InternalValidationError(
-				`Certificate could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
+				`Certificate could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
 			);
 		}
 
 		const savedRow = await certificateModel
 			.query()
-			.patchAndFetchById(row.id, data)
-			.then(utils.omitRow(omissions()));
+			.patchAndFetchById(row.id, /** @type {any} */ (thisData))
+			.then(/** @type {any} */ (utils.omitRow(omissions())));
 
 		savedRow.meta = internalCertificate.cleanMeta(savedRow.meta);
-		if (data.meta) {
-			data.meta = internalCertificate.cleanMeta(data.meta);
+		if (thisData.meta) {
+			thisData.meta = internalCertificate.cleanMeta(thisData.meta);
 		}
 
 		// Add row.nice_name for custom certs
 		if (savedRow.provider === "other") {
-			data.nice_name = savedRow.nice_name;
+			thisData.nice_name = savedRow.nice_name;
 		}
 
 		// Add to audit log
@@ -248,14 +263,14 @@ const internalCertificate = {
 			action: "updated",
 			object_type: "certificate",
 			object_id: row.id,
-			meta: _.omit(data, ["expires_on"]), // this prevents json circular reference because expires_on might be raw
+			meta: _.omit(thisData, ["expires_on"]), // this prevents json circular reference because expires_on might be raw
 		});
 
 		return savedRow;
 	},
 
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {Number}   data.id
 	 * @param  {Array}    [data.expand]
@@ -263,11 +278,12 @@ const internalCertificate = {
 	 * @return {Promise}
 	 */
 	get: async (access, data) => {
-		const accessData = await access.can("certificates:get", data.id);
+		const thisData = /** @type {any} */ (data || {});
+		const accessData = await access.can("certificates:get", thisData.id);
 		const query = certificateModel
 			.query()
 			.where("is_deleted", 0)
-			.andWhere("id", data.id)
+			.andWhere("id", thisData.id)
 			.allowGraph("[owner,proxy_hosts,redirection_hosts,dead_hosts,streams]")
 			.first();
 
@@ -275,17 +291,17 @@ const internalCertificate = {
 			query.andWhere("owner_user_id", access.token.getUserId(1));
 		}
 
-		if (typeof data.expand !== "undefined" && data.expand !== null) {
-			query.withGraphFetched(`[${data.expand.join(", ")}]`);
+		if (typeof thisData.expand !== "undefined" && thisData.expand !== null) {
+			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 		}
 
-		const row = await query.then(utils.omitRow(omissions()));
+		const row = await query.then(/** @type {any} */ (utils.omitRow(omissions())));
 		if (!row || !row.id) {
-			throw new error.ItemNotFoundError(data.id);
+			throw new error.ItemNotFoundError(thisData.id);
 		}
 		// Custom omissions
-		if (typeof data.omit !== "undefined" && data.omit !== null) {
-			return _.omit(row, [...data.omit]);
+		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
+			return _.omit(row, [...thisData.omit]);
 		}
 
 		return internalCertificate.cleanExpansions(row);
@@ -308,7 +324,7 @@ const internalCertificate = {
 	},
 
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
 	 * @param   {Number}  data.id
 	 * @returns {Promise}
@@ -340,7 +356,7 @@ const internalCertificate = {
 	},
 
 	/**
-	 * @param   {String}  source
+	 * @param   {Array<String>}  source
 	 * @param   {String}  out
 	 * @returns {Promise}
 	 */
@@ -362,7 +378,7 @@ const internalCertificate = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -403,7 +419,7 @@ const internalCertificate = {
 	/**
 	 * All Certs
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [searchQuery]
 	 * @returns {Promise}
@@ -433,7 +449,7 @@ const internalCertificate = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		const r = await query.then(utils.omitRows(omissions()));
+		const r = await query.then(/** @type {any} */ (utils.omitRows(omissions())));
 		for (let i = 0; i < r.length; i++) {
 			r[i] = internalCertificate.cleanExpansions(r[i]);
 		}
@@ -455,7 +471,7 @@ const internalCertificate = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(row.count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 
 	/**
@@ -508,9 +524,11 @@ const internalCertificate = {
 	},
 
 	/**
-	 * @param   {Access}   access
-	 * @param   {Object}   data
-	 * @param   {Array}    data.domain_names
+	 * @param   {import("../lib/types.js").Access}   access
+	 * @param   {import("../lib/types.js").Access}   access
+	 * @param   {Object}      data
+	 * @param   {Array<string>}    data.domain_names
+	 * @param   {Object}      [data.meta]
 	 * @returns {Promise}
 	 */
 	createQuickCertificate: async (access, data) => {
@@ -566,7 +584,7 @@ const internalCertificate = {
 	},
 
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
 	 * @param   {Number}  data.id
 	 * @param   {Object}  data.files
@@ -589,12 +607,17 @@ const internalCertificate = {
 			}
 		});
 
-		const certificate = await internalCertificate.update(access, {
-			id: data.id,
-			expires_on: dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss"),
-			domain_names: [validations.certificate.cn],
-			meta: _.clone(row.meta), // Prevent the update method from changing this value that we'll use later
-		});
+		const certificate = await internalCertificate.update(
+			access,
+			/** @type {any} */ ({
+				id: data.id,
+				expires_on: /** @type {any} */ (
+					dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss")
+				),
+				domain_names: [validations.certificate.cn],
+				meta: _.clone(row.meta), // Prevent the update method from changing this value that we'll use later
+			}),
+		);
 
 		certificate.meta = row.meta;
 		await internalCertificate.writeCustomCert(certificate);
@@ -730,7 +753,6 @@ const internalCertificate = {
 
 	/**
 	 * Cleans the tls keys from the meta object and sets them
-	 * @param   {String}  email         the email address to use for registration to "true"
 	 *
 	 * @param   {Object}  meta
 	 * @param   {Boolean} [remove]
@@ -764,7 +786,7 @@ const internalCertificate = {
 	requestCertbotWithDnsChallenge: (certificate) => certbot.requestCertbotWithDnsChallenge(certificate),
 
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
 	 * @param   {Number}  data.id
 	 * @returns {Promise}
@@ -784,7 +806,7 @@ const internalCertificate = {
 			);
 
 			const updatedCertificate = await certificateModel.query().patchAndFetchById(certificate.id, {
-				expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss"),
+				expires_on: /** @type {any} */ (dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")),
 			});
 
 			// Add to audit log

@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import internalAi from "../../internal/ai.js";
-import internalSetting from "../../internal/setting.js";
 import internalProxyHost from "../../internal/proxy-host.js";
-
+import internalSetting from "../../internal/setting.js";
 import SettingModel from "../../models/setting.js";
 
 // Mock dependencies
@@ -11,6 +10,19 @@ vi.mock("../../internal/proxy-host.js");
 vi.mock("../../models/setting.js");
 vi.mock("../../lib/logger.js", () => ({
 	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+}));
+
+vi.mock("../../lib/encryption.js", () => ({
+	encrypt: vi.fn((val) => `encrypted_${val}`),
+	decrypt: vi.fn((val) => val.replace("encrypted_", "")),
+}));
+
+vi.mock("../../db.js", () => ({
+	default: vi.fn(() => ({
+		// Mock knex instance
+		transaction: vi.fn(),
+		destroy: vi.fn(),
+	})),
 }));
 
 // Mock fetch

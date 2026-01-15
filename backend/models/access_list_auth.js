@@ -10,8 +10,8 @@ Model.knex(db());
 
 class AccessListAuth extends Model {
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for meta
 		if (typeof this.meta === "undefined") {
@@ -20,7 +20,7 @@ class AccessListAuth extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	static get name() {

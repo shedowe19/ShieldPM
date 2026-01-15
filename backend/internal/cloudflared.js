@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn } from "node:child_process";
 import { global as logger } from "../logger.js";
 import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 
@@ -13,7 +13,9 @@ const internalCloudflared = {
 		const tunnels = await CloudflaredTunnel.query();
 		for (const tunnel of tunnels) {
 			// Reset status to stopped on boot, then start
-			await tunnel.$query().patch({ status: 0 });
+			await /** @type {any} */ (tunnel)
+				.$query()
+				.patch({ status: 0 });
 			internalCloudflared.start(tunnel);
 		}
 	},
@@ -28,7 +30,9 @@ const internalCloudflared = {
 		}
 
 		logger.info(`Starting Cloudflared Tunnel: ${tunnel.name} (${tunnel.id})`);
-		await tunnel.$query().patch({ status: 1 }); // Starting
+		await /** @type {any} */ (tunnel)
+			.$query()
+			.patch({ status: 1 }); // Starting
 
 		try {
 			const child = spawn("/usr/local/bin/cloudflared", ["tunnel", "run"], {
@@ -73,7 +77,7 @@ const internalCloudflared = {
 
 	/**
 	 * Stop a tunnel
-	 * @param {Integer} tunnelId
+	 * @param {number} tunnelId
 	 */
 	stop: async (tunnelId) => {
 		const child = processes.get(tunnelId);

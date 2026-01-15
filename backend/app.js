@@ -1,11 +1,11 @@
-import express from "express";
 import cookieParser from "cookie-parser";
+import express from "express";
 import fileUpload from "express-fileupload";
 import helmet from "helmet";
-import jwt from "./lib/express/jwt.js";
-import csrfMiddleware from "./lib/express/csrf.js";
-import { debug, express as logger } from "./logger.js";
 import analyticsService from "./internal/analytics.js";
+import csrfMiddleware from "./lib/express/csrf.js";
+import jwt from "./lib/express/jwt.js";
+import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
 
 // Initialize Analytics Service (starts tailing logs)
@@ -52,6 +52,7 @@ app.enable("strict routing");
 app.set("json spaces", 2);
 
 import checkDemoMode from "./lib/express/demo.js";
+
 app.use(checkDemoMode);
 
 app.use(jwt());

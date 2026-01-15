@@ -57,7 +57,7 @@ const up = async (knex) => {
  * @param   {Object} knex
  * @returns {Promise}
  */
-const down = async (knex) => {
+const down = async (_knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 
 	// We don't strictly need to remove them here as the previous migration owns them conceptually,

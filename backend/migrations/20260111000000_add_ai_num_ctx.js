@@ -12,11 +12,11 @@ const up = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Up...`);
 
 	const row = await knex("setting").where("id", "ai-config").first();
-	if (row && row.meta) {
+	if (row?.meta) {
 		let meta = {};
 		try {
 			meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
-		} catch (e) {
+		} catch (_e) {
 			// ignore
 		}
 
@@ -41,11 +41,11 @@ const up = async (knex) => {
 const down = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 	const row = await knex("setting").where("id", "ai-config").first();
-	if (row && row.meta) {
+	if (row?.meta) {
 		let meta = {};
 		try {
 			meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
-		} catch (e) {
+		} catch (_e) {
 			// ignore
 		}
 

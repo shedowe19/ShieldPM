@@ -1,17 +1,19 @@
 import express from "express";
+import { isDemoMode } from "../lib/config.js";
 import errs from "../lib/error.js";
 import pjson from "../package.json" with { type: "json" };
 import { isSetup } from "../setup.js";
-import { isDemoMode } from "../lib/config.js";
+import aiRoutes from "./ai.js";
+import analyticsRoutes from "./analytics.js";
 import auditLogRoutes from "./audit-log.js";
 import accessListsRoutes from "./nginx/access_lists.js";
+import nginxAnalyticsRoutes from "./nginx/analytics.js";
 import certificatesHostsRoutes from "./nginx/certificates.js";
+import cloudflaredRoutes from "./nginx/cloudflared.js";
 import deadHostsRoutes from "./nginx/dead_hosts.js";
 import proxyHostsRoutes from "./nginx/proxy_hosts.js";
 import redirectionHostsRoutes from "./nginx/redirection_hosts.js";
 import streamsRoutes from "./nginx/streams.js";
-import nginxAnalyticsRoutes from "./nginx/analytics.js";
-import cloudflaredRoutes from "./nginx/cloudflared.js";
 import oidcRoutes from "./oidc.js";
 import reportsRoutes from "./reports.js";
 import schemaRoutes from "./schema.js";
@@ -19,8 +21,6 @@ import settingsRoutes from "./settings.js";
 import tokensRoutes from "./tokens.js";
 import usersRoutes from "./users.js";
 import versionRoutes from "./version.js";
-import analyticsRoutes from "./analytics.js";
-import aiRoutes from "./ai.js";
 
 const router = express.Router({
 	caseSensitive: true,

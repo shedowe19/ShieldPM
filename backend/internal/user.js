@@ -19,7 +19,7 @@ const internalUser = {
 	 * Create a user can happen unauthenticated only once and only when no active users exist.
 	 * Otherwise, a valid auth method is required.
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
 	 * @returns {Promise}
 	 */
@@ -58,28 +58,32 @@ const internalUser = {
 			}
 
 			// Create permissions row as well
-			const isAdmin = data.roles.indexOf("admin") !== -1;
+			const _isAdmin = data.roles.indexOf("admin") !== -1;
 
-			await userPermissionModel.query(trx).insert({
-				user_id: user.id,
-				visibility: isAdmin ? "all" : "user",
-				proxy_hosts: "manage",
-				redirection_hosts: "manage",
-				dead_hosts: "manage",
-				streams: "manage",
-				access_lists: "manage",
-				certificates: "manage",
-			});
+			await userPermissionModel.query(trx).insert(
+				/** @type {any} */ ({
+					user_id: user.id,
+					visibility: "user",
+					access_lists: "manage",
+					certificates: "manage",
+					proxy_hosts: "manage",
+					redirection_hosts: "manage",
+					streams: "manage",
+					dead_hosts: "manage",
+					cloudflared_tunnels: "manage",
+					analytics: "view",
+				}),
+			);
 		});
 
 		// Fetch fresh object with Permissions populated
-		user = await internalUser.get(access, { id: user.id, expand: ["permissions"] });
+		user = await internalUser.get(access, { id: /** @type {any} */ (user).id, expand: ["permissions"] });
 		user = _.omit(user, omissions());
 
 		await internalAuditLog.add(access, {
 			action: "created",
 			object_type: "user",
-			object_id: user.id,
+			object_id: /** @type {any} */ (user).id,
 			meta: user,
 		});
 
@@ -87,11 +91,8 @@ const internalUser = {
 	},
 
 	/**
-	 * @param  {Access}  access
-	 * @param  {Object}  data
-	 * @param  {Integer} data.id
-	 * @param  {String}  [data.email]
-	 * @param  {String}  [data.name]
+	 * @param  {import("../lib/types.js").Access}  access
+	 * @param  {any}  data
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
@@ -141,9 +142,9 @@ const internalUser = {
 	},
 
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   [data]
-	 * @param  {Integer}  [data.id]          Defaults to the token user
+	 * @param  {number}  [data.id]          Defaults to the token user
 	 * @param  {Array}    [data.expand]
 	 * @param  {Array}    [data.omit]
 	 * @return {Promise}
@@ -169,14 +170,14 @@ const internalUser = {
 		}
 
 		let row = await query;
-		row = _.omit(row, omissions());
+		row = /** @type {any} */ (_.omit(row, omissions()));
 
 		if (!row || !row.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		// Custom omissions
 		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
-			return _.omit(row, thisData.omit);
+			return /** @type {any} */ (_.omit(row, thisData.omit));
 		}
 
 		if (row.avatar === "") {
@@ -205,9 +206,9 @@ const internalUser = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
-	 * @param {Integer} data.id
+	 * @param {number} data.id
 	 * @param {String}  [data.reason]
 	 * @returns {Promise}
 	 */
@@ -248,9 +249,9 @@ const internalUser = {
 	/**
 	 * This will only count the users
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {String}  [search_query]
-	 * @returns {*}
+	 * @returns {Promise<any>}
 	 */
 	getCount: async (access, search_query) => {
 		await access.can("users:list");
@@ -264,13 +265,13 @@ const internalUser = {
 		}
 
 		const row = await query;
-		return Number.parseInt(row.count, 10);
+		return Number.parseInt(String(row.count), 10);
 	},
 
 	/**
 	 * All users
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
 	 * @returns {Promise}
@@ -300,9 +301,9 @@ const internalUser = {
 	},
 
 	/**
-	 * @param   {Access} access
-	 * @param   {Integer} [id_requested]
-	 * @returns {[String]}
+	 * @param   {import("../lib/types.js").Access} access
+	 * @param   {number} [idRequested]
+	 * @returns {string[]}
 	 */
 	getUserOmisionsByAccess: (access, idRequested) => {
 		let response = []; // Admin response
@@ -315,11 +316,12 @@ const internalUser = {
 	},
 
 	/**
-	 * @param  {Access}  access
+	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
-	 * @param  {Integer} data.id
+	 * @param  {number} data.id
 	 * @param  {String}  data.type
 	 * @param  {String}  data.secret
+	 * @param  {String}  [data.current]
 	 * @return {Promise}
 	 */
 	setPassword: async (access, data) => {
@@ -380,7 +382,7 @@ const internalUser = {
 	},
 
 	/**
-	 * @param  {Access}  access
+	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
 	 * @return {Promise}
 	 */
@@ -404,7 +406,7 @@ const internalUser = {
 			permissions = await userPermissionModel
 				.query()
 				.where("user_id", user.id)
-				.patchAndFetchById(existing_auth.id, _.assign({ user_id: user.id }, data));
+				.patchAndFetchById(/** @type {any} */ (existing_auth).id, _.assign({ user_id: user.id }, data));
 		} else {
 			// insert
 			permissions = await userPermissionModel.query().insertAndFetch(_.assign({ user_id: user.id }, data));
@@ -425,9 +427,9 @@ const internalUser = {
 	},
 
 	/**
-	 * @param {Access}   access
+	 * @param {import("../lib/types.js").Access}   access
 	 * @param {Object}   data
-	 * @param {Integer}  data.id
+	 * @param {number}  data.id
 	 */
 	loginAs: async (access, data) => {
 		await access.can("users:loginas", data.id);
