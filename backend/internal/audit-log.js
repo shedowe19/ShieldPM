@@ -82,7 +82,6 @@ const internalAuditLog = {
 			throw new errs.InternalValidationError("Audit log entry must contain an Action");
 		}
 
-		// @ts-ignore
 		const accessId = typeof access.token.getUserId === "function" ? access.token.getUserId(1) : 0;
 
 		return auditLogModel.query().insert(/** @type {any} */({

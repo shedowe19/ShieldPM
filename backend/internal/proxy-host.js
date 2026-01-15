@@ -431,9 +431,9 @@ const internalProxyHost = {
 		if (rows) {
 			rows.map((row) => {
 				row.access_list_id = Number.parseInt(String(row.access_list_id), 10);
-				// @ts-ignore
+				// @ts-expect-error
 				row.connected_tunnels = /** @type {any} */ (row).count || 0;
-				// @ts-ignore
+				// @ts-expect-error
 				delete row.count;
 				return row;
 			});

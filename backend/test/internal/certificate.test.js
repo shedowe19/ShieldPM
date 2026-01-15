@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies to avoid side effects (db connection, file writing)
 vi.mock("../../models/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 vi.mock("../../internal/certbot.js", () => ({
-	installPlugin: vi.fn(), testHttpsChallenge: vi.fn().mockImplementation((access, domains) => {
+	installPlugin: vi.fn(), testHttpsChallenge: vi.fn().mockImplementation((_access, domains) => {
 		const result = Object.create(null);
 		domains.domains.forEach((d) => {
 			result[d] = "ok";
@@ -16,7 +16,7 @@ vi.mock("../../internal/certbot.js", () => ({
 
 vi.mock("proxy-agent", () => ({ ProxyAgent: vi.fn() }));
 vi.mock("node:https", () => {
-	const request = vi.fn((url, options, cb) => {
+	const request = vi.fn((_url, _options, cb) => {
 		const res = {
 			on: (event, handler) => {
 				if (event === "data") {

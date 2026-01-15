@@ -632,26 +632,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				// Consistent Enable/Disable
-				case "enable_redirection_host": {
-					await internalRedirectionHost.enable(access, { id: call.args.id });
-					result = `Enabled Redirection Host ID: ${call.args.id}`;
-					break;
-				}
-				case "disable_redirection_host": {
-					await internalRedirectionHost.disable(access, { id: call.args.id });
-					result = `Disabled Redirection Host ID: ${call.args.id}`;
-					break;
-				}
-				case "enable_dead_host": {
-					await internalDeadHost.enable(access, { id: call.args.id });
-					result = `Enabled Dead Host ID: ${call.args.id}`;
-					break;
-				}
-				case "disable_dead_host": {
-					await internalDeadHost.disable(access, { id: call.args.id });
-					result = `Disabled Dead Host ID: ${call.args.id}`;
-					break;
-				}
+
 				case "enable_stream": {
 					await internalStream.enable(access, { id: call.args.id });
 					result = `Enabled Stream ID: ${call.args.id}`;

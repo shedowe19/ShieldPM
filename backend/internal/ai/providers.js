@@ -27,14 +27,14 @@ export const callGemini = async (config, systemPrompt, message, history, tools) 
 	const geminiTools =
 		tools.length > 0
 			? tools.map((t) => ({
-					functionDeclarations: [
-						{
-							name: t.function.name,
-							description: t.function.description,
-							parameters: t.function.parameters,
-						},
-					],
-				}))
+				functionDeclarations: [
+					{
+						name: t.function.name,
+						description: t.function.description,
+						parameters: t.function.parameters,
+					},
+				],
+			}))
 			: undefined;
 
 	// Start chat session with history
@@ -78,23 +78,23 @@ export const callGemini = async (config, systemPrompt, message, history, tools) 
 
 /**
  * Call Gemini with tool results
- * @param {Object} config - AI configuration
- * @param {string} systemPrompt - System prompt
- * @param {string} message - User message
- * @param {Array} history - Chat history
+ * @param {Object} _config - AI configuration
+ * @param {string} _systemPrompt - System prompt
+ * @param {string} _message - User message
+ * @param {Array} _history - Chat history
  * @param {Object} previousResponse - Previous response with chat session
  * @param {Array} toolResults - Results from tool execution
- * @param {Array} tools - Tool definitions
+ * @param {Array} _tools - Tool definitions
  * @returns {Promise<Object>} Response with content and optional toolCalls
  */
 export const callGeminiWithResults = async (
-	config,
-	systemPrompt,
-	message,
-	history,
+	_config,
+	_systemPrompt,
+	_message,
+	_history,
 	previousResponse,
 	toolResults,
-	tools,
+	_tools,
 ) => {
 	const chat = previousResponse.chat;
 
@@ -168,13 +168,13 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 	const ollamaTools =
 		tools.length > 0
 			? tools.map((t) => ({
-					type: "function",
-					function: {
-						name: t.function.name,
-						description: t.function.description,
-						parameters: t.function.parameters,
-					},
-				}))
+				type: "function",
+				function: {
+					name: t.function.name,
+					description: t.function.description,
+					parameters: t.function.parameters,
+				},
+			}))
 			: undefined;
 
 	if (isOllamaNative) {

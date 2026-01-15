@@ -26,7 +26,7 @@ const ai = {
 			if (meta.api_key) {
 				try {
 					meta.api_key = decrypt(meta.api_key);
-				} catch (err) {
+				} catch (_err) {
 					// Ignore decryption error
 				}
 			}
@@ -36,7 +36,7 @@ const ai = {
 			if (!meta.num_thread) meta.num_thread = 4;
 			if (!meta.keep_alive) meta.keep_alive = "5m";
 			return meta;
-		} catch (err) {
+		} catch (_err) {
 			// Return default config if not found
 			return {
 				enabled: false,
@@ -167,7 +167,7 @@ const ai = {
 
 			try {
 				const headers = {};
-				if (config.api_key) headers["Authorization"] = `Bearer ${config.api_key}`;
+				if (config.api_key) headers.Authorization = `Bearer ${config.api_key}`;
 
 				const res = await fetch(targetUrl.toString(), { headers: /** @type {any} */ (headers) });
 				if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);

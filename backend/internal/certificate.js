@@ -203,7 +203,7 @@ const internalCertificate = {
 		// Add to audit log
 		await internalCertificate.addCreatedAuditLog(access, certificate.id, utils.omitRow(omissions())(data));
 
-		// @ts-ignore
+		// @ts-expect-error
 		rows = rows.map(utils.omitRow(omissions())); (certificate);
 	},
 
@@ -448,7 +448,6 @@ const internalCertificate = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		// @ts-ignore
 		const r = await query.then(/** @type {any} */(utils.omitRows(omissions())));
 		for (let i = 0; i < r.length; i++) {
 			r[i] = internalCertificate.cleanExpansions(r[i]);

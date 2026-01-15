@@ -26,9 +26,7 @@ const mockAccess = {
 		getUserId: () => SYSTEM_USER_ID,
 		// @ts-ignore
 		getScope: () => [],
-		// @ts-ignore
 		get: () => null,
-		// @ts-ignore
 		hasScope: () => true,
 	},
 	can: () => Promise.resolve({ permission_visibility: "all" }),
