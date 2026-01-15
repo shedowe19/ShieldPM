@@ -92,7 +92,7 @@ backend/
 > [!NOTE]
 > 1. **ai.js (2413 lines)**: Consider splitting into `ai-config.js`, `ai-tools.js`, `ai-chat.js` (Addressed in v3.5.0)
 > 2. **certificate.js (1103 lines)**: Separate certbot logic from certificate management (Addressed in v3.5.0)
-> 3. **Type Safety**: Backend uses JSDoc with `checkJs: true` (Pilot: docker.js) - *In Progress*
+> 3. **Type Safety**: ✅ Backend JSDoc with `checkJs: true` enforced. 0 TSC errors (Completed v3.5.2)
 > 4. **Docker.js mockAccess**: Constant-time Service Account ID (Addressed in v3.5.1)
 
 ---
