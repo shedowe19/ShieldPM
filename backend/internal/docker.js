@@ -421,7 +421,9 @@ class DockerService {
 				// Block dangerous directives
 				const dangerous = /lua_|perl_|exec|include|root|alias|types|so_|load_module/i;
 				if (dangerous.test(cleanAdvancedConfig)) {
-					logger.warn(`Docker Auto-Discovery: Blocking dangerous advanced config for ${domains}: ${cleanAdvancedConfig}`);
+					logger.warn(
+						`Docker Auto-Discovery: Blocking dangerous advanced config for ${domains}: ${cleanAdvancedConfig}`,
+					);
 					cleanAdvancedConfig = "# Dangerous config blocked by ShieldPM Security";
 				}
 			}

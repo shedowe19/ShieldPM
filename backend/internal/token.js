@@ -12,7 +12,6 @@ const ERROR_MESSAGE_INVALID_AUTH_I18N = "error.invalid-auth";
 const DUMMY_HASH = "$2a$13$mzC9.T8Qed0f/M9.2v.9JO/1.1.1.1.1.1.1.1.1.1.1.1.1.1"; // Cost 13 (High)
 
 export default {
-
 	/**
 	 * @param   {Object} data
 	 * @param   {String} data.identity

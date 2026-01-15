@@ -46,12 +46,17 @@ const internalMaintenance = {
 				const isCurrentlyActive = !!host.maintenance_active;
 
 				if (shouldBeActive !== isCurrentlyActive) {
-					logger.info(`Maintenance State Change for Host #${host.id}: ${isCurrentlyActive} -> ${shouldBeActive}`);
+					logger.info(
+						`Maintenance State Change for Host #${host.id}: ${isCurrentlyActive} -> ${shouldBeActive}`,
+					);
 
 					// Update DB
-					await proxyHostModel.query().findById(host.id).patch({
-						maintenance_active: shouldBeActive ? 1 : 0
-					});
+					await proxyHostModel
+						.query()
+						.findById(host.id)
+						.patch({
+							maintenance_active: shouldBeActive ? 1 : 0,
+						});
 
 					reloadNeeded = true;
 				}
