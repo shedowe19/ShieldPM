@@ -25,7 +25,7 @@ const mockAccess = {
 	token: {
 		getUserId: () => SYSTEM_USER_ID,
 	},
-	// @ts-ignore - internal mock
+	// @ts-expect-error - internal mock
 	can: () => Promise.resolve({ permission_visibility: "all" }),
 };
 
