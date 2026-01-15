@@ -53,7 +53,10 @@ export const getToolDefinitions = () => [
 					disable_buffering: { type: "boolean" },
 					bandwidth_limit: { type: "string", description: "Limit bandwidth (e.g. 100k, 1m)" },
 					forward_query: { type: "string", description: "Query string to append" },
-					maintenance_on_failure: { type: "boolean", description: "Show maintenance page if backend is down" },
+					maintenance_on_failure: {
+						type: "boolean",
+						description: "Show maintenance page if backend is down",
+					},
 					adv_limit_req_rate: { type: "integer", description: "Requests per unit" },
 					adv_limit_req_unit: { type: "string", description: "'s' for seconds, 'm' for minutes" },
 					adv_limit_req_burst: { type: "integer", description: "Burst allowance" },

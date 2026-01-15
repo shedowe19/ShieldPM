@@ -9,7 +9,7 @@
  * @returns {string} The system prompt
  */
 export const getSystemPrompt = (config) => {
-    const defaultPrompt = `You are the AI Administrator for **ShieldPM**, a specific fork of Nginx Proxy Manager.
+	const defaultPrompt = `You are the AI Administrator for **ShieldPM**, a specific fork of Nginx Proxy Manager.
 Your goal is to help the user manage their Nginx proxy hosts, certificates, and settings through this chat interface.
 
 CONTEXT & CRITICAL RULES:
@@ -142,5 +142,5 @@ SYSTEM:
 Be concise. Always respond in the user's language.
 Time: ${new Date().toISOString()}`;
 
-    return config.system_prompt || defaultPrompt;
+	return config.system_prompt || defaultPrompt;
 };

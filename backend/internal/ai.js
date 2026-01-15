@@ -9,7 +9,6 @@ import { executeTools } from "./ai/executor.js";
 
 const AI_CONFIG_ID = "ai-config";
 
-
 /**
  * AI Service for handling Chat and Tool Execution
  */
@@ -345,7 +344,6 @@ const ai = {
 			content: finalContent,
 		};
 	},
-
 };
 
 export default ai;
