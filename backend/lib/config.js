@@ -196,7 +196,7 @@ const configGet = (key) => {
  * @returns {boolean}
  */
 const isDestructiveTestMode = () => {
-	return false;
+	return process.env.CI === "true" && process.env.NPM_CI_ENABLE_DESTRUCTIVE_TEST_MODE === "true";
 };
 
 /**

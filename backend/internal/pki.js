@@ -210,6 +210,11 @@ const createClientCert = async (data, outDir) => {
 	await utils.execFile("chmod", ["0600", keyPath]);
 
 	// 2. Create CSR (Client Auth Extended Usage)
+	// SECURITY: Sanitize common_name to prevent OpenSSL Config Injection
+	if (!/^[a-zA-Z0-9.\-@]+$/.test(data.common_name)) {
+		throw new Error("Invalid Common Name: Only alphanumeric characters, dots, dashes, and @ are allowed.");
+	}
+
 	const configPath = path.join(outDir, "openssl-client.cnf");
 	const configContent = `
 [req]

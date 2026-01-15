@@ -59,6 +59,17 @@ router
 	.post(async (req, res, next) => {
 		const ip = req.ip;
 		const now = Date.now();
+
+		// DoS Protection: Cap the memory usage of the rate limiter
+		if (loginAttempts.size > 5000 && !loginAttempts.has(ip)) {
+			// If map is full and IP is new, reject or prune. Pruning is safer for legit users.
+			// Simple strategy: Clear the map if it gets too big (Heavy handed but effective againt exhaustion)
+			// Better: Do not track new IPs if full, but that allows bruteforce.
+			// Best generic fix without Redis: Clear 10% or just clear all.
+			logger.warn("Login Rate Limiter full, flushing memory.");
+			loginAttempts.clear();
+		}
+
 		const attempts = loginAttempts.get(ip) || { count: 0, blockedUntil: 0, lastAttempt: 0 };
 
 		if (now < attempts.blockedUntil) {

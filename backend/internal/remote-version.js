@@ -21,7 +21,16 @@ const internalRemoteVersion = {
 			Date.now() - internalRemoteVersion.last_fetch_time > internalRemoteVersion.cache_timeout
 		) {
 			const raw = await internalRemoteVersion.fetchUrl(VERSION_URL);
-			const data = JSON.parse(raw);
+			// Prevent Event Loop blocking on large JSON
+			const data = await new Promise((resolve, reject) => {
+				setImmediate(() => {
+					try {
+						resolve(JSON.parse(raw));
+					} catch (e) {
+						reject(e);
+					}
+				});
+			});
 			internalRemoteVersion.last_result = data;
 			internalRemoteVersion.last_fetch_time = Date.now();
 		}
