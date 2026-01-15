@@ -26,7 +26,7 @@ dayjs.extend(quarterOfYear);
 const parseDatePeriod = (expression) => {
 	const matches = expression.match(/^([0-9]+)(y|Q|M|w|d|h|m|s|ms)$/m);
 	if (matches) {
-		return dayjs().add(matches[1], matches[2]);
+		return dayjs().add(Number.parseInt(matches[1], 10), /** @type {import("dayjs").ManipulateType} */(matches[2]));
 	}
 
 	return null;
@@ -54,7 +54,7 @@ const convertBoolFieldsToInt = (obj, fields) => {
  * Casts a column to json if using postgres
  *
  * @param {string} colName
- * @returns {string|Objection.ReferenceBuilder}
+ * @returns {string|import("objection").ReferenceBuilder}
  */
 const castJsonIfNeed = (colName) => (isPostgres() ? ref(colName).castText() : colName);
 

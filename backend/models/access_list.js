@@ -15,9 +15,28 @@ Model.knex(db());
 const boolFields = ["is_deleted", "satisfy_any", "pass_auth", "mtls_enabled", "mtls_use_internal"];
 
 class AccessList extends Model {
+	/** @type {number} */
+	id;
+	/** @type {string} */
+	name;
+	/** @type {Object} */
+	meta;
+	/** @type {number} */
+	owner_user_id;
+	/** @type {number} */
+	is_deleted;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+	/** @type {import("./access_list_auth.js").default[]} */
+	items;
+	/** @type {import("./access_list_client.js").default[]} */
+	clients;
+
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for meta
 		if (typeof this.meta === "undefined") {
@@ -26,7 +45,7 @@ class AccessList extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	$parseDatabaseJson(json) {

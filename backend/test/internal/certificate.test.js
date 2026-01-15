@@ -4,7 +4,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("../../models/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
-vi.mock("../../lib/certbot.js", () => ({ installPlugin: vi.fn() }));
+vi.mock("../../internal/certbot.js", () => ({
+	installPlugin: vi.fn(), testHttpsChallenge: vi.fn().mockImplementation((access, domains) => {
+		const result = Object.create(null);
+		domains.domains.forEach((d) => {
+			result[d] = "ok";
+		});
+		return Promise.resolve(result);
+	})
+}));
 
 vi.mock("proxy-agent", () => ({ ProxyAgent: vi.fn() }));
 vi.mock("node:https", () => {

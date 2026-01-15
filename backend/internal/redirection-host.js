@@ -14,12 +14,26 @@ const omissions = () => {
 
 const internalRedirectionHost = {
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
+	 * @param   {Array<string>} data.domain_names
+	 * @param   {string}  data.forward_scheme
+	 * @param   {string}  data.forward_domain_name
+	 * @param   {number}  data.forward_http_code
+	 * @param   {boolean} [data.preserve_path]
+	 * @param   {number|string}  [data.certificate_id]
+	 * @param   {boolean} [data.ssl_forced]
+	 * @param   {boolean} [data.hsts_enabled]
+	 * @param   {boolean} [data.hsts_subdomains]
+	 * @param   {boolean} [data.http2_support]
+	 * @param   {boolean} [data.block_exploits]
+	 * @param   {string}  [data.advanced_config]
+	 * @param   {Object}  [data.meta]
+	 * @param   {number}  [data.owner_user_id]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		let thisData = data || {};
+		let thisData = /** @type {any} */ (data || {});
 		const createCertificate = thisData.certificate_id === "new";
 
 		if (createCertificate) {
@@ -54,7 +68,7 @@ const internalRedirectionHost = {
 			data.advanced_config = "";
 		}
 
-		let row = await redirectionHostModel.query().insertAndFetch(thisData);
+		let row = await redirectionHostModel.query().insertAndFetch(/** @type {any} */(thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -89,13 +103,26 @@ const internalRedirectionHost = {
 	},
 
 	/**
-	 * @param  {Access}  access
+	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
-	 * @param  {Number}  data.id
+	 * @param  {number}  data.id
+	 * @param  {Array<string>} [data.domain_names]
+	 * @param  {string}  [data.forward_scheme]
+	 * @param  {string}  [data.forward_domain_name]
+	 * @param  {number}  [data.forward_http_code]
+	 * @param  {boolean} [data.preserve_path]
+	 * @param  {number|string}  [data.certificate_id]
+	 * @param  {boolean} [data.ssl_forced]
+	 * @param  {boolean} [data.hsts_enabled]
+	 * @param  {boolean} [data.hsts_subdomains]
+	 * @param  {boolean} [data.http2_support]
+	 * @param  {boolean} [data.block_exploits]
+	 * @param  {string}  [data.advanced_config]
+	 * @param  {Object}  [data.meta]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
-		let thisData = data || {};
+		let thisData = /** @type {any} */ (data || {});
 		const createCertificate = thisData.certificate_id === "new";
 
 		if (createCertificate) {
@@ -103,6 +130,13 @@ const internalRedirectionHost = {
 		}
 
 		await access.can("redirection_hosts:update", thisData.id);
+		let row = await internalRedirectionHost.get(access, { id: thisData.id });
+
+		if (row.id !== thisData.id) {
+			throw new errs.InternalValidationError(
+				`Redirection Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
+			);
+		}
 
 		// Get a list of the domain names and check each of them against existing records
 		const domain_name_check_promises = [];
@@ -120,15 +154,6 @@ const internalRedirectionHost = {
 				}
 				return true;
 			});
-		}
-
-		let row = await internalRedirectionHost.get(access, { id: thisData.id });
-
-		if (row.id !== thisData.id) {
-			// Sanity check that something crazy hasn't happened
-			throw new errs.InternalValidationError(
-				`Redirection Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
-			);
 		}
 
 		if (createCertificate) {
@@ -153,8 +178,8 @@ const internalRedirectionHost = {
 
 		const _saved_row = await redirectionHostModel
 			.query()
-			.patchAndFetchById(thisData.id, thisData)
-			.then(utils.omitRow(omissions())); // Ensure we omit rows here if needed, though patchAndFetchById returns object
+			.patchAndFetchById(thisData.id, /** @type {any} */(thisData))
+			.then(/** @type {any} */(utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -177,7 +202,7 @@ const internalRedirectionHost = {
 	},
 
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {Number}   data.id
 	 * @param  {Array}    [data.expand]
@@ -185,7 +210,7 @@ const internalRedirectionHost = {
 	 * @return {Promise}
 	 */
 	get: async (access, data) => {
-		const thisData = data || {};
+		const thisData = /** @type {any} */ (data || {});
 
 		const access_data = await access.can("redirection_hosts:get", thisData.id);
 
@@ -219,7 +244,7 @@ const internalRedirectionHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -253,7 +278,7 @@ const internalRedirectionHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -275,9 +300,9 @@ const internalRedirectionHost = {
 
 		row.enabled = 1;
 
-		await redirectionHostModel.query().where("id", row.id).patch({
+		await redirectionHostModel.query().where("id", row.id).patch(/** @type {any} */({
 			enabled: 1,
-		});
+		}));
 
 		// Configure nginx
 		await internalNginx.configure(redirectionHostModel, "redirection_host", row);
@@ -294,7 +319,7 @@ const internalRedirectionHost = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -313,9 +338,9 @@ const internalRedirectionHost = {
 
 		row.enabled = 0;
 
-		await redirectionHostModel.query().where("id", row.id).patch({
+		await redirectionHostModel.query().where("id", row.id).patch(/** @type {any} */({
 			enabled: 0,
-		});
+		}));
 
 		// Delete Nginx Config
 		await internalNginx.deleteConfig("redirection_host", row);
@@ -335,7 +360,7 @@ const internalRedirectionHost = {
 	/**
 	 * All Hosts
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
 	 * @returns {Promise}
@@ -390,7 +415,7 @@ const internalRedirectionHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(row.count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 

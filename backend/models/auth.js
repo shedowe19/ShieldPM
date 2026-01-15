@@ -13,15 +13,36 @@ Model.knex(db());
 const boolFields = ["is_deleted"];
 
 async function encryptPassword() {
-	if (this.type === "password" && this.secret) {
-		this.secret = await bcrypt.hash(this.secret, 13);
+	/** @type {Auth} */
+	// @ts-ignore
+	const self = this;
+
+	if (self.type === "password" && self.secret) {
+		self.secret = await bcrypt.hash(self.secret, 13);
 	}
 }
 
 class Auth extends Model {
+	/** @type {number} */
+	id;
+	/** @type {number} */
+	user_id;
+	/** @type {string} */
+	type;
+	/** @type {string} */
+	secret;
+	/** @type {Object} */
+	meta;
+	/** @type {number} */
+	is_deleted;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+
 	async $beforeInsert(queryContext) {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for meta
 		if (typeof this.meta === "undefined") {
@@ -32,7 +53,7 @@ class Auth extends Model {
 	}
 
 	async $beforeUpdate(queryContext) {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 		await encryptPassword.apply(this, queryContext);
 	}
 

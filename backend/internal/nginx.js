@@ -91,7 +91,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -106,7 +106,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -118,7 +118,7 @@ const internalNginx = {
 
 	/**
 	 * @param   {String}  host_type
-	 * @param   {Integer} host_id
+	 * @param   {number} host_id
 	 * @returns {String}
 	 */
 	getConfigName: (host_type, host_id) => {
@@ -183,7 +183,7 @@ const internalNginx = {
 
 	/**
 	 * @param   {String}  host_type
-	 * @param   {Object}  host
+	 * @param   {Object}  host_row
 	 * @returns {Promise}
 	 */
 	generateConfig: async (host_type, host_row) => {
@@ -367,7 +367,7 @@ const internalNginx = {
 	},
 
 	/**
-	 * @param   {string}  config
+	 * @param   {string}  cfg
 	 * @returns {boolean}
 	 */
 	advancedConfigHasDefaultLocation: (cfg) => !!cfg.match(/^(?:.*;)?\s*?location\s*?\/\s*?{/im),

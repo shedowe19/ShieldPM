@@ -89,13 +89,11 @@ export default {
 	},
 
 	/**
-	 * @param   {Object} data
-	 * @param   {String} data.identity
-	 * @param   {String} [issuer]
+	 * @param   {any} data
 	 * @returns {Promise}
 	 */
 	getTokenFromOAuthClaim: async (data) => {
-		const Token = new TokenModel();
+		const Token = new (/** @type {any} */ (TokenModel))();
 
 		data.scope = "user";
 		data.expiry = "1d";
@@ -133,7 +131,7 @@ export default {
 	},
 
 	/**
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {Object} [data]
 	 * @param {String} [data.expiry]
 	 * @param {String} [data.scope]   Only considered if existing token scope is admin

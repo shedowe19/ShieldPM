@@ -7,10 +7,10 @@ const migrateName = "identifier_for_migrate";
  *
  * @see http://knexjs.org/#Schema
  *
- * @param   {Object} knex
+ * @param   {Object} db
  * @returns {Promise}
  */
-const up = (_knex) => {
+const up = (db) => {
 	logger.info(`[${migrateName}] Migrating Up...`);
 
 	// Create Table example:
@@ -36,10 +36,10 @@ const up = (_knex) => {
 /**
  * Undo Migrate
  *
- * @param   {Object} knex
+ * @param   {Object} db
  * @returns {Promise}
  */
-const down = (_knex) => {
+const down = (db) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 
 	// Drop table example:

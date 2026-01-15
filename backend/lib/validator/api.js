@@ -1,7 +1,7 @@
 import Ajv from "ajv/dist/2020.js";
 import errs from "../error.js";
 
-const ajv = new Ajv({
+const ajv = new /** @type {any} */(Ajv)({
 	verbose: true,
 	allErrors: true,
 	allowUnionTypes: true,
@@ -34,7 +34,7 @@ const apiValidator = async (schema, payload /*, description*/) => {
 
 	const message = ajv.errorsText(validate.errors);
 	const err = new errs.ValidationError(message);
-	err.debug = { validationErrors: validate.errors, payload };
+	/** @type {any} */ (err).debug = { validationErrors: validate.errors, payload };
 	throw err;
 };
 

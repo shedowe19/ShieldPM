@@ -3,9 +3,9 @@ import _ from "lodash";
 import commonDefinitions from "../../schema/common.json" with { type: "json" };
 import errs from "../error.js";
 
-RegExp.prototype.toJSON = RegExp.prototype.toString;
+/** @type {any} */ (RegExp.prototype).toJSON = RegExp.prototype.toString;
 
-const ajv = new Ajv({
+const ajv = new /** @type {any} */(Ajv)({
 	verbose: true,
 	allErrors: true,
 	allowUnionTypes: true,

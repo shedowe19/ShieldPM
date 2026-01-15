@@ -39,8 +39,8 @@ const validateHost = (host, forbiddenHosts, res, context = "") => {
 				return blockRequest(res, `Forwarding to ${range} IP (${host}) is disabled in Demo Mode.${context}`);
 			}
 
-			if (addr.kind() === "ipv6" && addr.isIPv4MappedAddress()) {
-				const v4 = addr.toIPv4Address();
+			if (addr.kind() === "ipv6" && /** @type {any} */ (addr).isIPv4MappedAddress()) {
+				const v4 = /** @type {any} */ (addr).toIPv4Address();
 				if (blockedRanges.includes(v4.range())) {
 					return blockRequest(
 						res,

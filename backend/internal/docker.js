@@ -19,11 +19,17 @@ import { SYSTEM_USER_ID } from "../lib/constants.js";
 
 /**
  * Mock Access Object for internal system operations
- * @type {Access}
+ * @type {import("../lib/types.js").Access}
  */
 const mockAccess = {
 	token: {
 		getUserId: () => SYSTEM_USER_ID,
+		// @ts-ignore
+		getScope: () => [],
+		// @ts-ignore
+		get: () => null,
+		// @ts-ignore
+		hasScope: () => true,
 	},
 	// @ts-expect-error - internal mock
 	can: () => Promise.resolve({ permission_visibility: "all" }),

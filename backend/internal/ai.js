@@ -15,7 +15,7 @@ const AI_CONFIG_ID = "ai-config";
 const ai = {
 	/**
 	 * Get the current AI Configuration
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 */
 	getConfig: async (access) => {
 		// Verify permissions (admin only for config)
@@ -84,7 +84,7 @@ const ai = {
 
 	/**
 	 * Update AI Configuration
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {Object} data
 	 */
 	setConfig: async (access, data) => {
@@ -99,12 +99,12 @@ const ai = {
 		try {
 			await internalSetting.get(access, { id: AI_CONFIG_ID });
 			// Update
-			await internalSetting.update(access, {
+			await internalSetting.update(access, /** @type {any} */({
 				id: AI_CONFIG_ID,
 				description: "AI Agent Configuration",
 				value: data.enabled ? "true" : "false",
 				meta: dataToSave,
-			});
+			}));
 		} catch (err) {
 			const SettingModel = (await import("../models/setting.js")).default;
 			await SettingModel.query().insert({
@@ -121,7 +121,7 @@ const ai = {
 
 	/**
 	 * Get Models from Provider
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {Object} config
 	 */
 	getModels: async (access, config) => {
@@ -169,7 +169,7 @@ const ai = {
 				const headers = {};
 				if (config.api_key) headers["Authorization"] = `Bearer ${config.api_key}`;
 
-				const res = await fetch(targetUrl.toString(), { headers });
+				const res = await fetch(targetUrl.toString(), { headers: /** @type {any} */ (headers) });
 				if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
 				const data = await res.json();
 				return (data.data || [])
@@ -186,7 +186,7 @@ const ai = {
 
 	/**
 	 * Main Chat Entry point
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {String} message
 	 * @param {Array} history
 	 */

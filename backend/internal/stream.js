@@ -14,8 +14,17 @@ const omissions = () => {
 
 const internalStream = {
 	/**
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
+	 * @param   {number}  data.incoming_port
+	 * @param   {boolean} data.tcp_forwarding
+	 * @param   {boolean} data.udp_forwarding
+	 * @param   {string|number} [data.certificate_id]
+	 * @param   {Object}  [data.meta]
+	 * @param   {Array<string>} [data.domain_names]
+	 * @param   {number}  [data.owner_user_id]
+	 * @param   {string}  [data.forwarding_host]
+	 * @param   {number}  [data.forwarding_port]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
@@ -63,11 +72,11 @@ const internalStream = {
 		const data_no_domains = structuredClone(data);
 		delete data_no_domains.domain_names;
 
-		let row = await streamModel.query().insertAndFetch(data_no_domains);
+		let row = await streamModel.query().insertAndFetch(/** @type {any} */(data_no_domains));
 		row = utils.omitRow(omissions())(row);
 
 		if (create_certificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, data);
+			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */(data));
 			// update host with cert id
 			await internalStream.update(access, {
 				id: row.id,
@@ -96,9 +105,17 @@ const internalStream = {
 	},
 
 	/**
-	 * @param  {Access}  access
+	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
-	 * @param  {Number}  data.id
+	 * @param  {number}  data.id
+	 * @param  {number}  [data.incoming_port]
+	 * @param  {boolean} [data.tcp_forwarding]
+	 * @param  {boolean} [data.udp_forwarding]
+	 * @param  {string|number} [data.certificate_id]
+	 * @param  {Object}  [data.meta]
+	 * @param  {Array<string>} [data.domain_names]
+	 * @param  {string}  [data.forwarding_host]
+	 * @param  {number}  [data.forwarding_port]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
@@ -167,7 +184,7 @@ const internalStream = {
 			data,
 		);
 
-		let saved_row = await streamModel.query().patchAndFetchById(row.id, thisData);
+		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */(thisData));
 
 		saved_row = utils.omitRow(omissions())(saved_row);
 
@@ -187,7 +204,7 @@ const internalStream = {
 	},
 
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {Number}   data.id
 	 * @param  {Array}    [data.expand]
@@ -195,7 +212,7 @@ const internalStream = {
 	 * @return {Promise}
 	 */
 	get: async (access, data) => {
-		const thisData = data || {};
+		const thisData = /** @type {any} */ (data || {});
 
 		const access_data = await access.can("streams:get", thisData.id);
 
@@ -229,7 +246,7 @@ const internalStream = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -263,7 +280,7 @@ const internalStream = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -285,9 +302,9 @@ const internalStream = {
 
 		row.enabled = 1;
 
-		await streamModel.query().where("id", row.id).patch({
+		await streamModel.query().where("id", row.id).patch(/** @type {any} */({
 			enabled: 1,
-		});
+		}));
 
 		// Configure nginx
 		await internalNginx.configure(streamModel, "stream", row);
@@ -304,7 +321,7 @@ const internalStream = {
 	},
 
 	/**
-	 * @param {Access}  access
+	 * @param {import("../lib/types.js").Access}  access
 	 * @param {Object}  data
 	 * @param {Number}  data.id
 	 * @param {String}  [data.reason]
@@ -323,9 +340,9 @@ const internalStream = {
 
 		row.enabled = 0;
 
-		await streamModel.query().where("id", row.id).patch({
+		await streamModel.query().where("id", row.id).patch(/** @type {any} */({
 			enabled: 0,
-		});
+		}));
 
 		// Delete Nginx Config
 		await internalNginx.deleteConfig("stream", row);
@@ -345,7 +362,7 @@ const internalStream = {
 	/**
 	 * All Streams
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
 	 * @returns {Promise}
@@ -400,7 +417,7 @@ const internalStream = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(row.count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 

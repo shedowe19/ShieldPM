@@ -13,10 +13,30 @@ Model.knex(db());
 
 const boolFields = ["is_deleted"];
 
+
 class CloudflaredTunnel extends Model {
+	/** @type {number} */
+	id;
+	/** @type {string} */
+	name;
+	/** @type {string} */
+	token;
+	/** @type {number} */
+	status;
+	/** @type {string} */
+	created_on;
+	/** @type {string} */
+	modified_on;
+	/** @type {Object} */
+	meta;
+	/** @type {number} */
+	is_deleted;
+	/** @type {number} */
+	owner_user_id;
+
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for meta
 		if (typeof this.meta === "undefined") {
@@ -25,7 +45,7 @@ class CloudflaredTunnel extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 	}
 
 	$parseDatabaseJson(json) {

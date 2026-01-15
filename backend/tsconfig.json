@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "module": "NodeNext",
+        "target": "ES2022",
+        "checkJs": true,
+        "strict": false,
+        "moduleResolution": "NodeNext",
+        "allowJs": true,
+        "noEmit": true
+    },
+    "include": [
+        "internal/**/*",
+        "lib/**/*",
+        "models/**/*"
+    ]
+}

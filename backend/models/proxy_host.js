@@ -82,8 +82,8 @@ class ProxyHost extends Model {
 	advanced_config;
 
 	$beforeInsert() {
-		this.created_on = now();
-		this.modified_on = now();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 
 		// Default for domain_names
 		if (typeof this.domain_names === "undefined") {
@@ -109,7 +109,7 @@ class ProxyHost extends Model {
 	}
 
 	$beforeUpdate() {
-		this.modified_on = now();
+		this.modified_on = /** @type {any} */ (now());
 
 		if (this.maintenance_start) {
 			this.maintenance_start = dayjs(this.maintenance_start).format("YYYY-MM-DD HH:mm:ss");

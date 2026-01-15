@@ -5,7 +5,7 @@ import internalNginx from "./nginx.js";
 
 const internalSetting = {
 	/**
-	 * @param  {Access}  access
+	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
 	 * @param  {String}  data.id
 	 * @return {Promise}
@@ -50,7 +50,7 @@ const internalSetting = {
 	},
 
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @param  {Object}   data
 	 * @param  {String}   data.id
 	 * @return {Promise}
@@ -67,19 +67,19 @@ const internalSetting = {
 	/**
 	 * This will only count the settings
 	 *
-	 * @param   {Access}  access
-	 * @returns {*}
+	 * @param   {import("../lib/types.js").Access}  access
+	 * @returns {Promise<number>}
 	 */
 	getCount: async (access) => {
 		await access.can("settings:list");
 		const row = await settingModel.query().count("id as count").first();
-		return Number.parseInt(row.count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 
 	/**
 	 * All settings
 	 *
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @returns {Promise}
 	 */
 	getAll: async (access) => {

@@ -5,7 +5,7 @@ import internalStream from "./stream.js";
 
 const internalReport = {
 	/**
-	 * @param  {Access}   access
+	 * @param  {import("../lib/types.js").Access}   access
 	 * @return {Promise}
 	 */
 	getHostsReport: async (access) => {

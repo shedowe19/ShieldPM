@@ -11,7 +11,7 @@ const internalHost = {
 	 *     if force_ssl is off, then hsts_enabled is definitely off.
 	 *
 	 * @param   {object} data
-	 * @param   {object} [existing_data]
+	 * @param   {object} [existingData]
 	 * @returns {object}
 	 */
 	cleanSslHstsData: (newCert, data, existingData) => {
@@ -95,7 +95,7 @@ const internalHost = {
 	 *
 	 * @param   {String}   hostname
 	 * @param   {String}   [ignore_type]   'proxy', 'redirection', 'dead'
-	 * @param   {Integer}  [ignore_id]     Must be supplied if type was also supplied
+	 * @param   {number}  [ignore_id]     Must be supplied if type was also supplied
 	 * @returns {Promise}
 	 */
 	isHostnameTaken: async (hostname, ignore_type, ignore_id) => {
@@ -167,7 +167,7 @@ const internalHost = {
 	 *
 	 * @param   {String}  hostname
 	 * @param   {Array}   existingRows
-	 * @param   {Integer} [ignoreId]
+	 * @param   {number} [ignoreId]
 	 * @returns {Boolean}
 	 */
 	_checkHostnameRecordsTaken: (hostname, existingRows, ignoreId) => {
