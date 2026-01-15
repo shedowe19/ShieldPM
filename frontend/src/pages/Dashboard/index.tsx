@@ -1,4 +1,5 @@
 import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-react";
+import { jwtDecode } from "jwt-decode";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FormattedNumber } from "react-intl";
@@ -37,16 +38,7 @@ const Dashboard = () => {
 		const token = AuthStore.token?.token;
 		if (token) {
 			try {
-				const base64Url = token.split(".")[1];
-				const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-				const jsonPayload = decodeURIComponent(
-					window
-						.atob(base64)
-						.split("")
-						.map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
-						.join(""),
-				);
-				const payload = JSON.parse(jsonPayload);
+				const payload = jwtDecode(token) as any;
 				if (payload?.attrs?.id) {
 					setUserId(payload.attrs.id);
 				}
