@@ -37,6 +37,7 @@
 *   **[Request Rate Limiting](Request-Rate-Limiting)**: Protect hosts from abuse and DDoS.
 *   **[Internal PKI & ML-KEM](Internal-PKI)**: Setup and use the internal Certificate Authority with Post-Quantum security.
 *   **[Secure Demo Mode](Demo-Mode)**: Architecture and deployment of the public sandbox environment.
+*   **[2026 Audit Report](Audit-Report-2026)**: Full-system security and architecture audit findings.
 
 
 ### Advanced
