@@ -63,7 +63,7 @@ router
 		// DoS Protection: Cap the memory usage of the rate limiter
 		if (loginAttempts.size > 5000 && !loginAttempts.has(ip)) {
 			// If map is full and IP is new, reject or prune. Pruning is safer for legit users.
-			// Simple strategy: Clear the map if it gets too big (Heavy handed but effective againt exhaustion)
+			// Simple strategy: Clear the map if it gets too big (Heavy handed but effective against exhaustion)
 			// Better: Do not track new IPs if full, but that allows bruteforce.
 			// Best generic fix without Redis: Clear 10% or just clear all.
 			logger.warn("Login Rate Limiter full, flushing memory.");
