@@ -191,6 +191,10 @@ const validateCallback = async (req, settings) => {
 	if (!claims.email) {
 		throw new errs.AuthError("The Identity Provider didn't send the 'email' claim");
 	}
+
+	if (claims.email_verified !== true && claims.email_verified !== "true") {
+		throw new errs.AuthError("The Identity Provider has not verified the email address");
+	}
 	logger.info(`Successful authentication for email ${claims.email.toLowerCase()}`);
 
 	return internalToken.getTokenFromOAuthClaim({ identity: claims.email.toLowerCase() });

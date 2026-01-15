@@ -32,15 +32,27 @@ const internalMaintenance = {
 				const start = host.maintenance_start ? dayjs(host.maintenance_start) : null;
 				const end = host.maintenance_end ? dayjs(host.maintenance_end) : null;
 
-				// Check if we just entered maintenance (start time was within last minute)
-				if (start && start.isAfter(now.subtract(1, "minute")) && start.isBefore(now.add(1, "second"))) {
-					logger.info(`Host #${host.id} entering maintenance window. Reloading Nginx.`);
-					reloadNeeded = true;
+				// STATE-BASED LOGIC:
+				// 1. Determine if we SHOULD be in maintenance right now
+				let shouldBeActive = false;
+				if (start && now.isAfter(start)) {
+					// It has started. Has it ended?
+					if (!end || now.isBefore(end)) {
+						shouldBeActive = true;
+					}
 				}
 
-				// Check if we just exited maintenance (end time was within last minute)
-				if (end && end.isAfter(now.subtract(1, "minute")) && end.isBefore(now.add(1, "second"))) {
-					logger.info(`Host #${host.id} exiting maintenance window. Reloading Nginx.`);
+				// 2. Compare with current DB state
+				const isCurrentlyActive = !!host.maintenance_active;
+
+				if (shouldBeActive !== isCurrentlyActive) {
+					logger.info(`Maintenance State Change for Host #${host.id}: ${isCurrentlyActive} -> ${shouldBeActive}`);
+
+					// Update DB
+					await proxyHostModel.query().findById(host.id).patch({
+						maintenance_active: shouldBeActive ? 1 : 0
+					});
+
 					reloadNeeded = true;
 				}
 			}
