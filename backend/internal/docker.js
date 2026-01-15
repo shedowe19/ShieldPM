@@ -31,7 +31,6 @@ const mockAccess = {
 		// @ts-ignore
 		hasScope: () => true,
 	},
-	// @ts-expect-error - internal mock
 	can: () => Promise.resolve({ permission_visibility: "all" }),
 };
 
