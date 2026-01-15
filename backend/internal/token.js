@@ -181,7 +181,8 @@ export default {
 				},
 			};
 		}
-		throw new errs.AssertionFailedError("Existing token contained invalid user data");
+
+		throw new errs.UnauthorizedError("No active session found");
 	},
 
 	/**

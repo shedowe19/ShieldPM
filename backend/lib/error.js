@@ -98,6 +98,17 @@ class AssertionFailedError extends Error {
 	}
 }
 
+class UnauthorizedError extends Error {
+	constructor(message, previous) {
+		super(message || "Unauthorized");
+		this.name = "UnauthorizedError";
+		this.previous = previous;
+		this.public = true;
+		this.status = 401;
+		Error.captureStackTrace(this, this.constructor);
+	}
+}
+
 class CommandError extends Error {
 	constructor(stdErr, code, previous) {
 		super(stdErr);
@@ -119,6 +130,7 @@ const errs = {
 	CacheError,
 	ValidationError,
 	AssertionFailedError,
+	UnauthorizedError,
 	CommandError,
 };
 
