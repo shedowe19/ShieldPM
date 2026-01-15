@@ -40,16 +40,21 @@ const internalAccessList = {
 
 		const promises = [];
 		// Items
-		data.items.map((item) => {
-			promises.push(
-				accessListAuthModel.query().insert({
-					access_list_id: omittedRow.id,
-					username: item.username,
-					password: item.password,
-				}),
-			);
-			return true;
+		// Items
+		const itemsPromises = data.items.map(async (item) => {
+			let password = item.password;
+			if (password && !password.startsWith("$2")) {
+				password = await bcrypt.hash(password, 13);
+			}
+
+			return accessListAuthModel.query().insert({
+				access_list_id: omittedRow.id,
+				username: item.username,
+				password: password,
+			});
 		});
+
+		promises.push(...itemsPromises);
 
 		// Clients
 		data.clients?.map((client) => {
@@ -130,21 +135,25 @@ const internalAccessList = {
 			const promises = [];
 			const itemsToKeep = [];
 
-			data.items.map((item) => {
+			// Re-implementation of the loop to correctly capture promises
+			for (const item of data.items) {
 				if (item.password) {
+					let finalPass = item.password;
+					if (!finalPass.startsWith("$2")) {
+						finalPass = await bcrypt.hash(item.password, 13);
+					}
+
 					promises.push(
 						accessListAuthModel.query().insert({
 							access_list_id: data.id,
 							username: item.username,
-							password: item.password,
+							password: finalPass,
 						}),
 					);
 				} else {
-					// This was supplied with an empty password, which means keep it but don't change the password
 					itemsToKeep.push(item.username);
 				}
-				return true;
-			});
+			}
 
 			const query = accessListAuthModel.query().delete().where("access_list_id", data.id);
 
@@ -452,8 +461,15 @@ const internalAccessList = {
 				if (item.password?.length) {
 					logger.info(`Adding: ${item.username}`);
 					try {
-						const res = await bcrypt.hash(item.password, 13);
-						await fs.promises.appendFile(htpasswdFile, `${item.username}:${res}\n`, {
+						// Password is already hashed in DB or migration
+						// But if it's plaintext (e.g. from old data not migrated?), we should check
+						let finalPass = item.password;
+						if (!finalPass.startsWith("$2") && !finalPass.startsWith("$apr1$")) {
+							// Fail-safe: hash it if it looks plain
+							finalPass = await bcrypt.hash(item.password, 13);
+						}
+
+						await fs.promises.appendFile(htpasswdFile, `${item.username}:${finalPass}\n`, {
 							encoding: "utf8",
 						});
 					} catch (err) {

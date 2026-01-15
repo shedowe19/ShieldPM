@@ -467,8 +467,8 @@ const internalCertificate = {
 		const dir = `/data/tls/custom/npm-${certificate.id}`;
 
 		return new Promise((resolve, reject) => {
-			if (certificate.provider === "letsencrypt") {
-				reject(new Error("Refusing to write certbot certs here"));
+			if (certificate.provider === "letsencrypt" || certificate.provider === "internal") {
+				reject(new Error("Refusing to write certbot/internal certs here"));
 				return;
 			}
 
