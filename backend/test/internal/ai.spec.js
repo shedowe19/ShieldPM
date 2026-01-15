@@ -3,9 +3,12 @@ import internalAi from "../../internal/ai.js";
 import internalSetting from "../../internal/setting.js";
 import internalProxyHost from "../../internal/proxy-host.js";
 
+import SettingModel from "../../models/setting.js";
+
 // Mock dependencies
 vi.mock("../../internal/setting.js");
 vi.mock("../../internal/proxy-host.js");
+vi.mock("../../models/setting.js");
 vi.mock("../../lib/logger.js", () => ({
 	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
@@ -37,14 +40,24 @@ describe("internal/ai.js", () => {
 	});
 
 	describe("chat", () => {
-		it("should throw if AI is disabled", async () => {
-			internalSetting.get.mockResolvedValue({ meta: { enabled: false } });
+		it("should throws if AI is disabled", async () => {
+			// Mock direct DB call for _getConfigForChat
+			SettingModel.query.mockReturnValue({
+				where: vi.fn().mockReturnValue({
+					first: vi.fn().mockResolvedValue({ meta: { enabled: false } }),
+				}),
+			});
+
 			await expect(internalAi.chat(mockAccess, "hello")).rejects.toThrow("AI Agent is disabled");
 		});
 
 		it("should calls Gemini API", async () => {
-			internalSetting.get.mockResolvedValue({
-				meta: { enabled: true, provider: "gemini", api_key: "test" },
+			SettingModel.query.mockReturnValue({
+				where: vi.fn().mockReturnValue({
+					first: vi.fn().mockResolvedValue({
+						meta: { enabled: true, provider: "gemini", api_key: "test" },
+					}),
+				}),
 			});
 
 			const mockGeminiResponse = {
@@ -71,8 +84,12 @@ describe("internal/ai.js", () => {
 		});
 
 		it("should handle Tool Calls (mocked)", async () => {
-			internalSetting.get.mockResolvedValue({
-				meta: { enabled: true, provider: "gemini", api_key: "test" },
+			SettingModel.query.mockReturnValue({
+				where: vi.fn().mockReturnValue({
+					first: vi.fn().mockResolvedValue({
+						meta: { enabled: true, provider: "gemini", api_key: "test" },
+					}),
+				}),
 			});
 
 			// 1. Tool Call Response

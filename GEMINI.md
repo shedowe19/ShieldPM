@@ -7,7 +7,7 @@ ShieldPM is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fr
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
 *   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
 *   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**.
+*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**, **HTTP-Only Cookie Auth**.
 *   **Language:** JavaScript/TypeScript (ES Modules).
 
 ## Secure Demo Mode Architecture
@@ -112,6 +112,8 @@ Following a deep-dive audit, the following security measures are enforced:
 *   **OIDC Strictness**: `email_verified` claim is **mandatory** for all OIDC logins.
 *   **Docker Sanitization**: Docker labels blocking dangerous Nginx directives (`lua_`, `exec`, etc.).
 *   **Auth Timing**: Constant-time response (via dummy hashing) for invalid login attempts.
+*   **Cookie Auth**: Migrated from localStorage to HTTP-Only, Secure, SameSite=Strict cookies.
+*   **CSRF Protection**: Implemented Double Submit Cookie pattern for all state-changing requests.
 *   **Reliability**:
     *   **Async Analytics**: Log parsing offloaded to prevent Event Loop blocking.
     *   **Debounced Reloads**: Nginx reloads are batched (2s delay) during Docker stack deployments.

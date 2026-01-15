@@ -77,6 +77,14 @@ export default {
 		return {
 			token: signed.token,
 			expires: expiry.toISOString(),
+			user: {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				nickname: user.nickname,
+				avatar: user.avatar,
+				roles: user.roles,
+			},
 		};
 	},
 
@@ -168,6 +176,9 @@ export default {
 			return {
 				token: signed.token,
 				expires: expiry.toISOString(),
+				user: {
+					id: token_attrs.id,
+				},
 			};
 		}
 		throw new errs.AssertionFailedError("Existing token contained invalid user data");

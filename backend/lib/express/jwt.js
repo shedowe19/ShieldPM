@@ -6,6 +6,8 @@ export default function () {
 			if (parts && parts[0] === "Bearer" && parts[1]) {
 				res.locals.token = parts[1];
 			}
+		} else if (req.cookies && req.cookies.shieldpm_jwt) {
+			res.locals.token = req.cookies.shieldpm_jwt;
 		}
 
 		next();

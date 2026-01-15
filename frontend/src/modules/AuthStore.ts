@@ -1,94 +1,75 @@
-import { getUnixTime, parseISO } from "date-fns";
-import type { TokenResponse } from "src/api/backend";
-
 export const TOKEN_KEY = "authentications";
 
+// Model for memory store
+interface AuthState {
+	expires: number;
+	userId?: number;
+}
+
 export class AuthStore {
-	// Get all tokens from stack
-	get tokens() {
-		const t = localStorage.getItem(TOKEN_KEY);
-		let tokens = [];
-		if (t !== null) {
-			try {
-				tokens = JSON.parse(t);
-			} catch (e) {
-				console.error("Failed to parse tokens from localStorage", e);
-			}
-		}
-		return tokens;
+	private state: AuthState | null = null;
+
+	// Check if we have an active session in memory
+	// Note: On page reload, this will be null until verified by API
+	get active() {
+		return this.state !== null;
 	}
 
-	// Get last token from stack
-	get token() {
-		const t = this.tokens;
-		if (t.length) {
-			return t[t.length - 1];
-		}
-		return null;
-	}
-
-	// Get expires from last token
 	get expires() {
-		const t = this.token;
-		if (t && typeof t.expires !== "undefined") {
-			const expires = Number(t.expires);
-			if (expires && !Number.isNaN(expires)) {
-				return expires;
-			}
-		}
-		return null;
+		return this.state?.expires || null;
 	}
 
-	// Filter out invalid tokens and return true if we find one that is valid
-	// hasActiveToken() {
-	// 	const t = this.tokens;
-	// 	return t.length > 0;
-	// }
-	// Start from the END of the stack and work backwards
+	get userId() {
+		return this.state?.userId || 0;
+	}
+
+	// Helper to check validity based on expiration
 	hasActiveToken() {
-		const t = this.tokens;
-		if (!t.length) {
-			return false;
+		if (!this.state) return false;
+
+		const now = Date.now();
+		const oneMinuteBuffer = 60 * 1000;
+		// TokenResponse.expires is number
+		const expires = this.expires;
+
+		if (expires && expires - oneMinuteBuffer > now) {
+			return true;
 		}
 
-		const now = Math.round(Date.now() / 1000);
-		const oneMinuteBuffer = 60;
-		for (let i = t.length - 1; i >= 0; i--) {
-			const dte = getUnixTime(parseISO(t[i].expires));
-			const valid = dte - oneMinuteBuffer > now;
-			if (valid) {
-				return true;
-			}
-			this.drop();
-		}
+		this.clear();
 		return false;
 	}
 
-	// Set a single token on the stack
-	set({ token, expires }: TokenResponse) {
-		localStorage.setItem(TOKEN_KEY, JSON.stringify([{ token, expires }]));
+	// Set session details from login response
+	set(data: { expires: number; user?: { id: number } }) {
+		this.state = {
+			expires: data.expires,
+			userId: data.user?.id
+		};
 	}
 
-	// Add a token to the END of the stack
-	add({ token, expires }: TokenResponse) {
-		const t = this.tokens;
-		t.push({ token, expires });
-		localStorage.setItem(TOKEN_KEY, JSON.stringify(t));
+	// Add is alias for Set in cookie mode
+	add(data: { expires: number; user?: { id: number } }) {
+		this.set(data);
 	}
 
-	// Drop a token from the END of the stack
-	drop() {
-		const t = this.tokens;
-		t.splice(-1, 1);
-		localStorage.setItem(TOKEN_KEY, JSON.stringify(t));
-	}
-
+	// Clear memory state
 	clear() {
-		localStorage.removeItem(TOKEN_KEY);
+		this.state = null;
+		// We can't clear httpOnly cookie here, API must do it
+	}
+
+	drop() {
+		this.clear();
 	}
 
 	count() {
-		return this.tokens.length;
+		return this.state ? 1 : 0;
+	}
+
+	// Legacy getter for backwards compat (returns null now)
+	get token() {
+		return null;
 	}
 }
 

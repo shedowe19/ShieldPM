@@ -1,5 +1,4 @@
 import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-react";
-import { jwtDecode } from "jwt-decode";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FormattedNumber } from "react-intl";
@@ -35,16 +34,9 @@ const Dashboard = () => {
 	const { data: userData } = useUser(userId, { enabled: userId !== 0 });
 
 	useEffect(() => {
-		const token = AuthStore.token?.token;
-		if (token) {
-			try {
-				const payload = jwtDecode(token) as any;
-				if (payload?.attrs?.id) {
-					setUserId(payload.attrs.id);
-				}
-			} catch (e) {
-				console.error("Failed to decode token", e);
-			}
+		const storedId = AuthStore.userId;
+		if (storedId) {
+			setUserId(storedId);
 		}
 	}, []);
 
