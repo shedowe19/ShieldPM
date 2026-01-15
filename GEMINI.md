@@ -103,6 +103,18 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
 | `20260113000000_add_ai_advanced_options.js` | Advanced AI options |
 | `20260114000000_update_ai_options.js` | AI options structure update |
 | `20260115000000_add_system_prompt.js` | Customizable AI system prompt |
+| `20260116000000_hash_access_list_passwords.js` | Hash Access List Passwords (Argon2) |
+
+---
+
+## Security Hardening (2026 Re-Audit)
+Following a deep-dive audit, the following security measures are enforced:
+*   **OIDC Strictness**: `email_verified` claim is **mandatory** for all OIDC logins.
+*   **Docker Sanitization**: Docker labels blocking dangerous Nginx directives (`lua_`, `exec`, etc.).
+*   **Auth Timing**: Constant-time response (via dummy hashing) for invalid login attempts.
+*   **Reliability**:
+    *   **Async Analytics**: Log parsing offloaded to prevent Event Loop blocking.
+    *   **Debounced Reloads**: Nginx reloads are batched (2s delay) during Docker stack deployments.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
 The application includes an auto-migration feature that detects if you are switching from the default SQLite database to MySQL or PostgreSQL.
