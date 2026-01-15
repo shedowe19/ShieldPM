@@ -58,7 +58,7 @@ const internalCloudflared = {
 					.$query()
 					.patch({ status: 0 })
 					.then()
-					.catch(() => { }); // Set to stopped
+					.catch(() => {}); // Set to stopped
 			});
 
 			// Assume running if no immediate exit?
