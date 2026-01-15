@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, type TokenResponse } from "src/api/backend";
 import AuthStore from "src/modules/AuthStore";
@@ -27,13 +27,12 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const [authenticated, setAuthenticated] = useState(false);
 	const [loading, setLoading] = useState(true);
 
-	const handleTokenUpdate = (response: TokenResponse) => {
+	const handleTokenUpdate = useCallback((response: TokenResponse) => {
 		AuthStore.set(response);
 		setAuthenticated(true);
-	};
+	}, []);
 
 	// On mount, try to refresh token (via cookie) to restore session
-	// eslint-disable-next-line react-hooks/exhaustive-deps
 	useEffect(() => {
 		refreshToken()
 			.then(handleTokenUpdate)
@@ -44,7 +43,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			.finally(() => {
 				setLoading(false);
 			});
-	}, []);
+	}, [handleTokenUpdate]);
 
 	const login = async (identity: string, secret: string) => {
 		const response = await getToken(identity, secret);
