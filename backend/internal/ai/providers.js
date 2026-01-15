@@ -27,14 +27,14 @@ export const callGemini = async (config, systemPrompt, message, history, tools) 
 	const geminiTools =
 		tools.length > 0
 			? tools.map((t) => ({
-				functionDeclarations: [
-					{
-						name: t.function.name,
-						description: t.function.description,
-						parameters: t.function.parameters,
-					},
-				],
-			}))
+					functionDeclarations: [
+						{
+							name: t.function.name,
+							description: t.function.description,
+							parameters: t.function.parameters,
+						},
+					],
+				}))
 			: undefined;
 
 	// Start chat session with history
@@ -168,13 +168,13 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 	const ollamaTools =
 		tools.length > 0
 			? tools.map((t) => ({
-				type: "function",
-				function: {
-					name: t.function.name,
-					description: t.function.description,
-					parameters: t.function.parameters,
-				},
-			}))
+					type: "function",
+					function: {
+						name: t.function.name,
+						description: t.function.description,
+						parameters: t.function.parameters,
+					},
+				}))
 			: undefined;
 
 	if (isOllamaNative) {

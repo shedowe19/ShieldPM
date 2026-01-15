@@ -1,5 +1,5 @@
-import _ from "lodash";
 import bcrypt from "bcryptjs"; // Added for timing attack mitigation
+import _ from "lodash";
 import errs from "../lib/error.js";
 import { parseDatePeriod } from "../lib/helpers.js";
 import authModel from "../models/auth.js";
@@ -93,7 +93,7 @@ export default {
 	 * @returns {Promise}
 	 */
 	getTokenFromOAuthClaim: async (data) => {
-		const Token = new (/** @type {any} */ (TokenModel))();
+		const Token = new /** @type {any} */ (TokenModel)();
 
 		data.scope = "user";
 		data.expiry = "1d";

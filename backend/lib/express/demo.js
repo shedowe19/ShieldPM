@@ -1,5 +1,5 @@
-import { isDemoMode } from "../config.js";
 import ipaddr from "ipaddr.js";
+import { isDemoMode } from "../config.js";
 
 /**
  * Helper: Get field value supporting both camelCase and snake_case
@@ -49,7 +49,7 @@ const validateHost = (host, forbiddenHosts, res, context = "") => {
 				}
 			}
 		}
-	} catch (err) {
+	} catch (_err) {
 		// Not a valid IP, ignored
 	}
 	return null;

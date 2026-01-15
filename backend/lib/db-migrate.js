@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import Knex from "knex";
-import { isSqlite } from "./config.js";
 import db from "../db.js";
-import { migrateUp } from "../migrate.js"; // Adjust path as needed, index.js imports it from ./migrate.js
 import { global as logger } from "../logger.js";
+import { migrateUp } from "../migrate.js"; // Adjust path as needed, index.js imports it from ./migrate.js
+import { isSqlite } from "./config.js";
 
 const TABLES = [
 	"user",

@@ -1,11 +1,10 @@
-import internalSetting from "./setting.js";
-import { encrypt, decrypt } from "../lib/encryption.js";
-
-// Modular AI components (SRP refactoring)
-import { getToolDefinitions } from "./ai/tools.js";
+import { decrypt, encrypt } from "../lib/encryption.js";
+import { executeTools } from "./ai/executor.js";
 import { getSystemPrompt } from "./ai/prompt.js";
 import * as aiProviders from "./ai/providers.js";
-import { executeTools } from "./ai/executor.js";
+// Modular AI components (SRP refactoring)
+import { getToolDefinitions } from "./ai/tools.js";
+import internalSetting from "./setting.js";
 
 const AI_CONFIG_ID = "ai-config";
 
@@ -67,7 +66,7 @@ const ai = {
 			if (meta.api_key) {
 				try {
 					meta.api_key = decrypt(meta.api_key);
-				} catch (err) {
+				} catch (_err) {
 					// Ignore decryption error
 				}
 			}
@@ -77,7 +76,7 @@ const ai = {
 			if (!meta.num_thread) meta.num_thread = 4;
 			if (!meta.keep_alive) meta.keep_alive = "5m";
 			return meta;
-		} catch (err) {
+		} catch (_err) {
 			return { enabled: false };
 		}
 	},
@@ -99,13 +98,16 @@ const ai = {
 		try {
 			await internalSetting.get(access, { id: AI_CONFIG_ID });
 			// Update
-			await internalSetting.update(access, /** @type {any} */({
-				id: AI_CONFIG_ID,
-				description: "AI Agent Configuration",
-				value: data.enabled ? "true" : "false",
-				meta: dataToSave,
-			}));
-		} catch (err) {
+			await internalSetting.update(
+				access,
+				/** @type {any} */ ({
+					id: AI_CONFIG_ID,
+					description: "AI Agent Configuration",
+					value: data.enabled ? "true" : "false",
+					meta: dataToSave,
+				}),
+			);
+		} catch (_err) {
 			const SettingModel = (await import("../models/setting.js")).default;
 			await SettingModel.query().insert({
 				id: AI_CONFIG_ID,

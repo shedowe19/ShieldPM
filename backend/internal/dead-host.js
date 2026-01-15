@@ -132,10 +132,13 @@ const internalDeadHost = {
 		}
 
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */({
-				domain_names: thisData.domain_names || row.domain_names,
-				meta: _.assign({}, row.meta, thisData.meta),
-			}));
+			const cert = await internalCertificate.createQuickCertificate(
+				access,
+				/** @type {any} */ ({
+					domain_names: thisData.domain_names || row.domain_names,
+					meta: _.assign({}, row.meta, thisData.meta),
+				}),
+			);
 
 			// update host with cert id
 			thisData.certificate_id = cert.id;
@@ -271,9 +274,14 @@ const internalDeadHost = {
 
 		row.enabled = 1;
 
-		await deadHostModel.query().where("id", row.id).patch(/** @type {any} */({
-			enabled: 1,
-		}));
+		await deadHostModel
+			.query()
+			.where("id", row.id)
+			.patch(
+				/** @type {any} */ ({
+					enabled: 1,
+				}),
+			);
 
 		// Configure nginx
 		await internalNginx.configure(deadHostModel, "dead_host", row);
@@ -308,9 +316,14 @@ const internalDeadHost = {
 
 		row.enabled = 0;
 
-		await deadHostModel.query().where("id", row.id).patch(/** @type {any} */({
-			enabled: 0,
-		}));
+		await deadHostModel
+			.query()
+			.where("id", row.id)
+			.patch(
+				/** @type {any} */ ({
+					enabled: 0,
+				}),
+			);
 
 		// Delete Nginx Config
 		await internalNginx.deleteConfig("dead_host", row);
@@ -382,7 +395,7 @@ const internalDeadHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */(row).count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 };
 

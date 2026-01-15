@@ -84,13 +84,15 @@ const internalAuditLog = {
 
 		const accessId = typeof access.token.getUserId === "function" ? access.token.getUserId(1) : 0;
 
-		return auditLogModel.query().insert(/** @type {any} */({
-			user_id: accessId,
-			action: data.action,
-			object_type: data.object_type,
-			object_id: data.object_id,
-			meta: data.meta ? JSON.stringify(data.meta) : "",
-		}));
+		return auditLogModel.query().insert(
+			/** @type {any} */ ({
+				user_id: accessId,
+				action: data.action,
+				object_type: data.object_type,
+				object_id: data.object_id,
+				meta: data.meta ? JSON.stringify(data.meta) : "",
+			}),
+		);
 	},
 };
 

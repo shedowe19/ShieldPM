@@ -58,20 +58,22 @@ const internalUser = {
 			}
 
 			// Create permissions row as well
-			const isAdmin = data.roles.indexOf("admin") !== -1;
+			const _isAdmin = data.roles.indexOf("admin") !== -1;
 
-			await userPermissionModel.query(trx).insert(/** @type {any} */({
-				user_id: user.id,
-				visibility: "user",
-				access_lists: "manage",
-				certificates: "manage",
-				proxy_hosts: "manage",
-				redirection_hosts: "manage",
-				streams: "manage",
-				dead_hosts: "manage",
-				cloudflared_tunnels: "manage",
-				analytics: "view",
-			}));
+			await userPermissionModel.query(trx).insert(
+				/** @type {any} */ ({
+					user_id: user.id,
+					visibility: "user",
+					access_lists: "manage",
+					certificates: "manage",
+					proxy_hosts: "manage",
+					redirection_hosts: "manage",
+					streams: "manage",
+					dead_hosts: "manage",
+					cloudflared_tunnels: "manage",
+					analytics: "view",
+				}),
+			);
 		});
 
 		// Fetch fresh object with Permissions populated
@@ -81,7 +83,7 @@ const internalUser = {
 		await internalAuditLog.add(access, {
 			action: "created",
 			object_type: "user",
-			object_id: /** @type {any} */(user).id,
+			object_id: /** @type {any} */ (user).id,
 			meta: user,
 		});
 
@@ -404,7 +406,7 @@ const internalUser = {
 			permissions = await userPermissionModel
 				.query()
 				.where("user_id", user.id)
-				.patchAndFetchById(/** @type {any} */(existing_auth).id, _.assign({ user_id: user.id }, data));
+				.patchAndFetchById(/** @type {any} */ (existing_auth).id, _.assign({ user_id: user.id }, data));
 		} else {
 			// insert
 			permissions = await userPermissionModel.query().insertAndFetch(_.assign({ user_id: user.id }, data));

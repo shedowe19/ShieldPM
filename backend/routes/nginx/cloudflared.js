@@ -1,9 +1,9 @@
 import express from "express";
 import { transaction } from "objection";
 import internalCloudflared from "../../internal/cloudflared.js";
-import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
+import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import { getValidationSchema } from "../../schema/index.js";
 
 const router = express.Router({
@@ -17,7 +17,7 @@ const router = express.Router({
  */
 router.use(jwtdecode());
 
-router.get("/", async (req, res, next) => {
+router.get("/", async (_req, res, next) => {
 	try {
 		const tunnels = await CloudflaredTunnel.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))

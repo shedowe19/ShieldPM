@@ -73,7 +73,7 @@ const internalSetting = {
 	getCount: async (access) => {
 		await access.can("settings:list");
 		const row = await settingModel.query().count("id as count").first();
-		return Number.parseInt(/** @type {any} */(row).count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 
 	/**

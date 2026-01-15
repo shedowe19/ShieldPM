@@ -72,11 +72,11 @@ const internalStream = {
 		const data_no_domains = structuredClone(data);
 		delete data_no_domains.domain_names;
 
-		let row = await streamModel.query().insertAndFetch(/** @type {any} */(data_no_domains));
+		let row = await streamModel.query().insertAndFetch(/** @type {any} */ (data_no_domains));
 		row = utils.omitRow(omissions())(row);
 
 		if (create_certificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */(data));
+			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */ (data));
 			// update host with cert id
 			await internalStream.update(access, {
 				id: row.id,
@@ -184,7 +184,7 @@ const internalStream = {
 			data,
 		);
 
-		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */(thisData));
+		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */ (thisData));
 
 		saved_row = utils.omitRow(omissions())(saved_row);
 
@@ -302,9 +302,14 @@ const internalStream = {
 
 		row.enabled = 1;
 
-		await streamModel.query().where("id", row.id).patch(/** @type {any} */({
-			enabled: 1,
-		}));
+		await streamModel
+			.query()
+			.where("id", row.id)
+			.patch(
+				/** @type {any} */ ({
+					enabled: 1,
+				}),
+			);
 
 		// Configure nginx
 		await internalNginx.configure(streamModel, "stream", row);
@@ -340,9 +345,14 @@ const internalStream = {
 
 		row.enabled = 0;
 
-		await streamModel.query().where("id", row.id).patch(/** @type {any} */({
-			enabled: 0,
-		}));
+		await streamModel
+			.query()
+			.where("id", row.id)
+			.patch(
+				/** @type {any} */ ({
+					enabled: 0,
+				}),
+			);
 
 		// Delete Nginx Config
 		await internalNginx.deleteConfig("stream", row);
@@ -417,7 +427,7 @@ const internalStream = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */(row).count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 };
 

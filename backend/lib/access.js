@@ -261,7 +261,7 @@ export default function (tokenString) {
 
 				permissionSchema.properties[permission] = permissionSchemaCache[permission];
 
-				const ajv = new (/** @type {any} */ (Ajv))({
+				const ajv = new /** @type {any} */ (Ajv)({
 					verbose: true,
 					allErrors: true,
 					breakOnError: true,

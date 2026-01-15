@@ -1,24 +1,18 @@
 import fs from "node:fs";
-import https from "node:https";
 import path from "path";
 import archiver from "archiver";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import _ from "lodash";
-import { ProxyAgent } from "proxy-agent";
-import punycode from "punycode.js";
 import tempWrite from "temp-write";
-import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
-import { installPlugin } from "../lib/certbot.js";
 import error from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
 import certificateModel from "../models/certificate.js";
-import pjson from "../package.json" with { type: "json" };
 import internalAuditLog from "./audit-log.js";
+import * as certbot from "./certbot.js";
 import internalNginx from "./nginx.js";
 import internalPki from "./pki.js";
-import * as certbot from "./certbot.js";
 
 dayjs.extend(customParseFormat);
 
@@ -86,7 +80,9 @@ const internalCertificate = {
 								.where("id", certificate.id)
 								.andWhere("provider", "letsencrypt")
 								.patch({
-									expires_on: /** @type {any} */ (dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")),
+									expires_on: /** @type {any} */ (
+										dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
+									),
 								});
 						} catch (err) {
 							// Don't want to stop the train here, just log the error
@@ -124,7 +120,7 @@ const internalCertificate = {
 		}
 
 		// this command really should clean up and delete the cert if it can't fully succeed
-		const certificate = await certificateModel.query().insertAndFetch(/** @type {any} */(thisData));
+		const certificate = await certificateModel.query().insertAndFetch(/** @type {any} */ (thisData));
 
 		try {
 			if (certificate.provider === "letsencrypt") {
@@ -144,9 +140,11 @@ const internalCertificate = {
 					const savedRow = await certificateModel
 						.query()
 						.patchAndFetchById(certificate.id, {
-							expires_on: /** @type {any} */ (dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")),
+							expires_on: /** @type {any} */ (
+								dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
+							),
 						})
-						.then(/** @type {any} */(utils.omitRow(omissions())));
+						.then(/** @type {any} */ (utils.omitRow(omissions())));
 
 					// Add cert data for audit log
 					savedRow.meta = _.assign({}, savedRow.meta, {
@@ -177,13 +175,15 @@ const internalCertificate = {
 					const savedRow = await certificateModel
 						.query()
 						.patchAndFetchById(certificate.id, {
-							expires_on: /** @type {any} */ (dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")),
+							expires_on: /** @type {any} */ (
+								dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
+							),
 							meta: _.assign({}, certificate.meta, {
 								certificate: result.fullchain,
 								certificate_key: result.privkey,
 							}),
 						})
-						.then(/** @type {any} */(utils.omitRow(omissions())));
+						.then(/** @type {any} */ (utils.omitRow(omissions())));
 
 					await internalCertificate.addCreatedAuditLog(access, certificate.id, savedRow);
 					return savedRow;
@@ -204,7 +204,8 @@ const internalCertificate = {
 		await internalCertificate.addCreatedAuditLog(access, certificate.id, utils.omitRow(omissions())(data));
 
 		// @ts-expect-error
-		rows = rows.map(utils.omitRow(omissions())); (certificate);
+		rows = rows.map(utils.omitRow(omissions()));
+		certificate;
 	},
 
 	addCreatedAuditLog: async (access, certificate_id, meta) => {
@@ -244,8 +245,8 @@ const internalCertificate = {
 
 		const savedRow = await certificateModel
 			.query()
-			.patchAndFetchById(row.id, /** @type {any} */(thisData))
-			.then(/** @type {any} */(utils.omitRow(omissions())));
+			.patchAndFetchById(row.id, /** @type {any} */ (thisData))
+			.then(/** @type {any} */ (utils.omitRow(omissions())));
 
 		savedRow.meta = internalCertificate.cleanMeta(savedRow.meta);
 		if (thisData.meta) {
@@ -294,7 +295,7 @@ const internalCertificate = {
 			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 		}
 
-		const row = await query.then(/** @type {any} */(utils.omitRow(omissions())));
+		const row = await query.then(/** @type {any} */ (utils.omitRow(omissions())));
 		if (!row || !row.id) {
 			throw new error.ItemNotFoundError(thisData.id);
 		}
@@ -448,7 +449,7 @@ const internalCertificate = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		const r = await query.then(/** @type {any} */(utils.omitRows(omissions())));
+		const r = await query.then(/** @type {any} */ (utils.omitRows(omissions())));
 		for (let i = 0; i < r.length; i++) {
 			r[i] = internalCertificate.cleanExpansions(r[i]);
 		}
@@ -470,7 +471,7 @@ const internalCertificate = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */(row).count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 
 	/**
@@ -606,12 +607,17 @@ const internalCertificate = {
 			}
 		});
 
-		const certificate = await internalCertificate.update(access, /** @type {any} */({
-			id: data.id,
-			expires_on: /** @type {any} */ (dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss")),
-			domain_names: [validations.certificate.cn],
-			meta: _.clone(row.meta), // Prevent the update method from changing this value that we'll use later
-		}));
+		const certificate = await internalCertificate.update(
+			access,
+			/** @type {any} */ ({
+				id: data.id,
+				expires_on: /** @type {any} */ (
+					dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss")
+				),
+				domain_names: [validations.certificate.cn],
+				meta: _.clone(row.meta), // Prevent the update method from changing this value that we'll use later
+			}),
+		);
 
 		certificate.meta = row.meta;
 		await internalCertificate.writeCustomCert(certificate);

@@ -26,7 +26,7 @@ dayjs.extend(quarterOfYear);
 const parseDatePeriod = (expression) => {
 	const matches = expression.match(/^([0-9]+)(y|Q|M|w|d|h|m|s|ms)$/m);
 	if (matches) {
-		return dayjs().add(Number.parseInt(matches[1], 10), /** @type {import("dayjs").ManipulateType} */(matches[2]));
+		return dayjs().add(Number.parseInt(matches[1], 10), /** @type {import("dayjs").ManipulateType} */ (matches[2]));
 	}
 
 	return null;

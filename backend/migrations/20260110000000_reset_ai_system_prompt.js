@@ -20,7 +20,7 @@ const up = async (knex) => {
  * @param   {Object} knex
  * @returns {Promise}
  */
-const down = (knex) => {
+const down = (_knex) => {
 	// No rollback needed - users can re-enter custom prompts if desired
 	return Promise.resolve();
 };

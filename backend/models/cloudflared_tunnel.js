@@ -2,17 +2,16 @@
 // http://vincit.github.io/objection.js/
 
 import { Model } from "objection";
-import { encrypt, decrypt } from "../lib/encryption.js";
-import { global as logger } from "../logger.js";
-import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
 import db from "../db.js";
+import { decrypt, encrypt } from "../lib/encryption.js";
+import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
+import { global as logger } from "../logger.js";
 import now from "./now_helper.js";
 import User from "./user.js";
 
 Model.knex(db());
 
 const boolFields = ["is_deleted"];
-
 
 class CloudflaredTunnel extends Model {
 	/** @type {number} */

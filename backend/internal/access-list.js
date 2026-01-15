@@ -35,16 +35,18 @@ const internalAccessList = {
 	 */
 	create: async (access, data) => {
 		await access.can("access_lists:create", data);
-		const row = await accessListModel.query().insertAndFetch(/** @type {any} */({
-			name: data.name,
-			satisfy_any: data.satisfy_any,
-			pass_auth: data.pass_auth,
-			mtls_enabled: data.mtls_enabled || false,
-			mtls_use_internal: data.mtls_use_internal || false,
-			mtls_certificate: data.mtls_certificate || "",
-			meta: data.meta,
-			owner_user_id: access.token.getUserId(1),
-		}));
+		const row = await accessListModel.query().insertAndFetch(
+			/** @type {any} */ ({
+				name: data.name,
+				satisfy_any: data.satisfy_any,
+				pass_auth: data.pass_auth,
+				mtls_enabled: data.mtls_enabled || false,
+				mtls_use_internal: data.mtls_use_internal || false,
+				mtls_certificate: data.mtls_certificate || "",
+				meta: data.meta,
+				owner_user_id: access.token.getUserId(1),
+			}),
+		);
 
 		const omittedRow = utils.omitRow(omissions())(row);
 
@@ -59,11 +61,13 @@ const internalAccessList = {
 				password = await bcrypt.hash(password, 13);
 			}
 
-			return accessListAuthModel.query().insert(/** @type {any} */({
-				access_list_id: omittedRow.id,
-				username: item.username,
-				password: password,
-			}));
+			return accessListAuthModel.query().insert(
+				/** @type {any} */ ({
+					access_list_id: omittedRow.id,
+					username: item.username,
+					password: password,
+				}),
+			);
 		});
 
 		promises.push(...itemsPromises);
@@ -71,13 +75,15 @@ const internalAccessList = {
 		// Clients
 		data.clients?.map((/** @type {any} */ client) => {
 			promises.push(
-				accessListClientModel.query().insert(/** @type {any} */({
-					access_list_id: data.id,
-					address: client.address,
-					directive: client.directive,
-					created_on: now(),
-					modified_on: now(),
-				})),
+				accessListClientModel.query().insert(
+					/** @type {any} */ ({
+						access_list_id: data.id,
+						address: client.address,
+						directive: client.directive,
+						created_on: now(),
+						modified_on: now(),
+					}),
+				),
 			);
 			return true;
 		});
@@ -141,14 +147,19 @@ const internalAccessList = {
 		// patch name if specified
 		if (typeof data.name !== "undefined" && data.name) {
 			logger.info(`[Update] Access List #${data.id} meta: ${JSON.stringify(data.meta)}`);
-			await accessListModel.query().where({ id: data.id }).patch(/** @type {any} */({
-				name: data.name,
-				satisfy_any: data.satisfy_any,
-				pass_auth: data.pass_auth,
-				mtls_enabled: data.mtls_enabled,
-				mtls_use_internal: data.mtls_use_internal,
-				meta: data.meta,
-			}));
+			await accessListModel
+				.query()
+				.where({ id: data.id })
+				.patch(
+					/** @type {any} */ ({
+						name: data.name,
+						satisfy_any: data.satisfy_any,
+						pass_auth: data.pass_auth,
+						mtls_enabled: data.mtls_enabled,
+						mtls_use_internal: data.mtls_use_internal,
+						meta: data.meta,
+					}),
+				);
 		}
 
 		// Check for items and add/update/remove them
@@ -165,11 +176,13 @@ const internalAccessList = {
 					}
 
 					promises.push(
-						accessListAuthModel.query().insert(/** @type {any} */({
-							access_list_id: data.id,
-							username: item.username,
-							password: finalPass,
-						})),
+						accessListAuthModel.query().insert(
+							/** @type {any} */ ({
+								access_list_id: data.id,
+								username: item.username,
+								password: finalPass,
+							}),
+						),
 					);
 				} else {
 					itemsToKeep.push(item.username);
@@ -192,11 +205,9 @@ const internalAccessList = {
 		// Check for clients and add/update/remove them
 		if (typeof data.clients !== "undefined" && data.clients) {
 			const clientPromises = [];
-			data.clients.map((/** @type {any} */client) => {
+			data.clients.map((/** @type {any} */ client) => {
 				if (client.address) {
-					clientPromises.push(
-						accessListClientModel.query().insert(/** @type {any} */(client)),
-					);
+					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */ (client)));
 				}
 				return true;
 			});

@@ -1,7 +1,7 @@
 import express from "express";
-import apiValidator from "../lib/validator/api.js";
 import internalAi from "../internal/ai.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
+import apiValidator from "../lib/validator/api.js";
 import { getValidationSchema } from "../schema/index.js";
 
 const router = express.Router();
@@ -11,7 +11,7 @@ const router = express.Router();
  * @param {express.Response} res
  * @param {express.NextFunction} next
  */
-router.get("/config", jwtdecode(), async (req, res, next) => {
+router.get("/config", jwtdecode(), async (_req, res, next) => {
 	try {
 		const result = await internalAi.getConfig(res.locals.access);
 		res.status(200).json(result);

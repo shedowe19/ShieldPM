@@ -5,7 +5,7 @@ import errs from "../error.js";
 
 /** @type {any} */ (RegExp.prototype).toJSON = RegExp.prototype.toString;
 
-const ajv = new /** @type {any} */(Ajv)({
+const ajv = new /** @type {any} */ (Ajv)({
 	verbose: true,
 	allErrors: true,
 	allowUnionTypes: true,

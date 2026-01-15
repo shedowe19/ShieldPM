@@ -7,13 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": [
-			"**/*.ts",
-			"**/*.tsx",
-			"**/*.js",
-			"**/*.jsx",
-			"!**/dist/**/*"
-		]
+		"includes": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "!**/dist/**/*"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -31,24 +25,13 @@
 						"groups": [
 							":BUN:",
 							":NODE:",
-							[
-								"npm:*",
-								"npm:*/**"
-							],
+							["npm:*", "npm:*/**"],
 							":PACKAGE_WITH_PROTOCOL:",
 							":URL:",
 							":PACKAGE:",
-							[
-								"/src/*",
-								"/src/**"
-							],
-							[
-								"/**"
-							],
-							[
-								"#*",
-								"#*/**"
-							],
+							["/src/*", "/src/**"],
+							["/**"],
+							["#*", "#*/**"],
 							":PATH:"
 						]
 					}

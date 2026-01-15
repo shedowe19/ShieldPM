@@ -1,5 +1,5 @@
-import express from "express";
 import dayjs from "dayjs";
+import express from "express";
 import AnalyticCount from "../models/analytic_count.js";
 
 const router = express.Router();
@@ -120,6 +120,7 @@ router.get("/top-hosts", async (req, res) => {
  * Returns real-time system status (Network Bandwidth)
  */
 import si from "systeminformation";
+
 router.get("/status", async (_req, res) => {
 	try {
 		const net = await si.networkStats();

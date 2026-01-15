@@ -21,6 +21,6 @@ export async function up(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-export async function down(knex) {
+export async function down(_knex) {
 	// Cannot un-hash passwords
 }

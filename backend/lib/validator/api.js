@@ -1,7 +1,7 @@
 import Ajv from "ajv/dist/2020.js";
 import errs from "../error.js";
 
-const ajv = new /** @type {any} */(Ajv)({
+const ajv = new /** @type {any} */ (Ajv)({
 	verbose: true,
 	allErrors: true,
 	allowUnionTypes: true,

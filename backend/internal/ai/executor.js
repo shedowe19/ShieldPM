@@ -3,30 +3,29 @@
  * Handles the execution of AI tool calls by interfacing with internal backend modules.
  */
 
-import internalProxyHost from "../proxy-host.js";
-import internalRedirectionHost from "../redirection-host.js";
-import internalDeadHost from "../dead-host.js";
-import internalStream from "../stream.js";
+import { exec } from "node:child_process";
+import util from "node:util";
+import dayjs from "dayjs";
+import ipaddr from "ipaddr.js";
+import si from "systeminformation";
+import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
+import { isDemoMode } from "../../lib/config.js";
+import AnalyticCount from "../../models/analytic_count.js";
+import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
-import internalSetting from "../setting.js";
-import internalReport from "../report.js";
-import internalUser from "../user.js";
-import internalToken from "../token.js";
-import internalPki from "../pki.js";
-import internalNginx from "../nginx.js";
 import internalCertificate from "../certificate.js";
+import internalDeadHost from "../dead-host.js";
 import internalIpRanges from "../ip_ranges.js";
-import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
-import AnalyticCount from "../../models/analytic_count.js";
-import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
-import si from "systeminformation";
-import { exec } from "child_process";
-import util from "util";
-import dayjs from "dayjs";
-import { isDemoMode } from "../../lib/config.js";
-import ipaddr from "ipaddr.js";
-import * as aiTools from "./tools.js"; // In case we need shared definitions, but currently logic is separate
+import internalNginx from "../nginx.js";
+import internalPki from "../pki.js";
+import internalProxyHost from "../proxy-host.js";
+import internalRedirectionHost from "../redirection-host.js";
+import internalReport from "../report.js";
+import internalSetting from "../setting.js";
+import internalStream from "../stream.js";
+import internalToken from "../token.js";
+import internalUser from "../user.js";
 
 const execAsync = util.promisify(exec);
 
@@ -184,7 +183,7 @@ export const executeTools = async (access, toolCalls) => {
 						// Ensure these are always valid (override any nulls from AI)
 						advanced_config: "",
 					};
-					const newHost = await internalProxyHost.create(access, /** @type {any} */(data));
+					const newHost = await internalProxyHost.create(access, /** @type {any} */ (data));
 					result = `Created Proxy Host ID: ${newHost.id}`;
 					break;
 				}
@@ -250,7 +249,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalRedirectionHost.create(access, /** @type {any} */(data));
+					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
 					break;
 				}
@@ -306,7 +305,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalDeadHost.create(access, /** @type {any} */(data));
+					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
 					result = `Created 404 Host ID: ${newHost.id}`;
 					break;
 				}
@@ -583,9 +582,12 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "test_http_challenge": {
-					const testResult = await internalCertificate.testHttpsChallenge(access, /** @type {any} */({
-						domains: call.args.domains,
-					}));
+					const testResult = await internalCertificate.testHttpsChallenge(
+						access,
+						/** @type {any} */ ({
+							domains: call.args.domains,
+						}),
+					);
 					result = JSON.stringify(testResult);
 					break;
 				}
@@ -708,7 +710,12 @@ export const executeTools = async (access, toolCalls) => {
 				case "get_users": {
 					const users = await internalUser.getAll(access);
 					result = JSON.stringify(
-						users.map((/** @type {any} */ u) => ({ id: u.id, name: u.name, email: u.email, roles: u.roles })),
+						users.map((/** @type {any} */ u) => ({
+							id: u.id,
+							name: u.name,
+							email: u.email,
+							roles: u.roles,
+						})),
 					);
 					break;
 				}

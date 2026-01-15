@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import internalAi from "../../internal/ai.js";
-import internalSetting from "../../internal/setting.js";
 import internalProxyHost from "../../internal/proxy-host.js";
-
+import internalSetting from "../../internal/setting.js";
 import SettingModel from "../../models/setting.js";
 
 // Mock dependencies
