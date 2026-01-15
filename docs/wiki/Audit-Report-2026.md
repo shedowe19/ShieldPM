@@ -1,6 +1,6 @@
 # 🛡️ ShieldPM Full-System Audit Report
 **Date:** 2026-01-15  
-**Scope:** Complete recursive audit of all functional units
+**Scope:** Complete recursive audit of all functional units (Updated for v3.5.1)
 
 ---
 
@@ -45,6 +45,7 @@
 | [demo.js](../backend/lib/express/demo.js) | Blocks private IPs, loopback, linkLocal, broadcast |
 | [ai.js](../backend/internal/ai.js) | ipaddr.js validation for all ranges |
 | [docker.js](../backend/internal/docker.js) | Regex blocking dangerous Nginx directives |
+| [docker.js](../backend/internal/docker.js) | Standardized Service Account (ID: 1) for mockAccess |
 
 ### ✅ Encryption
 | Component | Algorithm |
@@ -91,8 +92,8 @@ backend/
 > [!NOTE]
 > 1. **ai.js (2413 lines)**: Consider splitting into `ai-config.js`, `ai-tools.js`, `ai-chat.js` (Addressed in v3.5.0)
 > 2. **certificate.js (1103 lines)**: Separate certbot logic from certificate management (Addressed in v3.5.0)
-> 3. **Type Safety**: Backend uses JSDoc but not TypeScript
-> 4. **Docker.js mockAccess**: Hardcoded user ID 1 - consider service account pattern
+> 3. **Type Safety**: Backend uses JSDoc with `checkJs: true` (Pilot: docker.js) - *In Progress*
+> 4. **Docker.js mockAccess**: Constant-time Service Account ID (Addressed in v3.5.1)
 
 ---
 

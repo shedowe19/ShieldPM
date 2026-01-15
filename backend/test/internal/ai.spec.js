@@ -13,6 +13,19 @@ vi.mock("../../lib/logger.js", () => ({
 	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
+vi.mock("../../lib/encryption.js", () => ({
+	encrypt: vi.fn((val) => `encrypted_${val}`),
+	decrypt: vi.fn((val) => val.replace("encrypted_", "")),
+}));
+
+vi.mock("../../db.js", () => ({
+	default: vi.fn(() => ({
+		// Mock knex instance
+		transaction: vi.fn(),
+		destroy: vi.fn(),
+	})),
+}));
+
 // Mock fetch
 global.fetch = vi.fn();
 

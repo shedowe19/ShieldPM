@@ -28,6 +28,59 @@ const boolFields = [
 ];
 
 class ProxyHost extends Model {
+	/** @type {number} */
+	id;
+	/** @type {string[]} */
+	domain_names;
+	/** @type {Object} */
+	meta;
+	/** @type {Object[]} */
+	locations;
+	/** @type {number} */
+	owner_user_id;
+	/** @type {number} */
+	access_list_id;
+	/** @type {number} */
+	certificate_id;
+	/** @type {number} */
+	enabled;
+	/** @type {number} */
+	ssl_forced;
+	/** @type {number} */
+	caching_enabled;
+	/** @type {number} */
+	block_exploits;
+	/** @type {number} */
+	allow_websocket_upgrade;
+	/** @type {number} */
+	http2_support;
+	/** @type {number} */
+	hsts_enabled;
+	/** @type {number} */
+	hsts_subdomains;
+	/** @type {number} */
+	disable_buffering;
+	/** @type {number} */
+	maintenance_active;
+	/** @type {number} */
+	maintenance_on_failure;
+	/** @type {string|null} */
+	maintenance_start;
+	/** @type {string|null} */
+	maintenance_end;
+	/** @type {string|null} */
+	bandwidth_limit;
+	/** @type {number|null} */
+	adv_limit_req_rate;
+	/** @type {string|null} */
+	adv_limit_req_unit;
+	/** @type {number|null} */
+	adv_limit_req_burst;
+	/** @type {string|null} */
+	forward_query;
+	/** @type {string} */
+	advanced_config;
+
 	$beforeInsert() {
 		this.created_on = now();
 		this.modified_on = now();

@@ -4,10 +4,28 @@ import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
 import internalNginx from "./nginx.js";
 
+import { SYSTEM_USER_ID } from "../lib/constants.js";
+
+/**
+ * @typedef {Object} AccessToken
+ * @property {() => number} getUserId
+ */
+
+/**
+ * @typedef {Object} Access
+ * @property {AccessToken} token
+ * @property {() => Promise<any>} can
+ */
+
+/**
+ * Mock Access Object for internal system operations
+ * @type {Access}
+ */
 const mockAccess = {
 	token: {
-		getUserId: () => 1,
+		getUserId: () => SYSTEM_USER_ID,
 	},
+	// @ts-ignore - internal mock
 	can: () => Promise.resolve({ permission_visibility: "all" }),
 };
 
@@ -84,7 +102,7 @@ class DockerService {
 				const dockerConfig = {
 					host: url.hostname,
 					port: url.port || 2375,
-					protocol: url.protocol.replace(":", ""),
+					protocol: /** @type {"http"|"https"|"ssh"} */ (url.protocol.replace(":", "")),
 				};
 
 				if (url.protocol === "tcp:") {
@@ -439,7 +457,7 @@ class DockerService {
 				logger.info(`Docker Auto-Discovery: Updated host #${existingHost.id}`);
 			} else {
 				// Create
-				payload.owner_user_id = 1;
+				payload.owner_user_id = SYSTEM_USER_ID;
 				payload.locations = [];
 
 				const newHost = await ProxyHost.query().insertAndFetch(payload);
