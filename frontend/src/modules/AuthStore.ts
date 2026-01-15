@@ -44,7 +44,7 @@ export class AuthStore {
 	set(data: { expires: number; user?: { id: number } }) {
 		this.state = {
 			expires: data.expires,
-			userId: data.user?.id
+			userId: data.user?.id,
 		};
 	}
 

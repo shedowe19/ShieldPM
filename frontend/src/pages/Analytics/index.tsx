@@ -589,14 +589,15 @@ const Analytics = () => {
 											<td className="p-4 align-middle">
 												<span
 													className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-													${req.status >= 200 && req.status < 300
+													${
+														req.status >= 200 && req.status < 300
 															? "text-green-500"
 															: req.status >= 300 && req.status < 400
 																? "text-blue-500"
 																: req.status >= 400 && req.status < 500
 																	? "text-yellow-500"
 																	: "text-red-500"
-														}`}
+													}`}
 												>
 													{req.status}
 												</span>

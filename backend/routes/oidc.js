@@ -125,7 +125,7 @@ router
 			// Return user info for AuthStore
 			res.status(200).send({
 				expires,
-				user: { id: payload.attrs.id }
+				user: { id: payload.attrs.id },
 			});
 		} catch (err) {
 			res.status(400).send({ error: { message: err.message } });
