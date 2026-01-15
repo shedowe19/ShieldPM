@@ -1,4 +1,5 @@
 import _ from "lodash";
+import bcrypt from "bcryptjs"; // Added for timing attack mitigation
 import errs from "../lib/error.js";
 import { parseDatePeriod } from "../lib/helpers.js";
 import authModel from "../models/auth.js";
@@ -7,6 +8,8 @@ import userModel from "../models/user.js";
 
 const ERROR_MESSAGE_INVALID_AUTH = "Invalid email or password";
 const ERROR_MESSAGE_INVALID_AUTH_I18N = "error.invalid-auth";
+
+const DUMMY_HASH = "$2a$13$mzC9.T8Qed0f/M9.2v.9JO/1.1.1.1.1.1.1.1.1.1.1.1.1.1"; // Cost 13 (High)
 
 export default {
 	/**
@@ -32,12 +35,16 @@ export default {
 			.first();
 
 		if (!user) {
+			// Fake work to prevent timing attacks
+			await bcrypt.compare(data.secret, DUMMY_HASH);
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
 		}
 
 		const auth = await authModel.query().where("user_id", "=", user.id).where("type", "=", "password").first();
 
 		if (!auth) {
+			// Fake work to prevent timing attacks
+			await bcrypt.compare(data.secret, DUMMY_HASH);
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
 		}
 
@@ -70,6 +77,14 @@ export default {
 		return {
 			token: signed.token,
 			expires: expiry.toISOString(),
+			user: {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				nickname: user.nickname,
+				avatar: user.avatar,
+				roles: user.roles,
+			},
 		};
 	},
 
@@ -161,6 +176,9 @@ export default {
 			return {
 				token: signed.token,
 				expires: expiry.toISOString(),
+				user: {
+					id: token_attrs.id,
+				},
 			};
 		}
 		throw new errs.AssertionFailedError("Existing token contained invalid user data");

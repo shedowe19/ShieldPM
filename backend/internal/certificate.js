@@ -467,8 +467,8 @@ const internalCertificate = {
 		const dir = `/data/tls/custom/npm-${certificate.id}`;
 
 		return new Promise((resolve, reject) => {
-			if (certificate.provider === "letsencrypt") {
-				reject(new Error("Refusing to write certbot certs here"));
+			if (certificate.provider === "letsencrypt" || certificate.provider === "internal") {
+				reject(new Error("Refusing to write certbot/internal certs here"));
 				return;
 			}
 
@@ -969,7 +969,8 @@ const internalCertificate = {
 		await access.can("certificates:list");
 
 		// Create a test challenge file
-		const testChallengeDir = "/data/acme-challenge/.well-known/acme-challenge";
+		const dataPath = process.env.DATA_PATH || "/data";
+		const testChallengeDir = `${dataPath}/acme-challenge/.well-known/acme-challenge`;
 		const testChallengeFile = `${testChallengeDir}/test-challenge`;
 		fs.mkdirSync(testChallengeDir, { recursive: true });
 		fs.writeFileSync(testChallengeFile, "Success", { encoding: "utf8" });

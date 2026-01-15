@@ -229,6 +229,31 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
 *   **Container**: Single container architecture (s6-overlay)
 *   **Services**: `nginx` (Web server), `node` (Backend API), `crond` (Certificate renewal)
 
+### Security & Reliability Guidelines (2026)
+
+#### 1. Non-Blocking I/O (The Golden Rule)
+- **Problem**: `JSON.parse` or large loops on the main thread block the Event Loop, causing health checks to fail.
+- **Solution**: Wrap heavy synchronous operations in `setImmediate()` or use Worker Threads.
+- **Code**:
+  ```javascript
+  setImmediate(() => {
+      try {
+           const data = JSON.parse(hugeString);
+           processData(data);
+      } catch (err) { logger.error(err); }
+  });
+  ```
+
+#### 2. Debouncing Resource-Intensive Tasks
+- **Problem**: Triggering `nginx -s reload` for every API call causes CPU spikes and dropped connections.
+- **Solution**: Use a debounce timer (e.g., 2000ms) to batch multiple requests into one execution.
+
+#### 3. Input Sanitization (No Raw Injection)
+- **Problem**: Injecting user input directly into config files (e.g., Nginx) leads to RCE.
+- **Solution**:
+  - Whitelist: Allow only specific characters (e.g., Alphanumeric).
+  - Blocklist: Explicitly reject dangerous patterns (`lua_`, `exec`, `system`).
+
 ---
 
 ## Version Bump Workflow

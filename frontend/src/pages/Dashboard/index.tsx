@@ -34,25 +34,9 @@ const Dashboard = () => {
 	const { data: userData } = useUser(userId, { enabled: userId !== 0 });
 
 	useEffect(() => {
-		const token = AuthStore.token?.token;
-		if (token) {
-			try {
-				const base64Url = token.split(".")[1];
-				const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-				const jsonPayload = decodeURIComponent(
-					window
-						.atob(base64)
-						.split("")
-						.map((c) => `%${`00${c.charCodeAt(0).toString(16)}`.slice(-2)}`)
-						.join(""),
-				);
-				const payload = JSON.parse(jsonPayload);
-				if (payload?.attrs?.id) {
-					setUserId(payload.attrs.id);
-				}
-			} catch (e) {
-				console.error("Failed to decode token", e);
-			}
+		const storedId = AuthStore.userId;
+		if (storedId) {
+			setUserId(storedId);
 		}
 	}, []);
 

@@ -105,8 +105,28 @@ router
 				throw new errs.AuthError("Invalid token data in cookie");
 			}
 
+			// Decode token to get user ID (without verification, signature is trusted from encryption)
+			// We can use the global jwt-decode middleware logic? Or just manual decode since we trust the source (our own encrypted cookie)
+			// But better to use library to be safe.
+			// Let's assume we import jsonwebtoken or just rely on the fact we just decrypted it.
+			// For user ID, we need to parse the base64 payload.
+			const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
+
+			// Set Session Cookie
+			res.cookie("shieldpm_jwt", token, {
+				httpOnly: true,
+				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				sameSite: "strict",
+				maxAge: new Date(expires).getTime() - Date.now(),
+			});
+
 			res.clearCookie("shieldpm_oidc", { secure: true, sameSite: "Strict" });
-			res.status(200).send({ token, expires });
+
+			// Return user info for AuthStore
+			res.status(200).send({
+				expires,
+				user: { id: payload.attrs.id },
+			});
 		} catch (err) {
 			res.status(400).send({ error: { message: err.message } });
 		}
@@ -190,6 +210,10 @@ const validateCallback = async (req, settings) => {
 
 	if (!claims.email) {
 		throw new errs.AuthError("The Identity Provider didn't send the 'email' claim");
+	}
+
+	if (claims.email_verified !== true && claims.email_verified !== "true") {
+		throw new errs.AuthError("The Identity Provider has not verified the email address");
 	}
 	logger.info(`Successful authentication for email ${claims.email.toLowerCase()}`);
 

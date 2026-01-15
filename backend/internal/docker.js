@@ -175,8 +175,26 @@ class DockerService {
 		}
 	}
 
+	// Helper for debounce
+	reloadTimer = null;
+
 	/**
-	 * Reload Nginx for a specific host
+	 * Trigger Nginx reload with debounce
+	 */
+	triggerReload() {
+		if (this.reloadTimer) clearTimeout(this.reloadTimer);
+		this.reloadTimer = setTimeout(async () => {
+			try {
+				logger.info("Docker Auto-Discovery: Triggering batched Nginx reload...");
+				await internalNginx.reload();
+			} catch (err) {
+				logger.error("Docker Auto-Discovery: Reload failed", err);
+			}
+		}, 2000); // 2 seconds debounce
+	}
+
+	/**
+	 * Configure Nginx for a specific host (Internal - just updates DB, does NOT reload immediately)
 	 * @param {number} hostId
 	 */
 	async configureNginx(hostId) {
@@ -187,12 +205,15 @@ class DockerService {
 				.where("is_deleted", 0);
 
 			if (host && host.enabled) {
-				await internalNginx.configure(ProxyHost, "proxy_host", host);
+				// This generates the config file on disk
+				await internalNginx.generateConfig("proxy_host", host);
 			} else if (host) {
 				// If disabled, delete config
 				await internalNginx.deleteConfig("proxy_host", host);
-				await internalNginx.reload();
 			}
+
+			// Always trigger the debounced reload
+			this.triggerReload();
 		} catch (err) {
 			logger.error(`Docker Auto-Discovery: Error configuring Nginx for host #${hostId}`, err);
 		}
@@ -394,7 +415,19 @@ class DockerService {
 			}
 
 			// Handle Strings (Always overwrite/reset to label value)
-			payload.advanced_config = advancedConfig || "";
+			// SECURITY: Sanitize advanced_config to prevent RCE
+			let cleanAdvancedConfig = advancedConfig || "";
+			if (cleanAdvancedConfig) {
+				// Block dangerous directives
+				const dangerous = /lua_|perl_|exec|include|root|alias|types|so_|load_module/i;
+				if (dangerous.test(cleanAdvancedConfig)) {
+					logger.warn(
+						`Docker Auto-Discovery: Blocking dangerous advanced config for ${domains}: ${cleanAdvancedConfig}`,
+					);
+					cleanAdvancedConfig = "# Dangerous config blocked by ShieldPM Security";
+				}
+			}
+			payload.advanced_config = cleanAdvancedConfig;
 			payload.bandwidth_limit = bandwidthLimit || null;
 			payload.forward_query = forwardQuery || null;
 

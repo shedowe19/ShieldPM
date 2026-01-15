@@ -4,7 +4,6 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { type ReactNode, useState } from "react";
 import { type Certificate, createCertificate } from "src/api/backend";
-import AuthStore from "src/modules/AuthStore";
 import { intl, T } from "src/locale";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
@@ -35,14 +34,10 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 			if (values.type === "client") {
 				// Client Certificate Download
 				// Use AuthStore to get the current token
-				const authData = AuthStore.token;
-				const token = authData ? authData.token : "";
-
 				const response = await fetch("/api/nginx/certificates/internal/client", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: `Bearer ${token}`,
 					},
 					body: JSON.stringify({
 						common_name: values.domain_names, // Reusing field

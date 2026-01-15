@@ -7,7 +7,7 @@ ShieldPM is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fr
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
 *   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
 *   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**.
+*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**, **HTTP-Only Cookie Auth**.
 *   **Language:** JavaScript/TypeScript (ES Modules).
 
 ## Secure Demo Mode Architecture
@@ -103,6 +103,20 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
 | `20260113000000_add_ai_advanced_options.js` | Advanced AI options |
 | `20260114000000_update_ai_options.js` | AI options structure update |
 | `20260115000000_add_system_prompt.js` | Customizable AI system prompt |
+| `20260116000000_hash_access_list_passwords.js` | Hash Access List Passwords (Argon2) |
+
+---
+
+## Security Hardening (2026 Re-Audit)
+Following a deep-dive audit, the following security measures are enforced:
+*   **OIDC Strictness**: `email_verified` claim is **mandatory** for all OIDC logins.
+*   **Docker Sanitization**: Docker labels blocking dangerous Nginx directives (`lua_`, `exec`, etc.).
+*   **Auth Timing**: Constant-time response (via dummy hashing) for invalid login attempts.
+*   **Cookie Auth**: Migrated from localStorage to HTTP-Only, Secure, SameSite=Strict cookies.
+*   **CSRF Protection**: Implemented Double Submit Cookie pattern for all state-changing requests.
+*   **Reliability**:
+    *   **Async Analytics**: Log parsing offloaded to prevent Event Loop blocking.
+    *   **Debounced Reloads**: Nginx reloads are batched (2s delay) during Docker stack deployments.
 
 ### Auto-Migration (SQLite to MySQL/Postgres)
 The application includes an auto-migration feature that detects if you are switching from the default SQLite database to MySQL or PostgreSQL.

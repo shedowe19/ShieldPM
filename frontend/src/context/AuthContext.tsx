@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useContext, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, type TokenResponse } from "src/api/backend";
 import AuthStore from "src/modules/AuthStore";
@@ -11,6 +11,7 @@ export interface AuthContextType {
 	loginAs: (id: number) => Promise<void>;
 	logout: () => void;
 	token?: string;
+	loading?: boolean;
 }
 
 const initalValue = null;
@@ -23,12 +24,26 @@ interface Props {
 }
 function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props) {
 	const queryClient = useQueryClient();
-	const [authenticated, setAuthenticated] = useState(AuthStore.hasActiveToken());
+	const [authenticated, setAuthenticated] = useState(false);
+	const [loading, setLoading] = useState(true);
 
-	const handleTokenUpdate = (response: TokenResponse) => {
+	const handleTokenUpdate = useCallback((response: TokenResponse) => {
 		AuthStore.set(response);
 		setAuthenticated(true);
-	};
+	}, []);
+
+	// On mount, try to refresh token (via cookie) to restore session
+	useEffect(() => {
+		refreshToken()
+			.then(handleTokenUpdate)
+			.catch(() => {
+				// No session or expired
+				setAuthenticated(false);
+			})
+			.finally(() => {
+				setLoading(false);
+			});
+	}, [handleTokenUpdate]);
 
 	const login = async (identity: string, secret: string) => {
 		const response = await getToken(identity, secret);
@@ -52,6 +67,8 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		AuthStore.clear();
 		setAuthenticated(false);
 		queryClient.clear();
+		// Call API to clear cookie
+		fetch("/api/tokens", { method: "DELETE" });
 	};
 
 	const refresh = async () => {
@@ -69,7 +86,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		true,
 	);
 
-	const value = { authenticated, login, logout, loginAs };
+	const value = { authenticated, login, logout, loginAs, loading };
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

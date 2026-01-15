@@ -50,7 +50,10 @@ class AnalyticsService {
 		// Tail the log file
 		try {
 			this.tail = new Tail(this.logFile);
-			this.tail.on("line", (line) => this.processLine(line));
+			this.tail.on("line", (line) => {
+				// Prevent event loop blocking under high load by deferring processing
+				setImmediate(() => this.processLine(line));
+			});
 			this.tail.on("error", (error) => logger.error(`Tail error: ${error}`));
 		} catch (err) {
 			logger.error(`Failed to initialize tail: ${err.message}`);

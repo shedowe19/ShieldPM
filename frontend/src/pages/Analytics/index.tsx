@@ -90,11 +90,7 @@ const Analytics = () => {
 	useEffect(() => {
 		const fetchLiveParams = async () => {
 			try {
-				const res = await fetch("/api/analytics/status", {
-					headers: {
-						Authorization: `Bearer ${localStorage.getItem("token")}`,
-					},
-				});
+				const res = await fetch("/api/analytics/status");
 				if (res.ok) {
 					const data = await res.json();
 					setNetworkSpeed(data.total_sec || 0);

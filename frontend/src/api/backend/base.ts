@@ -33,9 +33,19 @@ function buildUrl({ url, params }: BuildUrlArgs) {
 	return apiUrl;
 }
 
+function getCookie(name: string): string | undefined {
+	const matches = document.cookie.match(
+		new RegExp(`(?:^|; )${name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1")}=([^;]*)`),
+	);
+	return matches ? decodeURIComponent(matches[1]) : undefined;
+}
+
 function buildAuthHeader(): Record<string, string> | undefined {
-	if (AuthStore.token) {
-		return { Authorization: `Bearer ${AuthStore.token.token}` };
+	const csrfToken = getCookie("XSRF-TOKEN");
+	if (csrfToken) {
+		return {
+			"X-XSRF-TOKEN": csrfToken,
+		};
 	}
 	return {};
 }

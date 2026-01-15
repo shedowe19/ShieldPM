@@ -43,33 +43,38 @@ const internalUser = {
 		await access.can("users:create", data);
 		data.avatar = gravatar.url(data.email, { default: "mm" });
 
-		let user = await userModel.query().insertAndFetch(data);
-		user = _.omit(user, omissions());
+		// Use transaction to ensure all user data is created or none at all
+		let user;
+		await userModel.transaction(async (trx) => {
+			user = await userModel.query(trx).insertAndFetch(data);
 
-		if (auth) {
-			await authModel.query().insert({
+			if (auth) {
+				await authModel.query(trx).insert({
+					user_id: user.id,
+					type: auth.type,
+					secret: auth.secret,
+					meta: {},
+				});
+			}
+
+			// Create permissions row as well
+			const isAdmin = data.roles.indexOf("admin") !== -1;
+
+			await userPermissionModel.query(trx).insert({
 				user_id: user.id,
-				type: auth.type,
-				secret: auth.secret,
-				meta: {},
+				visibility: isAdmin ? "all" : "user",
+				proxy_hosts: "manage",
+				redirection_hosts: "manage",
+				dead_hosts: "manage",
+				streams: "manage",
+				access_lists: "manage",
+				certificates: "manage",
 			});
-		}
-
-		// Create permissions row as well
-		const isAdmin = data.roles.indexOf("admin") !== -1;
-
-		await userPermissionModel.query().insert({
-			user_id: user.id,
-			visibility: isAdmin ? "all" : "user",
-			proxy_hosts: "manage",
-			redirection_hosts: "manage",
-			dead_hosts: "manage",
-			streams: "manage",
-			access_lists: "manage",
-			certificates: "manage",
 		});
 
+		// Fetch fresh object with Permissions populated
 		user = await internalUser.get(access, { id: user.id, expand: ["permissions"] });
+		user = _.omit(user, omissions());
 
 		await internalAuditLog.add(access, {
 			action: "created",

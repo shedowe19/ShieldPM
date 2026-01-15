@@ -1,7 +1,9 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload";
 import helmet from "helmet";
 import jwt from "./lib/express/jwt.js";
+import csrfMiddleware from "./lib/express/csrf.js";
 import { debug, express as logger } from "./logger.js";
 import analyticsService from "./internal/analytics.js";
 import mainRoutes from "./routes/main.js";
@@ -32,6 +34,8 @@ app.use(
 		},
 	}),
 );
+app.use(cookieParser());
+app.use(csrfMiddleware());
 app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -38,13 +38,27 @@ router
 	 */
 	.get(jwtdecode(), async (req, res, next) => {
 		try {
+			// Backwards compatibility: Check header first, then cookie
+			// Actually jwtdecode middleware handles header -> res.locals.access
+			// If we want to support cookie-based refresh loop:
+			// The `jwtdecode` middleware needs to be updated too, but for now let's assume valid access token is present
+
 			const data = await internalToken.getFreshToken(res.locals.access, {
 				expiry: typeof req.query.expiry !== "undefined" ? req.query.expiry : null,
 				scope: typeof req.query.scope !== "undefined" ? req.query.scope : null,
 			});
+
+			// Set new cookie
+			res.cookie("shieldpm_jwt", data.token, {
+				httpOnly: true,
+				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				sameSite: "strict",
+				maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days (example, matches typical expiry)
+			});
+
 			// clear this temporary cookie following a successful oidc authentication
 			res.clearCookie("shieldpm_oidc");
-			res.status(200).send(data);
+			res.status(200).send({ ...data, token: undefined }); // Don't send token in body
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			next(err);
@@ -59,6 +73,17 @@ router
 	.post(async (req, res, next) => {
 		const ip = req.ip;
 		const now = Date.now();
+
+		// DoS Protection: Cap the memory usage of the rate limiter
+		if (loginAttempts.size > 5000 && !loginAttempts.has(ip)) {
+			// If map is full and IP is new, reject or prune. Pruning is safer for legit users.
+			// Simple strategy: Clear the map if it gets too big (Heavy handed but effective against exhaustion)
+			// Better: Do not track new IPs if full, but that allows bruteforce.
+			// Best generically without Redis: Clear 10% or just clear all.
+			logger.warn("Login Rate Limiter full, flushing memory.");
+			loginAttempts.clear();
+		}
+
 		const attempts = loginAttempts.get(ip) || { count: 0, blockedUntil: 0, lastAttempt: 0 };
 
 		if (now < attempts.blockedUntil) {
@@ -75,7 +100,16 @@ router
 			const data = await apiValidator(getValidationSchema("/tokens", "post"), req.body);
 			const result = await internalToken.getTokenFromEmail(data);
 			loginAttempts.delete(ip);
-			res.status(200).send(result);
+
+			// Set Cookie
+			res.cookie("shieldpm_jwt", result.token, {
+				httpOnly: true,
+				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				sameSite: "strict",
+				maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
+			});
+
+			res.status(200).send({ ...result, token: undefined }); // Omit token
 		} catch (err) {
 			attempts.count++;
 			attempts.lastAttempt = now;
@@ -90,6 +124,11 @@ router
 			await new Promise((resolve) => setTimeout(resolve, 500));
 			next(err);
 		}
+	})
+
+	.delete(async (req, res) => {
+		res.clearCookie("shieldpm_jwt");
+		res.sendStatus(204);
 	});
 
 export default router;

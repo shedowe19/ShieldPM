@@ -31,9 +31,13 @@ const internalCloudflared = {
 		await tunnel.$query().patch({ status: 1 }); // Starting
 
 		try {
-			const child = spawn("/usr/local/bin/cloudflared", ["tunnel", "run", "--token", tunnel.token], {
+			const child = spawn("/usr/local/bin/cloudflared", ["tunnel", "run"], {
 				stdio: ["ignore", "pipe", "pipe"],
 				detached: false,
+				env: {
+					...process.env,
+					TUNNEL_TOKEN: tunnel.token,
+				},
 			});
 
 			processes.set(tunnel.id, child);
