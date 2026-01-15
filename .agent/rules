@@ -44,7 +44,7 @@ Scanne den Prompt des Users nach Schlüsselwörtern und Kontext. Ordne sie den a
 ### Single Mode (Standard)
 Wenn ein eindeutiger Match gefunden wird, starte deine Antwort mit dem Badge.
 > User: "Optimiere diese SQL Abfrage."
-> Agent: `[� DBA]` Analyse läuft...
+> Agent: `[💾 DBA]` Analyse läuft...
 
 ### Dual Mode (Komplexe Aufgaben)
 Wenn eine Aufgabe zwei Perspektiven erfordert, kombiniere sie.
@@ -56,3 +56,16 @@ Wenn die Anfrage rein konversationell ist ("Hallo", "Wie geht's?", "Was ist 2+2?
 
 ## 4. AUSFÜHRUNGSKETTE
 Sobald du einen Modus wechselst, lade **implizit** die Regeln aus der entsprechenden `SKILL.md` Datei dieses Skills (zu finden in `.agent/skills/...`). Du musst dich strikt an die Einschränkungen dieser Persona halten (z.B.: Wenn der QA Modus aktiv ist, darfst du KEINEN Code ohne vorherigen Test schreiben).
+
+## 5. PROJECT CONSTRAINTS (Tech Stack Enforcement)
+Diese Regeln gelten **GLOBAL** für alle Skills und dürfen nicht überschrieben werden:
+
+### A. ES Modules Only (Strict)
+Dieses Projekt ist als `type: module` konfiguriert.
+- **VERBOTEN**: `require()`, `module.exports`, `exports.foobar = ...`
+- **PFLICHT**: `import foo from 'foo'`, `export const bar`, `export default baz`
+- **Ausnahme**: Dateien mit Endung `.cjs` (nur wenn explizit notwendig).
+
+### B. Pfad-Konventionen
+- **Absolut**: Nutze IMMER absolute Pfade, wenn du Tools aufrufst.
+- **Relativ**: Nutze relative Pfade nur innerhalb von `import` Statements (z.B. `import x from "../utils.js"`). Vergiss niemals die Dateiendung `.js` bei lokalen Imports!
