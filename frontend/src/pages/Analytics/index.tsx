@@ -1,11 +1,11 @@
-import { IconActivity, IconChartBar, IconServer } from "@tabler/icons-react";
+import { IconActivity, IconChartBar, IconDatabase, IconServer } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Button } from "src/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { getAnalyticsSummary, getAnalyticsSeries, type AnalyticsSummary, type TimeSeriesPoint } from "src/api/backend";
+import { getAnalyticsSummary, getAnalyticsSeries, type AnalyticsSummary, type TimeSeriesPoint, type DbStats } from "src/api/backend";
 import { useProxyHosts, useHealth } from "src/hooks";
 import { T } from "src/locale";
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
@@ -45,6 +45,7 @@ const Analytics = () => {
 	const [series, setSeries] = useState<(TimeSeriesPoint & { timeDisplay: string })[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [networkSpeed, setNetworkSpeed] = useState(0);
+	const [dbStats, setDbStats] = useState<DbStats | null>(null);
 	const health = useHealth();
 	const isDemo = health.data?.demo;
 
@@ -94,6 +95,16 @@ const Analytics = () => {
 				if (res.ok) {
 					const data = await res.json();
 					setNetworkSpeed(data.total_sec || 0);
+				}
+			} catch (_err) {
+				// quiet failure
+			}
+
+			// Fetch DB stats
+			try {
+				const dbRes = await fetch("/api/analytics/db-stats");
+				if (dbRes.ok) {
+					setDbStats(await dbRes.json());
 				}
 			} catch (_err) {
 				// quiet failure
@@ -163,7 +174,7 @@ const Analytics = () => {
 			</div>
 
 			{/* KPI Cards */}
-			<div className="grid gap-4 md:grid-cols-3">
+			<div className="grid gap-4 md:grid-cols-4">
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">
@@ -203,6 +214,23 @@ const Analytics = () => {
 						<div className="text-2xl font-bold">{formatBytes(networkSpeed)}/s</div>
 						<p className="text-xs text-muted-foreground">
 							<T id="analytics.current-throughput" />
+						</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<CardTitle className="text-sm font-medium">
+							<T id="analytics.database" />
+						</CardTitle>
+						<IconDatabase className="h-4 w-4 text-muted-foreground" />
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">{formatBytes(dbStats?.size || 0)}</div>
+						<p className="text-xs text-muted-foreground">
+							{dbStats?.engine?.toUpperCase()} • {dbStats?.connections?.open || 1} <T id="analytics.connections" />
+						</p>
+						<p className="text-xs text-muted-foreground mt-1">
+							<T id="analytics.io-reads" />: {(dbStats?.io?.reads || 0).toLocaleString()} • <T id="analytics.io-writes" />: {(dbStats?.io?.writes || 0).toLocaleString()}
 						</p>
 					</CardContent>
 				</Card>
@@ -589,15 +617,14 @@ const Analytics = () => {
 											<td className="p-4 align-middle">
 												<span
 													className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-													${
-														req.status >= 200 && req.status < 300
+													${req.status >= 200 && req.status < 300
 															? "text-green-500"
 															: req.status >= 300 && req.status < 400
 																? "text-blue-500"
 																: req.status >= 400 && req.status < 500
 																	? "text-yellow-500"
 																	: "text-red-500"
-													}`}
+														}`}
 												>
 													{req.status}
 												</span>

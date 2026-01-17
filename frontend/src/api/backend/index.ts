@@ -21,6 +21,7 @@ export * from "./getAccessList";
 export * from "./getAccessLists";
 export * from "./getAnalyticsSeries";
 export * from "./getAnalyticsSummary";
+export * from "./getDbStats";
 export * from "./getAuditLog";
 export * from "./getAuditLogs";
 export * from "./getCertificate";
