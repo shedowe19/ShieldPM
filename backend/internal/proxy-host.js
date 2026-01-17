@@ -5,6 +5,7 @@ import utils from "../lib/utils.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
@@ -71,7 +72,7 @@ const internalProxyHost = {
 			thisData.advanced_config = "";
 		}
 
-		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */(thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -102,6 +103,9 @@ const internalProxyHost = {
 			object_id: row.id,
 			meta: thisData,
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("proxy-host");
 
 		return row;
 	},
@@ -187,7 +191,7 @@ const internalProxyHost = {
 		let _saved_row = await proxyHostModel
 			.query()
 			.where({ id: thisData.id })
-			.patch(/** @type {any} */ (thisData));
+			.patch(/** @type {any} */(thisData));
 
 		// fetch updated row to be safe and consistent with previous logic if patch returns count
 		// wait, patch returns count. We need to fetch it or rely on logic.
@@ -214,7 +218,7 @@ const internalProxyHost = {
 		// But for safety, I will use `patchAndFetchById`.
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */(thisData))
 		);
 		_saved_row = utils.omitRow(omissions())(new_saved_row);
 
@@ -239,6 +243,10 @@ const internalProxyHost = {
 		// Configure nginx
 		const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
 		row.meta = new_meta;
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("proxy-host");
+
 		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
 	},
 
@@ -303,13 +311,13 @@ const internalProxyHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					is_deleted: 1,
 				}),
 			);
 
 		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
+		await internalNginx.deleteConfig("proxy_host", /** @type {any} */(row));
 		await internalNginx.reload();
 
 		// Add to audit log
@@ -319,6 +327,9 @@ const internalProxyHost = {
 			object_id: row.id,
 			meta: _.omit(row, omissions()),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("proxy-host");
 
 		return true;
 	},
@@ -467,7 +478,7 @@ const internalProxyHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */ (row).count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 

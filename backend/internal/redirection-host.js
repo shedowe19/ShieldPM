@@ -5,6 +5,7 @@ import utils from "../lib/utils.js";
 import redirectionHostModel from "../models/redirection_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
@@ -68,7 +69,7 @@ const internalRedirectionHost = {
 			data.advanced_config = "";
 		}
 
-		let row = await redirectionHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		let row = await redirectionHostModel.query().insertAndFetch(/** @type {any} */(thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -98,6 +99,9 @@ const internalRedirectionHost = {
 			object_id: row.id,
 			meta: thisData,
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("redirection-host");
 
 		return row;
 	},
@@ -178,8 +182,8 @@ const internalRedirectionHost = {
 
 		const _saved_row = await redirectionHostModel
 			.query()
-			.patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
-			.then(/** @type {any} */ (utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
+			.patchAndFetchById(thisData.id, /** @type {any} */(thisData))
+			.then(/** @type {any} */(utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -197,6 +201,9 @@ const internalRedirectionHost = {
 		// Configure nginx
 		const new_meta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
 		row.meta = new_meta;
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("redirection-host");
 
 		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
 	},
@@ -274,6 +281,9 @@ const internalRedirectionHost = {
 			meta: _.omit(row, omissions()),
 		});
 
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("redirection-host");
+
 		return true;
 	},
 
@@ -304,7 +314,7 @@ const internalRedirectionHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					enabled: 1,
 				}),
 			);
@@ -347,7 +357,7 @@ const internalRedirectionHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					enabled: 0,
 				}),
 			);
@@ -425,7 +435,7 @@ const internalRedirectionHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */ (row).count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 

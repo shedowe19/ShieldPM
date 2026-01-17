@@ -6,6 +6,7 @@ import { isSetup } from "../setup.js";
 import aiRoutes from "./ai.js";
 import analyticsRoutes from "./analytics.js";
 import auditLogRoutes from "./audit-log.js";
+import gitopsRoutes from "./gitops.js";
 import accessListsRoutes from "./nginx/access_lists.js";
 import nginxAnalyticsRoutes from "./nginx/analytics.js";
 import certificatesHostsRoutes from "./nginx/certificates.js";
@@ -21,6 +22,7 @@ import settingsRoutes from "./settings.js";
 import tokensRoutes from "./tokens.js";
 import usersRoutes from "./users.js";
 import versionRoutes from "./version.js";
+
 
 const router = express.Router({
 	caseSensitive: true,
@@ -59,12 +61,11 @@ router.use("/nginx/redirection-hosts", redirectionHostsRoutes);
 router.use("/nginx/dead-hosts", deadHostsRoutes);
 router.use("/nginx/streams", streamsRoutes);
 router.use("/nginx/access-lists", accessListsRoutes);
-// ... existing imports ...
-
-// ... existing mounts ...
 router.use("/nginx/certificates", certificatesHostsRoutes);
 router.use("/nginx/analytics", nginxAnalyticsRoutes);
 router.use("/nginx/cloudflared-tunnels", cloudflaredRoutes);
+router.use("/gitops", gitopsRoutes);
+
 
 /**
  * API 404 for all other routes

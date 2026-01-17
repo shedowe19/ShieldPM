@@ -5,6 +5,7 @@ import utils from "../lib/utils.js";
 import streamModel from "../models/stream.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
@@ -72,11 +73,11 @@ const internalStream = {
 		const data_no_domains = structuredClone(data);
 		delete data_no_domains.domain_names;
 
-		let row = await streamModel.query().insertAndFetch(/** @type {any} */ (data_no_domains));
+		let row = await streamModel.query().insertAndFetch(/** @type {any} */(data_no_domains));
 		row = utils.omitRow(omissions())(row);
 
 		if (create_certificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */ (data));
+			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */(data));
 			// update host with cert id
 			await internalStream.update(access, {
 				id: row.id,
@@ -100,6 +101,9 @@ const internalStream = {
 			object_id: row.id,
 			meta: data,
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("stream");
 
 		return row;
 	},
@@ -184,7 +188,7 @@ const internalStream = {
 			data,
 		);
 
-		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */ (thisData));
+		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */(thisData));
 
 		saved_row = utils.omitRow(omissions())(saved_row);
 
@@ -200,6 +204,10 @@ const internalStream = {
 
 		const new_meta = await internalNginx.configure(streamModel, "stream", row);
 		row.meta = new_meta;
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("stream");
+
 		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
 	},
 
@@ -276,6 +284,9 @@ const internalStream = {
 			meta: _.omit(row, omissions()),
 		});
 
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("stream");
+
 		return true;
 	},
 
@@ -306,7 +317,7 @@ const internalStream = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					enabled: 1,
 				}),
 			);
@@ -349,7 +360,7 @@ const internalStream = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					enabled: 0,
 				}),
 			);
@@ -427,7 +438,7 @@ const internalStream = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */ (row).count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 

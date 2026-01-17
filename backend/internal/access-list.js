@@ -10,6 +10,7 @@ import accessListClientModel from "../models/access_list_client.js";
 import now from "../models/now_helper.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
+import internalGitOps from "./gitops.js";
 import internalNginx from "./nginx.js";
 
 const omissions = () => {
@@ -36,7 +37,7 @@ const internalAccessList = {
 	create: async (access, data) => {
 		await access.can("access_lists:create", data);
 		const row = await accessListModel.query().insertAndFetch(
-			/** @type {any} */ ({
+			/** @type {any} */({
 				name: data.name,
 				satisfy_any: data.satisfy_any,
 				pass_auth: data.pass_auth,
@@ -62,7 +63,7 @@ const internalAccessList = {
 			}
 
 			return accessListAuthModel.query().insert(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					access_list_id: omittedRow.id,
 					username: item.username,
 					password: password,
@@ -76,7 +77,7 @@ const internalAccessList = {
 		data.clients?.map((/** @type {any} */ client) => {
 			promises.push(
 				accessListClientModel.query().insert(
-					/** @type {any} */ ({
+					/** @type {any} */({
 						access_list_id: data.id,
 						address: client.address,
 						directive: client.directive,
@@ -116,6 +117,9 @@ const internalAccessList = {
 			meta: internalAccessList.maskItems(data),
 		});
 
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("access-list");
+
 		return internalAccessList.maskItems(freshRow);
 	},
 
@@ -151,7 +155,7 @@ const internalAccessList = {
 				.query()
 				.where({ id: data.id })
 				.patch(
-					/** @type {any} */ ({
+					/** @type {any} */({
 						name: data.name,
 						satisfy_any: data.satisfy_any,
 						pass_auth: data.pass_auth,
@@ -177,7 +181,7 @@ const internalAccessList = {
 
 					promises.push(
 						accessListAuthModel.query().insert(
-							/** @type {any} */ ({
+							/** @type {any} */({
 								access_list_id: data.id,
 								username: item.username,
 								password: finalPass,
@@ -207,7 +211,7 @@ const internalAccessList = {
 			const clientPromises = [];
 			data.clients.map((/** @type {any} */ client) => {
 				if (client.address) {
-					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */ (client)));
+					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */(client)));
 				}
 				return true;
 			});
@@ -245,6 +249,10 @@ const internalAccessList = {
 			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
 		}
 		await internalNginx.reload();
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("access-list");
+
 		return internalAccessList.maskItems(freshRow);
 	},
 
@@ -364,6 +372,10 @@ const internalAccessList = {
 			object_id: row.id,
 			meta: _.omit(internalAccessList.maskItems(row), ["is_deleted", "proxy_hosts"]),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("access-list");
+
 		return true;
 	},
 

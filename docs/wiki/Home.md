@@ -43,6 +43,7 @@
 ### Advanced
 *   **[Advanced Analytics](Analytics)**: Real-time traffic insights and status code breakdown.
 *   **[Cloudflare Tunnels](Cloudflared-Tunnels)**: Native support for exposing services via Cloudflare Zero Trust.
+*   **[GitOps Synchronization](GitOps)**: Backup, version control, and restore your configuration with Git.
 *   **[Docker Auto-Discovery](Docker-Auto-Discovery)**: Automatically expose containers using labels (Traefik-like).
 *   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, PHP-FPM, Streams, and custom configs.
 *   **[AI Agent (Administrator)](AI-Agent)**: Configuring and using the AI Co-Pilot.
@@ -51,6 +52,7 @@
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).
 *   **[Development](Development)**: How to build and test ShieldPM locally.
 *   **[CLI Reference](CLI-Reference)**: Documentation for internal scripts and `cscli` usage.
+
 
 ## 🤝 Community & Support
 
