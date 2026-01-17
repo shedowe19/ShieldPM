@@ -187,11 +187,16 @@ router.get("/db-stats", async (_req, res) => {
 			// MySQL connections
 			const [connResult] = await knex.raw("SHOW STATUS LIKE 'Threads_connected'");
 			stats.connections.open = Number.parseInt(connResult[0]?.Value || 0, 10);
-			// MySQL I/O stats
-			const [readResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Innodb_data_read'");
-			const [writeResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Innodb_data_written'");
+			// MySQL I/O stats (row-based, more meaningful than bytes)
+			const [readResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Innodb_rows_read'");
+			const [insertResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Innodb_rows_inserted'");
+			const [updateResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Innodb_rows_updated'");
+			const [deleteResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Innodb_rows_deleted'");
 			stats.io.reads = Number.parseInt(readResult[0]?.Value || 0, 10);
-			stats.io.writes = Number.parseInt(writeResult[0]?.Value || 0, 10);
+			stats.io.writes =
+				Number.parseInt(insertResult[0]?.Value || 0, 10) +
+				Number.parseInt(updateResult[0]?.Value || 0, 10) +
+				Number.parseInt(deleteResult[0]?.Value || 0, 10);
 		} else if (isPostgres()) {
 			stats.engine = "postgresql";
 			// PostgreSQL database size
