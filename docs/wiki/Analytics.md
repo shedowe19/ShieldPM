@@ -14,6 +14,14 @@ ShieldPM includes a powerful, privacy-friendly analytics dashboard directly inte
     *   **Paths:** Most requested URL paths.
     *   **User Agents:** Breakdown of browsers and devices.
 *   **Recent Requests:** Detailed table of the latest requests with method, status, path, IP, and duration.
+*   **Database Statistics:** Real-time database metrics including:
+    *   **Database Size:** Current size of the application database.
+    *   **Engine Type:** Shows SQLite, MySQL, or PostgreSQL.
+    *   **Connections:** Number of active database connections.
+    *   **Read/Write I/O:** Cumulative read and write operations:
+        *   **SQLite:** Uses `PRAGMA cache_stats` (if available).
+        *   **MySQL:** Uses `Handler_read_rnd_next` and `Handler_write` status variables.
+        *   **PostgreSQL:** Uses `blks_read`, `blks_hit`, and tuple statistics from `pg_stat_database`.
 
 ## Privacy
 
