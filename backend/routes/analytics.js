@@ -211,7 +211,9 @@ router.get("/db-stats", async (_req, res) => {
 			`);
 			if (ioResult.rows[0]) {
 				// Reads = blocks read from disk + blocks from cache (hit)
-				stats.io.reads = Number.parseInt(ioResult.rows[0].blks_read || 0, 10) + Number.parseInt(ioResult.rows[0].blks_hit || 0, 10);
+				stats.io.reads =
+					Number.parseInt(ioResult.rows[0].blks_read || 0, 10) +
+					Number.parseInt(ioResult.rows[0].blks_hit || 0, 10);
 				// Writes = inserts + updates + deletes
 				stats.io.writes =
 					Number.parseInt(ioResult.rows[0].tup_inserted || 0, 10) +
@@ -227,4 +229,3 @@ router.get("/db-stats", async (_req, res) => {
 });
 
 export default router;
-

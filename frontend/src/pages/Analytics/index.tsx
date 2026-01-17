@@ -5,7 +5,13 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Button } from "src/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { getAnalyticsSummary, getAnalyticsSeries, type AnalyticsSummary, type TimeSeriesPoint, type DbStats } from "src/api/backend";
+import {
+	getAnalyticsSummary,
+	getAnalyticsSeries,
+	type AnalyticsSummary,
+	type TimeSeriesPoint,
+	type DbStats,
+} from "src/api/backend";
 import { useProxyHosts, useHealth } from "src/hooks";
 import { T } from "src/locale";
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
@@ -227,10 +233,12 @@ const Analytics = () => {
 					<CardContent>
 						<div className="text-2xl font-bold">{formatBytes(dbStats?.size || 0)}</div>
 						<p className="text-xs text-muted-foreground">
-							{dbStats?.engine?.toUpperCase()} • {dbStats?.connections?.open || 1} <T id="analytics.connections" />
+							{dbStats?.engine?.toUpperCase()} • {dbStats?.connections?.open || 1}{" "}
+							<T id="analytics.connections" />
 						</p>
 						<p className="text-xs text-muted-foreground mt-1">
-							<T id="analytics.io-reads" />: {(dbStats?.io?.reads || 0).toLocaleString()} • <T id="analytics.io-writes" />: {(dbStats?.io?.writes || 0).toLocaleString()}
+							<T id="analytics.io-reads" />: {(dbStats?.io?.reads || 0).toLocaleString()} •{" "}
+							<T id="analytics.io-writes" />: {(dbStats?.io?.writes || 0).toLocaleString()}
 						</p>
 					</CardContent>
 				</Card>
@@ -617,14 +625,15 @@ const Analytics = () => {
 											<td className="p-4 align-middle">
 												<span
 													className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-													${req.status >= 200 && req.status < 300
+													${
+														req.status >= 200 && req.status < 300
 															? "text-green-500"
 															: req.status >= 300 && req.status < 400
 																? "text-blue-500"
 																: req.status >= 400 && req.status < 500
 																	? "text-yellow-500"
 																	: "text-red-500"
-														}`}
+													}`}
 												>
 													{req.status}
 												</span>
