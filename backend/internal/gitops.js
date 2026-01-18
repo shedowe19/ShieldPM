@@ -417,17 +417,33 @@ const internalGitOps = {
 		// Export custom certificates
 		const customDir = "/data/tls/custom";
 		if (fs.existsSync(customDir)) {
-			const files = fs.readdirSync(customDir);
+			const items = fs.readdirSync(customDir);
 			const customTargetDir = path.join(certFilesDir, "custom");
 			if (!fs.existsSync(customTargetDir)) {
 				fs.mkdirSync(customTargetDir, { recursive: true });
 			}
-			for (const file of files) {
-				const srcPath = path.join(customDir, file);
-				const destPath = path.join(customTargetDir, file);
-				if (fs.statSync(srcPath).isFile()) {
+			for (const item of items) {
+				const srcPath = path.join(customDir, item);
+				const destPath = path.join(customTargetDir, item);
+				const stats = fs.statSync(srcPath);
+
+				if (stats.isFile()) {
 					fs.copyFileSync(srcPath, destPath);
 					exportedFiles.push(destPath);
+				} else if (stats.isDirectory() && item.startsWith("npm-")) {
+					// Custom certs are often in folders like "npm-12"
+					if (!fs.existsSync(destPath)) {
+						fs.mkdirSync(destPath, { recursive: true });
+					}
+					const files = fs.readdirSync(srcPath);
+					for (const file of files) {
+						const srcFile = path.join(srcPath, file);
+						const destFile = path.join(destPath, file);
+						if (fs.statSync(srcFile).isFile()) {
+							fs.copyFileSync(srcFile, destFile);
+							exportedFiles.push(destFile);
+						}
+					}
 				}
 			}
 		}
@@ -796,17 +812,15 @@ const internalGitOps = {
 							}
 
 							// Ensure item is not marked as deleted upon restore
-							// This is critical because exports sanitize "is_deleted" (it's removed),
-							// so if an item was soft-deleted in DB, restoring it would fail to flip the flag back to 0.
 							itemData.is_deleted = 0;
 
-							// Ensure owner_user_id is valid (fallback to current admin if missing)
+							// Ensure owner_user_id is valid
 							if (itemData.owner_user_id) {
 								// Check if user exists, if not set to current user to avoid constraint error
 							}
 
 							if (options.overwrite && existingId) {
-								// Use upsertGraph for complex models (AccessList), patch/insert for simple
+								// Use upsertGraph for complex models
 								if (relationGraph) {
 									await modelClass.query().upsertGraph(itemData, {
 										insertMissing: true,
@@ -824,7 +838,6 @@ const internalGitOps = {
 								}
 							} else {
 								if (!options.overwrite) delete itemData.id;
-								// Set owner to current user for new imports if not strictly restoring
 								if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId();
 
 								let newRow;
@@ -847,9 +860,7 @@ const internalGitOps = {
 			}
 
 			// FULL SYNC: Delete items not in importedIds
-			// Only if overwriting (Revert/Full Import)
 			if (options.overwrite) {
-				// Find items in DB that were NOT imported
 				const query = modelClass.query().whereNotIn("id", importedIds);
 
 				try {
@@ -876,13 +887,13 @@ const internalGitOps = {
 		};
 
 		try {
-			// 1. Import Users first (to satisfy foreign keys)
+			// 1. Import Users first
 			await importModel(User, "users", null, "permissions");
 
-			// 2. Import Certificates (DB)
+			// 2. Import Certificates
 			await importModel(Certificate, "certificates");
 
-			// 3. Import Access Lists (with items and clients)
+			// 3. Import Access Lists
 			await importModel(AccessList, "access-lists", null, "[items, clients]");
 
 			// 4. Import Hosts & Streams
@@ -892,7 +903,7 @@ const internalGitOps = {
 			await importModel(Stream, "streams", "stream");
 			await importModel(CloudflaredTunnel, "cloudflared-tunnels");
 
-			// 5. Import Settings (excluding gitops-config)
+			// 5. Import Settings
 			const settingsDir = path.join(configDir, "settings");
 			if (fs.existsSync(settingsDir)) {
 				const files = fs.readdirSync(settingsDir).filter((f) => f.endsWith(".yaml"));
@@ -902,7 +913,6 @@ const internalGitOps = {
 						const data = yaml.load(content);
 						if (data && typeof data === "object") {
 							const settingData = /** @type {any} */ (data);
-							// Skip GitOps config to avoid overwriting credentials/repo url with old data
 							if (settingData.id === "gitops-config") continue;
 
 							const existing = await settingModel.query().findById(settingData.id);
@@ -922,6 +932,19 @@ const internalGitOps = {
 			// 6. Restore Certificate Files
 			const certFilesDir = path.join(configDir, "certificate-files");
 			if (fs.existsSync(certFilesDir)) {
+				const restoreFile = (src, dest) => {
+					fs.copyFileSync(src, dest);
+					// Set permissions
+					if (dest.endsWith(".key") || dest.endsWith(".pem")) {
+						const filename = path.basename(dest);
+						if (filename === "privkey.pem" || filename.endsWith(".key")) {
+							fs.chmodSync(dest, 0o600);
+						} else {
+							fs.chmodSync(dest, 0o644);
+						}
+					}
+				};
+
 				// Restore Let's Encrypt
 				const leDir = path.join(certFilesDir, "letsencrypt");
 				if (fs.existsSync(leDir)) {
@@ -934,7 +957,7 @@ const internalGitOps = {
 						}
 						const files = fs.readdirSync(srcDir);
 						for (const file of files) {
-							fs.copyFileSync(path.join(srcDir, file), path.join(targetDir, file));
+							restoreFile(path.join(srcDir, file), path.join(targetDir, file));
 						}
 					}
 				}
@@ -946,9 +969,23 @@ const internalGitOps = {
 					if (!fs.existsSync(targetDir)) {
 						fs.mkdirSync(targetDir, { recursive: true });
 					}
-					const files = fs.readdirSync(customDir);
-					for (const file of files) {
-						fs.copyFileSync(path.join(customDir, file), path.join(targetDir, file));
+					const items = fs.readdirSync(customDir);
+					for (const item of items) {
+						const srcPath = path.join(customDir, item);
+						const destPath = path.join(targetDir, item);
+						const stats = fs.statSync(srcPath);
+
+						if (stats.isFile()) {
+							restoreFile(srcPath, destPath);
+						} else if (stats.isDirectory() && item.startsWith("npm-")) {
+							if (!fs.existsSync(destPath)) {
+								fs.mkdirSync(destPath, { recursive: true });
+							}
+							const files = fs.readdirSync(srcPath);
+							for (const file of files) {
+								restoreFile(path.join(srcPath, file), path.join(destPath, file));
+							}
+						}
 					}
 				}
 
@@ -960,30 +997,22 @@ const internalGitOps = {
 						fs.mkdirSync(targetBaseDir, { recursive: true });
 					}
 
-					// Copy Root CA and intermediate files that are directly in InternalDir?
-					// Usually InternalDir has structure like `root_ca/` or `npm-{id}/`
 					const internalItems = fs.readdirSync(internalDir);
 					for (const item of internalItems) {
 						const srcPath = path.join(internalDir, item);
 						const destPath = path.join(targetBaseDir, item);
 						const stat = fs.statSync(srcPath);
 
-						if (stat.isDirectory()) {
-							// Recursively copy directory
-							if (!fs.existsSync(destPath)) fs.mkdirSync(destPath, { recursive: true });
-							const subFiles = fs.readdirSync(srcPath);
-							for (const subFile of subFiles) {
-								fs.copyFileSync(path.join(srcPath, subFile), path.join(destPath, subFile));
-								// Fix permissions for keys
-								if (subFile.endsWith(".key")) {
-									fs.chmodSync(path.join(destPath, subFile), 0o600);
-								}
+						if (stat.isFile()) {
+							restoreFile(srcPath, destPath);
+						} else if (stat.isDirectory() && item.startsWith("npm-")) {
+							const destDir = path.join(targetBaseDir, item);
+							if (!fs.existsSync(destDir)) {
+								fs.mkdirSync(destDir, { recursive: true });
 							}
-						} else {
-							// Copy file
-							fs.copyFileSync(srcPath, destPath);
-							if (item.endsWith(".key")) {
-								fs.chmodSync(destPath, 0o600);
+							const files = fs.readdirSync(srcPath);
+							for (const file of files) {
+								restoreFile(path.join(srcPath, file), path.join(destDir, file));
 							}
 						}
 					}
@@ -991,8 +1020,6 @@ const internalGitOps = {
 			}
 
 			// 7. Regenerate Nginx Configs
-			// This generates configs for ALL hosts currently in DB (which now match Git state)
-			// Using skip_reload to prevent reload storm
 			await internalNginx.bulkGenerateConfigs(
 				ProxyHost,
 				"proxy_host",
