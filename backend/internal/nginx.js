@@ -26,12 +26,15 @@ const internalNginx = {
 	 * @param   {Object}         host
 	 * @returns {Promise}
 	 */
-	configure: async (model, host_type, host) => {
+	configure: async (model, host_type, host, options = {}) => {
+		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
 
 		await internalNginx.test();
 		await internalNginx.deleteConfig(host_type, host);
-		await internalNginx.reload();
+		if (!skip_reload) {
+			await internalNginx.reload();
+		}
 		await internalNginx.generateConfig(host_type, host);
 
 		try {
@@ -63,7 +66,9 @@ const internalNginx = {
 			await internalNginx.renameConfigAsError(host_type, host);
 		}
 
-		await internalNginx.reload();
+		if (!skip_reload) {
+			await internalNginx.reload();
+		}
 		return combined_meta;
 	},
 
@@ -359,7 +364,7 @@ const internalNginx = {
 	bulkGenerateConfigs: async (model, hostType, hosts) => {
 		const promises = [];
 		hosts.map((host) => {
-			promises.push(internalNginx.configure(model, hostType, host));
+			promises.push(internalNginx.configure(model, hostType, host, { skip_reload: true }));
 			return true;
 		});
 
