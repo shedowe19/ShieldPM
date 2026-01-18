@@ -21,16 +21,15 @@ import { useGitOps, useGitOpsConfig, useGitOpsHistory } from "@/hooks/useGitOps"
 import { Loading } from "src/components";
 import { T } from "src/locale";
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "src/components/ui/alert-dialog";
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+	DialogClose,
+} from "src/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -276,7 +275,7 @@ export default function GitOps() {
 							<Button
 								variant="outline"
 								className="h-auto py-4 flex-col"
-								onClick={() => push.mutate()}
+								onClick={() => push.mutate(undefined)}
 								disabled={push.isPending}
 							>
 								{push.isPending ? (
@@ -309,8 +308,8 @@ export default function GitOps() {
 								<span className="text-xs text-muted-foreground mt-1">Pull latest from remote</span>
 							</Button>
 
-							<AlertDialog>
-								<AlertDialogTrigger asChild>
+							<Dialog>
+								<DialogTrigger asChild>
 									<Button
 										variant="outline"
 										className="h-auto py-4 flex-col border-amber-500/50 hover:border-amber-500"
@@ -323,26 +322,28 @@ export default function GitOps() {
 											Import config from Git
 										</span>
 									</Button>
-								</AlertDialogTrigger>
-								<AlertDialogContent>
-									<AlertDialogHeader>
-										<AlertDialogTitle>Import Configuration from Git?</AlertDialogTitle>
-										<AlertDialogDescription>
-											This will import proxy hosts, access lists, and other configuration from the
-											Git repository. Existing items with matching IDs may be overwritten.
-										</AlertDialogDescription>
-									</AlertDialogHeader>
-									<AlertDialogFooter>
-										<AlertDialogCancel>Cancel</AlertDialogCancel>
-										<AlertDialogAction
+								</DialogTrigger>
+								<DialogContent>
+									<DialogHeader>
+										<DialogTitle>Import Configuration from Git?</DialogTitle>
+										<DialogDescription>
+											This will import proxy hosts, access lists, and other configuration from the Git repository.
+											Existing items with matching IDs may be overwritten.
+										</DialogDescription>
+									</DialogHeader>
+									<DialogFooter>
+										<DialogClose asChild>
+											<Button variant="outline">Cancel</Button>
+										</DialogClose>
+										<Button
 											onClick={() => importConfig.mutate(true)}
 											className="bg-amber-600 hover:bg-amber-700"
 										>
 											Import
-										</AlertDialogAction>
-									</AlertDialogFooter>
-								</AlertDialogContent>
-							</AlertDialog>
+										</Button>
+									</DialogFooter>
+								</DialogContent>
+							</Dialog>
 						</div>
 					</CardContent>
 				</Card>
@@ -374,31 +375,32 @@ export default function GitOps() {
 													{commit.author} • {new Date(commit.date).toLocaleString()}
 												</div>
 											</div>
-											<AlertDialog>
-												<AlertDialogTrigger asChild>
+											<Dialog>
+												<DialogTrigger asChild>
 													<Button variant="ghost" size="sm" className="ml-2">
 														<RotateCcw className="h-4 w-4" />
 													</Button>
-												</AlertDialogTrigger>
-												<AlertDialogContent>
-													<AlertDialogHeader>
-														<AlertDialogTitle>Revert to this commit?</AlertDialogTitle>
-														<AlertDialogDescription>
-															Revert to commit {commit.sha.substring(0, 7)}: "
-															{commit.message}"
-														</AlertDialogDescription>
-													</AlertDialogHeader>
-													<AlertDialogFooter>
-														<AlertDialogCancel>Cancel</AlertDialogCancel>
-														<AlertDialogAction
+												</DialogTrigger>
+												<DialogContent>
+													<DialogHeader>
+														<DialogTitle>Revert to this commit?</DialogTitle>
+														<DialogDescription>
+															Revert to commit {commit.sha.substring(0, 7)}: "{commit.message}"
+														</DialogDescription>
+													</DialogHeader>
+													<DialogFooter>
+														<DialogClose asChild>
+															<Button variant="outline">Cancel</Button>
+														</DialogClose>
+														<Button
 															onClick={() => revert.mutate(commit.sha)}
 															className="bg-amber-600 hover:bg-amber-700"
 														>
 															Revert
-														</AlertDialogAction>
-													</AlertDialogFooter>
-												</AlertDialogContent>
-											</AlertDialog>
+														</Button>
+													</DialogFooter>
+												</DialogContent>
+											</Dialog>
 										</div>
 										{index < history.length - 1 && <Separator />}
 									</div>
@@ -410,4 +412,5 @@ export default function GitOps() {
 			)}
 		</div>
 	);
+}
 }
