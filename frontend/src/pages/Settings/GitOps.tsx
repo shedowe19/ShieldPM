@@ -328,8 +328,8 @@ export default function GitOps() {
 									<DialogHeader>
 										<DialogTitle>Import Configuration from Git?</DialogTitle>
 										<DialogDescription>
-											This will import proxy hosts, access lists, and other configuration from the Git repository.
-											Existing items with matching IDs may be overwritten.
+											This will import proxy hosts, access lists, and other configuration from the
+											Git repository. Existing items with matching IDs may be overwritten.
 										</DialogDescription>
 									</DialogHeader>
 									<DialogFooter>
@@ -389,7 +389,8 @@ export default function GitOps() {
 													<DialogHeader>
 														<DialogTitle>Revert to this commit?</DialogTitle>
 														<DialogDescription>
-															Revert to commit {commit.sha.substring(0, 7)}: "{commit.message}"
+															Revert to commit {commit.sha.substring(0, 7)}: "
+															{commit.message}"
 														</DialogDescription>
 													</DialogHeader>
 													<DialogFooter>
@@ -425,4 +426,3 @@ export default function GitOps() {
 		</div>
 	);
 }
-
