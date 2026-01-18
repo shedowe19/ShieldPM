@@ -719,7 +719,19 @@ const internalGitOps = {
 			const importResult = await internalGitOps.importConfig(access, { overwrite: true });
 
 			if (importResult.success) {
-				return { success: true, message: `Reverted to ${sha} and applied configuration` };
+				// Restart Container after 1 second to allow response to be sent
+				logger.info("GitOps Revert: Scheduling container restart in 1 second...");
+				setTimeout(() => {
+					logger.info("GitOps Revert: Restarting container via SIGTERM (PID 1)...");
+					try {
+						process.kill(1, "SIGTERM");
+					} catch (e) {
+						logger.error("Failed to kill PID 1:", e);
+						process.exit(1); // Fallback
+					}
+				}, 1000);
+
+				return { success: true, message: `Reverted to ${sha}. Container will restart now.` };
 			}
 			return {
 				success: false,
@@ -737,7 +749,7 @@ const internalGitOps = {
 	 * @param {import("../lib/types.js").Access} access
 	 * @param {Object} options
 	 * @param {boolean} [options.overwrite=false] - Overwrite existing hosts
-	 * @returns {Promise<{success: boolean, imported: number, skipped: number, errors: string[]}>}
+	 * @returns {Promise<{success: boolean, imported: number, skipped: number, deleted: number, errors: string[]}>}
 	 */
 	importConfig: async (access, options = {}) => {
 		if (isDemoMode()) {
@@ -749,88 +761,130 @@ const internalGitOps = {
 		const configDir = getConfigDir();
 		let imported = 0;
 		let skipped = 0;
+		let deleted = 0;
 		const errors = [];
 
-		// Helper to import standard models
-		const importModel = async (modelClass, dirName, relationGraph = null) => {
+		/**
+		 * Helper to import standard models and DELETE missing ones (Full Sync)
+		 * @param {Object} modelClass - Objection.js Model class
+		 * @param {string} dirName - Directory name in gitops repo
+		 * @param {string} [hostType] - Host type string for Nginx (e.g. 'proxy_host')
+		 * @param {string|null} [relationGraph] - Relation graph for insertGraph/upsertGraph
+		 */
+		const importModel = async (modelClass, dirName, hostType = null, relationGraph = null) => {
 			const dirPath = path.join(configDir, dirName);
-			if (!fs.existsSync(dirPath)) return;
+			const importedIds = [];
 
-			const files = fs.readdirSync(dirPath).filter((f) => f.endsWith(".yaml"));
-			for (const file of files) {
-				try {
-					const content = fs.readFileSync(path.join(dirPath, file), "utf8");
-					const data = yaml.load(content);
+			if (fs.existsSync(dirPath)) {
+				const files = fs.readdirSync(dirPath).filter((f) => f.endsWith(".yaml"));
+				for (const file of files) {
+					try {
+						const content = fs.readFileSync(path.join(dirPath, file), "utf8");
+						const data = yaml.load(content);
 
-					if (data && typeof data === "object") {
-						const itemData = /** @type {any} */ (data);
-						const existingId = itemData.id;
+						if (data && typeof data === "object") {
+							const itemData = /** @type {any} */ (data);
+							const existingId = itemData.id;
 
-						if (existingId) {
-							const existing = await modelClass.query().findById(existingId);
-							if (existing && !options.overwrite) {
-								skipped++;
-								continue;
-							}
-						}
-
-						// Ensure owner_user_id is valid (fallback to current admin if missing)
-						if (itemData.owner_user_id) {
-							// Check if user exists, if not set to current user to avoid constraint error
-						}
-
-						if (options.overwrite && existingId) {
-							// Use upsertGraph for complex models (AccessList), patch/insert for simple
-							if (relationGraph) {
-								await modelClass.query().upsertGraph(itemData, {
-									insertMissing: true,
-									relate: true,
-									update: true,
-									noDelete: false, // Delete missing children (items/clients)
-								});
-							} else {
+							if (existingId) {
+								importedIds.push(existingId);
 								const existing = await modelClass.query().findById(existingId);
-								if (existing) {
-									await modelClass.query().patchAndFetchById(existingId, itemData);
-								} else {
-									await modelClass.query().insert(itemData);
+								if (existing && !options.overwrite) {
+									skipped++;
+									continue;
 								}
 							}
-						} else {
-							if (!options.overwrite) delete itemData.id;
-							// Set owner to current user for new imports if not strictly restoring
-							if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId();
 
-							if (relationGraph) {
-								await modelClass.query().insertGraph(itemData);
-							} else {
-								await modelClass.query().insert(itemData);
+							// Ensure owner_user_id is valid (fallback to current admin if missing)
+							if (itemData.owner_user_id) {
+								// Check if user exists, if not set to current user to avoid constraint error
 							}
+
+							if (options.overwrite && existingId) {
+								// Use upsertGraph for complex models (AccessList), patch/insert for simple
+								if (relationGraph) {
+									await modelClass.query().upsertGraph(itemData, {
+										insertMissing: true,
+										relate: true,
+										update: true,
+										noDelete: false, // Delete missing children (items/clients)
+									});
+								} else {
+									const existing = await modelClass.query().findById(existingId);
+									if (existing) {
+										await modelClass.query().patchAndFetchById(existingId, itemData);
+									} else {
+										await modelClass.query().insert(itemData);
+									}
+								}
+							} else {
+								if (!options.overwrite) delete itemData.id;
+								// Set owner to current user for new imports if not strictly restoring
+								if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId();
+
+								let newRow;
+								if (relationGraph) {
+									newRow = await modelClass.query().insertGraph(itemData);
+								} else {
+									newRow = await modelClass.query().insert(itemData);
+								}
+
+								if (itemData.id) importedIds.push(itemData.id);
+								else if (newRow && newRow.id) importedIds.push(newRow.id);
+							}
+							imported++;
 						}
-						imported++;
+					} catch (err) {
+						logger.error(`Import failed for ${dirName}/${file}:`, err);
+						errors.push(`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
+					}
+				}
+			}
+
+			// FULL SYNC: Delete items not in importedIds
+			// Only if overwriting (Revert/Full Import)
+			if (options.overwrite) {
+				// Find items in DB that were NOT imported
+				const query = modelClass.query().whereNotIn("id", importedIds);
+
+				try {
+					const staleItems = await query;
+					for (const item of staleItems) {
+						// Delete Nginx config if hostType is provided
+						if (hostType) {
+							await internalNginx.deleteConfig(hostType, item);
+						}
+
+						// Soft delete if supported, else hard delete
+						if (item.is_deleted !== undefined) {
+							await modelClass.query().patchAndFetchById(item.id, { is_deleted: 1 });
+						} else {
+							await modelClass.query().deleteById(item.id);
+						}
+						deleted++;
+						logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
 					}
 				} catch (err) {
-					logger.error(`Import failed for ${dirName}/${file}:`, err);
-					errors.push(`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
+					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
 				}
 			}
 		};
 
 		try {
 			// 1. Import Users first (to satisfy foreign keys)
-			await importModel(User, "users", "permissions");
+			await importModel(User, "users", null, "permissions");
 
 			// 2. Import Certificates (DB)
 			await importModel(Certificate, "certificates");
 
 			// 3. Import Access Lists (with items and clients)
-			await importModel(AccessList, "access-lists", "[items, clients]");
+			await importModel(AccessList, "access-lists", null, "[items, clients]");
 
 			// 4. Import Hosts & Streams
-			await importModel(ProxyHost, "proxy-hosts");
-			await importModel(RedirectionHost, "redirection-hosts");
-			await importModel(DeadHost, "dead-hosts");
-			await importModel(Stream, "streams");
+			await importModel(ProxyHost, "proxy-hosts", "proxy_host");
+			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
+			await importModel(DeadHost, "dead-hosts", "dead_host");
+			await importModel(Stream, "streams", "stream");
 			await importModel(CloudflaredTunnel, "cloudflared-tunnels");
 
 			// 5. Import Settings (excluding gitops-config)
@@ -901,40 +955,39 @@ const internalGitOps = {
 						fs.mkdirSync(targetBaseDir, { recursive: true });
 					}
 
-					// Restore Root CA files
-					const rootFiles = ["root_ca.crt", "root_ca.key", "root_ca.srl"];
-					for (const file of rootFiles) {
-						const srcPath = path.join(internalDir, file);
-						const destPath = path.join(targetBaseDir, file);
-						if (fs.existsSync(srcPath)) {
-							fs.copyFileSync(srcPath, destPath);
-							// Ensure strict permissions for key
-							if (file.endsWith(".key")) {
-								fs.chmodSync(destPath, 0o600);
-							}
-						}
-					}
+					// Copy Root CA and intermediate files that are directly in InternalDir?
+					// Usually InternalDir has structure like `root_ca/` or `npm-{id}/`
+					const internalItems = fs.readdirSync(internalDir);
+					for (const item of internalItems) {
+						const srcPath = path.join(internalDir, item);
+						const destPath = path.join(targetBaseDir, item);
+						const stat = fs.statSync(srcPath);
 
-					// Restore leaf cert directories
-					const items = fs.readdirSync(internalDir);
-					for (const item of items) {
-						const itemPath = path.join(internalDir, item);
-						if (fs.statSync(itemPath).isDirectory() && item.startsWith("npm-")) {
-							const targetDir = path.join(targetBaseDir, item);
-							if (!fs.existsSync(targetDir)) {
-								fs.mkdirSync(targetDir, { recursive: true });
+						if (stat.isDirectory()) {
+							// Recursively copy directory
+							if (!fs.existsSync(destPath)) fs.mkdirSync(destPath, { recursive: true });
+							const subFiles = fs.readdirSync(srcPath);
+							for (const subFile of subFiles) {
+								fs.copyFileSync(path.join(srcPath, subFile), path.join(destPath, subFile));
+								// Fix permissions for keys
+								if (subFile.endsWith(".key")) {
+									fs.chmodSync(path.join(destPath, subFile), 0o600);
+								}
 							}
-							const files = fs.readdirSync(itemPath);
-							for (const file of files) {
-								fs.copyFileSync(path.join(itemPath, file), path.join(targetDir, file));
+						} else {
+							// Copy file
+							fs.copyFileSync(srcPath, destPath);
+							if (item.endsWith(".key")) {
+								fs.chmodSync(destPath, 0o600);
 							}
 						}
 					}
 				}
 			}
 
-			// Regenerate Nginx configurations
-			logger.info("GitOps: Regenerating Nginx configurations...");
+			// 7. Regenerate Nginx Configs
+			// This generates configs for ALL hosts currently in DB (which now match Git state)
+			// Using skip_reload to prevent reload storm
 			await internalNginx.bulkGenerateConfigs(
 				ProxyHost,
 				"proxy_host",
@@ -954,12 +1007,14 @@ const internalGitOps = {
 
 			await internalNginx.reload();
 
-			logger.info(`GitOps import: ${imported} imported, ${skipped} skipped, ${errors.length} errors`);
-			return { success: true, imported, skipped, errors };
+			logger.info(
+				`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`,
+			);
+			return { success: true, imported, skipped, deleted, errors };
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Unknown error";
 			logger.error("GitOps import failed:", err);
-			return { success: false, imported, skipped, errors: [...errors, errorMessage] };
+			return { success: false, imported, skipped, deleted, errors: [...errors, errorMessage] };
 		}
 	},
 
