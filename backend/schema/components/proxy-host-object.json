@@ -269,6 +269,22 @@
 				"null"
 			],
 			"example": "System Upgrade"
+		},
+		"php_enabled": {
+			"type": "boolean",
+			"example": false
+		},
+		"php_version": {
+			"type": [
+				"string",
+				"null"
+			],
+			"enum": [
+				"82",
+				"83",
+				"84"
+			],
+			"example": "83"
 		}
 	}
 }

@@ -117,6 +117,12 @@
 						},
 						"maintenance_reason": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/maintenance_reason"
+						},
+						"php_enabled": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/php_enabled"
+						},
+						"php_version": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/php_version"
 						}
 					}
 				}
