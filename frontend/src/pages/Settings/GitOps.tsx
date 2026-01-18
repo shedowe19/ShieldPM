@@ -50,6 +50,7 @@ export default function GitOps() {
 	});
 
 	const [isInitialized, setIsInitialized] = useState(false);
+	const [openRevertId, setOpenRevertId] = useState<string | null>(null);
 
 	// Initialize form data when config is loaded
 	if (config && !isInitialized) {
@@ -375,7 +376,10 @@ export default function GitOps() {
 													{commit.author} • {new Date(commit.date).toLocaleString()}
 												</div>
 											</div>
-											<Dialog>
+											<Dialog
+												open={openRevertId === commit.sha}
+												onOpenChange={(open) => setOpenRevertId(open ? commit.sha : null)}
+											>
 												<DialogTrigger asChild>
 													<Button variant="ghost" size="sm" className="ml-2">
 														<RotateCcw className="h-4 w-4" />
@@ -393,9 +397,17 @@ export default function GitOps() {
 															<Button variant="outline">Cancel</Button>
 														</DialogClose>
 														<Button
-															onClick={() => revert.mutate(commit.sha)}
+															onClick={() =>
+																revert.mutate(commit.sha, {
+																	onSuccess: () => setOpenRevertId(null),
+																})
+															}
 															className="bg-amber-600 hover:bg-amber-700"
+															disabled={revert.isPending}
 														>
+															{revert.isPending && openRevertId === commit.sha && (
+																<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+															)}
 															Revert
 														</Button>
 													</DialogFooter>

@@ -17,6 +17,7 @@ import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 import User from "../models/user.js";
 import { global as logger } from "../logger.js";
 import { isDemoMode } from "../lib/config.js";
+import internalNginx from "./nginx.js";
 
 const GITOPS_DIR = "/data/gitops";
 const CONFIG_SUBDIR = "shieldpm-config";
@@ -843,6 +844,19 @@ const internalGitOps = {
                     }
                 }
             }
+
+            // Regenerate Nginx configurations
+            logger.info("GitOps: Regenerating Nginx configurations...");
+            await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", await ProxyHost.query().where("is_deleted", 0));
+            await internalNginx.bulkGenerateConfigs(RedirectionHost, "redirection_host", await RedirectionHost.query().where("is_deleted", 0));
+            await internalNginx.bulkGenerateConfigs(DeadHost, "dead_host", await DeadHost.query().where("is_deleted", 0));
+            // Streams are tricky as they might not use bulkGenerateConfigs generically or need specific handling?
+            // internalNginx.configure handles streams? internalNginx.bulkGenerateConfigs calls configure.
+            // internalNginx.configure takes (model, host_type, host).
+            // Stream host_type is 'stream'.
+            await internalNginx.bulkGenerateConfigs(Stream, "stream", await Stream.query().where("is_deleted", 0));
+
+            await internalNginx.reload();
 
             logger.info(`GitOps import: ${imported} imported, ${skipped} skipped, ${errors.length} errors`);
             return { success: true, imported, skipped, errors };
