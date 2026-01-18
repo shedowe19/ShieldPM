@@ -692,10 +692,11 @@ const internalGitOps = {
 
 	/**
 	 * Revert to a specific commit
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {string} sha
 	 * @returns {Promise<{success: boolean, message?: string}>}
 	 */
-	revertToCommit: async (sha) => {
+	revertToCommit: async (access, sha) => {
 		if (isDemoMode()) {
 			throw new errs.AuthError("GitOps is disabled in Demo Mode");
 		}
@@ -712,7 +713,18 @@ const internalGitOps = {
 			});
 
 			logger.info(`GitOps: Reverted to commit ${sha}`);
-			return { success: true, message: `Reverted to ${sha}` };
+
+			// Apply configuration
+			logger.info("GitOps: Applying reverted configuration...");
+			const importResult = await internalGitOps.importConfig(access, { overwrite: true });
+
+			if (importResult.success) {
+				return { success: true, message: `Reverted to ${sha} and applied configuration` };
+			}
+			return {
+				success: false,
+				message: `Reverted to ${sha} but import failed: ${importResult.errors.join(", ")}`,
+			};
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Unknown error";
 			logger.error("GitOps revert failed:", err);

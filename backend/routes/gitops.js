@@ -1,8 +1,8 @@
 import express from "express";
 import internalGitOps from "../internal/gitops.js";
+import { isDemoMode } from "../lib/config.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import { debug, express as logger } from "../logger.js";
-import { isDemoMode } from "../lib/config.js";
 
 const router = express.Router({
 	caseSensitive: true,
@@ -142,7 +142,7 @@ router.post("/revert", jwtdecode(), demoCheck, async (req, res, next) => {
 				error: { message: "SHA is required", code: 400 },
 			});
 		}
-		const result = await internalGitOps.revertToCommit(sha);
+		const result = await internalGitOps.revertToCommit(res.locals.access, sha);
 		res.status(200).json(result);
 	} catch (err) {
 		debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
