@@ -138,6 +138,9 @@ export interface ProxyHost {
 	maintenanceStart?: string;
 	maintenanceEnd?: string;
 	maintenanceReason?: string;
+	// PHP hosting (for scheme=path)
+	phpEnabled?: boolean;
+	phpVersion?: string;
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;

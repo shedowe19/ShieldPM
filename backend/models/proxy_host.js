@@ -25,6 +25,7 @@ const boolFields = [
 	"maintenance_on_failure",
 	"disable_buffering",
 	"maintenance_active",
+	"php_enabled",
 ];
 
 class ProxyHost extends Model {

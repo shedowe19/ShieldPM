@@ -1,13 +1,8 @@
-import { IconSettings, IconServer, IconShieldLock, IconTool } from "@tabler/icons-react";
-
-import { Loader2, AlertCircle } from "lucide-react";
+import { IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-
-import { Button } from "src/components/ui/button";
-import { Card, CardContent } from "src/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import {
 	AccessField,
 	DomainNamesField,
@@ -18,15 +13,18 @@ import {
 	SSLCertificateField,
 	SSLOptionsFields,
 } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Switch } from "src/components/ui/switch";
-import { Textarea } from "src/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
-import { T, intl } from "src/locale";
+import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
@@ -101,6 +99,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								blockExploits: data?.blockExploits || false,
 								allowWebsocketUpgrade: data?.allowWebsocketUpgrade || false,
 								maintenanceOnFailure: data?.maintenanceOnFailure || false,
+								// PHP hosting (for scheme=path)
+								phpEnabled: data?.phpEnabled || false,
+								phpVersion: data?.phpVersion || "83",
 								// Locations tab
 								locations: data?.locations || [],
 								// SSL tab
@@ -277,6 +278,90 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 												</div>
+												{/* PHP Settings - Only show when scheme is 'path' */}
+												<Field name="forwardScheme">
+													{({ field: schemeField }: any) =>
+														schemeField.value === "path" && (
+															<Card className="my-3 border-dashed border-purple-500/50">
+																<CardContent className="p-4">
+																	<h4 className="pb-2 text-lg font-semibold text-purple-400">
+																		<T id="proxy-host.php-settings" />
+																	</h4>
+																	<p className="text-sm text-muted-foreground mb-4">
+																		<T id="proxy-host.php-settings.hint" />
+																	</p>
+																	<div className="space-y-4">
+																		<div className="flex items-center justify-between">
+																			<Label
+																				htmlFor="phpEnabled"
+																				className="flex-1 cursor-pointer"
+																			>
+																				<T id="proxy-host.php-enabled" />
+																			</Label>
+																			<Field name="phpEnabled" type="checkbox">
+																				{({ field, form }: any) => (
+																					<Switch
+																						id="phpEnabled"
+																						checked={field.checked}
+																						onCheckedChange={(
+																							checked: boolean,
+																						) =>
+																							form.setFieldValue(
+																								"phpEnabled",
+																								checked,
+																							)
+																						}
+																					/>
+																				)}
+																			</Field>
+																		</div>
+																		<Field name="phpEnabled" type="checkbox">
+																			{({ field: phpField }: any) =>
+																				phpField.checked && (
+																					<Field name="phpVersion">
+																						{({ field, form }: any) => (
+																							<div className="space-y-2">
+																								<Label htmlFor="phpVersion">
+																									<T id="proxy-host.php-version" />
+																								</Label>
+																								<Select
+																									onValueChange={(
+																										val: string,
+																									) =>
+																										form.setFieldValue(
+																											field.name,
+																											val,
+																										)
+																									}
+																									value={field.value}
+																								>
+																									<SelectTrigger id="phpVersion">
+																										<SelectValue placeholder="PHP 8.3" />
+																									</SelectTrigger>
+																									<SelectContent>
+																										<SelectItem value="82">
+																											PHP 8.2
+																										</SelectItem>
+																										<SelectItem value="83">
+																											PHP 8.3
+																										</SelectItem>
+																										<SelectItem value="84">
+																											PHP 8.4
+																										</SelectItem>
+																									</SelectContent>
+																								</Select>
+																							</div>
+																						)}
+																					</Field>
+																				)
+																			}
+																		</Field>
+																	</div>
+																</CardContent>
+															</Card>
+														)
+													}
+												</Field>
 												<div className="row">
 													<div className="col-md-12">
 														<Field name="bandwidthLimit">
