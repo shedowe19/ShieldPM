@@ -37,7 +37,7 @@ const internalAccessList = {
 	create: async (access, data) => {
 		await access.can("access_lists:create", data);
 		const row = await accessListModel.query().insertAndFetch(
-			/** @type {any} */({
+			/** @type {any} */ ({
 				name: data.name,
 				satisfy_any: data.satisfy_any,
 				pass_auth: data.pass_auth,
@@ -63,7 +63,7 @@ const internalAccessList = {
 			}
 
 			return accessListAuthModel.query().insert(
-				/** @type {any} */({
+				/** @type {any} */ ({
 					access_list_id: omittedRow.id,
 					username: item.username,
 					password: password,
@@ -77,7 +77,7 @@ const internalAccessList = {
 		data.clients?.map((/** @type {any} */ client) => {
 			promises.push(
 				accessListClientModel.query().insert(
-					/** @type {any} */({
+					/** @type {any} */ ({
 						access_list_id: data.id,
 						address: client.address,
 						directive: client.directive,
@@ -155,7 +155,7 @@ const internalAccessList = {
 				.query()
 				.where({ id: data.id })
 				.patch(
-					/** @type {any} */({
+					/** @type {any} */ ({
 						name: data.name,
 						satisfy_any: data.satisfy_any,
 						pass_auth: data.pass_auth,
@@ -181,7 +181,7 @@ const internalAccessList = {
 
 					promises.push(
 						accessListAuthModel.query().insert(
-							/** @type {any} */({
+							/** @type {any} */ ({
 								access_list_id: data.id,
 								username: item.username,
 								password: finalPass,
@@ -211,7 +211,7 @@ const internalAccessList = {
 			const clientPromises = [];
 			data.clients.map((/** @type {any} */ client) => {
 				if (client.address) {
-					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */(client)));
+					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */ (client)));
 				}
 				return true;
 			});

@@ -23,7 +23,6 @@ import tokensRoutes from "./tokens.js";
 import usersRoutes from "./users.js";
 import versionRoutes from "./version.js";
 
-
 const router = express.Router({
 	caseSensitive: true,
 	strict: true,
@@ -65,7 +64,6 @@ router.use("/nginx/certificates", certificatesHostsRoutes);
 router.use("/nginx/analytics", nginxAnalyticsRoutes);
 router.use("/nginx/cloudflared-tunnels", cloudflaredRoutes);
 router.use("/gitops", gitopsRoutes);
-
 
 /**
  * API 404 for all other routes

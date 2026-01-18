@@ -69,7 +69,7 @@ const internalRedirectionHost = {
 			data.advanced_config = "";
 		}
 
-		let row = await redirectionHostModel.query().insertAndFetch(/** @type {any} */(thisData));
+		let row = await redirectionHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -182,8 +182,8 @@ const internalRedirectionHost = {
 
 		const _saved_row = await redirectionHostModel
 			.query()
-			.patchAndFetchById(thisData.id, /** @type {any} */(thisData))
-			.then(/** @type {any} */(utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
+			.patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+			.then(/** @type {any} */ (utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -314,7 +314,7 @@ const internalRedirectionHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */({
+				/** @type {any} */ ({
 					enabled: 1,
 				}),
 			);
@@ -357,7 +357,7 @@ const internalRedirectionHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */({
+				/** @type {any} */ ({
 					enabled: 0,
 				}),
 			);
@@ -435,7 +435,7 @@ const internalRedirectionHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */(row).count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 };
 

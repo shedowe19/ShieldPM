@@ -138,7 +138,7 @@ const internalDeadHost = {
 		if (createCertificate) {
 			const cert = await internalCertificate.createQuickCertificate(
 				access,
-				/** @type {any} */({
+				/** @type {any} */ ({
 					domain_names: thisData.domain_names || row.domain_names,
 					meta: _.assign({}, row.meta, thisData.meta),
 				}),
@@ -290,7 +290,7 @@ const internalDeadHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */({
+				/** @type {any} */ ({
 					enabled: 1,
 				}),
 			);
@@ -332,7 +332,7 @@ const internalDeadHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */({
+				/** @type {any} */ ({
 					enabled: 0,
 				}),
 			);
@@ -407,7 +407,7 @@ const internalDeadHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */(row).count, 10);
+		return Number.parseInt(/** @type {any} */ (row).count, 10);
 	},
 };
 
