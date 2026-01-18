@@ -15,7 +15,7 @@ fi
 
 
 if [ "$PHP82" = "true" ]; then
-    apk add --no-cache php82-fpm
+    apk add --no-cache php82 php82-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP82_APKS" ]; then
         for apk in $(echo "$PHP82_APKS" | tr " " "\n"); do
@@ -41,7 +41,7 @@ elif [ "$FULLCLEAN" = "true" ]; then
 fi
 
 if [ "$PHP83" = "true" ]; then
-    apk add --no-cache php83-fpm
+    apk add --no-cache php83 php83-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP83_APKS" ]; then
         for apk in $(echo "$PHP83_APKS" | tr " " "\n"); do
@@ -67,7 +67,7 @@ elif [ "$FULLCLEAN" = "true" ]; then
 fi
 
 if [ "$PHP84" = "true" ]; then
-    apk add --no-cache php84-fpm
+    apk add --no-cache php84 php84-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP84_APKS" ]; then
         for apk in $(echo "$PHP84_APKS" | tr " " "\n"); do
