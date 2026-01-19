@@ -19,8 +19,12 @@ interface Props {
 
 export function GitSyncTab({ hostId }: Props) {
 	const { values }: any = useFormikContext();
-	const { data: status, isLoading } = useGitSyncStatus(hostId);
+	const { data: status, isLoading, isError, error } = useGitSyncStatus(hostId);
 	const { mutate: triggerSync, isPending: isSyncing } = useTriggerGitSync();
+
+	if (isError) {
+		console.error("Git Sync Status Error:", error);
+	}
 
 	const handleSync = () => {
 		if (hostId) {
@@ -200,6 +204,12 @@ export function GitSyncTab({ hostId }: Props) {
 							<div className="flex items-center gap-2 text-sm text-muted-foreground">
 								<Loader2 className="h-4 w-4 animate-spin" /> Loading status...
 							</div>
+						) : isError ? (
+							<Alert variant="destructive">
+								<IconX className="h-4 w-4" />
+								<AlertTitle>Error loading status</AlertTitle>
+								<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+							</Alert>
 						) : (
 							<div className="space-y-2 text-sm">
 								<div className="flex justify-between items-center">
