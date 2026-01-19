@@ -1,4 +1,5 @@
 import express from "express";
+import internalGitDeploy from "../../internal/git-deploy.js";
 import internalProxyHost from "../../internal/proxy-host.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
@@ -199,6 +200,80 @@ router
 			const result = await internalProxyHost.disable(res.locals.access, {
 				id: Number.parseInt(req.params.host_id, 10),
 			});
+			res.status(200).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	});
+
+/**
+ * Git Sync - Trigger manual sync
+ *
+ * /api/nginx/proxy-hosts/123/git-sync
+ */
+router
+	.route("/:host_id/git-sync")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(jwtdecode())
+
+	/**
+	 * POST /api/nginx/proxy-hosts/123/git-sync
+	 *
+	 * Trigger a manual Git sync for a path-based proxy host
+	 */
+	.post(async (req, res, next) => {
+		try {
+			const hostId = Number.parseInt(req.params.host_id, 10);
+			await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-sync", "post"), req.body);
+			const result = await internalGitDeploy.sync(hostId);
+			res.status(200).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	});
+
+/**
+ * Git Status - Get sync status
+ *
+ * /api/nginx/proxy-hosts/123/git-status
+ */
+router
+	.route("/:host_id/git-status")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(jwtdecode())
+
+	/**
+	 * GET /api/nginx/proxy-hosts/123/git-status
+	 *
+	 * Get Git sync status for a proxy host
+	 */
+	.get(async (req, res, next) => {
+		try {
+			const hostId = Number.parseInt(req.params.host_id, 10);
+			const result = await internalGitDeploy.getStatus(hostId);
+			res.status(200).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
+	})
+
+	/**
+	 * PUT /api/nginx/proxy-hosts/123/git-status
+	 *
+	 * Update Git sync configuration for a proxy host
+	 */
+	.put(async (req, res, next) => {
+		try {
+			const hostId = Number.parseInt(req.params.host_id, 10);
+			const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-status", "put"), req.body);
+			const result = await internalGitDeploy.updateConfig(res.locals.access, hostId, payload);
 			res.status(200).send(result);
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);

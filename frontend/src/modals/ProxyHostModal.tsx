@@ -1,11 +1,12 @@
-import { IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
-import EasyModal, { type InnerModalProps } from "ez-modal-react";
+import { IconGitBranch, IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
+import EasyModal from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
 	AccessField,
 	DomainNamesField,
+	GitSyncTab,
 	HasPermission,
 	Loading,
 	LocationsFields,
@@ -24,6 +25,7 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
+
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
@@ -33,12 +35,7 @@ const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
 };
 
-interface Props extends InnerModalProps {
-	id: number | "new";
-	visible: boolean;
-	remove: () => void;
-}
-const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
+const ProxyHostModal = EasyModal.create(({ id, visible, remove }: any) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
 	const { data, isLoading, error } = useProxyHost(id);
 	const { mutate: setProxyHost } = useSetProxyHost();
@@ -160,6 +157,24 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<TabsTrigger value="maintenance">
 												<IconTool size={20} />
 											</TabsTrigger>
+											<Field name="forwardScheme">
+												{({ field: schemeField }: any) =>
+													schemeField.value === "path" && (
+														<TabsTrigger value="git-sync" className="text-emerald-500">
+															<IconGitBranch size={20} />
+														</TabsTrigger>
+													)
+												}
+											</Field>
+											<Field name="forwardScheme">
+												{({ field: schemeField }: any) =>
+													schemeField.value === "path" && (
+														<TabsTrigger value="git-sync" className="text-emerald-500">
+															<IconGitBranch size={20} />
+														</TabsTrigger>
+													)
+												}
+											</Field>
 										</TabsList>
 									</div>
 
@@ -192,7 +207,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																				form.touched.forwardScheme
+																					form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -230,7 +245,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																			form.touched.forwardHost
+																				form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -261,7 +276,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																			form.touched.forwardPort
+																				form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -409,7 +424,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
+																				form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -437,7 +452,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																			form.touched.forwardQuery
+																				form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}
@@ -617,7 +632,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqRate &&
-																			form.touched.advLimitReqRate
+																				form.touched.advLimitReqRate
 																				? "border-destructive"
 																				: ""
 																		}
@@ -675,7 +690,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqBurst &&
-																			form.touched.advLimitReqBurst
+																				form.touched.advLimitReqBurst
 																				? "border-destructive"
 																				: ""
 																		}
@@ -777,6 +792,16 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													)}
 												</Field>
 											</TabsContent>
+
+											<Field name="forwardScheme">
+												{({ field: schemeField }: any) =>
+													schemeField.value === "path" && (
+														<TabsContent value="git-sync" className="mt-0 space-y-4">
+															<GitSyncTab hostId={typeof id === "number" ? id : null} />
+														</TabsContent>
+													)
+												}
+											</Field>
 										</div>
 									</div>
 								</Tabs>

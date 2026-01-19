@@ -141,6 +141,15 @@ export interface ProxyHost {
 	// PHP hosting (for scheme=path)
 	phpEnabled?: boolean;
 	phpVersion?: string;
+	// Git Sync (for scheme=path)
+	gitRepoUrl?: string | null;
+	gitBranch?: string;
+	gitSyncEnabled?: boolean;
+	gitPollInterval?: number;
+	gitPollUnit?: "s" | "m" | "h";
+	gitLastSync?: string | null;
+	gitLastCommit?: string | null;
+	gitLastError?: string | null;
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;

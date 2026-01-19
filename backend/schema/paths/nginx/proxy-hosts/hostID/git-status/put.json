@@ -1,0 +1,42 @@
+{
+    "type": "object",
+    "properties": {
+        "git_repo_url": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "minLength": 1,
+            "maxLength": 255
+        },
+        "git_branch": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "maxLength": 255
+        },
+        "git_sync_enabled": {
+            "type": "boolean"
+        },
+        "git_poll_interval": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "git_poll_unit": {
+            "type": "string",
+            "enum": [
+                "s",
+                "m",
+                "h"
+            ]
+        },
+        "git_credentials": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    },
+    "additionalProperties": false
+}

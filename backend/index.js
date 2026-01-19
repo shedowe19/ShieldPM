@@ -4,6 +4,7 @@ import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
 import internalCloudflared from "./internal/cloudflared.js";
 import internalDocker from "./internal/docker.js";
+import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
 import internalMaintenance from "./internal/maintenance.js";
@@ -41,6 +42,7 @@ async function appStart() {
 		internalCloudflared.init();
 		internalDocker.init();
 		internalGitOps.init();
+		internalGitDeploy.init();
 
 		const server = app.listen("/run/shieldpm.sock", () => {
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);

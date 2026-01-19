@@ -292,6 +292,76 @@
 				"null"
 			],
 			"example": "memory_limit = 512M"
+		},
+		"git_repo_url": {
+			"type": [
+				"string",
+				"null"
+			],
+			"description": "Git repository URL for auto-deployment",
+			"example": "https://github.com/user/repo.git"
+		},
+		"git_branch": {
+			"type": "string",
+			"description": "Git branch to sync from",
+			"default": "main",
+			"example": "main"
+		},
+		"git_sync_enabled": {
+			"type": "boolean",
+			"description": "Enable automatic Git polling",
+			"example": false
+		},
+		"git_poll_interval": {
+			"type": "integer",
+			"description": "Polling interval value",
+			"minimum": 10,
+			"maximum": 86400,
+			"default": 60,
+			"example": 60
+		},
+		"git_poll_unit": {
+			"type": "string",
+			"description": "Polling interval unit: s (seconds), m (minutes), h (hours)",
+			"enum": [
+				"s",
+				"m",
+				"h"
+			],
+			"default": "m",
+			"example": "m"
+		},
+		"git_credentials": {
+			"type": [
+				"string",
+				"null"
+			],
+			"description": "Personal Access Token for private repos (write-only)",
+			"example": null
+		},
+		"git_last_sync": {
+			"type": [
+				"string",
+				"null"
+			],
+			"description": "Last successful sync timestamp",
+			"example": "2026-01-19 12:00:00"
+		},
+		"git_last_commit": {
+			"type": [
+				"string",
+				"null"
+			],
+			"description": "Last synced commit SHA",
+			"example": "abc123def456"
+		},
+		"git_last_error": {
+			"type": [
+				"string",
+				"null"
+			],
+			"description": "Last sync error message",
+			"example": null
 		}
 	}
 }
