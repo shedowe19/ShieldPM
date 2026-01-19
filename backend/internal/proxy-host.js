@@ -35,6 +35,12 @@ const internalProxyHost = {
 	 * @param   {Object}  [data.meta]
 	 * @param   {Array<Object>} [data.locations]
 	 * @param   {number}  [data.owner_user_id]
+	 * @param   {string}  [data.git_repo_url]
+	 * @param   {string}  [data.git_branch]
+	 * @param   {boolean} [data.git_sync_enabled]
+	 * @param   {number}  [data.git_poll_interval]
+	 * @param   {string}  [data.git_poll_unit]
+	 * @param   {string}  [data.git_credentials]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
@@ -131,6 +137,12 @@ const internalProxyHost = {
 	 * @param  {string}  [data.advanced_config]
 	 * @param  {Object}  [data.meta]
 	 * @param  {Array<Object>} [data.locations]
+	 * @param  {string}  [data.git_repo_url]
+	 * @param  {string}  [data.git_branch]
+	 * @param  {boolean} [data.git_sync_enabled]
+	 * @param  {number}  [data.git_poll_interval]
+	 * @param  {string}  [data.git_poll_unit]
+	 * @param  {string}  [data.git_credentials]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
