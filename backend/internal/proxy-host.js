@@ -2,6 +2,7 @@ import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import utils from "../lib/utils.js";
+import { encrypt } from "../lib/encryption.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
@@ -72,7 +73,7 @@ const internalProxyHost = {
 			thisData.advanced_config = "";
 		}
 
-		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */(thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -188,10 +189,16 @@ const internalProxyHost = {
 
 		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
 
+		if (thisData.git_credentials) {
+			thisData.git_credentials = encrypt(thisData.git_credentials);
+		} else if (typeof thisData.git_credentials !== "undefined" && thisData.git_credentials === "") {
+			thisData.git_credentials = null;
+		}
+
 		let _saved_row = await proxyHostModel
 			.query()
 			.where({ id: thisData.id })
-			.patch(/** @type {any} */ (thisData));
+			.patch(/** @type {any} */(thisData));
 
 		// fetch updated row to be safe and consistent with previous logic if patch returns count
 		// wait, patch returns count. We need to fetch it or rely on logic.
@@ -218,7 +225,7 @@ const internalProxyHost = {
 		// But for safety, I will use `patchAndFetchById`.
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */(thisData))
 		);
 		_saved_row = utils.omitRow(omissions())(new_saved_row);
 
@@ -311,13 +318,13 @@ const internalProxyHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					is_deleted: 1,
 				}),
 			);
 
 		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
+		await internalNginx.deleteConfig("proxy_host", /** @type {any} */(row));
 		await internalNginx.reload();
 
 		// Add to audit log
@@ -478,7 +485,7 @@ const internalProxyHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */ (row).count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 
