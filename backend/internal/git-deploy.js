@@ -3,6 +3,7 @@
  * Handles automatic Git synchronization for path-based proxy hosts
  */
 
+import dayjs from "dayjs";
 import fs from "node:fs";
 
 import path from "node:path";
