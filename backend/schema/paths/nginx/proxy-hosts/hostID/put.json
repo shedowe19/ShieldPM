@@ -123,6 +123,9 @@
 						},
 						"php_version": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/php_version"
+						},
+						"php_override_ini": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/php_override_ini"
 						}
 					}
 				}

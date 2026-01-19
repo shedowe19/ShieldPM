@@ -285,6 +285,13 @@
 				"84"
 			],
 			"example": "83"
+		},
+		"php_override_ini": {
+			"type": [
+				"string",
+				"null"
+			],
+			"example": "memory_limit = 512M"
 		}
 	}
 }

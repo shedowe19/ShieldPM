@@ -30,19 +30,26 @@ environment:
 > [!NOTE]
 > The container will install these packages every time it starts. This ensures your extensions are always up-to-date with the container capabilities.
 
-## Custom PHP Configuration (php.ini)
+## Custom PHP Configuration
 
-You can override PHP settings (like memory limits) by creating `.ini` files in the data volume.
+### Option A: Per-Host GUI Settings (Recommended)
+You can define custom PHP directives directly in the Proxy Host settings:
+1. Edit your Proxy Host.
+2. Ensure **Scheme** is `Path` and **Enable PHP** is `On`.
+3. In the **Custom PHP.ini Settings** box, enter directives (one per line):
+   ```ini
+   memory_limit = 1024M
+   upload_max_filesize = 16G
+   post_max_size = 16G
+   max_execution_time = 3600
+   ```
+
+### Option B: PHP.ini Files (Global or Version-wide)
+You can also create `.ini` files in the data volume to affect all hosts using that PHP version.
 
 **Path:** `/data/php/<version>/conf.d/`
 
-**Example:** Create `/data/php/84/conf.d/memory.ini`:
-```ini
-memory_limit = 1024M
-upload_max_filesize = 10G
-post_max_size = 10G
-max_execution_time = 3600
-```
+**Example:** Create `/data/php/84/conf.d/memory.ini`.
 
 ---
 
@@ -63,7 +70,16 @@ Add these extensions to your `compose.yaml`. This covers almost all Nextcloud ap
         - "your-domain.com:127.0.0.1" 
 ```
 
-### 2. Permissions
+### 2. Configuration (GUI)
+In the Proxy Host **Custom PHP.ini Settings** field, enter:
+```ini
+memory_limit = 1024M
+upload_max_filesize = 16G
+post_max_size = 16G
+max_execution_time = 3600
+```
+
+### 3. Permissions
 ShieldPM runs as user `root` but PHP-FPM workers run as `nobody` (UID 65534) or the PUID/PGID you configured. ensure your files are owned correctly.
 ```bash
 docker exec shieldpm chown -R nobody:nobody /var/www/test/nextcloud

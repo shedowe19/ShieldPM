@@ -79,6 +79,8 @@ class ProxyHost extends Model {
 	adv_limit_req_burst;
 	/** @type {string|null} */
 	forward_query;
+	/** @type {string|null} */
+	php_override_ini;
 	/** @type {string} */
 	advanced_config;
 

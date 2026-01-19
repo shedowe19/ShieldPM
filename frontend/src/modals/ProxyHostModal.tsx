@@ -192,7 +192,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																				form.touched.forwardScheme
+																					form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -230,7 +230,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																			form.touched.forwardHost
+																				form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -261,7 +261,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																			form.touched.forwardPort
+																				form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -315,44 +315,70 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																				)}
 																			</Field>
 																		</div>
+
+
 																		<Field name="phpEnabled" type="checkbox">
 																			{({ field: phpField }: any) =>
 																				phpField.checked && (
-																					<Field name="phpVersion">
-																						{({ field, form }: any) => (
-																							<div className="space-y-2">
-																								<Label htmlFor="phpVersion">
-																									<T id="proxy-host.php-version" />
-																								</Label>
-																								<Select
-																									onValueChange={(
-																										val: string,
-																									) =>
-																										form.setFieldValue(
-																											field.name,
-																											val,
-																										)
-																									}
-																									value={field.value}
-																								>
-																									<SelectTrigger id="phpVersion">
-																										<SelectValue placeholder="PHP 8.3" />
-																									</SelectTrigger>
-																									<SelectContent>
-																										<SelectItem value="82">
-																											PHP 8.2
-																										</SelectItem>
-																										<SelectItem value="83">
-																											PHP 8.3
-																										</SelectItem>
-																										<SelectItem value="84">
-																											PHP 8.4
-																										</SelectItem>
-																									</SelectContent>
-																								</Select>
-																							</div>
-																						)}
-																					</Field>
+																					<>
+																						<Field name="phpVersion">
+																							{({ field, form }: any) => (
+																								<div className="space-y-2">
+																									<Label htmlFor="phpVersion">
+																										<T id="proxy-host.php-version" />
+																									</Label>
+																									<Select
+																										onValueChange={(
+																											val: string,
+																										) =>
+																											form.setFieldValue(
+																												field.name,
+																												val,
+																											)
+																										}
+																										value={field.value}
+																									>
+																										<SelectTrigger id="phpVersion">
+																											<SelectValue placeholder="PHP 8.3" />
+																										</SelectTrigger>
+																										<SelectContent>
+																											<SelectItem value="82">
+																												PHP 8.2
+																											</SelectItem>
+																											<SelectItem value="83">
+																												PHP 8.3
+																											</SelectItem>
+																											<SelectItem value="84">
+																												PHP 8.4
+																											</SelectItem>
+																										</SelectContent>
+																									</Select>
+																								</div>
+																							)}
+																						</Field>
+
+																						<Field name="php_override_ini">
+																							{({ field }: any) => (
+																								<div className="space-y-2 pt-2">
+																									<Label htmlFor="php_override_ini">
+																										<T id="proxy-host.php.custom-ini" />
+																									</Label>
+																									<Textarea
+																										id="php_override_ini"
+																										placeholder={intl.formatMessage({
+																											id: "proxy-host.php.custom-ini.placeholder",
+																										})}
+																										className="font-mono text-xs min-h-[100px]"
+																										{...field}
+																										value={field.value || ""}
+																									/>
+																									<p className="text-xs text-muted-foreground">
+																										<T id="proxy-host.php.custom-ini.hint" />
+																									</p>
+																								</div>
+																							)}
+																						</Field>
+																					</>
 																				)
 																			}
 																		</Field>
@@ -377,7 +403,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
+																				form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -405,7 +431,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																			form.touched.forwardQuery
+																				form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}
@@ -585,7 +611,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqRate &&
-																			form.touched.advLimitReqRate
+																				form.touched.advLimitReqRate
 																				? "border-destructive"
 																				: ""
 																		}
@@ -643,7 +669,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqBurst &&
-																			form.touched.advLimitReqBurst
+																				form.touched.advLimitReqBurst
 																				? "border-destructive"
 																				: ""
 																		}
@@ -770,7 +796,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</Formik>
 				)}
 			</DialogContent>
-		</Dialog>
+		</Dialog >
 	);
 });
 
