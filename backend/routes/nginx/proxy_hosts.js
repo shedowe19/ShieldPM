@@ -272,7 +272,10 @@ router
 	.put(async (req, res, next) => {
 		try {
 			const hostId = Number.parseInt(req.params.host_id, 10);
-			const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-status", "put"), req.body);
+			const payload = await apiValidator(
+				getValidationSchema("/nginx/proxy-hosts/{hostID}/git-status", "put"),
+				req.body,
+			);
 			const result = await internalGitDeploy.updateConfig(res.locals.access, hostId, payload);
 			res.status(200).send(result);
 		} catch (err) {
