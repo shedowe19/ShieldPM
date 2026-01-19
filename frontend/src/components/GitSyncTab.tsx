@@ -22,10 +22,6 @@ export function GitSyncTab({ hostId }: Props) {
 	const { data: status, isLoading, isError, error } = useGitSyncStatus(hostId);
 	const { mutate: triggerSync, isPending: isSyncing } = useTriggerGitSync();
 
-	if (isError) {
-		console.error("Git Sync Status Error:", error);
-	}
-
 	const handleSync = () => {
 		if (hostId) {
 			triggerSync(hostId, {
@@ -217,7 +213,7 @@ export function GitSyncTab({ hostId }: Props) {
 										<T id="proxy-host.git-sync.last-sync" />
 									</span>
 									<span className="font-mono">
-										{status?.git_last_sync ? new Date(status.git_last_sync).toLocaleString() : "-"}
+										{status?.gitLastSync ? new Date(status.gitLastSync).toLocaleString() : "-"}
 									</span>
 								</div>
 								<div className="flex justify-between items-center">
@@ -226,23 +222,23 @@ export function GitSyncTab({ hostId }: Props) {
 									</span>
 									<div className="flex items-center gap-1 font-mono">
 										<IconGitCommit className="h-3 w-3" />
-										{status?.git_last_commit ? status.git_last_commit.substring(0, 7) : "-"}
+										{status?.gitLastCommit ? status.gitLastCommit.substring(0, 7) : "-"}
 									</div>
 								</div>
 
-								{status?.git_last_error && (
+								{status?.gitLastError && (
 									<Alert variant="destructive" className="mt-2 py-2">
 										<IconX className="h-4 w-4" />
 										<AlertTitle>
 											<T id="error" />
 										</AlertTitle>
 										<AlertDescription className="font-mono text-xs break-all">
-											{status.git_last_error}
+											{status.gitLastError}
 										</AlertDescription>
 									</Alert>
 								)}
 
-								{!status?.git_last_error && status?.git_last_sync && (
+								{!status?.gitLastError && status?.gitLastSync && (
 									<div className="flex items-center gap-2 text-emerald-600 mt-2">
 										<IconCheck className="h-4 w-4" />
 										<span>
