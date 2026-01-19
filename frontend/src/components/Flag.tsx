@@ -1,6 +1,5 @@
 import { IconWorld } from "@tabler/icons-react";
 import { hasFlag } from "country-flag-icons";
-// @ts-expect-error Creating a typing for a subfolder is not easily possible
 import Flags from "country-flag-icons/react/3x2";
 
 interface FlagProps {

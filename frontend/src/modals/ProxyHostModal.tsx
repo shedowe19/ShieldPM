@@ -1,5 +1,5 @@
 import { IconGitBranch, IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
-import EasyModal from "ez-modal-react";
+import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -35,7 +35,12 @@ const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
 };
 
-const ProxyHostModal = EasyModal.create(({ id, visible, remove }: any) => {
+interface Props extends InnerModalProps {
+	id: number | "new";
+	visible: boolean;
+	remove: () => void;
+}
+const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
 	const { data, isLoading, error } = useProxyHost(id);
 	const { mutate: setProxyHost } = useSetProxyHost();
