@@ -64,7 +64,7 @@ Add these extensions to your `compose.yaml`. This covers almost all Nextcloud ap
     environment:
       - "PHP84=true"
       # Comprehensive list for Nextcloud 28+
-      - "PHP84_APKS=php84-simplexml php84-xml php84-dom php84-xmlwriter php84-xmlreader php84-curl php84-mbstring php84-gd php84-zip php84-openssl php84-pdo php84-pdo_mysql php84-pdo_sqlite php84-fileinfo php84-ctype php84-session php84-iconv php84-intl php84-posix php84-pecl-imagick php84-opcache php84-gmp php84-bcmath php84-pcntl php84-sodium php84-exif php84-sysvsem imagemagick imagemagick-svg"
+      - "PHP84_APKS=php84-simplexml php84-xml php84-dom php84-xmlwriter php84-xmlreader php84-curl php84-mbstring php84-gd php84-zip php84-openssl php84-pdo php84-pdo_mysql php84-pdo_sqlite php84-fileinfo php84-ctype php84-session php84-iconv php84-intl php84-posix php84-pecl-imagick php84-opcache php84-gmp php84-bcmath php84-pcntl php84-sodium php84-exif php84-sysvsem php84-pecl-apcu imagemagick imagemagick-svg"
       # Fix for self-checks
       extra_hosts:
         - "your-domain.com:127.0.0.1" 
@@ -77,6 +77,7 @@ memory_limit = 1024M
 upload_max_filesize = 16G
 post_max_size = 16G
 max_execution_time = 3600
+apc.enable_cli = 1
 ```
 
 ### 3. Permissions
