@@ -269,6 +269,29 @@
 				"null"
 			],
 			"example": "System Upgrade"
+		},
+		"php_enabled": {
+			"type": "boolean",
+			"example": false
+		},
+		"php_version": {
+			"type": [
+				"string",
+				"null"
+			],
+			"enum": [
+				"82",
+				"83",
+				"84"
+			],
+			"example": "83"
+		},
+		"php_override_ini": {
+			"type": [
+				"string",
+				"null"
+			],
+			"example": "memory_limit = 512M"
 		}
 	}
 }

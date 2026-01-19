@@ -5,6 +5,7 @@ import utils from "../lib/utils.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
@@ -102,6 +103,9 @@ const internalProxyHost = {
 			object_id: row.id,
 			meta: thisData,
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("proxy-host");
 
 		return row;
 	},
@@ -239,6 +243,10 @@ const internalProxyHost = {
 		// Configure nginx
 		const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
 		row.meta = new_meta;
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("proxy-host");
+
 		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
 	},
 
@@ -319,6 +327,9 @@ const internalProxyHost = {
 			object_id: row.id,
 			meta: _.omit(row, omissions()),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("proxy-host");
 
 		return true;
 	},

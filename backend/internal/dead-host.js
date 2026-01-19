@@ -5,6 +5,7 @@ import utils from "../lib/utils.js";
 import deadHostModel from "../models/dead_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
@@ -87,6 +88,9 @@ const internalDeadHost = {
 
 		// Configure nginx
 		await internalNginx.configure(deadHostModel, "dead_host", freshRow);
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("dead-host");
 
 		return freshRow;
 	},
@@ -174,6 +178,10 @@ const internalDeadHost = {
 		// Configure nginx
 		const newMeta = await internalNginx.configure(deadHostModel, "dead_host", row);
 		row.meta = newMeta;
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("dead-host");
+
 		return _.omit(internalHost.cleanRowCertificateMeta(thisRow), omissions());
 	},
 
@@ -248,6 +256,10 @@ const internalDeadHost = {
 			object_id: row.id,
 			meta: _.omit(row, omissions()),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("dead-host");
+
 		return true;
 	},
 

@@ -5,6 +5,7 @@ import utils from "../lib/utils.js";
 import redirectionHostModel from "../models/redirection_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
@@ -98,6 +99,9 @@ const internalRedirectionHost = {
 			object_id: row.id,
 			meta: thisData,
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("redirection-host");
 
 		return row;
 	},
@@ -198,6 +202,9 @@ const internalRedirectionHost = {
 		const new_meta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
 		row.meta = new_meta;
 
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("redirection-host");
+
 		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
 	},
 
@@ -273,6 +280,9 @@ const internalRedirectionHost = {
 			object_id: row.id,
 			meta: _.omit(row, omissions()),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("redirection-host");
 
 		return true;
 	},

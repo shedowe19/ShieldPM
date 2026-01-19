@@ -332,27 +332,39 @@ const internalCertificate = {
 	download: async (access, data) => {
 		await access.can("certificates:get", data);
 		const certificate = await internalCertificate.get(access, data);
+
+		let zipDirectory;
 		if (certificate.provider === "letsencrypt") {
-			const zipDirectory = internalCertificate.getLiveCertPath(data.id);
-			if (!fs.existsSync(zipDirectory)) {
-				throw new error.ItemNotFoundError(`Certificate ${certificate.nice_name} does not exists`);
-			}
-
-			const certFiles = fs
-				.readdirSync(zipDirectory)
-				.filter((fn) => fn.endsWith(".pem"))
-				.map((fn) => fs.realpathSync(path.join(zipDirectory, fn)));
-
-			const downloadName = `npm-${data.id}-${Date.now()}.zip`;
-			const opName = `/tmp/${downloadName}`;
-
-			await internalCertificate.zipFiles(certFiles, opName);
-			debug(logger, "zip completed : ", opName);
-			return {
-				fileName: opName,
-			};
+			zipDirectory = internalCertificate.getLiveCertPath(data.id);
+		} else if (certificate.provider === "internal") {
+			zipDirectory = `/data/tls/internal/npm-${data.id}`;
+		} else if (certificate.provider === "other") {
+			zipDirectory = `/data/tls/custom/npm-${data.id}`;
+		} else {
+			throw new error.ValidationError("This certificate type cannot be downloaded");
 		}
-		throw new error.ValidationError("Only Certbot certificates can be downloaded");
+
+		if (!fs.existsSync(zipDirectory)) {
+			throw new error.ItemNotFoundError(`Certificate ${certificate.nice_name} does not exist on disk`);
+		}
+
+		const certFiles = fs
+			.readdirSync(zipDirectory)
+			.filter((fn) => fn.endsWith(".pem") || fn.endsWith(".crt") || fn.endsWith(".key"))
+			.map((fn) => fs.realpathSync(path.join(zipDirectory, fn)));
+
+		if (certFiles.length === 0) {
+			throw new error.ItemNotFoundError(`No certificate files found for ${certificate.nice_name}`);
+		}
+
+		const downloadName = `npm-${data.id}-${Date.now()}.zip`;
+		const opName = `/tmp/${downloadName}`;
+
+		await internalCertificate.zipFiles(certFiles, opName);
+		debug(logger, "zip completed : ", opName);
+		return {
+			fileName: opName,
+		};
 	},
 
 	/**

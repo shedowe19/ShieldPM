@@ -15,16 +15,10 @@ fi
 
 
 if [ "$PHP82" = "true" ]; then
-    apk add --no-cache php82-fpm
+    apk add --no-cache php82 php82-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP82_APKS" ]; then
         for apk in $(echo "$PHP82_APKS" | tr " " "\n"); do
-            if ! echo "$apk" | grep -q "^php82-.*$"; then
-                echo "$apk is a non allowed value."
-                echo "It needs to start with \"php82-\"."
-                echo "It is set to \"$apk\"."
-                sleep inf
-            fi
             echo "Installing $apk via apk..."
             if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
                 echo "The apk \"$apk\" was not installed!"
@@ -36,21 +30,16 @@ if [ "$PHP82" = "true" ]; then
     sed -i "s|#\?listen =.*|listen = /run/php82.sock|" /data/php/82/php-fpm.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/82/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/82/php-fpm.d/*.conf|g" /data/php/82/php-fpm.conf
+    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/82/php-fpm.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
     rm -vrf /data/php/82
 fi
 
 if [ "$PHP83" = "true" ]; then
-    apk add --no-cache php83-fpm
+    apk add --no-cache php83 php83-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP83_APKS" ]; then
         for apk in $(echo "$PHP83_APKS" | tr " " "\n"); do
-            if ! echo "$apk" | grep -q "^php83-.*$"; then
-                echo "$apk is a non allowed value."
-                echo "It needs to start with \"php83-\"."
-                echo "It is set to \"$apk\"."
-                sleep inf
-            fi
             echo "Installing $apk via apk..."
             if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
                 echo "The apk \"$apk\" was not installed!"
@@ -62,21 +51,16 @@ if [ "$PHP83" = "true" ]; then
     sed -i "s|#\?listen =.*|listen = /run/php83.sock|" /data/php/83/php-fpm.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/83/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/83/php-fpm.d/*.conf|g" /data/php/83/php-fpm.conf
+    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/83/php-fpm.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
     rm -vrf /data/php/83
 fi
 
 if [ "$PHP84" = "true" ]; then
-    apk add --no-cache php84-fpm
+    apk add --no-cache php84 php84-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP84_APKS" ]; then
         for apk in $(echo "$PHP84_APKS" | tr " " "\n"); do
-            if ! echo "$apk" | grep -q "^php84-.*$"; then
-                echo "$apk is a non allowed value."
-                echo "It needs to start with \"php84-\"."
-                echo "It is set to \"$apk\"."
-                sleep inf
-            fi
             echo "Installing $apk via apk..."
             if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
                 echo "The apk \"$apk\" was not installed!"
@@ -88,6 +72,7 @@ if [ "$PHP84" = "true" ]; then
     sed -i "s|#\?listen =.*|listen = /run/php84.sock|" /data/php/84/php-fpm.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/84/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/84/php-fpm.d/*.conf|g" /data/php/84/php-fpm.conf
+    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/84/php-fpm.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
     rm -vrf /data/php/84
 fi
@@ -95,12 +80,6 @@ fi
 if { [ "$PHP82" = "true" ] || [ "$PHP83" = "true" ] || [ "$PHP84" = "true" ]; } && [ -n "$PHP_APKS" ]; then
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     for apk in $(echo "$PHP_APKS" | tr " " "\n"); do
-        if ! echo "$apk" | grep -q "^php-.*$"; then
-            echo "$apk is a non allowed value."
-            echo "It needs to start with \"php-\"."
-            echo "It is set to \"$apk\"."
-            sleep inf
-        fi
         echo "Installing $apk via apk..."
         if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
             echo "The apk \"$apk\" was not installed!"

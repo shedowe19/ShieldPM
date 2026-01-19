@@ -10,6 +10,7 @@ import accessListClientModel from "../models/access_list_client.js";
 import now from "../models/now_helper.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
+import internalGitOps from "./gitops.js";
 import internalNginx from "./nginx.js";
 
 const omissions = () => {
@@ -115,6 +116,9 @@ const internalAccessList = {
 			object_id: freshRow.id,
 			meta: internalAccessList.maskItems(data),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("access-list");
 
 		return internalAccessList.maskItems(freshRow);
 	},
@@ -245,6 +249,10 @@ const internalAccessList = {
 			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
 		}
 		await internalNginx.reload();
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("access-list");
+
 		return internalAccessList.maskItems(freshRow);
 	},
 
@@ -364,6 +372,10 @@ const internalAccessList = {
 			object_id: row.id,
 			meta: _.omit(internalAccessList.maskItems(row), ["is_deleted", "proxy_hosts"]),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("access-list");
+
 		return true;
 	},
 

@@ -5,6 +5,7 @@ import utils from "../lib/utils.js";
 import streamModel from "../models/stream.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
@@ -100,6 +101,9 @@ const internalStream = {
 			object_id: row.id,
 			meta: data,
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("stream");
 
 		return row;
 	},
@@ -200,6 +204,10 @@ const internalStream = {
 
 		const new_meta = await internalNginx.configure(streamModel, "stream", row);
 		row.meta = new_meta;
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("stream");
+
 		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
 	},
 
@@ -275,6 +283,9 @@ const internalStream = {
 			object_id: row.id,
 			meta: _.omit(row, omissions()),
 		});
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("stream");
 
 		return true;
 	},

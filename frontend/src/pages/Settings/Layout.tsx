@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { T } from "src/locale";
 import DefaultSite from "./DefaultSite";
-import { IconSettings, IconRobot } from "@tabler/icons-react";
+import { IconSettings, IconRobot, IconGitBranch } from "@tabler/icons-react";
 import AiConfigPage from "./Ai";
+import GitOps from "./GitOps";
 import { useHealth } from "@/hooks/useHealth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
 export default function Layout() {
 	const health = useHealth();
-	const [activeTab, setActiveTab] = useState<"default-site" | "ai">("default-site");
+	const [activeTab, setActiveTab] = useState<"default-site" | "ai" | "gitops">("default-site");
 
 	if (health.data?.demo) {
 		return (
@@ -58,11 +59,20 @@ export default function Layout() {
 							<IconRobot className="mr-2 h-4 w-4" />
 							AI Agent
 						</button>
+						<button
+							type="button"
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "gitops" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab("gitops")}
+						>
+							<IconGitBranch className="mr-2 h-4 w-4" />
+							<T id="settings.gitops" />
+						</button>
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
 					{activeTab === "default-site" && <DefaultSite />}
 					{activeTab === "ai" && <AiConfigPage />}
+					{activeTab === "gitops" && <GitOps />}
 				</div>
 			</div>
 		</div>
