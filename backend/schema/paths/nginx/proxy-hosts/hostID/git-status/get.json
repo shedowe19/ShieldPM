@@ -1,0 +1,77 @@
+{
+    "operationId": "getProxyHostGitStatus",
+    "summary": "Get Git Sync Status for a Proxy Host",
+    "tags": [
+        "proxy-hosts"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "proxy_hosts.view"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "hostID",
+            "description": "The ID of the Proxy Host",
+            "schema": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "required": true,
+            "example": 1
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "git_repo_url": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "git_branch": {
+                                "type": "string"
+                            },
+                            "git_sync_enabled": {
+                                "type": "boolean"
+                            },
+                            "git_poll_interval": {
+                                "type": "integer"
+                            },
+                            "git_poll_unit": {
+                                "type": "string",
+                                "enum": [
+                                    "s",
+                                    "m",
+                                    "h"
+                                ]
+                            },
+                            "git_last_sync": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "git_last_commit": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "git_last_error": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "polling_active": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
