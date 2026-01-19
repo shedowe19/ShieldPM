@@ -2,6 +2,7 @@ import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import utils from "../lib/utils.js";
+import { encrypt } from "../lib/encryption.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
@@ -34,6 +35,12 @@ const internalProxyHost = {
 	 * @param   {Object}  [data.meta]
 	 * @param   {Array<Object>} [data.locations]
 	 * @param   {number}  [data.owner_user_id]
+	 * @param   {string}  [data.git_repo_url]
+	 * @param   {string}  [data.git_branch]
+	 * @param   {boolean} [data.git_sync_enabled]
+	 * @param   {number}  [data.git_poll_interval]
+	 * @param   {string}  [data.git_poll_unit]
+	 * @param   {string}  [data.git_credentials]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
@@ -130,6 +137,12 @@ const internalProxyHost = {
 	 * @param  {string}  [data.advanced_config]
 	 * @param  {Object}  [data.meta]
 	 * @param  {Array<Object>} [data.locations]
+	 * @param  {string}  [data.git_repo_url]
+	 * @param  {string}  [data.git_branch]
+	 * @param  {boolean} [data.git_sync_enabled]
+	 * @param  {number}  [data.git_poll_interval]
+	 * @param  {string}  [data.git_poll_unit]
+	 * @param  {string}  [data.git_credentials]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
@@ -187,6 +200,12 @@ const internalProxyHost = {
 		);
 
 		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
+
+		if (thisData.git_credentials) {
+			thisData.git_credentials = encrypt(thisData.git_credentials);
+		} else if (typeof thisData.git_credentials !== "undefined" && thisData.git_credentials === "") {
+			thisData.git_credentials = null;
+		}
 
 		let _saved_row = await proxyHostModel
 			.query()

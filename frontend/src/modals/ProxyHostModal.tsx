@@ -1,4 +1,4 @@
-import { IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
+import { IconGitBranch, IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -6,6 +6,7 @@ import { type ReactNode, useState } from "react";
 import {
 	AccessField,
 	DomainNamesField,
+	GitSyncTab,
 	HasPermission,
 	Loading,
 	LocationsFields,
@@ -24,6 +25,7 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
+
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
@@ -121,7 +123,13 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								maintenanceStart: data?.maintenanceStart || "",
 								maintenanceEnd: data?.maintenanceEnd || "",
 								maintenanceReason: data?.maintenanceReason || "",
-								meta: data?.meta || {},
+								// Git Sync
+								gitRepoUrl: data?.gitRepoUrl || "",
+								gitBranch: data?.gitBranch || "main",
+								gitSyncEnabled: data?.gitSyncEnabled || false,
+								gitPollInterval: data?.gitPollInterval || 60,
+								gitPollUnit: data?.gitPollUnit || "m",
+								gitCredentials: "", // Do not fill credentials for security
 							} as any
 						}
 						enableReinitialize
@@ -160,6 +168,15 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<TabsTrigger value="maintenance">
 												<IconTool size={20} />
 											</TabsTrigger>
+											<Field name="forwardScheme">
+												{({ field: schemeField }: any) =>
+													schemeField.value === "path" && (
+														<TabsTrigger value="git-sync" className="text-emerald-500">
+															<IconGitBranch size={20} />
+														</TabsTrigger>
+													)
+												}
+											</Field>
 										</TabsList>
 									</div>
 
@@ -777,6 +794,16 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													)}
 												</Field>
 											</TabsContent>
+
+											<Field name="forwardScheme">
+												{({ field: schemeField }: any) =>
+													schemeField.value === "path" && (
+														<TabsContent value="git-sync" className="mt-0 space-y-4">
+															<GitSyncTab hostId={typeof id === "number" ? id : null} />
+														</TabsContent>
+													)
+												}
+											</Field>
 										</div>
 									</div>
 								</Tabs>

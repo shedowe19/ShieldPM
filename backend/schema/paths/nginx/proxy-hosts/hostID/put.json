@@ -126,6 +126,24 @@
 						},
 						"php_override_ini": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/php_override_ini"
+						},
+						"git_repo_url": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/git_repo_url"
+						},
+						"git_branch": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/git_branch"
+						},
+						"git_sync_enabled": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/git_sync_enabled"
+						},
+						"git_poll_interval": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/git_poll_interval"
+						},
+						"git_poll_unit": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/git_poll_unit"
+						},
+						"git_credentials": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/git_credentials"
 						}
 					}
 				}

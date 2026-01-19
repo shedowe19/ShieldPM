@@ -26,11 +26,18 @@ const boolFields = [
 	"disable_buffering",
 	"maintenance_active",
 	"php_enabled",
+	"git_sync_enabled",
 ];
 
 class ProxyHost extends Model {
 	/** @type {number} */
 	id;
+	/** @type {string} */
+	forward_scheme;
+	/** @type {string} */
+	forward_host;
+	/** @type {number} */
+	forward_port;
 	/** @type {string[]} */
 	domain_names;
 	/** @type {Object} */
@@ -83,6 +90,26 @@ class ProxyHost extends Model {
 	php_override_ini;
 	/** @type {string} */
 	advanced_config;
+
+	// Git Sync fields
+	/** @type {string|null} */
+	git_repo_url;
+	/** @type {string} */
+	git_branch;
+	/** @type {boolean} */
+	git_sync_enabled;
+	/** @type {number} */
+	git_poll_interval;
+	/** @type {string} */
+	git_poll_unit;
+	/** @type {string|null} */
+	git_credentials;
+	/** @type {string|null} */
+	git_last_sync;
+	/** @type {string|null} */
+	git_last_commit;
+	/** @type {string|null} */
+	git_last_error;
 
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());

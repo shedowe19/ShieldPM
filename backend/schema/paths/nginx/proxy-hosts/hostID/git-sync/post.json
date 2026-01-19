@@ -1,0 +1,62 @@
+{
+    "operationId": "triggerGitSync",
+    "summary": "Trigger Git Sync",
+    "description": "Trigger a manual Git sync for a proxy host",
+    "tags": [
+        "proxy-hosts"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "proxy_hosts.update"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "hostID",
+            "description": "The ID of the Proxy Host",
+            "schema": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "required": true,
+            "example": 1
+        }
+    ],
+    "requestBody": {
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "Sync result",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "success": {
+                                "type": "boolean"
+                            },
+                            "commit": {
+                                "type": "string"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

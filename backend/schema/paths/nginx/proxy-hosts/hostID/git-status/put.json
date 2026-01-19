@@ -1,0 +1,89 @@
+{
+    "operationId": "updateGitSyncConfig",
+    "summary": "Update Git Sync Configuration",
+    "description": "Update Git sync configuration for a proxy host",
+    "tags": [
+        "proxy-hosts"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "proxy_hosts.update"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "hostID",
+            "description": "The ID of the Proxy Host",
+            "schema": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "required": true,
+            "example": 1
+        }
+    ],
+    "requestBody": {
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "git_repo_url": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "minLength": 1,
+                            "maxLength": 255
+                        },
+                        "git_branch": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        },
+                        "git_sync_enabled": {
+                            "type": "boolean"
+                        },
+                        "git_poll_interval": {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+                        "git_poll_unit": {
+                            "type": "string",
+                            "enum": [
+                                "s",
+                                "m",
+                                "h"
+                            ]
+                        },
+                        "git_credentials": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "Updated Git Sync Status",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../get.json#/responses/200/content/application/json/schema"
+                    }
+                }
+            }
+        }
+    }
+}

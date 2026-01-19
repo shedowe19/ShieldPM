@@ -1,6 +1,6 @@
 {
 	"name": "shieldpm",
-	"version": "3.7.0",
+	"version": "3.8.0",
 	"description": "A beautiful interface for creating Nginx endpoints",
 	"author": "ShieldPM Contributors (based on work by Jamie Curnow and ZoeyVid)",
 	"license": "UNLICENSED",
