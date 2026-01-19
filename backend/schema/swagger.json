@@ -197,6 +197,19 @@
 				"$ref": "./paths/nginx/proxy-hosts/hostID/disable/post.json"
 			}
 		},
+		"/nginx/proxy-hosts/{hostID}/git-sync": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/git-sync/post.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/git-status": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/git-status/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/git-status/put.json"
+			}
+		},
 		"/nginx/redirection-hosts": {
 			"get": {
 				"$ref": "./paths/nginx/redirection-hosts/get.json"
