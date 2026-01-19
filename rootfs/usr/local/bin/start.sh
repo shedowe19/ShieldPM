@@ -19,12 +19,6 @@ if [ "$PHP82" = "true" ]; then
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP82_APKS" ]; then
         for apk in $(echo "$PHP82_APKS" | tr " " "\n"); do
-            if ! echo "$apk" | grep -q "^php82-.*$"; then
-                echo "$apk is a non allowed value."
-                echo "It needs to start with \"php82-\"."
-                echo "It is set to \"$apk\"."
-                sleep inf
-            fi
             echo "Installing $apk via apk..."
             if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
                 echo "The apk \"$apk\" was not installed!"
@@ -46,12 +40,6 @@ if [ "$PHP83" = "true" ]; then
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP83_APKS" ]; then
         for apk in $(echo "$PHP83_APKS" | tr " " "\n"); do
-            if ! echo "$apk" | grep -q "^php83-.*$"; then
-                echo "$apk is a non allowed value."
-                echo "It needs to start with \"php83-\"."
-                echo "It is set to \"$apk\"."
-                sleep inf
-            fi
             echo "Installing $apk via apk..."
             if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
                 echo "The apk \"$apk\" was not installed!"
@@ -73,12 +61,6 @@ if [ "$PHP84" = "true" ]; then
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP84_APKS" ]; then
         for apk in $(echo "$PHP84_APKS" | tr " " "\n"); do
-            if ! echo "$apk" | grep -q "^php84-.*$"; then
-                echo "$apk is a non allowed value."
-                echo "It needs to start with \"php84-\"."
-                echo "It is set to \"$apk\"."
-                sleep inf
-            fi
             echo "Installing $apk via apk..."
             if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
                 echo "The apk \"$apk\" was not installed!"
@@ -98,12 +80,6 @@ fi
 if { [ "$PHP82" = "true" ] || [ "$PHP83" = "true" ] || [ "$PHP84" = "true" ]; } && [ -n "$PHP_APKS" ]; then
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     for apk in $(echo "$PHP_APKS" | tr " " "\n"); do
-        if ! echo "$apk" | grep -q "^php-.*$"; then
-            echo "$apk is a non allowed value."
-            echo "It needs to start with \"php-\"."
-            echo "It is set to \"$apk\"."
-            sleep inf
-        fi
         echo "Installing $apk via apk..."
         if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
             echo "The apk \"$apk\" was not installed!"
