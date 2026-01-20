@@ -153,7 +153,7 @@ export const ICON_CDN_BASE = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-
  * Detect service based on port and hostname
  */
 export function detectService(port: number, hostname = ""): ServiceDefinition | null {
-    const lowerHostname = hostname.toLowerCase();
+    const lowerHostname = hostname?.toLowerCase() || "";
 
     // First try exact match with hostname (more specific)
     const hostnameMatch = SERVICES.find(

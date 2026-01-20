@@ -54,7 +54,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 					);
 				},
 				meta: {
-					className: "w-1",
+					className: "w-[50px]",
 				},
 			}),
 			columnHelper.accessor("owner", {
