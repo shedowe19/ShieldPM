@@ -9,6 +9,7 @@ import {
 	EmptyData,
 	GravatarFormatter,
 	HasPermission,
+	ServiceIcon,
 	TrueFalseFormatter,
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
@@ -37,6 +38,25 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 	const columnHelper = createColumnHelper<ProxyHost>();
 	const columns = useMemo(
 		() => [
+			columnHelper.accessor((row) => row, {
+				id: "icon",
+				cell: (info) => {
+					const value = info.getValue();
+					return (
+						<ServiceIcon
+							port={value.forwardPort}
+							hostname={value.forwardHost}
+							customIconUrl={value.iconUrl}
+							iconType={value.iconType}
+							size={28}
+							showTooltip
+						/>
+					);
+				},
+				meta: {
+					className: "w-[50px]",
+				},
+			}),
 			columnHelper.accessor("owner", {
 				id: "owner",
 				cell: (info) => {

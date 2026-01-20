@@ -11,6 +11,7 @@ import {
 	Loading,
 	LocationsFields,
 	NginxConfigField,
+	ServiceIcon,
 	SSLCertificateField,
 	SSLOptionsFields,
 } from "src/components";
@@ -130,6 +131,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								gitPollInterval: data?.gitPollInterval || 60,
 								gitPollUnit: data?.gitPollUnit || "m",
 								gitCredentials: "", // Do not fill credentials for security
+								// Service Icon
+								iconType: data?.iconType || "auto",
+								iconUrl: data?.iconUrl || "",
 							} as any
 						}
 						enableReinitialize
@@ -295,6 +299,111 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 												</div>
+												{/* Icon Settings */}
+												<Card className="my-3 border-dashed border-blue-500/50">
+													<CardContent className="p-4">
+														<h4 className="pb-2 text-lg font-semibold text-blue-400">
+															<T id="proxy-host.icon-settings" />
+														</h4>
+														<div className="grid grid-cols-12 gap-4">
+															<div className="col-span-12 md:col-span-4">
+																<Field name="iconType">
+																	{({ field, form }: any) => (
+																		<div className="space-y-2">
+																			<Label htmlFor="iconType">
+																				<T id="proxy-host.icon-type" />
+																			</Label>
+																			<Select
+																				onValueChange={(val: string) =>
+																					form.setFieldValue(field.name, val)
+																				}
+																				value={field.value || "auto"}
+																			>
+																				<SelectTrigger id="iconType">
+																					<SelectValue />
+																				</SelectTrigger>
+																				<SelectContent>
+																					<SelectItem value="auto">
+																						<T id="proxy-host.icon-type.auto" />
+																					</SelectItem>
+																					<SelectItem value="custom">
+																						<T id="proxy-host.icon-type.custom" />
+																					</SelectItem>
+																					<SelectItem value="none">
+																						<T id="proxy-host.icon-type.none" />
+																					</SelectItem>
+																				</SelectContent>
+																			</Select>
+																		</div>
+																	)}
+																</Field>
+															</div>
+															<Field name="iconType">
+																{({ field: typeField }: any) =>
+																	typeField.value === "custom" && (
+																		<div className="col-span-12 md:col-span-8">
+																			<Field name="iconUrl">
+																				{({ field }: any) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="iconUrl">
+																							<T id="proxy-host.icon-url" />
+																						</Label>
+																						<Input
+																							id="iconUrl"
+																							placeholder="https://example.com/icon.png"
+																							{...field}
+																						/>
+																						<p className="text-xs text-muted-foreground">
+																							<T id="proxy-host.icon-url.hint" />
+																						</p>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																	)
+																}
+															</Field>
+														</div>
+														{/* Icon Preview */}
+														<Field name="forwardPort">
+															{({ field: portField }: any) => (
+																<Field name="forwardHost">
+																	{({ field: hostField }: any) => (
+																		<Field name="iconType">
+																			{({ field: typeField }: any) => (
+																				<Field name="iconUrl">
+																					{({ field: urlField }: any) => (
+																						<div className="mt-4 flex items-center gap-4">
+																							<span className="text-sm text-muted-foreground">
+																								<T id="proxy-host.icon-preview" />
+																								:
+																							</span>
+																							<ServiceIcon
+																								port={portField.value}
+																								hostname={
+																									hostField.value
+																								}
+																								customIconUrl={
+																									urlField.value
+																								}
+																								iconType={
+																									typeField.value ||
+																									"auto"
+																								}
+																								size={40}
+																								showTooltip
+																							/>
+																						</div>
+																					)}
+																				</Field>
+																			)}
+																		</Field>
+																	)}
+																</Field>
+															)}
+														</Field>
+													</CardContent>
+												</Card>
 												{/* PHP Settings - Only show when scheme is 'path' */}
 												<Field name="forwardScheme">
 													{({ field: schemeField }: any) =>

@@ -150,6 +150,9 @@ export interface ProxyHost {
 	gitLastSync?: string | null;
 	gitLastCommit?: string | null;
 	gitLastError?: string | null;
+	// Service Icon
+	iconUrl?: string | null;
+	iconType?: "auto" | "custom" | "none";
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;
