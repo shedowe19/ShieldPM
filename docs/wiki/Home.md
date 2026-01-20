@@ -27,6 +27,7 @@
 *   **[Redirection & Dead Hosts](Redirection-Hosts)**: Managing 301/302 redirects and 404 blocks.
 *   **[Disable Buffering](Disable-Buffering)**: Optimizing for streaming services (Jellyfin/Plex).
 *   **[Maintenance Features](Maintenance)**: Configuring automatic maintenance pages for downtime.
+*   **[Service Icons](Service-Icons)**: Auto-detection and custom icons for your hosts.
 *   **[SSL Certificates](SSL-Certificates)**: Let's Encrypt, Custom Certs, and HSTS best practices.
 
 ### Security
