@@ -56,14 +56,16 @@ function buildBody(data?: Record<string, any>): string | undefined {
 	}
 }
 
-async function processResponse(response: Response) {
+async function processResponse(response: Response, silentAuth = false) {
 	const payload = await response.json();
 	if (!response.ok) {
 		if (response.status === 401) {
 			// Force logout user and reload the page if Unauthorized
 			AuthStore.clear();
 			queryClient.clear();
-			window.location.reload();
+			if (!silentAuth) {
+				window.location.reload();
+			}
 		}
 		throw new Error(
 			typeof payload.error.messageI18n !== "undefined" ? payload.error.messageI18n : payload.error.message,
@@ -75,6 +77,28 @@ async function processResponse(response: Response) {
 interface GetArgs {
 	url: string;
 	params?: queryString.StringifiableRecord;
+	silentAuth?: boolean;
+}
+
+interface PostArgs {
+	url: string;
+	params?: queryString.StringifiableRecord;
+	data?: any;
+	noAuth?: boolean;
+	silentAuth?: boolean;
+}
+
+interface PutArgs {
+	url: string;
+	params?: queryString.StringifiableRecord;
+	data?: Record<string, any>;
+	silentAuth?: boolean;
+}
+
+interface DeleteArgs {
+	url: string;
+	params?: queryString.StringifiableRecord;
+	silentAuth?: boolean;
 }
 
 async function baseGet({ url, params }: GetArgs, abortController?: AbortController) {
@@ -87,7 +111,7 @@ async function baseGet({ url, params }: GetArgs, abortController?: AbortControll
 }
 
 export async function get(args: GetArgs, abortController?: AbortController) {
-	return processResponse(await baseGet(args, abortController));
+	return processResponse(await baseGet(args, abortController), args.silentAuth);
 }
 
 export async function download({ url, params }: GetArgs, filename = "download.file") {
@@ -137,14 +161,7 @@ export async function downloadPost({ url, params, data, noAuth }: PostArgs, file
 	window.URL.revokeObjectURL(u);
 }
 
-interface PostArgs {
-	url: string;
-	params?: queryString.StringifiableRecord;
-	data?: any;
-	noAuth?: boolean;
-}
-
-export async function post({ url, params, data, noAuth }: PostArgs, abortController?: AbortController) {
+export async function post({ url, params, data, noAuth, silentAuth }: PostArgs, abortController?: AbortController) {
 	const apiUrl = buildUrl({ url, params });
 	const method = "POST";
 
@@ -171,15 +188,10 @@ export async function post({ url, params, data, noAuth }: PostArgs, abortControl
 
 	const signal = abortController?.signal;
 	const response = await fetch(apiUrl, { method, headers, body, signal });
-	return processResponse(response);
+	return processResponse(response, silentAuth);
 }
 
-interface PutArgs {
-	url: string;
-	params?: queryString.StringifiableRecord;
-	data?: Record<string, any>;
-}
-export async function put({ url, params, data }: PutArgs, abortController?: AbortController) {
+export async function put({ url, params, data, silentAuth }: PutArgs, abortController?: AbortController) {
 	const apiUrl = buildUrl({ url, params });
 	const method = "PUT";
 	const headers = {
@@ -189,14 +201,10 @@ export async function put({ url, params, data }: PutArgs, abortController?: Abor
 	const signal = abortController?.signal;
 	const body = buildBody(data);
 	const response = await fetch(apiUrl, { method, headers, body, signal });
-	return processResponse(response);
+	return processResponse(response, silentAuth);
 }
 
-interface DeleteArgs {
-	url: string;
-	params?: queryString.StringifiableRecord;
-}
-export async function del({ url, params }: DeleteArgs, abortController?: AbortController) {
+export async function del({ url, params, silentAuth }: DeleteArgs, abortController?: AbortController) {
 	const apiUrl = buildUrl({ url, params });
 	const method = "DELETE";
 	const headers = {
@@ -205,5 +213,5 @@ export async function del({ url, params }: DeleteArgs, abortController?: AbortCo
 	};
 	const signal = abortController?.signal;
 	const response = await fetch(apiUrl, { method, headers, signal });
-	return processResponse(response);
+	return processResponse(response, silentAuth);
 }
