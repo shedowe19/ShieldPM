@@ -362,6 +362,25 @@
 			],
 			"description": "Last sync error message",
 			"example": null
+		},
+		"icon_url": {
+			"type": [
+				"string",
+				"null"
+			],
+			"description": "Custom icon URL",
+			"maxLength": 512,
+			"example": "https://example.com/icon.svg"
+		},
+		"icon_type": {
+			"type": "string",
+			"enum": [
+				"auto",
+				"custom",
+				"none"
+			],
+			"default": "auto",
+			"example": "auto"
 		}
 	}
 }

@@ -144,6 +144,12 @@
 						},
 						"git_credentials": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/git_credentials"
+						},
+						"icon_url": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/icon_url"
+						},
+						"icon_type": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/icon_type"
 						}
 					}
 				}
