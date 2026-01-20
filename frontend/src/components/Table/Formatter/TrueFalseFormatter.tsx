@@ -27,7 +27,10 @@ export function TrueFalseFormatter({ value, trueLabel = "enabled", falseLabel = 
 	return (
 		<Badge variant={value ? "outline" : "destructive"} className={cn("font-normal", value && badgeClass)}>
 			<span
-				className={cn("mr-1.5 h-2 w-2 rounded-full", value ? "bg-green-600 dark:bg-green-400" : "bg-white")}
+				className={cn(
+					"mr-1.5 h-2 w-2 rounded-full",
+					value ? "bg-green-600 dark:bg-green-400 animate-breathing" : "bg-white",
+				)}
 			/>
 			<T id={value ? trueLabel : falseLabel} />
 		</Badge>
