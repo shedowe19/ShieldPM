@@ -111,6 +111,12 @@ class ProxyHost extends Model {
 	/** @type {string|null} */
 	git_last_error;
 
+	// Service Icon fields
+	/** @type {string|null} */
+	icon_url;
+	/** @type {string} */
+	icon_type;
+
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());
 		this.modified_on = /** @type {any} */ (now());

@@ -21,6 +21,7 @@ import schemaRoutes from "./schema.js";
 import settingsRoutes from "./settings.js";
 import tokensRoutes from "./tokens.js";
 import usersRoutes from "./users.js";
+import servicesRoutes from "./services.js";
 import versionRoutes from "./version.js";
 
 const router = express.Router({
@@ -64,6 +65,7 @@ router.use("/nginx/certificates", certificatesHostsRoutes);
 router.use("/nginx/analytics", nginxAnalyticsRoutes);
 router.use("/nginx/cloudflared-tunnels", cloudflaredRoutes);
 router.use("/gitops", gitopsRoutes);
+router.use("/services", servicesRoutes);
 
 /**
  * API 404 for all other routes
