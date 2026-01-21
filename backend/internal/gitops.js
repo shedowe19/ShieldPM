@@ -851,7 +851,7 @@ const internalGitOps = {
 								}
 
 								if (itemData.id) importedIds.push(itemData.id);
-								else if (newRow && newRow.id) importedIds.push(newRow.id);
+								else if (newRow?.id) importedIds.push(newRow.id);
 							}
 							imported++;
 						}

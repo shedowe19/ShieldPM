@@ -1,14 +1,9 @@
 import _ from "lodash";
 import errs from "../lib/error.js";
-import utils from "../lib/utils.js";
 import DdnsProvider from "../models/ddns_provider.js";
 import internalAuditLog from "./audit-log.js";
 import internalDdns from "./ddns.js";
 import internalGitOps from "./gitops.js";
-
-const omissions = () => {
-	return [];
-};
 
 const internalDdnsProvider = {
 	/**
@@ -122,23 +117,28 @@ const internalDdnsProvider = {
 	 * @param {Number}  data.id
 	 * @returns {Promise}
 	 */
-	delete: async (access, data) => {
-		const row = await internalDdnsProvider.get(access, { id: data.id });
-		if (!row) throw new errs.ItemNotFoundError(data.id);
+	delete: async (id, userId) => {
+		const provider = await /** @type {any} */ (DdnsProvider)
+			.query()
+			.findById(id);
 
-		await DdnsProvider.query().deleteById(data.id);
+		if (!provider) {
+			throw new errs.NotFoundError("DDNS Provider not found");
+		}
 
-		await internalAuditLog.add(access, {
-			action: "deleted",
-			object_type: "ddns-provider",
-			object_id: row.id,
-			meta: row,
+		await /** @type {any} */ (DdnsProvider)
+			.query()
+			.deleteById(id);
+
+		// Audit Log
+		await internalAuditLog.add(userId, "ddns-provider", id, "deleted", {
+			name: provider.name,
 		});
-
-		return true;
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("ddns-provider");
+
+		return true;
 	},
 
 	/**

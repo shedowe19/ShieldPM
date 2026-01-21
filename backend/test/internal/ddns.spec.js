@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import ddnsService from "../../internal/ddns.js";
 import DdnsProvider from "../../models/ddns_provider.js";
 
