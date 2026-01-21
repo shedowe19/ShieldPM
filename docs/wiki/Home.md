@@ -45,6 +45,7 @@
 *   **[Advanced Analytics](Analytics)**: Real-time traffic insights and status code breakdown.
 *   **[Cloudflare Tunnels](Cloudflared-Tunnels)**: Native support for exposing services via Cloudflare Zero Trust.
 *   **[GitOps Synchronization](GitOps)**: Backup, version control, and restore your configuration with Git.
+*   **[Dynamic DNS (DDNS)](DDNS)**: Built-in DDNS client for Cloudflare, DuckDNS, and Custom URLs.
 *   **[Docker Auto-Discovery](Docker-Auto-Discovery)**: Automatically expose containers using labels (Traefik-like).
 *   **[Git Auto-Deploy](Git-Auto-Deploy)**: Auto-sync static sites/apps from Git repositories.
 *   **[PHP Hosting](PHP-Hosting)**: Host PHP apps (Nextcloud, WordPress) directly with ShieldPM (No extra container needed).
