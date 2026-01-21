@@ -215,8 +215,8 @@ export const process = async (force = false) => {
 		logger.info(`DDNS: Current WAN IPs - v4: ${currentIps.ipv4}, v6: ${currentIps.ipv6}`);
 
 		for (const provider of providersList) {
-			const v4Changed = (provider.ip_ver !== "v6") && currentIps.ipv4 && provider.last_ipv4 !== currentIps.ipv4;
-			const v6Changed = (provider.ip_ver !== "v4") && currentIps.ipv6 && provider.last_ipv6 !== currentIps.ipv6;
+			const v4Changed = provider.ip_ver !== "v6" && currentIps.ipv4 && provider.last_ipv4 !== currentIps.ipv4;
+			const v6Changed = provider.ip_ver !== "v4" && currentIps.ipv6 && provider.last_ipv6 !== currentIps.ipv6;
 
 			if (force || v4Changed || v6Changed) {
 				logger.info(`DDNS: IP changed for ${provider.name} (IP Ver: ${provider.ip_ver}) or Force Update`);

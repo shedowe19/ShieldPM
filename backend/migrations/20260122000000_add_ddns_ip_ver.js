@@ -3,9 +3,9 @@
  * @returns {Promise<void>}
  */
 export async function up(knex) {
-    return knex.schema.table("ddns_provider", (table) => {
-        table.string("ip_ver").notNullable().defaultTo("dual");
-    });
+	return knex.schema.table("ddns_provider", (table) => {
+		table.string("ip_ver").notNullable().defaultTo("dual");
+	});
 }
 
 /**
@@ -13,7 +13,7 @@ export async function up(knex) {
  * @returns {Promise<void>}
  */
 export async function down(knex) {
-    return knex.schema.table("ddns_provider", (table) => {
-        table.dropColumn("ip_ver");
-    });
+	return knex.schema.table("ddns_provider", (table) => {
+		table.dropColumn("ip_ver");
+	});
 }
