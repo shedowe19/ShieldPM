@@ -79,15 +79,6 @@
                     }
                 }
             }
-        },
-        "400": {
-            "$ref": "../../../../components/responses/400.json"
-        },
-        "401": {
-            "$ref": "../../../../components/responses/401.json"
-        },
-        "500": {
-            "$ref": "../../../../components/responses/500.json"
         }
     }
 }
