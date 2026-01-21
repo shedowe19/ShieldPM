@@ -29,6 +29,7 @@ const RedirectionHosts = lazy(() => import("src/pages/Nginx/RedirectionHosts"));
 const DeadHosts = lazy(() => import("src/pages/Nginx/DeadHosts"));
 const Streams = lazy(() => import("src/pages/Nginx/Streams"));
 const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
+const DdnsProviders = lazy(() => import("src/pages/Nginx/DdnsProviders"));
 
 function Content() {
 	const location = useLocation();
@@ -120,6 +121,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<CloudflaredTunnels />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/nginx/ddns"
+					element={
+						<AnimatedPage>
+							<DdnsProviders />
 						</AnimatedPage>
 					}
 				/>

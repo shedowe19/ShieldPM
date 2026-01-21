@@ -1,0 +1,84 @@
+{
+    "summary": "Create a DDNS Provider",
+    "tags": [
+        "DDNS"
+    ],
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "requestBody": {
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "required": [
+                        "name",
+                        "provider",
+                        "domains",
+                        "config"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "provider": {
+                            "type": "string",
+                            "enum": [
+                                "cloudflare",
+                                "duckdns",
+                                "custom"
+                            ]
+                        },
+                        "domains": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "minItems": 1
+                        },
+                        "config": {
+                            "type": "object"
+                        },
+                        "enabled": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        },
+                        "meta": {
+                            "type": "object"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            }
+        }
+    },
+    "responses": {
+        "201": {
+            "description": "Provider created",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/ddns-provider.json"
+                    }
+                }
+            }
+        },
+        "400": {
+            "$ref": "../../../../components/responses/400.json"
+        },
+        "401": {
+            "$ref": "../../../../components/responses/401.json"
+        },
+        "500": {
+            "$ref": "../../../../components/responses/500.json"
+        }
+    }
+}

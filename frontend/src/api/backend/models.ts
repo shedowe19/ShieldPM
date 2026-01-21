@@ -269,3 +269,20 @@ export interface AiChatResponse {
 	role: "assistant";
 	content: string;
 }
+
+export interface DdnsProvider {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	ownerUserId: number;
+	name: string;
+	provider: "cloudflare" | "duckdns" | "custom";
+	domains: string[];
+	config: Record<string, any>;
+	lastIpv4?: string;
+	lastIpv6?: string;
+	lastUpdatedOn?: string;
+	lastError?: string;
+	enabled: boolean;
+	meta: Record<string, any>;
+}
