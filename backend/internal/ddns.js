@@ -1,3 +1,4 @@
+// @ts-ignore
 import dayjs from "dayjs";
 import DdnsProvider from "../models/ddns_provider.js";
 import { global as logger } from "../logger.js";
@@ -186,7 +187,7 @@ export const updateProvider = async (provider, ips) => {
 
 		const result = await handler(provider, filteredIps);
 
-		await DdnsProvider.query().patchAndFetchById(provider.id, {
+		await /** @type {any} */ (DdnsProvider).query().patchAndFetchById(provider.id, {
 			last_ipv4: filteredIps.ipv4, // Only save what we intended to update
 			last_ipv6: filteredIps.ipv6,
 			last_updated_on: dayjs().format("YYYY-MM-DD HH:mm:ss"),
@@ -196,7 +197,7 @@ export const updateProvider = async (provider, ips) => {
 		logger.info(`DDNS [${provider.name}]: Success - ${result}`);
 	} catch (err) {
 		logger.error(`DDNS [${provider.name}]: Failed - ${err.message}`);
-		await DdnsProvider.query().patchAndFetchById(provider.id, {
+		await /** @type {any} */ (DdnsProvider).query().patchAndFetchById(provider.id, {
 			last_error: err.message,
 		});
 	}
@@ -208,7 +209,7 @@ export const updateProvider = async (provider, ips) => {
  */
 export const process = async (force = false) => {
 	try {
-		const providersList = await DdnsProvider.query().where("enabled", 1);
+		const providersList = await /** @type {any} */ (DdnsProvider).query().where("enabled", 1);
 		if (providersList.length === 0) return;
 
 		const currentIps = await getWanIps();
