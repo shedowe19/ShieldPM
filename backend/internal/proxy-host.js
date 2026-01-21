@@ -6,6 +6,7 @@ import { encrypt } from "../lib/encryption.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitDeploy from "./git-deploy.js";
 import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
@@ -79,7 +80,7 @@ const internalProxyHost = {
 			thisData.advanced_config = "";
 		}
 
-		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */(thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -113,6 +114,11 @@ const internalProxyHost = {
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("proxy-host");
+
+		// Start Git Deploy polling if enabled
+		if (row.git_sync_enabled && row.git_repo_url) {
+			internalGitDeploy.startPollingForHost(row);
+		}
 
 		return row;
 	},
@@ -210,7 +216,7 @@ const internalProxyHost = {
 		let _saved_row = await proxyHostModel
 			.query()
 			.where({ id: thisData.id })
-			.patch(/** @type {any} */ (thisData));
+			.patch(/** @type {any} */(thisData));
 
 		// fetch updated row to be safe and consistent with previous logic if patch returns count
 		// wait, patch returns count. We need to fetch it or rely on logic.
@@ -237,7 +243,7 @@ const internalProxyHost = {
 		// But for safety, I will use `patchAndFetchById`.
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */(thisData))
 		);
 		_saved_row = utils.omitRow(omissions())(new_saved_row);
 
@@ -330,13 +336,13 @@ const internalProxyHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					is_deleted: 1,
 				}),
 			);
 
 		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
+		await internalNginx.deleteConfig("proxy_host", /** @type {any} */(row));
 		await internalNginx.reload();
 
 		// Add to audit log
@@ -349,6 +355,9 @@ const internalProxyHost = {
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("proxy-host");
+
+		// Stop Git Deploy polling
+		internalGitDeploy.stopPolling(data.id);
 
 		return true;
 	},
@@ -382,6 +391,11 @@ const internalProxyHost = {
 
 		// Configure nginx
 		await internalNginx.configure(proxyHostModel, "proxy_host", row);
+
+		// Start Git Deploy polling if enabled
+		if (row.git_sync_enabled && row.git_repo_url) {
+			internalGitDeploy.startPollingForHost(row);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -421,6 +435,9 @@ const internalProxyHost = {
 		// Delete Nginx Config
 		await internalNginx.deleteConfig("proxy_host", row);
 		await internalNginx.reload();
+
+		// Stop Git Deploy polling
+		internalGitDeploy.stopPolling(data.id);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -497,7 +514,7 @@ const internalProxyHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */ (row).count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 
