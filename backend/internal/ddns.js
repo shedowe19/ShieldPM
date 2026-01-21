@@ -4,7 +4,7 @@ import DdnsProvider from "../models/ddns_provider.js";
 import { global as logger } from "../logger.js";
 
 let timer = null;
-const INTERVAL = 1000 * 60 * 10; // 10 minutes
+const INTERVAL = 1000 * 60; // 60 seconds
 
 /**
  * Get current WAN IPs (v4 and v6)
