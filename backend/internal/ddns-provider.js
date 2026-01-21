@@ -4,6 +4,7 @@ import utils from "../lib/utils.js";
 import DdnsProvider from "../models/ddns_provider.js";
 import internalAuditLog from "./audit-log.js";
 import internalDdns from "./ddns.js";
+import internalGitOps from "./gitops.js";
 
 const omissions = () => {
 	return [];
@@ -35,6 +36,9 @@ const internalDdnsProvider = {
 		// Trigger initial update in background
 		internalDdns.process(true);
 
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("ddns-provider");
+
 		return row;
 	},
 
@@ -63,6 +67,9 @@ const internalDdnsProvider = {
 
 		// Trigger update
 		internalDdns.process(true);
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("ddns-provider");
 
 		return row;
 	},
@@ -129,6 +136,9 @@ const internalDdnsProvider = {
 		});
 
 		return true;
+
+		// Trigger GitOps auto-push
+		internalGitOps.triggerAutoPush("ddns-provider");
 	},
 
 	/**

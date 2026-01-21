@@ -12,6 +12,7 @@ import Certificate from "../models/certificate.js";
 import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 import DeadHost from "../models/dead_host.js";
 import ProxyHost from "../models/proxy_host.js";
+import DdnsProvider from "../models/ddns_provider.js";
 import RedirectionHost from "../models/redirection_host.js";
 import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
@@ -268,7 +269,9 @@ const internalGitOps = {
 			"certificates",
 			"users",
 			"settings",
+			"settings",
 			"cloudflared-tunnels",
+			"ddns-providers",
 		];
 		for (const dir of dirs) {
 			const dirPath = path.join(configDir, dir);
@@ -901,7 +904,9 @@ const internalGitOps = {
 			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
 			await importModel(DeadHost, "dead-hosts", "dead_host");
 			await importModel(Stream, "streams", "stream");
+			await importModel(Stream, "streams", "stream");
 			await importModel(CloudflaredTunnel, "cloudflared-tunnels");
+			await importModel(DdnsProvider, "ddns-providers");
 
 			// 5. Import Settings
 			const settingsDir = path.join(configDir, "settings");
