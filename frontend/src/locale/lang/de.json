@@ -181,6 +181,7 @@
 	"dashboard.greeting.morning": "Guten Morgen",
 	"dashboard.no-expiring-certificates": "Keine Zertifikate laufen bald ab",
 	"dashboard.status_ok": "Alles sieht gut aus!",
+	"ddns-provider": "DDNS-Anbieter",
 	"ddns-providers": "DDNS-Anbieter",
 	"ddns-providers.add": "DDNS-Anbieter hinzufügen",
 	"ddns-providers.cloudfare_token": "API-Token",

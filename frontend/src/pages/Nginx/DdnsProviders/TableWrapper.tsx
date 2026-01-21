@@ -78,7 +78,7 @@ export default function TableWrapper() {
 						onClick={() => showDdnsProviderModal()}
 					>
 						<IconPlus className="mr-2 h-4 w-4" />
-						<T id="object.add" tData={{ object: "ddns-provider" }} />
+						<T id="object.add" tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }} />
 					</Button>
 				</div>
 			</CardHeader>
@@ -90,10 +90,20 @@ export default function TableWrapper() {
 					onEdit={(id: number) => showDdnsProviderModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "ddns-provider" }} />,
+							title: (
+								<T
+									id="object.delete"
+									tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }}
+								/>
+							),
 							onConfirm: () => handleDelete(id),
 							invalidations: [["ddns-providers"]],
-							children: <T id="object.delete.content" tData={{ object: "ddns-provider" }} />,
+							children: (
+								<T
+									id="object.delete.content"
+									tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }}
+								/>
+							),
 						})
 					}
 					onNew={() => showDdnsProviderModal()}

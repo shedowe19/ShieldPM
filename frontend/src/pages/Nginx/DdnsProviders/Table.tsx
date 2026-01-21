@@ -164,8 +164,8 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, isFil
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object="ddns-provider"
-					objects="ddns-providers"
+					object={intl.formatMessage({ id: "ddns-provider" })}
+					objects={intl.formatMessage({ id: "ddns-providers" })}
 					onNew={onNew}
 					isFiltered={isFiltered}
 					color="cyan"
