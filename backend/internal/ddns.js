@@ -1,4 +1,3 @@
-// @ts-expect-error
 import dayjs from "dayjs";
 import DdnsProvider from "../models/ddns_provider.js";
 import { global as logger } from "../logger.js";
