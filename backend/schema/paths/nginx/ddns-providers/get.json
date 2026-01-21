@@ -11,7 +11,7 @@
                     "schema": {
                         "type": "array",
                         "items": {
-                            "$ref": "../../../../components/ddns-provider.json"
+                            "$ref": "../../../components/ddns-provider.json"
                         }
                     }
                 }

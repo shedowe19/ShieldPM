@@ -79,7 +79,7 @@
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "../../../../../components/ddns-provider.json"
+                        "$ref": "../../../../components/ddns-provider.json"
                     }
                 }
             }
