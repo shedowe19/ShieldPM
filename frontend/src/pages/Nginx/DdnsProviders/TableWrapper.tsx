@@ -91,10 +91,7 @@ export default function TableWrapper() {
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
 							title: (
-								<T
-									id="object.delete"
-									tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }}
-								/>
+								<T id="object.delete" tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }} />
 							),
 							onConfirm: () => handleDelete(id),
 							invalidations: [["ddns-providers"]],

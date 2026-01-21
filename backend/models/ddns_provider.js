@@ -1,7 +1,6 @@
 // Objection Docs:
 // http://vincit.github.io/objection.js/
 
-
 import { Model } from "objection";
 import db from "../db.js";
 import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
