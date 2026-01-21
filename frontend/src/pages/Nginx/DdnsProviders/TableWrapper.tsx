@@ -1,4 +1,4 @@
-import { IconHelp, IconPlus, IconSearch, IconWorld } from "@tabler/icons-react";
+import { IconPlus, IconSearch, IconWorld } from "@tabler/icons-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { deleteDdnsProvider, getDdnsProviders } from "src/api/backend";
