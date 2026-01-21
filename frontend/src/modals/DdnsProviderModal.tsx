@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { IconWorld } from "@tabler/icons-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDdnsProviders } from "src/api/backend/getDdnsProviders";
 
 const showDdnsProviderModal = (id?: number) => {
@@ -37,6 +37,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 	const data = id && id !== "new" ? providers?.find((p) => p.id === id) : null;
 	const isEditing = id !== "new";
+	const queryClient = useQueryClient();
 
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +80,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				await createDdnsProvider(payload);
 				showObjectSuccess("ddns-provider", "created");
 			}
+			queryClient.invalidateQueries({ queryKey: ["ddns-providers"] });
 			remove();
 		} catch (err: any) {
 			setErrorMsg(typeof err === "string" ? err : err.message);
