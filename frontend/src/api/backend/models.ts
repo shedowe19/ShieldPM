@@ -279,6 +279,7 @@ export interface DdnsProvider {
 	provider: "cloudflare" | "duckdns" | "custom";
 	domains: string[];
 	config: Record<string, any>;
+	ip_ver?: "v4" | "v6" | "dual";
 	lastIpv4?: string;
 	lastIpv6?: string;
 	lastUpdatedOn?: string;

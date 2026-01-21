@@ -49,6 +49,14 @@
                         "config": {
                             "type": "object"
                         },
+                        "ip_ver": {
+                            "type": "string",
+                            "enum": [
+                                "v4",
+                                "v6",
+                                "dual"
+                            ]
+                        },
                         "enabled": {
                             "type": "integer",
                             "enum": [

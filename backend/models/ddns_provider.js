@@ -27,6 +27,8 @@ class DdnsProvider extends Model {
 	provider;
 	/** @type {string[]} */
 	domains;
+	/** @type {string} */
+	ip_ver;
 	/** @type {Object} */
 	config;
 	/** @type {string|null} */

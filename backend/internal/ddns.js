@@ -175,11 +175,20 @@ export const updateProvider = async (provider, ips) => {
 		const handler = providers[provider.provider];
 		if (!handler) throw new Error(`Unknown provider: ${provider.provider}`);
 
-		const result = await handler(provider, ips);
+		// Filter IPs based on ip_ver preference
+		const filteredIps = {
+			ipv4: provider.ip_ver !== "v6" ? ips.ipv4 : null,
+			ipv6: provider.ip_ver !== "v4" ? ips.ipv6 : null,
+		};
+
+		// If filtering results in no IPs (e.g. v4 only but no v4 WAN), we should probably skip or log?
+		// But let the handler decide or just send empty updates (for custom placeholders to be cleared)
+
+		const result = await handler(provider, filteredIps);
 
 		await DdnsProvider.query().patchAndFetchById(provider.id, {
-			last_ipv4: ips.ipv4,
-			last_ipv6: ips.ipv6,
+			last_ipv4: filteredIps.ipv4, // Only save what we intended to update
+			last_ipv6: filteredIps.ipv6,
 			last_updated_on: dayjs().format("YYYY-MM-DD HH:mm:ss"),
 			last_error: null,
 		});
@@ -206,11 +215,11 @@ export const process = async (force = false) => {
 		logger.info(`DDNS: Current WAN IPs - v4: ${currentIps.ipv4}, v6: ${currentIps.ipv6}`);
 
 		for (const provider of providersList) {
-			const v4Changed = currentIps.ipv4 && provider.last_ipv4 !== currentIps.ipv4;
-			const v6Changed = currentIps.ipv6 && provider.last_ipv6 !== currentIps.ipv6;
+			const v4Changed = (provider.ip_ver !== "v6") && currentIps.ipv4 && provider.last_ipv4 !== currentIps.ipv4;
+			const v6Changed = (provider.ip_ver !== "v4") && currentIps.ipv6 && provider.last_ipv6 !== currentIps.ipv6;
 
 			if (force || v4Changed || v6Changed) {
-				logger.info(`DDNS: IP changed for ${provider.name} or Force Update`);
+				logger.info(`DDNS: IP changed for ${provider.name} (IP Ver: ${provider.ip_ver}) or Force Update`);
 				await updateProvider(provider, currentIps);
 			}
 		}
