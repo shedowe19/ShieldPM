@@ -1,19 +1,19 @@
-import { IconSearch, IconPlus, IconUsers } from "@tabler/icons-react";
+import { IconPlus, IconSearch, IconUsers } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
 import { deleteUser, toggleUser } from "src/api/backend";
 import { LoadingPage } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import { Input } from "src/components/ui/input";
 import { useAuthState } from "src/context";
-import { useUser, useUsers, useHealth } from "src/hooks";
+import { useHealth, useUser, useUsers } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal, showUserModal } from "src/modals";
 import { showError, showObjectSuccess } from "src/notifications";
 import Table from "./Table";
-import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
-import { Input } from "src/components/ui/input";
-import { Button } from "src/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle, Lock } from "lucide-react";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();

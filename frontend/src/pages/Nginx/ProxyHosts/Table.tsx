@@ -13,8 +13,7 @@ import {
 	TrueFalseFormatter,
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
-import { intl, T } from "src/locale";
-import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
+import { Button } from "src/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -23,7 +22,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
-import { Button } from "src/components/ui/button";
+import { intl, T } from "src/locale";
+import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 
 interface Props {
 	data: ProxyHost[];

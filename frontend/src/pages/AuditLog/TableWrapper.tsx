@@ -1,12 +1,12 @@
-import { LoadingPage } from "src/components";
 import { IconHistory } from "@tabler/icons-react";
+import { AlertCircle } from "lucide-react";
+import { LoadingPage } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { useAuditLogs } from "src/hooks";
 import { T } from "src/locale";
 import { showEventDetailsModal } from "src/modals";
 import Table from "./Table";
-import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 export default function TableWrapper() {
 	const { isFetching, isLoading, isError, error, data } = useAuditLogs(["user"]);

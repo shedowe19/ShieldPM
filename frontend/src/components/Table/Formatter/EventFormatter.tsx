@@ -1,8 +1,8 @@
 import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc, IconLock, IconShield, IconUser } from "@tabler/icons-react";
 import cn from "classnames";
 import type { AuditLog } from "src/api/backend";
-import { formatDateTime, T } from "src/locale";
 import { Badge } from "src/components/ui/badge";
+import { formatDateTime, T } from "src/locale";
 
 const getEventValue = (event: AuditLog) => {
 	switch (event.objectType) {

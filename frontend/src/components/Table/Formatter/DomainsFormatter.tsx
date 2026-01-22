@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { formatDateTime, T } from "src/locale";
 import { Badge } from "src/components/ui/badge";
+import { formatDateTime, T } from "src/locale";
 
 interface Props {
 	domains: string[];

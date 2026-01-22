@@ -1,8 +1,8 @@
 import _ from "lodash";
+import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import utils from "../lib/utils.js";
-import { encrypt } from "../lib/encryption.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";

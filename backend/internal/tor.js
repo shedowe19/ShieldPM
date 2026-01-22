@@ -1,5 +1,5 @@
-import { createConnection } from "node:net";
 import fs from "node:fs";
+import { createConnection } from "node:net";
 import { global as logger } from "../logger.js";
 import TorOnion from "../models/tor_onion.js";
 

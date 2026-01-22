@@ -1,7 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { T } from "src/locale";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
@@ -10,9 +12,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "src/components/ui/dialog";
-import { Button } from "src/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle, AlertTriangle } from "lucide-react";
+import { T } from "src/locale";
 
 interface ShowProps {
 	title?: ReactNode;

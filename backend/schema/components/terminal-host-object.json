@@ -1,0 +1,71 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "example": 1
+        },
+        "created_on": {
+            "type": "string",
+            "example": "2020-09-01 02:03:04"
+        },
+        "modified_on": {
+            "type": "string",
+            "example": "2020-09-01 02:03:04"
+        },
+        "owner_user_id": {
+            "type": "integer",
+            "example": 1
+        },
+        "name": {
+            "type": "string",
+            "example": "My Web Terminal"
+        },
+        "host": {
+            "type": "string",
+            "example": "192.168.1.100"
+        },
+        "port": {
+            "type": "integer",
+            "example": 22
+        },
+        "auth_type": {
+            "type": "string",
+            "enum": [
+                "password",
+                "key"
+            ],
+            "example": "password"
+        },
+        "username": {
+            "type": "string",
+            "example": "root"
+        },
+        "password": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "example": "secret"
+        },
+        "private_key": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "example": "-----BEGIN OPENSSH PRIVATE KEY-----..."
+        },
+        "enabled": {
+            "type": "boolean",
+            "example": true
+        },
+        "meta": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {}
+        },
+        "owner": {
+            "$ref": "./user-object.json"
+        }
+    }
+}

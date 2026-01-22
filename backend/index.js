@@ -3,14 +3,15 @@
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
 import internalCloudflared from "./internal/cloudflared.js";
+import internalDdns from "./internal/ddns.js";
 import internalDocker from "./internal/docker.js";
 import internalGitDeploy from "./internal/git-deploy.js";
-import internalDdns from "./internal/ddns.js";
-import internalTor from "./internal/tor.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
 import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
+import internalTerminal from "./internal/terminal.js";
+import internalTor from "./internal/tor.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";
@@ -50,6 +51,9 @@ async function appStart() {
 
 		const server = app.listen("/run/shieldpm.sock", () => {
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);
+
+			// Initialize Terminal WebSocket (needs server instance)
+			internalTerminal.init(server);
 
 			process.on("SIGTERM", () => {
 				logger.info(`PID ${process.pid} received SIGTERM`);

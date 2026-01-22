@@ -311,3 +311,22 @@ export interface TorOnionListResponse {
 		version: string | null;
 	};
 }
+
+export interface TerminalHost {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	ownerUserId: number;
+	enabled: boolean;
+	type: string;
+	name: string;
+	host: string;
+	port: number;
+	authType: "password" | "key";
+	username: string;
+	password?: string | null;
+	privateKey?: string | null;
+	meta: Record<string, any>;
+	// Expansions:
+	owner?: User;
+}

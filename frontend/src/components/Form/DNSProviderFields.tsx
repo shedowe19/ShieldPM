@@ -4,10 +4,10 @@ import { Field, useFormikContext } from "formik";
 import { useState } from "react";
 import Select, { type ActionMeta } from "react-select";
 import type { DNSProvider } from "src/api/backend";
-import { useDnsProviders } from "src/hooks";
-import { intl, T } from "src/locale";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
+import { useDnsProviders } from "src/hooks";
+import { intl, T } from "src/locale";
 
 interface DNSProviderOption {
 	readonly value: string;

@@ -1,24 +1,24 @@
+import { IconRoute } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
+import { AlertCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { createRedirectionHost, updateRedirectionHost } from "src/api/backend";
 import { DomainNamesField, NginxConfigField, SSLCertificateField, SSLOptionsFields } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent } from "src/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
+import { Switch } from "src/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useRedirectionHost } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Button } from "src/components/ui/button";
-import { Input } from "src/components/ui/input";
-import { Label } from "src/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
-import { Switch } from "src/components/ui/switch";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { IconRoute } from "@tabler/icons-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { Card, CardContent } from "src/components/ui/card";
 
 const showRedirectionHostModal = (id: number | "new") => {
 	EasyModal.show(RedirectionHostModal, { id });

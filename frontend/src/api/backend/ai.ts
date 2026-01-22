@@ -1,5 +1,5 @@
-import { get, put, post } from "./base";
-import type { AiConfig, AiChatResponse, AiChatMessage } from "./models.ts";
+import { get, post, put } from "./base";
+import type { AiChatMessage, AiChatResponse, AiConfig } from "./models.ts";
 
 export function getAiConfig(): Promise<AiConfig> {
 	return get({ url: "/ai/config" });

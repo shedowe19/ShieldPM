@@ -1,15 +1,15 @@
+import { IconRobot } from "@tabler/icons-react";
+import { Loader2, Send, Trash2 } from "lucide-react";
 import type React from "react";
-import { useState, useRef, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
+import { useEffect, useRef, useState } from "react";
+import { sendAiChat } from "src/api/backend/ai";
+import type { AiChatMessage } from "src/api/backend/models";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
-import { IconRobot } from "@tabler/icons-react";
-import { Send, Loader2, Trash2 } from "lucide-react";
-import { AiMessage } from "./AiMessage";
-import type { AiChatMessage } from "src/api/backend/models";
-import { sendAiChat } from "src/api/backend/ai";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
 import { cn } from "src/lib/utils";
-import { T, intl } from "src/locale";
+import { intl, T } from "src/locale";
+import { AiMessage } from "./AiMessage";
 
 export function AiChat() {
 	const [open, setOpen] = useState(false);

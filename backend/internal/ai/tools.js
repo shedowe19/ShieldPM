@@ -806,6 +806,122 @@ export const getToolDefinitions = () => [
 	},
 	{
 		function: {
+			name: "get_terminal_hosts",
+			description: "Get all Terminal Hosts",
+			parameters: { type: "object", properties: {} },
+		},
+	},
+	{
+		function: {
+			name: "create_terminal_host",
+			description: "Create a new Terminal Host",
+			parameters: {
+				type: "object",
+				properties: {
+					name: { type: "string" },
+					host: { type: "string" },
+					port: { type: "integer", description: "SSH Port (default 22)" },
+					username: { type: "string" },
+					auth_type: { type: "string", enum: ["password", "key"] },
+					password: { type: "string", description: "Password (if auth_type is password)" },
+					private_key: { type: "string", description: "Private Key (if auth_type is key)" },
+				},
+				required: ["name", "host", "username", "auth_type"],
+			},
+		},
+	},
+	{
+		function: {
+			name: "update_terminal_host",
+			description: "Update a Terminal Host",
+			parameters: {
+				type: "object",
+				properties: {
+					id: { type: "integer" },
+					name: { type: "string" },
+					host: { type: "string" },
+					port: { type: "integer" },
+					username: { type: "string" },
+					auth_type: { type: "string", enum: ["password", "key"] },
+					password: { type: "string" },
+					private_key: { type: "string" },
+				},
+				required: ["id"],
+			},
+		},
+	},
+	{
+		function: {
+			name: "delete_terminal_host",
+			description: "Delete a Terminal Host",
+			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
+		},
+	},
+
+	// Tor Onion Services
+	{
+		function: {
+			name: "get_tor_onion_services",
+			description: "Get all Tor Onion Services",
+			parameters: { type: "object", properties: {} },
+		},
+	},
+	{
+		function: {
+			name: "create_tor_onion_service",
+			description: "Create a new Tor Onion Service",
+			parameters: {
+				type: "object",
+				properties: {
+					name: { type: "string" },
+					proxy_host_id: { type: "integer", description: "ID of Proxy Host to forward to" },
+					virtual_port: { type: "integer", description: "Public port on .onion address (usually 80)" },
+					target_port: { type: "integer", description: "Internal port to forward to (usually 80)" },
+				},
+				required: ["name", "virtual_port", "target_port"],
+			},
+		},
+	},
+	{
+		function: {
+			name: "update_tor_onion_service",
+			description: "Update a Tor Onion Service",
+			parameters: {
+				type: "object",
+				properties: {
+					id: { type: "integer" },
+					name: { type: "string" },
+					proxy_host_id: { type: "integer" },
+					virtual_port: { type: "integer" },
+					target_port: { type: "integer" },
+				},
+				required: ["id"],
+			},
+		},
+	},
+	{
+		function: {
+			name: "delete_tor_onion_service",
+			description: "Delete a Tor Onion Service",
+			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
+		},
+	},
+	{
+		function: {
+			name: "start_tor_onion_service",
+			description: "Start a Tor Onion Service",
+			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
+		},
+	},
+	{
+		function: {
+			name: "stop_tor_onion_service",
+			description: "Stop a Tor Onion Service",
+			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
+		},
+	},
+	{
+		function: {
 			name: "get_audit_log",
 			description: "Get System Audit Logs",
 			parameters: { type: "object", properties: { limit: { type: "integer" } } },

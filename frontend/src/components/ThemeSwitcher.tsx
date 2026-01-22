@@ -1,7 +1,5 @@
 import { IconMoon, IconSun } from "@tabler/icons-react";
-import { T } from "src/locale";
 import cn from "classnames";
-import { useTheme } from "src/hooks";
 import { Button } from "src/components/ui/button";
 import {
 	DropdownMenu,
@@ -9,6 +7,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
+import { useTheme } from "src/hooks";
+import { T } from "src/locale";
 
 interface Props {
 	className?: string;

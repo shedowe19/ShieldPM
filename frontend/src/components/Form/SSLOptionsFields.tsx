@@ -1,8 +1,8 @@
 import { Field, useFormikContext } from "formik";
 import { DNSProviderFields, DomainNamesField } from "src/components";
-import { T } from "src/locale";
-import { Switch } from "src/components/ui/switch";
 import { Label } from "src/components/ui/label";
+import { Switch } from "src/components/ui/switch";
+import { T } from "src/locale";
 
 interface Props {
 	forHttp?: boolean; // the sslForced, http2Support, hstsEnabled, hstsSubdomains fields

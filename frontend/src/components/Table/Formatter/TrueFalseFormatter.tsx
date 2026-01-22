@@ -1,6 +1,6 @@
 import { Badge } from "src/components/ui/badge";
-import { T } from "src/locale";
 import { cn } from "src/lib/utils";
+import { T } from "src/locale";
 
 interface Props {
 	value: boolean;

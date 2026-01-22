@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	getGitSyncStatus,
-	triggerGitSync,
-	updateGitSyncConfig,
 	type GitSyncConfig,
 	type GitSyncResult,
 	type GitSyncStatus,
+	getGitSyncStatus,
+	triggerGitSync,
+	updateGitSyncConfig,
 } from "src/api/backend/gitSync";
 
 /**

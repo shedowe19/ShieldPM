@@ -1,19 +1,19 @@
-import { IconHelp, IconSearch, IconPlus, IconGhost } from "@tabler/icons-react";
+import { IconGhost, IconHelp, IconPlus, IconSearch } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { deleteDeadHost, toggleDeadHost } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import { Input } from "src/components/ui/input";
 import { useDeadHosts } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showDeadHostModal, showDeleteConfirmModal, showHelpModal } from "src/modals";
 import { DEAD_HOSTS, MANAGE } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import Table from "./Table";
-import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
-import { Input } from "src/components/ui/input";
-import { Button } from "src/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();

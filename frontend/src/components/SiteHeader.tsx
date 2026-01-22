@@ -1,9 +1,6 @@
 import { IconLock, IconLogout, IconUser } from "@tabler/icons-react";
 import { LocalePicker, ThemeSwitcher } from "src/components";
-import { useAuthState } from "src/context";
-import { useUser } from "src/hooks";
-import { T } from "src/locale";
-import { showChangePasswordModal, showUserModal } from "src/modals";
+import { Avatar, AvatarFallback, AvatarImage } from "src/components/ui/avatar";
 import { Button } from "src/components/ui/button";
 import {
 	DropdownMenu,
@@ -13,7 +10,10 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "src/components/ui/avatar";
+import { useAuthState } from "src/context";
+import { useUser } from "src/hooks";
+import { T } from "src/locale";
+import { showChangePasswordModal, showUserModal } from "src/modals";
 
 export function SiteHeader() {
 	const { data: currentUser } = useUser("me");

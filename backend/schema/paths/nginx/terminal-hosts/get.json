@@ -1,0 +1,45 @@
+{
+    "operationId": "getTerminalHosts",
+    "summary": "Get all Terminal Hosts",
+    "tags": [
+        "terminal-hosts"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "terminal_hosts.list"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "query",
+            "name": "expand",
+            "schema": {
+                "$ref": "../../../components/common.json#/properties/expand"
+            }
+        },
+        {
+            "in": "query",
+            "name": "query",
+            "schema": {
+                "$ref": "../../../components/common.json#/properties/query"
+            }
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "../../../components/terminal-host-object.json"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

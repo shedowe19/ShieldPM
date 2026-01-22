@@ -215,3 +215,12 @@ export async function del({ url, params, silentAuth }: DeleteArgs, abortControll
 	const response = await fetch(apiUrl, { method, headers, signal });
 	return processResponse(response, silentAuth);
 }
+
+export const apiClient = {
+	get,
+	post,
+	put,
+	delete: del,
+	download,
+	downloadPost,
+};

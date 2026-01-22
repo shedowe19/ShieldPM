@@ -1,11 +1,11 @@
 import express from "express";
 import { transaction } from "objection";
 import internalTor from "../../internal/tor.js";
+import { isDemoMode } from "../../lib/config.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import TorOnion from "../../models/tor_onion.js";
 import { getValidationSchema } from "../../schema/index.js";
-import { isDemoMode } from "../../lib/config.js";
 
 const router = express.Router({
 	caseSensitive: true,

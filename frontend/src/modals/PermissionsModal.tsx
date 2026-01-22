@@ -10,18 +10,18 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { setPermissions } from "src/api/backend";
 import { Loading } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Label } from "src/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { useUser, useHealth } from "src/hooks";
+import { useHealth, useUser } from "src/hooks";
 import { T } from "src/locale";
-import { AlertCircle, Loader2 } from "lucide-react";
 
 const showPermissionsModal = (id: number) => {
 	EasyModal.show(PermissionsModal, { id });

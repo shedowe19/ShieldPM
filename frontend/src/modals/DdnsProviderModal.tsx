@@ -1,21 +1,21 @@
+import { IconWorld } from "@tabler/icons-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { createDdnsProvider, updateDdnsProvider, testDdnsProvider } from "src/api/backend";
+import { createDdnsProvider, testDdnsProvider, updateDdnsProvider } from "src/api/backend";
+import { getDdnsProviders } from "src/api/backend/getDdnsProviders";
 import { Loading } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Button } from "src/components/ui/button";
-import { Input } from "src/components/ui/input";
-import { Label } from "src/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle, Loader2 } from "lucide-react";
-import { IconWorld } from "@tabler/icons-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDdnsProviders } from "src/api/backend/getDdnsProviders";
 
 const showDdnsProviderModal = (id?: number) => {
 	EasyModal.show(DdnsProviderModal, { id: id || "new" });

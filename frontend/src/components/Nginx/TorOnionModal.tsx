@@ -1,15 +1,15 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import type { TorOnion } from "@/api/backend";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useTorOnion } from "@/hooks/useTorOnion";
-import type { TorOnion } from "@/api/backend";
-import { Loader2 } from "lucide-react";
-import { T, intl } from "@/locale";
+import { intl, T } from "@/locale";
 
 const formSchema = z.object({
 	name: z.string().min(1, intl.formatMessage({ id: "error.required_field" })),

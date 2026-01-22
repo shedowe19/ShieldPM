@@ -1,5 +1,5 @@
 import type { TableLayoutProps } from "src/components";
-import { TableHeader as ShadcnTableHeader, TableRow, TableHead } from "src/components/ui/table";
+import { TableHeader as ShadcnTableHeader, TableHead, TableRow } from "src/components/ui/table";
 
 function TableHeader<T>(props: TableLayoutProps<T>) {
 	const { tableInstance } = props;

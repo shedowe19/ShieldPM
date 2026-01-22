@@ -1,7 +1,7 @@
 import type { DeadHost, ProxyHost, RedirectionHost, Stream } from "src/api/backend";
 import { TrueFalseFormatter } from "src/components";
-import { T } from "src/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "src/components/ui/popover";
+import { T } from "src/locale";
 
 const getSection = (title: string, items: ProxyHost[] | RedirectionHost[] | DeadHost[]) => {
 	if (items.length === 0) {

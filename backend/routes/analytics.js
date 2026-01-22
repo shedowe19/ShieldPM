@@ -140,7 +140,7 @@ router.get("/status", async (_req, res) => {
 	}
 });
 
-import { isSqlite, isMysql, isPostgres } from "../lib/config.js";
+import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
 
 /**
  * GET /api/analytics/db-stats

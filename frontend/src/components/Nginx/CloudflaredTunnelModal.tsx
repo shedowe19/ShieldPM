@@ -1,15 +1,15 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Cloud, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import type { CloudflaredTunnel } from "@/api/backend";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useCloudflaredTunnel } from "@/hooks/useCloudflaredTunnel";
-import type { CloudflaredTunnel } from "@/api/backend";
-import { Cloud, Loader2 } from "lucide-react";
-import { T, intl } from "@/locale";
+import { intl, T } from "@/locale";
 
 const formSchema = z.object({
 	name: z.string().min(1, intl.formatMessage({ id: "error.required_field" })),

@@ -1,0 +1,77 @@
+{
+    "operationId": "updateTerminalHost",
+    "summary": "Update a Terminal Host",
+    "tags": [
+        "terminal-hosts"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "terminal_hosts.manage"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+                "$ref": "../../../../components/common.json#/properties/id"
+            }
+        }
+    ],
+    "requestBody": {
+        "description": "Terminal Host Payload",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "name": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/name"
+                        },
+                        "host": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/host"
+                        },
+                        "port": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/port"
+                        },
+                        "auth_type": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/auth_type"
+                        },
+                        "username": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/username"
+                        },
+                        "password": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/password"
+                        },
+                        "private_key": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/private_key"
+                        },
+                        "meta": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/meta"
+                        },
+                        "enabled": {
+                            "$ref": "../../../../components/terminal-host-object.json#/properties/enabled"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/terminal-host-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

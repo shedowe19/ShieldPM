@@ -1,21 +1,20 @@
 import { IconId, IconMail, IconPower, IconSettings, IconShield, IconUser } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Loading } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { Loader2 } from "lucide-react";
-import { useSetUser, useUser, useHealth } from "src/hooks";
+import { useHealth, useSetUser, useUser } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import { AlertCircle } from "lucide-react";
 
 const showUserModal = (id: number | "me" | "new") => {
 	EasyModal.show(UserModal, { id });

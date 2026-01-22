@@ -1,6 +1,6 @@
 import express from "express";
 import jwtdecode from "../lib/express/jwt-decode.js";
-import { getAllServices, detectService, getIconUrl } from "../lib/service-icons.js";
+import { detectService, getAllServices, getIconUrl } from "../lib/service-icons.js";
 
 const router = express.Router({
 	caseSensitive: true,

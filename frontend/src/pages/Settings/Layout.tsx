@@ -1,12 +1,12 @@
+import { IconGitBranch, IconRobot, IconSettings } from "@tabler/icons-react";
+import { Lock } from "lucide-react";
 import { useState } from "react";
 import { T } from "src/locale";
-import DefaultSite from "./DefaultSite";
-import { IconSettings, IconRobot, IconGitBranch } from "@tabler/icons-react";
 import AiConfigPage from "./Ai";
+import DefaultSite from "./DefaultSite";
 import GitOps from "./GitOps";
-import { useHealth } from "@/hooks/useHealth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock } from "lucide-react";
+import { useHealth } from "@/hooks/useHealth";
 
 export default function Layout() {
 	const health = useHealth();

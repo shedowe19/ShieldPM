@@ -1,5 +1,5 @@
 import type { Table as ReactTable } from "@tanstack/react-table";
-import { TableRow, TableCell } from "src/components/ui/table";
+import { TableCell, TableRow } from "src/components/ui/table";
 
 interface Props {
 	tableInstance: ReactTable<any>;

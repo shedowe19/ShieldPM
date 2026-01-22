@@ -1,26 +1,25 @@
-import { useState } from "react";
 import {
-	IconPlus,
-	IconRefresh,
-	IconTrash,
+	IconCopy,
 	IconEdit,
 	IconPlayerPlay,
 	IconPlayerStop,
-	IconCopy,
+	IconPlus,
+	IconRefresh,
+	IconTrash,
 } from "@tabler/icons-react";
-
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
-import { useTorOnions, useTorOnion } from "@/hooks/useTorOnion";
+import { AlertCircle, Lock } from "lucide-react";
+import { useState } from "react";
 import type { TorOnion } from "@/api/backend";
-import { T } from "@/locale";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Lock, AlertCircle } from "lucide-react";
-import { useHealth } from "@/hooks/useHealth";
-import { useToast } from "@/hooks/use-toast";
+import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { useHealth } from "@/hooks/useHealth";
+import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
+import { T } from "@/locale";
 
 export function TorOnionServices() {
 	const health = useHealth();
@@ -189,7 +188,7 @@ export function TorOnionServices() {
 														variant="ghost"
 														size="icon"
 														className="h-6 w-6"
-														onClick={() => handleCopy(service.onionAddress!)}
+														onClick={() => handleCopy(service.onionAddress || "")}
 													>
 														<IconCopy className="h-3 w-3" />
 													</Button>

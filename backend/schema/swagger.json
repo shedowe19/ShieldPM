@@ -145,6 +145,25 @@
 				"$ref": "./paths/nginx/tor-onion/post.json"
 			}
 		},
+		"/nginx/terminal-hosts": {
+			"get": {
+				"$ref": "./paths/nginx/terminal-hosts/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/terminal-hosts/post.json"
+			}
+		},
+		"/nginx/terminal-hosts/{id}": {
+			"get": {
+				"$ref": "./paths/nginx/terminal-hosts/id/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/terminal-hosts/id/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/terminal-hosts/id/delete.json"
+			}
+		},
 		"/nginx/tor-onion/{id}": {
 			"get": {
 				"$ref": "./paths/nginx/tor-onion/id/get.json"

@@ -10,13 +10,16 @@ import ipaddr from "ipaddr.js";
 import si from "systeminformation";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
+import { encrypt } from "../../lib/encryption.js";
 import AnalyticCount from "../../models/analytic_count.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
+import TerminalHost from "../../models/terminal_host.js";
+import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
 import internalCertificate from "../certificate.js";
-import internalDeadHost from "../dead-host.js";
 import internalDdnsProvider from "../ddns-provider.js";
+import internalDeadHost from "../dead-host.js";
 import internalIpRanges from "../ip_ranges.js";
 import internalNginx from "../nginx.js";
 import internalPki from "../pki.js";
@@ -26,6 +29,7 @@ import internalReport from "../report.js";
 import internalSetting from "../setting.js";
 import internalStream from "../stream.js";
 import internalToken from "../token.js";
+import internalTor from "../tor.js";
 import internalUser from "../user.js";
 
 const execAsync = util.promisify(exec);
@@ -752,6 +756,126 @@ export const executeTools = async (access, toolCalls) => {
 						tmpDir,
 					);
 					result = `Client Certificate Created at: ${p12Path}. You can retrieve it from the server filesystem.`;
+					break;
+				}
+
+				// Terminal Hosts
+				case "get_terminal_hosts": {
+					const hosts = await TerminalHost.query().where("is_deleted", 0).orderBy("name", "ASC");
+					result = JSON.stringify(
+						hosts.map((h) => ({
+							id: h.id,
+							name: h.name,
+							host: h.host,
+							port: h.port,
+							username: h.username,
+							auth_type: h.auth_type,
+						})),
+					);
+					break;
+				}
+				case "create_terminal_host": {
+					// Demo Mode: Block
+					validateDemoModeHost({ forward_host: call.args.host });
+
+					const payload = {
+						...call.args,
+						owner_user_id: access.token.getUserId(1), // Assume running user context or system
+					};
+
+					if (payload.password) payload.password = encrypt(payload.password);
+					if (payload.private_key) payload.private_key = encrypt(payload.private_key);
+
+					const host = await TerminalHost.query().insertAndFetch(payload);
+					result = `Created Terminal Host ID: ${host.id}`;
+					break;
+				}
+				case "update_terminal_host": {
+					validateDemoModeHost({ forward_host: call.args.host });
+
+					const payload = { ...call.args };
+					if (payload.password) payload.password = encrypt(payload.password);
+					if (payload.private_key) payload.private_key = encrypt(payload.private_key);
+
+					await TerminalHost.query().patchAndFetchById(call.args.id, payload);
+					result = `Updated Terminal Host ID: ${call.args.id}`;
+					break;
+				}
+				case "delete_terminal_host": {
+					await TerminalHost.query().patchAndFetchById(call.args.id, { is_deleted: 1 });
+					result = `Deleted Terminal Host ID: ${call.args.id}`;
+					break;
+				}
+
+				// Tor Onion Services
+				case "get_tor_onion_services": {
+					const services = await TorOnion.query().where("is_deleted", 0);
+					result = JSON.stringify(
+						services.map((s) => ({
+							id: s.id,
+							name: s.name,
+							onion: s.onion_address,
+							status: s.status,
+						})),
+					);
+					break;
+				}
+				case "create_tor_onion_service": {
+					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
+
+					const payload = {
+						...call.args,
+						owner_user_id: access.token.getUserId(1),
+						status: 0,
+					};
+
+					const service = await TorOnion.query().insert(payload);
+					// Create in Tor
+					await internalTor.create(service);
+
+					// Refetch for address
+					const finalService = await TorOnion.query().findById(service.id);
+					result = `Created Tor Onion Service ID: ${service.id} (Address: ${finalService.onion_address})`;
+					break;
+				}
+				case "update_tor_onion_service": {
+					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
+
+					const service = await TorOnion.query().findById(call.args.id);
+					if (!service) throw new Error("Service not found");
+
+					const updated = await service.$query().patchAndFetch(call.args);
+
+					if (call.args.virtual_port || call.args.target_port) {
+						await internalTor.restart(updated);
+					}
+
+					result = `Updated Tor Onion Service ID: ${call.args.id}`;
+					break;
+				}
+				case "delete_tor_onion_service": {
+					// Stop first
+					const service = await TorOnion.query().findById(call.args.id);
+					if (service) {
+						await internalTor.stop(service);
+						await service.$query().patch({ is_deleted: 1 });
+					}
+					result = `Deleted Tor Onion Service ID: ${call.args.id}`;
+					break;
+				}
+				case "start_tor_onion_service": {
+					const service = await TorOnion.query().findById(call.args.id);
+					if (service) {
+						if (!service.private_key) await internalTor.create(service);
+						else await internalTor.start(service);
+					}
+					result = `Started Tor Onion Service ID: ${call.args.id}`;
+					break;
+				}
+				case "stop_tor_onion_service": {
+					const service = await TorOnion.query().findById(call.args.id);
+					if (service) await internalTor.stop(service);
+					result = `Stopped Tor Onion Service ID: ${call.args.id}`;
 					break;
 				}
 				// Missing Read/Log Tools

@@ -1,4 +1,4 @@
-import { IconAlertTriangle, IconWorld, IconCheck } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCheck, IconWorld } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Form, Formik } from "formik";
@@ -6,10 +6,10 @@ import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { createCertificate, testHttpCertificate } from "src/api/backend";
 import { DomainNamesField } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Alert, AlertTitle, AlertDescription } from "src/components/ui/alert";
 import { Card, CardContent, CardFooter } from "src/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 

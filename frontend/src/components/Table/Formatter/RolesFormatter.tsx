@@ -1,5 +1,5 @@
-import { T } from "src/locale";
 import { Badge } from "src/components/ui/badge";
+import { T } from "src/locale";
 
 interface Props {
 	roles: string[];

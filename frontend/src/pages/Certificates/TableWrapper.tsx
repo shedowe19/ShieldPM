@@ -1,7 +1,21 @@
-import { IconHelp, IconSearch, IconChevronDown, IconCertificate, IconPlus, IconShieldLock } from "@tabler/icons-react";
+import { IconCertificate, IconChevronDown, IconHelp, IconPlus, IconSearch, IconShieldLock } from "@tabler/icons-react";
+import { AlertCircle } from "lucide-react";
 import { type ChangeEvent, useState } from "react";
 import { type Certificate, deleteCertificate, downloadCertificate, downloadRootCa } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+// import { Button } from "src/components/ui/button"; // Using src/components which might conflict, let's use shadcn button aliased if needed or rely on src/components Button if it is shadcn now?
+// Actually src/components index likely exports a Button. Previous migrations imported Button from src/components/ui/button. I will do the same here.
+import { Button as ShadcnButton } from "src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "src/components/ui/dropdown-menu";
+import { Input } from "src/components/ui/input";
 import { useCertificates } from "src/hooks";
 import { intl, T } from "src/locale";
 import {
@@ -16,21 +30,6 @@ import {
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
 import { showError, showObjectSuccess } from "src/notifications";
 import Table from "./Table";
-import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
-import { Input } from "src/components/ui/input";
-// import { Button } from "src/components/ui/button"; // Using src/components which might conflict, let's use shadcn button aliased if needed or rely on src/components Button if it is shadcn now?
-// Actually src/components index likely exports a Button. Previous migrations imported Button from src/components/ui/button. I will do the same here.
-import { Button as ShadcnButton } from "src/components/ui/button";
-
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "src/components/ui/dropdown-menu";
 
 export default function TableWrapper() {
 	const [search, setSearch] = useState("");
