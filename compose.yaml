@@ -1,3 +1,18 @@
+# ==============================================================================
+# ShieldPM - Advanced Docker Compose Configuration
+# ------------------------------------------------------------------------------
+# HOW TO USE THIS FILE:
+# 1. This is the "Full Configuration" with all features available.
+#    For a simpler start, check 'compose.easy.yaml' first.
+#
+# 2. REQUIRED SETTINGS:
+#    - TZ (Timezone)
+#
+# 3. OPTIONAL SETTINGS:
+#    - Uncomment the environment variables you need (remove the leading '# -').
+#    - For Database (MySQL/Postgres), CrowdSec, or OpenAppSec, scroll to the
+#      bottom "OPTIONAL SERVICES" section and uncomment the desired blocks.
+# ==============================================================================
 services:
   shieldpm:
     image: ghcr.io/shedowe19/shieldpm:latest
