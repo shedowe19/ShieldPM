@@ -125,6 +125,12 @@ You should only use HTTPS over Tor if:
 
 > 💡 **Tip**: Using self-signed certificates for Onion addresses will still trigger browser warnings, even though Tor is already secure. For 99% of use cases, standard HTTP (Port 80) is the recommended way.
 
+## ⚖️ Legal & Ethical Use
+
+**Important Note**: The Tor Onion Services feature in ShieldPM is designed to empower users with **privacy**, **censorship resistance**, and **secure remote access** to legitimate self-hosted services (e.g., Nextcloud, Home Assistant, personal blogs) without exposing public IP addresses or requiring complex port forwarding.
+
+This feature is **not** intended to facilitate illegal activities, the hosting of illicit content, or the operation of "Dark Web" marketplaces. ShieldPM provides this technology to foster a freer and more secure internet for everyone. Users are responsible for complying with all applicable laws and regulations in their jurisdiction regarding the content they host.
+
 ## 🔍 Troubleshooting
 
 ### Tor Not Available

@@ -17,8 +17,8 @@ DataDirectory /data/tor
 # Logging configuration
 Log notice file /data/tor/tor.log
 
-# Avoid IPv6 issues in container environments
-ClientUseIPv6 0
+# Enable IPv6 support (if available in container environment)
+ClientUseIPv6 1
 
 # Don't run as relay or exit node
 ExitRelay 0
