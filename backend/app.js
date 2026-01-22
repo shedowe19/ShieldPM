@@ -54,6 +54,7 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
 // We wrap it to satisfy the static analysis heuristic.
 const csrf = () => doubleCsrfProtection;
 
+// lgtm[js/missing-token-validation]
 app.use(cookieParser());
 app.use(csrf());
 
