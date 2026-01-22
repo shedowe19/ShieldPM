@@ -85,7 +85,7 @@ const internalAuditLog = {
 		const accessId = typeof access.token.getUserId === "function" ? access.token.getUserId(1) : 0;
 
 		return auditLogModel.query().insert(
-			/** @type {any} */({
+			/** @type {any} */ ({
 				user_id: accessId,
 				action: data.action,
 				object_type: data.object_type,
