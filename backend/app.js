@@ -3,8 +3,7 @@ import express from "express";
 import fileUpload from "express-fileupload";
 import helmet from "helmet";
 import analyticsService from "./internal/analytics.js";
-import csrf from "./lib/express/csrf.js";
-import { csrfToken } from "./lib/express/csrf.js";
+import { doubleCsrf } from "csrf-csrf";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
@@ -36,19 +35,31 @@ app.use(
 	}),
 );
 
+// CSRF Protection (Double Submit Cookie)
+const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
+	getSecret: () => "DevelopmentSecretKEYChangedInProd", // TODO: Move to config/env
+	cookieName: "XSRF-TOKEN",
+	cookieOptions: {
+		sameSite: "strict",
+		secure: true,
+		path: "/",
+	},
+	size: 64,
+	ignoredMethods: ["GET", "HEAD", "OPTIONS"],
+	getCsrfTokenFromRequest: (req) => req.headers["x-xsrf-token"],
+	getSessionIdentifier: (_req) => "stateless-session",
+});
+
 app.use(cookieParser());
-app.use(csrf());
+app.use(doubleCsrfProtection);
+
 // Generate Token and set cookie/local
 app.use((req, res, next) => {
-	const token = csrfToken(req, res);
-	// Double-Check: csrf-csrf sets the cookie automatically if configured?
-	// Actually generateToken returns the token, and sets the cookie if req/res are passed and cookie configured.
-	// But let's be explicit if needed or trust the lib.
-	// Documentation says: generateToken(req, res, overwrite)
-	// We make it available to views/API
+	const token = generateCsrfToken(req, res);
 	res.locals.csrfToken = token;
 	next();
 });
+
 app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
