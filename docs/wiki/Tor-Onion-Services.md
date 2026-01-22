@@ -82,7 +82,7 @@ Tor Onion Services are **completely disabled** in Demo Mode for security reasons
 |------|-------------|
 | `/data/tor/` | Tor data directory |
 | `/data/shieldpm/tor-control-password` | Control Port password |
-| `/data/logs/tor.log` | Tor daemon logs |
+| `/data/tor/tor.log` | Tor daemon logs |
 | `/etc/tor/torrc` | Tor configuration file |
 
 ## 🔄 Service Lifecycle
