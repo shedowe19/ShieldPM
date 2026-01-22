@@ -17,14 +17,14 @@
             "name": "id",
             "required": true,
             "schema": {
-                "$ref": "../../../../components/common.json#/properties/id"
+                "$ref": "../../../../common.json#/properties/id"
             }
         },
         {
             "in": "query",
             "name": "expand",
             "schema": {
-                "$ref": "../../../../components/common.json#/properties/expand"
+                "$ref": "../../../../common.json#/properties/expand"
             }
         }
     ],
