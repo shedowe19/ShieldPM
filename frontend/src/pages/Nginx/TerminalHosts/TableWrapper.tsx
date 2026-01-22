@@ -4,10 +4,8 @@ import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { deleteTerminalHost, getTerminalHosts, type TerminalHost } from "src/api/backend";
 import {
-    EmptyData,
     HasPermission,
     LoadingPage,
-    ServiceIcon,
 } from "src/components";
 import WebTerminal from "src/components/Terminal/WebTerminal";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -56,7 +54,7 @@ export default function TableWrapper() {
     let filtered = null;
     if (search && data) {
         filtered = data?.filter(
-            (item) =>
+            (item: TerminalHost) =>
                 item.name.toLowerCase().includes(search) ||
                 item.host.toLowerCase().includes(search) ||
                 item.username.toLowerCase().includes(search) ||
