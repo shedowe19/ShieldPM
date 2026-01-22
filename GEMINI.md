@@ -6,8 +6,8 @@ ShieldPM is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-fr
 **Key Technologies:**
 *   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
 *   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
-*   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**, **HTTP-Only Cookie Auth**, **GitOps Synchronization**.
+*   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared, Tor.
+*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Tor Onion Services**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**, **HTTP-Only Cookie Auth**, **GitOps Synchronization**.
 *   **Language:** JavaScript/TypeScript (ES Modules).
 
 ## Secure Demo Mode Architecture
@@ -105,6 +105,7 @@ Database schema evolution is handled by **Knex.js** migrations in `backend/migra
 | `20260115000000_add_system_prompt.js` | Customizable AI system prompt |
 | `20260116000000_hash_access_list_passwords.js` | Hash Access List Passwords (Argon2) |
 | `20260118000000_add_gitops_config.js` | GitOps configuration setting |
+| `20260122100000_add_tor_onion.js` | Tor Onion Services table |
 
 ---
 
@@ -136,6 +137,7 @@ The application uses `react-router-dom` with the following route map:
 | `/nginx/redirection` | `RedirectionHosts` | Manage Redirection Hosts |
 | `/nginx/stream` | `Streams` | Manage TCP/UDP Streams |
 | `/nginx/cloudflared` | `CloudflaredTunnels` | Manage Cloudflare Tunnels |
+| `/nginx/tor` | `TorOnionServices` | Manage Tor Hidden Services |
 | `/nginx/404` | `DeadHosts` | Manage 404 Hosts |
 | `/access` | `Access` | Admin Control Lists (ACLs) |
 | `/certificates` | `Certificates` | SSL/TLS Certificate management |
@@ -227,6 +229,8 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
 | `/data/access/{id}` | Htpasswd files |
 | `/data/logs/` | Nginx error/access logs |
 | `/data/gitops/` | GitOps repository and exported YAML files |
+| `/data/tor/` | Tor data directory |
+| `/data/shieldpm/tor-control-password` | Tor Control Port password |
 
 ### Validation & Schema
 *   **Backend**: Uses **AJV** and **OpenAPI** schemas in `backend/schema/`
@@ -240,6 +244,7 @@ The frontend is a React Single Page Application (SPA) built with Vite, utilizing
 | `["users"]` | User list |
 | `["settings"]` | Global settings |
 | `["health"]` | System health check |
+| `["tor-onions"]` | List of Tor Onion Services |
 
 ### Docker Infrastructure
 *   **Container**: Single container architecture (s6-overlay)

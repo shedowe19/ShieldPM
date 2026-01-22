@@ -287,3 +287,27 @@ export interface DdnsProvider {
 	enabled: boolean;
 	meta: Record<string, any>;
 }
+
+export interface TorOnion {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	ownerUserId: number;
+	name: string;
+	proxyHostId?: number | null;
+	onionAddress?: string | null;
+	virtualPort: number;
+	targetPort: number;
+	status: number; // 0=Stopped, 1=Starting, 2=Running, 3=Error
+	meta: Record<string, any>;
+	// Expansions:
+	proxyHost?: ProxyHost;
+}
+
+export interface TorOnionListResponse {
+	services: TorOnion[];
+	tor: {
+		available: boolean;
+		version: string | null;
+	};
+}

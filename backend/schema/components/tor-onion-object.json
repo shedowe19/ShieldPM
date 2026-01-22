@@ -1,0 +1,54 @@
+{
+    "type": "object",
+    "description": "Tor Onion Service",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Unique identifier"
+        },
+        "name": {
+            "type": "string",
+            "description": "Service name"
+        },
+        "proxy_host_id": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "description": "Associated Proxy Host ID"
+        },
+        "onion_address": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "The .onion address"
+        },
+        "virtual_port": {
+            "type": "integer",
+            "description": "Port the onion service listens on"
+        },
+        "target_port": {
+            "type": "integer",
+            "description": "Local target port"
+        },
+        "status": {
+            "type": "integer",
+            "description": "Status: 0=Stopped, 1=Starting, 2=Running, 3=Error"
+        },
+        "created_on": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "modified_on": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "owner_user_id": {
+            "type": "integer"
+        },
+        "meta": {
+            "type": "object"
+        }
+    }
+}

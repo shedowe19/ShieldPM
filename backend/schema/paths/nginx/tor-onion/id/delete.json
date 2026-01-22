@@ -1,0 +1,45 @@
+{
+    "operationId": "deleteTorOnion",
+    "summary": "Delete a Tor Onion Service",
+    "tags": [
+        "Tor Onion"
+    ],
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+                "type": "integer"
+            }
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "Onion Service deleted",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "OK"
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "404": {
+            "description": "Onion Service not found"
+        }
+    }
+}

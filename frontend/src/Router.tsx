@@ -30,6 +30,7 @@ const DeadHosts = lazy(() => import("src/pages/Nginx/DeadHosts"));
 const Streams = lazy(() => import("src/pages/Nginx/Streams"));
 const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
 const DdnsProviders = lazy(() => import("src/pages/Nginx/DdnsProviders"));
+const TorOnionServices = lazy(() => import("src/pages/Nginx/TorOnionServices"));
 
 function Content() {
 	const location = useLocation();
@@ -129,6 +130,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<DdnsProviders />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/nginx/tor"
+					element={
+						<AnimatedPage>
+							<TorOnionServices />
 						</AnimatedPage>
 					}
 				/>

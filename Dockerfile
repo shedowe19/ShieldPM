@@ -294,7 +294,7 @@ WORKDIR /app
 RUN apk upgrade --no-cache -a && \
     apk add --no-cache argon2-libs bash bash-completion brotli coreutils curl fcgi findutils geoip goaccess grep jq \
                        libatomic_ops libcrypto3 libedit libldap libmaxminddb-libs libssl3 libxml2 lmdb logrotate lua5.1-cjson luajit \
-                       nano nodejs openssl pcre2 python3 shadow su-exec tini tzdata util-linux-misc yajl zlib zstd && \
+                       nano nodejs openssl pcre2 python3 shadow su-exec tini tor tzdata util-linux-misc yajl zlib zstd && \
     # Fix CrowdSec Version in Config
     mv /usr/local/nginx/conf/conf.d/crowdsec.conf.disabled /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \
     sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/include/crowdsec.conf && \

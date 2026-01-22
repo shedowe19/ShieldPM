@@ -110,7 +110,31 @@ mkdir -vp /data/tls/certbot/renewal \
           /data/nginx/proxy_host \
           /data/nginx/dead_host \
           /data/nginx/stream \
-          /data/custom_nginx
+          /data/custom_nginx \
+          /data/tor
+
+
+# Tor Hidden Service Setup
+if [ "${TOR_ENABLED:-true}" = "true" ]; then
+    chmod 700 /data/tor
+    
+    # Generate Control Port Password if not exists
+    if [ ! -s /data/shieldpm/tor-control-password ]; then
+        TOR_PASSWORD=$(openssl rand -base64 32)
+        echo "$TOR_PASSWORD" > /data/shieldpm/tor-control-password
+        chmod 600 /data/shieldpm/tor-control-password
+        echo "Generated new Tor control password"
+    fi
+    
+    TOR_PASSWORD=$(cat /data/shieldpm/tor-control-password)
+    TOR_HASH=$(tor --hash-password "$TOR_PASSWORD" 2>/dev/null | tail -1)
+    if [ -n "$TOR_HASH" ]; then
+        sed -i "s|__TOR_CONTROL_PASSWORD__|$TOR_HASH|g" /etc/tor/torrc
+        echo "Tor control password configured"
+    else
+        echo "Warning: Could not generate Tor password hash (tor binary may not be available)"
+    fi
+fi
 
 
 if [ -n "$(ls -A /data/nginx/custom 2> /dev/null)"  ]; then

@@ -11,6 +11,7 @@ import accessListsRoutes from "./nginx/access_lists.js";
 import nginxAnalyticsRoutes from "./nginx/analytics.js";
 import certificatesHostsRoutes from "./nginx/certificates.js";
 import cloudflaredRoutes from "./nginx/cloudflared.js";
+import torOnionRoutes from "./nginx/tor_onion.js";
 import deadHostsRoutes from "./nginx/dead_hosts.js";
 import proxyHostsRoutes from "./nginx/proxy_hosts.js";
 import ddnsProvidersRoutes from "./nginx/ddns_providers.js";
@@ -66,6 +67,7 @@ router.use("/nginx/access-lists", accessListsRoutes);
 router.use("/nginx/certificates", certificatesHostsRoutes);
 router.use("/nginx/analytics", nginxAnalyticsRoutes);
 router.use("/nginx/cloudflared-tunnels", cloudflaredRoutes);
+router.use("/nginx/tor-onion", torOnionRoutes);
 router.use("/gitops", gitopsRoutes);
 router.use("/services", servicesRoutes);
 

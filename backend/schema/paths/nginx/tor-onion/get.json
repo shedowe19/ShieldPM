@@ -1,0 +1,27 @@
+{
+	"operationId": "getTorOnions",
+	"summary": "Get all Tor Onion Services",
+	"tags": [
+		"Tor Onion"
+	],
+	"security": [
+		{
+			"BearerAuth": []
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "Successful response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"$ref": "../../../components/tor-onion-object.json"
+						}
+					}
+				}
+			}
+		}
+	}
+}

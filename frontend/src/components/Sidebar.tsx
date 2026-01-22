@@ -81,6 +81,10 @@ const menuItems: MenuItem[] = [
 				to: "/nginx/ddns",
 				label: "ddns-providers",
 			},
+			{
+				to: "/nginx/tor",
+				label: "tor.title",
+			},
 
 			{
 				to: "/nginx/404",

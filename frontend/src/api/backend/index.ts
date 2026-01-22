@@ -75,3 +75,8 @@ export * from "./createDdnsProvider";
 export * from "./updateDdnsProvider";
 export * from "./deleteDdnsProvider";
 export * from "./testDdnsProvider";
+export * from "./getTorOnions";
+export * from "./createTorOnion";
+export * from "./updateTorOnion";
+export * from "./deleteTorOnion";
+export * from "./torOnionActions";
