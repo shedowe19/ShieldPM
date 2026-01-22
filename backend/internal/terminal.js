@@ -46,7 +46,17 @@ const internalTerminal = {
             // NOTE: This assumes the standard JWT secret is used.
             // In `lib/express/jwt.js` we use express-jwt-smart which handles this.
             // Here we need manual verification.
-            const _secret = getPublicKey();
+            // Verify JWT
+            const publicKey = getPublicKey();
+            if (!publicKey) {
+                throw new Error("Public key not available");
+            }
+
+            // Verify token signature and expiration (RS256)
+            jwt.verify(token, publicKey, { algorithms: ["RS256"] });
+
+            // Legacy line for reference (removed)
+            // const _secret = getPublicKey();
             // The JWT in the cookie might be partial or contain the payload directly depending on how it's set.
             // ShieldPM usually sets a standard JWT.
 
