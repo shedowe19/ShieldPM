@@ -1,0 +1,88 @@
+{
+    "summary": "Update a DDNS Provider",
+    "tags": [
+        "DDNS"
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer"
+            },
+            "required": true,
+            "description": "ID of the DDNS Provider"
+        }
+    ],
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "requestBody": {
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "provider": {
+                            "type": "string",
+                            "enum": [
+                                "cloudflare",
+                                "duckdns",
+                                "custom"
+                            ]
+                        },
+                        "domains": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1
+                            },
+                            "minItems": 1
+                        },
+                        "config": {
+                            "type": "object"
+                        },
+                        "ip_ver": {
+                            "type": "string",
+                            "enum": [
+                                "v4",
+                                "v6",
+                                "dual"
+                            ]
+                        },
+                        "enabled": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        },
+                        "meta": {
+                            "type": "object"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "Provider updated",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/ddns-provider.json"
+                    }
+                }
+            }
+        }
+    }
+}

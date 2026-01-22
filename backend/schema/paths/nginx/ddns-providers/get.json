@@ -1,0 +1,26 @@
+{
+    "tags": [
+        "DDNS"
+    ],
+    "summary": "Get all DDNS Providers",
+    "responses": {
+        "200": {
+            "description": "List of DDNS Providers",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "../../../components/ddns-provider.json"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ]
+}

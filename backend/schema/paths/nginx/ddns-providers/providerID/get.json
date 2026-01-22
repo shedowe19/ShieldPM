@@ -1,0 +1,34 @@
+{
+    "tags": [
+        "DDNS"
+    ],
+    "summary": "Get a specific DDNS Provider",
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer"
+            },
+            "required": true,
+            "description": "ID of the DDNS Provider"
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "DDNS Provider details",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/ddns-provider.json"
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ]
+}

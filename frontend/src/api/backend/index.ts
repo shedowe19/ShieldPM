@@ -70,3 +70,8 @@ export * from "./createCloudflaredTunnel";
 export * from "./updateCloudflaredTunnel";
 export * from "./deleteCloudflaredTunnel";
 export * from "./gitSync";
+export * from "./getDdnsProviders";
+export * from "./createDdnsProvider";
+export * from "./updateDdnsProvider";
+export * from "./deleteDdnsProvider";
+export * from "./testDdnsProvider";

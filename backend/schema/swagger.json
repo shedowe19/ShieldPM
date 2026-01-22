@@ -268,6 +268,30 @@
 				"$ref": "./paths/nginx/dead-hosts/hostID/disable/post.json"
 			}
 		},
+		"/nginx/ddns-providers": {
+			"get": {
+				"$ref": "./paths/nginx/ddns-providers/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/ddns-providers/post.json"
+			}
+		},
+		"/nginx/ddns-providers/{id}": {
+			"get": {
+				"$ref": "./paths/nginx/ddns-providers/providerID/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/ddns-providers/providerID/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/ddns-providers/providerID/delete.json"
+			}
+		},
+		"/nginx/ddns-providers/{id}/test": {
+			"post": {
+				"$ref": "./paths/nginx/ddns-providers/providerID/test/post.json"
+			}
+		},
 		"/nginx/streams": {
 			"get": {
 				"$ref": "./paths/nginx/streams/get.json"

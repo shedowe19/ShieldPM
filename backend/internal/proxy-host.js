@@ -6,6 +6,7 @@ import { encrypt } from "../lib/encryption.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import internalGitDeploy from "./git-deploy.js";
 import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
@@ -113,6 +114,11 @@ const internalProxyHost = {
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("proxy-host");
+
+		// Start Git Deploy polling if enabled
+		if (row.git_sync_enabled && row.git_repo_url) {
+			internalGitDeploy.startPollingForHost(row);
+		}
 
 		return row;
 	},
@@ -350,6 +356,9 @@ const internalProxyHost = {
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("proxy-host");
 
+		// Stop Git Deploy polling
+		internalGitDeploy.stopPolling(data.id);
+
 		return true;
 	},
 
@@ -382,6 +391,11 @@ const internalProxyHost = {
 
 		// Configure nginx
 		await internalNginx.configure(proxyHostModel, "proxy_host", row);
+
+		// Start Git Deploy polling if enabled
+		if (row.git_sync_enabled && row.git_repo_url) {
+			internalGitDeploy.startPollingForHost(row);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -421,6 +435,9 @@ const internalProxyHost = {
 		// Delete Nginx Config
 		await internalNginx.deleteConfig("proxy_host", row);
 		await internalNginx.reload();
+
+		// Stop Git Deploy polling
+		internalGitDeploy.stopPolling(data.id);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {

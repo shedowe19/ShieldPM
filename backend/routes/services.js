@@ -12,7 +12,7 @@ const router = express.Router({
  * GET /api/services/icons
  * Returns list of all available service icons for picker/autocomplete
  */
-router.get("/icons", jwtdecode(), (req, res) => {
+router.get("/icons", jwtdecode(), (_req, res) => {
 	res.json(getAllServices());
 });
 

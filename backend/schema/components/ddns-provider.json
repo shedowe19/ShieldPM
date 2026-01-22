@@ -1,0 +1,64 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "created_on": {
+            "type": "string"
+        },
+        "modified_on": {
+            "type": "string"
+        },
+        "owner_user_id": {
+            "type": "integer"
+        },
+        "name": {
+            "type": "string"
+        },
+        "provider": {
+            "type": "string",
+            "enum": [
+                "cloudflare",
+                "duckdns",
+                "custom"
+            ]
+        },
+        "domains": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "config": {
+            "type": "object"
+        },
+        "last_ipv4": {
+            "type": "string"
+        },
+        "last_ipv6": {
+            "type": "string"
+        },
+        "last_updated_on": {
+            "type": "string"
+        },
+        "last_error": {
+            "type": "string"
+        },
+        "enabled": {
+            "type": "boolean"
+        },
+        "meta": {
+            "type": "object"
+        },
+        "ip_ver": {
+            "type": "string",
+            "enum": [
+                "v4",
+                "v6",
+                "dual"
+            ],
+            "default": "dual"
+        }
+    }
+}

@@ -1,0 +1,56 @@
+{
+    "tags": [
+        "DDNS"
+    ],
+    "summary": "Manual test/update of a DDNS Provider",
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer"
+            },
+            "required": true,
+            "description": "ID of the DDNS Provider"
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "Success",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            },
+                            "ips": {
+                                "type": "object",
+                                "properties": {
+                                    "ip": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "ipv6": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ]
+}

@@ -1,0 +1,26 @@
+services:
+  shieldpm:
+    container_name: shieldpm
+    image: ghcr.io/shedowe19/shieldpm:develop
+    restart: always
+    network_mode: host
+    volumes:
+      - "/opt/shieldpm:/data"
+      # - "/var/www:/var/www" # Optional: If you want to use ShieldPM key folders
+    environment:
+      # Set your timezone
+      - "TZ=Europe/Berlin"
+      
+      # Minimal Configuration
+      - "PUID=0" # Run as root by default (easy start)
+      - "PGID=0"
+      - "NPM_PORT=81" # UI Port
+      - "HTTP_PORT=80"
+      - "HTTPS_PORT=443"
+
+      # SSL / ACME (Let's Encrypt)
+      # - "ACME_EMAIL=your@email.com" # Required for some CAs, recommended for expiration alerts
+      # - "ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory"
+
+      # Optional: Enable Quick Features
+      # - "DISABLE_IPV6=true" # Disable IPv6 if your network/docker doesn't support it

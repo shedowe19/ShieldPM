@@ -78,6 +78,11 @@ const menuItems: MenuItem[] = [
 				label: "cloudflared.title",
 			},
 			{
+				to: "/nginx/ddns",
+				label: "ddns-providers",
+			},
+
+			{
 				to: "/nginx/404",
 				label: "dead-hosts",
 				permissionSection: DEAD_HOSTS,
