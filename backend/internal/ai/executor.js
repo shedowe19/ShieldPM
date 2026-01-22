@@ -16,6 +16,7 @@ import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
 import internalCertificate from "../certificate.js";
 import internalDeadHost from "../dead-host.js";
+import internalDdnsProvider from "../ddns-provider.js";
 import internalIpRanges from "../ip_ranges.js";
 import internalNginx from "../nginx.js";
 import internalPki from "../pki.js";
@@ -130,6 +131,7 @@ export const executeTools = async (access, toolCalls) => {
 					"update_cloudflared_tunnel",
 					"delete_cloudflared_tunnel",
 					"get_cloudflared_tunnels",
+					// DDNS is safe in Demo but creation might be blocked if we want to be strict, currently User said "allow all"
 				];
 				if (blockedTools.includes(call.name)) {
 					result = "Error: This action is prohibited in the public Demo Mode.";
@@ -183,7 +185,7 @@ export const executeTools = async (access, toolCalls) => {
 						// Ensure these are always valid (override any nulls from AI)
 						advanced_config: "",
 					};
-					const newHost = await internalProxyHost.create(access, /** @type {any} */ (data));
+					const newHost = await internalProxyHost.create(access, /** @type {any} */(data));
 					result = `Created Proxy Host ID: ${newHost.id}`;
 					break;
 				}
@@ -249,7 +251,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
+					const newHost = await internalRedirectionHost.create(access, /** @type {any} */(data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
 					break;
 				}
@@ -305,7 +307,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
+					const newHost = await internalDeadHost.create(access, /** @type {any} */(data));
 					result = `Created 404 Host ID: ${newHost.id}`;
 					break;
 				}
@@ -576,15 +578,61 @@ export const executeTools = async (access, toolCalls) => {
 					result = JSON.stringify(cert, null, 2);
 					break;
 				}
-				case "get_dns_providers": {
+				case "get_dns_plugins": {
 					const plugins = dnsPlugins;
 					result = JSON.stringify(Object.keys(plugins).map((k) => ({ id: k, name: plugins[k].name })));
+					break;
+				}
+				// DDNS Client
+				case "get_ddns_providers": {
+					const providers = await internalDdnsProvider.getAll(access);
+					result = JSON.stringify(
+						providers.map((p) => ({
+							id: p.id,
+							name: p.name,
+							provider: p.provider,
+							domains: p.domains,
+							last_updated: p.last_updated_on,
+							status: p.last_error ? "Error" : "OK",
+						})),
+					);
+					break;
+				}
+				case "create_ddns_provider": {
+					// Check demo mode for dangerous config (custom URL to local IPs)
+					if (isDemoMode() && call.args.provider === "custom") {
+						validateDemoModeHost({ forward_host: call.args.config.url }); // Reuse validator
+					}
+					const provider = await internalDdnsProvider.create(access, {
+						ip_ver: "dual",
+						enabled: true,
+						...call.args,
+					});
+					result = `Created DDNS Provider ID: ${provider.id}`;
+					break;
+				}
+				case "update_ddns_provider": {
+					if (isDemoMode() && call.args.provider === "custom" && call.args.config?.url) {
+						validateDemoModeHost({ forward_host: call.args.config.url });
+					}
+					await internalDdnsProvider.update(access, { id: call.args.id, ...call.args });
+					result = `Updated DDNS Provider ID: ${call.args.id}`;
+					break;
+				}
+				case "delete_ddns_provider": {
+					await internalDdnsProvider.delete(call.args.id, access.token.getUserId(1));
+					result = `Deleted DDNS Provider ID: ${call.args.id}`;
+					break;
+				}
+				case "test_ddns_provider": {
+					const testRel = await internalDdnsProvider.test(access, { id: call.args.id });
+					result = `Test Result: ${testRel.status}. IPs: ${JSON.stringify(testRel.ips)}`;
 					break;
 				}
 				case "test_http_challenge": {
 					const testResult = await internalCertificate.testHttpsChallenge(
 						access,
-						/** @type {any} */ ({
+						/** @type {any} */({
 							domains: call.args.domains,
 						}),
 					);

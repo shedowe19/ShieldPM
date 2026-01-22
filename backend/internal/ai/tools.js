@@ -525,9 +525,68 @@ export const getToolDefinitions = () => [
 	},
 	{
 		function: {
-			name: "get_dns_providers",
-			description: "Get list of supported DNS Providers",
+			name: "get_dns_plugins",
+			description: "Get list of supported Certbot DNS Plugins (Cloudflare, etc)",
 			parameters: { type: "object", properties: {} },
+		},
+	},
+
+	// DDNS Client
+	{
+		function: {
+			name: "get_ddns_providers",
+			description: "Get configured DDNS Client Providers",
+			parameters: { type: "object", properties: {} },
+		},
+	},
+	{
+		function: {
+			name: "create_ddns_provider",
+			description: "Create a new DDNS Provider",
+			parameters: {
+				type: "object",
+				properties: {
+					name: { type: "string" },
+					provider: { type: "string", enum: ["cloudflare", "duckdns", "custom"] },
+					domains: { type: "array", items: { type: "string" } },
+					ip_ver: { type: "string", enum: ["v4", "v6", "dual"] },
+					config: { type: "object" },
+				},
+				required: ["name", "provider", "domains"],
+			},
+		},
+	},
+	{
+		function: {
+			name: "update_ddns_provider",
+			description: "Update a DDNS Provider",
+			parameters: {
+				type: "object",
+				properties: {
+					id: { type: "integer" },
+					name: { type: "string" },
+					provider: { type: "string" },
+					domains: { type: "array" },
+					ip_ver: { type: "string" },
+					config: { type: "object" },
+					enabled: { type: "boolean" },
+				},
+				required: ["id"],
+			},
+		},
+	},
+	{
+		function: {
+			name: "delete_ddns_provider",
+			description: "Delete a DDNS Provider",
+			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
+		},
+	},
+	{
+		function: {
+			name: "test_ddns_provider",
+			description: "Force Update / Test a DDNS Provider",
+			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
 		},
 	},
 	{
