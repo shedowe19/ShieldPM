@@ -44,7 +44,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onConnect, o
                         <ServiceIcon
                             port={info.getValue().port}
                             hostname={info.getValue().host}
-                            iconType={"terminal"} // Placeholder if supported, otherwise generic
+                            iconType={"none"} // Placeholder if supported, otherwise generic
                             size={28}
                         />
                     );
