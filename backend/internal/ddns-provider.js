@@ -117,10 +117,10 @@ const internalDdnsProvider = {
 	 * @param {Number}  data.id
 	 * @returns {Promise}
 	 */
-	delete: async (id, userId) => {
+	delete: async (access, data) => {
 		const provider = await /** @type {any} */ (DdnsProvider)
 			.query()
-			.findById(id);
+			.findById(data.id);
 
 		if (!provider) {
 			throw new errs.NotFoundError("DDNS Provider not found");
@@ -128,11 +128,16 @@ const internalDdnsProvider = {
 
 		await /** @type {any} */ (DdnsProvider)
 			.query()
-			.deleteById(id);
+			.deleteById(data.id);
 
 		// Audit Log
-		await internalAuditLog.add(userId, "ddns-provider", id, "deleted", {
-			name: provider.name,
+		await internalAuditLog.add(access, {
+			action: "deleted",
+			object_type: "ddns-provider",
+			object_id: data.id,
+			meta: {
+				name: provider.name,
+			},
 		});
 
 		// Trigger GitOps auto-push

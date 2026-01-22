@@ -550,7 +550,15 @@ export const getToolDefinitions = () => [
 					provider: { type: "string", enum: ["cloudflare", "duckdns", "custom"] },
 					domains: { type: "array", items: { type: "string" } },
 					ip_ver: { type: "string", enum: ["v4", "v6", "dual"] },
-					config: { type: "object" },
+					config: {
+						type: "object",
+						description: "Provider configuration",
+						properties: {
+							token: { type: "string", description: "Cloudflare API Token or DuckDNS Token" },
+							zone_id: { type: "string", description: "Cloudflare Zone ID" },
+							url: { type: "string", description: "Custom URL" },
+						},
+					},
 				},
 				required: ["name", "provider", "domains"],
 			},
@@ -568,7 +576,14 @@ export const getToolDefinitions = () => [
 					provider: { type: "string" },
 					domains: { type: "array" },
 					ip_ver: { type: "string" },
-					config: { type: "object" },
+					config: {
+						type: "object",
+						properties: {
+							token: { type: "string" },
+							zone_id: { type: "string" },
+							url: { type: "string" },
+						},
+					},
 					enabled: { type: "boolean" },
 				},
 				required: ["id"],
