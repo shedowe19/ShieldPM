@@ -1,0 +1,37 @@
+{
+    "operationId": "getTorOnion",
+    "summary": "Get a specific Tor Onion Service",
+    "tags": [
+        "Tor Onion"
+    ],
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+                "type": "integer"
+            }
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "Successful response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../components/tor-onion-object.json"
+                    }
+                }
+            }
+        },
+        "404": {
+            "description": "Onion Service not found"
+        }
+    }
+}

@@ -1,0 +1,72 @@
+{
+    "operationId": "updateTorOnion",
+    "summary": "Update a Tor Onion Service",
+    "tags": [
+        "Tor Onion"
+    ],
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "parameters": [
+        {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+                "type": "integer"
+            }
+        }
+    ],
+    "requestBody": {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "description": "Name for this Onion Service"
+                        },
+                        "proxy_host_id": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "ID of the Proxy Host to expose (optional)"
+                        },
+                        "virtual_port": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 65535,
+                            "description": "Port the onion service will listen on"
+                        },
+                        "target_port": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 65535,
+                            "description": "Local port to forward traffic to"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "Onion Service updated",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../components/tor-onion-object.json"
+                    }
+                }
+            }
+        },
+        "404": {
+            "description": "Onion Service not found"
+        }
+    }
+}

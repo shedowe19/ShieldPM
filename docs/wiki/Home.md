@@ -44,6 +44,7 @@
 ### Advanced
 *   **[Advanced Analytics](Analytics)**: Real-time traffic insights and status code breakdown.
 *   **[Cloudflare Tunnels](Cloudflared-Tunnels)**: Native support for exposing services via Cloudflare Zero Trust.
+*   **[Tor Onion Services](Tor-Onion-Services)**: Expose services via Tor Hidden Services for privacy and CGNAT bypass.
 *   **[GitOps Synchronization](GitOps)**: Backup, version control, and restore your configuration with Git.
 *   **[Dynamic DNS (DDNS)](DDNS)**: Built-in DDNS client for Cloudflare, DuckDNS, and Custom URLs.
 *   **[Docker Auto-Discovery](Docker-Auto-Discovery)**: Automatically expose containers using labels (Traefik-like).

@@ -131,6 +131,9 @@ services:
       # - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start
       # - "ENABLE_PRERUN=true" # see readme, default off
 
+      # --- Tor Onion Services ---
+      # - "TOR_ENABLED=true" # Enable/disable Tor daemon for Onion Services, default true
+
     # --------------------------------------------------------------------------
     # CAPABILITIES (Advanced)
     # --------------------------------------------------------------------------

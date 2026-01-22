@@ -6,6 +6,7 @@ import internalCloudflared from "./internal/cloudflared.js";
 import internalDocker from "./internal/docker.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalDdns from "./internal/ddns.js";
+import internalTor from "./internal/tor.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
 import internalMaintenance from "./internal/maintenance.js";
@@ -41,6 +42,7 @@ async function appStart() {
 		internalMaintenance.initTimer();
 		internalNginx.reload();
 		internalCloudflared.init();
+		internalTor.init();
 		internalDocker.init();
 		internalGitOps.init();
 		internalDdns.initTimer();

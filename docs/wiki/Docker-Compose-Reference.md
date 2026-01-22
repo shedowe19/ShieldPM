@@ -115,6 +115,7 @@ services:
 #      - "NGINX_LOAD_NJS_MODULE=true" # loads the njs module (nginx JavaScript module), requires manual configuration, default false
 #      - "NGINX_LOAD_NTLM_MODULE=true" # loads the ntlm module, requires manual configuration, default false
 #      - "NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE=true" # loads the virtual host traffic status module, requires manual configuration, default false
+#      - "TOR_ENABLED=true" # Enable/disable Tor daemon for Onion Services, default true
 
 # This can be used to enable crowdsec, see README for a guide
 #  crowdsec:

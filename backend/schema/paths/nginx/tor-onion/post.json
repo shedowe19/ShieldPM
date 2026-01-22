@@ -1,0 +1,67 @@
+{
+    "operationId": "createTorOnion",
+    "summary": "Create a new Tor Onion Service",
+    "tags": [
+        "Tor Onion"
+    ],
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ],
+    "requestBody": {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "name",
+                        "target_port"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "description": "Name for this Onion Service"
+                        },
+                        "proxy_host_id": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "ID of the Proxy Host to expose (optional)"
+                        },
+                        "virtual_port": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 65535,
+                            "default": 80,
+                            "description": "Port the onion service will listen on"
+                        },
+                        "target_port": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 65535,
+                            "description": "Local port to forward traffic to"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "201": {
+            "description": "Onion Service created",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../components/tor-onion-object.json"
+                    }
+                }
+            }
+        },
+        "400": {
+            "description": "Invalid request"
+        }
+    }
+}
