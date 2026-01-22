@@ -34,8 +34,20 @@ app.use(
 		},
 	}),
 );
+import { csrfToken } from "./lib/express/csrf.js";
 app.use(cookieParser());
 app.use(csrfMiddleware());
+// Generate Token and set cookie/local
+app.use((req, res, next) => {
+	const token = csrfToken(req, res);
+	// Double-Check: csrf-csrf sets the cookie automatically if configured?
+	// Actually generateToken returns the token, and sets the cookie if req/res are passed and cookie configured.
+	// But let's be explicit if needed or trust the lib.
+	// Documentation says: generateToken(req, res, overwrite)
+	// We make it available to views/API
+	res.locals.csrfToken = token;
+	next();
+});
 app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

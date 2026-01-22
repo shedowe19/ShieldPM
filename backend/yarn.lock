@@ -1034,6 +1034,13 @@ cross-spawn@^7.0.6:
     shebang-command "^2.0.0"
     which "^2.0.1"
 
+csrf-csrf@^4.0.3:
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/csrf-csrf/-/csrf-csrf-4.0.3.tgz#78ef21148526deb7a88dcaa6c392e3ae00355247"
+  integrity sha512-DaygOzelL4Qo1pHwI9LPyZL+X2456/OzpT596kNeZGiTSqKVDOk/9PPJ+FjzZacjMUEusOHw3WJKe1RW4iUhrw==
+  dependencies:
+    http-errors "^2.0.0"
+
 data-uri-to-buffer@^6.0.2:
   version "6.0.2"
   resolved "https://registry.npmjs.org/data-uri-to-buffer/-/data-uri-to-buffer-6.0.2.tgz"
