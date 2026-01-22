@@ -19,7 +19,7 @@ import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import Table from "./Table";
 
-export default function TableWrapper() {
+export default function TerminalHostTable() {
     const queryClient = useQueryClient();
     const [search, setSearch] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);

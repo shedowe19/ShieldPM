@@ -1,11 +1,11 @@
 import { HasPermission } from "src/components";
 import { PROXY_HOSTS, VIEW } from "src/modules/Permissions";
-import TableWrapper from "./TableWrapper";
+import TerminalHostTable from "./TerminalHostTable";
 
 const TerminalHosts = () => {
     return (
         <HasPermission section={PROXY_HOSTS} permission={VIEW} pageLoading loadingNoLogo>
-            <TableWrapper />
+            <TerminalHostTable />
         </HasPermission>
     );
 };
