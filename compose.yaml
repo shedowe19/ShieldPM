@@ -96,7 +96,7 @@ services:
       # - "GOA=true" # Enables goaccess (and overrides LOGROTATE to true), default false --- if you download the GeoLite2-Country.mmdb...
       # - "GOACLA=--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=2 --keep-last=7 --with-output-resolver --no-query-string" # Arguments that should be passed to goaccess
 
-      # --- PHP Options (Not Recommended, use dedicated container) ---
+      # --- PHP Options ---
       # - "PHP82=true" # Activate PHP82, default false
       # - "PHP82_APKS=php82-curl php82-openssl" # Add php extensions
       # - "PHP83=true" # Activate PHP83, default false
