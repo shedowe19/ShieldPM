@@ -3,7 +3,8 @@ import express from "express";
 import fileUpload from "express-fileupload";
 import helmet from "helmet";
 import analyticsService from "./internal/analytics.js";
-import csrfMiddleware from "./lib/express/csrf.js";
+import csrf from "./lib/express/csrf.js";
+import { csrfToken } from "./lib/express/csrf.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
@@ -34,9 +35,9 @@ app.use(
 		},
 	}),
 );
-import { csrfToken } from "./lib/express/csrf.js";
+
 app.use(cookieParser());
-app.use(csrfMiddleware());
+app.use(csrf());
 // Generate Token and set cookie/local
 app.use((req, res, next) => {
 	const token = csrfToken(req, res);
