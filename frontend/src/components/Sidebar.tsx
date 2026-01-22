@@ -7,7 +7,6 @@ import {
 	IconMenu2,
 	IconSettings,
 	IconShield,
-	IconTerminal2,
 	IconUser,
 } from "@tabler/icons-react";
 import type React from "react";
@@ -94,15 +93,8 @@ const menuItems: MenuItem[] = [
 				permission: VIEW,
 			},
 			{
-				to: "/nginx/404",
-				label: "dead-hosts",
-				permissionSection: DEAD_HOSTS,
-				permission: VIEW,
-			},
-			{
 				to: "/nginx/terminal",
 				label: "terminal-hosts",
-				icon: IconTerminal2,
 				permissionSection: PROXY_HOSTS, // Sharing permission for now or create new
 				permission: VIEW,
 			},
