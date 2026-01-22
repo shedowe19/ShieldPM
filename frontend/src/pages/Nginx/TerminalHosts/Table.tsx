@@ -49,12 +49,12 @@ export default function Table({ data, isFetching, onEdit, onDelete, onConnect, o
 			}),
 			columnHelper.accessor("name", {
 				id: "name",
-				header: intl.formatMessage({ id: "str.name" }),
+				header: intl.formatMessage({ id: "column.name" }),
 				cell: (info) => <span className="font-medium">{info.getValue()}</span>,
 			}),
 			columnHelper.accessor((row) => row, {
 				id: "host",
-				header: intl.formatMessage({ id: "str.host" }),
+				header: intl.formatMessage({ id: "column.host" }),
 				cell: (info) => {
 					const value = info.getValue();
 					return `${value.username}@${value.host}:${value.port}`;

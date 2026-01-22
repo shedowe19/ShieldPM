@@ -155,6 +155,7 @@
 	"column.email": "Email",
 	"column.event": "Ereignis",
 	"column.expires": "Verfällt am",
+	"column.host": "Host/IP",
 	"column.http-code": "HTTP Code",
 	"column.incoming-port": "Eingehender Port",
 	"column.name": "Name",
