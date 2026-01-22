@@ -137,6 +137,25 @@
 				"$ref": "./paths/nginx/cloudflared-tunnels/id/delete.json"
 			}
 		},
+		"/nginx/tor-onion": {
+			"get": {
+				"$ref": "./paths/nginx/tor-onion/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/tor-onion/post.json"
+			}
+		},
+		"/nginx/tor-onion/{id}": {
+			"get": {
+				"$ref": "./paths/nginx/tor-onion/id/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/tor-onion/id/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/tor-onion/id/delete.json"
+			}
+		},
 		"/nginx/certificates/test-http": {
 			"post": {
 				"$ref": "./paths/nginx/certificates/test-http/post.json"

@@ -106,6 +106,25 @@ Tor Onion Services are **completely disabled** in Demo Mode for security reasons
 
 > ⚠️ **Warning**: Keep a backup of your database if you need to preserve `.onion` addresses!
 
+## 🔐 HTTPS vs. HTTP over Tor
+
+A common question is whether you need HTTPS (SSL/TLS) for an Onion Service.
+
+### Short Answer: No!
+Onion Services provide **end-to-end encryption and authentication** natively by the Tor protocol. When you connect to a `.onion` address, the Tor circuit itself ensures that:
+- The connection is encrypted
+- You are talking to the correct server (the address is a hash of the public key)
+
+Because of this, **Port 80 (HTTP) is completely safe** for sensitive content over Tor.
+
+### When to use HTTPS (Port 443)?
+You should only use HTTPS over Tor if:
+1. **Frontend Requirements**: Your backend application *enforces* HTTPS and won't work without it.
+2. **Double Encryption**: You want an extra layer of security (e.g., from the browser process to the app container).
+3. **EV Certificates**: You have an expensive Extended Validation certificate for your onion address (rare).
+
+> 💡 **Tip**: Using self-signed certificates for Onion addresses will still trigger browser warnings, even though Tor is already secure. For 99% of use cases, standard HTTP (Port 80) is the recommended way.
+
 ## 🔍 Troubleshooting
 
 ### Tor Not Available
@@ -119,7 +138,7 @@ If you see "Tor daemon is not available":
 
 2. Check Tor logs:
    ```bash
-   docker exec shieldpm cat /data/logs/tor.log
+   docker exec shieldpm cat /data/tor/tor.log
    ```
 
 3. Ensure `TOR_ENABLED` is not set to `false`

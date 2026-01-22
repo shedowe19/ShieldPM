@@ -49,44 +49,25 @@ export function TorOnionServices() {
 	const handleCopy = (address: string) => {
 		navigator.clipboard.writeText(address);
 		toast({
-			title: "Copied!",
-			description: "Onion address copied to clipboard.",
+			description: <T id="tor.copy_success" />,
 		});
 	};
 
 	const getStatusBadge = (status: number) => {
-		switch (status) {
-			case 0:
-				return (
-					<Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
-						<T id="disabled" />
-					</Badge>
-				);
-			case 1:
-				return (
-					<Badge className="bg-yellow-500 text-white hover:bg-yellow-600">
-						<T id="loading" />
-					</Badge>
-				);
-			case 2:
-				return (
-					<Badge className="bg-green-500 text-white hover:bg-green-600">
-						<T id="online" />
-					</Badge>
-				);
-			case 3:
-				return (
-					<Badge className="bg-red-500 text-white hover:bg-red-600">
-						<T id="error.unknown" />
-					</Badge>
-				);
-			default:
-				return (
-					<Badge className="text-foreground">
-						<T id="offline" />
-					</Badge>
-				);
-		}
+		const statusMap: Record<number, { label: string; variant: string }> = {
+			0: { label: "tor.status_stopped", variant: "secondary" },
+			1: { label: "tor.status_starting", variant: "warning" },
+			2: { label: "tor.status_running", variant: "success" },
+			3: { label: "tor.status_error", variant: "destructive" },
+		};
+
+		const { label, variant } = statusMap[status] || statusMap[0];
+
+		return (
+			<Badge variant={variant as any}>
+				<T id={label} />
+			</Badge>
+		);
 	};
 
 	if (health.data?.demo) {
@@ -144,7 +125,7 @@ export function TorOnionServices() {
 					<Alert variant="destructive" className="mb-4">
 						<AlertCircle className="h-4 w-4" />
 						<AlertDescription>
-							Tor daemon is not available. Make sure Tor is installed and running.
+							<T id="tor.daemon_unavailable" />
 						</AlertDescription>
 					</Alert>
 				)}
@@ -169,6 +150,9 @@ export function TorOnionServices() {
 								</TableHead>
 								<TableHead>
 									<T id="tor.virtual_port" />
+								</TableHead>
+								<TableHead>
+									<T id="tor.target_port" />
 								</TableHead>
 								<TableHead>
 									<T id="column.status" />

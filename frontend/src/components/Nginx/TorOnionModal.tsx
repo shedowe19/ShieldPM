@@ -13,8 +13,8 @@ import { T, intl } from "@/locale";
 
 const formSchema = z.object({
 	name: z.string().min(1, intl.formatMessage({ id: "error.required_field" })),
-	virtualPort: z.number().min(1).max(65535),
-	targetPort: z.number().min(1).max(65535),
+	virtualPort: z.coerce.number().int().min(1).max(65535),
+	targetPort: z.coerce.number().int().min(1).max(65535),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -29,7 +29,7 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 	const { create, update } = useTorOnion();
 
 	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+		resolver: zodResolver(formSchema) as any,
 		defaultValues: {
 			name: "",
 			virtualPort: 80,
@@ -117,7 +117,9 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 											<FormControl>
 												<Input type="number" min={1} max={65535} {...field} />
 											</FormControl>
-											<FormDescription>Port on the .onion address</FormDescription>
+											<FormDescription>
+												<T id="tor.virtual_port_desc" />
+											</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -127,15 +129,28 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 									name="targetPort"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Target Port</FormLabel>
+											<FormLabel>
+												<T id="tor.target_port" />
+											</FormLabel>
 											<FormControl>
 												<Input type="number" min={1} max={65535} {...field} />
 											</FormControl>
-											<FormDescription>Local port to forward to (e.g., 80, 443)</FormDescription>
+											<FormDescription>
+												<T id="tor.target_port_desc" />
+											</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}
 								/>
+							</div>
+
+							<div className="p-4 bg-muted/40 rounded-lg text-xs space-y-2">
+								<p className="font-semibold flex items-center gap-1.5 text-foreground">
+									<T id="tor.help_https_title" />
+								</p>
+								<p className="text-muted-foreground leading-relaxed">
+									<T id="tor.help_https_desc" />
+								</p>
 							</div>
 
 							{service?.onionAddress && (
