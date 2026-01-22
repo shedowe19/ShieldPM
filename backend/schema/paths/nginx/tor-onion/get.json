@@ -1,7 +1,9 @@
 {
 	"operationId": "getTorOnions",
 	"summary": "Get all Tor Onion Services",
-	"tags": ["Tor Onion"],
+	"tags": [
+		"Tor Onion"
+	],
 	"security": [
 		{
 			"BearerAuth": []
@@ -15,7 +17,7 @@
 					"schema": {
 						"type": "array",
 						"items": {
-							"$ref": "../../components/tor-onion-object.json"
+							"$ref": "../../../components/tor-onion-object.json"
 						}
 					}
 				}

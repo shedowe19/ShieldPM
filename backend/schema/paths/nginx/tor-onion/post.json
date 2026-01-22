@@ -55,7 +55,7 @@
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "../../components/tor-onion-object.json"
+                        "$ref": "../../../components/tor-onion-object.json"
                     }
                 }
             }
