@@ -185,7 +185,7 @@ export const executeTools = async (access, toolCalls) => {
 						// Ensure these are always valid (override any nulls from AI)
 						advanced_config: "",
 					};
-					const newHost = await internalProxyHost.create(access, /** @type {any} */(data));
+					const newHost = await internalProxyHost.create(access, /** @type {any} */ (data));
 					result = `Created Proxy Host ID: ${newHost.id}`;
 					break;
 				}
@@ -251,7 +251,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalRedirectionHost.create(access, /** @type {any} */(data));
+					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
 					break;
 				}
@@ -307,7 +307,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalDeadHost.create(access, /** @type {any} */(data));
+					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
 					result = `Created 404 Host ID: ${newHost.id}`;
 					break;
 				}
@@ -632,7 +632,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "test_http_challenge": {
 					const testResult = await internalCertificate.testHttpsChallenge(
 						access,
-						/** @type {any} */({
+						/** @type {any} */ ({
 							domains: call.args.domains,
 						}),
 					);
