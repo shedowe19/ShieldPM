@@ -11,6 +11,7 @@ services:
       - "/opt/shieldpm:/data"
       # - "/var/www:/var/www" # Optional: Webserver root
       # - "/path/to/old/npm/letsencrypt:/etc/letsencrypt" # Migration only
+      # - "shm-volume:/dev/shm/check-point" # Required for OpenAppSec (enable ipc: host too)
     
     # --------------------------------------------------------------------------
     # ENVIRONMENT VARIABLES
@@ -46,7 +47,7 @@ services:
       # --- Analytics & Logging ---
       # - "LOGROTATE=true"
       # - "LOGROTATIONS=7"
-      # - "GOA=false" # GoAccess Analytics
+      # - "GOA=false" # GoAccess Analytics (Requires GeoIP container for maps)
 
       # --- PHP Options (Not Recommended, use dedicated container) ---
       # - "PHP82=false"
@@ -56,6 +57,9 @@ services:
       # - "NGINX_QUIC_BPF=true" # Requires CAP_ADD
       # - "NGINX_DISABLE_PROXY_BUFFERING=true"
       # - "DISABLE_HTTP=false"
+      
+      # --- OpenAppSec ---
+      # - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" # Requires ipc: host
 
     # --------------------------------------------------------------------------
     # CAPABILITIES (Advanced)
@@ -63,6 +67,8 @@ services:
     # cap_add:
     #   - BPF
     #   - NET_ADMIN
+    
+    # ipc: host # Required for OpenAppSec
 
 # ==============================================================================
 # OPTIONAL SERVICES
@@ -110,5 +116,82 @@ services:
 #    volumes:
 #      - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
 
+# --- GeoIP Update (for GoAccess) ---
+#  geoipupdate:
+#    container_name: shieldpm-geoipupdate
+#    image: ghcr.io/maxmind/geoipupdate:latest
+#    restart: always
+#    network_mode: bridge
+#    environment:
+#      - "TZ=Europe/Berlin"
+#      - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City GeoLite2-ASN"
+#      - "GEOIPUPDATE_ACCOUNT_ID=<your-account-id>"
+#      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>"
+#      - "GEOIPUPDATE_FREQUENCY=24"
+#    volumes:
+#      - "/opt/shieldpm/goaccess/geoip:/usr/share/GeoIP"
+
+# --- Caddy (Redirector) ---
+#  shieldpm-caddy:
+#    container_name: shieldpm-caddy
+#    image: ghcr.io/shedowe19/shieldpm:caddy
+#    restart: always
+#    network_mode: bridge
+#    ports:
+#      - "80:80"
+#    environment:
+#      - "TZ=Europe/Berlin"
+
+# ==============================================================================
+# OPENAPPSEC (Advanced WAF)
+# IMPORTANT: Uncomment 'ipc: host' and 'shm-volume' in shieldpm service above
+# ==============================================================================
+#  openappsec-agent:
+#    image: ghcr.io/openappsec/agent:latest
+#    container_name: openappsec-agent
+#    restart: always
+#    ipc: host
+#    volumes:
+#      - "shm-volume:/dev/shm/check-point"
+#      - "/opt/openappsec/conf:/etc/cp/conf"
+#      - "/opt/openappsec/data:/etc/cp/data"
+#      - "/opt/openappsec/logs:/var/log/nano_agent"
+#      - "/opt/openappsec/localconf:/ext/appsec"
+#    environment:
+#      - "TZ=Europe/Berlin"
+#      - "autoPolicyLoad=true"
+#      - "registered_server=ShieldPM"
+#      - "user_email=your@email.com"
+#      # - "AGENT_TOKEN=" # Set token OR uncomment shared storage below if using local
+#      - "SHARED_STORAGE_HOST=openappsec-shared-storage"
+#      - "LEARNING_HOST=openappsec-smartsync"
+#      - "TUNING_HOST=openappsec-tuning-svc"
+#    command: /cp-nano-agent
+
+#  openappsec-smartsync:
+#    image: ghcr.io/openappsec/smartsync:latest
+#    container_name: openappsec-smartsync
+#    restart: always
+#    environment:
+#      - "TZ=Europe/Berlin"
+#      - "SHARED_STORAGE_HOST=openappsec-shared-storage"
+#    depends_on:
+#      - openappsec-shared-storage
+
+#  openappsec-shared-storage:
+#    image: ghcr.io/openappsec/smartsync-shared-files:latest
+#    container_name: openappsec-shared-storage
+#    restart: always
+#    ipc: service:openappsec-agent
+#    environment:
+#      - "TZ=Europe/Berlin"
+#    volumes:
+#      - "/opt/openappsec/storage:/db"
+
 # volumes:
 #   db_data:
+#   shm-volume:
+#     driver: local
+#     driver_opts:
+#       type: tmpfs
+#       device: tmpfs
