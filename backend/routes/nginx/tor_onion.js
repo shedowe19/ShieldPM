@@ -1,6 +1,7 @@
 import express from "express";
 import { transaction } from "objection";
 import internalTor from "../../internal/tor.js";
+import internalAuditLog from "../../internal/audit-log.js";
 import { isDemoMode } from "../../lib/config.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
@@ -97,6 +98,17 @@ router.post("/", async (req, res, next) => {
 		// Refetch with updated onion address
 		const finalService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
 
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "created",
+			object_type: "tor-onion",
+			object_id: finalService.id,
+			meta: {
+				name: finalService.name,
+				onion_address: finalService.onion_address,
+			},
+		});
+
 		res.status(201).send({
 			...finalService,
 			created: result !== null,
@@ -140,6 +152,17 @@ router.put("/:id", async (req, res, next) => {
 		// Refetch with updated data
 		const updatedService = await TorOnion.query().findById(result.id).withGraphFetched("proxy_host");
 
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "updated",
+			object_type: "tor-onion",
+			object_id: updatedService.id,
+			meta: {
+				name: updatedService.name,
+				onion_address: updatedService.onion_address,
+			},
+		});
+
 		res.status(200).send(updatedService);
 	} catch (err) {
 		if (trx) {
@@ -172,6 +195,17 @@ router.delete("/:id", async (req, res, next) => {
 		trx = await transaction.start(TorOnion.knex());
 		await service.$query(trx).delete();
 		await trx.commit();
+
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "deleted",
+			object_type: "tor-onion",
+			object_id: service.id,
+			meta: {
+				name: service.name,
+				onion_address: service.onion_address,
+			},
+		});
 
 		res.status(200).send({ status: "OK" });
 	} catch (err) {
@@ -208,6 +242,18 @@ router.post("/:id/start", async (req, res, next) => {
 		// Refetch with updated status
 		const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
 
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "updated",
+			object_type: "tor-onion",
+			object_id: updatedService.id,
+			meta: {
+				name: updatedService.name,
+				onion_address: updatedService.onion_address,
+				status: "started",
+			},
+		});
+
 		res.status(200).send(updatedService);
 	} catch (err) {
 		next(err);
@@ -234,6 +280,18 @@ router.post("/:id/stop", async (req, res, next) => {
 
 		// Refetch with updated status
 		const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
+
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "updated",
+			object_type: "tor-onion",
+			object_id: updatedService.id,
+			meta: {
+				name: updatedService.name,
+				onion_address: updatedService.onion_address,
+				status: "stopped",
+			},
+		});
 
 		res.status(200).send(updatedService);
 	} catch (err) {

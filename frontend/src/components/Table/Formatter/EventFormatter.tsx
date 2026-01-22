@@ -17,6 +17,12 @@ const getEventValue = (event: AuditLog) => {
 			return event.meta?.incomingPort || "N/A";
 		case "certificate":
 			return event.meta?.domainNames?.join(", ") || event.meta?.niceName || "N/A";
+		case "ddns-provider":
+		case "terminal-host":
+		case "cloudflared-tunnel":
+			return event.meta?.name || "N/A";
+		case "tor-onion":
+			return event.meta?.onion_address || "N/A";
 		default:
 			return `UNKNOWN EVENT TYPE: ${event.objectType}`;
 	}
@@ -57,6 +63,18 @@ const getIcon = (row: AuditLog) => {
 			break;
 		case "certificate":
 			ico = <IconShield size={16} className={c} />;
+			break;
+		case "ddns-provider":
+			ico = <IconDisc size={16} className={c} />;
+			break;
+		case "tor-onion":
+			ico = <IconShield size={16} className={c} />;
+			break;
+		case "cloudflared-tunnel":
+			ico = <IconBolt size={16} className={c} />;
+			break;
+		case "terminal-host":
+			ico = <IconBolt size={16} className={c} />;
 			break;
 	}
 
