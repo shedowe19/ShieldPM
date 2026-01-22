@@ -15,7 +15,7 @@
 # ==============================================================================
 services:
   shieldpm:
-    image: ghcr.io/shedowe19/shieldpm:latest
+    image: ghcr.io/shedowe19/shieldpm:develop
     container_name: shieldpm
     restart: always
     network_mode: host
@@ -35,18 +35,18 @@ services:
     environment:
       # --- System Settings ---
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
-      - "PUID=0" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
-      - "PGID=0" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID
+      # - "PUID=0" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
+      # - "PGID=0" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID
       
       # --- Network & Ports ---
-      - "NPM_PORT=81" # Port the ShieldPM UI should be bound to, default 81, change this if you want to run multiple shieldpm instances in network mode host
-      - "GOA_PORT=91" # Port for goaccess, default 91, change this if you want to run multiple shieldpm with goaccess instances in network mode host
-      - "HTTP_PORT=80" # tcp port to use for http traffic, changing this may break certbot http challenge, default 80
-      - "HTTPS_PORT=443" # udp and tcp port to use for https traffic, changing this may break certbot http challenge, default 443
-      - "HTTP3_ALT_SVC_PORT=443" # please change this if the udp port the clients connect to is not 443, default 443
-      - "DISABLE_HTTP=false" # prevents nginx from listening on port 80, default false
-      - "LISTEN_PROXY_PROTOCOL=false" # should listeners of http(s) hosts (proxy/redirect/dead and default) use proxy protocol instead of http(s)? default false, overrides DISABLE_H3_QUIC to true
-      - "DISABLE_H3_QUIC=false" # prevents nginx from listening on port 443 udp for default host and all your hosts, this will fully disable HTTP/3 and QUIC, even if you enable it inside the UI, not recommended, default false
+      # - "NPM_PORT=81" # Port the ShieldPM UI should be bound to, default 81, change this if you want to run multiple shieldpm instances in network mode host
+      # - "GOA_PORT=91" # Port for goaccess, default 91, change this if you want to run multiple shieldpm with goaccess instances in network mode host
+      # - "HTTP_PORT=80" # tcp port to use for http traffic, changing this may break certbot http challenge, default 80
+      # - "HTTPS_PORT=443" # udp and tcp port to use for https traffic, changing this may break certbot http challenge, default 443
+      # - "HTTP3_ALT_SVC_PORT=443" # please change this if the udp port the clients connect to is not 443, default 443
+      # - "DISABLE_HTTP=false" # prevents nginx from listening on port 80, default false
+      # - "LISTEN_PROXY_PROTOCOL=false" # should listeners of http(s) hosts (proxy/redirect/dead and default) use proxy protocol instead of http(s)? default false, overrides DISABLE_H3_QUIC to true
+      # - "DISABLE_H3_QUIC=false" # prevents nginx from listening on port 443 udp for default host and all your hosts, this will fully disable HTTP/3 and QUIC, even if you enable it inside the UI, not recommended, default false
       
       # - "IPV4_BINDING=127.0.0.1" # IPv4 address to bind, defaults to all
       # - "NPM_IPV4_BINDING=127.0.0.1" # IPv4 address to bind for the ShieldPM UI, defaults to all
