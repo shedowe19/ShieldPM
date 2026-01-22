@@ -20,6 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # CodeQL supports 'javascript' which includes both JavaScript and TypeScript
         language: [ 'javascript' ]
 
     steps:
