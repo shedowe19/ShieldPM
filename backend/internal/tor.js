@@ -4,6 +4,7 @@ import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import TorOnion from "../models/tor_onion.js";
 import internalNginx from "./nginx.js";
+import internalGitOps from "./gitops.js";
 
 const dataPath = process.env.DATA_PATH || "/data";
 const torControlHost = "127.0.0.1";
@@ -163,6 +164,7 @@ const syncProxyHost = async (service, skip_reload = false) => {
 		await internalNginx.configure(ProxyHost, "proxy_host", updatedHost, { skip_reload });
 
 		logger.info(`Added onion address ${service.onion_address} to Proxy Host ${proxyHost.id}`);
+		internalGitOps.triggerAutoPush("onion-sync");
 	} catch (err) {
 		logger.error(`Failed to sync onion address to Proxy Host: ${err.message}`);
 	}
