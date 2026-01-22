@@ -46,6 +46,7 @@ router.get("/", async (_, res /*, next*/) => {
 		setup,
 		version,
 		demo: isDemoMode(),
+		csrfToken: res.locals.csrfToken,
 	});
 });
 

@@ -71,6 +71,16 @@ export class AuthStore {
 	get token() {
 		return null;
 	}
+
+	private _csrfToken: string | null = null;
+
+	get csrfToken() {
+		return this._csrfToken;
+	}
+
+	setCsrfToken(token: string) {
+		this._csrfToken = token;
+	}
 }
 
 export default new AuthStore();
