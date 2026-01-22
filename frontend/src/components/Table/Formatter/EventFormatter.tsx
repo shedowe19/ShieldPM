@@ -20,7 +20,8 @@ const getEventValue = (event: AuditLog) => {
 		case "ddns-provider":
 		case "terminal-host":
 		case "cloudflared-tunnel":
-			return event.meta?.name || "N/A";
+		case "setting":
+			return event.meta?.name || event.meta?.id || "N/A";
 		case "tor-onion":
 			return event.meta?.onion_address || "N/A";
 		default:
@@ -74,6 +75,9 @@ const getIcon = (row: AuditLog) => {
 			ico = <IconBolt size={16} className={c} />;
 			break;
 		case "terminal-host":
+			ico = <IconBolt size={16} className={c} />;
+			break;
+		case "setting":
 			ico = <IconBolt size={16} className={c} />;
 			break;
 	}
