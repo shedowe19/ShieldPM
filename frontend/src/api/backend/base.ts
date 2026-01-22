@@ -33,8 +33,6 @@ function buildUrl({ url, params }: BuildUrlArgs) {
 	return apiUrl;
 }
 
-
-
 function buildAuthHeader(): Record<string, string> | undefined {
 	const csrfToken = AuthStore.csrfToken;
 	if (csrfToken) {
