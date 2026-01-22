@@ -16,14 +16,14 @@
             "in": "query",
             "name": "expand",
             "schema": {
-                "$ref": "../../../components/common.json#/properties/expand"
+                "$ref": "../../../common.json#/properties/expand"
             }
         },
         {
             "in": "query",
             "name": "query",
             "schema": {
-                "$ref": "../../../components/common.json#/properties/query"
+                "$ref": "../../../common.json#/properties/query"
             }
         }
     ],
