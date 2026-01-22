@@ -132,20 +132,6 @@ export default function TerminalHostTable() {
 			{connectedHost && (
 				<div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
 					<div className="w-full h-full max-w-6xl max-h-[80vh] border rounded-lg shadow-2xl overflow-hidden bg-black ring-1 ring-border relative flex flex-col">
-						{/* Header for Close Button */}
-						<div className="h-8 bg-muted flex items-center justify-between px-3 border-b">
-							<span className="text-xs font-mono text-muted-foreground">
-								{connectedHost.username}@{connectedHost.host}:{connectedHost.port}
-							</span>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-6 w-6 p-0 hover:bg-destructive hover:text-white"
-								onClick={() => setConnectedHost(null)}
-							>
-								✕
-							</Button>
-						</div>
 						<div className="flex-1 overflow-hidden relative">
 							<WebTerminal host={connectedHost} onClose={() => setConnectedHost(null)} />
 						</div>

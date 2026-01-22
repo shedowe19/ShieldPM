@@ -98,14 +98,17 @@ const WebTerminal = ({ host, onClose }: Props) => {
 			}
 		});
 
-		// Handle window resize
-		const handleResize = () => {
+		// Handle container resize
+		const resizeObserver = new ResizeObserver(() => {
 			fitAddon.fit();
-		};
-		window.addEventListener("resize", handleResize);
+		});
+		resizeObserver.observe(terminalRef.current);
+
+		// Initial fit delay to ensure layout is settled
+		setTimeout(() => fitAddon.fit(), 100);
 
 		return () => {
-			window.removeEventListener("resize", handleResize);
+			resizeObserver.disconnect();
 			if (ws.readyState === WebSocket.OPEN) {
 				ws.close();
 			}
