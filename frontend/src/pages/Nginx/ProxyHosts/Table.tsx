@@ -1,4 +1,4 @@
-import { IconDotsVertical, IconEdit, IconPower, IconTrash } from "@tabler/icons-react";
+import { IconDotsVertical, IconEdit, IconPower, IconTerminal2, IconTrash } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { ProxyHost } from "src/api/backend";
@@ -137,6 +137,22 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 										<T id={info.row.original.enabled ? "action.disable" : "action.enable"} />
 									</DropdownMenuItem>
 									<DropdownMenuSeparator />
+									{info.row.original.forwardScheme === "terminal" && (
+										<>
+											<DropdownMenuItem
+												onClick={() =>
+													window.open(
+														`//${info.row.original.domainNames[0]}`,
+														"_blank",
+													)
+												}
+											>
+												<IconTerminal2 className="mr-2 h-4 w-4" />
+												<T id="action.connect" />
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+										</>
+									)}
 									<DropdownMenuItem
 										className="text-red-600 focus:text-red-500"
 										onClick={() => onDelete?.(info.row.original.id)}

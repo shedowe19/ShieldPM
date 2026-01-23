@@ -92,12 +92,6 @@ const menuItems: MenuItem[] = [
 				permissionSection: DEAD_HOSTS,
 				permission: VIEW,
 			},
-			{
-				to: "/nginx/terminal",
-				label: "terminal-hosts",
-				permissionSection: PROXY_HOSTS, // Sharing permission for now or create new
-				permission: VIEW,
-			},
 		],
 	},
 	{

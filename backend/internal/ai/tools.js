@@ -804,60 +804,6 @@ export const getToolDefinitions = () => [
 			},
 		},
 	},
-	{
-		function: {
-			name: "get_terminal_hosts",
-			description: "Get all Terminal Hosts",
-			parameters: { type: "object", properties: {} },
-		},
-	},
-	{
-		function: {
-			name: "create_terminal_host",
-			description: "Create a new Terminal Host",
-			parameters: {
-				type: "object",
-				properties: {
-					name: { type: "string" },
-					host: { type: "string" },
-					port: { type: "integer", description: "SSH Port (default 22)" },
-					username: { type: "string" },
-					auth_type: { type: "string", enum: ["password", "key"] },
-					password: { type: "string", description: "Password (if auth_type is password)" },
-					private_key: { type: "string", description: "Private Key (if auth_type is key)" },
-				},
-				required: ["name", "host", "username", "auth_type"],
-			},
-		},
-	},
-	{
-		function: {
-			name: "update_terminal_host",
-			description: "Update a Terminal Host",
-			parameters: {
-				type: "object",
-				properties: {
-					id: { type: "integer" },
-					name: { type: "string" },
-					host: { type: "string" },
-					port: { type: "integer" },
-					username: { type: "string" },
-					auth_type: { type: "string", enum: ["password", "key"] },
-					password: { type: "string" },
-					private_key: { type: "string" },
-				},
-				required: ["id"],
-			},
-		},
-	},
-	{
-		function: {
-			name: "delete_terminal_host",
-			description: "Delete a Terminal Host",
-			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
-		},
-	},
-
 	// Tor Onion Services
 	{
 		function: {

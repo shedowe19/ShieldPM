@@ -13,7 +13,6 @@ import { isDemoMode } from "../../lib/config.js";
 import { encrypt } from "../../lib/encryption.js";
 import AnalyticCount from "../../models/analytic_count.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
-import TerminalHost from "../../models/terminal_host.js";
 import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
@@ -189,7 +188,7 @@ export const executeTools = async (access, toolCalls) => {
 						// Ensure these are always valid (override any nulls from AI)
 						advanced_config: "",
 					};
-					const newHost = await internalProxyHost.create(access, /** @type {any} */ (data));
+					const newHost = await internalProxyHost.create(access, /** @type {any} */(data));
 					result = `Created Proxy Host ID: ${newHost.id}`;
 					break;
 				}
@@ -255,7 +254,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
+					const newHost = await internalRedirectionHost.create(access, /** @type {any} */(data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
 					break;
 				}
@@ -311,7 +310,7 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
-					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
+					const newHost = await internalDeadHost.create(access, /** @type {any} */(data));
 					result = `Created 404 Host ID: ${newHost.id}`;
 					break;
 				}
@@ -636,7 +635,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "test_http_challenge": {
 					const testResult = await internalCertificate.testHttpsChallenge(
 						access,
-						/** @type {any} */ ({
+						/** @type {any} */({
 							domains: call.args.domains,
 						}),
 					);
@@ -759,53 +758,8 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 
-				// Terminal Hosts
-				case "get_terminal_hosts": {
-					const hosts = await TerminalHost.query().where("is_deleted", 0).orderBy("name", "ASC");
-					result = JSON.stringify(
-						hosts.map((h) => ({
-							id: h.id,
-							name: h.name,
-							host: h.host,
-							port: h.port,
-							username: h.username,
-							auth_type: h.auth_type,
-						})),
-					);
-					break;
-				}
-				case "create_terminal_host": {
-					// Demo Mode: Block
-					validateDemoModeHost({ forward_host: call.args.host });
+				// Terminal Hosts removed (merged into Proxy Hosts)
 
-					const payload = {
-						...call.args,
-						owner_user_id: access.token.getUserId(1), // Assume running user context or system
-					};
-
-					if (payload.password) payload.password = encrypt(payload.password);
-					if (payload.private_key) payload.private_key = encrypt(payload.private_key);
-
-					const host = await TerminalHost.query().insertAndFetch(payload);
-					result = `Created Terminal Host ID: ${host.id}`;
-					break;
-				}
-				case "update_terminal_host": {
-					validateDemoModeHost({ forward_host: call.args.host });
-
-					const payload = { ...call.args };
-					if (payload.password) payload.password = encrypt(payload.password);
-					if (payload.private_key) payload.private_key = encrypt(payload.private_key);
-
-					await TerminalHost.query().patchAndFetchById(call.args.id, payload);
-					result = `Updated Terminal Host ID: ${call.args.id}`;
-					break;
-				}
-				case "delete_terminal_host": {
-					await TerminalHost.query().patchAndFetchById(call.args.id, { is_deleted: 1 });
-					result = `Deleted Terminal Host ID: ${call.args.id}`;
-					break;
-				}
 
 				// Tor Onion Services
 				case "get_tor_onion_services": {

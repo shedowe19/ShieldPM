@@ -118,6 +118,20 @@ class ProxyHost extends Model {
 	/** @type {string} */
 	icon_type;
 
+	// Terminal fields (for forward_scheme: 'terminal')
+	/** @type {string|null} */
+	terminal_host;
+	/** @type {number|null} */
+	terminal_port;
+	/** @type {string|null} */
+	terminal_username;
+	/** @type {string|null} */
+	terminal_auth_type;
+	/** @type {string|null} */
+	terminal_password;
+	/** @type {string|null} */
+	terminal_private_key;
+
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());
 		this.modified_on = /** @type {any} */ (now());

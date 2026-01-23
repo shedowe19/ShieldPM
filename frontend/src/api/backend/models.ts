@@ -153,6 +153,13 @@ export interface ProxyHost {
 	// Service Icon
 	iconUrl?: string | null;
 	iconType?: "auto" | "custom" | "none";
+	// Terminal Fields
+	terminalHost?: string;
+	terminalPort?: number;
+	terminalUsername?: string;
+	terminalAuthType?: "password" | "key";
+	terminalPassword?: string;
+	terminalPrivateKey?: string;
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;
@@ -312,21 +319,4 @@ export interface TorOnionListResponse {
 	};
 }
 
-export interface TerminalHost {
-	id: number;
-	createdOn: string;
-	modifiedOn: string;
-	ownerUserId: number;
-	enabled: boolean;
-	type: string;
-	name: string;
-	host: string;
-	port: number;
-	authType: "password" | "key";
-	username: string;
-	password?: string | null;
-	privateKey?: string | null;
-	meta: Record<string, any>;
-	// Expansions:
-	owner?: User;
-}
+
