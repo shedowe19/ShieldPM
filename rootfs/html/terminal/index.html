@@ -118,28 +118,15 @@
             term.open(document.getElementById('terminal'));
             fitAddon.fit();
 
-            // Construct WebSocket URL
-            // If running on dashboard (port 81 or specific path), use API path
-            // Otherwise assume proxy domain and use /ws
+            // Construct WebSocket URL from current page location
+            // The Nginx config proxies /ws to the backend
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            let wsUrl;
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const hostId = urlParams.get('id');
-
-            if (hostId && (window.location.pathname.startsWith('/terminal') || window.location.port === '81')) {
-                // Dashboard mode
-                wsUrl = `${protocol}//${window.location.host}/api/nginx/proxy-hosts/${hostId}/terminal/ws`;
-            } else {
-                // Proxy domain mode (legacy/public)
-                wsUrl = `${protocol}//${window.location.host}/ws`;
-            }
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
 
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 statusDot.className = 'status-dot connected';
-                statusText.textContent = 'Connected';
 
                 // Send initial resize
                 const dims = { cols: term.cols, rows: term.rows };
