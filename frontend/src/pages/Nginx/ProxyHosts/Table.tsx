@@ -141,10 +141,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 										<>
 											<DropdownMenuItem
 												onClick={() =>
-													window.open(
-														`//${info.row.original.domainNames[0]}`,
-														"_blank",
-													)
+													window.open(`//${info.row.original.domainNames[0]}`, "_blank")
 												}
 											>
 												<IconTerminal2 className="mr-2 h-4 w-4" />
