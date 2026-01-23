@@ -7,7 +7,6 @@ import analyticsService from "./internal/analytics.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
-import { isSetup } from "./setup.js";
 
 // Initialize Analytics Service (starts tailing logs)
 analyticsService.init();
@@ -43,7 +42,7 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
 	cookieName: "XSRF-TOKEN",
 	cookieOptions: {
 		sameSite: "strict",
-		secure: false, // Allow both HTTP and HTTPS (sameSite provides protection)
+		secure: process.env.NODE_ENV === "production",
 		path: "/",
 	},
 	size: 64,
@@ -59,20 +58,7 @@ const csrf = () => doubleCsrfProtection;
 // lgtm[js/missing-token-validation]
 // codeql[js/missing-token-validation]
 app.use(cookieParser());
-
-// CSRF middleware with setup mode bypass
-// During initial setup (no admin account), CSRF is skipped for POST /api/users
-app.use(async (req, res, next) => {
-	const setup = await isSetup();
-
-	// Skip CSRF validation during setup mode for user creation
-	if (!setup && req.method === "POST" && req.path === "/users") {
-		return next();
-	}
-
-	// Normal CSRF validation
-	return csrf()(req, res, next);
-});
+app.use(csrf());
 
 // Generate Token and set cookie/local
 app.use((req, res, next) => {
