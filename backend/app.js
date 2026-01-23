@@ -64,20 +64,12 @@ const csrf = () => doubleCsrfProtection;
 app.use(cookieParser());
 app.use(csrf());
 
-// Generate Token and set cookie/local with dynamic secure flag
+// Generate Token and store in res.locals for API responses
+// Note: csrf-csrf library handles the cookie internally with the hash.
+// We only need to expose the token value in API responses.
 app.use((req, res, next) => {
 	const token = generateCsrfToken(req, res);
 	res.locals.csrfToken = token;
-
-	// Override the CSRF cookie with proper secure flag based on actual request
-	// This is necessary because csrf-csrf sets secure statically, but we need it dynamic.
-	const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
-	res.cookie("XSRF-TOKEN", token, {
-		sameSite: "strict",
-		secure: isSecure,
-		path: "/",
-	});
-
 	next();
 });
 
