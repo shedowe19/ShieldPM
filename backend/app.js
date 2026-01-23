@@ -7,6 +7,7 @@ import analyticsService from "./internal/analytics.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
+import { isSetup } from "./setup.js";
 
 // Initialize Analytics Service (starts tailing logs)
 analyticsService.init();
@@ -36,17 +37,13 @@ app.use(
 );
 
 // CSRF Protection (Double Submit Cookie)
-// We use request-based HTTPS detection to set the secure flag dynamically.
-const csrfSecret = process.env.CSRF_SECRET || "DevelopmentSecretKEY-CHANGE-IN-PROD";
 
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
-	getSecret: () => csrfSecret,
+	getSecret: () => process.env.CSRF_SECRET || "DevelopmentSecretKEY-CHANGE-IN-PROD",
 	cookieName: "XSRF-TOKEN",
 	cookieOptions: {
 		sameSite: "strict",
-		// We set secure dynamically per-request below, but need a default here.
-		// Setting to false allows the library to set cookie, then we override if needed.
-		secure: false,
+		secure: false, // Allow both HTTP and HTTPS (sameSite provides protection)
 		path: "/",
 	},
 	size: 64,
@@ -62,11 +59,22 @@ const csrf = () => doubleCsrfProtection;
 // lgtm[js/missing-token-validation]
 // codeql[js/missing-token-validation]
 app.use(cookieParser());
-app.use(csrf());
 
-// Generate Token and store in res.locals for API responses
-// Note: csrf-csrf library handles the cookie internally with the hash.
-// We only need to expose the token value in API responses.
+// CSRF middleware with setup mode bypass
+// During initial setup (no admin account), CSRF is skipped for POST /api/users
+app.use(async (req, res, next) => {
+	const setup = await isSetup();
+
+	// Skip CSRF validation during setup mode for user creation
+	if (!setup && req.method === "POST" && req.path === "/users") {
+		return next();
+	}
+
+	// Normal CSRF validation
+	return csrf()(req, res, next);
+});
+
+// Generate Token and set cookie/local
 app.use((req, res, next) => {
 	const token = generateCsrfToken(req, res);
 	res.locals.csrfToken = token;
