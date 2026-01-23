@@ -16,7 +16,6 @@ import deadHostsRoutes from "./nginx/dead_hosts.js";
 import proxyHostsRoutes from "./nginx/proxy_hosts.js";
 import redirectionHostsRoutes from "./nginx/redirection_hosts.js";
 import streamsRoutes from "./nginx/streams.js";
-import terminalHostsRoutes from "./nginx/terminal_hosts.js";
 import torOnionRoutes from "./nginx/tor_onion.js";
 import oidcRoutes from "./oidc.js";
 import reportsRoutes from "./reports.js";
@@ -70,7 +69,6 @@ router.use("/nginx/certificates", certificatesHostsRoutes);
 router.use("/nginx/analytics", nginxAnalyticsRoutes);
 router.use("/nginx/cloudflared-tunnels", cloudflaredRoutes);
 router.use("/nginx/tor-onion", torOnionRoutes);
-router.use("/nginx/terminal-hosts", terminalHostsRoutes);
 router.use("/gitops", gitopsRoutes);
 router.use("/services", servicesRoutes);
 
