@@ -66,6 +66,9 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 	const credentialsLocation = `/data/certbot-credentials/credentials-${certificate.id}`;
 	fs.writeFileSync(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
 
+	// Determine the credentials argument - use defined value or fall back to standard pattern
+	const credentialsArg = dnsPlugin.credentials_argument || `dns-${certificate.meta.dns_provider}-credentials`;
+
 	const result = await utils.execFile("certbot", [
 		"--config",
 		"/etc/certbot.ini",
@@ -76,7 +79,7 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 		certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
 		dnsPlugin.full_plugin_name ? "--authenticator" : `--dns-${certificate.meta.dns_provider}`,
 		...(dnsPlugin.full_plugin_name ? [dnsPlugin.full_plugin_name] : []),
-		`--${dnsPlugin.credentials_argument}`,
+		`--${credentialsArg}`,
 		credentialsLocation,
 		...(certificate.meta.propagation_seconds
 			? [`--dns-${certificate.meta.dns_provider}-propagation-seconds`, certificate.meta.propagation_seconds]
