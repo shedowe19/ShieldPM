@@ -24,3 +24,6 @@ services:
 
       # Optional: Enable Quick Features
       # - "DISABLE_IPV6=true" # Disable IPv6 if your network/docker doesn't support it
+
+      # Security (Optional)
+      # - "CSRF_SECRET=your-secure-random-secret" # Min. 32 characters recommended. Generate with: openssl rand -hex 32
