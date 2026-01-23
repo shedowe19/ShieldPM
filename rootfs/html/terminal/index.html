@@ -116,77 +116,83 @@
             term.loadAddon(new WebLinksAddon.WebLinksAddon());
 
             term.open(document.getElementById('terminal'));
-            fitAddon.fit();
 
-            // Construct WebSocket URL from current page location
-            // The Nginx config proxies /ws to the backend
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
-
-            const ws = new WebSocket(wsUrl);
-
-            ws.onopen = () => {
-                statusDot.className = 'status-dot connected';
-
-                // Send initial resize
-                const dims = { cols: term.cols, rows: term.rows };
-                ws.send(JSON.stringify({ type: 'resize', ...dims }));
-
-                term.focus();
-            };
-
-            ws.onmessage = (event) => {
-                try {
-                    const msg = JSON.parse(event.data);
-                    if (msg.type === 'data') {
-                        term.write(msg.data);
-                    } else if (msg.type === 'error') {
-                        term.write(`\r\n\x1b[31mError: ${msg.message}\x1b[0m\r\n`);
-                        statusDot.className = 'status-dot disconnected';
-                        statusText.textContent = 'Error';
-                    } else if (msg.type === 'status' && msg.status === 'connected') {
-                        statusDot.className = 'status-dot connected';
-                        statusText.textContent = 'Connected';
-                    }
-                } catch (e) {
-                    // Ignore parse errors
-                }
-            };
-
-            ws.onclose = (event) => {
-                statusDot.className = 'status-dot disconnected';
-                statusText.textContent = 'Disconnected';
-                if (event.code === 1008) {
-                    term.write(`\r\n\x1b[31mConnection closed: ${event.reason}\x1b[0m\r\n`);
-                } else {
-                    term.write('\r\n\x1b[31mConnection closed.\x1b[0m\r\n');
-                }
-            };
-
-            ws.onerror = (e) => {
-                console.error('WS Error', e);
-                statusDot.className = 'status-dot disconnected';
-                statusText.textContent = 'Connection Error';
-                term.write('\r\n\x1b[31mConnection error.\x1b[0m\r\n');
-            };
-
-            term.onData((data) => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'data', data }));
-                }
-            });
-
-            term.onResize((size) => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
-                }
-            });
-
-            // Handle container resize
-            const resizeObserver = new ResizeObserver(() => {
+            // Wait for next frame to ensure container dimensions are ready
+            requestAnimationFrame(() => {
                 fitAddon.fit();
+
+                // Construct WebSocket URL from current page location
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+                const ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    statusDot.className = 'status-dot connected';
+
+                    // Send initial resize with current dimensions
+                    ws.send(JSON.stringify({
+                        type: 'resize',
+                        cols: term.cols,
+                        rows: term.rows
+                    }));
+
+                    term.focus();
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'data') {
+                            term.write(msg.data);
+                        } else if (msg.type === 'error') {
+                            term.write(`\r\n\x1b[31mError: ${msg.message}\x1b[0m\r\n`);
+                            statusDot.className = 'status-dot disconnected';
+                            statusText.textContent = 'Error';
+                        } else if (msg.type === 'status' && msg.status === 'connected') {
+                            statusDot.className = 'status-dot connected';
+                            statusText.textContent = 'Connected';
+                        }
+                    } catch (e) {
+                        // Ignore parse errors
+                    }
+                };
+
+                ws.onclose = (event) => {
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'Disconnected';
+                    if (event.code === 1008) {
+                        term.write(`\r\n\x1b[31mConnection closed: ${event.reason}\x1b[0m\r\n`);
+                    } else {
+                        term.write('\r\n\x1b[31mConnection closed.\x1b[0m\r\n');
+                    }
+                };
+
+                ws.onerror = (e) => {
+                    console.error('WS Error', e);
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'Connection Error';
+                    term.write('\r\n\x1b[31mConnection error.\x1b[0m\r\n');
+                };
+
+                term.onData((data) => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'data', data }));
+                    }
+                });
+
+                term.onResize((size) => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'resize', cols: size.cols, rows: size.rows }));
+                    }
+                });
+
+                // Handle container resize
+                const resizeObserver = new ResizeObserver(() => {
+                    fitAddon.fit();
+                });
+                resizeObserver.observe(document.getElementById('terminal-container'));
             });
-            resizeObserver.observe(document.getElementById('terminal-container'));
         })();
     </script>
 </body>
