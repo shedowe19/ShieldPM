@@ -1,19 +1,19 @@
 import { IconRobot } from "@tabler/icons-react";
-import { AlertCircle, Loader2 } from "lucide-react";
 import { Field, Form, Formik } from "formik";
-import { useState, useEffect } from "react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
+import { getAiConfig, updateAiConfig } from "src/api/backend/ai";
+import type { AiConfig } from "src/api/backend/models";
+import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
-import { getAiConfig, updateAiConfig } from "src/api/backend/ai";
-import type { AiConfig } from "src/api/backend/models";
-import { showObjectSuccess } from "src/notifications";
-import { Loading } from "src/components";
 import { T } from "src/locale";
+import { showObjectSuccess } from "src/notifications";
 
 export default function AiConfigPage() {
 	const [config, setConfig] = useState<AiConfig | null>(null);

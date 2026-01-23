@@ -1,24 +1,24 @@
 import { IconActivity, IconChartBar, IconDatabase, IconServer } from "@tabler/icons-react";
-import dayjs from "dayjs";
-import { useEffect, useState } from "react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
-import { Button } from "src/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import {
-	getAnalyticsSummary,
-	getAnalyticsSeries,
-	type AnalyticsSummary,
-	type TimeSeriesPoint,
-	type DbStats,
-} from "src/api/backend";
-import { useProxyHosts, useHealth } from "src/hooks";
-import { T } from "src/locale";
-import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from "react-simple-maps";
 import { geoCentroid } from "d3-geo";
-import { Loading } from "src/components";
+import dayjs from "dayjs";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
+import { useEffect, useState } from "react";
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+	type AnalyticsSummary,
+	type DbStats,
+	getAnalyticsSeries,
+	getAnalyticsSummary,
+	type TimeSeriesPoint,
+} from "src/api/backend";
+import { Loading } from "src/components";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
+import { useHealth, useProxyHosts } from "src/hooks";
+import { T } from "src/locale";
 
 countries.registerLocale(enLocale);
 

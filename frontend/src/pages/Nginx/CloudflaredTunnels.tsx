@@ -1,16 +1,15 @@
-import { useState } from "react";
-import { IconPlus, IconRefresh, IconTrash, IconEdit } from "@tabler/icons-react";
-
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { CloudflaredTunnelModal } from "@/components/Nginx/CloudflaredTunnelModal";
-import { useCloudflaredTunnels, useCloudflaredTunnel } from "@/hooks/useCloudflaredTunnel";
-import type { CloudflaredTunnel } from "@/api/backend";
-import { T } from "@/locale";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IconEdit, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { Cloud, Lock } from "lucide-react";
+import { useState } from "react";
+import type { CloudflaredTunnel } from "@/api/backend";
+import { CloudflaredTunnelModal } from "@/components/Nginx/CloudflaredTunnelModal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
+import { T } from "@/locale";
 
 export function CloudflaredTunnels() {
 	const health = useHealth();

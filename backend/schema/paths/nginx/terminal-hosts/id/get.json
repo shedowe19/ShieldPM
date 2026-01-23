@@ -1,0 +1,43 @@
+{
+    "operationId": "getTerminalHost",
+    "summary": "Get a Terminal Host",
+    "tags": [
+        "terminal-hosts"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "terminal_hosts.list"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+                "$ref": "../../../../common.json#/properties/id"
+            }
+        },
+        {
+            "in": "query",
+            "name": "expand",
+            "schema": {
+                "$ref": "../../../../common.json#/properties/expand"
+            }
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/terminal-host-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

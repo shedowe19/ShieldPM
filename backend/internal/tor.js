@@ -1,7 +1,10 @@
-import { createConnection } from "node:net";
 import fs from "node:fs";
+import { createConnection } from "node:net";
 import { global as logger } from "../logger.js";
+import ProxyHost from "../models/proxy_host.js";
 import TorOnion from "../models/tor_onion.js";
+import internalNginx from "./nginx.js";
+import internalGitOps from "./gitops.js";
 
 const dataPath = process.env.DATA_PATH || "/data";
 const torControlHost = "127.0.0.1";
@@ -125,6 +128,48 @@ const sendAuthenticatedCommand = async (command) => {
 	});
 };
 
+/**
+ * Syncs the onion address to the Proxy Host's domain_names
+ * @param {TorOnion} service
+ * @param {boolean} [skip_reload=false]
+ * @returns {Promise<void>}
+ */
+const syncProxyHost = async (service, skip_reload = false) => {
+	if (!service.proxy_host_id || !service.onion_address) {
+		return;
+	}
+
+	try {
+		const proxyHost = await ProxyHost.query().findById(service.proxy_host_id).where("is_deleted", 0);
+		if (!proxyHost) {
+			return;
+		}
+
+		// Check if onion address is already in domain_names
+		if (proxyHost.domain_names.includes(service.onion_address)) {
+			return;
+		}
+
+		// Add onion address
+		const newDomains = [...proxyHost.domain_names, service.onion_address];
+
+		// Update Proxy Host in DB
+		await ProxyHost.query().patchAndFetchById(proxyHost.id, {
+			domain_names: newDomains,
+		});
+
+		// Reconfigure Nginx
+		// We fetch the updated row to be sure
+		const updatedHost = await ProxyHost.query().findById(proxyHost.id);
+		await internalNginx.configure(ProxyHost, "proxy_host", updatedHost, { skip_reload });
+
+		logger.info(`Added onion address ${service.onion_address} to Proxy Host ${proxyHost.id}`);
+		internalGitOps.triggerAutoPush("onion-sync");
+	} catch (err) {
+		logger.error(`Failed to sync onion address to Proxy Host: ${err.message}`);
+	}
+};
+
 const internalTor = {
 	/**
 	 * Check if Tor is available
@@ -168,8 +213,15 @@ const internalTor = {
 
 			// Re-add services that have a private key
 			if (service.private_key && service.onion_address) {
-				await internalTor.start(service);
+				await internalTor.start(service, true); // skip_reload for batch processing
 			}
+		}
+
+		// Reload Nginx once after initialization
+		try {
+			await internalNginx.reload();
+		} catch (err) {
+			logger.error("Failed to reload Nginx after Tor initialization", err);
 		}
 	},
 
@@ -211,6 +263,10 @@ const internalTor = {
 			});
 
 			logger.info(`Tor Onion Service created: ${onionAddress}`);
+
+			// Sync with Proxy Host
+			await syncProxyHost(await TorOnion.query().findById(service.id));
+
 			return { onionAddress, privateKey };
 		} catch (err) {
 			logger.error(`Failed to create Tor Onion Service ${service.id}:`, err);
@@ -222,9 +278,10 @@ const internalTor = {
 	/**
 	 * Start an existing Onion Service (re-add with stored private key)
 	 * @param {TorOnion} service
+	 * @param {boolean} [skip_reload=false]
 	 * @returns {Promise<boolean>}
 	 */
-	start: async (service) => {
+	start: async (service, skip_reload = false) => {
 		if (!service.private_key || !service.onion_address) {
 			logger.warn(`Cannot start Tor Onion Service ${service.id}: missing private key or address`);
 			return false;
@@ -242,6 +299,10 @@ const internalTor = {
 			if (response.includes("250 OK") || response.includes("ServiceID=")) {
 				await service.$query().patch({ status: 2 }); // Running
 				logger.info(`Tor Onion Service started: ${service.onion_address}`);
+
+				// Sync with Proxy Host
+				await syncProxyHost(service, skip_reload);
+
 				return true;
 			}
 

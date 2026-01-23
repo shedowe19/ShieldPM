@@ -127,6 +127,24 @@
 						},
 						"icon_type": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/icon_type"
+						},
+						"terminal_host": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_host"
+						},
+						"terminal_port": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_port"
+						},
+						"terminal_username": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_username"
+						},
+						"terminal_auth_type": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_auth_type"
+						},
+						"terminal_password": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_password"
+						},
+						"terminal_private_key": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_private_key"
 						}
 					}
 				},

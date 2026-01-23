@@ -1,7 +1,7 @@
 import type { AccessList } from "src/api/backend";
+import { Button } from "src/components/ui/button";
 import { T } from "src/locale";
 import { showAccessListModal } from "src/modals";
-import { Button } from "src/components/ui/button";
 
 interface Props {
 	access?: AccessList;

@@ -12,10 +12,11 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { AiChat } from "src/components/AiChat/AiChat";
+import { HasPermission } from "src/components/HasPermission";
 import { Button } from "src/components/ui/button";
 import { ScrollArea } from "src/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "src/components/ui/sheet";
-import { HasPermission } from "src/components/HasPermission";
 import { T } from "src/locale";
 import {
 	ACCESS_LISTS,
@@ -29,7 +30,6 @@ import {
 	STREAMS,
 	VIEW,
 } from "src/modules/Permissions";
-import { AiChat } from "src/components/AiChat/AiChat";
 
 interface MenuItem {
 	label: string;

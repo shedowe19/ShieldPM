@@ -1,9 +1,9 @@
 import { flexRender } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "framer-motion";
-import type { TableLayoutProps } from "src/components";
-import { EmptyRow } from "./EmptyRow";
-import { TableBody as ShadcnTableBody, TableRow, TableCell } from "src/components/ui/table";
 import React from "react";
+import type { TableLayoutProps } from "src/components";
+import { TableBody as ShadcnTableBody, TableCell, TableRow } from "src/components/ui/table";
+import { EmptyRow } from "./EmptyRow";
 
 // Helper to use forwardRef with motion
 const TableRowWithRef = React.forwardRef<HTMLTableRowElement, any>((props, ref) => <TableRow ref={ref} {...props} />);

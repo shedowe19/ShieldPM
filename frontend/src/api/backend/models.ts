@@ -153,6 +153,13 @@ export interface ProxyHost {
 	// Service Icon
 	iconUrl?: string | null;
 	iconType?: "auto" | "custom" | "none";
+	// Terminal Fields
+	terminalHost?: string;
+	terminalPort?: number;
+	terminalUsername?: string;
+	terminalAuthType?: "password" | "key";
+	terminalPassword?: string;
+	terminalPrivateKey?: string;
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;

@@ -1,19 +1,18 @@
 import { Field, Form, Formik } from "formik";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { claimOidcToken } from "src/api/backend";
 import { LocalePicker, ThemeSwitcher } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
 import { useAuthState } from "src/context";
 import { useHealth } from "src/hooks";
 import { intl, T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 import { validateEmail, validateString } from "src/modules/Validations";
-
-import { Button } from "src/components/ui/button";
-import { Input } from "src/components/ui/input";
-import { Label } from "src/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
-import { AlertCircle, Loader2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 
 export default function Login() {
 	const emailRef = useRef<HTMLInputElement>(null);

@@ -1,14 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Field, Form, Formik } from "formik";
-import { useState } from "react";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { createUser } from "src/api/backend";
 import { LocalePicker, ThemeSwitcher } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { useAuthState } from "src/context";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";

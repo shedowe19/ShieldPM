@@ -26,7 +26,6 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
-
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
@@ -96,6 +95,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								forwardScheme: data?.forwardScheme || "http",
 								forwardHost: data?.forwardHost || "",
 								forwardPort: data?.forwardPort || undefined,
+								// Terminal Fields
+								terminalHost: data?.terminalHost || "",
+								terminalPort: data?.terminalPort || 22,
+								terminalUsername: data?.terminalUsername || "",
+								terminalAuthType: data?.terminalAuthType || "password",
+								terminalPassword: data?.terminalPassword || "",
+								terminalPrivateKey: data?.terminalPrivateKey || "",
+
 								accessListId: data?.accessListId || 0,
 								cachingEnabled: data?.cachingEnabled || false,
 								disableBuffering: data?.disableBuffering || false,
@@ -226,6 +233,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectItem value="path">path</SelectItem>
 																			<SelectItem value="grpc">grpc</SelectItem>
 																			<SelectItem value="grpcs">grpcs</SelectItem>
+																			<SelectItem value="terminal">
+																				terminal
+																			</SelectItem>
 																		</SelectContent>
 																	</Select>
 																	{form.errors.forwardScheme &&
@@ -299,6 +309,163 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 												</div>
+
+												{/* Terminal Fields */}
+												<Field name="forwardScheme">
+													{({ field: schemeField }: any) =>
+														schemeField.value === "terminal" && (
+															<Card className="my-3 border-dashed border-yellow-500/50">
+																<CardContent className="p-4">
+																	<h4 className="pb-2 text-lg font-semibold text-yellow-500">
+																		<T id="terminal.connection-details" />
+																	</h4>
+																	<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+																		<div className="md:col-span-8">
+																			<Field name="terminalHost">
+																				{({ field }: any) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="terminalHost">
+																							<T id="terminal.host" />
+																						</Label>
+																						<Input
+																							id="terminalHost"
+																							placeholder="192.168.1.100"
+																							autoComplete="off"
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		<div className="md:col-span-4">
+																			<Field name="terminalPort">
+																				{({ field, form }: any) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="terminalPort">
+																							<T id="terminal.port" />
+																						</Label>
+																						<Input
+																							id="terminalPort"
+																							type="number"
+																							placeholder="22"
+																							className={
+																								form.errors
+																									.terminalPort &&
+																								form.touched
+																									.terminalPort
+																									? "border-destructive"
+																									: ""
+																							}
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		<div className="md:col-span-6">
+																			<Field name="terminalUsername">
+																				{({ field }: any) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="terminalUsername">
+																							<T id="terminal.username" />
+																						</Label>
+																						<Input
+																							id="terminalUsername"
+																							placeholder="root"
+																							autoComplete="new-password"
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		<div className="md:col-span-6">
+																			<Field name="terminalAuthType">
+																				{({ field }: any) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="terminalAuthType">
+																							<T id="terminal.auth-type" />
+																						</Label>
+																						<Select
+																							onValueChange={(
+																								val: string,
+																							) =>
+																								field.onChange({
+																									target: {
+																										name: field.name,
+																										value: val,
+																									},
+																								})
+																							}
+																							value={field.value}
+																						>
+																							<SelectTrigger>
+																								<SelectValue />
+																							</SelectTrigger>
+																							<SelectContent>
+																								<SelectItem value="password">
+																									<T id="terminal.auth-type.password" />
+																								</SelectItem>
+																								<SelectItem value="key">
+																									<T id="terminal.auth-type.key" />
+																								</SelectItem>
+																							</SelectContent>
+																						</Select>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+
+																		{/* Auth Fields */}
+																		<Field name="terminalAuthType">
+																			{({ field: authField }: any) =>
+																				authField.value === "password" ? (
+																					<div className="col-span-12">
+																						<Field name="terminalPassword">
+																							{({ field }: any) => (
+																								<div className="space-y-2">
+																									<Label htmlFor="terminalPassword">
+																										<T id="terminal.password" />
+																									</Label>
+																									<Input
+																										id="terminalPassword"
+																										type="password"
+																										placeholder="••••••••"
+																										autoComplete="new-password"
+																										{...field}
+																									/>
+																								</div>
+																							)}
+																						</Field>
+																					</div>
+																				) : (
+																					<div className="col-span-12">
+																						<Field name="terminalPrivateKey">
+																							{({ field }: any) => (
+																								<div className="space-y-2">
+																									<Label htmlFor="terminalPrivateKey">
+																										<T id="terminal.private-key" />
+																									</Label>
+																									<Textarea
+																										id="terminalPrivateKey"
+																										placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+																										className="font-mono text-xs min-h-[100px]"
+																										{...field}
+																									/>
+																								</div>
+																							)}
+																						</Field>
+																					</div>
+																				)
+																			}
+																		</Field>
+																	</div>
+																</CardContent>
+															</Card>
+														)
+													}
+												</Field>
+
 												{/* Icon Settings */}
 												<Card className="my-3 border-dashed border-blue-500/50">
 													<CardContent className="p-4">
@@ -308,14 +475,19 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<div className="grid grid-cols-12 gap-4">
 															<div className="col-span-12 md:col-span-4">
 																<Field name="iconType">
-																	{({ field, form }: any) => (
+																	{({ field }: any) => (
 																		<div className="space-y-2">
 																			<Label htmlFor="iconType">
 																				<T id="proxy-host.icon-type" />
 																			</Label>
 																			<Select
 																				onValueChange={(val: string) =>
-																					form.setFieldValue(field.name, val)
+																					field.onChange({
+																						target: {
+																							name: field.name,
+																							value: val,
+																						},
+																					})
 																				}
 																				value={field.value || "auto"}
 																			>

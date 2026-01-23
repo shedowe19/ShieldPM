@@ -3,8 +3,8 @@ import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/re
 import { useMemo } from "react";
 import type { AuditLog } from "src/api/backend";
 import { EventFormatter, GravatarFormatter } from "src/components";
-import { Button } from "src/components/ui/button";
 import { TableLayout } from "src/components/Table/TableLayout";
+import { Button } from "src/components/ui/button";
 import { intl, T } from "src/locale";
 
 interface Props {

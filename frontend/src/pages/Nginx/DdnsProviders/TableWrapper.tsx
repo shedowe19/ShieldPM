@@ -1,18 +1,18 @@
 import { IconPlus, IconSearch, IconWorld } from "@tabler/icons-react";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AlertCircle } from "lucide-react";
+import { useState } from "react";
 import { deleteDdnsProvider, getDdnsProviders } from "src/api/backend";
 import { LoadingPage } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import { Input } from "src/components/ui/input";
 import { intl, T } from "src/locale";
 import { showDeleteConfirmModal } from "src/modals";
 import { showDdnsProviderModal } from "src/modals/DdnsProviderModal";
 import { showObjectSuccess } from "src/notifications";
 import Table from "./Table";
-import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
-import { Input } from "src/components/ui/input";
-import { Button } from "src/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 export default function TableWrapper() {
 	const [search, setSearch] = useState("");

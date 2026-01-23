@@ -6,10 +6,10 @@ import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { createCertificate } from "src/api/backend";
 import { DNSProviderFields, DomainNamesField } from "src/components";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Alert, AlertTitle, AlertDescription } from "src/components/ui/alert";
 import { Card, CardContent } from "src/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 

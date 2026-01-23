@@ -1,11 +1,11 @@
-import { IconX, IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconX } from "@tabler/icons-react";
 import { useFormikContext } from "formik";
 import { useState } from "react";
 import type { AccessListItem } from "src/api/backend";
-import { T } from "src/locale";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
+import { T } from "src/locale";
 
 interface Props {
 	initialValues: AccessListItem[];

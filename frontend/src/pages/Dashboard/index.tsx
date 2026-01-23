@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { FormattedNumber } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { HasPermission } from "src/components";
+import { Card, CardContent } from "src/components/ui/card";
 import { useHostReport, useUser } from "src/hooks";
 import { T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 import { DEAD_HOSTS, PROXY_HOSTS, REDIRECTION_HOSTS, STREAMS, VIEW } from "src/modules/Permissions";
-import { Card, CardContent } from "src/components/ui/card";
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
 
 const MotionCard = motion(Card);

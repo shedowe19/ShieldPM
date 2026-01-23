@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import DdnsProvider from "../models/ddns_provider.js";
 import { global as logger } from "../logger.js";
+import DdnsProvider from "../models/ddns_provider.js";
 
 let timer = null;
 const INTERVAL = 1000 * 60; // 60 seconds

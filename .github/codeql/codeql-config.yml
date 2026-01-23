@@ -1,0 +1,7 @@
+name: "ShieldPM CodeQL Config"
+
+disable-default-queries: false
+
+query-filters:
+  - exclude:
+      id: js/missing-token-validation

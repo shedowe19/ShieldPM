@@ -1,0 +1,37 @@
+{
+    "operationId": "deleteTerminalHost",
+    "summary": "Delete a Terminal Host",
+    "tags": [
+        "terminal-hosts"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "terminal_hosts.manage"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+                "$ref": "../../../../common.json#/properties/id"
+            }
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                }
+            }
+        }
+    }
+}

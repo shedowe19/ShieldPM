@@ -90,7 +90,7 @@ const internalAuditLog = {
 				action: data.action,
 				object_type: data.object_type,
 				object_id: data.object_id,
-				meta: data.meta ? JSON.stringify(data.meta) : "",
+				meta: data.meta || {},
 			}),
 		);
 	},

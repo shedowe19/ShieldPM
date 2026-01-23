@@ -9,7 +9,29 @@ Usage: `example.com`, `app.example.com`.
 The domain names that this proxy host will respond to. You can specify multiple domains by separating them with a comma or pressing Enter.
 
 ### Scheme, Forward Host, Forward Port
-*   **Scheme:** The protocol used to talk to the *internal* service (`http` or `https`).
+*   **Forward Host / IP:** The address of the backend service (e.g., `127.0.0.1`, `192.168.1.50`, or a container name).
+*   **Forward Port:** The port the service is listening on (e.g., `8080`, `3000`, `22`).
+*   **Forward Scheme:** The protocol used to talk to the *internal* service:
+    *   `http`: Standard web traffic.
+    *   `https`: Secure web traffic (backend handles SSL).
+    *   `terminal`: SSH Gateway (Web Terminal).
+    *   `grpc` / `grpcs`: gRPC traffic.
+    *   `path`: Serve static files or PHP (internal).
+
+### Terminal Scheme (SSH)
+If you select **terminal** as the scheme, additional fields will appear to configure the SSH connection:
+*   **Terminal Host:** The SSH server address (usually same as Forward Host).
+*   **Terminal Port:** The SSH port (default `22`).
+*   **Username:** SSH username (e.g., `root`).
+*   **Auth Type:** Password or Private Key.
+    *   **Password:** Securely encrypted.
+    *   **Private Key:** Paste your PEM-formatted private key (encrypted at rest).
+
+
+To access the terminal, simply **navigate to the domain** you configured (e.g., `https://term.example.com`).
+
+A "Connect" shortcut is also available in the dashboard via the **three dots** menu.
+## 🔒 SSL/TLS (HTTPS)
 *   **Forward Host:** The IP address or hostname of your internal service (e.g., `192.168.1.50` or a container name like `nextcloud`).
     *   *Tip:* If using `network_mode: host` for ShieldPM, use `127.0.0.1` to access services on the same machine running on host ports.
     *   *Tip:* If using Docker networks, use the container name.

@@ -1,6 +1,4 @@
 import { Flag } from "src/components";
-import { useLocaleState } from "src/context";
-import { changeLocale, getFlagCodeForLocale, localeOptions, T } from "src/locale";
 import { Button } from "src/components/ui/button";
 import {
 	DropdownMenu,
@@ -8,6 +6,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
+import { useLocaleState } from "src/context";
+import { changeLocale, getFlagCodeForLocale, localeOptions, T } from "src/locale";
 
 interface Props {
 	menuAlign?: "start" | "end";

@@ -11,28 +11,28 @@ import {
 	TestTube,
 } from "lucide-react";
 import { useState } from "react";
+import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
-import { Input } from "src/components/ui/input";
-import { Label } from "src/components/ui/label";
-import { Switch } from "src/components/ui/switch";
-import { useGitOps, useGitOpsConfig, useGitOpsHistory } from "@/hooks/useGitOps";
-import { Loading } from "src/components";
-import { T } from "src/locale";
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-	DialogClose,
 } from "src/components/ui/dialog";
+import { Input } from "src/components/ui/input";
+import { Label } from "src/components/ui/label";
+import { Switch } from "src/components/ui/switch";
+import { T } from "src/locale";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useGitOps, useGitOpsConfig, useGitOpsHistory } from "@/hooks/useGitOps";
 
 export default function GitOps() {
 	const { data: config, isLoading, error: fetchError } = useGitOpsConfig();

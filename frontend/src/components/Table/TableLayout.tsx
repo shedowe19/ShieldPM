@@ -1,7 +1,7 @@
 import type { Table as ReactTable } from "@tanstack/react-table";
+import { Table } from "src/components/ui/table";
 import { TableBody } from "./TableBody";
 import { TableHeader } from "./TableHeader";
-import { Table } from "src/components/ui/table";
 
 interface TableLayoutProps<TFields> {
 	tableInstance: ReactTable<TFields>;

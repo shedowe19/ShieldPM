@@ -28,6 +28,7 @@
 *   **[Disable Buffering](Disable-Buffering)**: Optimizing for streaming services (Jellyfin/Plex).
 *   **[Maintenance Features](Maintenance)**: Configuring automatic maintenance pages for downtime.
 *   **[Service Icons](Service-Icons)**: Auto-detection and custom icons for your hosts.
+*   **[Terminal Hosts](Terminal-Hosts)**: SSH Bastion and Web Terminal Gateway management.
 *   **[SSL Certificates](SSL-Certificates)**: Let's Encrypt, Custom Certs, and HSTS best practices.
 
 ### Security

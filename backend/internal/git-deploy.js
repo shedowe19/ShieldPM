@@ -3,19 +3,15 @@
  * Handles automatic Git synchronization for path-based proxy hosts
  */
 
-import dayjs from "dayjs";
 import fs from "node:fs";
-
 import path from "node:path";
-
+import dayjs from "dayjs";
 import git from "isomorphic-git";
-
 import http from "isomorphic-git/http/node";
 import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
-
 import ProxyHost from "../models/proxy_host.js";
 import internalNginx from "./nginx.js";
 

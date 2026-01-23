@@ -1,7 +1,7 @@
-import type { AiChatMessage } from "src/api/backend/models";
-import { cn } from "src/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { AiChatMessage } from "src/api/backend/models";
+import { cn } from "src/lib/utils";
 
 interface AiMessageProps {
 	message: AiChatMessage;

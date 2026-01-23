@@ -12,6 +12,7 @@ import certificateModel from "../models/certificate.js";
 import internalAuditLog from "./audit-log.js";
 import * as certbot from "./certbot.js";
 import internalNginx from "./nginx.js";
+import internalGitOps from "./gitops.js";
 import internalPki from "./pki.js";
 
 dayjs.extend(customParseFormat);
@@ -205,7 +206,10 @@ const internalCertificate = {
 
 		// @ts-expect-error
 		rows = rows.map(utils.omitRow(omissions()));
-		certificate;
+
+		internalGitOps.triggerAutoPush("certificate");
+
+		return certificate;
 	},
 
 	addCreatedAuditLog: async (access, certificate_id, meta) => {
@@ -265,6 +269,8 @@ const internalCertificate = {
 			object_id: row.id,
 			meta: _.omit(thisData, ["expires_on"]), // this prevents json circular reference because expires_on might be raw
 		});
+
+		internalGitOps.triggerAutoPush("certificate");
 
 		return savedRow;
 	},
@@ -425,6 +431,9 @@ const internalCertificate = {
 			fs.rmSync(`/data/tls/custom/npm-${row.id}`, { force: true, recursive: true });
 			fs.rmSync(`/data/tls/custom/npm-${row.id}.der`, { force: true });
 		}
+
+		internalGitOps.triggerAutoPush("certificate");
+
 		return true;
 	},
 

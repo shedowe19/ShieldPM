@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import errs from "../lib/error.js";
 import settingModel from "../models/setting.js";
+import internalAuditLog from "./audit-log.js";
 import internalNginx from "./nginx.js";
 
 const internalSetting = {
@@ -46,6 +47,19 @@ const internalSetting = {
 				throw new errs.ValidationError("Could not reconfigure Nginx. Please check logs.");
 			}
 		}
+
+		// Add to audit log
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "setting",
+			object_id: updatedRow.id,
+			meta: {
+				name: updatedRow.name,
+				description: updatedRow.description,
+				value: updatedRow.value,
+			},
+		});
+
 		return updatedRow;
 	},
 

@@ -33,15 +33,8 @@ function buildUrl({ url, params }: BuildUrlArgs) {
 	return apiUrl;
 }
 
-function getCookie(name: string): string | undefined {
-	const matches = document.cookie.match(
-		new RegExp(`(?:^|; )${name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1")}=([^;]*)`),
-	);
-	return matches ? decodeURIComponent(matches[1]) : undefined;
-}
-
 function buildAuthHeader(): Record<string, string> | undefined {
-	const csrfToken = getCookie("XSRF-TOKEN");
+	const csrfToken = AuthStore.csrfToken;
 	if (csrfToken) {
 		return {
 			"X-XSRF-TOKEN": csrfToken,
@@ -58,6 +51,11 @@ function buildBody(data?: Record<string, any>): string | undefined {
 
 async function processResponse(response: Response, silentAuth = false) {
 	const payload = await response.json();
+	// Capture CSRF Token if present in response
+	if (payload.csrfToken) {
+		AuthStore.setCsrfToken(payload.csrfToken);
+	}
+
 	if (!response.ok) {
 		if (response.status === 401) {
 			// Force logout user and reload the page if Unauthorized
@@ -215,3 +213,12 @@ export async function del({ url, params, silentAuth }: DeleteArgs, abortControll
 	const response = await fetch(apiUrl, { method, headers, signal });
 	return processResponse(response, silentAuth);
 }
+
+export const apiClient = {
+	get,
+	post,
+	put,
+	delete: del,
+	download,
+	downloadPost,
+};

@@ -8,6 +8,7 @@ import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.j
 import AccessList from "./access_list.js";
 import Certificate from "./certificate.js";
 import now from "./now_helper.js";
+import TorOnion from "./tor_onion.js";
 import User from "./user.js";
 
 Model.knex(db());
@@ -117,6 +118,20 @@ class ProxyHost extends Model {
 	/** @type {string} */
 	icon_type;
 
+	// Terminal fields (for forward_scheme: 'terminal')
+	/** @type {string|null} */
+	terminal_host;
+	/** @type {number|null} */
+	terminal_port;
+	/** @type {string|null} */
+	terminal_username;
+	/** @type {string|null} */
+	terminal_auth_type;
+	/** @type {string|null} */
+	terminal_password;
+	/** @type {string|null} */
+	terminal_private_key;
+
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());
 		this.modified_on = /** @type {any} */ (now());
@@ -215,6 +230,17 @@ class ProxyHost extends Model {
 				},
 				modify: (qb) => {
 					qb.where("certificate.is_deleted", 0);
+				},
+			},
+			tor_onion: {
+				relation: Model.HasOneRelation,
+				modelClass: TorOnion,
+				join: {
+					from: "proxy_host.id",
+					to: "tor_onion.proxy_host_id",
+				},
+				modify: (qb) => {
+					qb.where("tor_onion.is_deleted", 0);
 				},
 			},
 		};

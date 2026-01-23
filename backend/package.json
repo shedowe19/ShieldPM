@@ -1,6 +1,6 @@
 {
 	"name": "shieldpm",
-	"version": "3.10.0",
+	"version": "3.11.12",
 	"description": "A beautiful interface for creating Nginx endpoints",
 	"author": "ShieldPM Contributors (based on work by Jamie Curnow and ZoeyVid)",
 	"license": "UNLICENSED",
@@ -16,6 +16,7 @@
 		"bcryptjs": "3.0.3",
 		"better-sqlite3": "^12.6.0",
 		"cookie-parser": "^1.4.7",
+		"csrf-csrf": "^4.0.3",
 		"dayjs": "1.11.19",
 		"dockerode": "^4.0.0",
 		"express": "5.2.1",
@@ -38,9 +39,11 @@
 		"proxy-agent": "6.5.0",
 		"punycode.js": "2.3.1",
 		"signale": "1.4.0",
+		"ssh2": "^1.17.0",
 		"systeminformation": "^5.30.3",
 		"tail": "^2.2.6",
-		"temp-write": "6.0.0"
+		"temp-write": "6.0.0",
+		"ws": "^8.19.0"
 	},
 	"devDependencies": {
 		"@apidevtools/swagger-parser": "12.1.0",

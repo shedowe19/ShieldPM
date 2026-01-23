@@ -1,6 +1,7 @@
 import express from "express";
 import { transaction } from "objection";
 import internalCloudflared from "../../internal/cloudflared.js";
+import internalAuditLog from "../../internal/audit-log.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
@@ -71,6 +72,16 @@ router.post("/", async (req, res, next) => {
 		// Start the process
 		internalCloudflared.start(newTunnel);
 
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "created",
+			object_type: "cloudflared-tunnel",
+			object_id: newTunnel.id,
+			meta: {
+				name: newTunnel.name,
+			},
+		});
+
 		res.status(201).send(newTunnel);
 	} catch (err) {
 		if (trx) {
@@ -106,6 +117,16 @@ router.put("/:id", async (req, res, next) => {
 		// Restart with new config
 		internalCloudflared.restart(result);
 
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "updated",
+			object_type: "cloudflared-tunnel",
+			object_id: result.id,
+			meta: {
+				name: result.name,
+			},
+		});
+
 		res.status(200).send(result);
 	} catch (err) {
 		if (trx) {
@@ -138,6 +159,16 @@ router.delete("/:id", async (req, res, next) => {
 		trx = await transaction.start(CloudflaredTunnel.knex());
 		await tunnel.$query(trx).delete();
 		await trx.commit();
+
+		// Audit Log
+		await internalAuditLog.add(res.locals.access, {
+			action: "deleted",
+			object_type: "cloudflared-tunnel",
+			object_id: tunnel.id,
+			meta: {
+				name: tunnel.name,
+			},
+		});
 
 		res.status(200).send({ status: "OK" });
 	} catch (err) {

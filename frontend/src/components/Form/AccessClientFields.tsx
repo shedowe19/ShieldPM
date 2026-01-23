@@ -1,12 +1,12 @@
-import { IconX, IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconX } from "@tabler/icons-react";
 import { useFormikContext } from "formik";
 import { useState } from "react";
 import type { AccessListClient } from "src/api/backend";
-import { intl, T } from "src/locale";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { cn } from "src/lib/utils";
+import { intl, T } from "src/locale";
 
 interface Props {
 	initialValues: AccessListClient[];

@@ -1,8 +1,8 @@
 import _ from "lodash";
+import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import utils from "../lib/utils.js";
-import { encrypt } from "../lib/encryption.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
@@ -78,6 +78,16 @@ const internalProxyHost = {
 		// for this optional field.
 		if (typeof thisData.advanced_config === "undefined") {
 			thisData.advanced_config = "";
+		}
+
+		// Encrypt terminal credentials if present
+		if (thisData.forward_scheme === "terminal") {
+			if (thisData.terminal_password) {
+				thisData.terminal_password = encrypt(thisData.terminal_password);
+			}
+			if (thisData.terminal_private_key) {
+				thisData.terminal_private_key = encrypt(thisData.terminal_private_key);
+			}
 		}
 
 		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
@@ -211,6 +221,14 @@ const internalProxyHost = {
 			thisData.git_credentials = encrypt(thisData.git_credentials);
 		} else if (typeof thisData.git_credentials !== "undefined" && thisData.git_credentials === "") {
 			thisData.git_credentials = null;
+		}
+
+		// Encrypt terminal credentials if present (on update)
+		if (thisData.terminal_password) {
+			thisData.terminal_password = encrypt(thisData.terminal_password);
+		}
+		if (thisData.terminal_private_key) {
+			thisData.terminal_private_key = encrypt(thisData.terminal_private_key);
 		}
 
 		let _saved_row = await proxyHostModel

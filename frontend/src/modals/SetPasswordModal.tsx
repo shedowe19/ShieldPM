@@ -1,17 +1,17 @@
+import { IconDice, IconEye, IconEyeOff, IconLock } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { generate } from "generate-password-browser";
+import { AlertCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { updateAuth } from "src/api/backend";
-import { intl, T } from "src/locale";
-import { validateString } from "src/modules/Validations";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { IconDice, IconEye, IconEyeOff, IconLock } from "@tabler/icons-react";
+import { intl, T } from "src/locale";
+import { validateString } from "src/modules/Validations";
 
 const showSetPasswordModal = (id: number) => {
 	EasyModal.show(SetPasswordModal, { id });

@@ -1,8 +1,8 @@
 import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc, IconLock, IconShield, IconUser } from "@tabler/icons-react";
 import cn from "classnames";
 import type { AuditLog } from "src/api/backend";
-import { formatDateTime, T } from "src/locale";
 import { Badge } from "src/components/ui/badge";
+import { formatDateTime, T } from "src/locale";
 
 const getEventValue = (event: AuditLog) => {
 	switch (event.objectType) {
@@ -17,6 +17,13 @@ const getEventValue = (event: AuditLog) => {
 			return event.meta?.incomingPort || "N/A";
 		case "certificate":
 			return event.meta?.domainNames?.join(", ") || event.meta?.niceName || "N/A";
+		case "ddns-provider":
+		case "terminal-host":
+		case "cloudflared-tunnel":
+		case "setting":
+			return event.meta?.name || event.meta?.id || "N/A";
+		case "tor-onion":
+			return event.meta?.onion_address || "N/A";
 		default:
 			return `UNKNOWN EVENT TYPE: ${event.objectType}`;
 	}
@@ -57,6 +64,21 @@ const getIcon = (row: AuditLog) => {
 			break;
 		case "certificate":
 			ico = <IconShield size={16} className={c} />;
+			break;
+		case "ddns-provider":
+			ico = <IconDisc size={16} className={c} />;
+			break;
+		case "tor-onion":
+			ico = <IconShield size={16} className={c} />;
+			break;
+		case "cloudflared-tunnel":
+			ico = <IconBolt size={16} className={c} />;
+			break;
+		case "terminal-host":
+			ico = <IconBolt size={16} className={c} />;
+			break;
+		case "setting":
+			ico = <IconBolt size={16} className={c} />;
 			break;
 	}
 

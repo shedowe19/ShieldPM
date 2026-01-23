@@ -1,7 +1,7 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { Field } from "formik";
-import { intl, T } from "src/locale";
 import { Label } from "src/components/ui/label";
+import { intl, T } from "src/locale";
 
 interface Props {
 	id?: string;
