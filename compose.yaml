@@ -37,6 +37,7 @@ services:
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
       # - "PUID=0" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
       # - "PGID=0" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID
+      # - "CSRF_SECRET=your-secure-random-secret" # Secret for CSRF token generation. Change this in production!
       
       # --- Network & Ports ---
       # - "NPM_PORT=81" # Port the ShieldPM UI should be bound to, default 81, change this if you want to run multiple shieldpm instances in network mode host

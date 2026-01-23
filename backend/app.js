@@ -1,9 +1,9 @@
 import cookieParser from "cookie-parser";
+import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import fileUpload from "express-fileupload";
 import helmet from "helmet";
 import analyticsService from "./internal/analytics.js";
-import { doubleCsrf } from "csrf-csrf";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
@@ -36,12 +36,17 @@ app.use(
 );
 
 // CSRF Protection (Double Submit Cookie)
+// We use request-based HTTPS detection to set the secure flag dynamically.
+const csrfSecret = process.env.CSRF_SECRET || "DevelopmentSecretKEY-CHANGE-IN-PROD";
+
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
-	getSecret: () => "DevelopmentSecretKEYChangedInProd", // TODO: Move to config/env
+	getSecret: () => csrfSecret,
 	cookieName: "XSRF-TOKEN",
 	cookieOptions: {
 		sameSite: "strict",
-		secure: true,
+		// We set secure dynamically per-request below, but need a default here.
+		// Setting to false allows the library to set cookie, then we override if needed.
+		secure: false,
 		path: "/",
 	},
 	size: 64,
@@ -59,10 +64,20 @@ const csrf = () => doubleCsrfProtection;
 app.use(cookieParser());
 app.use(csrf());
 
-// Generate Token and set cookie/local
+// Generate Token and set cookie/local with dynamic secure flag
 app.use((req, res, next) => {
 	const token = generateCsrfToken(req, res);
 	res.locals.csrfToken = token;
+
+	// Override the CSRF cookie with proper secure flag based on actual request
+	// This is necessary because csrf-csrf sets secure statically, but we need it dynamic.
+	const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
+	res.cookie("XSRF-TOKEN", token, {
+		sameSite: "strict",
+		secure: isSecure,
+		path: "/",
+	});
+
 	next();
 });
 
