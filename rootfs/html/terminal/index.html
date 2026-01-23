@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,16 +12,20 @@
             padding: 0;
             box-sizing: border-box;
         }
-        html, body {
+
+        html,
+        body {
             width: 100%;
             height: 100%;
             background: #000;
             overflow: hidden;
         }
+
         #terminal {
             width: 100%;
             height: 100%;
         }
+
         .status-bar {
             position: fixed;
             top: 0;
@@ -37,19 +42,39 @@
             border-bottom: 1px solid #333;
             z-index: 1000;
         }
+
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             margin-right: 8px;
         }
-        .status-dot.connected { background: #4ade80; }
-        .status-dot.connecting { background: #fbbf24; animation: pulse 1s infinite; }
-        .status-dot.disconnected { background: #ef4444; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+        .status-dot.connected {
+            background: #4ade80;
         }
+
+        .status-dot.connecting {
+            background: #fbbf24;
+            animation: pulse 1s infinite;
+        }
+
+        .status-dot.disconnected {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
         #terminal-container {
             position: fixed;
             top: 30px;
@@ -59,6 +84,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="status-bar">
         <span id="status-dot" class="status-dot connecting"></span>
@@ -72,7 +98,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
     <script>
-        (function() {
+        (function () {
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('status-text');
 
@@ -92,10 +118,22 @@
             term.open(document.getElementById('terminal'));
             fitAddon.fit();
 
-            // Construct WebSocket URL from current page location
-            // The Nginx config proxies /ws to the backend
+            // Construct WebSocket URL
+            // If running on dashboard (port 81 or specific path), use API path
+            // Otherwise assume proxy domain and use /ws
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            let wsUrl;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const hostId = urlParams.get('id');
+
+            if (hostId && (window.location.pathname.startsWith('/terminal') || window.location.port === '81')) {
+                // Dashboard mode
+                wsUrl = `${protocol}//${window.location.host}/api/nginx/proxy-hosts/${hostId}/terminal/ws`;
+            } else {
+                // Proxy domain mode (legacy/public)
+                wsUrl = `${protocol}//${window.location.host}/ws`;
+            }
 
             const ws = new WebSocket(wsUrl);
 
@@ -165,4 +203,5 @@
         })();
     </script>
 </body>
+
 </html>
