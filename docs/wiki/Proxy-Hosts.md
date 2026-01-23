@@ -28,7 +28,9 @@ If you select **terminal** as the scheme, additional fields will appear to confi
     *   **Password:** Securely encrypted.
     *   **Private Key:** Paste your PEM-formatted private key (encrypted at rest).
 
-To access the terminal, click the **three dots** menu on the specific host in the dashboard and select **Connect**. This will open a secure WebSocket terminal in a new tab.
+To access the terminal, simply **navigate to the domain** you configured (e.g., `https://term.example.com`).
+
+A "Connect" shortcut is also available in the dashboard via the **three dots** menu.
 
 ## 🔒 SSL/TLS (HTTPS)
 *   **Forward Host:** The IP address or hostname of your internal service (e.g., `192.168.1.50` or a container name like `nextcloud`).
