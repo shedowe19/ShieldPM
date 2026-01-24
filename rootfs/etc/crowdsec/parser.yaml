@@ -1,4 +1,4 @@
-filter: "evt.Parsed.program startsWith 'shieldpm'"
+filter: "evt.Parsed.program == 'shieldpm' || evt.Line.Labels.type == 'shieldpm'"
 onsuccess: next_stage
 name: shedowe19/shieldpm-logs
 description: "Parse ShieldPM JSON access logs and error logs"
