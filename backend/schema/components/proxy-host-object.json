@@ -76,6 +76,9 @@
 		"block_exploits": {
 			"$ref": "../common.json#/properties/block_exploits"
 		},
+		"security_crowdsec": {
+			"$ref": "../common.json#/properties/security_crowdsec"
+		},
 		"advanced_config": {
 			"type": "string",
 			"example": ""

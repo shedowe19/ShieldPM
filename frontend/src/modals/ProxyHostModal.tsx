@@ -55,10 +55,6 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		const { ...payload } = {
 			id: id === "new" ? undefined : id,
 			...values,
-			meta: {
-				...data?.meta,
-				crowdsec_enabled: values.crowdsecEnabled,
-			},
 		};
 
 		setProxyHost(payload, {

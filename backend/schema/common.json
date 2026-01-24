@@ -126,6 +126,12 @@
 			"type": "boolean",
 			"example": false
 		},
+		"security_crowdsec": {
+			"description": "Enable CrowdSec IPS",
+			"type": "boolean",
+			"default": false,
+			"example": false
+		},
 		"caching_enabled": {
 			"description": "Should we cache assets",
 			"type": "boolean",

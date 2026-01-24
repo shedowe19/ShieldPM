@@ -25,6 +25,7 @@ const boolFields = [
 	"hsts_subdomains",
 	"maintenance_on_failure",
 	"disable_buffering",
+	"security_crowdsec",
 	"maintenance_active",
 	"php_enabled",
 	"git_sync_enabled",
