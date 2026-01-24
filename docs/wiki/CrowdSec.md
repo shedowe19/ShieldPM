@@ -25,16 +25,16 @@ Add the CrowdSec container to your `compose.yaml`.
       - "./crowdsec-config:/etc/crowdsec"
       - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro" # Read logs from ShieldPM
       # Mount ShieldPM Custom Configs
-      # ⚠️ CHECK YOUR PATH: Ensure ./data matches your host's data path for ShieldPM
-      - "./data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
-      - "./data/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
+      # ⚠️ STANDARD PATH: /opt/shieldpm/data/crowdsec/
+      # Verify this matches your 'volumes' in shieldpm service!
+      - "/opt/shieldpm/data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+      - "/opt/shieldpm/data/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
 ```
 
 > [!WARNING]
 > **Check your paths!**
-> The example above assumes your `compose.yaml` is in the root and your data is in `./data`.
-> If you installed ShieldPM in `/opt/shieldpm`, your mount might look like:
-> `- "/opt/shieldpm/data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"`
+> The example above uses the standard installation path `/opt/shieldpm`.
+> If you are using a custom location or relative paths (e.g. `./data`), adjust the volume mounts accordingly.
 
 ### 2. Connect ShieldPM (The Bouncer)
 
