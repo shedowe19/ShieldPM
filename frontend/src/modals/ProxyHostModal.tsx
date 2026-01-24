@@ -140,11 +140,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								gitCredentials: "", // Do not fill credentials for security
 								// Service Icon
 								iconType: data?.iconType || "auto",
-								// Service Icon
-								iconType: data?.iconType || "auto",
 								iconUrl: data?.iconUrl || "",
 								// CrowdSec
-								crowdsecEnabled: data?.meta?.crowdsec_enabled || false,
+								crowdsecEnabled: data?.securityCrowdsec || false,
 							} as any
 						}
 						enableReinitialize
