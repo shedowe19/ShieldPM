@@ -171,6 +171,8 @@ services:
 #      - "/opt/crowdsec/conf:/etc/crowdsec"
 #      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
 #      - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro"
+#      - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+#      - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
 #      - "/opt/openappsec/logs:/opt/openappsec/logs:ro" # only uncomment if you also use the openappsec-agent container
 
 # --- Database: MySQL ---
