@@ -25,10 +25,10 @@ Add the CrowdSec container to your `compose.yaml`.
       - "./crowdsec-config:/etc/crowdsec"
       - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro" # Read logs from ShieldPM
       # Mount ShieldPM Custom Configs
-      # ⚠️ STANDARD PATH: /opt/shieldpm/data/crowdsec/
+      # ⚠️ STANDARD PATH: /opt/shieldpm/crowdsec/
       # Verify this matches your 'volumes' in shieldpm service!
-      - "/opt/shieldpm/data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
-      - "/opt/shieldpm/data/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
+      - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+      - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
 ```
 
 > [!WARNING]
