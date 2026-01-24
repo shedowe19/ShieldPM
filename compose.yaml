@@ -166,7 +166,7 @@ services:
 #    environment:
 #      - "TZ=Europe/Berlin"
 #      - "USE_WAL=true"
-#      - "COLLECTIONS=shedowe19/shieldpm"
+      # - "COLLECTIONS=crowdsecurity/nginx" # Install basic nginx collection
 #    volumes:
 #      - "/opt/crowdsec/conf:/etc/crowdsec"
 #      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
