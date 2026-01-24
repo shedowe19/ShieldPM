@@ -65,6 +65,33 @@ It should be installed automatically if you set `COLLECTIONS` env var. If not:
 docker exec crowdsec cscli collections install shedowe19/shieldpm
 ```
 
+
+## 📦 Manual Installation (Offline/Custom)
+
+If you cannot connect to the CrowdSec Hub or want to use the bundled configurations directly from this repository, you can mount the provided `crowdsec` directory into your container.
+
+1.  **Mount the files:**
+    Update your `compose.yaml` to include the local `crowdsec` directory:
+    ```yaml
+        volumes:
+          - "./crowdsec:/etc/crowdsec/hub/parsers/s01-parse/shedowe19-shieldpm-logs.yaml:ro"
+          - "./crowdsec:/etc/crowdsec/hub/collections/shedowe19-shieldpm.yaml:ro"
+    ```
+    *Note: The actual paths inside the container might vary depending on your CrowdSec configuration (e.g., typically `.../hub/parsers/...` or `.../acquis.d/...` for acquisition).*
+    
+    **Better approach for custom Parsers:**
+    Mount them into `conf.d`:
+    ```yaml
+        volumes:
+          - "./crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+          - "./crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
+    ```
+
+2.  **Restart CrowdSec:**
+    ```bash
+    docker compose restart crowdsec
+    ```
+
 ## 🕹️ Management (cscli)
 
 *   **List Banners:** `cscli decisions list`
