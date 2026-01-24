@@ -59,6 +59,21 @@ ShieldPM has a built-in Nginx Bouncer.
     docker restart shieldpm
     ```
 
+### 📄 Configuration Reference (`crowdsec.conf`)
+
+| Parameter | Required | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `ENABLED` | **Yes** | Set to `true` to enable the Bouncer. | `true` |
+| `API_URL` | **Yes** | URL of your CrowdSec Agent (Local API). | `http://crowdsec:8080` |
+| `API_KEY` | **Yes** | Bouncer API Key generated via `cscli`. | `your-generated-key` |
+| `CACHE_EXPIRATION` | No | How long to cache decisions locally. | `1s` |
+| `BAN_TEMPLATE_PATH` | No | Path to the HTML file for Ban pages. | `/data/crowdsec/ban.html` |
+| `CAPTCHA_TEMPLATE_PATH` | No | Path to the HTML file for Captcha pages. | `/data/crowdsec/captcha.html` |
+| `SITE_KEY` | Conditional | reCaptcha Site Key (required for Captcha). | `your-site-key` |
+| `SECRET_KEY` | Conditional | reCaptcha Secret Key (required for Captcha). | `your-secret-key` |
+| `REDIRECT_LOCATION` | No | URL to redirect banned users to (instead of template). | `https://google.com` |
+| `RET_CODE` | No | HTTP Status Code for bans (Default: 403). | `403` |
+
 ## ⚙️ Acquisition Configuration
 
 Tell CrowdSec where to find the logs. Create `<crowdsec-conf-vol>/acquis.d/shieldpm.yaml`:
