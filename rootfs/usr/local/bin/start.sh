@@ -502,6 +502,7 @@ if [ "$LOGROTATE" = "true" ]; then
     sed -i "s|access_log off; # stream|access_log /data/nginx/stream.log slog;|g" /usr/local/nginx/conf/nginx.conf
     sed -i "s|#error_log|error_log|g" /usr/local/nginx/conf/nginx.conf
     touch /data/nginx/access.log \
+          /data/nginx/json_access.log \
           /data/nginx/stream.log \
           /data/nginx/error.log
 elif [ "$FULLCLEAN" = "true" ]; then
