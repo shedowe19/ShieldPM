@@ -120,6 +120,7 @@ export interface ProxyHost {
 	cachingEnabled: boolean;
 	disableBuffering: boolean;
 	blockExploits: boolean;
+	securityCrowdsec: boolean;
 	advancedConfig: string;
 	bandwidthLimit: string;
 	meta: Record<string, any>;
