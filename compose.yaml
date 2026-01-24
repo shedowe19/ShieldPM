@@ -166,7 +166,7 @@ services:
 #    environment:
 #      - "TZ=Europe/Berlin"
 #      - "USE_WAL=true"
-      - "COLLECTIONS=crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve" # Install basic nginx collection
+      - "COLLECTIONS=crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve crowdsecurity/modsecurity crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
 #    volumes:
 #      - "/opt/crowdsec/conf:/etc/crowdsec"
 #      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
