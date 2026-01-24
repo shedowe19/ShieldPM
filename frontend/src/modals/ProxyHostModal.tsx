@@ -55,6 +55,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		const { ...payload } = {
 			id: id === "new" ? undefined : id,
 			...values,
+			meta: {
+				...data?.meta,
+				crowdsec_enabled: values.crowdsecEnabled,
+			},
 		};
 
 		setProxyHost(payload, {
@@ -140,7 +144,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								gitCredentials: "", // Do not fill credentials for security
 								// Service Icon
 								iconType: data?.iconType || "auto",
+								// Service Icon
+								iconType: data?.iconType || "auto",
 								iconUrl: data?.iconUrl || "",
+								// CrowdSec
+								crowdsecEnabled: data?.meta?.crowdsec_enabled || false,
 							} as any
 						}
 						enableReinitialize
@@ -220,7 +228,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																				form.touched.forwardScheme
+																					form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -261,7 +269,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																			form.touched.forwardHost
+																				form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -292,7 +300,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																			form.touched.forwardPort
+																				form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -351,8 +359,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																							className={
 																								form.errors
 																									.terminalPort &&
-																								form.touched
-																									.terminalPort
+																									form.touched
+																										.terminalPort
 																									? "border-destructive"
 																									: ""
 																							}
@@ -707,7 +715,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
+																				form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -735,7 +743,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																			form.touched.forwardQuery
+																				form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}
@@ -895,6 +903,31 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</AlertDescription>
 												</Alert>
 
+												<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+													<div className="space-y-0.5">
+														<div className="flex items-center gap-2">
+															<IconShieldLock className="h-4 w-4 text-orange-500" />
+															<Label htmlFor="crowdsecEnabled" className="text-base">
+																CrowdSec IPS
+															</Label>
+														</div>
+														<p className="text-sm text-muted-foreground">
+															Enable CrowdSec Bouncer for this host (Blocks known attackers)
+														</p>
+													</div>
+													<Field name="crowdsecEnabled" type="checkbox">
+														{({ field, form }: any) => (
+															<Switch
+																id="crowdsecEnabled"
+																checked={field.checked}
+																onCheckedChange={(checked: boolean) =>
+																	form.setFieldValue("crowdsecEnabled", checked)
+																}
+															/>
+														)}
+													</Field>
+												</div>
+
 												<div className="grid grid-cols-12 gap-4">
 													<div className="col-span-12 md:col-span-4">
 														<Field
@@ -915,7 +948,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqRate &&
-																			form.touched.advLimitReqRate
+																				form.touched.advLimitReqRate
 																				? "border-destructive"
 																				: ""
 																		}
@@ -973,7 +1006,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqBurst &&
-																			form.touched.advLimitReqBurst
+																				form.touched.advLimitReqBurst
 																				? "border-destructive"
 																				: ""
 																		}
