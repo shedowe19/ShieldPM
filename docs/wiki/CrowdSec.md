@@ -6,7 +6,19 @@
 
 To enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyzes logs) and the **Bouncer** (enforces blocks in Nginx).
 
-### 1. The Agent
+### 1. Pre-Requisites & Order
+
+> [!IMPORTANT]
+> **Initialization Order Matters!**
+> ShieldPM creates the necessary configuration files (`parser.yaml`, `collection.yaml`) on first boot in your data directory.
+> **You must start ShieldPM FIRST** before enabling the CrowdSec container.
+> 1. Start ShieldPM (`docker compose up -d shieldpm`).
+> 2. Wait for it to initialize (check logs).
+> 3. Restart or start CrowdSec (`docker compose up -d crowdsec`).
+>
+> If you start CrowdSec while these files are missing, Docker may create them as **directories**, causing CrowdSec to crash.
+
+### 2. The Agent
 
 Add the CrowdSec container to your `compose.yaml`.
 **Important:** ShieldPM automatically provisions the necessary Parser and Collection configurations to your data directory (default: `data/crowdsec/`). You **must** mount these into the CrowdSec container.
