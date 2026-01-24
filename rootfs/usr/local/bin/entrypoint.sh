@@ -13,6 +13,12 @@ if [ -d "/data/npmplus" ] && [ ! -d "/data/shieldpm" ]; then
     echo "Migration complete."
 fi
 
+# Populate CrowdSec Data Directory
+if [ -d "/etc/crowdsec" ]; then
+    mkdir -p /data/crowdsec
+    cp -u /etc/crowdsec/*.yaml /data/crowdsec/
+fi
+
 if [ -n "$(ls -A /data/prerun 2> /dev/null)" ] && [ "$ENABLE_PRERUN" = "true" ]; then
     for script in /data/prerun/*.sh; do
         echo "Exexcuting prerun script: $script"

@@ -68,24 +68,16 @@ docker exec crowdsec cscli collections install shedowe19/shieldpm
 
 ## 📦 Manual Installation (Offline/Custom)
 
-If you cannot connect to the CrowdSec Hub or want to use the bundled configurations directly from this repository, you can mount the provided `crowdsec` directory into your container.
+If you cannot connect to the CrowdSec Hub, you can use the bundled configurations which are automatically available in your data folder at `data/crowdsec/`.
 
 1.  **Mount the files:**
-    Update your `compose.yaml` to include the local `crowdsec` directory:
+    Update your `compose.yaml` to mount these files into the CrowdSec container:
     ```yaml
         volumes:
-          - "./crowdsec:/etc/crowdsec/hub/parsers/s01-parse/shedowe19-shieldpm-logs.yaml:ro"
-          - "./crowdsec:/etc/crowdsec/hub/collections/shedowe19-shieldpm.yaml:ro"
+          - "./data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+          - "./data/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
     ```
-    *Note: The actual paths inside the container might vary depending on your CrowdSec configuration (e.g., typically `.../hub/parsers/...` or `.../acquis.d/...` for acquisition).*
-    
-    **Better approach for custom Parsers:**
-    Mount them into `conf.d`:
-    ```yaml
-        volumes:
-          - "./crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
-          - "./crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
-    ```
+    *Note: Adjust `./data/crowdsec/` if your host data path is different.*
 
 2.  **Restart CrowdSec:**
     ```bash
