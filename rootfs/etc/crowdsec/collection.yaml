@@ -8,6 +8,8 @@ collections:
   - crowdsecurity/base-http-scenarios
   - crowdsecurity/http-cve
   - crowdsecurity/modsecurity
+  - crowdsecurity/http-bad-user-agent
+  - crowdsecurity/whitelist-good-actors
 scenarios:
   - crowdsecurity/nginx-req-limit-exceeded
 description: "ShieldPM support: parser and generic http scenarios"
