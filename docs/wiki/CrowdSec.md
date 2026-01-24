@@ -2,12 +2,14 @@
 
 [CrowdSec](https://www.crowdsec.net/) is a collaborative IPS (Intrusion Prevention System) that analyzes logs to detect and block malicious behavior.
 
-## 🏗️ Installation
+## Installation / Configuration
 
-Top enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyzes logs) and the **Bouncer** (enforces blocks in Nginx).
+To enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyzes logs) and the **Bouncer** (enforces blocks in Nginx).
 
 ### 1. The Agent
-Add the CrowdSec container to your `compose.yaml`:
+
+Add the CrowdSec container to your `compose.yaml`.
+**Important:** ShieldPM automatically provisions the necessary Parser and Collection configurations to your data directory (default: `data/crowdsec/`). You **must** mount these into the CrowdSec container.
 
 ```yaml
   crowdsec:
@@ -17,14 +19,25 @@ Add the CrowdSec container to your `compose.yaml`:
     network_mode: bridge
     environment:
       - "TZ=Europe/Berlin"
-      - "COLLECTIONS=shedowe19/shieldpm"
+      - "COLLECTIONS=crowdsecurity/nginx" # Install basic nginx collection
     volumes:
-      - "/opt/crowdsec/conf:/etc/crowdsec"
-      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
+      - "./crowdsec-db:/var/lib/crowdsec/data"
+      - "./crowdsec-config:/etc/crowdsec"
       - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro" # Read logs from ShieldPM
+      # Mount ShieldPM Custom Configs
+      # ⚠️ CHECK YOUR PATH: Ensure ./data matches your host's data path for ShieldPM
+      - "./data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+      - "./data/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
 ```
 
+> [!WARNING]
+> **Check your paths!**
+> The example above assumes your `compose.yaml` is in the root and your data is in `./data`.
+> If you installed ShieldPM in `/opt/shieldpm`, your mount might look like:
+> `- "/opt/shieldpm/data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"`
+
 ### 2. Connect ShieldPM (The Bouncer)
+
 ShieldPM has a built-in Nginx Bouncer.
 
 1.  **Generate API Key:**
@@ -35,7 +48,7 @@ ShieldPM has a built-in Nginx Bouncer.
     *Copy the API Key printed.*
 
 2.  **Configure ShieldPM:**
-    Edit `/opt/shieldpm/crowdsec/crowdsec.conf` (created after first run):
+    Edit `data/crowdsec/crowdsec.conf` (or via the UI if available/environment variables):
     ```ini
     API_KEY=your-generated-key
     API_URL=http://<crowdsec-container-ip>:8080
@@ -46,9 +59,8 @@ ShieldPM has a built-in Nginx Bouncer.
     docker restart shieldpm
     ```
 
-## ⚙️ Configuration
+## ⚙️ Acquisition Configuration
 
-### Acquisition
 Tell CrowdSec where to find the logs. Create `<crowdsec-conf-vol>/acquis.d/shieldpm.yaml`:
 
 ```yaml
@@ -58,31 +70,7 @@ labels:
   type: shieldpm
 ```
 
-### Collections
-The `shedowe19/shieldpm` collection includes parser rules specifically for Nginx Proxy Manager logs.
-It should be installed automatically if you set `COLLECTIONS` env var. If not:
-```bash
-docker exec crowdsec cscli collections install shedowe19/shieldpm
-```
-
-
-## 📦 Manual Installation (Offline/Custom)
-
-If you cannot connect to the CrowdSec Hub, you can use the bundled configurations which are automatically available in your data folder at `data/crowdsec/`.
-
-1.  **Mount the files:**
-    Update your `compose.yaml` to mount these files into the CrowdSec container:
-    ```yaml
-        volumes:
-          - "./data/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
-          - "./data/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
-    ```
-    *Note: Adjust `./data/crowdsec/` if your host data path is different.*
-
-2.  **Restart CrowdSec:**
-    ```bash
-    docker compose restart crowdsec
-    ```
+---
 
 ## 🕹️ Management (cscli)
 
