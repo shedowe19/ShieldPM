@@ -61,6 +61,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			sanitizedValues.advLimitReqBurst = null;
 		}
 
+		// Map frontend field to backend schema
+		if (typeof sanitizedValues.crowdsecEnabled !== "undefined") {
+			sanitizedValues.security_crowdsec = sanitizedValues.crowdsecEnabled;
+			delete sanitizedValues.crowdsecEnabled;
+		}
+
 		const { ...payload } = {
 			id: id === "new" ? undefined : id,
 			...sanitizedValues,
