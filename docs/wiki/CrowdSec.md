@@ -65,7 +65,8 @@ Tell CrowdSec where to find the logs. Create `<crowdsec-conf-vol>/acquis.d/shiel
 
 ```yaml
 filenames:
-  - /opt/shieldpm/nginx/*.log
+  - /opt/shieldpm/nginx/json_access.log
+  - /opt/shieldpm/nginx/error.log
 labels:
   type: shieldpm
 ```
