@@ -52,9 +52,18 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
+		// Sanitize numeric fields that can be null
+		const sanitizedValues = { ...values };
+		if (sanitizedValues.advLimitReqRate === "" || isNaN(sanitizedValues.advLimitReqRate)) {
+			sanitizedValues.advLimitReqRate = null;
+		}
+		if (sanitizedValues.advLimitReqBurst === "" || isNaN(sanitizedValues.advLimitReqBurst)) {
+			sanitizedValues.advLimitReqBurst = null;
+		}
+
 		const { ...payload } = {
 			id: id === "new" ? undefined : id,
-			...values,
+			...sanitizedValues,
 		};
 
 		setProxyHost(payload, {
@@ -222,7 +231,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																				form.touched.forwardScheme
+																					form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -263,7 +272,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																			form.touched.forwardHost
+																				form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -294,7 +303,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																			form.touched.forwardPort
+																				form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -353,8 +362,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																							className={
 																								form.errors
 																									.terminalPort &&
-																								form.touched
-																									.terminalPort
+																									form.touched
+																										.terminalPort
 																									? "border-destructive"
 																									: ""
 																							}
@@ -709,7 +718,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
+																				form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -737,7 +746,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																			form.touched.forwardQuery
+																				form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}
@@ -927,7 +936,6 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<div className="col-span-12 md:col-span-4">
 														<Field
 															name="advLimitReqRate"
-															validate={validateNumber(0, 100000)}
 														>
 															{({ field, form }: any) => (
 																<div className="space-y-2">
@@ -943,7 +951,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqRate &&
-																			form.touched.advLimitReqRate
+																				form.touched.advLimitReqRate
 																				? "border-destructive"
 																				: ""
 																		}
@@ -985,7 +993,6 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<div className="col-span-12 md:col-span-4">
 														<Field
 															name="advLimitReqBurst"
-															validate={validateNumber(0, 100000)}
 														>
 															{({ field, form }: any) => (
 																<div className="space-y-2">
@@ -1001,7 +1008,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqBurst &&
-																			form.touched.advLimitReqBurst
+																				form.touched.advLimitReqBurst
 																				? "border-destructive"
 																				: ""
 																		}
