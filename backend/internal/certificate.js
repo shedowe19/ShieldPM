@@ -204,12 +204,9 @@ const internalCertificate = {
 		// Add to audit log
 		await internalCertificate.addCreatedAuditLog(access, certificate.id, utils.omitRow(omissions())(data));
 
-		// @ts-expect-error
-		rows = rows.map(utils.omitRow(omissions()));
-
 		internalGitOps.triggerAutoPush("certificate");
 
-		return certificate;
+		return utils.omitRow(omissions())(certificate);
 	},
 
 	addCreatedAuditLog: async (access, certificate_id, meta) => {
