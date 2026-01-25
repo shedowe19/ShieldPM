@@ -104,7 +104,9 @@ const internalGitDeploy = {
 		const gitDir = path.join(dir, ".git");
 
 		try {
-			logger.info(`[git-deploy] Starting sync for host ${hostId} (Repo: ${host.git_repo_url}, Branch: ${host.git_branch || "main"})`);
+			logger.info(
+				`[git-deploy] Starting sync for host ${hostId} (Repo: ${host.git_repo_url}, Branch: ${host.git_branch || "main"})`,
+			);
 
 			// Check if repo already exists
 			let repoExists = fs.existsSync(gitDir);
