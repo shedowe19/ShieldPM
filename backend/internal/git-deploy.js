@@ -353,7 +353,6 @@ const internalGitDeploy = {
 			}
 		}, intervalMs);
 
-
 		pollingTimers.set(host.id, timer);
 
 		// Trigger immediate sync
