@@ -353,7 +353,13 @@ const internalGitDeploy = {
 			}
 		}, intervalMs);
 
+
 		pollingTimers.set(host.id, timer);
+
+		// Trigger immediate sync
+		internalGitDeploy.sync(host.id).catch((err) => {
+			logger.error(`[git-deploy] Initial sync failed for host ${host.id}:`, err);
+		});
 	},
 
 	/**
