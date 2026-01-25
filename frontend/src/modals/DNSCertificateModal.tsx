@@ -63,7 +63,7 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 								</DialogTitle>
 							</DialogHeader>
 
-							<div className="py-4 space-y-4 max-h-[70vh] overflow-y-auto px-1">
+							<div className="py-4 space-y-4">
 								{errorMsg && (
 									<Alert variant="destructive">
 										<AlertTitle>Error</AlertTitle>
