@@ -23,8 +23,6 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 	const { data: dnsProviders, isLoading } = useDnsProviders();
 	const [dnsProviderId, setDnsProviderId] = useState<string | null>(null);
 
-
-
 	const handleChange = (newValue: any, _actionMeta: ActionMeta<DNSProviderOption>) => {
 		setFieldValue("meta.dnsProvider", newValue?.value);
 		setFieldValue("meta.dnsProviderCredentials", newValue?.credentials);
