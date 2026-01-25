@@ -104,11 +104,18 @@ const internalGitDeploy = {
 		const gitDir = path.join(dir, ".git");
 
 		try {
+			logger.info(`[git-deploy] Starting sync for host ${hostId} (Repo: ${host.git_repo_url}, Branch: ${host.git_branch || "main"})`);
+
 			// Check if repo already exists
-			if (fs.existsSync(gitDir)) {
+			let repoExists = fs.existsSync(gitDir);
+			logger.debug(`[git-deploy] Host ${hostId}: Repo exists? ${repoExists}`);
+
+			if (repoExists) {
 				// Check for branch mismatch
 				const currentBranch = await git.currentBranch({ fs, dir });
 				const targetBranch = host.git_branch || "main";
+
+				logger.debug(`[git-deploy] Host ${hostId}: Current branch: ${currentBranch}, Target: ${targetBranch}`);
 
 				if (currentBranch !== targetBranch) {
 					logger.info(
@@ -116,6 +123,7 @@ const internalGitDeploy = {
 					);
 					fs.rmSync(dir, { recursive: true, force: true });
 					fs.mkdirSync(dir, { recursive: true });
+					repoExists = false; // Mark as not existing so we clone
 				}
 			}
 
