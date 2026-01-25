@@ -127,6 +127,10 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 											fontSize: 12,
 											backgroundColor: "#1e1e1e",
 											minHeight: "130px",
+											maxHeight: "400px",
+											overflowY: "auto",
+											whiteSpace: "pre-wrap",
+											wordBreak: "break-word",
 										}}
 										value={v.meta.dnsProviderCredentials || ""}
 										{...field}
