@@ -1,11 +1,11 @@
 import { IconAlertTriangle } from "@tabler/icons-react";
-import CodeEditor from "@uiw/react-textarea-code-editor";
 import { Field, useFormikContext } from "formik";
 import { useState } from "react";
 import Select, { type ActionMeta } from "react-select";
 import type { DNSProvider } from "src/api/backend";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
+import { Textarea } from "src/components/ui/textarea";
 import { useDnsProviders } from "src/hooks";
 import { intl, T } from "src/locale";
 
@@ -114,25 +114,10 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 									<T id="certificates.dns.credentials" />
 								</Label>
 								<div className="rounded-md border overflow-hidden">
-									<CodeEditor
-										language="bash"
+									<Textarea
 										id="dnsProviderCredentials"
-										padding={15}
-										data-color-mode="dark"
-										minHeight={130}
-										indentWidth={2}
-										style={{
-											fontFamily:
-												"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-											fontSize: 12,
-											backgroundColor: "#1e1e1e",
-											minHeight: "130px",
-											maxHeight: "400px",
-											overflowY: "auto",
-											whiteSpace: "pre-wrap",
-											wordBreak: "break-word",
-										}}
-										value={v.meta.dnsProviderCredentials || ""}
+										className="font-mono min-h-[130px] bg-[#1e1e1e] border-none focus-visible:ring-1 focus-visible:ring-offset-0"
+										spellCheck={false}
 										{...field}
 									/>
 								</div>
