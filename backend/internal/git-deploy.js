@@ -106,6 +106,21 @@ const internalGitDeploy = {
 		try {
 			// Check if repo already exists
 			if (fs.existsSync(gitDir)) {
+				// Check for branch mismatch
+				const currentBranch = await git.currentBranch({ fs, dir });
+				const targetBranch = host.git_branch || "main";
+
+				if (currentBranch !== targetBranch) {
+					logger.info(
+						`[git-deploy] Branch changed from '${currentBranch}' to '${targetBranch}' for host ${hostId}. Re-cloning...`,
+					);
+					fs.rmSync(dir, { recursive: true, force: true });
+					fs.mkdirSync(dir, { recursive: true });
+				}
+			}
+
+			// Check if repo exists (it might have been deleted above)
+			if (fs.existsSync(gitDir)) {
 				// Pull latest changes
 				logger.info(`[git-deploy] Pulling updates for host ${hostId}...`);
 
