@@ -198,6 +198,8 @@ const internalCertificate = {
 		} catch (err) {
 			// Delete the certificate here. This is a hard delete, since it never existed properly
 			await certificateModel.query().deleteById(certificate.id);
+			// Mark as public so the user sees the real error
+			err.public = true;
 			throw err;
 		}
 
