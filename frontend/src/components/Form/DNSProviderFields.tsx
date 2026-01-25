@@ -19,11 +19,11 @@ interface Props {
 	showBoundaryBox?: boolean;
 }
 export function DNSProviderFields({ showBoundaryBox = false }: Props) {
-	const { values, setFieldValue } = useFormikContext();
+	const { setFieldValue } = useFormikContext();
 	const { data: dnsProviders, isLoading } = useDnsProviders();
 	const [dnsProviderId, setDnsProviderId] = useState<string | null>(null);
 
-	const v: any = values || {};
+
 
 	const handleChange = (newValue: any, _actionMeta: ActionMeta<DNSProviderOption>) => {
 		setFieldValue("meta.dnsProvider", newValue?.value);
