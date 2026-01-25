@@ -32,4 +32,46 @@ The analytics feature is designed with privacy in mind:
 
 ## Configuration
 
-Analytics are enabled by default. No additional configuration is required.
+Analytics are enabled by default. No additional configuration is required for the basic functionality.
+
+### Enabling GeoIP (Country Statistics)
+
+To enable the country breakdown in the analytics dashboard, you need to provide MaxMind GeoIP databases and enable the Nginx module.
+
+#### 1. Configure GeoIP Update
+Uncomment the `geoipupdate` service in your `compose.yaml` and ensure the volume points to `/opt/shieldpm/nginx`. You will need a free account from [MaxMind](https://www.maxmind.com/en/geolite2/signup).
+
+```yaml
+  geoipupdate:
+    container_name: shieldpm-geoipupdate
+    image: ghcr.io/maxmind/geoipupdate:latest
+    restart: always
+    network_mode: bridge
+    environment:
+      - "TZ=Europe/Berlin"
+      - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City" # GeoLite2-ASN is optional
+      - "GEOIPUPDATE_ACCOUNT_ID=<your-account-id>"
+      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>"
+      - "GEOIPUPDATE_FREQUENCY=24"
+    volumes:
+      - "/opt/shieldpm/nginx:/usr/share/GeoIP"
+```
+
+> [!IMPORTANT]
+> The volume path must be `/opt/shieldpm/nginx` on the host side, as this maps to `/data/nginx` inside the ShieldPM container, which is where Nginx expects the files.
+
+#### 2. Enable Nginx Module
+In your `shieldpm` service environment variables, enable the GeoIP2 module:
+
+```yaml
+    environment:
+      # ... other settings ...
+      - "NGINX_LOAD_GEOIP2_MODULE=true"
+```
+
+#### 3. Restart
+Restart your stack to apply the changes:
+```bash
+docker compose up -d
+```
+Once restarted, Nginx will load the GeoIP database, and new requests will be tagged with their country code.

@@ -219,7 +219,7 @@ services:
 #      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>" # needs to be changed
 #      - "GEOIPUPDATE_FREQUENCY=24"
 #    volumes:
-#      - "/opt/shieldpm/goaccess/geoip:/usr/share/GeoIP"
+#      - "/opt/shieldpm/nginx:/usr/share/GeoIP"
 
 # --- Caddy (Redirector) ---
 #  shieldpm-caddy:
