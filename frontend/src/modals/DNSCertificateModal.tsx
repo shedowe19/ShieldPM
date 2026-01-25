@@ -32,7 +32,13 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 			showObjectSuccess("certificate", "saved");
 			remove();
 		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+			// If the error message likely contains spaces, use it directly (it's a raw log)
+			// Otherwise try to translate it
+			if (err.message && err.message.includes(" ")) {
+				setErrorMsg(err.message);
+			} else {
+				setErrorMsg(<T id={err.message} />);
+			}
 		}
 		queryClient.invalidateQueries({ queryKey: ["certificates"] });
 		setIsSubmitting(false);
@@ -67,7 +73,15 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 								{errorMsg && (
 									<Alert variant="destructive">
 										<AlertTitle>Error</AlertTitle>
-										<AlertDescription>{errorMsg}</AlertDescription>
+										<AlertDescription>
+											{typeof errorMsg === "string" && errorMsg.includes(" ") ? (
+												<div className="whitespace-pre-wrap font-mono text-xs max-h-[200px] overflow-y-auto mt-2">
+													{errorMsg}
+												</div>
+											) : (
+												errorMsg
+											)}
+										</AlertDescription>
 									</Alert>
 								)}
 
