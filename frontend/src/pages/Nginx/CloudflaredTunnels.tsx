@@ -1,4 +1,5 @@
 import { IconEdit, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
+import dayjs from "dayjs";
 import { Cloud, Lock } from "lucide-react";
 import { useState } from "react";
 import type { CloudflaredTunnel } from "@/api/backend";
@@ -147,7 +148,7 @@ export function CloudflaredTunnels() {
 									<TableRow key={tunnel.id}>
 										<TableCell className="font-medium">{tunnel.name}</TableCell>
 										<TableCell>{getStatusBadge(tunnel.status)}</TableCell>
-										<TableCell>{tunnel.createdOn}</TableCell>
+										<TableCell>{dayjs(tunnel.createdOn).format("YYYY-MM-DD HH:mm:ss")}</TableCell>
 										<TableCell className="text-right space-x-2">
 											<Button variant="ghost" size="icon" onClick={() => handleEdit(tunnel)}>
 												<IconEdit className="h-4 w-4" />

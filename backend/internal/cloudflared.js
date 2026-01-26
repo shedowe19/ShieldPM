@@ -58,17 +58,26 @@ const internalCloudflared = {
 			child.on("exit", (code, signal) => {
 				logger.warn(`Cloudflared Tunnel ${tunnel.id} exited with code ${code} / signal ${signal}`);
 				processes.delete(tunnel.id);
+
+				// Determine status based on exit code
+				// 0 = Stopped (Clean exit)
+				// Anything else = Error
+				const newStatus = code === 0 || code === null ? 0 : 3;
+
 				tunnel
 					.$query()
-					.patch({ status: 0 })
+					.patch({ status: newStatus })
 					.then()
-					.catch(() => {}); // Set to stopped
+					.catch(() => { });
 			});
 
-			// Assume running if no immediate exit?
-			// Cloudflared doesn't really signal "ready" easily via simple spawn without parsing logs.
-			// We'll set to 2 (Running) immediately.
-			await tunnel.$query().patch({ status: 2 });
+			// Wait 2 seconds to ensure the process is stable
+			await new Promise((resolve) => setTimeout(resolve, 2000));
+
+			if (processes.has(tunnel.id)) {
+				// Still running after 2 seconds, mark as Online
+				await tunnel.$query().patch({ status: 2 });
+			}
 		} catch (err) {
 			logger.error(`Failed to start Cloudflared Tunnel ${tunnel.id}:`, err);
 			await tunnel.$query().patch({ status: 3 }); // Error
