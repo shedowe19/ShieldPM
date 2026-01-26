@@ -27,7 +27,7 @@ router.get("/", async (_req, res, next) => {
 			.orderBy("name", "ASC");
 
 		// Debug log
-		tunnels.forEach(t => {
+		tunnels.forEach((t) => {
 			if (t.status === 3) {
 				logger.info(`[API Debug] Tunnel ${t.id} (Status 3) Meta:`, JSON.stringify(t.meta));
 			}
