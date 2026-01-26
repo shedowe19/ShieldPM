@@ -253,7 +253,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="forwardScheme"
 																			className={
 																				form.errors.forwardScheme &&
-																					form.touched.forwardScheme
+																				form.touched.forwardScheme
 																					? "border-destructive"
 																					: ""
 																			}
@@ -294,7 +294,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		autoComplete="off"
 																		className={
 																			form.errors.forwardHost &&
-																				form.touched.forwardHost
+																			form.touched.forwardHost
 																				? "border-destructive"
 																				: ""
 																		}
@@ -325,7 +325,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="eg: 8081"
 																		className={
 																			form.errors.forwardPort &&
-																				form.touched.forwardPort
+																			form.touched.forwardPort
 																				? "border-destructive"
 																				: ""
 																		}
@@ -414,8 +414,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																							className={
 																								form.errors
 																									.terminalPort &&
-																									form.touched
-																										.terminalPort
+																								form.touched
+																									.terminalPort
 																									? "border-destructive"
 																									: ""
 																							}
@@ -770,7 +770,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.bandwidthLimit &&
-																				form.touched.bandwidthLimit
+																			form.touched.bandwidthLimit
 																				? "border-destructive"
 																				: ""
 																		}
@@ -798,7 +798,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		placeholder="e.g. api_key=123"
 																		className={
 																			form.errors.forwardQuery &&
-																				form.touched.forwardQuery
+																			form.touched.forwardQuery
 																				? "border-destructive"
 																				: ""
 																		}
@@ -1001,7 +1001,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqRate &&
-																				form.touched.advLimitReqRate
+																			form.touched.advLimitReqRate
 																				? "border-destructive"
 																				: ""
 																		}
@@ -1056,7 +1056,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		})}
 																		className={
 																			form.errors.advLimitReqBurst &&
-																				form.touched.advLimitReqBurst
+																			form.touched.advLimitReqBurst
 																				? "border-destructive"
 																				: ""
 																		}
