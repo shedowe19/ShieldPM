@@ -142,6 +142,7 @@ export interface ProxyHost {
 	// PHP hosting (for scheme=path)
 	phpEnabled?: boolean;
 	phpVersion?: string;
+	indexFile?: string; // Add indexFile
 	// Git Sync (for scheme=path)
 	gitRepoUrl?: string | null;
 	gitBranch?: string;
