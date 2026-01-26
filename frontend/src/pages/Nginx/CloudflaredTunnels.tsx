@@ -60,16 +60,18 @@ export function CloudflaredTunnels() {
 				return (
 					<TooltipProvider>
 						<Tooltip>
-							<TooltipTrigger>
-								<Badge className="bg-red-500 text-white hover:bg-red-600 cursor-help">
-									<T id="error.unknown" />
-								</Badge>
+							<TooltipTrigger asChild>
+								<span tabIndex={0} className="cursor-help inline-flex">
+									<Badge className="bg-red-500 text-white hover:bg-red-600 pointer-events-none">
+										<T id="error.unknown" />
+									</Badge>
+								</span>
 							</TooltipTrigger>
-							{tunnel.meta?.last_error && (
-								<TooltipContent className="max-w-md">
-									<p className="font-mono text-xs whitespace-pre-wrap">{tunnel.meta.last_error}</p>
-								</TooltipContent>
-							)}
+							<TooltipContent className="max-w-md">
+								<p className="font-mono text-xs whitespace-pre-wrap">
+									{tunnel.meta?.last_error || "No error details available. Check container logs."}
+								</p>
+							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
 				);
