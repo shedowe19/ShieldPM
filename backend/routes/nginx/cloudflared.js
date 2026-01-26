@@ -23,7 +23,6 @@ router.get("/", async (_req, res, next) => {
 		const tunnels = await CloudflaredTunnel.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
-			.andWhere("is_deleted", 0)
 			.orderBy("name", "ASC");
 
 		// Debug log
