@@ -1,4 +1,4 @@
-import { IconArrowsRightLeft } from "@tabler/icons-react";
+import { IconArrowsRightLeft, IconNote } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { Loader2 } from "lucide-react";
@@ -104,12 +104,15 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								</div>
 
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-									<TabsList className="grid w-full grid-cols-2">
+									<TabsList className="grid w-full grid-cols-3">
 										<TabsTrigger value="details">
 											<T id="column.details" />
 										</TabsTrigger>
 										<TabsTrigger value="ssl">
 											<T id="column.ssl" />
+										</TabsTrigger>
+										<TabsTrigger value="notes">
+											<IconNote size={20} />
 										</TabsTrigger>
 									</TabsList>
 
@@ -246,6 +249,9 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 												</div>
 											</div>
+										</TabsContent>
+
+										<TabsContent value="notes" className="space-y-4">
 											<Field name="note">
 												{({ field }: any) => (
 													<div className="space-y-2 mb-4">
@@ -257,7 +263,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															placeholder={intl.formatMessage({
 																id: "host.note.placeholder",
 															})}
-															className="min-h-[100px]"
+															className="min-h-[300px] font-mono text-sm"
 															{...field}
 														/>
 														<p className="text-xs text-muted-foreground">
@@ -303,7 +309,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</Formik>
 				)}
 			</DialogContent>
-		</Dialog>
+		</Dialog >
 	);
 });
 

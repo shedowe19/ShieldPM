@@ -1,4 +1,4 @@
-import { IconGhost, IconSettings } from "@tabler/icons-react";
+import { IconGhost, IconNote, IconSettings } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { Loader2 } from "lucide-react";
@@ -111,7 +111,7 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								</div>
 
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-									<TabsList className="grid w-full grid-cols-3">
+									<TabsList className="grid w-full grid-cols-4">
 										<TabsTrigger value="details">
 											<T id="column.details" />
 										</TabsTrigger>
@@ -121,6 +121,9 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<TabsTrigger value="advanced">
 											<IconSettings size={16} className="mr-2" />
 											<span className="sr-only">Settings</span>
+										</TabsTrigger>
+										<TabsTrigger value="notes">
+											<IconNote size={20} />
 										</TabsTrigger>
 									</TabsList>
 
@@ -139,6 +142,10 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										</TabsContent>
 
 										<TabsContent value="advanced">
+											<NginxConfigField />
+										</TabsContent>
+
+										<TabsContent value="notes">
 											<Field name="note">
 												{({ field }: any) => (
 													<div className="space-y-2 mb-4">
@@ -150,7 +157,7 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															placeholder={intl.formatMessage({
 																id: "host.note.placeholder",
 															})}
-															className="min-h-[100px]"
+															className="min-h-[300px] font-mono text-sm"
 															{...field}
 														/>
 														<p className="text-xs text-muted-foreground">
@@ -159,7 +166,6 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 												)}
 											</Field>
-											<NginxConfigField />
 										</TabsContent>
 									</div>
 								</Tabs>
@@ -182,7 +188,7 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</Formik>
 				)}
 			</DialogContent>
-		</Dialog>
+		</Dialog >
 	);
 });
 
