@@ -121,7 +121,7 @@ const internalCertificate = {
 		}
 
 		// this command really should clean up and delete the cert if it can't fully succeed
-		const certificate = await certificateModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		const certificate = await certificateModel.query().insertAndFetch(/** @type {any} */(thisData));
 
 		try {
 			if (certificate.provider === "letsencrypt") {
@@ -145,7 +145,7 @@ const internalCertificate = {
 								dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
 							),
 						})
-						.then(/** @type {any} */ (utils.omitRow(omissions())));
+						.then(/** @type {any} */(utils.omitRow(omissions())));
 
 					// Add cert data for audit log
 					savedRow.meta = _.assign({}, savedRow.meta, {
@@ -186,7 +186,7 @@ const internalCertificate = {
 								certificate_key: result.privkey,
 							}),
 						})
-						.then(/** @type {any} */ (utils.omitRow(omissions())));
+						.then(/** @type {any} */(utils.omitRow(omissions())));
 
 					await internalCertificate.addCreatedAuditLog(access, certificate.id, savedRow);
 					return savedRow;
@@ -250,8 +250,8 @@ const internalCertificate = {
 
 		const savedRow = await certificateModel
 			.query()
-			.patchAndFetchById(row.id, /** @type {any} */ (thisData))
-			.then(/** @type {any} */ (utils.omitRow(omissions())));
+			.patchAndFetchById(row.id, /** @type {any} */(thisData))
+			.then(/** @type {any} */(utils.omitRow(omissions())));
 
 		savedRow.meta = internalCertificate.cleanMeta(savedRow.meta);
 		if (thisData.meta) {
@@ -302,7 +302,7 @@ const internalCertificate = {
 			query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 		}
 
-		const row = await query.then(/** @type {any} */ (utils.omitRow(omissions())));
+		const row = await query.then(/** @type {any} */(utils.omitRow(omissions())));
 		if (!row || !row.id) {
 			throw new error.ItemNotFoundError(thisData.id);
 		}
@@ -471,7 +471,7 @@ const internalCertificate = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		const r = await query.then(/** @type {any} */ (utils.omitRows(omissions())));
+		const r = await query.then(/** @type {any} */(utils.omitRows(omissions())));
 		for (let i = 0; i < r.length; i++) {
 			r[i] = internalCertificate.cleanExpansions(r[i]);
 		}
@@ -493,7 +493,7 @@ const internalCertificate = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */ (row).count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 
 	/**
@@ -501,7 +501,10 @@ const internalCertificate = {
 	 * @returns {Promise}
 	 */
 	writeCustomCert: async (certificate) => {
-		logger.info("Writing Custom Certificate:", certificate);
+		logger.info("Writing Custom Certificate:", {
+			...certificate,
+			meta: internalCertificate.cleanMeta({ ...certificate.meta }, false),
+		});
 
 		const dir = `/data/tls/custom/npm-${certificate.id}`;
 
@@ -631,7 +634,7 @@ const internalCertificate = {
 
 		const certificate = await internalCertificate.update(
 			access,
-			/** @type {any} */ ({
+			/** @type {any} */({
 				id: data.id,
 				expires_on: /** @type {any} */ (
 					dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss")
