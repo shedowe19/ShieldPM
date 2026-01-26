@@ -96,7 +96,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -111,7 +111,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -272,6 +272,14 @@ const internalNginx = {
 			const end = dayjs(host.maintenance_end);
 			if (now.isAfter(start) && now.isBefore(end)) {
 				host.maintenance_mode = true;
+			}
+		}
+
+		// Calculate index_dir if index_file is set and contains a path separator
+		if (host.index_file && host.index_file.includes("/")) {
+			const indexDir = dirname(host.index_file);
+			if (indexDir && indexDir !== ".") {
+				host.index_dir = indexDir;
 			}
 		}
 
