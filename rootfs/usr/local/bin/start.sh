@@ -300,6 +300,20 @@ if [ ! -s /data/crowdsec/crowdsec.conf ]; then
 fi
 cp -a /usr/local/nginx/conf/conf.d/include/crowdsec.conf /data/crowdsec/crowdsec.conf.example
 
+if ! grep -q "^REQUEST_TIMEOUT=" /data/crowdsec/crowdsec.conf; then
+    echo "REQUEST_TIMEOUT=5000" >> /data/crowdsec/crowdsec.conf
+fi
+if ! grep -q "^FALLBACK_REMEDIATION=" /data/crowdsec/crowdsec.conf; then
+    echo "FALLBACK_REMEDIATION=ban" >> /data/crowdsec/crowdsec.conf
+fi
+if ! grep -q "^BOUNCING_ON_TYPE=" /data/crowdsec/crowdsec.conf; then
+    echo "BOUNCING_ON_TYPE=all" >> /data/crowdsec/crowdsec.conf
+fi
+if ! grep -q "^CAPTCHA_PROVIDER=" /data/crowdsec/crowdsec.conf; then
+    echo "CAPTCHA_PROVIDER=recaptcha" >> /data/crowdsec/crowdsec.conf
+fi
+
+
 if grep -iq "^ENABLED *= *true$" /data/crowdsec/crowdsec.conf; then
     if [ ! -s /usr/local/nginx/conf/conf.d/crowdsec.conf ]; then
         cp -van /usr/local/nginx/conf/conf.d/include/crowdsec_nginx.conf /usr/local/nginx/conf/conf.d/crowdsec.conf

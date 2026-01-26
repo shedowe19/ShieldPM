@@ -379,6 +379,31 @@ const internalGitOps = {
 		// Copy certificate files if they exist
 		await internalGitOps.exportCertificateFiles(configDir, exportedFiles);
 
+		// Prune stale files (files that exist in the config dir but were not just exported)
+		// This ensures that deleted items are removed from the git repository
+		const pruneDirectory = (dir) => {
+			if (!fs.existsSync(dir)) return;
+			const items = fs.readdirSync(dir);
+			for (const item of items) {
+				const fullPath = path.join(dir, item);
+				const stat = fs.statSync(fullPath);
+				if (stat.isDirectory()) {
+					pruneDirectory(fullPath);
+					// If empty after prune, delete dir
+					if (fs.readdirSync(fullPath).length === 0) {
+						fs.rmdirSync(fullPath);
+					}
+				} else {
+					if (!exportedFiles.includes(fullPath)) {
+						fs.unlinkSync(fullPath);
+						logger.info(`GitOps: Pruned stale file: ${fullPath.replace(GITOPS_DIR, "")}`);
+					}
+				}
+			}
+		};
+
+		pruneDirectory(configDir);
+
 		logger.info(`Exported ${exportedFiles.length} configuration files`);
 		return exportedFiles;
 	},

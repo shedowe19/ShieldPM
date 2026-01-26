@@ -127,8 +127,7 @@ router
 	.put(async (req, res, next) => {
 		try {
 			const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}", "put"), req.body);
-			logger.info(`[DEBUG] PUT proxy-host payload: ${JSON.stringify(payload, null, 2)}`);
-			logger.info(`[DEBUG] PUT proxy-host req.body: ${JSON.stringify(req.body, null, 2)}`);
+
 			payload.id = Number.parseInt(req.params.host_id, 10);
 			const result = await internalProxyHost.update(res.locals.access, payload);
 			res.status(200).send(result);

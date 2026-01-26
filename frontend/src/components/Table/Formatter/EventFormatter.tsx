@@ -1,4 +1,13 @@
-import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc, IconLock, IconShield, IconUser } from "@tabler/icons-react";
+import {
+	IconArrowsCross,
+	IconBolt,
+	IconBoltOff,
+	IconDisc,
+	IconLock,
+	IconNote,
+	IconShield,
+	IconUser,
+} from "@tabler/icons-react";
 import cn from "classnames";
 import type { AuditLog } from "src/api/backend";
 import { Badge } from "src/components/ui/badge";
@@ -22,6 +31,8 @@ const getEventValue = (event: AuditLog) => {
 		case "cloudflared-tunnel":
 		case "setting":
 			return event.meta?.name || event.meta?.id || "N/A";
+		case "dashboard_note":
+			return event.meta?.content || "Dashboard Note";
 		case "tor-onion":
 			return event.meta?.onion_address || "N/A";
 		default:
@@ -80,6 +91,9 @@ const getIcon = (row: AuditLog) => {
 		case "setting":
 			ico = <IconBolt size={16} className={c} />;
 			break;
+		case "dashboard_note":
+			ico = <IconNote size={16} className={c} />;
+			break;
 	}
 
 	return ico;
@@ -95,7 +109,7 @@ export function EventFormatter({ row }: Props) {
 				{getIcon(row)}
 				<T id={`object.event.${row.action}`} tData={{ object: row.objectType }} />
 				&nbsp; &mdash;{" "}
-				<Badge variant="secondary" className="ml-2 font-normal">
+				<Badge variant="secondary" className="ml-2 font-normal max-w-[300px] truncate block">
 					{getEventValue(row)}
 				</Badge>
 			</div>

@@ -60,6 +60,7 @@ const getFlagCodeForLocale = (locale?: string) => {
 		zh: "cn", // China
 		vi: "vn", // Vietnam
 		ko: "kr", // Korea
+		en: "gb", // English (UK)
 	};
 
 	if (specialCases[thisLocale]) {

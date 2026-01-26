@@ -501,7 +501,10 @@ const internalCertificate = {
 	 * @returns {Promise}
 	 */
 	writeCustomCert: async (certificate) => {
-		logger.info("Writing Custom Certificate:", certificate);
+		logger.info("Writing Custom Certificate:", {
+			...certificate,
+			meta: internalCertificate.cleanMeta({ ...certificate.meta }, false),
+		});
 
 		const dir = `/data/tls/custom/npm-${certificate.id}`;
 

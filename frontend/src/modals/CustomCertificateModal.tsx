@@ -1,4 +1,4 @@
-import { IconAlertTriangle, IconCertificate } from "@tabler/icons-react";
+import { IconCertificate } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
@@ -11,6 +11,8 @@ import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Textarea } from "src/components/ui/textarea";
 import { T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
@@ -23,6 +25,12 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [mode, setMode] = useState<"upload" | "paste">("upload");
+
+	const validatePem = (content: string, type: "PRIVATE KEY" | "CERTIFICATE") => {
+		if (!content) return false;
+		return content.includes(`-----BEGIN ${type}-----`);
+	};
 
 	const onSubmit = async (values: any, { setSubmitting }: any) => {
 		if (isSubmitting) return;
@@ -30,13 +38,44 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 		setErrorMsg(null);
 
 		try {
-			const { niceName, provider, certificate, certificateKey, intermediateCertificate } = values;
+			const { niceName, provider } = values;
 			const formData = new FormData();
 
-			formData.append("certificate", certificate);
-			formData.append("certificate_key", certificateKey);
-			if (intermediateCertificate !== null) {
-				formData.append("intermediate_certificate", intermediateCertificate);
+			if (mode === "upload") {
+				if (!values.certificate || !values.certificateKey) {
+					throw new Error("certificate.errors.missing_files");
+				}
+				formData.append("certificate", values.certificate);
+				formData.append("certificate_key", values.certificateKey);
+				if (values.intermediateCertificate) {
+					formData.append("intermediate_certificate", values.intermediateCertificate);
+				}
+			} else {
+				// Paste mode validation
+				if (!validatePem(values.certificateKeyText, "PRIVATE KEY")) {
+					throw new Error("certificate.errors.invalid_key_pem");
+				}
+				if (!validatePem(values.certificateText, "CERTIFICATE")) {
+					throw new Error("certificate.errors.invalid_cert_pem");
+				}
+
+				// Convert text to files
+				const keyFile = new File([values.certificateKeyText], "privkey.pem", {
+					type: "application/x-pem-file",
+				});
+				const certFile = new File([values.certificateText], "fullchain.pem", {
+					type: "application/x-pem-file",
+				});
+
+				formData.append("certificate", certFile);
+				formData.append("certificate_key", keyFile);
+
+				if (values.intermediateCertificateText) {
+					const chainFile = new File([values.intermediateCertificateText], "chain.pem", {
+						type: "application/x-pem-file",
+					});
+					formData.append("intermediate_certificate", chainFile);
+				}
 			}
 
 			// Validate
@@ -52,7 +91,9 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 			showObjectSuccess("certificate", "saved");
 			remove();
 		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+			// If it's a known error key, translate it, otherwise show message
+			const isKey = err.message.includes(".") || err.message.includes("_");
+			setErrorMsg(isKey ? <T id={err.message} /> : err.message);
 		}
 
 		queryClient.invalidateQueries({ queryKey: ["certificates"] });
@@ -75,9 +116,14 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 						{
 							niceName: "",
 							provider: "other",
+							// Upload fields
 							certificate: null,
 							certificateKey: null,
 							intermediateCertificate: null,
+							// Text fields
+							certificateText: "",
+							certificateKeyText: "",
+							intermediateCertificateText: "",
 						} as any
 					}
 					onSubmit={onSubmit}
@@ -92,110 +138,146 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 								</Alert>
 							)}
 
-							<Card className="border-dashed">
-								<CardContent className="p-4 space-y-4">
-									<Alert
-										variant="default"
-										className="bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
-									>
-										<IconAlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-										<AlertDescription className="ml-2">
-											<T id="certificates.custom.warning" />
-										</AlertDescription>
-									</Alert>
+							<div className="space-y-2">
+								<Label htmlFor="niceName">
+									<T id="column.name" />
+								</Label>
+								<Field name="niceName" validate={validateString(1, 255)}>
+									{({ field }: any) => (
+										<Input
+											{...field}
+											id="niceName"
+											autoComplete="off"
+											className={errors.niceName && touched.niceName ? "border-destructive" : ""}
+										/>
+									)}
+								</Field>
+								{errors.niceName && touched.niceName && (
+									<div className="text-sm text-destructive">{errors.niceName}</div>
+								)}
+							</div>
 
-									<div className="space-y-2">
-										<Label htmlFor="niceName">
-											<T id="column.name" />
-										</Label>
-										<Field name="niceName" validate={validateString(1, 255)}>
-											{({ field }: any) => (
+							<Tabs value={mode} onValueChange={(v: any) => setMode(v)} className="w-full">
+								<TabsList className="grid w-full grid-cols-2">
+									<TabsTrigger value="upload">File Upload</TabsTrigger>
+									<TabsTrigger value="paste">Paste Input</TabsTrigger>
+								</TabsList>
+
+								<TabsContent value="upload" className="space-y-4 pt-4">
+									<Card className="border-dashed">
+										<CardContent className="p-4 space-y-4">
+											<div className="space-y-2">
+												<Label htmlFor="certificateKey">
+													<T id="certificate.custom-certificate-key" />
+												</Label>
 												<Input
-													{...field}
-													id="niceName"
-													autoComplete="off"
-													className={
-														errors.niceName && touched.niceName ? "border-destructive" : ""
-													}
+													id="certificateKey"
+													type="file"
+													required={mode === "upload"}
+													className={`cursor-pointer file:text-foreground ${errors.certificateKey && touched.certificateKey ? "border-destructive" : ""}`}
+													onChange={(event) => {
+														setFieldValue(
+															"certificateKey",
+															event.currentTarget.files?.length
+																? event.currentTarget.files[0]
+																: null,
+														);
+													}}
 												/>
-											)}
-										</Field>
-										{errors.niceName && touched.niceName && (
-											<div className="text-sm text-destructive">{errors.niceName}</div>
-										)}
-									</div>
-
-									<div className="space-y-2">
-										<Label htmlFor="certificateKey">
-											<T id="certificate.custom-certificate-key" />
-										</Label>
-										<Input
-											id="certificateKey"
-											type="file"
-											required
-											className={`cursor-pointer file:text-foreground ${errors.certificateKey && touched.certificateKey ? "border-destructive" : ""}`}
-											onChange={(event) => {
-												setFieldValue(
-													"certificateKey",
-													event.currentTarget.files?.length
-														? event.currentTarget.files[0]
-														: null,
-												);
-											}}
-										/>
-										{errors.certificateKey && touched.certificateKey && (
-											<div className="text-sm text-destructive">{errors.certificateKey}</div>
-										)}
-									</div>
-
-									<div className="space-y-2">
-										<Label htmlFor="certificate">
-											<T id="certificate.custom-certificate" />
-										</Label>
-										<Input
-											id="certificate"
-											type="file"
-											required
-											className={`cursor-pointer file:text-foreground ${errors.certificate && touched.certificate ? "border-destructive" : ""}`}
-											onChange={(event) => {
-												setFieldValue(
-													"certificate",
-													event.currentTarget.files?.length
-														? event.currentTarget.files[0]
-														: null,
-												);
-											}}
-										/>
-										{errors.certificate && touched.certificate && (
-											<div className="text-sm text-destructive">{errors.certificate}</div>
-										)}
-									</div>
-
-									<div className="space-y-2">
-										<Label htmlFor="intermediateCertificate">
-											<T id="certificate.custom-intermediate" />
-										</Label>
-										<Input
-											id="intermediateCertificate"
-											type="file"
-											className={`cursor-pointer file:text-foreground ${errors.intermediateCertificate && touched.intermediateCertificate ? "border-destructive" : ""}`}
-											onChange={(event) => {
-												setFieldValue(
-													"intermediateCertificate",
-													event.currentTarget.files?.length
-														? event.currentTarget.files[0]
-														: null,
-												);
-											}}
-										/>
-										{errors.intermediateCertificate && touched.intermediateCertificate && (
-											<div className="text-sm text-destructive">
-												{errors.intermediateCertificate}
 											</div>
-										)}
-									</div>
-								</CardContent>
-							</Card>
+
+											<div className="space-y-2">
+												<Label htmlFor="certificate">
+													<T id="certificate.custom-certificate" />
+												</Label>
+												<Input
+													id="certificate"
+													type="file"
+													required={mode === "upload"}
+													className={`cursor-pointer file:text-foreground ${errors.certificate && touched.certificate ? "border-destructive" : ""}`}
+													onChange={(event) => {
+														setFieldValue(
+															"certificate",
+															event.currentTarget.files?.length
+																? event.currentTarget.files[0]
+																: null,
+														);
+													}}
+												/>
+											</div>
+
+											<div className="space-y-2">
+												<Label htmlFor="intermediateCertificate">
+													<T id="certificate.custom-intermediate" />
+												</Label>
+												<Input
+													id="intermediateCertificate"
+													type="file"
+													className={`cursor-pointer file:text-foreground ${errors.intermediateCertificate && touched.intermediateCertificate ? "border-destructive" : ""}`}
+													onChange={(event) => {
+														setFieldValue(
+															"intermediateCertificate",
+															event.currentTarget.files?.length
+																? event.currentTarget.files[0]
+																: null,
+														);
+													}}
+												/>
+											</div>
+										</CardContent>
+									</Card>
+								</TabsContent>
+
+								<TabsContent value="paste" className="space-y-4 pt-4">
+									<Card className="border-dashed">
+										<CardContent className="p-4 space-y-4">
+											<div className="space-y-2">
+												<Label htmlFor="certificateKeyText">Private Key (PEM)</Label>
+												<Field name="certificateKeyText">
+													{({ field }: any) => (
+														<Textarea
+															{...field}
+															id="certificateKeyText"
+															placeholder="-----BEGIN PRIVATE KEY-----..."
+															className="font-mono text-xs min-h-[100px]"
+														/>
+													)}
+												</Field>
+											</div>
+
+											<div className="space-y-2">
+												<Label htmlFor="certificateText">Certificate Body (PEM)</Label>
+												<Field name="certificateText">
+													{({ field }: any) => (
+														<Textarea
+															{...field}
+															id="certificateText"
+															placeholder="-----BEGIN CERTIFICATE-----..."
+															className="font-mono text-xs min-h-[100px]"
+														/>
+													)}
+												</Field>
+											</div>
+
+											<div className="space-y-2">
+												<Label htmlFor="intermediateCertificateText">
+													Intermediate Certificate (Optional)
+												</Label>
+												<Field name="intermediateCertificateText">
+													{({ field }: any) => (
+														<Textarea
+															{...field}
+															id="intermediateCertificateText"
+															placeholder="-----BEGIN CERTIFICATE-----..."
+															className="font-mono text-xs min-h-[100px]"
+														/>
+													)}
+												</Field>
+											</div>
+										</CardContent>
+									</Card>
+								</TabsContent>
+							</Tabs>
 
 							<DialogFooter>
 								<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
