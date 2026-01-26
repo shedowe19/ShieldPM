@@ -49,15 +49,18 @@ const internalCloudflared = {
 			let errorLog = "";
 
 			child.stdout.on("data", (data) => {
-				logger.debug(`[Cloudflared ${tunnel.id}] ${data}`);
+				const str = data.toString();
+				logger.debug(`[Cloudflared ${tunnel.id}] ${str}`);
+				// Capture stdout too, sometimes errors are there
+				errorLog = (errorLog + str).slice(-2000);
 			});
 
 			child.stderr.on("data", (data) => {
 				// Cloudflared logs to stderr mostly
 				const str = data.toString();
 				logger.info(`[Cloudflared ${tunnel.id}] ${str}`);
-				// Capture last ~1000 chars of error log
-				errorLog = (errorLog + str).slice(-1000);
+				// Capture last ~2000 chars of error log
+				errorLog = (errorLog + str).slice(-2000);
 			});
 
 			child.on("exit", (code, signal) => {
@@ -74,6 +77,7 @@ const internalCloudflared = {
 				const meta = { ...tunnel.meta };
 
 				if (newStatus === 3 && errorLog) {
+					logger.info(`[Cloudflared ${tunnel.id}] Saving error log to DB: ${errorLog.length} chars`);
 					meta.last_error = errorLog.trim();
 				} else {
 					// Clear error on clean exit or restart
@@ -84,8 +88,12 @@ const internalCloudflared = {
 				tunnel
 					.$query()
 					.patch(patchData)
-					.then()
-					.catch(() => {});
+					.then(() => {
+						logger.info(`[Cloudflared ${tunnel.id}] Updated status to ${newStatus}`);
+					})
+					.catch((err) => {
+						logger.error(`[Cloudflared ${tunnel.id}] Failed to update status:`, err);
+					});
 			});
 
 			// Wait 2 seconds to ensure the process is stable
