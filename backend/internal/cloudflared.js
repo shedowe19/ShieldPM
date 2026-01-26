@@ -46,13 +46,18 @@ const internalCloudflared = {
 
 			processes.set(tunnel.id, child);
 
+			let errorLog = "";
+
 			child.stdout.on("data", (data) => {
 				logger.debug(`[Cloudflared ${tunnel.id}] ${data}`);
 			});
 
 			child.stderr.on("data", (data) => {
 				// Cloudflared logs to stderr mostly
-				logger.info(`[Cloudflared ${tunnel.id}] ${data}`);
+				const str = data.toString();
+				logger.info(`[Cloudflared ${tunnel.id}] ${str}`);
+				// Capture last ~1000 chars of error log
+				errorLog = (errorLog + str).slice(-1000);
 			});
 
 			child.on("exit", (code, signal) => {
@@ -64,9 +69,21 @@ const internalCloudflared = {
 				// Anything else = Error
 				const newStatus = code === 0 || code === null ? 0 : 3;
 
+				// Update status and meta.last_error if error
+				const patchData = { status: newStatus };
+				const meta = { ...tunnel.meta };
+
+				if (newStatus === 3 && errorLog) {
+					meta.last_error = errorLog.trim();
+				} else {
+					// Clear error on clean exit or restart
+					delete meta.last_error;
+				}
+				patchData.meta = meta;
+
 				tunnel
 					.$query()
-					.patch({ status: newStatus })
+					.patch(patchData)
 					.then()
 					.catch(() => {});
 			});
@@ -76,7 +93,11 @@ const internalCloudflared = {
 
 			if (processes.has(tunnel.id)) {
 				// Still running after 2 seconds, mark as Online
-				await tunnel.$query().patch({ status: 2 });
+				// clear any previous error
+				const meta = { ...tunnel.meta };
+				delete meta.last_error;
+
+				await tunnel.$query().patch({ status: 2, meta });
 			}
 		} catch (err) {
 			logger.error(`Failed to start Cloudflared Tunnel ${tunnel.id}:`, err);

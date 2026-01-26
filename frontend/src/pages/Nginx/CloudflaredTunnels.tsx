@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
 import { T } from "@/locale";
@@ -35,8 +36,8 @@ export function CloudflaredTunnels() {
 		setIsModalOpen(true);
 	};
 
-	const getStatusBadge = (status: number) => {
-		switch (status) {
+	const getStatusBadge = (tunnel: CloudflaredTunnel) => {
+		switch (tunnel.status) {
 			case 0:
 				return (
 					<Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
@@ -57,9 +58,20 @@ export function CloudflaredTunnels() {
 				);
 			case 3:
 				return (
-					<Badge className="bg-red-500 text-white hover:bg-red-600">
-						<T id="error.unknown" />
-					</Badge>
+					<TooltipProvider>
+						<Tooltip>
+							<TooltipTrigger>
+								<Badge className="bg-red-500 text-white hover:bg-red-600 cursor-help">
+									<T id="error.unknown" />
+								</Badge>
+							</TooltipTrigger>
+							{tunnel.meta?.last_error && (
+								<TooltipContent className="max-w-md">
+									<p className="font-mono text-xs whitespace-pre-wrap">{tunnel.meta.last_error}</p>
+								</TooltipContent>
+							)}
+						</Tooltip>
+					</TooltipProvider>
 				);
 			default:
 				return (
@@ -147,7 +159,7 @@ export function CloudflaredTunnels() {
 								tunnels?.map((tunnel) => (
 									<TableRow key={tunnel.id}>
 										<TableCell className="font-medium">{tunnel.name}</TableCell>
-										<TableCell>{getStatusBadge(tunnel.status)}</TableCell>
+										<TableCell>{getStatusBadge(tunnel)}</TableCell>
 										<TableCell>{dayjs(tunnel.createdOn).format("YYYY-MM-DD HH:mm:ss")}</TableCell>
 										<TableCell className="text-right space-x-2">
 											<Button variant="ghost" size="icon" onClick={() => handleEdit(tunnel)}>
