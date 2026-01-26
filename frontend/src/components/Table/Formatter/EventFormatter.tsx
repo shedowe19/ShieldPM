@@ -1,4 +1,13 @@
-import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc, IconLock, IconNote, IconShield, IconUser } from "@tabler/icons-react";
+import {
+	IconArrowsCross,
+	IconBolt,
+	IconBoltOff,
+	IconDisc,
+	IconLock,
+	IconNote,
+	IconShield,
+	IconUser,
+} from "@tabler/icons-react";
 import cn from "classnames";
 import type { AuditLog } from "src/api/backend";
 import { Badge } from "src/components/ui/badge";
