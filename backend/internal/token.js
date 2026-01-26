@@ -36,7 +36,11 @@ export default {
 
 		if (!user) {
 			// Fake work to prevent timing attacks
-			await bcrypt.compare(data.secret, DUMMY_HASH);
+			try {
+				await bcrypt.compare(data.secret, DUMMY_HASH);
+			} catch (_err) {
+				// Ignore
+			}
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
 		}
 
@@ -44,11 +48,21 @@ export default {
 
 		if (!auth) {
 			// Fake work to prevent timing attacks
-			await bcrypt.compare(data.secret, DUMMY_HASH);
+			try {
+				await bcrypt.compare(data.secret, DUMMY_HASH);
+			} catch (_err) {
+				// Ignore
+			}
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
 		}
 
-		const valid = await auth.verifyPassword(data.secret);
+		let valid = false;
+		try {
+			valid = await auth.verifyPassword(data.secret);
+		} catch (_err) {
+			// Ignore error, treat as invalid password
+		}
+
 		if (!valid) {
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH, ERROR_MESSAGE_INVALID_AUTH_I18N);
 		}
@@ -93,7 +107,7 @@ export default {
 	 * @returns {Promise}
 	 */
 	getTokenFromOAuthClaim: async (data) => {
-		const Token = new /** @type {any} */ (TokenModel)();
+		const Token = new /** @type {any} */(TokenModel)();
 
 		data.scope = "user";
 		data.expiry = "1d";
