@@ -80,7 +80,7 @@ const internalDashboardNote = {
 	 * @return {Promise}
 	 */
 	get: async (access, data) => {
-		await access.can("dashboard_notes:read", data.id);
+		await access.can("dashboard_notes:get", data.id);
 		const row = await dashboardNoteModel.query().where("id", data.id).first();
 		if (row) {
 			return row;

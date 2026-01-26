@@ -31,7 +31,9 @@
                 "blue",
                 "green",
                 "red",
-                "purple"
+                "purple",
+                "gray",
+                "grey"
             ],
             "default": "yellow",
             "example": "yellow"
