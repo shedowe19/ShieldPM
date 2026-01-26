@@ -67,7 +67,7 @@ export const DashboardNotesWidget = () => {
 								role="button"
 								tabIndex={0}
 							>
-								<div className="whitespace-pre-wrap text-sm font-medium leading-relaxed">
+								<div className="whitespace-pre-wrap break-all text-sm font-medium leading-relaxed">
 									{note.content}
 								</div>
 

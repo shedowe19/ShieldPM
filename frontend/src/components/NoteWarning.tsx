@@ -14,7 +14,7 @@ const NoteWarning = ({ content }: NoteWarningProps) => {
 					<AlertTriangle className="h-5 w-5 text-yellow-400" aria-hidden="true" />
 				</div>
 				<div className="ml-3">
-					<p className="text-sm text-yellow-700 dark:text-yellow-200 whitespace-pre-wrap max-h-[200px] overflow-y-auto font-mono">
+					<p className="text-sm text-yellow-700 dark:text-yellow-200 whitespace-pre-wrap break-all max-h-[200px] overflow-y-auto font-mono">
 						{content}
 					</p>
 				</div>
