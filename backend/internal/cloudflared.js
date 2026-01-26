@@ -68,7 +68,7 @@ const internalCloudflared = {
 					.$query()
 					.patch({ status: newStatus })
 					.then()
-					.catch(() => { });
+					.catch(() => {});
 			});
 
 			// Wait 2 seconds to ensure the process is stable
