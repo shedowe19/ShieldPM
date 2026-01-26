@@ -61,7 +61,7 @@ export function CloudflaredTunnels() {
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<span tabIndex={0} className="cursor-help inline-flex">
+								<span className="cursor-help inline-flex">
 									<Badge className="bg-red-500 text-white hover:bg-red-600 pointer-events-none">
 										<T id="error.unknown" />
 									</Badge>
