@@ -197,7 +197,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 																})}
 																className={
 																	errors.forwardDomainName &&
-																		touched.forwardDomainName
+																	touched.forwardDomainName
 																		? "border-destructive"
 																		: ""
 																}
@@ -339,7 +339,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 					</Formik>
 				)}
 			</DialogContent>
-		</Dialog >
+		</Dialog>
 	);
 });
 

@@ -309,7 +309,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</Formik>
 				)}
 			</DialogContent>
-		</Dialog >
+		</Dialog>
 	);
 });
 
