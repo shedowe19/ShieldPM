@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "Good evening",
 	"dashboard.greeting.morning": "Good morning",
 	"dashboard.no-expiring-certificates": "No certificates expiring soon",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "Add Note",
 	"dashboard.notes.color": "Note Color",
 	"dashboard.notes.content": "Note Content",
