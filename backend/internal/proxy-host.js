@@ -90,7 +90,7 @@ const internalProxyHost = {
 			}
 		}
 
-		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */(thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -217,25 +217,25 @@ const internalProxyHost = {
 
 		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
 
-		if (thisData.git_credentials) {
-			thisData.git_credentials = encrypt(thisData.git_credentials);
-		} else if (typeof thisData.git_credentials !== "undefined" && thisData.git_credentials === "") {
+		if (data.git_credentials) {
+			thisData.git_credentials = encrypt(data.git_credentials);
+		} else if (typeof data.git_credentials !== "undefined" && data.git_credentials === "") {
 			// Empty string means preserve existing credentials (do not update)
 			delete thisData.git_credentials;
 		}
 
 		// Encrypt terminal credentials if present (on update)
-		if (thisData.terminal_password) {
-			thisData.terminal_password = encrypt(thisData.terminal_password);
+		if (data.terminal_password) {
+			thisData.terminal_password = encrypt(data.terminal_password);
 		}
-		if (thisData.terminal_private_key) {
-			thisData.terminal_private_key = encrypt(thisData.terminal_private_key);
+		if (data.terminal_private_key) {
+			thisData.terminal_private_key = encrypt(data.terminal_private_key);
 		}
 
 		let _saved_row = await proxyHostModel
 			.query()
 			.where({ id: thisData.id })
-			.patch(/** @type {any} */ (thisData));
+			.patch(/** @type {any} */(thisData));
 
 		// fetch updated row to be safe and consistent with previous logic if patch returns count
 		// wait, patch returns count. We need to fetch it or rely on logic.
@@ -262,7 +262,7 @@ const internalProxyHost = {
 		// But for safety, I will use `patchAndFetchById`.
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */(thisData))
 		);
 		_saved_row = utils.omitRow(omissions())(new_saved_row);
 
@@ -358,13 +358,13 @@ const internalProxyHost = {
 			.query()
 			.where("id", row.id)
 			.patch(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					is_deleted: 1,
 				}),
 			);
 
 		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
+		await internalNginx.deleteConfig("proxy_host", /** @type {any} */(row));
 		await internalNginx.reload();
 
 		// Add to audit log
@@ -536,7 +536,7 @@ const internalProxyHost = {
 		}
 
 		const row = await query.first();
-		return Number.parseInt(/** @type {any} */ (row).count, 10);
+		return Number.parseInt(/** @type {any} */(row).count, 10);
 	},
 };
 
