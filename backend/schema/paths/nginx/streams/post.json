@@ -48,6 +48,9 @@
 						},
 						"meta": {
 							"$ref": "../../../components/stream-object.json#/properties/meta"
+						},
+						"note": {
+							"$ref": "../../../components/stream-object.json#/properties/note"
 						}
 					}
 				},

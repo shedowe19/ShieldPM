@@ -42,6 +42,8 @@ const internalProxyHost = {
 	 * @param   {number}  [data.git_poll_interval]
 	 * @param   {string}  [data.git_poll_unit]
 	 * @param   {string}  [data.git_credentials]
+	 * @param   {string}  [data.terminal_password]
+	 * @param   {string}  [data.terminal_private_key]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
@@ -159,6 +161,8 @@ const internalProxyHost = {
 	 * @param  {number}  [data.git_poll_interval]
 	 * @param  {string}  [data.git_poll_unit]
 	 * @param  {string}  [data.git_credentials]
+	 * @param  {string}  [data.terminal_password]
+	 * @param  {string}  [data.terminal_private_key]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {

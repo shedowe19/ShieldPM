@@ -1,9 +1,6 @@
-import cookie from "cookie";
 import { StringDecoder } from "node:string_decoder";
 import { Client } from "ssh2";
 import { WebSocketServer } from "ws";
-import jwt from "jsonwebtoken";
-import { getPublicKey } from "../lib/config.js";
 import { decrypt } from "../lib/encryption.js";
 import { debug, internal as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";

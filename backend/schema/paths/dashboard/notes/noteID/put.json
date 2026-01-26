@@ -1,0 +1,63 @@
+{
+    "operationId": "updateDashboardNote",
+    "summary": "Update a Dashboard Note",
+    "tags": [
+        "dashboard"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "dashboard_notes.manage"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "noteID",
+            "description": "The ID of the Dashboard Note",
+            "schema": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "required": true,
+            "example": 1
+        }
+    ],
+    "requestBody": {
+        "description": "Dashboard Note Payload",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "minProperties": 1,
+                    "properties": {
+                        "content": {
+                            "$ref": "../../../../components/dashboard-note-object.json#/properties/content"
+                        },
+                        "color": {
+                            "$ref": "../../../../components/dashboard-note-object.json#/properties/color"
+                        },
+                        "position": {
+                            "$ref": "../../../../components/dashboard-note-object.json#/properties/position"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/dashboard-note-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

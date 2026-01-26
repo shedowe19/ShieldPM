@@ -169,6 +169,9 @@
 						"terminal_password": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/terminal_password"
 						},
+						"note": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/note"
+						},
 						"terminal_private_key": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/terminal_private_key"
 						}

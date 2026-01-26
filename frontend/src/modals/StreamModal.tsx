@@ -1,9 +1,9 @@
-import { IconArrowsRightLeft } from "@tabler/icons-react";
+import { IconArrowsRightLeft, IconNote } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { Loading, SSLCertificateField, SSLOptionsFields } from "src/components";
+import { Loading, NoteWarning, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
@@ -11,6 +11,7 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Textarea } from "src/components/ui/textarea";
 import { useSetStream, useStream } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
@@ -22,7 +23,10 @@ const showStreamModal = (id: number | "new") => {
 
 interface Props extends InnerModalProps {
 	id: number | "new";
+	visible: boolean;
+	remove: () => void;
 }
+
 const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useStream(id);
 	const { mutate: setStream } = useSetStream();
@@ -66,21 +70,20 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				)}
 
 				{!isLoading && data && (
-					<Formik
-						initialValues={
-							{
-								incomingPort: data?.incomingPort,
-								forwardingHost: data?.forwardingHost,
-								forwardingPort: data?.forwardingPort,
-								tcpForwarding: data?.tcpForwarding,
-								udpForwarding: data?.udpForwarding,
-								certificateId: data?.certificateId,
-								meta: data?.meta || {},
-							} as any
-						}
+					<Formik<any>
+						initialValues={{
+							incomingPort: data?.incomingPort,
+							forwardingHost: data?.forwardingHost,
+							forwardingPort: data?.forwardingPort,
+							tcpForwarding: data?.tcpForwarding,
+							udpForwarding: data?.udpForwarding,
+							certificateId: data?.certificateId,
+							meta: data?.meta || {},
+							note: data?.note || "",
+						}}
 						onSubmit={onSubmit}
 					>
-						{({ setFieldValue, errors, touched, handleSubmit }) => (
+						{({ setFieldValue, errors, touched, handleSubmit }: any) => (
 							<Form onSubmit={handleSubmit} className="space-y-4">
 								<DialogHeader>
 									<DialogTitle className="flex items-center gap-2">
@@ -96,13 +99,20 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									</Alert>
 								)}
 
+								<div className="mb-4">
+									<NoteWarning content={data?.note} />
+								</div>
+
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-									<TabsList className="grid w-full grid-cols-2">
+									<TabsList className="grid w-full grid-cols-3">
 										<TabsTrigger value="details">
 											<T id="column.details" />
 										</TabsTrigger>
 										<TabsTrigger value="ssl">
 											<T id="column.ssl" />
+										</TabsTrigger>
+										<TabsTrigger value="notes">
+											<IconNote size={20} />
 										</TabsTrigger>
 									</TabsList>
 
@@ -239,6 +249,29 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 												</div>
 											</div>
+										</TabsContent>
+
+										<TabsContent value="notes" className="space-y-4">
+											<Field name="note">
+												{({ field }: any) => (
+													<div className="space-y-2 mb-4">
+														<Label htmlFor="note">
+															<T id="host.note" />
+														</Label>
+														<Textarea
+															id="note"
+															placeholder={intl.formatMessage({
+																id: "host.note.placeholder",
+															})}
+															className="min-h-[300px] font-mono text-sm"
+															{...field}
+														/>
+														<p className="text-xs text-muted-foreground">
+															<T id="host.note.hint" />
+														</p>
+													</div>
+												)}
+											</Field>
 										</TabsContent>
 
 										<TabsContent value="ssl">

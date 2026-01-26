@@ -46,6 +46,9 @@
 						},
 						"meta": {
 							"$ref": "../../../components/dead-host-object.json#/properties/meta"
+						},
+						"note": {
+							"$ref": "../../../components/dead-host-object.json#/properties/note"
 						}
 					}
 				},

@@ -98,6 +98,14 @@
 				"nginx_err": null
 			}
 		},
+		"note": {
+			"type": [
+				"string",
+				"null"
+			],
+			"maxLength": 10000,
+			"example": "Do not delete this host."
+		},
 		"certificate": {
 			"oneOf": [
 				{

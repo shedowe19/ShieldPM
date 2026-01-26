@@ -10,6 +10,7 @@ export * from "./Loading";
 export * from "./LoadingPage";
 export * from "./LocalePicker";
 export * from "./NavLink";
+export { default as NoteWarning } from "./NoteWarning";
 export * from "./Page";
 export * from "./ServiceIcon";
 export * from "./Sidebar";

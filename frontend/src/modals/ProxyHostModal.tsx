@@ -1,4 +1,4 @@
-import { IconGitBranch, IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
+import { IconGitBranch, IconNote, IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, Form, Formik } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -11,6 +11,7 @@ import {
 	Loading,
 	LocationsFields,
 	NginxConfigField,
+	NoteWarning,
 	ServiceIcon,
 	SSLCertificateField,
 	SSLOptionsFields,
@@ -54,10 +55,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 		// Sanitize numeric fields that can be null
 		const sanitizedValues = { ...values };
-		if (sanitizedValues.advLimitReqRate === "" || isNaN(sanitizedValues.advLimitReqRate)) {
+		if (sanitizedValues.advLimitReqRate === "" || Number.isNaN(sanitizedValues.advLimitReqRate)) {
 			sanitizedValues.advLimitReqRate = null;
 		}
-		if (sanitizedValues.advLimitReqBurst === "" || isNaN(sanitizedValues.advLimitReqBurst)) {
+		if (sanitizedValues.advLimitReqBurst === "" || Number.isNaN(sanitizedValues.advLimitReqBurst)) {
 			sanitizedValues.advLimitReqBurst = null;
 		}
 
@@ -163,6 +164,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								iconUrl: data?.iconUrl || "",
 								// CrowdSec
 								crowdsecEnabled: data?.securityCrowdsec || false,
+								// Note
+								note: data?.note || "",
 							} as any
 						}
 						enableReinitialize
@@ -179,6 +182,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										/>
 									</DialogTitle>
 								</DialogHeader>
+
+								<div className="px-6 pt-4">
+									<NoteWarning content={data?.note} />
+								</div>
 
 								<Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
 									<div className="px-6 pt-4">
@@ -200,6 +207,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</TabsTrigger>
 											<TabsTrigger value="maintenance">
 												<IconTool size={20} />
+											</TabsTrigger>
+											<TabsTrigger value="notes">
+												<IconNote size={20} />
 											</TabsTrigger>
 											<Field name="forwardScheme">
 												{({ field: schemeField }: any) =>
@@ -1113,6 +1123,29 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																className="min-h-[100px]"
 																{...field}
 															/>
+														</div>
+													)}
+												</Field>
+											</TabsContent>
+
+											<TabsContent value="notes" className="space-y-4 pt-4">
+												<Field name="note">
+													{({ field }: any) => (
+														<div className="space-y-2 mb-4">
+															<Label htmlFor="note">
+																<T id="host.note" />
+															</Label>
+															<Textarea
+																id="note"
+																placeholder={intl.formatMessage({
+																	id: "host.note.placeholder",
+																})}
+																className="min-h-[300px] font-mono text-sm"
+																{...field}
+															/>
+															<p className="text-xs text-muted-foreground">
+																<T id="host.note.hint" />
+															</p>
 														</div>
 													)}
 												</Field>

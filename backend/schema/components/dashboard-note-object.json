@@ -1,0 +1,47 @@
+{
+    "type": "object",
+    "description": "Dashboard Note object",
+    "required": [
+        "id",
+        "created_on",
+        "modified_on",
+        "content",
+        "color",
+        "position"
+    ],
+    "properties": {
+        "id": {
+            "$ref": "../common.json#/properties/id"
+        },
+        "created_on": {
+            "$ref": "../common.json#/properties/created_on"
+        },
+        "modified_on": {
+            "$ref": "../common.json#/properties/modified_on"
+        },
+        "content": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Remember to update the certificates!"
+        },
+        "color": {
+            "type": "string",
+            "enum": [
+                "yellow",
+                "blue",
+                "green",
+                "red",
+                "purple",
+                "gray"
+            ],
+            "default": "yellow",
+            "example": "yellow"
+        },
+        "position": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "example": 1
+        }
+    }
+}
