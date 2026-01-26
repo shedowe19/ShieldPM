@@ -35,13 +35,13 @@
                     "minProperties": 1,
                     "properties": {
                         "content": {
-                            "$ref": "../../../components/dashboard-note-object.json#/properties/content"
+                            "$ref": "../../../../components/dashboard-note-object.json#/properties/content"
                         },
                         "color": {
-                            "$ref": "../../../components/dashboard-note-object.json#/properties/color"
+                            "$ref": "../../../../components/dashboard-note-object.json#/properties/color"
                         },
                         "position": {
-                            "$ref": "../../../components/dashboard-note-object.json#/properties/position"
+                            "$ref": "../../../../components/dashboard-note-object.json#/properties/position"
                         }
                     }
                 }
@@ -54,7 +54,7 @@
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "../../../components/dashboard-note-object.json"
+                        "$ref": "../../../../components/dashboard-note-object.json"
                     }
                 }
             }

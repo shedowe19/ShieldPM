@@ -43,7 +43,7 @@
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "../../components/dashboard-note-object.json"
+                        "$ref": "../../../components/dashboard-note-object.json"
                     }
                 }
             }
