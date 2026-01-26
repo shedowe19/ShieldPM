@@ -116,6 +116,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								forwardScheme: data?.forwardScheme || "http",
 								forwardHost: data?.forwardHost || "",
 								forwardPort: data?.forwardPort || undefined,
+								indexFile: data?.indexFile || "", // Add indexFile to initialValues
 								// Terminal Fields
 								terminalHost: data?.terminalHost || "",
 								terminalPort: data?.terminalPort || 22,
@@ -341,6 +342,36 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 												</div>
+
+												{/* Index File Field - visible when scheme is 'path' */}
+												<Field name="forwardScheme">
+													{({ field: schemeField }: any) =>
+														schemeField.value === "path" && (
+															<div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+																<div className="md:col-span-12">
+																	<Field name="indexFile">
+																		{({ field }: any) => (
+																			<div className="space-y-2">
+																				<Label htmlFor="indexFile">
+																					<T id="proxy-host.index-file" />
+																				</Label>
+																				<Input
+																					id="indexFile"
+																					placeholder="index.php"
+																					autoComplete="off"
+																					{...field}
+																				/>
+																				<p className="text-xs text-muted-foreground">
+																					<T id="proxy-host.index-file.hint" />
+																				</p>
+																			</div>
+																		)}
+																	</Field>
+																</div>
+															</div>
+														)
+													}
+												</Field>
 
 												{/* Terminal Fields */}
 												<Field name="forwardScheme">

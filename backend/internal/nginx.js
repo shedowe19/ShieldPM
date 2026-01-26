@@ -275,6 +275,14 @@ const internalNginx = {
 			}
 		}
 
+		// Calculate index_dir if index_file is set and contains a path separator
+		if (host.index_file && host.index_file.includes("/")) {
+			const indexDir = dirname(host.index_file);
+			if (indexDir && indexDir !== ".") {
+				host.index_dir = indexDir;
+			}
+		}
+
 		try {
 			const config_text = await renderEngine.parseAndRender(template, host);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });

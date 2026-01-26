@@ -92,6 +92,8 @@ class ProxyHost extends Model {
 	forward_query;
 	/** @type {string|null} */
 	php_override_ini;
+	/** @type {string|null} */
+	index_file;
 	/** @type {string} */
 	advanced_config;
 

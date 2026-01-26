@@ -305,6 +305,13 @@
 			],
 			"example": "memory_limit = 512M"
 		},
+		"index_file": {
+			"type": [
+				"string",
+				"null"
+			],
+			"example": "index.html"
+		},
 		"git_repo_url": {
 			"type": [
 				"string",
