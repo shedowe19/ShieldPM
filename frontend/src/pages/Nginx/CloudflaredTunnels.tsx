@@ -37,6 +37,17 @@ export function CloudflaredTunnels() {
 	};
 
 	const getStatusBadge = (tunnel: CloudflaredTunnel) => {
+		// Ensure meta is an object (handle SQLite/serialization edge cases)
+		let meta = tunnel.meta;
+		if (typeof meta === "string") {
+			try {
+				meta = JSON.parse(meta);
+			} catch (e) {
+				console.error("Failed to parse tunnel meta:", e);
+				meta = {};
+			}
+		}
+
 		switch (tunnel.status) {
 			case 0:
 				return (
@@ -69,7 +80,7 @@ export function CloudflaredTunnels() {
 							</TooltipTrigger>
 							<TooltipContent className="max-w-md">
 								<p className="font-mono text-xs whitespace-pre-wrap">
-									{tunnel.meta?.last_error || "No error details available. Check container logs."}
+									{meta?.last_error || "No error details available."}
 								</p>
 							</TooltipContent>
 						</Tooltip>
