@@ -6,6 +6,7 @@ import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import { getValidationSchema } from "../../schema/index.js";
+import { global as logger } from "../../logger.js";
 
 const router = express.Router({
 	caseSensitive: true,
