@@ -3,8 +3,8 @@ import { createConnection } from "node:net";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import TorOnion from "../models/tor_onion.js";
-import internalNginx from "./nginx.js";
 import internalGitOps from "./gitops.js";
+import internalNginx from "./nginx.js";
 
 const dataPath = process.env.DATA_PATH || "/data";
 const torControlHost = "127.0.0.1";

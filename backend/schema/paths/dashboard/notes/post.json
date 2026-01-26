@@ -1,0 +1,52 @@
+{
+    "operationId": "createDashboardNote",
+    "summary": "Create a Dashboard Note",
+    "tags": [
+        "dashboard"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "dashboard_notes.manage"
+            ]
+        }
+    ],
+    "requestBody": {
+        "description": "Dashboard Note Payload",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "content"
+                    ],
+                    "properties": {
+                        "content": {
+                            "$ref": "../../components/dashboard-note-object.json#/properties/content"
+                        },
+                        "color": {
+                            "$ref": "../../components/dashboard-note-object.json#/properties/color"
+                        },
+                        "position": {
+                            "$ref": "../../components/dashboard-note-object.json#/properties/position"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "201": {
+            "description": "201 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../components/dashboard-note-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

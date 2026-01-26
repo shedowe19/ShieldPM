@@ -104,6 +104,14 @@
 				"nginx_err": null
 			}
 		},
+		"note": {
+			"type": [
+				"string",
+				"null"
+			],
+			"maxLength": 10000,
+			"example": "Do not delete this host."
+		},
 		"allow_websocket_upgrade": {
 			"description": "Allow Websocket Upgrade for all paths",
 			"type": "boolean",

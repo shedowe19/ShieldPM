@@ -11,8 +11,8 @@ import { debug, ssl as logger } from "../logger.js";
 import certificateModel from "../models/certificate.js";
 import internalAuditLog from "./audit-log.js";
 import * as certbot from "./certbot.js";
-import internalNginx from "./nginx.js";
 import internalGitOps from "./gitops.js";
+import internalNginx from "./nginx.js";
 import internalPki from "./pki.js";
 
 dayjs.extend(customParseFormat);

@@ -11,6 +11,7 @@ import {
 	Loading,
 	LocationsFields,
 	NginxConfigField,
+	NoteWarning,
 	ServiceIcon,
 	SSLCertificateField,
 	SSLOptionsFields,
@@ -54,10 +55,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 		// Sanitize numeric fields that can be null
 		const sanitizedValues = { ...values };
-		if (sanitizedValues.advLimitReqRate === "" || isNaN(sanitizedValues.advLimitReqRate)) {
+		if (sanitizedValues.advLimitReqRate === "" || Number.isNaN(sanitizedValues.advLimitReqRate)) {
 			sanitizedValues.advLimitReqRate = null;
 		}
-		if (sanitizedValues.advLimitReqBurst === "" || isNaN(sanitizedValues.advLimitReqBurst)) {
+		if (sanitizedValues.advLimitReqBurst === "" || Number.isNaN(sanitizedValues.advLimitReqBurst)) {
 			sanitizedValues.advLimitReqBurst = null;
 		}
 
@@ -163,6 +164,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								iconUrl: data?.iconUrl || "",
 								// CrowdSec
 								crowdsecEnabled: data?.securityCrowdsec || false,
+								// Note
+								note: data?.note || "",
 							} as any
 						}
 						enableReinitialize
@@ -179,6 +182,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										/>
 									</DialogTitle>
 								</DialogHeader>
+
+								<div className="px-6 pt-4">
+									<NoteWarning content={data?.note} />
+								</div>
 
 								<Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
 									<div className="px-6 pt-4">
@@ -781,6 +788,31 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															<T id="options" />
 														</h4>
 														<div className="space-y-4">
+															<div className="flex items-center justify-between">
+																<div className="flex-1">
+																	<Field name="note">
+																		{({ field }: any) => (
+																			<div className="space-y-2 mb-4">
+																				<Label htmlFor="note">
+																					<T id="host.note" />
+																				</Label>
+																				<Textarea
+																					id="note"
+																					placeholder={intl.formatMessage({
+																						id: "host.note.placeholder",
+																					})}
+																					className="min-h-[100px]"
+																					{...field}
+																				/>
+																				<p className="text-xs text-muted-foreground">
+																					<T id="host.note.hint" />
+																				</p>
+																			</div>
+																		)}
+																	</Field>
+																</div>
+															</div>
+
 															<div className="flex items-center justify-between">
 																<Label
 																	htmlFor="cachingEnabled"

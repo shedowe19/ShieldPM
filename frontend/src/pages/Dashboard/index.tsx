@@ -10,6 +10,7 @@ import { T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 import { DEAD_HOSTS, PROXY_HOSTS, REDIRECTION_HOSTS, STREAMS, VIEW } from "src/modules/Permissions";
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
+import { DashboardNotesWidget } from "./DashboardNotesWidget";
 
 const MotionCard = motion(Card);
 const container = {
@@ -165,8 +166,9 @@ const Dashboard = () => {
 				</HasPermission>
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
 				<CertificateExpiryWidget />
+				<DashboardNotesWidget />
 			</div>
 		</motion.div>
 	);

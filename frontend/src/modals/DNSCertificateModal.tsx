@@ -34,7 +34,7 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 		} catch (err: any) {
 			// If the error message likely contains spaces, use it directly (it's a raw log)
 			// Otherwise try to translate it
-			if (err.message && err.message.includes(" ")) {
+			if (err.message?.includes(" ")) {
 				setErrorMsg(err.message);
 			} else {
 				setErrorMsg(<T id={err.message} />);

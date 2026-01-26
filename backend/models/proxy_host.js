@@ -44,6 +44,8 @@ class ProxyHost extends Model {
 	domain_names;
 	/** @type {Object} */
 	meta;
+	/** @type {string} */
+	note;
 	/** @type {Object[]} */
 	locations;
 	/** @type {number} */

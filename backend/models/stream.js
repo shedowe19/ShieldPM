@@ -26,6 +26,8 @@ class Stream extends Model {
 	certificate_id;
 	/** @type {Object} */
 	meta;
+	/** @type {string} */
+	note;
 	/** @type {number} */
 	is_deleted;
 	/** @type {string} */

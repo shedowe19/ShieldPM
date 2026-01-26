@@ -10,7 +10,6 @@ import ipaddr from "ipaddr.js";
 import si from "systeminformation";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
-import { encrypt } from "../../lib/encryption.js";
 import AnalyticCount from "../../models/analytic_count.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import TorOnion from "../../models/tor_onion.js";

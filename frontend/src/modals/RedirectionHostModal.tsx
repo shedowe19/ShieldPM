@@ -5,7 +5,7 @@ import { Field, Form, Formik } from "formik";
 import { AlertCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { createRedirectionHost, updateRedirectionHost } from "src/api/backend";
-import { DomainNamesField, NginxConfigField, SSLCertificateField, SSLOptionsFields } from "src/components";
+import { DomainNamesField, NginxConfigField, NoteWarning, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -15,6 +15,7 @@ import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Textarea } from "src/components/ui/textarea";
 import { useRedirectionHost } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
@@ -107,7 +108,9 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 								hstsSubdomains: data?.hstsSubdomains || false,
 								// Advanced tab
 								advancedConfig: data?.advancedConfig || "",
+
 								meta: data?.meta || {},
+								note: data?.note || "",
 							} as any
 						}
 						onSubmit={onSubmit}
@@ -121,6 +124,10 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 										<AlertDescription>{errorMsg}</AlertDescription>
 									</Alert>
 								)}
+
+								<div className="mb-4">
+									<NoteWarning content={data?.note} />
+								</div>
 
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 									<TabsList className="grid w-full grid-cols-3">
@@ -285,6 +292,26 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 									</TabsContent>
 
 									<TabsContent value="advanced" className="pt-4">
+										<Field name="note">
+											{({ field }: any) => (
+												<div className="space-y-2 mb-4">
+													<Label htmlFor="note">
+														<T id="host.note" />
+													</Label>
+													<Textarea
+														id="note"
+														placeholder={intl.formatMessage({
+															id: "host.note.placeholder",
+														})}
+														className="min-h-[100px]"
+														{...field}
+													/>
+													<p className="text-xs text-muted-foreground">
+														<T id="host.note.hint" />
+													</p>
+												</div>
+											)}
+										</Field>
 										<NginxConfigField />
 									</TabsContent>
 								</Tabs>

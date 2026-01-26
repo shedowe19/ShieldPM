@@ -35,6 +35,8 @@ class DeadHost extends Model {
 	advanced_config;
 	/** @type {Object} */
 	meta;
+	/** @type {string} */
+	note;
 	/** @type {number} */
 	is_deleted;
 	/** @type {string} */

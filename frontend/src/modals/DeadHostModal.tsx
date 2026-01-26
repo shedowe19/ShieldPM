@@ -1,15 +1,24 @@
 import { IconGhost, IconSettings } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Form, Formik } from "formik";
+import { Field, Form, Formik } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { DomainNamesField, Loading, NginxConfigField, SSLCertificateField, SSLOptionsFields } from "src/components";
+import {
+	DomainNamesField,
+	Loading,
+	NginxConfigField,
+	NoteWarning,
+	SSLCertificateField,
+	SSLOptionsFields,
+} from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
+import { Label } from "src/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Textarea } from "src/components/ui/textarea";
 import { useDeadHost, useSetDeadHost } from "src/hooks";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 
 const showDeadHostModal = (id: number | "new") => {
@@ -73,6 +82,7 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								hstsEnabled: data?.hstsEnabled,
 								hstsSubdomains: data?.hstsSubdomains,
 								meta: data?.meta || {},
+								note: data?.note || "",
 							} as any
 						}
 						onSubmit={onSubmit}
@@ -95,6 +105,10 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<AlertDescription>{errorMsg}</AlertDescription>
 									</Alert>
 								)}
+
+								<div className="mb-4">
+									<NoteWarning content={data?.note} />
+								</div>
 
 								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 									<TabsList className="grid w-full grid-cols-3">
@@ -125,6 +139,26 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										</TabsContent>
 
 										<TabsContent value="advanced">
+											<Field name="note">
+												{({ field }: any) => (
+													<div className="space-y-2 mb-4">
+														<Label htmlFor="note">
+															<T id="host.note" />
+														</Label>
+														<Textarea
+															id="note"
+															placeholder={intl.formatMessage({
+																id: "host.note.placeholder",
+															})}
+															className="min-h-[100px]"
+															{...field}
+														/>
+														<p className="text-xs text-muted-foreground">
+															<T id="host.note.hint" />
+														</p>
+													</div>
+												)}
+											</Field>
 											<NginxConfigField />
 										</TabsContent>
 									</div>

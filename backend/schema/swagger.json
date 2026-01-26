@@ -71,6 +71,22 @@
 				"$ref": "./paths/get.json"
 			}
 		},
+		"/dashboard/notes": {
+			"get": {
+				"$ref": "./paths/dashboard/notes/get.json"
+			},
+			"post": {
+				"$ref": "./paths/dashboard/notes/post.json"
+			}
+		},
+		"/dashboard/notes/{noteID}": {
+			"put": {
+				"$ref": "./paths/dashboard/notes/noteID/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/dashboard/notes/noteID/delete.json"
+			}
+		},
 		"/audit-log": {
 			"get": {
 				"$ref": "./paths/audit-log/get.json"

@@ -165,6 +165,7 @@ export interface ProxyHost {
 	owner?: User;
 	accessList?: AccessList;
 	certificate?: Certificate;
+	note?: string;
 }
 
 export interface DeadHost {
@@ -184,6 +185,7 @@ export interface DeadHost {
 	// Expansions:
 	owner?: User;
 	certificate?: Certificate;
+	note?: string;
 }
 
 export interface RedirectionHost {
@@ -208,6 +210,7 @@ export interface RedirectionHost {
 	// Expansions:
 	owner?: User;
 	certificate?: Certificate;
+	note?: string;
 }
 
 export interface Stream {
@@ -226,6 +229,7 @@ export interface Stream {
 	// Expansions:
 	owner?: User;
 	certificate?: Certificate;
+	note?: string;
 }
 
 export interface Setting {
@@ -318,4 +322,13 @@ export interface TorOnionListResponse {
 		available: boolean;
 		version: string | null;
 	};
+}
+
+export interface DashboardNote {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	content: string;
+	color: string;
+	position: number;
 }

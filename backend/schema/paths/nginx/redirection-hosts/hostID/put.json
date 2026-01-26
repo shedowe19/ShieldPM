@@ -72,6 +72,9 @@
 						},
 						"meta": {
 							"$ref": "../../../../components/redirection-host-object.json#/properties/meta"
+						},
+						"note": {
+							"$ref": "../../../../components/redirection-host-object.json#/properties/note"
 						}
 					}
 				}
