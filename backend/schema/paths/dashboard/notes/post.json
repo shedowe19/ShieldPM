@@ -24,13 +24,13 @@
                     ],
                     "properties": {
                         "content": {
-                            "$ref": "../../components/dashboard-note-object.json#/properties/content"
+                            "$ref": "../../../components/dashboard-note-object.json#/properties/content"
                         },
                         "color": {
-                            "$ref": "../../components/dashboard-note-object.json#/properties/color"
+                            "$ref": "../../../components/dashboard-note-object.json#/properties/color"
                         },
                         "position": {
-                            "$ref": "../../components/dashboard-note-object.json#/properties/position"
+                            "$ref": "../../../components/dashboard-note-object.json#/properties/position"
                         }
                     }
                 }
