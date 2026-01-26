@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "Dobrý večer",
 	"dashboard.greeting.morning": "Dobré ráno",
 	"dashboard.no-expiring-certificates": "Žiadne certifikáty, ktorých platnosť čoskoro vyprší",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "Pridať poznámku",
 	"dashboard.notes.color": "Farba poznámky",
 	"dashboard.notes.content": "Obsah poznámky",

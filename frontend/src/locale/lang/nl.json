@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "Goedenavond",
 	"dashboard.greeting.morning": "Goedemorgen",
 	"dashboard.no-expiring-certificates": "Geen certificaten die binnenkort verlopen",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "Notitie toevoegen",
 	"dashboard.notes.color": "Kleur notitie",
 	"dashboard.notes.content": "Inhoud notitie",

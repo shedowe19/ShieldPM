@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "Chào buổi tối",
 	"dashboard.greeting.morning": "Chào buổi sáng",
 	"dashboard.no-expiring-certificates": "Không có chứng chỉ nào sắp hết hạn",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "Thêm Ghi chú",
 	"dashboard.notes.color": "Màu Ghi chú",
 	"dashboard.notes.content": "Nội dung Ghi chú",

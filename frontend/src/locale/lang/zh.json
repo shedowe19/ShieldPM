@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "晚上好",
 	"dashboard.greeting.morning": "早上好",
 	"dashboard.no-expiring-certificates": "没有即将过期的证书",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "添加便签",
 	"dashboard.notes.color": "便签颜色",
 	"dashboard.notes.content": "便签内容",

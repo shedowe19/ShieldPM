@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "저녁 시간입니다",
 	"dashboard.greeting.morning": "좋은 아침입니다",
 	"dashboard.no-expiring-certificates": "곧 만료되는 인증서 없음",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "메모 추가",
 	"dashboard.notes.color": "메모 색상",
 	"dashboard.notes.content": "메모 내용",

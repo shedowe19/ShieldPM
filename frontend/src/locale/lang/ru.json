@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "Добрый вечер",
 	"dashboard.greeting.morning": "Доброе утро",
 	"dashboard.no-expiring-certificates": "Нет сертификатов с истекающим сроком действия",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "Добавить заметку",
 	"dashboard.notes.color": "Цвет заметки",
 	"dashboard.notes.content": "Содержание заметки",

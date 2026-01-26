@@ -181,6 +181,7 @@
 	"dashboard.greeting.evening": "こんばんは",
 	"dashboard.greeting.morning": "おはようございます",
 	"dashboard.no-expiring-certificates": "期限切れ間近の証明書はありません",
+	"dashboard_note": "Dashboard Note",
 	"dashboard.notes.add": "メモを追加",
 	"dashboard.notes.color": "メモの色",
 	"dashboard.notes.content": "メモの内容",
