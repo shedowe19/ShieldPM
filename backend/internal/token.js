@@ -107,7 +107,7 @@ export default {
 	 * @returns {Promise}
 	 */
 	getTokenFromOAuthClaim: async (data) => {
-		const Token = new /** @type {any} */(TokenModel)();
+		const Token = new /** @type {any} */ (TokenModel)();
 
 		data.scope = "user";
 		data.expiry = "1d";
