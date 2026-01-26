@@ -382,6 +382,8 @@
 	"proxy-host.icon-type.none": "No Icon",
 	"proxy-host.icon-url": "Icon URL",
 	"proxy-host.icon-url.hint": "Direct link to a PNG/SVG icon (e.g. from Dashboard Icons)",
+	"proxy-host.index-file": "Index File",
+	"proxy-host.index-file.hint": "Custom index file path (e.g. app/start.php). Relative to Forward Host root.",
 	"proxy-host.maintenance-mode": "Maintenance Mode",
 	"proxy-host.maintenance.active": "Maintenance Active",
 	"proxy-host.maintenance.active.description": "Manually force maintenance mode immediately",
