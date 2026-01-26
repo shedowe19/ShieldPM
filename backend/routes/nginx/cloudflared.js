@@ -23,7 +23,16 @@ router.get("/", async (_req, res, next) => {
 		const tunnels = await CloudflaredTunnel.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
+			.andWhere("is_deleted", 0)
 			.orderBy("name", "ASC");
+
+		// Debug log
+		tunnels.forEach(t => {
+			if (t.status === 3) {
+				logger.info(`[API Debug] Tunnel ${t.id} (Status 3) Meta:`, JSON.stringify(t.meta));
+			}
+		});
+
 		res.status(200).send(tunnels);
 	} catch (err) {
 		next(err);
