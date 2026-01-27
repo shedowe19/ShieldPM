@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Trash2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
+import { intl, T } from "src/locale";
 import { z } from "zod";
 import {
 	createChatIntegration,
@@ -30,7 +30,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function ChatOps() {
-	const { t } = useTranslation();
+	// const { t } = useTranslation(); // Removed
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
 
@@ -65,10 +65,14 @@ export default function ChatOps() {
 		mutationFn: createChatIntegration,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["chat-integrations"] });
-			toast({ title: t("saved") });
+			toast({ title: intl.formatMessage({ id: "notification.success" }) });
 		},
 		onError: (err) => {
-			toast({ title: t("error"), description: err.message, variant: "destructive" });
+			toast({
+				title: intl.formatMessage({ id: "notification.error" }),
+				description: err.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -79,10 +83,14 @@ export default function ChatOps() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["chat-integrations"] });
-			toast({ title: t("saved") });
+			toast({ title: intl.formatMessage({ id: "notification.success" }) });
 		},
 		onError: (err) => {
-			toast({ title: t("error"), description: err.message, variant: "destructive" });
+			toast({
+				title: intl.formatMessage({ id: "notification.error" }),
+				description: err.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -91,7 +99,7 @@ export default function ChatOps() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["chat-integrations"] });
 			form.reset({ token: "", allowed_ids: "", enabled: true });
-			toast({ title: t("deleted") });
+			toast({ title: intl.formatMessage({ id: "notification.success" }) });
 		},
 	});
 
@@ -116,16 +124,25 @@ export default function ChatOps() {
 
 	return (
 		<Container>
-			<div className="mb-6">
-				<h1 className="text-3xl font-bold tracking-tight">ChatOps</h1>
-				<p className="text-muted-foreground">{t("chatops_description") || "Manage Chat Integrations"}</p>
-			</div>
-			<Card>
+			<Card className="border-t-4 border-slate-500/50">
 				<CardHeader>
-					<CardTitle>Telegram Bot</CardTitle>
-					<CardDescription>Configure a Telegram Bot to manage your server via chat.</CardDescription>
+					<CardTitle>
+						<T id="chatops" />
+					</CardTitle>
+					<CardDescription>
+						<T id="chatops.description" />
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
+					<div className="mb-6">
+						<h3 className="text-lg font-medium">
+							<T id="chatops.telegram.title" />
+						</h3>
+						<p className="text-sm text-muted-foreground">
+							<T id="chatops.telegram.description" />
+						</p>
+					</div>
+
 					<Form {...form}>
 						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 							<FormField
@@ -133,11 +150,15 @@ export default function ChatOps() {
 								name="token"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Bot Token</FormLabel>
+										<FormLabel>
+											<T id="chatops.telegram.token" />
+										</FormLabel>
 										<FormControl>
 											<Input placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" {...field} />
 										</FormControl>
-										<FormDescription>Create a bot via @BotFather on Telegram.</FormDescription>
+										<FormDescription>
+											<T id="chatops.telegram.help" />
+										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -148,12 +169,14 @@ export default function ChatOps() {
 								name="allowed_ids"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Allowed User IDs</FormLabel>
+										<FormLabel>
+											<T id="chatops.telegram.allowed_ids" />
+										</FormLabel>
 										<FormControl>
 											<Input placeholder="12345678, 87654321" {...field} />
 										</FormControl>
 										<FormDescription>
-											Comma-separated list of Telegram User IDs allowed to interact with this bot.
+											<T id="chatops.telegram.allowed_ids.desc" />
 										</FormDescription>
 										<FormMessage />
 									</FormItem>
@@ -166,8 +189,12 @@ export default function ChatOps() {
 								render={({ field }) => (
 									<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
 										<div className="space-y-0.5">
-											<FormLabel className="text-base">Enabled</FormLabel>
-											<FormDescription>Enable or disable this bot integration.</FormDescription>
+											<FormLabel className="text-base">
+												<T id="chatops.telegram.enabled" />
+											</FormLabel>
+											<FormDescription>
+												<T id="chatops.telegram.enabled.desc" />
+											</FormDescription>
 										</div>
 										<FormControl>
 											<Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -181,7 +208,7 @@ export default function ChatOps() {
 									{(createMutation.isPending || updateMutation.isPending) && (
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 									)}
-									{t("save")}
+									<T id="save" />
 								</Button>
 
 								{existing && (
@@ -192,7 +219,7 @@ export default function ChatOps() {
 										disabled={deleteMutation.isPending}
 									>
 										<Trash2 className="mr-2 h-4 w-4" />
-										{t("delete")}
+										<T id="action.delete" />
 									</Button>
 								)}
 							</div>
