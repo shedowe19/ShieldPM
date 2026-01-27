@@ -5,7 +5,7 @@ import type { Stream } from "src/api/backend";
 import {
 	CertificateFormatter,
 	EmptyData,
-	GravatarFormatter,
+	UserAvatar,
 	HasPermission,
 	TrueFalseFormatter,
 	ValueWithDateFormatter,
@@ -41,7 +41,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 				id: "owner",
 				cell: (info) => {
 					const value = info.getValue();
-					return <GravatarFormatter url={value ? value.avatar : ""} name={value ? value.name : ""} />;
+					return <UserAvatar url={value ? value.avatar : ""} name={value ? value.name : ""} />;
 				},
 				meta: {
 					className: "w-1",

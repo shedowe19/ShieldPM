@@ -58,11 +58,21 @@
 			"description": "Gravatar URL based on email, without scheme",
 			"example": "//www.gravatar.com/avatar/6193176330f8d38747f038c170ddb193?default=mm"
 		},
+		"avatar_type": {
+			"type": "string",
+			"description": "Avatar Type",
+			"example": "gravatar",
+			"default": "gravatar",
+			"enum": ["gravatar", "url", "upload"]
+		},
+		"avatar_value": {
+			"type": ["string", "null"],
+			"description": "Avatar Value (URL or filename)",
+			"example": "https://example.com/avatar.png"
+		},
 		"roles": {
 			"description": "Roles applied",
-			"example": [
-				"admin"
-			],
+			"example": ["admin"],
 			"type": "array",
 			"items": {
 				"type": "string"

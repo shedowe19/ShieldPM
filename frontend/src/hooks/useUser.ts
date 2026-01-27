@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createUser, getUser, type User, updateUser } from "src/api/backend";
-import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE } from "src/types/enums";
 
 const fetchUser = (id: number | string) => {
 	if (id === "new") {
@@ -14,6 +14,8 @@ const fetchUser = (id: number | string) => {
 			nickname: "",
 			roles: [],
 			avatar: "",
+			avatar_type: AVATAR_TYPE.GRAVATAR,
+			avatar_value: "",
 		} as User);
 	}
 	return getUser(id, ["permissions"]);

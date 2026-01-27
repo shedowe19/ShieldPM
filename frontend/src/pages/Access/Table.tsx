@@ -2,7 +2,7 @@ import { IconDotsVertical, IconEdit, IconTrash } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { AccessList } from "src/api/backend";
-import { EmptyData, GravatarFormatter, HasPermission, ValueWithDateFormatter } from "src/components";
+import { EmptyData, UserAvatar, HasPermission, ValueWithDateFormatter } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Button } from "src/components/ui/button";
 import {
@@ -33,7 +33,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 				id: "owner",
 				cell: (info) => {
 					const value = info.getValue();
-					return <GravatarFormatter url={value ? value.avatar : ""} name={value ? value.name : ""} />;
+					return <UserAvatar url={value ? value.avatar : ""} name={value ? value.name : ""} />;
 				},
 				meta: {
 					className: "w-1",

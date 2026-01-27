@@ -6,7 +6,7 @@ interface Props {
 	url?: string;
 	name?: string;
 }
-export function GravatarFormatter({ url, name }: Props) {
+export function UserAvatar({ url, name }: Props) {
 	return (
 		<div className="flex items-center py-1">
 			<Avatar className="h-8 w-8 mr-2">

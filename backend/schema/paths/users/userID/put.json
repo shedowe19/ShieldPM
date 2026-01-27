@@ -56,6 +56,12 @@
 						},
 						"is_disabled": {
 							"$ref": "../../../components/user-object.json#/properties/is_disabled"
+						},
+						"avatar_type": {
+							"$ref": "../../../components/user-object.json#/properties/avatar_type"
+						},
+						"avatar_value": {
+							"$ref": "../../../components/user-object.json#/properties/avatar_value"
 						}
 					}
 				}

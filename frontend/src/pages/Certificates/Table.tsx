@@ -7,7 +7,7 @@ import {
 	DateFormatter,
 	DomainsFormatter,
 	EmptyData,
-	GravatarFormatter,
+	UserAvatar,
 	HasPermission,
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
@@ -46,7 +46,7 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 				id: "owner",
 				cell: (info) => {
 					const value = info.getValue();
-					return <GravatarFormatter url={value ? value.avatar : ""} name={value ? value.name : ""} />;
+					return <UserAvatar url={value ? value.avatar : ""} name={value ? value.name : ""} />;
 				},
 				meta: {
 					className: "w-1",

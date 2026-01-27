@@ -1,22 +1,24 @@
-import { IconId, IconMail, IconPower, IconSettings, IconShield, IconUser } from "@tabler/icons-react";
+import { IconId, IconMail, IconPhoto, IconPower, IconSettings, IconShield, IconUser } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
-import type { User } from "src/api/backend";
-import { Loading } from "src/components";
+import { type User, uploadUserAvatar } from "src/api/backend";
+import { Loading, UserAvatar } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { Switch } from "src/components/ui/switch";
 import { useHealth, useSetUser, useUser } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import { AUDIT_LOG_OBJECT_TYPE, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, type AvatarType, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
 
 const showUserModal = (id: number | "me" | "new") => {
 	EasyModal.show(UserModal, { id });
@@ -31,6 +33,8 @@ interface UserValues {
 	email: string;
 	isAdmin: boolean;
 	isDisabled: boolean;
+	avatar_type: AvatarType;
+	avatar_value: string;
 }
 
 const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
@@ -39,6 +43,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { mutate: setUser } = useSetUser();
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
 	const onSubmit = async (values: UserValues, { setSubmitting }: FormikHelpers<UserValues>) => {
 		if (isSubmitting) return;
@@ -65,12 +70,25 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setUser(payload as unknown as User, {
 			onError: (err) => {
 				if (err instanceof Error) setErrorMsg(err.message);
+				setIsSubmitting(false);
+				setSubmitting(false);
 			},
-			onSuccess: () => {
+			onSuccess: async (newUser) => {
+				// Assuming hooks/useSetUser returns the user object on success
+				if (values.avatar_type === AVATAR_TYPE.UPLOAD && selectedFile) {
+					try {
+						await uploadUserAvatar({ id: newUser.id, file: selectedFile });
+					} catch (err) {
+						// Setup fallback error message but don't fail the whole user save?
+						// Or just show error and keep modal open?
+						// But onSuccess implies success of user save.
+						console.error("Failed to upload avatar", err);
+						// We could show a toast warning?
+					}
+				}
+
 				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, "saved");
 				remove();
-			},
-			onSettled: () => {
 				setIsSubmitting(false);
 				setSubmitting(false);
 			},
@@ -137,6 +155,8 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							email: data?.email || "",
 							isAdmin: data?.roles?.includes(USER_ROLE.ADMIN) || false,
 							isDisabled: data?.isDisabled || false,
+							avatar_type: data?.avatar_type || AVATAR_TYPE.GRAVATAR,
+							avatar_value: data?.avatar_value || "",
 						}}
 						onSubmit={onSubmit}
 					>
@@ -150,126 +170,256 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									</Alert>
 								)}
 
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div className="space-y-2">
-										<Label htmlFor="name" className="flex items-center gap-2">
-											<IconUser className="h-4 w-4 text-muted-foreground" />
-											<T id="user.full-name" />
-										</Label>
-										<Field name="name" validate={validateString(1, 50)}>
-											{({ field }: FieldProps) => (
-												<Input
-													id="name"
-													placeholder={intl.formatMessage({ id: "user.full-name" })}
-													className={errors.name && touched.name ? "border-destructive" : ""}
-													{...field}
-												/>
+								<Tabs defaultValue="details" className="w-full">
+									<TabsList className="grid w-full grid-cols-2 mb-4">
+										<TabsTrigger value="details" className="flex items-center gap-2">
+											<IconUser className="h-4 w-4" />
+											<span className="hidden sm:inline">
+												<T id="details" />
+											</span>
+										</TabsTrigger>
+										<TabsTrigger value="avatar" className="flex items-center gap-2">
+											<IconPhoto className="h-4 w-4" />
+											<span className="hidden sm:inline">Profile Picture</span>
+										</TabsTrigger>
+									</TabsList>
+
+									<TabsContent value="details" className="space-y-4">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-2">
+												<Label htmlFor="name" className="flex items-center gap-2">
+													<IconUser className="h-4 w-4 text-muted-foreground" />
+													<T id="user.full-name" />
+												</Label>
+												<Field name="name" validate={validateString(1, 50)}>
+													{({ field }: FieldProps) => (
+														<Input
+															id="name"
+															placeholder={intl.formatMessage({ id: "user.full-name" })}
+															className={
+																errors.name && touched.name ? "border-destructive" : ""
+															}
+															{...field}
+														/>
+													)}
+												</Field>
+												{errors.name && touched.name && (
+													<p className="text-sm font-medium text-destructive">
+														{errors.name as string}
+													</p>
+												)}
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="nickname" className="flex items-center gap-2">
+													<IconId className="h-4 w-4 text-muted-foreground" />
+													<T id="user.nickname" />
+												</Label>
+												<Field name="nickname" validate={validateString(1, 30)}>
+													{({ field }: FieldProps) => (
+														<Input
+															id="nickname"
+															placeholder={intl.formatMessage({ id: "user.nickname" })}
+															className={
+																errors.nickname && touched.nickname
+																	? "border-destructive"
+																	: ""
+															}
+															{...field}
+														/>
+													)}
+												</Field>
+												{errors.nickname && touched.nickname && (
+													<p className="text-sm font-medium text-destructive">
+														{errors.nickname as string}
+													</p>
+												)}
+											</div>
+										</div>
+
+										<div className="space-y-2">
+											<Label htmlFor="email" className="flex items-center gap-2">
+												<IconMail className="h-4 w-4 text-muted-foreground" />
+												<T id="email-address" />
+											</Label>
+											<Field name="email" validate={validateEmail()}>
+												{({ field }: FieldProps) => (
+													<Input
+														id="email"
+														type="email"
+														placeholder={intl.formatMessage({ id: "email-address" })}
+														className={
+															errors.email && touched.email ? "border-destructive" : ""
+														}
+														{...field}
+													/>
+												)}
+											</Field>
+											{errors.email && touched.email && (
+												<p className="text-sm font-medium text-destructive">
+													{errors.email as string}
+												</p>
 											)}
-										</Field>
-										{errors.name && touched.name && (
-											<p className="text-sm font-medium text-destructive">
-												{errors.name as string}
-											</p>
+										</div>
+
+										{currentUser && data && currentUser?.id !== data?.id && (
+											<Card className="mt-6 border-dashed">
+												<CardContent className="p-4 space-y-4">
+													<h4 className="text-sm font-medium flex items-center gap-2">
+														<IconSettings className="h-4 w-4" />
+														<T id="options" />
+													</h4>
+													<div className="flex items-center justify-between">
+														<Label
+															htmlFor="isAdmin"
+															className="flex-1 cursor-pointer flex items-center gap-2"
+														>
+															<IconShield className="h-4 w-4 text-orange-500" />
+															<div className="flex flex-col">
+																<span>
+																	<T id="role.admin" />
+																</span>
+																<span className="text-xs text-muted-foreground font-normal">
+																	<T id="user.permissions.full-system-access" />
+																</span>
+															</div>
+														</Label>
+														<Switch
+															id="isAdmin"
+															checked={values.isAdmin}
+															onCheckedChange={(checked) =>
+																setFieldValue("isAdmin", checked)
+															}
+														/>
+													</div>
+													<div className="flex items-center justify-between">
+														<Label
+															htmlFor="isDisabled"
+															className="flex-1 cursor-pointer flex items-center gap-2"
+														>
+															<IconPower className="h-4 w-4 text-red-500" />
+															<div className="flex flex-col">
+																<span>
+																	<T id="disabled" />
+																</span>
+																<span className="text-xs text-muted-foreground font-normal">
+																	<T id="user.permissions.prevent-login" />
+																</span>
+															</div>
+														</Label>
+														<Switch
+															id="isDisabled"
+															checked={values.isDisabled}
+															onCheckedChange={(checked) =>
+																setFieldValue("isDisabled", checked)
+															}
+														/>
+													</div>
+												</CardContent>
+											</Card>
 										)}
-									</div>
-									<div className="space-y-2">
-										<Label htmlFor="nickname" className="flex items-center gap-2">
-											<IconId className="h-4 w-4 text-muted-foreground" />
-											<T id="user.nickname" />
-										</Label>
-										<Field name="nickname" validate={validateString(1, 30)}>
-											{({ field }: FieldProps) => (
-												<Input
-													id="nickname"
-													placeholder={intl.formatMessage({ id: "user.nickname" })}
-													className={
-														errors.nickname && touched.nickname ? "border-destructive" : ""
+									</TabsContent>
+
+									<TabsContent
+										value="avatar"
+										className="space-y-6 animate-in fade-in slide-in-from-bottom-2"
+									>
+										<div className="flex flex-col items-center justify-center p-6 border rounded-lg bg-muted/20">
+											<div className="bg-background rounded-full p-1 shadow-sm border mb-4">
+												{/* Preview Logic */}
+												<UserAvatar
+													name={values.name || "User"}
+													url={
+														values.avatar_type === "upload" && selectedFile
+															? URL.createObjectURL(selectedFile)
+															: values.avatar_type === "url"
+																? values.avatar_value
+																: values.avatar_type === "upload" && !selectedFile
+																	? data?.avatar // Shows current upload if exists
+																	: undefined // Gravatar (UserAvatar handles undefined url)
 													}
-													{...field}
 												/>
-											)}
-										</Field>
-										{errors.nickname && touched.nickname && (
-											<p className="text-sm font-medium text-destructive">
-												{errors.nickname as string}
+											</div>
+											<p className="text-sm text-muted-foreground text-center max-w-xs">
+												This is how your profile picture will appear across the dashboard.
 											</p>
-										)}
-									</div>
-								</div>
+										</div>
 
-								<div className="space-y-2">
-									<Label htmlFor="email" className="flex items-center gap-2">
-										<IconMail className="h-4 w-4 text-muted-foreground" />
-										<T id="email-address" />
-									</Label>
-									<Field name="email" validate={validateEmail()}>
-										{({ field }: FieldProps) => (
-											<Input
-												id="email"
-												type="email"
-												placeholder={intl.formatMessage({ id: "email-address" })}
-												className={errors.email && touched.email ? "border-destructive" : ""}
-												{...field}
-											/>
-										)}
-									</Field>
-									{errors.email && touched.email && (
-										<p className="text-sm font-medium text-destructive">{errors.email as string}</p>
-									)}
-								</div>
+										<div className="space-y-4">
+											<Label>Source</Label>
+											<ToggleGroup
+												type="single"
+												value={values.avatar_type}
+												onValueChange={(val) => {
+													if (val) setFieldValue("avatar_type", val);
+												}}
+												className="justify-start border p-1 rounded-md inline-flex"
+											>
+												<ToggleGroupItem
+													value="gravatar"
+													aria-label="Gravatar"
+													className="gap-2"
+												>
+													Gravatar
+												</ToggleGroupItem>
+												<ToggleGroupItem value="url" aria-label="Custom URL" className="gap-2">
+													Custom URL
+												</ToggleGroupItem>
+												<ToggleGroupItem value="upload" aria-label="Upload" className="gap-2">
+													Upload
+												</ToggleGroupItem>
+											</ToggleGroup>
+										</div>
 
-								{currentUser && data && currentUser?.id !== data?.id && (
-									<Card className="mt-6 border-dashed">
-										<CardContent className="p-4 space-y-4">
-											<h4 className="text-sm font-medium flex items-center gap-2">
-												<IconSettings className="h-4 w-4" />
-												<T id="options" />
-											</h4>
-											<div className="flex items-center justify-between">
-												<Label
-													htmlFor="isAdmin"
-													className="flex-1 cursor-pointer flex items-center gap-2"
-												>
-													<IconShield className="h-4 w-4 text-orange-500" />
-													<div className="flex flex-col">
-														<span>
-															<T id="role.admin" />
-														</span>
-														<span className="text-xs text-muted-foreground font-normal">
-															<T id="user.permissions.full-system-access" />
-														</span>
-													</div>
-												</Label>
-												<Switch
-													id="isAdmin"
-													checked={values.isAdmin}
-													onCheckedChange={(checked) => setFieldValue("isAdmin", checked)}
-												/>
+										{values.avatar_type === "gravatar" && (
+											<div className="text-sm text-muted-foreground bg-blue-500/10 text-blue-600 p-3 rounded-md flex items-start gap-2">
+												<IconMail className="h-5 w-5 shrink-0" />
+												<span>
+													Avatar will be automatically fetched from Gravatar using your email
+													address:
+													<br />
+													<strong>{values.email}</strong>
+												</span>
 											</div>
-											<div className="flex items-center justify-between">
-												<Label
-													htmlFor="isDisabled"
-													className="flex-1 cursor-pointer flex items-center gap-2"
-												>
-													<IconPower className="h-4 w-4 text-red-500" />
-													<div className="flex flex-col">
-														<span>
-															<T id="disabled" />
-														</span>
-														<span className="text-xs text-muted-foreground font-normal">
-															<T id="user.permissions.prevent-login" />
-														</span>
-													</div>
-												</Label>
-												<Switch
-													id="isDisabled"
-													checked={values.isDisabled}
-													onCheckedChange={(checked) => setFieldValue("isDisabled", checked)}
-												/>
+										)}
+
+										{values.avatar_type === "url" && (
+											<div className="space-y-2">
+												<Label htmlFor="avatar_value">Image URL</Label>
+												<Field name="avatar_value">
+													{({ field }: FieldProps) => (
+														<Input
+															{...field}
+															id="avatar_value"
+															placeholder="https://example.com/me.png"
+															className={errors.avatar_value ? "border-destructive" : ""}
+														/>
+													)}
+												</Field>
+												<p className="text-xs text-muted-foreground">
+													Enter a direct link to an image file (PNG, JPG, GIF).
+												</p>
 											</div>
-										</CardContent>
-									</Card>
-								)}
+										)}
+
+										{values.avatar_type === "upload" && (
+											<div className="space-y-2">
+												<Label htmlFor="file_upload">Upload Image</Label>
+												<Input
+													id="file_upload"
+													type="file"
+													accept="image/png, image/jpeg, image/gif, image/webp"
+													onChange={(event) => {
+														const file = event.currentTarget.files?.[0];
+														setSelectedFile(file || null);
+													}}
+												/>
+												<p className="text-xs text-muted-foreground">
+													Max size: 2MB. Supported formats: PNG, JPG, GIF, WebP.
+												</p>
+											</div>
+										)}
+									</TabsContent>
+								</Tabs>
 
 								<DialogFooter className="mt-6">
 									<Button

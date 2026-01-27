@@ -7,7 +7,7 @@ import {
 	CertificateFormatter,
 	DomainsFormatter,
 	EmptyData,
-	GravatarFormatter,
+	UserAvatar,
 	HasPermission,
 	ServiceIcon,
 	TrueFalseFormatter,
@@ -62,7 +62,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 				id: "owner",
 				cell: (info) => {
 					const value = info.getValue();
-					return <GravatarFormatter url={value ? value.avatar : ""} name={value ? value.name : ""} />;
+					return <UserAvatar url={value ? value.avatar : ""} name={value ? value.name : ""} />;
 				},
 				meta: {
 					className: "w-1",
