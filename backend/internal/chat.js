@@ -132,7 +132,7 @@ const internalChat = {
 			bot.launch().catch((err) => {
 				logger.error(`[ChatOps] Failed to launch bot ${integration.id}:`, err);
 			});
-			
+
 			bots[integration.id] = bot;
 			logger.info(`[ChatOps] Started Telegram bot for Integration ID ${integration.id}`);
 		} catch (err) {
