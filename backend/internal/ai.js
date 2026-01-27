@@ -95,9 +95,20 @@ const ai = {
 			dataToSave.api_key = encrypt(dataToSave.api_key);
 		}
 
-		// Check if setting exists, create if not
+
+		// Check if setting exists, or create if not
+		let exists = false;
 		try {
 			await internalSetting.get(access, { id: AI_CONFIG_ID });
+			exists = true;
+		} catch (err) {
+			if (err.code !== 404 && err.message !== AI_CONFIG_ID) {
+				// Rethrow if it's not a "Not Found" error
+				throw err;
+			}
+		}
+
+		if (exists) {
 			// Update
 			await internalSetting.update(
 				access,
@@ -108,7 +119,8 @@ const ai = {
 					meta: dataToSave,
 				}),
 			);
-		} catch (_err) {
+		} else {
+			// Insert
 			const SettingModel = (await import("../models/setting.js")).default;
 			await SettingModel.query().insert({
 				id: AI_CONFIG_ID,
