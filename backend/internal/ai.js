@@ -1,4 +1,5 @@
 import { decrypt, encrypt } from "../lib/encryption.js";
+import { global as logger } from "../logger.js";
 import { executeTools } from "./ai/executor.js";
 import { getSystemPrompt } from "./ai/prompt.js";
 import * as aiProviders from "./ai/providers.js";
@@ -199,7 +200,7 @@ const ai = {
 			throw new Error("AI Agent is disabled.");
 		}
 
-		console.log("[DEBUG] AI Chat Config:", {
+		logger.debug("[DEBUG] AI Chat Config:", {
 			provider: config.provider,
 			model: config.model,
 			baseUrl: config.base_url,
@@ -208,7 +209,7 @@ const ai = {
 		// FAIL-SAFE: If switching providers left a Gemini model name, clear it for Local
 		if (config.provider === "local" && config.model && config.model.includes("gemini")) {
 			// Logs for debugging
-			console.log(`[AI] Sanitzing model for Local provider. Invalid model: ${config.model}`);
+			logger.warn(`[AI] Sanitzing model for Local provider. Invalid model: ${config.model}`);
 			config.model = ""; // Will fallback to default in _callLocalLLM
 		}
 
@@ -219,7 +220,7 @@ const ai = {
 		const systemPrompt = getSystemPrompt(config);
 		const tools = getToolDefinitions();
 
-		console.log("[AI Chat] Calling LLM:", {
+		logger.info("[AI Chat] Calling LLM:", {
 			provider: config.provider,
 			messageLength: message.length,
 			toolsCount: tools.length,
@@ -233,7 +234,7 @@ const ai = {
 			response = await aiProviders.callLocalLLM(config, systemPrompt, message, history, tools);
 		}
 
-		console.log("[AI Chat] LLM Response:", {
+		logger.info("[AI Chat] LLM Response:", {
 			hasContent: !!response.content,
 			hasToolCalls: !!response.toolCalls,
 			contentLength: response.content?.length || 0,
@@ -251,7 +252,7 @@ const ai = {
 			for (const pattern of toolCallPatterns) {
 				const matches = [...response.content.matchAll(pattern)];
 				if (matches.length > 0) {
-					console.log("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
+					logger.warn("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
 					response.toolCalls = response.toolCalls || [];
 					for (const match of matches) {
 						try {
@@ -259,9 +260,9 @@ const ai = {
 							const argsStr = match[2] || "{}";
 							const args = JSON.parse(argsStr.replace(/'/g, '"'));
 							response.toolCalls.push({ name: toolName, args });
-							console.log(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
+							logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
 						} catch (e) {
-							console.log("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
+							logger.warn("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
 						}
 					}
 					// Clear the text content since we extracted tool calls
@@ -275,13 +276,13 @@ const ai = {
 
 		// 4. Handle Tool Calls
 		if (response.toolCalls && response.toolCalls.length > 0) {
-			console.log(
+			logger.info(
 				"[AI Chat] Executing tools:",
 				response.toolCalls.map((tc) => tc.name),
 			);
 			const toolResults = await executeTools(access, response.toolCalls);
 
-			console.log(
+			logger.info(
 				"[AI Chat] Tool results:",
 				toolResults.map((tr) => ({ name: tr.name, resultLength: tr.result?.length || 0 })),
 			);
@@ -308,7 +309,7 @@ const ai = {
 			);
 		}
 
-		console.log("[AI Chat] Returning response:", {
+		logger.debug("[AI Chat] Returning response:", {
 			role: "assistant",
 			contentLength: response.content?.length || 0,
 		});
@@ -336,7 +337,7 @@ const ai = {
 		if (!toolsExecuted && finalContent) {
 			const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
 			if (claimsAction) {
-				console.log("[AI Chat] WARNING: AI claims action but no tool was executed!");
+				logger.warn("[AI Chat] WARNING: AI claims action but no tool was executed!");
 				finalContent = `⚠️ WARNING: The AI claims to have performed an action, but no tool was executed. Please verify manually!\n\n---\n\n${finalContent}`;
 			}
 		}

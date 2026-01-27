@@ -2,6 +2,7 @@ import express from "express";
 import internalAi from "../internal/ai.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
+import { express as logger } from "../logger.js";
 import { getValidationSchema } from "../schema/index.js";
 
 const router = express.Router();
@@ -57,17 +58,17 @@ router.post("/models", jwtdecode(), async (req, res, next) => {
  */
 router.post("/chat", jwtdecode(), async (req, res, next) => {
 	try {
-		console.log("AI Chat request received:", {
+		logger.debug("AI Chat request received:", {
 			message: req.body.message,
 			historyLength: req.body.history?.length || 0,
 		});
 		const payload = await apiValidator(getValidationSchema("/ai/chat", "post"), req.body);
 		const { message, history } = payload;
 		const result = await internalAi.chat(res.locals.access, message, history);
-		console.log("AI Chat response:", result);
+		logger.debug("AI Chat response:", result);
 		res.status(200).json(result);
 	} catch (err) {
-		console.error("AI Chat error:", err);
+		logger.error("AI Chat error:", err);
 		next(err);
 	}
 });

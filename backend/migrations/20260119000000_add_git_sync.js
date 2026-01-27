@@ -3,14 +3,10 @@
  * For automatic website deployment from Git repositories
  */
 
-const migrateName = "add_git_sync";
-
 /**
  * @param {import("knex").Knex} knex
  */
 export async function up(knex) {
-	console.log(`[${migrateName}] Migrating Up...`);
-
 	await knex.schema.alterTable("proxy_host", (table) => {
 		// Repository configuration
 		table.string("git_repo_url").nullable().defaultTo(null);
@@ -29,16 +25,12 @@ export async function up(knex) {
 		table.string("git_last_commit").nullable().defaultTo(null);
 		table.text("git_last_error").nullable().defaultTo(null);
 	});
-
-	console.log(`[${migrateName}] Migrating Up Complete`);
 }
 
 /**
  * @param {import("knex").Knex} knex
  */
 export async function down(knex) {
-	console.log(`[${migrateName}] Migrating Down...`);
-
 	await knex.schema.alterTable("proxy_host", (table) => {
 		table.dropColumn("git_repo_url");
 		table.dropColumn("git_branch");
@@ -50,6 +42,4 @@ export async function down(knex) {
 		table.dropColumn("git_last_commit");
 		table.dropColumn("git_last_error");
 	});
-
-	console.log(`[${migrateName}] Migrating Down Complete`);
 }

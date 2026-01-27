@@ -18,7 +18,7 @@ function getLicenses(cwd, production) {
         const type = production ? '--production' : '--development';
         // Use npx -y to avoid prompts
         const cmd = `npx -y license-checker --start . --json --direct ${type}`;
-        console.log(`Running in ${cwd}: ${cmd}`);
+        process.stdout.write(`Running in ${cwd}: ${cmd}\n`);
         const output = execSync(cmd, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
         return JSON.parse(output);
     } catch (e) {
@@ -51,14 +51,14 @@ function main() {
     const backendPath = path.resolve(__dirname, '../backend');
     const frontendPath = path.resolve(__dirname, '../frontend');
 
-    console.log('Fetching Backend Production...');
+    process.stdout.write('Fetching Backend Production...\n');
     const backProd = getLicenses(backendPath, true);
-    console.log('Fetching Backend Development...');
+    process.stdout.write('Fetching Backend Development...\n');
     const backDev = getLicenses(backendPath, false);
 
-    console.log('Fetching Frontend Production...');
+    process.stdout.write('Fetching Frontend Production...\n');
     const frontProd = getLicenses(frontendPath, true);
-    console.log('Fetching Frontend Development...');
+    process.stdout.write('Fetching Frontend Development...\n');
     const frontDev = getLicenses(frontendPath, false);
 
     let content = HEADER;
@@ -78,7 +78,7 @@ function main() {
     content += '\n' + FOOTER;
 
     fs.writeFileSync(path.resolve(__dirname, '../THIRD-PARTY-NOTICES.md'), content);
-    console.log('Successfully wrote THIRD-PARTY-NOTICES.md');
+    process.stdout.write('Successfully wrote THIRD-PARTY-NOTICES.md\n');
 }
 
 main();

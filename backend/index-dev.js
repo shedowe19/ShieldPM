@@ -60,11 +60,11 @@ internalIpRanges.fetch = async () => {
 
 async function start() {
 	try {
-		console.log("Starting DB Migration...");
+		logger.info("Starting DB Migration...");
 		await migrateUp();
-		console.log("Starting Setup...");
+		logger.info("Starting Setup...");
 		await setup();
-		console.log("Compiling Schema...");
+		logger.info("Compiling Schema...");
 		await getCompiledSchema();
 
 		const port = 3000;
@@ -74,7 +74,6 @@ async function start() {
 		});
 	} catch (err) {
 		logger.error("Startup Error", err);
-		console.error(err);
 		process.exit(1);
 	}
 }

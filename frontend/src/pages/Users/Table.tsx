@@ -13,9 +13,9 @@ import type { User } from "src/api/backend";
 import {
 	EmailFormatter,
 	EmptyData,
-	UserAvatar,
 	RolesFormatter,
 	TrueFalseFormatter,
+	UserAvatar,
 	ValueWithDateFormatter,
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";

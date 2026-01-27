@@ -43,12 +43,6 @@ const loadMessages = (locale?: string): typeof langList & typeof langEn => {
 	const found = localeOptions.find(([code]) => code === thisLocale);
 	const messages = found ? found[2] : langEn;
 
-	console.log(`[IntlProvider] Loading locale: ${locale} -> ${thisLocale}`, {
-		found: !!found,
-		messageCount: Object.keys(messages).length,
-		sample: (messages as Record<string, string>)["proxy_hosts.count_label"],
-	});
-
 	return Object.assign({}, langList, langEn, messages);
 };
 

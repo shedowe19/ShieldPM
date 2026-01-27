@@ -304,3 +304,7 @@ export const AVATAR_TYPE = {
 	UPLOAD: "upload",
 } as const;
 export type AvatarType = (typeof AVATAR_TYPE)[keyof typeof AVATAR_TYPE];
+export const CHAT_PROVIDER = {
+	TELEGRAM: "telegram",
+} as const;
+export type ChatProvider = (typeof CHAT_PROVIDER)[keyof typeof CHAT_PROVIDER];

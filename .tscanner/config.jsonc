@@ -1,34 +1,90 @@
 {
   "$schema": "https://unpkg.com/tscanner@0.1.3/schema.json",
+  "ai": {
+    "provider": "gemini"
+  },
   "rules": {
     "builtin": {
       "no-explicit-any": {}
     },
-    "regex": {},
+    "regex": {
+        "no-console-log": {
+            "pattern": "console\\.log\\(",
+            "message": "Avoid shipping console.log statements",
+            "severity": "warning",
+            "include": ["**/*.ts", "**/*.tsx", "**/*.js"]
+        },
+        "no-debugger": {
+            "pattern": "debugger",
+            "message": "Do not commit debugger statements",
+            "severity": "error",
+            "include": ["**/*.ts", "**/*.tsx", "**/*.js"]
+        },
+        "no-alert": {
+            "pattern": "alert\\(",
+            "message": "Avoid using native alert()",
+            "severity": "warning",
+            "include": ["**/*.ts", "**/*.tsx", "**/*.js"]
+        },
+        "no-todo": {
+            "pattern": "//\\s*TODO:",
+            "message": "Tracked TODO item found",
+            "severity": "info",
+            "include": ["**/*.ts", "**/*.tsx", "**/*.js"]
+        },
+        "no-fixme": {
+            "pattern": "//\\s*FIXME:",
+            "message": "Fix this issue before merging",
+            "severity": "warning",
+            "include": ["**/*.ts", "**/*.tsx", "**/*.js"]
+        },
+        "no-var": {
+            "pattern": "\\bvar\\s+",
+            "message": "Use let or const instead of var",
+            "severity": "error",
+            "include": ["**/*.ts", "**/*.tsx", "**/*.js"]
+        }
+    },
     "script": {
-    "no-long-files": {
-      "command": "npx tsx script-rules/no-long-files.ts",
-      "include": [
-      "**/*.ts",
-      "**/*.tsx",
-      "**/*.js",
-      "**/*.jsx"
-      ],
-      "message": "File exceeds maximum lines limit",
-      "severity": "warning"
-    }}
+      "no-long-files": {
+        "command": "npx tsx script-rules/no-long-files.ts",
+        "include": [
+          "**/*.ts",
+          "**/*.tsx",
+          "**/*.js",
+          "**/*.jsx"
+        ],
+        "message": "File exceeds maximum lines limit",
+        "severity": "warning"
+      }
+    }
   },
   "aiRules": {
     "find-enum-candidates": {
       "include": [
-      "**/*.ts",
-      "**/*.tsx"
+        "**/*.ts",
+        "**/*.tsx"
       ],
       "message": "Type union could be replaced with an enum for better type safety",
       "mode": "agentic",
       "prompt": "find-enum-candidates.md",
       "severity": "warning"
-    }},
+    },
+    "security-audit": {
+        "include": ["**/*.js", "**/*.ts", "**/*.tsx"],
+        "message": "Potential Security Issue detected",
+        "mode": "agentic",
+        "prompt": "security.md",
+        "severity": "warning"
+    },
+    "performance-check": {
+        "include": ["**/*.js", "**/*.ts", "**/*.tsx"],
+        "message": "Potential Performance Bottleneck detected",
+        "mode": "agentic",
+        "prompt": "performance.md",
+        "severity": "info"
+    }
+  },
   "files": {
     "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"],
     "exclude": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"]

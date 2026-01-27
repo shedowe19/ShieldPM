@@ -1,0 +1,68 @@
+{
+	"operationId": "updateChatIntegration",
+	"summary": "Update a Chat Integration",
+	"tags": [
+		"chat"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"user"
+			]
+		}
+	],
+	"parameters": [
+		{
+			"in": "path",
+			"name": "integrationID",
+			"required": true,
+			"schema": {
+				"type": "integer"
+			}
+		}
+	],
+	"requestBody": {
+		"description": "Chat Integration Payload",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"provider": {
+							"type": "string",
+							"enum": [
+								"telegram"
+							]
+						},
+						"token": {
+							"type": "string"
+						},
+						"enabled": {
+							"type": "boolean"
+						},
+						"config": {
+							"type": "object"
+						},
+						"meta": {
+							"type": "object"
+						}
+					}
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "200 response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/chat-integration-object.json"
+					}
+				}
+			}
+		}
+	}
+}

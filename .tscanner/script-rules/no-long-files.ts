@@ -1,24 +1,27 @@
 #!/usr/bin/env npx tsx
 
-// biome-ignore assist/source/organizeImports: <tscanner>
-import { type ScriptIssue, addIssue, runScript } from 'tscanner';
+import fs from 'node:fs';
 
 const MAX_LINES = 1500;
 
-runScript((input) => {
-  const issues: ScriptIssue[] = [];
+// Read input from stdin
+const input = fs.readFileSync(0, 'utf-8');
+const data = JSON.parse(input);
 
-  for (const file of input.files) {
-    const lineCount = file.lines.length;
+const issues = [];
 
-    if (lineCount > MAX_LINES) {
-      addIssue(issues, {
-        file: file.path,
-        line: MAX_LINES + 1,
-        message: `File has ${lineCount} lines, exceeds maximum of ${MAX_LINES} lines`,
-      });
-    }
+for (const file of data.files) {
+  const lineCount = file.lines.length;
+
+  if (lineCount > MAX_LINES) {
+    issues.push({
+      file: file.path,
+      line: MAX_LINES + 1,
+      message: `File has ${lineCount} lines, exceeds maximum of ${MAX_LINES} lines`,
+      severity: 'warning'
+    });
   }
+}
 
-  return issues;
-});
+// Output results to stdout without newline to avoid issues, or with newline is fine usually
+process.stdout.write(`${JSON.stringify(issues)}\n`);

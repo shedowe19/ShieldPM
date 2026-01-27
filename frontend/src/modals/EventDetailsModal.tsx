@@ -1,7 +1,7 @@
 import { IconCode, IconListDetails } from "@tabler/icons-react";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { EventFormatter, UserAvatar, Loading } from "src/components";
+import { EventFormatter, Loading, UserAvatar } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";

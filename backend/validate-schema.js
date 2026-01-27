@@ -6,11 +6,11 @@ import { getCompiledSchema } from "./schema/index.js";
 getCompiledSchema().then(async (swaggerJSON) => {
 	try {
 		const api = await SwaggerParser.validate(swaggerJSON);
-		console.log("API name: %s, Version: %s", api.info.title, api.info.version);
-		console.log("❯ Schema is valid");
+		process.stdout.write(`API name: ${api.info.title}, Version: ${api.info.version}\n`);
+		process.stdout.write("❯ Schema is valid\n");
 	} catch (e) {
 		console.error(e);
-		console.log("❯", e.message, "\n");
+		process.stdout.write(`❯ ${e.message}\n\n`);
 		process.exit(1);
 	}
 });

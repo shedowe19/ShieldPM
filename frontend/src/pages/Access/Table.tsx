@@ -2,7 +2,7 @@ import { IconDotsVertical, IconEdit, IconTrash } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { AccessList } from "src/api/backend";
-import { EmptyData, UserAvatar, HasPermission, ValueWithDateFormatter } from "src/components";
+import { EmptyData, HasPermission, UserAvatar, ValueWithDateFormatter } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Button } from "src/components/ui/button";
 import {

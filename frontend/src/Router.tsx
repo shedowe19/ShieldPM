@@ -31,6 +31,7 @@ const Streams = lazy(() => import("src/pages/Nginx/Streams"));
 const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
 const DdnsProviders = lazy(() => import("src/pages/Nginx/DdnsProviders"));
 const TorOnionServices = lazy(() => import("src/pages/Nginx/TorOnionServices"));
+const ChatOps = lazy(() => import("src/pages/ChatOps"));
 
 function Content() {
 	const location = useLocation();
@@ -154,6 +155,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<Analytics />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/chatops"
+					element={
+						<AnimatedPage>
+							<ChatOps />
 						</AnimatedPage>
 					}
 				/>

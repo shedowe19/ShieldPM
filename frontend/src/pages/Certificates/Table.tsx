@@ -7,8 +7,8 @@ import {
 	DateFormatter,
 	DomainsFormatter,
 	EmptyData,
-	UserAvatar,
 	HasPermission,
+	UserAvatar,
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Button } from "src/components/ui/button";

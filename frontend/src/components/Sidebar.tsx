@@ -5,6 +5,7 @@ import {
 	IconHome,
 	IconLock,
 	IconMenu2,
+	IconMessageCircle,
 	IconSettings,
 	IconShield,
 	IconUser,
@@ -121,6 +122,12 @@ const menuItems: MenuItem[] = [
 		permissionSection: ADMIN,
 	},
 	{
+		to: "/chatops",
+		icon: IconMessageCircle,
+		label: "ChatOps",
+		permissionSection: ADMIN,
+	},
+	{
 		to: "/settings",
 		icon: IconSettings,
 		label: "settings",
@@ -201,8 +208,8 @@ export function Sidebar() {
 							</div>
 							<ScrollArea className="flex-1 px-4">
 								<nav className="flex flex-col gap-2 py-4">
-									{menuItems.map((item, index) => (
-										<SidebarItem key={index} item={item} />
+									{menuItems.map((item) => (
+										<SidebarItem key={item.to || item.label} item={item} />
 									))}
 									<div className="pt-4 border-t border-slate-800 mt-2">
 										<AiChat />
@@ -230,8 +237,8 @@ export function Sidebar() {
 				</div>
 				<ScrollArea className="flex-1 px-4">
 					<nav className="flex flex-col gap-2 py-4">
-						{menuItems.map((item, index) => (
-							<SidebarItem key={index} item={item} />
+						{menuItems.map((item) => (
+							<SidebarItem key={item.to || item.label} item={item} />
 						))}
 						<div className="pt-4 border-t border-slate-800 mt-2">
 							<AiChat />

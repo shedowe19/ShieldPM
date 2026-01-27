@@ -4,9 +4,9 @@ import internalAuditLog from "../../internal/audit-log.js";
 import internalCloudflared from "../../internal/cloudflared.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
+import { global as logger } from "../../logger.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import { getValidationSchema } from "../../schema/index.js";
-import { global as logger } from "../../logger.js";
 
 const router = express.Router({
 	caseSensitive: true,

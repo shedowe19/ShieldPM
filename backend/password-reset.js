@@ -7,13 +7,13 @@ import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 
 function usage() {
-	console.log(`usage: node ${process.argv[1]} USER_EMAIL PASSWORD
+	process.stdout.write(`usage: node ${process.argv[1]} USER_EMAIL PASSWORD
 
 Reset password of a ShieldPM user.
 
 Arguments:
   USER_EMAIL      Email address of the user to reset the password.
-  PASSWORD        Optional new password of the user. If not set, password is set to 'changeme'.`);
+  PASSWORD        Optional new password of the user. If not set, password is set to 'changeme'.\n`);
 	process.exit(1);
 }
 
@@ -56,9 +56,9 @@ async function run() {
 				const result = stmt.run(PASSWORD_HASH, USER_EMAIL);
 
 				if (result.changes > 0) {
-					console.log(`Password for user ${USER_EMAIL} has been reset.`);
+					process.stdout.write(`Password for user ${USER_EMAIL} has been reset.\n`);
 				} else {
-					console.log(`No user found with email ${USER_EMAIL}.`);
+					process.stdout.write(`No user found with email ${USER_EMAIL}.\n`);
 				}
 			} finally {
 				db.close();

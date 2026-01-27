@@ -4,6 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { global as logger } from "../../logger.js";
 
 /**
  * Call Gemini API
@@ -46,12 +47,12 @@ export const callGemini = async (config, systemPrompt, message, history, tools) 
 		tools: geminiTools,
 	});
 
-	console.log("[Gemini SDK] Sending message with tools:", geminiTools?.length || 0);
+	logger.debug("[Gemini SDK] Sending message with tools:", geminiTools?.length || 0);
 
 	const result = await chat.sendMessage(message);
 	const response = result.response;
 
-	console.log("[Gemini SDK] Response:", {
+	logger.debug("[Gemini SDK] Response:", {
 		hasText: !!response.text(),
 		hasFunctionCalls: !!(response.functionCalls() && response.functionCalls().length > 0),
 	});
@@ -59,7 +60,7 @@ export const callGemini = async (config, systemPrompt, message, history, tools) 
 	// Check for function calls
 	const functionCalls = response.functionCalls();
 	if (functionCalls && functionCalls.length > 0) {
-		console.log(
+		logger.info(
 			"[Gemini SDK] Tool calls detected:",
 			functionCalls.map((fc) => fc.name),
 		);
@@ -106,7 +107,7 @@ export const callGeminiWithResults = async (
 		},
 	}));
 
-	console.log("[Gemini SDK] Sending function responses:", functionResponses.length);
+	logger.debug("[Gemini SDK] Sending function responses:", functionResponses.length);
 
 	const result = await chat.sendMessage(functionResponses);
 	const response = result.response;
@@ -114,7 +115,7 @@ export const callGeminiWithResults = async (
 	// Check for more function calls
 	const functionCalls = response.functionCalls();
 	if (functionCalls && functionCalls.length > 0) {
-		console.log(
+		logger.info(
 			"[Gemini SDK] More tool calls detected:",
 			functionCalls.map((fc) => fc.name),
 		);
@@ -196,7 +197,7 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 		};
 	}
 
-	console.log("[Local LLM] Request:", { url, model: config.model, toolsCount: tools.length });
+	logger.debug("[Local LLM] Request:", { url, model: config.model, toolsCount: tools.length });
 
 	const res = await fetch(url, {
 		method: "POST",
@@ -241,7 +242,7 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 	}
 
 	if (toolCalls.length > 0) {
-		console.log(
+		logger.info(
 			"[Local LLM] Tool calls detected:",
 			toolCalls.map((tc) => tc.name),
 		);
