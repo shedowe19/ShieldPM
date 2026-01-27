@@ -123,7 +123,16 @@ const internalChat = {
 				}
 			});
 
-			bot.launch();
+			// Global error handler for this bot
+			bot.catch((err, ctx) => {
+				logger.error(`[ChatOps] Bot ${integration.id} error for ${ctx.updateType}:`, err);
+			});
+
+			// Launch with explicit error handling
+			bot.launch().catch((err) => {
+				logger.error(`[ChatOps] Failed to launch bot ${integration.id}:`, err);
+			});
+			
 			bots[integration.id] = bot;
 			logger.info(`[ChatOps] Started Telegram bot for Integration ID ${integration.id}`);
 		} catch (err) {

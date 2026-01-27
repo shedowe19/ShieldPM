@@ -48,7 +48,7 @@ async function appStart() {
 		internalDocker.init();
 		internalGitOps.init();
 		internalDdns.initTimer();
-		internalChat.init();
+		await internalChat.init();
 		internalGitDeploy.init();
 
 		const server = app.listen("/run/shieldpm.sock", () => {
