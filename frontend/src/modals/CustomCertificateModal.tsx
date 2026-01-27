@@ -16,6 +16,7 @@ import { Textarea } from "src/components/ui/textarea";
 import { T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, CERT_CUSTOM_MODE, type CertCustomMode, PEM_TYPE, type PemType } from "src/types/enums";
 
 const showCustomCertificateModal = () => {
 	EasyModal.show(CustomCertificateModal);
@@ -38,9 +39,9 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [mode, setMode] = useState<"upload" | "paste">("upload");
+	const [mode, setMode] = useState<CertCustomMode>(CERT_CUSTOM_MODE.UPLOAD);
 
-	const validatePem = (content: string, type: "PRIVATE KEY" | "CERTIFICATE") => {
+	const validatePem = (content: string, type: PemType) => {
 		if (!content) return false;
 		return content.includes(`-----BEGIN ${type}-----`);
 	};
@@ -57,7 +58,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 			const { niceName, provider } = values;
 			const formData = new FormData();
 
-			if (mode === "upload") {
+			if (mode === CERT_CUSTOM_MODE.UPLOAD) {
 				if (!values.certificate || !values.certificateKey) {
 					throw new Error("certificate.errors.missing_files");
 				}
@@ -68,10 +69,10 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 				}
 			} else {
 				// Paste mode validation
-				if (!validatePem(values.certificateKeyText, "PRIVATE KEY")) {
+				if (!validatePem(values.certificateKeyText, PEM_TYPE.KEY)) {
 					throw new Error("certificate.errors.invalid_key_pem");
 				}
-				if (!validatePem(values.certificateText, "CERTIFICATE")) {
+				if (!validatePem(values.certificateText, PEM_TYPE.CERT)) {
 					throw new Error("certificate.errors.invalid_cert_pem");
 				}
 
@@ -104,7 +105,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 			await uploadCertificate(cert.id, formData);
 
 			// Success
-			showObjectSuccess("certificate", "saved");
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "saved");
 			remove();
 		} catch (err) {
 			if (err instanceof Error) {
@@ -125,7 +126,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<IconCertificate className="h-5 w-5" />
-						<T id="object.add" tData={{ object: "certificates.custom" }} />
+						<T id="object.add" tData={{ object: `${AUDIT_LOG_OBJECT_TYPE.CERTIFICATE}.custom` }} />
 					</DialogTitle>
 				</DialogHeader>
 
@@ -173,17 +174,13 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 								)}
 							</div>
 
-							<Tabs
-								value={mode}
-								onValueChange={(v) => setMode(v as "upload" | "paste")}
-								className="w-full"
-							>
+							<Tabs value={mode} onValueChange={(v) => setMode(v as CertCustomMode)} className="w-full">
 								<TabsList className="grid w-full grid-cols-2">
-									<TabsTrigger value="upload">File Upload</TabsTrigger>
-									<TabsTrigger value="paste">Paste Input</TabsTrigger>
+									<TabsTrigger value={CERT_CUSTOM_MODE.UPLOAD}>File Upload</TabsTrigger>
+									<TabsTrigger value={CERT_CUSTOM_MODE.PASTE}>Paste Input</TabsTrigger>
 								</TabsList>
 
-								<TabsContent value="upload" className="space-y-4 pt-4">
+								<TabsContent value={CERT_CUSTOM_MODE.UPLOAD} className="space-y-4 pt-4">
 									<Card className="border-dashed">
 										<CardContent className="p-4 space-y-4">
 											<div className="space-y-2">
@@ -193,7 +190,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 												<Input
 													id="certificateKey"
 													type="file"
-													required={mode === "upload"}
+													required={mode === CERT_CUSTOM_MODE.UPLOAD}
 													className={`cursor-pointer file:text-foreground ${errors.certificateKey && touched.certificateKey ? "border-destructive" : ""}`}
 													onChange={(event) => {
 														setFieldValue(
@@ -213,7 +210,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 												<Input
 													id="certificate"
 													type="file"
-													required={mode === "upload"}
+													required={mode === CERT_CUSTOM_MODE.UPLOAD}
 													className={`cursor-pointer file:text-foreground ${errors.certificate && touched.certificate ? "border-destructive" : ""}`}
 													onChange={(event) => {
 														setFieldValue(
@@ -248,7 +245,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 									</Card>
 								</TabsContent>
 
-								<TabsContent value="paste" className="space-y-4 pt-4">
+								<TabsContent value={CERT_CUSTOM_MODE.PASTE} className="space-y-4 pt-4">
 									<Card className="border-dashed">
 										<CardContent className="p-4 space-y-4">
 											<div className="space-y-2">

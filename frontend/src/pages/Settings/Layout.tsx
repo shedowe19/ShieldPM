@@ -2,6 +2,7 @@ import { IconGitBranch, IconRobot, IconSettings } from "@tabler/icons-react";
 import { Lock } from "lucide-react";
 import { useState } from "react";
 import { T } from "src/locale";
+import { SETTINGS_TAB, type SettingsTab } from "src/types/enums";
 import AiConfigPage from "./Ai";
 import DefaultSite from "./DefaultSite";
 import GitOps from "./GitOps";
@@ -10,7 +11,7 @@ import { useHealth } from "@/hooks/useHealth";
 
 export default function Layout() {
 	const health = useHealth();
-	const [activeTab, setActiveTab] = useState<"default-site" | "ai" | "gitops">("default-site");
+	const [activeTab, setActiveTab] = useState<SettingsTab>(SETTINGS_TAB.DEFAULT_SITE);
 
 	if (health.data?.demo) {
 		return (
@@ -45,24 +46,24 @@ export default function Layout() {
 						</h2>
 						<button
 							type="button"
-							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "default-site" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
-							onClick={() => setActiveTab("default-site")}
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.DEFAULT_SITE ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab(SETTINGS_TAB.DEFAULT_SITE)}
 						>
 							<IconSettings className="mr-2 h-4 w-4" />
 							<T id="settings.default-site" />
 						</button>
 						<button
 							type="button"
-							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "ai" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
-							onClick={() => setActiveTab("ai")}
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.AI ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab(SETTINGS_TAB.AI)}
 						>
 							<IconRobot className="mr-2 h-4 w-4" />
 							AI Agent
 						</button>
 						<button
 							type="button"
-							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === "gitops" ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
-							onClick={() => setActiveTab("gitops")}
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.GITOPS ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab(SETTINGS_TAB.GITOPS)}
 						>
 							<IconGitBranch className="mr-2 h-4 w-4" />
 							<T id="settings.gitops" />
@@ -70,9 +71,9 @@ export default function Layout() {
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
-					{activeTab === "default-site" && <DefaultSite />}
-					{activeTab === "ai" && <AiConfigPage />}
-					{activeTab === "gitops" && <GitOps />}
+					{activeTab === SETTINGS_TAB.DEFAULT_SITE && <DefaultSite />}
+					{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
+					{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}
 				</div>
 			</div>
 		</div>

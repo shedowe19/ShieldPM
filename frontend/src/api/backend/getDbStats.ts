@@ -1,5 +1,7 @@
+import type { DbEngine } from "src/types/enums";
+
 export interface DbStats {
-	engine: "sqlite" | "mysql" | "postgresql" | "unknown";
+	engine: DbEngine;
 	size: number;
 	connections: {
 		open: number;

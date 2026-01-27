@@ -17,6 +17,7 @@ import { useSetStream, useStream } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, STREAM_TAB } from "src/types/enums";
 
 const showStreamModal = (id: number | "new") => {
 	EasyModal.show(StreamModal, { id });
@@ -44,7 +45,6 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { mutate: setStream } = useSetStream();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [activeTab, setActiveTab] = useState("details");
 
 	const onSubmit = async (values: StreamValues, { setSubmitting }: FormikHelpers<StreamValues>) => {
 		if (isSubmitting) return;
@@ -62,7 +62,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setStream(payload as unknown as Stream, {
 			onError: (err: Error) => setErrorMsg(<T id={err.message} />),
 			onSuccess: () => {
-				showObjectSuccess("stream", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, "saved");
 				remove();
 			},
 			onSettled: () => {
@@ -103,7 +103,10 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								<DialogHeader>
 									<DialogTitle className="flex items-center gap-2">
 										<IconArrowsRightLeft className="h-5 w-5" />
-										<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "stream" }} />
+										<T
+											id={data?.id ? "object.edit" : "object.add"}
+											tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }}
+										/>
 									</DialogTitle>
 								</DialogHeader>
 
@@ -118,192 +121,143 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									<NoteWarning content={data?.note} />
 								</div>
 
-								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+								<Tabs defaultValue={STREAM_TAB.DETAILS} className="w-full">
 									<TabsList className="grid w-full grid-cols-3">
-										<TabsTrigger value="details">
-											<T id="column.details" />
+										<TabsTrigger value={STREAM_TAB.DETAILS}>
+											<T id="details" />
 										</TabsTrigger>
-										<TabsTrigger value="ssl">
-											<T id="column.ssl" />
+										<TabsTrigger value={STREAM_TAB.SSL}>
+											<T id="ssl-certificate" />
 										</TabsTrigger>
-										<TabsTrigger value="notes">
+										<TabsTrigger value={STREAM_TAB.NOTES}>
 											<IconNote size={20} />
 										</TabsTrigger>
 									</TabsList>
 
-									<div className="mt-4 p-1">
-										<TabsContent value="details" className="space-y-4">
-											<div className="space-y-2">
-												<Label htmlFor="incomingPort">
-													<T id="stream.incoming-port" />
+									<TabsContent value={STREAM_TAB.DETAILS} className="space-y-4 pt-4">
+										<div className="space-y-2">
+											<Label htmlFor="incomingPort">
+												<T id="stream.incoming-port" />
+											</Label>
+											<Field name="incomingPort" validate={validateString(1, 11)}>
+												{({ field }: FieldProps) => (
+													<Input
+														{...field}
+														id="incomingPort"
+														required
+														placeholder="eg: 8080"
+														className={
+															errors.incomingPort && touched.incomingPort
+																? "border-destructive"
+																: ""
+														}
+													/>
+												)}
+											</Field>
+										</div>
+
+										<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+											<div className="md:col-span-8">
+												<Label htmlFor="forwardingHost">
+													<T id="stream.forwarding-host" />
 												</Label>
-												<Field name="incomingPort" validate={validateString(1, 11)}>
+												<Field name="forwardingHost" validate={validateString(1, 255)}>
 													{({ field }: FieldProps) => (
 														<Input
 															{...field}
-															id="incomingPort"
+															id="forwardingHost"
 															required
-															placeholder="eg: 8080"
+															placeholder="eg: 192.168.1.1"
 															className={
-																errors.incomingPort && touched.incomingPort
+																errors.forwardingHost && touched.forwardingHost
 																	? "border-destructive"
 																	: ""
 															}
 														/>
 													)}
 												</Field>
-												{errors.incomingPort && touched.incomingPort && (
-													<div className="text-sm text-destructive">
-														{String(errors.incomingPort)}
-													</div>
-												)}
 											</div>
-
-											<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-												<div className="md:col-span-8 space-y-2">
-													<Label htmlFor="forwardingHost">
-														<T id="stream.forward-host" />
-													</Label>
-													<Field name="forwardingHost" validate={validateString(1, 255)}>
-														{({ field }: FieldProps) => (
-															<Input
-																{...field}
-																id="forwardingHost"
-																required
-																placeholder={intl.formatMessage({
-																	id: "stream.forward-host.placeholder",
-																})}
-																className={
-																	errors.forwardingHost && touched.forwardingHost
-																		? "border-destructive"
-																		: ""
-																}
-															/>
-														)}
-													</Field>
-													{errors.forwardingHost && touched.forwardingHost && (
-														<div className="text-sm text-destructive">
-															{String(errors.forwardingHost)}
-														</div>
-													)}
-												</div>
-												<div className="md:col-span-4 space-y-2">
-													<Label htmlFor="forwardingPort">
-														<T id="host.forward-port" />
-													</Label>
-													<Field name="forwardingPort" validate={validateString(0, 12)}>
-														{({ field }: FieldProps) => (
-															<Input
-																{...field}
-																id="forwardingPort"
-																placeholder="eg: 8081"
-																className={
-																	errors.forwardingPort && touched.forwardingPort
-																		? "border-destructive"
-																		: ""
-																}
-															/>
-														)}
-													</Field>
-													{errors.forwardingPort && touched.forwardingPort && (
-														<div className="text-sm text-destructive">
-															{String(errors.forwardingPort)}
-														</div>
-													)}
-												</div>
-											</div>
-
-											<div className="my-4">
-												<h3 className="text-lg font-medium py-2">
-													<T id="host.flags.protocols" />
-												</h3>
-												<div className="space-y-4">
-													<div className="flex items-center justify-between">
-														<Label
-															htmlFor="tcpForwarding"
-															className="cursor-pointer font-normal"
-														>
-															<T id="streams.tcp" />
-														</Label>
-														<Field name="tcpForwarding" type="checkbox">
-															{({ field }: FieldProps) => (
-																<Switch
-																	id="tcpForwarding"
-																	checked={field.value}
-																	onCheckedChange={(checked) => {
-																		setFieldValue(field.name, checked);
-																		if (!checked) {
-																			setFieldValue("udpForwarding", true);
-																		}
-																	}}
-																/>
-															)}
-														</Field>
-													</div>
-													<div className="flex items-center justify-between">
-														<Label
-															htmlFor="udpForwarding"
-															className="cursor-pointer font-normal"
-														>
-															<T id="streams.udp" />
-														</Label>
-														<Field name="udpForwarding" type="checkbox">
-															{({ field }: FieldProps) => (
-																<Switch
-																	id="udpForwarding"
-																	checked={field.value}
-																	onCheckedChange={(checked) => {
-																		setFieldValue(field.name, checked);
-																		if (!checked) {
-																			setFieldValue("tcpForwarding", true);
-																		}
-																	}}
-																/>
-															)}
-														</Field>
-													</div>
-												</div>
-											</div>
-										</TabsContent>
-
-										<TabsContent value="notes" className="space-y-4">
-											<Field name="note">
-												{({ field }: FieldProps) => (
-													<div className="space-y-2 mb-4">
-														<Label htmlFor="note">
-															<T id="host.note" />
-														</Label>
-														<Textarea
-															id="note"
-															placeholder={intl.formatMessage({
-																id: "host.note.placeholder",
-															})}
-															className="min-h-[300px] font-mono text-sm"
+											<div className="md:col-span-4">
+												<Label htmlFor="forwardingPort">
+													<T id="stream.forwarding-port" />
+												</Label>
+												<Field name="forwardingPort" validate={validateString(1, 11)}>
+													{({ field }: FieldProps) => (
+														<Input
 															{...field}
+															id="forwardingPort"
+															required
+															placeholder="eg: 80"
+															className={
+																errors.forwardingPort && touched.forwardingPort
+																	? "border-destructive"
+																	: ""
+															}
 														/>
-														<p className="text-xs text-muted-foreground">
-															<T id="host.note.hint" />
-														</p>
-													</div>
-												)}
-											</Field>
-										</TabsContent>
+													)}
+												</Field>
+											</div>
+										</div>
 
-										<TabsContent value="ssl">
-											<SSLCertificateField
-												name="certificateId"
-												label="ssl-certificate"
-												allowNew
-												forHttp={false}
-											/>
-											<SSLOptionsFields
-												color="bg-blue"
-												forHttp={false}
-												forceDNSForNew
-												requireDomainNames
-											/>
-										</TabsContent>
-									</div>
+										<div className="flex gap-4">
+											<div className="flex items-center space-x-2">
+												<Field name="tcpForwarding">
+													{({ field }: FieldProps) => (
+														<Switch
+															id="tcpForwarding"
+															checked={field.value}
+															onCheckedChange={(checked) =>
+																setFieldValue("tcpForwarding", checked)
+															}
+														/>
+													)}
+												</Field>
+												<Label htmlFor="tcpForwarding">TCP</Label>
+											</div>
+											<div className="flex items-center space-x-2">
+												<Field name="udpForwarding">
+													{({ field }: FieldProps) => (
+														<Switch
+															id="udpForwarding"
+															checked={field.value}
+															onCheckedChange={(checked) =>
+																setFieldValue("udpForwarding", checked)
+															}
+														/>
+													)}
+												</Field>
+												<Label htmlFor="udpForwarding">UDP</Label>
+											</div>
+										</div>
+									</TabsContent>
+
+									<TabsContent value={STREAM_TAB.SSL} className="pt-4">
+										<SSLCertificateField name="certificateId" label="ssl-certificate" allowNew />
+										<SSLOptionsFields color="bg-cyan" />
+									</TabsContent>
+
+									<TabsContent value={STREAM_TAB.NOTES} className="space-y-4 pt-4">
+										<Field name="note">
+											{({ field }: FieldProps) => (
+												<div className="space-y-2 mb-4">
+													<Label htmlFor="note">
+														<T id="host.note" />
+													</Label>
+													<Textarea
+														id="note"
+														placeholder={intl.formatMessage({
+															id: "host.note.placeholder",
+														})}
+														className="min-h-[300px] font-mono text-sm"
+														{...field}
+													/>
+													<p className="text-xs text-muted-foreground">
+														<T id="host.note.hint" />
+													</p>
+												</div>
+											)}
+										</Field>
+									</TabsContent>
 								</Tabs>
 
 								<DialogFooter>
@@ -312,10 +266,10 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									</Button>
 									<Button
 										type="submit"
-										className="bg-blue-600/90 hover:bg-blue-600 text-white shadow-sm"
 										disabled={isSubmitting}
+										className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
 									>
-										{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+										{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 										<T id="save" />
 									</Button>
 								</DialogFooter>

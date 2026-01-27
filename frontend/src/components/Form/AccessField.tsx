@@ -7,6 +7,7 @@ import { Label } from "src/components/ui/label";
 import { Skeleton } from "src/components/ui/skeleton";
 import { useAccessLists } from "src/hooks";
 import { formatDateTime, intl, T } from "src/locale";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface AccessOption {
 	readonly value: number;
@@ -33,7 +34,11 @@ interface Props {
 	name?: string;
 	label?: string;
 }
-export function AccessField({ name = "accessListId", label = "access-list", id = "accessListId" }: Props) {
+export function AccessField({
+	name = "accessListId",
+	label = AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST,
+	id = "accessListId",
+}: Props) {
 	const { isLoading, isError, error, data } = useAccessLists(["owner", "items", "clients"]);
 	const { setFieldValue } = useFormikContext();
 

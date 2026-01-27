@@ -1,10 +1,18 @@
 import type {
 	AccessDirective,
 	AiProvider,
+	AiRole,
+	CertificateProvider,
 	DdnsProviderName,
+	ForwardScheme,
+	GitPollUnit,
 	IconType,
 	IpVersion,
+	PhpVersion,
+	TerminalAuthType,
+	TimeUnit,
 	TorOnionStatus,
+	UiColor,
 } from "src/types/enums";
 
 export interface UserPermissions {
@@ -92,7 +100,7 @@ export interface Certificate {
 	createdOn: string;
 	modifiedOn: string;
 	ownerUserId: number;
-	provider: "letsencrypt" | "other" | "internal" | string;
+	provider: CertificateProvider | (string & {});
 	niceName: string;
 	domainNames: string[];
 	expiresOn: string;
@@ -107,7 +115,7 @@ export interface Certificate {
 export interface ProxyLocation {
 	path: string;
 	advancedConfig: string;
-	forwardScheme: string;
+	forwardScheme: ForwardScheme;
 	forwardHost: string;
 	forwardPort: number;
 	forwardQuery?: string;
@@ -119,7 +127,7 @@ export interface ProxyHost {
 	modifiedOn: string;
 	ownerUserId: number;
 	domainNames: string[];
-	forwardScheme: string;
+	forwardScheme: ForwardScheme;
 	forwardHost: string;
 	forwardPort: number;
 	forwardQuery?: string;
@@ -135,7 +143,7 @@ export interface ProxyHost {
 	meta: Record<string, unknown>;
 	maintenanceOnFailure: boolean;
 	advLimitReqRate?: number;
-	advLimitReqUnit?: string;
+	advLimitReqUnit?: TimeUnit;
 	advLimitReqBurst?: number;
 	allowWebsocketUpgrade: boolean;
 
@@ -150,14 +158,14 @@ export interface ProxyHost {
 	maintenanceReason?: string;
 	// PHP hosting (for scheme=path)
 	phpEnabled?: boolean;
-	phpVersion?: string;
+	phpVersion?: PhpVersion;
 	indexFile?: string; // Add indexFile
 	// Git Sync (for scheme=path)
 	gitRepoUrl?: string | null;
 	gitBranch?: string;
 	gitSyncEnabled?: boolean;
 	gitPollInterval?: number;
-	gitPollUnit?: "s" | "m" | "h";
+	gitPollUnit?: GitPollUnit;
 	gitLastSync?: string | null;
 	gitLastCommit?: string | null;
 	gitLastError?: string | null;
@@ -168,7 +176,7 @@ export interface ProxyHost {
 	terminalHost?: string;
 	terminalPort?: number;
 	terminalUsername?: string;
-	terminalAuthType?: "password" | "key";
+	terminalAuthType?: TerminalAuthType;
 	terminalPassword?: string;
 	terminalPrivateKey?: string;
 	// Expansions:
@@ -212,7 +220,7 @@ export interface RedirectionHost {
 	advancedConfig: string;
 	meta: Record<string, unknown>;
 	http2Support: boolean;
-	forwardScheme: string;
+	forwardScheme: ForwardScheme;
 	forwardHttpCode: number;
 	enabled: boolean;
 	hstsEnabled: boolean;
@@ -281,7 +289,7 @@ export interface AiConfig {
 }
 
 export interface AiChatMessage {
-	role: "user" | "assistant" | "model";
+	role: AiRole;
 	content: string;
 	toolCalls?: unknown[];
 	rawParts?: unknown[];
@@ -339,6 +347,6 @@ export interface DashboardNote {
 	createdOn: string;
 	modifiedOn: string;
 	content: string;
-	color: string;
+	color: UiColor;
 	position: number;
 }

@@ -9,6 +9,7 @@ import { Input } from "src/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
+import { AI_ROLE } from "src/types/enums";
 import { AiMessage } from "./AiMessage";
 
 export function AiChat() {
@@ -28,7 +29,7 @@ export function AiChat() {
 	const handleSend = async () => {
 		if (!input.trim() || loading) return;
 
-		const userMsg: AiChatMessage = { role: "user", content: input };
+		const userMsg: AiChatMessage = { role: AI_ROLE.USER, content: input };
 		setMessages((prev: AiChatMessage[]) => [...prev, userMsg]);
 		setInput("");
 		setLoading(true);
@@ -41,11 +42,11 @@ export function AiChat() {
 
 			const response = await sendAiChat(userMsg.content, history);
 			console.log("Received chat response:", response);
-			setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: response.content }]);
+			setMessages((prev: AiChatMessage[]) => [...prev, { role: AI_ROLE.ASSISTANT, content: response.content }]);
 		} catch (err) {
 			console.error("Chat error:", err);
 			const msg = err instanceof Error ? err.message : String(err);
-			setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: `Error: ${msg}` }]);
+			setMessages((prev: AiChatMessage[]) => [...prev, { role: AI_ROLE.ASSISTANT, content: `Error: ${msg}` }]);
 		} finally {
 			setLoading(false);
 		}

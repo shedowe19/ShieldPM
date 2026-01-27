@@ -13,12 +13,16 @@ import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showHelpModal, showRedirectionHostModal } from "src/modals";
 import { MANAGE, REDIRECTION_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
-	const { isFetching, isLoading, isError, error, data } = useRedirectionHosts(["owner", "certificate"]);
+	const { isFetching, isLoading, isError, error, data } = useRedirectionHosts([
+		"owner",
+		AUDIT_LOG_OBJECT_TYPE.CERTIFICATE,
+	]);
 
 	if (isLoading) {
 		return <LoadingPage />;
@@ -36,14 +40,14 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteRedirectionHost(id);
-		showObjectSuccess("redirection-host", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, "deleted");
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
 		await toggleRedirectionHost(id, enabled);
 		queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
-		queryClient.invalidateQueries({ queryKey: ["redirection-host", id] });
-		showObjectSuccess("redirection-host", enabled ? "enabled" : "disabled");
+		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, enabled ? "enabled" : "disabled");
 	};
 
 	let filtered = null;
@@ -89,7 +93,7 @@ export default function TableWrapper() {
 								onClick={() => showRedirectionHostModal("new")}
 							>
 								<IconPlus className="mr-2 h-4 w-4" />
-								<T id="object.add" tData={{ object: "redirection-host" }} />
+								<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST }} />
 							</Button>
 						) : null}
 					</HasPermission>
@@ -103,10 +107,15 @@ export default function TableWrapper() {
 					onEdit={(id: number) => showRedirectionHostModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "redirection-host" }} />,
+							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST }} />,
 							onConfirm: () => handleDelete(id),
-							invalidations: [["redirection-hosts"], ["redirection-host", id]],
-							children: <T id="object.delete.content" tData={{ object: "redirection-host" }} />,
+							invalidations: [["redirection-hosts"], [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id]],
+							children: (
+								<T
+									id="object.delete.content"
+									tData={{ object: AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST }}
+								/>
+							),
 						})
 					}
 					onDisableToggle={handleDisableToggle}

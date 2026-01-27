@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
+import { BADGE_VARIANT, type BadgeVariant, TOR_ONION_STATUS, type TorOnionStatus } from "src/types/enums";
 import type { TorOnion } from "@/api/backend";
 import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,7 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
-import { TorOnionStatus } from "@/types/enums";
 
 export function TorOnionServices() {
 	const health = useHealth();
@@ -53,18 +53,35 @@ export function TorOnionServices() {
 		});
 	};
 
-	const getStatusBadge = (status: number) => {
-		const statusMap: Record<TorOnionStatus, { label: string; variant: string }> = {
-			[TorOnionStatus.STOPPED]: { label: "tor.status_stopped", variant: "secondary" },
-			[TorOnionStatus.STARTING]: { label: "tor.status_starting", variant: "warning" },
-			[TorOnionStatus.RUNNING]: { label: "tor.status_running", variant: "success" },
-			[TorOnionStatus.ERROR]: { label: "tor.status_error", variant: "destructive" },
-		};
+	const getStatusBadge = (status: TorOnionStatus) => {
+		let label: string;
+		let variant: BadgeVariant = BADGE_VARIANT.SECONDARY;
 
-		const { label, variant } = statusMap[status as TorOnionStatus] || statusMap[TorOnionStatus.STOPPED];
+		switch (status) {
+			case TOR_ONION_STATUS.STOPPED:
+				label = "tor.status_stopped";
+				variant = BADGE_VARIANT.SECONDARY;
+				break;
+			case TOR_ONION_STATUS.STARTING:
+				label = "tor.status_starting";
+				variant = BADGE_VARIANT.WARNING;
+				break;
+			case TOR_ONION_STATUS.RUNNING:
+				label = "tor.status_running";
+				variant = BADGE_VARIANT.SUCCESS;
+				break;
+			case TOR_ONION_STATUS.ERROR:
+				label = "tor.status_error";
+				variant = BADGE_VARIANT.DESTRUCTIVE;
+				break;
+			default:
+				label = "tor.status_stopped"; // Default label
+				variant = BADGE_VARIANT.SECONDARY; // Default variant
+				break;
+		}
 
 		return (
-			<Badge variant={variant as "secondary" | "warning" | "success" | "destructive"}>
+			<Badge variant={variant}>
 				<T id={label} />
 			</Badge>
 		);
@@ -198,10 +215,10 @@ export function TorOnionServices() {
 												<span className="text-muted-foreground">—</span>
 											)}
 										</TableCell>
-										<TableCell>{service.virtualPort}</TableCell>
+										<TableCell>{service.targetPort}</TableCell>
 										<TableCell>{getStatusBadge(service.status)}</TableCell>
 										<TableCell className="text-right space-x-1">
-											{service.status === TorOnionStatus.RUNNING ? (
+											{service.status === TOR_ONION_STATUS.RUNNING ? (
 												<Button
 													variant="ghost"
 													size="icon"

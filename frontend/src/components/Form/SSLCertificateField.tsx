@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Skeleton } from "src/components/ui/skeleton";
 import { useCertificates } from "src/hooks";
 import { formatDateTime, intl, T } from "src/locale";
+import { CERTIFICATE_PROVIDER } from "src/types/enums";
 
 interface CertOption {
 	readonly value: string; // Ensure value is always string to work with Select
@@ -80,7 +81,7 @@ export function SSLCertificateField({
 		data?.map((cert: Certificate) => ({
 			value: String(cert.id),
 			label: cert.niceName,
-			subLabel: `${cert.provider === "letsencrypt" ? intl.formatMessage({ id: "lets-encrypt" }) : cert.provider} — ${intl.formatMessage({ id: "expires.on" }, { date: cert.expiresOn ? formatDateTime(cert.expiresOn) : "N/A" })}`,
+			subLabel: `${cert.provider === CERTIFICATE_PROVIDER.LETSENCRYPT ? intl.formatMessage({ id: "lets-encrypt" }) : cert.provider} — ${intl.formatMessage({ id: "expires.on" }, { date: cert.expiresOn ? formatDateTime(cert.expiresOn) : "N/A" })}`,
 			icon: <IconShield size={14} className="text-pink-500" />,
 		})) || [];
 

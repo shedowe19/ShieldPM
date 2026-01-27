@@ -29,6 +29,7 @@ import {
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: User[];
@@ -124,7 +125,7 @@ export default function Table({
 								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
-										tData={{ object: "user" }}
+										tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }}
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
@@ -207,7 +208,13 @@ export default function Table({
 		<TableLayout
 			tableInstance={tableInstance}
 			emptyState={
-				<EmptyData object="user" objects="users" onNew={onNewUser} isFiltered={isFiltered} color="orange" />
+				<EmptyData
+					object={AUDIT_LOG_OBJECT_TYPE.USER}
+					objects="users"
+					onNew={onNewUser}
+					isFiltered={isFiltered}
+					color="orange"
+				/>
 			}
 		/>
 	);

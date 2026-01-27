@@ -12,6 +12,7 @@ import { intl, T } from "src/locale";
 import { showAccessListModal, showDeleteConfirmModal, showHelpModal } from "src/modals";
 import { ACCESS_LISTS, MANAGE } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
@@ -34,7 +35,7 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteAccessList(id);
-		showObjectSuccess("access-list", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, "deleted");
 	};
 
 	let filtered = null;
@@ -77,7 +78,7 @@ export default function TableWrapper() {
 								onClick={() => showAccessListModal("new")}
 							>
 								<IconPlus className="mr-2 h-4 w-4" />
-								<T id="object.add" tData={{ object: "access-list" }} />
+								<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }} />
 							</Button>
 						) : null}
 					</HasPermission>
@@ -91,10 +92,12 @@ export default function TableWrapper() {
 					onEdit={(id: number) => showAccessListModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "access-list" }} />,
+							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }} />,
 							onConfirm: () => handleDelete(id),
-							invalidations: [["access-lists"], ["access-list", id]],
-							children: <T id="object.delete.content" tData={{ object: "access-list" }} />,
+							invalidations: [["access-lists"], [AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, id]],
+							children: (
+								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }} />
+							),
 						})
 					}
 					onNew={() => showAccessListModal("new")}

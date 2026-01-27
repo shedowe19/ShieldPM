@@ -15,6 +15,7 @@ import {
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: DdnsProvider[];
@@ -53,8 +54,8 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, isFil
 				header: intl.formatMessage({ id: "ddns-providers.domains" }),
 				cell: (info) => (
 					<div className="flex flex-col gap-1">
-						{info.getValue().map((d, i) => (
-							<span key={i} className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded w-fit">
+						{info.getValue().map((d) => (
+							<span key={d} className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded w-fit">
 								{d}
 							</span>
 						))}
@@ -164,8 +165,8 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, isFil
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object={intl.formatMessage({ id: "ddns-provider" })}
-					objects={intl.formatMessage({ id: "ddns-providers" })}
+					object={intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER })}
+					objects="ddns-providers"
 					onNew={onNew}
 					isFiltered={isFiltered}
 					color="cyan"

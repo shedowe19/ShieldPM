@@ -13,6 +13,7 @@ import { useGitSyncStatus, useTriggerGitSync } from "src/hooks/useGitSync";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { TIME_UNIT } from "src/types/enums";
 
 interface Props {
 	hostId: number | null;
@@ -163,13 +164,13 @@ export function GitSyncTab({ hostId }: Props) {
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="s">
+												<SelectItem value={TIME_UNIT.SECONDS}>
 													<T id="proxy-host.git-sync.poll-unit.seconds" />
 												</SelectItem>
-												<SelectItem value="m">
+												<SelectItem value={TIME_UNIT.MINUTES}>
 													<T id="proxy-host.git-sync.poll-unit.minutes" />
 												</SelectItem>
-												<SelectItem value="h">
+												<SelectItem value={TIME_UNIT.HOURS}>
 													<T id="proxy-host.git-sync.poll-unit.hours" />
 												</SelectItem>
 											</SelectContent>

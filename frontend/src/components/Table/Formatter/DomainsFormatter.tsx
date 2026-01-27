@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Badge } from "src/components/ui/badge";
 import { formatDateTime, T } from "src/locale";
+import { CERTIFICATE_PROVIDER } from "src/types/enums";
 
 interface Props {
 	domains: string[];
@@ -50,7 +51,7 @@ export function DomainsFormatter({ domains, createdOn, niceName, provider, color
 			</Badge>,
 		);
 	}
-	if (!domains || (niceName && provider !== "letsencrypt")) {
+	if (!domains || (niceName && provider !== CERTIFICATE_PROVIDER.LETSENCRYPT)) {
 		elms.push(
 			<Badge key="nice-name" variant="secondary" className="mr-2 text-muted-foreground">
 				{niceName}

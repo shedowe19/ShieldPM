@@ -7,7 +7,7 @@ import { Input } from "src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
-import { AccessDirective } from "src/types/enums";
+import { ACCESS_DIRECTIVE } from "src/types/enums";
 
 interface Props {
 	initialValues: AccessListClient[];
@@ -17,7 +17,10 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 	const [values, setValues] = useState<AccessListClient[]>(initialValues || []);
 	const { setFieldValue } = useFormikContext();
 
-	const blankClient: AccessListClient = { directive: AccessDirective.Allow, address: "" };
+	const blankClient: AccessListClient = {
+		directive: ACCESS_DIRECTIVE.ALLOW,
+		address: "",
+	};
 
 	if (values?.length === 0) {
 		setValues([blankClient]);
@@ -57,7 +60,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 				<T id="access-list.help.rules-order" />
 			</p>
 			{values.map((client: AccessListClient, idx: number) => (
-				<div className="flex items-center gap-2" key={idx}>
+				<div className="flex items-center gap-2" key={`${client.address}-${idx}`}>
 					<div className="flex-1 flex gap-2">
 						<div className="w-32 flex-shrink-0">
 							<Select
@@ -66,7 +69,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 							>
 								<SelectTrigger
 									className={cn(
-										client.directive === AccessDirective.Allow
+										client.directive === ACCESS_DIRECTIVE.ALLOW
 											? "bg-green-100 dark:bg-green-900 border-green-200 dark:border-green-800 text-green-800 dark:text-green-100"
 											: "bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-100",
 									)}
@@ -74,10 +77,10 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value={AccessDirective.Allow}>
+									<SelectItem value={ACCESS_DIRECTIVE.ALLOW}>
 										<T id="action.allow" />
 									</SelectItem>
-									<SelectItem value={AccessDirective.Deny}>
+									<SelectItem value={ACCESS_DIRECTIVE.DENY}>
 										<T id="action.deny" />
 									</SelectItem>
 								</SelectContent>
@@ -118,7 +121,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 				<div className="flex items-center gap-2 opacity-60">
 					<div className="flex-1 flex gap-2">
 						<div className="w-32 flex-shrink-0">
-							<Select value="deny" disabled>
+							<Select value={ACCESS_DIRECTIVE.DENY} disabled>
 								<SelectTrigger className="bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-100">
 									<SelectValue>
 										<T id="action.deny" />

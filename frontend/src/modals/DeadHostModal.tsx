@@ -21,6 +21,7 @@ import { Textarea } from "src/components/ui/textarea";
 import { useDeadHost, useSetDeadHost } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, DEAD_HOST_TAB } from "src/types/enums";
 
 const showDeadHostModal = (id: number | "new") => {
 	EasyModal.show(DeadHostModal, { id });
@@ -46,7 +47,6 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { mutate: setDeadHost } = useSetDeadHost();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [activeTab, setActiveTab] = useState("details");
 
 	const onSubmit = async (values: DeadHostValues, { setSubmitting }: FormikHelpers<DeadHostValues>) => {
 		if (isSubmitting) return;
@@ -63,7 +63,7 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 			},
 			onSuccess: () => {
-				showObjectSuccess("dead-host", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, "saved");
 				remove();
 			},
 			onSettled: () => {
@@ -107,7 +107,7 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<IconGhost className="h-5 w-5" />
 										<T
 											id={data?.id ? "object.edit" : "object.add"}
-											tData={{ object: "dead-host" }}
+											tData={{ object: AUDIT_LOG_OBJECT_TYPE.DEAD_HOST }}
 										/>
 									</DialogTitle>
 								</DialogHeader>
@@ -123,29 +123,29 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									<NoteWarning content={data?.note} />
 								</div>
 
-								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+								<Tabs defaultValue={DEAD_HOST_TAB.DETAILS} className="w-full">
 									<TabsList className="grid w-full grid-cols-4">
-										<TabsTrigger value="details">
+										<TabsTrigger value={DEAD_HOST_TAB.DETAILS}>
 											<T id="column.details" />
 										</TabsTrigger>
-										<TabsTrigger value="ssl">
+										<TabsTrigger value={DEAD_HOST_TAB.SSL}>
 											<T id="column.ssl" />
 										</TabsTrigger>
-										<TabsTrigger value="advanced">
+										<TabsTrigger value={DEAD_HOST_TAB.ADVANCED}>
 											<IconSettings size={16} className="mr-2" />
 											<span className="sr-only">Settings</span>
 										</TabsTrigger>
-										<TabsTrigger value="notes">
+										<TabsTrigger value={DEAD_HOST_TAB.NOTES}>
 											<IconNote size={20} />
 										</TabsTrigger>
 									</TabsList>
 
 									<div className="mt-4 p-1">
-										<TabsContent value="details">
+										<TabsContent value={DEAD_HOST_TAB.DETAILS}>
 											<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
 										</TabsContent>
 
-										<TabsContent value="ssl">
+										<TabsContent value={DEAD_HOST_TAB.SSL}>
 											<SSLCertificateField
 												name="certificateId"
 												label="ssl-certificate"
@@ -154,11 +154,11 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<SSLOptionsFields color="bg-red" />
 										</TabsContent>
 
-										<TabsContent value="advanced">
+										<TabsContent value={DEAD_HOST_TAB.ADVANCED}>
 											<NginxConfigField />
 										</TabsContent>
 
-										<TabsContent value="notes">
+										<TabsContent value={DEAD_HOST_TAB.NOTES}>
 											<Field name="note">
 												{({ field }: FieldProps) => (
 													<div className="space-y-2 mb-4">

@@ -12,6 +12,7 @@ import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, CERTIFICATE_PROVIDER } from "src/types/enums";
 
 const showDNSCertificateModal = () => {
 	EasyModal.show(DNSCertificateModal);
@@ -59,13 +60,15 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
 			<DialogContent className="sm:max-w-lg">
 				<Formik
-					initialValues={{
-						domainNames: [] as string[],
-						provider: "letsencrypt",
-						meta: {
-							dnsChallenge: true,
-						},
-					}}
+					initialValues={
+						{
+							domainNames: [] as string[],
+							provider: CERTIFICATE_PROVIDER.LETSENCRYPT,
+							meta: {
+								dnsChallenge: true,
+							},
+						} as DNSCertificateValues
+					}
 					onSubmit={onSubmit}
 				>
 					{({ handleSubmit }) => (
@@ -73,7 +76,7 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 							<DialogHeader>
 								<DialogTitle className="flex items-center gap-2">
 									<IconWorld className="h-5 w-5" />
-									<T id="object.add" tData={{ object: "lets-encrypt-via-dns" }} />
+									<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />
 								</DialogTitle>
 							</DialogHeader>
 

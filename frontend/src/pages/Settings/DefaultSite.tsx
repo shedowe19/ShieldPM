@@ -13,6 +13,7 @@ import { useSetSetting, useSetting } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface DefaultSiteValues {
 	value: string;
@@ -43,7 +44,7 @@ export default function DefaultSite() {
 		setSetting(payload, {
 			onError: (err: Error) => setErrorMsg(<T id={err.message} />),
 			onSuccess: () => {
-				showObjectSuccess("setting", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.SETTING, "saved");
 			},
 			onSettled: () => {
 				setIsSubmitting(false);

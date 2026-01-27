@@ -5,6 +5,7 @@ import {
 	type RedirectionHost,
 	updateRedirectionHost,
 } from "src/api/backend";
+import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME } from "src/types/enums";
 
 const fetchRedirectionHost = (id: number | "new") => {
 	if (id === "new") {
@@ -21,7 +22,7 @@ const fetchRedirectionHost = (id: number | "new") => {
 			advancedConfig: "",
 			meta: {},
 			http2Support: false,
-			forwardScheme: "auto",
+			forwardScheme: FORWARD_SCHEME.AUTO,
 			forwardHttpCode: 301,
 			blockExploits: false,
 			enabled: true,
@@ -34,7 +35,7 @@ const fetchRedirectionHost = (id: number | "new") => {
 
 const useRedirectionHost = (id: number | "new", options = {}) => {
 	return useQuery<RedirectionHost, Error>({
-		queryKey: ["redirection-host", id],
+		queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id],
 		queryFn: () => fetchRedirectionHost(id),
 		staleTime: 60 * 1000, // 1 minute
 		...options,
@@ -50,16 +51,16 @@ const useSetRedirectionHost = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData(["redirection-host", values.id]);
-			queryClient.setQueryData(["redirection-host", values.id], (old: RedirectionHost) => ({
+			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, values.id]);
+			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, values.id], (old: RedirectionHost) => ({
 				...old,
 				...values,
 			}));
-			return () => queryClient.setQueryData(["redirection-host", values.id], previousObject);
+			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, values.id], previousObject);
 		},
 		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: RedirectionHost) => {
-			queryClient.invalidateQueries({ queryKey: ["redirection-host", id] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
 			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
 			queryClient.invalidateQueries({ queryKey: ["host-report"] });

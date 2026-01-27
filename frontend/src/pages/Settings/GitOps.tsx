@@ -29,6 +29,7 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { T } from "src/locale";
+import { GITOPS_AUTH_TYPE, type GitOpsAuthType } from "src/types/enums";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -43,7 +44,7 @@ export default function GitOps() {
 		enabled: false,
 		repositoryUrl: "",
 		branch: "main",
-		authType: "https" as "ssh" | "https",
+		authType: GITOPS_AUTH_TYPE.HTTPS as GitOpsAuthType,
 		credentials: "",
 		autoPush: false,
 		autoPullOnStartup: false,
@@ -58,7 +59,7 @@ export default function GitOps() {
 			enabled: config.enabled,
 			repositoryUrl: config.repositoryUrl || "",
 			branch: config.branch || "main",
-			authType: config.authType || "https",
+			authType: config.authType || GITOPS_AUTH_TYPE.HTTPS,
 			credentials: "", // Never populate credentials from server
 			autoPush: config.autoPush,
 			autoPullOnStartup: config.autoPullOnStartup,
@@ -150,7 +151,7 @@ export default function GitOps() {
 							<T id="settings.gitops.auth_type" />
 						</Label>
 						<div className="flex gap-4">
-							{(["https", "ssh"] as const).map((option) => (
+							{[GITOPS_AUTH_TYPE.HTTPS, GITOPS_AUTH_TYPE.SSH].map((option) => (
 								<label
 									key={option}
 									className={`
@@ -167,7 +168,7 @@ export default function GitOps() {
 										onChange={() => setFormData({ ...formData, authType: option })}
 									/>
 									<span className="uppercase text-sm font-medium">
-										{option === "https" ? "HTTPS (PAT)" : "SSH Key"}
+										{option === GITOPS_AUTH_TYPE.HTTPS ? "HTTPS (PAT)" : "SSH Key"}
 									</span>
 								</label>
 							))}
@@ -177,9 +178,9 @@ export default function GitOps() {
 					{/* Credentials */}
 					<div className="space-y-2">
 						<Label htmlFor="credentials">
-							{formData.authType === "https" ? "Personal Access Token" : "SSH Private Key"}
+							{formData.authType === GITOPS_AUTH_TYPE.HTTPS ? "Personal Access Token" : "SSH Private Key"}
 						</Label>
-						{formData.authType === "https" ? (
+						{formData.authType === GITOPS_AUTH_TYPE.HTTPS ? (
 							<Input
 								id="credentials"
 								type="password"

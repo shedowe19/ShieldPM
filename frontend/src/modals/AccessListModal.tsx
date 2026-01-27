@@ -19,6 +19,7 @@ import { useAccessList, useSetAccessList } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { ACCESS_LIST_AUTH_TYPE, ACCESS_LIST_TAB, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -44,7 +45,6 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { mutate: setAccessList } = useSetAccessList();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [activeTab, setActiveTab] = useState("details");
 
 	const validate = (values: AccessListFormValues): string | null => {
 		// either Auths or Clients or SSO must be defined
@@ -52,13 +52,13 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			values.items?.length === 0 &&
 			values.clients?.length === 0 &&
 			!values.authentikHost &&
-			values.authType !== "oidc" &&
+			values.authType !== ACCESS_LIST_AUTH_TYPE.OIDC &&
 			!values.mtlsEnabled
 		) {
 			return intl.formatMessage({ id: "error.access.at-least-one" });
 		}
 
-		if (values.authType === "oidc") {
+		if (values.authType === ACCESS_LIST_AUTH_TYPE.OIDC) {
 			if (!values.oidcClientId) return "Client ID is required";
 			if (!values.oidcClientSecret) return "Client Secret is required";
 			if (!values.oidcDiscoveryUrl) return "Discovery URL is required";
@@ -90,7 +90,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
-		const authType = values.authType === "none" ? "" : values.authType;
+		const authType = values.authType === ACCESS_LIST_AUTH_TYPE.NONE ? "" : values.authType;
 
 		const payload: Partial<AccessList> = {
 			id: id === "new" ? undefined : id,
@@ -104,10 +104,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			meta: {
 				...data?.meta,
 				auth_type: authType,
-				authentik_host: authType === "authentik_proxy" ? values.authentikHost : undefined,
-				oidc_discovery_url: authType === "oidc" ? values.oidcDiscoveryUrl : undefined,
-				oidc_client_id: authType === "oidc" ? values.oidcClientId : undefined,
-				oidc_client_secret: authType === "oidc" ? values.oidcClientSecret : undefined,
+				authentik_host: authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY ? values.authentikHost : undefined,
+				oidc_discovery_url: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcDiscoveryUrl : undefined,
+				oidc_client_id: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientId : undefined,
+				oidc_client_secret: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientSecret : undefined,
 			},
 		};
 
@@ -126,7 +126,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setAccessList(payload as unknown as AccessList, {
 			onError: (err: unknown) => setErrorMsg(typeof err === "string" ? err : (err as Error).message),
 			onSuccess: () => {
-				showObjectSuccess("access-list", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, "saved");
 				remove();
 			},
 			onSettled: () => {
@@ -152,8 +152,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	})();
 
 	let initialAuthType =
-		meta.auth_type || meta.authType || (meta.authentik_host || meta.authentikHost ? "authentik_proxy" : "");
-	if (!initialAuthType) initialAuthType = "none";
+		meta.auth_type ||
+		meta.authType ||
+		(meta.authentik_host || meta.authentikHost ? ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY : "");
+	if (!initialAuthType) initialAuthType = ACCESS_LIST_AUTH_TYPE.NONE;
 
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
@@ -161,7 +163,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<IconShieldLock className="h-5 w-5" />
-						<T id={id === "new" ? "object.add" : "object.edit"} tData={{ object: "access-list" }} />
+						<T
+							id={id === "new" ? "object.add" : "object.edit"}
+							tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }}
+						/>
 					</DialogTitle>
 				</DialogHeader>
 
@@ -200,7 +205,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						onSubmit={onSubmit}
 					>
 						{({ values, setFieldValue, errors, touched }: FormikProps<AccessListFormValues>) => {
-							const isSsoEnabled = !!(values.authType && values.authType !== "none");
+							const isSsoEnabled = !!(values.authType && values.authType !== ACCESS_LIST_AUTH_TYPE.NONE);
 							return (
 								<Form className="space-y-4">
 									{errorMsg && (
@@ -211,26 +216,26 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										</Alert>
 									)}
 
-									<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+									<Tabs defaultValue={ACCESS_LIST_TAB.DETAILS} className="w-full">
 										<TabsList className="grid w-full grid-cols-5">
-											<TabsTrigger value="details">
+											<TabsTrigger value={ACCESS_LIST_TAB.DETAILS}>
 												<T id="column.details" />
 											</TabsTrigger>
-											<TabsTrigger value="auth">
+											<TabsTrigger value={ACCESS_LIST_TAB.AUTH}>
 												<T id="column.authorizations" />
 											</TabsTrigger>
-											<TabsTrigger value="rules">
+											<TabsTrigger value={ACCESS_LIST_TAB.RULES}>
 												<T id="column.rules" />
 											</TabsTrigger>
-											<TabsTrigger value="sso">
+											<TabsTrigger value={ACCESS_LIST_TAB.SSO}>
 												<T id="access-list.sso" />
 											</TabsTrigger>
-											<TabsTrigger value="mtls">
+											<TabsTrigger value={ACCESS_LIST_TAB.MTLS}>
 												<T id="access-list.mtls.tab" />
 											</TabsTrigger>
 										</TabsList>
 
-										<TabsContent value="details" className="space-y-4 pt-4">
+										<TabsContent value={ACCESS_LIST_TAB.DETAILS} className="space-y-4 pt-4">
 											<div className="space-y-2">
 												<Label htmlFor="name">
 													<T id="column.name" />
@@ -293,7 +298,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</Card>
 										</TabsContent>
 
-										<TabsContent value="auth" className="pt-4">
+										<TabsContent value={ACCESS_LIST_TAB.AUTH} className="pt-4">
 											{isSsoEnabled && (
 												<Alert variant="default" className="mb-4 bg-muted border-primary/20">
 													<AlertTriangle className="h-4 w-4 text-primary" />
@@ -310,7 +315,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</fieldset>
 										</TabsContent>
 
-										<TabsContent value="rules" className="pt-4">
+										<TabsContent value={ACCESS_LIST_TAB.RULES} className="pt-4">
 											{isSsoEnabled && (
 												<Alert variant="default" className="mb-4 bg-muted border-primary/20">
 													<AlertTriangle className="h-4 w-4 text-primary" />
@@ -327,13 +332,13 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</fieldset>
 										</TabsContent>
 
-										<TabsContent value="sso" className="pt-4 space-y-4">
+										<TabsContent value={ACCESS_LIST_TAB.SSO} className="pt-4 space-y-4">
 											<div className="space-y-2">
 												<Label htmlFor="authType">Provider Type</Label>
 												<Field name="authType">
 													{({ field }: FieldProps) => (
 														<Select
-															value={field.value || "none"}
+															value={field.value || ACCESS_LIST_AUTH_TYPE.NONE}
 															onValueChange={(val) => setFieldValue("authType", val)}
 														>
 															<SelectTrigger id="authType">
@@ -344,11 +349,15 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																/>
 															</SelectTrigger>
 															<SelectContent>
-																<SelectItem value="none">None / Basic Auth</SelectItem>
-																<SelectItem value="authentik_proxy">
+																<SelectItem value={ACCESS_LIST_AUTH_TYPE.NONE}>
+																	None / Basic Auth
+																</SelectItem>
+																<SelectItem
+																	value={ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY}
+																>
 																	Authentik Proxy (Forward Auth)
 																</SelectItem>
-																<SelectItem value="oidc">
+																<SelectItem value={ACCESS_LIST_AUTH_TYPE.OIDC}>
 																	OIDC (OpenID Connect)
 																</SelectItem>
 															</SelectContent>
@@ -357,7 +366,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</Field>
 											</div>
 
-											{values.authType === "authentik_proxy" && (
+											{values.authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY && (
 												<div className="space-y-2">
 													<Label htmlFor="authentikHost">Authentik Host URL</Label>
 													<Field name="authentikHost">
@@ -378,7 +387,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</div>
 											)}
 
-											{values.authType === "oidc" && (
+											{values.authType === ACCESS_LIST_AUTH_TYPE.OIDC && (
 												<>
 													<div className="space-y-2">
 														<Label htmlFor="oidcDiscoveryUrl">Discovery URL</Label>
@@ -417,7 +426,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										</TabsContent>
 
 										{/* mTLS Tab */}
-										<TabsContent value="mtls" className="pt-4 space-y-4">
+										<TabsContent value={ACCESS_LIST_TAB.MTLS} className="pt-4 space-y-4">
 											<div className="flex items-center justify-between">
 												<div className="space-y-0.5">
 													<Label htmlFor="mtlsEnabled" className="text-base">
@@ -494,7 +503,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<Button
 											type="submit"
 											disabled={isSubmitting}
-											className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
+											className={`bg-${UI_COLOR.CYAN}-600/90 hover:bg-${UI_COLOR.CYAN}-600 text-white shadow-sm`}
 										>
 											{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 											<T id="save" />

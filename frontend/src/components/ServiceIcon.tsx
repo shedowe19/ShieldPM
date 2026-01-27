@@ -2,9 +2,7 @@ import { IconServer } from "@tabler/icons-react";
 import { useState } from "react";
 import { detectService, getIconUrl } from "src/lib/serviceIcons";
 import { cn } from "src/lib/utils";
-import { IconType } from "src/types/enums";
-
-export type { IconType };
+import { ICON_TYPE, type IconType } from "src/types/enums";
 
 interface ServiceIconProps {
 	/** Port number for auto-detection */
@@ -35,7 +33,7 @@ export function ServiceIcon({
 	port,
 	hostname = "",
 	customIconUrl,
-	iconType = IconType.Auto,
+	iconType = ICON_TYPE.AUTO,
 	size = 24,
 	className = "",
 	showTooltip = false,
@@ -46,15 +44,15 @@ export function ServiceIcon({
 	let iconUrl: string | null = null;
 	let serviceName: string | null = null;
 
-	if (iconType === IconType.None) {
+	if (iconType === ICON_TYPE.NONE) {
 		// No icon requested
 		return null;
 	}
 
-	if (iconType === IconType.Custom && customIconUrl) {
+	if (iconType === ICON_TYPE.CUSTOM && customIconUrl) {
 		iconUrl = customIconUrl;
 		serviceName = "Custom Icon";
-	} else if (iconType === IconType.Auto && port) {
+	} else if (iconType === ICON_TYPE.AUTO && port) {
 		const service = detectService(port, hostname);
 		if (service) {
 			iconUrl = getIconUrl(service.name);

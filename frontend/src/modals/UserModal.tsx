@@ -16,6 +16,7 @@ import { useHealth, useSetUser, useUser } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
 
 const showUserModal = (id: number | "me" | "new") => {
 	EasyModal.show(UserModal, { id });
@@ -55,7 +56,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			delete payload.isDisabled;
 			delete payload.roles;
 		} else if (payload.isAdmin) {
-			payload.roles = ["admin"];
+			payload.roles = [USER_ROLE.ADMIN];
 		}
 
 		// this isn't a real field, just for the form
@@ -66,7 +67,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				if (err instanceof Error) setErrorMsg(err.message);
 			},
 			onSuccess: () => {
-				showObjectSuccess("user", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, "saved");
 				remove();
 			},
 			onSettled: () => {
@@ -92,7 +93,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						<p className="text-lg font-semibold">User modification is disabled in Demo Mode.</p>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={remove}>
+						<Button variant={SHADCN_VARIANT.OUTLINE} onClick={remove}>
 							<T id="close" />
 						</Button>
 					</DialogFooter>
@@ -107,7 +108,10 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<IconUser className="h-5 w-5" />
-						<T id={data?.id ? "object.edit" : "object.add"} tData={{ object: "user" }} />
+						<T
+							id={data?.id ? "object.edit" : "object.add"}
+							tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }}
+						/>
 					</DialogTitle>
 				</DialogHeader>
 
@@ -131,7 +135,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							name: data?.name || "",
 							nickname: data?.nickname || "",
 							email: data?.email || "",
-							isAdmin: data?.roles?.includes("admin") || false,
+							isAdmin: data?.roles?.includes(USER_ROLE.ADMIN) || false,
 							isDisabled: data?.isDisabled || false,
 						}}
 						onSubmit={onSubmit}
@@ -268,12 +272,17 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								)}
 
 								<DialogFooter className="mt-6">
-									<Button variant="outline" onClick={remove} disabled={isSubmitting} type="button">
+									<Button
+										variant={SHADCN_VARIANT.OUTLINE}
+										onClick={remove}
+										disabled={isSubmitting}
+										type="button"
+									>
 										<T id="cancel" />
 									</Button>
 									<Button
 										type="submit"
-										variant="default"
+										variant={SHADCN_VARIANT.DEFAULT}
 										disabled={isSubmitting}
 										className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
 									>

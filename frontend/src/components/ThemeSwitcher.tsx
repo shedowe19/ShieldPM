@@ -9,7 +9,7 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { useTheme } from "src/hooks";
 import { T } from "src/locale";
-import { AppTheme } from "src/types/enums";
+import { APP_THEME } from "src/types/enums";
 
 interface Props {
 	className?: string;
@@ -29,13 +29,13 @@ function ThemeSwitcher({ className }: Props) {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				<DropdownMenuItem onClick={() => setTheme(AppTheme.Light)}>
+				<DropdownMenuItem onClick={() => setTheme(APP_THEME.LIGHT)}>
 					<IconSun className="mr-2 h-4 w-4" />
 					<span>
 						<T id="theme.light" />
 					</span>
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => setTheme(AppTheme.Dark)}>
+				<DropdownMenuItem onClick={() => setTheme(APP_THEME.DARK)}>
 					<IconMoon className="mr-2 h-4 w-4" />
 					<span>
 						<T id="theme.dark" />

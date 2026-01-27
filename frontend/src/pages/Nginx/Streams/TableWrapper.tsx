@@ -13,13 +13,14 @@ import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showHelpModal, showStreamModal } from "src/modals";
 import { MANAGE, STREAMS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
 	const [_deleteId, _setDeleteIdd] = useState(0);
-	const { isFetching, isLoading, isError, error, data } = useStreams(["owner", "certificate"]);
+	const { isFetching, isLoading, isError, error, data } = useStreams(["owner", AUDIT_LOG_OBJECT_TYPE.CERTIFICATE]);
 
 	if (isLoading) {
 		return <LoadingPage />;
@@ -37,14 +38,14 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteStream(id);
-		showObjectSuccess("stream", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, "deleted");
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
 		await toggleStream(id, enabled);
 		queryClient.invalidateQueries({ queryKey: ["streams"] });
-		queryClient.invalidateQueries({ queryKey: ["stream", id] });
-		showObjectSuccess("stream", enabled ? "enabled" : "disabled");
+		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.STREAM, id] });
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, enabled ? "enabled" : "disabled");
 	};
 
 	let filtered = null;
@@ -91,7 +92,7 @@ export default function TableWrapper() {
 								onClick={() => showStreamModal("new")}
 							>
 								<IconPlus className="mr-2 h-4 w-4" />
-								<T id="object.add" tData={{ object: "stream" }} />
+								<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }} />
 							</Button>
 						) : null}
 					</HasPermission>
@@ -105,10 +106,10 @@ export default function TableWrapper() {
 					onEdit={(id: number) => showStreamModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "stream" }} />,
+							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }} />,
 							onConfirm: () => handleDelete(id),
-							invalidations: [["streams"], ["stream", id]],
-							children: <T id="object.delete.content" tData={{ object: "stream" }} />,
+							invalidations: [["streams"], [AUDIT_LOG_OBJECT_TYPE.STREAM, id]],
+							children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }} />,
 						})
 					}
 					onDisableToggle={handleDisableToggle}

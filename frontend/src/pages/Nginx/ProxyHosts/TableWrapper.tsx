@@ -13,12 +13,17 @@ import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "src/modals";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
-	const { isFetching, isLoading, isError, error, data } = useProxyHosts(["owner", "access_list", "certificate"]);
+	const { isFetching, isLoading, isError, error, data } = useProxyHosts([
+		"owner",
+		"access_list",
+		AUDIT_LOG_OBJECT_TYPE.CERTIFICATE,
+	]);
 
 	if (isLoading) {
 		return <LoadingPage />;
@@ -36,14 +41,14 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteProxyHost(id);
-		showObjectSuccess("proxy-host", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, "deleted");
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
 		await toggleProxyHost(id, enabled);
 		queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
-		queryClient.invalidateQueries({ queryKey: ["proxy-host", id] });
-		showObjectSuccess("proxy-host", enabled ? "enabled" : "disabled");
+		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
 	};
 
 	let filtered = null;
@@ -89,7 +94,7 @@ export default function TableWrapper() {
 								onClick={() => showProxyHostModal("new")}
 							>
 								<IconPlus className="mr-2 h-4 w-4" />
-								<T id="object.add" tData={{ object: "proxy-host" }} />
+								<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
 							</Button>
 						) : null}
 					</HasPermission>
@@ -103,10 +108,12 @@ export default function TableWrapper() {
 					onEdit={(id: number) => showProxyHostModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "proxy-host" }} />,
+							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />,
 							onConfirm: () => handleDelete(id),
-							invalidations: [["proxy-hosts"], ["proxy-host", id]],
-							children: <T id="object.delete.content" tData={{ object: "proxy-host" }} />,
+							invalidations: [["proxy-hosts"], [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id]],
+							children: (
+								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
+							),
 						})
 					}
 					onDisableToggle={handleDisableToggle}

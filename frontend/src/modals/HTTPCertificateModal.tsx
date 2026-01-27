@@ -12,6 +12,7 @@ import { Card, CardContent, CardFooter } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, CERTIFICATE_PROVIDER } from "src/types/enums";
 
 const showHTTPCertificateModal = () => {
 	EasyModal.show(HTTPCertificateModal);
@@ -99,10 +100,12 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
 			<DialogContent className="sm:max-w-lg">
 				<Formik
-					initialValues={{
-						domainNames: [] as string[],
-						provider: "letsencrypt",
-					}}
+					initialValues={
+						{
+							domainNames: [] as string[],
+							provider: CERTIFICATE_PROVIDER.LETSENCRYPT,
+						} as HTTPCertificateValues
+					}
 					onSubmit={onSubmit}
 				>
 					{({ handleSubmit }) => (
@@ -110,7 +113,7 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 							<DialogHeader>
 								<DialogTitle className="flex items-center gap-2">
 									<IconWorld className="h-5 w-5" />
-									<T id="object.add" tData={{ object: "lets-encrypt-via-http" }} />
+									<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />
 								</DialogTitle>
 							</DialogHeader>
 

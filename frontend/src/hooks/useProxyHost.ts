@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProxyHost, getProxyHost, type ProxyHost, updateProxyHost } from "src/api/backend";
+import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME } from "src/types/enums";
 
 const fetchProxyHost = (id: number | "new") => {
 	if (id === "new") {
@@ -22,7 +23,7 @@ const fetchProxyHost = (id: number | "new") => {
 			meta: {},
 			allowWebsocketUpgrade: false,
 			http2Support: false,
-			forwardScheme: "",
+			forwardScheme: FORWARD_SCHEME.HTTP,
 			enabled: true,
 			hstsEnabled: false,
 			hstsSubdomains: false,
@@ -36,7 +37,7 @@ const fetchProxyHost = (id: number | "new") => {
 
 const useProxyHost = (id: number | "new", options = {}) => {
 	return useQuery<ProxyHost, Error>({
-		queryKey: ["proxy-host", id],
+		queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id],
 		queryFn: () => fetchProxyHost(id),
 		staleTime: 60 * 1000, // 1 minute
 		...options,
@@ -51,16 +52,16 @@ const useSetProxyHost = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData(["proxy-host", values.id]);
-			queryClient.setQueryData(["proxy-host", values.id], (old: ProxyHost) => ({
+			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, values.id]);
+			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, values.id], (old: ProxyHost) => ({
 				...old,
 				...values,
 			}));
-			return () => queryClient.setQueryData(["proxy-host", values.id], previousObject);
+			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, values.id], previousObject);
 		},
-		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
+		onError: (_: Error, __: ProxyHost, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: ProxyHost) => {
-			queryClient.invalidateQueries({ queryKey: ["proxy-host", id] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
 			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
 			queryClient.invalidateQueries({ queryKey: ["host-report"] });

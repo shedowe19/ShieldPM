@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createUser, getUser, type User, updateUser } from "src/api/backend";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 const fetchUser = (id: number | string) => {
 	if (id === "new") {
@@ -20,7 +21,7 @@ const fetchUser = (id: number | string) => {
 
 const useUser = (id: string | number, options = {}) => {
 	return useQuery<User, Error>({
-		queryKey: ["user", id],
+		queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id],
 		queryFn: () => fetchUser(id),
 		staleTime: 60 * 1000, // 1 minute
 		...options,
@@ -35,16 +36,16 @@ const useSetUser = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData(["user", values.id]);
-			queryClient.setQueryData(["user", values.id], (old: User) => ({
+			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.USER, values.id]);
+			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.USER, values.id], (old: User) => ({
 				...old,
 				...values,
 			}));
-			return () => queryClient.setQueryData(["user", values.id], previousObject);
+			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.USER, values.id], previousObject);
 		},
 		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: User) => {
-			queryClient.invalidateQueries({ queryKey: ["user", id] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id] });
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
 		},

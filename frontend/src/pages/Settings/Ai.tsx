@@ -14,7 +14,7 @@ import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
-import { AiProvider } from "src/types/enums";
+import { AI_PROVIDER, AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 export default function AiConfigPage() {
 	const [config, setConfig] = useState<AiConfig | null>(null);
@@ -42,7 +42,7 @@ export default function AiConfigPage() {
 			};
 			const res = await updateAiConfig(payload as AiConfig);
 			setConfig(res);
-			showObjectSuccess("setting", "saved");
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.SETTING, "saved");
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);
 		} finally {
@@ -54,7 +54,7 @@ export default function AiConfigPage() {
 
 	const initialValues: AiConfig = config || {
 		enabled: false,
-		provider: AiProvider.Gemini,
+		provider: AI_PROVIDER.GEMINI,
 		api_key: "",
 		base_url: "",
 		model: "",
@@ -101,7 +101,7 @@ export default function AiConfigPage() {
 									<T id="ai.provider" />
 								</Label>
 								<div className="flex gap-4">
-									{[AiProvider.Gemini, AiProvider.Local].map((option) => (
+									{[AI_PROVIDER.GEMINI, AI_PROVIDER.LOCAL].map((option) => (
 										<label
 											key={option}
 											className={`
@@ -120,21 +120,21 @@ export default function AiConfigPage() {
 													// Set default model based on provider to avoid invalid state
 													setFieldValue(
 														"model",
-														option === AiProvider.Gemini
+														option === AI_PROVIDER.GEMINI
 															? "gemini-1.5-flash"
 															: "gpt-3.5-turbo",
 													);
 												}}
 											/>
 											<span className="capitalize">
-												{option === AiProvider.Gemini ? "Google Gemini" : "Local LLM / OpenAI"}
+												{option === AI_PROVIDER.GEMINI ? "Google Gemini" : "Local LLM / OpenAI"}
 											</span>
 										</label>
 									))}
 								</div>
 							</div>
 
-							{values.provider === AiProvider.Gemini && (
+							{values.provider === AI_PROVIDER.GEMINI && (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="api_key">
@@ -198,7 +198,7 @@ export default function AiConfigPage() {
 								</div>
 							)}
 
-							{values.provider === AiProvider.Local && (
+							{values.provider === AI_PROVIDER.LOCAL && (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="base_url">

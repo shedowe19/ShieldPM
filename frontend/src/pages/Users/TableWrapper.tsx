@@ -13,6 +13,7 @@ import { useHealth, useUser, useUsers } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal, showUserModal } from "src/modals";
 import { showError, showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
@@ -68,14 +69,14 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteUser(id);
-		showObjectSuccess("user", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, "deleted");
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
 		await toggleUser(id, enabled);
 		queryClient.invalidateQueries({ queryKey: ["users"] });
-		queryClient.invalidateQueries({ queryKey: ["user", id] });
-		showObjectSuccess("user", enabled ? "enabled" : "disabled");
+		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id] });
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, enabled ? "enabled" : "disabled");
 	};
 
 	let filtered = null;
@@ -117,7 +118,7 @@ export default function TableWrapper() {
 							onClick={() => showUserModal("new")}
 						>
 							<IconPlus className="mr-2 h-4 w-4" />
-							<T id="object.add" tData={{ object: "user" }} />
+							<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />
 						</Button>
 					</div>
 				) : null}
@@ -133,10 +134,10 @@ export default function TableWrapper() {
 					onSetPassword={(id: number) => showSetPasswordModal(id)}
 					onDeleteUser={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "user" }} />,
+							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />,
 							onConfirm: () => handleDelete(id),
-							invalidations: [["users"], ["user", id]],
-							children: <T id="object.delete.content" tData={{ object: "user" }} />,
+							invalidations: [["users"], [AUDIT_LOG_OBJECT_TYPE.USER, id]],
+							children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />,
 						})
 					}
 					onDisableToggle={handleDisableToggle}

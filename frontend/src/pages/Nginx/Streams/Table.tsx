@@ -22,6 +22,7 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { MANAGE, STREAMS } from "src/modules/Permissions";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: Stream[];
@@ -87,7 +88,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 				id: "certificate",
 				header: intl.formatMessage({ id: "column.ssl" }),
 				cell: (info) => {
-					return <CertificateFormatter certificate={info.getValue()} />;
+					return <CertificateFormatter value={info.getValue()} />;
 				},
 			}),
 			columnHelper.accessor("enabled", {
@@ -112,7 +113,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
-										tData={{ object: "stream" }}
+										tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }}
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
@@ -166,7 +167,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object="stream"
+					object={AUDIT_LOG_OBJECT_TYPE.STREAM}
 					objects="streams"
 					onNew={onNew}
 					isFiltered={isFiltered}

@@ -15,6 +15,7 @@ import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { UI_COLOR, type UiColor } from "src/types/enums";
 
 const showDashboardNoteModal = (note?: Props["note"]) => {
 	EasyModal.show(DashboardNoteModal, { note });
@@ -24,24 +25,24 @@ interface Props extends InnerModalProps {
 	note?: {
 		id: number;
 		content: string;
-		color?: string;
+		color?: UiColor;
 		position?: number;
 	};
 }
 
 interface DashboardNoteValues {
 	content: string;
-	color: string;
+	color: UiColor;
 	position: number;
 }
 
 const COLORS = [
-	{ value: "yellow", label: "Yellow", class: "bg-yellow-100 dark:bg-yellow-900/20" },
-	{ value: "blue", label: "Blue", class: "bg-blue-100 dark:bg-blue-900/20" },
-	{ value: "green", label: "Green", class: "bg-green-100 dark:bg-green-900/20" },
-	{ value: "red", label: "Red", class: "bg-red-100 dark:bg-red-900/20" },
-	{ value: "purple", label: "Purple", class: "bg-purple-100 dark:bg-purple-900/20" },
-	{ value: "gray", label: "Gray", class: "bg-gray-100 dark:bg-gray-800" },
+	{ value: UI_COLOR.YELLOW, label: "Yellow", class: "bg-yellow-100 dark:bg-yellow-900/20" },
+	{ value: UI_COLOR.BLUE, label: "Blue", class: "bg-blue-100 dark:bg-blue-900/20" },
+	{ value: UI_COLOR.GREEN, label: "Green", class: "bg-green-100 dark:bg-green-900/20" },
+	{ value: UI_COLOR.RED, label: "Red", class: "bg-red-100 dark:bg-red-900/20" },
+	{ value: UI_COLOR.PURPLE, label: "Purple", class: "bg-purple-100 dark:bg-purple-900/20" },
+	{ value: UI_COLOR.GRAY, label: "Gray", class: "bg-gray-100 dark:bg-gray-800" },
 ];
 
 const DashboardNoteModal = EasyModal.create(({ note, visible, remove }: Props) => {
@@ -83,10 +84,10 @@ const DashboardNoteModal = EasyModal.create(({ note, visible, remove }: Props) =
 					</DialogTitle>
 				</DialogHeader>
 
-				<Formik
+				<Formik<DashboardNoteValues>
 					initialValues={{
 						content: note?.content || "",
-						color: note?.color || "yellow",
+						color: note?.color || UI_COLOR.YELLOW,
 						position: note?.position || 0,
 					}}
 					onSubmit={onSubmit}
