@@ -259,6 +259,8 @@ const ai = {
 				/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
 				// Pattern 2: function call format
 				/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
+				// Pattern 3: XML-style <toolcall> (Gemini Thinking/Flash models sometimes do this)
+				/<toolcall>\s*(\{.*?\})\s*<\/toolcall>/gs,
 			];
 
 			for (const pattern of toolCallPatterns) {
@@ -268,9 +270,41 @@ const ai = {
 					response.toolCalls = response.toolCalls || [];
 					for (const match of matches) {
 						try {
-							const toolName = match[1];
-							const argsStr = match[2] || "{}";
-							const args = JSON.parse(argsStr.replace(/'/g, '"'));
+							let toolName, args;
+							
+							// Check which pattern matched
+							if (match[0].startsWith("<toolcall>")) {
+								// XML Pattern: match[1] is the JSON content
+								const json = JSON.parse(match[1]);
+								toolName = json.name;
+								args = json.arguments || {};
+							} else if (match[1] && match[2]) {
+								// Regex groups
+								toolName = match[1];
+								const argsStr = match[2] || "{}";
+								args = JSON.parse(argsStr.replace(/'/g, '"'));
+							} else {
+								// JSON Pattern
+								toolName = match[1];
+								const argsStr = match[2] || "{}";
+								args = JSON.parse(argsStr.replace(/'/g, '"'));
+							}
+
+							// Normalization: Fix hallucinated names (e.g. gethostanalytics -> get_host_analytics)
+							// We try updates if direct match fails.
+							const definedTools = getToolDefinitions();
+							const exactMatch = definedTools.find(t => t.function.name === toolName);
+							if (!exactMatch) {
+								// Try to find by removing underscores from defined tools
+								const looseMatch = definedTools.find(
+									t => t.function.name.replace(/_/g, "") === toolName.replace(/_/g, "")
+								);
+								if (looseMatch) {
+									logger.info(`[AI Chat] Normalizing tool name: ${toolName} -> ${looseMatch.function.name}`);
+									toolName = looseMatch.function.name;
+								}
+							}
+
 							response.toolCalls.push({ name: toolName, args });
 							logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
 						} catch (e) {

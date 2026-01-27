@@ -102,19 +102,26 @@ const internalChat = {
 				const message = ctx.message.text;
 				if (!message) return;
 
-				// Show typing status
-				await ctx.sendChatAction("typing");
-
 				try {
-					// Route to AI
-					// We treat this as a new conversation for each message for now?
-					// Or keep a small history? Telegram doesn't map easily to our history array.
-					// Let's start with stateless execution (history=[]) or simple context.
+					const sendTyping = async () => {
+						try {
+							await ctx.sendChatAction("typing");
+						} catch (_e) {
+							/* ignore */
+						}
+					};
 
-					// Ideally we'd map ctx.chat.id to a conversation history in DB, but let's keep it simple first.
+					// Start typing loop
+					await sendTyping();
+					const typingInterval = setInterval(sendTyping, 4000); // Telegram status lasts ~5s
 
-					// @ts-expect-error: Custom shieldAccess property on context is not typed
-					const response = await ai.chat(ctx.shieldAccess, message, []);
+					let response;
+					try {
+						// @ts-expect-error: Custom shieldAccess property on context is not typed
+						response = await ai.chat(ctx.shieldAccess, message, []);
+					} finally {
+						clearInterval(typingInterval);
+					}
 
 					// Send response
 					if (response.content) {
