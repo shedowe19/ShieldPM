@@ -73,7 +73,8 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				setIsSubmitting(false);
 				setSubmitting(false);
 			},
-			onSuccess: async (newUser) => { // Assuming hooks/useSetUser returns the user object on success
+			onSuccess: async (newUser) => {
+				// Assuming hooks/useSetUser returns the user object on success
 				if (values.avatar_type === AVATAR_TYPE.UPLOAD && selectedFile) {
 					try {
 						await uploadUserAvatar({ id: newUser.id, file: selectedFile });
