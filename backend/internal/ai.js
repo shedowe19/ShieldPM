@@ -95,7 +95,6 @@ const ai = {
 			dataToSave.api_key = encrypt(dataToSave.api_key);
 		}
 
-
 		// Check if setting exists, or create if not
 		let exists = false;
 		try {
