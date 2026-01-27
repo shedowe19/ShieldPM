@@ -39,7 +39,7 @@ router.get("/", async (req, res, next) => {
  */
 router.post("/", async (req, res, next) => {
 	try {
-		await req.access.can("settings:update", "chat"); // Re-using settings permission or create new?
+		// Reusing settings permission or create new?
 		// Let's assume if you can login, you can create a bot for yourself.
 
 		// Validation Schema
