@@ -24,6 +24,7 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: ProxyHost[];
@@ -87,7 +88,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 				id: "certificate",
 				header: intl.formatMessage({ id: "column.ssl" }),
 				cell: (info) => {
-					return <CertificateFormatter certificate={info.getValue()} />;
+					return <CertificateFormatter value={info.getValue()} />;
 				},
 			}),
 			columnHelper.accessor("accessList", {
@@ -119,7 +120,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
-										tData={{ object: "proxy-host" }}
+										tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }}
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
@@ -174,7 +175,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object="proxy-host"
+					object={AUDIT_LOG_OBJECT_TYPE.PROXY_HOST}
 					objects="proxy-hosts"
 					onNew={onNew}
 					isFiltered={isFiltered}

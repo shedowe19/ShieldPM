@@ -1,7 +1,7 @@
 import { IconCertificate, IconShieldLock } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { type Certificate, createCertificate } from "src/api/backend";
@@ -15,23 +15,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Textarea } from "src/components/ui/textarea";
 import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, INTERNAL_CERT_TYPE, type InternalCertType } from "src/types/enums";
 
 const showInternalCertificateModal = () => {
 	EasyModal.show(InternalCertificateModal);
 };
+
+interface InternalCertificateValues {
+	type: InternalCertType;
+	domain_names: string;
+	password: string;
+	years: string;
+}
 
 const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerModalProps) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (
+		values: InternalCertificateValues,
+		{ setSubmitting }: FormikHelpers<InternalCertificateValues>,
+	) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
 		try {
-			if (values.type === "client") {
+			if (values.type === INTERNAL_CERT_TYPE.CLIENT) {
 				// Client Certificate Download
 				// Use AuthStore to get the current token
 				const response = await fetch("/api/nginx/certificates/internal/client", {
@@ -61,7 +72,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 				a.click();
 				window.URL.revokeObjectURL(url);
 
-				showObjectSuccess("certificate", "downloaded"); // Custom message?
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "downloaded"); // Custom message?
 				remove();
 			} else {
 				// Server Certificate (Existing Logic)
@@ -73,11 +84,11 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 					},
 				} as unknown as Certificate);
 
-				showObjectSuccess("certificate", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "saved");
 				remove();
 			}
-		} catch (err: any) {
-			setErrorMsg(err.message || "An error occurred");
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(err.message || "An error occurred");
 		}
 
 		queryClient.invalidateQueries({ queryKey: ["certificates"] });
@@ -97,16 +108,16 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 					</DialogTitle>
 				</DialogHeader>
 
-				<Formik
+				<Formik<InternalCertificateValues>
 					initialValues={{
-						type: "server",
+						type: INTERNAL_CERT_TYPE.SERVER,
 						domain_names: "",
 						password: "",
 						years: "10",
 					}}
 					onSubmit={onSubmit}
 				>
-					{({ errors, touched, setFieldValue, values }: any) => (
+					{({ errors, touched, setFieldValue, values }) => (
 						<Form className="space-y-4">
 							{errorMsg && (
 								<Alert variant="destructive">
@@ -146,10 +157,10 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 												/>
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="server">
+												<SelectItem value={INTERNAL_CERT_TYPE.SERVER}>
 													<T id="certificates.internal.type.server" />
 												</SelectItem>
-												<SelectItem value="client">
+												<SelectItem value={INTERNAL_CERT_TYPE.CLIENT}>
 													<T id="certificates.internal.type.client" />
 												</SelectItem>
 											</SelectContent>
@@ -158,19 +169,19 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 
 									<div className="space-y-2">
 										<Label htmlFor="domain_names">
-											{values.type === "client" ? (
+											{values.type === INTERNAL_CERT_TYPE.CLIENT ? (
 												<T id="certificates.internal.identity_name" />
 											) : (
 												<T id="domain-names" />
 											)}
 										</Label>
 										<Field name="domain_names">
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<Textarea
 													{...field}
 													id="domain_names"
 													placeholder={
-														values.type === "client"
+														values.type === INTERNAL_CERT_TYPE.CLIENT
 															? "my-laptop"
 															: "example.internal, svc.local"
 													}
@@ -179,12 +190,12 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 															? "border-destructive"
 															: ""
 													}
-													rows={values.type === "client" ? 1 : 3}
+													rows={values.type === INTERNAL_CERT_TYPE.CLIENT ? 1 : 3}
 												/>
 											)}
 										</Field>
 										<p className="text-sm text-muted-foreground">
-											{values.type === "client" ? (
+											{values.type === INTERNAL_CERT_TYPE.CLIENT ? (
 												<T id="certificates.internal.identity_help" />
 											) : (
 												<T id="certificates.internal.domain_names_help" />
@@ -192,13 +203,13 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 										</p>
 									</div>
 
-									{values.type === "client" && (
+									{values.type === INTERNAL_CERT_TYPE.CLIENT && (
 										<div className="space-y-2">
 											<Label htmlFor="password">
 												<T id="certificates.internal.password" />
 											</Label>
 											<Field name="password">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<Input
 														{...field}
 														type="password"

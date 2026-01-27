@@ -1,5 +1,5 @@
 import { IconRobot } from "@tabler/icons-react";
-import { Field, Form, Formik } from "formik";
+import { Field, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
@@ -14,6 +14,7 @@ import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
+import { AI_PROVIDER, AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 export default function AiConfigPage() {
 	const [config, setConfig] = useState<AiConfig | null>(null);
@@ -30,7 +31,7 @@ export default function AiConfigPage() {
 
 	const { formatMessage } = useIntl();
 
-	const onSubmit = async (values: AiConfig, { setSubmitting }: any) => {
+	const onSubmit = async (values: AiConfig, { setSubmitting }: FormikHelpers<AiConfig>) => {
 		try {
 			// Convert numeric fields from strings to integers
 			const payload = {
@@ -39,11 +40,11 @@ export default function AiConfigPage() {
 				num_batch: values.num_batch ? Number.parseInt(String(values.num_batch), 10) : undefined,
 				num_thread: values.num_thread ? Number.parseInt(String(values.num_thread), 10) : undefined,
 			};
-			const res = await updateAiConfig(payload as any);
+			const res = await updateAiConfig(payload as AiConfig);
 			setConfig(res);
-			showObjectSuccess("setting", "saved");
-		} catch (err: any) {
-			setError(err.message);
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.SETTING, "saved");
+		} catch (err) {
+			if (err instanceof Error) setError(err.message);
 		} finally {
 			setSubmitting(false);
 		}
@@ -53,7 +54,7 @@ export default function AiConfigPage() {
 
 	const initialValues: AiConfig = config || {
 		enabled: false,
-		provider: "gemini",
+		provider: AI_PROVIDER.GEMINI,
 		api_key: "",
 		base_url: "",
 		model: "",
@@ -100,7 +101,7 @@ export default function AiConfigPage() {
 									<T id="ai.provider" />
 								</Label>
 								<div className="flex gap-4">
-									{["gemini", "local"].map((option) => (
+									{[AI_PROVIDER.GEMINI, AI_PROVIDER.LOCAL].map((option) => (
 										<label
 											key={option}
 											className={`
@@ -119,19 +120,21 @@ export default function AiConfigPage() {
 													// Set default model based on provider to avoid invalid state
 													setFieldValue(
 														"model",
-														option === "gemini" ? "gemini-1.5-flash" : "gpt-3.5-turbo",
+														option === AI_PROVIDER.GEMINI
+															? "gemini-1.5-flash"
+															: "gpt-3.5-turbo",
 													);
 												}}
 											/>
 											<span className="capitalize">
-												{option === "gemini" ? "Google Gemini" : "Local LLM / OpenAI"}
+												{option === AI_PROVIDER.GEMINI ? "Google Gemini" : "Local LLM / OpenAI"}
 											</span>
 										</label>
 									))}
 								</div>
 							</div>
 
-							{values.provider === "gemini" && (
+							{values.provider === AI_PROVIDER.GEMINI && (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="api_key">
@@ -159,8 +162,8 @@ export default function AiConfigPage() {
 														);
 														setFetchedModels(models);
 														showObjectSuccess("Models Loaded", "");
-													} catch (e: any) {
-														setError(e.message);
+													} catch (e) {
+														if (e instanceof Error) setError(e.message);
 													}
 												}}
 											>
@@ -177,7 +180,7 @@ export default function AiConfigPage() {
 													{formatMessage({ id: "frames.select_placeholder" }) ||
 														"Select a model"}
 												</option>
-												{fetchedModels.map((m: any) => (
+												{fetchedModels.map((m) => (
 													<option key={m.id} value={m.id}>
 														{m.name}
 													</option>
@@ -195,7 +198,7 @@ export default function AiConfigPage() {
 								</div>
 							)}
 
-							{values.provider === "local" && (
+							{values.provider === AI_PROVIDER.LOCAL && (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="base_url">
@@ -242,8 +245,8 @@ export default function AiConfigPage() {
 														);
 														setFetchedModels(models);
 														showObjectSuccess("Models Loaded", "");
-													} catch (e: any) {
-														setError(e.message);
+													} catch (e) {
+														if (e instanceof Error) setError(e.message);
 													}
 												}}
 											>
@@ -261,7 +264,7 @@ export default function AiConfigPage() {
 													{formatMessage({ id: "frames.select_placeholder" }) ||
 														"Select a model"}
 												</option>
-												{fetchedModels.map((m: any) => (
+												{fetchedModels.map((m) => (
 													<option key={m.id} value={m.id}>
 														{m.name}
 													</option>

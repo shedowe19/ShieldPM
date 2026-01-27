@@ -1,3 +1,4 @@
+import type { GitOpsAuthType } from "src/types/enums";
 import { get, post, put } from "./base";
 
 /**
@@ -7,7 +8,7 @@ export interface GitOpsConfig {
 	enabled: boolean;
 	repositoryUrl: string;
 	branch: string;
-	authType: "ssh" | "https";
+	authType: GitOpsAuthType;
 	encryptedCredentials: string; // Always "[REDACTED]" from API
 	autoPush: boolean;
 	autoPullOnStartup: boolean;
@@ -22,7 +23,7 @@ export interface GitOpsConfigUpdate {
 	enabled?: boolean;
 	repositoryUrl?: string;
 	branch?: string;
-	authType?: "ssh" | "https";
+	authType?: GitOpsAuthType;
 	credentials?: string; // Plain credentials for update
 	autoPush?: boolean;
 	autoPullOnStartup?: boolean;

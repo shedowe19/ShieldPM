@@ -6,6 +6,7 @@ import {
 	getAccessList,
 	updateAccessList,
 } from "src/api/backend";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 const fetchAccessList = (id: number | "new", expand: AccessListExpansion[] = ["owner"]) => {
 	if (id === "new") {
@@ -25,7 +26,7 @@ const fetchAccessList = (id: number | "new", expand: AccessListExpansion[] = ["o
 
 const useAccessList = (id: number | "new", expand?: AccessListExpansion[], options = {}) => {
 	return useQuery<AccessList, Error>({
-		queryKey: ["access-list", id, expand],
+		queryKey: [AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, id, expand],
 		queryFn: () => fetchAccessList(id, expand),
 		staleTime: 60 * 1000, // 1 minute
 		...options,
@@ -38,18 +39,18 @@ const useSetAccessList = () => {
 		mutationFn: (values: AccessList) => (values.id ? updateAccessList(values) : createAccessList(values)),
 		onMutate: (values: AccessList) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
-			const previousObject = queryClient.getQueryData(["access-list", values.id]);
-			queryClient.setQueryData(["access-list", values.id], (old: AccessList) => ({
+			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, values.id]);
+			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, values.id], (old: AccessList) => ({
 				...old,
 				...values,
 			}));
-			return () => queryClient.setQueryData(["access-list", values.id], previousObject);
+			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: AccessList) => {
-			queryClient.invalidateQueries({ queryKey: ["access-list", id] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, id] });
 			queryClient.invalidateQueries({ queryKey: ["access-lists"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
 			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });

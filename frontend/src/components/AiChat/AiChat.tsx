@@ -9,11 +9,14 @@ import { Input } from "src/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
+import { AI_ROLE } from "src/types/enums";
 import { AiMessage } from "./AiMessage";
+
+type ChatMessage = AiChatMessage & { id: string };
 
 export function AiChat() {
 	const [open, setOpen] = useState(false);
-	const [messages, setMessages] = useState<AiChatMessage[]>([]);
+	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -28,23 +31,34 @@ export function AiChat() {
 	const handleSend = async () => {
 		if (!input.trim() || loading) return;
 
-		const userMsg: AiChatMessage = { role: "user", content: input };
-		setMessages((prev: AiChatMessage[]) => [...prev, userMsg]);
+		const userMsg: ChatMessage = {
+			role: AI_ROLE.USER,
+			content: input,
+			id: Math.random().toString(36).substring(7),
+		};
+		setMessages((prev) => [...prev, userMsg]);
 		setInput("");
 		setLoading(true);
 
 		try {
 			// Filter history to exclude failed/loading states if any,
-			// but here we just pass the valid history
-			const history = messages;
+			// but here we just pass the valid history (stripped of internal IDs)
+			const history = messages.map(({ id, ...rest }) => rest);
 			console.log("Sending chat request:", { message: userMsg.content, historyLength: history.length });
 
 			const response = await sendAiChat(userMsg.content, history);
 			console.log("Received chat response:", response);
-			setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: response.content }]);
-		} catch (err: any) {
+			setMessages((prev) => [
+				...prev,
+				{ role: AI_ROLE.ASSISTANT, content: response.content, id: Math.random().toString(36).substring(7) },
+			]);
+		} catch (err) {
 			console.error("Chat error:", err);
-			setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
+			const msg = err instanceof Error ? err.message : String(err);
+			setMessages((prev) => [
+				...prev,
+				{ role: AI_ROLE.ASSISTANT, content: `Error: ${msg}`, id: Math.random().toString(36).substring(7) },
+			]);
 		} finally {
 			setLoading(false);
 		}
@@ -95,8 +109,8 @@ export function AiChat() {
 							</p>
 						</div>
 					)}
-					{messages.map((m: AiChatMessage, i: number) => (
-						<AiMessage key={i} message={m} />
+					{messages.map((m) => (
+						<AiMessage key={m.id} message={m} />
 					))}
 					{loading && (
 						<div className="flex w-full mt-2 space-x-3 max-w-md">

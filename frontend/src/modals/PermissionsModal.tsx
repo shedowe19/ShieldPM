@@ -9,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers, type FormikProps } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { setPermissions } from "src/api/backend";
@@ -22,6 +22,7 @@ import { Label } from "src/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { useHealth, useUser } from "src/hooks";
 import { T } from "src/locale";
+import { AUDIT_LOG_OBJECT_TYPE, PERMISSION_LEVEL, PERMISSION_SCOPE } from "src/types/enums";
 
 const showPermissionsModal = (id: number) => {
 	EasyModal.show(PermissionsModal, { id });
@@ -30,13 +31,24 @@ const showPermissionsModal = (id: number) => {
 interface Props extends InnerModalProps {
 	id: number;
 }
+
+interface PermissionsValues {
+	visibility: string;
+	accessLists: string;
+	certificates: string;
+	deadHosts: string;
+	proxyHosts: string;
+	redirectionHosts: string;
+	streams: string;
+}
+
 const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const { data, isLoading, error } = useUser(id);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: PermissionsValues, { setSubmitting }: FormikHelpers<PermissionsValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -44,9 +56,9 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			await setPermissions(id, values);
 			remove();
 			queryClient.invalidateQueries({ queryKey: ["users"] });
-			queryClient.invalidateQueries({ queryKey: ["user"] });
-		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER] });
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 		}
 		setSubmitting(false);
 		setIsSubmitting(false);
@@ -54,35 +66,39 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 	// given the field and clicked permission, intelligently set the value, and
 	// other values that depends on it.
-	const handleChange = (form: any, field: any, perm: string) => {
+	const handleChange = (form: FormikProps<PermissionsValues>, field: FieldProps["field"], perm: string) => {
 		if (!perm) return; // Toggle group can return undefined if unchecked
 
-		if (field.name === "proxyHosts" && perm !== "hidden" && form.values.accessLists === "hidden") {
-			form.setFieldValue("accessLists", "view");
+		if (
+			field.name === "proxyHosts" &&
+			perm !== PERMISSION_LEVEL.HIDDEN &&
+			form.values.accessLists === PERMISSION_LEVEL.HIDDEN
+		) {
+			form.setFieldValue("accessLists", PERMISSION_LEVEL.VIEW);
 		}
 		// certs are required for proxy and redirection hosts, and streams
 		if (
 			["proxyHosts", "redirectionHosts", "deadHosts", "streams"].includes(field.name) &&
-			perm !== "hidden" &&
-			form.values.certificates === "hidden"
+			perm !== PERMISSION_LEVEL.HIDDEN &&
+			form.values.certificates === PERMISSION_LEVEL.HIDDEN
 		) {
-			form.setFieldValue("certificates", "view");
+			form.setFieldValue("certificates", PERMISSION_LEVEL.VIEW);
 		}
 
 		form.setFieldValue(field.name, perm);
 	};
 
-	const getPermissionButtons = (field: any, form: any) => {
+	const getPermissionButtons = (field: FieldProps["field"], form: FormikProps<PermissionsValues>) => {
 		let hiddenDisabled = false;
 		if (field.name === "accessLists") {
-			hiddenDisabled = form.values.proxyHosts !== "hidden";
+			hiddenDisabled = form.values.proxyHosts !== PERMISSION_LEVEL.HIDDEN;
 		}
 		if (field.name === "certificates") {
 			hiddenDisabled =
-				form.values.proxyHosts !== "hidden" ||
-				form.values.redirectionHosts !== "hidden" ||
-				form.values.deadHosts !== "hidden" ||
-				form.values.streams !== "hidden";
+				form.values.proxyHosts !== PERMISSION_LEVEL.HIDDEN ||
+				form.values.redirectionHosts !== PERMISSION_LEVEL.HIDDEN ||
+				form.values.deadHosts !== PERMISSION_LEVEL.HIDDEN ||
+				form.values.streams !== PERMISSION_LEVEL.HIDDEN;
 		}
 
 		return (
@@ -92,13 +108,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				onValueChange={(val) => handleChange(form, field, val)}
 				className="justify-start w-full border rounded-md p-1"
 			>
-				<ToggleGroupItem value="manage" className="flex-1">
+				<ToggleGroupItem value={PERMISSION_LEVEL.MANAGE} className="flex-1">
 					<T id="permissions.manage" />
 				</ToggleGroupItem>
-				<ToggleGroupItem value="view" className="flex-1">
+				<ToggleGroupItem value={PERMISSION_LEVEL.VIEW} className="flex-1">
 					<T id="permissions.view" />
 				</ToggleGroupItem>
-				<ToggleGroupItem value="hidden" disabled={hiddenDisabled} className="flex-1">
+				<ToggleGroupItem value={PERMISSION_LEVEL.HIDDEN} disabled={hiddenDisabled} className="flex-1">
 					<T id="permissions.hidden" />
 				</ToggleGroupItem>
 			</ToggleGroup>
@@ -157,20 +173,18 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 				{!isLoading && data && (
 					<Formik
-						initialValues={
-							{
-								visibility: data.permissions?.visibility,
-								accessLists: data.permissions?.accessLists,
-								certificates: data.permissions?.certificates,
-								deadHosts: data.permissions?.deadHosts,
-								proxyHosts: data.permissions?.proxyHosts,
-								redirectionHosts: data.permissions?.redirectionHosts,
-								streams: data.permissions?.streams,
-							} as any
-						}
+						initialValues={{
+							visibility: data.permissions?.visibility || PERMISSION_SCOPE.ALL,
+							accessLists: data.permissions?.accessLists || PERMISSION_SCOPE.ALL,
+							certificates: data.permissions?.certificates || PERMISSION_SCOPE.ALL,
+							deadHosts: data.permissions?.deadHosts || PERMISSION_SCOPE.ALL,
+							proxyHosts: data.permissions?.proxyHosts || PERMISSION_SCOPE.ALL,
+							redirectionHosts: data.permissions?.redirectionHosts || PERMISSION_SCOPE.ALL,
+							streams: data.permissions?.streams || PERMISSION_SCOPE.ALL,
+						}}
 						onSubmit={onSubmit}
 					>
-						{({ values, setFieldValue, ...formikProps }) => (
+						{() => (
 							<Form className="space-y-4">
 								{errorMsg && (
 									<Alert variant="destructive" className="mb-4">
@@ -186,17 +200,19 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="permissions.visibility.title" />
 									</Label>
 									<Field name="visibility">
-										{({ field }: any) => (
+										{({ field, form }: FieldProps) => (
 											<ToggleGroup
 												type="single"
-												value={field.value}
-												onValueChange={(val) => val && setFieldValue(field.name, val)}
+												value={field.value || ""}
+												onValueChange={(val) => {
+													if (val) form.setFieldValue(field.name, val);
+												}}
 												className="justify-start w-full border rounded-md p-1"
 											>
-												<ToggleGroupItem value="user" className="flex-1">
+												<ToggleGroupItem value={PERMISSION_SCOPE.USER} className="flex-1">
 													<T id="permissions.visibility.user" />
 												</ToggleGroupItem>
-												<ToggleGroupItem value="all" className="flex-1">
+												<ToggleGroupItem value={PERMISSION_SCOPE.ALL} className="flex-1">
 													<T id="permissions.visibility.all" />
 												</ToggleGroupItem>
 											</ToggleGroup>
@@ -213,12 +229,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="proxy-hosts" />
 												</Label>
 												<Field name="proxyHosts">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -228,12 +240,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="redirection-hosts" />
 												</Label>
 												<Field name="redirectionHosts">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -243,12 +251,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="dead-hosts" />
 												</Label>
 												<Field name="deadHosts">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -258,12 +262,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="streams" />
 												</Label>
 												<Field name="streams">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -273,12 +273,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="access-lists" />
 												</Label>
 												<Field name="accessLists">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -288,12 +284,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="certificates" />
 												</Label>
 												<Field name="certificates">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>

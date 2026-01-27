@@ -19,7 +19,8 @@ import langZh from "./lang/zh.json";
 // first item of each array should be the language code,
 // not the country code
 // Remember when adding to this list, also update check-locales.js script
-const localeOptions = [
+export type LocaleOption = [string, string, Record<string, string>];
+const localeOptions: LocaleOption[] = [
 	["en", "en-US", langEn],
 	["de", "de-DE", langDe],
 	["es", "es-ES", langEs],
@@ -45,7 +46,7 @@ const loadMessages = (locale?: string): typeof langList & typeof langEn => {
 	console.log(`[IntlProvider] Loading locale: ${locale} -> ${thisLocale}`, {
 		found: !!found,
 		messageCount: Object.keys(messages).length,
-		sample: (messages as any)["proxy_hosts.count_label"],
+		sample: (messages as Record<string, string>)["proxy_hosts.count_label"],
 	});
 
 	return Object.assign({}, langList, langEn, messages);

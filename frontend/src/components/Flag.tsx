@@ -13,7 +13,7 @@ function Flag({ className, countryCode }: FlagProps) {
 	}
 
 	if (hasFlag(countryCode)) {
-		const FlagElement = Flags[countryCode] as any;
+		const FlagElement = (Flags as Record<string, React.ElementType>)[countryCode];
 		return <FlagElement title={countryCode} className={className} width={20} />;
 	}
 	console.error(`No flag for country ${countryCode} found!`);

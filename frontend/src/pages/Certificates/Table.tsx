@@ -28,6 +28,7 @@ import {
 	showInternalCertificateModal,
 } from "src/modals";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
+import { AUDIT_LOG_OBJECT_TYPE, CERTIFICATE_PROVIDER } from "src/types/enums";
 
 interface Props {
 	data: Certificate[];
@@ -78,7 +79,7 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 				header: intl.formatMessage({ id: "column.provider" }),
 				cell: (info) => {
 					const r = info.getValue();
-					if (r.provider === "letsencrypt") {
+					if (r.provider === CERTIFICATE_PROVIDER.LETSENCRYPT) {
 						if (r.meta?.dnsChallenge && r.meta?.dnsProvider) {
 							return (
 								<>
@@ -131,7 +132,7 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
-										tData={{ object: "certificate" }}
+										tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }}
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
@@ -180,7 +181,7 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button variant="default" className="bg-pink-600 hover:bg-pink-700 my-3">
-					<T id="object.add" tData={{ object: "certificate" }} />
+					<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent>
@@ -207,7 +208,7 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object="certificate"
+					object={AUDIT_LOG_OBJECT_TYPE.CERTIFICATE}
 					objects="certificates"
 					isFiltered={isFiltered}
 					color="pink"

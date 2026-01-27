@@ -22,6 +22,7 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { DEAD_HOSTS, MANAGE } from "src/modules/Permissions";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: DeadHost[];
@@ -58,7 +59,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 				id: "certificate",
 				header: intl.formatMessage({ id: "column.ssl" }),
 				cell: (info) => {
-					return <CertificateFormatter certificate={info.getValue()} />;
+					return <CertificateFormatter value={info.getValue()} />;
 				},
 			}),
 			columnHelper.accessor("enabled", {
@@ -83,7 +84,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
-										tData={{ object: "dead-host" }}
+										tData={{ object: AUDIT_LOG_OBJECT_TYPE.DEAD_HOST }}
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
@@ -137,7 +138,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object="dead-host"
+					object={AUDIT_LOG_OBJECT_TYPE.DEAD_HOST}
 					objects="dead-hosts"
 					onNew={onNew}
 					isFiltered={isFiltered}

@@ -1,3 +1,20 @@
+import type {
+	AccessDirective,
+	AiProvider,
+	AiRole,
+	CertificateProvider,
+	DdnsProviderName,
+	ForwardScheme,
+	GitPollUnit,
+	IconType,
+	IpVersion,
+	PhpVersion,
+	TerminalAuthType,
+	TimeUnit,
+	TorOnionStatus,
+	UiColor,
+} from "src/types/enums";
+
 export interface UserPermissions {
 	id?: number;
 	createdOn?: string;
@@ -33,7 +50,7 @@ export interface AuditLog {
 	objectType: string;
 	objectId: number;
 	action: string;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 	// Expansions:
 	user?: User;
 }
@@ -44,7 +61,7 @@ export interface AccessList {
 	modifiedOn?: string;
 	ownerUserId: number;
 	name: string;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 	mtlsEnabled?: boolean;
 	mtlsUseInternal?: boolean;
 	mtlsCertificate?: string;
@@ -64,7 +81,7 @@ export interface AccessListItem {
 	accessListId?: number;
 	username: string;
 	password: string;
-	meta?: Record<string, any>;
+	meta?: Record<string, unknown>;
 	hint?: string;
 }
 
@@ -74,8 +91,8 @@ export type AccessListClient = {
 	modifiedOn?: string;
 	accessListId?: number;
 	address: string;
-	directive: "allow" | "deny";
-	meta?: Record<string, any>;
+	directive: AccessDirective;
+	meta?: Record<string, unknown>;
 };
 
 export interface Certificate {
@@ -83,11 +100,11 @@ export interface Certificate {
 	createdOn: string;
 	modifiedOn: string;
 	ownerUserId: number;
-	provider: "letsencrypt" | "other" | "internal" | string;
+	provider: CertificateProvider | (string & {});
 	niceName: string;
 	domainNames: string[];
 	expiresOn: string;
-	meta: Record<string, any> & { years?: number };
+	meta: Record<string, unknown> & { years?: number };
 	owner?: User;
 	proxyHosts?: ProxyHost[];
 	deadHosts?: DeadHost[];
@@ -98,7 +115,7 @@ export interface Certificate {
 export interface ProxyLocation {
 	path: string;
 	advancedConfig: string;
-	forwardScheme: string;
+	forwardScheme: ForwardScheme;
 	forwardHost: string;
 	forwardPort: number;
 	forwardQuery?: string;
@@ -110,7 +127,7 @@ export interface ProxyHost {
 	modifiedOn: string;
 	ownerUserId: number;
 	domainNames: string[];
-	forwardScheme: string;
+	forwardScheme: ForwardScheme;
 	forwardHost: string;
 	forwardPort: number;
 	forwardQuery?: string;
@@ -123,10 +140,10 @@ export interface ProxyHost {
 	securityCrowdsec: boolean;
 	advancedConfig: string;
 	bandwidthLimit: string;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 	maintenanceOnFailure: boolean;
 	advLimitReqRate?: number;
-	advLimitReqUnit?: string;
+	advLimitReqUnit?: TimeUnit;
 	advLimitReqBurst?: number;
 	allowWebsocketUpgrade: boolean;
 
@@ -141,25 +158,25 @@ export interface ProxyHost {
 	maintenanceReason?: string;
 	// PHP hosting (for scheme=path)
 	phpEnabled?: boolean;
-	phpVersion?: string;
+	phpVersion?: PhpVersion;
 	indexFile?: string; // Add indexFile
 	// Git Sync (for scheme=path)
 	gitRepoUrl?: string | null;
 	gitBranch?: string;
 	gitSyncEnabled?: boolean;
 	gitPollInterval?: number;
-	gitPollUnit?: "s" | "m" | "h";
+	gitPollUnit?: GitPollUnit;
 	gitLastSync?: string | null;
 	gitLastCommit?: string | null;
 	gitLastError?: string | null;
 	// Service Icon
 	iconUrl?: string | null;
-	iconType?: "auto" | "custom" | "none";
+	iconType?: IconType;
 	// Terminal Fields
 	terminalHost?: string;
 	terminalPort?: number;
 	terminalUsername?: string;
-	terminalAuthType?: "password" | "key";
+	terminalAuthType?: TerminalAuthType;
 	terminalPassword?: string;
 	terminalPrivateKey?: string;
 	// Expansions:
@@ -178,7 +195,7 @@ export interface DeadHost {
 	certificateId: number;
 	sslForced: boolean;
 	advancedConfig: string;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 	http2Support: boolean;
 	enabled: boolean;
 	hstsEnabled: boolean;
@@ -201,9 +218,9 @@ export interface RedirectionHost {
 	sslForced: boolean;
 	blockExploits: boolean;
 	advancedConfig: string;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 	http2Support: boolean;
-	forwardScheme: string;
+	forwardScheme: ForwardScheme;
 	forwardHttpCode: number;
 	enabled: boolean;
 	hstsEnabled: boolean;
@@ -224,7 +241,7 @@ export interface Stream {
 	forwardingPort: number;
 	tcpForwarding: boolean;
 	udpForwarding: boolean;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 	enabled: boolean;
 	certificateId: number;
 	// Expansions:
@@ -238,7 +255,7 @@ export interface Setting {
 	name?: string;
 	description?: string;
 	value: string;
-	meta?: Record<string, any>;
+	meta?: Record<string, unknown>;
 }
 
 export interface DNSProvider {
@@ -255,13 +272,13 @@ export interface CloudflaredTunnel {
 	name: string;
 	token: string;
 	status: number;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 	owner?: User;
 }
 
 export interface AiConfig {
 	enabled: boolean;
-	provider: "gemini" | "local";
+	provider: AiProvider;
 	api_key?: string;
 	base_url?: string;
 	model?: string;
@@ -272,10 +289,10 @@ export interface AiConfig {
 }
 
 export interface AiChatMessage {
-	role: "user" | "assistant" | "model";
+	role: AiRole;
 	content: string;
-	toolCalls?: any[];
-	rawParts?: any[];
+	toolCalls?: unknown[];
+	rawParts?: unknown[];
 }
 
 export interface AiChatResponse {
@@ -289,16 +306,16 @@ export interface DdnsProvider {
 	modifiedOn: string;
 	ownerUserId: number;
 	name: string;
-	provider: "cloudflare" | "duckdns" | "custom";
+	provider: DdnsProviderName;
 	domains: string[];
-	config: Record<string, any>;
-	ip_ver?: "v4" | "v6" | "dual";
+	config: Record<string, unknown>;
+	ip_ver?: IpVersion;
 	lastIpv4?: string;
 	lastIpv6?: string;
 	lastUpdatedOn?: string;
 	lastError?: string;
 	enabled: boolean;
-	meta: Record<string, any>;
+	meta: Record<string, unknown>;
 }
 
 export interface TorOnion {
@@ -311,8 +328,8 @@ export interface TorOnion {
 	onionAddress?: string | null;
 	virtualPort: number;
 	targetPort: number;
-	status: number; // 0=Stopped, 1=Starting, 2=Running, 3=Error
-	meta: Record<string, any>;
+	status: TorOnionStatus;
+	meta: Record<string, unknown>;
 	// Expansions:
 	proxyHost?: ProxyHost;
 }
@@ -330,6 +347,6 @@ export interface DashboardNote {
 	createdOn: string;
 	modifiedOn: string;
 	content: string;
-	color: string;
+	color: UiColor;
 	position: number;
 }

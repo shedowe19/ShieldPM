@@ -1,30 +1,19 @@
 import cn from "classnames";
 import { type HTMLMotionProps, motion } from "framer-motion";
 import type { ReactNode } from "react";
+import type { ButtonActionType, ButtonSize, ButtonVariant, UiColor } from "src/types/enums";
 
 interface Props extends Omit<HTMLMotionProps<"button">, "ref"> {
 	children: ReactNode;
 	className?: string;
 	type?: "button" | "submit";
-	actionType?: "primary" | "secondary" | "success" | "warning" | "danger" | "info" | "light" | "dark";
-	variant?: "ghost" | "outline" | "pill" | "square" | "action";
-	size?: "sm" | "md" | "lg" | "xl";
+	actionType?: ButtonActionType;
+	variant?: ButtonVariant;
+	size?: ButtonSize;
 	fullWidth?: boolean;
 	isLoading?: boolean;
 	disabled?: boolean;
-	color?:
-		| "blue"
-		| "azure"
-		| "indigo"
-		| "purple"
-		| "pink"
-		| "red"
-		| "orange"
-		| "yellow"
-		| "lime"
-		| "green"
-		| "teal"
-		| "cyan";
+	color?: UiColor;
 	onClick?: () => void;
 }
 

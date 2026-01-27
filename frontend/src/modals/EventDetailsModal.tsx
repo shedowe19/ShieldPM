@@ -19,7 +19,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useAuditLog(id);
 	const health = useHealth();
 
-	const maskSensitiveData = (obj: any): any => {
+	const maskSensitiveData = (obj: unknown): unknown => {
 		if (!health.data?.demo) return obj;
 		if (typeof obj !== "object" || obj === null) return obj;
 
@@ -27,7 +27,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			return obj.map(maskSensitiveData);
 		}
 
-		const masked = { ...obj };
+		const masked = { ...(obj as Record<string, unknown>) };
 		const sensitiveKeys = ["ip", "client_ip", "remote_addr", "address", "ip_address"];
 
 		for (const key in masked) {

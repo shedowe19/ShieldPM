@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useCertificate } from "src/hooks";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props extends InnerModalProps {
 	id: number;
@@ -33,12 +34,12 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 
 		renewCertificate(id)
 			.then(() => {
-				showObjectSuccess("certificate", "renewed");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "renewed");
 				queryClient.invalidateQueries({ queryKey: ["certificates"] });
 				remove();
 			})
-			.catch((err: any) => {
-				setErrorMsg(<T id={err.message} />);
+			.catch((err) => {
+				if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 			})
 			.finally(() => {
 				setIsSubmitting(false);

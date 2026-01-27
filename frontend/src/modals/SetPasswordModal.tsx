@@ -1,6 +1,6 @@
 import { IconDice, IconEye, IconEyeOff, IconLock } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { generate } from "generate-password-browser";
 import { AlertCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -20,20 +20,24 @@ const showSetPasswordModal = (id: number) => {
 interface Props extends InnerModalProps {
 	id: number;
 }
+interface SetPasswordValues {
+	new: string;
+}
+
 const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [error, setError] = useState<ReactNode | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: SetPasswordValues, { setSubmitting }: FormikHelpers<SetPasswordValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setError(null);
 		try {
 			await updateAuth(id, values.new);
 			remove();
-		} catch (err: any) {
-			setError(<T id={err.message} />);
+		} catch (err) {
+			if (err instanceof Error) setError(<T id={err.message} />);
 		}
 		setIsSubmitting(false);
 		setSubmitting(false);
@@ -42,12 +46,10 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
 			<DialogContent className="sm:max-w-md">
-				<Formik
-					initialValues={
-						{
-							new: "",
-						} as any
-					}
+				<Formik<SetPasswordValues>
+					initialValues={{
+						new: "",
+					}}
 					onSubmit={onSubmit}
 				>
 					{({ errors, touched, setFieldValue }) => (
@@ -69,7 +71,7 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 							<div className="grid gap-4 py-4">
 								<Field name="new" validate={validateString(8, 100)}>
-									{({ field }: any) => (
+									{({ field }: FieldProps) => (
 										<div className="space-y-2">
 											<Label htmlFor="new">
 												<T id="user.new-password" />

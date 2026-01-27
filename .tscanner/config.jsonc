@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/tscanner@0.1.3/schema.json",
+  "rules": {
+    "builtin": {
+      "no-explicit-any": {}
+    },
+    "regex": {},
+    "script": {
+    "no-long-files": {
+      "command": "npx tsx script-rules/no-long-files.ts",
+      "include": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx"
+      ],
+      "message": "File exceeds maximum lines limit",
+      "severity": "warning"
+    }}
+  },
+  "aiRules": {
+    "find-enum-candidates": {
+      "include": [
+      "**/*.ts",
+      "**/*.tsx"
+      ],
+      "message": "Type union could be replaced with an enum for better type safety",
+      "mode": "agentic",
+      "prompt": "find-enum-candidates.md",
+      "severity": "warning"
+    }},
+  "files": {
+    "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"],
+    "exclude": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"]
+  }
+}

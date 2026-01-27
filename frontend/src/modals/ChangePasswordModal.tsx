@@ -1,6 +1,6 @@
 import { IconDice, IconEye, IconEyeOff, IconLock } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { generate } from "generate-password-browser";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -21,6 +21,12 @@ const showChangePasswordModal = (id: number | "me") => {
 interface Props extends InnerModalProps {
 	id: number | "me";
 }
+interface ChangePasswordValues {
+	current: string;
+	new: string;
+	confirm: string;
+}
+
 const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [error, setError] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +34,7 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 	const [showNew, setShowNew] = useState(false);
 	const [showConfirm, setShowConfirm] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: ChangePasswordValues, { setSubmitting }: FormikHelpers<ChangePasswordValues>) => {
 		if (values.new !== values.confirm) {
 			setError(<T id="error.passwords-must-match" />);
 			setSubmitting(false);
@@ -42,8 +48,8 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 		try {
 			await updateAuth(id, values.new, values.current);
 			remove();
-		} catch (err: any) {
-			setError(<T id={err.message} />);
+		} catch (err) {
+			if (err instanceof Error) setError(<T id={err.message} />);
 		}
 		setIsSubmitting(false);
 		setSubmitting(false);
@@ -84,14 +90,12 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 					</DialogTitle>
 				</DialogHeader>
 
-				<Formik
-					initialValues={
-						{
-							current: "",
-							new: "",
-							confirm: "",
-						} as any
-					}
+				<Formik<ChangePasswordValues>
+					initialValues={{
+						current: "",
+						new: "",
+						confirm: "",
+					}}
 					onSubmit={onSubmit}
 				>
 					{({ errors, touched, setFieldValue }) => (
@@ -109,7 +113,7 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 									<T id="user.current-password" />
 								</Label>
 								<Field name="current">
-									{({ field }: any) => (
+									{({ field }: FieldProps) => (
 										<div className="relative">
 											<Input
 												id="current"
@@ -149,7 +153,7 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 									<T id="user.new-password" />
 								</Label>
 								<Field name="new" validate={validateString(8, 100)}>
-									{({ field }: any) => (
+									{({ field }: FieldProps) => (
 										<div className="flex gap-2">
 											<div className="relative flex-1">
 												<Input
@@ -207,7 +211,7 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 									<T id="user.confirm-password" />
 								</Label>
 								<Field name="confirm" validate={validateString(8, 100)}>
-									{({ field }: any) => (
+									{({ field }: FieldProps) => (
 										<div className="relative">
 											<Input
 												id="confirm"

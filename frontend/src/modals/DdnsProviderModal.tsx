@@ -1,10 +1,10 @@
 import { IconWorld } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { createDdnsProvider, testDdnsProvider, updateDdnsProvider } from "src/api/backend";
+import { createDdnsProvider, type DdnsProvider, testDdnsProvider, updateDdnsProvider } from "src/api/backend";
 import { getDdnsProviders } from "src/api/backend/getDdnsProviders";
 import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -16,6 +16,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import {
+	AUDIT_LOG_OBJECT_TYPE,
+	DDNS_PROVIDER_NAME,
+	type DdnsProviderName,
+	IP_VERSION,
+	type IpVersion,
+} from "src/types/enums";
 
 const showDdnsProviderModal = (id?: number) => {
 	EasyModal.show(DdnsProviderModal, { id: id || "new" });
@@ -25,6 +32,20 @@ interface Props extends InnerModalProps {
 	id: number | "new";
 	visible: boolean;
 	remove: () => void;
+}
+
+interface DdnsProviderValues {
+	name: string;
+	provider: DdnsProviderName;
+	ip_ver: IpVersion;
+	domainsStr: string;
+	// Cloudflare
+	cloudfare_token: string;
+	cloudfare_zone_id: string;
+	// DuckDNS
+	duckdns_token: string;
+	// Custom
+	custom_url: string;
 }
 
 const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
@@ -44,26 +65,26 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [isTesting, setIsTesting] = useState(false);
 	const [testResult, setTestResult] = useState<string | null>(null);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: DdnsProviderValues, { setSubmitting }: FormikHelpers<DdnsProviderValues>) => {
 		if (isSubmitting) return;
 
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
 		// Prepare config based on provider
-		let config: any = {};
-		if (values.provider === "cloudflare") {
+		let config: Record<string, unknown> = {};
+		if (values.provider === DDNS_PROVIDER_NAME.CLOUDFLARE) {
 			config = { token: values.cloudfare_token, zone_id: values.cloudfare_zone_id };
-		} else if (values.provider === "duckdns") {
+		} else if (values.provider === DDNS_PROVIDER_NAME.DUCKDNS) {
 			config = { token: values.duckdns_token };
-		} else if (values.provider === "custom") {
+		} else if (values.provider === DDNS_PROVIDER_NAME.CUSTOM) {
 			config = { url: values.custom_url };
 		}
 
 		// Split domains by comma or space
 		const domains = values.domainsStr.split(/[\s,]+/).filter((d: string) => d.trim().length > 0);
 
-		const payload: any = {
+		const payload: Partial<DdnsProvider> = {
 			name: values.name,
 			provider: values.provider,
 			ip_ver: values.ip_ver,
@@ -73,17 +94,17 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		};
 
 		try {
-			if (typeof id === "number") {
-				await updateDdnsProvider(id, payload);
-				showObjectSuccess("ddns-provider", "saved");
+			if (id) {
+				await updateDdnsProvider(id as number, { ...payload, id: id as number }); // Cast id to number for update
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER, "saved");
 			} else {
 				await createDdnsProvider(payload);
-				showObjectSuccess("ddns-provider", "created");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER, "created");
 			}
 			queryClient.invalidateQueries({ queryKey: ["ddns-providers"] });
 			remove();
-		} catch (err: any) {
-			setErrorMsg(typeof err === "string" ? err : err.message);
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(err.message);
 		} finally {
 			setIsSubmitting(false);
 			setSubmitting(false);
@@ -95,10 +116,10 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setIsTesting(true);
 		setTestResult(null);
 		try {
-			const res = await testDdnsProvider(id);
+			const res = (await testDdnsProvider(id)) as { ips: string[] };
 			setTestResult(`Success: IPs ${JSON.stringify(res.ips)}`);
-		} catch (err: any) {
-			setTestResult(`Error: ${err.message}`);
+		} catch (err) {
+			if (err instanceof Error) setTestResult(`Error: ${err.message}`);
 		} finally {
 			setIsTesting(false);
 		}
@@ -117,24 +138,24 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				{isLoading && isEditing ? (
 					<Loading noLogo />
 				) : (
-					<Formik
+					<Formik<DdnsProviderValues>
 						enableReinitialize
 						initialValues={{
 							name: data?.name || "",
-							provider: data?.provider || "cloudflare",
-							ip_ver: data?.ip_ver || "dual",
+							provider: (data?.provider as DdnsProviderName) || DDNS_PROVIDER_NAME.CLOUDFLARE,
+							ip_ver: (data?.ip_ver as IpVersion) || IP_VERSION.DUAL,
 							domainsStr: data?.domains.join(", ") || "",
 							// Cloudflare
-							cloudfare_token: data?.config?.token || "",
-							cloudfare_zone_id: data?.config?.zone_id || "",
+							cloudfare_token: (data?.config as { token?: string })?.token || "",
+							cloudfare_zone_id: (data?.config as { zone_id?: string })?.zone_id || "",
 							// DuckDNS
-							duckdns_token: data?.config?.token || "",
+							duckdns_token: (data?.config as { token?: string })?.token || "",
 							// Custom
-							custom_url: data?.config?.url || "",
+							custom_url: (data?.config as { url?: string })?.url || "",
 						}}
 						onSubmit={onSubmit}
 					>
-						{({ values, setFieldValue }: any) => (
+						{({ values, setFieldValue }) => (
 							<Form className="space-y-4">
 								{errorMsg && (
 									<Alert variant="destructive">
@@ -149,7 +170,9 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="column.name" />
 									</Label>
 									<Field name="name" validate={validateString(1, 50)}>
-										{({ field }: any) => <Input {...field} id="name" placeholder="My DDNS" />}
+										{({ field }: FieldProps) => (
+											<Input {...field} id="name" placeholder="My DDNS" />
+										)}
 									</Field>
 								</div>
 
@@ -158,7 +181,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="ddns-providers.provider" />
 									</Label>
 									<Field name="provider">
-										{({ field }: any) => (
+										{({ field }: FieldProps) => (
 											<Select
 												value={field.value}
 												onValueChange={(val) => setFieldValue("provider", val)}
@@ -167,9 +190,13 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="cloudflare">Cloudflare</SelectItem>
-													<SelectItem value="duckdns">DuckDNS</SelectItem>
-													<SelectItem value="custom">Custom (Webhook)</SelectItem>
+													<SelectItem value={DDNS_PROVIDER_NAME.CLOUDFLARE}>
+														Cloudflare
+													</SelectItem>
+													<SelectItem value={DDNS_PROVIDER_NAME.DUCKDNS}>DuckDNS</SelectItem>
+													<SelectItem value={DDNS_PROVIDER_NAME.CUSTOM}>
+														Custom (Webhook)
+													</SelectItem>
 												</SelectContent>
 											</Select>
 										)}
@@ -181,7 +208,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="ddns-providers.domains" />
 									</Label>
 									<Field name="domainsStr">
-										{({ field }: any) => (
+										{({ field }: FieldProps) => (
 											<Input
 												{...field}
 												id="domainsStr"
@@ -197,7 +224,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="ddns-providers.ip-ver" />
 									</Label>
 									<Field name="ip_ver">
-										{({ field }: any) => (
+										{({ field }: FieldProps) => (
 											<Select
 												value={field.value}
 												onValueChange={(val) => setFieldValue("ip_ver", val)}
@@ -206,13 +233,13 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="dual">
+													<SelectItem value={IP_VERSION.DUAL}>
 														<T id="ddns-providers.ip-ver.dual" />
 													</SelectItem>
-													<SelectItem value="v4">
+													<SelectItem value={IP_VERSION.V4}>
 														<T id="ddns-providers.ip-ver.v4" />
 													</SelectItem>
-													<SelectItem value="v6">
+													<SelectItem value={IP_VERSION.V6}>
 														<T id="ddns-providers.ip-ver.v6" />
 													</SelectItem>
 												</SelectContent>
@@ -226,14 +253,14 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="ddns-providers.config" />
 									</h3>
 
-									{values.provider === "cloudflare" && (
+									{values.provider === DDNS_PROVIDER_NAME.CLOUDFLARE && (
 										<>
 											<div className="space-y-2">
 												<Label htmlFor="cloudfare_token">
 													<T id="ddns-providers.cloudfare_token" />
 												</Label>
 												<Field name="cloudfare_token">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<Input {...field} type="password" id="cloudfare_token" />
 													)}
 												</Field>
@@ -243,32 +270,34 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="ddns-providers.cloudfare_zone_id" />
 												</Label>
 												<Field name="cloudfare_zone_id">
-													{({ field }: any) => <Input {...field} id="cloudfare_zone_id" />}
+													{({ field }: FieldProps) => (
+														<Input {...field} id="cloudfare_zone_id" />
+													)}
 												</Field>
 											</div>
 										</>
 									)}
 
-									{values.provider === "duckdns" && (
+									{values.provider === DDNS_PROVIDER_NAME.DUCKDNS && (
 										<div className="space-y-2">
 											<Label htmlFor="duckdns_token">
 												<T id="ddns-providers.duckdns_token" />
 											</Label>
 											<Field name="duckdns_token">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<Input {...field} type="password" id="duckdns_token" />
 												)}
 											</Field>
 										</div>
 									)}
 
-									{values.provider === "custom" && (
+									{values.provider === DDNS_PROVIDER_NAME.CUSTOM && (
 										<div className="space-y-2">
 											<Label htmlFor="custom_url">
 												<T id="ddns-providers.custom_url" />
 											</Label>
 											<Field name="custom_url">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<Input
 														{...field}
 														id="custom_url"

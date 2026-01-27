@@ -49,6 +49,25 @@ vi.mock("node:fs", async (importOriginal) => {
 		mkdirSync: vi.fn(),
 		writeFileSync: vi.fn(),
 		unlinkSync: vi.fn(),
+		// Add mocks for reading keys to prevent generateKeys from running
+		existsSync: vi.fn((path) => {
+			if (typeof path === "string" && path.includes("keys.json")) return true;
+			return false;
+		}),
+		readFileSync: vi.fn((path) => {
+			if (typeof path === "string" && path.includes("keys.json")) {
+				return JSON.stringify({
+					key: "mock-private-key",
+					pub: "mock-public-key",
+					encryptionKey: "mock-encryption-key",
+				});
+			}
+			// For specific file check in configure()
+			if (typeof path === "string" && path.includes("default.json")) {
+				throw new Error("ENOENT");
+			}
+			return Buffer.from("");
+		}),
 	};
 });
 

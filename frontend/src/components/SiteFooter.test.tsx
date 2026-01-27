@@ -11,7 +11,7 @@ vi.mock("src/locale", () => ({
 
 describe("SiteFooter", () => {
 	// Helper to setup mocks with different data
-	const setup = (healthData: any, versionData: any) => {
+	const setup = (healthData: { version: string }, versionData: { updateAvailable: boolean; latest: string }) => {
 		vi.mock("src/hooks", () => ({
 			useHealth: () => ({
 				data: healthData,

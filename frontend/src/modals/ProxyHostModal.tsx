@@ -1,8 +1,10 @@
-import { IconGitBranch, IconNote, IconServer, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
+// biome-ignore assist/source/organizeImports: <@tabler/icons-react>
+import { IconBolt, IconGitBranch, IconNote, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import type { ProxyHost } from "src/api/backend";
 import {
 	AccessField,
 	DomainNamesField,
@@ -12,9 +14,9 @@ import {
 	LocationsFields,
 	NginxConfigField,
 	NoteWarning,
-	ServiceIcon,
 	SSLCertificateField,
 	SSLOptionsFields,
+	ServiceIcon,
 } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -27,10 +29,19 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
-import { intl, T } from "src/locale";
+import { T, intl } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import {
+	FORWARD_SCHEME,
+	ICON_TYPE,
+	PHP_VERSION,
+	PROXY_HOST_TAB,
+	TERMINAL_AUTH_TYPE,
+	TIME_UNIT,
+	AUDIT_LOG_OBJECT_TYPE,
+} from "src/types/enums";
 
 const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
@@ -41,6 +52,15 @@ interface Props extends InnerModalProps {
 	visible: boolean;
 	remove: () => void;
 }
+
+interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate" | "advLimitReqBurst"> {
+	advLimitReqRate?: number | string;
+	advLimitReqBurst?: number | string;
+	crowdsecEnabled?: boolean;
+	gitCredentials?: string;
+	php_override_ini?: string;
+}
+
 const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
 	const { data, isLoading, error } = useProxyHost(id);
@@ -48,23 +68,23 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: ProxyHostFormValues, { setSubmitting }: FormikHelpers<ProxyHostFormValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
 		// Sanitize numeric fields that can be null
 		const sanitizedValues = { ...values };
-		if (sanitizedValues.advLimitReqRate === "" || Number.isNaN(sanitizedValues.advLimitReqRate)) {
-			sanitizedValues.advLimitReqRate = null;
+		if (sanitizedValues.advLimitReqRate === "" || Number.isNaN(Number(sanitizedValues.advLimitReqRate))) {
+			sanitizedValues.advLimitReqRate = undefined;
 		}
-		if (sanitizedValues.advLimitReqBurst === "" || Number.isNaN(sanitizedValues.advLimitReqBurst)) {
-			sanitizedValues.advLimitReqBurst = null;
+		if (sanitizedValues.advLimitReqBurst === "" || Number.isNaN(Number(sanitizedValues.advLimitReqBurst))) {
+			sanitizedValues.advLimitReqBurst = undefined;
 		}
 
 		// Map frontend field to backend schema
 		if (typeof sanitizedValues.crowdsecEnabled !== "undefined") {
-			sanitizedValues.security_crowdsec = sanitizedValues.crowdsecEnabled;
+			sanitizedValues.securityCrowdsec = sanitizedValues.crowdsecEnabled;
 			delete sanitizedValues.crowdsecEnabled;
 		}
 
@@ -78,10 +98,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			...sanitizedValues,
 		};
 
-		setProxyHost(payload, {
-			onError: (err: any) => setErrorMsg(<T id={err.message} />),
+		setProxyHost(payload as unknown as ProxyHost, {
+			onError: (err: Error) => setErrorMsg(err.message ? <T id={err.message} /> : "Unknown error"),
 			onSuccess: () => {
-				showObjectSuccess("proxy-host", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, "saved");
 				remove();
 			},
 			onSettled: () => {
@@ -113,7 +133,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							{
 								// Details tab
 								domainNames: data?.domainNames || [],
-								forwardScheme: data?.forwardScheme || "http",
+								forwardScheme: data?.forwardScheme || FORWARD_SCHEME.HTTP,
 								forwardHost: data?.forwardHost || "",
 								forwardPort: data?.forwardPort || undefined,
 								indexFile: data?.indexFile || "", // Add indexFile to initialValues
@@ -121,7 +141,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								terminalHost: data?.terminalHost || "",
 								terminalPort: data?.terminalPort || 22,
 								terminalUsername: data?.terminalUsername || "",
-								terminalAuthType: data?.terminalAuthType || "password",
+								terminalAuthType: data?.terminalAuthType || TERMINAL_AUTH_TYPE.PASSWORD,
 								terminalPassword: data?.terminalPassword || "",
 								terminalPrivateKey: data?.terminalPrivateKey || "",
 
@@ -133,7 +153,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								maintenanceOnFailure: data?.maintenanceOnFailure || false,
 								// PHP hosting (for scheme=path)
 								phpEnabled: data?.phpEnabled || false,
-								phpVersion: data?.phpVersion || "83",
+								phpVersion: data?.phpVersion || PHP_VERSION.PHP83,
 								// Locations tab
 								locations: data?.locations || [],
 								// SSL tab
@@ -146,7 +166,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								advancedConfig: data?.advancedConfig || "",
 								bandwidthLimit: data?.bandwidthLimit || "",
 								advLimitReqRate: data?.advLimitReqRate || undefined,
-								advLimitReqUnit: data?.advLimitReqUnit || "s",
+								advLimitReqUnit: data?.advLimitReqUnit || TIME_UNIT.SECONDS,
 								advLimitReqBurst: data?.advLimitReqBurst || undefined,
 								forwardQuery: data?.forwardQuery || "",
 								maintenanceActive: data?.maintenanceActive || false,
@@ -158,16 +178,16 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								gitBranch: data?.gitBranch || "main",
 								gitSyncEnabled: data?.gitSyncEnabled || false,
 								gitPollInterval: data?.gitPollInterval || 60,
-								gitPollUnit: data?.gitPollUnit || "m",
+								gitPollUnit: data?.gitPollUnit || TIME_UNIT.MINUTES,
 								gitCredentials: "", // Do not fill credentials for security
 								// Service Icon
-								iconType: data?.iconType || "auto",
+								iconType: data?.iconType || ICON_TYPE.AUTO,
 								iconUrl: data?.iconUrl || "",
 								// CrowdSec
 								crowdsecEnabled: data?.securityCrowdsec || false,
 								// Note
 								note: data?.note || "",
-							} as any
+							} as ProxyHostFormValues
 						}
 						enableReinitialize
 						onSubmit={onSubmit}
@@ -175,11 +195,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						{() => (
 							<Form className="flex flex-col h-full overflow-hidden">
 								<DialogHeader className="px-6 py-4 border-b">
-									<DialogTitle className="flex items-center gap-2">
-										<IconServer className="h-5 w-5" />
+									<DialogTitle className="flex items-center gap-2 text-xl">
+										<IconBolt className="h-6 w-6 text-primary" />
 										<T
 											id={data?.id ? "object.edit" : "object.add"}
-											tData={{ object: "proxy-host" }}
+											tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }}
 										/>
 									</DialogTitle>
 								</DialogHeader>
@@ -188,34 +208,37 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									<NoteWarning content={data?.note} />
 								</div>
 
-								<Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+								<Tabs defaultValue={PROXY_HOST_TAB.DETAILS} className="flex-1 flex flex-col min-h-0">
 									<div className="px-6 pt-4">
 										<TabsList className="w-full justify-start">
-											<TabsTrigger value="details">
+											<TabsTrigger value={PROXY_HOST_TAB.DETAILS}>
 												<T id="column.details" />
 											</TabsTrigger>
-											<TabsTrigger value="locations">
+											<TabsTrigger value={PROXY_HOST_TAB.LOCATIONS}>
 												<T id="column.custom-locations" />
 											</TabsTrigger>
-											<TabsTrigger value="ssl">
+											<TabsTrigger value={PROXY_HOST_TAB.SSL}>
 												<T id="column.ssl" />
 											</TabsTrigger>
-											<TabsTrigger value="security">
+											<TabsTrigger value={PROXY_HOST_TAB.SECURITY}>
 												<IconShieldLock size={20} />
 											</TabsTrigger>
-											<TabsTrigger value="advanced" className="ml-auto">
+											<TabsTrigger value={PROXY_HOST_TAB.ADVANCED} className="ml-auto">
 												<IconSettings size={20} />
 											</TabsTrigger>
-											<TabsTrigger value="maintenance">
+											<TabsTrigger value={PROXY_HOST_TAB.MAINTENANCE}>
 												<IconTool size={20} />
 											</TabsTrigger>
-											<TabsTrigger value="notes">
+											<TabsTrigger value={PROXY_HOST_TAB.NOTES}>
 												<IconNote size={20} />
 											</TabsTrigger>
 											<Field name="forwardScheme">
-												{({ field: schemeField }: any) =>
-													schemeField.value === "path" && (
-														<TabsTrigger value="git-sync" className="text-emerald-500">
+												{({ field: schemeField }: FieldProps) =>
+													schemeField.value === FORWARD_SCHEME.PATH && (
+														<TabsTrigger
+															value={PROXY_HOST_TAB.GIT_SYNC}
+															className="text-emerald-500"
+														>
 															<IconGitBranch size={20} />
 														</TabsTrigger>
 													)
@@ -233,12 +256,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<AlertDescription>{errorMsg}</AlertDescription>
 												</Alert>
 											)}
-											<TabsContent value="details" className="mt-0 space-y-4">
+											<TabsContent value={PROXY_HOST_TAB.DETAILS} className="mt-0 space-y-4">
 												<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
 												<div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
 													<div className="md:col-span-3">
 														<Field name="forwardScheme">
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="space-y-2">
 																	<Label htmlFor="forwardScheme">
 																		<T id="host.forward-scheme" />
@@ -261,12 +284,22 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectValue placeholder="http" />
 																		</SelectTrigger>
 																		<SelectContent>
-																			<SelectItem value="http">http</SelectItem>
-																			<SelectItem value="https">https</SelectItem>
-																			<SelectItem value="path">path</SelectItem>
-																			<SelectItem value="grpc">grpc</SelectItem>
-																			<SelectItem value="grpcs">grpcs</SelectItem>
-																			<SelectItem value="terminal">
+																			<SelectItem value={FORWARD_SCHEME.HTTP}>
+																				http
+																			</SelectItem>
+																			<SelectItem value={FORWARD_SCHEME.HTTPS}>
+																				https
+																			</SelectItem>
+																			<SelectItem value={FORWARD_SCHEME.PATH}>
+																				path
+																			</SelectItem>
+																			<SelectItem value={FORWARD_SCHEME.GRPC}>
+																				grpc
+																			</SelectItem>
+																			<SelectItem value={FORWARD_SCHEME.GRPCS}>
+																				grpcs
+																			</SelectItem>
+																			<SelectItem value={FORWARD_SCHEME.TERMINAL}>
 																				terminal
 																			</SelectItem>
 																		</SelectContent>
@@ -274,7 +307,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	{form.errors.forwardScheme &&
 																		form.touched.forwardScheme && (
 																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardScheme}
+																				{form.errors.forwardScheme as string}
 																			</p>
 																		)}
 																</div>
@@ -283,7 +316,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 													<div className="md:col-span-6">
 														<Field name="forwardHost" validate={validateString(1, 255)}>
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="space-y-2">
 																	<Label htmlFor="forwardHost">
 																		<T id="proxy-host.forward-host" />
@@ -303,7 +336,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	{form.errors.forwardHost &&
 																		form.touched.forwardHost && (
 																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardHost}
+																				{form.errors.forwardHost as string}
 																			</p>
 																		)}
 																</div>
@@ -312,7 +345,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 													<div className="md:col-span-3">
 														<Field name="forwardPort" validate={validateNumber(-1, 65535)}>
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="space-y-2">
 																	<Label htmlFor="forwardPort">
 																		<T id="host.forward-port" />
@@ -334,7 +367,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	{form.errors.forwardPort &&
 																		form.touched.forwardPort && (
 																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardPort}
+																				{form.errors.forwardPort as string}
 																			</p>
 																		)}
 																</div>
@@ -345,12 +378,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 												{/* Index File Field - visible when scheme is 'path' */}
 												<Field name="forwardScheme">
-													{({ field: schemeField }: any) =>
-														schemeField.value === "path" && (
+													{({ field: schemeField }: FieldProps) =>
+														schemeField.value === FORWARD_SCHEME.PATH && (
 															<div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
 																<div className="md:col-span-12">
 																	<Field name="indexFile">
-																		{({ field }: any) => (
+																		{({ field }: FieldProps) => (
 																			<div className="space-y-2">
 																				<Label htmlFor="indexFile">
 																					<T id="proxy-host.index-file" />
@@ -375,8 +408,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 												{/* Terminal Fields */}
 												<Field name="forwardScheme">
-													{({ field: schemeField }: any) =>
-														schemeField.value === "terminal" && (
+													{({ field: schemeField }: FieldProps) =>
+														schemeField.value === FORWARD_SCHEME.TERMINAL && (
 															<Card className="my-3 border-dashed border-yellow-500/50">
 																<CardContent className="p-4">
 																	<h4 className="pb-2 text-lg font-semibold text-yellow-500">
@@ -385,7 +418,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 																		<div className="md:col-span-8">
 																			<Field name="terminalHost">
-																				{({ field }: any) => (
+																				{({ field }: FieldProps) => (
 																					<div className="space-y-2">
 																						<Label htmlFor="terminalHost">
 																							<T id="terminal.host" />
@@ -402,7 +435,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		</div>
 																		<div className="md:col-span-4">
 																			<Field name="terminalPort">
-																				{({ field, form }: any) => (
+																				{({ field, form }: FieldProps) => (
 																					<div className="space-y-2">
 																						<Label htmlFor="terminalPort">
 																							<T id="terminal.port" />
@@ -427,7 +460,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		</div>
 																		<div className="md:col-span-6">
 																			<Field name="terminalUsername">
-																				{({ field }: any) => (
+																				{({ field }: FieldProps) => (
 																					<div className="space-y-2">
 																						<Label htmlFor="terminalUsername">
 																							<T id="terminal.username" />
@@ -444,7 +477,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		</div>
 																		<div className="md:col-span-6">
 																			<Field name="terminalAuthType">
-																				{({ field }: any) => (
+																				{({ field }: FieldProps) => (
 																					<div className="space-y-2">
 																						<Label htmlFor="terminalAuthType">
 																							<T id="terminal.auth-type" />
@@ -466,10 +499,18 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																								<SelectValue />
 																							</SelectTrigger>
 																							<SelectContent>
-																								<SelectItem value="password">
+																								<SelectItem
+																									value={
+																										TERMINAL_AUTH_TYPE.PASSWORD
+																									}
+																								>
 																									<T id="terminal.auth-type.password" />
 																								</SelectItem>
-																								<SelectItem value="key">
+																								<SelectItem
+																									value={
+																										TERMINAL_AUTH_TYPE.KEY
+																									}
+																								>
 																									<T id="terminal.auth-type.key" />
 																								</SelectItem>
 																							</SelectContent>
@@ -481,11 +522,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 																		{/* Auth Fields */}
 																		<Field name="terminalAuthType">
-																			{({ field: authField }: any) =>
-																				authField.value === "password" ? (
+																			{({ field: authField }: FieldProps) =>
+																				authField.value ===
+																				TERMINAL_AUTH_TYPE.PASSWORD ? (
 																					<div className="col-span-12">
 																						<Field name="terminalPassword">
-																							{({ field }: any) => (
+																							{({
+																								field,
+																							}: FieldProps) => (
 																								<div className="space-y-2">
 																									<Label htmlFor="terminalPassword">
 																										<T id="terminal.password" />
@@ -504,7 +548,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																				) : (
 																					<div className="col-span-12">
 																						<Field name="terminalPrivateKey">
-																							{({ field }: any) => (
+																							{({
+																								field,
+																							}: FieldProps) => (
 																								<div className="space-y-2">
 																									<Label htmlFor="terminalPrivateKey">
 																										<T id="terminal.private-key" />
@@ -538,7 +584,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<div className="grid grid-cols-12 gap-4">
 															<div className="col-span-12 md:col-span-4">
 																<Field name="iconType">
-																	{({ field }: any) => (
+																	{({ field }: FieldProps) => (
 																		<div className="space-y-2">
 																			<Label htmlFor="iconType">
 																				<T id="proxy-host.icon-type" />
@@ -552,19 +598,21 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																						},
 																					})
 																				}
-																				value={field.value || "auto"}
+																				value={field.value || ICON_TYPE.AUTO}
 																			>
 																				<SelectTrigger id="iconType">
 																					<SelectValue />
 																				</SelectTrigger>
 																				<SelectContent>
-																					<SelectItem value="auto">
+																					<SelectItem value={ICON_TYPE.AUTO}>
 																						<T id="proxy-host.icon-type.auto" />
 																					</SelectItem>
-																					<SelectItem value="custom">
+																					<SelectItem
+																						value={ICON_TYPE.CUSTOM}
+																					>
 																						<T id="proxy-host.icon-type.custom" />
 																					</SelectItem>
-																					<SelectItem value="none">
+																					<SelectItem value={ICON_TYPE.NONE}>
 																						<T id="proxy-host.icon-type.none" />
 																					</SelectItem>
 																				</SelectContent>
@@ -574,11 +622,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																</Field>
 															</div>
 															<Field name="iconType">
-																{({ field: typeField }: any) =>
-																	typeField.value === "custom" && (
+																{({ field: typeField }: FieldProps) =>
+																	typeField.value === ICON_TYPE.CUSTOM && (
 																		<div className="col-span-12 md:col-span-8">
 																			<Field name="iconUrl">
-																				{({ field }: any) => (
+																				{({ field }: FieldProps) => (
 																					<div className="space-y-2">
 																						<Label htmlFor="iconUrl">
 																							<T id="proxy-host.icon-url" />
@@ -601,13 +649,15 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</div>
 														{/* Icon Preview */}
 														<Field name="forwardPort">
-															{({ field: portField }: any) => (
+															{({ field: portField }: FieldProps) => (
 																<Field name="forwardHost">
-																	{({ field: hostField }: any) => (
+																	{({ field: hostField }: FieldProps) => (
 																		<Field name="iconType">
-																			{({ field: typeField }: any) => (
+																			{({ field: typeField }: FieldProps) => (
 																				<Field name="iconUrl">
-																					{({ field: urlField }: any) => (
+																					{({
+																						field: urlField,
+																					}: FieldProps) => (
 																						<div className="mt-4 flex items-center gap-4">
 																							<span className="text-sm text-muted-foreground">
 																								<T id="proxy-host.icon-preview" />
@@ -623,7 +673,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																								}
 																								iconType={
 																									typeField.value ||
-																									"auto"
+																									ICON_TYPE.AUTO
 																								}
 																								size={40}
 																								showTooltip
@@ -641,8 +691,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</Card>
 												{/* PHP Settings - Only show when scheme is 'path' */}
 												<Field name="forwardScheme">
-													{({ field: schemeField }: any) =>
-														schemeField.value === "path" && (
+													{({ field: schemeField }: FieldProps) =>
+														schemeField.value === FORWARD_SCHEME.PATH && (
 															<Card className="my-3 border-dashed border-purple-500/50">
 																<CardContent className="p-4">
 																	<h4 className="pb-2 text-lg font-semibold text-purple-400">
@@ -660,7 +710,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																				<T id="proxy-host.php-enabled" />
 																			</Label>
 																			<Field name="phpEnabled" type="checkbox">
-																				{({ field, form }: any) => (
+																				{({ field, form }: FieldProps) => (
 																					<Switch
 																						id="phpEnabled"
 																						checked={field.checked}
@@ -678,11 +728,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		</div>
 
 																		<Field name="phpEnabled" type="checkbox">
-																			{({ field: phpField }: any) =>
+																			{({ field: phpField }: FieldProps) =>
 																				phpField.checked && (
 																					<>
 																						<Field name="phpVersion">
-																							{({ field, form }: any) => (
+																							{({
+																								field,
+																								form,
+																							}: FieldProps) => (
 																								<div className="space-y-2">
 																									<Label htmlFor="phpVersion">
 																										<T id="proxy-host.php-version" />
@@ -704,13 +757,25 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																											<SelectValue placeholder="PHP 8.3" />
 																										</SelectTrigger>
 																										<SelectContent>
-																											<SelectItem value="82">
+																											<SelectItem
+																												value={
+																													PHP_VERSION.PHP82
+																												}
+																											>
 																												PHP 8.2
 																											</SelectItem>
-																											<SelectItem value="83">
+																											<SelectItem
+																												value={
+																													PHP_VERSION.PHP83
+																												}
+																											>
 																												PHP 8.3
 																											</SelectItem>
-																											<SelectItem value="84">
+																											<SelectItem
+																												value={
+																													PHP_VERSION.PHP84
+																												}
+																											>
 																												PHP 8.4
 																											</SelectItem>
 																										</SelectContent>
@@ -720,7 +785,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																						</Field>
 
 																						<Field name="php_override_ini">
-																							{({ field }: any) => (
+																							{({
+																								field,
+																							}: FieldProps) => (
 																								<div className="space-y-2 pt-2">
 																									<Label htmlFor="php_override_ini">
 																										<T id="proxy-host.php.custom-ini" />
@@ -758,7 +825,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<div className="row">
 													<div className="col-md-12">
 														<Field name="bandwidthLimit">
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="mb-3 space-y-2">
 																	<Label htmlFor="bandwidthLimit">
 																		<T id="proxy-host.bandwidth-limit" />
@@ -779,7 +846,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	{form.errors.bandwidthLimit &&
 																		form.touched.bandwidthLimit && (
 																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.bandwidthLimit}
+																				{form.errors.bandwidthLimit as string}
 																			</p>
 																		)}
 																</div>
@@ -788,7 +855,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 													<div className="col-md-12">
 														<Field name="forwardQuery">
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="mb-3 space-y-2">
 																	<Label htmlFor="forwardQuery">
 																		<T id="proxy-host.forward-query" />
@@ -807,7 +874,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	{form.errors.forwardQuery &&
 																		form.touched.forwardQuery && (
 																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardQuery}
+																				{form.errors.forwardQuery as string}
 																			</p>
 																		)}
 																</div>
@@ -830,7 +897,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<T id="host.flags.cache-assets" />
 																</Label>
 																<Field name="cachingEnabled" type="checkbox">
-																	{({ field, form }: any) => (
+																	{({ field, form }: FieldProps) => (
 																		<Switch
 																			id="cachingEnabled"
 																			checked={field.checked}
@@ -852,7 +919,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<T id="disableBuffering" />
 																</Label>
 																<Field name="disableBuffering" type="checkbox">
-																	{({ field, form }: any) => (
+																	{({ field, form }: FieldProps) => (
 																		<Switch
 																			id="disableBuffering"
 																			checked={field.checked}
@@ -874,7 +941,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<T id="host.flags.block-exploits" />
 																</Label>
 																<Field name="blockExploits" type="checkbox">
-																	{({ field, form }: any) => (
+																	{({ field, form }: FieldProps) => (
 																		<Switch
 																			id="blockExploits"
 																			checked={field.checked}
@@ -896,7 +963,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<T id="host.flags.websockets-upgrade" />
 																</Label>
 																<Field name="allowWebsocketUpgrade" type="checkbox">
-																	{({ field, form }: any) => (
+																	{({ field, form }: FieldProps) => (
 																		<Switch
 																			id="allowWebsocketUpgrade"
 																			checked={field.checked}
@@ -918,7 +985,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<T id="host.flags.maintenance-on-failure" />
 																</Label>
 																<Field name="maintenanceOnFailure" type="checkbox">
-																	{({ field, form }: any) => (
+																	{({ field, form }: FieldProps) => (
 																		<Switch
 																			id="maintenanceOnFailure"
 																			checked={field.checked}
@@ -936,10 +1003,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</CardContent>
 												</Card>
 											</TabsContent>
-											<TabsContent value="locations" className="mt-0">
+											<TabsContent value={PROXY_HOST_TAB.LOCATIONS} className="mt-0">
 												<LocationsFields initialValues={data?.locations || []} />
 											</TabsContent>
-											<TabsContent value="ssl" className="mt-0">
+											<TabsContent value={PROXY_HOST_TAB.SSL} className="mt-0">
 												<SSLCertificateField
 													name="certificateId"
 													label="ssl-certificate"
@@ -947,7 +1014,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												/>
 												<SSLOptionsFields color="bg-lime" />
 											</TabsContent>
-											<TabsContent value="security" className="mt-0 space-y-4">
+											<TabsContent value={PROXY_HOST_TAB.SECURITY} className="mt-0 space-y-4">
 												<Alert variant="default" className="bg-muted/50">
 													<IconShieldLock className="h-4 w-4" />
 													<AlertTitle>
@@ -972,7 +1039,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</p>
 													</div>
 													<Field name="crowdsecEnabled" type="checkbox">
-														{({ field, form }: any) => (
+														{({ field, form }: FieldProps) => (
 															<Switch
 																id="crowdsecEnabled"
 																checked={field.checked}
@@ -987,7 +1054,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<div className="grid grid-cols-12 gap-4">
 													<div className="col-span-12 md:col-span-4">
 														<Field name="advLimitReqRate">
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="space-y-2">
 																	<Label htmlFor="advLimitReqRate">
 																		<T id="proxy-host.rate-limiting.rate" />
@@ -1013,7 +1080,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 													<div className="col-span-12 md:col-span-4">
 														<Field name="advLimitReqUnit">
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="space-y-2">
 																	<Label htmlFor="advLimitReqUnit">
 																		<T id="proxy-host.rate-limiting.unit" />
@@ -1028,10 +1095,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectValue />
 																		</SelectTrigger>
 																		<SelectContent>
-																			<SelectItem value="s">
+																			<SelectItem value={TIME_UNIT.SECONDS}>
 																				<T id="proxy-host.rate-limiting.unit.second" />
 																			</SelectItem>
-																			<SelectItem value="m">
+																			<SelectItem value={TIME_UNIT.MINUTES}>
 																				<T id="proxy-host.rate-limiting.unit.minute" />
 																			</SelectItem>
 																		</SelectContent>
@@ -1042,7 +1109,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 													<div className="col-span-12 md:col-span-4">
 														<Field name="advLimitReqBurst">
-															{({ field, form }: any) => (
+															{({ field, form }: FieldProps) => (
 																<div className="space-y-2">
 																	<Label htmlFor="advLimitReqBurst">
 																		<T id="proxy-host.rate-limiting.burst" />
@@ -1069,11 +1136,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</div>
 											</TabsContent>
 
-											<TabsContent value="advanced" className="mt-0">
+											<TabsContent value={PROXY_HOST_TAB.ADVANCED} className="mt-0">
 												<NginxConfigField />
 											</TabsContent>
 
-											<TabsContent value="maintenance" className="mt-0 space-y-4">
+											<TabsContent value={PROXY_HOST_TAB.MAINTENANCE} className="mt-0 space-y-4">
 												<Alert variant="default" className="bg-muted/50">
 													<IconTool className="h-4 w-4" />
 													<AlertTitle>
@@ -1094,7 +1161,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</p>
 													</div>
 													<Field name="maintenanceActive" type="checkbox">
-														{({ field, form }: any) => (
+														{({ field, form }: FieldProps) => (
 															<Switch
 																id="maintenanceActive"
 																checked={field.checked}
@@ -1108,7 +1175,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 												<div className="grid grid-cols-2 gap-4">
 													<Field name="maintenanceStart">
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<div className="space-y-2">
 																<Label htmlFor="maintenanceStart">
 																	<T id="proxy-host.maintenance.start" />
@@ -1124,7 +1191,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</Field>
 
 													<Field name="maintenanceEnd">
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<div className="space-y-2">
 																<Label htmlFor="maintenanceEnd">
 																	<T id="proxy-host.maintenance.end" />
@@ -1141,7 +1208,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</div>
 
 												<Field name="maintenanceReason">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<div className="space-y-2">
 															<Label htmlFor="maintenanceReason">
 																<T id="proxy-host.maintenance.reason" />
@@ -1159,9 +1226,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</Field>
 											</TabsContent>
 
-											<TabsContent value="notes" className="space-y-4 pt-4">
+											<TabsContent value={PROXY_HOST_TAB.NOTES} className="mt-0 space-y-4 pt-4">
 												<Field name="note">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<div className="space-y-2 mb-4">
 															<Label htmlFor="note">
 																<T id="host.note" />
@@ -1183,9 +1250,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</TabsContent>
 
 											<Field name="forwardScheme">
-												{({ field: schemeField }: any) =>
-													schemeField.value === "path" && (
-														<TabsContent value="git-sync" className="mt-0 space-y-4">
+												{({ field: schemeField }: FieldProps) =>
+													schemeField.value === FORWARD_SCHEME.PATH && (
+														<TabsContent
+															value={PROXY_HOST_TAB.GIT_SYNC}
+															className="mt-0 space-y-4"
+														>
 															<GitSyncTab hostId={typeof id === "number" ? id : null} />
 														</TabsContent>
 													)

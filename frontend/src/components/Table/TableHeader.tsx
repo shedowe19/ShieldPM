@@ -11,7 +11,7 @@ function TableHeader<T>(props: TableLayoutProps<T>) {
 				<TableRow key={headerGroup.id}>
 					{headerGroup.headers.map((header) => {
 						const { column } = header;
-						const { className } = (column.columnDef.meta as any) ?? {};
+						const { className } = (column.columnDef.meta as { className?: string }) ?? {};
 						return (
 							<TableHead key={header.id} className={className}>
 								{typeof column.columnDef.header === "string" ? `${column.columnDef.header}` : null}

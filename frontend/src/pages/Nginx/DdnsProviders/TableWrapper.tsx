@@ -9,9 +9,9 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal } from "src/modals";
-import { showDdnsProviderModal } from "src/modals/DdnsProviderModal";
+import { showDdnsProviderModal, showDeleteConfirmModal } from "src/modals";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
@@ -37,7 +37,7 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteDdnsProvider(id);
-		showObjectSuccess("ddns-provider", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER, "deleted");
 	};
 
 	let filtered = null;
@@ -72,13 +72,12 @@ export default function TableWrapper() {
 						</div>
 					) : null}
 
-					<Button
-						size="sm"
-						className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
-						onClick={() => showDdnsProviderModal()}
-					>
+					<Button disabled={!data} onClick={() => showDdnsProviderModal()}>
 						<IconPlus className="mr-2 h-4 w-4" />
-						<T id="object.add" tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }} />
+						<T
+							id="object.add"
+							tData={{ object: intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER }) }}
+						/>
 					</Button>
 				</div>
 			</CardHeader>

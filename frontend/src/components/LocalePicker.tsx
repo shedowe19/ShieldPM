@@ -33,7 +33,7 @@ function LocalePicker(_props: Props) {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
-				{localeOptions.map((item: any) => (
+				{localeOptions.map((item) => (
 					<DropdownMenuItem
 						key={`locale-${item[0]}`}
 						onClick={() => changeTo(item[0])}

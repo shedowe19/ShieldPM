@@ -1,5 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Field, Form, Formik } from "formik";
+import {
+	Field,
+	type FieldProps,
+	Form,
+	Formik,
+	type FormikErrors,
+	type FormikHelpers,
+	type FormikTouched,
+} from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { createUser } from "src/api/backend";
@@ -24,7 +32,7 @@ export default function Setup() {
 	const { login } = useAuthState();
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-	const onSubmit = async (values: Payload, { setSubmitting }: any) => {
+	const onSubmit = async (values: Payload, { setSubmitting }: FormikHelpers<Payload>) => {
 		setErrorMsg(null);
 
 		// Set a nickname, which is the first word of the name
@@ -49,14 +57,14 @@ export default function Setup() {
 					// Trigger a Health change
 					await queryClient.refetchQueries({ queryKey: ["health"] });
 					// window.location.reload();
-				} catch (err: any) {
-					setErrorMsg(err.message);
+				} catch (err) {
+					if (err instanceof Error) setErrorMsg(err.message);
 				}
 			} else {
 				setErrorMsg("cannot_create_user");
 			}
-		} catch (err: any) {
-			setErrorMsg(err.message);
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(err.message);
 		}
 		setSubmitting(false);
 	};
@@ -96,23 +104,29 @@ export default function Setup() {
 						)}
 
 						<Formik
-							initialValues={
-								{
-									name: "",
-									email: "",
-									password: "",
-								} as any
-							}
+							initialValues={{
+								name: "",
+								email: "",
+								password: "",
+							}}
 							onSubmit={onSubmit}
 						>
-							{({ isSubmitting, errors, touched }: any) => (
+							{({
+								isSubmitting,
+								errors,
+								touched,
+							}: FormikHelpers<Payload> & {
+								isSubmitting: boolean;
+								errors: FormikErrors<Payload>;
+								touched: FormikTouched<Payload>;
+							}) => (
 								<Form className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="name">
 											<T id="user.full-name" />
 										</Label>
 										<Field name="name" validate={validateString(1, 50)}>
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<Input
 													{...field}
 													id="name"
@@ -131,7 +145,7 @@ export default function Setup() {
 											<T id="email-address" />
 										</Label>
 										<Field name="email" validate={validateEmail()}>
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<Input
 													{...field}
 													id="email"
@@ -153,7 +167,7 @@ export default function Setup() {
 											<T id="user.new-password" />
 										</Label>
 										<Field name="password" validate={validateString(8, 100)}>
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<Input
 													{...field}
 													id="password"

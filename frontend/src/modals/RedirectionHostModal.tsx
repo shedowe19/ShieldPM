@@ -1,10 +1,11 @@
-import { IconNote, IconRoute } from "@tabler/icons-react";
+// biome-ignore assist/source/organizeImports: <@tabler/icons-react>
+import { IconNote, IconRoute, IconSettings } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
-import { AlertCircle } from "lucide-react";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers, type FormikProps } from "formik";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { createRedirectionHost, updateRedirectionHost } from "src/api/backend";
+import { type RedirectionHost, createRedirectionHost, updateRedirectionHost } from "src/api/backend";
 import { DomainNamesField, NginxConfigField, NoteWarning, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -20,6 +21,7 @@ import { useRedirectionHost } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, REDIRECTION_HOST_TAB, UI_COLOR } from "src/types/enums";
 
 const showRedirectionHostModal = (id: number | "new") => {
 	EasyModal.show(RedirectionHostModal, { id });
@@ -34,9 +36,11 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 	const { data, isLoading, error } = useRedirectionHost(id);
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [activeTab, setActiveTab] = useState("details");
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (
+		values: Partial<RedirectionHost>,
+		{ setSubmitting }: FormikHelpers<Partial<RedirectionHost>>,
+	) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -48,19 +52,20 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 		try {
 			if (id === "new") {
-				await createRedirectionHost(payload);
+				await createRedirectionHost(payload as unknown as RedirectionHost);
 			} else {
-				await updateRedirectionHost(payload);
+				await updateRedirectionHost(payload as unknown as RedirectionHost);
 			}
 
-			showObjectSuccess("redirection-host", "saved");
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, "saved");
 			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
 			if (id !== "new") {
-				queryClient.invalidateQueries({ queryKey: ["redirection-host", id] });
+				queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
 			}
 			remove();
-		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : "Unknown error";
+			setErrorMsg(<T id={message} />);
 		} finally {
 			setIsSubmitting(false);
 			setSubmitting(false);
@@ -90,13 +95,13 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 				)}
 
 				{!isLoading && (data || id === "new") && (
-					<Formik
+					<Formik<Partial<RedirectionHost>>
 						initialValues={
 							{
 								// Details tab
 								domainNames: data?.domainNames || [],
 								forwardDomainName: data?.forwardDomainName || "",
-								forwardScheme: data?.forwardScheme || "auto",
+								forwardScheme: data?.forwardScheme || FORWARD_SCHEME.AUTO,
 								forwardHttpCode: data?.forwardHttpCode || 301,
 								preservePath: data?.preservePath || false,
 								blockExploits: data?.blockExploits || false,
@@ -111,11 +116,11 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 								meta: data?.meta || {},
 								note: data?.note || "",
-							} as any
+							} as Partial<RedirectionHost>
 						}
 						onSubmit={onSubmit}
 					>
-						{({ setFieldValue, errors, touched }: any) => (
+						{({ setFieldValue, errors, touched }: FormikProps<Partial<RedirectionHost>>) => (
 							<Form className="space-y-4">
 								{errorMsg && (
 									<Alert variant="destructive">
@@ -129,23 +134,23 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 									<NoteWarning content={data?.note} />
 								</div>
 
-								<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+								<Tabs defaultValue={REDIRECTION_HOST_TAB.DETAILS} className="w-full">
 									<TabsList className="grid w-full grid-cols-4">
-										<TabsTrigger value="details">
-											<T id="details" />
+										<TabsTrigger value={REDIRECTION_HOST_TAB.DETAILS}>
+											<T id="column.details" />
 										</TabsTrigger>
-										<TabsTrigger value="ssl">
-											<T id="ssl-certificate" />
+										<TabsTrigger value={REDIRECTION_HOST_TAB.SSL}>
+											<T id="column.ssl" />
 										</TabsTrigger>
-										<TabsTrigger value="advanced">
-											<T id="advanced" />
+										<TabsTrigger value={REDIRECTION_HOST_TAB.ADVANCED}>
+											<IconSettings className="h-4 w-4" />
 										</TabsTrigger>
-										<TabsTrigger value="notes">
-											<IconNote size={20} />
+										<TabsTrigger value={REDIRECTION_HOST_TAB.NOTES}>
+											<IconNote className="h-4 w-4" />
 										</TabsTrigger>
 									</TabsList>
 
-									<TabsContent value="details" className="space-y-4 pt-4">
+									<TabsContent value={REDIRECTION_HOST_TAB.DETAILS} className="space-y-4 pt-4">
 										<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
 
 										<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -154,7 +159,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 													<T id="host.forward-scheme" />
 												</Label>
 												<Field name="forwardScheme">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<Select
 															value={field.value}
 															onValueChange={(val) => setFieldValue("forwardScheme", val)}
@@ -172,11 +177,15 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 																/>
 															</SelectTrigger>
 															<SelectContent>
-																<SelectItem value="auto">
+																<SelectItem value={FORWARD_SCHEME.AUTO}>
 																	<T id="auto" />
 																</SelectItem>
-																<SelectItem value="http">http</SelectItem>
-																<SelectItem value="https">https</SelectItem>
+																<SelectItem value={FORWARD_SCHEME.HTTP}>
+																	http
+																</SelectItem>
+																<SelectItem value={FORWARD_SCHEME.HTTPS}>
+																	https
+																</SelectItem>
 															</SelectContent>
 														</Select>
 													)}
@@ -184,7 +193,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 											</div>
 											<div className="col-span-1 md:col-span-8">
 												<Field name="forwardDomainName" validate={validateString(1, 255)}>
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<div className="space-y-2">
 															<Label htmlFor="forwardDomainName">
 																<T id="redirection-host.forward-domain" />
@@ -213,7 +222,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 												<T id="redirection-host.forward-http-code" />
 											</Label>
 											<Field name="forwardHttpCode">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<Select
 														value={String(field.value)}
 														onValueChange={(val) =>
@@ -258,7 +267,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 														<T id="host.flags.preserve-path" />
 													</Label>
 													<Field name="preservePath">
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<Switch
 																id="preservePath"
 																checked={field.value}
@@ -274,7 +283,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 														<T id="host.flags.block-exploits" />
 													</Label>
 													<Field name="blockExploits">
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<Switch
 																id="blockExploits"
 																checked={field.value}
@@ -289,18 +298,18 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 										</Card>
 									</TabsContent>
 
-									<TabsContent value="ssl" className="pt-4">
+									<TabsContent value={REDIRECTION_HOST_TAB.SSL} className="mt-0">
 										<SSLCertificateField name="certificateId" label="ssl-certificate" allowNew />
 										<SSLOptionsFields color="bg-yellow" />
 									</TabsContent>
 
-									<TabsContent value="advanced" className="pt-4">
+									<TabsContent value={REDIRECTION_HOST_TAB.ADVANCED} className="mt-0">
 										<NginxConfigField />
 									</TabsContent>
 
-									<TabsContent value="notes" className="pt-4">
+									<TabsContent value={REDIRECTION_HOST_TAB.NOTES} className="mt-0 space-y-4 pt-4">
 										<Field name="note">
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<div className="space-y-2 mb-4">
 													<Label htmlFor="note">
 														<T id="host.note" />
@@ -329,9 +338,13 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 									<Button
 										type="submit"
 										disabled={isSubmitting}
-										className="bg-yellow-600/90 hover:bg-yellow-600 text-white shadow-sm"
+										className={`bg-${UI_COLOR.YELLOW}-600/90 hover:bg-${UI_COLOR.YELLOW}-600 text-white shadow-sm`}
 									>
-										{isSubmitting ? "..." : <T id="save" />}
+										{isSubmitting ? (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<T id="save" />
+										)}
 									</Button>
 								</DialogFooter>
 							</Form>

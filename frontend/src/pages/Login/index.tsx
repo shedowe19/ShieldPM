@@ -1,4 +1,4 @@
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { claimOidcToken } from "src/api/backend";
@@ -14,12 +14,17 @@ import { intl, T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 import { validateEmail, validateString } from "src/modules/Validations";
 
+interface LoginValues {
+	email: string;
+	password: string;
+}
+
 export default function Login() {
 	const emailRef = useRef<HTMLInputElement>(null);
 	const [formErr, setFormErr] = useState("");
 	const { login } = useAuthState();
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: LoginValues, { setSubmitting }: FormikHelpers<LoginValues>) => {
 		setFormErr("");
 		try {
 			await login(values.email, values.password);
@@ -82,19 +87,17 @@ export default function Login() {
 						)}
 
 						<Formik
-							initialValues={
-								{
-									email: "",
-									password: "",
-								} as any
-							}
+							initialValues={{
+								email: "",
+								password: "",
+							}}
 							onSubmit={onSubmit}
 						>
-							{({ isSubmitting, errors, touched }: any) => (
+							{({ isSubmitting, errors, touched }) => (
 								<Form className="space-y-4">
 									<div className="space-y-2">
 										<Field name="email" validate={validateEmail()}>
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<div className="grid gap-2">
 													<Label htmlFor="email">
 														<T id="email-address" />
@@ -119,7 +122,7 @@ export default function Login() {
 									</div>
 									<div className="space-y-2">
 										<Field name="password" validate={validateString(8, 255)}>
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<div className="grid gap-2">
 													<Label htmlFor="password">
 														<T id="password" />

@@ -1,7 +1,7 @@
 import { get } from "./base";
 
 export interface TimeSeriesPoint {
-	time_bucket: number;
+	time_bucket?: number;
 	count: number;
 	bytes: number;
 	s2xx: number;
@@ -20,7 +20,17 @@ export async function getAnalyticsSeries(hostId?: number, range = "24h"): Promis
 	// Frontend expects: timestamp (or timeDisplay handled in index), s2xx
 
 	// Backend returns camelCase (Objection/Knex default behavior implicitly active)
-	return data.map((d: any) => ({
+	interface BackendAnalyticsItem {
+		timestamp: string;
+		requestCount: number;
+		bytesSent: number;
+		statusCode2xx: number;
+		statusCode3xx: number;
+		statusCode4xx: number;
+		statusCode5xx: number;
+	}
+
+	return (data as BackendAnalyticsItem[]).map((d) => ({
 		timestamp: d.timestamp,
 		count: d.requestCount,
 		bytes: d.bytesSent,

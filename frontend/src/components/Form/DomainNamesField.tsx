@@ -1,4 +1,4 @@
-import { Field, useFormikContext } from "formik";
+import { Field, type FieldProps, useFormikContext } from "formik";
 import type { ReactNode } from "react";
 import type { ActionMeta, MultiValue } from "react-select";
 import CreatableSelect from "react-select/creatable";
@@ -40,19 +40,19 @@ export function DomainNamesField({
 		onChange?.(doms);
 	};
 
-	const helperTexts: ReactNode[] = [];
+	const helperTexts: { key: string; node: ReactNode }[] = [];
 	if (maxDomains) {
-		helperTexts.push(<T id="domain-names.max" data={{ count: maxDomains }} />);
+		helperTexts.push({ key: "max", node: <T id="domain-names.max" data={{ count: maxDomains }} /> });
 	}
 	if (!isWildcardPermitted) {
-		helperTexts.push(<T id="domain-names.wildcards-not-permitted" />);
+		helperTexts.push({ key: "wildcards-not-permitted", node: <T id="domain-names.wildcards-not-permitted" /> });
 	} else if (!dnsProviderWildcardSupported) {
-		helperTexts.push(<T id="domain-names.wildcards-not-supported" />);
+		helperTexts.push({ key: "wildcards-not-supported", node: <T id="domain-names.wildcards-not-supported" /> });
 	}
 
 	return (
 		<Field name={name} validate={validateDomains(isWildcardPermitted && dnsProviderWildcardSupported, maxDomains)}>
-			{({ field, form }: any) => (
+			{({ field, form }: FieldProps) => (
 				<div className="space-y-2 mb-3">
 					<Label htmlFor={id}>
 						<T id={label} />
@@ -68,7 +68,7 @@ export function DomainNamesField({
 						isMulti
 						placeholder={intl.formatMessage({ id: "domain-names.placeholder" })}
 						onChange={handleChange}
-						value={field.value?.map((d: string) => ({ label: d, value: d }))}
+						value={(field.value as string[])?.map((d: string) => ({ label: d, value: d }))}
 						styles={{
 							control: (baseStyles) => ({
 								...baseStyles,
@@ -117,11 +117,11 @@ export function DomainNamesField({
 						}}
 					/>
 					{form.errors[field.name] && form.touched[field.name] ? (
-						<p className="text-sm font-medium text-destructive">{form.errors[field.name]}</p>
+						<p className="text-sm font-medium text-destructive">{form.errors[field.name] as string}</p>
 					) : helperTexts.length ? (
-						helperTexts.map((i, idx) => (
-							<p key={idx} className="text-sm text-muted-foreground">
-								{i}
+						helperTexts.map((item) => (
+							<p key={item.key} className="text-sm text-muted-foreground">
+								{item.node}
 							</p>
 						))
 					) : null}

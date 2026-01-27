@@ -23,7 +23,7 @@ export const useCloudflaredTunnel = () => {
 				description: "The Cloudflared tunnel has been created and started.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to create tunnel.",
@@ -42,7 +42,7 @@ export const useCloudflaredTunnel = () => {
 				description: "The Cloudflared tunnel has been updated and restarted.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to update tunnel.",
@@ -60,7 +60,7 @@ export const useCloudflaredTunnel = () => {
 				description: "The Cloudflared tunnel has been stopped and deleted.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to delete tunnel.",

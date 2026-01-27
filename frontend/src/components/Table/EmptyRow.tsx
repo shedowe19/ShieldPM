@@ -2,7 +2,7 @@ import type { Table as ReactTable } from "@tanstack/react-table";
 import { TableCell, TableRow } from "src/components/ui/table";
 
 interface Props {
-	tableInstance: ReactTable<any>;
+	tableInstance: ReactTable<unknown>;
 }
 function EmptyRow({ tableInstance }: Props) {
 	return (

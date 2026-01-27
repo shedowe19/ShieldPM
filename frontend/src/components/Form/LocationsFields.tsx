@@ -9,6 +9,7 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { intl, T } from "src/locale";
+import { FORWARD_SCHEME } from "src/types/enums";
 
 interface Props {
 	initialValues: ProxyLocation[];
@@ -24,7 +25,7 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 		path: "",
 		advancedConfig: "",
 		forwardQuery: "",
-		forwardScheme: "http",
+		forwardScheme: FORWARD_SCHEME.HTTP,
 		forwardHost: "",
 		forwardPort: 80,
 	};
@@ -73,7 +74,7 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 	return (
 		<div className="space-y-4">
 			{values.map((item: ProxyLocation, idx: number) => (
-				<Card key={idx}>
+				<Card key={`${item.path}-${idx}`}>
 					<CardContent className="p-4 space-y-4">
 						<div className="flex items-start gap-4">
 							<div className="flex-1">
@@ -115,11 +116,11 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 										<SelectValue placeholder="http" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="http">http</SelectItem>
-										<SelectItem value="https">https</SelectItem>
-										<SelectItem value="path">path</SelectItem>
-										<SelectItem value="grpc">grpc</SelectItem>
-										<SelectItem value="grpcs">grpcs</SelectItem>
+										<SelectItem value={FORWARD_SCHEME.HTTP}>http</SelectItem>
+										<SelectItem value={FORWARD_SCHEME.HTTPS}>https</SelectItem>
+										<SelectItem value={FORWARD_SCHEME.PATH}>path</SelectItem>
+										<SelectItem value={FORWARD_SCHEME.GRPC}>grpc</SelectItem>
+										<SelectItem value={FORWARD_SCHEME.GRPCS}>grpcs</SelectItem>
 									</SelectContent>
 								</Select>
 							</div>

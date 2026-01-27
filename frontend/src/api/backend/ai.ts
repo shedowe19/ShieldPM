@@ -6,7 +6,7 @@ export function getAiConfig(): Promise<AiConfig> {
 }
 
 export function updateAiConfig(data: AiConfig): Promise<AiConfig> {
-	return put({ url: "/ai/config", data });
+	return put({ url: "/ai/config", data: data as unknown as Record<string, unknown> });
 }
 
 export function sendAiChat(message: string, history: AiChatMessage[]): Promise<AiChatResponse> {
@@ -14,5 +14,5 @@ export function sendAiChat(message: string, history: AiChatMessage[]): Promise<A
 }
 
 export function getAiModels(config: Partial<AiConfig>): Promise<{ id: string; name: string }[]> {
-	return post({ url: "/ai/models", data: config });
+	return post({ url: "/ai/models", data: config as unknown as Record<string, unknown> });
 }

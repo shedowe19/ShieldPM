@@ -1,3 +1,4 @@
+import type { GitPollUnit } from "src/types/enums";
 import * as api from "./base";
 
 export interface GitSyncStatus {
@@ -5,7 +6,7 @@ export interface GitSyncStatus {
 	gitBranch: string;
 	gitSyncEnabled: boolean;
 	gitPollInterval: number;
-	gitPollUnit: "s" | "m" | "h";
+	gitPollUnit: GitPollUnit;
 	gitLastSync: string | null;
 	gitLastCommit: string | null;
 	gitLastError: string | null;
@@ -23,7 +24,7 @@ export interface GitSyncConfig {
 	gitBranch?: string;
 	gitSyncEnabled?: boolean;
 	gitPollInterval?: number;
-	gitPollUnit?: "s" | "m" | "h";
+	gitPollUnit?: GitPollUnit;
 	gitCredentials?: string;
 }
 

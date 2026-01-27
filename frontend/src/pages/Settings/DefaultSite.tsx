@@ -1,6 +1,6 @@
 import { IconSettings } from "@tabler/icons-react";
 import CodeEditor from "@uiw/react-textarea-code-editor";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Loading } from "src/components";
@@ -13,6 +13,13 @@ import { useSetSetting, useSetting } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+
+interface DefaultSiteValues {
+	value: string;
+	redirect: string;
+	html: string;
+}
 
 export default function DefaultSite() {
 	const { data, isLoading, error } = useSetting("default-site");
@@ -20,7 +27,7 @@ export default function DefaultSite() {
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: DefaultSiteValues, { setSubmitting }: FormikHelpers<DefaultSiteValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -35,9 +42,9 @@ export default function DefaultSite() {
 		};
 
 		setSetting(payload, {
-			onError: (err: any) => setErrorMsg(<T id={err.message} />),
+			onError: (err: Error) => setErrorMsg(<T id={err.message} />),
 			onSuccess: () => {
-				showObjectSuccess("setting", "saved");
+				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.SETTING, "saved");
 			},
 			onSettled: () => {
 				setIsSubmitting(false);
@@ -68,13 +75,11 @@ export default function DefaultSite() {
 
 	return (
 		<Formik
-			initialValues={
-				{
-					value: data?.value || "congratulations",
-					redirect: data?.meta?.redirect || "",
-					html: data?.meta?.html || "",
-				} as any
-			}
+			initialValues={{
+				value: (data?.value as string) || "congratulations",
+				redirect: (data?.meta?.redirect as string) || "",
+				html: (data?.meta?.html as string) || "",
+			}}
 			onSubmit={onSubmit}
 		>
 			{({ values }) => (
@@ -100,7 +105,7 @@ export default function DefaultSite() {
 
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<Field name="value">
-									{({ field, form }: any) => (
+									{({ field, form }: FieldProps) => (
 										<>
 											{["congratulations", "404", "444", "redirect", "html"].map((option) => (
 												<label
@@ -148,7 +153,7 @@ export default function DefaultSite() {
 										<T id="settings.default-site.redirect" />
 									</Label>
 									<Field name="redirect" validate={validateString(1, 255)}>
-										{({ field, form }: any) => (
+										{({ field, form }: FieldProps) => (
 											<>
 												<Input
 													{...field}
@@ -157,7 +162,9 @@ export default function DefaultSite() {
 													autoComplete="off"
 												/>
 												{form.errors.redirect && form.touched.redirect && (
-													<p className="text-sm text-destructive">{form.errors.redirect}</p>
+													<p className="text-sm text-destructive">
+														{form.errors.redirect as string}
+													</p>
 												)}
 											</>
 										)}
@@ -171,7 +178,7 @@ export default function DefaultSite() {
 										<T id="settings.default-site.html" />
 									</Label>
 									<Field name="html" validate={validateString(1)}>
-										{({ field }: any) => (
+										{({ field }: FieldProps) => (
 											<div className="rounded-md border overflow-hidden">
 												<CodeEditor
 													language="php"

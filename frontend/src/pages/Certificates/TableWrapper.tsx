@@ -29,6 +29,7 @@ import {
 } from "src/modals";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
 import { showError, showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
@@ -57,14 +58,14 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteCertificate(id);
-		showObjectSuccess("certificate", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "deleted");
 	};
 
 	const handleDownload = async (id: number) => {
 		try {
 			await downloadCertificate(id);
-		} catch (err: any) {
-			showError(err.message);
+		} catch (err) {
+			if (err instanceof Error) showError(err.message);
 		}
 	};
 
@@ -121,7 +122,7 @@ export default function TableWrapper() {
 										className="bg-pink-600/90 hover:bg-pink-600 text-white shadow-sm"
 									>
 										<IconPlus className="mr-2 h-4 w-4" />
-										<T id="object.add" tData={{ object: "certificate" }} />
+										<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />
 										<IconChevronDown className="ml-2 h-4 w-4 opacity-50" />
 									</ShadcnButton>
 								</DropdownMenuTrigger>
@@ -156,10 +157,12 @@ export default function TableWrapper() {
 					onDownload={handleDownload}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "certificate" }} />,
+							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />,
 							onConfirm: () => handleDelete(id),
-							invalidations: [["certificates"], ["certificate", id]],
-							children: <T id="object.delete.content" tData={{ object: "certificate" }} />,
+							invalidations: [["certificates"], [AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, id]],
+							children: (
+								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />
+							),
 						})
 					}
 				/>

@@ -13,7 +13,7 @@ export interface TokenResponse {
 }
 
 export interface ValidatedCertificateResponse {
-	certificate: Record<string, any>;
+	certificate: Record<string, unknown>;
 	certificateKey: boolean;
 }
 

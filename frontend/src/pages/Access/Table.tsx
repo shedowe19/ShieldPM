@@ -15,6 +15,7 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { ACCESS_LISTS, MANAGE } from "src/modules/Permissions";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: AccessList[];
@@ -80,7 +81,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 								<DropdownMenuLabel>
 									<T
 										id="object.actions-title"
-										tData={{ object: "access-list" }}
+										tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }}
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
@@ -128,7 +129,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object="access-list"
+					object={AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST}
 					objects="access-lists"
 					onNew={onNew}
 					isFiltered={isFiltered}

@@ -13,12 +13,13 @@ import { intl, T } from "src/locale";
 import { showDeadHostModal, showDeleteConfirmModal, showHelpModal } from "src/modals";
 import { DEAD_HOSTS, MANAGE } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
 
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
-	const { isFetching, isLoading, isError, error, data } = useDeadHosts(["owner", "certificate"]);
+	const { isFetching, isLoading, isError, error, data } = useDeadHosts(["owner", AUDIT_LOG_OBJECT_TYPE.CERTIFICATE]);
 
 	if (isLoading) {
 		return <LoadingPage />;
@@ -36,14 +37,14 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteDeadHost(id);
-		showObjectSuccess("dead-host", "deleted");
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, "deleted");
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
 		await toggleDeadHost(id, enabled);
 		queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });
-		queryClient.invalidateQueries({ queryKey: ["dead-host", id] });
-		showObjectSuccess("dead-host", enabled ? "enabled" : "disabled");
+		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, id] });
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, enabled ? "enabled" : "disabled");
 	};
 
 	let filtered = null;
@@ -86,7 +87,7 @@ export default function TableWrapper() {
 								onClick={() => showDeadHostModal("new")}
 							>
 								<IconPlus className="mr-2 h-4 w-4" />
-								<T id="object.add" tData={{ object: "dead-host" }} />
+								<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.DEAD_HOST }} />
 							</Button>
 						) : null}
 					</HasPermission>
@@ -100,10 +101,11 @@ export default function TableWrapper() {
 					onEdit={(id: number) => showDeadHostModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: "dead-host" }} />,
+							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.DEAD_HOST }} />,
 							onConfirm: () => handleDelete(id),
-							invalidations: [["dead-hosts"], ["dead-host", id]],
-							children: <T id="object.delete.content" tData={{ object: "dead-host" }} />,
+							children: (
+								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.DEAD_HOST }} />
+							),
 						})
 					}
 					onDisableToggle={handleDisableToggle}

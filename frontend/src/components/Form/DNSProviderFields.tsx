@@ -1,5 +1,5 @@
 import { IconAlertTriangle } from "@tabler/icons-react";
-import { Field, useFormikContext } from "formik";
+import { Field, type FieldProps, useFormikContext } from "formik";
 import { useState } from "react";
 import Select, { type ActionMeta } from "react-select";
 import type { DNSProvider } from "src/api/backend";
@@ -23,10 +23,11 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 	const { data: dnsProviders, isLoading } = useDnsProviders();
 	const [dnsProviderId, setDnsProviderId] = useState<string | null>(null);
 
-	const handleChange = (newValue: any, _actionMeta: ActionMeta<DNSProviderOption>) => {
-		setFieldValue("meta.dnsProvider", newValue?.value);
-		setFieldValue("meta.dnsProviderCredentials", newValue?.credentials);
-		setDnsProviderId(newValue?.value);
+	const handleChange = (newValue: unknown, _actionMeta: ActionMeta<DNSProviderOption>) => {
+		const option = newValue as DNSProviderOption | null;
+		setFieldValue("meta.dnsProvider", option?.value);
+		setFieldValue("meta.dnsProviderCredentials", option?.credentials);
+		setDnsProviderId(option?.value || null);
 	};
 
 	const options: DNSProviderOption[] =
@@ -46,7 +47,7 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 			)}
 
 			<Field name="meta.dnsProvider">
-				{({ field }: any) => (
+				{({ field }: FieldProps) => (
 					<div className="space-y-2">
 						<Label htmlFor="dnsProvider">
 							<T id="certificates.dns.provider" />
@@ -106,7 +107,7 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 			{dnsProviderId ? (
 				<>
 					<Field name="meta.dnsProviderCredentials">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="space-y-2 mt-4">
 								<Label htmlFor="dnsProviderCredentials">
 									<T id="certificates.dns.credentials" />
@@ -133,7 +134,7 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 						)}
 					</Field>
 					<Field name="meta.propagationSeconds">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="space-y-2 mt-4">
 								<Label htmlFor="propagationSeconds">
 									<T id="certificates.dns.propagation-seconds" />
