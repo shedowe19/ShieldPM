@@ -7,12 +7,14 @@ import { getValidationSchema } from "../schema/index.js";
 
 const router = express.Router();
 
+import jwtdecode from "../lib/express/jwt-decode.js";
+
 /**
  * GET /api/chat-integrations
  * List all chat integrations for the current user (or all if admin?)
  * For now, let's limit to user's own integrations or admin view.
  */
-router.get("/", async (req, res, next) => {
+router.get("/", jwtdecode(), async (req, res, next) => {
 	try {
 		// Use 'settings:list' or 'users:list' as proxy for admin?
 		// Or creating a new permission 'chat:list'?
