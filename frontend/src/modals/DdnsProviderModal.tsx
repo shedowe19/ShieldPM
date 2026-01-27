@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import { DdnsProviderName, IpVersion } from "src/types/enums";
 
 const showDdnsProviderModal = (id?: number) => {
 	EasyModal.show(DdnsProviderModal, { id: id || "new" });
@@ -29,8 +30,8 @@ interface Props extends InnerModalProps {
 
 interface DdnsProviderValues {
 	name: string;
-	provider: "cloudflare" | "duckdns" | "custom" | string;
-	ip_ver: "dual" | "v4" | "v6";
+	provider: DdnsProviderName;
+	ip_ver: IpVersion;
 	domainsStr: string;
 	// Cloudflare
 	cloudfare_token: string;
@@ -66,11 +67,11 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 		// Prepare config based on provider
 		let config: Record<string, unknown> = {};
-		if (values.provider === "cloudflare") {
+		if (values.provider === DdnsProviderName.Cloudflare) {
 			config = { token: values.cloudfare_token, zone_id: values.cloudfare_zone_id };
-		} else if (values.provider === "duckdns") {
+		} else if (values.provider === DdnsProviderName.DuckDNS) {
 			config = { token: values.duckdns_token };
-		} else if (values.provider === "custom") {
+		} else if (values.provider === DdnsProviderName.Custom) {
 			config = { url: values.custom_url };
 		}
 
@@ -79,7 +80,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 		const payload: Partial<DdnsProvider> = {
 			name: values.name,
-			provider: values.provider as "cloudflare" | "duckdns" | "custom",
+			provider: values.provider,
 			ip_ver: values.ip_ver,
 			domains,
 			config,
@@ -135,8 +136,8 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						enableReinitialize
 						initialValues={{
 							name: data?.name || "",
-							provider: data?.provider || "cloudflare",
-							ip_ver: data?.ip_ver || "dual",
+							provider: (data?.provider as DdnsProviderName) || DdnsProviderName.Cloudflare,
+							ip_ver: (data?.ip_ver as IpVersion) || IpVersion.Dual,
 							domainsStr: data?.domains.join(", ") || "",
 							// Cloudflare
 							cloudfare_token: (data?.config as { token?: string })?.token || "",
@@ -183,9 +184,13 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="cloudflare">Cloudflare</SelectItem>
-													<SelectItem value="duckdns">DuckDNS</SelectItem>
-													<SelectItem value="custom">Custom (Webhook)</SelectItem>
+													<SelectItem value={DdnsProviderName.Cloudflare}>
+														Cloudflare
+													</SelectItem>
+													<SelectItem value={DdnsProviderName.DuckDNS}>DuckDNS</SelectItem>
+													<SelectItem value={DdnsProviderName.Custom}>
+														Custom (Webhook)
+													</SelectItem>
 												</SelectContent>
 											</Select>
 										)}
@@ -222,13 +227,13 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="dual">
+													<SelectItem value={IpVersion.Dual}>
 														<T id="ddns-providers.ip-ver.dual" />
 													</SelectItem>
-													<SelectItem value="v4">
+													<SelectItem value={IpVersion.V4}>
 														<T id="ddns-providers.ip-ver.v4" />
 													</SelectItem>
-													<SelectItem value="v6">
+													<SelectItem value={IpVersion.V6}>
 														<T id="ddns-providers.ip-ver.v6" />
 													</SelectItem>
 												</SelectContent>
@@ -242,7 +247,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="ddns-providers.config" />
 									</h3>
 
-									{values.provider === "cloudflare" && (
+									{values.provider === DdnsProviderName.Cloudflare && (
 										<>
 											<div className="space-y-2">
 												<Label htmlFor="cloudfare_token">
@@ -267,7 +272,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										</>
 									)}
 
-									{values.provider === "duckdns" && (
+									{values.provider === DdnsProviderName.DuckDNS && (
 										<div className="space-y-2">
 											<Label htmlFor="duckdns_token">
 												<T id="ddns-providers.duckdns_token" />
@@ -280,7 +285,7 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										</div>
 									)}
 
-									{values.provider === "custom" && (
+									{values.provider === DdnsProviderName.Custom && (
 										<div className="space-y-2">
 											<Label htmlFor="custom_url">
 												<T id="ddns-providers.custom_url" />

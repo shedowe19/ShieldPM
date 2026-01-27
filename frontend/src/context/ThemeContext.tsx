@@ -5,8 +5,10 @@ const StorageKey = "tabler-theme";
 export const Light = "light";
 export const Dark = "dark";
 
+import { AppTheme } from "src/types/enums";
+
 // Define theme types
-export type Theme = "light" | "dark";
+export type Theme = AppTheme;
 
 interface ThemeContextType {
 	theme: Theme;
@@ -23,9 +25,9 @@ interface ThemeProviderProps {
 
 const getBrowserDefault = (): Theme => {
 	if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-		return Dark;
+		return AppTheme.Dark;
 	}
-	return Light;
+	return AppTheme.Light;
 };
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
@@ -40,13 +42,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
 	useEffect(() => {
 		document.body.dataset.theme = theme;
-		document.body.classList.remove(theme === Light ? Dark : Light);
+		document.body.classList.remove(theme === AppTheme.Light ? AppTheme.Dark : AppTheme.Light);
 		document.body.classList.add(theme);
 		localStorage.setItem(StorageKey, theme);
 	}, [theme]);
 
 	const toggleTheme = () => {
-		setThemeState((prev) => (prev === Light ? Dark : Light));
+		setThemeState((prev) => (prev === AppTheme.Light ? AppTheme.Dark : AppTheme.Light));
 	};
 
 	const setTheme = (newTheme: Theme) => {

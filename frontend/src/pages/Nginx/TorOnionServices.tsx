@@ -10,6 +10,7 @@ import {
 import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
 import type { TorOnion } from "@/api/backend";
+import { TorOnionStatus } from "@/types/enums";
 import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -53,14 +54,14 @@ export function TorOnionServices() {
 	};
 
 	const getStatusBadge = (status: number) => {
-		const statusMap: Record<number, { label: string; variant: string }> = {
-			0: { label: "tor.status_stopped", variant: "secondary" },
-			1: { label: "tor.status_starting", variant: "warning" },
-			2: { label: "tor.status_running", variant: "success" },
-			3: { label: "tor.status_error", variant: "destructive" },
+		const statusMap: Record<TorOnionStatus, { label: string; variant: string }> = {
+			[TorOnionStatus.STOPPED]: { label: "tor.status_stopped", variant: "secondary" },
+			[TorOnionStatus.STARTING]: { label: "tor.status_starting", variant: "warning" },
+			[TorOnionStatus.RUNNING]: { label: "tor.status_running", variant: "success" },
+			[TorOnionStatus.ERROR]: { label: "tor.status_error", variant: "destructive" },
 		};
 
-		const { label, variant } = statusMap[status] || statusMap[0];
+		const { label, variant } = statusMap[status as TorOnionStatus] || statusMap[TorOnionStatus.STOPPED];
 
 		return (
 			<Badge variant={variant as "secondary" | "warning" | "success" | "destructive"}>
@@ -200,7 +201,7 @@ export function TorOnionServices() {
 										<TableCell>{service.virtualPort}</TableCell>
 										<TableCell>{getStatusBadge(service.status)}</TableCell>
 										<TableCell className="text-right space-x-1">
-											{service.status === 2 ? (
+											{service.status === TorOnionStatus.RUNNING ? (
 												<Button
 													variant="ghost"
 													size="icon"

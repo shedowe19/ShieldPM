@@ -1,3 +1,12 @@
+import type {
+	AccessDirective,
+	AiProvider,
+	DdnsProviderName,
+	IconType,
+	IpVersion,
+	TorOnionStatus,
+} from "src/types/enums";
+
 export interface UserPermissions {
 	id?: number;
 	createdOn?: string;
@@ -74,7 +83,7 @@ export type AccessListClient = {
 	modifiedOn?: string;
 	accessListId?: number;
 	address: string;
-	directive: "allow" | "deny";
+	directive: AccessDirective;
 	meta?: Record<string, unknown>;
 };
 
@@ -154,7 +163,7 @@ export interface ProxyHost {
 	gitLastError?: string | null;
 	// Service Icon
 	iconUrl?: string | null;
-	iconType?: "auto" | "custom" | "none";
+	iconType?: IconType;
 	// Terminal Fields
 	terminalHost?: string;
 	terminalPort?: number;
@@ -261,7 +270,7 @@ export interface CloudflaredTunnel {
 
 export interface AiConfig {
 	enabled: boolean;
-	provider: "gemini" | "local";
+	provider: AiProvider;
 	api_key?: string;
 	base_url?: string;
 	model?: string;
@@ -289,10 +298,10 @@ export interface DdnsProvider {
 	modifiedOn: string;
 	ownerUserId: number;
 	name: string;
-	provider: "cloudflare" | "duckdns" | "custom";
+	provider: DdnsProviderName;
 	domains: string[];
 	config: Record<string, unknown>;
-	ip_ver?: "v4" | "v6" | "dual";
+	ip_ver?: IpVersion;
 	lastIpv4?: string;
 	lastIpv6?: string;
 	lastUpdatedOn?: string;
@@ -311,7 +320,7 @@ export interface TorOnion {
 	onionAddress?: string | null;
 	virtualPort: number;
 	targetPort: number;
-	status: number; // 0=Stopped, 1=Starting, 2=Running, 3=Error
+	status: TorOnionStatus;
 	meta: Record<string, unknown>;
 	// Expansions:
 	proxyHost?: ProxyHost;

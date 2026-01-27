@@ -14,6 +14,7 @@ import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
+import { AiProvider } from "src/types/enums";
 
 export default function AiConfigPage() {
 	const [config, setConfig] = useState<AiConfig | null>(null);
@@ -53,7 +54,7 @@ export default function AiConfigPage() {
 
 	const initialValues: AiConfig = config || {
 		enabled: false,
-		provider: "gemini",
+		provider: AiProvider.Gemini,
 		api_key: "",
 		base_url: "",
 		model: "",
@@ -100,7 +101,7 @@ export default function AiConfigPage() {
 									<T id="ai.provider" />
 								</Label>
 								<div className="flex gap-4">
-									{["gemini", "local"].map((option) => (
+									{[AiProvider.Gemini, AiProvider.Local].map((option) => (
 										<label
 											key={option}
 											className={`
@@ -119,19 +120,21 @@ export default function AiConfigPage() {
 													// Set default model based on provider to avoid invalid state
 													setFieldValue(
 														"model",
-														option === "gemini" ? "gemini-1.5-flash" : "gpt-3.5-turbo",
+														option === AiProvider.Gemini
+															? "gemini-1.5-flash"
+															: "gpt-3.5-turbo",
 													);
 												}}
 											/>
 											<span className="capitalize">
-												{option === "gemini" ? "Google Gemini" : "Local LLM / OpenAI"}
+												{option === AiProvider.Gemini ? "Google Gemini" : "Local LLM / OpenAI"}
 											</span>
 										</label>
 									))}
 								</div>
 							</div>
 
-							{values.provider === "gemini" && (
+							{values.provider === AiProvider.Gemini && (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="api_key">
@@ -195,7 +198,7 @@ export default function AiConfigPage() {
 								</div>
 							)}
 
-							{values.provider === "local" && (
+							{values.provider === AiProvider.Local && (
 								<div className="space-y-4">
 									<div className="space-y-2">
 										<Label htmlFor="base_url">

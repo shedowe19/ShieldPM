@@ -7,6 +7,7 @@ import { Input } from "src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
+import { AccessDirective } from "src/types/enums";
 
 interface Props {
 	initialValues: AccessListClient[];
@@ -16,7 +17,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 	const [values, setValues] = useState<AccessListClient[]>(initialValues || []);
 	const { setFieldValue } = useFormikContext();
 
-	const blankClient: AccessListClient = { directive: "allow", address: "" };
+	const blankClient: AccessListClient = { directive: AccessDirective.Allow, address: "" };
 
 	if (values?.length === 0) {
 		setValues([blankClient]);
@@ -65,7 +66,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 							>
 								<SelectTrigger
 									className={cn(
-										client.directive === "allow"
+										client.directive === AccessDirective.Allow
 											? "bg-green-100 dark:bg-green-900 border-green-200 dark:border-green-800 text-green-800 dark:text-green-100"
 											: "bg-orange-100 dark:bg-orange-900 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-100",
 									)}
@@ -73,10 +74,10 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="allow">
+									<SelectItem value={AccessDirective.Allow}>
 										<T id="action.allow" />
 									</SelectItem>
-									<SelectItem value="deny">
+									<SelectItem value={AccessDirective.Deny}>
 										<T id="action.deny" />
 									</SelectItem>
 								</SelectContent>
