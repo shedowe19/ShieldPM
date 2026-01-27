@@ -654,6 +654,12 @@ export const executeTools = async (access, toolCalls) => {
 					result = `Series Data Points: ${data.length}`;
 					break;
 				}
+				case "get_host_analytics": {
+					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					const summary = await internalAnalytics.getHostSummary(call.args.host_id, call.args.range || "24h");
+					result = JSON.stringify(summary, null, 2);
+					break;
+				}
 				// Other Updates
 				case "update_redirection_host": {
 					await internalRedirectionHost.update(access, { id: call.args.id, ...call.args });
