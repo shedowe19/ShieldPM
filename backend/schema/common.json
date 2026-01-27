@@ -239,6 +239,11 @@
 					}
 				}
 			}
+		},
+		"meta": {
+			"description": "Meta Data",
+			"type": "object",
+			"additionalProperties": true
 		}
 	}
 }
