@@ -297,3 +297,10 @@ export const PERMISSION_SCOPE = {
 	ALL: "all",
 } as const;
 export type PermissionScope = (typeof PERMISSION_SCOPE)[keyof typeof PERMISSION_SCOPE];
+
+export const AVATAR_TYPE = {
+	GRAVATAR: "gravatar",
+	URL: "url",
+	UPLOAD: "upload",
+} as const;
+export type AvatarType = (typeof AVATAR_TYPE)[keyof typeof AVATAR_TYPE];

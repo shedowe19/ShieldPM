@@ -18,7 +18,7 @@ import { useHealth, useSetUser, useUser } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import { AUDIT_LOG_OBJECT_TYPE, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, type AvatarType, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
 
 const showUserModal = (id: number | "me" | "new") => {
 	EasyModal.show(UserModal, { id });
@@ -33,7 +33,7 @@ interface UserValues {
 	email: string;
 	isAdmin: boolean;
 	isDisabled: boolean;
-	avatar_type: "gravatar" | "url" | "upload";
+	avatar_type: AvatarType;
 	avatar_value: string;
 }
 
@@ -73,9 +73,8 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				setIsSubmitting(false);
 				setSubmitting(false);
 			},
-			onSuccess: async (newUser) => {
-				// Assuming hooks/useSetUser returns the user object on success
-				if (values.avatar_type === "upload" && selectedFile) {
+			onSuccess: async (newUser) => { // Assuming hooks/useSetUser returns the user object on success
+				if (values.avatar_type === AVATAR_TYPE.UPLOAD && selectedFile) {
 					try {
 						await uploadUserAvatar({ id: newUser.id, file: selectedFile });
 					} catch (err) {
@@ -155,7 +154,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							email: data?.email || "",
 							isAdmin: data?.roles?.includes(USER_ROLE.ADMIN) || false,
 							isDisabled: data?.isDisabled || false,
-							avatar_type: data?.avatar_type || "gravatar",
+							avatar_type: data?.avatar_type || AVATAR_TYPE.GRAVATAR,
 							avatar_value: data?.avatar_value || "",
 						}}
 						onSubmit={onSubmit}

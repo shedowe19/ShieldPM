@@ -24,6 +24,8 @@ This PR introduces the ability for users to customize their profile pictures. Pr
 - **Components**:
     - Renamed `GravatarFormatter` to `UserAvatar`.
     - Updated `UserAvatar` to correctly render images from all sources.
+- **Refactoring**:
+    - Identified and refactored legacy string unions to `as const` enums (e.g., `AVATAR_TYPE`) to improve type safety.
 
 ## Data Path
 Uploaded avatars are stored in the `/data/avatars` directory. This ensures they persist alongside other data.

@@ -2,6 +2,7 @@ import type {
 	AccessDirective,
 	AiProvider,
 	AiRole,
+	AvatarType,
 	CertificateProvider,
 	DdnsProviderName,
 	ForwardScheme,
@@ -38,7 +39,7 @@ export interface User {
 	name: string;
 	nickname: string;
 	avatar: string;
-	avatar_type: "gravatar" | "url" | "upload";
+	avatar_type: AvatarType;
 	avatar_value: string | null;
 	roles: string[];
 	permissions?: UserPermissions;
