@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
 import access from "../lib/access.js";
-import { configGet } from "../lib/config.js";
+import { configGet, getPrivateKey } from "../lib/config.js";
 import { decrypt } from "../lib/encryption.js";
 import { global as logger } from "../logger.js";
 import ChatIntegrationModel from "../models/chat_integration.js";
@@ -73,14 +73,18 @@ const internalChat = {
 				ctx.shieldAccess = {
 					can: async (permission, data) => {
 						// Generate a temporary JWT for this user to reuse the access system
-						const secret = configGet("jwt:secret");
+						// Generate a temporary JWT for this user to reuse the access system
+						const secret = getPrivateKey();
 						const generatedToken = jwt.sign(
 							{
 								scope: ["user"],
 								id: integration.user_id,
 							},
 							secret,
-							{ expiresIn: "5m" },
+							{
+								algorithm: "RS256",
+								expiresIn: "5m",
+							},
 						);
 
 						// Initialize access control with this token
