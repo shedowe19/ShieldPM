@@ -34,6 +34,10 @@ class User extends Model {
 	permissions;
 	/** @type {string} */
 	avatar;
+	/** @type {string} */
+	avatar_type;
+	/** @type {string | null} */
+	avatar_value;
 	/** @type {number} */
 	count;
 

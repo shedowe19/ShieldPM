@@ -38,6 +38,8 @@ export interface User {
 	name: string;
 	nickname: string;
 	avatar: string;
+	avatar_type: "gravatar" | "url" | "upload";
+	avatar_value: string | null;
 	roles: string[];
 	permissions?: UserPermissions;
 }

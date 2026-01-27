@@ -13,7 +13,7 @@ import type { User } from "src/api/backend";
 import {
 	EmailFormatter,
 	EmptyData,
-	GravatarFormatter,
+	UserAvatar,
 	RolesFormatter,
 	TrueFalseFormatter,
 	ValueWithDateFormatter,
@@ -64,7 +64,7 @@ export default function Table({
 				id: "avatar",
 				cell: (info) => {
 					const value = info.getValue();
-					return <GravatarFormatter url={value.avatar} name={value.name} />;
+					return <UserAvatar url={value.avatar} name={value.name} />;
 				},
 				meta: {
 					className: "w-[50px]",

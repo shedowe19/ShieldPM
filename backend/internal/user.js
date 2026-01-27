@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import gravatar from "gravatar";
 import _ from "lodash";
 import errs from "../lib/error.js";
@@ -125,7 +127,36 @@ const internalUser = {
 			);
 		}
 
-		data.avatar = gravatar.url(data.email || user.email, { default: "mm" });
+		// Handle Avatar Logic
+		let avatarType = data.avatar_type;
+		if (!avatarType) {
+			avatarType = user.avatar_type || "gravatar";
+		}
+
+		let avatarValue = data.avatar_value;
+		if (avatarValue === undefined) {
+			avatarValue = user.avatar_value;
+		}
+
+		const email = data.email || user.email;
+
+		if (avatarType === "gravatar") {
+			data.avatar = gravatar.url(email, { default: "mm" });
+		} else if (avatarType === "url") {
+			data.avatar = avatarValue || gravatar.url(email, { default: "mm" });
+		} else if (avatarType === "upload") {
+			// If we are switching to upload, check if we have a value
+			if (avatarValue) {
+				data.avatar = `/api/users/${user.id}/avatar/image`;
+			} else {
+				// No upload exists, fallback to gravatar but keep type logic?
+				// Or assume the upload endpoint handles the avatar field update.
+				// If user just switches type to upload but has no file, we should probably warn or fallback.
+				// For now, assume if they select upload, they might upload a file separately.
+				// We set the URL anyway if value exists.
+				data.avatar = `/api/users/${user.id}/avatar/image`;
+			}
+		}
 
 		await userModel.query().patchAndFetchById(user.id, data);
 		user = await internalUser.get(access, { id: data.id });
@@ -435,6 +466,84 @@ const internalUser = {
 		await access.can("users:loginas", data.id);
 		const user = await internalUser.get(access, data);
 		return internalToken.getTokenFromUser(user);
+	},
+
+	/**
+	 * @param {import("../lib/types.js").Access} access
+	 * @param {Object} data
+	 * @param {number} data.id
+	 * @param {Object} data.file
+	 */
+	uploadAvatar: async (access, data) => {
+		await access.can("users:update", data.id);
+		const user = await internalUser.get(access, { id: data.id });
+
+		if (!data.file) {
+			throw new errs.ValidationError("No file uploaded");
+		}
+
+		const file = data.file;
+		const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+		if (!allowedTypes.includes(file.mimetype)) {
+			throw new errs.ValidationError("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.");
+		}
+
+		if (file.size > 2 * 1024 * 1024) {
+			throw new errs.ValidationError("File too large. Maximum size is 2MB.");
+		}
+
+		const dataPath = process.env.DATA_PATH || "/data";
+		const avatarDir = path.join(dataPath, "avatars");
+
+		if (!fs.existsSync(avatarDir)) {
+			fs.mkdirSync(avatarDir, { recursive: true });
+		}
+
+		// Delete old avatar if it exists and was an upload
+		if (user.avatar_type === "upload" && user.avatar_value) {
+			const oldPath = path.join(avatarDir, user.avatar_value);
+			if (fs.existsSync(oldPath)) {
+				fs.unlinkSync(oldPath);
+			}
+		}
+
+		const ext = path.extname(file.name);
+		const filename = `${user.id}-${Date.now()}${ext}`;
+		const filePath = path.join(avatarDir, filename);
+
+		await file.mv(filePath);
+
+		await userModel.query().patchAndFetchById(user.id, {
+			avatar_type: "upload",
+			avatar_value: filename,
+			avatar: `/api/users/${user.id}/avatar/image`,
+		});
+
+		return {
+			url: `/api/users/${user.id}/avatar/image`,
+		};
+	},
+
+	/**
+	 * @param {import("../lib/types.js").Access} _access
+	 * @param {Object} data
+	 * @param {number} data.id
+	 */
+	getAvatarImage: async (_access, data) => {
+		// Public access allowed for avatars, but we check existence
+		const user = await userModel.query().findById(data.id);
+		if (!user || user.avatar_type !== "upload" || !user.avatar_value) {
+			throw new errs.ItemNotFoundError("Avatar not found");
+		}
+
+		const dataPath = process.env.DATA_PATH || "/data";
+		const filePath = path.join(dataPath, "avatars", user.avatar_value);
+
+		if (!fs.existsSync(filePath)) {
+			throw new errs.ItemNotFoundError("Avatar file missing");
+		}
+
+		return filePath;
 	},
 };
 

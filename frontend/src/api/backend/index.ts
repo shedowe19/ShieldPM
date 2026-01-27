@@ -83,4 +83,5 @@ export * from "./updateStream";
 export * from "./updateTorOnion";
 export * from "./updateUser";
 export * from "./uploadCertificate";
+export * from "./uploadUserAvatar";
 export * from "./validateCertificate";

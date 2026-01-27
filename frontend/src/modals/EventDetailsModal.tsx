@@ -1,7 +1,7 @@
 import { IconCode, IconListDetails } from "@tabler/icons-react";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { EventFormatter, GravatarFormatter, Loading } from "src/components";
+import { EventFormatter, UserAvatar, Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
@@ -62,7 +62,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						<div className="py-6 space-y-6">
 							{/* Header Section */}
 							<div className="flex items-start gap-4 p-4 rounded-lg border bg-card/50 shadow-sm">
-								<GravatarFormatter url={data.user?.avatar || ""} />
+								<UserAvatar url={data.user?.avatar || ""} />
 								<EventFormatter row={data} />
 							</div>
 
