@@ -11,7 +11,11 @@ import * as sk from "./sk/index";
 import * as vi from "./vi/index";
 import * as zh from "./zh/index";
 
-const items: any = { en, de, ja, sk, zh, pl, ru, it, vi, nl, bg, ko };
+interface HelpDocModule {
+	[key: string]: { default: string };
+}
+
+const items: Record<string, HelpDocModule> = { en, de, ja, sk, zh, pl, ru, it, vi, nl, bg, ko };
 
 const fallbackLang = "en";
 

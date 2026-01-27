@@ -23,7 +23,7 @@ export const useTorOnion = () => {
 				description: "The Tor Onion Service has been created.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to create Onion Service.",
@@ -41,7 +41,7 @@ export const useTorOnion = () => {
 				description: "The Tor Onion Service has been updated.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to update Onion Service.",
@@ -59,7 +59,7 @@ export const useTorOnion = () => {
 				description: "The Tor Onion Service has been stopped and deleted.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to delete Onion Service.",
@@ -77,7 +77,7 @@ export const useTorOnion = () => {
 				description: "The Tor Onion Service is now running.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to start Onion Service.",
@@ -95,7 +95,7 @@ export const useTorOnion = () => {
 				description: "The Tor Onion Service has been stopped.",
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: Error) => {
 			toast({
 				title: "Error",
 				description: error.message || "Failed to stop Onion Service.",

@@ -1,5 +1,5 @@
 import { IconRobot } from "@tabler/icons-react";
-import { Field, Form, Formik } from "formik";
+import { Field, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
@@ -30,7 +30,7 @@ export default function AiConfigPage() {
 
 	const { formatMessage } = useIntl();
 
-	const onSubmit = async (values: AiConfig, { setSubmitting }: any) => {
+	const onSubmit = async (values: AiConfig, { setSubmitting }: FormikHelpers<AiConfig>) => {
 		try {
 			// Convert numeric fields from strings to integers
 			const payload = {
@@ -39,11 +39,11 @@ export default function AiConfigPage() {
 				num_batch: values.num_batch ? Number.parseInt(String(values.num_batch), 10) : undefined,
 				num_thread: values.num_thread ? Number.parseInt(String(values.num_thread), 10) : undefined,
 			};
-			const res = await updateAiConfig(payload as any);
+			const res = await updateAiConfig(payload as AiConfig);
 			setConfig(res);
 			showObjectSuccess("setting", "saved");
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err) {
+			if (err instanceof Error) setError(err.message);
 		} finally {
 			setSubmitting(false);
 		}
@@ -159,8 +159,8 @@ export default function AiConfigPage() {
 														);
 														setFetchedModels(models);
 														showObjectSuccess("Models Loaded", "");
-													} catch (e: any) {
-														setError(e.message);
+													} catch (e) {
+														if (e instanceof Error) setError(e.message);
 													}
 												}}
 											>
@@ -177,7 +177,7 @@ export default function AiConfigPage() {
 													{formatMessage({ id: "frames.select_placeholder" }) ||
 														"Select a model"}
 												</option>
-												{fetchedModels.map((m: any) => (
+												{fetchedModels.map((m) => (
 													<option key={m.id} value={m.id}>
 														{m.name}
 													</option>
@@ -242,8 +242,8 @@ export default function AiConfigPage() {
 														);
 														setFetchedModels(models);
 														showObjectSuccess("Models Loaded", "");
-													} catch (e: any) {
-														setError(e.message);
+													} catch (e) {
+														if (e instanceof Error) setError(e.message);
 													}
 												}}
 											>
@@ -261,7 +261,7 @@ export default function AiConfigPage() {
 													{formatMessage({ id: "frames.select_placeholder" }) ||
 														"Select a model"}
 												</option>
-												{fetchedModels.map((m: any) => (
+												{fetchedModels.map((m) => (
 													<option key={m.id} value={m.id}>
 														{m.name}
 													</option>

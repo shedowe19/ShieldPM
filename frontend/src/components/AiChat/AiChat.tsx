@@ -42,9 +42,10 @@ export function AiChat() {
 			const response = await sendAiChat(userMsg.content, history);
 			console.log("Received chat response:", response);
 			setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: response.content }]);
-		} catch (err: any) {
+		} catch (err) {
 			console.error("Chat error:", err);
-			setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
+			const msg = err instanceof Error ? err.message : String(err);
+			setMessages((prev: AiChatMessage[]) => [...prev, { role: "assistant", content: `Error: ${msg}` }]);
 		} finally {
 			setLoading(false);
 		}

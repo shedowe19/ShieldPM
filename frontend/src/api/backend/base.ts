@@ -6,6 +6,8 @@ import AuthStore from "src/modules/AuthStore";
 const queryClient = new QueryClient();
 const contentTypeHeader = "Content-Type";
 
+type DynamicResponse = unknown;
+
 interface BuildUrlArgs {
 	url: string;
 	params?: StringifiableRecord;
@@ -43,13 +45,13 @@ function buildAuthHeader(): Record<string, string> | undefined {
 	return {};
 }
 
-function buildBody(data?: Record<string, any>): string | undefined {
+function buildBody(data?: object): string | undefined {
 	if (data) {
 		return JSON.stringify(decamelizeKeys(data));
 	}
 }
 
-async function processResponse(response: Response, silentAuth = false) {
+async function processResponse<T = DynamicResponse>(response: Response, silentAuth = false): Promise<T> {
 	const payload = await response.json();
 	// Capture CSRF Token if present in response
 	if (payload.csrfToken) {
@@ -69,7 +71,7 @@ async function processResponse(response: Response, silentAuth = false) {
 			typeof payload.error.messageI18n !== "undefined" ? payload.error.messageI18n : payload.error.message,
 		);
 	}
-	return camelizeKeys(payload) as any;
+	return camelizeKeys(payload) as unknown as T;
 }
 
 interface GetArgs {
@@ -81,7 +83,7 @@ interface GetArgs {
 interface PostArgs {
 	url: string;
 	params?: queryString.StringifiableRecord;
-	data?: any;
+	data?: object | FormData;
 	noAuth?: boolean;
 	silentAuth?: boolean;
 }
@@ -89,7 +91,7 @@ interface PostArgs {
 interface PutArgs {
 	url: string;
 	params?: queryString.StringifiableRecord;
-	data?: Record<string, any>;
+	data?: object;
 	silentAuth?: boolean;
 }
 
@@ -108,8 +110,8 @@ async function baseGet({ url, params }: GetArgs, abortController?: AbortControll
 	return response;
 }
 
-export async function get(args: GetArgs, abortController?: AbortController) {
-	return processResponse(await baseGet(args, abortController), args.silentAuth);
+export async function get<T = DynamicResponse>(args: GetArgs, abortController?: AbortController): Promise<T> {
+	return processResponse<T>(await baseGet(args, abortController), args.silentAuth);
 }
 
 export async function download({ url, params }: GetArgs, filename = "download.file") {
@@ -146,7 +148,7 @@ export async function downloadPost({ url, params, data, noAuth }: PostArgs, file
 			...headers,
 			[contentTypeHeader]: "application/json",
 		};
-		body = buildBody(data);
+		body = buildBody(data as Record<string, unknown>);
 	}
 
 	const res = await fetch(apiUrl, { method, headers, body });
@@ -159,7 +161,10 @@ export async function downloadPost({ url, params, data, noAuth }: PostArgs, file
 	window.URL.revokeObjectURL(u);
 }
 
-export async function post({ url, params, data, noAuth, silentAuth }: PostArgs, abortController?: AbortController) {
+export async function post<T = DynamicResponse>(
+	{ url, params, data, noAuth, silentAuth }: PostArgs,
+	abortController?: AbortController,
+): Promise<T> {
 	const apiUrl = buildUrl({ url, params });
 	const method = "POST";
 
@@ -181,7 +186,7 @@ export async function post({ url, params, data, noAuth, silentAuth }: PostArgs, 
 			...headers,
 			[contentTypeHeader]: "application/json",
 		};
-		body = buildBody(data);
+		body = buildBody(data as Record<string, unknown>);
 	}
 
 	const signal = abortController?.signal;
@@ -189,7 +194,10 @@ export async function post({ url, params, data, noAuth, silentAuth }: PostArgs, 
 	return processResponse(response, silentAuth);
 }
 
-export async function put({ url, params, data, silentAuth }: PutArgs, abortController?: AbortController) {
+export async function put<T = DynamicResponse>(
+	{ url, params, data, silentAuth }: PutArgs,
+	abortController?: AbortController,
+): Promise<T> {
 	const apiUrl = buildUrl({ url, params });
 	const method = "PUT";
 	const headers = {
@@ -202,7 +210,10 @@ export async function put({ url, params, data, silentAuth }: PutArgs, abortContr
 	return processResponse(response, silentAuth);
 }
 
-export async function del({ url, params, silentAuth }: DeleteArgs, abortController?: AbortController) {
+export async function del<T = DynamicResponse>(
+	{ url, params, silentAuth }: DeleteArgs,
+	abortController?: AbortController,
+): Promise<T> {
 	const apiUrl = buildUrl({ url, params });
 	const method = "DELETE";
 	const headers = {
@@ -211,7 +222,7 @@ export async function del({ url, params, silentAuth }: DeleteArgs, abortControll
 	};
 	const signal = abortController?.signal;
 	const response = await fetch(apiUrl, { method, headers, signal });
-	return processResponse(response, silentAuth);
+	return processResponse<T>(response, silentAuth);
 }
 
 export const apiClient = {

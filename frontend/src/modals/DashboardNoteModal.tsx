@@ -1,7 +1,7 @@
 import { IconNote } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { createDashboardNote, updateDashboardNote } from "src/api/backend";
@@ -16,7 +16,7 @@ import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 
-const showDashboardNoteModal = (note?: any) => {
+const showDashboardNoteModal = (note?: Props["note"]) => {
 	EasyModal.show(DashboardNoteModal, { note });
 };
 
@@ -27,6 +27,12 @@ interface Props extends InnerModalProps {
 		color?: string;
 		position?: number;
 	};
+}
+
+interface DashboardNoteValues {
+	content: string;
+	color: string;
+	position: number;
 }
 
 const COLORS = [
@@ -43,7 +49,7 @@ const DashboardNoteModal = EasyModal.create(({ note, visible, remove }: Props) =
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: DashboardNoteValues, { setSubmitting }: FormikHelpers<DashboardNoteValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -59,8 +65,8 @@ const DashboardNoteModal = EasyModal.create(({ note, visible, remove }: Props) =
 
 			queryClient.invalidateQueries({ queryKey: ["dashboard-notes"] });
 			remove();
-		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 		} finally {
 			setIsSubmitting(false);
 			setSubmitting(false);
@@ -85,7 +91,7 @@ const DashboardNoteModal = EasyModal.create(({ note, visible, remove }: Props) =
 					}}
 					onSubmit={onSubmit}
 				>
-					{({ setFieldValue, errors, touched }: any) => (
+					{({ setFieldValue, errors, touched }) => (
 						<Form className="space-y-4">
 							{errorMsg && (
 								<Alert variant="destructive">
@@ -100,7 +106,7 @@ const DashboardNoteModal = EasyModal.create(({ note, visible, remove }: Props) =
 									<T id="dashboard.notes.content" />
 								</Label>
 								<Field name="content" validate={validateString(1, 65535)}>
-									{({ field }: any) => (
+									{({ field }: FieldProps) => (
 										<Textarea
 											{...field}
 											id="content"
@@ -121,7 +127,7 @@ const DashboardNoteModal = EasyModal.create(({ note, visible, remove }: Props) =
 									<T id="dashboard.notes.color" />
 								</Label>
 								<Field name="color">
-									{({ field }: any) => (
+									{({ field }: FieldProps) => (
 										<Select
 											value={field.value}
 											onValueChange={(val) => setFieldValue("color", val)}

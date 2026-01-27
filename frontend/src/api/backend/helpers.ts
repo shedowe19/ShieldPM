@@ -5,10 +5,15 @@ import { decamelize } from "humps";
  * a string that the backend api likes:
  *   name.asc,id.desc
  */
-export function tableSortToAPI(sortBy: any): string | undefined {
+interface SortItem {
+	id: string;
+	desc: boolean;
+}
+
+export function tableSortToAPI(sortBy: SortItem[]): string | undefined {
 	if (sortBy?.length > 0) {
 		const strs: string[] = [];
-		sortBy.map((item: any) => {
+		sortBy.map((item) => {
 			strs.push(`${decamelize(item.id)}.${item.desc ? "desc" : "asc"}`);
 			return undefined;
 		});
@@ -22,10 +27,18 @@ export function tableSortToAPI(sortBy: any): string | undefined {
  * a string that the backend api likes:
  *   name:contains=jam
  */
-export function tableFiltersToAPI(filters: any[]): { [key: string]: string } {
+interface FilterItem {
+	id: string;
+	value: {
+		modifier: string;
+		value: string;
+	};
+}
+
+export function tableFiltersToAPI(filters: FilterItem[]): { [key: string]: string } {
 	const items: { [key: string]: string } = {};
 	if (filters?.length > 0) {
-		filters.map((item: any) => {
+		filters.map((item) => {
 			items[`${decamelize(item.id)}:${item.value.modifier}`] = item.value.value;
 			return undefined;
 		});

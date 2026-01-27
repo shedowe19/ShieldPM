@@ -1,8 +1,9 @@
 import { IconArrowsRightLeft, IconNote } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import type { Stream } from "src/api/backend";
 import { Loading, NoteWarning, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -27,6 +28,17 @@ interface Props extends InnerModalProps {
 	remove: () => void;
 }
 
+interface StreamValues {
+	incomingPort: string;
+	forwardingHost: string;
+	forwardingPort: string;
+	tcpForwarding: boolean;
+	udpForwarding: boolean;
+	certificateId: number;
+	meta: Record<string, unknown>;
+	note: string;
+}
+
 const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useStream(id);
 	const { mutate: setStream } = useSetStream();
@@ -34,18 +46,21 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("details");
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: StreamValues, { setSubmitting }: FormikHelpers<StreamValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
-		const { ...payload } = {
-			id: id === "new" ? undefined : id,
+		// We need to ensure ports are numbers for the API
+		const payload = {
 			...values,
+			id: id === "new" ? undefined : id,
+			incomingPort: Number(values.incomingPort),
+			forwardingPort: Number(values.forwardingPort),
 		};
 
-		setStream(payload, {
-			onError: (err: any) => setErrorMsg(<T id={err.message} />),
+		setStream(payload as unknown as Stream, {
+			onError: (err: Error) => setErrorMsg(<T id={err.message} />),
 			onSuccess: () => {
 				showObjectSuccess("stream", "saved");
 				remove();
@@ -70,20 +85,20 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				)}
 
 				{!isLoading && data && (
-					<Formik<any>
+					<Formik<StreamValues>
 						initialValues={{
-							incomingPort: data?.incomingPort,
-							forwardingHost: data?.forwardingHost,
-							forwardingPort: data?.forwardingPort,
-							tcpForwarding: data?.tcpForwarding,
-							udpForwarding: data?.udpForwarding,
-							certificateId: data?.certificateId,
+							incomingPort: String(data?.incomingPort || ""),
+							forwardingHost: data?.forwardingHost || "",
+							forwardingPort: String(data?.forwardingPort || ""),
+							tcpForwarding: data?.tcpForwarding || false,
+							udpForwarding: data?.udpForwarding || false,
+							certificateId: data?.certificateId || 0,
 							meta: data?.meta || {},
 							note: data?.note || "",
 						}}
 						onSubmit={onSubmit}
 					>
-						{({ setFieldValue, errors, touched, handleSubmit }: any) => (
+						{({ setFieldValue, errors, touched, handleSubmit }) => (
 							<Form onSubmit={handleSubmit} className="space-y-4">
 								<DialogHeader>
 									<DialogTitle className="flex items-center gap-2">
@@ -123,7 +138,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="stream.incoming-port" />
 												</Label>
 												<Field name="incomingPort" validate={validateString(1, 11)}>
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<Input
 															{...field}
 															id="incomingPort"
@@ -150,7 +165,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<T id="stream.forward-host" />
 													</Label>
 													<Field name="forwardingHost" validate={validateString(1, 255)}>
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<Input
 																{...field}
 																id="forwardingHost"
@@ -177,7 +192,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<T id="host.forward-port" />
 													</Label>
 													<Field name="forwardingPort" validate={validateString(0, 12)}>
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<Input
 																{...field}
 																id="forwardingPort"
@@ -211,7 +226,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															<T id="streams.tcp" />
 														</Label>
 														<Field name="tcpForwarding" type="checkbox">
-															{({ field }: any) => (
+															{({ field }: FieldProps) => (
 																<Switch
 																	id="tcpForwarding"
 																	checked={field.value}
@@ -233,7 +248,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															<T id="streams.udp" />
 														</Label>
 														<Field name="udpForwarding" type="checkbox">
-															{({ field }: any) => (
+															{({ field }: FieldProps) => (
 																<Switch
 																	id="udpForwarding"
 																	checked={field.value}
@@ -253,7 +268,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 										<TabsContent value="notes" className="space-y-4">
 											<Field name="note">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<div className="space-y-2 mb-4">
 														<Label htmlFor="note">
 															<T id="host.note" />

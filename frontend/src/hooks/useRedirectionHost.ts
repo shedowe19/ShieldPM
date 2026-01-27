@@ -48,7 +48,7 @@ const useSetRedirectionHost = () => {
 			values.id ? updateRedirectionHost(values) : createRedirectionHost(values),
 		onMutate: (values: RedirectionHost) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
 			const previousObject = queryClient.getQueryData(["redirection-host", values.id]);
 			queryClient.setQueryData(["redirection-host", values.id], (old: RedirectionHost) => ({
@@ -57,7 +57,7 @@ const useSetRedirectionHost = () => {
 			}));
 			return () => queryClient.setQueryData(["redirection-host", values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: RedirectionHost) => {
 			queryClient.invalidateQueries({ queryKey: ["redirection-host", id] });
 			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });

@@ -28,7 +28,7 @@ const mockCertificates = [
 
 // Mock T component from src/locale
 vi.mock("src/locale", () => ({
-	T: ({ id, data }: { id: string; data?: any }) => {
+	T: ({ id, data }: { id: string; data?: { days?: number | string } }) => {
 		if (id === "dashboard.certificates-expiring") return "Certificates Expiring Soon";
 		if (id === "dashboard.expired") return "Expired";
 		if (id === "dashboard.days-left") return `${data?.days} Days Left`;

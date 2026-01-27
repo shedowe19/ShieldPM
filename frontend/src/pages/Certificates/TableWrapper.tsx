@@ -63,8 +63,8 @@ export default function TableWrapper() {
 	const handleDownload = async (id: number) => {
 		try {
 			await downloadCertificate(id);
-		} catch (err: any) {
-			showError(err.message);
+		} catch (err) {
+			if (err instanceof Error) showError(err.message);
 		}
 	};
 

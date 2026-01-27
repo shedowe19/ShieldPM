@@ -1,10 +1,10 @@
 import { IconAlertTriangle, IconCheck, IconWorld } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Form, Formik } from "formik";
+import { Form, Formik, type FormikHelpers } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { createCertificate, testHttpCertificate } from "src/api/backend";
+import { type Certificate, createCertificate, testHttpCertificate } from "src/api/backend";
 import { DomainNamesField } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -17,6 +17,11 @@ const showHTTPCertificateModal = () => {
 	EasyModal.show(HTTPCertificateModal);
 };
 
+interface HTTPCertificateValues {
+	domainNames: string[];
+	provider: string;
+}
+
 const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalProps) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
@@ -25,17 +30,17 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 	const [isTesting, setIsTesting] = useState(false);
 	const [testResults, setTestResults] = useState(null as Record<string, string> | null);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: HTTPCertificateValues, { setSubmitting }: FormikHelpers<HTTPCertificateValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
 		try {
-			await createCertificate(values);
+			await createCertificate(values as unknown as Certificate);
 			showObjectSuccess("certificate", "saved");
 			remove();
-		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 		}
 		queryClient.invalidateQueries({ queryKey: ["certificates"] });
 		setIsSubmitting(false);
@@ -49,8 +54,8 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 		try {
 			const result = await testHttpCertificate(domains);
 			setTestResults(result);
-		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+		} catch (err: unknown) {
+			if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 		}
 		setIsTesting(false);
 	};
@@ -94,12 +99,10 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
 			<DialogContent className="sm:max-w-lg">
 				<Formik
-					initialValues={
-						{
-							domainNames: [],
-							provider: "letsencrypt",
-						} as any
-					}
+					initialValues={{
+						domainNames: [] as string[],
+						provider: "letsencrypt",
+					}}
 					onSubmit={onSubmit}
 				>
 					{({ handleSubmit }) => (

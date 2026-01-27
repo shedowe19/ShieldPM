@@ -1,8 +1,9 @@
 import { IconId, IconMail, IconPower, IconSettings, IconShield, IconUser } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
+import type { User } from "src/api/backend";
 import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -23,6 +24,14 @@ const showUserModal = (id: number | "me" | "new") => {
 interface Props extends InnerModalProps {
 	id: number | "me" | "new";
 }
+interface UserValues {
+	name: string;
+	nickname: string;
+	email: string;
+	isAdmin: boolean;
+	isDisabled: boolean;
+}
+
 const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useUser(id);
 	const { data: currentUser, isLoading: currentIsLoading } = useUser("me");
@@ -30,13 +39,13 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: UserValues, { setSubmitting }: FormikHelpers<UserValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
-		const { ...payload } = {
-			id: id === "new" ? undefined : id,
+		const payload: Record<string, unknown> = {
+			id: id === "new" ? undefined : (id as number),
 			roles: [],
 			...values,
 		};
@@ -52,8 +61,10 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		// this isn't a real field, just for the form
 		delete payload.isAdmin;
 
-		setUser(payload, {
-			onError: (err: any) => setErrorMsg(err.message),
+		setUser(payload as unknown as User, {
+			onError: (err) => {
+				if (err instanceof Error) setErrorMsg(err.message);
+			},
 			onSuccess: () => {
 				showObjectSuccess("user", "saved");
 				remove();
@@ -115,16 +126,14 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				)}
 
 				{!isLoading && !currentIsLoading && data && currentUser && (
-					<Formik
-						initialValues={
-							{
-								name: data?.name,
-								nickname: data?.nickname,
-								email: data?.email,
-								isAdmin: data?.roles?.includes("admin") || false,
-								isDisabled: data?.isDisabled || false,
-							} as any
-						}
+					<Formik<UserValues>
+						initialValues={{
+							name: data?.name || "",
+							nickname: data?.nickname || "",
+							email: data?.email || "",
+							isAdmin: data?.roles?.includes("admin") || false,
+							isDisabled: data?.isDisabled || false,
+						}}
 						onSubmit={onSubmit}
 					>
 						{({ errors, touched, setFieldValue, values }) => (
@@ -144,7 +153,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<T id="user.full-name" />
 										</Label>
 										<Field name="name" validate={validateString(1, 50)}>
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<Input
 													id="name"
 													placeholder={intl.formatMessage({ id: "user.full-name" })}
@@ -165,7 +174,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<T id="user.nickname" />
 										</Label>
 										<Field name="nickname" validate={validateString(1, 30)}>
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<Input
 													id="nickname"
 													placeholder={intl.formatMessage({ id: "user.nickname" })}
@@ -190,7 +199,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="email-address" />
 									</Label>
 									<Field name="email" validate={validateEmail()}>
-										{({ field }: any) => (
+										{({ field }: FieldProps) => (
 											<Input
 												id="email"
 												type="email"

@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { type QueryKey, useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -19,7 +19,7 @@ interface ShowProps {
 	tTitle?: string;
 	children: ReactNode;
 	onConfirm: () => Promise<void> | void;
-	invalidations?: any[];
+	invalidations?: QueryKey[];
 }
 
 interface Props extends InnerModalProps, ShowProps {}
@@ -45,8 +45,8 @@ const DeleteConfirmModal = EasyModal.create(
 				invalidations?.forEach((inv) => {
 					queryClient.invalidateQueries({ queryKey: inv });
 				});
-			} catch (err: any) {
-				setError(<T id={err.message} />);
+			} catch (err) {
+				if (err instanceof Error) setError(<T id={err.message} />);
 			}
 			setIsSubmitting(false);
 		};

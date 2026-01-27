@@ -1,8 +1,9 @@
 import { IconGhost, IconNote, IconSettings } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import type { DeadHost } from "src/api/backend";
 import {
 	DomainNamesField,
 	Loading,
@@ -28,6 +29,18 @@ const showDeadHostModal = (id: number | "new") => {
 interface Props extends InnerModalProps {
 	id: number | "new";
 }
+interface DeadHostValues {
+	domainNames: string[];
+	certificateId: number;
+	sslForced: boolean;
+	advancedConfig: string;
+	http2Support: boolean;
+	hstsEnabled: boolean;
+	hstsSubdomains: boolean;
+	meta: Record<string, unknown>;
+	note: string;
+}
+
 const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useDeadHost(id);
 	const { mutate: setDeadHost } = useSetDeadHost();
@@ -35,18 +48,20 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("details");
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: DeadHostValues, { setSubmitting }: FormikHelpers<DeadHostValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
-		const { ...payload } = {
+		const payload = {
 			id: id === "new" ? undefined : id,
 			...values,
 		};
 
-		setDeadHost(payload, {
-			onError: (err: any) => setErrorMsg(<T id={err.message} />),
+		setDeadHost(payload as unknown as DeadHost, {
+			onError: (err) => {
+				if (err instanceof Error) setErrorMsg(<T id={err.message} />);
+			},
 			onSuccess: () => {
 				showObjectSuccess("dead-host", "saved");
 				remove();
@@ -71,20 +86,18 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				)}
 
 				{!isLoading && data && (
-					<Formik
-						initialValues={
-							{
-								domainNames: data?.domainNames,
-								certificateId: data?.certificateId,
-								sslForced: data?.sslForced,
-								advancedConfig: data?.advancedConfig,
-								http2Support: data?.http2Support,
-								hstsEnabled: data?.hstsEnabled,
-								hstsSubdomains: data?.hstsSubdomains,
-								meta: data?.meta || {},
-								note: data?.note || "",
-							} as any
-						}
+					<Formik<DeadHostValues>
+						initialValues={{
+							domainNames: data?.domainNames || [],
+							certificateId: data?.certificateId || 0,
+							sslForced: data?.sslForced || false,
+							advancedConfig: data?.advancedConfig || "",
+							http2Support: data?.http2Support || false,
+							hstsEnabled: data?.hstsEnabled || false,
+							hstsSubdomains: data?.hstsSubdomains || false,
+							meta: data?.meta || {},
+							note: data?.note || "",
+						}}
 						onSubmit={onSubmit}
 					>
 						{({ handleSubmit }) => (
@@ -147,7 +160,7 @@ const DeadHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 										<TabsContent value="notes">
 											<Field name="note">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<div className="space-y-2 mb-4">
 														<Label htmlFor="note">
 															<T id="host.note" />

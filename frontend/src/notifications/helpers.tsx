@@ -10,7 +10,7 @@ const showSuccess = (message: string) => {
 				<Check className="h-4 w-4 text-green-500" />
 				<span>{intl.formatMessage({ id: "notification.success" })}</span>
 			</div>
-		) as any, // Cast to any to avoid type conflict if strict ReactNode check fails
+		),
 		description: message,
 	});
 };
@@ -23,7 +23,7 @@ const showError = (message: string) => {
 				<AlertCircle className="h-4 w-4" />
 				<span>{intl.formatMessage({ id: "notification.error" })}</span>
 			</div>
-		) as any,
+		),
 		description: message,
 	});
 };

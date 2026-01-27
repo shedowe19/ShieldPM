@@ -7,7 +7,7 @@ interface TableLayoutProps<TFields> {
 	tableInstance: ReactTable<TFields>;
 	emptyState?: React.ReactNode;
 	extraStyles?: {
-		row: (rowData: TFields) => any | undefined;
+		row: (rowData: TFields) => React.HTMLAttributes<HTMLTableRowElement> | undefined;
 	};
 }
 function TableLayout<TFields>(props: TableLayoutProps<TFields>) {

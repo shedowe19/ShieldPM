@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { type Resolver, useForm } from "react-hook-form";
 import { z } from "zod";
 import type { TorOnion } from "@/api/backend";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export function TorOnionModal({ open, onOpenChange, service }: TorOnionModalProp
 	const { create, update } = useTorOnion();
 
 	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema) as any,
+		resolver: zodResolver(formSchema) as unknown as Resolver<FormValues>,
 		defaultValues: {
 			name: "",
 			virtualPort: 80,

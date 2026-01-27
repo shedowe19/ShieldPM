@@ -63,7 +63,7 @@ export function TorOnionServices() {
 		const { label, variant } = statusMap[status] || statusMap[0];
 
 		return (
-			<Badge variant={variant as any}>
+			<Badge variant={variant as "secondary" | "warning" | "success" | "destructive"}>
 				<T id={label} />
 			</Badge>
 		);

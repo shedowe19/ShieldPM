@@ -1,7 +1,7 @@
 import { IconCertificate, IconShieldLock } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { type Certificate, createCertificate } from "src/api/backend";
@@ -20,12 +20,22 @@ const showInternalCertificateModal = () => {
 	EasyModal.show(InternalCertificateModal);
 };
 
+interface InternalCertificateValues {
+	type: string;
+	domain_names: string;
+	password: string;
+	years: string;
+}
+
 const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerModalProps) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (
+		values: InternalCertificateValues,
+		{ setSubmitting }: FormikHelpers<InternalCertificateValues>,
+	) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -76,8 +86,8 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 				showObjectSuccess("certificate", "saved");
 				remove();
 			}
-		} catch (err: any) {
-			setErrorMsg(err.message || "An error occurred");
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(err.message || "An error occurred");
 		}
 
 		queryClient.invalidateQueries({ queryKey: ["certificates"] });
@@ -106,7 +116,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 					}}
 					onSubmit={onSubmit}
 				>
-					{({ errors, touched, setFieldValue, values }: any) => (
+					{({ errors, touched, setFieldValue, values }) => (
 						<Form className="space-y-4">
 							{errorMsg && (
 								<Alert variant="destructive">
@@ -165,7 +175,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 											)}
 										</Label>
 										<Field name="domain_names">
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<Textarea
 													{...field}
 													id="domain_names"
@@ -198,7 +208,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 												<T id="certificates.internal.password" />
 											</Label>
 											<Field name="password">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<Input
 														{...field}
 														type="password"

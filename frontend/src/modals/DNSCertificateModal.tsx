@@ -1,10 +1,10 @@
 import { IconWorld } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Form, Formik } from "formik";
+import { Form, Formik, type FormikHelpers } from "formik";
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { createCertificate } from "src/api/backend";
+import { type Certificate, createCertificate } from "src/api/backend";
 import { DNSProviderFields, DomainNamesField } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -17,27 +17,37 @@ const showDNSCertificateModal = () => {
 	EasyModal.show(DNSCertificateModal);
 };
 
+interface DNSCertificateValues {
+	domainNames: string[];
+	provider: string;
+	meta: {
+		dnsChallenge: boolean;
+		[key: string]: unknown;
+	};
+}
+
 const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalProps) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: DNSCertificateValues, { setSubmitting }: FormikHelpers<DNSCertificateValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
 		try {
-			await createCertificate(values);
+			await createCertificate(values as unknown as Certificate);
 			showObjectSuccess("certificate", "saved");
 			remove();
-		} catch (err: any) {
+		} catch (err) {
 			// If the error message likely contains spaces, use it directly (it's a raw log)
 			// Otherwise try to translate it
-			if (err.message?.includes(" ")) {
-				setErrorMsg(err.message);
+			const message = err instanceof Error ? err.message : String(err);
+			if (message.includes(" ")) {
+				setErrorMsg(message);
 			} else {
-				setErrorMsg(<T id={err.message} />);
+				setErrorMsg(<T id={message} />);
 			}
 		}
 		queryClient.invalidateQueries({ queryKey: ["certificates"] });
@@ -49,15 +59,13 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
 			<DialogContent className="sm:max-w-lg">
 				<Formik
-					initialValues={
-						{
-							domainNames: [],
-							provider: "letsencrypt",
-							meta: {
-								dnsChallenge: true,
-							},
-						} as any
-					}
+					initialValues={{
+						domainNames: [] as string[],
+						provider: "letsencrypt",
+						meta: {
+							dnsChallenge: true,
+						},
+					}}
 					onSubmit={onSubmit}
 				>
 					{({ handleSubmit }) => (

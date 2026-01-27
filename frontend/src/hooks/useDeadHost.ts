@@ -37,7 +37,7 @@ const useSetDeadHost = () => {
 		mutationFn: (values: DeadHost) => (values.id ? updateDeadHost(values) : createDeadHost(values)),
 		onMutate: (values: DeadHost) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
 			const previousObject = queryClient.getQueryData(["dead-host", values.id]);
 			queryClient.setQueryData(["dead-host", values.id], (old: DeadHost) => ({
@@ -46,7 +46,7 @@ const useSetDeadHost = () => {
 			}));
 			return () => queryClient.setQueryData(["dead-host", values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: DeadHost) => {
 			queryClient.invalidateQueries({ queryKey: ["dead-host", id] });
 			queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });

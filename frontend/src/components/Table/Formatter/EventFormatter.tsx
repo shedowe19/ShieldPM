@@ -13,28 +13,41 @@ import type { AuditLog } from "src/api/backend";
 import { Badge } from "src/components/ui/badge";
 import { formatDateTime, T } from "src/locale";
 
-const getEventValue = (event: AuditLog) => {
+interface AuditMeta {
+	name?: string;
+	domainNames?: string[];
+	incomingPort?: number;
+	niceName?: string;
+	id?: string;
+	content?: string;
+	onion_address?: string;
+	[key: string]: unknown;
+}
+
+const getEventValue = (event: AuditLog): string => {
+	const meta = (event.meta || {}) as AuditMeta;
+
 	switch (event.objectType) {
 		case "access-list":
 		case "user":
-			return event.meta?.name;
+			return meta.name ?? "N/A";
 		case "proxy-host":
 		case "redirection-host":
 		case "dead-host":
-			return event.meta?.domainNames?.join(", ") || "N/A";
+			return meta.domainNames?.join(", ") || "N/A";
 		case "stream":
-			return event.meta?.incomingPort || "N/A";
+			return meta.incomingPort ? String(meta.incomingPort) : "N/A";
 		case "certificate":
-			return event.meta?.domainNames?.join(", ") || event.meta?.niceName || "N/A";
+			return meta.domainNames?.join(", ") || meta.niceName || "N/A";
 		case "ddns-provider":
 		case "terminal-host":
 		case "cloudflared-tunnel":
 		case "setting":
-			return event.meta?.name || event.meta?.id || "N/A";
+			return meta.name || meta.id || "N/A";
 		case "dashboard_note":
-			return event.meta?.content || "Dashboard Note";
+			return meta.content || "Dashboard Note";
 		case "tor-onion":
-			return event.meta?.onion_address || "N/A";
+			return meta.onion_address || "N/A";
 		default:
 			return `UNKNOWN EVENT TYPE: ${event.objectType}`;
 	}

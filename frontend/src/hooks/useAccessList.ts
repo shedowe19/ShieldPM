@@ -38,7 +38,7 @@ const useSetAccessList = () => {
 		mutationFn: (values: AccessList) => (values.id ? updateAccessList(values) : createAccessList(values)),
 		onMutate: (values: AccessList) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
 			const previousObject = queryClient.getQueryData(["access-list", values.id]);
 			queryClient.setQueryData(["access-list", values.id], (old: AccessList) => ({
@@ -47,7 +47,7 @@ const useSetAccessList = () => {
 			}));
 			return () => queryClient.setQueryData(["access-list", values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: AccessList) => {
 			queryClient.invalidateQueries({ queryKey: ["access-list", id] });
 			queryClient.invalidateQueries({ queryKey: ["access-lists"] });

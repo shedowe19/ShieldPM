@@ -1,10 +1,11 @@
+// biome-ignore assist/source/organizeImports: <@tabler/icons-react>
 import { IconNote, IconRoute } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers, type FormikProps } from "formik";
 import { AlertCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { createRedirectionHost, updateRedirectionHost } from "src/api/backend";
+import { type RedirectionHost, createRedirectionHost, updateRedirectionHost } from "src/api/backend";
 import { DomainNamesField, NginxConfigField, NoteWarning, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -36,7 +37,10 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("details");
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (
+		values: Partial<RedirectionHost>,
+		{ setSubmitting }: FormikHelpers<Partial<RedirectionHost>>,
+	) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -48,9 +52,9 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 		try {
 			if (id === "new") {
-				await createRedirectionHost(payload);
+				await createRedirectionHost(payload as unknown as RedirectionHost);
 			} else {
-				await updateRedirectionHost(payload);
+				await updateRedirectionHost(payload as unknown as RedirectionHost);
 			}
 
 			showObjectSuccess("redirection-host", "saved");
@@ -59,8 +63,9 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 				queryClient.invalidateQueries({ queryKey: ["redirection-host", id] });
 			}
 			remove();
-		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : "Unknown error";
+			setErrorMsg(<T id={message} />);
 		} finally {
 			setIsSubmitting(false);
 			setSubmitting(false);
@@ -90,7 +95,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 				)}
 
 				{!isLoading && (data || id === "new") && (
-					<Formik
+					<Formik<Partial<RedirectionHost>>
 						initialValues={
 							{
 								// Details tab
@@ -111,11 +116,11 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 								meta: data?.meta || {},
 								note: data?.note || "",
-							} as any
+							} as Partial<RedirectionHost>
 						}
 						onSubmit={onSubmit}
 					>
-						{({ setFieldValue, errors, touched }: any) => (
+						{({ setFieldValue, errors, touched }: FormikProps<Partial<RedirectionHost>>) => (
 							<Form className="space-y-4">
 								{errorMsg && (
 									<Alert variant="destructive">
@@ -154,7 +159,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 													<T id="host.forward-scheme" />
 												</Label>
 												<Field name="forwardScheme">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<Select
 															value={field.value}
 															onValueChange={(val) => setFieldValue("forwardScheme", val)}
@@ -184,7 +189,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 											</div>
 											<div className="col-span-1 md:col-span-8">
 												<Field name="forwardDomainName" validate={validateString(1, 255)}>
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<div className="space-y-2">
 															<Label htmlFor="forwardDomainName">
 																<T id="redirection-host.forward-domain" />
@@ -213,7 +218,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 												<T id="redirection-host.forward-http-code" />
 											</Label>
 											<Field name="forwardHttpCode">
-												{({ field }: any) => (
+												{({ field }: FieldProps) => (
 													<Select
 														value={String(field.value)}
 														onValueChange={(val) =>
@@ -258,7 +263,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 														<T id="host.flags.preserve-path" />
 													</Label>
 													<Field name="preservePath">
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<Switch
 																id="preservePath"
 																checked={field.value}
@@ -274,7 +279,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 														<T id="host.flags.block-exploits" />
 													</Label>
 													<Field name="blockExploits">
-														{({ field }: any) => (
+														{({ field }: FieldProps) => (
 															<Switch
 																id="blockExploits"
 																checked={field.value}
@@ -300,7 +305,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 
 									<TabsContent value="notes" className="pt-4">
 										<Field name="note">
-											{({ field }: any) => (
+											{({ field }: FieldProps) => (
 												<div className="space-y-2 mb-4">
 													<Label htmlFor="note">
 														<T id="host.note" />

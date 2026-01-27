@@ -24,7 +24,18 @@ export function AiMessage({ message }: AiMessageProps) {
 					<ReactMarkdown
 						remarkPlugins={[remarkGfm]}
 						components={{
-							code: ({ node, inline, className, children, ...props }: any) => {
+							code: ({
+								node,
+								inline,
+								className,
+								children,
+								...props
+							}: {
+								node?: unknown;
+								inline?: boolean;
+								className?: string;
+								children?: React.ReactNode;
+							} & React.HTMLAttributes<HTMLElement>) => {
 								return inline ? (
 									<code
 										className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs"

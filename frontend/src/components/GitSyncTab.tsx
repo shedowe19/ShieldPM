@@ -1,6 +1,7 @@
 import { IconCheck, IconGitBranch, IconGitCommit, IconRefresh, IconX } from "@tabler/icons-react";
-import { Field, useFormikContext } from "formik";
+import { Field, type FieldProps, useFormikContext } from "formik";
 import { Loader2 } from "lucide-react";
+import type { ProxyHost } from "src/api/backend";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -18,7 +19,7 @@ interface Props {
 }
 
 export function GitSyncTab({ hostId }: Props) {
-	const { values }: any = useFormikContext();
+	const { values } = useFormikContext<ProxyHost>();
 	const { data: status, isLoading, isError, error } = useGitSyncStatus(hostId);
 	const { mutate: triggerSync, isPending: isSyncing } = useTriggerGitSync();
 
@@ -51,7 +52,7 @@ export function GitSyncTab({ hostId }: Props) {
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div className="md:col-span-2">
 					<Field name="gitRepoUrl" validate={validateString(1, 255)}>
-						{({ field, form }: any) => (
+						{({ field, form }: FieldProps) => (
 							<div className="space-y-2">
 								<Label htmlFor="gitRepoUrl">
 									<T id="proxy-host.git-sync.repo-url" />
@@ -67,7 +68,9 @@ export function GitSyncTab({ hostId }: Props) {
 									{...field}
 								/>
 								{form.errors.gitRepoUrl && form.touched.gitRepoUrl && (
-									<p className="text-sm font-medium text-destructive">{form.errors.gitRepoUrl}</p>
+									<p className="text-sm font-medium text-destructive">
+										{form.errors.gitRepoUrl as string}
+									</p>
 								)}
 							</div>
 						)}
@@ -76,7 +79,7 @@ export function GitSyncTab({ hostId }: Props) {
 
 				<div className="md:col-span-1">
 					<Field name="gitBranch">
-						{({ field, form }: any) => (
+						{({ field, form }: FieldProps) => (
 							<div className="space-y-2">
 								<Label htmlFor="gitBranch">
 									<T id="proxy-host.git-sync.branch" />
@@ -96,7 +99,7 @@ export function GitSyncTab({ hostId }: Props) {
 
 				<div className="md:col-span-1">
 					<Field name="gitCredentials">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="space-y-2">
 								<Label htmlFor="gitCredentials">
 									<T id="proxy-host.git-sync.credentials" />
@@ -122,7 +125,7 @@ export function GitSyncTab({ hostId }: Props) {
 							<T id="proxy-host.git-sync.enable-polling" />
 						</Label>
 						<Field name="gitSyncEnabled" type="checkbox">
-							{({ field, form }: any) => (
+							{({ field, form }: FieldProps) => (
 								<Switch
 									id="gitSyncEnabled"
 									checked={field.checked}
@@ -137,7 +140,7 @@ export function GitSyncTab({ hostId }: Props) {
 					{values.gitSyncEnabled && (
 						<div className="grid grid-cols-2 gap-4 pt-2">
 							<Field name="gitPollInterval">
-								{({ field }: any) => (
+								{({ field }: FieldProps) => (
 									<div className="space-y-2">
 										<Label htmlFor="gitPollInterval">
 											<T id="proxy-host.git-sync.poll-interval" />
@@ -147,7 +150,7 @@ export function GitSyncTab({ hostId }: Props) {
 								)}
 							</Field>
 							<Field name="gitPollUnit">
-								{({ field, form }: any) => (
+								{({ field, form }: FieldProps) => (
 									<div className="space-y-2">
 										<Label htmlFor="gitPollUnit">
 											<T id="proxy-host.rate-limiting.unit" />

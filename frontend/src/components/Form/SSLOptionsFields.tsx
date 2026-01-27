@@ -1,4 +1,4 @@
-import { Field, useFormikContext } from "formik";
+import { Field, type FieldProps, useFormikContext } from "formik";
 import { DNSProviderFields, DomainNamesField } from "src/components";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
@@ -12,11 +12,26 @@ interface Props {
 }
 
 export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomainNames, color: _color }: Props) {
-	const { values, setFieldValue } = useFormikContext();
-	const v: any = values || {};
+	const { values, setFieldValue } = useFormikContext<Record<string, unknown>>();
+
+	interface SSLValues {
+		certificateId?: number | string;
+		sslForced?: boolean;
+		http2Support?: boolean;
+		hstsEnabled?: boolean;
+		hstsSubdomains?: boolean;
+		meta?: {
+			dnsChallenge?: boolean;
+			[key: string]: unknown;
+		};
+		[key: string]: unknown;
+	}
+
+	const v = (values || {}) as SSLValues;
 
 	const newCertificate = v?.certificateId === "new";
-	const hasCertificate = newCertificate || (v?.certificateId && v?.certificateId > 0 && v?.certificateId !== "0");
+	const hasCertificate =
+		newCertificate || (v?.certificateId && Number(v?.certificateId) > 0 && v?.certificateId !== "0");
 	const { sslForced, http2Support, hstsEnabled, hstsSubdomains, meta } = v;
 	const { dnsChallenge } = meta || {};
 
@@ -38,7 +53,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
 					<Field name="sslForced">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="flex items-center space-x-2">
 								<Switch
 									id="sslForced"
@@ -55,7 +70,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 				</div>
 				<div>
 					<Field name="http2Support">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="flex items-center space-x-2">
 								<Switch
 									id="http2Support"
@@ -77,7 +92,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
 					<Field name="hstsEnabled">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="flex items-center space-x-2">
 								<Switch
 									id="hstsEnabled"
@@ -97,7 +112,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 				</div>
 				<div>
 					<Field name="hstsSubdomains">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="flex items-center space-x-2">
 								<Switch
 									id="hstsSubdomains"
@@ -125,7 +140,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 			{newCertificate ? (
 				<div className="space-y-4">
 					<Field name="meta.dnsChallenge">
-						{({ field }: any) => (
+						{({ field }: FieldProps) => (
 							<div className="flex items-center space-x-2 mt-4 mb-2">
 								<Switch
 									id="dnsChallenge"

@@ -33,7 +33,7 @@ const useSetUser = () => {
 		mutationFn: (values: User) => (values.id ? updateUser(values) : createUser(values)),
 		onMutate: (values: User) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
 			const previousObject = queryClient.getQueryData(["user", values.id]);
 			queryClient.setQueryData(["user", values.id], (old: User) => ({
@@ -42,7 +42,7 @@ const useSetUser = () => {
 			}));
 			return () => queryClient.setQueryData(["user", values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: User) => {
 			queryClient.invalidateQueries({ queryKey: ["user", id] });
 			queryClient.invalidateQueries({ queryKey: ["users"] });

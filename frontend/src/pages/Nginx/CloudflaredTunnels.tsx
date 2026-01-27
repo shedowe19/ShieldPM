@@ -80,7 +80,7 @@ export function CloudflaredTunnels() {
 							</TooltipTrigger>
 							<TooltipContent className="max-w-md">
 								<p className="font-mono text-xs whitespace-pre-wrap">
-									{meta?.last_error || "No error details available."}
+									{(meta?.last_error as string) || "No error details available."}
 								</p>
 							</TooltipContent>
 						</Tooltip>

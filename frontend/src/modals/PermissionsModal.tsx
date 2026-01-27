@@ -9,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers, type FormikProps } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { setPermissions } from "src/api/backend";
@@ -30,13 +30,24 @@ const showPermissionsModal = (id: number) => {
 interface Props extends InnerModalProps {
 	id: number;
 }
+
+interface PermissionsValues {
+	visibility: string;
+	accessLists: string;
+	certificates: string;
+	deadHosts: string;
+	proxyHosts: string;
+	redirectionHosts: string;
+	streams: string;
+}
+
 const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const { data, isLoading, error } = useUser(id);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (values: PermissionsValues, { setSubmitting }: FormikHelpers<PermissionsValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -45,8 +56,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			remove();
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 			queryClient.invalidateQueries({ queryKey: ["user"] });
-		} catch (err: any) {
-			setErrorMsg(<T id={err.message} />);
+		} catch (err) {
+			if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 		}
 		setSubmitting(false);
 		setIsSubmitting(false);
@@ -54,7 +65,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 	// given the field and clicked permission, intelligently set the value, and
 	// other values that depends on it.
-	const handleChange = (form: any, field: any, perm: string) => {
+	const handleChange = (form: FormikProps<PermissionsValues>, field: FieldProps["field"], perm: string) => {
 		if (!perm) return; // Toggle group can return undefined if unchecked
 
 		if (field.name === "proxyHosts" && perm !== "hidden" && form.values.accessLists === "hidden") {
@@ -72,7 +83,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		form.setFieldValue(field.name, perm);
 	};
 
-	const getPermissionButtons = (field: any, form: any) => {
+	const getPermissionButtons = (field: FieldProps["field"], form: FormikProps<PermissionsValues>) => {
 		let hiddenDisabled = false;
 		if (field.name === "accessLists") {
 			hiddenDisabled = form.values.proxyHosts !== "hidden";
@@ -157,20 +168,18 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 				{!isLoading && data && (
 					<Formik
-						initialValues={
-							{
-								visibility: data.permissions?.visibility,
-								accessLists: data.permissions?.accessLists,
-								certificates: data.permissions?.certificates,
-								deadHosts: data.permissions?.deadHosts,
-								proxyHosts: data.permissions?.proxyHosts,
-								redirectionHosts: data.permissions?.redirectionHosts,
-								streams: data.permissions?.streams,
-							} as any
-						}
+						initialValues={{
+							visibility: data.permissions?.visibility || "all",
+							accessLists: data.permissions?.accessLists || "all",
+							certificates: data.permissions?.certificates || "all",
+							deadHosts: data.permissions?.deadHosts || "all",
+							proxyHosts: data.permissions?.proxyHosts || "all",
+							redirectionHosts: data.permissions?.redirectionHosts || "all",
+							streams: data.permissions?.streams || "all",
+						}}
 						onSubmit={onSubmit}
 					>
-						{({ values, setFieldValue, ...formikProps }) => (
+						{() => (
 							<Form className="space-y-4">
 								{errorMsg && (
 									<Alert variant="destructive" className="mb-4">
@@ -186,11 +195,13 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<T id="permissions.visibility.title" />
 									</Label>
 									<Field name="visibility">
-										{({ field }: any) => (
+										{({ field, form }: FieldProps) => (
 											<ToggleGroup
 												type="single"
-												value={field.value}
-												onValueChange={(val) => val && setFieldValue(field.name, val)}
+												value={field.value || ""}
+												onValueChange={(val) => {
+													if (val) form.setFieldValue(field.name, val);
+												}}
 												className="justify-start w-full border rounded-md p-1"
 											>
 												<ToggleGroupItem value="user" className="flex-1">
@@ -213,12 +224,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="proxy-hosts" />
 												</Label>
 												<Field name="proxyHosts">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -228,12 +235,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="redirection-hosts" />
 												</Label>
 												<Field name="redirectionHosts">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -243,12 +246,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="dead-hosts" />
 												</Label>
 												<Field name="deadHosts">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -258,12 +257,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="streams" />
 												</Label>
 												<Field name="streams">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -273,12 +268,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="access-lists" />
 												</Label>
 												<Field name="accessLists">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>
@@ -288,12 +279,8 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="certificates" />
 												</Label>
 												<Field name="certificates">
-													{({ field }: any) =>
-														getPermissionButtons(field, {
-															values,
-															setFieldValue,
-															...formikProps,
-														})
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
 													}
 												</Field>
 											</div>

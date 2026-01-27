@@ -33,7 +33,7 @@ const useSetStream = () => {
 		mutationFn: (values: Stream) => (values.id ? updateStream(values) : createStream(values)),
 		onMutate: (values: Stream) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
 			const previousObject = queryClient.getQueryData(["stream", values.id]);
 			queryClient.setQueryData(["stream", values.id], (old: Stream) => ({
@@ -42,7 +42,7 @@ const useSetStream = () => {
 			}));
 			return () => queryClient.setQueryData(["stream", values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: Stream) => {
 			queryClient.invalidateQueries({ queryKey: ["stream", id] });
 			queryClient.invalidateQueries({ queryKey: ["streams"] });

@@ -11,7 +11,7 @@ export interface TableSortBy {
 
 export interface TableFilter {
 	id: string;
-	value: any;
+	value: unknown;
 }
 
 const tableEvents = {
@@ -20,44 +20,62 @@ const tableEvents = {
 	PAGE_SIZE_CHANGED: "PAGE_SIZE_CHANGED",
 	TOTAL_COUNT_CHANGED: "TOTAL_COUNT_CHANGED",
 	SORT_CHANGED: "SORT_CHANGED",
-};
+} as const;
 
-const tableEventReducer = (state: any, { type, payload }: any) => {
+interface TableState {
+	limit: number;
+	offset: number;
+	total: number;
+	sortBy?: TableSortBy;
+	filters?: TableFilter[];
+}
+
+type TableAction =
+	| { type: typeof tableEvents.PAGE_CHANGED; payload: number }
+	| { type: typeof tableEvents.PAGE_SIZE_CHANGED; payload: number }
+	| { type: typeof tableEvents.TOTAL_COUNT_CHANGED; payload: number }
+	| { type: typeof tableEvents.SORT_CHANGED; payload: TableSortBy }
+	| { type: typeof tableEvents.FILTERS_CHANGED; payload: TableFilter[] };
+
+const tableEventReducer = (state: TableState, action: TableAction): TableState => {
+	const { type, payload } = action;
 	let offset = state.offset;
 	switch (type) {
 		case tableEvents.PAGE_CHANGED:
 			return {
 				...state,
-				offset: payload * state.limit,
+				offset: (payload as number) * state.limit,
 			};
 		case tableEvents.PAGE_SIZE_CHANGED:
 			return {
 				...state,
-				limit: payload,
+				limit: payload as number,
 			};
 		case tableEvents.TOTAL_COUNT_CHANGED:
 			return {
 				...state,
-				total: payload,
+				total: payload as number,
 			};
 		case tableEvents.SORT_CHANGED:
 			return {
 				...state,
-				sortBy: payload,
+				sortBy: payload as TableSortBy,
 			};
-		case tableEvents.FILTERS_CHANGED:
-			if (state.filters !== payload) {
+		case tableEvents.FILTERS_CHANGED: {
+			const filters = payload as TableFilter[];
+			if (state.filters !== filters) {
 				// this actually was a legit change
 				// sets to page 1 when filter is modified
 				offset = 0;
 			}
 			return {
 				...state,
-				filters: payload,
+				filters,
 				offset,
 			};
+		}
 		default:
-			throw new Error(`Unhandled action type: ${type}`);
+			throw new Error(`Unhandled action type: ${(action as { type: string }).type}`);
 	}
 };
 

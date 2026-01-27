@@ -1,4 +1,4 @@
-import { flexRender } from "@tanstack/react-table";
+import { flexRender, type Table } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "framer-motion";
 import React from "react";
 import type { TableLayoutProps } from "src/components";
@@ -6,7 +6,9 @@ import { TableBody as ShadcnTableBody, TableCell, TableRow } from "src/component
 import { EmptyRow } from "./EmptyRow";
 
 // Helper to use forwardRef with motion
-const TableRowWithRef = React.forwardRef<HTMLTableRowElement, any>((props, ref) => <TableRow ref={ref} {...props} />);
+const TableRowWithRef = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
+	(props, ref) => <TableRow ref={ref} {...props} />,
+);
 TableRowWithRef.displayName = "TableRowWithRef";
 
 const MotionTableRow = motion(TableRowWithRef);
@@ -30,7 +32,7 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 						</TableCell>
 					</TableRow>
 				) : (
-					<EmptyRow tableInstance={tableInstance} />
+					<EmptyRow tableInstance={tableInstance as unknown as Table<unknown>} />
 				)}
 			</ShadcnTableBody>
 		);
@@ -43,7 +45,8 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 					return (
 						<MotionTableRow
 							key={row.id}
-							{...extraStyles?.row(row.original)}
+							// biome-ignore lint/suspicious/noExplicitAny: Framer motion type conflict
+							{...(extraStyles?.row(row.original) as Record<string, unknown>)}
 							initial={{ opacity: 0, x: -20 }}
 							animate={{ opacity: 1, x: 0 }}
 							exit={{ opacity: 0, x: 20 }}
@@ -51,7 +54,7 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 							layout
 						>
 							{row.getVisibleCells().map((cell) => {
-								const { className } = (cell.column.columnDef.meta as any) ?? {};
+								const { className } = (cell.column.columnDef.meta as { className?: string }) ?? {};
 								return (
 									<TableCell key={cell.id} className={className}>
 										{flexRender(cell.column.columnDef.cell, cell.getContext())}

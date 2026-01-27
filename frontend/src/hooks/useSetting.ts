@@ -20,7 +20,7 @@ const useSetSetting = () => {
 		mutationFn: (values: Setting) => updateSetting(values),
 		onMutate: (values: Setting) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
 			const previousObject = queryClient.getQueryData(["setting", values.id]);
 			queryClient.setQueryData(["setting", values.id], (old: Setting) => ({
@@ -29,7 +29,7 @@ const useSetSetting = () => {
 			}));
 			return () => queryClient.setQueryData(["setting", values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: Setting) => {
 			queryClient.invalidateQueries({ queryKey: ["setting", id] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });

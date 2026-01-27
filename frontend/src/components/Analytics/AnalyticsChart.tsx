@@ -13,8 +13,18 @@ import {
 import { useTheme } from "../../hooks/useTheme";
 import { T } from "../../locale";
 
+interface AnalyticsDataPoint {
+	time_bucket: number;
+	hits: number;
+	bytes: number;
+	status_2xx: number;
+	status_3xx: number;
+	status_4xx: number;
+	status_5xx: number;
+}
+
 interface Props {
-	data: any[];
+	data: AnalyticsDataPoint[];
 }
 
 export const AnalyticsChart = ({ data }: Props) => {

@@ -49,7 +49,7 @@ const useSetProxyHost = () => {
 		mutationFn: (values: ProxyHost) => (values.id ? updateProxyHost(values) : createProxyHost(values)),
 		onMutate: (values: ProxyHost) => {
 			if (!values.id) {
-				return;
+				return () => {};
 			}
 			const previousObject = queryClient.getQueryData(["proxy-host", values.id]);
 			queryClient.setQueryData(["proxy-host", values.id], (old: ProxyHost) => ({
@@ -58,7 +58,7 @@ const useSetProxyHost = () => {
 			}));
 			return () => queryClient.setQueryData(["proxy-host", values.id], previousObject);
 		},
-		onError: (_, __, rollback: any) => rollback(),
+		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: ProxyHost) => {
 			queryClient.invalidateQueries({ queryKey: ["proxy-host", id] });
 			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });

@@ -1,5 +1,5 @@
 import { IconPlus, IconShield } from "@tabler/icons-react";
-import { Field, useFormikContext } from "formik";
+import { Field, type FieldProps, useFormikContext } from "formik";
 import type { Certificate } from "src/api/backend";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
@@ -32,12 +32,12 @@ export function SSLCertificateField({
 	forHttp = true,
 }: Props) {
 	const { isLoading, isError, error, data } = useCertificates();
-	const { values, setFieldValue } = useFormikContext();
-	const v: any = values || {};
+	const { values, setFieldValue } = useFormikContext<Record<string, unknown>>();
+	const v = values || {};
 
 	// Helper to convert value to string for Select component
 	// The certificate ID is number, "new" is string, "0" for none
-	const getValueString = (val: any) => {
+	const getValueString = (val: unknown) => {
 		if (val === undefined || val === null) return "0";
 		return String(val);
 	};
@@ -108,7 +108,7 @@ export function SSLCertificateField({
 
 	return (
 		<Field name={name}>
-			{({ field, form }: any) => (
+			{({ field, form }: FieldProps) => (
 				<div className="mb-3 space-y-2">
 					<Label htmlFor={id}>
 						<T id={label} />
@@ -143,7 +143,7 @@ export function SSLCertificateField({
 						</Select>
 					)}
 					{form.errors[field.name] && form.touched[field.name] && (
-						<div className="text-destructive text-sm">{form.errors[field.name]}</div>
+						<div className="text-destructive text-sm">{form.errors[field.name] as string}</div>
 					)}
 				</div>
 			)}

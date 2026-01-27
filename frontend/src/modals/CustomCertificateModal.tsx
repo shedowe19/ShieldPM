@@ -1,7 +1,7 @@
 import { IconCertificate } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, Form, Formik } from "formik";
+import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { type Certificate, createCertificate, uploadCertificate, validateCertificate } from "src/api/backend";
@@ -21,6 +21,19 @@ const showCustomCertificateModal = () => {
 	EasyModal.show(CustomCertificateModal);
 };
 
+interface CustomCertificateValues {
+	niceName: string;
+	provider: "other";
+	// Upload fields
+	certificate: File | null;
+	certificateKey: File | null;
+	intermediateCertificate: File | null;
+	// Text fields
+	certificateText: string;
+	certificateKeyText: string;
+	intermediateCertificateText: string;
+}
+
 const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModalProps) => {
 	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
@@ -32,7 +45,10 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 		return content.includes(`-----BEGIN ${type}-----`);
 	};
 
-	const onSubmit = async (values: any, { setSubmitting }: any) => {
+	const onSubmit = async (
+		values: CustomCertificateValues,
+		{ setSubmitting }: FormikHelpers<CustomCertificateValues>,
+	) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -90,10 +106,12 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 			// Success
 			showObjectSuccess("certificate", "saved");
 			remove();
-		} catch (err: any) {
-			// If it's a known error key, translate it, otherwise show message
-			const isKey = err.message.includes(".") || err.message.includes("_");
-			setErrorMsg(isKey ? <T id={err.message} /> : err.message);
+		} catch (err) {
+			if (err instanceof Error) {
+				// If it's a known error key, translate it, otherwise show message
+				const isKey = err.message.includes(".") || err.message.includes("_");
+				setErrorMsg(isKey ? <T id={err.message} /> : err.message);
+			}
 		}
 
 		queryClient.invalidateQueries({ queryKey: ["certificates"] });
@@ -111,24 +129,22 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 					</DialogTitle>
 				</DialogHeader>
 
-				<Formik
-					initialValues={
-						{
-							niceName: "",
-							provider: "other",
-							// Upload fields
-							certificate: null,
-							certificateKey: null,
-							intermediateCertificate: null,
-							// Text fields
-							certificateText: "",
-							certificateKeyText: "",
-							intermediateCertificateText: "",
-						} as any
-					}
+				<Formik<CustomCertificateValues>
+					initialValues={{
+						niceName: "",
+						provider: "other",
+						// Upload fields
+						certificate: null,
+						certificateKey: null,
+						intermediateCertificate: null,
+						// Text fields
+						certificateText: "",
+						certificateKeyText: "",
+						intermediateCertificateText: "",
+					}}
 					onSubmit={onSubmit}
 				>
-					{({ errors, touched, setFieldValue }: any) => (
+					{({ errors, touched, setFieldValue }) => (
 						<Form className="space-y-4">
 							{errorMsg && (
 								<Alert variant="destructive">
@@ -143,7 +159,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 									<T id="column.name" />
 								</Label>
 								<Field name="niceName" validate={validateString(1, 255)}>
-									{({ field }: any) => (
+									{({ field }: FieldProps) => (
 										<Input
 											{...field}
 											id="niceName"
@@ -157,7 +173,11 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 								)}
 							</div>
 
-							<Tabs value={mode} onValueChange={(v: any) => setMode(v)} className="w-full">
+							<Tabs
+								value={mode}
+								onValueChange={(v) => setMode(v as "upload" | "paste")}
+								className="w-full"
+							>
 								<TabsList className="grid w-full grid-cols-2">
 									<TabsTrigger value="upload">File Upload</TabsTrigger>
 									<TabsTrigger value="paste">Paste Input</TabsTrigger>
@@ -234,7 +254,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 											<div className="space-y-2">
 												<Label htmlFor="certificateKeyText">Private Key (PEM)</Label>
 												<Field name="certificateKeyText">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<Textarea
 															{...field}
 															id="certificateKeyText"
@@ -248,7 +268,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 											<div className="space-y-2">
 												<Label htmlFor="certificateText">Certificate Body (PEM)</Label>
 												<Field name="certificateText">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<Textarea
 															{...field}
 															id="certificateText"
@@ -264,7 +284,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 													Intermediate Certificate (Optional)
 												</Label>
 												<Field name="intermediateCertificateText">
-													{({ field }: any) => (
+													{({ field }: FieldProps) => (
 														<Textarea
 															{...field}
 															id="intermediateCertificateText"

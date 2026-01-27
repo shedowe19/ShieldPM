@@ -37,8 +37,8 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 				queryClient.invalidateQueries({ queryKey: ["certificates"] });
 				remove();
 			})
-			.catch((err: any) => {
-				setErrorMsg(<T id={err.message} />);
+			.catch((err) => {
+				if (err instanceof Error) setErrorMsg(<T id={err.message} />);
 			})
 			.finally(() => {
 				setIsSubmitting(false);

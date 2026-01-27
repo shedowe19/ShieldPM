@@ -1,5 +1,5 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
-import { Field } from "formik";
+import { Field, type FieldProps } from "formik";
 import { Label } from "src/components/ui/label";
 import { intl, T } from "src/locale";
 
@@ -15,7 +15,7 @@ export function NginxConfigField({
 }: Props) {
 	return (
 		<Field name={name}>
-			{({ field }: any) => (
+			{({ field }: FieldProps) => (
 				<div className="space-y-2 mt-4 ml-[1px]">
 					<Label htmlFor={id}>
 						<T id={label} />

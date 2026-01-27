@@ -1,5 +1,5 @@
 import { IconLock, IconLockOpen2 } from "@tabler/icons-react";
-import { Field, useFormikContext } from "formik";
+import { Field, type FieldProps, useFormikContext } from "formik";
 import type { ReactNode } from "react";
 import Select, { type ActionMeta, components, type OptionProps } from "react-select";
 import type { AccessList } from "src/api/backend";
@@ -37,8 +37,9 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 	const { isLoading, isError, error, data } = useAccessLists(["owner", "items", "clients"]);
 	const { setFieldValue } = useFormikContext();
 
-	const handleChange = (newValue: any, _actionMeta: ActionMeta<AccessOption>) => {
-		setFieldValue(name, newValue?.value);
+	const handleChange = (newValue: unknown, _actionMeta: ActionMeta<AccessOption>) => {
+		const option = newValue as AccessOption | null;
+		setFieldValue(name, option?.value);
 	};
 
 	const options: AccessOption[] =
@@ -66,7 +67,7 @@ export function AccessField({ name = "accessListId", label = "access-list", id =
 
 	return (
 		<Field name={name}>
-			{({ field, form }: any) => (
+			{({ field, form }: FieldProps) => (
 				<div className="space-y-2 mb-3">
 					<Label htmlFor={id}>
 						<T id={label} />

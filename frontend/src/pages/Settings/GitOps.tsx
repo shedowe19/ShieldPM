@@ -67,7 +67,7 @@ export default function GitOps() {
 	}
 
 	const handleSave = async () => {
-		const payload: any = { ...formData };
+		const payload: Partial<typeof formData> = { ...formData };
 		if (!payload.credentials) {
 			delete payload.credentials; // Don't send empty credentials
 		}
