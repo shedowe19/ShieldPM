@@ -112,6 +112,7 @@ const ai = {
 			const SettingModel = (await import("../models/setting.js")).default;
 			await SettingModel.query().insert({
 				id: AI_CONFIG_ID,
+				name: AI_CONFIG_ID,
 				description: "AI Agent Configuration",
 				value: data.enabled ? "true" : "false",
 				meta: dataToSave,
