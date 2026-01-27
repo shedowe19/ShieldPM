@@ -78,7 +78,9 @@ const internalChat = {
 						const generatedToken = jwt.sign(
 							{
 								scope: ["user"],
-								id: integration.user_id,
+								attrs: {
+									id: integration.user_id,
+								},
 							},
 							secret,
 							{
