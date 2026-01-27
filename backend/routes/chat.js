@@ -38,7 +38,7 @@ router.get("/", jwtdecode(), async (_req, res, next) => {
  * POST /api/chat-integrations
  * Create a new integration
  */
-router.post("/", async (req, res, next) => {
+router.post("/", jwtdecode(), async (req, res, next) => {
 	try {
 		// Reusing settings permission or create new?
 		// Let's assume if you can login, you can create a bot for yourself.
