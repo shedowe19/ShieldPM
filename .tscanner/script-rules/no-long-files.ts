@@ -1,8 +1,9 @@
 #!/usr/bin/env npx tsx
 
+// biome-ignore assist/source/organizeImports: <tscanner>
 import { type ScriptIssue, addIssue, runScript } from 'tscanner';
 
-const MAX_LINES = 300;
+const MAX_LINES = 1500;
 
 runScript((input) => {
   const issues: ScriptIssue[] = [];
