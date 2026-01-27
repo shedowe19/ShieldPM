@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
 import access from "../lib/access.js";
-import { configGet, getPrivateKey } from "../lib/config.js";
+import { getPrivateKey } from "../lib/config.js";
 import { decrypt } from "../lib/encryption.js";
 import { global as logger } from "../logger.js";
 import ChatIntegrationModel from "../models/chat_integration.js";
