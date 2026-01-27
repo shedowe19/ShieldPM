@@ -1,20 +1,19 @@
 import express from "express";
 import internalChat from "../internal/chat.js";
 import { encrypt } from "../lib/encryption.js";
+import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import ChatIntegrationModel from "../models/chat_integration.js";
 import { getValidationSchema } from "../schema/index.js";
 
 const router = express.Router();
 
-import jwtdecode from "../lib/express/jwt-decode.js";
-
 /**
  * GET /api/chat-integrations
  * List all chat integrations for the current user (or all if admin?)
  * For now, let's limit to user's own integrations or admin view.
  */
-router.get("/", jwtdecode(), async (req, res, next) => {
+router.get("/", jwtdecode(), async (_req, res, next) => {
 	try {
 		// Use 'settings:list' or 'users:list' as proxy for admin?
 		// Or creating a new permission 'chat:list'?
@@ -23,7 +22,7 @@ router.get("/", jwtdecode(), async (req, res, next) => {
 		// For MVP: Return all if admin, specific if user.
 
 		const integrations = await ChatIntegrationModel.query()
-			.where("user_id", req.token.attrs.id)
+			.where("user_id", res.locals.access.token.getUserId())
 			.orWhere(() => {
 				// If admin, show all? TODO: Add proper Admin check
 				// For now simpler: Users manage THEIR OWN bots.
@@ -53,7 +52,7 @@ router.post("/", async (req, res, next) => {
 
 		const integration = await ChatIntegrationModel.query().insertAndFetch({
 			...payload,
-			user_id: req.token.attrs.id,
+			user_id: res.locals.access.token.getUserId(),
 			meta: payload.meta || {},
 			config: payload.config || { allowed_ids: [] },
 		});
@@ -76,9 +75,9 @@ router.put("/:id", async (req, res, next) => {
 		const integration = await ChatIntegrationModel.query().findById(req.params.id);
 		if (!integration) throw new Error("Not Found");
 
-		if (integration.user_id !== req.token.attrs.id) {
+		if (integration.user_id !== res.locals.access.token.getUserId()) {
 			// Check generic admin permission if not owner
-			await req.access.can("settings:update", "chat");
+			await res.locals.access.can("settings:update", "chat");
 		}
 
 		const payload = await apiValidator(getValidationSchema("/chat/{integrationID}", "put"), req.body);
@@ -108,8 +107,8 @@ router.delete("/:id", async (req, res, next) => {
 		const integration = await ChatIntegrationModel.query().findById(req.params.id);
 		if (!integration) throw new Error("Not Found");
 
-		if (integration.user_id !== req.token.attrs.id) {
-			await req.access.can("settings:update", "chat");
+		if (integration.user_id !== res.locals.access.token.getUserId()) {
+			await res.locals.access.can("settings:update", "chat");
 		}
 
 		await internalChat.stopBot(integration.id);
