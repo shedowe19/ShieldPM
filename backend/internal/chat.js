@@ -118,7 +118,22 @@ const internalChat = {
 
 					// Send response
 					if (response.content) {
-						await ctx.reply(response.content, { parse_mode: "Markdown" });
+						try {
+							await ctx.reply(response.content, { parse_mode: "Markdown" });
+						} catch (sendErr) {
+							// Check for markdown parse errors
+							if (
+								sendErr.message.includes("can't parse entities") ||
+								sendErr.message.includes("Can't find end of the entity")
+							) {
+								logger.warn(
+									`[ChatOps] Markdown send failed (${sendErr.message}), falling back to plain text.`,
+								);
+								await ctx.reply(response.content);
+							} else {
+								throw sendErr;
+							}
+						}
 					} else {
 						logger.warn("[ChatOps] AI returned empty content.");
 						await ctx.reply("🤔 I processed your request but have nothing to say.");
