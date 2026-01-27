@@ -73,7 +73,8 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				setIsSubmitting(false);
 				setSubmitting(false);
 			},
-			onSuccess: async (newUser) => { // Assuming hooks/useSetUser returns the user object on success
+			onSuccess: async (newUser) => {
+				// Assuming hooks/useSetUser returns the user object on success
 				if (values.avatar_type === "upload" && selectedFile) {
 					try {
 						await uploadUserAvatar({ id: newUser.id, file: selectedFile });
@@ -85,7 +86,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						// We could show a toast warning?
 					}
 				}
-				
+
 				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, "saved");
 				remove();
 				setIsSubmitting(false);
@@ -173,7 +174,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									<TabsList className="grid w-full grid-cols-2 mb-4">
 										<TabsTrigger value="details" className="flex items-center gap-2">
 											<IconUser className="h-4 w-4" />
-											<span className="hidden sm:inline"><T id="details" /></span>
+											<span className="hidden sm:inline">
+												<T id="details" />
+											</span>
 										</TabsTrigger>
 										<TabsTrigger value="avatar" className="flex items-center gap-2">
 											<IconPhoto className="h-4 w-4" />
@@ -193,7 +196,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Input
 															id="name"
 															placeholder={intl.formatMessage({ id: "user.full-name" })}
-															className={errors.name && touched.name ? "border-destructive" : ""}
+															className={
+																errors.name && touched.name ? "border-destructive" : ""
+															}
 															{...field}
 														/>
 													)}
@@ -215,7 +220,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															id="nickname"
 															placeholder={intl.formatMessage({ id: "user.nickname" })}
 															className={
-																errors.nickname && touched.nickname ? "border-destructive" : ""
+																errors.nickname && touched.nickname
+																	? "border-destructive"
+																	: ""
 															}
 															{...field}
 														/>
@@ -240,13 +247,17 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														id="email"
 														type="email"
 														placeholder={intl.formatMessage({ id: "email-address" })}
-														className={errors.email && touched.email ? "border-destructive" : ""}
+														className={
+															errors.email && touched.email ? "border-destructive" : ""
+														}
 														{...field}
 													/>
 												)}
 											</Field>
 											{errors.email && touched.email && (
-												<p className="text-sm font-medium text-destructive">{errors.email as string}</p>
+												<p className="text-sm font-medium text-destructive">
+													{errors.email as string}
+												</p>
 											)}
 										</div>
 
@@ -275,7 +286,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Switch
 															id="isAdmin"
 															checked={values.isAdmin}
-															onCheckedChange={(checked) => setFieldValue("isAdmin", checked)}
+															onCheckedChange={(checked) =>
+																setFieldValue("isAdmin", checked)
+															}
 														/>
 													</div>
 													<div className="flex items-center justify-between">
@@ -296,7 +309,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<Switch
 															id="isDisabled"
 															checked={values.isDisabled}
-															onCheckedChange={(checked) => setFieldValue("isDisabled", checked)}
+															onCheckedChange={(checked) =>
+																setFieldValue("isDisabled", checked)
+															}
 														/>
 													</div>
 												</CardContent>
@@ -304,7 +319,10 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										)}
 									</TabsContent>
 
-									<TabsContent value="avatar" className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+									<TabsContent
+										value="avatar"
+										className="space-y-6 animate-in fade-in slide-in-from-bottom-2"
+									>
 										<div className="flex flex-col items-center justify-center p-6 border rounded-lg bg-muted/20">
 											<div className="bg-background rounded-full p-1 shadow-sm border mb-4">
 												{/* Preview Logic */}
@@ -314,10 +332,10 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														values.avatar_type === "upload" && selectedFile
 															? URL.createObjectURL(selectedFile)
 															: values.avatar_type === "url"
-															? values.avatar_value
-															: values.avatar_type === "upload" && !selectedFile
-															? data?.avatar // Shows current upload if exists
-															: undefined // Gravatar (UserAvatar handles undefined url)
+																? values.avatar_value
+																: values.avatar_type === "upload" && !selectedFile
+																	? data?.avatar // Shows current upload if exists
+																	: undefined // Gravatar (UserAvatar handles undefined url)
 													}
 												/>
 											</div>
@@ -336,7 +354,11 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												}}
 												className="justify-start border p-1 rounded-md inline-flex"
 											>
-												<ToggleGroupItem value="gravatar" aria-label="Gravatar" className="gap-2">
+												<ToggleGroupItem
+													value="gravatar"
+													aria-label="Gravatar"
+													className="gap-2"
+												>
 													Gravatar
 												</ToggleGroupItem>
 												<ToggleGroupItem value="url" aria-label="Custom URL" className="gap-2">
@@ -352,7 +374,8 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<div className="text-sm text-muted-foreground bg-blue-500/10 text-blue-600 p-3 rounded-md flex items-start gap-2">
 												<IconMail className="h-5 w-5 shrink-0" />
 												<span>
-													Avatar will be automatically fetched from Gravatar using your email address:
+													Avatar will be automatically fetched from Gravatar using your email
+													address:
 													<br />
 													<strong>{values.email}</strong>
 												</span>

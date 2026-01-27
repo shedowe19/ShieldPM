@@ -291,8 +291,7 @@ router
 		}
 	});
 
-router
-	.route("/:user_id") // Resume existing routes
+router.route("/:user_id"); // Resume existing routes
 
 /**
  * Specific user auth
