@@ -14,6 +14,7 @@ This PR introduces the ability for users to customize their profile pictures. Pr
     - `POST /api/users/:id/avatar`: Endpoint for uploading avatar images (max 2MB).
     - `GET /api/users/:id/avatar/image`: Endpoint for serving uploaded avatars.
     - Updated `PUT /api/users/:id` to handle avatar type switching.
+    - **Security**: Applied rate limiting (100 req/min) to avatar image serving endpoint.
 - **Logic**: Implemented file serving and upload handling in `internal/user.js`.
 
 ### Frontend

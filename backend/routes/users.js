@@ -1,5 +1,16 @@
 import express from "express";
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
+
+const avatarLimiter = rateLimit({
+	windowMs: 1 * 60 * 1000, // 1 minute
+	limit: 100, // Limit each IP to 100 requests per 1 minute
+	standardHeaders: true,
+	legacyHeaders: false,
+	validate: {
+		trustProxy: false,
+	},
+});
+
 import internalUser from "../internal/user.js";
 import Access from "../lib/access.js";
 import { isDestructiveTestMode } from "../lib/config.js";
@@ -266,7 +277,7 @@ router
 	// The frontend loads images via <img> src.
 	// If protected, <img> tag needs to send cookies. Browsers do this for Same-Origin.
 	// So we can protect it.
-	.get(async (req, res) => {
+	.get(avatarLimiter, async (req, res) => {
 		try {
 			// For image serving, we might not always have Bearer token in header (img tag).
 			// We can rely on Cookie if enabled?
