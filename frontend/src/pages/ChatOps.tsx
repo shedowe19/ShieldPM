@@ -55,7 +55,7 @@ export default function ChatOps() {
 		if (existing) {
 			form.reset({
 				token: "********", // Don't show real encrypted token
-				allowed_ids: existing.config.allowed_ids.join(", "),
+				allowed_ids: existing.config?.allowed_ids?.join(", ") || "",
 				enabled: existing.enabled,
 			});
 		}
