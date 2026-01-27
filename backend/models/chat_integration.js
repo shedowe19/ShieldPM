@@ -45,7 +45,10 @@ class ChatIntegration extends Model {
 				config: {
 					type: "object",
 					properties: {
-						allowed_ids: { type: "array", items: { type: ["string", "number"] } },
+						allowed_ids: {
+							type: "array",
+							items: { anyOf: [{ type: "string" }, { type: "number" }] },
+						},
 					},
 				},
 				meta: { type: "object" },
