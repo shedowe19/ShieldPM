@@ -70,7 +70,7 @@ router.post("/", jwtdecode(), async (req, res, next) => {
  * PUT /api/chat-integrations/:id
  * Update
  */
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", jwtdecode(), async (req, res, next) => {
 	try {
 		const integration = await ChatIntegrationModel.query().findById(req.params.id);
 		if (!integration) throw new Error("Not Found");
@@ -102,7 +102,7 @@ router.put("/:id", async (req, res, next) => {
 /**
  * DELETE /api/chat-integrations/:id
  */
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", jwtdecode(), async (req, res, next) => {
 	try {
 		const integration = await ChatIntegrationModel.query().findById(req.params.id);
 		if (!integration) throw new Error("Not Found");
