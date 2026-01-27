@@ -270,7 +270,8 @@ const ai = {
 					response.toolCalls = response.toolCalls || [];
 					for (const match of matches) {
 						try {
-							let toolName, args;
+							let toolName;
+							let args;
 							
 							// Check which pattern matched
 							if (match[0].startsWith("<toolcall>")) {
