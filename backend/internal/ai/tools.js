@@ -413,8 +413,20 @@ export const getToolDefinitions = () => [
 					mtls_enabled: { type: "boolean" },
 					mtls_certificate: { type: "string" },
 					mtls_use_internal: { type: "boolean" },
-					items: { type: "array" },
-					clients: { type: "array" },
+					items: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: { username: { type: "string" }, password: { type: "string" } },
+						},
+					},
+					clients: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: { address: { type: "string" }, directive: { type: "string" } },
+						},
+					},
 				},
 				required: ["id"],
 			},
@@ -574,7 +586,7 @@ export const getToolDefinitions = () => [
 					id: { type: "integer" },
 					name: { type: "string" },
 					provider: { type: "string" },
-					domains: { type: "array" },
+					domains: { type: "array", items: { type: "string" } },
 					ip_ver: { type: "string" },
 					config: {
 						type: "object",
