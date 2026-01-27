@@ -10,7 +10,6 @@ import {
 import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
 import type { TorOnion } from "@/api/backend";
-import { TorOnionStatus } from "@/types/enums";
 import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
+import { TorOnionStatus } from "@/types/enums";
 
 export function TorOnionServices() {
 	const health = useHealth();

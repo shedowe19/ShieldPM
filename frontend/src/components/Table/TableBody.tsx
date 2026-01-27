@@ -45,7 +45,6 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 					return (
 						<MotionTableRow
 							key={row.id}
-							// biome-ignore lint/suspicious/noExplicitAny: Framer motion type conflict
 							{...(extraStyles?.row(row.original) as Record<string, unknown>)}
 							initial={{ opacity: 0, x: -20 }}
 							animate={{ opacity: 1, x: 0 }}
