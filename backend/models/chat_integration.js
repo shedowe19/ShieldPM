@@ -26,7 +26,7 @@ class ChatIntegration extends Model {
 	user;
 
 	static get tableName() {
-		return "id";
+		return "chat_integration";
 	}
 
 	static get jsonSchema() {
