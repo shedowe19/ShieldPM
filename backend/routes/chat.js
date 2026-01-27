@@ -81,7 +81,7 @@ router.put("/:id", jwtdecode(), async (req, res, next) => {
 		}
 
 		const payload = await apiValidator(getValidationSchema("/chat/{integrationID}", "put"), req.body);
-		payload.id = req.params.id;
+		payload.id = parseInt(req.params.id, 10);
 
 		if (payload.token) {
 			payload.token = encrypt(payload.token);
@@ -112,7 +112,7 @@ router.delete("/:id", jwtdecode(), async (req, res, next) => {
 		}
 
 		await internalChat.stopBot(integration.id);
-		await ChatIntegrationModel.query().deleteById(req.params.id);
+		await ChatIntegrationModel.query().deleteById(parseInt(req.params.id, 10));
 
 		res.json({ status: "ok" });
 	} catch (err) {
