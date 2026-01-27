@@ -1,5 +1,6 @@
 import { Model } from "objection";
 import db from "../db.js";
+import User from "./user.js";
 
 Model.knex(db());
 
@@ -22,7 +23,7 @@ class ChatIntegration extends Model {
 	config;
 	/** @type {Object} */
 	meta;
-	/** @type {import("./user.js").default} */
+	/** @type {User} */
 	user;
 
 	static get tableName() {
@@ -33,7 +34,7 @@ class ChatIntegration extends Model {
 		return {
 			user: {
 				relation: Model.BelongsToOneRelation,
-				modelClass: import("./user.js"),
+				modelClass: User,
 				join: {
 					from: "chat_integration.user_id",
 					to: "user.id",
