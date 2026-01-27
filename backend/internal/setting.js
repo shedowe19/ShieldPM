@@ -52,8 +52,9 @@ const internalSetting = {
 		await internalAuditLog.add(access, {
 			action: "updated",
 			object_type: "setting",
-			object_id: updatedRow.id,
+			object_id: 0, // Settings use string IDs, so we use 0
 			meta: {
+				setting_id: updatedRow.id,
 				name: updatedRow.name,
 				description: updatedRow.description,
 				value: updatedRow.value,
