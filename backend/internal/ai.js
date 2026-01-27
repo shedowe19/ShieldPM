@@ -287,21 +287,26 @@ const ai = {
 		}
 
 		// 4. Handle Tool Calls
-		if (response.toolCalls && response.toolCalls.length > 0) {
+		// 4. Handle Tool Calls (Recursive Loop)
+		let iterations = 0;
+		const MAX_ITERATIONS = 5;
+
+		while (response.toolCalls && response.toolCalls.length > 0 && iterations < MAX_ITERATIONS) {
+			iterations++;
 			logger.info(
-				"[AI Chat] Executing tools:",
+				`[AI Chat] Executing tools (Turn ${iterations}):`,
 				response.toolCalls.map((tc) => tc.name),
 			);
 			const toolResults = await executeTools(access, response.toolCalls);
 
 			logger.info(
-				"[AI Chat] Tool results:",
+				`[AI Chat] Tool results (Turn ${iterations}):`,
 				toolResults.map((tr) => ({ name: tr.name, resultLength: tr.result?.length || 0 })),
 			);
 
 			// Call LLM again with results
 			if (config.provider === "gemini") {
-				return await aiProviders.callGeminiWithResults(
+				response = await aiProviders.callGeminiWithResults(
 					config,
 					systemPrompt,
 					message,
@@ -310,15 +315,22 @@ const ai = {
 					toolResults,
 					tools,
 				);
+			} else {
+				response = await aiProviders.callLocalWithResults(
+					config,
+					systemPrompt,
+					message,
+					history,
+					response,
+					toolResults,
+				);
 			}
-			return await aiProviders.callLocalWithResults(
-				config,
-				systemPrompt,
-				message,
-				history,
-				response,
-				toolResults,
-			);
+
+			logger.info(`[AI Chat] LLM Response (Turn ${iterations}):`, {
+				hasContent: !!response.content,
+				hasToolCalls: !!response.toolCalls,
+				contentLength: response.content?.length || 0,
+			});
 		}
 
 		logger.debug("[AI Chat] Returning response:", {

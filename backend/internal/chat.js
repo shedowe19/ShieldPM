@@ -117,7 +117,12 @@ const internalChat = {
 					const response = await ai.chat(ctx.shieldAccess, message, []);
 
 					// Send response
-					await ctx.reply(response.content, { parse_mode: "Markdown" });
+					if (response.content) {
+						await ctx.reply(response.content, { parse_mode: "Markdown" });
+					} else {
+						logger.warn("[ChatOps] AI returned empty content.");
+						await ctx.reply("🤔 I processed your request but have nothing to say.");
+					}
 				} catch (err) {
 					logger.error(`[ChatOps] Error handling message: ${err.message}`);
 					await ctx.reply(`❌ Error processing request: ${err.message}`);
