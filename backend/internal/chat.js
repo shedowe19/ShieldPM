@@ -89,7 +89,6 @@ const internalChat = {
 
 						// Initialize access control with this token
 						const acl = new access(generatedToken);
-						await acl.init();
 						return acl.can(permission, data);
 					},
 				};
