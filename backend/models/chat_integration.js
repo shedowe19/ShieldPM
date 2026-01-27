@@ -29,6 +29,19 @@ class ChatIntegration extends Model {
 		return "chat_integration";
 	}
 
+	static get relationMappings() {
+		return {
+			user: {
+				relation: Model.BelongsToOneRelation,
+				modelClass: import("./user.js"),
+				join: {
+					from: "chat_integration.user_id",
+					to: "user.id",
+				},
+			},
+		};
+	}
+
 	static get jsonSchema() {
 		return {
 			type: "object",
