@@ -260,7 +260,8 @@ const ai = {
 				// Pattern 2: function call format
 				/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
 				// Pattern 3: XML-style <toolcall> (Gemini Thinking/Flash models sometimes do this)
-				/<toolcall>\s*(\{.*?\})\s*<\/toolcall>/gs,
+				// Using [\s\S] instead of . to ensure newlines are matched across the whole block
+				/<toolcall(?:\s+[^>]*)?>([\s\S]*?)<\/toolcall>/gi,
 			];
 
 			for (const pattern of toolCallPatterns) {
@@ -391,21 +392,31 @@ const ai = {
 			/removed/i,
 			/added/i,
 		];
-		const toolsExecuted = response.toolCalls && response.toolCalls.length > 0;
 
-		if (!toolsExecuted && finalContent) {
-			const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
-			if (claimsAction) {
-				logger.warn("[AI Chat] WARNING: AI claims action but no tool was executed!");
-				finalContent = `⚠️ WARNING: The AI claims to have performed an action, but no tool was executed. Please verify manually!\n\n---\n\n${finalContent}`;
-			}
+		// Filter out <think> blocks from final content
+		if (finalContent) {
+			// Remove <think>...</think> blocks (dotAll to handle newlines)
+			finalContent = finalContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+			// Also remove <toolcall> blocks if any remain (just in case)
+			finalContent = finalContent.replace(/<toolcall>[\s\S]*?<\/toolcall>/gi, "").trim();
 		}
 
-		return {
-			role: "assistant",
-			content: finalContent,
-		};
-	},
-};
+			// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
+			const toolsExecuted = response.toolCalls && response.toolCalls.length > 0;
+
+			if (!toolsExecuted && finalContent) {
+				const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
+				if (claimsAction) {
+					logger.warn("[AI Chat] WARNING: AI claims action but no tool was executed!");
+					finalContent = `⚠️ WARNING: The AI claims to have performed an action, but no tool was executed. Please verify manually!\n\n---\n\n${finalContent}`;
+				}
+			}
+
+			return {
+				role: "assistant",
+				content: finalContent,
+			};
+		},
+	};
 
 export default ai;
