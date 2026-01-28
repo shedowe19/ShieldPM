@@ -8,6 +8,27 @@
  * @returns {Array} Tool definitions in OpenAI/Gemini function format
  */
 export const getToolDefinitions = () => [
+	{
+		function: {
+			name: "get_system_status",
+			description: "Get System Health (CPU, RAM, Network Traffic)",
+			parameters: { type: "object", properties: {} },
+		},
+	},
+	{
+		function: {
+			name: "force_nginx_reload",
+			description: "Force Nginx Reload",
+			parameters: { type: "object", properties: {} },
+		},
+	},
+	{
+		function: {
+			name: "test_nginx_config",
+			description: "Test Nginx Configuration",
+			parameters: { type: "object", properties: {} },
+		},
+	},
 	// Proxy Hosts
 	{
 		function: {

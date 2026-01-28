@@ -599,6 +599,52 @@ export const executeTools = async (access, toolCalls) => {
 					result = JSON.stringify(Object.keys(plugins).map((k) => ({ id: k, name: plugins[k].name })));
 					break;
 				}
+				// Users
+				case "get_users": {
+					if (isDemoMode()) throw new Error("User listing is disabled in Demo Mode.");
+					const users = await internalUser.getAll(access);
+					result = JSON.stringify(
+						users.map((u) => ({
+							id: u.id,
+							name: u.name,
+							email: u.email,
+							roles: u.roles,
+							is_disabled: u.is_disabled,
+						})),
+					);
+					break;
+				}
+				// Logs
+				case "read_nginx_logs": {
+					if (isDemoMode()) throw new Error("Log reading is disabled in Demo Mode.");
+					const logType = call.args.log_type || "error";
+					const lines = call.args.lines || 50;
+					const logs = await internalNginx.getLogs(access, logType);
+					// Get last N lines
+					const logLines = logs.split("\n").slice(-lines).join("\n");
+					result = logLines || "No logs found.";
+					break;
+				}
+				// Analytics Alias
+				case "get_analytics_summary": {
+					// Redirect to getHostSummary logic
+					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					// Use 'all' or first host if not specified, though summary implies specific. 
+					// If no host, maybe dashboard summary?
+					// Let's assume dashboard summary if no args
+					if (!call.args.host_id && !call.args.proxy_host_id) {
+						// Dashboard stats
+						const counts = await internalReport.getHostsReport(access);
+						result = JSON.stringify(counts);
+					} else {
+						const summary = await internalAnalytics.getHostSummary(
+							call.args.host_id || call.args.proxy_host_id,
+							call.args.range || "24h",
+						);
+						result = JSON.stringify(summary, null, 2);
+					}
+					break;
+				}
 				// DDNS Client
 				case "get_ddns_providers": {
 					const providers = await internalDdnsProvider.getAll(access);
