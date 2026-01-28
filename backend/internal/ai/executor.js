@@ -221,7 +221,12 @@ export const executeTools = async (access, toolCalls) => {
 					await internalProxyHost.update(access, payload);
 					
 					// Force Nginx Reload
-					const updatedHost = await internalProxyHost.get(access, { id: call.args.id });
+					// We must fetch the FULL object with all relations (locations, access_list, etc)
+					// otherwise generateConfig fails when accessing missing properties (e.g. locations).
+					const updatedHost = await internalProxyHost.get(access, {
+						id: call.args.id,
+						expand: ["owner", "access_list", "certificate", "locations"]
+					});
 					await internalNginx.configure(updatedHost, "proxy_host");
 					await internalNginx.reload();
 
