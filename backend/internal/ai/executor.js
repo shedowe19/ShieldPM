@@ -210,8 +210,9 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "set_maintenance_mode": {
 					// Use update mechanism to set maintenance fields
+					const id = call.args.id || call.args.proxy_host_id;
 					const payload = {
-						id: call.args.id,
+						id: id,
 						maintenance_active: call.args.active,
 					};
 					if (call.args.reason) {
