@@ -10,6 +10,41 @@ import ai from "./ai.js";
 
 const bots = {}; // Cache for bot instances: { integration_id: TelegrafInstance }
 
+// Smart MarkdownV2 Escaper
+// Escapes special characters OUTSIDE of code blocks, but preserves them INSIDE.
+const smartEscape = (text) => {
+	// Split by code blocks (backticks or triple backticks)
+	const parts = text.split(/(`[^`]+`|```[\s\S]+?```)/g);
+	return parts
+		.map((part) => {
+			// If it starts with a backtick, it's code. Don't escape standard chars.
+			if (part.startsWith("`")) {
+				return part; // Return code block as-is
+			}
+			// Escape special chars for MarkdownV2 OUTSIDE code blocks
+			// Characters needing escape: _ * [ ] ( ) ~ > # + - = | { } . !
+			return part
+				.replace(/_/g, "\\_")
+				.replace(/\*/g, "\\*")
+				.replace(/\[/g, "\\[")
+				.replace(/\]/g, "\\]")
+				.replace(/\(/g, "\\(")
+				.replace(/\)/g, "\\)")
+				.replace(/~/g, "\\~")
+				.replace(/>/g, "\\>")
+				.replace(/#/g, "\\#")
+				.replace(/\+/g, "\\+")
+				.replace(/-/g, "\\-")
+				.replace(/=/g, "\\=")
+				.replace(/\|/g, "\\|")
+				.replace(/\{/g, "\\{")
+				.replace(/\}/g, "\\}")
+				.replace(/\./g, "\\.")
+				.replace(/!/g, "\\!");
+		})
+		.join("");
+};
+
 const internalChat = {
 	/**
 	 * Initialize all enabled chat integrations
@@ -126,11 +161,9 @@ const internalChat = {
 					// Send response
 					if (response.content) {
 						try {
-							// Telegram has issues with underscores in words (e.g. host_name).
-							// We try to "smart escape" them if they look like snake_case variables.
-							// Regex: Match _ preceded by char and followed by char (inside word)
-							const escapedContent = response.content.replace(/(?<=\w)_(?=\w)/g, "\\_");
-							await ctx.reply(escapedContent, { parse_mode: "Markdown" });
+							// Use smart escaping to handle MarkdownV2 safely
+							const escapedContent = smartEscape(response.content);
+							await ctx.reply(escapedContent, { parse_mode: "MarkdownV2" });
 						} catch (sendErr) {
 							// Check for markdown parse errors
 							if (
