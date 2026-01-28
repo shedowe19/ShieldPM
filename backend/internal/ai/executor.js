@@ -893,20 +893,13 @@ export const executeTools = async (access, toolCalls) => {
 					result = `Stopped Tor Onion Service ID: ${call.args.id}`;
 					break;
 				}
-				// Missing Read/Log Tools
-				case "get_users": {
-					const users = await internalUser.getAll(access);
-					result = JSON.stringify(
-						users.map((/** @type {any} */ u) => ({
-							id: u.id,
-							name: u.name,
-							email: u.email,
-							roles: u.roles,
-						})),
-					);
-					break;
-				}
+				// Duplicate cases removed. get_users, read_nginx_logs, get_analytics_summary are handled earlier.
+				// get_audit_log is unique here, so we move it or keep it?
+				// Actually I should DELETE the duplicates but keep get_audit_log if it wasn't earlier.
+				// Grep said get_audit_log was at 909. Was it earlier?
+				// Grep output 1683: get_audit_log only at 909. So I must KEEP it.
 				case "get_audit_log": {
+					if (isDemoMode()) throw new Error("Audit Log is disabled in Demo Mode.");
 					const logs = await internalAuditLog.getAll(access, ["user"]);
 					result = JSON.stringify(
 						logs.map((/** @type {any} */ l) => ({
@@ -916,31 +909,6 @@ export const executeTools = async (access, toolCalls) => {
 							meta: l.meta,
 						})),
 					);
-					break;
-				}
-				case "read_nginx_logs": {
-					const type = call.args.log_type;
-					const lines = call.args.lines || 50;
-					const file = type === "error" ? "/data/logs/error.log" : "/data/logs/access.log";
-					try {
-						const { stdout } = await execAsync(`tail -n ${lines} ${file}`);
-						result = stdout;
-					} catch (err) {
-						result = `Error reading logs: ${err.message}`;
-					}
-					break;
-				}
-				case "get_analytics_summary": {
-					const start = dayjs().subtract(24, "hour").format("YYYY-MM-DD HH:mm:ss");
-					const end = dayjs().format("YYYY-MM-DD HH:mm:ss");
-					/** @type {any} */
-					const totalRequests = await AnalyticCount.query()
-						.where("timestamp", ">=", start)
-						.andWhere("timestamp", "<=", end)
-						.count("id as count")
-						.first();
-
-					result = `Analytics (24h) - Total Requests: ${/** @type {any} */ (totalRequests).count || 0}`;
 					break;
 				}
 
