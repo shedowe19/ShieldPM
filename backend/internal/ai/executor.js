@@ -3,8 +3,6 @@
  * Handles the execution of AI tool calls by interfacing with internal backend modules.
  */
 
-import { exec } from "node:child_process";
-import util from "node:util";
 import ipaddr from "ipaddr.js";
 import si from "systeminformation";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
