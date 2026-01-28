@@ -126,7 +126,11 @@ const internalChat = {
 					// Send response
 					if (response.content) {
 						try {
-							await ctx.reply(response.content, { parse_mode: "Markdown" });
+							// Telegram has issues with underscores in words (e.g. host_name).
+							// We try to "smart escape" them if they look like snake_case variables.
+							// Regex: Match _ preceded by char and followed by char (inside word)
+							const escapedContent = response.content.replace(/(?<=\w)_(?=\w)/g, "\\_");
+							await ctx.reply(escapedContent, { parse_mode: "Markdown" });
 						} catch (sendErr) {
 							// Check for markdown parse errors
 							if (
