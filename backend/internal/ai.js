@@ -403,6 +403,11 @@ const ai = {
 			finalContent = finalContent.replace(/<tool_?call>[\s\S]*?<\/tool_?call>/gi, "").trim();
 		}
 
+		// Fail-safe: If content is empty but tools were executed, provide a default status
+		if (!finalContent && wasToolExecuted) {
+			finalContent = "✅ Validated actions. Please check the system state updates.";
+		}
+
 			// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
 			// Use the persistent flag, not just the final response state
 			const toolsExecuted = wasToolExecuted || (response.toolCalls && response.toolCalls.length > 0);
