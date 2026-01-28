@@ -252,81 +252,88 @@ const ai = {
 			contentLength: response.content?.length || 0,
 		});
 
-		// FALLBACK: Detect tool calls embedded in text response (small models sometimes output JSON as text)
-		if ((!response.toolCalls || response.toolCalls.length === 0) && response.content) {
-			const toolCallPatterns = [
-				// Pattern 1: {"name": "tool_name", "arguments": {...}}
-				/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
-				// Pattern 2: function call format
-				/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
-				// Pattern 3: XML-style <toolcall> or <tool_call> (Gemini Thinking/Flash models sometimes do this)
-				// Using [\s\S] instead of . to ensure newlines are matched across the whole block
-				/<tool_?call(?:\s+[^>]*)?>([\s\S]*?)<\/tool_?call>/gi,
-			];
-
-			for (const pattern of toolCallPatterns) {
-				const matches = [...response.content.matchAll(pattern)];
-				if (matches.length > 0) {
-					logger.warn("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
-					response.toolCalls = response.toolCalls || [];
-					for (const match of matches) {
-						try {
-							let toolName;
-							let args;
-							
-							// Check which pattern matched
-							if (match[0].startsWith("<tool")) {
-								// XML Pattern: match[1] is the JSON content
-								const json = JSON.parse(match[1]);
-								toolName = json.name;
-								args = json.arguments || {};
-							} else if (match[1] && match[2]) {
-								// Regex groups
-								toolName = match[1];
-								const argsStr = match[2] || "{}";
-								args = JSON.parse(argsStr.replace(/'/g, '"'));
-							} else {
-								// JSON Pattern
-								toolName = match[1];
-								const argsStr = match[2] || "{}";
-								args = JSON.parse(argsStr.replace(/'/g, '"'));
-							}
-
-							// Normalization: Fix hallucinated names (e.g. gethostanalytics -> get_host_analytics)
-							// We try updates if direct match fails.
-							const definedTools = getToolDefinitions();
-							const exactMatch = definedTools.find(t => t.function.name === toolName);
-							if (!exactMatch) {
-								// Try to find by removing underscores from defined tools
-								const looseMatch = definedTools.find(
-									t => t.function.name.replace(/_/g, "") === toolName.replace(/_/g, "")
-								);
-								if (looseMatch) {
-									logger.info(`[AI Chat] Normalizing tool name: ${toolName} -> ${looseMatch.function.name}`);
-									toolName = looseMatch.function.name;
-								}
-							}
-
-							response.toolCalls.push({ name: toolName, args });
-							logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
-						} catch (e) {
-							logger.warn("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
-						}
-					}
-					// Clear the text content since we extracted tool calls
-					if (response.toolCalls.length > 0) {
-						response.content = "";
-					}
-					break;
-				}
-			}
-		}
-
-		// 4. Handle Tool Calls
+	// 4. Handle Tool Calls
 		// 4. Handle Tool Calls (Recursive Loop)
 		let iterations = 0;
 		const MAX_ITERATIONS = 5;
 		let wasToolExecuted = false; // Track if ANY tool was executed in this chain
+
+		// Helper to extract tools from text content if structured tool calls are missing
+		const extractToolsFromText = (resp) => {
+			if ((!resp.toolCalls || resp.toolCalls.length === 0) && resp.content) {
+				const toolCallPatterns = [
+					// Pattern 1: {"name": "tool_name", "arguments": {...}}
+					/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
+					// Pattern 2: function call format
+					/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
+					// Pattern 3: XML-style <toolcall> or <tool_call> (Gemini Thinking/Flash models sometimes do this)
+					// Using [\s\S] instead of . to ensure newlines are matched across the whole block
+					/<tool_?call(?:\s+[^>]*)?>([\s\S]*?)<\/tool_?call>/gi,
+				];
+
+				for (const pattern of toolCallPatterns) {
+					const matches = [...resp.content.matchAll(pattern)];
+					if (matches.length > 0) {
+						logger.warn("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
+						resp.toolCalls = resp.toolCalls || [];
+						for (const match of matches) {
+							try {
+								let toolName;
+								let args;
+
+								// Check which pattern matched
+								if (match[0].startsWith("<tool")) {
+									// XML Pattern: match[1] is the JSON content
+									const json = JSON.parse(match[1]);
+									toolName = json.name;
+									args = json.arguments || {};
+								} else if (match[1] && match[2]) {
+									// Regex groups
+									toolName = match[1];
+									const argsStr = match[2] || "{}";
+									args = JSON.parse(argsStr.replace(/'/g, '"'));
+								} else {
+									// JSON Pattern
+									toolName = match[1];
+									const argsStr = match[2] || "{}";
+									args = JSON.parse(argsStr.replace(/'/g, '"'));
+								}
+
+								// Normalization: Fix hallucinated names (e.g. gethostanalytics -> get_host_analytics)
+								// We try updates if direct match fails.
+								const definedTools = getToolDefinitions();
+								const exactMatch = definedTools.find((t) => t.function.name === toolName);
+								if (!exactMatch) {
+									// Try to find by removing underscores from defined tools
+									const looseMatch = definedTools.find(
+										(t) => t.function.name.replace(/_/g, "") === toolName.replace(/_/g, ""),
+									);
+									if (looseMatch) {
+										logger.info(
+											`[AI Chat] Normalizing tool name: ${toolName} -> ${looseMatch.function.name}`,
+										);
+										toolName = looseMatch.function.name;
+									}
+								}
+
+								resp.toolCalls.push({ name: toolName, args });
+								logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
+							} catch (e) {
+								logger.warn("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
+							}
+						}
+						// Clear the text content since we extracted tool calls
+						if (resp.toolCalls.length > 0) {
+							resp.content = "";
+						}
+						break;
+					}
+				}
+			}
+		};
+
+		// Initial Check
+		extractToolsFromText(response);
 
 		while (response.toolCalls && response.toolCalls.length > 0 && iterations < MAX_ITERATIONS) {
 			iterations++;
@@ -363,6 +370,9 @@ const ai = {
 					toolResults,
 				);
 			}
+
+			// Check for tools in the new response (RECURSIVE FIX)
+			extractToolsFromText(response);
 
 			logger.info(`[AI Chat] LLM Response (Turn ${iterations}):`, {
 				hasContent: !!response.content,
