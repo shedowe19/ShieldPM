@@ -225,13 +225,13 @@ export const executeTools = async (access, toolCalls) => {
 					// We must fetch the FULL object with all relations (locations, access_list, etc)
 					// otherwise generateConfig fails when accessing missing properties (e.g. locations).
 					const updatedHost = await internalProxyHost.get(access, {
-						id: call.args.id,
+						id: id,
 						expand: ["owner", "access_list", "certificate", "locations"]
 					});
 					await internalNginx.configure(updatedHost, "proxy_host");
 					await internalNginx.reload();
 
-					result = `Maintenance Mode ${call.args.active ? "ENABLED" : "DISABLED"} for Host ID: ${call.args.id}`;
+					result = `Maintenance Mode ${call.args.active ? "ENABLED" : "DISABLED"} for Host ID: ${id}`;
 					break;
 				}
 				// Redirection Hosts
