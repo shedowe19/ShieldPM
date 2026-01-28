@@ -5,12 +5,10 @@
 
 import { exec } from "node:child_process";
 import util from "node:util";
-import dayjs from "dayjs";
 import ipaddr from "ipaddr.js";
 import si from "systeminformation";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
-import AnalyticCount from "../../models/analytic_count.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
@@ -29,8 +27,6 @@ import internalStream from "../stream.js";
 import internalToken from "../token.js";
 import internalTor from "../tor.js";
 import internalUser from "../user.js";
-
-const execAsync = util.promisify(exec);
 
 /**
  * Validate host data in Demo Mode - blocks private IPs and advanced config
