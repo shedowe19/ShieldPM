@@ -62,11 +62,13 @@ CONTEXT & CRITICAL RULES:
     - Tell the user: "Deleted and verified: [domain] no longer exists"
     - If the item still exists, report an error!
 
-Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
+65: Examples - ALWAYS follow this pattern: Query → Find ID → Execute Action:
 
 PROXY HOSTS:
 - "disable cdn.ex.com" → get_proxy_hosts, find ID, disable_proxy_host
 - "enable cdn.ex.com" → get_proxy_hosts, find ID, enable_proxy_host
+- "maintenance on cdn.ex.com" → get_proxy_hosts, find ID, set_maintenance_mode(active: true)
+- "maintenance off cdn.ex.com" → get_proxy_hosts, find ID, set_maintenance_mode(active: false)
 - "create proxy app.ex.com to 192.168.1.10:3000" → create_proxy_host with domain_names, forward_scheme: "http", forward_host, forward_port
 - "update proxy cdn.ex.com forward to 10.0.0.5:8080" → get_proxy_hosts, find ID, update_proxy_host
 - "delete proxy old.ex.com" → get_proxy_hosts, find ID, delete_proxy_host
