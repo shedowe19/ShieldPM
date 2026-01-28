@@ -127,6 +127,21 @@ export const getToolDefinitions = () => [
 	},
 	{
 		function: {
+			name: "set_maintenance_mode",
+			description: "Enable or Disable Maintenance Mode for a Proxy Host (displays maintenance page to visitors)",
+			parameters: {
+				type: "object",
+				properties: {
+					id: { type: "integer", description: "Proxy Host ID" },
+					active: { type: "boolean", description: "true to enable maintenance, false to disable" },
+					reason: { type: "string", description: "Reason for maintenance (optional)" },
+				},
+				required: ["id", "active"],
+			},
+		},
+	},
+	{
+		function: {
 			name: "disable_proxy_host",
 			description: "Disable a Proxy Host by ID",
 			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },

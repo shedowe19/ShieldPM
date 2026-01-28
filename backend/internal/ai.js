@@ -264,8 +264,10 @@ const ai = {
 				const toolCallPatterns = [
 					// Pattern 1: {"name": "tool_name", "arguments": {...}}
 					/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
-					// Pattern 2: function call format
+					// Pattern 2: function call format (standard)
 					/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
+					// Pattern 2b: function call format (no parentheses, just JSON)
+					/(\w+_\w+)\s*(\{[^}]+\})/g,
 					// Pattern 3: XML-style <toolcall> or <tool_call> (Gemini Thinking/Flash models sometimes do this)
 					// Using [\s\S] instead of . to ensure newlines are matched across the whole block
 					/<tool_?call(?:\s+[^>]*)?>([\s\S]*?)<\/tool_?call>/gi,

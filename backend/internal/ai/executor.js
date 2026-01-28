@@ -214,6 +214,20 @@ export const executeTools = async (access, toolCalls) => {
 					result = `Disabled Proxy Host ID: ${call.args.id}`;
 					break;
 				}
+				case "set_maintenance_mode": {
+					// Use update mechanism to set maintenance fields
+					const payload = {
+						id: call.args.id,
+						maintenance_active: call.args.active,
+					};
+					if (call.args.reason) {
+						payload.maintenance_reason = call.args.reason;
+					}
+					// Verify host exists first (optional, update throws if not found)
+					await internalProxyHost.update(access, payload);
+					result = `Maintenance Mode ${call.args.active ? "ENABLED" : "DISABLED"} for Host ID: ${call.args.id}`;
+					break;
+				}
 				// Redirection Hosts
 				case "get_redirection_hosts": {
 					const hosts = await internalRedirectionHost.getAll(access);
