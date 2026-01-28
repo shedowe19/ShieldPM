@@ -259,9 +259,9 @@ const ai = {
 				/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
 				// Pattern 2: function call format
 				/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
-				// Pattern 3: XML-style <toolcall> (Gemini Thinking/Flash models sometimes do this)
+				// Pattern 3: XML-style <toolcall> or <tool_call> (Gemini Thinking/Flash models sometimes do this)
 				// Using [\s\S] instead of . to ensure newlines are matched across the whole block
-				/<toolcall(?:\s+[^>]*)?>([\s\S]*?)<\/toolcall>/gi,
+				/<tool_?call(?:\s+[^>]*)?>([\s\S]*?)<\/tool_?call>/gi,
 			];
 
 			for (const pattern of toolCallPatterns) {
@@ -275,7 +275,7 @@ const ai = {
 							let args;
 							
 							// Check which pattern matched
-							if (match[0].startsWith("<toolcall>")) {
+							if (match[0].startsWith("<tool")) {
 								// XML Pattern: match[1] is the JSON content
 								const json = JSON.parse(match[1]);
 								toolName = json.name;
@@ -397,8 +397,8 @@ const ai = {
 		if (finalContent) {
 			// Remove <think>...</think> blocks (dotAll to handle newlines)
 			finalContent = finalContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-			// Also remove <toolcall> blocks if any remain (just in case)
-			finalContent = finalContent.replace(/<toolcall>[\s\S]*?<\/toolcall>/gi, "").trim();
+			// Also remove <toolcall> or <tool_call> blocks if any remain (just in case)
+			finalContent = finalContent.replace(/<tool_?call>[\s\S]*?<\/tool_?call>/gi, "").trim();
 		}
 
 			// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
