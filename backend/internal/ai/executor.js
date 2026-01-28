@@ -215,10 +215,28 @@ export const executeTools = async (access, toolCalls) => {
 					const id = call.args.id || call.args.proxy_host_id || call.args.host_id;
 					const payload = {
 						id: id,
-						maintenance_active: call.args.active,
 					};
+
+					// If maintenance_active is explicitly boolean, use it.
+					// If it's undefined (scheduling only), we generally don't touch 'active' unless we want to ensure it's off.
+					// However, Nginx logic prioritizes 'active'. So if scheduling, we probably want active=false.
+					if (typeof call.args.active !== "undefined") {
+						payload.maintenance_active = call.args.active;
+					}
+
+					// Handle Scheduling
+					if (call.args.maintenance_start) payload.maintenance_start = call.args.maintenance_start;
+					if (call.args.maintenance_end) payload.maintenance_end = call.args.maintenance_end;
+					
+					// If start is set but active is not specified, force active=false to allow schedule to work
+					if (payload.maintenance_start && typeof payload.maintenance_active === "undefined") {
+						payload.maintenance_active = false;
+					}
+
 					if (call.args.reason) {
 						payload.maintenance_reason = call.args.reason;
+					} else if (call.args.maintenance_reason) {
+						payload.maintenance_reason = call.args.maintenance_reason;
 					}
 					// Verify host exists first (optional, update throws if not found)
 					await internalProxyHost.update(access, payload);
