@@ -224,9 +224,11 @@ export const executeTools = async (access, toolCalls) => {
 						payload.maintenance_active = call.args.active;
 					}
 
-					// Handle Scheduling
-					if (call.args.maintenance_start) payload.maintenance_start = call.args.maintenance_start;
-					if (call.args.maintenance_end) payload.maintenance_end = call.args.maintenance_end;
+					// Handle Scheduling - support many AI parameter name variations
+					const startTime = call.args.maintenance_start || call.args.start || call.args.start_time || call.args.scheduled_start;
+					const endTime = call.args.maintenance_end || call.args.end || call.args.end_time || call.args.scheduled_end;
+					if (startTime) payload.maintenance_start = startTime;
+					if (endTime) payload.maintenance_end = endTime;
 
 					// If start is set but active is not specified, force active=false to allow schedule to work
 					if (payload.maintenance_start && typeof payload.maintenance_active === "undefined") {
