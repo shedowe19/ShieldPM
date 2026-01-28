@@ -219,6 +219,12 @@ export const executeTools = async (access, toolCalls) => {
 					}
 					// Verify host exists first (optional, update throws if not found)
 					await internalProxyHost.update(access, payload);
+					
+					// Force Nginx Reload
+					const updatedHost = await internalProxyHost.get(access, { id: call.args.id });
+					await internalNginx.configure(updatedHost, "proxy_host");
+					await internalNginx.reload();
+
 					result = `Maintenance Mode ${call.args.active ? "ENABLED" : "DISABLED"} for Host ID: ${call.args.id}`;
 					break;
 				}
