@@ -90,31 +90,26 @@ const internalChat = {
 				// We can create a "Internal" access object manually or use a helper.
 				// For now, let's create a minimal compatible object.
 
-				// @ts-expect-error: Adding custom shieldAccess property to context which is not in the type definition but required for internal logic
-				ctx.shieldAccess = {
-					can: async (permission, data) => {
-						// Generate a temporary JWT for this user to reuse the access system
-						// Generate a temporary JWT for this user to reuse the access system
-						const secret = getPrivateKey();
-						const generatedToken = jwt.sign(
-							{
-								scope: ["user"],
-								attrs: {
-									id: integration.user_id,
-								},
-							},
-							secret,
-							{
-								algorithm: "RS256",
-								expiresIn: "5m",
-							},
-						);
-
-						// Initialize access control with this token
-						const acl = /** @type {any} */ (new access(generatedToken));
-						return acl.can(permission, data);
+				// Generate a temporary JWT for this user to reuse the access system
+				const secret = /** @type {string} */ (getPrivateKey());
+				const generatedToken = jwt.sign(
+					{
+						scope: ["user"],
+						attrs: {
+							id: integration.user_id,
+						},
 					},
-				};
+					secret,
+					{
+						algorithm: "RS256",
+						expiresIn: "5m",
+					},
+				);
+
+				// Initialize REAL access control object
+				// This ensures access.token is available for audit logs and prompts
+				// @ts-expect-error: Custom property
+				ctx.shieldAccess = new access(generatedToken);
 
 				return next();
 			});
