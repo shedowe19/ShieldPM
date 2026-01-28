@@ -252,7 +252,7 @@ const ai = {
 			contentLength: response.content?.length || 0,
 		});
 
-	// 4. Handle Tool Calls
+		// 4. Handle Tool Calls
 		// 4. Handle Tool Calls (Recursive Loop)
 		let iterations = 0;
 		const MAX_ITERATIONS = 5;
@@ -420,23 +420,23 @@ const ai = {
 			finalContent = "✅ Validated actions. Please check the system state updates.";
 		}
 
-			// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
-			// Use the persistent flag, not just the final response state
-			const toolsExecuted = wasToolExecuted || (response.toolCalls && response.toolCalls.length > 0);
+		// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
+		// Use the persistent flag, not just the final response state
+		const toolsExecuted = wasToolExecuted || (response.toolCalls && response.toolCalls.length > 0);
 
-			if (!toolsExecuted && finalContent) {
-				const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
-				if (claimsAction) {
-					logger.warn("[AI Chat] WARNING: AI claims action but no tool was executed!");
-					finalContent = `⚠️ WARNING: The AI claims to have performed an action, but no tool was executed. Please verify manually!\n\n---\n\n${finalContent}`;
-				}
+		if (!toolsExecuted && finalContent) {
+			const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
+			if (claimsAction) {
+				logger.warn("[AI Chat] WARNING: AI claims action but no tool was executed!");
+				finalContent = `⚠️ WARNING: The AI claims to have performed an action, but no tool was executed. Please verify manually!\n\n---\n\n${finalContent}`;
 			}
+		}
 
-			return {
-				role: "assistant",
-				content: finalContent,
-			};
-		},
-	};
+		return {
+			role: "assistant",
+			content: finalContent,
+		};
+	},
+};
 
 export default ai;

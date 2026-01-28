@@ -227,7 +227,7 @@ export const executeTools = async (access, toolCalls) => {
 					// Handle Scheduling
 					if (call.args.maintenance_start) payload.maintenance_start = call.args.maintenance_start;
 					if (call.args.maintenance_end) payload.maintenance_end = call.args.maintenance_end;
-					
+
 					// If start is set but active is not specified, force active=false to allow schedule to work
 					if (payload.maintenance_start && typeof payload.maintenance_active === "undefined") {
 						payload.maintenance_active = false;
@@ -240,13 +240,13 @@ export const executeTools = async (access, toolCalls) => {
 					}
 					// Verify host exists first (optional, update throws if not found)
 					await internalProxyHost.update(access, payload);
-					
+
 					// Force Nginx Reload
 					// We must fetch the FULL object with all relations (locations, access_list, etc)
 					// otherwise generateConfig fails when accessing missing properties (e.g. locations).
 					const updatedHost = await internalProxyHost.get(access, {
 						id: id,
-						expand: ["owner", "access_list", "certificate"]
+						expand: ["owner", "access_list", "certificate"],
 					});
 					// configure expects (Model, type, item)
 					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
@@ -656,7 +656,7 @@ export const executeTools = async (access, toolCalls) => {
 				case "get_analytics_summary": {
 					// Redirect to getHostSummary logic
 					const internalAnalytics = (await import("../../internal/analytics.js")).default;
-					// Use 'all' or first host if not specified, though summary implies specific. 
+					// Use 'all' or first host if not specified, though summary implies specific.
 					// If no host, maybe dashboard summary?
 					// Let's assume dashboard summary if no args
 					if (!call.args.host_id && !call.args.proxy_host_id) {
