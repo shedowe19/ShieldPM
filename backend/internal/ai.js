@@ -326,9 +326,11 @@ const ai = {
 		// 4. Handle Tool Calls (Recursive Loop)
 		let iterations = 0;
 		const MAX_ITERATIONS = 5;
+		let wasToolExecuted = false; // Track if ANY tool was executed in this chain
 
 		while (response.toolCalls && response.toolCalls.length > 0 && iterations < MAX_ITERATIONS) {
 			iterations++;
+			wasToolExecuted = true;
 			logger.info(
 				`[AI Chat] Executing tools (Turn ${iterations}):`,
 				response.toolCalls.map((tc) => tc.name),
@@ -402,7 +404,8 @@ const ai = {
 		}
 
 			// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
-			const toolsExecuted = response.toolCalls && response.toolCalls.length > 0;
+			// Use the persistent flag, not just the final response state
+			const toolsExecuted = wasToolExecuted || (response.toolCalls && response.toolCalls.length > 0);
 
 			if (!toolsExecuted && finalContent) {
 				const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
