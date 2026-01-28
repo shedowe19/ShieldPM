@@ -22,25 +22,9 @@ const smartEscape = (text) => {
 				return part; // Return code block as-is
 			}
 			// Escape special chars for MarkdownV2 OUTSIDE code blocks
-			// Characters needing escape: _ * [ ] ( ) ~ > # + - = | { } . !
-			return part
-				.replace(/_/g, "\\_")
-				.replace(/\*/g, "\\*")
-				.replace(/\[/g, "\\[")
-				.replace(/\]/g, "\\]")
-				.replace(/\(/g, "\\(")
-				.replace(/\)/g, "\\)")
-				.replace(/~/g, "\\~")
-				.replace(/>/g, "\\>")
-				.replace(/#/g, "\\#")
-				.replace(/\+/g, "\\+")
-				.replace(/-/g, "\\-")
-				.replace(/=/g, "\\=")
-				.replace(/\|/g, "\\|")
-				.replace(/\{/g, "\\{")
-				.replace(/\}/g, "\\}")
-				.replace(/\./g, "\\.")
-				.replace(/!/g, "\\!");
+			// Characters: _ * [ ] ( ) ~ > # + - = | { } . ! \ `
+			// We use a single regex for efficiency and to avoid "Incomplete string escaping" alerts
+			return part.replace(/([_*\[\]()~>#+\-=|{}.!\\`])/g, "\\$1");
 		})
 		.join("");
 };
