@@ -15,9 +15,11 @@ import internalCertificate from "../certificate.js";
 import internalDdnsProvider from "../ddns-provider.js";
 import internalDeadHost from "../dead-host.js";
 import internalIpRanges from "../ip_ranges.js";
+import internalGitOps from "../gitops.js";
 import internalNginx from "../nginx.js";
 import internalPki from "../pki.js";
 import internalProxyHost from "../proxy-host.js";
+import ProxyHost from "../../models/proxy_host.js";
 import internalRedirectionHost from "../redirection-host.js";
 import internalReport from "../report.js";
 import internalSetting from "../setting.js";
@@ -228,7 +230,8 @@ export const executeTools = async (access, toolCalls) => {
 						id: id,
 						expand: ["owner", "access_list", "certificate"]
 					});
-					await internalNginx.configure(updatedHost, "proxy_host");
+					// configure expects (Model, type, item)
+					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
 					await internalNginx.reload();
 
 					result = `Maintenance Mode ${call.args.active ? "ENABLED" : "DISABLED"} for Host ID: ${id}`;
