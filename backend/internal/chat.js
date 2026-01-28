@@ -23,8 +23,10 @@ const smartEscape = (text) => {
 			}
 			// Escape special chars for MarkdownV2 OUTSIDE code blocks
 			// Characters: _ * [ ] ( ) ~ > # + - = | { } . ! \ `
-			// We use a single regex for efficiency and to avoid "Incomplete string escaping" alerts
-			return part.replace(/([_*\[\]()~>#+\-=|{}.!\\`])/g, "\\$1");
+			// We use a single regex for efficiency. We only escape characters that have special meaning in regex if needed,
+			// or just list them. Inside [], most don't need escaping.
+			// \ and ] and - need care.
+			return part.replace(/([_*[\]()~>#+\-=|{}.!\\`])/g, "\\$1");
 		})
 		.join("");
 };
