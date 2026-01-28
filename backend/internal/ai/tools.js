@@ -816,8 +816,19 @@ export const getToolDefinitions = () => [
 	{
 		function: {
 			name: "get_analytics_series",
-			description: "Get Analytics (Time Series)",
-			parameters: { type: "object", properties: {} },
+			description: "Get detailed analytics (Top IPs, User Agents, etc.) for a specific Proxy Host",
+			parameters: {
+				type: "object",
+				properties: {
+					host_id: { type: "integer", description: "ID of the Proxy Host" },
+					range: {
+						type: "string",
+						description: "Time range (1h, 24h, 7d, 30d)",
+						enum: ["1h", "24h", "7d", "30d"],
+					},
+				},
+				required: ["host_id"],
+			},
 		},
 	},
 	{

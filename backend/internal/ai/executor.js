@@ -642,16 +642,13 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "get_analytics_series": {
-					// const summaryResult = await ai._tools.get_analytics_summary(call.args); // Reuse summary logic or fetch specifically
-					// Re-implement series logic briefly
-					const start = dayjs().subtract(24, "hour").toISOString();
-					const end = dayjs().toISOString();
-					const data = await AnalyticCount.query()
-						.where("timestamp", ">=", start)
-						.andWhere("timestamp", "<=", end)
-						.orderBy("timestamp", "asc");
-					// Simply return raw length or condensed
-					result = `Series Data Points: ${data.length}`;
+					// Redirect to the robust summary tool logic
+					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					const summary = await internalAnalytics.getHostSummary(
+						call.args.proxy_host_id || call.args.host_id,
+						call.args.time_range || call.args.range || "24h",
+					);
+					result = JSON.stringify(summary, null, 2);
 					break;
 				}
 				case "get_host_analytics": {
