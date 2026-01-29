@@ -5,7 +5,6 @@
 
 import ipaddr from "ipaddr.js";
 import si from "systeminformation";
-import { global as logger } from "../../logger.js";
 import internalMaintenance from "../maintenance.js";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
@@ -242,12 +241,7 @@ export const executeTools = async (access, toolCalls) => {
 						payload.maintenance_reason = call.args.maintenance_reason;
 					}
 					// Verify host exists first (optional, update throws if not found)
-					logger.debug("[AI Executor] set_maintenance_mode payload:", payload);
 					await internalProxyHost.update(access, payload);
-					
-					// Verify the update was saved
-					const verifyHost = await internalProxyHost.get(access, { id: id });
-					logger.debug("[AI Executor] After update - maintenance_start:", verifyHost.maintenance_start, "maintenance_active:", verifyHost.maintenance_active);
 
 					// Force Nginx Reload
 					// We must fetch the FULL object with all relations (locations, access_list, etc)
