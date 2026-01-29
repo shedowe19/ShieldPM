@@ -225,8 +225,13 @@ export const executeTools = async (access, toolCalls) => {
 					}
 
 					// Handle Scheduling - support many AI parameter name variations
-					const startTime = call.args.maintenance_start || call.args.start || call.args.start_time || call.args.scheduled_start;
-					const endTime = call.args.maintenance_end || call.args.end || call.args.end_time || call.args.scheduled_end;
+					const startTime =
+						call.args.maintenance_start ||
+						call.args.start ||
+						call.args.start_time ||
+						call.args.scheduled_start;
+					const endTime =
+						call.args.maintenance_end || call.args.end || call.args.end_time || call.args.scheduled_end;
 					if (startTime) payload.maintenance_start = startTime;
 					if (endTime) payload.maintenance_end = endTime;
 
@@ -253,7 +258,7 @@ export const executeTools = async (access, toolCalls) => {
 					// configure expects (Model, type, item)
 					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
 					await internalNginx.reload();
-					
+
 					// Trigger immediate maintenance processing (don't wait for polling interval)
 					// This ensures scheduled maintenance activates/deactivates instantly
 					internalMaintenance.processMaintenance().catch(() => {});

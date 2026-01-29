@@ -22,7 +22,7 @@ const internalMaintenance = {
 	scheduleTimers: (hostId, start, end) => {
 		const now = dayjs();
 		const timerKey = `host_${hostId}`;
-		
+
 		// Clear any existing timers for this host
 		if (internalMaintenance.scheduledTimers.has(timerKey)) {
 			const existingTimers = internalMaintenance.scheduledTimers.get(timerKey);
@@ -30,9 +30,9 @@ const internalMaintenance = {
 				clearTimeout(timer);
 			});
 		}
-		
+
 		const newTimers = [];
-		
+
 		// Schedule start timer
 		if (start && now.isBefore(start)) {
 			const msUntilStart = start.diff(now);
@@ -43,7 +43,7 @@ const internalMaintenance = {
 			}, msUntilStart);
 			newTimers.push(startTimer);
 		}
-		
+
 		// Schedule end timer
 		if (end && now.isBefore(end)) {
 			const msUntilEnd = end.diff(now);
@@ -54,7 +54,7 @@ const internalMaintenance = {
 			}, msUntilEnd);
 			newTimers.push(endTimer);
 		}
-		
+
 		if (newTimers.length > 0) {
 			internalMaintenance.scheduledTimers.set(timerKey, newTimers);
 		}
@@ -117,17 +117,14 @@ const internalMaintenance = {
 					}
 
 					// Update DB
-					await proxyHostModel
-						.query()
-						.findById(host.id)
-						.patch(patchData);
+					await proxyHostModel.query().findById(host.id).patch(patchData);
 
 					// Refetch host and regenerate nginx config
 					const updatedHost = await proxyHostModel
 						.query()
 						.findById(host.id)
 						.withGraphFetched("[owner, access_list, certificate]");
-					
+
 					await internalNginx.configure(proxyHostModel, "proxy_host", updatedHost, { skip_reload: true });
 
 					reloadNeeded = true;
