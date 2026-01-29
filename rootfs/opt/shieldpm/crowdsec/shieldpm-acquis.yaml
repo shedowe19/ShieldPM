@@ -1,0 +1,5 @@
+filenames:
+  - /opt/shieldpm/nginx/json_access.log
+  - /opt/shieldpm/nginx/error.log
+labels:
+  type: shieldpm
