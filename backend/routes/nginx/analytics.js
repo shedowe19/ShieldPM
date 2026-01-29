@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import express from "express";
 import jwtdecode from "../../lib/express/jwt-decode.js";
+import AnalyticCount from "../../models/analytic_count.js";
 import ProxyHostModel from "../../models/proxy_host.js";
 
 const router = express.Router({
