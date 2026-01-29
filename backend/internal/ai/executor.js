@@ -5,7 +5,7 @@
 
 import ipaddr from "ipaddr.js";
 import si from "systeminformation";
-import logger from "../../logger.js";
+import { global as logger } from "../../logger.js";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
