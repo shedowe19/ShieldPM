@@ -6,10 +6,56 @@ import internalNginx from "./nginx.js";
 const internalMaintenance = {
 	interval: null,
 	intervalProcessing: false,
+	scheduledTimers: new Map(), // Track scheduled timers by hostId
 
 	initTimer: () => {
 		logger.info("Maintenance Timer initialized");
-		internalMaintenance.interval = setInterval(internalMaintenance.processMaintenance, 15 * 1000); // Check every 15 seconds
+		// Initial scan and set up precise timers
+		internalMaintenance.processMaintenance();
+		// Also keep polling as backup (every 30s) for hosts added during runtime
+		internalMaintenance.interval = setInterval(internalMaintenance.processMaintenance, 30 * 1000);
+	},
+
+	/**
+	 * Schedule precise timers for a specific host
+	 */
+	scheduleTimers: (hostId, start, end) => {
+		const now = dayjs();
+		const timerKey = `host_${hostId}`;
+		
+		// Clear any existing timers for this host
+		if (internalMaintenance.scheduledTimers.has(timerKey)) {
+			const existingTimers = internalMaintenance.scheduledTimers.get(timerKey);
+			existingTimers.forEach(timer => clearTimeout(timer));
+		}
+		
+		const newTimers = [];
+		
+		// Schedule start timer
+		if (start && now.isBefore(start)) {
+			const msUntilStart = start.diff(now);
+			logger.info(`Scheduling maintenance START for Host #${hostId} in ${Math.round(msUntilStart / 1000)}s`);
+			const startTimer = setTimeout(() => {
+				logger.info(`Maintenance START triggered for Host #${hostId}`);
+				internalMaintenance.processMaintenance();
+			}, msUntilStart);
+			newTimers.push(startTimer);
+		}
+		
+		// Schedule end timer
+		if (end && now.isBefore(end)) {
+			const msUntilEnd = end.diff(now);
+			logger.info(`Scheduling maintenance END for Host #${hostId} in ${Math.round(msUntilEnd / 1000)}s`);
+			const endTimer = setTimeout(() => {
+				logger.info(`Maintenance END triggered for Host #${hostId}`);
+				internalMaintenance.processMaintenance();
+			}, msUntilEnd);
+			newTimers.push(endTimer);
+		}
+		
+		if (newTimers.length > 0) {
+			internalMaintenance.scheduledTimers.set(timerKey, newTimers);
+		}
 	},
 
 	processMaintenance: async () => {
@@ -32,6 +78,9 @@ const internalMaintenance = {
 				const start = host.maintenance_start ? dayjs(host.maintenance_start) : null;
 				const end = host.maintenance_end ? dayjs(host.maintenance_end) : null;
 
+				// Schedule precise timers for future events
+				internalMaintenance.scheduleTimers(host.id, start, end);
+
 				// STATE-BASED LOGIC:
 				// 1. Determine if we SHOULD be in maintenance right now
 				let shouldBeActive = false;
@@ -45,7 +94,7 @@ const internalMaintenance = {
 				// 2. Compare with current DB state
 				const isCurrentlyActive = !!host.maintenance_active;
 
-					if (shouldBeActive !== isCurrentlyActive) {
+				if (shouldBeActive !== isCurrentlyActive) {
 					logger.info(
 						`Maintenance State Change for Host #${host.id}: ${isCurrentlyActive} -> ${shouldBeActive}`,
 					);
@@ -55,15 +104,11 @@ const internalMaintenance = {
 						maintenance_active: shouldBeActive ? 1 : 0,
 					};
 
-					// Clear schedule after it has been processed to prevent constant re-triggering:
-					// - If activating with no end time (one-shot): clear start after activation
-					// - If deactivating (window ended): clear both start and end
+					// Clear schedule after it has been processed to prevent constant re-triggering
 					if (shouldBeActive && !end) {
-						// One-shot activation: clear start so user can manually disable later
 						patchData.maintenance_start = null;
 						logger.info(`Cleared one-shot schedule for Host #${host.id}`);
 					} else if (!shouldBeActive && end && now.isAfter(end)) {
-						// Window has passed: clear both dates
 						patchData.maintenance_start = null;
 						patchData.maintenance_end = null;
 						logger.info(`Cleared expired maintenance window for Host #${host.id}`);
@@ -75,13 +120,12 @@ const internalMaintenance = {
 						.findById(host.id)
 						.patch(patchData);
 
-					// Refetch host with updated maintenance_active and regenerate nginx config
+					// Refetch host and regenerate nginx config
 					const updatedHost = await proxyHostModel
 						.query()
 						.findById(host.id)
 						.withGraphFetched("[owner, access_list, certificate]");
 					
-					// Regenerate nginx config for this host (skip_reload=true, we batch reload at end)
 					await internalNginx.configure(proxyHostModel, "proxy_host", updatedHost, { skip_reload: true });
 
 					reloadNeeded = true;
