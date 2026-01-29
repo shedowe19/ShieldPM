@@ -26,7 +26,9 @@ const internalMaintenance = {
 		// Clear any existing timers for this host
 		if (internalMaintenance.scheduledTimers.has(timerKey)) {
 			const existingTimers = internalMaintenance.scheduledTimers.get(timerKey);
-			existingTimers.forEach(timer => clearTimeout(timer));
+			existingTimers.forEach((timer) => {
+				clearTimeout(timer);
+			});
 		}
 		
 		const newTimers = [];

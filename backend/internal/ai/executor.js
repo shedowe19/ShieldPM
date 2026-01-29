@@ -17,7 +17,6 @@ import internalCertificate from "../certificate.js";
 import internalDdnsProvider from "../ddns-provider.js";
 import internalDeadHost from "../dead-host.js";
 import internalIpRanges from "../ip_ranges.js";
-import internalGitOps from "../gitops.js";
 import internalNginx from "../nginx.js";
 import internalPki from "../pki.js";
 import internalProxyHost from "../proxy-host.js";
