@@ -30,8 +30,10 @@ CONTEXT & CRITICAL RULES:
 12. **MAINTENANCE SCHEDULING**:
     - If user says "in 10 minutes", **CALCULATE** the timestamp (Current Time + 10m) in ISO 8601 UTC.
     - Set \`maintenance_start\` to this timestamp.
+    - If user says "...and stop in 20 minutes", also set \`maintenance_end\` to (Current Time + 20m).
     - Set \`maintenance_active\` to \`false\` (otherwise Manual Mode overrides Schedule).
-    - Example: \`set_maintenance_mode(id=123, maintenance_start="2026-01-28T15:30:00Z", active=false)\`
+    - Example (start only): \`set_maintenance_mode(id=123, maintenance_start="2026-01-28T15:30:00Z", active=false)\`
+    - Example (start AND end): \`set_maintenance_mode(id=123, maintenance_start="2026-01-28T15:30:00Z", maintenance_end="2026-01-28T16:00:00Z", active=false)\`
     - ALWAYS pass \`reason\` if the user specifies one or implies a message for visitors.
 
 13. **PARAMETER ALIASES**:
