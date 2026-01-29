@@ -44,16 +44,14 @@ export function AiChat() {
 			// Filter history to exclude failed/loading states if any,
 			// but here we just pass the valid history (stripped of internal IDs)
 			const history = messages.map(({ id, ...rest }) => rest);
-			console.log("Sending chat request:", { message: userMsg.content, historyLength: history.length });
 
 			const response = await sendAiChat(userMsg.content, history);
-			console.log("Received chat response:", response);
+
 			setMessages((prev) => [
 				...prev,
 				{ role: AI_ROLE.ASSISTANT, content: response.content, id: Math.random().toString(36).substring(7) },
 			]);
 		} catch (err) {
-			console.error("Chat error:", err);
 			const msg = err instanceof Error ? err.message : String(err);
 			setMessages((prev) => [
 				...prev,

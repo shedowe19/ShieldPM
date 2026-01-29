@@ -2,6 +2,7 @@
 
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
+import internalChat from "./internal/chat.js";
 import internalCloudflared from "./internal/cloudflared.js";
 import internalDdns from "./internal/ddns.js";
 import internalDocker from "./internal/docker.js";
@@ -47,6 +48,7 @@ async function appStart() {
 		internalDocker.init();
 		internalGitOps.init();
 		internalDdns.initTimer();
+		await internalChat.init();
 		internalGitDeploy.init();
 
 		const server = app.listen("/run/shieldpm.sock", () => {

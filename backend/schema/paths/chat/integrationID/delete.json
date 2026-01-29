@@ -1,0 +1,36 @@
+{
+	"operationId": "deleteChatIntegration",
+	"summary": "Delete a Chat Integration",
+	"tags": [
+		"chat"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"user"
+			]
+		}
+	],
+	"parameters": [
+		{
+			"in": "path",
+			"name": "integrationID",
+			"required": true,
+			"schema": {
+				"type": "integer"
+			}
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "200 response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "boolean"
+					}
+				}
+			}
+		}
+	}
+}

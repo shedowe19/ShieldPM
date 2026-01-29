@@ -19,7 +19,7 @@ services:
     container_name: shieldpm
     restart: always
     network_mode: host
-    
+
     # --------------------------------------------------------------------------
     # VOLUMES
     # --------------------------------------------------------------------------
@@ -29,16 +29,16 @@ services:
       # - "/path/to/old/npm/letsencrypt/folder:/etc/letsencrypt" # Only needed for initial migration from original nginx-proxy-manager to this fork, remove after migration
       # - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml and set ipc: host
 
-    # --------------------------------------------------------------------------
-    # ENVIRONMENT VARIABLES
-    # --------------------------------------------------------------------------
+      # --------------------------------------------------------------------------
+      # ENVIRONMENT VARIABLES
+      # --------------------------------------------------------------------------
     environment:
       # --- System Settings ---
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
       # - "PUID=0" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
       # - "PGID=0" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID
       # - "CSRF_SECRET=your-secure-random-secret" # Min. 32 characters recommended. Generate with: openssl rand -hex 32
-      
+
       # --- Network & Ports ---
       # - "NPM_PORT=81" # Port the ShieldPM UI should be bound to, default 81, change this if you want to run multiple shieldpm instances in network mode host
       # - "GOA_PORT=91" # Port for goaccess, default 91, change this if you want to run multiple shieldpm with goaccess instances in network mode host
@@ -48,7 +48,7 @@ services:
       # - "DISABLE_HTTP=false" # prevents nginx from listening on port 80, default false
       # - "LISTEN_PROXY_PROTOCOL=false" # should listeners of http(s) hosts (proxy/redirect/dead and default) use proxy protocol instead of http(s)? default false, overrides DISABLE_H3_QUIC to true
       # - "DISABLE_H3_QUIC=false" # prevents nginx from listening on port 443 udp for default host and all your hosts, this will fully disable HTTP/3 and QUIC, even if you enable it inside the UI, not recommended, default false
-      
+
       # - "IPV4_BINDING=127.0.0.1" # IPv4 address to bind, defaults to all
       # - "NPM_IPV4_BINDING=127.0.0.1" # IPv4 address to bind for the ShieldPM UI, defaults to all
       # - "GOA_IPV4_BINDING=127.0.0.1" # IPv4 address to bind for goaccess, defaults to all
@@ -68,7 +68,7 @@ services:
       # - "DB_MYSQL_SSL=false" # Enable SSL for MySQL/MariaDB? default false
       # - "DB_MYSQL_SSL_REJECT_UNAUTHORIZED=true" # Reject unauthorized SSL certificates? default true
       # - "DB_MYSQL_SSL_VERIFY_IDENTITY=true" # Verify SSL certificate identity? default true
-      
+
       # - "DB_POSTGRES_HOST=127.0.0.1" # Postgres Host
       # - "DB_POSTGRES_PORT=5432" # Postgres Port
       # - "DB_POSTGRES_USER=npm" # Postgres User
@@ -85,7 +85,7 @@ services:
       # - "ACME_PROFILE=shortlived" # sets the profile to be used from the acme server, defaults to "none"
       # - "ACME_KEY_TYPE=rsa" # which key type to use ecdsa or rsa, default and recommended: ecdsa
       # - "ACME_SERVER_TLS_VERIFY=false" # enables checking if ACME_SERVER has a valid TLS cert, default and recommended true
-      
+
       # - "DEFAULT_CERT_ID=1" # ID of cert to use instead of dummycerts, default 0/unset/dummycerts
       # - "CUSTOM_OCSP_STAPLING=true" # enables ocsp stapling for custom certs, default false, I recommend enabling this if your custom certs support it
       # - "CRT=72" # Set how many hours should be between certbot trying to renew your certs, default 23
@@ -125,7 +125,7 @@ services:
       # - "NGINX_LOAD_NTLM_MODULE=true" # loads the ntlm module, requires manual configuration, default false
       # - "NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE=true" # loads the virtual host traffic status module, requires manual configuration, default false
       # - "DOCKER_HOSTS=tcp://10.10.10.1:2375,tcp://10.10.10.2:2375" # Optional: Connect to additional remote Docker hosts (local socket is always monitored)
-      
+
       # --- Initialization ---
       # - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # email to use instead of admin@example.org on first start
       # - "INITIAL_ADMIN_PASSWORD=<initial-password>" # password to use instead of a random password
@@ -135,182 +135,183 @@ services:
       # --- Tor Onion Services ---
       # - "TOR_ENABLED=true" # Enable/disable Tor daemon for Onion Services, default true
 
-    # --------------------------------------------------------------------------
-    # CAPABILITIES (Advanced)
-    # --------------------------------------------------------------------------
-    # cap_add: # required if you set NGINX_QUIC_BPF to true
-    #   - BPF 
-    #   - PERFMON
-    #   - NET_ADMIN
-    
-    # dns: # only set this if you need/want to override the default DNS server
-    #   - 1.1.1.1 # Cloudflare
-    #   - 1.0.0.1 # Cloudflare
+      # --------------------------------------------------------------------------
+      # CAPABILITIES (Advanced)
+      # --------------------------------------------------------------------------
+      # cap_add: # required if you set NGINX_QUIC_BPF to true
+      #   - BPF 
+      #   - PERFMON
+      #   - NET_ADMIN
 
-    # ipc: host # required when you want to use the openappsec attachment module
+      # dns: # only set this if you need/want to override the default DNS server
+      #   - 1.1.1.1 # Cloudflare
+      #   - 1.0.0.1 # Cloudflare
 
-# ==============================================================================
-# OPTIONAL SERVICES
-# Uncomment the blocks below to enable additional features
-# ==============================================================================
+      # ipc: host # required when you want to use the openappsec attachment module
 
-# --- CrowdSec (Security) ---
-#  crowdsec:
-#    container_name: crowdsec
-#    image: docker.io/crowdsecurity/crowdsec:latest
-#    restart: always
-#    network_mode: bridge
-#    ports:
-#      - "127.0.0.1:7422:7422"
-#      - "127.0.0.1:8080:8080"
-#    environment:
-#      - "TZ=Europe/Berlin"
-#      - "USE_WAL=true"
-      - "COLLECTIONS=crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve crowdsecurity/modsecurity crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
-#    volumes:
-#      - "/opt/crowdsec/conf:/etc/crowdsec"
-#      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
-#      - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro"
-#      - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
-#      - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
-#      - "/opt/openappsec/logs:/opt/openappsec/logs:ro" # only uncomment if you also use the openappsec-agent container
+      # ==============================================================================
+      # OPTIONAL SERVICES
+      # Uncomment the blocks below to enable additional features
+      # ==============================================================================
 
-# --- Database: MySQL ---
-#  db:
-#    container_name: shieldpm-db
-#    image: mysql:8 # or mariadb:10
-#    restart: always
-#    network_mode: bridge
-#    environment:
-#      - "MYSQL_ROOT_PASSWORD=npm"
-#      - "MYSQL_DATABASE=npm"
-#      - "MYSQL_USER=npm"
-#      - "MYSQL_PASSWORD=npm"
-#    ports:
-#      - "3306:3306"
-#    volumes:
-#      - "db_data:/var/lib/mysql"
+      # --- CrowdSec (Security) ---
+      #  crowdsec:
+      #    container_name: crowdsec
+      #    image: docker.io/crowdsecurity/crowdsec:latest
+      #    restart: always
+      #    network_mode: bridge
+      #    ports:
+      #      - "127.0.0.1:7422:7422"
+      #      - "127.0.0.1:8080:8080"
+      #    environment:
+      #      - "TZ=Europe/Berlin"
+      #      - "USE_WAL=true"
+      #      - "COLLECTIONS=crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve crowdsecurity/modsecurity crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
+      #    volumes:
+      #      - "/opt/crowdsec/conf:/etc/crowdsec"
+      #      - "/opt/crowdsec/data:/var/lib/crowdsec/data"
+      #      - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro"
+      #      - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+      #      - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
+      #      - "/opt/shieldpm/crowdsec/shieldpm-acquis.yaml:/etc/crowdsec/acquis.d/shieldpm.yaml:ro"
+      #      - "/opt/openappsec/logs:/opt/openappsec/logs:ro" # only uncomment if you also use the openappsec-agent container
 
-# --- Database: Postgres ---
-#  db:
-#    container_name: shieldpm-db
-#    image: postgres:17-alpine
-#    restart: always
-#    network_mode: bridge
-#    environment:
-#      - "POSTGRES_DB=npm"
-#      - "POSTGRES_USER=npm"
-#      - "POSTGRES_PASSWORD=npm"
-#    ports:
-#      - "5432:5432"
-#    volumes:
-#      - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
+      # --- Database: MySQL ---
+      #  db:
+      #    container_name: shieldpm-db
+      #    image: mysql:8 # or mariadb:10
+      #    restart: always
+      #    network_mode: bridge
+      #    environment:
+      #      - "MYSQL_ROOT_PASSWORD=npm"
+      #      - "MYSQL_DATABASE=npm"
+      #      - "MYSQL_USER=npm"
+      #      - "MYSQL_PASSWORD=npm"
+      #    ports:
+      #      - "3306:3306"
+      #    volumes:
+      #      - "db_data:/var/lib/mysql"
 
-# --- GeoIP Update (for GoAccess) ---
-#  geoipupdate:
-#    container_name: shieldpm-geoipupdate
-#    image: ghcr.io/maxmind/geoipupdate:latest
-#    restart: always
-#    network_mode: bridge
-#    environment:
-#      - "TZ=Europe/Berlin"
-#      - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City GeoLite2-ASN"
-#      - "GEOIPUPDATE_ACCOUNT_ID=<your-account-id>" # needs to be changed
-#      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>" # needs to be changed
-#      - "GEOIPUPDATE_FREQUENCY=24"
-#    volumes:
-#      - "/opt/shieldpm/nginx:/usr/share/GeoIP"
+      # --- Database: Postgres ---
+      #  db:
+      #    container_name: shieldpm-db
+      #    image: postgres:17-alpine
+      #    restart: always
+      #    network_mode: bridge
+      #    environment:
+      #      - "POSTGRES_DB=npm"
+      #      - "POSTGRES_USER=npm"
+      #      - "POSTGRES_PASSWORD=npm"
+      #    ports:
+      #      - "5432:5432"
+      #    volumes:
+      #      - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
 
-# --- Caddy (Redirector) ---
-#  shieldpm-caddy:
-#    container_name: shieldpm-caddy
-#    image: ghcr.io/shedowe19/shieldpm:caddy
-#    restart: always
-#    network_mode: bridge
-#    ports:
-#      - "80:80"
-#    environment:
-#      - "TZ=Europe/Berlin"
+      # --- GeoIP Update (for GoAccess) ---
+      #  geoipupdate:
+      #    container_name: shieldpm-geoipupdate
+      #    image: ghcr.io/maxmind/geoipupdate:latest
+      #    restart: always
+      #    network_mode: bridge
+      #    environment:
+      #      - "TZ=Europe/Berlin"
+      #      - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City GeoLite2-ASN"
+      #      - "GEOIPUPDATE_ACCOUNT_ID=<your-account-id>" # needs to be changed
+      #      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>" # needs to be changed
+      #      - "GEOIPUPDATE_FREQUENCY=24"
+      #    volumes:
+      #      - "/opt/shieldpm/nginx:/usr/share/GeoIP"
 
-# ==============================================================================
-# OPENAPPSEC (Advanced WAF)
-# IMPORTANT: Uncomment 'ipc: host' and 'shm-volume' in shieldpm service above
-# ==============================================================================
-#  openappsec-agent:
-#    container_name: openappsec-agent
-#    image: ghcr.io/openappsec/agent:latest
-#    restart: always
-#    ipc: host
-#    volumes:
-#      - "shm-volume:/dev/shm/check-point"
-#      - "/opt/openappsec/conf:/etc/cp/conf"
-#      - "/opt/openappsec/data:/etc/cp/data"
-#      - "/opt/openappsec/logs:/var/log/nano_agent"
-#      - "/opt/openappsec/localconf:/ext/appsec" # if you don't set AGENT_TOKEN, then please put a local_policy.yaml in the /opt/openappsec/localconf folder before deploying
-#      - "/opt/openappsec/open-appsec-advanced-model.tgz:/advanced-model/open-appsec-advanced-model.tgz" # optional, if you want to use a different model
-#    environment:
-#      - "TZ=Europe/Berlin"
-#      - "autoPolicyLoad=true"
-#      - "registered_server=ShieldPM"
-#      - "user_email=your-email" # optional, from their docs...
-#      - "AGENT_TOKEN=" # optional, you can specify an openappsec deployment profile token...
-#      - "SHARED_STORAGE_HOST=openappsec-shared-storage" # uncomment if you don't set AGENT_TOKEN
-#      - "LEARNING_HOST=openappsec-smartsync" # uncomment if you don't set AGENT_TOKEN
-#      - "TUNING_HOST=openappsec-tuning-svc" # uncomment if you don't set AGENT_TOKEN
-#    command: /cp-nano-agent
+      # --- Caddy (Redirector) ---
+      #  shieldpm-caddy:
+      #    container_name: shieldpm-caddy
+      #    image: ghcr.io/shedowe19/shieldpm:caddy
+      #    restart: always
+      #    network_mode: bridge
+      #    ports:
+      #      - "80:80"
+      #    environment:
+      #      - "TZ=Europe/Berlin"
 
-#  openappsec-smartsync:
-#    container_name: openappsec-smartsync
-#    image: ghcr.io/openappsec/smartsync:latest
-#    restart: always
-#    environment:
-#      - "TZ=Europe/Berlin"
-#      - "SHARED_STORAGE_HOST=openappsec-shared-storage"
-#    depends_on:
-#      - openappsec-shared-storage
+      # ==============================================================================
+      # OPENAPPSEC (Advanced WAF)
+      # IMPORTANT: Uncomment 'ipc: host' and 'shm-volume' in shieldpm service above
+      # ==============================================================================
+      #  openappsec-agent:
+      #    container_name: openappsec-agent
+      #    image: ghcr.io/openappsec/agent:latest
+      #    restart: always
+      #    ipc: host
+      #    volumes:
+      #      - "shm-volume:/dev/shm/check-point"
+      #      - "/opt/openappsec/conf:/etc/cp/conf"
+      #      - "/opt/openappsec/data:/etc/cp/data"
+      #      - "/opt/openappsec/logs:/var/log/nano_agent"
+      #      - "/opt/openappsec/localconf:/ext/appsec" # if you don't set AGENT_TOKEN, then please put a local_policy.yaml in the /opt/openappsec/localconf folder before deploying
+      #      - "/opt/openappsec/open-appsec-advanced-model.tgz:/advanced-model/open-appsec-advanced-model.tgz" # optional, if you want to use a different model
+      #    environment:
+      #      - "TZ=Europe/Berlin"
+      #      - "autoPolicyLoad=true"
+      #      - "registered_server=ShieldPM"
+      #      - "user_email=your-email" # optional, from their docs...
+      #      - "AGENT_TOKEN=" # optional, you can specify an openappsec deployment profile token...
+      #      - "SHARED_STORAGE_HOST=openappsec-shared-storage" # uncomment if you don't set AGENT_TOKEN
+      #      - "LEARNING_HOST=openappsec-smartsync" # uncomment if you don't set AGENT_TOKEN
+      #      - "TUNING_HOST=openappsec-tuning-svc" # uncomment if you don't set AGENT_TOKEN
+      #    command: /cp-nano-agent
 
-#  openappsec-shared-storage:
-#    container_name: openappsec-shared-storage
-#    image: ghcr.io/openappsec/smartsync-shared-files:latest
-#    restart: always
-#    ipc: service:openappsec-agent
-#    user: root # if you do not want to run this container as "root"...
-#    environment:
-#      - "TZ=Europe/Berlin"
-#    volumes:
-#      - "/opt/openappsec/storage:/db"
+      #  openappsec-smartsync:
+      #    container_name: openappsec-smartsync
+      #    image: ghcr.io/openappsec/smartsync:latest
+      #    restart: always
+      #    environment:
+      #      - "TZ=Europe/Berlin"
+      #      - "SHARED_STORAGE_HOST=openappsec-shared-storage"
+      #    depends_on:
+      #      - openappsec-shared-storage
 
-#  openappsec-tuning-svc:
-#    container_name: openappsec-tuning-svc
-#    image: ghcr.io/openappsec/smartsync-tuning:latest
-#    restart: always
-#    environment:
-#      - "TZ=Europe/Berlin"
-#      - "SHARED_STORAGE_HOST=openappsec-shared-storage"
-#      - "QUERY_DB_HOST=openappsec-db"
-#      - "QUERY_DB_PASSWORD=password" # replace with something secure, should match POSTGRES_PASSWORD from openappsec-db container
-#      - "QUERY_DB_USER=appsec"
-#    volumes:
-#      - "/opt/openappsec/conf:/etc/cp/conf"
-#    depends_on:
-#      - openappsec-shared-storage
-#      - openappsec-db
+      #  openappsec-shared-storage:
+      #    container_name: openappsec-shared-storage
+      #    image: ghcr.io/openappsec/smartsync-shared-files:latest
+      #    restart: always
+      #    ipc: service:openappsec-agent
+      #    user: root # if you do not want to run this container as "root"...
+      #    environment:
+      #      - "TZ=Europe/Berlin"
+      #    volumes:
+      #      - "/opt/openappsec/storage:/db"
 
-#  openappsec-db:
-#    container_name: openappsec-db
-#    image: postgres:17-alpine
-#    restart: always
-#    environment:
-#      - "TZ=Europe/Berlin"
-#      - "POSTGRES_PASSWORD=password" # replace with something secure, should match QUERY_DB_PASSWORD from openappsec-tuning-svc container
-#      - "POSTGRES_USER=appsec"
-#    volumes:
-#      - "/opt/openappsec/pgdb:/var/lib/postgresql/data"
+      #  openappsec-tuning-svc:
+      #    container_name: openappsec-tuning-svc
+      #    image: ghcr.io/openappsec/smartsync-tuning:latest
+      #    restart: always
+      #    environment:
+      #      - "TZ=Europe/Berlin"
+      #      - "SHARED_STORAGE_HOST=openappsec-shared-storage"
+      #      - "QUERY_DB_HOST=openappsec-db"
+      #      - "QUERY_DB_PASSWORD=password" # replace with something secure, should match POSTGRES_PASSWORD from openappsec-db container
+      #      - "QUERY_DB_USER=appsec"
+      #    volumes:
+      #      - "/opt/openappsec/conf:/etc/cp/conf"
+      #    depends_on:
+      #      - openappsec-shared-storage
+      #      - openappsec-db
 
-# volumes:
-#   db_data:
-#   shm-volume:
-#     driver: local
-#     driver_opts:
-#       type: tmpfs
-#       device: tmpfs
+      #  openappsec-db:
+      #    container_name: openappsec-db
+      #    image: postgres:17-alpine
+      #    restart: always
+      #    environment:
+      #      - "TZ=Europe/Berlin"
+      #      - "POSTGRES_PASSWORD=password" # replace with something secure, should match QUERY_DB_PASSWORD from openappsec-tuning-svc container
+      #      - "POSTGRES_USER=appsec"
+      #    volumes:
+      #      - "/opt/openappsec/pgdb:/var/lib/postgresql/data"
+
+      # volumes:
+      #   db_data:
+      #   shm-volume:
+      #     driver: local
+      #     driver_opts:
+      #       type: tmpfs
+      #       device: tmpfs

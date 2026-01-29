@@ -1,0 +1,26 @@
+{
+	"operationId": "getChatIntegrations",
+	"summary": "Get all Chat Integrations",
+	"tags": [
+		"chat"
+	],
+	"security": [
+		{
+			"bearerAuth": [
+				"user"
+			]
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "200 response",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../components/chat-integration-list.json"
+					}
+				}
+			}
+		}
+	}
+}

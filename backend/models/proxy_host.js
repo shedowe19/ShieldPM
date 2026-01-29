@@ -167,16 +167,18 @@ class ProxyHost extends Model {
 	$beforeUpdate() {
 		this.modified_on = /** @type {any} */ (now());
 
-		if (this.maintenance_start) {
-			this.maintenance_start = dayjs(this.maintenance_start).format("YYYY-MM-DD HH:mm:ss");
-		} else {
-			this.maintenance_start = null;
+		// Only format maintenance dates if they are explicitly being set (not undefined)
+		// Do NOT set to null if undefined - this would override partial patches
+		if (typeof this.maintenance_start !== "undefined") {
+			this.maintenance_start = this.maintenance_start
+				? dayjs(this.maintenance_start).format("YYYY-MM-DD HH:mm:ss")
+				: null;
 		}
 
-		if (this.maintenance_end) {
-			this.maintenance_end = dayjs(this.maintenance_end).format("YYYY-MM-DD HH:mm:ss");
-		} else {
-			this.maintenance_end = null;
+		if (typeof this.maintenance_end !== "undefined") {
+			this.maintenance_end = this.maintenance_end
+				? dayjs(this.maintenance_end).format("YYYY-MM-DD HH:mm:ss")
+				: null;
 		}
 	}
 

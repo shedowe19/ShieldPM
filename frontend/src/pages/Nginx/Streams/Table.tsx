@@ -5,9 +5,9 @@ import type { Stream } from "src/api/backend";
 import {
 	CertificateFormatter,
 	EmptyData,
-	UserAvatar,
 	HasPermission,
 	TrueFalseFormatter,
+	UserAvatar,
 	ValueWithDateFormatter,
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";

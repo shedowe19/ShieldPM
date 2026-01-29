@@ -8,6 +8,27 @@
  * @returns {Array} Tool definitions in OpenAI/Gemini function format
  */
 export const getToolDefinitions = () => [
+	{
+		function: {
+			name: "get_system_status",
+			description: "Get System Health (CPU, RAM, Network Traffic)",
+			parameters: { type: "object", properties: {} },
+		},
+	},
+	{
+		function: {
+			name: "force_nginx_reload",
+			description: "Force Nginx Reload",
+			parameters: { type: "object", properties: {} },
+		},
+	},
+	{
+		function: {
+			name: "test_nginx_config",
+			description: "Test Nginx Configuration",
+			parameters: { type: "object", properties: {} },
+		},
+	},
 	// Proxy Hosts
 	{
 		function: {
@@ -123,6 +144,21 @@ export const getToolDefinitions = () => [
 			name: "enable_proxy_host",
 			description: "Enable a Proxy Host by ID",
 			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
+		},
+	},
+	{
+		function: {
+			name: "set_maintenance_mode",
+			description: "Enable or Disable Maintenance Mode for a Proxy Host (displays maintenance page to visitors)",
+			parameters: {
+				type: "object",
+				properties: {
+					id: { type: "integer", description: "Proxy Host ID" },
+					active: { type: "boolean", description: "true to enable maintenance, false to disable" },
+					reason: { type: "string", description: "Reason for maintenance (optional)" },
+				},
+				required: ["id", "active"],
+			},
 		},
 	},
 	{
@@ -413,8 +449,20 @@ export const getToolDefinitions = () => [
 					mtls_enabled: { type: "boolean" },
 					mtls_certificate: { type: "string" },
 					mtls_use_internal: { type: "boolean" },
-					items: { type: "array" },
-					clients: { type: "array" },
+					items: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: { username: { type: "string" }, password: { type: "string" } },
+						},
+					},
+					clients: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: { address: { type: "string" }, directive: { type: "string" } },
+						},
+					},
 				},
 				required: ["id"],
 			},
@@ -574,7 +622,7 @@ export const getToolDefinitions = () => [
 					id: { type: "integer" },
 					name: { type: "string" },
 					provider: { type: "string" },
-					domains: { type: "array" },
+					domains: { type: "array", items: { type: "string" } },
 					ip_ver: { type: "string" },
 					config: {
 						type: "object",
@@ -778,6 +826,24 @@ export const getToolDefinitions = () => [
 	// Analytics & Logs
 	{
 		function: {
+			name: "get_host_analytics",
+			description: "Get detailed analytics (Top IPs, User Agents, etc.) for a specific Proxy Host",
+			parameters: {
+				type: "object",
+				properties: {
+					host_id: { type: "integer", description: "ID of the Proxy Host" },
+					range: {
+						type: "string",
+						description: "Time range (1h, 24h, 7d, 30d)",
+						enum: ["1h", "24h", "7d", "30d"],
+					},
+				},
+				required: ["host_id"],
+			},
+		},
+	},
+	{
+		function: {
 			name: "get_analytics_summary",
 			description: "Get recent analytics summary (24h)",
 			parameters: { type: "object", properties: {} },
@@ -786,8 +852,19 @@ export const getToolDefinitions = () => [
 	{
 		function: {
 			name: "get_analytics_series",
-			description: "Get Analytics (Time Series)",
-			parameters: { type: "object", properties: {} },
+			description: "Get detailed analytics (Top IPs, User Agents, etc.) for a specific Proxy Host",
+			parameters: {
+				type: "object",
+				properties: {
+					host_id: { type: "integer", description: "ID of the Proxy Host" },
+					range: {
+						type: "string",
+						description: "Time range (1h, 24h, 7d, 30d)",
+						enum: ["1h", "24h", "7d", "30d"],
+					},
+				},
+				required: ["host_id"],
+			},
 		},
 	},
 	{

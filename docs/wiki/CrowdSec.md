@@ -41,6 +41,7 @@ Add the CrowdSec container to your `compose.yaml`.
       # Verify this matches your 'volumes' in shieldpm service!
       - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
       - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
+      - "/opt/shieldpm/crowdsec/shieldpm-acquis.yaml:/etc/crowdsec/acquis.d/shieldpm.yaml:ro"
 ```
 
 > [!WARNING]
@@ -88,7 +89,15 @@ ShieldPM has a built-in Nginx Bouncer.
 
 ## ⚙️ Acquisition Configuration
 
-Tell CrowdSec where to find the logs. Create `<crowdsec-conf-vol>/acquis.d/shieldpm.yaml`:
+ShieldPM automatically provisions the acquisition configuration to your data directory (`/data/crowdsec/shieldpm-acquis.yaml`).
+
+**Mount it into your CrowdSec container** (add to your `compose.yaml` volumes):
+
+```yaml
+      - "/opt/shieldpm/crowdsec/shieldpm-acquis.yaml:/etc/crowdsec/acquis.d/shieldpm.yaml:ro"
+```
+
+The file contains:
 
 ```yaml
 filenames:

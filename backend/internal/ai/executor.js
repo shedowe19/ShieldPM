@@ -3,14 +3,11 @@
  * Handles the execution of AI tool calls by interfacing with internal backend modules.
  */
 
-import { exec } from "node:child_process";
-import util from "node:util";
-import dayjs from "dayjs";
 import ipaddr from "ipaddr.js";
 import si from "systeminformation";
+import internalMaintenance from "../maintenance.js";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
-import AnalyticCount from "../../models/analytic_count.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
@@ -22,6 +19,7 @@ import internalIpRanges from "../ip_ranges.js";
 import internalNginx from "../nginx.js";
 import internalPki from "../pki.js";
 import internalProxyHost from "../proxy-host.js";
+import ProxyHost from "../../models/proxy_host.js";
 import internalRedirectionHost from "../redirection-host.js";
 import internalReport from "../report.js";
 import internalSetting from "../setting.js";
@@ -29,8 +27,6 @@ import internalStream from "../stream.js";
 import internalToken from "../token.js";
 import internalTor from "../tor.js";
 import internalUser from "../user.js";
-
-const execAsync = util.promisify(exec);
 
 /**
  * Validate host data in Demo Mode - blocks private IPs and advanced config
@@ -212,6 +208,62 @@ export const executeTools = async (access, toolCalls) => {
 				case "disable_proxy_host": {
 					await internalProxyHost.disable(access, { id: call.args.id });
 					result = `Disabled Proxy Host ID: ${call.args.id}`;
+					break;
+				}
+				case "set_maintenance_mode": {
+					// Use update mechanism to set maintenance fields
+					const id = call.args.id || call.args.proxy_host_id || call.args.host_id;
+					const payload = {
+						id: id,
+					};
+
+					// If maintenance_active is explicitly boolean, use it.
+					// If it's undefined (scheduling only), we generally don't touch 'active' unless we want to ensure it's off.
+					// However, Nginx logic prioritizes 'active'. So if scheduling, we probably want active=false.
+					if (typeof call.args.active !== "undefined") {
+						payload.maintenance_active = call.args.active;
+					}
+
+					// Handle Scheduling - support many AI parameter name variations
+					const startTime =
+						call.args.maintenance_start ||
+						call.args.start ||
+						call.args.start_time ||
+						call.args.scheduled_start;
+					const endTime =
+						call.args.maintenance_end || call.args.end || call.args.end_time || call.args.scheduled_end;
+					if (startTime) payload.maintenance_start = startTime;
+					if (endTime) payload.maintenance_end = endTime;
+
+					// If start is set but active is not specified, force active=false to allow schedule to work
+					if (payload.maintenance_start && typeof payload.maintenance_active === "undefined") {
+						payload.maintenance_active = false;
+					}
+
+					if (call.args.reason) {
+						payload.maintenance_reason = call.args.reason;
+					} else if (call.args.maintenance_reason) {
+						payload.maintenance_reason = call.args.maintenance_reason;
+					}
+					// Verify host exists first (optional, update throws if not found)
+					await internalProxyHost.update(access, payload);
+
+					// Force Nginx Reload
+					// We must fetch the FULL object with all relations (locations, access_list, etc)
+					// otherwise generateConfig fails when accessing missing properties (e.g. locations).
+					const updatedHost = await internalProxyHost.get(access, {
+						id: id,
+						expand: ["owner", "access_list", "certificate"],
+					});
+					// configure expects (Model, type, item)
+					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
+					await internalNginx.reload();
+
+					// Trigger immediate maintenance processing (don't wait for polling interval)
+					// This ensures scheduled maintenance activates/deactivates instantly
+					internalMaintenance.processMaintenance().catch(() => {});
+
+					result = `Maintenance Mode ${call.args.active ? "ENABLED" : "DISABLED"} for Host ID: ${id}`;
 					break;
 				}
 				// Redirection Hosts
@@ -585,6 +637,52 @@ export const executeTools = async (access, toolCalls) => {
 					result = JSON.stringify(Object.keys(plugins).map((k) => ({ id: k, name: plugins[k].name })));
 					break;
 				}
+				// Users
+				case "get_users": {
+					if (isDemoMode()) throw new Error("User listing is disabled in Demo Mode.");
+					const users = await internalUser.getAll(access);
+					result = JSON.stringify(
+						users.map((u) => ({
+							id: u.id,
+							name: u.name,
+							email: u.email,
+							roles: u.roles,
+							is_disabled: u.is_disabled,
+						})),
+					);
+					break;
+				}
+				// Logs
+				case "read_nginx_logs": {
+					if (isDemoMode()) throw new Error("Log reading is disabled in Demo Mode.");
+					const logType = call.args.log_type || "error";
+					const lines = call.args.lines || 50;
+					const logs = await internalNginx.getLogs(access, logType);
+					// Get last N lines
+					const logLines = logs.split("\n").slice(-lines).join("\n");
+					result = logLines || "No logs found.";
+					break;
+				}
+				// Analytics Alias
+				case "get_analytics_summary": {
+					// Redirect to getHostSummary logic
+					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					// Use 'all' or first host if not specified, though summary implies specific.
+					// If no host, maybe dashboard summary?
+					// Let's assume dashboard summary if no args
+					if (!call.args.host_id && !call.args.proxy_host_id) {
+						// Dashboard stats
+						const counts = await internalReport.getHostsReport(access);
+						result = JSON.stringify(counts);
+					} else {
+						const summary = await internalAnalytics.getHostSummary(
+							call.args.host_id || call.args.proxy_host_id,
+							call.args.range || "24h",
+						);
+						result = JSON.stringify(summary, null, 2);
+					}
+					break;
+				}
 				// DDNS Client
 				case "get_ddns_providers": {
 					const providers = await internalDdnsProvider.getAll(access);
@@ -642,16 +740,19 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "get_analytics_series": {
-					// const summaryResult = await ai._tools.get_analytics_summary(call.args); // Reuse summary logic or fetch specifically
-					// Re-implement series logic briefly
-					const start = dayjs().subtract(24, "hour").toISOString();
-					const end = dayjs().toISOString();
-					const data = await AnalyticCount.query()
-						.where("timestamp", ">=", start)
-						.andWhere("timestamp", "<=", end)
-						.orderBy("timestamp", "asc");
-					// Simply return raw length or condensed
-					result = `Series Data Points: ${data.length}`;
+					// Redirect to the robust summary tool logic
+					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					const summary = await internalAnalytics.getHostSummary(
+						call.args.proxy_host_id || call.args.host_id,
+						call.args.time_range || call.args.range || "24h",
+					);
+					result = JSON.stringify(summary, null, 2);
+					break;
+				}
+				case "get_host_analytics": {
+					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					const summary = await internalAnalytics.getHostSummary(call.args.host_id, call.args.range || "24h");
+					result = JSON.stringify(summary, null, 2);
 					break;
 				}
 				// Other Updates
@@ -830,20 +931,13 @@ export const executeTools = async (access, toolCalls) => {
 					result = `Stopped Tor Onion Service ID: ${call.args.id}`;
 					break;
 				}
-				// Missing Read/Log Tools
-				case "get_users": {
-					const users = await internalUser.getAll(access);
-					result = JSON.stringify(
-						users.map((/** @type {any} */ u) => ({
-							id: u.id,
-							name: u.name,
-							email: u.email,
-							roles: u.roles,
-						})),
-					);
-					break;
-				}
+				// Duplicate cases removed. get_users, read_nginx_logs, get_analytics_summary are handled earlier.
+				// get_audit_log is unique here, so we move it or keep it?
+				// Actually I should DELETE the duplicates but keep get_audit_log if it wasn't earlier.
+				// Grep said get_audit_log was at 909. Was it earlier?
+				// Grep output 1683: get_audit_log only at 909. So I must KEEP it.
 				case "get_audit_log": {
+					if (isDemoMode()) throw new Error("Audit Log is disabled in Demo Mode.");
 					const logs = await internalAuditLog.getAll(access, ["user"]);
 					result = JSON.stringify(
 						logs.map((/** @type {any} */ l) => ({
@@ -853,31 +947,6 @@ export const executeTools = async (access, toolCalls) => {
 							meta: l.meta,
 						})),
 					);
-					break;
-				}
-				case "read_nginx_logs": {
-					const type = call.args.log_type;
-					const lines = call.args.lines || 50;
-					const file = type === "error" ? "/data/logs/error.log" : "/data/logs/access.log";
-					try {
-						const { stdout } = await execAsync(`tail -n ${lines} ${file}`);
-						result = stdout;
-					} catch (err) {
-						result = `Error reading logs: ${err.message}`;
-					}
-					break;
-				}
-				case "get_analytics_summary": {
-					const start = dayjs().subtract(24, "hour").format("YYYY-MM-DD HH:mm:ss");
-					const end = dayjs().format("YYYY-MM-DD HH:mm:ss");
-					/** @type {any} */
-					const totalRequests = await AnalyticCount.query()
-						.where("timestamp", ">=", start)
-						.andWhere("timestamp", "<=", end)
-						.count("id as count")
-						.first();
-
-					result = `Analytics (24h) - Total Requests: ${/** @type {any} */ (totalRequests).count || 0}`;
 					break;
 				}
 

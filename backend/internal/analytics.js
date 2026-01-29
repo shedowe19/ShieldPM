@@ -206,6 +206,138 @@ class AnalyticsService {
 			logger.error(`Failed to run retention: ${err.message}`);
 		}
 	}
+	/**
+	 * Get aggregated summary for a host (Top Lists)
+	 * @param {number} hostId
+	 * @param {String} range (1h, 24h, 7d, 30d)
+	 */
+	async getHostSummary(hostId, range) {
+		const host = await ProxyHost.query().where("id", hostId).andWhere("is_deleted", 0).first();
+		if (!host) throw new Error("Host not found");
+
+		let since;
+		const now = dayjs();
+		switch (range) {
+			case "1h":
+				since = now.subtract(1, "hour");
+				break;
+			case "24h":
+				since = now.subtract(24, "hour");
+				break;
+			case "7d":
+				since = now.subtract(7, "day");
+				break;
+			case "30d":
+				since = now.subtract(30, "day");
+				break;
+			default:
+				since = now.subtract(24, "hour");
+				break;
+		}
+
+		const sinceIso = since.toISOString();
+		const knex = AnalyticsLogs.knex();
+
+		// Parallel execution for speed
+		const [topCountries, topIps, topReferers, topUserAgents, topPaths, recent, resultTotals] = await Promise.all([
+			// Top Countries
+			knex("analytics_logs")
+				.select("country_code")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("country_code")
+				.orderBy("count", "desc")
+				.limit(10),
+
+			// Top IPs
+			knex("analytics_logs")
+				.select("ip", "country_code")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("ip", "country_code")
+				.orderBy("count", "desc")
+				.limit(10),
+
+			// Top Referrers
+			knex("analytics_logs")
+				.select("referer")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.whereNotNull("referer")
+				.andWhereNot("referer", "-")
+				.groupBy("referer")
+				.orderBy("count", "desc")
+				.limit(10),
+
+			// Top UAs
+			knex("analytics_logs")
+				.select("user_agent")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("user_agent")
+				.orderBy("count", "desc")
+				.limit(10),
+
+			// Top Paths
+			knex("analytics_logs")
+				.select("path")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("path")
+				.orderBy("count", "desc")
+				.limit(10),
+
+			// Recent 20 requests
+			knex("analytics_logs")
+				.select("*")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.orderBy("time", "desc")
+				.limit(20),
+
+			// Aggregated Totals
+			AnalyticCount.query()
+				.where("proxy_host_id", hostId)
+				.andWhere("timestamp", ">=", sinceIso)
+				.sum("request_count as count")
+				.sum("status_code_2xx as s2xx")
+				.sum("status_code_3xx as s3xx")
+				.sum("status_code_4xx as s4xx")
+				.sum("status_code_5xx as s5xx")
+				.first(),
+		]);
+
+		const totals = resultTotals || {};
+		const getNum = (obj, keys) => {
+			for (const k of keys) {
+				if (obj[k] !== undefined && obj[k] !== null) return Number(obj[k]);
+			}
+			return 0;
+		};
+
+		return {
+			range,
+			since: sinceIso,
+			stats: {
+				count: getNum(totals, ["count", "COUNT", "request_count"]),
+				status_2xx: getNum(totals, ["s2xx", "S2XX", "status_code_2xx"]),
+				status_3xx: getNum(totals, ["s3xx", "S3XX", "status_code_3xx"]),
+				status_4xx: getNum(totals, ["s4xx", "S4XX", "status_code_4xx"]),
+				status_5xx: getNum(totals, ["s5xx", "S5XX", "status_code_5xx"]),
+			},
+			top_countries: topCountries,
+			top_ips: topIps,
+			top_referers: topReferers,
+			top_user_agents: topUserAgents,
+			top_paths: topPaths,
+			recent_requests: recent,
+		};
+	}
 }
 
 const service = new AnalyticsService();

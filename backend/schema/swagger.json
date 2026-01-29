@@ -63,6 +63,10 @@
 		{
 			"name": "users",
 			"description": "Endpoints for managing users"
+		},
+		{
+			"name": "chat",
+			"description": "Endpoints for managing Chat Integrations"
 		}
 	],
 	"paths": {
@@ -457,6 +461,22 @@
 		"/ai/chat": {
 			"post": {
 				"$ref": "./paths/ai/chat.json"
+			}
+		},
+		"/chat": {
+			"get": {
+				"$ref": "./paths/chat/get.json"
+			},
+			"post": {
+				"$ref": "./paths/chat/post.json"
+			}
+		},
+		"/chat/{integrationID}": {
+			"put": {
+				"$ref": "./paths/chat/integrationID/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/chat/integrationID/delete.json"
 			}
 		}
 	}

@@ -1,3 +1,4 @@
+export * from "./chatIntegrations";
 export * from "./checkVersion";
 export * from "./claimOidcToken";
 export * from "./createAccessList";

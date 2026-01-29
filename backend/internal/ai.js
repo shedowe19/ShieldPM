@@ -1,4 +1,5 @@
 import { decrypt, encrypt } from "../lib/encryption.js";
+import { global as logger } from "../logger.js";
 import { executeTools } from "./ai/executor.js";
 import { getSystemPrompt } from "./ai/prompt.js";
 import * as aiProviders from "./ai/providers.js";
@@ -94,9 +95,19 @@ const ai = {
 			dataToSave.api_key = encrypt(dataToSave.api_key);
 		}
 
-		// Check if setting exists, create if not
+		// Check if setting exists, or create if not
+		let exists = false;
 		try {
 			await internalSetting.get(access, { id: AI_CONFIG_ID });
+			exists = true;
+		} catch (err) {
+			if (err.code !== 404 && err.message !== AI_CONFIG_ID) {
+				// Rethrow if it's not a "Not Found" error
+				throw err;
+			}
+		}
+
+		if (exists) {
 			// Update
 			await internalSetting.update(
 				access,
@@ -107,10 +118,12 @@ const ai = {
 					meta: dataToSave,
 				}),
 			);
-		} catch (_err) {
+		} else {
+			// Insert
 			const SettingModel = (await import("../models/setting.js")).default;
 			await SettingModel.query().insert({
 				id: AI_CONFIG_ID,
+				name: AI_CONFIG_ID,
 				description: "AI Agent Configuration",
 				value: data.enabled ? "true" : "false",
 				meta: dataToSave,
@@ -199,7 +212,7 @@ const ai = {
 			throw new Error("AI Agent is disabled.");
 		}
 
-		console.log("[DEBUG] AI Chat Config:", {
+		logger.debug("[DEBUG] AI Chat Config:", {
 			provider: config.provider,
 			model: config.model,
 			baseUrl: config.base_url,
@@ -208,7 +221,7 @@ const ai = {
 		// FAIL-SAFE: If switching providers left a Gemini model name, clear it for Local
 		if (config.provider === "local" && config.model && config.model.includes("gemini")) {
 			// Logs for debugging
-			console.log(`[AI] Sanitzing model for Local provider. Invalid model: ${config.model}`);
+			logger.warn(`[AI] Sanitzing model for Local provider. Invalid model: ${config.model}`);
 			config.model = ""; // Will fallback to default in _callLocalLLM
 		}
 
@@ -219,7 +232,7 @@ const ai = {
 		const systemPrompt = getSystemPrompt(config);
 		const tools = getToolDefinitions();
 
-		console.log("[AI Chat] Calling LLM:", {
+		logger.info("[AI Chat] Calling LLM:", {
 			provider: config.provider,
 			messageLength: message.length,
 			toolsCount: tools.length,
@@ -233,62 +246,114 @@ const ai = {
 			response = await aiProviders.callLocalLLM(config, systemPrompt, message, history, tools);
 		}
 
-		console.log("[AI Chat] LLM Response:", {
+		logger.info("[AI Chat] LLM Response:", {
 			hasContent: !!response.content,
 			hasToolCalls: !!response.toolCalls,
 			contentLength: response.content?.length || 0,
 		});
 
-		// FALLBACK: Detect tool calls embedded in text response (small models sometimes output JSON as text)
-		if ((!response.toolCalls || response.toolCalls.length === 0) && response.content) {
-			const toolCallPatterns = [
-				// Pattern 1: {"name": "tool_name", "arguments": {...}}
-				/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
-				// Pattern 2: function call format
-				/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
-			];
+		// 4. Handle Tool Calls
+		// 4. Handle Tool Calls (Recursive Loop)
+		let iterations = 0;
+		const MAX_ITERATIONS = 5;
+		let wasToolExecuted = false; // Track if ANY tool was executed in this chain
 
-			for (const pattern of toolCallPatterns) {
-				const matches = [...response.content.matchAll(pattern)];
-				if (matches.length > 0) {
-					console.log("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
-					response.toolCalls = response.toolCalls || [];
-					for (const match of matches) {
-						try {
-							const toolName = match[1];
-							const argsStr = match[2] || "{}";
-							const args = JSON.parse(argsStr.replace(/'/g, '"'));
-							response.toolCalls.push({ name: toolName, args });
-							console.log(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
-						} catch (e) {
-							console.log("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
+		// Helper to extract tools from text content if structured tool calls are missing
+		const extractToolsFromText = (resp) => {
+			if ((!resp.toolCalls || resp.toolCalls.length === 0) && resp.content) {
+				const toolCallPatterns = [
+					// Pattern 1: {"name": "tool_name", "arguments": {...}}
+					/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
+					// Pattern 2: function call format (standard)
+					/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
+					// Pattern 2b: function call format (no parentheses, just JSON)
+					/(\w+_\w+)\s*(\{[^}]+\})/g,
+					// Pattern 3: XML-style <toolcall> or <tool_call> (Gemini Thinking/Flash models sometimes do this)
+					// Using [\s\S] instead of . to ensure newlines are matched across the whole block
+					/<tool_?call(?:\s+[^>]*)?>([\s\S]*?)<\/tool_?call>/gi,
+				];
+
+				for (const pattern of toolCallPatterns) {
+					const matches = [...resp.content.matchAll(pattern)];
+					if (matches.length > 0) {
+						logger.warn("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
+						resp.toolCalls = resp.toolCalls || [];
+						for (const match of matches) {
+							try {
+								let toolName;
+								let args;
+
+								// Check which pattern matched
+								if (match[0].startsWith("<tool")) {
+									// XML Pattern: match[1] is the JSON content
+									const json = JSON.parse(match[1]);
+									toolName = json.name;
+									args = json.arguments || {};
+								} else if (match[1] && match[2]) {
+									// Regex groups
+									toolName = match[1];
+									const argsStr = match[2] || "{}";
+									args = JSON.parse(argsStr.replace(/'/g, '"'));
+								} else {
+									// JSON Pattern
+									toolName = match[1];
+									const argsStr = match[2] || "{}";
+									args = JSON.parse(argsStr.replace(/'/g, '"'));
+								}
+
+								// Normalization: Fix hallucinated names (e.g. gethostanalytics -> get_host_analytics)
+								// We try updates if direct match fails.
+								const definedTools = getToolDefinitions();
+								const exactMatch = definedTools.find((t) => t.function.name === toolName);
+								if (!exactMatch) {
+									// Try to find by removing underscores from defined tools
+									const looseMatch = definedTools.find(
+										(t) => t.function.name.replace(/_/g, "") === toolName.replace(/_/g, ""),
+									);
+									if (looseMatch) {
+										logger.info(
+											`[AI Chat] Normalizing tool name: ${toolName} -> ${looseMatch.function.name}`,
+										);
+										toolName = looseMatch.function.name;
+									}
+								}
+
+								resp.toolCalls.push({ name: toolName, args });
+								logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
+							} catch (e) {
+								logger.warn("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
+							}
 						}
+						// Clear the text content since we extracted tool calls
+						if (resp.toolCalls.length > 0) {
+							resp.content = "";
+						}
+						break;
 					}
-					// Clear the text content since we extracted tool calls
-					if (response.toolCalls.length > 0) {
-						response.content = "";
-					}
-					break;
 				}
 			}
-		}
+		};
 
-		// 4. Handle Tool Calls
-		if (response.toolCalls && response.toolCalls.length > 0) {
-			console.log(
-				"[AI Chat] Executing tools:",
+		// Initial Check
+		extractToolsFromText(response);
+
+		while (response.toolCalls && response.toolCalls.length > 0 && iterations < MAX_ITERATIONS) {
+			iterations++;
+			wasToolExecuted = true;
+			logger.info(
+				`[AI Chat] Executing tools (Turn ${iterations}):`,
 				response.toolCalls.map((tc) => tc.name),
 			);
 			const toolResults = await executeTools(access, response.toolCalls);
 
-			console.log(
-				"[AI Chat] Tool results:",
+			logger.info(
+				`[AI Chat] Tool results (Turn ${iterations}):`,
 				toolResults.map((tr) => ({ name: tr.name, resultLength: tr.result?.length || 0 })),
 			);
 
 			// Call LLM again with results
 			if (config.provider === "gemini") {
-				return await aiProviders.callGeminiWithResults(
+				response = await aiProviders.callGeminiWithResults(
 					config,
 					systemPrompt,
 					message,
@@ -297,18 +362,28 @@ const ai = {
 					toolResults,
 					tools,
 				);
+			} else {
+				response = await aiProviders.callLocalWithResults(
+					config,
+					systemPrompt,
+					message,
+					history,
+					response,
+					toolResults,
+				);
 			}
-			return await aiProviders.callLocalWithResults(
-				config,
-				systemPrompt,
-				message,
-				history,
-				response,
-				toolResults,
-			);
+
+			// Check for tools in the new response (RECURSIVE FIX)
+			extractToolsFromText(response);
+
+			logger.info(`[AI Chat] LLM Response (Turn ${iterations}):`, {
+				hasContent: !!response.content,
+				hasToolCalls: !!response.toolCalls,
+				contentLength: response.content?.length || 0,
+			});
 		}
 
-		console.log("[AI Chat] Returning response:", {
+		logger.debug("[AI Chat] Returning response:", {
 			role: "assistant",
 			contentLength: response.content?.length || 0,
 		});
@@ -331,12 +406,28 @@ const ai = {
 			/removed/i,
 			/added/i,
 		];
-		const toolsExecuted = response.toolCalls && response.toolCalls.length > 0;
+
+		// Filter out <think> blocks from final content
+		if (finalContent) {
+			// Remove <think>...</think> blocks (dotAll to handle newlines)
+			finalContent = finalContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+			// Also remove <toolcall> or <tool_call> blocks if any remain (just in case)
+			finalContent = finalContent.replace(/<tool_?call>[\s\S]*?<\/tool_?call>/gi, "").trim();
+		}
+
+		// Fail-safe: If content is empty but tools were executed, provide a default status
+		if (!finalContent && wasToolExecuted) {
+			finalContent = "✅ Validated actions. Please check the system state updates.";
+		}
+
+		// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
+		// Use the persistent flag, not just the final response state
+		const toolsExecuted = wasToolExecuted || (response.toolCalls && response.toolCalls.length > 0);
 
 		if (!toolsExecuted && finalContent) {
 			const claimsAction = actionWords.some((pattern) => pattern.test(finalContent));
 			if (claimsAction) {
-				console.log("[AI Chat] WARNING: AI claims action but no tool was executed!");
+				logger.warn("[AI Chat] WARNING: AI claims action but no tool was executed!");
 				finalContent = `⚠️ WARNING: The AI claims to have performed an action, but no tool was executed. Please verify manually!\n\n---\n\n${finalContent}`;
 			}
 		}

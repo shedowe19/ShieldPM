@@ -7,10 +7,10 @@ import {
 	CertificateFormatter,
 	DomainsFormatter,
 	EmptyData,
-	UserAvatar,
 	HasPermission,
 	ServiceIcon,
 	TrueFalseFormatter,
+	UserAvatar,
 } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Button } from "src/components/ui/button";

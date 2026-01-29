@@ -4,6 +4,7 @@ import type {
 	AiRole,
 	AvatarType,
 	CertificateProvider,
+	ChatProvider,
 	DdnsProviderName,
 	ForwardScheme,
 	GitPollUnit,
@@ -352,4 +353,19 @@ export interface DashboardNote {
 	content: string;
 	color: UiColor;
 	position: number;
+}
+
+export interface ChatIntegration {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	userId: number;
+	provider: ChatProvider;
+	token?: string;
+	enabled: boolean;
+	config: {
+		allowed_ids: (string | number)[];
+	};
+	meta: Record<string, unknown>;
+	user?: User;
 }

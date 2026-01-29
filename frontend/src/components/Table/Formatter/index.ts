@@ -5,7 +5,7 @@ export * from "./DateFormatter";
 export * from "./DomainsFormatter";
 export * from "./EmailFormatter";
 export * from "./EventFormatter";
-export * from "./UserAvatar";
 export * from "./RolesFormatter";
 export * from "./TrueFalseFormatter";
+export * from "./UserAvatar";
 export * from "./ValueWithDateFormatter";
