@@ -50,13 +50,30 @@ const internalMaintenance = {
 						`Maintenance State Change for Host #${host.id}: ${isCurrentlyActive} -> ${shouldBeActive}`,
 					);
 
+					// Build patch object
+					const patchData = {
+						maintenance_active: shouldBeActive ? 1 : 0,
+					};
+
+					// Clear schedule after it has been processed to prevent constant re-triggering:
+					// - If activating with no end time (one-shot): clear start after activation
+					// - If deactivating (window ended): clear both start and end
+					if (shouldBeActive && !end) {
+						// One-shot activation: clear start so user can manually disable later
+						patchData.maintenance_start = null;
+						logger.info(`Cleared one-shot schedule for Host #${host.id}`);
+					} else if (!shouldBeActive && end && now.isAfter(end)) {
+						// Window has passed: clear both dates
+						patchData.maintenance_start = null;
+						patchData.maintenance_end = null;
+						logger.info(`Cleared expired maintenance window for Host #${host.id}`);
+					}
+
 					// Update DB
 					await proxyHostModel
 						.query()
 						.findById(host.id)
-						.patch({
-							maintenance_active: shouldBeActive ? 1 : 0,
-						});
+						.patch(patchData);
 
 					// Refetch host with updated maintenance_active and regenerate nginx config
 					const updatedHost = await proxyHostModel
