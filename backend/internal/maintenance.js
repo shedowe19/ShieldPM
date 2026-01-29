@@ -45,7 +45,7 @@ const internalMaintenance = {
 				// 2. Compare with current DB state
 				const isCurrentlyActive = !!host.maintenance_active;
 
-				if (shouldBeActive !== isCurrentlyActive) {
+					if (shouldBeActive !== isCurrentlyActive) {
 					logger.info(
 						`Maintenance State Change for Host #${host.id}: ${isCurrentlyActive} -> ${shouldBeActive}`,
 					);
@@ -57,6 +57,15 @@ const internalMaintenance = {
 						.patch({
 							maintenance_active: shouldBeActive ? 1 : 0,
 						});
+
+					// Refetch host with updated maintenance_active and regenerate nginx config
+					const updatedHost = await proxyHostModel
+						.query()
+						.findById(host.id)
+						.withGraphFetched("[owner, access_list, certificate]");
+					
+					// Regenerate nginx config for this host (skip_reload=true, we batch reload at end)
+					await internalNginx.configure(proxyHostModel, "proxy_host", updatedHost, { skip_reload: true });
 
 					reloadNeeded = true;
 				}
