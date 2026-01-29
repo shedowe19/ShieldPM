@@ -9,7 +9,7 @@ const internalMaintenance = {
 
 	initTimer: () => {
 		logger.info("Maintenance Timer initialized");
-		internalMaintenance.interval = setInterval(internalMaintenance.processMaintenance, 60 * 1000); // Check every minute
+		internalMaintenance.interval = setInterval(internalMaintenance.processMaintenance, 15 * 1000); // Check every 15 seconds
 	},
 
 	processMaintenance: async () => {
