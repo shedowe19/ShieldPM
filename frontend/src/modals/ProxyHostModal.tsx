@@ -170,8 +170,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								advLimitReqBurst: data?.advLimitReqBurst || undefined,
 								forwardQuery: data?.forwardQuery || "",
 								maintenanceActive: data?.maintenanceActive || false,
-								maintenanceStart: data?.maintenanceStart || "",
-								maintenanceEnd: data?.maintenanceEnd || "",
+								// datetime-local requires format: YYYY-MM-DDTHH:mm:ss (no timezone)
+								// API returns ISO format with 'Z' suffix, so we strip it
+								maintenanceStart: data?.maintenanceStart
+									? data.maintenanceStart.replace("Z", "").split(".")[0]
+									: "",
+								maintenanceEnd: data?.maintenanceEnd
+									? data.maintenanceEnd.replace("Z", "").split(".")[0]
+									: "",
 								maintenanceReason: data?.maintenanceReason || "",
 								// Git Sync
 								gitRepoUrl: data?.gitRepoUrl || "",
