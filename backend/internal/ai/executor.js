@@ -6,6 +6,7 @@
 import ipaddr from "ipaddr.js";
 import si from "systeminformation";
 import { global as logger } from "../../logger.js";
+import internalMaintenance from "../maintenance.js";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
@@ -259,6 +260,10 @@ export const executeTools = async (access, toolCalls) => {
 					// configure expects (Model, type, item)
 					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
 					await internalNginx.reload();
+					
+					// Trigger immediate maintenance processing (don't wait for polling interval)
+					// This ensures scheduled maintenance activates/deactivates instantly
+					internalMaintenance.processMaintenance().catch(() => {});
 
 					result = `Maintenance Mode ${call.args.active ? "ENABLED" : "DISABLED"} for Host ID: ${id}`;
 					break;
