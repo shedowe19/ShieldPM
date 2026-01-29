@@ -241,7 +241,6 @@ export const executeTools = async (access, toolCalls) => {
 						payload.maintenance_reason = call.args.maintenance_reason;
 					}
 					// Verify host exists first (optional, update throws if not found)
-					console.log("[AI Executor] set_maintenance_mode payload:", JSON.stringify(payload));
 					await internalProxyHost.update(access, payload);
 
 					// Force Nginx Reload
