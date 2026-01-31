@@ -223,8 +223,7 @@ export const process = async (force = false) => {
 		const currentIps = await getWanIps();
 
 		// Only log if IPs have changed since last check
-		const wanIpsChanged =
-			currentIps.ipv4 !== lastKnownIps.ipv4 || currentIps.ipv6 !== lastKnownIps.ipv6;
+		const wanIpsChanged = currentIps.ipv4 !== lastKnownIps.ipv4 || currentIps.ipv6 !== lastKnownIps.ipv6;
 
 		if (wanIpsChanged) {
 			logger.info(`DDNS: WAN IPs changed - v4: ${currentIps.ipv4}, v6: ${currentIps.ipv6}`);
