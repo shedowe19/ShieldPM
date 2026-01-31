@@ -257,7 +257,7 @@ RUN apk upgrade --no-cache -a && \
 # ==========================================
 # Stage 5: Cloudflared
 # ==========================================
-FROM cloudflare/cloudflared:2025.11.1 AS cloudflared
+FROM cloudflare/cloudflared:latest AS cloudflared
 
 # ==========================================
 # Final Stage
