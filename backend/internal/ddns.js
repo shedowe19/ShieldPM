@@ -5,6 +5,9 @@ import DdnsProvider from "../models/ddns_provider.js";
 let timer = null;
 const INTERVAL = 1000 * 60; // 60 seconds
 
+// Track last known IPs to avoid log spam
+let lastKnownIps = { ipv4: null, ipv6: null };
+
 /**
  * Get current WAN IPs (v4 and v6)
  * @returns {Promise<{ipv4: string|null, ipv6: string|null}>}
@@ -218,7 +221,15 @@ export const process = async (force = false) => {
 		if (providersList.length === 0) return;
 
 		const currentIps = await getWanIps();
-		logger.info(`DDNS: Current WAN IPs - v4: ${currentIps.ipv4}, v6: ${currentIps.ipv6}`);
+
+		// Only log if IPs have changed since last check
+		const wanIpsChanged =
+			currentIps.ipv4 !== lastKnownIps.ipv4 || currentIps.ipv6 !== lastKnownIps.ipv6;
+
+		if (wanIpsChanged) {
+			logger.info(`DDNS: WAN IPs changed - v4: ${currentIps.ipv4}, v6: ${currentIps.ipv6}`);
+			lastKnownIps = { ...currentIps };
+		}
 
 		for (const provider of providersList) {
 			const v4Changed = provider.ip_ver !== "v6" && currentIps.ipv4 && provider.last_ipv4 !== currentIps.ipv4;
