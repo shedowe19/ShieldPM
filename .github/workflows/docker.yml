@@ -29,6 +29,7 @@ on:
 
 env:
   IMAGE_NAME: ghcr.io/shedowe19/shieldpm
+  LXC_TEMPLATE_NAME: "" # Placeholder for linter
 
 permissions:
   contents: read
@@ -268,7 +269,7 @@ jobs:
           FILE_NAME="shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_${ARCH_SUFFIX}.tar.gz"
           mv rootfs.tar.gz "$FILE_NAME"
           
-          echo "filename=$FILE_NAME" >> $GITHUB_OUTPUT
+          echo "LXC_TEMPLATE_NAME=$FILE_NAME" >> $GITHUB_ENV
           
           # Cleanup
           docker rm -f "$CONTAINER_NAME"
@@ -278,7 +279,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: shieldpm-lxc-template-${{ matrix.arch }}
-          path: ${{ steps.lxc.outputs.filename }}
+          path: ${{ env.LXC_TEMPLATE_NAME }}
           if-no-files-found: error
 
   # ---------------------------------------------------------
