@@ -184,14 +184,13 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Proxmox Native Passive Mode) ---
+      # --- NEW: LXC Export (Fix "Start Twice" Bug) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Start temporary container
           docker run -d --name temp-lxc-export --entrypoint tail ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }} -f /dev/null
           
           # 2. Install legacy dhclient (Alpine 3.20)
-          # We provide the binary so Proxmox hooks can use it, but we don't force-run it.
           echo "Adding Alpine 3.20 repos to fetch legacy dhclient..."
           docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/main' >> /etc/apk/repositories"
           docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/community' >> /etc/apk/repositories"
@@ -201,7 +200,6 @@ jobs:
           docker exec temp-lxc-export apk add --no-cache dhclient
           
           # 3. Create Symlink (/sbin/dhclient)
-          # This is CRITICAL. Proxmox explicitly calls /sbin/dhclient.
           echo "Ensuring /sbin/dhclient exists..."
           if docker exec temp-lxc-export ls /usr/sbin/dhclient >/dev/null 2>&1; then
               docker exec temp-lxc-export ln -s /usr/sbin/dhclient /sbin/dhclient
@@ -228,12 +226,24 @@ jobs:
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 6. Patch launch.sh (Passive Network Logic)
-          echo "Patching launch.sh with Passive Network Logic..."
+          # 6. Patch launch.sh (Fix: Cleanup Stale Leases/PIDs)
+          echo "Patching launch.sh with Cleanup Logic..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
             # Set CWD to /app (fixes migrations)\
             cd /app\
+            \
+            # ------------------------------------------------------------------\
+            # STARTUP CLEANUP (Fixes "DHCP failed" on restart)\
+            # ------------------------------------------------------------------\
+            # Kill any leftover dhclients and remove stale pid/lease files\
+            # This ensures Proxmox (and our fallback) start with a clean state.\
+            killall dhclient 2>/dev/null || true\
+            rm -rf /var/lib/dhcp/*\
+            rm -f /var/run/dhclient.pid\
+            rm -f /var/run/dhclient.leases\
+            # Create required directory\
+            mkdir -p /var/lib/dhcp\
             \
             # Fix Proxmox Console (TTY Login)\
             for tty in tty1 tty2; do\
@@ -317,9 +327,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **Legacy `dhclient` installed (Alpine 3.20)**
-            - **Native Proxmox Integration:** Checks if IP exists before doing anything.
-            - Fallback to `dhclient` only if Proxmox fails.
+            - **Startup Cleanup:** Removes stale leases/PIDs (Fixes "Second Start" Crash).
+            - **`dhclient` (Alpine 3.20)**
+            - Smart Network (Wait for Proxmox -> Fallback)
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
