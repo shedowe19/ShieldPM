@@ -132,27 +132,45 @@ jobs:
 
       - name: "🔄 Transplant ShieldPM"
         run: |
-          echo "Copying application files from Source to Target..."
-
-          # 1. Directories
+          echo "Copying application files via Host..."
+          
+          # Ordner im Container erstellen
           docker exec target-system mkdir -p /app/backend /app/frontend/dist /etc/shieldpm
 
-          # 2. Copy Backend (NodeJS)
-          docker cp source-app:/app/backend/. target-system:/app/backend/
+          # --- 1. BACKEND ---
+          # Erst vom Source-Container auf den Host (Runner) kopieren
+          docker cp source-app:/app/backend ./temp_backend
+          # Dann vom Host in den Ziel-Container kopieren
+          docker cp ./temp_backend/. target-system:/app/backend/
 
-          # 3. Copy Frontend (Static Files)
-          docker cp source-app:/app/frontend/dist/. target-system:/app/frontend/dist/
+          # --- 2. FRONTEND ---
+          docker cp source-app:/app/frontend/dist ./temp_frontend
+          docker cp ./temp_frontend/. target-system:/app/frontend/dist/
 
-          # 4. Copy Nginx Config
+          # --- 3. NGINX CONFIG ---
+          # Aufräumen im Ziel
           docker exec target-system rm -f /etc/nginx/sites-enabled/default
-          docker cp source-app:/etc/nginx/nginx.conf target-system:/etc/nginx/nginx.conf
-          docker cp source-app:/etc/nginx/conf.d/. target-system:/etc/nginx/conf.d/
+          
+          # Kopieren
+          docker cp source-app:/etc/nginx/nginx.conf ./nginx.conf
+          docker cp ./nginx.conf target-system:/etc/nginx/nginx.conf
+          
+          docker cp source-app:/etc/nginx/conf.d ./nginx_conf_d
+          docker cp ./nginx_conf_d/. target-system:/etc/nginx/conf.d/
 
-          # 5. Copy Certbot Scripts (falls vorhanden)
-          docker cp source-app:/usr/local/bin/certbot-dns-cloudflare target-system:/usr/local/bin/ 2>/dev/null || true
-          docker cp source-app:/usr/local/bin/certbot-dns-hetzner target-system:/usr/local/bin/ 2>/dev/null || true
+          # --- 4. CERTBOT ---
+          # Wir kopieren alles aus /usr/local/bin auf den Host
+          docker cp source-app:/usr/local/bin ./local_bin_files
+          
+          # Wir kopieren nur die relevanten Skripte zurück
+          if [ -f "./local_bin_files/certbot-dns-cloudflare" ]; then
+             docker cp ./local_bin_files/certbot-dns-cloudflare target-system:/usr/local/bin/
+          fi
+          if [ -f "./local_bin_files/certbot-dns-hetzner" ]; then
+             docker cp ./local_bin_files/certbot-dns-hetzner target-system:/usr/local/bin/
+          fi
 
-          # 6. Create & Enable ShieldPM Service
+          # --- 5. SYSTEMD SERVICE ---
           echo "Creating Systemd Unit..."
           cat <<EOF > shieldpm.service
           [Unit]
@@ -172,12 +190,17 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
+          # Service File in Container kopieren
+          # Da wir shieldpm.service hier lokal erstellt haben, können wir es direkt kopieren
           docker cp shieldpm.service target-system:/etc/systemd/system/
           
-          # Fix Permissions & Enable
+          # Permissions & Enable
           docker exec target-system chmod 644 /etc/systemd/system/shieldpm.service
           docker exec target-system systemctl enable shieldpm.service
           docker exec target-system systemctl enable nginx
+          
+          # Cleanup Host Temp Files
+          rm -rf ./temp_backend ./temp_frontend ./nginx.conf ./nginx_conf_d ./local_bin_files shieldpm.service
 
       - name: "📦 Export & Compress Artifact"
         run: |
@@ -187,7 +210,7 @@ jobs:
           echo "Compressing..."
           gzip -9 rootfs.tar > debian-trixie-shieldpm-${{ matrix.arch }}.tar.gz
           
-          # Cleanup
+          # Cleanup Containers
           docker rm -f source-app target-system
 
       - name: "Upload LXC Artifact"
