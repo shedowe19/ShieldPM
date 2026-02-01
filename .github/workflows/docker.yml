@@ -184,7 +184,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Fix Proxmox aa-exec Error) ---
+      # --- NEW: LXC Export (Fix Permissions & AA-Exec) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Start temporary container
@@ -199,44 +199,38 @@ jobs:
           docker exec temp-lxc-export apk update
           docker exec temp-lxc-export apk add --no-cache dhclient
           
-          # 3. Create Dummy aa-exec (Fixes "aa-exec: not found")
-          # Proxmox calls: aa-exec -p unconfined /sbin/dhclient ...
-          # This dummy script strips "-p unconfined" and executes the rest.
-          echo "Creating dummy aa-exec..."
+          # 3. Create Dummy aa-exec
+          # Fixes "aa-exec: not found" by stripping AppArmor flags
           cat <<'EOF' > aa-exec
           #!/bin/sh
-          # Fake aa-exec for Proxmox compatibility in Alpine
-          # Skip arguments until we hit the command
           while [ "$#" -gt 0 ]; do
               case "$1" in
-                  -p) shift 2 ;;       # Skip -p unconfined
-                  -*) shift ;;         # Skip other flags
-                  *) break ;;          # Found the command
+                  -p) shift 2 ;;
+                  -*) shift ;;
+                  *) break ;;
               esac
           done
-          # Execute the actual command
           exec "$@"
           EOF
           docker cp aa-exec temp-lxc-export:/usr/sbin/aa-exec
           docker exec temp-lxc-export chmod +x /usr/sbin/aa-exec
-          # Symlink to /bin and /sbin to be safe
           docker exec temp-lxc-export ln -s /usr/sbin/aa-exec /bin/aa-exec
           docker exec temp-lxc-export ln -s /usr/sbin/aa-exec /sbin/aa-exec
           
           # 4. Rename Real Binary
-          echo "Setting up dhclient wrapper infrastructure..."
           docker exec temp-lxc-export mv /usr/sbin/dhclient /usr/sbin/dhclient.real
           
-          # 5. Create Directory-Fix Wrapper for dhclient
-          # Intercepts -pf and -lf args to create missing dirs on the fly
+          # 5. Create Permission-Fixing Wrapper
+          # Intercepts args, creates dirs with 777 perms, deletes stale files
           cat <<'WRAPPER' > dhclient-wrapper
           #!/bin/sh
           prev=""
           for arg in "$@"; do
               if [ "$prev" = "-pf" ] || [ "$prev" = "-lf" ]; then
-                  # Ensure the directory exists (Proxmox expects it)
-                  mkdir -p "$(dirname "$arg")"
-                  # Delete stale file
+                  # Fix 1: Create directory with 777 permissions
+                  # This allows dhclient (even if it drops privileges) to write
+                  mkdir -p -m 777 "$(dirname "$arg")"
+                  # Fix 2: Delete stale file
                   rm -f "$arg"
               fi
               prev="$arg"
@@ -248,12 +242,21 @@ jobs:
           docker cp dhclient-wrapper temp-lxc-export:/sbin/dhclient
           docker exec temp-lxc-export chmod +x /sbin/dhclient
           
-          # 6. Fix Script Path (Proxmox compatibility)
-          echo "Fixing dhclient-script path..."
+          # 6. Fix Script Permission & Path (Critical Fix for "execve: Permission denied")
+          echo "Fixing dhclient-script permissions and path..."
           docker exec temp-lxc-export mkdir -p /usr/share/lxc/hooks
-          if docker exec temp-lxc-export ls /sbin/dhclient-script >/dev/null 2>&1; then
-             docker exec temp-lxc-export ln -s /sbin/dhclient-script /usr/share/lxc/hooks/dhclient-script
+          
+          # Find where Alpine put the script (usually /usr/sbin/dhclient-script)
+          SCRIPT_PATH="/usr/sbin/dhclient-script"
+          if ! docker exec temp-lxc-export ls $SCRIPT_PATH >/dev/null 2>&1; then
+              SCRIPT_PATH="/sbin/dhclient-script"
           fi
+          
+          # Force it to be executable (Fixes execve error)
+          docker exec temp-lxc-export chmod +x "$SCRIPT_PATH"
+          
+          # Link it to where Proxmox expects it
+          docker exec temp-lxc-export ln -sf "$SCRIPT_PATH" /usr/share/lxc/hooks/dhclient-script
           
           # 7. Inject Config
           cat <<EOF > shieldpm.env
@@ -270,13 +273,13 @@ jobs:
           EOF
           docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
           
-          # 8. Patch entrypoint.sh (Global PATH export)
+          # 8. Patch entrypoint.sh
           echo "Patching entrypoint.sh with PATH..."
           docker cp temp-lxc-export:/usr/local/bin/entrypoint.sh .
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 9. Patch launch.sh (Passive Network Logic + Cleanup)
+          # 9. Patch launch.sh
           echo "Patching launch.sh with Cleanup & Passive Network..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
@@ -293,7 +296,7 @@ jobs:
             # LXC Network Init (Passive Mode)\
             ip link set lo up\
             \
-            # Wait for Proxmox Hooks (which use our wrapper now)\
+            # Wait for Proxmox Hooks\
             echo "LXC: Waiting 3s for host network configuration..."\
             sleep 3\
             \
@@ -303,7 +306,7 @@ jobs:
             else\
                 echo "LXC: No IP detected! Starting fallback..."\
                 # Cleanup manually if Proxmox failed completely\
-                mkdir -p /var/lib/dhcp\
+                mkdir -p -m 777 /var/lib/dhcp\
                 rm -f /var/run/dhclient.pid\
                 /sbin/dhclient -v\
             fi\
@@ -365,9 +368,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **`aa-exec` Dummy (Fixes "Command not found" error in Proxmox Hooks)**
-            - **`dhclient` Wrapper (Fixes Directory/Stale File Errors)**
-            - Passive Network Mode
+            - **Permission Fix:** `mkdir -m 777` for Lease-Files.
+            - **Script Fix:** `chmod +x` for `dhclient-script` (Fixes execve error).
+            - **`aa-exec` Fix:** Dummy wrapper.
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
