@@ -1,6 +1,11 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import knex from "knex";
 import { configGet, configHas } from "./lib/config.js";
 import { global as logger } from "./logger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let instance = null;
 
@@ -29,6 +34,7 @@ const generateDbConfig = () => {
 		},
 		migrations: {
 			tableName: "migrations",
+			directory: path.join(__dirname, "migrations"),
 		},
 		pool: {
 			min: 2,

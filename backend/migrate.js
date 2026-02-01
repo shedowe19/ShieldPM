@@ -1,12 +1,17 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import db from "./db.js";
 import { migrate as logger } from "./logger.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const migrateUp = async () => {
 	const version = await db().migrate.currentVersion();
 	logger.info("Current database version:", version);
 	return await db().migrate.latest({
 		tableName: "migrations",
-		directory: "migrations",
+		directory: path.join(__dirname, "migrations"),
 	});
 };
 
