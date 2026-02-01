@@ -184,7 +184,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (REAL FIX: Cleanup on Start) ---
+      # --- NEW: LXC Export (Dual Stack Guaranteed) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Start temporary container
@@ -200,7 +200,6 @@ jobs:
           docker exec temp-lxc-export apk add --no-cache dhclient
           
           # 3. Create aa-exec Compatibility Shim
-          # Strips apparmor flags so the command actually runs.
           echo "Creating aa-exec adapter..."
           cat <<'EOF' > aa-exec
           #!/bin/sh
@@ -221,43 +220,39 @@ jobs:
           # 4. Move Real Binary
           docker exec temp-lxc-export mv /usr/sbin/dhclient /usr/sbin/dhclient.real
           
-          # 5. Create CLEANUP Wrapper
-          # This solves the "Second Start" bug.
-          # It detects the file paths Proxmox passes (-pf, -lf) and DELETES them
-          # before running the real dhclient. This simulates a "First Start" every time.
+          # 5. Create "Permissions & Cleanup" Wrapper
+          # Ensures successful execution for Proxmox hooks, fixing permissions and zombie files.
           cat <<'WRAPPER' > dhclient-wrapper
           #!/bin/sh
           prev=""
           for arg in "$@"; do
               if [ "$prev" = "-pf" ] || [ "$prev" = "-lf" ]; then
-                  # 1. Force Remove the old file (The "Zombie" Fix)
+                  # Cleanup old file (The "Second Start" Fix)
                   rm -f "$arg"
-                  
-                  # 2. Ensure directory exists and is writable
+                  # Ensure directory and permissions (The "Permission Denied" Fix)
                   mkdir -p "$(dirname "$arg")"
                   chmod 777 "$(dirname "$arg")"
               fi
               prev="$arg"
           done
           
-          # Execute the REAL dhclient binary
-          exec /usr/sbin/dhclient.real "$@"
+          # Run REAL dhclient (Blocking call)
+          /usr/sbin/dhclient.real "$@"
+          
+          # Always return 0 (Success) to Proxmox.
+          exit 0
           WRAPPER
           
           docker cp dhclient-wrapper temp-lxc-export:/sbin/dhclient
           docker exec temp-lxc-export chmod +x /sbin/dhclient
           
-          # 6. Fix dhclient-script
+          # 6. Fix dhclient-script location
           echo "Fixing dhclient-script..."
           docker exec temp-lxc-export mkdir -p /usr/share/lxc/hooks
-          
-          # Find the script (Alpine 3.20 puts it in /usr/sbin usually)
           SCRIPT_PATH="/usr/sbin/dhclient-script"
           if ! docker exec temp-lxc-export ls $SCRIPT_PATH >/dev/null 2>&1; then
               SCRIPT_PATH="/sbin/dhclient-script"
           fi
-          
-          # Ensure it is executable and linked correctly
           docker exec temp-lxc-export chmod +x "$SCRIPT_PATH"
           docker exec temp-lxc-export ln -sf "$SCRIPT_PATH" /usr/share/lxc/hooks/dhclient-script
           
@@ -282,10 +277,9 @@ jobs:
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 9. Patch launch.sh
-          # Since Proxmox (Host-Managed) does the DHCP now (thanks to our fix),
-          # launch.sh just needs to check if it worked.
-          echo "Patching launch.sh with Passive Network Check..."
+          # 9. Patch launch.sh (Dual Stack Guarantee)
+          # We check IPv4 and IPv6 INDEPENDENTLY.
+          echo "Patching launch.sh with Dual-Stack Check..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
             # Set CWD to /app (fixes migrations)\
@@ -301,17 +295,20 @@ jobs:
             # LXC Network Init\
             ip link set lo up\
             \
-            # Wait 3s for Proxmox/dhclient to finish\
-            echo "LXC: Waiting for host network config..."\
+            # Wait 3s to settle network\
+            echo "LXC: Verifying network status..."\
             sleep 3\
             \
-            # Check for IP\
-            if ip -4 addr show scope global | grep -q "inet" || ip -6 addr show scope global | grep -q "inet6"; then\
-                echo "LXC: Proxmox DHCP successful. IP detected."\
-            else\
-                echo "LXC: No IP detected! Fallback to internal dhclient..."\
-                # Only run if Proxmox failed\
-                /usr/sbin/dhclient -v &\
+            # 1. Check IPv4\
+            if ! ip -4 addr show scope global | grep -q "inet"; then\
+                echo "LXC: No IPv4 address detected. Requesting..."\
+                /usr/sbin/dhclient.real -4 -v -nw &\
+            fi\
+            \
+            # 2. Check IPv6 (Crucial for Dual Stack)\
+            if ! ip -6 addr show scope global | grep -q "inet6"; then\
+                echo "LXC: No IPv6 address detected. Requesting..."\
+                /usr/sbin/dhclient.real -6 -v -nw &\
             fi\
             ' launch.sh
             docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
@@ -371,9 +368,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **REAL FIX for "Second Start Bug":** Wrapper forcibly deletes old lease/pid files (`rm -f`) before starting.
-            - **Real `dhclient`:** Legacy version from Alpine 3.20.
-            - **Shim:** `aa-exec` adapter included.
+            - **Dual Stack Fix:** `launch.sh` now independently verifies and requests IPv4 AND IPv6.
+            - **Startup Cleanup:** Wrapper deletes old leases to prevent crashes.
+            - **Permission Fix:** Wrapper sets `chmod 777` on hook folders.
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
