@@ -34,11 +34,7 @@ set -a
 # shellcheck source=/dev/null
 . /data/.env
 set +a
-if [ -s /tmp/env.sha512sum ] && [ "$(cat /tmp/env.sha512sum)" != "$(sha512sum < /data/.env)" ]; then
-    echo "You need to recreate the ShieldPM container after changing the .env file, restarting the container after changing the .env file is not supported"
-    sleep inf
-fi
-sha512sum < /data/.env > /tmp/env.sha512sum
+
 
 # Run Node.js validation script
 # Capture output to evaluate exports
