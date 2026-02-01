@@ -17,38 +17,38 @@ services:
   # Auto-Reset Sidecar
   # Resets the database every 60 minutes
   reset:
-    image: alpine:latest
+    image: debian:trixie-slim
     restart: unless-stopped
     volumes:
       - /data/shieldpm:/data
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: |
-        sh -c '
-        echo "Auto-Reset Service Started..."
-        apk add --no-cache docker-cli
-        
-        # Wait for main app to initialize DB if needed
-        sleep 60
-        
-        # Create a clean backup if it does not exist yet
-        # Default path inside container is /data/shieldpm/database.sqlite
-        if [ ! -f /data/shieldpm/database.sqlite.clean ]; then
-            echo "Creating clean backup of database.sqlite..."
-            cp /data/shieldpm/database.sqlite /data/shieldpm/database.sqlite.clean
-        fi
+      sh -c '
+      echo "Auto-Reset Service Started..."
+      apt-get update && apt-get install -y docker.io
 
-        while true; do
-            echo "Waiting 60 minutes before reset..."
-            sleep 3600
-            echo "Resetting database..."
-            # Copy clean DB over active DB
-            cp /data/shieldpm/database.sqlite.clean /data/shieldpm/database.sqlite
-            # Force remove WAL/SHM locks to avoid corruption
-            rm -f /data/shieldpm/database.sqlite-wal /data/shieldpm/database.sqlite-shm
-            echo "Database reset complete. Restarting Application..."
-            docker restart shieldpm-demo
-        done
-        '
+      # Wait for main app to initialize DB if needed
+      sleep 60
+
+      # Create a clean backup if it does not exist yet
+      # Default path inside container is /data/shieldpm/database.sqlite
+      if [ ! -f /data/shieldpm/database.sqlite.clean ]; then
+          echo "Creating clean backup of database.sqlite..."
+          cp /data/shieldpm/database.sqlite /data/shieldpm/database.sqlite.clean
+      fi
+
+      while true; do
+          echo "Waiting 60 minutes before reset..."
+          sleep 3600
+          echo "Resetting database..."
+          # Copy clean DB over active DB
+          cp /data/shieldpm/database.sqlite.clean /data/shieldpm/database.sqlite
+          # Force remove WAL/SHM locks to avoid corruption
+          rm -f /data/shieldpm/database.sqlite-wal /data/shieldpm/database.sqlite-shm
+          echo "Database reset complete. Restarting Application..."
+          docker restart shieldpm-demo
+      done
+      '
 
   crowdsec:
     image: crowdsecurity/crowdsec:latest

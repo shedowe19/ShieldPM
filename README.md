@@ -10,6 +10,13 @@
 >     *   **Action Required**: If you mount the data volume to a host path (e.g., `./data:/data`), you may want to rename your host folder for clarity, but it is not strictly required as the mapping handles it.
 > 3.  **Downgrade**: Migration is **one-way**. Back up your data before upgrading!
 
+> [!IMPORTANT]
+> **ALPINE TO DEBIAN MIGRATION**
+> The base image has been switched from **Alpine Linux** to **Debian Trixie** (Testing).
+> *   **Stability**: Improved compatibility with glibc-based binaries and Python wheels.
+> *   **Package Names**: If you install custom packages (e.g. `PHP82_APKS`), you must now use **Debian package names** (e.g., `php8.2-curl` instead of `php82-curl`).
+> *   **Shell**: The default shell is now `bash` instead of `ash`. `start.sh` and custom scripts should use `#!/usr/bin/env sh` or `#!/bin/bash`.
+
 
 ![Version](https://img.shields.io/github/v/release/shedowe19/ShieldPM?style=for-the-badge&color=blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red?style=for-the-badge)
@@ -187,7 +194,7 @@ ShieldPM extends the original Nginx Proxy Manager with significant enhancements:
 *   **Punycode:** Full support for international domain names.
 ### 💻 Usability & Administration
 *   **Internationalization:** Frontend available in multiple languages (English, German, Spanish, French, and more).
-*   **Lightweight:** Smaller Docker image based on **Alpine Linux**.
+*   **Lightweight:** Docker image based on **Debian Trixie** with systemd support.
 *   **Secure Admin:** Admin backend and default page run securely with HTTPS.
 *   **Database:** Automatic **SQLite** vacuum and password reset utility.
 *   **Networking:** Many environment options optimized for `network_mode: host`.

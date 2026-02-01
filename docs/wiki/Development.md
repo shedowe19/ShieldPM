@@ -50,7 +50,7 @@ To build the full image locally:
 ```bash
 docker build -t shieldpm:local .
 ```
-This multi-stage build will compile the frontend, install backend dependencies, and assemble the final Alpine-based image.
+This multi-stage build will compile the frontend, install backend dependencies, and assemble the final Debian Trixie-based image.
 
 ---
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

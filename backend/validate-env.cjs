@@ -254,14 +254,14 @@ checkInt('DEFAULT_CERT_ID');
 ensureDefault('GOACLA', "--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string");
 ensureDefault('INITIAL_DEFAULT_PAGE', 'congratulations');
 
-// PHP APKs
-const checkApk = (key) => {
+// PHP Packages
+const checkPkg = (key) => {
     const val = process.env[key];
-    if (val && !/^[a-z0-9 _-]+$/.test(val)) fatal(`${key} can consist of lower letters a-z, numbers 0-9, spaces, underscores and hyphens.`);
+    if (val && !/^[a-z0-9 _-+\.]+$/.test(val)) fatal(`${key} can consist of lower letters a-z, numbers 0-9, spaces, underscores, dots, plus signs and hyphens.`);
 };
-checkApk('PHP82_APKS');
-checkApk('PHP83_APKS');
-checkApk('PHP84_APKS');
+checkPkg('PHP82_APKS');
+checkPkg('PHP83_APKS');
+checkPkg('PHP84_APKS');
 
 // Initial Admin
 const initEmail = process.env.INITIAL_ADMIN_EMAIL;

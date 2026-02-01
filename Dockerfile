@@ -3,8 +3,8 @@
 # ==========================================
 # Stage 1: Build Nginx with Modules & Patches
 # ==========================================
-FROM alpine:3.23.2 AS nginx
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+FROM debian:trixie-slim AS nginx
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
 # --- Build Arguments: Versions ---
 ARG NGINX_VER=release-1.29.4
@@ -55,10 +55,12 @@ COPY nginx-quic/zstd-nginx-module.patch /src/zstd-nginx-module.patch
 COPY nginx-quic/attachment.patch /src/attachment.patch
 
 # --- Preparation: Install Dependencies ---
-RUN apk upgrade --no-cache -a && \
-    apk add --no-cache autoconf automake brotli-dev build-base ca-certificates clang cmake curl curl-dev geoip-dev git \
-                       libatomic_ops-dev libmaxminddb-dev libtool libxml2-dev linux-headers lld lmdb-dev luajit-dev luarocks5.1 \
-                       ninja openldap-dev openssl-dev pcre2-dev yajl-dev zlib-dev zstd-dev
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    autoconf automake libbrotli-dev build-essential ca-certificates clang cmake curl libcurl4-openssl-dev libgeoip-dev git \
+    libatomic1 libatomic-ops-dev libmaxminddb-dev libtool libxml2-dev linux-headers-generic lld liblmdb-dev libluajit-5.1-dev luarocks \
+    ninja-build libldap2-dev libssl-dev libpcre2-dev libyajl-dev zlib1g-dev libzstd-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # --- Build Step 1: ModSecurity ---
 RUN git clone --depth 1 --shallow-submodules --recurse-submodules https://github.com/owasp-modsecurity/ModSecurity --branch "$MODSEC_VER" /src/ModSecurity && \
@@ -214,44 +216,47 @@ RUN find /usr/local/nginx/modules -name "*.so" -exec strip -s {} \; && \
 # ==========================================
 # Stage 2: Build Frontend
 # ==========================================
-FROM --platform="$BUILDPLATFORM" alpine:3.23.2 AS frontend
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+FROM --platform="$BUILDPLATFORM" debian:trixie-slim AS frontend
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY frontend /app
 WORKDIR /app/frontend
-RUN apk upgrade --no-cache -a && \
-    apk add --no-cache nodejs yarn && \
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
+    npm install -g yarn && \
     yarn install --production=false && \
     yarn tsc && \
-    yarn vite build
+    yarn vite build && \
+    rm -rf /var/lib/apt/lists/*
 
 # ==========================================
 # Stage 3: Build Backend
 # ==========================================
-FROM alpine:3.23.2 AS backend
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+FROM debian:trixie-slim AS backend
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY backend /app
 WORKDIR /app
-RUN apk upgrade --no-cache -a && \
-    apk add --no-cache nodejs yarn binutils file && \
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file && \
+    npm install -g yarn && \
     yarn install --production=false && \
     yarn cache clean && \
     find node_modules -name "*.map" -delete && \
     rm -r node_modules/better-sqlite3/deps/sqlite3 && \
     find /app/node_modules -name "*.node" -type f -exec strip -s {} \; && \
-    find /app/node_modules -name "*.node" -type f -exec file {} \;
+    find /app/node_modules -name "*.node" -type f -exec file {} \; && \
+    rm -rf /var/lib/apt/lists/*
 
 
 # ==========================================
 # Stage 4: Certbot
 # ==========================================
-FROM alpine:3.23.2 AS certbot
+FROM debian:trixie-slim AS certbot
 COPY nginx-quic/requirements.txt /tmp/requirements.txt
-RUN apk upgrade --no-cache -a && \
-    apk add --no-cache ca-certificates build-base libffi-dev python3 py3-pip && \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates build-essential libffi-dev python3 python3-pip python3-venv && \
     python3 -m venv /usr/local && \
-    /usr/local/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+    /usr/local/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
+    rm -rf /var/lib/apt/lists/*
 
 
 # ==========================================
@@ -262,8 +267,8 @@ FROM cloudflare/cloudflared:latest AS cloudflared
 # ==========================================
 # Final Stage
 # ==========================================
-FROM alpine:3.23.2
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+FROM debian:trixie-slim
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
 
 
@@ -291,10 +296,11 @@ COPY rootfs /
 
 # --- Setup ---
 WORKDIR /app
-RUN apk upgrade --no-cache -a && \
-    apk add --no-cache argon2-libs bash bash-completion brotli coreutils curl fcgi findutils geoip goaccess grep jq \
-                       libatomic_ops libcrypto3 libedit libldap libmaxminddb-libs libssl3 libxml2 lmdb logrotate lua5.1-cjson luajit \
-                       nano nodejs openssl pcre2 python3 shadow su-exec tini tor tzdata util-linux-misc yajl zlib zstd && \
+RUN echo "exit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d && \
+    apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+    libargon2-1 bash bash-completion brotli ca-certificates coreutils curl fcgiwrap findutils geoip-bin goaccess grep jq \
+    libatomic1 libssl3 libedit2 libldap2 liblua5.1-0 libmaxminddb0 libxml2 liblmdb0 logrotate lua-cjson libluajit-5.1-2 \
+    nano nodejs openssl libpcre2-8-0 python3 gosu tini tor tzdata util-linux libyajl2 zlib1g zstd && \
     # Fix CrowdSec Version in Config
     sed -i "s|placeholder|$(cat /app/package.json | jq -r .version)|g" /usr/local/nginx/conf/conf.d/include/crowdsec_nginx.conf && \
     # Helper Scripts
@@ -308,7 +314,8 @@ RUN apk upgrade --no-cache -a && \
     ln -s /app/index.js /usr/local/bin/index.js && \
     chmod +x /usr/local/bin/* && \
     mkdir -p /var/log/nginx && \
-    find /tmp -mindepth 1 -delete
+    find /tmp -mindepth 1 -delete && \
+    rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["tini", "--", "entrypoint.sh"]
 HEALTHCHECK CMD healthcheck.sh

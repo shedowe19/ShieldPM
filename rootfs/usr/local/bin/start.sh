@@ -15,74 +15,74 @@ fi
 
 
 if [ "$PHP82" = "true" ]; then
-    apk add --no-cache php82 php82-fpm
+    apt-get update && apt-get install -y --no-install-recommends php8.2-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP82_APKS" ]; then
-        for apk in $(echo "$PHP82_APKS" | tr " " "\n"); do
-            echo "Installing $apk via apk..."
-            if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
-                echo "The apk \"$apk\" was not installed!"
+        for pkg in $(echo "$PHP82_APKS" | tr " " "\n"); do
+            echo "Installing $pkg via apt-get..."
+            if ! apt-get install -y --no-install-recommends "$pkg" > /dev/null 2>&1; then
+                echo "The package \"$pkg\" was not installed!"
             fi
         done
     fi
     mkdir -vp /data/php
-    cp -varnT /etc/php82 /data/php/82
-    sed -i "s|#\?listen =.*|listen = /run/php82.sock|" /data/php/82/php-fpm.d/www.conf
+    cp -varnT /etc/php/8.2/fpm /data/php/82
+    sed -i "s|#\?listen =.*|listen = /run/php82.sock|" /data/php/82/pool.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/82/php-fpm.conf
-    sed -i "s|include=.*|include=/data/php/82/php-fpm.d/*.conf|g" /data/php/82/php-fpm.conf
-    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/82/php-fpm.d/www.conf
+    sed -i "s|include=.*|include=/data/php/82/pool.d/*.conf|g" /data/php/82/php-fpm.conf
+    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/82/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
     rm -vrf /data/php/82
 fi
 
 if [ "$PHP83" = "true" ]; then
-    apk add --no-cache php83 php83-fpm
+    apt-get update && apt-get install -y --no-install-recommends php8.3-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP83_APKS" ]; then
-        for apk in $(echo "$PHP83_APKS" | tr " " "\n"); do
-            echo "Installing $apk via apk..."
-            if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
-                echo "The apk \"$apk\" was not installed!"
+        for pkg in $(echo "$PHP83_APKS" | tr " " "\n"); do
+            echo "Installing $pkg via apt-get..."
+            if ! apt-get install -y --no-install-recommends "$pkg" > /dev/null 2>&1; then
+                echo "The package \"$pkg\" was not installed!"
             fi
         done
     fi
     mkdir -vp /data/php
-    cp -varnT /etc/php83 /data/php/83
-    sed -i "s|#\?listen =.*|listen = /run/php83.sock|" /data/php/83/php-fpm.d/www.conf
+    cp -varnT /etc/php/8.3/fpm /data/php/83
+    sed -i "s|#\?listen =.*|listen = /run/php83.sock|" /data/php/83/pool.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/83/php-fpm.conf
-    sed -i "s|include=.*|include=/data/php/83/php-fpm.d/*.conf|g" /data/php/83/php-fpm.conf
-    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/83/php-fpm.d/www.conf
+    sed -i "s|include=.*|include=/data/php/83/pool.d/*.conf|g" /data/php/83/php-fpm.conf
+    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/83/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
     rm -vrf /data/php/83
 fi
 
 if [ "$PHP84" = "true" ]; then
-    apk add --no-cache php84 php84-fpm
+    apt-get update && apt-get install -y --no-install-recommends php8.4-fpm
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
     if [ -n "$PHP84_APKS" ]; then
-        for apk in $(echo "$PHP84_APKS" | tr " " "\n"); do
-            echo "Installing $apk via apk..."
-            if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
-                echo "The apk \"$apk\" was not installed!"
+        for pkg in $(echo "$PHP84_APKS" | tr " " "\n"); do
+            echo "Installing $pkg via apt-get..."
+            if ! apt-get install -y --no-install-recommends "$pkg" > /dev/null 2>&1; then
+                echo "The package \"$pkg\" was not installed!"
             fi
         done
     fi
     mkdir -vp /data/php
-    cp -varnT /etc/php84 /data/php/84
-    sed -i "s|#\?listen =.*|listen = /run/php84.sock|" /data/php/84/php-fpm.d/www.conf
+    cp -varnT /etc/php/8.4/fpm /data/php/84
+    sed -i "s|#\?listen =.*|listen = /run/php84.sock|" /data/php/84/pool.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/84/php-fpm.conf
-    sed -i "s|include=.*|include=/data/php/84/php-fpm.d/*.conf|g" /data/php/84/php-fpm.conf
-    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/84/php-fpm.d/www.conf
+    sed -i "s|include=.*|include=/data/php/84/pool.d/*.conf|g" /data/php/84/php-fpm.conf
+    sed -i "s|;clear_env = no|clear_env = no|g" /data/php/84/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
     rm -vrf /data/php/84
 fi
 
 if { [ "$PHP82" = "true" ] || [ "$PHP83" = "true" ] || [ "$PHP84" = "true" ]; } && [ -n "$PHP_APKS" ]; then
     # From https://github.com/nextcloud/all-in-one/pull/1377/files
-    for apk in $(echo "$PHP_APKS" | tr " " "\n"); do
-        echo "Installing $apk via apk..."
-        if ! apk add --no-cache "$apk" > /dev/null 2>&1; then
-            echo "The apk \"$apk\" was not installed!"
+    for pkg in $(echo "$PHP_APKS" | tr " " "\n"); do
+        echo "Installing $pkg via apt-get..."
+        if ! apt-get install -y --no-install-recommends "$pkg" > /dev/null 2>&1; then
+            echo "The package \"$pkg\" was not installed!"
         fi
     done
 fi
@@ -567,32 +567,32 @@ if [ "$PUID" != "0" ]; then
          -exec chown "$PUID:$PGID" {} \;
     chown "$PUID:$PGID" /proc/self/fd/2
     if [ "$PHP82" = "true" ]; then
-        sed -i "s|;\?user =.*|;user = root|" /data/php/82/php-fpm.d/www.conf
-        sed -i "s|;\?group =.*|;group = root|" /data/php/82/php-fpm.d/www.conf
+        sed -i "s|;\?user =.*|;user = root|" /data/php/82/pool.d/www.conf
+        sed -i "s|;\?group =.*|;group = root|" /data/php/82/pool.d/www.conf
     fi
     if [ "$PHP83" = "true" ]; then
-        sed -i "s|;\?user =.*|;user = root|" /data/php/83/php-fpm.d/www.conf
-        sed -i "s|;\?group =.*|;group = root|" /data/php/83/php-fpm.d/www.conf
+        sed -i "s|;\?user =.*|;user = root|" /data/php/83/pool.d/www.conf
+        sed -i "s|;\?group =.*|;group = root|" /data/php/83/pool.d/www.conf
     fi
     if [ "$PHP84" = "true" ]; then
-        sed -i "s|;\?user =.*|;user = root|" /data/php/84/php-fpm.d/www.conf
-        sed -i "s|;\?group =.*|;group = root|" /data/php/84/php-fpm.d/www.conf
+        sed -i "s|;\?user =.*|;user = root|" /data/php/84/pool.d/www.conf
+        sed -i "s|;\?group =.*|;group = root|" /data/php/84/pool.d/www.conf
     fi
     sed -i "s|user root;|#user root;|g" /usr/local/nginx/conf/nginx.conf
-    exec su-exec "$PUID:$PGID" launch.sh
+    exec gosu "$PUID:$PGID" launch.sh
 else
     find /data -not \( -uid 0 -and -gid 0 \) -exec chown 0:0 {} \;
     if [ "$PHP82" = "true" ]; then
-        sed -i "s|;user =.*|user = root|" /data/php/82/php-fpm.d/www.conf
-        sed -i "s|;group =.*|group = root|" /data/php/82/php-fpm.d/www.conf
+        sed -i "s|;user =.*|user = root|" /data/php/82/pool.d/www.conf
+        sed -i "s|;group =.*|group = root|" /data/php/82/pool.d/www.conf
     fi
     if [ "$PHP83" = "true" ]; then
-        sed -i "s|;user =.*|user = root|" /data/php/83/php-fpm.d/www.conf
-        sed -i "s|;group =.*|group = root|" /data/php/83/php-fpm.d/www.conf
+        sed -i "s|;user =.*|user = root|" /data/php/83/pool.d/www.conf
+        sed -i "s|;group =.*|group = root|" /data/php/83/pool.d/www.conf
     fi
     if [ "$PHP84" = "true" ]; then
-        sed -i "s|;user =.*|user = root|" /data/php/84/php-fpm.d/www.conf
-        sed -i "s|;group =.*|group = root|" /data/php/84/php-fpm.d/www.conf
+        sed -i "s|;user =.*|user = root|" /data/php/84/pool.d/www.conf
+        sed -i "s|;group =.*|group = root|" /data/php/84/pool.d/www.conf
     fi
     sed -i "s|#user root;|user root;|g"  /usr/local/nginx/conf/nginx.conf
     exec launch.sh

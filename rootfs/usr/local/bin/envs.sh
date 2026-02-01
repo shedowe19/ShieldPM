@@ -23,9 +23,9 @@ fi
 
 if [ ! -d /data ]; then
 	echo "----------------------------------------------"
-	echo "/data is not mounted! Check your compose.yaml."
+	echo "/data is not mounted! Creating it..."
 	echo "----------------------------------------------"
-    sleep inf
+    mkdir -p /data
 fi
 
 

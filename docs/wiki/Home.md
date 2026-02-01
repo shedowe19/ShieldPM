@@ -14,6 +14,7 @@
 
 ### Basics
 *   **[Installation](Installation)**: Get started with Docker Compose and migration guides.
+*   **[Proxmox LXC Installation](Proxmox-LXC)**: Setup guide for Native Containers (Systemd).
 *   **[Configuration](Configuration)**: detailed environment variables and database setup.
 *   **[IPv6 Configuration](IPv6)**: Setup guide for Docker and IPv6.
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
