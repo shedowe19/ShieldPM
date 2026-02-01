@@ -67,7 +67,7 @@ jobs:
           fi
 
   # ---------------------------------------------------------
-  # PHASE 2: BAUEN (Matrix für x86 und ARM)
+  # PHASE 2: BAUEN (Matrix für x86 und ARM + LXC Export)
   # ---------------------------------------------------------
   build:
     name: "🏗️ Build ${{ matrix.arch }}"
@@ -105,7 +105,7 @@ jobs:
           sed -i "s|\"0.0.0\"|\"$VER\"|g" frontend/package.json
           sed -i "s|\"0.0.0\"|\"$VER\"|g" backend/package.json
 
-      # --- Build Steps (Jetzt mit Anführungszeichen!) ---
+      # --- Build Steps ---
 
       - name: "📦 Build Stage: Nginx Build"
         uses: docker/build-push-action@v6
@@ -130,7 +130,6 @@ jobs:
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-certbot
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-certbot
-
 
       - name: "📦 Build Stage: Frontend"
         uses: docker/build-push-action@v6
@@ -168,8 +167,6 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.arch }}-cloudflared
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-cloudflared
 
-
-
       - name: "🚀 Build Final & Push"
         uses: docker/build-push-action@v6
         with:
@@ -186,8 +183,59 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-certbot
             type=gha,scope=${{ matrix.arch }}-cloudflared
             type=gha,scope=${{ matrix.arch }}-final
-
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
+
+      # --- NEU: LXC Export Steps mit Env-Injection ---
+      - name: "📦 Export LXC Rootfs Template"
+        run: |
+          # 1. Temporären Container aus dem gerade gebauten Image erstellen (nicht starten)
+          docker create --name temp-lxc-export ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          
+          # 2. ShieldPM Environment Datei lokal erstellen
+          cat <<EOF > shieldpm.env
+          # ----------------------------------------------------------------------
+          # ShieldPM LXC Environment Configuration
+          # Diese Datei wird in Proxmox/LXC geladen, wenn der Startbefehl angepasst wird:
+          # cmd: /bin/sh -c ". /etc/shieldpm.env && /usr/local/bin/entrypoint.sh"
+          # ----------------------------------------------------------------------
+
+          # -- Zeitzone --
+          export TZ=Europe/Berlin
+
+          # -- Let's Encrypt / SSL --
+          # export ACME_EMAIL=admin@changeme.com
+          # export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
+          # export ACME_EAB_KID=
+          # export ACME_EAB_HMAC_KEY=
+
+          # -- User Permissions (optional) --
+          export PUID=0
+          export PGID=0
+
+          # -- Features --
+          export TOR_ENABLED=true
+          export LOGROTATE=true
+          EOF
+
+          # 3. Datei in den Container kopieren (injizieren)
+          docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
+          
+          # 4. Dateisystem exportieren (das entfernt Docker-spezifische Layer und inkludiert unsere neue Datei)
+          docker export temp-lxc-export > rootfs.tar
+          
+          # 5. Aufräumen
+          docker rm temp-lxc-export
+          rm shieldpm.env
+          
+          # 6. Komprimieren für Proxmox/LXC
+          gzip -9 -c rootfs.tar > shieldpm-lxc-${{ matrix.arch }}.tar.gz
+
+      - name: "Upload LXC Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: lxc-template-${{ matrix.arch }}
+          path: shieldpm-lxc-${{ matrix.arch }}.tar.gz
+          retention-days: 5
 
   # ---------------------------------------------------------
   # PHASE 3: ZUSAMMENFÜGEN (Manifest erstellen)
@@ -198,7 +246,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'shedowe19' }}
     steps:
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -218,6 +265,16 @@ jobs:
         uses: mshick/add-pr-comment@v2
         if: ${{ needs.prepare.outputs.is_pr == 'true' }}
         with:
-          message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
+          message: |
+            ✅ **Build Successful!**
+            
+            **Docker Image:**
+            `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`
+            
+            **LXC Templates (RootFS):**
+            Enthält `/etc/shieldpm.env` zur Konfiguration.
+            Download unter "Artifacts":
+            - `lxc-template-x86_64`
+            - `lxc-template-aarch64`
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           refresh-message-position: true
