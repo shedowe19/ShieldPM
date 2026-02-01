@@ -184,20 +184,28 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Proxmox Native dhclient) ---
+      # --- NEW: LXC Export (Proxmox Alpine 3.20 Legacy Fix) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Start temporary container
           docker run -d --name temp-lxc-export --entrypoint tail ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }} -f /dev/null
           
-          # 2. Install dhclient (Alpine package name is "dhclient")
+          # 2. Install dhclient from Alpine 3.20 Repo
+          # "dhclient" was removed in Alpine 3.21 because ISC-DHCP is EOL.
+          # However, Proxmox LXC hooks REQUIRE /sbin/dhclient for IPv6 DHCP.
+          echo "Adding Alpine 3.20 repos to fetch legacy dhclient..."
+          docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/main' >> /etc/apk/repositories"
+          docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/community' >> /etc/apk/repositories"
+          
           echo "Installing dhclient..."
           docker exec temp-lxc-export apk update
           docker exec temp-lxc-export apk add --no-cache dhclient
           
-          # 3. Create Symlink (Proxmox expects /sbin/dhclient, Alpine puts it in /usr/sbin)
-          echo "Fixing dhclient path for Proxmox..."
-          docker exec temp-lxc-export ln -s /usr/sbin/dhclient /sbin/dhclient
+          # 3. Create Symlink (Just to be absolutely safe)
+          echo "Ensuring /sbin/dhclient exists..."
+          if docker exec temp-lxc-export ls /usr/sbin/dhclient >/dev/null 2>&1; then
+              docker exec temp-lxc-export ln -s /usr/sbin/dhclient /sbin/dhclient
+          fi
           
           # 4. Inject Config
           cat <<EOF > shieldpm.env
@@ -246,7 +254,7 @@ jobs:
             # 2. Start dhclient (Handles IPv4/IPv6 DHCP automatically)\
             # This fixes the Proxmox warning and ensures full connectivity\
             echo "LXC: Starting dhclient for dynamic addresses..."\
-            /usr/sbin/dhclient -v\
+            /sbin/dhclient -v\
             ' launch.sh
             docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
           fi
@@ -305,9 +313,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **`dhclient` + Symlink (Fixes Proxmox Hook Error)**
+            - **`dhclient` (via Alpine 3.20 Repo)**
+            - Fixes Proxmox IPv6 Hook Error
             - Smart Network (Static + DHCP)
-            - Console Login (TTY)
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
