@@ -150,6 +150,7 @@ if [ "${TOR_ENABLED:-true}" = "true" ]; then
     TOR_PASSWORD=$(cat /data/shieldpm/tor-control-password)
     TOR_HASH=$(tor --hash-password "$TOR_PASSWORD" 2>/dev/null | tail -1)
     if [ -n "$TOR_HASH" ]; then
+        cp /etc/tor/torrc.tpl /etc/tor/torrc
         sed -i "s|__TOR_CONTROL_PASSWORD__|$TOR_HASH|g" /etc/tor/torrc
         echo "Tor control password configured"
     else
