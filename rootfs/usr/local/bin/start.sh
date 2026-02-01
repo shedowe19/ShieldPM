@@ -463,6 +463,8 @@ if [ "$LISTEN_PROXY_PROTOCOL" = "true" ]; then
 fi
 if [ "$NGINX_QUIC_BPF" = "true" ]; then
   sed -i "s|quic_bpf.*|quic_bpf on;|g" /usr/local/nginx/conf/nginx.conf
+else
+  sed -i "s|quic_bpf.*|quic_bpf off;|g" /usr/local/nginx/conf/nginx.conf
 fi
 if [ "$NGINX_LOG_NOT_FOUND" = "true" ]; then
     sed -i "s|log_not_found.*|log_not_found on;|g" /usr/local/nginx/conf/nginx.conf
