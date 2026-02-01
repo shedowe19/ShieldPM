@@ -184,7 +184,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Fix "Start Twice" Bug) ---
+      # --- NEW: LXC Export (Smart Wrapper Fix) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Start temporary container
@@ -199,13 +199,47 @@ jobs:
           docker exec temp-lxc-export apk update
           docker exec temp-lxc-export apk add --no-cache dhclient
           
-          # 3. Create Symlink (/sbin/dhclient)
-          echo "Ensuring /sbin/dhclient exists..."
-          if docker exec temp-lxc-export ls /usr/sbin/dhclient >/dev/null 2>&1; then
-              docker exec temp-lxc-export ln -s /usr/sbin/dhclient /sbin/dhclient
+          # 3. Rename Real Binary
+          # We will place our wrapper at /sbin/dhclient, so we move the real one.
+          echo "Setting up dhclient wrapper infrastructure..."
+          docker exec temp-lxc-export mv /usr/sbin/dhclient /usr/sbin/dhclient.real
+          
+          # 4. Create Intelligent Wrapper Script
+          # This script intercepts Proxmox's call, creates the required dirs, cleans stale files, and runs the real binary.
+          cat <<'WRAPPER' > dhclient-wrapper
+          #!/bin/sh
+          # DHCP Wrapper for Proxmox LXC
+          # Intercepts arguments to ensure directories exist and stale files are gone.
+          
+          prev=""
+          for arg in "$@"; do
+              if [ "$prev" = "-pf" ] || [ "$prev" = "-lf" ]; then
+                  # Arg is a path (e.g., /var/lib/lxc/107/hook/...)
+                  # 1. Ensure the directory exists (Proxmox expects it to be there)
+                  mkdir -p "$(dirname "$arg")"
+                  # 2. Delete stale file to prevent "exit code 1"
+                  rm -f "$arg"
+              fi
+              prev="$arg"
+          done
+          
+          # Execute the real dhclient
+          exec /usr/sbin/dhclient.real "$@"
+          WRAPPER
+          
+          # Upload and permission the wrapper
+          docker cp dhclient-wrapper temp-lxc-export:/sbin/dhclient
+          docker exec temp-lxc-export chmod +x /sbin/dhclient
+          
+          # 5. Fix Script Path (Proxmox expects /usr/share/lxc/hooks/dhclient-script)
+          echo "Fixing dhclient-script path..."
+          docker exec temp-lxc-export mkdir -p /usr/share/lxc/hooks
+          # Link Alpine's script to where Proxmox looks
+          if docker exec temp-lxc-export ls /sbin/dhclient-script >/dev/null 2>&1; then
+             docker exec temp-lxc-export ln -s /sbin/dhclient-script /usr/share/lxc/hooks/dhclient-script
           fi
           
-          # 4. Inject Config
+          # 6. Inject Config
           cat <<EOF > shieldpm.env
           # ----------------------------------------------------------------------
           # ShieldPM LXC Environment Configuration
@@ -220,30 +254,18 @@ jobs:
           EOF
           docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
           
-          # 5. Patch entrypoint.sh (Global PATH export)
+          # 7. Patch entrypoint.sh (Global PATH export)
           echo "Patching entrypoint.sh with PATH..."
           docker cp temp-lxc-export:/usr/local/bin/entrypoint.sh .
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 6. Patch launch.sh (Fix: Cleanup Stale Leases/PIDs)
-          echo "Patching launch.sh with Cleanup Logic..."
+          # 8. Patch launch.sh (Passive Network Logic)
+          echo "Patching launch.sh with Passive Network Logic..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
             # Set CWD to /app (fixes migrations)\
             cd /app\
-            \
-            # ------------------------------------------------------------------\
-            # STARTUP CLEANUP (Fixes "DHCP failed" on restart)\
-            # ------------------------------------------------------------------\
-            # Kill any leftover dhclients and remove stale pid/lease files\
-            # This ensures Proxmox (and our fallback) start with a clean state.\
-            killall dhclient 2>/dev/null || true\
-            rm -rf /var/lib/dhcp/*\
-            rm -f /var/run/dhclient.pid\
-            rm -f /var/run/dhclient.leases\
-            # Create required directory\
-            mkdir -p /var/lib/dhcp\
             \
             # Fix Proxmox Console (TTY Login)\
             for tty in tty1 tty2; do\
@@ -267,20 +289,20 @@ jobs:
             else\
                 # 4. Fallback: Only run if Proxmox failed or this is not running on Proxmox\
                 echo "LXC: No IP detected! Starting fallback dhclient..."\
-                /usr/sbin/dhclient -v\
+                /sbin/dhclient -v\
             fi\
             ' launch.sh
             docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
           fi
           
-          # 7. Export
+          # 9. Export
           docker export temp-lxc-export > rootfs.tar
           
-          # 8. Cleanup
+          # 10. Cleanup
           docker rm -f temp-lxc-export
-          rm shieldpm.env entrypoint.sh launch.sh || true
+          rm shieldpm.env entrypoint.sh launch.sh dhclient-wrapper || true
           
-          # 9. Compress
+          # 11. Compress
           gzip -9 -c rootfs.tar > shieldpm-lxc-${{ matrix.arch }}.tar.gz
 
       - name: "Upload LXC Artifact"
@@ -327,9 +349,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **Startup Cleanup:** Removes stale leases/PIDs (Fixes "Second Start" Crash).
-            - **`dhclient` (Alpine 3.20)**
-            - Smart Network (Wait for Proxmox -> Fallback)
+            - **DHCP Wrapper:** Intercepts Proxmox hooks, creates required dirs & cleans stale files.
+            - **`dhclient`** from Alpine 3.20.
+            - Passive Network Mode.
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
