@@ -61,6 +61,17 @@ Edit `/etc/pve/lxc/100.conf` on the **Proxmox Host**:
 mp0: /mnt/pve/data/shieldpm,mp=/data
 ```
 
+### 🗄️ External Database (MySQL/PostgreSQL)
+If you want to use **MySQL** or **PostgreSQL** (instead of the default SQLite):
+
+> [!WARNING]
+> The LXC container **ONLY** contains the ShieldPM application. It does **NOT** include a database server.
+> You must host the database yourself (e.g., in another LXC container, VM, or managed service).
+
+1.  Enable `DB_MYSQL_` or `DB_POSTGRES_` variables in `/data/.env`.
+2.  Ensure the container can reach your database IP.
+3.  Create the empty database and user manually before starting ShieldPM.
+
 ---
 
 ## 4. Updates
