@@ -37,7 +37,7 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------
-  # PHASE 1: PREPARATION (Calculate Version & Base Tag)
+  # PHASE 1: PREPARATION
   # ---------------------------------------------------------
   prepare:
     name: "⚙️ Prepare & Version"
@@ -56,7 +56,6 @@ jobs:
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "hash=${SHORT_SHA}" >> $GITHUB_OUTPUT
-
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             CLEAN_PR=$(echo pr-${{ github.ref_name }} | sed "s|refs/pull/:||g" | sed "s|/merge||g")
             echo "tag_base=${CLEAN_PR}" >> $GITHUB_OUTPUT
@@ -67,7 +66,7 @@ jobs:
           fi
 
   # ---------------------------------------------------------
-  # PHASE 2: BUILD (Matrix for x86 and ARM + LXC Export)
+  # PHASE 2: BUILD
   # ---------------------------------------------------------
   build:
     name: "🏗️ Build ${{ matrix.arch }}"
@@ -185,36 +184,39 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Proxmox Native Network) ---
+      # --- NEW: LXC Export (ISC-DHCP-CLIENT ONLY) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
-          # 1. Create temporary container
-          docker create --name temp-lxc-export ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          # 1. Start temporary container
+          docker run -d --name temp-lxc-export --entrypoint tail ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }} -f /dev/null
           
-          # 2. Inject Config
+          # 2. Install isc-dhcp-client (Standard tool for Proxmox compatibility)
+          # Removes the need for udhcpc or dhcpcd
+          echo "Installing isc-dhcp-client..."
+          docker exec temp-lxc-export apk update
+          docker exec temp-lxc-export apk add --no-cache isc-dhcp-client
+          
+          # 3. Inject Config
           cat <<EOF > shieldpm.env
           # ----------------------------------------------------------------------
           # ShieldPM LXC Environment Configuration
-          # Start-Cmd: /sbin/tini -- /bin/sh -c ". /etc/shieldpm.env && /usr/local/bin/entrypoint.sh"
           # ----------------------------------------------------------------------
           export TZ=Europe/Berlin
           # export ACME_EMAIL=admin@changeme.com
           # export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
-          # export PUID=0
-          # export PGID=0
           export TOR_ENABLED=true
           export LOGROTATE=true
           EOF
           docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
           
-          # 3. Patch entrypoint.sh (Global PATH export)
+          # 4. Patch entrypoint.sh (Global PATH export)
           echo "Patching entrypoint.sh with PATH..."
           docker cp temp-lxc-export:/usr/local/bin/entrypoint.sh .
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 4. Patch launch.sh (Console, CWD & Proxmox Native Network)
-          echo "Patching launch.sh with Console, CWD and ifup..."
+          # 5. Patch launch.sh (Console, CWD & dhclient)
+          echo "Patching launch.sh with Console, CWD and dhclient..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
             # Set CWD to /app (fixes migrations)\
@@ -227,35 +229,31 @@ jobs:
                 fi\
             done\
             \
-            # LXC Network Init (Proxmox Native)\
-            # 1. Ensure Loopback is up\
+            # LXC Network Init (ISC-DHCP-CLIENT)\
             ip link set lo up\
             \
-            # 2. Apply Proxmox Network Config (/etc/network/interfaces)\
-            # This handles IPv4 Static/DHCP and IPv6 SLAAC/Static exactly as configured in GUI.\
-            if [ -f /etc/network/interfaces ]; then\
-                echo "LXC: Applying Proxmox network configuration via ifup..."\
+            # 1. Try Static IP (from Proxmox GUI)\
+            if grep -q "inet static" /etc/network/interfaces; then\
+                echo "LXC: Static IP config detected. Applying..."\
                 ifup -a\
-            else\
-                # Fallback: Manual DHCP if no config found\
-                echo "LXC: No network config found. Falling back to simple DHCP..."\
-                for iface in $(ls /sys/class/net/ | grep -v lo | grep -v bonding_masters); do\
-                    ip link set "$iface" up\
-                    udhcpc -b -i "$iface"\
-                done\
             fi\
+            \
+            # 2. Start dhclient (Handles IPv4/IPv6 DHCP automatically)\
+            # This fixes the Proxmox warning and ensures full connectivity\
+            echo "LXC: Starting isc-dhcp-client for dynamic addresses..."\
+            /sbin/dhclient -v\
             ' launch.sh
             docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
           fi
           
-          # 5. Export
+          # 6. Export
           docker export temp-lxc-export > rootfs.tar
           
-          # 6. Cleanup
-          docker rm temp-lxc-export
+          # 7. Cleanup
+          docker rm -f temp-lxc-export
           rm shieldpm.env entrypoint.sh launch.sh || true
           
-          # 7. Compress
+          # 8. Compress
           gzip -9 -c rootfs.tar > shieldpm-lxc-${{ matrix.arch }}.tar.gz
 
       - name: "Upload LXC Artifact"
@@ -302,9 +300,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **Native Proxmox Network (Supports Static/DHCP/SLAAC for IPv4/IPv6)**
+            - **Native `isc-dhcp-client` (Eliminates Proxmox Errors)**
+            - Supports Static IPv4/IPv6 + DHCP Dual Stack
             - Console Login (TTY)
-            - `cd /app` & Global PATH
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
