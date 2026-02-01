@@ -52,7 +52,7 @@ cp -r "$TEMP_DIR/backend/"* "$BACKEND_DIR/"
 
 # Frontend
 echo "    - Updating Frontend at $FRONTEND_DIR..."
-rm -rf "$FRONTEND_DIR"/*
+rm -rf "${FRONTEND_DIR:?}"/*
 cp -r "$TEMP_DIR/frontend/dist/"* "$FRONTEND_DIR/"
 
 echo "--> [6/6] Restarting ShieldPM..."

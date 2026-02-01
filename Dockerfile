@@ -221,12 +221,14 @@ SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY frontend /app
 WORKDIR /app/frontend
+# hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
     npm install -g yarn && \
     yarn install --production=false && \
     yarn tsc && \
     yarn vite build && \
     rm -rf /var/lib/apt/lists/*
+
 
 # ==========================================
 # Stage 3: Build Backend
@@ -236,6 +238,7 @@ SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY backend /app
 WORKDIR /app
+# hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file && \
     npm install -g yarn && \
     yarn install --production=false && \

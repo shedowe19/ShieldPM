@@ -257,7 +257,7 @@ ensureDefault('INITIAL_DEFAULT_PAGE', 'congratulations');
 // PHP Packages
 const checkPkg = (key) => {
     const val = process.env[key];
-    if (val && !/^[a-z0-9 _-+\.]+$/.test(val)) fatal(`${key} can consist of lower letters a-z, numbers 0-9, spaces, underscores, dots, plus signs and hyphens.`);
+    if (val && !/^[a-z0-9 _+. -]+$/.test(val)) fatal(`${key} can consist of lower letters a-z, numbers 0-9, spaces, underscores, dots, plus signs and hyphens.`);
 };
 checkPkg('PHP82_APKS');
 checkPkg('PHP83_APKS');
