@@ -1,0 +1,208 @@
+name: Build LXC Template (Debian Trixie)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+    paths:
+      - .github/workflows/lxc-build.yml
+      # Wir triggern auch, wenn sich am RootFS-Bauplan was ändert
+      - rootfs/**
+
+env:
+  # Das Image, aus dem wir die kompilierten Daten klauen
+  SOURCE_IMAGE: ghcr.io/shedowe19/shieldpm
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-lxc:
+    name: "📦 Build Debian Trixie LXC ${{ matrix.arch }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            platform: linux/amd64
+            docker_arch: x86_64
+          - arch: aarch64
+            platform: linux/arm64
+            docker_arch: aarch64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "📥 Pull Source Image (Application)"
+        run: |
+          # Wir holen uns das fertige App-Image (z.B. develop Branch)
+          # ACHTUNG: Das Image muss vorher durch die normale docker.yml gebaut worden sein!
+          SOURCE_TAG="develop-${{ matrix.docker_arch }}"
+          echo "Pulling source: ${{ env.SOURCE_IMAGE }}:$SOURCE_TAG"
+          
+          docker pull --platform ${{ matrix.platform }} ${{ env.SOURCE_IMAGE }}:$SOURCE_TAG
+          
+          # Erstellen (nicht starten) des Containers, um Daten zu kopieren
+          docker create --name source-app --platform ${{ matrix.platform }} ${{ env.SOURCE_IMAGE }}:$SOURCE_TAG
+
+      - name: "🏗️ Build Debian Base (Systemd)"
+        run: |
+          # Wir bauen den Ziel-Container (Debian Trixie mit Systemd)
+          cat <<EOF > Dockerfile.debian
+          FROM --platform=${{ matrix.platform }} debian:trixie
+          
+          ENV container=docker
+          ENV DEBIAN_FRONTEND=noninteractive
+
+          # 1. Install Basics, Systemd, Network
+          # 'ifupdown' ist wichtig, damit Proxmox /etc/network/interfaces schreiben kann!
+          # 'isc-dhcp-client' sorgt für DHCP Support, falls konfiguriert.
+          RUN apt-get update && apt-get install -y \
+              systemd \
+              systemd-sysv \
+              ifupdown \
+              iproute2 \
+              isc-dhcp-client \
+              openssh-server \
+              curl \
+              nano \
+              ca-certificates \
+              lsb-release \
+              procps \
+              net-tools \
+              # App Dependencies
+              nodejs \
+              npm \
+              nginx \
+              openssl \
+              && apt-get clean \
+              && rm -rf /var/lib/apt/lists/*
+
+          # 2. Configure Systemd for LXC/Docker usage
+          # Entfernt unnötige Units, die im Container Fehler werfen
+          RUN cd /lib/systemd/system/sysinit.target.wants/ && \
+              ls | grep -v systemd-tmpfiles-setup | xargs rm -f $1
+          RUN rm -f /lib/systemd/system/multi-user.target.wants/* \
+              /etc/systemd/system/*.wants/* \
+              /lib/systemd/system/local-fs.target.wants/* \
+              /lib/systemd/system/sockets.target.wants/*udev* \
+              /lib/systemd/system/sockets.target.wants/*initctl* \
+              /lib/systemd/system/basic.target.wants/* \
+              /lib/systemd/system/anaconda.target.wants/*
+
+          # 3. Enable Services
+          RUN systemctl enable ssh
+          
+          # 4. Proxmox Console Fix (Login via Web-Console)
+          RUN systemctl enable getty@tty1.service
+
+          # 5. Root User Setup
+          # Setzt Passwort auf "changeme" (User sollte SSH Keys nutzen)
+          RUN echo "root:changeme" | chpasswd
+          # Erlaubt Root Login via SSH (optional, aber oft gewünscht im LXC)
+          RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+          # Workdir setup
+          WORKDIR /app
+          
+          # Init als Entrypoint
+          CMD ["/lib/systemd/systemd"]
+          EOF
+
+          # Build the Base Image
+          docker build --platform ${{ matrix.platform }} -t debian-target -f Dockerfile.debian .
+          
+          # Create the container (running in background to copy files)
+          docker run -d --name target-system --platform ${{ matrix.platform }} --privileged debian-target
+
+      - name: "🔄 Transplant ShieldPM"
+        run: |
+          echo "Copying application files from Source to Target..."
+
+          # 1. Directories
+          docker exec target-system mkdir -p /app/backend /app/frontend/dist /etc/shieldpm
+
+          # 2. Copy Backend (NodeJS)
+          docker cp source-app:/app/backend/. target-system:/app/backend/
+
+          # 3. Copy Frontend (Static Files)
+          docker cp source-app:/app/frontend/dist/. target-system:/app/frontend/dist/
+
+          # 4. Copy Nginx Config
+          # Wir löschen die Debian Standard-Configs, damit nichts kollidiert
+          docker exec target-system rm -f /etc/nginx/sites-enabled/default
+          
+          # Kopiere Configs aus dem Source (Alpine Pfade -> Debian Pfade)
+          # Alpine: /etc/nginx/nginx.conf -> Debian: /etc/nginx/nginx.conf
+          docker cp source-app:/etc/nginx/nginx.conf target-system:/etc/nginx/nginx.conf
+          # Alpine: /etc/nginx/conf.d -> Debian: /etc/nginx/conf.d
+          docker cp source-app:/etc/nginx/conf.d/. target-system:/etc/nginx/conf.d/
+
+          # 5. Copy Certbot Scripts (falls vorhanden)
+          docker cp source-app:/usr/local/bin/certbot-dns-cloudflare target-system:/usr/local/bin/ 2>/dev/null || true
+          docker cp source-app:/usr/local/bin/certbot-dns-hetzner target-system:/usr/local/bin/ 2>/dev/null || true
+
+          # 6. Create & Enable ShieldPM Service
+          echo "Creating Systemd Unit..."
+          cat <<EOF > shieldpm.service
+          [Unit]
+          Description=ShieldPM Backend
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=root
+          WorkingDirectory=/app/backend
+          # Debian installiert nodejs meist als /usr/bin/node
+          ExecStart=/usr/bin/node dist/main.js
+          Restart=always
+          Environment=NODE_ENV=production
+          
+          # Environment Variablen File (optional)
+          EnvironmentFile=-/etc/shieldpm.env
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          docker cp shieldpm.service target-system:/etc/systemd/system/
+          
+          # Fix Permissions & Enable
+          docker exec target-system chmod 644 /etc/systemd/system/shieldpm.service
+          docker exec target-system systemctl enable shieldpm.service
+          docker exec target-system systemctl enable nginx
+
+      - name: "📦 Export & Compress Artifact"
+        run: |
+          echo "Exporting RootFS..."
+          docker export target-system > rootfs.tar
+          
+          echo "Compressing..."
+          gzip -9 rootfs.tar > debian-trixie-shieldpm-${{ matrix.arch }}.tar.gz
+          
+          # Cleanup
+          docker rm -f source-app target-system
+
+      - name: "Upload LXC Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: lxc-template-${{ matrix.arch }}
+          path: debian-trixie-shieldpm-${{ matrix.arch }}.tar.gz
+          retention-days: 5
