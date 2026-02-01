@@ -185,7 +185,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Simplified & Optimized) ---
+      # --- NEW: LXC Export (Proxmox Optimized) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Create temporary container
@@ -198,27 +198,26 @@ jobs:
           # Start-Cmd: /sbin/tini -- /bin/sh -c ". /etc/shieldpm.env && /usr/local/bin/entrypoint.sh"
           # ----------------------------------------------------------------------
           export TZ=Europe/Berlin
-          export ACME_EMAIL=admin@changeme.com
-          export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
-          export PUID=0
-          export PGID=0
+          # export ACME_EMAIL=admin@changeme.com
+          # export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
           export TOR_ENABLED=true
           export LOGROTATE=true
-          export GOA=true
           EOF
           docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
           
           # 3. Patch entrypoint.sh (Global PATH export)
-          # This fixes all "command not found" errors for subsequent scripts
           echo "Patching entrypoint.sh with PATH..."
           docker cp temp-lxc-export:/usr/local/bin/entrypoint.sh .
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 4. Patch launch.sh (Smart Network Detection)
-          echo "Patching launch.sh with Network Init..."
+          # 4. Patch launch.sh (Fix CWD & Network Detection)
+          echo "Patching launch.sh with CWD and Network Init..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
+            # Set Working Directory (Fixes migrations not found)\
+            cd /app\
+            \
             # LXC Network Init\
             ip link set lo up\
             for iface in $(ls /sys/class/net/ | grep -v lo | grep -v bonding_masters); do\
@@ -286,9 +285,10 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
+            - **`cd /app` (Fixes Migration Loop)**
             - `/etc/shieldpm.env` injected
-            - Global PATH export in `entrypoint.sh`
-            - Smart Network Init in `launch.sh` (Ignores `bonding_masters`)
+            - Global PATH export
+            - Smart Network Init
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
