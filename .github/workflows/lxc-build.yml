@@ -52,8 +52,7 @@ jobs:
 
       - name: "📥 Pull Source Image (Application)"
         run: |
-          # Wir holen uns das fertige App-Image (z.B. develop Branch)
-          # ACHTUNG: Das Image muss vorher durch die normale docker.yml gebaut worden sein!
+          # Wir holen uns das fertige App-Image
           SOURCE_TAG="develop-${{ matrix.docker_arch }}"
           echo "Pulling source: ${{ env.SOURCE_IMAGE }}:$SOURCE_TAG"
           
@@ -71,9 +70,9 @@ jobs:
           ENV container=docker
           ENV DEBIAN_FRONTEND=noninteractive
 
-          # 1. Install Basics, Systemd, Network
-          # 'ifupdown' ist wichtig, damit Proxmox /etc/network/interfaces schreiben kann!
-          # 'isc-dhcp-client' sorgt für DHCP Support, falls konfiguriert.
+          # 1. Install Basics, Systemd, Network & Apps
+          # WICHTIG: Keine Kommentare mitten in der Liste!
+          # ifupdown + isc-dhcp-client = Native Proxmox Network Support
           RUN apt-get update && apt-get install -y \
               systemd \
               systemd-sysv \
@@ -87,7 +86,6 @@ jobs:
               lsb-release \
               procps \
               net-tools \
-              # App Dependencies
               nodejs \
               npm \
               nginx \
@@ -114,15 +112,15 @@ jobs:
           RUN systemctl enable getty@tty1.service
 
           # 5. Root User Setup
-          # Setzt Passwort auf "changeme" (User sollte SSH Keys nutzen)
+          # Setzt Passwort auf "changeme"
           RUN echo "root:changeme" | chpasswd
-          # Erlaubt Root Login via SSH (optional, aber oft gewünscht im LXC)
+          # Erlaubt Root Login via SSH
           RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
           # Workdir setup
           WORKDIR /app
           
-          # Init als Entrypoint
+          # Init als Entrypoint (Startet Systemd)
           CMD ["/lib/systemd/systemd"]
           EOF
 
@@ -146,13 +144,8 @@ jobs:
           docker cp source-app:/app/frontend/dist/. target-system:/app/frontend/dist/
 
           # 4. Copy Nginx Config
-          # Wir löschen die Debian Standard-Configs, damit nichts kollidiert
           docker exec target-system rm -f /etc/nginx/sites-enabled/default
-          
-          # Kopiere Configs aus dem Source (Alpine Pfade -> Debian Pfade)
-          # Alpine: /etc/nginx/nginx.conf -> Debian: /etc/nginx/nginx.conf
           docker cp source-app:/etc/nginx/nginx.conf target-system:/etc/nginx/nginx.conf
-          # Alpine: /etc/nginx/conf.d -> Debian: /etc/nginx/conf.d
           docker cp source-app:/etc/nginx/conf.d/. target-system:/etc/nginx/conf.d/
 
           # 5. Copy Certbot Scripts (falls vorhanden)
@@ -170,12 +163,9 @@ jobs:
           Type=simple
           User=root
           WorkingDirectory=/app/backend
-          # Debian installiert nodejs meist als /usr/bin/node
           ExecStart=/usr/bin/node dist/main.js
           Restart=always
           Environment=NODE_ENV=production
-          
-          # Environment Variablen File (optional)
           EnvironmentFile=-/etc/shieldpm.env
 
           [Install]
