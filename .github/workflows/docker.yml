@@ -37,7 +37,7 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------
-  # PHASE 1: PREPARATION
+  # PHASE 1: VORBEREITUNG (Version & Base-Tag berechnen)
   # ---------------------------------------------------------
   prepare:
     name: "⚙️ Prepare & Version"
@@ -56,6 +56,7 @@ jobs:
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "hash=${SHORT_SHA}" >> $GITHUB_OUTPUT
+
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             CLEAN_PR=$(echo pr-${{ github.ref_name }} | sed "s|refs/pull/:||g" | sed "s|/merge||g")
             echo "tag_base=${CLEAN_PR}" >> $GITHUB_OUTPUT
@@ -66,7 +67,7 @@ jobs:
           fi
 
   # ---------------------------------------------------------
-  # PHASE 2: BUILD
+  # PHASE 2: BAUEN (Matrix für x86 und ARM)
   # ---------------------------------------------------------
   build:
     name: "🏗️ Build ${{ matrix.arch }}"
@@ -104,7 +105,7 @@ jobs:
           sed -i "s|\"0.0.0\"|\"$VER\"|g" frontend/package.json
           sed -i "s|\"0.0.0\"|\"$VER\"|g" backend/package.json
 
-      # --- Build Steps ---
+      # --- Build Steps (Jetzt mit Anführungszeichen!) ---
 
       - name: "📦 Build Stage: Nginx Build"
         uses: docker/build-push-action@v6
@@ -129,6 +130,7 @@ jobs:
             ${{ matrix.flags }}
           cache-from: type=gha,scope=${{ matrix.arch }}-certbot
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-certbot
+
 
       - name: "📦 Build Stage: Frontend"
         uses: docker/build-push-action@v6
@@ -166,6 +168,8 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.arch }}-cloudflared
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-cloudflared
 
+
+
       - name: "🚀 Build Final & Push"
         uses: docker/build-push-action@v6
         with:
@@ -182,172 +186,11 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-certbot
             type=gha,scope=${{ matrix.arch }}-cloudflared
             type=gha,scope=${{ matrix.arch }}-final
+
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Dual Stack Priority -> Fallback) ---
-      - name: "📦 Export LXC Rootfs Template"
-        run: |
-          # 1. Start temporary container
-          docker run -d --name temp-lxc-export --entrypoint tail ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }} -f /dev/null
-          
-          # 2. Install legacy dhclient (Alpine 3.20)
-          echo "Adding Alpine 3.20 repos to fetch legacy dhclient..."
-          docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/main' >> /etc/apk/repositories"
-          docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/community' >> /etc/apk/repositories"
-          
-          echo "Installing dhclient..."
-          docker exec temp-lxc-export apk update
-          docker exec temp-lxc-export apk add --no-cache dhclient
-          
-          # 3. Create aa-exec Shim (Proxmox compat)
-          cat <<'EOF' > aa-exec
-          #!/bin/sh
-          while [ "$#" -gt 0 ]; do
-              case "$1" in
-                  -p|--profile) shift 2 ;;
-                  -*) shift ;;
-                  *) break ;;
-              esac
-          done
-          exec "$@"
-          EOF
-          docker cp aa-exec temp-lxc-export:/usr/sbin/aa-exec
-          docker exec temp-lxc-export chmod +x /usr/sbin/aa-exec
-          docker exec temp-lxc-export ln -s /usr/sbin/aa-exec /bin/aa-exec
-          docker exec temp-lxc-export ln -s /usr/sbin/aa-exec /sbin/aa-exec
-          
-          # 4. Move Real Binary
-          docker exec temp-lxc-export mv /usr/sbin/dhclient /usr/sbin/dhclient.real
-          
-          # 5. Create Permissions/Cleanup Wrapper
-          # Fixes "Second Start" bug by removing old leases.
-          cat <<'WRAPPER' > dhclient-wrapper
-          #!/bin/sh
-          prev=""
-          for arg in "$@"; do
-              if [ "$prev" = "-pf" ] || [ "$prev" = "-lf" ]; then
-                  rm -f "$arg"
-                  mkdir -p "$(dirname "$arg")"
-                  chmod 777 "$(dirname "$arg")"
-              fi
-              prev="$arg"
-          done
-          
-          # Run REAL dhclient (Blocking call)
-          /usr/sbin/dhclient.real "$@"
-          
-          # Always return 0 to satisfy Proxmox
-          exit 0
-          WRAPPER
-          
-          docker cp dhclient-wrapper temp-lxc-export:/sbin/dhclient
-          docker exec temp-lxc-export chmod +x /sbin/dhclient
-          
-          # 6. Fix dhclient-script location
-          echo "Fixing dhclient-script..."
-          docker exec temp-lxc-export mkdir -p /usr/share/lxc/hooks
-          SCRIPT_PATH="/usr/sbin/dhclient-script"
-          if ! docker exec temp-lxc-export ls $SCRIPT_PATH >/dev/null 2>&1; then
-              SCRIPT_PATH="/sbin/dhclient-script"
-          fi
-          docker exec temp-lxc-export chmod +x "$SCRIPT_PATH"
-          docker exec temp-lxc-export ln -sf "$SCRIPT_PATH" /usr/share/lxc/hooks/dhclient-script
-          
-          # 7. Inject Config
-          cat <<EOF > shieldpm.env
-          # ----------------------------------------------------------------------
-          # ShieldPM LXC Environment Configuration
-          # ----------------------------------------------------------------------
-          export TZ=Europe/Berlin
-          # export ACME_EMAIL=admin@changeme.com
-          # export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
-          # export PUID=0
-          # export PGID=0
-          export TOR_ENABLED=true
-          export LOGROTATE=true
-          EOF
-          docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
-          
-          # 8. Patch entrypoint.sh
-          echo "Patching entrypoint.sh with PATH..."
-          docker cp temp-lxc-export:/usr/local/bin/entrypoint.sh .
-          sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
-          docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
-
-          # 9. Patch launch.sh (DUAL STACK: DHCP First -> Fallback Static)
-          echo "Patching launch.sh with Dual Stack Priority..."
-          if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
-            sed -i '2i\
-            # Set CWD to /app (fixes migrations)\
-            cd /app\
-            \
-            # Fix Proxmox Console (TTY Login)\
-            for tty in tty1 tty2; do\
-                if [ -c "/dev/$tty" ]; then\
-                    (while true; do /sbin/getty -L 0 $tty vt100; sleep 1; done) &\
-                fi\
-            done\
-            \
-            # LXC Network Init\
-            ip link set lo up\
-            # Force all interfaces UP before DHCP (Critical for IPv6)\
-            for iface in $(ls /sys/class/net/ | grep -v lo); do ip link set "$iface" up; done\
-            \
-            # ------------------------------------------------------------------\
-            # PRIORITY 1: DYNAMIC DUAL STACK\
-            # ------------------------------------------------------------------\
-            echo "LXC: Attempting Dual-Stack DHCP (Priority 1)..."\
-            # Try combined first (IPv4 + IPv6)\
-            /usr/sbin/dhclient.real -v -1 -timeout 10\
-            \
-            # Check IPv6 specifically (Often needs explicit request if RA was slow)\
-            if ! ip -6 addr show scope global | grep -q "inet6"; then\
-               echo "LXC: IPv6 missing. Forcing IPv6 DHCP request..."\
-               /usr/sbin/dhclient.real -6 -v -1 -timeout 5\
-            fi\
-            \
-            # ------------------------------------------------------------------\
-            # PRIORITY 2: FALLBACK TO STATIC\
-            # ------------------------------------------------------------------\
-            HAS_V4="no"\
-            if ip -4 addr show scope global | grep -q "inet"; then HAS_V4="yes"; fi\
-            \
-            HAS_V6="no"\
-            if ip -6 addr show scope global | grep -q "inet6"; then HAS_V6="yes"; fi\
-            \
-            if [ "$HAS_V4" = "no" ] && [ "$HAS_V6" = "no" ]; then\
-                echo "LXC: DHCP failed completely. Falling back to /etc/network/interfaces (Static)..."\
-                ifup -a\
-            elif [ "$HAS_V6" = "no" ]; then\
-                # We have V4 but not V6. Maybe V6 is static in interfaces?\
-                if grep -q "inet6 static" /etc/network/interfaces; then\
-                     echo "LXC: Static IPv6 config detected. Applying..."\
-                     ifup -a\
-                fi\
-            fi\
-            ' launch.sh
-            docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
-          fi
-          
-          # 10. Export
-          docker export temp-lxc-export > rootfs.tar
-          
-          # 11. Cleanup
-          docker rm -f temp-lxc-export
-          rm shieldpm.env entrypoint.sh launch.sh aa-exec dhclient-wrapper || true
-          
-          # 12. Compress
-          gzip -9 -c rootfs.tar > shieldpm-lxc-${{ matrix.arch }}.tar.gz
-
-      - name: "Upload LXC Artifact"
-        uses: actions/upload-artifact@v4
-        with:
-          name: lxc-template-${{ matrix.arch }}
-          path: shieldpm-lxc-${{ matrix.arch }}.tar.gz
-          retention-days: 5
-
   # ---------------------------------------------------------
-  # PHASE 3: MERGE (Create Manifest)
+  # PHASE 3: ZUSAMMENFÜGEN (Manifest erstellen)
   # ---------------------------------------------------------
   merge:
     name: "🔗 Merge Multiarch Image"
@@ -355,6 +198,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'shedowe19' }}
     steps:
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -374,21 +218,6 @@ jobs:
         uses: mshick/add-pr-comment@v2
         if: ${{ needs.prepare.outputs.is_pr == 'true' }}
         with:
-          message: |
-            ✅ **Build Successful!**
-            
-            **Docker Image:**
-            `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`
-            
-            **LXC Templates (RootFS):**
-            Optimized for Proxmox.
-            Fixes included:
-            - **Dual Stack Guarantee:** Forces DHCP for both IPv4 and IPv6.
-            - **Static Fallback:** Uses interfaces file if DHCP fails.
-            - **Proxmox Compat:** Cleaned up wrappers and permissions.
-            
-            Download available under "Artifacts":
-            - `lxc-template-x86_64`
-            - `lxc-template-aarch64`
+          message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           refresh-message-position: true
