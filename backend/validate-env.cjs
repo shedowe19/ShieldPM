@@ -132,7 +132,7 @@ if (acmeProfile !== 'none') {
         if (!json.meta || !json.meta.profiles || !json.meta.profiles[acmeProfile]) {
             fatal('The ACME_PROFILE seems to be not supported by the ACME_SERVER.');
         }
-    } catch (e) {
+    } catch {
         // Ignore curl errors
     }
 }
@@ -143,8 +143,8 @@ ensureDefault('PGID', '0');
 
 checkInt('PUID');
 checkInt('PGID');
-const puid = parseInt(getEnv('PUID', '0'));
-const pgid = parseInt(getEnv('PGID', '0'));
+const puid = parseInt(getEnv('PUID', '0'), 10);
+const pgid = parseInt(getEnv('PGID', '0'), 10);
 
 if (pgid !== 0 && puid === 0) fatal("You've set PGID but not PUID. Which is required.");
 if (pgid === 0 && puid !== 0) info("You've set PUID but not PGID. Are you sure that this is what you wanted?");
