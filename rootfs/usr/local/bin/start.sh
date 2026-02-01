@@ -27,6 +27,13 @@ if [ "$PHP82" = "true" ]; then
     fi
     mkdir -vp /data/php
     cp -varnT /etc/php/8.2/fpm /data/php/82
+    
+    # PHP Init: Debianize php.ini (Comment out extensions managed by conf.d)
+    if [ -f /data/php/82/php.ini ]; then
+        sed -i 's|^extension=|;extension=|g' /data/php/82/php.ini
+        sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/82/php.ini
+    fi
+
     sed -i "s|#\?listen =.*|listen = /run/php82.sock|" /data/php/82/pool.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/82/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/82/pool.d/*.conf|g" /data/php/82/php-fpm.conf
@@ -48,6 +55,13 @@ if [ "$PHP83" = "true" ]; then
     fi
     mkdir -vp /data/php
     cp -varnT /etc/php/8.3/fpm /data/php/83
+
+    # PHP Init: Debianize php.ini (Comment out extensions managed by conf.d)
+    if [ -f /data/php/83/php.ini ]; then
+        sed -i 's|^extension=|;extension=|g' /data/php/83/php.ini
+        sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/83/php.ini
+    fi
+
     sed -i "s|#\?listen =.*|listen = /run/php83.sock|" /data/php/83/pool.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/83/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/83/pool.d/*.conf|g" /data/php/83/php-fpm.conf
@@ -69,6 +83,13 @@ if [ "$PHP84" = "true" ]; then
     fi
     mkdir -vp /data/php
     cp -varnT /etc/php/8.4/fpm /data/php/84
+
+    # PHP Init: Debianize php.ini (Comment out extensions managed by conf.d)
+    if [ -f /data/php/84/php.ini ]; then
+        sed -i 's|^extension=|;extension=|g' /data/php/84/php.ini
+        sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/84/php.ini
+    fi
+
     sed -i "s|#\?listen =.*|listen = /run/php84.sock|" /data/php/84/pool.d/www.conf
     sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/84/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/84/pool.d/*.conf|g" /data/php/84/php-fpm.conf
