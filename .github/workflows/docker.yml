@@ -184,15 +184,14 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Proxmox Alpine 3.20 Legacy Fix) ---
+      # --- NEW: LXC Export (Proxmox Native Passive Mode) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Start temporary container
           docker run -d --name temp-lxc-export --entrypoint tail ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }} -f /dev/null
           
-          # 2. Install dhclient from Alpine 3.20 Repo
-          # "dhclient" was removed in Alpine 3.21 because ISC-DHCP is EOL.
-          # However, Proxmox LXC hooks REQUIRE /sbin/dhclient for IPv6 DHCP.
+          # 2. Install legacy dhclient (Alpine 3.20)
+          # We provide the binary so Proxmox hooks can use it, but we don't force-run it.
           echo "Adding Alpine 3.20 repos to fetch legacy dhclient..."
           docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/main' >> /etc/apk/repositories"
           docker exec temp-lxc-export sh -c "echo 'https://dl-cdn.alpinelinux.org/alpine/v3.20/community' >> /etc/apk/repositories"
@@ -201,7 +200,8 @@ jobs:
           docker exec temp-lxc-export apk update
           docker exec temp-lxc-export apk add --no-cache dhclient
           
-          # 3. Create Symlink (Just to be absolutely safe)
+          # 3. Create Symlink (/sbin/dhclient)
+          # This is CRITICAL. Proxmox explicitly calls /sbin/dhclient.
           echo "Ensuring /sbin/dhclient exists..."
           if docker exec temp-lxc-export ls /usr/sbin/dhclient >/dev/null 2>&1; then
               docker exec temp-lxc-export ln -s /usr/sbin/dhclient /sbin/dhclient
@@ -228,8 +228,8 @@ jobs:
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 6. Patch launch.sh (Console, CWD & dhclient)
-          echo "Patching launch.sh with Console, CWD and dhclient..."
+          # 6. Patch launch.sh (Passive Network Logic)
+          echo "Patching launch.sh with Passive Network Logic..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
             # Set CWD to /app (fixes migrations)\
@@ -242,19 +242,23 @@ jobs:
                 fi\
             done\
             \
-            # LXC Network Init\
+            # LXC Network Init (Passive Mode)\
+            # 1. Bring loopback up\
             ip link set lo up\
             \
-            # 1. Try Static IP (from Proxmox GUI)\
-            if grep -q "inet static" /etc/network/interfaces; then\
-                echo "LXC: Static IP config detected. Applying..."\
-                ifup -a\
-            fi\
+            # 2. Wait for Proxmox Hooks (lxc-attach dhclient...)\
+            echo "LXC: Waiting 3s for host network configuration..."\
+            sleep 3\
             \
-            # 2. Start dhclient (Handles IPv4/IPv6 DHCP automatically)\
-            # This fixes the Proxmox warning and ensures full connectivity\
-            echo "LXC: Starting dhclient for dynamic addresses..."\
-            /sbin/dhclient -v\
+            # 3. Check if we have an IP address (IPv4 or IPv6)\
+            if ip -4 addr show scope global | grep -q "inet" || ip -6 addr show scope global | grep -q "inet6"; then\
+                echo "LXC: IP address detected (configured by Proxmox/Host)."\
+                echo "LXC: Skipping internal network configuration."\
+            else\
+                # 4. Fallback: Only run if Proxmox failed or this is not running on Proxmox\
+                echo "LXC: No IP detected! Starting fallback dhclient..."\
+                /usr/sbin/dhclient -v\
+            fi\
             ' launch.sh
             docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
           fi
@@ -313,9 +317,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **`dhclient` (via Alpine 3.20 Repo)**
-            - Fixes Proxmox IPv6 Hook Error
-            - Smart Network (Static + DHCP)
+            - **Legacy `dhclient` installed (Alpine 3.20)**
+            - **Native Proxmox Integration:** Checks if IP exists before doing anything.
+            - Fallback to `dhclient` only if Proxmox fails.
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
