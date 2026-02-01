@@ -185,7 +185,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export with Full Script Chain Patching ---
+      # --- NEW: LXC Export (Simplified & Optimized) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Create temporary container
@@ -198,63 +198,48 @@ jobs:
           # Start-Cmd: /sbin/tini -- /bin/sh -c ". /etc/shieldpm.env && /usr/local/bin/entrypoint.sh"
           # ----------------------------------------------------------------------
           export TZ=Europe/Berlin
-          # export ACME_EMAIL=admin@changeme.com
-          # export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
+          export ACME_EMAIL=admin@changeme.com
+          export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
+          export PUID=0
+          export PGID=0
           export TOR_ENABLED=true
           export LOGROTATE=true
+          export GOA=true
           EOF
           docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
           
-          # 3. Patch ALL scripts in the chain to use absolute paths
-          # Chain: entrypoint.sh -> envs.sh -> migration.sh -> start.sh -> launch.sh
-          
-          echo "Patching entrypoint.sh (calls envs.sh)..."
+          # 3. Patch entrypoint.sh (Global PATH export)
+          # This fixes all "command not found" errors for subsequent scripts
+          echo "Patching entrypoint.sh with PATH..."
           docker cp temp-lxc-export:/usr/local/bin/entrypoint.sh .
-          sed -i 's|exec envs.sh|exec /usr/local/bin/envs.sh|g' entrypoint.sh
+          sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
-          
-          echo "Patching envs.sh (calls migration.sh)..."
-          docker cp temp-lxc-export:/usr/local/bin/envs.sh .
-          sed -i 's|exec migration.sh|exec /usr/local/bin/migration.sh|g' envs.sh
-          docker cp envs.sh temp-lxc-export:/usr/local/bin/envs.sh
-          
-          echo "Patching migration.sh (calls start.sh)..."
-          docker cp temp-lxc-export:/usr/local/bin/migration.sh .
-          sed -i 's|exec start.sh|exec /usr/local/bin/start.sh|g' migration.sh
-          docker cp migration.sh temp-lxc-export:/usr/local/bin/migration.sh
 
-          echo "Patching start.sh (calls launch.sh)..."
-          docker cp temp-lxc-export:/usr/local/bin/start.sh .
-          # Fix: exec launch.sh
-          sed -i 's|exec launch.sh|exec /usr/local/bin/launch.sh|g' start.sh
-          # Fix: exec su-exec ... launch.sh (note the space before launch.sh)
-          sed -i 's| launch.sh| /usr/local/bin/launch.sh|g' start.sh
-          docker cp start.sh temp-lxc-export:/usr/local/bin/start.sh
-
-          echo "Patching launch.sh (Adding Network Detection)..."
-          docker cp temp-lxc-export:/usr/local/bin/launch.sh .
-          # Insert dynamic network init logic at the start of launch.sh
-          sed -i '2i\
-          # LXC Network Init: Alpine rootfs has no service manager, so we do it manually\
-          ip link set lo up\
-          for iface in $(ls /sys/class/net/ | grep -v lo); do\
-              if ! ip addr show "$iface" | grep -q "inet"; then\
-                  echo "LXC detected: Configuring $iface via DHCP..."\
-                  ip link set "$iface" up\
-                  udhcpc -b -i "$iface"\
-              fi\
-          done\
-          ' launch.sh
-          docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
+          # 4. Patch launch.sh (Smart Network Detection)
+          echo "Patching launch.sh with Network Init..."
+          if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
+            sed -i '2i\
+            # LXC Network Init\
+            ip link set lo up\
+            for iface in $(ls /sys/class/net/ | grep -v lo | grep -v bonding_masters); do\
+                if ! ip addr show "$iface" | grep -q "inet"; then\
+                    echo "LXC detected: Configuring $iface via DHCP..."\
+                    ip link set "$iface" up\
+                    udhcpc -b -i "$iface"\
+                fi\
+            done\
+            ' launch.sh
+            docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
+          fi
           
-          # 4. Export
+          # 5. Export
           docker export temp-lxc-export > rootfs.tar
           
-          # 5. Cleanup
+          # 6. Cleanup
           docker rm temp-lxc-export
-          rm shieldpm.env entrypoint.sh envs.sh migration.sh start.sh launch.sh || true
+          rm shieldpm.env entrypoint.sh launch.sh || true
           
-          # 6. Compress
+          # 7. Compress
           gzip -9 -c rootfs.tar > shieldpm-lxc-${{ matrix.arch }}.tar.gz
 
       - name: "Upload LXC Artifact"
@@ -299,7 +284,12 @@ jobs:
             `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`
             
             **LXC Templates (RootFS):**
-            Optimized for Proxmox (Includes Env-Config, All Path-Fixes & Dynamic Network-Init).
+            Optimized for Proxmox.
+            Fixes included:
+            - `/etc/shieldpm.env` injected
+            - Global PATH export in `entrypoint.sh`
+            - Smart Network Init in `launch.sh` (Ignores `bonding_masters`)
+            
             Download available under "Artifacts":
             - `lxc-template-x86_64`
             - `lxc-template-aarch64`
