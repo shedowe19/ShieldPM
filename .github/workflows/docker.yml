@@ -185,7 +185,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Proxmox Optimized) ---
+      # --- NEW: LXC Export (Proxmox Native Network) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Create temporary container
@@ -200,6 +200,8 @@ jobs:
           export TZ=Europe/Berlin
           # export ACME_EMAIL=admin@changeme.com
           # export ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory
+          # export PUID=0
+          # export PGID=0
           export TOR_ENABLED=true
           export LOGROTATE=true
           EOF
@@ -211,30 +213,37 @@ jobs:
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 4. Patch launch.sh (Console Fix, CWD & Network Detection)
-          echo "Patching launch.sh with Console Login, CWD and Network..."
+          # 4. Patch launch.sh (Console, CWD & Proxmox Native Network)
+          echo "Patching launch.sh with Console, CWD and ifup..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
             # Set CWD to /app (fixes migrations)\
             cd /app\
             \
             # Fix Proxmox Console (TTY Login)\
-            # Spawns login prompt on tty1/tty2 if they exist\
             for tty in tty1 tty2; do\
                 if [ -c "/dev/$tty" ]; then\
                     (while true; do /sbin/getty -L 0 $tty vt100; sleep 1; done) &\
                 fi\
             done\
             \
-            # LXC Network Init\
+            # LXC Network Init (Proxmox Native)\
+            # 1. Ensure Loopback is up\
             ip link set lo up\
-            for iface in $(ls /sys/class/net/ | grep -v lo | grep -v bonding_masters); do\
-                if ! ip addr show "$iface" | grep -q "inet"; then\
-                    echo "LXC detected: Configuring $iface via DHCP..."\
+            \
+            # 2. Apply Proxmox Network Config (/etc/network/interfaces)\
+            # This handles IPv4 Static/DHCP and IPv6 SLAAC/Static exactly as configured in GUI.\
+            if [ -f /etc/network/interfaces ]; then\
+                echo "LXC: Applying Proxmox network configuration via ifup..."\
+                ifup -a\
+            else\
+                # Fallback: Manual DHCP if no config found\
+                echo "LXC: No network config found. Falling back to simple DHCP..."\
+                for iface in $(ls /sys/class/net/ | grep -v lo | grep -v bonding_masters); do\
                     ip link set "$iface" up\
                     udhcpc -b -i "$iface"\
-                fi\
-            done\
+                done\
+            fi\
             ' launch.sh
             docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
           fi
@@ -293,10 +302,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **Console Login (TTY)**
-            - **`cd /app` (Fixes Migrations)**
-            - `/etc/shieldpm.env` injected
-            - Global PATH & Network Init
+            - **Native Proxmox Network (Supports Static/DHCP/SLAAC for IPv4/IPv6)**
+            - Console Login (TTY)
+            - `cd /app` & Global PATH
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
