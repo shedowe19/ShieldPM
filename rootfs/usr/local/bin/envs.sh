@@ -30,8 +30,8 @@ fi
 
 
 touch /data/.env
-# shellcheck source=/dev/null
 set -a
+# shellcheck source=/dev/null
 . /data/.env
 set +a
 if [ -s /tmp/env.sha512sum ] && [ "$(cat /tmp/env.sha512sum)" != "$(sha512sum < /data/.env)" ]; then
