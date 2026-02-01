@@ -37,7 +37,7 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------
-  # PHASE 1: VORBEREITUNG (Version & Base-Tag berechnen)
+  # PHASE 1: PREPARATION (Calculate Version & Base Tag)
   # ---------------------------------------------------------
   prepare:
     name: "⚙️ Prepare & Version"
@@ -67,7 +67,7 @@ jobs:
           fi
 
   # ---------------------------------------------------------
-  # PHASE 2: BAUEN (Matrix für x86 und ARM + LXC Export)
+  # PHASE 2: BUILD (Matrix for x86 and ARM + LXC Export)
   # ---------------------------------------------------------
   build:
     name: "🏗️ Build ${{ matrix.arch }}"
@@ -185,21 +185,21 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEU: LXC Export Steps mit Env-Injection ---
+      # --- NEW: LXC Export with Patches (Here only!) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
-          # 1. Temporären Container aus dem gerade gebauten Image erstellen (nicht starten)
+          # 1. Create temporary container from the built image (do not start)
           docker create --name temp-lxc-export ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
           
-          # 2. ShieldPM Environment Datei lokal erstellen
+          # 2. Create & inject ShieldPM Environment file
           cat <<EOF > shieldpm.env
           # ----------------------------------------------------------------------
           # ShieldPM LXC Environment Configuration
-          # Diese Datei wird in Proxmox/LXC geladen, wenn der Startbefehl angepasst wird:
+          # This file is loaded in Proxmox/LXC when the start command is set to:
           # cmd: /bin/sh -c ". /etc/shieldpm.env && /usr/local/bin/entrypoint.sh"
           # ----------------------------------------------------------------------
-
-          # -- Zeitzone --
+          
+          # -- Timezone --
           export TZ=Europe/Berlin
 
           # -- Let's Encrypt / SSL --
@@ -208,26 +208,40 @@ jobs:
           # export ACME_EAB_KID=
           # export ACME_EAB_HMAC_KEY=
 
-          # -- User Permissions (optional) --
-          export PUID=0
-          export PGID=0
-
           # -- Features --
           export TOR_ENABLED=true
           export LOGROTATE=true
           EOF
-
-          # 3. Datei in den Container kopieren (injizieren)
+          
           docker cp shieldpm.env temp-lxc-export:/etc/shieldpm.env
           
-          # 4. Dateisystem exportieren (das entfernt Docker-spezifische Layer und inkludiert unsere neue Datei)
+          # 3. Patch scripts (Extract from container -> modify -> push back)
+          # Reason: $PATH is often missing in LXC, so we must force absolute paths.
+          
+          echo "Patching entrypoint.sh..."
+          docker cp temp-lxc-export:/usr/local/bin/entrypoint.sh .
+          sed -i 's|exec envs.sh|exec /usr/local/bin/envs.sh|g' entrypoint.sh
+          docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
+          
+          echo "Patching envs.sh..."
+          docker cp temp-lxc-export:/usr/local/bin/envs.sh .
+          sed -i 's|exec migration.sh|exec /usr/local/bin/migration.sh|g' envs.sh
+          docker cp envs.sh temp-lxc-export:/usr/local/bin/envs.sh
+          
+          echo "Patching migration.sh..."
+          if docker cp temp-lxc-export:/usr/local/bin/migration.sh . 2>/dev/null; then
+            sed -i 's|exec launch.sh|exec /usr/local/bin/launch.sh|g' migration.sh
+            docker cp migration.sh temp-lxc-export:/usr/local/bin/migration.sh
+          fi
+          
+          # 4. Export filesystem (removes Docker-specific layers)
           docker export temp-lxc-export > rootfs.tar
           
-          # 5. Aufräumen
+          # 5. Cleanup
           docker rm temp-lxc-export
-          rm shieldpm.env
+          rm shieldpm.env entrypoint.sh envs.sh migration.sh || true
           
-          # 6. Komprimieren für Proxmox/LXC
+          # 6. Compress for Proxmox/LXC
           gzip -9 -c rootfs.tar > shieldpm-lxc-${{ matrix.arch }}.tar.gz
 
       - name: "Upload LXC Artifact"
@@ -238,7 +252,7 @@ jobs:
           retention-days: 5
 
   # ---------------------------------------------------------
-  # PHASE 3: ZUSAMMENFÜGEN (Manifest erstellen)
+  # PHASE 3: MERGE (Create Manifest)
   # ---------------------------------------------------------
   merge:
     name: "🔗 Merge Multiarch Image"
@@ -272,8 +286,8 @@ jobs:
             `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`
             
             **LXC Templates (RootFS):**
-            Enthält `/etc/shieldpm.env` zur Konfiguration.
-            Download unter "Artifacts":
+            Contains `/etc/shieldpm.env` and path fixes.
+            Download available under "Artifacts":
             - `lxc-template-x86_64`
             - `lxc-template-aarch64`
           repo-token: ${{ secrets.GITHUB_TOKEN }}
