@@ -184,7 +184,7 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
 
-      # --- NEW: LXC Export (Dual Stack Guaranteed) ---
+      # --- NEW: LXC Export (Dual Stack Priority -> Fallback) ---
       - name: "📦 Export LXC Rootfs Template"
         run: |
           # 1. Start temporary container
@@ -199,8 +199,7 @@ jobs:
           docker exec temp-lxc-export apk update
           docker exec temp-lxc-export apk add --no-cache dhclient
           
-          # 3. Create aa-exec Compatibility Shim
-          echo "Creating aa-exec adapter..."
+          # 3. Create aa-exec Shim (Proxmox compat)
           cat <<'EOF' > aa-exec
           #!/bin/sh
           while [ "$#" -gt 0 ]; do
@@ -220,16 +219,14 @@ jobs:
           # 4. Move Real Binary
           docker exec temp-lxc-export mv /usr/sbin/dhclient /usr/sbin/dhclient.real
           
-          # 5. Create "Permissions & Cleanup" Wrapper
-          # Ensures successful execution for Proxmox hooks, fixing permissions and zombie files.
+          # 5. Create Permissions/Cleanup Wrapper
+          # Fixes "Second Start" bug by removing old leases.
           cat <<'WRAPPER' > dhclient-wrapper
           #!/bin/sh
           prev=""
           for arg in "$@"; do
               if [ "$prev" = "-pf" ] || [ "$prev" = "-lf" ]; then
-                  # Cleanup old file (The "Second Start" Fix)
                   rm -f "$arg"
-                  # Ensure directory and permissions (The "Permission Denied" Fix)
                   mkdir -p "$(dirname "$arg")"
                   chmod 777 "$(dirname "$arg")"
               fi
@@ -239,7 +236,7 @@ jobs:
           # Run REAL dhclient (Blocking call)
           /usr/sbin/dhclient.real "$@"
           
-          # Always return 0 (Success) to Proxmox.
+          # Always return 0 to satisfy Proxmox
           exit 0
           WRAPPER
           
@@ -277,9 +274,8 @@ jobs:
           sed -i '2i export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"' entrypoint.sh
           docker cp entrypoint.sh temp-lxc-export:/usr/local/bin/entrypoint.sh
 
-          # 9. Patch launch.sh (Dual Stack Guarantee)
-          # We check IPv4 and IPv6 INDEPENDENTLY.
-          echo "Patching launch.sh with Dual-Stack Check..."
+          # 9. Patch launch.sh (DUAL STACK: DHCP First -> Fallback Static)
+          echo "Patching launch.sh with Dual Stack Priority..."
           if docker cp temp-lxc-export:/usr/local/bin/launch.sh . 2>/dev/null; then
             sed -i '2i\
             # Set CWD to /app (fixes migrations)\
@@ -294,21 +290,40 @@ jobs:
             \
             # LXC Network Init\
             ip link set lo up\
+            # Force all interfaces UP before DHCP (Critical for IPv6)\
+            for iface in $(ls /sys/class/net/ | grep -v lo); do ip link set "$iface" up; done\
             \
-            # Wait 3s to settle network\
-            echo "LXC: Verifying network status..."\
-            sleep 3\
+            # ------------------------------------------------------------------\
+            # PRIORITY 1: DYNAMIC DUAL STACK\
+            # ------------------------------------------------------------------\
+            echo "LXC: Attempting Dual-Stack DHCP (Priority 1)..."\
+            # Try combined first (IPv4 + IPv6)\
+            /usr/sbin/dhclient.real -v -1 -timeout 10\
             \
-            # 1. Check IPv4\
-            if ! ip -4 addr show scope global | grep -q "inet"; then\
-                echo "LXC: No IPv4 address detected. Requesting..."\
-                /usr/sbin/dhclient.real -4 -v -nw &\
+            # Check IPv6 specifically (Often needs explicit request if RA was slow)\
+            if ! ip -6 addr show scope global | grep -q "inet6"; then\
+               echo "LXC: IPv6 missing. Forcing IPv6 DHCP request..."\
+               /usr/sbin/dhclient.real -6 -v -1 -timeout 5\
             fi\
             \
-            # 2. Check IPv6 (Crucial for Dual Stack)\
-            if ! ip -6 addr show scope global | grep -q "inet6"; then\
-                echo "LXC: No IPv6 address detected. Requesting..."\
-                /usr/sbin/dhclient.real -6 -v -nw &\
+            # ------------------------------------------------------------------\
+            # PRIORITY 2: FALLBACK TO STATIC\
+            # ------------------------------------------------------------------\
+            HAS_V4="no"\
+            if ip -4 addr show scope global | grep -q "inet"; then HAS_V4="yes"; fi\
+            \
+            HAS_V6="no"\
+            if ip -6 addr show scope global | grep -q "inet6"; then HAS_V6="yes"; fi\
+            \
+            if [ "$HAS_V4" = "no" ] && [ "$HAS_V6" = "no" ]; then\
+                echo "LXC: DHCP failed completely. Falling back to /etc/network/interfaces (Static)..."\
+                ifup -a\
+            elif [ "$HAS_V6" = "no" ]; then\
+                # We have V4 but not V6. Maybe V6 is static in interfaces?\
+                if grep -q "inet6 static" /etc/network/interfaces; then\
+                     echo "LXC: Static IPv6 config detected. Applying..."\
+                     ifup -a\
+                fi\
             fi\
             ' launch.sh
             docker cp launch.sh temp-lxc-export:/usr/local/bin/launch.sh
@@ -368,9 +383,9 @@ jobs:
             **LXC Templates (RootFS):**
             Optimized for Proxmox.
             Fixes included:
-            - **Dual Stack Fix:** `launch.sh` now independently verifies and requests IPv4 AND IPv6.
-            - **Startup Cleanup:** Wrapper deletes old leases to prevent crashes.
-            - **Permission Fix:** Wrapper sets `chmod 777` on hook folders.
+            - **Dual Stack Guarantee:** Forces DHCP for both IPv4 and IPv6.
+            - **Static Fallback:** Uses interfaces file if DHCP fails.
+            - **Proxmox Compat:** Cleaned up wrappers and permissions.
             
             Download available under "Artifacts":
             - `lxc-template-x86_64`
