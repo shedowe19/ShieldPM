@@ -31,7 +31,9 @@ fi
 
 touch /data/.env
 # shellcheck source=/dev/null
+set -a
 . /data/.env
+set +a
 if [ -s /tmp/env.sha512sum ] && [ "$(cat /tmp/env.sha512sum)" != "$(sha512sum < /data/.env)" ]; then
     echo "You need to recreate the ShieldPM container after changing the .env file, restarting the container after changing the .env file is not supported"
     sleep inf
