@@ -65,8 +65,14 @@ mp0: /mnt/pve/data/shieldpm,mp=/data
 If you want to use **MySQL** or **PostgreSQL** (instead of the default SQLite):
 
 > [!WARNING]
-> The LXC container **ONLY** contains the ShieldPM application. It does **NOT** include a database server.
-> You must host the database yourself (e.g., in another LXC container, VM, or managed service).
+> The LXC container **ONLY** contains the ShieldPM application (Nginx + Node.js).
+> It does **NOT** include any optional sidecar containers defined in `compose.yaml`, such as:
+> *   **Database** (MySQL / PostgreSQL)
+> *   **CrowdSec**
+> *   **OpenAppSec** (WAF Agents)
+> *   **GeoIP Update**
+>
+> You must install/host these services yourself (e.g., in another LXC container, VM, or managed service) if you require them.
 
 1.  Enable `DB_MYSQL_` or `DB_POSTGRES_` variables in `/data/.env`.
 2.  Ensure the container can reach your database IP.
