@@ -93,8 +93,9 @@ update
 This command will:
 1.  Fetch the latest source code.
 2.  Rebuild the Frontend & Backend locally.
-3.  Replace the running files.
-4.  Restart the service.
+3.  **Update Application:** Replaces Frontend & Backend files.
+4.  **Update System:** Syncs new scripts and configs (Rootfs/Systemd/Tor) to `/`.
+5.  Restart the service.
 
 ---
 
