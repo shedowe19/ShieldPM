@@ -275,10 +275,10 @@ jobs:
           docker rm -f "$CONTAINER_NAME"
 
       - name: "📤 Upload LXC Template"
-        # if: matrix.arch == 'x86_64'
         uses: actions/upload-artifact@v4
         with:
-          name: shieldpm-lxc-template
+          # ÄNDERUNG: ${{ matrix.arch }} zum Namen hinzufügen
+          name: shieldpm-lxc-template-${{ matrix.arch }}
           path: ${{ env.LXC_TEMPLATE_NAME }}
           if-no-files-found: error
 
