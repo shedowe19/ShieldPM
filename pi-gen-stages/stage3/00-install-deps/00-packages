@@ -9,6 +9,8 @@ raspberrypi-kernel-headers
 rpi-eeprom
 rpi-update
 vcgencmd
+raspberrypi-bootloader
+raspberrypi-kernel
 
 # === Systemd & Boot ===
 systemd-sysv
