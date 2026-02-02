@@ -79,7 +79,7 @@ sed -i "s|nginx/|ShieldPM/|g" src/core/nginx.h
 sed -i "s|Server: nginx|Server: ShieldPM|g" src/http/ngx_http_header_filter_module.c
 
 # Clone modules
-git clone --depth 1 https://github.com/google/ngx_brotli --branch "$NB_VER" /src/ngx_brotli
+git clone --depth 1 --recurse-submodules https://github.com/google/ngx_brotli --branch "$NB_VER" /src/ngx_brotli
 git clone --depth 1 https://github.com/clyfish/ngx_unbrotli --branch "$NUB_VER" /src/ngx_unbrotli
 git clone --depth 1 https://github.com/tokers/zstd-nginx-module --branch "$ZNM_VER" /src/zstd-nginx-module
 git clone --depth 1 https://github.com/Zoey2936/ngx-fancyindex --branch "$NF_VER" /src/ngx-fancyindex
