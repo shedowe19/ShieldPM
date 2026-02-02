@@ -5,6 +5,7 @@
 raspi-config
 libraspberrypi-bin
 libraspberrypi0
+libraspberrypi-dev
 raspberrypi-kernel-headers
 rpi-eeprom
 rpi-update
