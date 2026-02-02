@@ -158,7 +158,7 @@ libargon2-1
 libatomic1
 libssl3
 libedit2
-libldap-2.5-0
+libldap2
 liblua5.1-0
 libmaxminddb0
 libxml2
