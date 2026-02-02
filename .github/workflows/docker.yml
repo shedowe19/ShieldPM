@@ -32,7 +32,7 @@ env:
   LXC_TEMPLATE_NAME: "" # Placeholder for linter
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   pull-requests: write
 
@@ -274,13 +274,11 @@ jobs:
           # Cleanup
           docker rm -f "$CONTAINER_NAME"
 
-      - name: "📤 Upload LXC Template"
-        # if: matrix.arch == 'x86_64'
-        uses: actions/upload-artifact@v4
+      - name: "📤 Upload LXC Template to Release"
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
-          name: shieldpm-lxc-template-${{ matrix.arch }}
-          path: ${{ env.LXC_TEMPLATE_NAME }}
-          if-no-files-found: error
+          files: ${{ env.LXC_TEMPLATE_NAME }}
 
   # ---------------------------------------------------------
   # PHASE 3: ZUSAMMENFÜGEN (Manifest erstellen)
