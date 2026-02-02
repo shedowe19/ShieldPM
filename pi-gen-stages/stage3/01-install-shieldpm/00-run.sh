@@ -135,7 +135,9 @@ cd /src/nginx
     --add-dynamic-module=/src/nginx-ntlm-module \
     --add-dynamic-module=/src/ModSecurity-nginx \
     --add-dynamic-module=/src/ngx_http_geoip2_module \
-    --with-ld-opt="$LDFLAGS"
+    --add-dynamic-module=/src/ngx_http_geoip2_module \
+    --with-cc-opt="-I/usr/include" \
+    --with-ld-opt="-L/usr/lib $LDFLAGS"
 
 echo ">>> Building Nginx..."
 make -j "$(nproc)" install
