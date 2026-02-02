@@ -25,6 +25,40 @@ python3-pigpio
 alsa-utils
 # Device Tree
 device-tree-compiler
+# Official pi-gen stage2 packages
+raspberrypi-sys-mods
+raspi-utils
+rpi-swap
+rpi-loop-utils
+rpi-keyboard-config
+python3-rpi-lgpio
+python3-smbus2
+python3-libgpiod
+gpiod
+avahi-daemon
+fake-hwclock
+ntfs-3g
+pciutils
+udisks2
+usbutils
+usb-modeswitch
+kms++-utils
+fbset
+psmisc
+strace
+ncdu
+console-setup
+keyboard-configuration
+debconf-utils
+bash-completion
+manpages-dev
+ssh-import-id
+ethtool
+unzip
+zip
+p7zip-full
+file
+man-db
 
 # === Systemd & Boot ===
 systemd-sysv
