@@ -70,8 +70,8 @@ jobs:
           image-name: ${{ env.IMAGE_NAME }}
           pi-gen-version: arm64
           
-          # Stages: stage0-2 (Raspberry Pi OS Lite) + custom ShieldPM stage
-          stage-list: stage0 stage1 stage2 ./pi-gen-stages/shieldpm
+          # Stages: stage0-2 (Raspberry Pi OS Lite) + stage3 (ShieldPM)
+          stage-list: stage0 stage1 stage2 ./pi-gen-stages/stage3
           
           # Raspberry Pi Config
           release: trixie
