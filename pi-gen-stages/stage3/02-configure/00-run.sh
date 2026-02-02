@@ -5,8 +5,10 @@ echo "=== Configuring ShieldPM ==="
 
 # Copy rootfs overlays (systemd units, configs, scripts)
 # These files should be placed in the files/ subdirectory
-if [ -d "${STAGE_WORK_DIR}/02-configure/files" ]; then
-    cp -rv "${STAGE_WORK_DIR}/02-configure/files/"* "${ROOTFS_DIR}/" || true
+# Copy rootfs overlays (systemd units, configs, scripts)
+# These files should be placed in the files/ subdirectory
+if [ -d "files" ]; then
+    cp -rv "files/"* "${ROOTFS_DIR}/" || true
 fi
 
 on_chroot << EOF
