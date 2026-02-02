@@ -1,78 +1,78 @@
 # Raspberry Pi Installation
 
-ShieldPM bietet vorgebaute **ARM64 Images** für Raspberry Pi 4B (und neuere Modelle), basierend auf **Debian Trixie**.
+ShieldPM provides pre-built **ARM64 images** for Raspberry Pi 4B and newer models, based on **Debian Trixie**.
 
 > [!IMPORTANT]
-> **Unterstützte Hardware**
-> - Raspberry Pi 4 Model B (2GB+ RAM empfohlen)
+> **Supported Hardware**
+> - Raspberry Pi 4 Model B (2GB+ RAM recommended)
 > - Raspberry Pi 5
 > - Raspberry Pi 400
 >
 > **Features**
-> - Vollständig nativ kompiliert (kein Docker)
-> - Alle Raspberry Pi Tools inkl. `raspi-config`
-> - HTTP/3 (QUIC) Support
-> - ModSecurity WAF vorinstalliert
+> - Fully natively compiled (no Docker)
+> - All Raspberry Pi tools including `raspi-config`
+> - HTTP/3 (QUIC) support
+> - ModSecurity WAF pre-installed
 
 ---
 
 ## 1. Download & Flash
 
-1. Lade das neueste Image von der **[Releases](https://github.com/shedowe19/ShieldPM/releases)** Seite:
+1. Download the latest image from the **[Releases](https://github.com/shedowe19/ShieldPM/releases)** page:
    - `shieldpm-rpi4-vX.X.X.img.xz`
-2. Flash mit **[Raspberry Pi Imager](https://www.raspberrypi.com/software/)** oder **balenaEtcher**
-3. SD-Karte einlegen und Raspberry Pi starten
+2. Flash with **[Raspberry Pi Imager](https://www.raspberrypi.com/software/)** or **balenaEtcher**
+3. Insert SD card and boot your Raspberry Pi
 
 > [!TIP]
-> Das Image ist mit `xz` komprimiert. Raspberry Pi Imager kann dies direkt verarbeiten, ohne vorheriges Entpacken.
+> The image is compressed with `xz`. Raspberry Pi Imager can handle this directly without prior extraction.
 
 ---
 
-## 2. Erste Einrichtung
+## 2. Initial Setup
 
-### Netzwerk
-Der Raspberry Pi bezieht automatisch eine IP über DHCP.
+### Network
+The Raspberry Pi automatically obtains an IP via DHCP.
 
-### SSH Zugang
+### SSH Access
 ```bash
 ssh root@shieldpm.local
-# Passwort: shieldpm
+# Password: shieldpm
 ```
 
 > [!WARNING]
-> **Ändere das Passwort sofort nach dem ersten Login!**
+> **Change the password immediately after first login!**
 > ```bash
 > passwd
 > ```
 
 ### Web UI
-Nach dem Boot ist die Web-Oberfläche erreichbar unter:
+After boot, the web interface is accessible at:
 - `http://shieldpm.local:81`
-- `http://<IP-ADRESSE>:81`
+- `http://<IP-ADDRESS>:81`
 
-**Standard-Login:**
+**Default Login:**
 - Email: `admin@example.com`
 - Password: `changeme`
 
 ---
 
-## 3. Konfiguration
+## 3. Configuration
 
-Die Konfiguration erfolgt über eine `.env` Datei:
+Configuration is done via a `.env` file:
 
 ```bash
 nano /data/.env
 ```
 
-**Wichtige Variablen:**
+**Important Variables:**
 
-| Variable | Beschreibung | Beispiel |
-|:---------|:-------------|:---------|
-| `TZ` | Zeitzone | `Europe/Berlin` |
-| `ACME_EMAIL` | Let's Encrypt Email | `deine@email.de` |
+| Variable | Description | Example |
+|:---------|:------------|:--------|
+| `TZ` | Timezone | `Europe/Berlin` |
+| `ACME_EMAIL` | Let's Encrypt Email | `your@email.com` |
 | `DB_MYSQL_HOST` | MySQL Host (optional) | `192.168.1.100` |
 
-Nach Änderungen:
+After changes:
 ```bash
 systemctl restart shieldpm
 ```
@@ -81,44 +81,44 @@ systemctl restart shieldpm
 
 ## 4. Updates
 
-ShieldPM kann direkt auf dem Raspberry Pi aktualisiert werden:
+ShieldPM can be updated directly on the Raspberry Pi:
 
 ```bash
 update
 ```
 
-Dies lädt den neuesten Code, baut Frontend/Backend neu und startet den Service.
+This downloads the latest code, rebuilds Frontend/Backend, and restarts the service.
 
 ---
 
-## 5. Unterschiede zu Docker/LXC
+## 5. Differences from Docker/LXC
 
-| Merkmal | Docker | LXC | Raspberry Pi |
+| Feature | Docker | LXC | Raspberry Pi |
 |:--------|:------:|:---:|:------------:|
-| Boot-Partition | ❌ | ❌ | ✅ |
+| Boot Partition | ❌ | ❌ | ✅ |
 | Bare-Metal | ❌ | ❌ | ✅ |
-| Kernel-Update | ❌ | ❌ | ✅ |
-| Hardware-Zugriff | ❌ | Teilweise | ✅ |
-| SD-Karte flashen | ❌ | ❌ | ✅ |
+| Kernel Updates | ❌ | ❌ | ✅ |
+| Hardware Access | ❌ | Partial | ✅ |
+| Flash to SD Card | ❌ | ❌ | ✅ |
 
 > [!NOTE]
-> Das Raspberry Pi Image enthält einen vollständigen Linux-Kernel mit allen Raspberry Pi-spezifischen Treibern (VideoCore, GPIO, etc.).
+> The Raspberry Pi image includes a complete Linux kernel with all Raspberry Pi-specific drivers (VideoCore, GPIO, etc.).
 
 ---
 
-## 6. Performance-Tipps
+## 6. Performance Tips
 
 ### Overclock (optional)
-Bearbeite `/boot/config.txt`:
+Edit `/boot/config.txt`:
 ```ini
 over_voltage=2
 arm_freq=1800
 ```
 
-### USB SSD Boot (empfohlen)
-Für bessere Performance, boote von einer USB-SSD statt SD-Karte.
+### USB SSD Boot (recommended)
+For better performance, boot from a USB SSD instead of SD card.
 
-### Swap deaktivieren
+### Disable Swap
 ```bash
 systemctl disable dphys-swapfile
 ```
