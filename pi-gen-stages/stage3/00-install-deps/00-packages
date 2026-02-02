@@ -12,6 +12,19 @@ rpi-update
 vcgencmd
 raspberrypi-bootloader
 raspberrypi-kernel
+# Hardware Interface Tools
+i2c-tools
+python3-smbus
+spi-tools
+python3-spidev
+python3-gpiozero
+python3-rpi.gpio
+pigpio
+python3-pigpio
+# Audio/Video
+alsa-utils
+# Device Tree
+device-tree-compiler
 
 # === Systemd & Boot ===
 systemd-sysv
