@@ -78,6 +78,8 @@ cp -r "$TEMP_DIR/frontend/dist/"* "$FRONTEND_DIR/"
 
 # Rootfs (System Scripts & Configs)
 echo "    - Updating System Configs (rootfs)..."
+# SAFETY: Remove /data from the update payload to PREVENT overwriting user config (.env) and database
+rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
 
 echo "--> [6/6] Restarting ShieldPM..."
