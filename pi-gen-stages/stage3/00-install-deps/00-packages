@@ -59,6 +59,17 @@ zip
 p7zip-full
 file
 man-db
+# Final missing pi-gen stage2 packages
+apt-listchanges
+bluez-firmware
+ed
+gdb
+libmtp-runtime
+libpam-chksshpwd
+lua5.1
+luajit
+python-is-python3
+v4l-utils
 
 # === Systemd & Boot ===
 systemd-sysv
