@@ -48,8 +48,8 @@ export CFLAGS="-mbranch-protection=standard -O3 -pipe -fstack-clash-protection -
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="-fuse-ld=lld -Wl,-s -Wl,-O1 -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
 
-LUAJIT_INC=/usr/include/luajit-2.1
-LUAJIT_LIB=/usr/lib
+export LUAJIT_INC=/usr/include/luajit-2.1
+export LUAJIT_LIB=/usr/lib
 
 mkdir -p /src
 cd /src
