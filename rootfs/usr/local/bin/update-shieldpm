@@ -55,6 +55,10 @@ echo "    - Updating Frontend at $FRONTEND_DIR..."
 rm -rf "${FRONTEND_DIR:?}"/*
 cp -r "$TEMP_DIR/frontend/dist/"* "$FRONTEND_DIR/"
 
+# Rootfs (System Scripts & Configs)
+echo "    - Updating System Configs (rootfs)..."
+cp -rf "$TEMP_DIR/rootfs/"* /
+
 echo "--> [6/6] Restarting ShieldPM..."
 if systemctl is-active --quiet shieldpm; then
     systemctl restart shieldpm
