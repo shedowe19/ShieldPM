@@ -483,8 +483,14 @@ const internalUser = {
 		}
 
 		const file = data.file;
-		const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-		if (!allowedTypes.includes(file.mimetype)) {
+		const allowedTypes = {
+			"image/jpeg": ".jpg",
+			"image/png": ".png",
+			"image/gif": ".gif",
+			"image/webp": ".webp",
+		};
+
+		if (!Object.keys(allowedTypes).includes(file.mimetype)) {
 			throw new errs.ValidationError("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.");
 		}
 
@@ -507,7 +513,7 @@ const internalUser = {
 			}
 		}
 
-		const ext = path.extname(file.name);
+		const ext = allowedTypes[file.mimetype];
 		const filename = `${user.id}-${Date.now()}${ext}`;
 		const filePath = path.join(avatarDir, filename);
 
