@@ -12,6 +12,7 @@ if [ ! -d "$SRC_DIR" ]; then
 fi
 
 # Copy source to chroot
+rm -rf "${ROOTFS_DIR}/tmp/shieldpm-src"
 cp -r "$SRC_DIR" "${ROOTFS_DIR}/tmp/shieldpm-src"
 
 on_chroot << 'CHROOT_EOF'
@@ -51,6 +52,7 @@ export LDFLAGS="-fuse-ld=lld -Wl,-s -Wl,-O1 -Wl,-z,noexecstack -Wl,-z,relro -Wl,
 export LUAJIT_INC=/usr/include/luajit-2.1
 export LUAJIT_LIB=/usr/lib
 
+rm -rf /src /tmp/coreruleset
 mkdir -p /src
 cd /src
 
