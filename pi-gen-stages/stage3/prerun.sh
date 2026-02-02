@@ -1,13 +1,6 @@
 #!/bin/bash -e
-# Stage prerun - runs before all substages
-# This copies the rootfs from the previous stage (stage2)
+# Stage prerun - copy rootfs from previous stage if not exists
 
-if [ ! -d "${PREV_ROOTFS_DIR}" ]; then
-    echo "ERROR: Previous rootfs not found at ${PREV_ROOTFS_DIR}"
-    exit 1
+if [ ! -d "${ROOTFS_DIR}" ]; then
+    copy_previous
 fi
-
-echo "=== Copying rootfs from stage2 ==="
-rsync -aH --info=progress2 "${PREV_ROOTFS_DIR}/" "${ROOTFS_DIR}/"
-
-echo "=== ShieldPM Stage: Preparing Raspberry Pi 4 Image ==="
