@@ -20,6 +20,20 @@ echo "Target Branch: $BRANCH"
 echo "Temp Dir:      $TEMP_DIR"
 echo "=========================================="
 
+echo ""
+echo "⚠️  WARNING: USE AT YOUR OWN RISK ⚠️"
+echo "This script will update ShieldPM in-place by pulling the latest code"
+echo "and rebuilding the application. Unexpected issues may occur."
+echo "Always backup your data before proceeding!"
+echo ""
+read -p "Are you sure you want to continue? [y/N] " -n 1 -r
+echo ""
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Update aborted."
+    exit 1
+fi
+echo ""
+
 echo "--> [1/6] Installing build dependencies..."
 apt-get update
 apt-get install -y --no-install-recommends \
