@@ -27,6 +27,7 @@ In Proxmox Web UI:
 2.  **General:**
     *   **Hostname:** `shieldpm`
     *   **Unprivileged:** Checked ✅ (Recommended)
+        > **Note:** If you want to use `NGINX_QUIC_BPF=true`, you **must** use a **Privileged** container, as BPF is not available in unprivileged LXC.
     *   **Nesting:** Checked ✅ (Required for Systemd)
 3.  **Template:** Select the `shieldpm-...tar.gz` you uploaded.
 4.  **Disks:** 8GB (minimum)
