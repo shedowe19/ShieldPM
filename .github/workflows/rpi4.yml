@@ -53,7 +53,6 @@ jobs:
           
           # Copy build files
           cp Dockerfile pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
-          cp package.json pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
           
           # Apply version
           VER="${{ steps.version.outputs.version }}"
