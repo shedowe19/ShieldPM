@@ -43,24 +43,24 @@ jobs:
       - name: Prepare ShieldPM Source
         run: |
           # Create files directory for pi-gen stage
-          mkdir -p pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src
+          mkdir -p pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src
           
           # Copy entire project (backend, frontend, rootfs)
-          cp -r backend pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
-          cp -r frontend pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
-          cp -r rootfs pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
-          cp -r nginx-quic pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          cp -r backend pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/
+          cp -r frontend pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/
+          cp -r rootfs pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/
+          cp -r nginx-quic pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/
           
           # Copy build files
-          cp Dockerfile pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          cp Dockerfile pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/
           
           # Apply version
           VER="${{ steps.version.outputs.version }}"
-          sed -i "s|\"0.0.0\"|\"${VER}\"|g" pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/frontend/package.json
-          sed -i "s|\"0.0.0\"|\"${VER}\"|g" pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/backend/package.json
+          sed -i "s|\"0.0.0\"|\"${VER}\"|g" pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/frontend/package.json
+          sed -i "s|\"0.0.0\"|\"${VER}\"|g" pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/backend/package.json
           
           echo "ShieldPM source prepared for pi-gen"
-          du -sh pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          du -sh pi-gen-stages/stage3/01-install-shieldpm/files/shieldpm-src/
 
       # --- Build Raspberry Pi Image with pi-gen ---
       - name: Build with pi-gen
