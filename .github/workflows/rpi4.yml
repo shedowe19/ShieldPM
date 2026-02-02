@@ -1,0 +1,121 @@
+name: Build Raspberry Pi 4 Image
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'ShieldPM release tag to use (e.g., v3.1.0)'
+        required: false
+        default: 'develop'
+
+env:
+  IMAGE_NAME: shieldpm-rpi4
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: "🍓 Build Raspberry Pi 4 Image"
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'shedowe19' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Get Version Info
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ] && [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+          elif [ -n "${{ github.event.inputs.release_tag }}" ]; then
+            VERSION="${{ github.event.inputs.release_tag }}"
+          else
+            VERSION="develop-$(git rev-parse --short HEAD)"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Building ShieldPM RPI4 Image: ${VERSION}"
+
+      # --- Prepare ShieldPM Source for pi-gen ---
+      - name: Prepare ShieldPM Source
+        run: |
+          # Create files directory for pi-gen stage
+          mkdir -p pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src
+          
+          # Copy entire project (backend, frontend, rootfs)
+          cp -r backend pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          cp -r frontend pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          cp -r rootfs pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          cp -r nginx-quic pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          
+          # Copy build files
+          cp Dockerfile pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          cp package.json pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+          
+          # Apply version
+          VER="${{ steps.version.outputs.version }}"
+          sed -i "s|\"0.0.0\"|\"${VER}\"|g" pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/frontend/package.json
+          sed -i "s|\"0.0.0\"|\"${VER}\"|g" pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/backend/package.json
+          
+          echo "ShieldPM source prepared for pi-gen"
+          du -sh pi-gen-stages/shieldpm/01-install-shieldpm/files/shieldpm-src/
+
+      # --- Build Raspberry Pi Image with pi-gen ---
+      - name: Build with pi-gen
+        uses: usimd/pi-gen-action@v1
+        id: build
+        with:
+          image-name: ${{ env.IMAGE_NAME }}
+          pi-gen-version: arm64
+          
+          # Stages: stage0-2 (Raspberry Pi OS Lite) + custom ShieldPM stage
+          stage-list: stage0 stage1 stage2 ./pi-gen-stages/shieldpm
+          
+          # Raspberry Pi Config
+          release: trixie
+          hostname: shieldpm
+          username: root
+          password: shieldpm
+          locale: en_US.UTF-8
+          keyboard-keymap: us
+          keyboard-layout: English (US)
+          timezone: Etc/UTC
+          
+          # Enable SSH & raspi-config
+          enable-ssh: 1
+          
+          # Use XZ compression for smallest size
+          compression: xz
+          compression-level: 9
+          
+          # Output format
+          export-last-stage-only: true
+
+      - name: Rename Image
+        run: |
+          IMAGE_FILE="${{ steps.build.outputs.image-path }}"
+          NEW_NAME="${{ env.IMAGE_NAME }}-${{ steps.version.outputs.version }}.img.xz"
+          mv "$IMAGE_FILE" "$NEW_NAME"
+          echo "IMAGE_PATH=$NEW_NAME" >> $GITHUB_ENV
+          
+          # Show image info
+          ls -lh "$NEW_NAME"
+          file "$NEW_NAME"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ steps.version.outputs.version }}
+          path: ${{ env.IMAGE_PATH }}
+          if-no-files-found: error
+
+      # --- Upload to Release (only on tag push) ---
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.IMAGE_PATH }}
+          fail_on_unmatched_files: true
