@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Self-update protection: Run from /tmp to allow overwriting the original script file
+SELF_PATH=$(readlink -f "$0")
+if [[ "$SELF_PATH" != "/tmp/shieldpm_update_running" ]]; then
+    cp "$SELF_PATH" /tmp/shieldpm_update_running
+    exec /bin/bash /tmp/shieldpm_update_running "$@"
+fi
+
 # Only run as root
 if [ "$EUID" -ne 0 ]; then
   echo "Please run as root"
@@ -71,6 +78,8 @@ cp -r "$TEMP_DIR/frontend/dist/"* "$FRONTEND_DIR/"
 
 # Rootfs (System Scripts & Configs)
 echo "    - Updating System Configs (rootfs)..."
+# SAFETY: Remove /data from the update payload to PREVENT overwriting user config (.env) and database
+rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
 
 echo "--> [6/6] Restarting ShieldPM..."
