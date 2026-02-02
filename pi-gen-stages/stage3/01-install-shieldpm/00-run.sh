@@ -4,7 +4,7 @@
 
 echo "=== Building ShieldPM from Source ==="
 
-SRC_DIR="${STAGE_WORK_DIR}/01-install-shieldpm/files/shieldpm-src"
+SRC_DIR="files/shieldpm-src"
 
 if [ ! -d "$SRC_DIR" ]; then
     echo "ERROR: ShieldPM source not found at $SRC_DIR"
