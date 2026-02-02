@@ -1,0 +1,21 @@
+[Unit]
+Description=ShieldPM Container Service
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Load environment from file if present (optional)
+# EnvironmentFile=-/etc/default/shieldpm
+Environment="TERM=xterm"
+Environment="HOME=/root"
+
+# Run the same entrypoint as Docker
+ExecStart=/usr/local/bin/entrypoint.sh
+
+# Restart logic
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

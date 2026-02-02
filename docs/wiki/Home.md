@@ -15,6 +15,7 @@
 ### Basics
 *   **[Installation](Installation)**: Get started with Docker Compose and migration guides.
 *   **[Proxmox LXC Installation](Proxmox-LXC)**: Setup guide for Native Containers (Systemd).
+*   **[Raspberry Pi Installation](Raspberry-Pi)**: Bootable ARM64 image for Raspberry Pi 4/5.
 *   **[Configuration](Configuration)**: detailed environment variables and database setup.
 *   **[IPv6 Configuration](IPv6)**: Setup guide for Docker and IPv6.
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.

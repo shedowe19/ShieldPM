@@ -1,0 +1,106 @@
+#!/bin/bash
+set -e
+
+# Self-update protection: Run from /tmp to allow overwriting the original script file
+SELF_PATH=$(readlink -f "$0")
+if [[ "$SELF_PATH" != "/tmp/shieldpm_update_running" ]]; then
+    cp "$SELF_PATH" /tmp/shieldpm_update_running
+    exec /bin/bash /tmp/shieldpm_update_running "$@"
+fi
+
+# Only run as root
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run as root"
+  exit 1
+fi
+
+REPO_URL="https://github.com/shedowe19/ShieldPM.git"
+BRANCH="develop" # Default branch
+TEMP_DIR="/tmp/shieldpm_update_$(date +%s)"
+BACKEND_DIR="/app"
+FRONTEND_DIR="/html/frontend"
+
+echo "=========================================="
+echo "🛡️ ShieldPM In-Place Update Utility"
+echo "=========================================="
+echo "Target Branch: $BRANCH"
+echo "Temp Dir:      $TEMP_DIR"
+echo "=========================================="
+
+echo ""
+echo "⚠️  WARNING: USE AT YOUR OWN RISK ⚠️"
+echo "This script will update ShieldPM in-place by pulling the latest code"
+echo "and rebuilding the application. Unexpected issues may occur."
+echo "Always backup your data before proceeding!"
+echo ""
+read -p "Are you sure you want to continue? [y/N] " -n 1 -r
+echo ""
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Update aborted."
+    exit 1
+fi
+echo ""
+
+echo "--> Installing build requiremends..."
+
+apt-get update
+apt-get install -y npm
+
+echo "--> [1/6] Installing build dependencies..."
+apt-get update
+apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    python3 \
+    python3-dev \
+    python3-pip \
+    libffi-dev \
+
+echo "--> [2/6] Fetching latest source..."
+git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
+
+echo "--> [3/6] Building Backend..."
+cd "$TEMP_DIR/backend"
+npm install --production=false
+# Cleanup Dev Dependencies to save space
+# npm prune --production
+
+echo "--> [4/6] Building Frontend..."
+cd "$TEMP_DIR/frontend"
+npm install
+npm run build
+
+echo "--> [5/6] Swapping files..."
+# Backend
+echo "    - Updating Backend at $BACKEND_DIR..."
+# Preserve config/keys if any (though usually strictly in /data)
+cp -r "$TEMP_DIR/backend/"* "$BACKEND_DIR/"
+
+# Frontend
+echo "    - Updating Frontend at $FRONTEND_DIR..."
+rm -rf "${FRONTEND_DIR:?}"/*
+cp -r "$TEMP_DIR/frontend/dist/"* "$FRONTEND_DIR/"
+
+# Rootfs (System Scripts & Configs)
+echo "    - Updating System Configs (rootfs)..."
+# SAFETY: Remove /data from the update payload to PREVENT overwriting user config (.env) and database
+rm -rf "$TEMP_DIR/rootfs/data"
+cp -rf "$TEMP_DIR/rootfs/"* /
+
+echo "--> [6/6] Restarting ShieldPM..."
+if systemctl is-active --quiet shieldpm; then
+    systemctl restart shieldpm
+    echo "    - Systemd service restarted."
+else
+    echo "    - Warning: shieldpm service not running. Please restart container manually."
+fi
+
+echo "--> Cleanup..."
+rm -rf "$TEMP_DIR"
+# Optional: remove build tools to save space?
+# apt-get remove -y git build-essential ...
+# apt-get autoremove -y
+
+echo "=========================================="
+echo "✅ Update Complete!"
+echo "=========================================="
