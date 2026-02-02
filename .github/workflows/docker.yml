@@ -29,9 +29,10 @@ on:
 
 env:
   IMAGE_NAME: ghcr.io/shedowe19/shieldpm
+  LXC_TEMPLATE_NAME: "" # Placeholder for linter
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   pull-requests: write
 
@@ -188,6 +189,96 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
 
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
+
+      # ---------------------------------------------------------
+      # OPTIONAL: Proxmox LXC Template Creation (Systemd-Patched)
+      # Now for both x86_64 and aarch64
+      # ---------------------------------------------------------
+      - name: "📦 Create Proxmox LXC Template"
+        id: lxc
+        # if: matrix.arch == 'x86_64' # Enable for both architectures
+        run: |
+          # 1. Pull the image we just pushed/built to ensure it's local
+          TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
+          docker pull "$TAG"
+
+          # 2. Run a temporary builder container
+          # We start it with a sleep entrypoint so we can exec patches into it
+          CONTAINER_NAME="lxc-builder-${{ matrix.arch }}"
+          docker run -d --name "$CONTAINER_NAME" --entrypoint /bin/sleep --user 0:0 --privileged "$TAG" infinity
+
+          # 3. PATCH: Install Systemd & Networking (Required for LXC)
+          echo "Installing Systemd & Networking tools..."
+          docker exec "$CONTAINER_NAME" apt-get update
+          docker exec "$CONTAINER_NAME" apt-get install -y --no-install-recommends \
+            systemd-sysv \
+            ifupdown \
+            net-tools \
+            iproute2 \
+            isc-dhcp-client \
+            udev \
+            qemu-guest-agent \
+            keyutils \
+            nfs-common \
+            cifs-utils \
+            fuse \
+            openssh-server \
+            nano \
+            curl
+
+          # 4. PATCH: Fix Systemd for Containers
+          # Mask services that fail in unprivileged containers
+          echo "Masking incompatible systemd units..."
+          docker exec "$CONTAINER_NAME" systemctl mask \
+            systemd-remount-fs.service \
+            dev-hugepages.mount \
+            sys-fs-fuse-connections.mount \
+            systemd-logind.service \
+            getty.target \
+            console-getty.service
+
+          # Enable standard Getty on tty1 for Proxmox Console
+          docker exec "$CONTAINER_NAME" systemctl enable getty@tty1.service
+
+          # Enable ShieldPM Service (Autostart)
+          docker exec "$CONTAINER_NAME" systemctl enable shieldpm.service
+          
+          # Alias update command
+          docker exec "$CONTAINER_NAME" ln -s /usr/local/bin/update-shieldpm /usr/bin/update
+
+          # 5. Cleanup to reduce size
+          docker exec "$CONTAINER_NAME" apt-get clean
+          docker exec "$CONTAINER_NAME" rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+          # 6. Export Rootfs
+          echo "Exporting Rootfs..."
+          docker export "$CONTAINER_NAME" -o rootfs.tar
+          
+          # 7. Compress (Standard Proxmox format: .tar.gz or .tar.xz)
+          echo "Compressing..."
+          gzip -9 rootfs.tar
+          
+          if [ "${{ matrix.arch }}" == "x86_64" ]; then
+            ARCH_SUFFIX="amd64"
+          elif [ "${{ matrix.arch }}" == "aarch64" ]; then
+            ARCH_SUFFIX="arm64"
+          else
+            ARCH_SUFFIX="${{ matrix.arch }}"
+          fi
+          
+          FILE_NAME="shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_${ARCH_SUFFIX}.tar.gz"
+          mv rootfs.tar.gz "$FILE_NAME"
+          
+          echo "LXC_TEMPLATE_NAME=$FILE_NAME" >> $GITHUB_ENV
+          
+          # Cleanup
+          docker rm -f "$CONTAINER_NAME"
+
+      - name: "📤 Upload LXC Template to Release"
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: ${{ env.LXC_TEMPLATE_NAME }}
 
   # ---------------------------------------------------------
   # PHASE 3: ZUSAMMENFÜGEN (Manifest erstellen)

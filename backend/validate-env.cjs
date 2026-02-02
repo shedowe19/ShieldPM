@@ -132,7 +132,7 @@ if (acmeProfile !== 'none') {
         if (!json.meta || !json.meta.profiles || !json.meta.profiles[acmeProfile]) {
             fatal('The ACME_PROFILE seems to be not supported by the ACME_SERVER.');
         }
-    } catch (e) {
+    } catch {
         // Ignore curl errors
     }
 }
@@ -143,8 +143,8 @@ ensureDefault('PGID', '0');
 
 checkInt('PUID');
 checkInt('PGID');
-const puid = parseInt(getEnv('PUID', '0'));
-const pgid = parseInt(getEnv('PGID', '0'));
+const puid = parseInt(getEnv('PUID', '0'), 10);
+const pgid = parseInt(getEnv('PGID', '0'), 10);
 
 if (pgid !== 0 && puid === 0) fatal("You've set PGID but not PUID. Which is required.");
 if (pgid === 0 && puid !== 0) info("You've set PUID but not PGID. Are you sure that this is what you wanted?");
@@ -254,14 +254,14 @@ checkInt('DEFAULT_CERT_ID');
 ensureDefault('GOACLA', "--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string");
 ensureDefault('INITIAL_DEFAULT_PAGE', 'congratulations');
 
-// PHP APKs
-const checkApk = (key) => {
+// PHP Packages
+const checkPkg = (key) => {
     const val = process.env[key];
-    if (val && !/^[a-z0-9 _-]+$/.test(val)) fatal(`${key} can consist of lower letters a-z, numbers 0-9, spaces, underscores and hyphens.`);
+    if (val && !/^[a-z0-9 _+. -]+$/.test(val)) fatal(`${key} can consist of lower letters a-z, numbers 0-9, spaces, underscores, dots, plus signs and hyphens.`);
 };
-checkApk('PHP82_APKS');
-checkApk('PHP83_APKS');
-checkApk('PHP84_APKS');
+checkPkg('PHP82_APKS');
+checkPkg('PHP83_APKS');
+checkPkg('PHP84_APKS');
 
 // Initial Admin
 const initEmail = process.env.INITIAL_ADMIN_EMAIL;

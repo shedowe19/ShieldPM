@@ -16,7 +16,7 @@ You can serve PHP applications directly through ShieldPM.
 
 ### External PHP-FPM (Recommended)
 This approach keeps your containers clean and separated.
-1.  Run a separate PHP-FPM container (e.g., `php:8.2-fpm-alpine`).
+1.  Run a separate PHP-FPM container (e.g., `php:8.2-fpm`).
 2.  In your Proxy Host's **Advanced Configuration**:
     ```nginx
     location / {

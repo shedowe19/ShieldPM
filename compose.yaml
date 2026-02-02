@@ -99,11 +99,11 @@ services:
 
       # --- PHP Options ---
       # - "PHP82=true" # Activate PHP82, default false
-      # - "PHP82_APKS=php82-curl php82-openssl" # Add php extensions
+      # - "PHP82_APKS=php8.2-curl php8.2-openssl" # Add php extensions
       # - "PHP83=true" # Activate PHP83, default false
-      # - "PHP83_APKS=php83-curl php83-openssl"
+      # - "PHP83_APKS=php8.3-curl php8.3-openssl"
       # - "PHP84=true" # Activate PHP84, default false
-      # - "PHP84_APKS=php84-curl php84-openssl"
+      # - "PHP84_APKS=php8.4-curl php8.4-openssl"
 
       # --- Advanced Nginx ---
       # - "NGINX_QUIC_BPF=true" # enables nginx's quic_bpf. Requires CAP_ADD (BPF, PERFMON, NET_ADMIN)
@@ -195,7 +195,10 @@ services:
       # --- Database: Postgres ---
       #  db:
       #    container_name: shieldpm-db
-      #    image: postgres:17-alpine
+      #  db:
+      #    container_name: shieldpm-db
+      #    image: postgres:17-bookworm
+      #    restart: always
       #    restart: always
       #    network_mode: bridge
       #    environment:
@@ -299,7 +302,10 @@ services:
 
       #  openappsec-db:
       #    container_name: openappsec-db
-      #    image: postgres:17-alpine
+      #  openappsec-db:
+      #    container_name: openappsec-db
+      #    image: postgres:17-bookworm
+      #    restart: always
       #    restart: always
       #    environment:
       #      - "TZ=Europe/Berlin"

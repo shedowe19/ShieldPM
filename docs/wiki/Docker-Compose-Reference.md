@@ -100,12 +100,12 @@ services:
 #      - "GOA=true" # Enables goaccess (and overrides LOGROTATE to true), default false --- if you download the GeoLite2-Country.mmdb, GeoLite2-City.mmdb AND GeoLite2-ASN.mmdb file from MaxMind and place them in /opt/shieldpm/goaccess/geoip it will automatically enable GeoIP in goaccess after restarting ShieldPM (no need to change GOACLA below), you may also enable the geoipupdate container below (please change the timezone)
 #      - "GOACLA=--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=2 --keep-last=7 --with-output-resolver --no-query-string" # Arguments that should be passed to goaccess, default: --agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string
 #      - "PHP82=true" # Activate PHP82, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
-#      - "PHP82_APKS=php82-curl php82-openssl" # Add php extensions, also enables PHP82, see available packages here: https://pkgs.alpinelinux.org/packages?branch=v3.21&repo=community&arch=x86_64&name=php82-*, default none, requires PHP82
+#      - "PHP82_APKS=php8.2-curl php8.2-openssl" # Add php extensions, also enables PHP82, see available packages here: https://packages.debian.org/search?keywords=php8.2-*, default none, requires PHP82
 #      - "PHP83=true" # Activate PHP83, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
-#      - "PHP83_APKS=php83-curl php83-openssl" # Add php extensions, also enables PHP83, see available packages here: https://pkgs.alpinelinux.org/packages?branch=v3.21&repo=community&arch=x86_64&name=php83-*, default none, requires PHP83
+#      - "PHP83_APKS=php8.3-curl php8.3-openssl" # Add php extensions, also enables PHP83, see available packages here: https://packages.debian.org/search?keywords=php8.3-*, default none, requires PHP83
 #      - "PHP84=true" # Activate PHP84, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
-#      - "PHP84_APKS=php84-curl php84-openssl" # Add php extensions, also enables PHP84, see available packages here: https://pkgs.alpinelinux.org/packages?branch=v3.21&repo=community&arch=x86_64&name=php84-*, default none, requires PHP84
-#      - "PHP_APKS=php-pecl-apcu php-pecl-redis" # Add php extensions, see available packages here: https://pkgs.alpinelinux.org/packages?branch=v3.21&repo=community&arch=x86_64&name=php-*, default none, requires PHP82, PHP83 and/or PHP84, not recommended, please use PHP82_APKS, PHP83_APKS or PHP84_APKS
+#      - "PHP84_APKS=php8.4-curl php8.4-openssl" # Add php extensions, also enables PHP84, see available packages here: https://packages.debian.org/search?keywords=php8.4-*, default none, requires PHP84
+#      - "PHP_APKS=php-apcu php-redis" # Add php extensions, see available packages here: https://packages.debian.org/search?keywords=php-*, default none, requires PHP82, PHP83 and/or PHP84, not recommended, please use PHP82_APKS, PHP83_APKS or PHP84_APKS
 #      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # email to use instead of admin@example.org on first start of ShieldPM for the initial user
 #      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # password to use instead of a random password which is logged on first start of ShieldPM for the initial user
 #      - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start of ShieldPM for the initial user, default congratulations, can be one of: 404, 444, redirect, congratulations or html
@@ -155,7 +155,7 @@ services:
 # This can be used to use Postgres instead of SQLite, you must also set DB_POSTGRES_HOST to 127.0.0.1 in the shieldpm container
 #  db:
 #    container_name: shieldpm-db
-#    image: postgres:17-alpine
+#    image: postgres:17-bookworm
 #    restart: always
 #    network_mode: bridge
 #    environment:
@@ -243,7 +243,7 @@ services:
 #      - openappsec-db
 #  openappsec-db:
 #    container_name: openappsec-db
-#    image: postgres:17-alpine
+#    image: postgres:17-bookworm
 #    restart: always
 #    environment:
 #      - "TZ=your-timezone" # needs to be changed

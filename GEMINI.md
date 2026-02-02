@@ -38,7 +38,7 @@ docker compose up -d
 The project uses a multi-stage `Dockerfile`.
 *   **Frontend:** Built in the `frontend` stage using `yarn vite build`.
 *   **Backend:** Dependencies installed in the `backend` stage.
-*   **Final Image:** Combines frontend assets, backend code, and Nginx configuration into an Alpine-based image (`shedowe19/nginx-quic`).
+*   **Final Image:** Combines frontend assets, backend code, and Nginx configuration into a Debian Trixie-based image (`shedowe19/nginx-quic`).
 
 **Key Scripts (Backend):**
 *   `test`: `vitest` - Runs unit tests.

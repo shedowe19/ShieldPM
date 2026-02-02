@@ -23,20 +23,18 @@ fi
 
 if [ ! -d /data ]; then
 	echo "----------------------------------------------"
-	echo "/data is not mounted! Check your compose.yaml."
+	echo "/data is not mounted! Creating it..."
 	echo "----------------------------------------------"
-    sleep inf
+    mkdir -p /data
 fi
 
 
 touch /data/.env
+set -a
 # shellcheck source=/dev/null
 . /data/.env
-if [ -s /tmp/env.sha512sum ] && [ "$(cat /tmp/env.sha512sum)" != "$(sha512sum < /data/.env)" ]; then
-    echo "You need to recreate the ShieldPM container after changing the .env file, restarting the container after changing the .env file is not supported"
-    sleep inf
-fi
-sha512sum < /data/.env > /tmp/env.sha512sum
+set +a
+
 
 # Run Node.js validation script
 # Capture output to evaluate exports

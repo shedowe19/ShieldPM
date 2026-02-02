@@ -54,20 +54,20 @@ if ! nginx -tq; then
     sleep inf
 fi
 if [ "$PHP82" = "true" ]; then
-    if ! PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm82 -c /data/php/82 -y /data/php/82/php-fpm.conf -FORt > /dev/null 2>&1; then
-        PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm82 -c /data/php/82 -y /data/php/82/php-fpm.conf -FORt
+    if ! PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FORt > /dev/null 2>&1; then
+        PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FORt
         sleep inf
     fi
 fi
 if [ "$PHP83" = "true" ]; then
-    if ! PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm83 -c /data/php/83 -y /data/php/83/php-fpm.conf -FORt > /dev/null 2>&1; then
-        PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm83 -c /data/php/83 -y /data/php/83/php-fpm.conf -FORt
+    if ! PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm8.3 -c /data/php/83 -y /data/php/83/php-fpm.conf -FORt > /dev/null 2>&1; then
+        PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm8.3 -c /data/php/83 -y /data/php/83/php-fpm.conf -FORt
         sleep inf
     fi
 fi
 if [ "$PHP84" = "true" ]; then
-    if ! PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm84 -c /data/php/84 -y /data/php/84/php-fpm.conf -FORt > /dev/null 2>&1; then
-        PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm84 -c /data/php/84 -y /data/php/84/php-fpm.conf -FORt
+    if ! PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm8.4 -c /data/php/84 -y /data/php/84/php-fpm.conf -FORt > /dev/null 2>&1; then
+        PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm8.4 -c /data/php/84 -y /data/php/84/php-fpm.conf -FORt
         sleep inf
     fi
 fi
@@ -79,9 +79,9 @@ if [ "${TOR_ENABLED:-true}" = "true" ] && command -v tor >/dev/null 2>&1; then
     tor -f /etc/tor/torrc &
 fi
 aio.sh &
-if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm82 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; done; fi &
-if [ "$PHP83" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm83 -c /data/php/83 -y /data/php/83/php-fpm.conf -FOR; done; fi &
-if [ "$PHP84" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm84 -c /data/php/84 -y /data/php/84/php-fpm.conf -FOR; done; fi &
+if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; done; fi &
+if [ "$PHP83" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm8.3 -c /data/php/83 -y /data/php/83/php-fpm.conf -FOR; done; fi &
+if [ "$PHP84" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm8.4 -c /data/php/84 -y /data/php/84/php-fpm.conf -FOR; done; fi &
 if [ "$LOGROTATE" = "true" ]; then while true; do logrotate --verbose --state /data/logrotate.state /etc/logrotate; sleep 25h; done; fi &
 # shellcheck disable=SC2086
 if [ "$GOA" = "true" ]; then while true; do if [ -f /data/nginx/json_access.log ]; then tail -F /data/nginx/json_access.log | jq --unbuffered -R -r 'try (fromjson | "[" + .time_local + "] " + .http_host + " " + .remote_addr + " " + .request_time + " \"" + (.request | gsub("\""; "\\\"")) + "\" " + .status + " " + .body_bytes_sent + " " + .bytes_sent + " \"" + (.http_referer | gsub("\""; "\\\"")) + "\" \"" + (.http_user_agent | gsub("\""; "\\\"")) + "\"") catch empty' | goaccess --no-global-config --num-tests=0 --tz="$TZ" --time-format="%H:%M:%S" \

@@ -10,21 +10,21 @@ ShieldPM allows you to host PHP applications directly alongside your proxy hosts
 4.  Toggle **Enable PHP** to `On`.
 5.  Select your desired **PHP Version** (e.g., 8.4).
 
-## Installing PHP Extensions (APKS)
+## Installing PHP Extensions
 
-ShieldPM supports run-time installation of PHP extensions using Alpine Linux packages (`apk`). You configure this via environment variables in your `compose.yaml`.
+ShieldPM supports run-time installation of PHP extensions using Debian packages (`apt-get`). You configure this via environment variables in your `compose.yaml`.
 
 | Variable | Description |
 | :--- | :--- |
-| `PHP82_APKS` | Space-separated list of `php82-*` packages. |
-| `PHP83_APKS` | Space-separated list of `php83-*` packages. |
-| `PHP84_APKS` | Space-separated list of `php84-*` packages. |
+| `PHP82_APKS` | Space-separated list of `php8.2-*` Debian packages. |
+| `PHP83_APKS` | Space-separated list of `php8.3-*` Debian packages. |
+| `PHP84_APKS` | Space-separated list of `php8.4-*` Debian packages. |
 
 **Example:**
 ```yaml
 environment:
   - "PHP84=true"
-  - "PHP84_APKS=php84-curl php84-openssl php84-gd php84-pdo_mysql"
+  - "PHP84_APKS=php8.4-curl php8.4-gd php8.4-mysql"
 ```
 
 > [!NOTE]
@@ -64,7 +64,7 @@ Add these extensions to your `compose.yaml`. This covers almost all Nextcloud ap
     environment:
       - "PHP84=true"
       # Comprehensive list for Nextcloud 28+
-      - "PHP84_APKS=php84-simplexml php84-xml php84-dom php84-xmlwriter php84-xmlreader php84-curl php84-mbstring php84-gd php84-zip php84-openssl php84-pdo php84-pdo_mysql php84-pdo_sqlite php84-fileinfo php84-ctype php84-session php84-iconv php84-intl php84-posix php84-pecl-imagick php84-opcache php84-gmp php84-bcmath php84-pcntl php84-sodium php84-exif php84-sysvsem php84-pecl-apcu imagemagick imagemagick-svg"
+      - "PHP84_APKS=php8.4-simplexml php8.4-xml php8.4-dom php8.4-curl php8.4-mbstring php8.4-gd php8.4-zip php8.4-mysql php8.4-sqlite3 php8.4-intl php8.4-imagick php8.4-opcache php8.4-gmp php8.4-bcmath php8.4-apcu imagemagick"
       # Fix for self-checks
       extra_hosts:
         - "your-domain.com:127.0.0.1" 
