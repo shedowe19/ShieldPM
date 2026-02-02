@@ -1,4 +1,6 @@
 #!/bin/bash -e
-# Stage prerun - runs before all substages
+# Stage prerun - copy rootfs from previous stage if not exists
 
-echo "=== ShieldPM Stage: Preparing Raspberry Pi 4 Image ==="
+if [ ! -d "${ROOTFS_DIR}" ]; then
+    copy_previous
+fi
