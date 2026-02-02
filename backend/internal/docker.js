@@ -439,7 +439,7 @@ class DockerService {
 			let cleanAdvancedConfig = advancedConfig || "";
 			if (cleanAdvancedConfig) {
 				// Block dangerous directives
-				const dangerous = /lua_|perl_|exec|include|root|alias|types|so_|load_module/i;
+				const dangerous = /lua_|perl_|exec|include|root|alias|types|so_|load_module|access_log|error_log|client_body_temp_path|fastcgi_temp_path|uwsgi_temp_path|scgi_temp_path/i;
 				if (dangerous.test(cleanAdvancedConfig)) {
 					logger.warn(
 						`Docker Auto-Discovery: Blocking dangerous advanced config for ${domains}: ${cleanAdvancedConfig}`,
