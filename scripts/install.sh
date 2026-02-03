@@ -93,6 +93,8 @@ fi
 echo ">>> Setting permissions..."
 # Ensure nginx binary is executable
 chmod +x /usr/local/nginx/sbin/nginx
+# Ensure scripts are executable (update-shieldpm etc.)
+chmod +x /usr/local/bin/*
 # Permissions for /data directory (will be created if not exists)
 mkdir -p /data/shieldpm /data/nginx /data/tls /data/access /data/logs /data/tor
 chown -R shieldpm:shieldpm /app /data /html
