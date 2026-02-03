@@ -62,8 +62,28 @@ echo ">>> Copying application files..."
 cp -r app /
 cp -r html /
 cp -r usr/local/nginx /usr/local/
-cp -r usr/local/bin/* /usr/local/bin/
+# Copy binaries but exclude python/pip related (we install them natively)
+mkdir -p /usr/local/bin
+find usr/local/bin -type f -not -name "python*" -not -name "pip*" -exec cp {} /usr/local/bin/ \;
 cp -r usr/local/lib/* /usr/local/lib/
+
+# 4. Setup Python Venv (Certbot)
+echo ">>> Setting up Certbot venv..."
+python3 -m venv /usr/local/certbot-venv
+/usr/local/certbot-venv/bin/pip install --upgrade pip
+# Install Certbot and plugins matching Dockerfile requirements
+# (We might need a requirements.txt, or we just install valid versions)
+/usr/local/certbot-venv/bin/pip install \
+    certbot \
+    certbot-dns-cloudflare \
+    certbot-dns-route53 \
+    certbot-dns-google \
+    certbot-dns-digitalocean \
+    certbot-dns-ovh \
+    certbot-dns-rfc2136 \
+    certbot-dns-linode
+
+ln -sf /usr/local/certbot-venv/bin/certbot /usr/local/bin/certbot
 # cp -r rootfs/* / # rootfs contains /etc overlays etc.
 if [ -d "rootfs" ]; then
     cp -r rootfs/* /
