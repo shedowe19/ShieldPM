@@ -39,7 +39,9 @@ apt-get install -y --no-install-recommends \
     tor \
     wget \
     sqlite3 \
-    jq
+    jq \
+    gosu \
+    tini
 
 # Libs for Nginx/Lua (Must match what we linked against)
 # Trixie/Bookworm package names might vary slightly, aiming for broad compatibility
@@ -106,16 +108,38 @@ echo ">>> Updating library paths..."
 echo '/usr/local/lib' > /etc/ld.so.conf.d/shieldpm.conf
 ldconfig
 
-# 6. Service
-echo ">>> Enabling systemd service..."
-# Assuming rootfs/etc/systemd/system/shieldpm.service exists.
-# If not, we might need to create it here or rely on it being in rootfs.
+# 6. Service & User Context
+echo ">>> Configuration Service..."
+# Get shieldpm UID/GID
+SPM_UID=$(id -u shieldpm)
+SPM_GID=$(id -g shieldpm)
+echo "Configuring service to run as UID=$SPM_UID GID=$SPM_GID"
+
+# Create /etc/default/shieldpm
+echo "PUID=$SPM_UID" > /etc/default/shieldpm
+echo "PGID=$SPM_GID" >> /etc/default/shieldpm
+
+# Enable EnvironmentFile in systemd service
 if [ -f "/etc/systemd/system/shieldpm.service" ]; then
+    sed -i "s|# EnvironmentFile=-/etc/default/shieldpm|EnvironmentFile=-/etc/default/shieldpm|g" /etc/systemd/system/shieldpm.service
+    
+    echo ">>> Enabling systemd service..."
     systemctl daemon-reload
     systemctl enable shieldpm.service
     echo "Service enabled. Run 'systemctl start shieldpm' to start."
 else
-    echo "WARNING: /etc/systemd/system/shieldpm.service not found."
+    # Fallback check in /usr/lib/systemd/system/ (where we copied it from rootfs)
+     if [ -f "/usr/lib/systemd/system/shieldpm.service" ]; then
+        sed -i "s|# EnvironmentFile=-/etc/default/shieldpm|EnvironmentFile=-/etc/default/shieldpm|g" /usr/lib/systemd/system/shieldpm.service
+        # Symlink if not in /etc
+        ln -sf /usr/lib/systemd/system/shieldpm.service /etc/systemd/system/shieldpm.service
+        
+        systemctl daemon-reload
+        systemctl enable shieldpm.service
+        echo "Service enabled. Run 'systemctl start shieldpm' to start."
+    else
+        echo "WARNING: shieldpm.service not found."
+    fi
 fi
 
 echo "=== Installation Complete ==="
