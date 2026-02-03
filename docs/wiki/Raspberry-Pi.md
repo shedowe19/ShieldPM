@@ -1,18 +1,41 @@
 # Raspberry Pi Installation
 
-ShieldPM provides pre-built **ARM64 images** for Raspberry Pi 4B and newer models, based on **Debian Trixie**.
+ShieldPM can be installed on Raspberry Pi OS using a **Native Installer Package**.
+This package is pre-compiled for ARM64, saving you hours of build time on the Pi itself.
 
-> [!IMPORTANT]
-> **Supported Hardware**
-> - Raspberry Pi 4 Model B (2GB+ RAM recommended)
-> - Raspberry Pi 5
-> - Raspberry Pi 400
->
-> **Features**
-> - Fully natively compiled (no Docker)
-> - All Raspberry Pi tools including `raspi-config`
-> - HTTP/3 (QUIC) support
-> - ModSecurity WAF pre-installed
+## 1. Prerequisites
+- **Hardware:** Raspberry Pi 4 Model B (4GB/8GB recommended) or Raspberry Pi 5.
+- **OS:** Raspberry Pi OS Lite (64-bit) - Debian Bookworm or newer.
+- **Network:** Internet connection required for installation.
+
+## 2. Installation
+1.  **Download** the latest `shieldpm-rpi-install.tar.gz` from GitHub Releases.
+2.  **Transfer** it to your Raspberry Pi (e.g., via `scp`):
+    ```bash
+    scp shieldpm-rpi-install.tar.gz root@<rpi-ip>:/root/
+    ```
+3.  **Run Installer**:
+    ```bash
+    ssh root@<rpi-ip>
+    mkdir shieldpm-install
+    tar -xzf shieldpm-rpi-install.tar.gz -C shieldpm-install
+    cd shieldpm-install
+    ./install.sh
+    ```
+
+## 3. Post-Installation
+- **Web UI:** `http://<rpi-ip>:81`
+  - Default User: `admin@example.com`
+  - Default Password: `changeme`
+- **SSH:** `ssh shieldpm@<rpi-ip>` (User created by installer)
+
+## 4. Building from Source (Advanced)
+If you want to build the installer locally (e.g. for development), you can emulate the CI process:
+1.  Build the Docker image: `docker build -t shieldpm:local .`
+2.  Extract artifacts manually using `docker create` and `docker cp`.
+3.  Combine with `scripts/install.sh`.
+
+*Note: The official way to get artifacts is via GitHub Actions.*
 
 ---
 
