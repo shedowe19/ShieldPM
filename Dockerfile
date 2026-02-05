@@ -7,7 +7,7 @@ FROM debian:trixie-slim AS nginx
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
 # --- Build Arguments: Versions ---
-ARG NGINX_VER=release-1.29.4
+ARG NGINX_VER=release-1.29.5
 ARG DTR_VER=1.29.2
 ARG RCP_VER=1.29.4
 
