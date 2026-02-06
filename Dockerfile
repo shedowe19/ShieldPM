@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
 # ==========================================
 # Final Stage
 # ==========================================
-FROM ghcr.io/shedowe19/shieldpm-nginx:latest
+FROM ghcr.io/shedowe19/shieldpm-nginx:master
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
 
