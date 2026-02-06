@@ -25,6 +25,7 @@ echo "🛡️ ShieldPM In-Place Update Utility"
 echo "=========================================="
 echo "Target Branch: $BRANCH"
 echo "Temp Dir:      $TEMP_DIR"
+echo "Binary Tag:    nginx-binaries (Rolling)"
 echo "=========================================="
 
 echo ""
@@ -87,7 +88,32 @@ echo "    - Updating System Configs (rootfs)..."
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
 
-echo "--> [6/6] Restarting ShieldPM..."
+echo "--> [6/7] Checking for Nginx Binary Updates..."
+RELEASE_BASE="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"
+ARCH=$(dpkg --print-architecture)
+
+if [[ "$ARCH" == "amd64" || "$ARCH" == "arm64" ]]; then
+    # Simple prompt, defaulting to Yes for convenience
+    read -p "    ? Update compiled Nginx binaries? (Recommended) [Y/n] " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+         echo "    - Skipping binary update."
+    else
+         echo "    - Downloading nginx-linux-$ARCH.tar.gz..."
+         curl -L -f -o "$TEMP_DIR/nginx.tar.gz" "$RELEASE_BASE/nginx-linux-$ARCH.tar.gz"
+         if [ -f "$TEMP_DIR/nginx.tar.gz" ]; then
+             echo "    - Extracting binaries..."
+             tar -xzf "$TEMP_DIR/nginx.tar.gz" -C /
+             echo "    - Binaries updated successfully."
+         else
+             echo "    ! Failed to download binaries. Please check internet connection or GitHub status."
+         fi
+    fi
+else
+    echo "    - Skipping Nginx update: Architecture $ARCH not supported for auto-update."
+fi
+
+echo "--> [7/7] Restarting ShieldPM..."
 if systemctl is-active --quiet shieldpm; then
     systemctl restart shieldpm
     echo "    - Systemd service restarted."

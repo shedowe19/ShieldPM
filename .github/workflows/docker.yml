@@ -106,32 +106,7 @@ jobs:
           sed -i "s|\"0.0.0\"|\"$VER\"|g" frontend/package.json
           sed -i "s|\"0.0.0\"|\"$VER\"|g" backend/package.json
 
-      # --- Build Steps (Jetzt mit Anführungszeichen!) ---
-
-      - name: "📦 Build Stage: Nginx Build"
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          target: nginx
-          push: false
-          build-args: |
-            ${{ matrix.flags }}
-          cache-from: type=gha,scope=${{ matrix.arch }}-nginx
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-nginx
-
-      - name: "📦 Build Stage: Certbot"
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          target: certbot
-          push: false
-          build-args: |
-            ${{ matrix.flags }}
-          cache-from: type=gha,scope=${{ matrix.arch }}-certbot
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-certbot
-
+      # --- Build Steps ---
 
       - name: "📦 Build Stage: Frontend"
         uses: docker/build-push-action@v6
@@ -157,20 +132,6 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
-      - name: "📦 Build Stage: Cloudflared"
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          target: cloudflared
-          push: false
-          build-args: |
-            ${{ matrix.flags }}
-          cache-from: type=gha,scope=${{ matrix.arch }}-cloudflared
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-cloudflared
-
-
-
       - name: "🚀 Build Final & Push"
         uses: docker/build-push-action@v6
         with:
@@ -183,9 +144,6 @@ jobs:
           cache-from: |
             type=gha,scope=${{ matrix.arch }}-frontend
             type=gha,scope=${{ matrix.arch }}-backend
-            type=gha,scope=${{ matrix.arch }}-nginx
-            type=gha,scope=${{ matrix.arch }}-certbot
-            type=gha,scope=${{ matrix.arch }}-cloudflared
             type=gha,scope=${{ matrix.arch }}-final
 
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
