@@ -34,10 +34,7 @@ jobs:
           yarn vitest
           ./src/locale/scripts/locale-sort.sh
 
-      - name: nginxbeautifier
-        run: |
-          yarn global add nginxbeautifier
-          nginxbeautifier -s 4 -r rootfs/usr/local/nginx/conf
+
       - name: push changes
         run: |
           git add -A
