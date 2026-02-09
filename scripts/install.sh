@@ -202,6 +202,7 @@ case "$db_choice" in
 
         if [ "$INSTALL_LOCAL_DB" = true ]; then
              echo "--> Installing MariaDB Server & Client..."
+             apt-get update
              apt-get install -y mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
              echo "--> Initializing MariaDB..."
              systemctl start mariadb
@@ -235,6 +236,7 @@ case "$db_choice" in
 
         if [ "$INSTALL_LOCAL_DB" = true ]; then
             echo "--> Installing PostgreSQL Server & Client..."
+            apt-get update
             apt-get install -y postgresql postgresql-contrib libpq-dev
             echo "--> Initializing PostgreSQL..."
             systemctl start postgresql
