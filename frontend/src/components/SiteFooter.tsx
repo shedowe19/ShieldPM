@@ -43,11 +43,7 @@ export function SiteFooter() {
 							</a>
 						</span>
 						<a
-							href={
-								getVersion()?.includes("-") || getVersion() === "v0.0.0"
-									? "https://github.com/shedowe19/ShieldPM/releases/tag/develop"
-									: `https://github.com/shedowe19/ShieldPM/releases/tag/v${getVersion()}`
-							}
+							href={`https://github.com/shedowe19/ShieldPM/releases/tag/v${getVersion()}`}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-sm font-medium underline underline-offset-4 hover:text-primary"
