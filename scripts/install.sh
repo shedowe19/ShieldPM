@@ -118,8 +118,8 @@ SERVICE_FILE=""
 if [ -f "/etc/systemd/system/shieldpm.service" ]; then
     SERVICE_FILE="/etc/systemd/system/shieldpm.service"
 elif [ -f "/usr/lib/systemd/system/shieldpm.service" ]; then
-    SERVICE_FILE="/usr/lib/systemd/system/shieldpm.service"
-    ln -sf "$SERVICE_FILE" /etc/systemd/system/shieldpm.service
+    SERVICE_FILE="/etc/systemd/system/shieldpm.service"
+    cp "/usr/lib/systemd/system/shieldpm.service" "$SERVICE_FILE"
 fi
 
 if [ -n "$SERVICE_FILE" ]; then
