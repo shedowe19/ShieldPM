@@ -40,7 +40,31 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "Update aborted."
     exit 1
 fi
+echo "--> Checking for application updates..."
+# Fetch latest commit SHA for the target branch
+LATEST_SHA_FULL=$(curl -s "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH" | grep '"sha":' | head -n 1 | cut -d '"' -f 4)
+LATEST_VER=${LATEST_SHA_FULL:0:7}
+
+# Get local version (from package.json, which is injected during build)
+if [ -f "/app/package.json" ]; then
+    CURRENT_VER=$(grep '"version":' /app/package.json | head -n 1 | cut -d '"' -f 4)
+else
+    CURRENT_VER="unknown"
+fi
+
+echo "    Current Version: $CURRENT_VER"
+echo "    Latest Version:  $LATEST_VER (Branch: $BRANCH)"
 echo ""
+
+if [[ "$CURRENT_VER" == "$LATEST_VER" ]]; then
+    echo "✅ You are already on the latest version!"
+    read -p "Force update anyway? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Update cancelled."
+        exit 0
+    fi
+fi
 
 # Self-Update: Fetch latest version of this script first
 echo "--> [0/7] Checking for script updates..."
