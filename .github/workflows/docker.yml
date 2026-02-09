@@ -386,7 +386,8 @@ jobs:
         with:
           tag_name: ${{ needs.prepare.outputs.docker_tag_base }}
           name: "ShieldPM ${{ needs.prepare.outputs.docker_tag_base }}"
-          prerelease: ${{ github.ref_name != 'main' }}
+          prerelease: false
+          make_latest: true
           generate_release_notes: true
           files: release-assets/*
           body: |
