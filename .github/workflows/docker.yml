@@ -341,7 +341,7 @@ jobs:
           refresh-message-position: true
 
   # ---------------------------------------------------------
-  # PHASE 4: RELEASE (Artifacts als GitHub Release)
+  # PHASE 4: RELEASE (Artifacts as GitHub Release)
   # ---------------------------------------------------------
   release:
     name: "📦 Upload Release Artifacts"
