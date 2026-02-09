@@ -205,7 +205,7 @@ case "$db_choice" in
         if [ "$INSTALL_LOCAL_DB" = true ]; then
              echo "--> Installing MariaDB Server & Client..."
              apt-get update
-             apt-get install -y mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
+             apt-get install -y --fix-missing mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
              echo "--> Initializing MariaDB..."
              systemctl start mariadb
              # Create DB and User
@@ -215,7 +215,7 @@ case "$db_choice" in
              mysql -e "FLUSH PRIVILEGES;"
         else
              echo "--> Installing MariaDB Client only..."
-             apt-get install -y mariadb-client libmariadb3 default-libmysqlclient-dev
+             apt-get install -y --fix-missing mariadb-client libmariadb3 default-libmysqlclient-dev
         fi
 
         # Update .env
@@ -239,7 +239,7 @@ case "$db_choice" in
         if [ "$INSTALL_LOCAL_DB" = true ]; then
             echo "--> Installing PostgreSQL Server & Client..."
             apt-get update
-            apt-get install -y postgresql postgresql-contrib libpq-dev
+            apt-get install -y --fix-missing postgresql postgresql-contrib libpq-dev
             echo "--> Initializing PostgreSQL..."
             systemctl start postgresql
             # Create DB and User
@@ -247,7 +247,7 @@ case "$db_choice" in
             sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" || true
         else
             echo "--> Installing PostgreSQL Client only..."
-            apt-get install -y postgresql-client libpq-dev
+            apt-get install -y --fix-missing postgresql-client libpq-dev
         fi
 
         # Update .env
