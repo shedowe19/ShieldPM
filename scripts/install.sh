@@ -14,13 +14,13 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# 1. Create User
-echo ">>> Creating 'shieldpm' user..."
-if ! id "shieldpm" &>/dev/null; then
-    useradd -r -s /bin/false -d /app shieldpm
-fi
+# 1. User Creation (Skipped - Running as root)
+# echo ">>> Creating 'shieldpm' user..."
+# if ! id "shieldpm" &>/dev/null; then
+#     useradd -r -s /bin/false -d /app shieldpm
+# fi
 # Add to video/render groups if needed for hardware acceleration (future proofing)
-usermod -aG video,render shieldpm 2>/dev/null || true
+# usermod -aG video,render shieldpm 2>/dev/null || true
 
 # 2. Install Runtime Dependencies
 echo ">>> Installing runtime dependencies..."
@@ -89,10 +89,10 @@ chmod +x /usr/local/bin/*
 
 # Create data directories
 mkdir -p /data/shieldpm /data/nginx /data/tls /data/access /data/logs /data/tor
-chown -R shieldpm:shieldpm /app /data /html
+# chown -R shieldpm:shieldpm /app /data /html (Skipped - Running as root)
 
 # Nginx needs special permissions to bind ports < 1024 without root
-setcap 'cap_net_bind_service=+ep' /usr/local/nginx/sbin/nginx
+# setcap 'cap_net_bind_service=+ep' /usr/local/nginx/sbin/nginx
 
 # 7. Libraries
 echo ">>> Updating library paths..."
@@ -105,8 +105,10 @@ ln -sf /usr/local/nginx/sbin/nginx /usr/local/bin/nginx
 
 # 9. Service Configuration
 echo ">>> Configuring systemd service..."
-SPM_UID=$(id -u shieldpm)
-SPM_GID=$(id -g shieldpm)
+# SPM_UID=$(id -u shieldpm)
+# SPM_GID=$(id -g shieldpm)
+SPM_UID=0
+SPM_GID=0
 echo "Configuring service to run as UID=$SPM_UID GID=$SPM_GID"
 
 # Create /etc/default/shieldpm
