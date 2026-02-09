@@ -178,6 +178,7 @@ else
 fi
 
 echo "--> [7/7] Restarting ShieldPM..."
+systemctl daemon-reload
 if systemctl is-active --quiet shieldpm; then
     systemctl restart shieldpm
     echo "    - Systemd service restarted."
