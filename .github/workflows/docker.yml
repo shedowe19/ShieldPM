@@ -351,23 +351,35 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download All Artifacts
+      - name: Create Release Assets Directory
+        run: mkdir -p release-assets
+
+      - name: Download LXC Template (x86_64)
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          merge-multiple: true
+          name: shieldpm-lxc-template-x86_64
+          path: release-assets
 
-      - name: Prepare Release Assets
-        run: |
-          mkdir -p release-assets
-          
-          # Find and move LXC templates
-          find artifacts -name "shieldpm-*-lxc_*.tar.gz" -exec mv {} release-assets/ \;
-          
-          # Find and move Native Installers
-          find artifacts -name "shieldpm-install-linux-*.tar.gz" -exec mv {} release-assets/ \;
-          
-          ls -la release-assets/
+      - name: Download LXC Template (aarch64)
+        uses: actions/download-artifact@v4
+        with:
+          name: shieldpm-lxc-template-aarch64
+          path: release-assets
+
+      - name: Download Native Installer (x86_64)
+        uses: actions/download-artifact@v4
+        with:
+          name: native-installer-x86_64
+          path: release-assets
+
+      - name: Download Native Installer (aarch64)
+        uses: actions/download-artifact@v4
+        with:
+          name: native-installer-aarch64
+          path: release-assets
+
+      - name: List Release Assets
+        run: ls -la release-assets/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
