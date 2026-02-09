@@ -116,12 +116,60 @@ update
 
 ## ⚙️ Configuration (Environment Variables)
 
-ShieldPM is configured via environment variables. In Docker, set them in `compose.yaml`. In Native/LXC, edit `/data/.env`.
+ShieldPM is configured via environment variables.
+- **Docker:** Set them in `compose.yaml` under `services: app: environment:`.
+- **Native / LXC:** Edit the file `/data/.env`.
+
+### Reference Table
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `DB_SQLITE_FILE` | `/data/database.sqlite` | SQLite database path |
-| `DB_MYSQL_HOST` | - | MySQL Host (switches to MySQL if set) |
-| `DB_POSTGRES_HOST` | - | PostgreSQL Host (switches to PG if set) |
-| `DISABLE_IPV6` | `false` | Disable IPv6 in Nginx |
-| `LOG_LEVEL` | `info` | API Log Level |
+| `DB_SQLITE_FILE` | `/data/shieldpm/database.sqlite` | Path to SQLite database file. |
+| `DB_MYSQL_HOST` | - | MySQL Hostname. Triggers MySQL mode if set. |
+| `DB_MYSQL_PORT` | `3306` | MySQL Port. |
+| `DB_MYSQL_USER` | - | MySQL Username. |
+| `DB_MYSQL_PASSWORD` | - | MySQL Password. |
+| `DB_MYSQL_NAME` | - | MySQL Database Name. |
+| `DB_MYSQL_SSL` | `false` | Enable SSL for MySQL connection (`true`/`false`). |
+| `DB_POSTGRES_HOST` | - | PostgreSQL Hostname. Triggers Postgres mode if set. |
+| `DB_POSTGRES_PORT` | `5432` | PostgreSQL Port. |
+| `DB_POSTGRES_USER` | - | PostgreSQL Username. |
+| `DB_POSTGRES_PASSWORD` | - | PostgreSQL Password. |
+| `DB_POSTGRES_NAME` | - | PostgreSQL Database Name. |
+| `DISABLE_IPV6` | `false` | Disable IPv6 support in Nginx (`true`/`false`). |
+| `LOG_LEVEL` | `info` | API Log Level (`debug`, `info`, `warn`, `error`). |
+| `WAF_MODSECURITY` | `false` | Enable ModSecurity globally (`true`/`false`). |
+| `DEMO_MODE` | `false` | Enable read-only Demo Mode (`true`/`false`). |
+| `DATA_PATH` | `/data` | Base path for data storage (Native/LXC only). |
+
+### Example `.env` File
+You can copy this into `/data/.env` (Native/LXC) or adapt for `compose.yaml`.
+
+```dotenv
+# --- Database (SQLite Default) ---
+# DB_SQLITE_FILE=/data/shieldpm/database.sqlite
+
+# --- Database (MySQL - Uncomment to use) ---
+# DB_MYSQL_HOST=mariadb
+# DB_MYSQL_PORT=3306
+# DB_MYSQL_USER=shieldpm
+# DB_MYSQL_PASSWORD=secret
+# DB_MYSQL_NAME=shieldpm
+
+# --- Database (PostgreSQL - Uncomment to use) ---
+# DB_POSTGRES_HOST=postgres
+# DB_POSTGRES_PORT=5432
+# DB_POSTGRES_USER=shieldpm
+# DB_POSTGRES_PASSWORD=secret
+# DB_POSTGRES_NAME=shieldpm
+
+# --- Networking ---
+DISABLE_IPV6=false
+
+# --- Security ---
+WAF_MODSECURITY=false
+DEMO_MODE=false
+
+# --- Logging ---
+LOG_LEVEL=info
+```
