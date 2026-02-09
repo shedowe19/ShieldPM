@@ -127,9 +127,56 @@ if [ -n "$SERVICE_FILE" ]; then
     systemctl daemon-reload
     systemctl enable shieldpm.service
     echo "Service enabled. Run 'systemctl start shieldpm' to start."
+    echo "Service enabled. Run 'systemctl start shieldpm' to start."
 else
     echo "WARNING: shieldpm.service not found."
 fi
+
+# 10. Database Configuration (Interactive)
+ENV_FILE="/data/.env"
+echo ""
+echo "=== Database Configuration ==="
+echo "Select the database engine for ShieldPM:"
+echo "1) SQLite (Default, easiest setup)"
+echo "2) MySQL / MariaDB (Recommended for production)"
+echo "3) PostgreSQL"
+echo ""
+read -p "Enter choice [1-3] (Default: 1): " db_choice
+
+# Ensure .env exists
+if [ ! -f "$ENV_FILE" ]; then
+    cp "/rootfs/data/.env" "$ENV_FILE" 2>/dev/null || true
+    # If copy failed (because we are inside install script where rootfs is likely already at /), try /data/.env
+    if [ ! -f "$ENV_FILE" ]; then
+        echo "Creating default .env..."
+        touch "$ENV_FILE"
+    fi
+fi
+
+case "$db_choice" in
+    2)
+        echo "--> Configuring for MySQL/MariaDB..."
+        sed -i 's/^# DB_MYSQL_/DB_MYSQL_/g' "$ENV_FILE"
+        sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
+        sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
+        echo "  > MySQL options enabled in $ENV_FILE. Please edit the file to set credentials!"
+        ;;
+    3)
+        echo "--> Configuring for PostgreSQL..."
+        sed -i 's/^# DB_POSTGRES_/DB_POSTGRES_/g' "$ENV_FILE"
+        sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
+        sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
+        echo "  > PostgreSQL options enabled in $ENV_FILE. Please edit the file to set credentials!"
+        ;;
+    *)
+        echo "--> Configuring for SQLite (Default)..."
+        # SQLite is default, ensure others are commented out
+        sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
+        sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
+        # Ensure SQLite path is uncommented if present (or just rely on default)
+        sed -i 's/^# DB_SQLITE_FILE/DB_SQLITE_FILE/g' "$ENV_FILE"
+        ;;
+esac
 
 echo "=== Installation Complete ==="
 echo "You can now reboot or start the service manually with:"
