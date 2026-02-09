@@ -107,8 +107,8 @@ ln -sf /usr/local/nginx/sbin/nginx /usr/local/bin/nginx
 echo ">>> Configuring systemd service..."
 # SPM_UID=$(id -u shieldpm)
 # SPM_GID=$(id -g shieldpm)
-SPM_UID=0
-SPM_GID=0
+SPM_UID=$(id -u root)
+SPM_GID=$(id -g root)
 echo "Configuring service to run as UID=$SPM_UID GID=$SPM_GID"
 
 # Create /etc/default/shieldpm
