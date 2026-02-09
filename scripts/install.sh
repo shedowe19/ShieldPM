@@ -67,7 +67,17 @@ apt-get install -y --no-install-recommends --fix-missing \
     util-linux \
     libyajl2 \
     zlib1g \
+    zlib1g \
     zstd
+
+# 2.1 Configure Locale
+echo ">>> Configuring locales..."
+if [ -f /etc/locale.gen ]; then
+    sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+    locale-gen
+    update-locale LANG=en_US.UTF-8
+    export LANG=en_US.UTF-8
+fi
 
 # 3. Copy Pre-built Binaries (Nginx, Certbot, Cloudflared, Libs)
 echo ">>> Installing pre-built binaries..."
