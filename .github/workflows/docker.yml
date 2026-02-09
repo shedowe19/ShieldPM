@@ -399,6 +399,8 @@ jobs:
             tar -xzf shieldpm-install-linux-*.tar.gz
             sudo ./install.sh
             ```
+            
+            **Update:** Run `update` or `update-shieldpm` anytime to fetch the latest version.
 
             ---
 
@@ -414,6 +416,8 @@ jobs:
             2. Create Container with the template
             3. Enable **Nesting** in Options
             4. Start and access via `https://<IP>:81`
+
+            **Update:** Run `update` in the container console to update ShieldPM and Nginx binaries.
 
             > ⚠️ **Note:** The `NGINX_QUIC_BPF=true` feature requires a **privileged** container. BPF is not available in unprivileged LXC containers.
 
