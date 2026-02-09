@@ -386,7 +386,10 @@ jobs:
 
             ---
 
-            ### 📦 Native Installer (Debian/Ubuntu)
+            ### 📦 Native Installer (Debian Trixie)
+            > **Designed for Debian 13 (Trixie).**
+            > Since all required apt packages are included, **all ShieldPM features (including CrowdSec, WAF, etc.) can be enabled** without manual dependency installation.
+
             Download the appropriate installer for your architecture:
             - **AMD64 (Intel/AMD):** `shieldpm-install-linux-amd64.tar.gz`
             - **ARM64 (Raspberry Pi/Ampere):** `shieldpm-install-linux-arm64.tar.gz`
