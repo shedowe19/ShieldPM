@@ -95,7 +95,11 @@ This command will:
 2.  Rebuild the Frontend & Backend locally.
 3.  **Update Application:** Replaces Frontend & Backend files.
 4.  **Update System:** Syncs new scripts and configs (Rootfs/Systemd/Tor) to `/`.
-5.  Restart the service.
+5.  **Update Nginx (Optional):** Downloads pre-compiled Nginx, Certbot & Cloudflared binaries from GitHub Releases.
+6.  Restart the service.
+
+> [!TIP]
+> The Nginx binary update saves you from compiling Nginx locally, which can take 30+ minutes. The pre-built binaries are identical to those used in the Docker image.
 
 ---
 
