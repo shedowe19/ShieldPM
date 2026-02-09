@@ -120,27 +120,14 @@ ShieldPM is configured via environment variables.
 - **Docker:** Set them in `compose.yaml` under `services: app: environment:`.
 - **Native / LXC:** Edit the file `/data/.env`.
 
-### Reference Table
+### Configuration File (`.env`)
 
-| Variable | Default | Description |
-| :--- | :--- | :--- |
-| `DB_SQLITE_FILE` | `/data/shieldpm/database.sqlite` | Path to SQLite database file. |
-| `DB_MYSQL_HOST` | - | MySQL Hostname. Triggers MySQL mode if set. |
-| `DB_MYSQL_PORT` | `3306` | MySQL Port. |
-| `DB_MYSQL_USER` | - | MySQL Username. |
-| `DB_MYSQL_PASSWORD` | - | MySQL Password. |
-| `DB_MYSQL_NAME` | - | MySQL Database Name. |
-| `DB_MYSQL_SSL` | `false` | Enable SSL for MySQL connection (`true`/`false`). |
-| `DB_POSTGRES_HOST` | - | PostgreSQL Hostname. Triggers Postgres mode if set. |
-| `DB_POSTGRES_PORT` | `5432` | PostgreSQL Port. |
-| `DB_POSTGRES_USER` | - | PostgreSQL Username. |
-| `DB_POSTGRES_PASSWORD` | - | PostgreSQL Password. |
-| `DB_POSTGRES_NAME` | - | PostgreSQL Database Name. |
-| `DISABLE_IPV6` | `false` | Disable IPv6 support in Nginx (`true`/`false`). |
-| `LOG_LEVEL` | `info` | API Log Level (`debug`, `info`, `warn`, `error`). |
-| `WAF_MODSECURITY` | `false` | Enable ModSecurity globally (`true`/`false`). |
-| `DEMO_MODE` | `false` | Enable read-only Demo Mode (`true`/`false`). |
-| `DATA_PATH` | `/data` | Base path for data storage (Native/LXC only). |
+The Native Installer and LXC Template come with a default `.env` file located at `/data/.env`.
+Most settings are commented out by default.
+
+> [!IMPORTANT]
+> **ACME / Let's Encrypt:**
+> If you want to use Let's Encrypt for automatic SSL certificates, you **MUST** uncomment and configure the `ACME_` variables in `/data/.env` (especially `ACME_EMAIL`).
 
 ### Example `.env` File
 You can copy this into `/data/.env` (Native/LXC) or adapt for `compose.yaml`.
