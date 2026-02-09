@@ -339,3 +339,79 @@ jobs:
           message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           refresh-message-position: true
+
+  # ---------------------------------------------------------
+  # PHASE 4: RELEASE (Artifacts als GitHub Release)
+  # ---------------------------------------------------------
+  release:
+    name: "📦 Upload Release Artifacts"
+    needs: [prepare, build, merge]
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' && github.repository_owner == 'shedowe19' }}
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release-assets
+          
+          # Find and move LXC templates
+          find artifacts -name "shieldpm-*-lxc_*.tar.gz" -exec mv {} release-assets/ \;
+          
+          # Find and move Native Installers
+          find artifacts -name "shieldpm-install-linux-*.tar.gz" -exec mv {} release-assets/ \;
+          
+          ls -la release-assets/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.docker_tag_base }}
+          name: "ShieldPM ${{ needs.prepare.outputs.docker_tag_base }}"
+          prerelease: ${{ github.ref_name != 'main' }}
+          generate_release_notes: true
+          files: release-assets/*
+          body: |
+            ## 🛡️ ShieldPM ${{ needs.prepare.outputs.docker_tag_base }}
+
+            ### 🐳 Docker
+            ```bash
+            docker pull ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}
+            ```
+
+            ---
+
+            ### 📦 Native Installer (Debian/Ubuntu)
+            Download the appropriate installer for your architecture:
+            - **AMD64 (Intel/AMD):** `shieldpm-install-linux-amd64.tar.gz`
+            - **ARM64 (Raspberry Pi/Ampere):** `shieldpm-install-linux-arm64.tar.gz`
+
+            ```bash
+            # Extract and run
+            tar -xzf shieldpm-install-linux-*.tar.gz
+            sudo ./install.sh
+            ```
+
+            ---
+
+            ### 🖥️ Proxmox LXC Template
+            Download the appropriate LXC template for your architecture:
+            - **AMD64:** `shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_amd64.tar.gz`
+            - **ARM64:** `shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_arm64.tar.gz`
+
+            1. Upload to Proxmox: **Datacenter → Storage → CT Templates**
+            2. Create Container with the template
+            3. Enable **Nesting** in Options
+            4. Start and access via `https://<IP>:81`
+
+            ---
+
+            ### 📖 Documentation
+            - [Installation Guide](https://github.com/shedowe19/ShieldPM/wiki/Installation)
+            - [Proxmox LXC Guide](https://github.com/shedowe19/ShieldPM/wiki/Proxmox-LXC)
+
