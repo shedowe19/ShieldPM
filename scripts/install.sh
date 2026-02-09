@@ -155,17 +155,25 @@ fi
 case "$db_choice" in
     2)
         echo "--> Configuring for MySQL/MariaDB..."
+        echo "--> Installing MariaDB Server & Client..."
+        apt-get install -y mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
+
         sed -i 's/^# DB_MYSQL_/DB_MYSQL_/g' "$ENV_FILE"
         sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
         echo "  > MySQL options enabled in $ENV_FILE. Please edit the file to set credentials!"
+        echo "  > MariaDB has been installed. You may need to run 'mysql_secure_installation' and create the database."
         ;;
     3)
         echo "--> Configuring for PostgreSQL..."
+        echo "--> Installing PostgreSQL Server & Client..."
+        apt-get install -y postgresql postgresql-contrib libpq-dev
+
         sed -i 's/^# DB_POSTGRES_/DB_POSTGRES_/g' "$ENV_FILE"
         sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
         echo "  > PostgreSQL options enabled in $ENV_FILE. Please edit the file to set credentials!"
+        echo "  > PostgreSQL has been installed. You need to create the database and user."
         ;;
     *)
         echo "--> Configuring for SQLite (Default)..."
