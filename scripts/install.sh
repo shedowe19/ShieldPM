@@ -307,9 +307,18 @@ ACQUIS_EOF
 
     # Install ShieldPM parser and collections
     echo "--> Installing CrowdSec parsers and collections..."
+    
+    # Download custom parser/collection from GitHub directly to target directories
+    mkdir -p /etc/crowdsec/parsers/s01-parse/
+    mkdir -p /etc/crowdsec/collections/
+    
+    wget -q -O /etc/crowdsec/parsers/s01-parse/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/parser.yaml
+    wget -q -O /etc/crowdsec/collections/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/collection.yaml
+
+    echo "  > Installed ShieldPM parser & collection"
+
     cscli hub update
-    cscli parsers install shedowe19/shieldpm-logs 2>/dev/null || \
-      cscli parsers install /etc/crowdsec/parser.yaml --force 2>/dev/null || true
+    # Install standard collections/scenarios from hub
     cscli collections install crowdsecurity/base-http-scenarios 2>/dev/null || true
     cscli collections install crowdsecurity/http-cve 2>/dev/null || true
     cscli collections install crowdsecurity/appsec-virtual-patching 2>/dev/null || true
