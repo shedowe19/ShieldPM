@@ -28,6 +28,8 @@ apt-get update
 # Upgrade is necessary on Trixie to ensure kernel headers match
 # Upgrade is necessary on Trixie to ensure kernel headers match, especially during t64 transition
 DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y
+# Fix any broken dependencies from base image or previous runs
+DEBIAN_FRONTEND=noninteractive apt-get --fix-broken install -y
 apt-get install -y --no-install-recommends --fix-missing \
     libargon2-1 \
     bash \
