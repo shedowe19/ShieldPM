@@ -90,6 +90,6 @@ if [ "$GOA" = "true" ]; then while true; do if [ -f /data/nginx/json_access.log 
                     --browsers-file=/etc/goaccess/browsers.list --browsers-file=/etc/goaccess/podcast.list $GOACLA; else sleep 10s; fi; done; fi &
 while true; do nginx -e stderr; done &
 while true; do
-  cd /app
+  cd /app || exit 1
   node index.js
 done
