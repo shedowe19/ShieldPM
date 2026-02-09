@@ -70,14 +70,10 @@ apt-get install -y --no-install-recommends --fix-missing \
     zlib1g \
     zstd
 
-# 2.1 Configure Locale
+# 2.1 Configure Locale (Interactive)
 echo ">>> Configuring locales..."
-if [ -f /etc/locale.gen ]; then
-    sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
-    locale-gen
-    update-locale LANG=en_US.UTF-8
-    export LANG=en_US.UTF-8
-fi
+echo "    Please select your desired system locale (e.g., en_US.UTF-8 or de_DE.UTF-8)."
+dpkg-reconfigure locales
 
 # 3. Copy Pre-built Binaries (Nginx, Certbot, Cloudflared, Libs)
 echo ">>> Installing pre-built binaries..."
@@ -296,4 +292,12 @@ echo "--> Restarting ShieldPM to load final configuration..."
 systemctl restart shieldpm
 
 echo "=== Installation Complete ==="
-echo "ShieldPM is running. Access it at http://<your-ip>:81"
+echo "ShieldPM is installed. A system reboot is recommended to apply all changes."
+read -p "Reboot now? [y/N] " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    reboot
+else
+    echo "Please reboot manually to ensure all services start correctly."
+    echo "Access ShieldPM at http://<your-ip>:81"
+fi
