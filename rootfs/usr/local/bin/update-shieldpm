@@ -42,6 +42,31 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 echo ""
 
+# Self-Update: Fetch latest version of this script first
+echo "--> [0/7] Checking for script updates..."
+SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${BRANCH}/rootfs/usr/local/bin/update-shieldpm"
+SCRIPT_TMP="/tmp/update-shieldpm.new"
+SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
+
+curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL"
+if [ -f "$SCRIPT_TMP" ]; then
+    # Compare with current script
+    if ! cmp -s "$SCRIPT_TMP" "$SCRIPT_CURRENT"; then
+        echo "    - New version found. Updating self and restarting..."
+        cp "$SCRIPT_TMP" "$SCRIPT_CURRENT"
+        chmod +x "$SCRIPT_CURRENT"
+        rm -f "$SCRIPT_TMP"
+        # Re-execute with same arguments, but mark as already self-updated
+        export SHIELDPM_SELF_UPDATED=1
+        exec /bin/bash "$SCRIPT_CURRENT" "$@"
+    else
+        echo "    - Script is up to date."
+        rm -f "$SCRIPT_TMP"
+    fi
+else
+    echo "    - Could not fetch latest script (continuing anyway)."
+fi
+
 echo "--> Installing build requiremends..."
 
 apt-get update
