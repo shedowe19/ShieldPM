@@ -127,7 +127,6 @@ if [ -n "$SERVICE_FILE" ]; then
     systemctl daemon-reload
     systemctl enable shieldpm.service
     echo "Service enabled. Run 'systemctl start shieldpm' to start."
-    echo "Service enabled. Run 'systemctl start shieldpm' to start."
 else
     echo "WARNING: shieldpm.service not found."
 fi
