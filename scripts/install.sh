@@ -266,6 +266,15 @@ case "$db_choice" in
         ;;
 esac
 
+echo "=== Starting ShieldPM ==="
+echo "--> Starting service to run initial migrations..."
+systemctl start shieldpm
+
+echo "--> Waiting 20 seconds for migrations to complete..."
+sleep 20
+
+echo "--> Restarting ShieldPM to load final configuration..."
+systemctl restart shieldpm
+
 echo "=== Installation Complete ==="
-echo "You can now reboot or start the service manually with:"
-echo "  systemctl start shieldpm"
+echo "ShieldPM is running. Access it at http://<your-ip>:81"
