@@ -152,52 +152,111 @@ if [ ! -f "$ENV_FILE" ]; then
     fi
 fi
 
+# Function to prompt for DB credentials
+prompt_db_creds() {
+    local default_host="127.0.0.1"
+    local default_port="$1"
+    local default_user="npm"
+    local default_pass="npm"
+    local default_name="npm"
+
+    echo "  > SELECT SETUP MODE:"
+    echo "    1) Local (Default): Install DB Server locally & use default credentials ($default_user/$default_pass)"
+    echo "    2) Manual / External: Enter connection details manually"
+    read -p "    Enter choice [1-2] (Default: 1): " db_mode
+
+    if [[ "$db_mode" == "2" ]]; then
+        read -p "    DB Host (Default: $default_host): " DB_HOST
+        DB_HOST=${DB_HOST:-$default_host}
+        read -p "    DB Port (Default: $default_port): " DB_PORT
+        DB_PORT=${DB_PORT:-$default_port}
+        read -p "    DB Name (Default: $default_name): " DB_NAME
+        DB_NAME=${DB_NAME:-$default_name}
+        read -p "    DB User (Default: $default_user): " DB_USER
+        DB_USER=${DB_USER:-$default_user}
+        read -p "    DB Password (Default: $default_pass): " DB_PASS
+        DB_PASS=${DB_PASS:-$default_pass}
+        
+        # Don't install server if external (unless user wants to, but assume external means existing)
+        if [[ "$DB_HOST" != "127.0.0.1" && "$DB_HOST" != "localhost" ]]; then
+             INSTALL_LOCAL_DB=false
+        else
+             INSTALL_LOCAL_DB=true
+        fi
+    else
+        DB_HOST=$default_host
+        DB_PORT=$default_port
+        DB_USER=$default_user
+        DB_PASS=$default_pass
+        DB_NAME=$default_name
+        INSTALL_LOCAL_DB=true
+    fi
+}
+
 case "$db_choice" in
     2)
         echo "--> Configuring for MySQL/MariaDB..."
-        echo "--> Installing MariaDB Server & Client..."
-        apt-get install -y mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
+        prompt_db_creds "3306"
 
+        if [ "$INSTALL_LOCAL_DB" = true ]; then
+             echo "--> Installing MariaDB Server & Client..."
+             apt-get install -y mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
+             echo "--> Initializing MariaDB..."
+             systemctl start mariadb
+             # Create DB and User
+             mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+             mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
+             mysql -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
+             mysql -e "FLUSH PRIVILEGES;"
+        else
+             echo "--> Installing MariaDB Client only..."
+             apt-get install -y mariadb-client libmariadb3 default-libmysqlclient-dev
+        fi
+
+        # Update .env
         sed -i 's/^# DB_MYSQL_/DB_MYSQL_/g' "$ENV_FILE"
         sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
 
-        # Default Credentials from .env
-        DB_USER="npm"
-        DB_PASS="npm"
-        DB_NAME="npm"
-
-        echo "--> Initializing MariaDB..."
-        systemctl start mariadb
-        # Create DB and User
-        mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-        mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
-        mysql -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
-        mysql -e "FLUSH PRIVILEGES;"
+        # Set values
+        sed -i "s|^DB_MYSQL_HOST=.*|DB_MYSQL_HOST=${DB_HOST}|g" "$ENV_FILE"
+        sed -i "s|^DB_MYSQL_PORT=.*|DB_MYSQL_PORT=${DB_PORT}|g" "$ENV_FILE"
+        sed -i "s|^DB_MYSQL_USER=.*|DB_MYSQL_USER=${DB_USER}|g" "$ENV_FILE"
+        sed -i "s|^DB_MYSQL_PASSWORD=.*|DB_MYSQL_PASSWORD=${DB_PASS}|g" "$ENV_FILE"
+        sed -i "s|^DB_MYSQL_NAME=.*|DB_MYSQL_NAME=${DB_NAME}|g" "$ENV_FILE"
         
-        echo "  > MariaDB initialized with default credentials (npm/npm/npm)."
+        echo "  > MySQL configured in $ENV_FILE."
         ;;
     3)
         echo "--> Configuring for PostgreSQL..."
-        echo "--> Installing PostgreSQL Server & Client..."
-        apt-get install -y postgresql postgresql-contrib libpq-dev
+        prompt_db_creds "5432"
 
+        if [ "$INSTALL_LOCAL_DB" = true ]; then
+            echo "--> Installing PostgreSQL Server & Client..."
+            apt-get install -y postgresql postgresql-contrib libpq-dev
+            echo "--> Initializing PostgreSQL..."
+            systemctl start postgresql
+            # Create DB and User
+            sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';" || true
+            sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" || true
+        else
+            echo "--> Installing PostgreSQL Client only..."
+            apt-get install -y postgresql-client libpq-dev
+        fi
+
+        # Update .env
         sed -i 's/^# DB_POSTGRES_/DB_POSTGRES_/g' "$ENV_FILE"
         sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
 
-        # Default Credentials from .env
-        DB_USER="npm"
-        DB_PASS="npm"
-        DB_NAME="npm"
+        # Set values
+        sed -i "s|^DB_POSTGRES_HOST=.*|DB_POSTGRES_HOST=${DB_HOST}|g" "$ENV_FILE"
+        sed -i "s|^DB_POSTGRES_PORT=.*|DB_POSTGRES_PORT=${DB_PORT}|g" "$ENV_FILE"
+        sed -i "s|^DB_POSTGRES_USER=.*|DB_POSTGRES_USER=${DB_USER}|g" "$ENV_FILE"
+        sed -i "s|^DB_POSTGRES_PASSWORD=.*|DB_POSTGRES_PASSWORD=${DB_PASS}|g" "$ENV_FILE"
+        sed -i "s|^DB_POSTGRES_NAME=.*|DB_POSTGRES_NAME=${DB_NAME}|g" "$ENV_FILE"
 
-        echo "--> Initializing PostgreSQL..."
-        systemctl start postgresql
-        # Create DB and User
-        sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';" || true
-        sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" || true
-        
-        echo "  > PostgreSQL initialized with default credentials (npm/npm/npm)."
+        echo "  > PostgreSQL configured in $ENV_FILE."
         ;;
     *)
         echo "--> Configuring for SQLite (Default)..."
