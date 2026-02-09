@@ -89,4 +89,7 @@ if [ "$GOA" = "true" ]; then while true; do if [ -f /data/nginx/json_access.log 
                     --real-time-html --output=/tmp/goa/index.html --persist --restore --db-path=/data/goaccess/data \
                     --browsers-file=/etc/goaccess/browsers.list --browsers-file=/etc/goaccess/podcast.list $GOACLA; else sleep 10s; fi; done; fi &
 while true; do nginx -e stderr; done &
-while true; do index.js; done
+while true; do
+  cd /app
+  node index.js
+done
