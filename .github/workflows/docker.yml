@@ -46,6 +46,7 @@ jobs:
     if: ${{ github.repository_owner == 'shedowe19' }}
     outputs:
       version_hash: ${{ steps.calc.outputs.hash }}
+      version: ${{ steps.calc.outputs.version }}
       docker_tag_base: ${{ steps.calc.outputs.tag_base }}
       is_pr: ${{ steps.calc.outputs.is_pr }}
     steps:
@@ -56,7 +57,9 @@ jobs:
         id: calc
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION=$(cat .version)
           echo "hash=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             CLEAN_PR=$(echo pr-${{ github.ref_name }} | sed "s|refs/pull/:||g" | sed "s|/merge||g")
@@ -385,7 +388,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.docker_tag_base }}
-          name: "ShieldPM ${{ needs.prepare.outputs.docker_tag_base }}"
+          name: "ShieldPM v${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.docker_tag_base }}-${{ needs.prepare.outputs.version_hash }})"
           prerelease: false
           make_latest: true
           generate_release_notes: true
