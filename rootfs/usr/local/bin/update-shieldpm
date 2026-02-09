@@ -43,21 +43,30 @@ fi
 echo "--> Checking for application updates..."
 # Fetch latest commit SHA for the target branch
 LATEST_SHA_FULL=$(curl -s "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH" | grep '"sha":' | head -n 1 | cut -d '"' -f 4)
-LATEST_VER=${LATEST_SHA_FULL:0:7}
+LATEST_SHORT=${LATEST_SHA_FULL:0:7}
 
-# Get local version (from package.json, which is injected during build)
+# Get local commit hash if available
+if [ -f "/app/.git-commit" ]; then
+    CURRENT_SHA=$(cat /app/.git-commit)
+    CURRENT_SHORT=${CURRENT_SHA:0:7}
+else
+    CURRENT_SHORT="unknown"
+    CURRENT_SHA=""
+fi
+
+# Get semantic version for display
 if [ -f "/app/package.json" ]; then
     CURRENT_VER=$(grep '"version":' /app/package.json | head -n 1 | cut -d '"' -f 4)
 else
     CURRENT_VER="unknown"
 fi
 
-echo "    Current Version: $CURRENT_VER"
-echo "    Latest Version:  $LATEST_VER (Branch: $BRANCH)"
+echo "    Current Version: $CURRENT_VER ($CURRENT_SHORT)"
+echo "    Latest Commit:   $LATEST_SHORT (Branch: $BRANCH)"
 echo ""
 
-if [[ "$CURRENT_VER" == "$LATEST_VER" ]]; then
-    echo "✅ You are already on the latest version!"
+if [[ "$CURRENT_SHA" == "$LATEST_SHA_FULL" ]]; then
+    echo "✅ You are already on the latest commit!"
     read -p "Force update anyway? [y/N] " -n 1 -r
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -130,6 +139,7 @@ echo "--> [5/6] Swapping files..."
 echo "    - Updating Backend at $BACKEND_DIR..."
 # Preserve config/keys if any (though usually strictly in /data)
 cp -r "$TEMP_DIR/backend/"* "$BACKEND_DIR/"
+echo "$LATEST_SHA_FULL" > "$BACKEND_DIR/.git-commit"
 
 # Frontend
 echo "    - Updating Frontend at $FRONTEND_DIR..."
