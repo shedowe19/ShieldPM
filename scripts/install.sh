@@ -25,7 +25,9 @@ fi
 # 2. Install Runtime Dependencies
 echo ">>> Installing runtime dependencies..."
 apt-get update
-apt-get install -y --no-install-recommends \
+# Upgrade is necessary on Trixie to ensure kernel headers match
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+apt-get install -y --no-install-recommends --fix-missing \
     libargon2-1 \
     bash \
     bash-completion \
