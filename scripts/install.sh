@@ -140,7 +140,7 @@ echo "1) SQLite (Default, easiest setup)"
 echo "2) MySQL / MariaDB (Recommended for production)"
 echo "3) PostgreSQL"
 echo ""
-read -p "Enter choice [1-3] (Default: 1): " db_choice
+read -r -p "Enter choice [1-3] (Default: 1): " db_choice
 
 # Ensure .env exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -163,18 +163,18 @@ prompt_db_creds() {
     echo "  > SELECT SETUP MODE:"
     echo "    1) Local (Default): Install DB Server locally & use default credentials ($default_user/$default_pass)"
     echo "    2) Manual / External: Enter connection details manually"
-    read -p "    Enter choice [1-2] (Default: 1): " db_mode
+    read -r -p "    Enter choice [1-2] (Default: 1): " db_mode
 
     if [[ "$db_mode" == "2" ]]; then
-        read -p "    DB Host (Default: $default_host): " DB_HOST
+        read -r -p "    DB Host (Default: $default_host): " DB_HOST
         DB_HOST=${DB_HOST:-$default_host}
-        read -p "    DB Port (Default: $default_port): " DB_PORT
+        read -r -p "    DB Port (Default: $default_port): " DB_PORT
         DB_PORT=${DB_PORT:-$default_port}
-        read -p "    DB Name (Default: $default_name): " DB_NAME
+        read -r -p "    DB Name (Default: $default_name): " DB_NAME
         DB_NAME=${DB_NAME:-$default_name}
-        read -p "    DB User (Default: $default_user): " DB_USER
+        read -r -p "    DB User (Default: $default_user): " DB_USER
         DB_USER=${DB_USER:-$default_user}
-        read -p "    DB Password (Default: $default_pass): " DB_PASS
+        read -r -p "    DB Password (Default: $default_pass): " DB_PASS
         DB_PASS=${DB_PASS:-$default_pass}
         
         # Don't install server if external (unless user wants to, but assume external means existing)
