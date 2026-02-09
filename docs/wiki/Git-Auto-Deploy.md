@@ -72,5 +72,9 @@ Hover over the error icon in the Git Sync tab to see the detailed error message.
 ### Logs
 Check the backend logs for detailed sync information:
 ```bash
+# Docker
 docker compose logs -f backend | grep "git-deploy"
+
+# Native / LXC
+journalctl -u shieldpm -f | grep "git-deploy"
 ```

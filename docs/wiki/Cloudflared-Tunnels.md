@@ -18,7 +18,7 @@ Cloudflare Tunnel (formerly Argo Tunnel) creates a secure, encrypted link betwee
 ### 1. Prerequisites
 *   A **Cloudflare Account**.
 *   A domain managed by Cloudflare DNS.
-*   **ShieldPM** running in Docker.
+*   **ShieldPM** running (Docker, Native, or LXC).
 
 ### 2. Create a Tunnel (Cloudflare Dashboard)
 1.  Go to the [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/).

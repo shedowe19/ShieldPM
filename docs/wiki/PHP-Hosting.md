@@ -12,7 +12,7 @@ ShieldPM allows you to host PHP applications directly alongside your proxy hosts
 
 ## Installing PHP Extensions
 
-ShieldPM supports run-time installation of PHP extensions using Debian packages (`apt-get`). You configure this via environment variables in your `compose.yaml`.
+ShieldPM supports run-time installation of PHP extensions using Debian packages (`apt-get`). You configure this via environment variables in your `compose.yaml` (Docker) or `/data/.env` (Native/LXC).
 
 | Variable | Description |
 | :--- | :--- |

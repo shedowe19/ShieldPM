@@ -139,12 +139,20 @@ If you see "Tor daemon is not available":
 
 1. Check if Tor is running:
    ```bash
+   # Docker
    docker exec shieldpm pgrep tor
+
+   # Native / LXC
+   pgrep tor
    ```
 
 2. Check Tor logs:
    ```bash
+   # Docker
    docker exec shieldpm cat /data/tor/tor.log
+
+   # Native / LXC
+   cat /data/tor/tor.log
    ```
 
 3. Ensure `TOR_ENABLED` is not set to `false`
@@ -160,12 +168,20 @@ If you see "Tor daemon is not available":
 
 1. Verify password file exists:
    ```bash
+   # Docker
    docker exec shieldpm cat /data/shieldpm/tor-control-password
+
+   # Native / LXC
+   cat /data/shieldpm/tor-control-password
    ```
 
 2. Check Tor configuration:
    ```bash
+   # Docker
    docker exec shieldpm cat /etc/tor/torrc
+
+   # Native / LXC
+   cat /etc/tor/torrc
    ```
 
 ## 📖 Further Reading

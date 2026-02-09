@@ -30,7 +30,7 @@ If you have your own certificates (e.g., from a corporate CA or bought manually)
 ### HSTS (HTTP Strict Transport Security)
 Enabling HSTS tells browsers to *only* connect to your site via HTTPS for a specified period.
 *   **Enable:** Check "HSTS Enabled" in the Proxy Host SSL tab.
-*   **Subdomains:** To enforce it for all subdomains, ensure `NGINX_HSTS_SUBDOMAINS=true` in `compose.yaml`.
+*   **Subdomains:** To enforce it for all subdomains, ensure `NGINX_HSTS_SUBDOMAINS=true` in `compose.yaml` (Docker) or `/data/.env` (Native/LXC).
 
 ### HTTP/2 and HTTP/3
 *   **HTTP/2:** Enabled by default for all HTTPS hosts.

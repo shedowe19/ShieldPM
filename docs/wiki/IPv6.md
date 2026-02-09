@@ -32,7 +32,7 @@ To use IPv6 with a bridge network:
 
 ## ⚙️ ShieldPM Settings
 
-Control how ShieldPM listens on IPv6 via `compose.yaml`:
+Control how ShieldPM listens on IPv6 via `compose.yaml` (Docker) or `/data/.env` (Native/LXC):
 
 *   **`IPV6_BINDING=[::1]`**: Bind to a specific address.
 *   **`DISABLE_IPV6=true`**: Completely disable IPv6 listeners. Use this if your environment explicitly does not support IPv6 to avoid "Address family not supported by protocol" errors.
