@@ -369,13 +369,13 @@ jobs:
       - name: Download Native Installer (x86_64)
         uses: actions/download-artifact@v4
         with:
-          name: native-installer-x86_64
+          name: shieldpm-install-linux-x86_64
           path: release-assets
 
       - name: Download Native Installer (aarch64)
         uses: actions/download-artifact@v4
         with:
-          name: native-installer-aarch64
+          name: shieldpm-install-linux-aarch64
           path: release-assets
 
       - name: List Release Assets
