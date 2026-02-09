@@ -25,11 +25,11 @@
 
 ### Host Management
 *   **[Proxy Hosts](Proxy-Hosts)**: Detailed guide on configuring hosts, locations, and cache.
+*   **[Stream Hosts (TCP/UDP)](Streams)**: Forward raw TCP/UDP traffic (Game Servers, Databases, VPN).
 *   **[Redirection & Dead Hosts](Redirection-Hosts)**: Managing 301/302 redirects and 404 blocks.
 *   **[Disable Buffering](Disable-Buffering)**: Optimizing for streaming services (Jellyfin/Plex).
 *   **[Maintenance Features](Maintenance)**: Configuring automatic maintenance pages for downtime.
 *   **[Service Icons](Service-Icons)**: Auto-detection and custom icons for your hosts.
-
 *   **[SSL Certificates](SSL-Certificates)**: Let's Encrypt, Custom Certs, and HSTS best practices.
 
 ### Security
@@ -52,8 +52,9 @@
 *   **[Docker Auto-Discovery](Docker-Auto-Discovery)**: Automatically expose containers using labels (Traefik-like).
 *   **[Git Auto-Deploy](Git-Auto-Deploy)**: Auto-sync static sites/apps from Git repositories.
 *   **[PHP Hosting](PHP-Hosting)**: Host PHP apps (Nextcloud, WordPress) directly with ShieldPM (No extra container needed).
-*   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, Streams, and custom configs.
+*   **[Advanced Usage](Advanced-Usage)**: GoAccess analytics, Dashboard Notes, and custom configs.
 *   **[AI Agent (Administrator)](AI-Agent)**: Configuring and using the AI Co-Pilot.
+*   **[ChatOps (Telegram Bot)](ChatOps)**: Manage ShieldPM via Telegram using the AI Agent.
 *   **[Architecture & Internals](Architecture)**: Data flow, file structure, and internal CLI tools.
 *   **[API Documentation](API-Docs)**: Developer reference for the REST API.
 *   **[Troubleshooting](Troubleshooting)**: Common issues and solutions (FAQ).

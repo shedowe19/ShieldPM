@@ -64,18 +64,24 @@ You can add custom Nginx directives to specific locations in the **Locations** t
 
 ### Stream Hosts (TCP/UDP Forwarding)
 ShieldPM isn't just for HTTP/HTTPS. You can forward raw TCP/UDP traffic (e.g., Game Servers, Database ports).
+👉 **[Read the full Streams documentation](Streams)**
 
-1.  Navigate to **Streams**.
-2.  **Incoming Port:** The port ShieldPM will listen on (e.g., `25565` for Minecraft).
-    *   *Note:* This port must be mapped in your `compose.yaml` (Expose ports `25565:25565`).
-3.  **Forward Host/Port:** The destination server.
-4.  **Protocol:** TCP or UDP.
+---
 
-1.  Create a script in the prerun directory:
-    *   **Docker:** `/opt/shieldpm/prerun/myscript.sh` (maps to `/data/prerun/`)
-    *   **Native / LXC:** `/data/prerun/myscript.sh`
-2.  Ensure it has `#!/usr/bin/env sh` and is executable.
-3.  Set `ENABLE_PRERUN: "true"` in `compose.yaml` (Docker) or `/data/.env` (Native/LXC).
+## 📝 Dashboard Notes
+
+The Dashboard includes a **Sticky Notes** widget where you can create colored notes to keep track of important information, reminders, or documentation for your infrastructure.
+
+### Features
+*   **Create / Edit / Delete** notes directly on the Dashboard.
+*   **Color Options:** Yellow, Blue, Green, Red, Purple, and Gray.
+*   **Shared:** Notes are visible to all users who can access the Dashboard.
+
+### Usage
+1.  Go to the **Dashboard** (home page).
+2.  Find the **Notes** widget.
+3.  Click the **+** button to create a new note.
+4.  Enter your text, choose a color, and save.
 
 ---
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
