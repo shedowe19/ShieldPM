@@ -23,7 +23,7 @@ Cleans up unused configuration folders. This checks the database for active host
 *   **When to use:** If you suspect you have "zombie" configuration files or after restoring a database backup.
 
 ### `logrotate`
-Manually triggers the log rotation script. This compresses and rotates `access.log`, `error.log`, and `stream.log`.
+Manually triggers the log rotation script. This compresses and rotates `json_access.log`, `error.log`, and `stream.log`.
 
 *   **Usage:** `logrotate`
 *   **Automatic:** Runs daily if `LOGROTATE=true` is set.

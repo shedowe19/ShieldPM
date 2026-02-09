@@ -39,7 +39,8 @@ Analytics are enabled by default. No additional configuration is required for th
 To enable the country breakdown in the analytics dashboard, you need to provide MaxMind GeoIP databases and enable the Nginx module.
 
 #### 1. Configure GeoIP Update
-Uncomment the `geoipupdate` service in your `compose.yaml` and ensure the volume points to `/opt/shieldpm/nginx`. You will need a free account from [MaxMind](https://www.maxmind.com/en/geolite2/signup).
+
+**🐳 Docker:** Uncomment the `geoipupdate` service in your `compose.yaml`. You will need a free account from [MaxMind](https://www.maxmind.com/en/geolite2/signup).
 
 ```yaml
   geoipupdate:
@@ -60,18 +61,40 @@ Uncomment the `geoipupdate` service in your `compose.yaml` and ensure the volume
 > [!IMPORTANT]
 > The volume path must be `/opt/shieldpm/nginx` on the host side, as this maps to `/data/nginx` inside the ShieldPM container, which is where Nginx expects the files.
 
+**📦 Native / LXC:** The installer offers GeoIP as an optional step (`Install GeoIP Update? [y/N]`). For manual setup:
+
+```bash
+apt install -y geoipupdate
+cat > /etc/GeoIP.conf << EOF
+AccountID <your-account-id>
+LicenseKey <your-license-key>
+EditionIDs GeoLite2-Country GeoLite2-City GeoLite2-ASN
+DatabaseDirectory /data/nginx
+EOF
+geoipupdate
+# Setup weekly cron
+echo "0 3 * * 3 root /usr/bin/geoipupdate > /dev/null 2>&1" > /etc/cron.d/geoipupdate
+```
+
 #### 2. Enable Nginx Module
-In your `shieldpm` service environment variables, enable the GeoIP2 module:
+Set `NGINX_LOAD_GEOIP2_MODULE=true`:
 
 ```yaml
+# Docker (compose.yaml)
     environment:
-      # ... other settings ...
       - "NGINX_LOAD_GEOIP2_MODULE=true"
+```
+```bash
+# Native / LXC (/data/.env)
+NGINX_LOAD_GEOIP2_MODULE=true
 ```
 
 #### 3. Restart
-Restart your stack to apply the changes:
 ```bash
+# Docker
 docker compose up -d
+
+# Native / LXC
+systemctl restart shieldpm
 ```
 Once restarted, Nginx will load the GeoIP database, and new requests will be tagged with their country code.

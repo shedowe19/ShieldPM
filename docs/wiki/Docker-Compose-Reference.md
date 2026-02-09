@@ -92,8 +92,8 @@ services:
 #      - "NGINX_WORKER_CONNECTIONS=1024" # value of worker_connections, default: 512
 #      - "DISABLE_NGINX_BEAUTIFIER=true" # disables nginxbeautifier, useful when it fails parsing non-standard custom/advanced configs, default false
 #      - "FULLCLEAN=true" # Cleans unused config folders, default false
-#      - "LOGROTATE=true" # Enables writing http access logs to /opt/shieldpm/nginx/access.log, stream access logs to /opt/shieldpm/nginx/stream.log and enables daily logrotation, default false
-#      - "LOGROTATIONS=7" # Set how often the access.log should be rotated until it is deleted, default 3
+#      - "LOGROTATE=true" # Enables writing http access logs to /opt/shieldpm/nginx/json_access.log, stream access logs to /opt/shieldpm/nginx/stream.log and enables daily logrotation, default false
+#      - "LOGROTATIONS=7" # Set how often the json_access.log should be rotated until it is deleted, default 3
 #      - "SKIP_IP_RANGES=false" # Skip fetching/whitelisting ip ranges from cloudflare, default true
 #      - "IPRT=3" # Set how many hours should be between updating ip ranges from aws and cloudflare, default 1, ignored when SKIP_IP_RANGES is true
 #      - "CRT=72" # Set how many hours should be between certbot trying to renew your certs, default 23

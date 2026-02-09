@@ -67,10 +67,8 @@ journalctl -u shieldpm -f
 
 ### Nginx Access/Error Logs
 By default, these are printed to the container/service logs. If you enabled `LOGROTATE=true`, they are written to disk:
-*   `/data/logs/access.log`
+*   `/data/logs/json_access.log`
 *   `/data/logs/error.log`
-
-</details>
 
 ## 🔒 Certificates
 

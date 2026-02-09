@@ -19,9 +19,10 @@ Restrict access using Basic Auth and IP ranges.
 👉 **[Read the Access Lists Guide](Access-Lists)**
 
 ## 🔐 OpenAppSec
-Machine Learning based WAF support.
+AI-based WAF using machine learning — no signature databases needed.
 *   Requires `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`.
-*   See `compose.yaml` for container setup.
+
+👉 **[Read the OpenAppSec Guide](OpenAppSec)**
 
 ---
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

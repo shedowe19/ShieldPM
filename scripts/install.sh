@@ -281,6 +281,235 @@ case "$db_choice" in
         ;;
 esac
 
+# 11. CrowdSec IPS (Optional)
+echo ""
+echo "=== CrowdSec IPS (Optional) ==="
+echo "CrowdSec detects and blocks malicious traffic using community threat intelligence."
+echo "The Nginx Bouncer is already built-in. This installs the CrowdSec Agent locally."
+echo ""
+read -r -p "Install CrowdSec? [y/N] (Default: N): " cs_choice
+
+if [[ "$cs_choice" =~ ^[Yy]$ ]]; then
+    echo "--> Installing CrowdSec Agent..."
+    curl -s https://install.crowdsec.net | bash
+    apt-get install -y crowdsec
+
+    # Create acquis with native log paths (/data/nginx/ instead of Docker's /opt/shieldpm/nginx/)
+    ACQUIS_DIR="/etc/crowdsec/acquis.d"
+    mkdir -p "$ACQUIS_DIR"
+    cat > "$ACQUIS_DIR/shieldpm.yaml" << 'ACQUIS_EOF'
+filenames:
+  - /data/nginx/json_access.log
+  - /data/nginx/error.log
+labels:
+  type: shieldpm
+ACQUIS_EOF
+
+    # Install ShieldPM parser and collections
+    echo "--> Installing CrowdSec parsers and collections..."
+    cscli hub update
+    cscli parsers install shedowe19/shieldpm-logs 2>/dev/null || \
+      cscli parsers install /etc/crowdsec/parser.yaml --force 2>/dev/null || true
+    cscli collections install crowdsecurity/base-http-scenarios 2>/dev/null || true
+    cscli collections install crowdsecurity/http-cve 2>/dev/null || true
+    cscli collections install crowdsecurity/appsec-virtual-patching 2>/dev/null || true
+    cscli collections install crowdsecurity/appsec-generic-rules 2>/dev/null || true
+    cscli collections install crowdsecurity/modsecurity 2>/dev/null || true
+    cscli scenarios install crowdsecurity/nginx-req-limit-exceeded 2>/dev/null || true
+
+    # Generate bouncer API key and auto-configure
+    echo "--> Configuring CrowdSec Bouncer..."
+    CS_API_KEY=$(cscli bouncers add shieldpm-bouncer -o raw 2>/dev/null || echo "")
+    if [ -n "$CS_API_KEY" ]; then
+        # Ensure crowdsec.conf exists (start.sh provisions it, but we run before first start)
+        mkdir -p /data/crowdsec
+        if [ ! -f /data/crowdsec/crowdsec.conf ]; then
+            cp /usr/local/nginx/conf/conf.d/include/crowdsec.conf /data/crowdsec/crowdsec.conf 2>/dev/null || true
+        fi
+        if [ -f /data/crowdsec/crowdsec.conf ]; then
+            sed -i "s|^API_KEY=.*|API_KEY=$CS_API_KEY|g" /data/crowdsec/crowdsec.conf
+            sed -i "s|^API_URL=.*|API_URL=http://127.0.0.1:8080|g" /data/crowdsec/crowdsec.conf
+            sed -i "s|^ENABLED.*|ENABLED=true|g" /data/crowdsec/crowdsec.conf
+        fi
+        echo "  > CrowdSec installed and configured!"
+        echo "  > Bouncer API Key: $CS_API_KEY"
+    else
+        echo "  > CrowdSec installed but bouncer key generation failed."
+        echo "  > After startup, run: cscli bouncers add shieldpm-bouncer"
+        echo "  > Then set API_KEY in /data/crowdsec/crowdsec.conf"
+    fi
+
+    systemctl enable crowdsec
+    systemctl start crowdsec
+    echo "  > CrowdSec Agent is running."
+else
+    echo "--> Skipping CrowdSec (can be installed later)."
+fi
+
+# 12. GeoIP Database Updates (Optional)
+echo ""
+echo "=== GeoIP Database Updates (Optional) ==="
+echo "MaxMind GeoIP databases enable geographic analytics and country-based blocking."
+echo "This installs 'geoipupdate' to automatically download GeoLite2 databases."
+echo "Requires a free MaxMind account: https://www.maxmind.com/en/geolite2/signup"
+echo ""
+read -r -p "Install GeoIP Update? [y/N] (Default: N): " geoip_choice
+
+if [[ "$geoip_choice" =~ ^[Yy]$ ]]; then
+    echo "--> Installing geoipupdate..."
+    # Add MaxMind PPA and install
+    apt-get install -y software-properties-common
+    add-apt-repository -y ppa:maxmind/ppa 2>/dev/null || true
+    apt-get update
+    apt-get install -y geoipupdate || {
+        # Fallback: direct download if PPA not available
+        echo "  > PPA not available, trying direct install..."
+        ARCH=$(dpkg --print-architecture)
+        GEOIP_URL="https://github.com/maxmind/geoipupdate/releases/latest/download/geoipupdate_7.1.0_linux_${ARCH}.deb"
+        curl -L -o /tmp/geoipupdate.deb "$GEOIP_URL" 2>/dev/null
+        dpkg -i /tmp/geoipupdate.deb 2>/dev/null || apt-get install -f -y
+        rm -f /tmp/geoipupdate.deb
+    }
+
+    # Prompt for MaxMind credentials
+    echo ""
+    echo "  Enter your MaxMind account details (from https://www.maxmind.com/en/accounts):"
+    read -r -p "  Account ID: " GEOIP_ACCOUNT_ID
+    read -r -p "  License Key: " GEOIP_LICENSE_KEY
+
+    if [ -n "$GEOIP_ACCOUNT_ID" ] && [ -n "$GEOIP_LICENSE_KEY" ]; then
+        # Write GeoIP config
+        cat > /etc/GeoIP.conf << GEOIP_EOF
+AccountID $GEOIP_ACCOUNT_ID
+LicenseKey $GEOIP_LICENSE_KEY
+EditionIDs GeoLite2-Country GeoLite2-City GeoLite2-ASN
+DatabaseDirectory /data/nginx
+GEOIP_EOF
+
+        # Run initial download
+        echo "--> Downloading GeoIP databases to /data/nginx/..."
+        mkdir -p /data/nginx
+        geoipupdate -v 2>&1 || echo "  > Initial download failed. Check your credentials."
+
+        # Setup weekly cron job (every Wednesday at 3 AM)
+        cat > /etc/cron.d/geoipupdate << 'CRON_EOF'
+# GeoIP Database Update (weekly)
+0 3 * * 3 root /usr/bin/geoipupdate > /dev/null 2>&1
+CRON_EOF
+        chmod 644 /etc/cron.d/geoipupdate
+
+        echo "  > GeoIP configured! Databases will auto-update weekly."
+        echo "  > Files: /data/nginx/GeoLite2-Country.mmdb, GeoLite2-City.mmdb, GeoLite2-ASN.mmdb"
+        echo "  > Enable in ShieldPM: set NGINX_LOAD_GEOIP2_MODULE=true in /data/.env"
+    else
+        echo "  > Skipped: No credentials provided. Configure manually in /etc/GeoIP.conf"
+    fi
+else
+    echo "--> Skipping GeoIP Update (can be installed later)."
+fi
+
+# 13. OpenAppSec WAF (Optional)
+echo ""
+echo "=== OpenAppSec WAF (Optional) ==="
+echo "OpenAppSec is an AI-based Web Application Firewall (WAF) that protects"
+echo "against OWASP Top 10 threats using machine learning."
+echo "The Nginx attachment module is already built-in."
+echo ""
+read -r -p "Install OpenAppSec Agent? [y/N] (Default: N): " oas_choice
+
+if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
+    echo "--> Downloading OpenAppSec installer..."
+    cd /tmp
+    wget -q https://downloads.openappsec.io/open-appsec-install && chmod +x open-appsec-install
+
+    # Ask about cloud portal
+    echo ""
+    echo "  OpenAppSec can be managed via the Cloud Portal (https://my.openappsec.io)"
+    echo "  or locally via a policy file. Cloud management requires a Deployment Profile Token."
+    echo ""
+    read -r -p "  Enter AGENT_TOKEN (leave empty for local-only mode): " OAS_AGENT_TOKEN
+
+    echo "--> Running OpenAppSec installer (agent only)..."
+    # Run installer — ShieldPM already has the Nginx attachment module compiled in
+    if [ -n "$OAS_AGENT_TOKEN" ]; then
+        ./open-appsec-install --auto --token "$OAS_AGENT_TOKEN" || {
+            echo "  > Automatic install failed, trying manual mode..."
+            ./open-appsec-install --manual || true
+        }
+        echo "  > Connected to Cloud Portal with provided token."
+    else
+        ./open-appsec-install --auto || {
+            echo "  > Automatic install failed, trying manual mode..."
+            ./open-appsec-install --manual || true
+        }
+
+        # Create default local_policy.yaml for standalone mode
+        APPSEC_CONF_DIR="/etc/cp/conf"
+        mkdir -p "$APPSEC_CONF_DIR"
+        if [ ! -f "$APPSEC_CONF_DIR/local_policy.yaml" ]; then
+            cat > "$APPSEC_CONF_DIR/local_policy.yaml" << 'APPSEC_EOF'
+# OpenAppSec Local Policy for ShieldPM
+# Docs: https://docs.openappsec.io/
+policies:
+  default:
+    mode: detect-learn
+    practices:
+      - web-attacks:
+          override-mode: detect-learn
+          minimum-confidence: medium
+      - anti-bot:
+          override-mode: detect-learn
+          injected-URIs: []
+          validated-URIs: []
+    triggers:
+      - log:
+          verbosity: standard
+          extendedLogging: true
+          logToAgent: true
+          logToCloud: false
+APPSEC_EOF
+            echo "  > Created default policy at $APPSEC_CONF_DIR/local_policy.yaml"
+            echo "  > Default mode: detect-learn (logs only, does not block)"
+            echo "  > Change to 'prevent-learn' to enable active blocking"
+        fi
+    fi
+
+    # Ask about Advanced ML Model
+    echo ""
+    echo "  OpenAppSec offers an Advanced ML Model with improved detection accuracy."
+    echo "  Download it from: https://my.openappsec.io or https://downloads.openappsec.io"
+    echo ""
+    read -r -p "  Path to Advanced Model .tgz (leave empty to skip): " OAS_MODEL_PATH
+
+    if [ -n "$OAS_MODEL_PATH" ] && [ -f "$OAS_MODEL_PATH" ]; then
+        mkdir -p /etc/cp/conf
+        cp "$OAS_MODEL_PATH" /etc/cp/conf/open-appsec-advanced-model.tgz
+        echo "  > Advanced Model installed at /etc/cp/conf/open-appsec-advanced-model.tgz"
+    elif [ -n "$OAS_MODEL_PATH" ]; then
+        echo "  > File not found: $OAS_MODEL_PATH — skipping Advanced Model."
+    fi
+
+    # Enable the Nginx module in .env
+    if grep -q "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE" "$ENV_FILE" 2>/dev/null; then
+        sed -i "s|.*NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE.*|NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true|g" "$ENV_FILE"
+    else
+        echo "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" >> "$ENV_FILE"
+    fi
+
+    echo "  > OpenAppSec Agent installed!"
+    echo "  > Manage with: open-appsec-ctl"
+    if [ -z "$OAS_AGENT_TOKEN" ]; then
+        echo "  > Policy file: /etc/cp/conf/local_policy.yaml"
+        echo "  > Apply changes: open-appsec-ctl --apply-policy"
+    else
+        echo "  > Cloud Portal: https://my.openappsec.io"
+    fi
+
+    rm -f /tmp/open-appsec-install
+else
+    echo "--> Skipping OpenAppSec (can be installed later)."
+fi
+
 echo "=== Starting ShieldPM ==="
 echo "--> Starting service to run initial migrations..."
 systemctl start shieldpm

@@ -78,10 +78,10 @@ If you want to use **MySQL** or **PostgreSQL** (instead of the default SQLite):
 > [!WARNING]
 > The LXC container **ONLY** contains the ShieldPM application (Nginx + Node.js).
 > It does **NOT** include any optional sidecar containers defined in `compose.yaml`, such as:
-> *   **Database** (MySQL / PostgreSQL)
-> *   **CrowdSec**
-> *   **OpenAppSec** (WAF Agents)
-> *   **GeoIP Update**
+> *   **Database** (MySQL / PostgreSQL — can be installed natively via the [Native Installer](Installation))
+> *   **CrowdSec** (can be installed natively — see [CrowdSec Guide](CrowdSec))
+> *   **OpenAppSec** (can be installed natively — see [OpenAppSec Guide](OpenAppSec))
+> *   **GeoIP Update** (can be installed natively via the [Native Installer](Installation))
 >
 > You must install/host these services yourself (e.g., in another LXC container, VM, or managed service) if you require them.
 
