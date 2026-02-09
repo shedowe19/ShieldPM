@@ -116,7 +116,7 @@ update
 
 ## ⚙️ Configuration (Environment Variables)
 
-ShieldPM is configured via environment variables. In Docker, set them in `compose.yaml`. In Native/LXC, edit `/app/.env`.
+ShieldPM is configured via environment variables. In Docker, set them in `compose.yaml`. In Native/LXC, edit `/data/.env`.
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
