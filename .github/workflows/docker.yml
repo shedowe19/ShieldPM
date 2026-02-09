@@ -150,10 +150,11 @@ jobs:
 
       # ---------------------------------------------------------
       # NEW: Native Installer Package (Generic .tar.gz)
+      # Uses pre-built nginx binaries from GitHub Releases
       # ---------------------------------------------------------
       - name: "📦 Create Native Installer Package"
         run: |
-          # 1. Pull Image (Ensure it's local)
+          # 1. Pull Image (For app/html only)
           TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
           docker pull "$TAG"
 
@@ -161,29 +162,7 @@ jobs:
           CONTAINER_NAME="installer-extractor-${{ matrix.arch }}"
           docker create --name "$CONTAINER_NAME" "$TAG"
 
-          # 3. Create Build Dir
-          BUILD_DIR="build/native-package"
-          mkdir -p "$BUILD_DIR/app" "$BUILD_DIR/html" "$BUILD_DIR/usr/local"
-
-          # 4. Extract Artifacts
-          docker cp "$CONTAINER_NAME":/app/. "$BUILD_DIR/app/"
-          docker cp "$CONTAINER_NAME":/html/. "$BUILD_DIR/html/"
-          docker cp "$CONTAINER_NAME":/usr/local/nginx/. "$BUILD_DIR/usr/local/nginx/"
-          # Binaries (cloudflared, helper scripts)
-          mkdir -p "$BUILD_DIR/usr/local/bin"
-          docker cp "$CONTAINER_NAME":/usr/local/bin/. "$BUILD_DIR/usr/local/bin/"
-          # Libraries
-          mkdir -p "$BUILD_DIR/usr/local/lib"
-          docker cp "$CONTAINER_NAME":/usr/local/lib/. "$BUILD_DIR/usr/local/lib/"
-          
-          # Rootfs overlays (From Repo)
-          cp -r rootfs "$BUILD_DIR/"
-          
-          # 5. Add Installer Script
-          cp scripts/install.sh "$BUILD_DIR/install.sh"
-          chmod +x "$BUILD_DIR/install.sh"
-          
-          # 6. Package
+          # 3. Determine Architecture Suffix
           if [ "${{ matrix.arch }}" == "x86_64" ]; then
             ARCH_SUFFIX="amd64"
           elif [ "${{ matrix.arch }}" == "aarch64" ]; then
@@ -191,13 +170,39 @@ jobs:
           else
             ARCH_SUFFIX="${{ matrix.arch }}"
           fi
+
+          # 4. Create Build Dir
+          BUILD_DIR="build/native-package"
+          mkdir -p "$BUILD_DIR/app" "$BUILD_DIR/html"
+
+          # 5. Extract App & Frontend from Docker (these are ShieldPM-specific)
+          docker cp "$CONTAINER_NAME":/app/. "$BUILD_DIR/app/"
+          docker cp "$CONTAINER_NAME":/html/. "$BUILD_DIR/html/"
+          docker rm -f "$CONTAINER_NAME"
+
+          # 6. Download Pre-built Nginx Binaries from Release
+          echo "Downloading nginx-linux-${ARCH_SUFFIX}.tar.gz from GitHub Releases..."
+          RELEASE_URL="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries/nginx-linux-${ARCH_SUFFIX}.tar.gz"
+          curl -L -f -o nginx-binaries.tar.gz "$RELEASE_URL"
           
+          # 7. Extract Nginx Binaries
+          echo "Extracting nginx binaries..."
+          tar -xzf nginx-binaries.tar.gz -C "$BUILD_DIR"
+          rm nginx-binaries.tar.gz
+
+          # 8. Rootfs overlays (From Repo)
+          cp -r rootfs "$BUILD_DIR/"
+          
+          # 9. Add Installer Script
+          cp scripts/install.sh "$BUILD_DIR/install.sh"
+          chmod +x "$BUILD_DIR/install.sh"
+          
+          # 10. Package
           TAR_NAME="shieldpm-install-linux-${ARCH_SUFFIX}.tar.gz"
           tar -czf "$TAR_NAME" -C "$BUILD_DIR" .
           echo "INSTALLER_PKG=$TAR_NAME" >> $GITHUB_ENV
           
           # Cleanup
-          docker rm -f "$CONTAINER_NAME"
           rm -rf "$BUILD_DIR"
 
       - name: "📤 Upload Native Installer"
