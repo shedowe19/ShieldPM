@@ -409,6 +409,8 @@ jobs:
             3. Enable **Nesting** in Options
             4. Start and access via `https://<IP>:81`
 
+            > ⚠️ **Note:** The `NGINX_QUIC_BPF=true` feature requires a **privileged** container. BPF is not available in unprivileged LXC containers.
+
             ---
 
             ### 📖 Documentation
