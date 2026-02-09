@@ -9,13 +9,25 @@ ShieldPM provides pre-built, systemd-ready **LXC Templates** for Proxmox VE. The
 
 ---
 
-## 1. Download Template
+---
 
-1.  Go to the **[Releases](https://github.com/shedowe19/ShieldPM/releases)** page on GitHub.
-2.  Download the latest template file:
-    *   **Intel/AMD:** `shieldpm-x.x.x-lxc_amd64.tar.gz`
-    *   **ARM:** `shieldpm-x.x.x-lxc_arm64.tar.gz`
-3.  Upload the file to your Proxmox storage (e.g., `local`) under **CT Templates**.
+## Method 1: Pre-built LXC Template (App Only)
+This is the **fastest** method but requires an **External Database** (MySQL/PostgreSQL) or existing SQLite. The template contains ONLY the application (Node.js + Nginx).
+
+## Method 2: Native Installer (All-in-One)
+If you want a **Monolithic** setup with a local Database (MariaDB/PostgreSQL) inside the container:
+1.  Create a standard **Debian 13 (Trixie)** LXC container.
+2.  Follow the [Native Installer Guide](Installation.md#native-installer).
+    - Checks `Root Runner` automatically.
+    - Installs Database Server locally.
+    - Sets up Systemd & Nginx.
+
+---
+
+## 1. Download Template (Method 1)
+1.  Go to the **[Releases](https://github.com/shedowe19/ShieldPM/releases)** page.
+2.  Download the latest template file (e.g., `shieldpm-v4.0.0-lxc_amd64.tar.gz`).
+3.  Upload to Proxmox **CT Templates**.
 
 ---
 
