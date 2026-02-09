@@ -387,9 +387,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.prepare.outputs.docker_tag_base }}
+          tag_name: "v${{ needs.prepare.outputs.version }}"
           name: "ShieldPM v${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.docker_tag_base }}-${{ needs.prepare.outputs.version_hash }})"
-          prerelease: false
+          prerelease: true
           make_latest: true
           generate_release_notes: true
           files: release-assets/*
