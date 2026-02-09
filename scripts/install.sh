@@ -161,8 +161,21 @@ case "$db_choice" in
         sed -i 's/^# DB_MYSQL_/DB_MYSQL_/g' "$ENV_FILE"
         sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
-        echo "  > MySQL options enabled in $ENV_FILE. Please edit the file to set credentials!"
-        echo "  > MariaDB has been installed. You may need to run 'mysql_secure_installation' and create the database."
+
+        # Default Credentials from .env
+        DB_USER="npm"
+        DB_PASS="npm"
+        DB_NAME="npm"
+
+        echo "--> Initializing MariaDB..."
+        systemctl start mariadb
+        # Create DB and User
+        mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+        mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
+        mysql -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
+        mysql -e "FLUSH PRIVILEGES;"
+        
+        echo "  > MariaDB initialized with default credentials (npm/npm/npm)."
         ;;
     3)
         echo "--> Configuring for PostgreSQL..."
@@ -172,16 +185,25 @@ case "$db_choice" in
         sed -i 's/^# DB_POSTGRES_/DB_POSTGRES_/g' "$ENV_FILE"
         sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
-        echo "  > PostgreSQL options enabled in $ENV_FILE. Please edit the file to set credentials!"
-        echo "  > PostgreSQL has been installed. You need to create the database and user."
+
+        # Default Credentials from .env
+        DB_USER="npm"
+        DB_PASS="npm"
+        DB_NAME="npm"
+
+        echo "--> Initializing PostgreSQL..."
+        systemctl start postgresql
+        # Create DB and User
+        sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';" || true
+        sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" || true
+        
+        echo "  > PostgreSQL initialized with default credentials (npm/npm/npm)."
         ;;
     *)
         echo "--> Configuring for SQLite (Default)..."
-        # SQLite is default, ensure others are commented out
+        # SQLite is default, just ensure others are commented out
         sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
         sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
-        # Ensure SQLite path is uncommented if present (or just rely on default)
-        sed -i 's/^# DB_SQLITE_FILE/DB_SQLITE_FILE/g' "$ENV_FILE"
         ;;
 esac
 
