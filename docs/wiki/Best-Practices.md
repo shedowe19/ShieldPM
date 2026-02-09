@@ -6,7 +6,7 @@ Ensure your ShieldPM installation is secure, reliable, and performant.
 
 ### Headers
 Security headers add an extra layer of protection for your clients.
-*   **HSTS:** Enable `NGINX_HSTS_SUBDOMAINS=true` in `compose.yaml` to enforce HTTPS on all subdomains.
+*   **HSTS:** Enable `NGINX_HSTS_SUBDOMAINS=true` in `compose.yaml` (Docker) or `/data/.env` (Native/LXC) to enforce HTTPS on all subdomains.
 *   **X-Frame-Options:** Defaults to `sameorigin`. Only change this if you need to embed your site in an iframe.
 
 ### Isolation

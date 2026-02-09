@@ -6,9 +6,9 @@ Unlock the full potential of ShieldPM with these advanced configurations.
 
 ShieldPM includes **GoAccess**, a real-time web log analyzer.
 
-*   **Enable:** Set `GOA=true` in `compose.yaml`.
+*   **Enable:** Set `GOA=true` in `compose.yaml` (Docker) or `/data/.env` (Native/LXC).
 *   **Access:** Open `http://<your-server-ip>:91` (Port 91 by default).
-*   **GeoIP:** To enable GeoIP stats, download the MaxMind GeoLite2 databases (Country, City, ASN) into `/opt/shieldpm/goaccess/geoip`.
+*   **GeoIP:** To enable GeoIP stats, download the MaxMind GeoLite2 databases (Country, City, ASN) into the `goaccess/geoip` folder inside your data directory.
 
 ## 🐘 PHP-FPM Integration
 
@@ -48,8 +48,9 @@ You can add custom Nginx directives to specific locations in the **Locations** t
 > deny all;
 > ```
 
-### Custom Upstreams (Load Balancing)
-1.  Create `/opt/shieldpm/custom_nginx/http_top.conf`.
+1.  Create a `http_top.conf` file in your custom Nginx config directory:
+    *   **Docker:** `/opt/shieldpm/custom_nginx/http_top.conf` (maps to `/data/custom_nginx/`)
+    *   **Native / LXC:** `/data/custom_nginx/http_top.conf`
 2.  Define your upstream block:
     ```nginx
     upstream my_backend {
@@ -70,11 +71,11 @@ ShieldPM isn't just for HTTP/HTTPS. You can forward raw TCP/UDP traffic (e.g., G
 3.  **Forward Host/Port:** The destination server.
 4.  **Protocol:** TCP or UDP.
 
-### Prerun Scripts
-Automate startup tasks (e.g., installing extra packages, fixing permissions).
-1.  Create `/opt/shieldpm/prerun/myscript.sh`.
+1.  Create a script in the prerun directory:
+    *   **Docker:** `/opt/shieldpm/prerun/myscript.sh` (maps to `/data/prerun/`)
+    *   **Native / LXC:** `/data/prerun/myscript.sh`
 2.  Ensure it has `#!/usr/bin/env sh` and is executable.
-3.  Set `ENABLE_PRERUN: "true"` in `compose.yaml`.
+3.  Set `ENABLE_PRERUN: "true"` in `compose.yaml` (Docker) or `/data/.env` (Native/LXC).
 
 ---
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

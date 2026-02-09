@@ -7,9 +7,13 @@ Stuck? Here are some solutions to common problems.
 ### I forgot my Admin Password
 If you are using SQLite (default):
 
-1.  Access the container:
+1.  Access the container/server:
     ```bash
+    # Docker
     docker exec -it shieldpm sh
+
+    # Native / LXC
+    # (Already on the server, just open a shell)
     ```
 2.  Run the password reset utility:
     ```bash
@@ -51,19 +55,20 @@ You are trying to upload a file larger than the configured limit.
 
 Logs are your best friend when debugging.
 
-<details>
-<summary><b>Click to view Log Commands</b></summary>
-
-### Container Logs
+### Container / Service Logs
 Check the main output for startup errors or crashes:
 ```bash
+# Docker
 docker logs -f shieldpm
+
+# Native / LXC (Systemd)
+journalctl -u shieldpm -f
 ```
 
 ### Nginx Access/Error Logs
-By default, these are printed to the docker logs. If you enabled `LOGROTATE=true`, they are written to disk:
-*   `/opt/shieldpm/nginx/access.log`
-*   `/opt/shieldpm/nginx/error.log`
+By default, these are printed to the container/service logs. If you enabled `LOGROTATE=true`, they are written to disk:
+*   `/data/logs/access.log`
+*   `/data/logs/error.log`
 
 </details>
 

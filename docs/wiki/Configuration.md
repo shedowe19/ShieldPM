@@ -1,6 +1,8 @@
 # Configuration
 
-ShieldPM is primarily configured via **Environment Variables** in your `compose.yaml`.
+ShieldPM is configured via **Environment Variables**.
+- **Docker:** Set them in `compose.yaml` under `services: app: environment:`.
+- **Native / LXC:** Edit the file `/data/.env`.
 
 ## 🌍 General Settings
 

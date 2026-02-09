@@ -9,15 +9,13 @@ ShieldPM provides pre-built, systemd-ready **LXC Templates** for Proxmox VE. The
 
 ---
 
----
-
 ## Method 1: Pre-built LXC Template (App Only)
 This is the **fastest** method but requires an **External Database** (MySQL/PostgreSQL) or existing SQLite. The template contains ONLY the application (Node.js + Nginx).
 
 ## Method 2: Native Installer (All-in-One)
 If you want a **Monolithic** setup with a local Database (MariaDB/PostgreSQL) inside the container:
 1.  Create a standard **Debian 13 (Trixie)** LXC container.
-2.  Follow the [Native Installer Guide](Installation.md#native-installer).
+2.  Follow the [Native Installer Guide](Installation).
     - Checks `Root Runner` automatically.
     - Installs Database Server locally.
     - Sets up Systemd & Nginx.

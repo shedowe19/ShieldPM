@@ -9,7 +9,7 @@ Understanding how ShieldPM works under the hood can help with debugging and adva
 3.  **Config Generation:**
     *   The `internal/nginx.js` logic is triggered.
     *   It fetches the fresh host data.
-    *   It renders the LiquidJS template (`templates/proxy_host.conf`).
+    *   It renders the EJS template (`templates/proxy_host.conf`).
     *   It writes the file to `/data/nginx/proxy_host/X.conf`.
 4.  **Reload:** The backend executes `nginx -s reload`.
 
@@ -30,13 +30,21 @@ These scripts are available inside the container for maintenance.
 ### `npm-reset-password`
 Resets the `admin@example.org` user's password if you are locked out.
 ```bash
+# Docker
 docker exec -it shieldpm npm-reset-password
+
+# Native / LXC
+npm-reset-password
 ```
 
 ### `sqlite-vaccum.js`
 Optimizes the SQLite database file by running the `VACUUM` command to reclaim unused space.
 ```bash
+# Docker
 docker exec -it shieldpm node /usr/local/bin/sqlite-vaccum.js
+
+# Native / LXC
+node /usr/local/bin/sqlite-vaccum.js
 ```
 
 ### `clean-modules`

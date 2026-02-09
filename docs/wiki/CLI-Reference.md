@@ -4,6 +4,18 @@ ShieldPM includes several internal CLI tools and scripts to help manage the appl
 
 ## Global Commands
 
+### `update` / `update-shieldpm`
+Updates ShieldPM to the latest version. Available on **Native** and **LXC** installations.
+
+*   **Usage:** `update` or `update-shieldpm`
+*   **What it does:**
+    1.  Self-updates the script itself.
+    2.  Checks GitHub for newer code.
+    3.  Upgrades system packages (`apt upgrade`).
+    4.  Updates ShieldPM code and frontend/backend.
+    5.  (Optional) Downloads updated Nginx binaries from GitHub Releases.
+    6.  Restarts the service.
+
 ### `fullclean`
 Cleans up unused configuration folders. This checks the database for active hosts and removes any `data/nginx` config files that do not have a corresponding database entry.
 

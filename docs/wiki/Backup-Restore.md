@@ -16,7 +16,7 @@ This directory contains everything you need:
 
 ## Backup Procedures
 
-### Simple Docker Backup
+### Docker Backup
 If you mapped a local folder to `/data`:
 
 ```bash
@@ -28,6 +28,18 @@ tar -czvf shieldpm-backup-$(date +%F).tar.gz /path/to/your/shieldpm/data
 
 # 3. Start the container
 docker compose up -d
+```
+
+### Native / LXC Backup
+```bash
+# 1. Stop the service
+systemctl stop shieldpm
+
+# 2. Create a backup archive
+tar -czvf shieldpm-backup-$(date +%F).tar.gz /data
+
+# 3. Restart the service
+systemctl start shieldpm
 ```
 
 ### Database Dump (MySQL / PostgreSQL)
@@ -64,11 +76,15 @@ docker exec shieldpm-db pg_dump -U npm npm > dump.sql
     ```
 
 5.  **Verify:**
-    *   Check logs: `docker compose logs -f shieldpm`
+    *   Check logs: `docker compose logs -f shieldpm` (Docker) or `journalctl -u shieldpm -f` (Native/LXC)
     *   Login to the web interface.
-    *   Run `fullclean` inside the container to ensure config consistency:
+    *   Run `fullclean` to ensure config consistency:
         ```bash
+        # Docker
         docker exec -it shieldpm fullclean
+
+        # Native / LXC
+        fullclean
         ```
 
 ---

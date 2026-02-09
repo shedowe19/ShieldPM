@@ -15,8 +15,7 @@
 ### Basics
 *   **[Installation](Installation)**: Get started with Docker Compose and migration guides.
 *   **[Proxmox LXC Installation](Proxmox-LXC)**: Setup guide for Native Containers (Systemd).
-*   **[Raspberry Pi Installation](Raspberry-Pi)**: Bootable ARM64 image for Raspberry Pi 4/5.
-*   **[Configuration](Configuration)**: detailed environment variables and database setup.
+*   **[Configuration](Configuration)**: Environment variables and database setup.
 *   **[IPv6 Configuration](IPv6)**: Setup guide for Docker and IPv6.
 *   **[Docker Compose Reference](Docker-Compose-Reference)**: Full reference file with all options.
 *   **[Prerequisites & Best Practices](Best-Practices)**: Backup strategies, security hardening, and performance tips.
@@ -30,7 +29,7 @@
 *   **[Disable Buffering](Disable-Buffering)**: Optimizing for streaming services (Jellyfin/Plex).
 *   **[Maintenance Features](Maintenance)**: Configuring automatic maintenance pages for downtime.
 *   **[Service Icons](Service-Icons)**: Auto-detection and custom icons for your hosts.
-*   **[Terminal Hosts](Terminal-Hosts)**: SSH Bastion and Web Terminal Gateway management.
+
 *   **[SSL Certificates](SSL-Certificates)**: Let's Encrypt, Custom Certs, and HSTS best practices.
 
 ### Security
