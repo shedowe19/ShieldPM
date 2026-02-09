@@ -72,8 +72,13 @@ echo "--> Installing build requiremends..."
 apt-get update
 apt-get install -y npm
 
-echo "--> [1/6] Installing build dependencies..."
+echo "--> [1/7] Updating System & Dependencies..."
+
 apt-get update
+# Upgrade all packages to keep the system secure
+DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
+
 apt-get install -y --no-install-recommends \
     git \
     build-essential \
