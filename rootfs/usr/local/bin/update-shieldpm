@@ -97,7 +97,6 @@ fi
 
 # Self-Update: Fetch latest version of this script first
 echo "--> [0/7] Checking for script updates..."
-echo "--> [0/7] Checking for script updates..."
 SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${SCRIPT_BRANCH}/rootfs/usr/local/bin/update-shieldpm"
 SCRIPT_TMP="/tmp/update-shieldpm.new"
 SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
