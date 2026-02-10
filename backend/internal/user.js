@@ -68,7 +68,7 @@ const internalUser = {
 			const _isAdmin = data.roles.indexOf("admin") !== -1;
 
 			await userPermissionModel.query(trx).insert(
-				/** @type {any} */({
+				/** @type {any} */ ({
 					user_id: user.id,
 					visibility: "user",
 					access_lists: "manage",
@@ -442,7 +442,7 @@ const internalUser = {
 			permissions = await userPermissionModel
 				.query()
 				.where("user_id", user.id)
-				.patchAndFetchById(/** @type {any} */(existing_auth).id, _.assign({ user_id: user.id }, data));
+				.patchAndFetchById(/** @type {any} */ (existing_auth).id, _.assign({ user_id: user.id }, data));
 		} else {
 			// insert
 			permissions = await userPermissionModel.query().insertAndFetch(_.assign({ user_id: user.id }, data));

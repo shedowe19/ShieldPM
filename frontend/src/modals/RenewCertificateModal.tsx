@@ -44,7 +44,7 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 			.finally(() => {
 				setIsSubmitting(false);
 			});
-	}, [id, data, isFresh, isSubmitting, remove, queryClient.invalidateQueries]);
+	}, [id, data, isFresh, isSubmitting, remove, queryClient]);
 
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && !isSubmitting && remove()}>
