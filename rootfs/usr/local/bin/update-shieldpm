@@ -16,6 +16,24 @@ fi
 
 REPO_URL="https://github.com/shedowe19/ShieldPM.git"
 BRANCH="develop" # Default branch
+
+# Preserve original arguments for self-update restart
+ORIGINAL_ARGS=("$@")
+
+# Argument Parsing
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -b|--branch)
+      BRANCH="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    *)
+      shift # past argument
+      ;;
+  esac
+done
+
 TEMP_DIR="/tmp/shieldpm_update_$(date +%s)"
 BACKEND_DIR="/app"
 FRONTEND_DIR="/html/frontend"
@@ -91,7 +109,7 @@ if [ -f "$SCRIPT_TMP" ]; then
         rm -f "$SCRIPT_TMP"
         # Re-execute with same arguments, but mark as already self-updated
         export SHIELDPM_SELF_UPDATED=1
-        exec /bin/bash "$SCRIPT_CURRENT" "$@"
+        exec /bin/bash "$SCRIPT_CURRENT" "${ORIGINAL_ARGS[@]}"
     else
         echo "    - Script is up to date."
         rm -f "$SCRIPT_TMP"
