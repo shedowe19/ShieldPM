@@ -16,7 +16,11 @@
     "d3-color": "^3.1.0"
   },
   "overrides": {
-    "d3-color": "^3.1.0"
+    "d3-color": "^3.1.0",
+    "react-simple-maps": {
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0"
+    }
   },
   "scripts": {
     "dev": "vite",
@@ -50,6 +54,9 @@
     "@types/react-simple-maps": "^3.0.6",
     "@types/ua-parser-js": "^0.7.39",
     "@uiw/react-textarea-code-editor": "3.1.1",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "classnames": "2.5.1",
     "clsx": "^2.1.1",
@@ -83,9 +90,6 @@
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "ua-parser-js": "^2.0.8",
-    "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0",
-    "xterm-addon-web-links": "^0.9.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {
