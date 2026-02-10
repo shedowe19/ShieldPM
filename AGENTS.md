@@ -1,5 +1,9 @@
 # ShieldPM Agent Context
 
+> [!IMPORTANT]
+> **This document is the SOURCE OF TRUTH for any AI Agent working on this project.**
+> It must be kept identical to `GEMINI.md`.
+
 ## 1. Project Identity & Purpose
 *   **Name**: ShieldPM (Shedowe's Shield Proxy Manager)
 *   **Base**: Advanced fork of Nginx Proxy Manager (NPM).
@@ -8,16 +12,17 @@
 *   **Primary Output**: Docker Image (`shedowe19/shieldpm:latest`) & Native Installer Script (`install.sh`).
 
 ## 2. Technology Stack & Dependencies
-An AI Agent working on this project must be aware of the following stack components:
+The Agent must be aware of these specific versions and libraries:
 
 ### Backend (API & Logic)
 *   **Runtime**: Node.js `v22+` (Alpine/Debian Trixie)
 *   **Framework**: Express.js `v5.2`
 *   **ORM**: Objection.js `v3.1` / Knex.js `v3.1`
 *   **Database**:
-    *   **Development**: SQLite (`better-sqlite3` v12.5)
+    *   **Development**: SQLite (`better-sqlite3` v12.6)
     *   **Production**: MySQL (`mysql2`) or PostgreSQL (`pg`)
-*   **Templating**: EJS (for Nginx config generation)
+*   **AI Integration**: `@google/generative-ai` (Gemini), `node-fetch` (Ollama/OpenAI Compatible)
+*   **Management**: `dockerode` (Docker API), `isomorphic-git` (GitOps), `telegraf` (ChatOps/Telegram), `ssh2` (Remote), `ws` (WebSockets)
 *   **Path**: `/backend`
 
 ### Frontend (UI)
@@ -37,14 +42,17 @@ An AI Agent working on this project must be aware of the following stack compone
     *   `lua-nginx-module` (Scripting)
     *   `brotli`, `zstd` (Compression)
 *   **Security Integrations**:
-    *   **CrowdSec**: IPS via Lua Bouncer (Native/Docker).
-    *   **OpenAppSec**: AI WAF via Attachment Module (Native/Docker).
+    *   **CrowdSec**: IPS via Lua Bouncer.
+    *   **OpenAppSec**: AI WAF via Attachment Module.
     *   **ModSecurity**: CRS v4 (Base WAF).
 
 ## 3. Repository Ecology & Build Context
 This project relies on **TWO** distinct repositories. The Agent must know which one to modify.
 
-### A. `ShieldPM` (This Repository) - application Logic
+> [!CAUTION]
+> **DO NOT confuse these repositories.** Modifications to the wrong repo will be lost or ineffective.
+
+### A. `ShieldPM` (This Repository) - Application Logic
 *   **Responsibility**: Source code for Backend API, Frontend UI, Database Migrations, and `install.sh`.
 *   **Build Output**: The application layer that runs *inside* the container or on the host.
 *   **Critical Paths**:
@@ -78,9 +86,9 @@ For Bare Metal or Proxmox LXC usage (no Docker):
 bash scripts/install.sh
 ```
 **Agent Action**: When modifying `install.sh`, ensure you handle:
-1.  **Dependency Checks**: `node`, `npm`, `nginx`, `sqlite3`.
+1.  **Dependency Checks**: `node`, `npm`, `nginx`, `sqlite3`, `python3-certbot-nginx`.
 2.  **Service Creation**: `systemd` unit files.
-3.  **Parsers/Collections**: Downloading CrowdSec/GeoIP configs to `/etc/` paths.
+3.  **Parsers/Collections**: Downloading CrowdSec/GeoIP configs to `/etc/` paths (using raw GitHub URLs).
 
 ### Development Environment
 ```bash
@@ -98,34 +106,73 @@ yarn dev # Nodemon
 ## 5. Security Architecture & Integrations
 
 ### CrowdSec (IPS)
-*   **Docker**: Runs as sidecar container. Logs shared via volume.
-*   **Native**: Runs as system service (`crowdsec`).
-*   **Integration**:
-    *   **Parser**: Custom `type: shieldpm` parser.
-    *   **Bouncer**: Nginx Lua Bouncer.
-    *   **Config**: `init_by_lua` in `nginx.conf` (via include) initializes the bounce.
-    *   **Fix**: `install.sh` downloads `parser.yaml` raw from GitHub to `/etc/crowdsec/parsers/s01-parse/shieldpm.yaml`.
+*   **Docker**: Sidecar container. Login parsed via `type: shieldpm`.
+*   **Native**: System service. `install.sh` downloads parser/collection directly to `/etc/crowdsec/`.
+*   **Nginx**: Uses Lua Bouncer (`init_by_lua` in `crowdsec_nginx.conf`).
 
 ### OpenAppSec (AI WAF)
-*   **Modes**:
-    *   **Cloud**: Managed via `AGENT_TOKEN` (Central Portal).
-    *   **Local**: Managed via `local_policy.yaml` (Declarative).
-*   **Integration**: Nginx attachment module loaded dynamically via `.env` (`NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`).
-*   **Model**: Advanced ML Model (`.tgz`) can be injected via `/etc/cp/conf/`.
+*   **Agent**: Runs as service/container.
+*   **Management**: Cloud (Connector using `AGENT_TOKEN`) or Local (`local_policy.yaml`).
+*   **Nginx**: Attachment module dynamic load via `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`.
+*   **Advanced Model**: `.tgz` file support for ML model upgrades.
 
-## 6. Project Structure Map (Agent Reference)
+### ChatOps (Telegram)
+*   **Engine**: `telegraf` running in backend.
+*   **Auth**: Whitelists Telegram User IDs (`allowed_ids`).
+*   **Access**: Synthesizes internal temporary JWT tokens (`ctx.shieldAccess`) for authenticated AI interaction.
+
+## 6. Internal Systems Deep Dive
+
+### 6.1 Nginx Configuration Engine (`backend/internal/nginx.js`)
+*   **Core Logic**: Reads DB state -> Renders EJS Templates (`backend/templates/`) -> Writes `.conf` files to `/data/nginx/`.
+*   **Reload Strategy**: Uses debounced `nginx -s reload` (2s delay) to prevent CPU spikes.
+*   **Validation**: `nginx -t` validation before reload is **disabled** for speed, trusting the templates (Risk: Template errors break Nginx).
+
+### 6.2 AI Core (`backend/internal/ai/`)
+*   **Orchestrator**: `executor.js` manages the chat loop.
+*   **Providers**: `providers.js` supports:
+    *   **Google Gemini**: via `@google/generative-ai`.
+    *   **Local LLM**: Ollama / OpenAI Compatible.
+*   **Tools**: `tools.js` defines executable functions users can invoke via chat.
+*   **Prompt**: `prompt.js` contains the System Prompt.
+
+### 6.3 GitOps (`backend/internal/gitops.js`)
+*   **Engine**: `isomorphic-git`.
+*   **Use Case**: Syncs ShieldPM configuration (exported as JSON/YAML) to/from a remote Git repository.
+*   **Auth**: SSH Keys or HTTPS Tokens.
+
+### 6.4 Tor Onion Services (`backend/internal/tor.js`)
+*   **Management**: Controls Tor process via `tor-control-port`.
+*   **Data**: Writes Hidden Service config to `/data/tor/`.
+*   **Output**: Reads `hostname` file to display Onion Address to user.
+
+## 7. Project Structure Map (Agent Reference)
 
 | Path | Responsible Component | Description |
 |:---|:---|:---|
-| `/backend/internal/nginx.js` | **Configuration Engine** | The "Brain". Orchestrates config generation & reloading. |
-| `/backend/templates/*.conf` | **Config Templates** | EJS files defining the structure of Nginx vhosts. |
-| `/backend/migrations/*.js` | **Database Schema** | Source of Truth for DB structure. Add new tables here. |
+| `/backend/internal/nginx.js` | **Configuration Engine** | The "Brain". Orchestrates config generation. |
+| `/backend/internal/ai/` | **AI Agent** | AI Logic, Providers, Tools. |
+| `/backend/internal/chat.js` | **ChatOps** | Telegram Bot logic. |
+| `/backend/templates/*.conf` | **Config Templates** | EJS files defining Nginx vhosts. |
+| `/backend/migrations/*.js` | **Database Schema** | Source of Truth for DB structure. |
 | `/frontend/src/pages/` | **UI Views** | React components for specific pages. |
 | `/rootfs/usr/local/bin/` | **Startup Scripts** | `launch.sh`, `start.sh`. Run inside container/service on boot. |
 | `/scripts/install.sh` | **Installer** | The Bash script for non-Docker deployments. |
-| `/data/` | **Persistent Storage** | Where checking code expects to find/write data. |
+| `/data/` | **Persistent Storage** | **Contract**: All dynamic data MUST reside here. |
 
-## 7. Versioning Strategy
+## 8. Agent Cookbook
+
+### Adding a New Locale
+1.  Create `frontend/src/locale/lang/XX.json`.
+2.  Update `frontend/src/locale/index.ts`.
+
+### Adding a New Service Integration (e.g. Slack)
+1.  Add dependency (e.g. `@slack/bolt`) to `backend/package.json`.
+2.  Create `backend/models/slack_integration.js`.
+3.  Create key in `backend/internal/chat.js` or new `backend/internal/slack.js`.
+4.  Implement Auth logic similar to Telegram (`allowed_ids`).
+
+## 9. Versioning Strategy
 *   **Source of Truth**: `backend/package.json` + `frontend/package.json` + `.version`.
 *   **Workflow**:
     *   Check current version.
@@ -133,11 +180,3 @@ yarn dev # Nodemon
     *   **Ask User**.
     *   Update ALL 3 files.
     *   Tag git commit.
-
-## 8. Agent Capabilities & Restrictions
-*   **Can Modify**: All code in `ShieldPM` repo.
-*   **Cannot Modify Directly**: Nginx binary compilation (requires `shieldpm-nginx` repo access).
-*   **Must Respect**:
-    *   **Non-Blocking I/O**: Use `setImmediate` for heavy backend logic.
-    *   **Deboucing**: Don't reload Nginx on every single API call.
-    *   **Sanitization**: Do not trust user input in Nginx templates.
