@@ -15,7 +15,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 REPO_URL="https://github.com/shedowe19/ShieldPM.git"
-REPO_URL="https://github.com/shedowe19/ShieldPM.git"
+
 BRANCH="develop" # Default branch for content
 SCRIPT_BRANCH="develop" # Always pull the updater from develop/master to avoid breaking on feature branches
 
