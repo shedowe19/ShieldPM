@@ -11,6 +11,14 @@
 *   **Current Version**: `v4.1.0`
 *   **Primary Output**: Docker Image (`shedowe19/shieldpm:latest`) & Native Installer Script (`install.sh`).
 
+### Key Features
+*   **Proxy Management**: HTTP/HTTPS/HTTP3, Streams (TCP/UDP), Redirections, 404 Hosts.
+*   **Security**: WAF (ModSecurity/OpenAppSec), IPS (CrowdSec), Access Lists (Basic Auth/mTLS), SSL (Let's Encrypt/Custom).
+*   **Advanced Networking**: Cloudflare Tunnels (no open ports), Tor Onion Services, Dynamic DNS (DDNS).
+*   **Maintenance**: Scheduled Windows & Failure pages.
+*   **Tools**: Web-based Terminal (SSH), GitOps (Backup/Sync), ChatOps (Telegram).
+*   **Enhancements**: Service Icons, Dashboard Notes, Custom PHP Configuration.
+
 ## 2. Technology Stack & Dependencies
 The Agent must be aware of these specific versions and libraries:
 
