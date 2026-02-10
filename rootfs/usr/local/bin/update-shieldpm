@@ -118,6 +118,7 @@ if curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL"; then
         echo "    - Script is up to date."
         rm -f "$SCRIPT_TMP"
     fi
+    fi
 else
     echo "    - Could not fetch latest script (continuing anyway)."
 fi
