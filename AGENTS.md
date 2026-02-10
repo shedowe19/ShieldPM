@@ -182,38 +182,27 @@ yarn dev # Nodemon
 
 ### Creating a Database Migration
 1.  **Naming Convention**: `backend/migrations/YYYYMMDDHHMMSS_description.js` (UTC Timestamp).
-2.  **Template** (ESM):
+2.  **Template** (Modern Async/Await):
 ```javascript
-import { migrate as logger } from "../logger.js";
-
-const migrateName = "unique_migration_name";
-
 /**
- * Migrate Up
- * @param {Object} knex
+ * Migration Description
+ * @param {import("knex").Knex} knex
  */
-export const up = (knex) => {
-    logger.info(`[${migrateName}] Migrating Up...`);
-    return knex.schema.createTable("ref_example", (table) => {
+export async function up(knex) {
+    await knex.schema.createTable("table_name", (table) => {
         table.increments("id").primary();
-        table.string("name").notNullable();
-        table.string("created_on").notNullable().defaultTo(knex.fn.now());
-        table.string("modified_on").notNullable().defaultTo(knex.fn.now());
-    }).then(() => {
-        logger.info(`[${migrateName}] Table created`);
+        table.dateTime("created_on").notNullable();
+        table.dateTime("modified_on").notNullable();
+        // Add columns here
     });
-};
+}
 
 /**
- * Migrate Down
- * @param {Object} knex
+ * @param {import("knex").Knex} knex
  */
-export const down = (knex) => {
-    logger.info(`[${migrateName}] Migrating Down...`);
-    return knex.schema.dropTable("ref_example").then(() => {
-        logger.info(`[${migrateName}] Table dropped`);
-    });
-};
+export async function down(knex) {
+    await knex.schema.dropTable("table_name");
+}
 ```
 
 ## 9. Versioning Strategy
