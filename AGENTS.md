@@ -67,7 +67,7 @@ This project relies on **TWO** distinct repositories. The Agent must know which 
     *   `Dockerfile`: Compiles Nginx from source with specific modules.
     *   `/etc/nginx/nginx.conf`: The **master** Nginx configuration file.
     *   `crowdsec_nginx.conf`: The Lua init block for CrowdSec.
-*   **Relation**: `ShieldPM`'s Dockerfile starts `FROM shedowe19/nginx-quic:latest` (built by `shieldpm-nginx`).
+*   **Relation**: `ShieldPM`'s Dockerfile starts `FROM ghcr.io/shedowe19/shieldpm-nginx:master` (built by `shieldpm-nginx`).
 *   **Agent Note**: If you need to change Nginx *compilation flags*, *modules*, or the *root* `nginx.conf`, you must modify `shieldpm-nginx`, not `ShieldPM`.
 
 ## 4. Build & Deployment Instructions
