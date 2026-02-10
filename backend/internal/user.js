@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import gravatar from "gravatar";
+import crypto from "node:crypto";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
@@ -14,7 +14,12 @@ const omissions = () => {
 	return ["is_deleted", "permissions.id", "permissions.user_id", "permissions.created_on", "permissions.modified_on"];
 };
 
-const DEFAULT_AVATAR = gravatar.url("admin@example.com", { default: "mm" });
+const getGravatarUrl = (email) => {
+	const hash = crypto.createHash("md5").update(email.trim().toLowerCase()).digest("hex");
+	return `https://www.gravatar.com/avatar/${hash}?d=mm`;
+};
+
+const DEFAULT_AVATAR = getGravatarUrl("admin@example.com");
 
 const internalUser = {
 	/**
@@ -43,7 +48,7 @@ const internalUser = {
 		}
 
 		await access.can("users:create", data);
-		data.avatar = gravatar.url(data.email, { default: "mm" });
+		data.avatar = getGravatarUrl(data.email);
 
 		// Use transaction to ensure all user data is created or none at all
 		let user;
@@ -63,7 +68,7 @@ const internalUser = {
 			const _isAdmin = data.roles.indexOf("admin") !== -1;
 
 			await userPermissionModel.query(trx).insert(
-				/** @type {any} */ ({
+				/** @type {any} */({
 					user_id: user.id,
 					visibility: "user",
 					access_lists: "manage",
@@ -141,9 +146,9 @@ const internalUser = {
 		const email = data.email || user.email;
 
 		if (avatarType === "gravatar") {
-			data.avatar = gravatar.url(email, { default: "mm" });
+			data.avatar = getGravatarUrl(email);
 		} else if (avatarType === "url") {
-			data.avatar = avatarValue || gravatar.url(email, { default: "mm" });
+			data.avatar = avatarValue || getGravatarUrl(email);
 		} else if (avatarType === "upload") {
 			// If we are switching to upload, check if we have a value
 			if (avatarValue) {
@@ -437,7 +442,7 @@ const internalUser = {
 			permissions = await userPermissionModel
 				.query()
 				.where("user_id", user.id)
-				.patchAndFetchById(/** @type {any} */ (existing_auth).id, _.assign({ user_id: user.id }, data));
+				.patchAndFetchById(/** @type {any} */(existing_auth).id, _.assign({ user_id: user.id }, data));
 		} else {
 			// insert
 			permissions = await userPermissionModel.query().insertAndFetch(_.assign({ user_id: user.id }, data));

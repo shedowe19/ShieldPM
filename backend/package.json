@@ -22,7 +22,6 @@
     "express": "5.2.1",
     "express-fileupload": "1.5.2",
     "express-rate-limit": "8.2.1",
-    "gravatar": "1.8.2",
     "helmet": "8.1.0",
     "ipaddr.js": "^2.3.0",
     "isomorphic-git": "^1.36.3",

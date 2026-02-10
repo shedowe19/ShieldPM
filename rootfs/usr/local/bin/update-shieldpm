@@ -125,7 +125,7 @@ git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
 
 echo "--> [3/6] Building Backend..."
 cd "$TEMP_DIR/backend"
-npm install --production=false
+npm install --omit=dev
 # Cleanup Dev Dependencies to save space
 # npm prune --production
 
