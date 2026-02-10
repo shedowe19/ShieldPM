@@ -1,176 +1,143 @@
-# ShieldPM
+# ShieldPM Agent Context
 
-## Project Overview
-ShieldPM is an advanced fork of Nginx Proxy Manager (NPM). It provides a user-friendly web interface for managing Nginx reverse proxies, with a focus on security, performance, and ease of use. It includes features like HTTP/3 (QUIC) support, CrowdSec integration, ModSecurity (WAF), OIDC (OpenID Connect) for Access Lists, **Advanced Analytics**, improved TLS certificate management (including OCSP Stapling), **Disable Buffering**, and **Scheduled Maintenance Mode**.
+## 1. Project Identity & Purpose
+*   **Name**: ShieldPM (Shedowe's Shield Proxy Manager)
+*   **Base**: Advanced fork of Nginx Proxy Manager (NPM).
+*   **Core Function**: Web UI for managing Nginx Reverse Proxies with heavy emphasis on security (WAF, IPS), modern protocols (HTTP/3, QUIC), and native performance.
+*   **Current Version**: `v4.1.0`
+*   **Primary Output**: Docker Image (`shedowe19/shieldpm:latest`) & Native Installer Script (`install.sh`).
 
-**Key Technologies:**
-*   **Backend:** Node.js, Express (v5.2), Knex.js (v3.1), Objection.js (v3.1), SQLite (via better-sqlite3 v12.5).
-*   **Frontend:** React (v19.2), Vite (v7.3), TypeScript (v5.9), Tailwind CSS (v3.4), shadcn/ui (Radix UI), React Query (v5.90).
-*   **Infrastructure:** Docker, Nginx (with QUIC support), Certbot, CrowdSec, Cloudflared, Tor, OpenAppSec.
-*   **Features**: mTLS, HTTP/3, WAF, OIDC, Analytics, **Internal PKI**, **Cloudflare Tunnels**, **Tor Onion Services**, **Secure Demo Mode**, **AI Agent (Co-Pilot)**, **HTTP-Only Cookie Auth**, **GitOps Synchronization**.
-*   **Language:** JavaScript/TypeScript (ES Modules).
+## 2. Technology Stack & Dependencies
+An AI Agent working on this project must be aware of the following stack components:
 
-## Secure Demo Mode Architecture
-The project supports a public "Demo Mode" toggled via `DEMO_MODE=true`.
-*   **Purpose**: Allows public testing without compromising security.
-*   **Restrictions**:
-    *   **Frontend**: Restricted menus (e.g., Cloudflare Tunnels) and visual indicator.
-    *   **Backend**: Middleware (`demo.js`) blocks sensitive write operations (User, Settings, Nginx Config).
-    *   **Nginx**: ModSecurity enabled, filesystem access blocked (`forward_scheme: path` disallowed).
-    *   **Network**: `ipaddr.js` blocks standard "Anti-SSRF" targets (Private IPs, Localhost, etc.).
-    *   **Infrastructure**: Auto-reset sidecar container wipes database every 60 minutes.
+### Backend (API & Logic)
+*   **Runtime**: Node.js `v22+` (Alpine/Debian Trixie)
+*   **Framework**: Express.js `v5.2`
+*   **ORM**: Objection.js `v3.1` / Knex.js `v3.1`
+*   **Database**:
+    *   **Development**: SQLite (`better-sqlite3` v12.5)
+    *   **Production**: MySQL (`mysql2`) or PostgreSQL (`pg`)
+*   **Templating**: EJS (for Nginx config generation)
+*   **Path**: `/backend`
 
-## Building and Running
+### Frontend (UI)
+*   **Runtime**: Node.js `v22+`
+*   **Build Tool**: Vite `v7.3`
+*   **Framework**: React `v19.2` (TypeScript)
+*   **State Management**: React Query `v5.90`
+*   **Styling**: Tailwind CSS `v3.4`, shadcn/ui (Radix UI)
+*   **Path**: `/frontend`
 
-The project is designed to be run using Docker Compose or natively (LXC/Bare Metal).
+### Infrastructure & Nginx Core
+*   **Web Server**: Nginx (OpenResty-based custom build).
+*   **Modules**:
+    *   `http_v3_module` (QUIC)
+    *   `ngx_http_modsecurity_module` (WAF)
+    *   `ngx_http_geoip2_module` (GeoIP)
+    *   `lua-nginx-module` (Scripting)
+    *   `brotli`, `zstd` (Compression)
+*   **Security Integrations**:
+    *   **CrowdSec**: IPS via Lua Bouncer (Native/Docker).
+    *   **OpenAppSec**: AI WAF via Attachment Module (Native/Docker).
+    *   **ModSecurity**: CRS v4 (Base WAF).
 
-### Prerequisites
-*   Docker & Docker Compose (for Container setup)
-*   **OR** Node.js 22+, Nginx w/ Lua, CrowdSec, OpenAppSec (for Native setup)
+## 3. Repository Ecology & Build Context
+This project relies on **TWO** distinct repositories. The Agent must know which one to modify.
 
-### Quick Start (Docker)
-To start the application in production mode:
+### A. `ShieldPM` (This Repository) - application Logic
+*   **Responsibility**: Source code for Backend API, Frontend UI, Database Migrations, and `install.sh`.
+*   **Build Output**: The application layer that runs *inside* the container or on the host.
+*   **Critical Paths**:
+    *   `backend/internal/nginx.js`: Generates Nginx configuration files from DB state.
+    *   `backend/templates/`: EJS templates for Nginx configs (`proxy_host.conf`).
+    *   `scripts/install.sh`: **The Native Installer**. Handles host setup for LXC/Native deployments.
+    *   `rootfs/`: Overlay files copied to the Docker image at build time (e.g. `start.sh`, `launch.sh`).
+
+### B. `shieldpm-nginx` (External Repository) - Base Image & Nginx Core
+*   **Responsibility**: Defines the **OS Environment** (Debian Trixie) and compiles **Nginx binaries**.
+*   **Contents**:
+    *   `Dockerfile`: Compiles Nginx from source with specific modules.
+    *   `/etc/nginx/nginx.conf`: The **master** Nginx configuration file.
+    *   `crowdsec_nginx.conf`: The Lua init block for CrowdSec.
+*   **Relation**: `ShieldPM`'s Dockerfile starts `FROM shedowe19/nginx-quic:latest` (built by `shieldpm-nginx`).
+*   **Agent Note**: If you need to change Nginx *compilation flags*, *modules*, or the *root* `nginx.conf`, you must modify `shieldpm-nginx`, not `ShieldPM`.
+
+## 4. Build & Deployment Instructions
+
+### Docker Build (Standard)
+To build the full ShieldPM image:
 ```bash
-docker compose up -d
+# Builds frontend, installs backend deps, copies overlays, pulls base image
+docker build -t shieldpm:local .
 ```
 
-### Native Installation (LXC/Bare Metal)
-The `install.sh` script supports a fully interactive native installation.
-*   **Supported OS**: Debian/Ubuntu/Proxmox LXC.
-*   **Features**:
-    *   Installs dependencies (Node.js, Nginx, Certbot).
-    *   **Native CrowdSec Integration**: Downloads parser/collection directly from GitHub to `/etc/crowdsec/` and configures access logs.
-    *   **Native GeoIP Update**: Sets up `geoipupdate` cron jobs and database paths.
-    *   **Native OpenAppSec WAF**: Installs the agent (Cloud or Local mode) and optional Advanced ML Model.
+### Native / LXC Installation
+For Bare Metal or Proxmox LXC usage (no Docker):
+```bash
+# interactive installer
+bash scripts/install.sh
+```
+**Agent Action**: When modifying `install.sh`, ensure you handle:
+1.  **Dependency Checks**: `node`, `npm`, `nginx`, `sqlite3`.
+2.  **Service Creation**: `systemd` unit files.
+3.  **Parsers/Collections**: Downloading CrowdSec/GeoIP configs to `/etc/` paths.
 
-### Development
-The project uses a multi-stage `Dockerfile`.
-*   **Frontend:** Built in the `frontend` stage using `yarn vite build`.
-*   **Backend:** Dependencies installed in the `backend` stage.
-*   **Final Image:** Combines frontend assets, backend code, and Nginx configuration into a Debian Trixie-based image.
+### Development Environment
+```bash
+# Frontend
+cd frontend
+yarn install
+yarn dev # Vite dev server
 
-**Key Scripts:**
-*   `yarn build`: Builds both frontend and backend.
-*   `yarn test`: Runs unit tests (`vitest`).
+# Backend
+cd backend
+yarn install
+yarn dev # Nodemon
+```
 
-## Development Conventions
+## 5. Security Architecture & Integrations
 
-*   **Code Style:** The project uses `biome` for linting and formatting.
-*   **Testing:** `vitest` is used for testing.
-*   **Database:** SQLite is key for development; MySQL/Postgres supported for production.
-*   **Architecture & Repositories:**
-    *   `ShieldPM` (This Repo): Main application logic (Frontend + Backend API).
-    *   `shieldpm-nginx` (External Repo): **Crucial distinction.** Contains the base Docker image definition (`Dockerfile`), `nginx.conf`, and compiled modules (QUIC, ModSecurity, etc.). The main `nginx.conf` used in production comes from here.
+### CrowdSec (IPS)
+*   **Docker**: Runs as sidecar container. Logs shared via volume.
+*   **Native**: Runs as system service (`crowdsec`).
+*   **Integration**:
+    *   **Parser**: Custom `type: shieldpm` parser.
+    *   **Bouncer**: Nginx Lua Bouncer.
+    *   **Config**: `init_by_lua` in `nginx.conf` (via include) initializes the bounce.
+    *   **Fix**: `install.sh` downloads `parser.yaml` raw from GitHub to `/etc/crowdsec/parsers/s01-parse/shieldpm.yaml`.
 
-## Configuration & Environment
-The application is configured primarily through Environment Variables (handled in `backend/lib/config.js`).
+### OpenAppSec (AI WAF)
+*   **Modes**:
+    *   **Cloud**: Managed via `AGENT_TOKEN` (Central Portal).
+    *   **Local**: Managed via `local_policy.yaml` (Declarative).
+*   **Integration**: Nginx attachment module loaded dynamically via `.env` (`NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`).
+*   **Model**: Advanced ML Model (`.tgz`) can be injected via `/etc/cp/conf/`.
 
-### Key Environment Variables
-*   **Database:** `DB_MYSQL_*`, `DB_POSTGRES_*` (or default SQLite).
-*   **Keys:** Managed automatically in `/data/shieldpm/keys.json` (RSA 2048-bit for JWT).
-*   **Data Path:** `DATA_PATH` (default: `/data`) - Base directory for all data.
-*   **Security:**
-    *   `DEMO_MODE=true`: Enables read-only demo mode.
-    *   `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`: Enables OpenAppSec module (Native/LXC).
+## 6. Project Structure Map (Agent Reference)
 
----
+| Path | Responsible Component | Description |
+|:---|:---|:---|
+| `/backend/internal/nginx.js` | **Configuration Engine** | The "Brain". Orchestrates config generation & reloading. |
+| `/backend/templates/*.conf` | **Config Templates** | EJS files defining the structure of Nginx vhosts. |
+| `/backend/migrations/*.js` | **Database Schema** | Source of Truth for DB structure. Add new tables here. |
+| `/frontend/src/pages/` | **UI Views** | React components for specific pages. |
+| `/rootfs/usr/local/bin/` | **Startup Scripts** | `launch.sh`, `start.sh`. Run inside container/service on boot. |
+| `/scripts/install.sh` | **Installer** | The Bash script for non-Docker deployments. |
+| `/data/` | **Persistent Storage** | Where checking code expects to find/write data. |
 
-## Database & Migrations
-Database schema evolution is handled by **Knex.js** migrations in `backend/migrations`.
+## 7. Versioning Strategy
+*   **Source of Truth**: `backend/package.json` + `frontend/package.json` + `.version`.
+*   **Workflow**:
+    *   Check current version.
+    *   Determine Patch/Minor/Major impact.
+    *   **Ask User**.
+    *   Update ALL 3 files.
+    *   Tag git commit.
 
-### Key Migrations
-*(Selected highlights)*
-*   `20180618015850_initial.js`: Initial Schema
-*   `20251231000000_analytics.js`: Advanced Analytics tables
-*   `20260108000000_add_cloudflared_tunnel.js`: Cloudflare Tunnels table
-*   `20260122100000_add_tor_onion.js`: Tor Onion Services table
-*   `20260210000000_native_integrations.js`: (Conceptual) Support for native CrowdSec/OpenAppSec via `install.sh` updates.
-
----
-
-## Security Hardening (2026 Re-Audit)
-*   **OIDC Strictness**: `email_verified` claim mandatory.
-*   **Docker Sanitization**: Labels blocking dangerous Nginx directives.
-*   **Auth Timing**: Constant-time response for invalid logins.
-*   **Cookie Auth**: HTTP-Only, Secure, SameSite=Strict cookies (Double Submit Cookie CSRF).
-*   **Reliability**: Async Analytics, Debounced Reloads.
-*   **Native Security**:
-    *   **CrowdSec**: Logs parsed via `type: shieldpm` (mapped to `nginx` parser via custom config).
-    *   **OpenAppSec**: Supports `local_policy.yaml` (Local) or `AGENT_TOKEN` (Cloud).
-
-### Auto-Migration
-Automatically migrates from SQLite to MySQL/Postgres if configured, renaming old DB to `database.sqlite.migrated`.
-
----
-
-## Frontend Routing (`/frontend/src/Router.tsx`)
-Standard React Router setup mapping paths like `/nginx/proxy`, `/access`, `/settings` to `src/pages/` components.
-
----
-
-## Project Structure
-
-### Repository Root (`/`)
-| Path | Description |
-|------|-------------|
-| `compose.yaml` | Main Docker Compose configuration |
-| `Dockerfile` | Multi-stage Docker build definition |
-| `knexfile.js` | Database configuration for Knex.js |
-| `package.json` | Root scripts and workspace definitions |
-| `docs/wiki/` | Documentation markdown files |
-| `scripts/` | Installation and maintenance scripts (Native Install) |
-| `rootfs/` | Docker filesystem overlays (ShieldPM specific) |
-
-### Backend (`/backend`)
-Node.js API server.
-*   `internal/`: Core logic (`nginx.js`, `certificate.js`). **Config Generation happens here.**
-*   `models/`: Objection.js ORM models.
-*   `templates/`: EJS templates for Nginx config files (`proxy_host.conf`).
-
-### Frontend (`/frontend`)
-React (Vite) SPA.
-
-### `shieldpm-nginx` (External Repository)
-**Base Image & Core Nginx Config**
-*   Contains the `Dockerfile` for the base image (`shedowe19/nginx-quic`).
-*   Contains `/etc/nginx/nginx.conf` (The main config file).
-*   Contains compiled modules (CrowdSec Lua, ModSecurity, OpenAppSec attachment).
-*   **Note**: `init_by_lua` for CrowdSec is defined here (in `conf.d/include/crowdsec_nginx.conf`).
-
----
-
-## Agent Knowledge Base & Cookbook
-
-### Data Flow: Lifecycle of a Proxy Host Change
-1.  **Frontend**: User submits form.
-2.  **API**: `POST /api/nginx/proxy-hosts`.
-3.  **Controller**: Validates input.
-4.  **Database**: Saves to `proxy_host` table.
-5.  **Nginx Config**: `internal/nginx.js` renders EJS template to `/data/nginx/proxy_host/ID.conf`.
-6.  **Reload**: `nginx -s reload`.
-
-### Developer Cookbook
-*   **Adding Features**: 1. Migration → 2. Model → 3. API/Schema → 4. Frontend Client → 5. UI → 6. Docs.
-*   **Native Install Updates**: Modify `scripts/install.sh`. Remember to support non-interactive modes if possible.
-
-### File Persistence (`/data`)
-*   `/data/nginx/`: Generated Configs & Logs.
-*   `/data/crowdsec/`: Security configurations.
-*   `/data/tls/`: Certificates.
-
-### Security & Reliability Guidelines (2026)
-*   **Non-Blocking I/O**: Wrap heavy tasks in `setImmediate()` or Worker Threads.
-*   **Debouncing**: Batch Nginx reloads (2s delay).
-*   **Input Sanitization**: Whitelist characters, block dangerous patterns (`lua_`, `exec`).
-
----
-
-## Version Bump Workflow
-
-**IMPORTANT**: After completing any significant work, ask the user about updating the project version.
-
-### Procedure
-1.  Check current version in `backend/package.json`, `frontend/package.json`, `.version`.
-2.  Suggest bump (Patch/Minor/Major).
-3.  **Wait for confirmation.**
-4.  Update all 3 files.
+## 8. Agent Capabilities & Restrictions
+*   **Can Modify**: All code in `ShieldPM` repo.
+*   **Cannot Modify Directly**: Nginx binary compilation (requires `shieldpm-nginx` repo access).
+*   **Must Respect**:
+    *   **Non-Blocking I/O**: Use `setImmediate` for heavy backend logic.
+    *   **Deboucing**: Don't reload Nginx on every single API call.
+    *   **Sanitization**: Do not trust user input in Nginx templates.
