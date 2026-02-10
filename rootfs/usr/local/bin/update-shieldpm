@@ -15,7 +15,9 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 REPO_URL="https://github.com/shedowe19/ShieldPM.git"
-BRANCH="develop" # Default branch
+REPO_URL="https://github.com/shedowe19/ShieldPM.git"
+BRANCH="develop" # Default branch for content
+SCRIPT_BRANCH="develop" # Always pull the updater from develop/master to avoid breaking on feature branches
 
 # Preserve original arguments for self-update restart
 ORIGINAL_ARGS=("$@")
@@ -95,12 +97,14 @@ fi
 
 # Self-Update: Fetch latest version of this script first
 echo "--> [0/7] Checking for script updates..."
-SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${BRANCH}/rootfs/usr/local/bin/update-shieldpm"
+echo "--> [0/7] Checking for script updates..."
+SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${SCRIPT_BRANCH}/rootfs/usr/local/bin/update-shieldpm"
 SCRIPT_TMP="/tmp/update-shieldpm.new"
 SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
 
-curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL"
-if [ -f "$SCRIPT_TMP" ]; then
+# Allow curl to fail (e.g. if offline or github issues) without crashing the script (set -e)
+if curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL"; then
+    if [ -f "$SCRIPT_TMP" ]; then
     # Compare with current script
     if ! cmp -s "$SCRIPT_TMP" "$SCRIPT_CURRENT"; then
         echo "    - New version found. Updating self and restarting..."
