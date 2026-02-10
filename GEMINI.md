@@ -180,6 +180,42 @@ yarn dev # Nodemon
 3.  Create key in `backend/internal/chat.js` or new `backend/internal/slack.js`.
 4.  Implement Auth logic similar to Telegram (`allowed_ids`).
 
+### Creating a Database Migration
+1.  **Naming Convention**: `backend/migrations/YYYYMMDDHHMMSS_description.js` (UTC Timestamp).
+2.  **Template** (ESM):
+```javascript
+import { migrate as logger } from "../logger.js";
+
+const migrateName = "unique_migration_name";
+
+/**
+ * Migrate Up
+ * @param {Object} knex
+ */
+export const up = (knex) => {
+    logger.info(`[${migrateName}] Migrating Up...`);
+    return knex.schema.createTable("ref_example", (table) => {
+        table.increments("id").primary();
+        table.string("name").notNullable();
+        table.string("created_on").notNullable().defaultTo(knex.fn.now());
+        table.string("modified_on").notNullable().defaultTo(knex.fn.now());
+    }).then(() => {
+        logger.info(`[${migrateName}] Table created`);
+    });
+};
+
+/**
+ * Migrate Down
+ * @param {Object} knex
+ */
+export const down = (knex) => {
+    logger.info(`[${migrateName}] Migrating Down...`);
+    return knex.schema.dropTable("ref_example").then(() => {
+        logger.info(`[${migrateName}] Table dropped`);
+    });
+};
+```
+
 ## 9. Versioning Strategy
 *   **Source of Truth**: `backend/package.json` + `frontend/package.json` + `.version`.
 *   **Workflow**:
