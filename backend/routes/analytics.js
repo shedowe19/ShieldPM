@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import express from "express";
-import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
 import AnalyticCount from "../models/analytic_count.js";
 
 const router = express.Router();
@@ -53,52 +52,40 @@ router.get("/series", async (req, res) => {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
 
-		const startDate = dayjs(start);
-		const endDate = dayjs(end);
-		const diffHours = endDate.diff(startDate, "hour");
-
-		// Determine grouping
-		// Minute: 16 chars (YYYY-MM-DDTHH:mm)
-		// Hour: 13 chars (YYYY-MM-DDTHH)
-		let substringLen = 16;
-		if (diffHours > 24) {
-			substringLen = 13;
-		}
-
-		const knex = AnalyticCount.knex();
-
-		// Postgres requires casting if column type is not text, but even if it is,
-		// explicit casting ensures compatibility.
-		// Other DBs (SQLite, MySQL) handle substr on strings fine.
-		const timeBucketRaw = isPostgres()
-			? knex.raw("substr(timestamp::text, 1, ?) as time_bucket", [substringLen])
-			: knex.raw("substr(timestamp, 1, ?) as time_bucket", [substringLen]);
-
-		const data = await knex("analytic_count")
-			.select(timeBucketRaw)
-			.sum("request_count as count")
-			.sum("bytes_sent as bytes")
-			.sum("status_code_2xx as s2xx")
-			.sum("status_code_3xx as s3xx")
-			.sum("status_code_4xx as s4xx")
-			.sum("status_code_5xx as s5xx")
+		// Fetch raw bucketed data
+		// For performance on large sets, we might want to aggregate by hour if range > 24h
+		const data = await AnalyticCount.query()
 			.where("timestamp", ">=", start)
 			.andWhere("timestamp", "<=", end)
-			.groupBy("time_bucket")
-			.orderBy("time_bucket", "asc");
+			.orderBy("timestamp", "asc");
 
-		// Map to expected format
-		const results = data.map((row) => ({
-			timestamp: row.time_bucket,
-			count: Number(row.count || 0),
-			bytes: Number(row.bytes || 0),
-			s2xx: Number(row.s2xx || 0),
-			s3xx: Number(row.s3xx || 0),
-			s4xx: Number(row.s4xx || 0),
-			s5xx: Number(row.s5xx || 0),
-		}));
+		// We might want to aggregate further per timestamp if multiple hosts exist
+		// But for now, we just pass the raw rows or aggregate in JS
 
-		res.json(results);
+		// Group by timestamp
+		const grouped = {};
+		for (const row of data) {
+			if (!grouped[row.timestamp]) {
+				grouped[row.timestamp] = {
+					timestamp: row.timestamp,
+					count: 0,
+					bytes: 0,
+					s2xx: 0,
+					s3xx: 0,
+					s4xx: 0,
+					s5xx: 0,
+				};
+			}
+			const g = grouped[row.timestamp];
+			g.count += row.request_count;
+			g.bytes += Number.parseInt(row.bytes_sent, 10); // sqlite might return string for bigint
+			g.s2xx += row.status_code_2xx;
+			g.s3xx += row.status_code_3xx;
+			g.s4xx += row.status_code_4xx;
+			g.s5xx += row.status_code_5xx;
+		}
+
+		res.json(Object.values(grouped));
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
@@ -152,6 +139,8 @@ router.get("/status", async (_req, res) => {
 		res.status(500).json({ error: err.message });
 	}
 });
+
+import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
 
 /**
  * GET /api/analytics/db-stats
