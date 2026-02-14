@@ -207,9 +207,7 @@ const internalTor = {
 		const services = await TorOnion.query().where("is_deleted", 0);
 		for (const service of services) {
 			// Reset status on boot
-			await /** @type {any} */ (service)
-				.$query()
-				.patch({ status: 0 });
+			await /** @type {any} */ (service).$query().patch({ status: 0 });
 
 			// Re-add services that have a private key
 			if (service.private_key && service.onion_address) {

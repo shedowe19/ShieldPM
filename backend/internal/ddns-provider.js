@@ -118,17 +118,13 @@ const internalDdnsProvider = {
 	 * @returns {Promise}
 	 */
 	delete: async (access, data) => {
-		const provider = await /** @type {any} */ (DdnsProvider)
-			.query()
-			.findById(data.id);
+		const provider = await /** @type {any} */ (DdnsProvider).query().findById(data.id);
 
 		if (!provider) {
 			throw new errs.NotFoundError("DDNS Provider not found");
 		}
 
-		await /** @type {any} */ (DdnsProvider)
-			.query()
-			.deleteById(data.id);
+		await /** @type {any} */ (DdnsProvider).query().deleteById(data.id);
 
 		// Audit Log
 		await internalAuditLog.add(access, {
