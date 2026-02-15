@@ -145,13 +145,14 @@ git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
 
 echo "--> [3/6] Building Backend..."
 cd "$TEMP_DIR/backend"
-npm install --omit=dev
+# LXC compatible: avoid fchown errors with --no-same-owner
+TAR_OPTIONS="--no-same-owner" npm install --omit=dev
 # Cleanup Dev Dependencies to save space
 # npm prune --production
 
 echo "--> [4/6] Building Frontend..."
 cd "$TEMP_DIR/frontend"
-npm install
+TAR_OPTIONS="--no-same-owner" npm install
 npm run build
 
 echo "--> [5/6] Swapping files..."
