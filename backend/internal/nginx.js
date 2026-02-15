@@ -59,7 +59,6 @@ const internalNginx = {
 
 			// 5. Delete backup (commit change)
 			await internalNginx.deleteBackupConfig(host_type, host);
-
 		} catch (err) {
 			logger.error(`Nginx test failed: ${err.message}`);
 
@@ -110,7 +109,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => { }),
+					.catch(() => {}),
 			);
 		}
 
@@ -125,7 +124,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => { }),
+					.catch(() => {}),
 			);
 		}
 
@@ -388,10 +387,7 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	backupConfig: async (host_type, host) => {
-		const config_file = internalNginx.getConfigName(
-			internalNginx.getFileFriendlyHostType(host_type),
-			host.id,
-		);
+		const config_file = internalNginx.getConfigName(internalNginx.getFileFriendlyHostType(host_type), host.id);
 		const backup_file = `${config_file}.bak`;
 
 		try {
@@ -399,7 +395,7 @@ const internalNginx = {
 			debug(logger, `Backed up config: ${config_file} -> ${backup_file}`);
 		} catch (err) {
 			// Ignore if original file doesn't exist (new host)
-			if (err.code !== 'ENOENT') {
+			if (err.code !== "ENOENT") {
 				logger.error(`Failed to backup config: ${err.message}`);
 			}
 		}
@@ -411,10 +407,7 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	restoreConfig: async (host_type, host) => {
-		const config_file = internalNginx.getConfigName(
-			internalNginx.getFileFriendlyHostType(host_type),
-			host.id,
-		);
+		const config_file = internalNginx.getConfigName(internalNginx.getFileFriendlyHostType(host_type), host.id);
 		const backup_file = `${config_file}.bak`;
 
 		try {
@@ -422,7 +415,7 @@ const internalNginx = {
 			debug(logger, `Restored config: ${backup_file} -> ${config_file}`);
 		} catch (err) {
 			// Ignore if backup doesn't exist
-			if (err.code !== 'ENOENT') {
+			if (err.code !== "ENOENT") {
 				logger.error(`Failed to restore config: ${err.message}`);
 			}
 		}
@@ -434,10 +427,7 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	deleteBackupConfig: async (host_type, host) => {
-		const config_file = internalNginx.getConfigName(
-			internalNginx.getFileFriendlyHostType(host_type),
-			host.id,
-		);
+		const config_file = internalNginx.getConfigName(internalNginx.getFileFriendlyHostType(host_type), host.id);
 		const backup_file = `${config_file}.bak`;
 
 		await internalNginx.deleteFile(backup_file);
