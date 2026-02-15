@@ -27,6 +27,18 @@ const downloadLimiter = rateLimit({
 	},
 });
 
+// Rate limiter for client certificate generation (CPU intensive)
+const createCertLimiter = rateLimit({
+	windowMs: 60 * 60 * 1000, // 1 hour
+	max: 5, // limit each IP to 5 requests per windowMs
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: { error: "Too many certificate generation requests, please try again later." },
+	validate: {
+		trustProxy: false,
+	},
+});
+
 /**
  * /api/nginx/certificates
  */
@@ -110,6 +122,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
+	.all(createCertLimiter)
 	.all(jwtdecode())
 	.post(async (req, res, next) => {
 		try {
