@@ -30,18 +30,24 @@ const internalNginx = {
 		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
 
-		await internalNginx.test();
-		await internalNginx.deleteConfig(host_type, host);
-		if (!skip_reload) {
-			await internalNginx.reload();
+		// 1. Backup existing config if it exists
+		await internalNginx.backupConfig(host_type, host);
+
+		// 2. Generate new config (overwrites existing if any)
+		try {
+			await internalNginx.generateConfig(host_type, host);
+		} catch (err) {
+			logger.error(`Generation failed: ${err.message}`);
+			// Restore backup if generation fails
+			await internalNginx.restoreConfig(host_type, host);
+			throw err;
 		}
-		await internalNginx.generateConfig(host_type, host);
 
 		try {
-			// Test nginx again and update meta with result
+			// 3. Test nginx configuration
 			await internalNginx.test();
 
-			// nginx is ok
+			// 4. Verification successful
 			combined_meta = _.assign({}, host.meta, {
 				nginx_online: true,
 				nginx_err: null,
@@ -50,20 +56,28 @@ const internalNginx = {
 			await model.query().where("id", host.id).patch({
 				meta: combined_meta,
 			});
-		} catch (err) {
-			logger.error(err.message);
 
-			// config is bad, update meta and rename config
+			// 5. Delete backup (commit change)
+			await internalNginx.deleteBackupConfig(host_type, host);
+
+		} catch (err) {
+			logger.error(`Nginx test failed: ${err.message}`);
+
+			// 6. Config is bad: Restore previous config
+			// First, move the bad config to .err for debugging
+			await internalNginx.renameConfigAsError(host_type, host);
+			// Then restore the working backup
+			await internalNginx.restoreConfig(host_type, host);
+
+			// Update meta with error
 			combined_meta = _.assign({}, host.meta, {
 				nginx_online: false,
-				nginx_err: err.message,
+				nginx_err: `[Rolled back] Configuration failed: ${err.message}`,
 			});
 
 			await model.query().where("id", host.id).patch({
 				meta: combined_meta,
 			});
-
-			await internalNginx.renameConfigAsError(host_type, host);
 		}
 
 		if (!skip_reload) {
@@ -96,7 +110,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -111,7 +125,7 @@ const internalNginx = {
 						"--no-reload-webserver",
 						"--quiet",
 					])
-					.catch(() => {}),
+					.catch(() => { }),
 			);
 		}
 
@@ -361,7 +375,72 @@ const internalNginx = {
 			typeof host === "undefined" ? 0 : host.id,
 		);
 
-		await fs.promises.rename(config_file, `${config_file}.err`);
+		try {
+			await fs.promises.rename(config_file, `${config_file}.err`);
+		} catch (err) {
+			// ignore if file doesn't exist
+		}
+	},
+
+	/**
+	 * @param   {String}  host_type
+	 * @param   {Object}  host
+	 * @returns {Promise}
+	 */
+	backupConfig: async (host_type, host) => {
+		const config_file = internalNginx.getConfigName(
+			internalNginx.getFileFriendlyHostType(host_type),
+			host.id,
+		);
+		const backup_file = `${config_file}.bak`;
+
+		try {
+			await fs.promises.copyFile(config_file, backup_file);
+			debug(logger, `Backed up config: ${config_file} -> ${backup_file}`);
+		} catch (err) {
+			// Ignore if original file doesn't exist (new host)
+			if (err.code !== 'ENOENT') {
+				logger.error(`Failed to backup config: ${err.message}`);
+			}
+		}
+	},
+
+	/**
+	 * @param   {String}  host_type
+	 * @param   {Object}  host
+	 * @returns {Promise}
+	 */
+	restoreConfig: async (host_type, host) => {
+		const config_file = internalNginx.getConfigName(
+			internalNginx.getFileFriendlyHostType(host_type),
+			host.id,
+		);
+		const backup_file = `${config_file}.bak`;
+
+		try {
+			await fs.promises.rename(backup_file, config_file);
+			debug(logger, `Restored config: ${backup_file} -> ${config_file}`);
+		} catch (err) {
+			// Ignore if backup doesn't exist
+			if (err.code !== 'ENOENT') {
+				logger.error(`Failed to restore config: ${err.message}`);
+			}
+		}
+	},
+
+	/**
+	 * @param   {String}  host_type
+	 * @param   {Object}  host
+	 * @returns {Promise}
+	 */
+	deleteBackupConfig: async (host_type, host) => {
+		const config_file = internalNginx.getConfigName(
+			internalNginx.getFileFriendlyHostType(host_type),
+			host.id,
+		);
+		const backup_file = `${config_file}.bak`;
+
+		await internalNginx.deleteFile(backup_file);
 	},
 
 	/**
