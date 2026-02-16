@@ -482,9 +482,12 @@ const internalProxyHost = {
 	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
+	 * @param   {Object}  [pagination]
+	 * @param   {number}  [pagination.page]
+	 * @param   {number}  [pagination.limit]
 	 * @returns {Promise}
 	 */
-	getAll: async (access, expand, search_query) => {
+	getAll: async (access, expand, search_query, pagination) => {
 		const accessData = await access.can("proxy_hosts:list");
 		const query = proxyHostModel
 			.query()
@@ -498,7 +501,7 @@ const internalProxyHost = {
 		}
 
 		// Query is used for searching
-		if (typeof search_query === "string") {
+		if (typeof search_query === "string" && search_query !== "") {
 			query.where(function () {
 				this.where("domain_names", "like", `%${search_query}%`);
 			});
@@ -508,7 +511,19 @@ const internalProxyHost = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		const rows = await query;
+		// Pagination
+		let total = 0;
+		if (pagination && pagination.limit) {
+			const countQuery = query.clone().resultSize();
+			total = await countQuery;
+			query.page(pagination.page > 0 ? pagination.page - 1 : 0, pagination.limit);
+		}
+
+		const result = await query;
+		let rows = result;
+		if (pagination && pagination.limit) {
+			rows = result.results;
+		}
 
 		// return rows with count
 		if (rows) {
@@ -520,6 +535,17 @@ const internalProxyHost = {
 				delete row.count;
 				return row;
 			});
+		}
+
+		if (pagination && pagination.limit) {
+			return {
+				data: rows,
+				pagination: {
+					page: pagination.page,
+					limit: pagination.limit,
+					total: total,
+				},
+			};
 		}
 
 		return rows;

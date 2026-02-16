@@ -1,13 +1,16 @@
-import { IconHelp, IconPlus, IconSearch, IconServer } from "@tabler/icons-react";
+import { IconHelp, IconPlus, IconSearch, IconServer, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { deleteProxyHost, toggleProxyHost } from "src/api/backend";
+import type { ProxyHost } from "src/api/backend";
+import type { PaginationResult } from "src/api/backend/getProxyHosts";
 import { HasPermission, LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useProxyHosts } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "src/modals";
@@ -19,11 +22,13 @@ import Table from "./Table";
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
-	const { isFetching, isLoading, isError, error, data } = useProxyHosts([
-		"owner",
-		"access_list",
-		AUDIT_LOG_OBJECT_TYPE.CERTIFICATE,
-	]);
+	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(10);
+
+	const { isFetching, isLoading, isError, error, data } = useProxyHosts(
+		["owner", "access_list", AUDIT_LOG_OBJECT_TYPE.CERTIFICATE],
+		{ page, limit, query: search },
+	);
 
 	if (isLoading) {
 		return <LoadingPage />;
@@ -51,18 +56,17 @@ export default function TableWrapper() {
 		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
 	};
 
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter(
-			(item) =>
-				item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
-				item.forwardHost.toLowerCase().includes(search) ||
-				`${item.forwardPort}`.includes(search),
-		);
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
-	}
+	// Helper to check if data is paginated
+	const isPaginated = (d: any): d is PaginationResult<ProxyHost> => {
+		return d && typeof d === "object" && "pagination" in d && "data" in d;
+	};
+
+	const listData = isPaginated(data) ? data.data : (data as ProxyHost[]) || [];
+	const pagination = isPaginated(data)
+		? data.pagination
+		: { page: 1, limit: listData.length, total: listData.length };
+
+	const totalPages = Math.ceil(pagination.total / limit);
 
 	return (
 		<Card className="mt-4 border-t-4 border-lime-500/50">
@@ -72,37 +76,37 @@ export default function TableWrapper() {
 					<T id="proxy-hosts" />
 				</CardTitle>
 				<div className="flex items-center space-x-2">
-					{data?.length ? (
-						<div className="relative w-full max-w-sm">
-							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-							<Input
-								type="search"
-								placeholder={intl.formatMessage({ id: "search.placeholder" })}
-								className="pl-8 h-9"
-								onChange={(e) => setSearch(e.target.value.toLowerCase().trim())}
-							/>
-						</div>
-					) : null}
+					<div className="relative w-full max-w-sm">
+						<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+						<Input
+							type="search"
+							placeholder={intl.formatMessage({ id: "search.placeholder" })}
+							className="pl-8 h-9"
+							value={search}
+							onChange={(e) => {
+								setSearch(e.target.value);
+								setPage(1); // Reset to page 1 on search
+							}}
+						/>
+					</div>
 					<Button variant="outline" size="icon" onClick={() => showHelpModal("ProxyHosts", "lime")}>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
-						{data?.length ? (
-							<Button
-								size="sm"
-								className="bg-lime-600/90 hover:bg-lime-600 text-white shadow-sm"
-								onClick={() => showProxyHostModal("new")}
-							>
-								<IconPlus className="mr-2 h-4 w-4" />
-								<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
-							</Button>
-						) : null}
+						<Button
+							size="sm"
+							className="bg-lime-600/90 hover:bg-lime-600 text-white shadow-sm"
+							onClick={() => showProxyHostModal("new")}
+						>
+							<IconPlus className="mr-2 h-4 w-4" />
+							<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
+						</Button>
 					</HasPermission>
 				</div>
 			</CardHeader>
 			<CardContent>
 				<Table
-					data={filtered ?? data ?? []}
+					data={listData}
 					isFiltered={!!search}
 					isFetching={isFetching}
 					onEdit={(id: number) => showProxyHostModal(id)}
@@ -119,6 +123,59 @@ export default function TableWrapper() {
 					onDisableToggle={handleDisableToggle}
 					onNew={() => showProxyHostModal("new")}
 				/>
+
+				{/* Pagination Controls */}
+				<div className="flex items-center justify-between mt-4">
+					<div className="flex items-center space-x-2 text-sm text-muted-foreground">
+						<span>
+							Showing {pagination.page * pagination.limit - pagination.limit + 1}-
+							{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+						</span>
+						<Select
+							value={`${limit}`}
+							onValueChange={(val) => {
+								setLimit(Number(val));
+								setPage(1);
+							}}
+						>
+							<SelectTrigger className="h-8 w-[70px]">
+								<SelectValue placeholder={limit} />
+							</SelectTrigger>
+							<SelectContent side="top">
+								{[10, 25, 50, 100].map((pageSize) => (
+									<SelectItem key={pageSize} value={`${pageSize}`}>
+										{pageSize}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<span>per page</span>
+					</div>
+
+					<div className="flex items-center space-x-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage((p) => Math.max(1, p - 1))}
+							disabled={page === 1 || isLoading}
+						>
+							<IconChevronLeft className="h-4 w-4" />
+							Previous
+						</Button>
+						<div className="text-sm font-medium">
+							Page {page} of {totalPages || 1}
+						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+							disabled={page === totalPages || isLoading}
+						>
+							Next
+							<IconChevronRight className="h-4 w-4" />
+						</Button>
+					</div>
+				</div>
 			</CardContent>
 		</Card>
 	);

@@ -14,6 +14,21 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Helper for checksum verification
+verify_file() {
+    local file="$1"
+    local expected_hash="$2"
+    local file_hash=$(sha256sum "$file" | awk '{print $1}')
+
+    if [ "$file_hash" != "$expected_hash" ]; then
+        echo "ERROR: Checksum mismatch for $file"
+        echo "Expected: $expected_hash"
+        echo "Got:      $file_hash"
+        exit 1
+    fi
+    echo "  > Checksum verified for $(basename "$file")"
+}
+
 # 1. User Creation (Skipped - Running as root)
 # echo ">>> Creating 'shieldpm' user..."
 # if ! id "shieldpm" &>/dev/null; then
@@ -313,7 +328,10 @@ ACQUIS_EOF
     mkdir -p /etc/crowdsec/collections/
     
     wget -q -O /etc/crowdsec/parsers/s01-parse/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/parser.yaml
+    verify_file "/etc/crowdsec/parsers/s01-parse/shieldpm.yaml" "6f93b5b8d1610f45d3a42c2681105eb964fa781f2fe2c543ddcca292dfecbda9"
+
     wget -q -O /etc/crowdsec/collections/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/collection.yaml
+    verify_file "/etc/crowdsec/collections/shieldpm.yaml" "4b79dcce738a20debffb6448dd20021f1d245497d509c7d6bb7135c46db2b345"
 
     echo "  > Installed ShieldPM parser & collection"
 
@@ -374,8 +392,17 @@ if [[ "$geoip_choice" =~ ^[Yy]$ ]]; then
         # Fallback: direct download if PPA not available
         echo "  > PPA not available, trying direct install..."
         ARCH=$(dpkg --print-architecture)
-        GEOIP_URL="https://github.com/maxmind/geoipupdate/releases/latest/download/geoipupdate_7.1.0_linux_${ARCH}.deb"
+        # Pin to specific version for security
+        GEOIP_VERSION="7.1.0"
+        GEOIP_URL="https://github.com/maxmind/geoipupdate/releases/download/v${GEOIP_VERSION}/geoipupdate_${GEOIP_VERSION}_linux_${ARCH}.deb"
+
         curl -L -o /tmp/geoipupdate.deb "$GEOIP_URL" 2>/dev/null
+
+        # Verify checksum for amd64 only (since we only calc'd that one)
+        if [ "$ARCH" == "amd64" ]; then
+            verify_file "/tmp/geoipupdate.deb" "2c91d4ca4b16c8339b3285041cfac80fba19e27de6233cea230cde809e968c99"
+        fi
+
         dpkg -i /tmp/geoipupdate.deb 2>/dev/null || apt-get install -f -y
         rm -f /tmp/geoipupdate.deb
     }
@@ -429,7 +456,9 @@ read -r -p "Install OpenAppSec Agent? [y/N] (Default: N): " oas_choice
 if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
     echo "--> Downloading OpenAppSec installer..."
     cd /tmp
-    wget -q https://downloads.openappsec.io/open-appsec-install && chmod +x open-appsec-install
+    wget -q https://downloads.openappsec.io/open-appsec-install
+    verify_file "open-appsec-install" "e821f1999be54bb9171f1723dcc9b9277c83be5122ecff33497957c03d5cfe8f"
+    chmod +x open-appsec-install
 
     # Ask about cloud portal
     echo ""

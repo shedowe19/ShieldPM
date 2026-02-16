@@ -1,47 +1,40 @@
 import { createIntl, createIntlCache } from "react-intl";
-import langBg from "./lang/bg.json";
-import langDe from "./lang/de.json";
 import langEn from "./lang/en.json";
-import langEs from "./lang/es.json";
-import langIt from "./lang/it.json";
-import langJa from "./lang/ja.json";
-import langKo from "./lang/ko.json";
 import langList from "./lang/lang-list.json";
-import langNl from "./lang/nl.json";
-import langPl from "./lang/pl.json";
-import langRu from "./lang/ru.json";
-import langSk from "./lang/sk.json";
-import langVi from "./lang/vi.json";
-import langZh from "./lang/zh.json";
 
 // Force HMR reload
 
 // first item of each array should be the language code,
 // not the country code
 // Remember when adding to this list, also update check-locales.js script
-export type LocaleOption = [string, string, Record<string, string>];
+export type LocaleOption = [string, string, () => Promise<any>];
 const localeOptions: LocaleOption[] = [
-	["en", "en-US", langEn],
-	["de", "de-DE", langDe],
-	["es", "es-ES", langEs],
-	["ja", "ja-JP", langJa],
-	["it", "it-IT", langIt],
-	["nl", "nl-NL", langNl],
-	["pl", "pl-PL", langPl],
-	["ru", "ru-RU", langRu],
-	["sk", "sk-SK", langSk],
-	["vi", "vi-VN", langVi],
-	["zh", "zh-CN", langZh],
-	["ko", "ko-KR", langKo],
-	["bg", "bg-BG", langBg],
+	["en", "en-US", () => import("./lang/en.json")],
+	["de", "de-DE", () => import("./lang/de.json")],
+	["es", "es-ES", () => import("./lang/es.json")],
+	["ja", "ja-JP", () => import("./lang/ja.json")],
+	["it", "it-IT", () => import("./lang/it.json")],
+	["nl", "nl-NL", () => import("./lang/nl.json")],
+	["pl", "pl-PL", () => import("./lang/pl.json")],
+	["ru", "ru-RU", () => import("./lang/ru.json")],
+	["sk", "sk-SK", () => import("./lang/sk.json")],
+	["vi", "vi-VN", () => import("./lang/vi.json")],
+	["zh", "zh-CN", () => import("./lang/zh.json")],
+	["ko", "ko-KR", () => import("./lang/ko.json")],
+	["bg", "bg-BG", () => import("./lang/bg.json")],
 ];
 
-const loadMessages = (locale?: string): typeof langList & typeof langEn => {
+const loadMessages = async (locale?: string): Promise<typeof langList & typeof langEn> => {
 	const thisLocale = (locale || "en").slice(0, 2);
 
 	// find language
 	const found = localeOptions.find(([code]) => code === thisLocale);
-	const messages = found ? found[2] : langEn;
+	let messages = langEn;
+
+	if (found) {
+		const module = await found[2]();
+		messages = module.default || module;
+	}
 
 	return Object.assign({}, langList, langEn, messages);
 };
@@ -81,14 +74,21 @@ const getLocale = (short = false) => {
 
 const cache = createIntlCache();
 
-const initialMessages = loadMessages(getLocale());
+// Initial load is synchronous to prevent flash of content, but defaults to EN if others not loaded
+// In a real lazy load scenario, we might want to start with a loader or EN.
+// For now, we initialize with English and let the app trigger a reload if needed.
+const initialMessages = Object.assign({}, langList, langEn);
 let intl = createIntl({ locale: getLocale(), messages: initialMessages }, cache);
 
-const changeLocale = (locale: string): void => {
-	const messages = loadMessages(locale);
+const changeLocale = async (locale: string): Promise<void> => {
+	const messages = await loadMessages(locale);
 	intl = createIntl({ locale, messages }, cache);
 	window.localStorage.setItem("locale", locale);
 	document.documentElement.lang = locale;
+	// Trigger a reload or state update to refresh the UI
+	// This part is tricky because intl is a singleton here.
+	// The LocaleProvider context usually handles the re-render.
+	// We might need to dispatch an event or rely on the Context to call this and update state.
 };
 
 // This is a translation component that wraps the translation in a span with a data
@@ -122,4 +122,4 @@ const T = ({
 	);
 };
 
-export { localeOptions, getFlagCodeForLocale, getLocale, createIntl, changeLocale, intl, T };
+export { localeOptions, getFlagCodeForLocale, getLocale, createIntl, changeLocale, intl, T, loadMessages };

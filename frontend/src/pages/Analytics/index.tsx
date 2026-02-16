@@ -43,8 +43,16 @@ const pulseStyle = `
 }
 `;
 
+import type { ProxyHost } from "src/api/backend";
+import type { PaginationResult } from "src/api/backend/getProxyHosts";
+
 const Analytics = () => {
-	const { data: hosts, isLoading: hostsLoading } = useProxyHosts();
+	const { data: hostsData, isLoading: hostsLoading } = useProxyHosts();
+	// Helper to handle pagination result vs array
+	const hosts = (hostsData && "data" in hostsData
+		? (hostsData as PaginationResult<ProxyHost>).data
+		: (hostsData as ProxyHost[])) || [];
+
 	const [selectedHostId, setSelectedHostId] = useState<string>("");
 	const [range, setRange] = useState("24h");
 	const [summary, setSummary] = useState<AnalyticsSummary | null>(null);

@@ -40,14 +40,29 @@ router
 						query: {
 							$ref: "common#/properties/query",
 						},
+						page: {
+							type: "integer",
+							minimum: 1,
+						},
+						limit: {
+							type: "integer",
+							minimum: 1,
+							maximum: 100,
+						},
 					},
 				},
 				{
 					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 					query: typeof req.query.query === "string" ? req.query.query : null,
+					page: req.query.page ? Number.parseInt(req.query.page, 10) : undefined,
+					limit: req.query.limit ? Number.parseInt(req.query.limit, 10) : undefined,
 				},
 			);
-			const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query);
+			const pagination = {
+				page: data.page,
+				limit: data.limit,
+			};
+			const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query, pagination);
 			res.status(200).send(rows);
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
