@@ -238,65 +238,8 @@ export default function (tokenString) {
 
 			try {
 				await this.init();
-				const objectSchema = await this.getObjectSchema(permission);
 
-				const dataSchema = {
-					[permission]: {
-						data: data,
-						scope: Token.get("scope"),
-						roles: userRoles,
-						permission_visibility: permissions.visibility,
-						permission_proxy_hosts: permissions.proxy_hosts,
-						permission_redirection_hosts: permissions.redirection_hosts,
-						permission_dead_hosts: permissions.dead_hosts,
-						permission_streams: permissions.streams,
-						permission_access_lists: permissions.access_lists,
-						permission_certificates: permissions.certificates,
-					},
-				};
-
-				const permissionSchema = {
-					$async: true,
-					$id: "permissions",
-					type: "object",
-					additionalProperties: false,
-					properties: {},
-				};
-
-				if (!permissionSchemaCache[permission]) {
-					const rawData = await fs.readFile(
-						`${__dirname}/access/${permission.replace(/:/gim, "-")}.json`,
-						"utf8",
-					);
-					permissionSchemaCache[permission] = JSON.parse(rawData);
-				}
-
-				permissionSchema.properties[permission] = permissionSchemaCache[permission];
-
-				// Reuse global Ajv instance but compile only the necessary request-specific schemas if not already present.
-				// However, 'objectSchema' is dynamic per request (depends on user context), so we can't cache it easily globally without leaking.
-				// But we can validate against a dynamically assembled schema using the pre-loaded ones.
-
-				// Actually, Ajv instances are heavy. Creating one per request is bad.
-				// We can add the dynamic schemas to the instance with a unique ID, validate, and then remove them?
-				// Or better: use `validate` method with the schema object directly, passing the others as refs.
-				// BUT `ajv.validate` compiles the schema. If we pass a new schema object every time, it compiles every time.
-				// The `permissionSchema` is relatively static per permission type.
-				// The `objectSchema` depends on the user's data.
-
-				// Strategy:
-				// 1. permissions.json and roles.json are static -> Loaded globally.
-				// 2. permission-specific json (e.g. proxy_hosts-create.json) is static -> Cache and add to global Ajv.
-				// 3. objectSchema is dynamic -> Pass as a definition or validate against it?
-
-				// Let's refactor to avoid `new Ajv()`
-				// We need to verify if we can pass schemas at validation time or if they must be added.
-				// With `ajv`, `validate(schema, data)` compiles `schema`.
-				// `objectSchema` changes every time because of `enum: [Token.get("attrs").id]` and object IDs.
-
-				// If we keep `objectSchema` dynamic, we still pay compilation cost, but at least we save instantiation cost.
-
-				// Reusing global Ajv instance by generating unique schema IDs for this request
+				// Reuse global Ajv instance by generating unique schema IDs for this request
 				// to avoid collisions with concurrent requests.
 				const runId = Math.random().toString(36).substring(7);
 				const objectSchemaId = `objects_${runId}`;
@@ -337,7 +280,10 @@ export default function (tokenString) {
 				// We need to be careful not to replace other things.
 				// Quotes are important: "objects" -> "objects_ID"
 				// Refs usually look like: "$ref": "objects#/properties/..."
-				const patchedPermissionJson = permissionSchemaCache[permission].replaceAll('"objects', `"${objectSchemaId}`);
+				const patchedPermissionJson = permissionSchemaCache[permission].replaceAll(
+					'"objects',
+					`"${objectSchemaId}`,
+				);
 
 				const permissionSchemaPart = JSON.parse(patchedPermissionJson);
 
@@ -347,7 +293,7 @@ export default function (tokenString) {
 					type: "object",
 					additionalProperties: false,
 					properties: {
-						[permission]: permissionSchemaPart
+						[permission]: permissionSchemaPart,
 					},
 				};
 
