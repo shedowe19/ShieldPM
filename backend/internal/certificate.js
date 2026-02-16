@@ -1,3 +1,4 @@
+import { X509Certificate } from "node:crypto";
 import fs from "node:fs";
 import path from "path";
 import archiver from "archiver";
@@ -701,8 +702,7 @@ const internalCertificate = {
 	},
 
 	/**
-	 * Uses the openssl command to both validate and get info out of the certificate.
-	 * It will save the file to disk first, then run commands on it, then delete the file.
+	 * Uses Node.js crypto.X509Certificate to validate and get info out of the certificate.
 	 *
 	 * @param {String}  certificateFile The file location on disk
 	 * @param {Boolean} [throw_expired]  Throw when the certificate is out of date
@@ -711,55 +711,27 @@ const internalCertificate = {
 		const certData = {};
 
 		try {
-			const result = await utils.execFile("openssl", ["x509", "-in", certificateFile, "-subject", "-noout"]);
-			// Examples:
-			// subject=CN = *.shieldpm.eu
-			// subject=CN = something.example.com
-			const regex = /(?:subject=)?[^=]+=\s*(\S+)/gim;
-			const match = regex.exec(result);
-			if (match && typeof match[1] !== "undefined") {
-				certData.cn = match[1];
+			const certContent = await fs.promises.readFile(certificateFile);
+			const x509 = new X509Certificate(certContent);
+
+			// Extract Common Name (CN) from Subject
+			// subject looks like: "CN=*.shieldpm.eu" or "CN=example.com\nO=Org"
+			const subject = x509.subject;
+			const subjectMatch = subject.match(/CN=([^,\n]+)/);
+			if (subjectMatch && subjectMatch[1]) {
+				certData.cn = subjectMatch[1];
+			} else {
+				// Fallback to full subject if no CN found (rare)
+				certData.cn = subject;
 			}
 
-			const result2 = await utils.execFile("openssl", ["x509", "-in", certificateFile, "-issuer", "-noout"]);
-			// Examples:
-			// issuer=C = US, O = Let's Encrypt, CN = Let's Encrypt Authority X3
-			// issuer=C = US, O = Let's Encrypt, CN = E5
-			// issuer=O = NginxProxyManager, CN = NginxProxyManager Intermediate CA","O = NginxProxyManager, CN = NginxProxyManager Intermediate CA
-			const regex2 = /^(?:issuer=)?(.*)$/gim;
-			const match2 = regex2.exec(result2);
-			if (match2 && typeof match2[1] !== "undefined") {
-				certData.issuer = match2[1];
-			}
+			// Extract Issuer
+			// issuer looks like: "C=US\nO=Let's Encrypt\nCN=R3"
+			// Legacy logic expected a single line string mostly, let's normalize.
+			certData.issuer = x509.issuer.replace(/\n/g, ", ");
 
-			const result3 = await utils.execFile("openssl", ["x509", "-in", certificateFile, "-dates", "-noout"]);
-			// notBefore=Jul 14 04:04:29 2018 GMT
-			// notAfter=Oct 12 04:04:29 2018 GMT
-			let validFrom = null;
-			let validTo = null;
-
-			const lines = result3.split("\n");
-			lines.map((str) => {
-				const regex = /^(\S+)=(.*)$/gim;
-				const match = regex.exec(str.trim());
-
-				if (match && typeof match[2] !== "undefined") {
-					// Use dayjs to parse the date
-					const dateString = match[2].replace(/\s+/g, " ");
-					const date = dayjs(dateString, "MMM D HH:mm:ss YYYY z").unix();
-
-					if (match[1].toLowerCase() === "notbefore") {
-						validFrom = date;
-					} else if (match[1].toLowerCase() === "notafter") {
-						validTo = date;
-					}
-				}
-				return true;
-			});
-
-			if (!validFrom || !validTo) {
-				throw new error.ValidationError(`Could not determine dates from certificate: ${result3}`);
-			}
+			const validFrom = dayjs(x509.validFrom).unix();
+			const validTo = dayjs(x509.validTo).unix();
 
 			if (throw_expired && validTo < dayjs().unix()) {
 				throw new error.ValidationError("Certificate has expired");
