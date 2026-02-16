@@ -1,4 +1,5 @@
 import internalProxyHost from "../../proxy-host.js";
+import { validateDemoModeHost } from "../validation.js";
 
 export const get_proxy_hosts = async (access, args) => {
 	const hosts = await internalProxyHost.getAll(access, [], "");
@@ -16,6 +17,9 @@ export const get_proxy_hosts = async (access, args) => {
 };
 
 export const create_proxy_host = async (access, args) => {
+	// Validate Demo Mode restrictions
+	validateDemoModeHost(args);
+
 	// Certificate handling
 	let certId = 0;
 	let meta = {};
@@ -45,6 +49,9 @@ export const create_proxy_host = async (access, args) => {
 };
 
 export const update_proxy_host = async (access, args) => {
+	// Validate Demo Mode restrictions
+	validateDemoModeHost(args);
+
 	await internalProxyHost.update(access, { id: args.id, ...args });
 	return `Updated Proxy Host ID: ${args.id}`;
 };

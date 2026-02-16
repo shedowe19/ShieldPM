@@ -1,4 +1,5 @@
 import internalStream from "../../stream.js";
+import { validateDemoModeHost } from "../validation.js";
 
 export const get_streams = async (access, args) => {
 	const streams = await internalStream.getAll(access);
@@ -16,6 +17,9 @@ export const get_streams = async (access, args) => {
 };
 
 export const create_stream = async (access, args) => {
+	// Validate Demo Mode restrictions
+	validateDemoModeHost(args);
+
 	const newStream = await internalStream.create(access, {
 		certificate_id: 0,
 		meta: {},
@@ -25,6 +29,9 @@ export const create_stream = async (access, args) => {
 };
 
 export const update_stream = async (access, args) => {
+	// Validate Demo Mode restrictions
+	validateDemoModeHost(args);
+
 	await internalStream.update(access, { id: args.id, ...args });
 	return `Updated Stream ID: ${args.id}`;
 };

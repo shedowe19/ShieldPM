@@ -1,4 +1,5 @@
 import internalRedirectionHost from "../../redirection-host.js";
+import { validateDemoModeHost } from "../validation.js";
 
 export const get_redirection_hosts = async (access, args) => {
 	const hosts = await internalRedirectionHost.getAll(access);
@@ -15,6 +16,9 @@ export const get_redirection_hosts = async (access, args) => {
 };
 
 export const create_redirection_host = async (access, args) => {
+	// Validate Demo Mode restrictions
+	validateDemoModeHost(args);
+
 	let certId = 0;
 	let meta = {};
 
@@ -42,6 +46,9 @@ export const create_redirection_host = async (access, args) => {
 };
 
 export const update_redirection_host = async (access, args) => {
+	// Validate Demo Mode restrictions
+	validateDemoModeHost(args);
+
 	await internalRedirectionHost.update(access, { id: args.id, ...args });
 	return `Updated Redirection Host ID: ${args.id}`;
 };

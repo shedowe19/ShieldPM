@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import EasyModal from "ez-modal-react";
+import { lazy, Suspense } from "react";
 import { RawIntlProvider } from "react-intl";
+import { LoadingPage } from "src/components";
 import { AuthProvider, LocaleProvider, ThemeProvider } from "src/context";
 import { intl } from "src/locale";
-import Router from "src/Router.tsx";
 import { Toaster } from "@/components/ui/toaster";
+
+const Router = lazy(() => import("src/Router.tsx"));
 
 // Create a client
 const queryClient = new QueryClient();
@@ -18,7 +21,9 @@ function App() {
 					<QueryClientProvider client={queryClient}>
 						<AuthProvider>
 							<EasyModal.Provider>
-								<Router />
+								<Suspense fallback={<LoadingPage />}>
+									<Router />
+								</Suspense>
 							</EasyModal.Provider>
 							<Toaster />
 						</AuthProvider>

@@ -512,17 +512,20 @@ const internalProxyHost = {
 		}
 
 		// Pagination
-		let total = 0;
 		if (pagination && pagination.limit) {
-			const countQuery = query.clone().resultSize();
-			total = await countQuery;
 			query.page(pagination.page > 0 ? pagination.page - 1 : 0, pagination.limit);
 		}
 
 		const result = await query;
 		let rows = result;
+		let total = 0;
+
 		if (pagination && pagination.limit) {
 			rows = result.results;
+			total = result.total;
+		} else {
+			rows = result;
+			total = rows.length;
 		}
 
 		// return rows with count
