@@ -49,9 +49,10 @@ import type { PaginationResult } from "src/api/backend/getProxyHosts";
 const Analytics = () => {
 	const { data: hostsData, isLoading: hostsLoading } = useProxyHosts();
 	// Helper to handle pagination result vs array
-	const hosts = (hostsData && "data" in hostsData
-		? (hostsData as PaginationResult<ProxyHost>).data
-		: (hostsData as ProxyHost[])) || [];
+	const hosts =
+		(hostsData && "data" in hostsData
+			? (hostsData as PaginationResult<ProxyHost>).data
+			: (hostsData as ProxyHost[])) || [];
 
 	const [selectedHostId, setSelectedHostId] = useState<string>("");
 	const [range, setRange] = useState("24h");
