@@ -1,6 +1,5 @@
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-import { RawIntlProvider } from "react-intl";
-import { changeLocale, getLocale, intl } from "src/locale";
+import { createContext, type ReactNode, useContext, useState } from "react";
+import { getLocale } from "src/locale";
 
 // Context
 export interface LocaleContextType {
@@ -17,31 +16,14 @@ interface Props {
 }
 function LocaleProvider({ children }: Props) {
 	const [locale, setLocaleValue] = useState(getLocale());
-	// We use this state to trigger re-renders when messages load
-	const [, setMessages] = useState(intl.messages);
 
-	// Load messages on mount and change
-	useEffect(() => {
-		const load = async () => {
-			await changeLocale(locale);
-			setMessages(intl.messages);
-		};
-		load();
-	}, [locale]);
-
-	const setLocale = async (newLocale: string) => {
-		setLocaleValue(newLocale);
+	const setLocale = async (locale: string) => {
+		setLocaleValue(locale);
 	};
 
 	const value = { locale, setLocale };
 
-	// We wrap the children in RawIntlProvider here to ensure updates propagate
-	// creating a new intl object is handled in `changeLocale` but we need to pass it down
-	return (
-		<LocaleContext.Provider value={value}>
-			<RawIntlProvider value={intl}>{children}</RawIntlProvider>
-		</LocaleContext.Provider>
-	);
+	return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
 function useLocaleState() {
