@@ -8,7 +8,10 @@ export const get_analytics_summary = async (access, args) => {
 		const counts = await internalReport.getHostsReport(access);
 		return JSON.stringify(counts);
 	}
-	const summary = await internalAnalytics.getHostSummary(args.host_id || args.proxy_host_id, args.range || "24h");
+	const summary = await internalAnalytics.getHostSummary(
+		args.host_id || args.proxy_host_id,
+		args.range || "24h",
+	);
 	return JSON.stringify(summary, null, 2);
 };
 

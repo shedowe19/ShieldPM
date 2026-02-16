@@ -72,7 +72,12 @@ export default function TableWrapper() {
 						</div>
 					) : null}
 
-					<Button disabled={!data} onClick={() => showDdnsProviderModal()}>
+					<Button
+						size="sm"
+						className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
+						disabled={!data}
+						onClick={() => showDdnsProviderModal()}
+					>
 						<IconPlus className="mr-2 h-4 w-4" />
 						<T
 							id="object.add"
