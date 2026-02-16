@@ -18,7 +18,8 @@ fi
 verify_file() {
     local file="$1"
     local expected_hash="$2"
-    local file_hash=$(sha256sum "$file" | awk '{print $1}')
+    local file_hash
+    file_hash=$(sha256sum "$file" | awk '{print $1}')
 
     if [ "$file_hash" != "$expected_hash" ]; then
         echo "ERROR: Checksum mismatch for $file"
