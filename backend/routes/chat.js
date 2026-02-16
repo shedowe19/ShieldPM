@@ -21,13 +21,16 @@ router.get("/", jwtdecode(), async (_req, res, next) => {
 		// NOTE: access.js logic needed to enforce this properly.
 		// For MVP: Return all if admin, specific if user.
 
-		const integrations = await ChatIntegrationModel.query()
-			.where("user_id", res.locals.access.token.getUserId())
-			.orWhere(() => {
-				// If admin, show all? TODO: Add proper Admin check
-				// For now simpler: Users manage THEIR OWN bots.
-			});
+		let query = ChatIntegrationModel.query();
 
+		// Check if user has admin permissions (can list all users implies admin usually)
+		const canManageAll = await res.locals.access.can("users:list");
+
+		if (!canManageAll) {
+			query = query.where("user_id", res.locals.access.token.getUserId());
+		}
+
+		const integrations = await query;
 		res.json(integrations);
 	} catch (err) {
 		next(err);
