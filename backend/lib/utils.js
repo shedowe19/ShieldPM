@@ -14,19 +14,23 @@ const nodeExecFilePromise = promisify(nodeExecFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const writeHash = () => {
-	const envVars = fs.readdirSync(`${__dirname}/../templates`).flatMap((file) => {
-		const content = fs.readFileSync(`${__dirname}/../templates/${file}`, "utf8");
+const writeHash = async () => {
+	const files = await fs.promises.readdir(`${__dirname}/../templates`);
+	const envVarsPromises = files.map(async (file) => {
+		const content = await fs.promises.readFile(`${__dirname}/../templates/${file}`, "utf8");
 		const matches = content.match(/env\.[A-Z0-9_]+/g) || [];
 		return matches.map((match) => match.replace("env.", ""));
 	});
+	const envVarsArrays = await Promise.all(envVarsPromises);
+	const envVars = envVarsArrays.flat();
+
 	const uniqueEnvVars =
 		[...new Set(envVars)]
 			.sort()
 			.map((varName) => process.env[varName])
 			.join("") + process.env.TV;
 	const hash = crypto.createHash("sha512").update(uniqueEnvVars).digest("hex");
-	fs.writeFileSync("/data/shieldpm/env.sha512sum", hash);
+	await fs.promises.writeFile("/data/shieldpm/env.sha512sum", hash);
 };
 
 /**

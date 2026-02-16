@@ -4,15 +4,17 @@
 FROM --platform="$BUILDPLATFORM" debian:trixie-slim AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
-COPY frontend /app
-WORKDIR /app/frontend
+WORKDIR /app
+COPY frontend/package.json frontend/yarn.lock ./
 # hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
     npm install -g yarn && \
     yarn install --production=false && \
-    yarn tsc && \
-    yarn vite build && \
     rm -rf /var/lib/apt/lists/*
+
+COPY frontend .
+RUN yarn tsc && \
+    yarn vite build
 
 
 # ==========================================
@@ -21,8 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
 FROM debian:trixie-slim AS backend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
-COPY backend /app
 WORKDIR /app
+COPY backend/package.json backend/yarn.lock ./
 # hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file && \
     npm install -g yarn && \
@@ -33,6 +35,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     find /app/node_modules -name "*.node" -type f -exec strip -s {} \; && \
     find /app/node_modules -name "*.node" -type f -exec file {} \; && \
     rm -rf /var/lib/apt/lists/*
+
+COPY backend .
 
 
 # ==========================================

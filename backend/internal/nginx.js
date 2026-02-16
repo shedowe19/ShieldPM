@@ -95,7 +95,18 @@ const internalNginx = {
 	/**
 	 * @returns {Promise}
 	 */
-	reload: async () => {
+	reload: _.debounce(async () => {
+		try {
+			await internalNginx._reload();
+		} catch (err) {
+			logger.error(`Nginx reload failed: ${err.message}`);
+		}
+	}, 2000),
+
+	/**
+	 * @returns {Promise}
+	 */
+	_reload: async () => {
 		const promises = [];
 
 		if (process.env.ACME_OCSP_STAPLING === "true") {
