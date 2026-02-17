@@ -26,7 +26,7 @@ export const validateDemoModeHost = (host) => {
 			/^192\.168\./,
 			/^172\.(1[6-9]|2[0-9]|3[0-1])\./,
 			/^localhost$/i,
-			/^::1$/,
+			/^::1$/
 		];
 
 		for (const regex of privateIPs) {
