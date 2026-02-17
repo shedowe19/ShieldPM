@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs from "node:fs/promises";
 import errs from "../lib/error.js";
 import settingModel from "../models/setting.js";
 import internalAuditLog from "./audit-log.js";
@@ -30,7 +30,7 @@ const internalSetting = {
 		if (updatedRow.id === "default-site") {
 			// write the html if we need to
 			if (updatedRow.value === "html") {
-				fs.writeFileSync("/data/html/index.html", updatedRow.meta.html, { encoding: "utf8" });
+				await fs.writeFile("/data/html/index.html", updatedRow.meta.html, { encoding: "utf8" });
 			}
 
 			// Configure nginx

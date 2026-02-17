@@ -4,6 +4,7 @@
  */
 
 import { isDemoMode } from "../../lib/config.js";
+import { global as logger } from "../../logger.js";
 import toolsRegistry from "./tools/index.js";
 
 /**
@@ -58,7 +59,7 @@ export const executeTools = async (access, toolCalls) => {
 			// Add result to list
 			toolResults.push({ name: call.name, result });
 		} catch (err) {
-			console.error(`[AI Executor] Error processing tool ${call.name}:`, err);
+			logger.error(`[AI Executor] Error processing tool ${call.name}:`, err);
 			toolResults.push({ name: call.name, result: `Error: ${err.message}` });
 		}
 	}

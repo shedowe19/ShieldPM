@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs from "node:fs/promises";
 import { createConnection } from "node:net";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
@@ -53,12 +53,14 @@ const sendCommand = (command) => {
  */
 const authenticate = async () => {
 	try {
-		if (!fs.existsSync(torPasswordFile)) {
+		try {
+			await fs.access(torPasswordFile);
+		} catch {
 			logger.warn("Tor control password file not found, Tor may not be running");
 			return false;
 		}
 
-		const password = fs.readFileSync(torPasswordFile, "utf-8").trim();
+		const password = (await fs.readFile(torPasswordFile, "utf-8")).trim();
 		const response = await sendCommand(`AUTHENTICATE "${password}"`);
 
 		if (response.includes("250 OK")) {
@@ -78,11 +80,13 @@ const authenticate = async () => {
  * @returns {Promise<string>}
  */
 const sendAuthenticatedCommand = async (command) => {
-	if (!fs.existsSync(torPasswordFile)) {
+	try {
+		await fs.access(torPasswordFile);
+	} catch {
 		throw new Error("Tor control password file not found");
 	}
 
-	const password = fs.readFileSync(torPasswordFile, "utf-8").trim();
+	const password = (await fs.readFile(torPasswordFile, "utf-8")).trim();
 
 	return new Promise((resolve, reject) => {
 		const socket = createConnection(torControlPort, torControlHost, () => {
