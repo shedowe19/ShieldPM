@@ -66,7 +66,7 @@ export default function TableWrapper() {
 		? data.pagination
 		: { page: 1, limit: listData.length, total: listData.length };
 
-	const totalPages = Math.ceil(pagination.total / limit);
+	const totalPages = Math.ceil(pagination.total / limit) || 1;
 
 	return (
 		<Card className="mt-4 border-t-4 border-lime-500/50">
@@ -128,7 +128,7 @@ export default function TableWrapper() {
 				<div className="flex items-center justify-between mt-4">
 					<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 						<span>
-							Showing {pagination.page * pagination.limit - pagination.limit + 1}-
+							Showing {pagination.total === 0 ? 0 : pagination.page * pagination.limit - pagination.limit + 1}-
 							{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
 						</span>
 						<Select
@@ -169,7 +169,7 @@ export default function TableWrapper() {
 							variant="outline"
 							size="sm"
 							onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-							disabled={page === totalPages || isLoading}
+							disabled={page >= totalPages || isLoading}
 						>
 							Next
 							<IconChevronRight className="h-4 w-4" />
