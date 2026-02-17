@@ -320,6 +320,10 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'shedowe19' }}
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
     steps:
 
       - name: Login to GitHub Container Registry
@@ -342,7 +346,6 @@ jobs:
         if: ${{ needs.prepare.outputs.is_pr == 'true' }}
         with:
           message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
           refresh-message-position: true
 
   # ---------------------------------------------------------
