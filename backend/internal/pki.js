@@ -9,11 +9,39 @@ const rootCaCrt = path.join(internalDir, "root_ca.crt");
 const rootCaSrl = path.join(internalDir, "root_ca.srl");
 
 /**
+ * Check if directory exists
+ * @param {string} dir
+ * @returns {Promise<boolean>}
+ */
+const dirExists = async (dir) => {
+	try {
+		await fs.promises.access(dir);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * Check if file exists
+ * @param {string} file
+ * @returns {Promise<boolean>}
+ */
+const fileExists = async (file) => {
+	try {
+		await fs.promises.access(file);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+/**
  * Ensure the Internal Directory exists
  */
-const ensureDir = () => {
-	if (!fs.existsSync(internalDir)) {
-		fs.mkdirSync(internalDir, { recursive: true });
+const ensureDir = async () => {
+	if (!(await dirExists(internalDir))) {
+		await fs.promises.mkdir(internalDir, { recursive: true });
 	}
 };
 
@@ -22,9 +50,9 @@ const ensureDir = () => {
  * Uses ECDSA P-384 (secp384r1) for key and 10 year validity
  */
 const ensureRootCa = async () => {
-	ensureDir();
+	await ensureDir();
 
-	if (fs.existsSync(rootCaKey) && fs.existsSync(rootCaCrt)) {
+	if ((await fileExists(rootCaKey)) && (await fileExists(rootCaCrt))) {
 		return;
 	}
 
@@ -72,8 +100,8 @@ const ensureRootCa = async () => {
 const createLeadCert = async (data, outDir) => {
 	await ensureRootCa();
 
-	if (!fs.existsSync(outDir)) {
-		fs.mkdirSync(outDir, { recursive: true });
+	if (!(await dirExists(outDir))) {
+		await fs.promises.mkdir(outDir, { recursive: true });
 	}
 
 	const keyPath = path.join(outDir, "privkey.pem");
@@ -114,7 +142,7 @@ keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 subjectAltName = ${sanList}
 `;
-	fs.writeFileSync(configPath, configContent);
+	await fs.promises.writeFile(configPath, configContent);
 
 	await utils.execFile("openssl", [
 		"req",
@@ -152,7 +180,7 @@ subjectAltName = ${sanList}
 		"v3_req",
 	];
 
-	if (!fs.existsSync(rootCaSrl)) {
+	if (!(await fileExists(rootCaSrl))) {
 		signArgs.push("-CAcreateserial");
 		signArgs.push("-CAserial", rootCaSrl);
 	} else {
@@ -163,13 +191,13 @@ subjectAltName = ${sanList}
 
 	// 4. Create Fullchain (Leaf + Root)
 	// This allows clients that trust the Root to trust the Leaf.
-	const leafContent = fs.readFileSync(certPath, "utf8");
-	const rootContent = fs.readFileSync(rootCaCrt, "utf8");
-	fs.writeFileSync(certPath, `${leafContent}\n${rootContent}`);
+	const leafContent = await fs.promises.readFile(certPath, "utf8");
+	const rootContent = await fs.promises.readFile(rootCaCrt, "utf8");
+	await fs.promises.writeFile(certPath, `${leafContent}\n${rootContent}`);
 
 	// Cleanup temp files
-	fs.unlinkSync(csrPath);
-	fs.unlinkSync(configPath);
+	await fs.promises.unlink(csrPath);
+	await fs.promises.unlink(configPath);
 
 	return {
 		fullchain: certPath,
@@ -188,8 +216,8 @@ subjectAltName = ${sanList}
 const createClientCert = async (data, outDir) => {
 	await ensureRootCa();
 
-	if (!fs.existsSync(outDir)) {
-		fs.mkdirSync(outDir, { recursive: true });
+	if (!(await dirExists(outDir))) {
+		await fs.promises.mkdir(outDir, { recursive: true });
 	}
 
 	const keyPath = path.join(outDir, "client.key");
@@ -229,7 +257,7 @@ CN = ${data.common_name}
 keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = clientAuth
 `;
-	fs.writeFileSync(configPath, configContent);
+	await fs.promises.writeFile(configPath, configContent);
 
 	await utils.execFile("openssl", [
 		"req",
@@ -265,7 +293,7 @@ extendedKeyUsage = clientAuth
 		"v3_req",
 	];
 
-	if (!fs.existsSync(rootCaSrl)) {
+	if (!(await fileExists(rootCaSrl))) {
 		signArgs.push("-CAcreateserial");
 		signArgs.push("-CAserial", rootCaSrl);
 	} else {
@@ -294,9 +322,9 @@ extendedKeyUsage = clientAuth
 	// but mostly we just return p12 path and let the caller handle it.
 	// The temp dir is usually specific to this request or a tmp folder.)
 	// For safety, let's remove the raw key immediately.
-	fs.unlinkSync(keyPath);
-	fs.unlinkSync(csrPath);
-	fs.unlinkSync(configPath);
+	await fs.promises.unlink(keyPath);
+	await fs.promises.unlink(csrPath);
+	await fs.promises.unlink(configPath);
 	// We keep certPath temporarily if needed, but p12 has it.
 
 	return p12Path;
@@ -307,7 +335,7 @@ extendedKeyUsage = clientAuth
  */
 const getRootCa = async () => {
 	await ensureRootCa();
-	return fs.readFileSync(rootCaCrt, "utf8");
+	return fs.promises.readFile(rootCaCrt, "utf8");
 };
 
 export default {

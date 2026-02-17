@@ -64,7 +64,7 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 	);
 
 	const credentialsLocation = `/data/certbot-credentials/credentials-${certificate.id}`;
-	fs.writeFileSync(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
+	await fs.promises.writeFile(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
 
 	// Determine the credentials argument - use defined value or fall back to standard pattern
 	const credentialsArg = dnsPlugin.credentials_argument || `dns-${certificate.meta.dns_provider}-credentials`;
@@ -183,7 +183,7 @@ export const revokeCertbot = async (certificate, throwErrors) => {
 			"unspecified",
 			"--delete-after-revoke",
 		]);
-		fs.rmSync(`/data/tls/certbot/live/npm-${certificate.id}.der`, { force: true });
+		await fs.promises.rm(`/data/tls/certbot/live/npm-${certificate.id}.der`, { force: true });
 		logger.info(result);
 		return result;
 	} catch (err) {
@@ -207,8 +207,8 @@ export const testHttpsChallenge = async (access, payload) => {
 	const dataPath = process.env.DATA_PATH || "/data";
 	const testChallengeDir = `${dataPath}/acme-challenge/.well-known/acme-challenge`;
 	const testChallengeFile = `${testChallengeDir}/test-challenge`;
-	fs.mkdirSync(testChallengeDir, { recursive: true });
-	fs.writeFileSync(testChallengeFile, "Success", { encoding: "utf8" });
+	await fs.promises.mkdir(testChallengeDir, { recursive: true });
+	await fs.promises.writeFile(testChallengeFile, "Success", { encoding: "utf8" });
 
 	const results = new Map();
 	for (const domain of payload.domains) {
@@ -216,7 +216,7 @@ export const testHttpsChallenge = async (access, payload) => {
 	}
 
 	// Remove the test challenge file
-	fs.unlinkSync(testChallengeFile);
+	await fs.promises.unlink(testChallengeFile);
 
 	const finalResult = Object.create(null);
 	for (const [domain, result] of results) {
