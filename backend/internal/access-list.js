@@ -507,6 +507,7 @@ const internalAccessList = {
 
 		// 3. generate password for each user
 		if (list.items.length) {
+			let htpasswdContent = "";
 			for (const item of list.items) {
 				if (item.password?.length) {
 					logger.info(`Adding: ${item.username}`);
@@ -519,14 +520,15 @@ const internalAccessList = {
 							finalPass = await bcrypt.hash(item.password, 13);
 						}
 
-						await fs.promises.appendFile(htpasswdFile, `${item.username}:${finalPass}\n`, {
-							encoding: "utf8",
-						});
+						htpasswdContent += `${item.username}:${finalPass}\n`;
 					} catch (err) {
 						logger.error(err);
 						throw err;
 					}
 				}
+			}
+			if (htpasswdContent.length > 0) {
+				await fs.promises.writeFile(htpasswdFile, htpasswdContent, { encoding: "utf8" });
 			}
 		}
 

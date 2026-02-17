@@ -61,11 +61,15 @@ const internalIpRanges = {
 			let ip_ranges = [];
 
 			try {
-				const cloudflare_v4_data = await internalIpRanges.fetchUrl(CLOUDFARE_V4_URL);
+				// Fetch both lists in parallel
+				const [cloudflare_v4_data, cloudflare_v6_data] = await Promise.all([
+					internalIpRanges.fetchUrl(CLOUDFARE_V4_URL),
+					internalIpRanges.fetchUrl(CLOUDFARE_V6_URL),
+				]);
+
 				const items_v4 = cloudflare_v4_data.split("\n").filter((line) => regIpV4.test(line));
 				ip_ranges = [...ip_ranges, ...items_v4];
 
-				const cloudflare_v6_data = await internalIpRanges.fetchUrl(CLOUDFARE_V6_URL);
 				const items_v6 = cloudflare_v6_data.split("\n").filter((line) => regIpV6.test(line));
 				ip_ranges = [...ip_ranges, ...items_v6];
 

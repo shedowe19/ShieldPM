@@ -450,13 +450,12 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	bulkGenerateConfigs: async (model, hostType, hosts) => {
-		const promises = [];
-		hosts.map((host) => {
-			promises.push(internalNginx.configure(model, hostType, host, { skip_reload: true }));
-			return true;
-		});
-
-		await Promise.all(promises);
+		// Use pMap to limit concurrency and avoid EMFILE errors
+		await utils.pMap(
+			hosts,
+			(host) => internalNginx.configure(model, hostType, host, { skip_reload: true }),
+			20,
+		);
 	},
 
 	/**

@@ -108,4 +108,24 @@ const getRenderEngine = () => {
 	return renderEngine;
 };
 
-export default { writeHash, execFile, omitRow, omitRows, getRenderEngine };
+/**
+ * Async map with concurrency limit
+ * @template T, U
+ * @param {T[]} array
+ * @param {(item: T, index: number) => Promise<U>} mapper
+ * @param {number} concurrency
+ * @returns {Promise<U[]>}
+ */
+const pMap = async (array, mapper, concurrency) => {
+	const results = new Array(array.length);
+	const iterator = array.entries();
+	const workers = new Array(Math.min(concurrency, array.length)).fill(iterator).map(async (iter) => {
+		for (const [index, item] of iter) {
+			results[index] = await mapper(item, index);
+		}
+	});
+	await Promise.all(workers);
+	return results;
+};
+
+export default { writeHash, execFile, omitRow, omitRows, getRenderEngine, pMap };
