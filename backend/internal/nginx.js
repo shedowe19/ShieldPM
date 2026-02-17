@@ -451,11 +451,7 @@ const internalNginx = {
 	 */
 	bulkGenerateConfigs: async (model, hostType, hosts) => {
 		// Use pMap to limit concurrency and avoid EMFILE errors
-		await utils.pMap(
-			hosts,
-			(host) => internalNginx.configure(model, hostType, host, { skip_reload: true }),
-			20,
-		);
+		await utils.pMap(hosts, (host) => internalNginx.configure(model, hostType, host, { skip_reload: true }), 20);
 	},
 
 	/**
