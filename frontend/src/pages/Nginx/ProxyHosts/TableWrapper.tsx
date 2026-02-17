@@ -128,8 +128,7 @@ export default function TableWrapper() {
 				<div className="flex items-center justify-between mt-4">
 					<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 						<span>
-							Showing{" "}
-							{pagination.total === 0 ? 0 : pagination.page * pagination.limit - pagination.limit + 1}-
+							Showing {pagination.total === 0 ? 0 : pagination.page * pagination.limit - pagination.limit + 1}-
 							{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
 						</span>
 						<Select
