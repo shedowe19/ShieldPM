@@ -45,7 +45,10 @@ const AnubisRulesField = () => {
 						)}
 						{rules.map((rule, index) => (
 							// Biome ignore lint/suspicious/noArrayIndexKey: Rules don't have IDs yet, using index + path as stable-ish key for editing
-							<div key={`${index}-${rule.path}`} className="flex gap-2 items-start p-2 border rounded bg-background/50">
+							<div
+								key={`${index}-${rule.path}`}
+								className="flex gap-2 items-start p-2 border rounded bg-background/50"
+							>
 								<div className="grid grid-cols-12 gap-2 flex-1">
 									<div className="col-span-4">
 										<Input
