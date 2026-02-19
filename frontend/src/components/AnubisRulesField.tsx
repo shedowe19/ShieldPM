@@ -40,8 +40,7 @@ const AnubisRulesField = () => {
 					<div className="space-y-3">
 						{rules.length === 0 && (
 							<p className="text-sm text-muted-foreground text-center py-4">
-								No custom rules defined. Anubis will only use its baseline
-								protection.
+								No custom rules defined. Anubis will only use its baseline protection.
 							</p>
 						)}
 						{rules.map((rule, index) => (

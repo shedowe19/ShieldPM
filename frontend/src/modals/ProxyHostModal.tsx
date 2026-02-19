@@ -56,7 +56,8 @@ const DEFAULT_ANUBIS_RULES = [
 	{
 		path: ".*",
 		action: "DENY",
-		user_agent: "(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
+		user_agent:
+			"(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
 	},
 ];
 
@@ -1093,7 +1094,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</p>
 													</div>
 													<Field name="anubisEnabled" type="checkbox">
-														{({ field, form }: FieldProps<boolean, ProxyHostFormValues>) => (
+														{({
+															field,
+															form,
+														}: FieldProps<boolean, ProxyHostFormValues>) => (
 															<Switch
 																id="anubisEnabled"
 																checked={field.checked}
