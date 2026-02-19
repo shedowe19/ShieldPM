@@ -23,10 +23,7 @@ const AnubisRulesField = () => {
 					variant="outline"
 					size="sm"
 					onClick={() => {
-						setFieldValue("anubisRules", [
-							...rules,
-							{ path: "^/admin/.*", action: "DENY", userAgent: "" },
-						]);
+						setFieldValue("anubisRules", [...rules, { path: "^/admin/.*", action: "DENY", userAgent: "" }]);
 					}}
 				>
 					<IconPlus className="h-4 w-4 mr-2" />

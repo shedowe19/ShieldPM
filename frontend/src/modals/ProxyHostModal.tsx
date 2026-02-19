@@ -56,7 +56,8 @@ const DEFAULT_ANUBIS_RULES = [
 	{
 		path: ".*",
 		action: "DENY",
-		userAgent: "(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
+		userAgent:
+			"(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
 	},
 ];
 
