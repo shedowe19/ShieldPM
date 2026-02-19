@@ -447,7 +447,7 @@ if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
     curl -L -o /tmp/anubis.tar.gz "$URL"
 
     if [ -s /tmp/anubis.tar.gz ]; then
-        tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin anubis
+        tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
         rm /tmp/anubis.tar.gz
         chmod +x /usr/local/bin/anubis
         echo "  > Anubis installed to /usr/local/bin/anubis"
