@@ -10,7 +10,8 @@ const DEFAULT_RULES = [
 	{
 		path: ".*",
 		action: "DENY",
-		user_agent: "(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
+		user_agent:
+			"(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
 		comment: "Block AI Crawlers and Aggressive Scrapers",
 	},
 ];
