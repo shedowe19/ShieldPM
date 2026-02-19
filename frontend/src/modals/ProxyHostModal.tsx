@@ -1,5 +1,13 @@
 // biome-ignore assist/source/organizeImports: <@tabler/icons-react>
-import { IconBolt, IconGitBranch, IconGhost, IconNote, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
+import {
+	IconBolt,
+	IconGitBranch,
+	IconGhost,
+	IconNote,
+	IconSettings,
+	IconShieldLock,
+	IconTool,
+} from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -1069,7 +1077,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															</Label>
 														</div>
 														<p className="text-sm text-muted-foreground">
-															Weighs the soul of incoming HTTP requests to stop AI crawlers
+															Weighs the soul of incoming HTTP requests to stop AI
+															crawlers
 														</p>
 													</div>
 													<Field name="anubisEnabled" type="checkbox">
