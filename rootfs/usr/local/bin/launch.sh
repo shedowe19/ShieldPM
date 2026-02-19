@@ -81,6 +81,7 @@ fi
 if [ "${ANUBIS_ENABLED:-true}" = "true" ] && command -v anubis >/dev/null 2>&1; then
     echo "Starting Anubis..."
     mkdir -p /run/anubis
+    mkdir -p /run/nginx
     mkdir -p /data/anubis
 
     ANUBIS_ARGS="-bind unix:///run/anubis/nginx.sock -target unix:///run/nginx/anubis-upstream.sock -socket-mode 0777"
