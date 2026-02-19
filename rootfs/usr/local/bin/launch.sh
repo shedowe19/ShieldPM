@@ -103,6 +103,9 @@ if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
         ANUBIS_ARGS="$ANUBIS_ARGS -policy-fname /data/anubis/policy.json"
     fi
 
+    # Remove stale socket file if it exists
+    rm -f /run/anubis/nginx.sock
+
     # shellcheck disable=SC2086
     $ANUBIS_BIN $ANUBIS_ARGS &
 fi
