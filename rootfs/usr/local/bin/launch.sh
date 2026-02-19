@@ -81,7 +81,21 @@ fi
 if [ "${ANUBIS_ENABLED:-true}" = "true" ] && command -v anubis >/dev/null 2>&1; then
     echo "Starting Anubis..."
     mkdir -p /run/anubis
-    anubis -bind unix:///run/anubis/nginx.sock -target unix:///run/nginx/anubis-upstream.sock -socket-mode 0777 &
+    mkdir -p /data/anubis
+
+    ANUBIS_ARGS="-bind unix:///run/anubis/nginx.sock -target unix:///run/nginx/anubis-upstream.sock -socket-mode 0777"
+
+    # Check for custom policy file
+    if [ -f /data/anubis/policy.yaml ]; then
+        echo "  > Using custom policy: /data/anubis/policy.yaml"
+        ANUBIS_ARGS="$ANUBIS_ARGS -policy-fname /data/anubis/policy.yaml"
+    elif [ -f /data/anubis/policy.json ]; then
+        echo "  > Using custom policy: /data/anubis/policy.json"
+        ANUBIS_ARGS="$ANUBIS_ARGS -policy-fname /data/anubis/policy.json"
+    fi
+
+    # shellcheck disable=SC2086
+    anubis $ANUBIS_ARGS &
 fi
 aio.sh &
 if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; done; fi &

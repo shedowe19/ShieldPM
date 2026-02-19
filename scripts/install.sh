@@ -417,7 +417,54 @@ else
     echo "--> Skipping GeoIP Update (can be installed later)."
 fi
 
-# 13. OpenAppSec WAF (Optional)
+# 13. Anubis AI Firewall (Optional)
+echo ""
+echo "=== Anubis AI Firewall (Optional) ==="
+echo "Anubis weighs the soul of incoming HTTP requests to stop AI crawlers."
+echo "It runs as a sidecar proxy to filter traffic before it reaches Nginx."
+echo ""
+read -r -p "Install Anubis? [y/N] (Default: N): " anubis_choice
+
+if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
+    echo "--> Installing Anubis..."
+
+    # Detect Architecture
+    ARCH=$(dpkg --print-architecture)
+    # Map Debian arch to Anubis binary naming (linux-amd64, linux-arm64)
+    if [ "$ARCH" = "amd64" ]; then
+        ANUBIS_ARCH="amd64"
+    elif [ "$ARCH" = "arm64" ]; then
+        ANUBIS_ARCH="arm64"
+    else
+        echo "  > Warning: Unsupported architecture $ARCH. Anubis might not work."
+        ANUBIS_ARCH="$ARCH"
+    fi
+
+    VERSION="v1.25.0"
+    URL="https://github.com/TecharoHQ/anubis/releases/download/${VERSION}/anubis-linux-${ANUBIS_ARCH}"
+
+    echo "  > Downloading from $URL..."
+    curl -L -o /usr/local/bin/anubis "$URL"
+
+    if [ -s /usr/local/bin/anubis ]; then
+        chmod +x /usr/local/bin/anubis
+        echo "  > Anubis installed to /usr/local/bin/anubis"
+
+        # Enable in .env
+        if grep -q "ANUBIS_ENABLED" "$ENV_FILE" 2>/dev/null; then
+            sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
+        else
+            echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
+        fi
+        echo "  > Enabled in $ENV_FILE"
+    else
+        echo "  > Download failed!"
+    fi
+else
+    echo "--> Skipping Anubis."
+fi
+
+# 14. OpenAppSec WAF (Optional)
 echo ""
 echo "=== OpenAppSec WAF (Optional) ==="
 echo "OpenAppSec is an AI-based Web Application Firewall (WAF) that protects"
