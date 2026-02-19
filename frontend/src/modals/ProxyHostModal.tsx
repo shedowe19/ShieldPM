@@ -52,6 +52,14 @@ import {
 	AUDIT_LOG_OBJECT_TYPE,
 } from "src/types/enums";
 
+const DEFAULT_ANUBIS_RULES = [
+	{
+		path: ".*",
+		action: "DENY",
+		user_agent: "(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
+	},
+];
+
 const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
 };
@@ -1085,13 +1093,23 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</p>
 													</div>
 													<Field name="anubisEnabled" type="checkbox">
-														{({ field, form }: FieldProps) => (
+														{({ field, form }: FieldProps<boolean, ProxyHostFormValues>) => (
 															<Switch
 																id="anubisEnabled"
 																checked={field.checked}
-																onCheckedChange={(checked: boolean) =>
-																	form.setFieldValue("anubisEnabled", checked)
-																}
+																onCheckedChange={(checked: boolean) => {
+																	form.setFieldValue("anubisEnabled", checked);
+																	if (
+																		checked &&
+																		(!form.values.anubisRules ||
+																			form.values.anubisRules.length === 0)
+																	) {
+																		form.setFieldValue(
+																			"anubisRules",
+																			DEFAULT_ANUBIS_RULES,
+																		);
+																	}
+																}}
 															/>
 														)}
 													</Field>
