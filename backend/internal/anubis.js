@@ -6,6 +6,15 @@ import ProxyHost from "../models/proxy_host.js";
 
 const POLICY_FILE = "/data/anubis/policy.yaml";
 
+const DEFAULT_RULES = [
+	{
+		path: ".*",
+		action: "DENY",
+		user_agent: "(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
+		comment: "Block AI Crawlers and Aggressive Scrapers",
+	},
+];
+
 const internalAnubis = {
 	/**
 	 * Generates the Anubis policy.yaml from database
@@ -33,7 +42,13 @@ const internalAnubis = {
 			// 1. Add Per-Host Rules
 			for (const host of hosts) {
 				// Use bracket notation to avoid TS property check in JS
-				const rules = host["anubis_rules"];
+				let rules = host["anubis_rules"];
+
+				// Use Default Rules if none defined but Anubis is enabled
+				if (!rules || !Array.isArray(rules) || rules.length === 0) {
+					rules = DEFAULT_RULES;
+				}
+
 				if (rules && Array.isArray(rules)) {
 					for (const rule of rules) {
 						if (!rule.path || !rule.action) continue;
