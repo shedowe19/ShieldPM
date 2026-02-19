@@ -21,10 +21,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
 FROM debian:trixie-slim AS backend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
+ARG TARGETARCH
 COPY backend /app
 WORKDIR /app
 # hadolint ignore=DL3016
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file && \
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file curl && \
+    curl -L "https://github.com/TecharoHQ/anubis/releases/download/v1.25.0/anubis-linux-${TARGETARCH}" -o /app/anubis && \
+    chmod +x /app/anubis && \
     npm install -g yarn && \
     yarn install --production=false && \
     yarn cache clean && \
@@ -47,6 +50,7 @@ ENV NODE_ENV=production
 
 # From Backend & Frontend
 COPY --from=backend  /app      /app
+COPY --from=backend  /app/anubis /usr/local/bin/anubis
 COPY --from=frontend /app/dist /html/frontend
 
 # Static Files

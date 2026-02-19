@@ -1,5 +1,5 @@
 // biome-ignore assist/source/organizeImports: <@tabler/icons-react>
-import { IconBolt, IconGitBranch, IconNote, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
+import { IconBolt, IconGitBranch, IconGhost, IconNote, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -57,6 +57,7 @@ interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate"
 	advLimitReqRate?: number | string;
 	advLimitReqBurst?: number | string;
 	crowdsecEnabled?: boolean;
+	anubisEnabled?: boolean;
 	gitCredentials?: string;
 	php_override_ini?: string;
 }
@@ -191,6 +192,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								iconUrl: data?.iconUrl || "",
 								// CrowdSec
 								crowdsecEnabled: data?.securityCrowdsec || false,
+								// Anubis
+								anubisEnabled: data?.anubisEnabled || false,
 								// Note
 								note: data?.note || "",
 							} as ProxyHostFormValues
@@ -1051,6 +1054,31 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																checked={field.checked}
 																onCheckedChange={(checked: boolean) =>
 																	form.setFieldValue("crowdsecEnabled", checked)
+																}
+															/>
+														)}
+													</Field>
+												</div>
+
+												<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+													<div className="space-y-0.5">
+														<div className="flex items-center gap-2">
+															<IconGhost className="h-4 w-4 text-purple-500" />
+															<Label htmlFor="anubisEnabled" className="text-base">
+																Anubis AI Firewall
+															</Label>
+														</div>
+														<p className="text-sm text-muted-foreground">
+															Weighs the soul of incoming HTTP requests to stop AI crawlers
+														</p>
+													</div>
+													<Field name="anubisEnabled" type="checkbox">
+														{({ field, form }: FieldProps) => (
+															<Switch
+																id="anubisEnabled"
+																checked={field.checked}
+																onCheckedChange={(checked: boolean) =>
+																	form.setFieldValue("anubisEnabled", checked)
 																}
 															/>
 														)}

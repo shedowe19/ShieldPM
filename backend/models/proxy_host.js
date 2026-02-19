@@ -29,6 +29,7 @@ const boolFields = [
 	"maintenance_active",
 	"php_enabled",
 	"git_sync_enabled",
+	"anubis_enabled",
 ];
 
 class ProxyHost extends Model {
@@ -72,6 +73,8 @@ class ProxyHost extends Model {
 	hsts_subdomains;
 	/** @type {number} */
 	disable_buffering;
+	/** @type {number} */
+	anubis_enabled;
 	/** @type {number} */
 	maintenance_active;
 	/** @type {number} */

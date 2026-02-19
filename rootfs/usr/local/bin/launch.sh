@@ -78,6 +78,11 @@ if [ "${TOR_ENABLED:-true}" = "true" ] && command -v tor >/dev/null 2>&1; then
     echo "Starting Tor daemon..."
     tor -f /etc/tor/torrc &
 fi
+if [ "${ANUBIS_ENABLED:-true}" = "true" ] && command -v anubis >/dev/null 2>&1; then
+    echo "Starting Anubis..."
+    mkdir -p /run/anubis
+    anubis -bind unix:///run/anubis/nginx.sock -target unix:///run/nginx/anubis-upstream.sock -socket-mode 0777 &
+fi
 aio.sh &
 if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; done; fi &
 if [ "$PHP83" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm8.3 -c /data/php/83 -y /data/php/83/php-fpm.conf -FOR; done; fi &

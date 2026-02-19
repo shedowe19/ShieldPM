@@ -142,6 +142,7 @@ export interface ProxyHost {
 	disableBuffering: boolean;
 	blockExploits: boolean;
 	securityCrowdsec: boolean;
+	anubisEnabled: boolean;
 	advancedConfig: string;
 	bandwidthLimit: string;
 	meta: Record<string, unknown>;
