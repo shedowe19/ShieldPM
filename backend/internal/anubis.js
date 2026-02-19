@@ -14,12 +14,13 @@ const internalAnubis = {
 	 * See: https://anubis.techaro.lol/docs/admin/policies
 	 *
 	 * Each bot rule supports:
-	 *   - name: unique kebab-case identifier
+	 *   - name: unique kebab-case identifier (exposed in Prometheus metrics)
 	 *   - user_agent_regex: regex to match User-Agent header
 	 *   - path_regex: regex to match request path
 	 *   - headers_regex: object of header_name -> regex pairs
+	 *   - remote_addresses: array of CIDR ranges for IP filtering
 	 *   - action: ALLOW | DENY | CHALLENGE
-	 *   - challenge: { difficulty, algorithm } (optional)
+	 *   - challenge: { difficulty, algorithm } (only for CHALLENGE action)
 	 *
 	 * @returns {Promise<void>}
 	 */
@@ -41,20 +42,28 @@ const internalAnubis = {
 
 				if (rules && Array.isArray(rules)) {
 					for (const rule of rules) {
-						if (!rule.path || !rule.action) continue;
+						if (!rule.action) continue;
 
 						const domains = host.domain_names;
 						if (!domains || domains.length === 0) continue;
 
 						ruleIndex++;
+
+						// Generate a name: user-provided or auto-generated
+						const ruleName =
+							rule.name ||
+							rule.ruleName ||
+							`shieldpm-${domains[0].replace(/\./g, "-")}-${ruleIndex}`;
+
 						const botRule = {
-							name: `shieldpm-${domains[0].replace(/\./g, "-")}-${ruleIndex}`,
-							action: rule.action, // ALLOW, DENY, CHALLENGE
+							name: ruleName,
+							action: rule.action,
 						};
 
-						// Add path_regex if not matching everything
-						if (rule.path && rule.path !== ".*") {
-							botRule.path_regex = rule.path;
+						// Add path_regex if present and not matching everything
+						const path = rule.path || rule.pathRegex;
+						if (path && path !== ".*") {
+							botRule.path_regex = path;
 						}
 
 						// Add user_agent_regex if present
@@ -63,13 +72,30 @@ const internalAnubis = {
 							botRule.user_agent_regex = userAgent;
 						}
 
+						// Add remote_addresses for IP filtering
+						const remoteAddresses = rule.remoteAddresses || rule.remote_addresses;
+						if (remoteAddresses && Array.isArray(remoteAddresses) && remoteAddresses.length > 0) {
+							botRule.remote_addresses = remoteAddresses;
+						}
+
 						// Add Host header matching to scope rule to this domain
 						if (domains.length === 1) {
 							botRule.headers_regex = { Host: `^${domains[0].replace(/\./g, "\\.")}$` };
 						} else {
-							// Multiple domains: match any of them
 							const hostPattern = domains.map((d) => d.replace(/\./g, "\\.")).join("|");
 							botRule.headers_regex = { Host: `^(${hostPattern})$` };
+						}
+
+						// Add challenge settings (only relevant for CHALLENGE action)
+						if (rule.action === "CHALLENGE") {
+							const difficulty = rule.challengeDifficulty || rule.challenge_difficulty;
+							const algorithm = rule.challengeAlgorithm || rule.challenge_algorithm;
+
+							if (difficulty || algorithm) {
+								botRule.challenge = {};
+								if (difficulty) botRule.challenge.difficulty = Number(difficulty);
+								if (algorithm) botRule.challenge.algorithm = algorithm;
+							}
 						}
 
 						policy.bots.push(botRule);

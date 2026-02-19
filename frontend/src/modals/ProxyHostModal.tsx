@@ -54,10 +54,17 @@ import {
 
 const DEFAULT_ANUBIS_RULES = [
 	{
+		name: "block-ai-crawlers",
 		path: ".*",
 		action: "DENY",
 		userAgent:
 			"(?i)GPTBot|CCBot|PerplexityBot|Anthropic-ai|Claude-Web|Google-Extended|Bytespider|Amazonbot|FacebookBot",
+	},
+	{
+		name: "challenge-browsers",
+		path: ".*",
+		action: "CHALLENGE",
+		userAgent: "Mozilla",
 	},
 ];
 

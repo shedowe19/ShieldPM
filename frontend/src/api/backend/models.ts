@@ -117,10 +117,14 @@ export interface Certificate {
 }
 
 export interface AnubisRule {
-	path: string;
+	name?: string;
+	path?: string;
 	action: "ALLOW" | "DENY" | "CHALLENGE";
 	userAgent?: string;
 	headers?: Record<string, string>;
+	remoteAddresses?: string[];
+	challengeDifficulty?: number | null;
+	challengeAlgorithm?: "fast" | "slow" | "metarefresh" | "preact";
 }
 
 export interface ProxyLocation {

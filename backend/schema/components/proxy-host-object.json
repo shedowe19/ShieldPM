@@ -85,12 +85,22 @@
 			"items": {
 				"type": "object",
 				"properties": {
+					"name": { "type": "string" },
 					"path": { "type": "string" },
 					"action": { "type": "string", "enum": ["ALLOW", "DENY", "CHALLENGE"] },
 					"user_agent": { "type": "string" },
-					"headers": { "type": "object" }
+					"headers": { "type": "object" },
+					"remote_addresses": {
+						"type": "array",
+						"items": { "type": "string" }
+					},
+					"challenge_difficulty": { "type": ["integer", "null"] },
+					"challenge_algorithm": {
+						"type": "string",
+						"enum": ["fast", "slow", "metarefresh", "preact"]
+					}
 				},
-				"required": ["path", "action"]
+				"required": ["action"]
 			}
 		},
 		"advanced_config": {
