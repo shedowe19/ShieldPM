@@ -1,8 +1,8 @@
-import fs from "fs";
-import { exec } from "child_process";
+import fs from "node:fs";
+import { exec } from "node:child_process";
 import yaml from "js-yaml";
 import ProxyHost from "../models/proxy_host.js";
-import { logger } from "../logger.js";
+import { internal as logger } from "../logger.js";
 
 const POLICY_FILE = "/data/anubis/policy.yaml";
 
@@ -25,6 +25,7 @@ const internalAnubis = {
 
 			// 1. Add Per-Host Rules
 			for (const host of hosts) {
+				// @ts-ignore: anubis_rules is added via relation mapping or raw query not typed in Model
 				if (host.anubis_rules && Array.isArray(host.anubis_rules)) {
 					for (const rule of host.anubis_rules) {
 						if (!rule.path || !rule.action) continue;
