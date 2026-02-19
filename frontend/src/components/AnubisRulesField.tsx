@@ -52,18 +52,14 @@ const AnubisRulesField = () => {
 										<Input
 											placeholder="Path Regex (e.g. ^/admin)"
 											value={rule.path}
-											onChange={(e) =>
-												setFieldValue(`anubisRules.${index}.path`, e.target.value)
-											}
+											onChange={(e) => setFieldValue(`anubisRules.${index}.path`, e.target.value)}
 											className="h-8 text-xs font-mono"
 										/>
 									</div>
 									<div className="col-span-3">
 										<Select
 											value={rule.action}
-											onValueChange={(val) =>
-												setFieldValue(`anubisRules.${index}.action`, val)
-											}
+											onValueChange={(val) => setFieldValue(`anubisRules.${index}.action`, val)}
 										>
 											<SelectTrigger className="h-8 text-xs">
 												<SelectValue />

@@ -16,10 +16,7 @@ const internalAnubis = {
 			logger.info("Generating Anubis Policy...");
 
 			// Fetch all enabled proxy hosts with Anubis enabled
-			const hosts = await ProxyHost.query()
-				.where("is_deleted", 0)
-				.where("enabled", 1)
-				.where("anubis_enabled", 1);
+			const hosts = await ProxyHost.query().where("is_deleted", 0).where("enabled", 1).where("anubis_enabled", 1);
 
 			const policy = {
 				bots: [], // Default bot rules could go here or be merged from a base file
@@ -39,9 +36,7 @@ const internalAnubis = {
 
 						// Create a CEL expression that matches ANY of the domains
 						// (request.host == 'a.com' || request.host == 'b.com')
-						const domainExpr = domains
-							.map((d) => `request.host == '${d}'`)
-							.join(" || ");
+						const domainExpr = domains.map((d) => `request.host == '${d}'`).join(" || ");
 
 						let expression = `(${domainExpr}) && request.path.matches('${rule.path}')`;
 
