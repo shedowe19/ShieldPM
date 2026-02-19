@@ -78,13 +78,21 @@ if [ "${TOR_ENABLED:-true}" = "true" ] && command -v tor >/dev/null 2>&1; then
     echo "Starting Tor daemon..."
     tor -f /etc/tor/torrc &
 fi
-if [ "${ANUBIS_ENABLED:-true}" = "true" ] && command -v anubis >/dev/null 2>&1; then
-    echo "Starting Anubis..."
+# Determine Anubis binary path
+ANUBIS_BIN=""
+if [ -x "/usr/local/bin/anubis" ]; then
+    ANUBIS_BIN="/usr/local/bin/anubis"
+elif command -v anubis >/dev/null 2>&1; then
+    ANUBIS_BIN="anubis"
+fi
+
+if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
+    echo "Starting Anubis ($ANUBIS_BIN)..."
     mkdir -p /run/anubis
     mkdir -p /run/nginx
     mkdir -p /data/anubis
 
-    ANUBIS_ARGS="-bind unix:///run/anubis/nginx.sock -target unix:///run/nginx/anubis-upstream.sock -socket-mode 0777"
+    ANUBIS_ARGS="-bind-network unix -bind /run/anubis/nginx.sock -target unix://run/nginx/anubis-upstream.sock -socket-mode 0777"
 
     # Check for custom policy file
     if [ -f /data/anubis/policy.yaml ]; then
@@ -96,7 +104,7 @@ if [ "${ANUBIS_ENABLED:-true}" = "true" ] && command -v anubis >/dev/null 2>&1; 
     fi
 
     # shellcheck disable=SC2086
-    anubis $ANUBIS_ARGS &
+    $ANUBIS_BIN $ANUBIS_ARGS &
 fi
 aio.sh &
 if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; done; fi &
