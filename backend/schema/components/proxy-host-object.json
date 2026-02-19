@@ -53,10 +53,7 @@
 			"example": "127.0.0.1"
 		},
 		"forward_port": {
-			"type": [
-				"integer",
-				"null"
-			],
+			"type": ["integer", "null"],
 			"minimum": 1,
 			"maximum": 65535,
 			"example": 8080
@@ -79,22 +76,20 @@
 		"security_crowdsec": {
 			"$ref": "../common.json#/properties/security_crowdsec"
 		},
+		"anubis_enabled": {
+			"type": "boolean",
+			"example": false
+		},
 		"advanced_config": {
 			"type": "string",
 			"example": ""
 		},
 		"bandwidth_limit": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"example": ""
 		},
 		"forward_query": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"example": "api_key=123"
 		},
 		"meta": {
@@ -105,10 +100,7 @@
 			}
 		},
 		"note": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"maxLength": 10000,
 			"example": "Do not delete this host."
 		},
@@ -122,14 +114,7 @@
 		},
 		"forward_scheme": {
 			"type": "string",
-			"enum": [
-				"http",
-				"https",
-				"path",
-				"grpc",
-				"grpcs",
-				"terminal"
-			],
+			"enum": ["http", "https", "path", "grpc", "grpcs", "terminal"],
 			"example": "http"
 		},
 		"enabled": {
@@ -140,19 +125,11 @@
 			"minItems": 0,
 			"items": {
 				"type": "object",
-				"required": [
-					"forward_scheme",
-					"forward_host",
-					"forward_port",
-					"path"
-				],
+				"required": ["forward_scheme", "forward_host", "forward_port", "path"],
 				"additionalProperties": false,
 				"properties": {
 					"id": {
-						"type": [
-							"integer",
-							"null"
-						]
+						"type": ["integer", "null"]
 					},
 					"path": {
 						"type": "string",
@@ -168,10 +145,7 @@
 						"$ref": "#/properties/forward_port"
 					},
 					"forward_query": {
-						"type": [
-							"string",
-							"null"
-						]
+						"type": ["string", "null"]
 					},
 					"advanced_config": {
 						"type": "string"
@@ -225,30 +199,18 @@
 			"example": false
 		},
 		"adv_limit_req_rate": {
-			"type": [
-				"integer",
-				"null"
-			],
+			"type": ["integer", "null"],
 			"minimum": 0,
 			"maximum": 100000,
 			"example": 10
 		},
 		"adv_limit_req_unit": {
-			"type": [
-				"string",
-				"null"
-			],
-			"enum": [
-				"s",
-				"m"
-			],
+			"type": ["string", "null"],
+			"enum": ["s", "m"],
 			"example": "s"
 		},
 		"adv_limit_req_burst": {
-			"type": [
-				"integer",
-				"null"
-			],
+			"type": ["integer", "null"],
 			"minimum": 0,
 			"maximum": 100000,
 			"example": 20
@@ -262,24 +224,15 @@
 			"example": false
 		},
 		"maintenance_start": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"example": "2026-01-01 10:00:00"
 		},
 		"maintenance_end": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"example": "2026-01-01 12:00:00"
 		},
 		"maintenance_reason": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"example": "System Upgrade"
 		},
 		"php_enabled": {
@@ -287,36 +240,20 @@
 			"example": false
 		},
 		"php_version": {
-			"type": [
-				"string",
-				"null"
-			],
-			"enum": [
-				"82",
-				"83",
-				"84"
-			],
+			"type": ["string", "null"],
+			"enum": ["82", "83", "84"],
 			"example": "83"
 		},
 		"php_override_ini": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"example": "memory_limit = 512M"
 		},
 		"index_file": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"example": "index.html"
 		},
 		"git_repo_url": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Git repository URL for auto-deployment",
 			"example": "https://github.com/user/repo.git"
 		},
@@ -342,113 +279,69 @@
 		"git_poll_unit": {
 			"type": "string",
 			"description": "Polling interval unit: s (seconds), m (minutes), h (hours)",
-			"enum": [
-				"s",
-				"m",
-				"h"
-			],
+			"enum": ["s", "m", "h"],
 			"default": "m",
 			"example": "m"
 		},
 		"git_credentials": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Personal Access Token for private repos (write-only)",
 			"example": null
 		},
 		"git_last_sync": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Last successful sync timestamp",
 			"example": "2026-01-19 12:00:00"
 		},
 		"git_last_commit": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Last synced commit SHA",
 			"example": "abc123def456"
 		},
 		"git_last_error": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Last sync error message",
 			"example": null
 		},
 		"icon_url": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Custom icon URL",
 			"maxLength": 512,
 			"example": "https://example.com/icon.svg"
 		},
 		"icon_type": {
 			"type": "string",
-			"enum": [
-				"auto",
-				"custom",
-				"none"
-			],
+			"enum": ["auto", "custom", "none"],
 			"default": "auto",
 			"example": "auto"
 		},
 		"terminal_host": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Terminal SSH Host",
 			"example": "192.168.1.10"
 		},
 		"terminal_port": {
-			"type": [
-				"integer",
-				"null"
-			],
+			"type": ["integer", "null"],
 			"description": "Terminal SSH Port",
 			"example": 22
 		},
 		"terminal_username": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Terminal SSH Username",
 			"example": "root"
 		},
 		"terminal_auth_type": {
-			"type": [
-				"string",
-				"null"
-			],
-			"enum": [
-				"password",
-				"key"
-			],
+			"type": ["string", "null"],
+			"enum": ["password", "key"],
 			"example": "password"
 		},
 		"terminal_password": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Encrypted Password",
 			"example": "encrypted..."
 		},
 		"terminal_private_key": {
-			"type": [
-				"string",
-				"null"
-			],
+			"type": ["string", "null"],
 			"description": "Encrypted Private Key",
 			"example": "encrypted..."
 		}

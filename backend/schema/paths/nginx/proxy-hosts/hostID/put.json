@@ -67,6 +67,9 @@
 						"security_crowdsec": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/security_crowdsec"
 						},
+						"anubis_enabled": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/anubis_enabled"
+						},
 						"caching_enabled": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/caching_enabled"
 						},
