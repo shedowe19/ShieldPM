@@ -19,7 +19,14 @@ const internalAnubis = {
 			const hosts = await ProxyHost.query().where("is_deleted", 0).where("enabled", 1).where("anubis_enabled", 1);
 
 			const policy = {
-				bots: [], // Default bot rules could go here or be merged from a base file
+				bots: [
+					// Anubis requires at least one bot rule to start
+					{
+						name: "AnubisPlaceholderBot",
+						user_agent: "^AnubisPlaceholderBot$",
+						action: "DENY",
+					},
+				],
 				rules: [],
 			};
 
