@@ -51,9 +51,7 @@ const internalAnubis = {
 
 						// Generate a name: user-provided or auto-generated
 						const ruleName =
-							rule.name ||
-							rule.ruleName ||
-							`shieldpm-${domains[0].replace(/\./g, "-")}-${ruleIndex}`;
+							rule.name || rule.ruleName || `shieldpm-${domains[0].replace(/\./g, "-")}-${ruleIndex}`;
 
 						const botRule = {
 							name: ruleName,

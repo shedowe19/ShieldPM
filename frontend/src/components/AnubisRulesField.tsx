@@ -36,7 +36,15 @@ const AnubisRulesField = () => {
 					onClick={() => {
 						setFieldValue("anubisRules", [
 							...rules,
-							{ name: "", path: ".*", action: "CHALLENGE", userAgent: "", remoteAddresses: [], challengeDifficulty: null, challengeAlgorithm: undefined },
+							{
+								name: "",
+								path: ".*",
+								action: "CHALLENGE",
+								userAgent: "",
+								remoteAddresses: [],
+								challengeDifficulty: null,
+								challengeAlgorithm: undefined,
+							},
 						]);
 					}}
 				>
@@ -67,7 +75,9 @@ const AnubisRulesField = () => {
 											<Input
 												placeholder="Rule Name (optional)"
 												value={rule.name || ""}
-												onChange={(e) => setFieldValue(`anubisRules.${index}.name`, e.target.value)}
+												onChange={(e) =>
+													setFieldValue(`anubisRules.${index}.name`, e.target.value)
+												}
 												className="h-8 text-xs font-mono"
 											/>
 										</div>
@@ -75,14 +85,18 @@ const AnubisRulesField = () => {
 											<Input
 												placeholder="Path Regex (e.g. .*)"
 												value={rule.path || ""}
-												onChange={(e) => setFieldValue(`anubisRules.${index}.path`, e.target.value)}
+												onChange={(e) =>
+													setFieldValue(`anubisRules.${index}.path`, e.target.value)
+												}
 												className="h-8 text-xs font-mono"
 											/>
 										</div>
 										<div className="col-span-2">
 											<Select
 												value={rule.action}
-												onValueChange={(val) => setFieldValue(`anubisRules.${index}.action`, val)}
+												onValueChange={(val) =>
+													setFieldValue(`anubisRules.${index}.action`, val)
+												}
 											>
 												<SelectTrigger className="h-8 text-xs">
 													<SelectValue />
@@ -167,7 +181,9 @@ const AnubisRulesField = () => {
 														onChange={(e) =>
 															setFieldValue(
 																`anubisRules.${index}.challengeDifficulty`,
-																e.target.value ? Number.parseInt(e.target.value, 10) : null,
+																e.target.value
+																	? Number.parseInt(e.target.value, 10)
+																	: null,
 															)
 														}
 														className="h-8 text-xs"
