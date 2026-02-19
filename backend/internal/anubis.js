@@ -38,7 +38,7 @@ const internalAnubis = {
 			// Generate bot rules from per-host UI rules
 			let ruleIndex = 0;
 			for (const host of hosts) {
-				const rules = host["anubis_rules"];
+				const rules = host["anubis_rules"]; // eslint-disable-line dot-notation
 
 				if (rules && Array.isArray(rules)) {
 					for (const rule of rules) {

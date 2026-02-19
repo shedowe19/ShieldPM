@@ -63,7 +63,7 @@ const AnubisRulesField = () => {
 							</p>
 						)}
 						{rules.map((rule, index) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: Rules don't have stable IDs
+	
 							<div
 								key={`${index}-${rule.path}`}
 								className="border rounded bg-background/50 overflow-hidden"
