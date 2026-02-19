@@ -109,7 +109,7 @@ if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
         rm -f /run/anubis/nginx.sock
         # shellcheck disable=SC2086
         $ANUBIS_BIN $ANUBIS_ARGS
-        sleep 5
+        sleep 1
       done
     ) &
 fi
