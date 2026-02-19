@@ -266,7 +266,6 @@ else
 fi
 
 echo "--> [8/8] Restarting ShieldPM..."
-echo "--> [8/8] Restarting ShieldPM..."
 systemctl daemon-reload
 if systemctl is-active --quiet shieldpm; then
     systemctl restart shieldpm
