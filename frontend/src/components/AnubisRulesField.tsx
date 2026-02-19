@@ -63,7 +63,6 @@ const AnubisRulesField = () => {
 							</p>
 						)}
 						{rules.map((rule, index) => (
-	
 							<div
 								key={`${index}-${rule.path}`}
 								className="border rounded bg-background/50 overflow-hidden"
