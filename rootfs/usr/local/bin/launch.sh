@@ -103,11 +103,15 @@ if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
         ANUBIS_ARGS="$ANUBIS_ARGS -policy-fname /data/anubis/policy.json"
     fi
 
-    # Remove stale socket file if it exists
-    rm -f /run/anubis/nginx.sock
-
-    # shellcheck disable=SC2086
-    $ANUBIS_BIN $ANUBIS_ARGS &
+    # Run Anubis in a loop to restart on failure (clearing socket first)
+    (
+      while true; do
+        rm -f /run/anubis/nginx.sock
+        # shellcheck disable=SC2086
+        $ANUBIS_BIN $ANUBIS_ARGS
+        sleep 5
+      done
+    ) &
 fi
 aio.sh &
 if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; done; fi &
