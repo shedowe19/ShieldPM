@@ -381,7 +381,7 @@ const internalNginx = {
 
 		try {
 			await fs.promises.rename(config_file, `${config_file}.err`);
-		} catch (err) {
+		} catch {
 			// ignore if file doesn't exist
 		}
 	},
