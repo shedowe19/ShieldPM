@@ -76,13 +76,26 @@ const internalAnubis = {
 							botRule.remote_addresses = remoteAddresses;
 						}
 
-						// Add Host header matching to scope rule to this domain
+						// Scope rule to this host's domain(s) via custom header.
+						// Note: Standard "Host" header is invisible to Go's Request.Header
+						// (Go stores it in Request.Host), so Anubis headers_regex can't match it.
+						// We use the custom "X-ShieldPM-Host" header set by the Nginx frontend block.
+						const headers = {};
+						const escapeRegex = (s) => s.replace(/\\/g, "\\\\").replace(/\./g, "\\.");
 						if (domains.length === 1) {
-							botRule.headers_regex = { Host: `^${domains[0].replace(/\./g, "\\.")}$` };
+							headers["X-Shieldpm-Host"] = `^${escapeRegex(domains[0])}$`;
 						} else {
-							const hostPattern = domains.map((d) => d.replace(/\./g, "\\.")).join("|");
-							botRule.headers_regex = { Host: `^(${hostPattern})$` };
+							const hostPattern = domains.map((d) => escapeRegex(d)).join("|");
+							headers["X-Shieldpm-Host"] = `^(${hostPattern})$`;
 						}
+
+						// Merge user-defined headers_regex if present
+						const userHeaders = rule.headersRegex || rule.headers_regex;
+						if (userHeaders && typeof userHeaders === "object") {
+							Object.assign(headers, userHeaders);
+						}
+
+						botRule.headers_regex = headers;
 
 						// Add challenge settings (only relevant for CHALLENGE action)
 						if (rule.action === "CHALLENGE") {
