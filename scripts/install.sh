@@ -440,13 +440,15 @@ if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
         ANUBIS_ARCH="$ARCH"
     fi
 
-    VERSION="v1.25.0"
-    URL="https://github.com/TecharoHQ/anubis/releases/download/${VERSION}/anubis-linux-${ANUBIS_ARCH}"
+    VERSION="1.25.0"
+    URL="https://github.com/TecharoHQ/anubis/releases/download/v${VERSION}/anubis-${VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
 
     echo "  > Downloading from $URL..."
-    curl -L -o /usr/local/bin/anubis "$URL"
+    curl -L -o /tmp/anubis.tar.gz "$URL"
 
-    if [ -s /usr/local/bin/anubis ]; then
+    if [ -s /tmp/anubis.tar.gz ]; then
+        tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin anubis
+        rm /tmp/anubis.tar.gz
         chmod +x /usr/local/bin/anubis
         echo "  > Anubis installed to /usr/local/bin/anubis"
 

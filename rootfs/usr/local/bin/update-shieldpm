@@ -235,11 +235,13 @@ if [[ -n "$ANUBIS_ARCH" ]]; then
     fi
 
     if [ "$SHOULD_UPDATE" = true ]; then
-        ANUBIS_VERSION="v1.25.0"
-        ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/${ANUBIS_VERSION}/anubis-linux-${ANUBIS_ARCH}"
+        ANUBIS_VERSION="1.25.0"
+        ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
         echo "    - Downloading Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
-        curl -L -f -o /usr/local/bin/anubis "$ANUBIS_URL"
-        if [ -s /usr/local/bin/anubis ]; then
+        curl -L -f -o /tmp/anubis.tar.gz "$ANUBIS_URL"
+        if [ -s /tmp/anubis.tar.gz ]; then
+            tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin anubis
+            rm /tmp/anubis.tar.gz
             chmod +x /usr/local/bin/anubis
             echo "    - Anubis installed successfully."
 
