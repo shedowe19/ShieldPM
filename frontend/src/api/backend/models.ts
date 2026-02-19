@@ -119,7 +119,7 @@ export interface Certificate {
 export interface AnubisRule {
 	path: string;
 	action: "ALLOW" | "DENY" | "CHALLENGE";
-	user_agent?: string;
+	userAgent?: string;
 	headers?: Record<string, string>;
 }
 

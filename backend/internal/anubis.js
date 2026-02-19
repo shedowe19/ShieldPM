@@ -51,8 +51,9 @@ const internalAnubis = {
 						let expression = `(${domainExpr}) && request.path.matches('${rule.path}')`;
 
 						// Add User-Agent check if present
-						if (rule.user_agent) {
-							expression += ` && request.user_agent.matches('${rule.user_agent}')`;
+						const userAgent = rule.userAgent || rule.user_agent;
+						if (userAgent) {
+							expression += ` && request.user_agent.matches('${userAgent}')`;
 						}
 
 						policy.rules.push({

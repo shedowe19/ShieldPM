@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 interface AnubisRule {
 	path: string;
 	action: "ALLOW" | "DENY" | "CHALLENGE";
-	user_agent?: string;
+	userAgent?: string;
 }
 
 const AnubisRulesField = () => {
@@ -25,7 +25,7 @@ const AnubisRulesField = () => {
 					onClick={() => {
 						setFieldValue("anubisRules", [
 							...rules,
-							{ path: "^/admin/.*", action: "DENY", user_agent: "" },
+							{ path: "^/admin/.*", action: "DENY", userAgent: "" },
 						]);
 					}}
 				>
@@ -76,9 +76,9 @@ const AnubisRulesField = () => {
 									<div className="col-span-5">
 										<Input
 											placeholder="User Agent Regex (Optional)"
-											value={rule.user_agent || ""}
+											value={rule.userAgent || ""}
 											onChange={(e) =>
-												setFieldValue(`anubisRules.${index}.user_agent`, e.target.value)
+												setFieldValue(`anubisRules.${index}.userAgent`, e.target.value)
 											}
 											className="h-8 text-xs font-mono"
 										/>
