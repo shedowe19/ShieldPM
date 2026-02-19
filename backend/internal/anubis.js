@@ -23,7 +23,7 @@ const internalAnubis = {
 					// Anubis requires at least one bot rule to start
 					{
 						name: "AnubisPlaceholderBot",
-						user_agent: "^AnubisPlaceholderBot$",
+						user_agent_regex: "^AnubisPlaceholderBot$",
 						action: "DENY",
 					},
 				],
