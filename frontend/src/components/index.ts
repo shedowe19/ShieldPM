@@ -1,4 +1,5 @@
 export * from "./AnimatedPage";
+export { default as AnubisRulesField } from "./AnubisRulesField";
 export * from "./Button";
 export * from "./EmptyData";
 export * from "./ErrorNotFound";

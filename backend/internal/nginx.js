@@ -11,6 +11,8 @@ import { debug, nginx as logger } from "../logger.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+import internalAnubis from "./anubis.js";
+
 const internalNginx = {
 	/**
 	 * This will:
@@ -59,6 +61,9 @@ const internalNginx = {
 
 			// 5. Delete backup (commit change)
 			await internalNginx.deleteBackupConfig(host_type, host);
+
+			// 6. Regenerate Anubis Policy (async, don't block)
+			internalAnubis.generatePolicy();
 		} catch (err) {
 			logger.error(`Nginx test failed: ${err.message}`);
 

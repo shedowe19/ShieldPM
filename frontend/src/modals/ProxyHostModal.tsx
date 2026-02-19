@@ -15,6 +15,7 @@ import { type ReactNode, useState } from "react";
 import type { ProxyHost } from "src/api/backend";
 import {
 	AccessField,
+	AnubisRulesField,
 	DomainNamesField,
 	GitSyncTab,
 	HasPermission,
@@ -66,6 +67,7 @@ interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate"
 	advLimitReqBurst?: number | string;
 	crowdsecEnabled?: boolean;
 	anubisEnabled?: boolean;
+	anubisRules?: ProxyHost["anubisRules"];
 	gitCredentials?: string;
 	php_override_ini?: string;
 }
@@ -202,6 +204,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								crowdsecEnabled: data?.securityCrowdsec || false,
 								// Anubis
 								anubisEnabled: data?.anubisEnabled || false,
+								anubisRules: data?.anubisRules || [],
 								// Note
 								note: data?.note || "",
 							} as ProxyHostFormValues
@@ -1093,6 +1096,17 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														)}
 													</Field>
 												</div>
+
+												{/* Anubis Rules Editor */}
+												<Field name="anubisEnabled">
+													{({ field }: FieldProps) =>
+														field.value && (
+															<div className="animate-in fade-in slide-in-from-top-2 duration-300">
+																<AnubisRulesField />
+															</div>
+														)
+													}
+												</Field>
 
 												<div className="grid grid-cols-12 gap-4">
 													<div className="col-span-12 md:col-span-4">

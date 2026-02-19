@@ -80,6 +80,19 @@
 			"type": "boolean",
 			"example": false
 		},
+		"anubis_rules": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"path": { "type": "string" },
+					"action": { "type": "string", "enum": ["ALLOW", "DENY", "CHALLENGE"] },
+					"user_agent": { "type": "string" },
+					"headers": { "type": "object" }
+				},
+				"required": ["path", "action"]
+			}
+		},
 		"advanced_config": {
 			"type": "string",
 			"example": ""

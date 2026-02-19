@@ -116,6 +116,13 @@ export interface Certificate {
 	streams?: Stream[];
 }
 
+export interface AnubisRule {
+	path: string;
+	action: "ALLOW" | "DENY" | "CHALLENGE";
+	user_agent?: string;
+	headers?: Record<string, string>;
+}
+
 export interface ProxyLocation {
 	path: string;
 	advancedConfig: string;
@@ -143,6 +150,7 @@ export interface ProxyHost {
 	blockExploits: boolean;
 	securityCrowdsec: boolean;
 	anubisEnabled: boolean;
+	anubisRules?: AnubisRule[];
 	advancedConfig: string;
 	bandwidthLimit: string;
 	meta: Record<string, unknown>;

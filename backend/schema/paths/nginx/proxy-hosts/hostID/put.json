@@ -70,6 +70,9 @@
 						"anubis_enabled": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/anubis_enabled"
 						},
+						"anubis_rules": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/anubis_rules"
+						},
 						"caching_enabled": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/caching_enabled"
 						},
