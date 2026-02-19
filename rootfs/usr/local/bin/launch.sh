@@ -92,7 +92,7 @@ if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
     mkdir -p /run/nginx
     mkdir -p /data/anubis
 
-    ANUBIS_ARGS="-bind-network unix -bind /run/anubis/nginx.sock -target unix://run/nginx/anubis-upstream.sock -socket-mode 0777"
+    ANUBIS_ARGS="-bind-network unix -bind /run/anubis/nginx.sock -target unix:///run/nginx/anubis-upstream.sock -socket-mode 0777"
 
     # Check for custom policy file
     if [ -f /data/anubis/policy.yaml ]; then
