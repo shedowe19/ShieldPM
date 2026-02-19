@@ -1,10 +1,8 @@
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { FieldArray, useFormikContext } from "formik";
-import { Trash2 } from "lucide-react";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { T } from "src/locale";
 
 interface AnubisRule {
 	path: string;
