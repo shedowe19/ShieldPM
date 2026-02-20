@@ -132,6 +132,9 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
+# Ensure Yarn is installed as the user requested
+npm install -g yarn
+
 apt-get install -y --no-install-recommends \
     git \
     build-essential \
@@ -145,16 +148,16 @@ git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
 
 echo "--> [3/6] Building Backend..."
 cd "$TEMP_DIR/backend"
-# LXC compatible: Run as root with unsafe-perm to avoid fchown errors
-npm install --unsafe-perm --omit=dev
+# LXC compatible: Run as root
+yarn install --production
 # Cleanup Dev Dependencies to save space
 # npm prune --production
 
 echo "--> [4/6] Building Frontend..."
 cd "$TEMP_DIR/frontend"
-# LXC compatible: Run as root with unsafe-perm to avoid fchown errors
-npm install --unsafe-perm
-npm run build
+# LXC compatible: Run as root
+yarn install
+yarn run build
 
 echo "--> [5/6] Swapping files..."
 # Backend
@@ -199,7 +202,75 @@ else
     echo "    - Skipping Nginx update: Architecture $ARCH not supported for auto-update."
 fi
 
-echo "--> [7/7] Restarting ShieldPM..."
+echo "--> [7/7] Checking for Anubis AI Firewall Updates..."
+# Check if Anubis is installed or enabled
+ANUBIS_INSTALLED=false
+if [ -f "/usr/local/bin/anubis" ]; then
+    ANUBIS_INSTALLED=true
+fi
+
+# Detect Arch for Anubis (reuse ARCH from nginx step if valid, else re-detect)
+# Anubis uses "amd64" / "arm64" suffix
+ANUBIS_ARCH=""
+if [[ "$ARCH" == "amd64" ]]; then
+    ANUBIS_ARCH="amd64"
+elif [[ "$ARCH" == "arm64" ]]; then
+    ANUBIS_ARCH="arm64"
+fi
+
+if [[ -n "$ANUBIS_ARCH" ]]; then
+    SHOULD_UPDATE=false
+
+    if [ "$ANUBIS_INSTALLED" = true ]; then
+        echo "    - Anubis is installed."
+        read -p "    ? Update Anubis binary? [Y/n] " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            SHOULD_UPDATE=true
+        fi
+    else
+        echo "    - Anubis is NOT installed."
+        read -p "    ? Install Anubis AI Firewall? [y/N] " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            SHOULD_UPDATE=true
+        fi
+    fi
+
+    if [ "$SHOULD_UPDATE" = true ]; then
+        ANUBIS_VERSION="1.25.0"
+        ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
+        echo "    - Downloading Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
+        curl -L -f -o /tmp/anubis.tar.gz "$ANUBIS_URL"
+        if [ -s /tmp/anubis.tar.gz ]; then
+            tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
+            rm /tmp/anubis.tar.gz
+            chmod +x /usr/local/bin/anubis
+            echo "    - Anubis installed successfully."
+
+            # Ensure enabled in env if installing fresh
+            if [ "$ANUBIS_INSTALLED" = false ]; then
+                ENV_FILE="/data/.env"
+                if [ -f "$ENV_FILE" ]; then
+                    if grep -q "ANUBIS_ENABLED" "$ENV_FILE"; then
+                        sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
+                    else
+                        echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
+                    fi
+                    echo "    - Enabled Anubis in $ENV_FILE"
+                fi
+            fi
+        else
+            echo "    ! Failed to download Anubis. Check internet connection."
+        fi
+    else
+        echo "    - Skipping Anubis update/install."
+    fi
+else
+    echo "    - Skipping Anubis: Architecture $ARCH not supported."
+fi
+
+echo "--> [8/8] Restarting ShieldPM..."
 systemctl daemon-reload
 if systemctl is-active --quiet shieldpm; then
     systemctl restart shieldpm
