@@ -259,7 +259,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 								<Button
 									type="submit"
 									disabled={isSubmitting}
-									className="bg-primary text-primary-foreground shadow-sm"
+									className="bg-pink-600/90 hover:bg-pink-600 text-white shadow-sm"
 								>
 									{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 									<T id="save" />
