@@ -204,7 +204,11 @@ export default function ChatOps() {
 							/>
 
 							<div className="flex justify-between">
-								<Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+								<Button
+									type="submit"
+									disabled={createMutation.isPending || updateMutation.isPending}
+									className="bg-sky-600/90 hover:bg-sky-600 text-white shadow-sm"
+								>
 									{(createMutation.isPending || updateMutation.isPending) && (
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 									)}
