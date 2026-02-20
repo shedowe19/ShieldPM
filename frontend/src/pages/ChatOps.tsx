@@ -124,7 +124,7 @@ export default function ChatOps() {
 
 	return (
 		<Container>
-			<Card className="border-t-4 border-slate-500/50">
+			<Card className="border-t-4 border-sky-500/50">
 				<CardHeader>
 					<CardTitle>
 						<T id="chatops" />
