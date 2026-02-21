@@ -1,6 +1,7 @@
 import {
 	IconCopy,
 	IconEdit,
+	IconHelp,
 	IconPlayerPlay,
 	IconPlayerStop,
 	IconPlus,
@@ -21,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
+import { showHelpModal } from "@/modals";
 
 export function TorOnionServices() {
 	const health = useHealth();
@@ -128,6 +130,9 @@ export function TorOnionServices() {
 				<div className="flex items-center space-x-2">
 					<Button variant="outline" size="icon" onClick={() => refetch()}>
 						<IconRefresh className="h-4 w-4" />
+					</Button>
+					<Button variant="outline" size="icon" onClick={() => showHelpModal("TorOnionServices", "purple")}>
+						<IconHelp className="h-4 w-4" />
 					</Button>
 					<Button
 						size="sm"

@@ -1,4 +1,4 @@
-import { IconEdit, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconEdit, IconHelp, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { Cloud, Lock } from "lucide-react";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
 import { T } from "@/locale";
+import { showHelpModal } from "@/modals";
 
 export function CloudflaredTunnels() {
 	const health = useHealth();
@@ -124,6 +125,9 @@ export function CloudflaredTunnels() {
 				<div className="flex items-center space-x-2">
 					<Button variant="outline" size="icon" onClick={() => refetch()}>
 						<IconRefresh className="h-4 w-4" />
+					</Button>
+					<Button variant="outline" size="icon" onClick={() => showHelpModal("CloudflaredTunnels", "orange")}>
+						<IconHelp className="h-4 w-4" />
 					</Button>
 					<Button
 						size="sm"

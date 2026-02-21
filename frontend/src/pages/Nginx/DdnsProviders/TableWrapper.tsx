@@ -1,4 +1,4 @@
-import { IconPlus, IconSearch, IconWorld } from "@tabler/icons-react";
+import { IconHelp, IconPlus, IconSearch, IconWorld } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
@@ -9,7 +9,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { intl, T } from "src/locale";
-import { showDdnsProviderModal, showDeleteConfirmModal } from "src/modals";
+import { showDdnsProviderModal, showDeleteConfirmModal, showHelpModal } from "src/modals";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
@@ -71,6 +71,9 @@ export default function TableWrapper() {
 							/>
 						</div>
 					) : null}
+					<Button variant="outline" size="icon" onClick={() => showHelpModal("DdnsProviders", "cyan")}>
+						<IconHelp className="h-4 w-4" />
+					</Button>
 					<Button
 						size="sm"
 						className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
