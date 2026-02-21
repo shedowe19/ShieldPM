@@ -21,7 +21,7 @@ interface AuditMeta {
 	niceName?: string;
 	id?: string;
 	content?: string;
-	onion_address?: string;
+	onionAddress?: string;
 	[key: string]: unknown;
 }
 
@@ -48,7 +48,7 @@ const getEventValue = (event: AuditLog): string => {
 		case AUDIT_LOG_OBJECT_TYPE.DASHBOARD_NOTE:
 			return meta.content || "Dashboard Note";
 		case AUDIT_LOG_OBJECT_TYPE.TOR_ONION:
-			return meta.onion_address || "N/A";
+			return meta.onionAddress || "N/A";
 		default:
 			return `UNKNOWN EVENT TYPE: ${event.objectType}`;
 	}
