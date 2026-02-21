@@ -9,7 +9,6 @@ import {
 } from "@tabler/icons-react";
 import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { BADGE_VARIANT, type BadgeVariant, TOR_ONION_STATUS, type TorOnionStatus } from "src/types/enums";
 import type { TorOnion } from "@/api/backend";
 import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
@@ -24,7 +23,6 @@ import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
 
 export function TorOnionServices() {
-	const { t } = useTranslation();
 	const health = useHealth();
 	const { data, isLoading, refetch } = useTorOnions();
 	const { remove, start, stop } = useTorOnion();
@@ -155,7 +153,9 @@ export function TorOnionServices() {
 
 				{torInfo?.available && (
 					<Alert className="mb-4">
-						<AlertDescription>{t("tor.running_status", { version: torInfo.version })}</AlertDescription>
+						<AlertDescription>
+							<T id="tor.running_status" data={{ version: torInfo.version || "" }} />
+						</AlertDescription>
 					</Alert>
 				)}
 
