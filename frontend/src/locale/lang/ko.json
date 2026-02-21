@@ -505,7 +505,7 @@
 	"tor.help_https_title": "HTTPS 및 Tor",
 	"tor.no_services": "없음",
 	"tor.onion_address": "Onion 주소",
-	"tor.running_status": "Tor v{{version}}이(가) 실행 중입니다. Onion 서비스는 Tor 브라우저를 통해 액세스할 수 있습니다.",
+	"tor.running_status": "Tor v{version}이(가) 실행 중입니다. Onion 서비스는 Tor 브라우저를 통해 액세스할 수 있습니다.",
 	"tor.status_error": "오류",
 	"tor.status_running": "실행 중",
 	"tor.status_starting": "시작 중",

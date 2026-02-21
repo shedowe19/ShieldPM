@@ -505,7 +505,7 @@
 	"tor.help_https_title": "Over HTTPS & Tor",
 	"tor.no_services": "Geen services gevonden",
 	"tor.onion_address": "Onion-adres",
-	"tor.running_status": "Tor v{{version}} wordt uitgevoerd. Onion-services zijn toegankelijk via de Tor Browser.",
+	"tor.running_status": "Tor v{version} wordt uitgevoerd. Onion-services zijn toegankelijk via de Tor Browser.",
 	"tor.status_error": "Fout",
 	"tor.status_running": "Actief",
 	"tor.status_starting": "Starten...",

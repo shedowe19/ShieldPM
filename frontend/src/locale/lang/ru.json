@@ -505,7 +505,7 @@
 	"tor.help_https_title": "О HTTPS и Tor",
 	"tor.no_services": "Сервисы не найдены",
 	"tor.onion_address": "Onion адрес",
-	"tor.running_status": "Tor v{{version}} запущен. Сервисы Onion будут доступны через браузер Tor.",
+	"tor.running_status": "Tor v{version} запущен. Сервисы Onion будут доступны через браузер Tor.",
 	"tor.status_error": "Ошибка",
 	"tor.status_running": "Запущен",
 	"tor.status_starting": "Запуск...",

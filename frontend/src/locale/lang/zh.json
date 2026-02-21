@@ -505,7 +505,7 @@
 	"tor.help_https_title": "关于 HTTPS 和 Tor",
 	"tor.no_services": "未找到",
 	"tor.onion_address": "Onion 地址",
-	"tor.running_status": "Tor v{{version}} 正在运行。Onion 服务将可以通过 Tor 浏览器访问。",
+	"tor.running_status": "Tor v{version} 正在运行。Onion 服务将可以通过 Tor 浏览器访问。",
 	"tor.status_error": "错误",
 	"tor.status_running": "运行中",
 	"tor.status_starting": "启动中",

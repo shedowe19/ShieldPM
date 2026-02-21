@@ -505,7 +505,7 @@
 	"tor.help_https_title": "Info HTTPS",
 	"tor.no_services": "Nessun servizio",
 	"tor.onion_address": "Indirizzo Onion",
-	"tor.running_status": "Tor v{{version}} è in esecuzione. I servizi Onion saranno accessibili tramite Tor Browser.",
+	"tor.running_status": "Tor v{version} è in esecuzione. I servizi Onion saranno accessibili tramite Tor Browser.",
 	"tor.status_error": "Errore",
 	"tor.status_running": "In Esecuzione",
 	"tor.status_starting": "Avvio",

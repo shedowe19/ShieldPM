@@ -505,7 +505,7 @@
 	"tor.help_https_title": "HTTPSとTor",
 	"tor.no_services": "なし",
 	"tor.onion_address": "Onionアドレス",
-	"tor.running_status": "Tor v{{version}} が実行中です。OnionサービスはTorブラウザからアクセス可能になります。",
+	"tor.running_status": "Tor v{version} が実行中です。OnionサービスはTorブラウザからアクセス可能になります。",
 	"tor.status_error": "エラー",
 	"tor.status_running": "実行中",
 	"tor.status_starting": "起動中",

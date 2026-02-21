@@ -515,7 +515,7 @@
 	"tor.help_https_title": "Über HTTPS & Tor",
 	"tor.no_services": "Keine Tor-Onion-Dienste gefunden",
 	"tor.onion_address": "Onion-Adresse",
-	"tor.running_status": "Tor v{{version}} läuft. Onion-Dienste sind über den Tor Browser erreichbar.",
+	"tor.running_status": "Tor v{version} läuft. Onion-Dienste sind über den Tor Browser erreichbar.",
 	"tor.status_error": "Fehler",
 	"tor.status_running": "Aktiv",
 	"tor.status_starting": "Startet...",

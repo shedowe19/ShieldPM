@@ -505,7 +505,7 @@
 	"tor.help_https_title": "O HTTPS a Tor",
 	"tor.no_services": "Žiadne služby",
 	"tor.onion_address": "Onion adresa",
-	"tor.running_status": "Tor v{{version}} je spustený. Služby Onion budú dostupné cez prehliadač Tor.",
+	"tor.running_status": "Tor v{version} je spustený. Služby Onion budú dostupné cez prehliadač Tor.",
 	"tor.status_error": "Chyba",
 	"tor.status_running": "Beží",
 	"tor.status_starting": "Spúšťa sa",

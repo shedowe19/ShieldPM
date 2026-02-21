@@ -505,7 +505,7 @@
 	"tor.help_https_title": "Относно HTTPS & Tor",
 	"tor.no_services": "Няма намерени услуги",
 	"tor.onion_address": "Onion Адрес",
-	"tor.running_status": "Tor v{{version}} работи. Onion услугите ще бъдат достъпни чрез Tor Browser.",
+	"tor.running_status": "Tor v{version} работи. Onion услугите ще бъдат достъпни чрез Tor Browser.",
 	"tor.status_error": "Грешка",
 	"tor.status_running": "Работи",
 	"tor.status_starting": "Стартиране",

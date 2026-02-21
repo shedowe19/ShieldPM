@@ -505,7 +505,7 @@
 	"tor.help_https_title": "Về HTTPS & Tor",
 	"tor.no_services": "Không tìm thấy dịch vụ",
 	"tor.onion_address": "Địa chỉ Onion",
-	"tor.running_status": "Tor v{{version}} đang chạy. Các dịch vụ Onion sẽ có thể truy cập qua Trình duyệt Tor.",
+	"tor.running_status": "Tor v{version} đang chạy. Các dịch vụ Onion sẽ có thể truy cập qua Trình duyệt Tor.",
 	"tor.status_error": "Lỗi",
 	"tor.status_running": "Đang chạy",
 	"tor.status_starting": "Đang khởi động",
