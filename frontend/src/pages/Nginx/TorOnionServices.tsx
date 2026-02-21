@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BADGE_VARIANT, type BadgeVariant, TOR_ONION_STATUS, type TorOnionStatus } from "src/types/enums";
 import type { TorOnion } from "@/api/backend";
 import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
@@ -23,6 +24,7 @@ import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
 
 export function TorOnionServices() {
+	const { t } = useTranslation();
 	const health = useHealth();
 	const { data, isLoading, refetch } = useTorOnions();
 	const { remove, start, stop } = useTorOnion();
@@ -93,13 +95,17 @@ export function TorOnionServices() {
 				<CardHeader>
 					<CardTitle className="text-2xl font-bold flex items-center gap-2 text-red-500">
 						<Lock className="h-6 w-6" />
-						Access Denied
+						<T id="tor.demo_mode_title" />
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div className="p-8 text-center text-muted-foreground">
-						<p className="text-lg font-semibold">This feature is disabled in Demo Mode.</p>
-						<p className="mt-2">Tor Onion Services are restricted for security reasons.</p>
+						<p className="text-lg font-semibold">
+							<T id="tor.demo_mode_desc" />
+						</p>
+						<p className="mt-2">
+							<T id="tor.demo_mode_subdesc" />
+						</p>
 					</div>
 				</CardContent>
 			</Card>
@@ -118,7 +124,7 @@ export function TorOnionServices() {
 						<T id="tor.title" />
 					</CardTitle>
 					<CardDescription className="mt-1">
-						Expose services via Tor Hidden Services for privacy and CGNAT bypass
+						<T id="tor.description" />
 					</CardDescription>
 				</div>
 				<div className="flex items-center space-x-2">
@@ -149,9 +155,7 @@ export function TorOnionServices() {
 
 				{torInfo?.available && (
 					<Alert className="mb-4">
-						<AlertDescription>
-							Tor v{torInfo.version} is running. Onion services will be accessible via Tor Browser.
-						</AlertDescription>
+						<AlertDescription>{t("tor.running_status", { version: torInfo.version })}</AlertDescription>
 					</Alert>
 				)}
 
