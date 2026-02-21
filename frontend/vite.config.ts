@@ -54,7 +54,6 @@ export default defineConfig({
 					"vendor-data": [
 						"@tanstack/react-query",
 						"@tanstack/react-table",
-						"axios",
 						"zod",
 						"react-hook-form",
 						"@hookform/resolvers",
