@@ -1,5 +1,5 @@
+import { fileURLToPath } from "node:url";
 import path from "path";
-import { fileURLToPath } from "url";
 import knex from "knex";
 import { configGet, configHas } from "./lib/config.js";
 import { global as logger } from "./logger.js";

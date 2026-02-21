@@ -5,10 +5,10 @@
 
 import ipaddr from "ipaddr.js";
 import si from "systeminformation";
-import internalMaintenance from "../maintenance.js";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
+import ProxyHost from "../../models/proxy_host.js";
 import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
@@ -16,10 +16,10 @@ import internalCertificate from "../certificate.js";
 import internalDdnsProvider from "../ddns-provider.js";
 import internalDeadHost from "../dead-host.js";
 import internalIpRanges from "../ip_ranges.js";
+import internalMaintenance from "../maintenance.js";
 import internalNginx from "../nginx.js";
 import internalPki from "../pki.js";
 import internalProxyHost from "../proxy-host.js";
-import ProxyHost from "../../models/proxy_host.js";
 import internalRedirectionHost from "../redirection-host.js";
 import internalReport from "../report.js";
 import internalSetting from "../setting.js";

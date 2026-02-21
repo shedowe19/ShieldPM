@@ -1,5 +1,5 @@
+import { fileURLToPath } from "node:url";
 import path from "path";
-import { fileURLToPath } from "url";
 import db from "./db.js";
 import { migrate as logger } from "./logger.js";
 
