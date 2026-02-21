@@ -535,5 +535,6 @@
 	"user.switch-dark": "Включить тёмную тему",
 	"user.switch-light": "Включить светлую тему",
 	"username": "Имя пользователя",
-	"users": "Пользователи"
+	"users": "Пользователи",
+	"tor-onion": "Tor-Onion"
 }

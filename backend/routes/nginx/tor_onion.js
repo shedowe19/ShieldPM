@@ -105,7 +105,7 @@ router.post("/", async (req, res, next) => {
 			object_id: finalService.id,
 			meta: {
 				name: finalService.name,
-				onion_address: finalService.onion_address,
+				onion_address: finalService.onionAddress,
 			},
 		});
 
@@ -159,7 +159,7 @@ router.put("/:id", async (req, res, next) => {
 			object_id: updatedService.id,
 			meta: {
 				name: updatedService.name,
-				onion_address: updatedService.onion_address,
+				onion_address: updatedService.onionAddress,
 			},
 		});
 
@@ -203,7 +203,7 @@ router.delete("/:id", async (req, res, next) => {
 			object_id: service.id,
 			meta: {
 				name: service.name,
-				onion_address: service.onion_address,
+				onion_address: service.onionAddress,
 			},
 		});
 
@@ -249,7 +249,7 @@ router.post("/:id/start", async (req, res, next) => {
 			object_id: updatedService.id,
 			meta: {
 				name: updatedService.name,
-				onion_address: updatedService.onion_address,
+				onion_address: updatedService.onionAddress,
 				status: "started",
 			},
 		});
@@ -288,7 +288,7 @@ router.post("/:id/stop", async (req, res, next) => {
 			object_id: updatedService.id,
 			meta: {
 				name: updatedService.name,
-				onion_address: updatedService.onion_address,
+				onion_address: updatedService.onionAddress,
 				status: "stopped",
 			},
 		});

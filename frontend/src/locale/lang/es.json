@@ -535,5 +535,6 @@
 	"user.switch-dark": "Cambiar a modo Oscuro",
 	"user.switch-light": "Cambiar a modo Claro",
 	"username": "Nombre de Usuario",
-	"users": "Usuarios"
+	"users": "Usuarios",
+	"tor-onion": "Tor-Onion"
 }

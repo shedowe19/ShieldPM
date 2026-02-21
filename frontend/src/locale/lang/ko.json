@@ -535,5 +535,6 @@
 	"user.switch-dark": "다크 모드로 전환",
 	"user.switch-light": "라이트 모드로 전환",
 	"username": "사용자 이름",
-	"users": "사용자"
+	"users": "사용자",
+	"tor-onion": "Tor-Onion"
 }

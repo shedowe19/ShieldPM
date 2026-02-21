@@ -545,5 +545,6 @@
 	"user.switch-dark": "Switch to Dark mode",
 	"user.switch-light": "Switch to Light mode",
 	"username": "Username",
-	"users": "Users"
+	"users": "Users",
+	"tor-onion": "Tor-Onion"
 }
