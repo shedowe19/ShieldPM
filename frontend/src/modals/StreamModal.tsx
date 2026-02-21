@@ -137,7 +137,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									<TabsContent value={STREAM_TAB.DETAILS} className="space-y-4 pt-4">
 										<div className="space-y-2">
 											<Label htmlFor="incomingPort">
-												<T id="stream.incoming-port" />
+												<T id="incomingPort" />
 											</Label>
 											<Field name="incomingPort" validate={validateString(1, 11)}>
 												{({ field }: FieldProps) => (
@@ -159,7 +159,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 											<div className="md:col-span-8">
 												<Label htmlFor="forwardingHost">
-													<T id="stream.forwarding-host" />
+													<T id="forwardingHost" />
 												</Label>
 												<Field name="forwardingHost" validate={validateString(1, 255)}>
 													{({ field }: FieldProps) => (
@@ -179,7 +179,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</div>
 											<div className="md:col-span-4">
 												<Label htmlFor="forwardingPort">
-													<T id="stream.forwarding-port" />
+													<T id="forwardingPort" />
 												</Label>
 												<Field name="forwardingPort" validate={validateString(1, 11)}>
 													{({ field }: FieldProps) => (
