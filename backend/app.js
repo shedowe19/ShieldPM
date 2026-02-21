@@ -12,6 +12,22 @@ import { isSetup } from "./setup.js";
 // Initialize Analytics Service (starts tailing logs)
 analyticsService.init();
 
+// Global API Rate Limiter
+import rateLimit from "express-rate-limit";
+
+const globalApiLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 500, // Limit each IP to 500 requests per 15 minutes
+	message: {
+		error: {
+			code: 429,
+			message: "Too many requests from this IP, please try again after 15 minutes",
+		},
+	},
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
 /**
  * App
  */
@@ -101,6 +117,10 @@ import checkDemoMode from "./lib/express/demo.js";
 app.use(checkDemoMode);
 
 app.use(jwt());
+
+// Apply global rate limiter to all API routes
+app.use("/api", globalApiLimiter);
+
 app.use("/", mainRoutes);
 
 // production error handler
