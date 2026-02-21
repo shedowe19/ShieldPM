@@ -43,6 +43,7 @@ const internalProxyHost = {
 	 * @param   {string}  [data.git_credentials]
 	 * @param   {string}  [data.terminal_password]
 	 * @param   {string}  [data.terminal_private_key]
+	 * @param   {Array<Object>} [data.host_domains]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
@@ -167,6 +168,7 @@ const internalProxyHost = {
 	 * @param  {string}  [data.git_credentials]
 	 * @param  {string}  [data.terminal_password]
 	 * @param  {string}  [data.terminal_private_key]
+	 * @param  {Array<Object>} [data.host_domains]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {

@@ -43,6 +43,8 @@ class ProxyHost extends Model {
 	forward_port;
 	/** @type {string[]} */
 	domain_names;
+	/** @type {Object[]} */
+	host_domains;
 	/** @type {Object} */
 	meta;
 	/** @type {string} */
