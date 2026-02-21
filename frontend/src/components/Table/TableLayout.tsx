@@ -21,4 +21,7 @@ function TableLayout<TFields>(props: TableLayoutProps<TFields>) {
 	);
 }
 
-export { TableLayout, type TableLayoutProps };
+import React from "react";
+
+const MemoizedTableLayout = React.memo(TableLayout) as typeof TableLayout;
+export { MemoizedTableLayout as TableLayout, type TableLayoutProps };
