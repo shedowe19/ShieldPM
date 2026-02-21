@@ -493,6 +493,7 @@
 	"test": "Test",
 	"theme.dark": "Tmavý",
 	"theme.light": "Svetlý",
+	"tor-onion": "Tor-Onion",
 	"tor.add": "Pridať Onion službu",
 	"tor.copy_success": "Skopírované!",
 	"tor.daemon_unavailable": "Démon Tor nie je k dispozícii",
@@ -535,6 +536,5 @@
 	"user.switch-dark": "Prepnúť na tmavý režim",
 	"user.switch-light": "Prepnúť na svetlý režim",
 	"username": "Používateľské meno",
-	"users": "Používatelia",
-	"tor-onion": "Tor-Onion"
+	"users": "Používatelia"
 }

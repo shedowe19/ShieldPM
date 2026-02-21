@@ -493,6 +493,7 @@
 	"test": "Kiểm tra",
 	"theme.dark": "Tối",
 	"theme.light": "Sáng",
+	"tor-onion": "Tor-Onion",
 	"tor.add": "Thêm Dịch vụ Onion",
 	"tor.copy_success": "Đã sao chép!",
 	"tor.daemon_unavailable": "Daemon Tor không khả dụng",
@@ -535,6 +536,5 @@
 	"user.switch-dark": "Chuyển sang chế độ tối",
 	"user.switch-light": "Chuyển sang chế độ sáng",
 	"username": "Tên người dùng",
-	"users": "Danh sách người dùng",
-	"tor-onion": "Tor-Onion"
+	"users": "Danh sách người dùng"
 }

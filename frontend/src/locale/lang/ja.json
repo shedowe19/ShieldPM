@@ -493,6 +493,7 @@
 	"test": "テスト",
 	"theme.dark": "ダーク",
 	"theme.light": "ライト",
+	"tor-onion": "Tor-Onion",
 	"tor.add": "Onionサービスを追加",
 	"tor.copy_success": "コピーしました！",
 	"tor.daemon_unavailable": "Torデーモン不可",
@@ -535,6 +536,5 @@
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
-	"users": "ユーザー",
-	"tor-onion": "Tor-Onion"
+	"users": "ユーザー"
 }

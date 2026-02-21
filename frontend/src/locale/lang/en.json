@@ -503,6 +503,7 @@
 	"test": "Test",
 	"theme.dark": "Dark",
 	"theme.light": "Light",
+	"tor-onion": "Tor-Onion",
 	"tor.add": "Add Onion Service",
 	"tor.copy_success": "Onion address copied to clipboard!",
 	"tor.daemon_unavailable": "Tor daemon is not available. Please ensure it is enabled and running.",
@@ -545,6 +546,5 @@
 	"user.switch-dark": "Switch to Dark mode",
 	"user.switch-light": "Switch to Light mode",
 	"username": "Username",
-	"users": "Users",
-	"tor-onion": "Tor-Onion"
+	"users": "Users"
 }

@@ -493,6 +493,7 @@
 	"test": "Test",
 	"theme.dark": "Donker",
 	"theme.light": "Licht",
+	"tor-onion": "Tor-Onion",
 	"tor.add": "Onion Service toevoegen",
 	"tor.copy_success": "Gekopieerd!",
 	"tor.daemon_unavailable": "Tor-daemon niet beschikbaar",
@@ -535,6 +536,5 @@
 	"user.switch-dark": "Verander naar donkere modus",
 	"user.switch-light": "Verander naar lichte modus",
 	"username": "Gebruikersnaam",
-	"users": "Gebruikers",
-	"tor-onion": "Tor-Onion"
+	"users": "Gebruikers"
 }

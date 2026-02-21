@@ -493,6 +493,7 @@
 	"test": "Тест",
 	"theme.dark": "Тъмна",
 	"theme.light": "Светла",
+	"tor-onion": "Tor-Onion",
 	"tor.add": "Добавяне на Onion Услуга",
 	"tor.copy_success": "Скопирано!",
 	"tor.daemon_unavailable": "Tor демонът не е наличен",
@@ -535,6 +536,5 @@
 	"user.switch-dark": "Тъмна тема",
 	"user.switch-light": "Светла тема",
 	"username": "Потребителско име",
-	"users": "Потребители",
-	"tor-onion": "Tor-Onion"
+	"users": "Потребители"
 }

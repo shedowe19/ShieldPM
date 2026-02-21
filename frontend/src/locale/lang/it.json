@@ -493,6 +493,7 @@
 	"test": "Test",
 	"theme.dark": "Scuro",
 	"theme.light": "Chiaro",
+	"tor-onion": "Tor-Onion",
 	"tor.add": "Aggiungi Onion",
 	"tor.copy_success": "Copiato!",
 	"tor.daemon_unavailable": "Tor non disponibile",
@@ -535,6 +536,5 @@
 	"user.switch-dark": "Passa alla modalità Scura",
 	"user.switch-light": "Passa alla modalità Chiara",
 	"username": "Nome Utente",
-	"users": "Utenti",
-	"tor-onion": "Tor-Onion"
+	"users": "Utenti"
 }
