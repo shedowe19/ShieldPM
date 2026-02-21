@@ -1,7 +1,6 @@
 import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
-import { castJsonIfNeed } from "../lib/helpers.js";
 import utils from "../lib/utils.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
@@ -92,7 +91,12 @@ const internalProxyHost = {
 			}
 		}
 
-		let row = await proxyHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		// Transform domain_names into host_domains relation objects for insertGraph
+		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
+			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
+		}
+
+		let row = await proxyHostModel.query().insertGraphAndFetch(/** @type {any} */ (thisData));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -107,7 +111,7 @@ const internalProxyHost = {
 		// re-fetch with cert
 		row = await internalProxyHost.get(access, {
 			id: row.id,
-			expand: ["certificate", "owner", "access_list.[clients,items]"],
+			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
 		});
 
 		// Configure nginx
@@ -265,8 +269,15 @@ const internalProxyHost = {
 		// Let's assume I should fetch the row again or return `row` with merged data.
 		// But for safety, I will use `patchAndFetchById`.
 
+		// Transform domain_names into host_domains relation objects for upsertGraph
+		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
+			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
+		}
+
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
+			await proxyHostModel
+				.query()
+				.upsertGraphAndFetch(/** @type {any} */ (thisData), { relate: true, unrelate: true })
 		);
 		_saved_row = utils.omitRow(omissions())(new_saved_row);
 
@@ -280,7 +291,7 @@ const internalProxyHost = {
 
 		row = await internalProxyHost.get(access, {
 			id: thisData.id,
-			expand: ["owner", "certificate", "access_list.[clients,items]"],
+			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
 		});
 
 		if (!row.enabled) {
@@ -318,7 +329,8 @@ const internalProxyHost = {
 			.query()
 			.where("is_deleted", 0)
 			.andWhere("id", thisData.id)
-			.allowGraph("[owner,access_list.[clients,items],certificate]")
+			.allowGraph("[owner,access_list.[clients,items],certificate,host_domains]")
+			.withGraphFetched("host_domains")
 			.first();
 
 		if (access_data.permission_visibility !== "all") {
@@ -399,7 +411,7 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:update", data.id);
 		const row = await internalProxyHost.get(access, {
 			id: data.id,
-			expand: ["certificate", "owner", "access_list"],
+			expand: ["certificate", "owner", "access_list", "host_domains"],
 		});
 
 		if (!row || !row.id) {
@@ -490,8 +502,9 @@ const internalProxyHost = {
 			.query()
 			.where("is_deleted", 0)
 			.groupBy("id")
-			.allowGraph("[owner,access_list,certificate]")
-			.orderBy(castJsonIfNeed("domain_names"), "ASC");
+			.allowGraph("[owner,access_list,certificate,host_domains]")
+			.withGraphFetched("host_domains")
+			.orderBy("id", "DESC"); // Order by id DESC since domain_names is no longer a simple column
 
 		if (accessData.permission_visibility !== "all") {
 			query.andWhere("owner_user_id", access.token.getUserId(1));
@@ -499,9 +512,9 @@ const internalProxyHost = {
 
 		// Query is used for searching
 		if (typeof search_query === "string") {
-			query.where(function () {
-				this.where("domain_names", "like", `%${search_query}%`);
-			});
+			query.whereExists(
+				proxyHostModel.relatedQuery("host_domains").where("domain_name", "like", `%${search_query}%`),
+			);
 		}
 
 		if (typeof expand !== "undefined" && expand !== null) {

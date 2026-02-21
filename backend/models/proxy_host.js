@@ -185,6 +185,16 @@ class ProxyHost extends Model {
 		}
 	}
 
+	$afterGet() {
+		// Map the host_domains relation back into the legacy domain_names array format
+		// This ensures seamless compatibility with APIs and Nginx templates
+		if (this.host_domains && Array.isArray(this.host_domains)) {
+			this.domain_names = this.host_domains.map((hd) => hd.domain_name);
+		} else if (!this.domain_names) {
+			this.domain_names = [];
+		}
+	}
+
 	$parseDatabaseJson(json) {
 		const thisJson = super.$parseDatabaseJson(json);
 		return convertIntFieldsToBool(thisJson, boolFields);
@@ -251,6 +261,15 @@ class ProxyHost extends Model {
 				},
 				modify: (qb) => {
 					qb.where("tor_onion.is_deleted", 0);
+				},
+			},
+			host_domains: {
+				relation: Model.HasManyRelation,
+				// We use a dynamic import/require string here to avoid circular dependencies
+				modelClass: import.meta.url ? new URL("./host_domain.js", import.meta.url).pathname : "host_domain.js",
+				join: {
+					from: "proxy_host.id",
+					to: "host_domain.proxy_host_id",
 				},
 			},
 		};
