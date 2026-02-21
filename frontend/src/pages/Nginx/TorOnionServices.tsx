@@ -215,6 +215,7 @@ export function TorOnionServices() {
 												<span className="text-muted-foreground">—</span>
 											)}
 										</TableCell>
+										<TableCell>{service.virtualPort}</TableCell>
 										<TableCell>{service.targetPort}</TableCell>
 										<TableCell>{getStatusBadge(service.status)}</TableCell>
 										<TableCell className="text-right space-x-1">
