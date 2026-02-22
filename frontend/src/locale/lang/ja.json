@@ -536,5 +536,6 @@
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
-	"users": "ユーザー"
+	"users": "ユーザー",
+	"role.user": "ユーザー"
 }

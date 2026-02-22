@@ -536,5 +536,6 @@
 	"user.switch-dark": "Chuyển sang chế độ tối",
 	"user.switch-light": "Chuyển sang chế độ sáng",
 	"username": "Tên người dùng",
-	"users": "Danh sách người dùng"
+	"users": "Danh sách người dùng",
+	"role.user": "Người dùng"
 }

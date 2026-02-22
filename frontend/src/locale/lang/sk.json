@@ -536,5 +536,6 @@
 	"user.switch-dark": "Prepnúť na tmavý režim",
 	"user.switch-light": "Prepnúť na svetlý režim",
 	"username": "Používateľské meno",
-	"users": "Používatelia"
+	"users": "Používatelia",
+	"role.user": "Používateľ"
 }

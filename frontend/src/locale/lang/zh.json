@@ -536,5 +536,6 @@
 	"user.switch-dark": "切换到深色模式",
 	"user.switch-light": "切换到浅色模式",
 	"username": "用户名",
-	"users": "用户列表"
+	"users": "用户列表",
+	"role.user": "用户"
 }

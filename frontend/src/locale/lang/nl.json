@@ -536,5 +536,6 @@
 	"user.switch-dark": "Verander naar donkere modus",
 	"user.switch-light": "Verander naar lichte modus",
 	"username": "Gebruikersnaam",
-	"users": "Gebruikers"
+	"users": "Gebruikers",
+	"role.user": "Gebruiker"
 }

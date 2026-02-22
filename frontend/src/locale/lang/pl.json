@@ -536,5 +536,6 @@
 	"user.switch-dark": "Przełącz na tryb ciemny",
 	"user.switch-light": "Przełącz na tryb jasny",
 	"username": "Nazwa użytkownika",
-	"users": "Użytkownicy"
+	"users": "Użytkownicy",
+	"role.user": "Użytkownik"
 }
