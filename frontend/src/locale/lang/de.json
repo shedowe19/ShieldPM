@@ -440,6 +440,7 @@
 	"redirection_hosts.count_label": "Redirection Hosts",
 	"role.admin": "Administrator",
 	"role.standard-user": "Standard User",
+	"role.user": "Benutzer",
 	"roles": "Rollen",
 	"satisfyAny": "Beliebige erfüllen",
 	"save": "Speichern",
@@ -546,6 +547,5 @@
 	"user.switch-dark": "Zum Dark Mode wechseln",
 	"user.switch-light": "Zum Light Mode wechslen",
 	"username": "Benutzername",
-	"users": "Benutzer",
-	"role.user": "Benutzer"
+	"users": "Benutzer"
 }

@@ -430,6 +430,7 @@
 	"redirection_hosts.count_label": "Хосты Перенаправления",
 	"role.admin": "Администратор",
 	"role.standard-user": "Обычный пользователь",
+	"role.user": "Пользователь",
 	"roles": "Роли",
 	"satisfyAny": "Удовлетворить любое",
 	"save": "Сохранить",
@@ -536,6 +537,5 @@
 	"user.switch-dark": "Включить тёмную тему",
 	"user.switch-light": "Включить светлую тему",
 	"username": "Имя пользователя",
-	"users": "Пользователи",
-	"role.user": "Пользователь"
+	"users": "Пользователи"
 }

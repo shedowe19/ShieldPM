@@ -430,6 +430,7 @@
 	"redirection_hosts.count_label": "Presmerovanie Hostiteľov",
 	"role.admin": "Administrátor",
 	"role.standard-user": "Bežný používateľ",
+	"role.user": "Používateľ",
 	"roles": "Roly",
 	"satisfyAny": "Uspokojiť akékoľvek",
 	"save": "Uložiť",
@@ -536,6 +537,5 @@
 	"user.switch-dark": "Prepnúť na tmavý režim",
 	"user.switch-light": "Prepnúť na svetlý režim",
 	"username": "Používateľské meno",
-	"users": "Používatelia",
-	"role.user": "Používateľ"
+	"users": "Používatelia"
 }

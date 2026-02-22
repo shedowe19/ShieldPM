@@ -430,6 +430,7 @@
 	"redirection_hosts.count_label": "Omleidings Hosts",
 	"role.admin": "Beheerder",
 	"role.standard-user": "Standaard Gebruiker",
+	"role.user": "Gebruiker",
 	"roles": "Rollen",
 	"satisfyAny": "Satisfy Any",
 	"save": "Opslaan",
@@ -536,6 +537,5 @@
 	"user.switch-dark": "Verander naar donkere modus",
 	"user.switch-light": "Verander naar lichte modus",
 	"username": "Gebruikersnaam",
-	"users": "Gebruikers",
-	"role.user": "Gebruiker"
+	"users": "Gebruikers"
 }

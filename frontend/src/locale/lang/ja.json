@@ -430,6 +430,7 @@
 	"redirection_hosts.count_label": "リダイレクトホスト",
 	"role.admin": "管理者",
 	"role.standard-user": "一般ユーザー",
+	"role.user": "ユーザー",
 	"roles": "役割",
 	"satisfyAny": "いずれかを満たす",
 	"save": "保存",
@@ -536,6 +537,5 @@
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
-	"users": "ユーザー",
-	"role.user": "ユーザー"
+	"users": "ユーザー"
 }

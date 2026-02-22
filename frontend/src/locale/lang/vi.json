@@ -430,6 +430,7 @@
 	"redirection_hosts.count_label": "Máy chủ Chuyển hướng",
 	"role.admin": "Quản trị viên",
 	"role.standard-user": "Người dùng bình thường",
+	"role.user": "Người dùng",
 	"roles": "Vai trò",
 	"satisfyAny": "Thỏa mãn bất kỳ",
 	"save": "Lưu",
@@ -536,6 +537,5 @@
 	"user.switch-dark": "Chuyển sang chế độ tối",
 	"user.switch-light": "Chuyển sang chế độ sáng",
 	"username": "Tên người dùng",
-	"users": "Danh sách người dùng",
-	"role.user": "Người dùng"
+	"users": "Danh sách người dùng"
 }

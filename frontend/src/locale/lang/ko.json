@@ -430,6 +430,7 @@
 	"redirection_hosts.count_label": "리디렉션 호스트",
 	"role.admin": "관리자",
 	"role.standard-user": "일반 사용자",
+	"role.user": "사용자",
 	"roles": "역할",
 	"satisfyAny": "조건 만족(Any)",
 	"save": "저장",
@@ -536,6 +537,5 @@
 	"user.switch-dark": "다크 모드로 전환",
 	"user.switch-light": "라이트 모드로 전환",
 	"username": "사용자 이름",
-	"users": "사용자",
-	"role.user": "사용자"
+	"users": "사용자"
 }

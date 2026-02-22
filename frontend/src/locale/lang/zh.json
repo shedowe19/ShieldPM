@@ -430,6 +430,7 @@
 	"redirection_hosts.count_label": "重定向主机",
 	"role.admin": "管理员",
 	"role.standard-user": "标准用户",
+	"role.user": "用户",
 	"roles": "角色",
 	"satisfyAny": "满足任意",
 	"save": "保存",
@@ -536,6 +537,5 @@
 	"user.switch-dark": "切换到深色模式",
 	"user.switch-light": "切换到浅色模式",
 	"username": "用户名",
-	"users": "用户列表",
-	"role.user": "用户"
+	"users": "用户列表"
 }
