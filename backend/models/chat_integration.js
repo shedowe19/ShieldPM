@@ -30,6 +30,10 @@ class ChatIntegration extends Model {
 		return "chat_integration";
 	}
 
+	static get jsonAttributes() {
+		return ["config", "meta"];
+	}
+
 	static get relationMappings() {
 		return {
 			user: {
