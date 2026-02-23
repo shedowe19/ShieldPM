@@ -77,6 +77,8 @@ class ProxyHost extends Model {
 	disable_buffering;
 	/** @type {number} */
 	anubis_enabled;
+	/** @type {Object[]|null} */
+	anubis_rules;
 	/** @type {number} */
 	maintenance_active;
 	/** @type {number} */
