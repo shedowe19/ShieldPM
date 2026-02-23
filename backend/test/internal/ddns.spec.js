@@ -76,22 +76,23 @@ describe("DDNS Service", () => {
 				ip_ver: "dual",
 			};
 
-			// Mock List Record (A)
+			// 1. Mock List Record (A)
 			fetchMock.mockResolvedValueOnce({
 				json: async () => ({ success: true, result: [{ id: "rec1", proxied: false }] }),
 			});
 
-			// Mock Update Record (A)
-			fetchMock.mockResolvedValueOnce({
-				json: async () => ({ success: true }),
-			});
-
-			// Mock List Record (AAAA) - Not found -> Create
+			// 2. Mock List Record (AAAA) - Not found -> Create
+			// (Due to Promise.all concurrency, the two List calls execute before the update/create calls)
 			fetchMock.mockResolvedValueOnce({
 				json: async () => ({ success: true, result: [] }),
 			});
 
-			// Mock Create Record (AAAA)
+			// 3. Mock Update Record (A)
+			fetchMock.mockResolvedValueOnce({
+				json: async () => ({ success: true }),
+			});
+
+			// 4. Mock Create Record (AAAA)
 			fetchMock.mockResolvedValueOnce({
 				json: async () => ({ success: true }),
 			});

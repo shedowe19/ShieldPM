@@ -56,18 +56,21 @@ const providers = {
 		if (!token || !zone_id) throw new Error("Missing Cloudflare Token or Zone ID");
 
 		const results = [];
+		const promises = [];
 
 		for (const domain of provider.domains) {
 			// Handle IPv4 (A Record)
 			if (ips.ipv4) {
-				await updateCloudflareRecord(token, zone_id, domain, "A", ips.ipv4, results);
+				promises.push(updateCloudflareRecord(token, zone_id, domain, "A", ips.ipv4, results));
 			}
 
 			// Handle IPv6 (AAAA Record)
 			if (ips.ipv6) {
-				await updateCloudflareRecord(token, zone_id, domain, "AAAA", ips.ipv6, results);
+				promises.push(updateCloudflareRecord(token, zone_id, domain, "AAAA", ips.ipv6, results));
 			}
 		}
+
+		await Promise.all(promises);
 		return `Updated: ${results.join(", ")}`;
 	},
 

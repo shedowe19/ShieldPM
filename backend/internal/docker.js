@@ -144,10 +144,8 @@ class DockerService {
 					`Docker Auto-Discovery [${client.name}]: Found ${containers.length} running containers. Syncing...`,
 				);
 
-				for (const containerInfo of containers) {
-					// We transfer the client context to processContainer
-					await this.processContainer(containerInfo, client);
-				}
+				const syncPromises = containers.map((containerInfo) => this.processContainer(containerInfo, client));
+				await Promise.allSettled(syncPromises);
 			} catch (err) {
 				logger.error(`Docker Auto-Discovery [${client.name}]: Sync failed`, err);
 			}

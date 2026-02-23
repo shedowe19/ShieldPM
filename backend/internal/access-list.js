@@ -171,27 +171,27 @@ const internalAccessList = {
 			const promises = [];
 			const itemsToKeep = [];
 
-			// Re-implementation of the loop to correctly capture promises
-			for (const item of data.items) {
+			// Re-implementation of the loop to run hashes concurrently
+			const itemPromises = data.items.map(async (item) => {
 				if (item.password) {
 					let finalPass = item.password;
 					if (!finalPass.startsWith("$2")) {
 						finalPass = await bcrypt.hash(item.password, 13);
 					}
 
-					promises.push(
-						accessListAuthModel.query().insert(
-							/** @type {any} */ ({
-								access_list_id: data.id,
-								username: item.username,
-								password: finalPass,
-							}),
-						),
+					return accessListAuthModel.query().insert(
+						/** @type {any} */ ({
+							access_list_id: data.id,
+							username: item.username,
+							password: finalPass,
+						}),
 					);
-				} else {
-					itemsToKeep.push(item.username);
 				}
-			}
+				itemsToKeep.push(item.username);
+				return null;
+			});
+
+			promises.push(...(await Promise.all(itemPromises)).filter(Boolean));
 
 			const query = accessListAuthModel.query().delete().where("access_list_id", data.id);
 

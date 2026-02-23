@@ -893,7 +893,7 @@ const internalGitOps = {
 
 				try {
 					const staleItems = await query;
-					for (const item of staleItems) {
+					const deletePromises = staleItems.map(async (item) => {
 						// Delete Nginx config if hostType is provided
 						if (hostType) {
 							await internalNginx.deleteConfig(hostType, item);
@@ -907,7 +907,9 @@ const internalGitOps = {
 						}
 						deleted++;
 						logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
-					}
+					});
+
+					await Promise.allSettled(deletePromises);
 				} catch (err) {
 					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
 				}
