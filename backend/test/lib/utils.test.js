@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import utils from '../../lib/utils.js';
 import fs from 'node:fs';
 import { execFile as nodeExecFile } from 'node:child_process';
@@ -85,13 +85,13 @@ describe('backend/lib/utils.js', () => {
     describe('execFile', () => {
         it('should execute a command and return stdout + stderr', async () => {
             // Mock nodeExecFile to call the callback with success
-            nodeExecFile.mockImplementation((cmd, args, callback) => {
+            nodeExecFile.mockImplementation((_cmd, args, callback) => {
                 // Handle optional args
+                let cb = callback;
                 if (typeof args === 'function') {
-                    callback = args;
-                    args = [];
+                    cb = args;
                 }
-                callback(null, { stdout: 'output', stderr: 'error' });
+                cb(null, { stdout: 'output', stderr: 'error' });
             });
 
             const result = await utils.execFile('ls', ['-la']);
@@ -101,15 +101,15 @@ describe('backend/lib/utils.js', () => {
 
         it('should throw CommandError on failure', async () => {
             // Mock nodeExecFile to call the callback with error
-            nodeExecFile.mockImplementation((cmd, args, callback) => {
+            nodeExecFile.mockImplementation((_cmd, args, callback) => {
+                 let cb = callback;
                  if (typeof args === 'function') {
-                    callback = args;
-                    args = [];
+                    cb = args;
                 }
                 const err = new Error('Command failed');
                 err.stdout = 'stdout info';
                 err.stderr = 'stderr info';
-                callback(err);
+                cb(err);
             });
 
             await expect(utils.execFile('fail', [])).rejects.toThrow('stdout infostderr info');

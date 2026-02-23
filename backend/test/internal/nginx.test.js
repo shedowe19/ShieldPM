@@ -92,7 +92,7 @@ describe('backend/internal/nginx.js', () => {
 
     describe('configure', () => {
         it('should configure nginx successfully', async () => {
-            const result = await internalNginx.configure(mockModel, 'proxy-host', mockHost);
+            await internalNginx.configure(mockModel, 'proxy-host', mockHost);
 
             // Verify backup
             expect(fs.promises.copyFile).toHaveBeenCalled();
