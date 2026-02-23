@@ -77,7 +77,10 @@ oidc_issuer_url = "${meta.oauth2_oidc_issuer_url}"
 		if (meta.oauth2_allowed_emails) {
 			// Create authenticated emails file
 			const emailsFile = `${dataPath}/access/${id}/allowed_emails`;
-			const emailsContent = meta.oauth2_allowed_emails.split(",").map((e) => e.trim()).join("\n");
+			const emailsContent = meta.oauth2_allowed_emails
+				.split(",")
+				.map((e) => e.trim())
+				.join("\n");
 			// We write this file synchronously here as it's part of config generation logic,
 			// but better to do it in start() async.
 			// For config string generation, we just reference it.
@@ -117,7 +120,10 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 		// Write Allowed Emails File if needed
 		if (list.meta.oauth2_allowed_emails) {
 			const emailsFile = `${accessDir}/allowed_emails`;
-			const emailsContent = list.meta.oauth2_allowed_emails.split(",").map((e) => e.trim()).join("\n");
+			const emailsContent = list.meta.oauth2_allowed_emails
+				.split(",")
+				.map((e) => e.trim())
+				.join("\n");
 			await fs.promises.writeFile(emailsFile, emailsContent);
 		}
 
@@ -162,7 +168,6 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 			child.on("error", (err) => {
 				logger.error(`Failed to spawn OAuth2 Proxy #${list.id}:`, err);
 			});
-
 		} catch (err) {
 			logger.error(`Error starting OAuth2 Proxy #${list.id}:`, err);
 		}
@@ -189,7 +194,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 	 */
 	restart: async (list) => {
 		await internalOAuth2Proxy.start(list);
-	}
+	},
 };
 
 export default internalOAuth2Proxy;

@@ -457,11 +457,19 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectValue placeholder="Select Provider" />
 																		</SelectTrigger>
 																		<SelectContent>
-																			<SelectItem value="google">Google</SelectItem>
-																			<SelectItem value="github">GitHub</SelectItem>
-																			<SelectItem value="oidc">OpenID Connect</SelectItem>
+																			<SelectItem value="google">
+																				Google
+																			</SelectItem>
+																			<SelectItem value="github">
+																				GitHub
+																			</SelectItem>
+																			<SelectItem value="oidc">
+																				OpenID Connect
+																			</SelectItem>
 																			<SelectItem value="azure">Azure</SelectItem>
-																			<SelectItem value="gitlab">GitLab</SelectItem>
+																			<SelectItem value="gitlab">
+																				GitLab
+																			</SelectItem>
 																			<SelectItem value="keycloak-oidc">
 																				Keycloak
 																			</SelectItem>
