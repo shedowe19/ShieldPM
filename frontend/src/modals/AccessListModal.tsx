@@ -32,6 +32,7 @@ interface Props extends InnerModalProps {
 interface AccessListFormValues extends Partial<AccessList> {
 	authType?: string;
 	authentikHost?: string;
+	oauth2ProxyHost?: string;
 	oidcDiscoveryUrl?: string;
 	oidcClientId?: string;
 	oidcClientSecret?: string;
@@ -52,6 +53,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			values.items?.length === 0 &&
 			values.clients?.length === 0 &&
 			!values.authentikHost &&
+			!values.oauth2ProxyHost &&
 			values.authType !== ACCESS_LIST_AUTH_TYPE.OIDC &&
 			!values.mtlsEnabled
 		) {
@@ -62,6 +64,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			if (!values.oidcClientId) return "Client ID is required";
 			if (!values.oidcClientSecret) return "Client Secret is required";
 			if (!values.oidcDiscoveryUrl) return "Discovery URL is required";
+		}
+
+		if (values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY) {
+			if (!values.oauth2ProxyHost) return "OAuth2 Proxy Host is required";
 		}
 
 		if (values.mtlsEnabled && !values.mtlsUseInternal && !values.mtlsContent) {
@@ -105,6 +111,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				...data?.meta,
 				auth_type: authType,
 				authentik_host: authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY ? values.authentikHost : undefined,
+				oauth2_proxy_host: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ProxyHost : undefined,
 				oidc_discovery_url: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcDiscoveryUrl : undefined,
 				oidc_client_id: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientId : undefined,
 				oidc_client_secret: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientSecret : undefined,
@@ -154,7 +161,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	let initialAuthType =
 		meta.auth_type ||
 		meta.authType ||
-		(meta.authentik_host || meta.authentikHost ? ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY : "");
+		(meta.authentik_host || meta.authentikHost
+			? ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY
+			: meta.oauth2_proxy_host || meta.oauth2ProxyHost
+				? ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY
+				: "");
 	if (!initialAuthType) initialAuthType = ACCESS_LIST_AUTH_TYPE.NONE;
 
 	return (
@@ -193,6 +204,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								// Determine initial authType
 								authType: initialAuthType,
 								authentikHost: meta.authentik_host || meta.authentikHost || "",
+								oauth2ProxyHost: meta.oauth2_proxy_host || meta.oauth2ProxyHost || "",
 								oidcDiscoveryUrl: meta.oidc_discovery_url || meta.oidcDiscoveryUrl || "",
 								oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
 								oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
@@ -357,6 +369,9 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																>
 																	Authentik Proxy (Forward Auth)
 																</SelectItem>
+																<SelectItem value={ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY}>
+																	OAuth2 Proxy
+																</SelectItem>
 																<SelectItem value={ACCESS_LIST_AUTH_TYPE.OIDC}>
 																	OIDC (OpenID Connect)
 																</SelectItem>
@@ -383,6 +398,25 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<div className="text-sm text-muted-foreground">
 														Full URL to your Authentik instance. Uses Nginx `auth_request`
 														to the Outpost.
+													</div>
+												</div>
+											)}
+
+											{values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY && (
+												<div className="space-y-2">
+													<Label htmlFor="oauth2ProxyHost">OAuth2 Proxy Host URL</Label>
+													<Field name="oauth2ProxyHost">
+														{({ field }: FieldProps) => (
+															<Input
+																{...field}
+																id="oauth2ProxyHost"
+																placeholder="http://oauth2-proxy:4180"
+															/>
+														)}
+													</Field>
+													<div className="text-sm text-muted-foreground">
+														Full URL to your OAuth2 Proxy instance. Uses Nginx
+														`auth_request`.
 													</div>
 												</div>
 											)}

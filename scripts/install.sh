@@ -466,7 +466,48 @@ else
     echo "--> Skipping Anubis."
 fi
 
-# 14. OpenAppSec WAF (Optional)
+# 14. OAuth2 Proxy (Optional)
+echo ""
+echo "=== OAuth2 Proxy (Optional) ==="
+echo "OAuth2 Proxy protects your applications using an external OAuth2 provider."
+echo "It handles authentication flow and passes user identity to the backend."
+echo ""
+read -r -p "Install OAuth2 Proxy? [y/N] (Default: N): " oauth2_choice
+
+if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
+    echo "--> Installing OAuth2 Proxy..."
+
+    # Detect Architecture
+    ARCH=$(dpkg --print-architecture)
+    # Map Debian arch to OAuth2 Proxy binary naming (linux-amd64, linux-arm64)
+    if [ "$ARCH" = "amd64" ]; then
+        OAUTH2_ARCH="amd64"
+    elif [ "$ARCH" = "arm64" ]; then
+        OAUTH2_ARCH="arm64"
+    else
+        echo "  > Warning: Unsupported architecture $ARCH. OAuth2 Proxy might not work."
+        OAUTH2_ARCH="$ARCH"
+    fi
+
+    VERSION="7.14.2"
+    URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${VERSION}/oauth2-proxy-v${VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
+
+    echo "  > Downloading from $URL..."
+    curl -L -o /tmp/oauth2-proxy.tar.gz "$URL"
+
+    if [ -s /tmp/oauth2-proxy.tar.gz ]; then
+        tar -xzf /tmp/oauth2-proxy.tar.gz -C /usr/local/bin --strip-components=1 "oauth2-proxy-v${VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
+        rm /tmp/oauth2-proxy.tar.gz
+        chmod +x /usr/local/bin/oauth2-proxy
+        echo "  > OAuth2 Proxy installed to /usr/local/bin/oauth2-proxy"
+    else
+        echo "  > Download failed!"
+    fi
+else
+    echo "--> Skipping OAuth2 Proxy."
+fi
+
+# 15. OpenAppSec WAF (Optional)
 echo ""
 echo "=== OpenAppSec WAF (Optional) ==="
 echo "OpenAppSec is an AI-based Web Application Firewall (WAF) that protects"
