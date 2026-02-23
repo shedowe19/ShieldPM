@@ -157,51 +157,44 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	renderLocations: async (host) => {
-		let template;
-
-		try {
-			template = await fs.promises.readFile(`${__dirname}/../templates/_proxy_host_custom_location.conf`, {
-				encoding: "utf8",
-			});
-		} catch (err) {
-			throw new errs.ConfigurationError(err.message);
-		}
-
 		const renderEngine = utils.getRenderEngine();
-		let renderedLocations = "";
+		const templatePath = `${__dirname}/../templates/_proxy_host_custom_location.conf`;
 
-		for (let i = 0; i < host.locations.length; i++) {
-			const locationCopy = Object.assign(
-				{},
-				{ access_list_id: host.access_list_id },
-				{ certificate_id: host.certificate_id },
-				{ ssl_forced: host.ssl_forced },
-				{ caching_enabled: host.caching_enabled },
-				{ block_exploits: host.block_exploits },
-				{ allow_websocket_upgrade: host.allow_websocket_upgrade },
-				{ http2_support: host.http2_support },
-				{ hsts_enabled: host.hsts_enabled },
-				{ hsts_subdomains: host.hsts_subdomains },
-				{ access_list: host.access_list },
-				{ certificate: host.certificate },
-				host.locations[i],
-			);
+		const renderedLocationsArray = await Promise.all(
+			host.locations.map(async (location) => {
+				const locationCopy = Object.assign(
+					{},
+					{ access_list_id: host.access_list_id },
+					{ certificate_id: host.certificate_id },
+					{ ssl_forced: host.ssl_forced },
+					{ caching_enabled: host.caching_enabled },
+					{ block_exploits: host.block_exploits },
+					{ allow_websocket_upgrade: host.allow_websocket_upgrade },
+					{ http2_support: host.http2_support },
+					{ hsts_enabled: host.hsts_enabled },
+					{ hsts_subdomains: host.hsts_subdomains },
+					{ access_list: host.access_list },
+					{ certificate: host.certificate },
+					location,
+				);
 
-			if (
-				locationCopy.forward_host.indexOf("/") > -1 &&
-				!locationCopy.forward_host.startsWith("/") &&
-				!locationCopy.forward_host.startsWith("unix")
-			) {
-				const split = locationCopy.forward_host.split("/");
+				if (
+					locationCopy.forward_host.indexOf("/") > -1 &&
+					!locationCopy.forward_host.startsWith("/") &&
+					!locationCopy.forward_host.startsWith("unix")
+				) {
+					const split = locationCopy.forward_host.split("/");
 
-				locationCopy.forward_host = split.shift();
-				locationCopy.forward_path = `/${split.join("/")}`;
-			}
-			locationCopy.env = process.env;
+					locationCopy.forward_host = split.shift();
+					locationCopy.forward_path = `/${split.join("/")}`;
+				}
+				locationCopy.env = process.env;
 
-			renderedLocations += await renderEngine.parseAndRender(template, locationCopy);
-		}
-		return renderedLocations;
+				return await renderEngine.renderFile(templatePath, locationCopy);
+			}),
+		);
+
+		return renderedLocationsArray.join("");
 	},
 
 	/**
@@ -215,17 +208,8 @@ const internalNginx = {
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 
 		const renderEngine = utils.getRenderEngine();
-
-		let template = null;
 		const filename = internalNginx.getConfigName(nice_host_type, host.id);
-
-		try {
-			template = await fs.promises.readFile(`${__dirname}/../templates/${nice_host_type}.conf`, {
-				encoding: "utf8",
-			});
-		} catch (err) {
-			throw new errs.ConfigurationError(err.message);
-		}
+		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;
 
 		let origLocations;
 
@@ -302,7 +286,7 @@ const internalNginx = {
 		}
 
 		try {
-			const config_text = await renderEngine.parseAndRender(template, host);
+			const config_text = await renderEngine.renderFile(templatePath, host);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
 

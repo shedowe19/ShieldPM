@@ -58,7 +58,7 @@ const authenticate = async () => {
 			return false;
 		}
 
-		const password = fs.readFileSync(torPasswordFile, "utf-8").trim();
+		const password = (await fs.promises.readFile(torPasswordFile, "utf-8")).trim();
 		const response = await sendCommand(`AUTHENTICATE "${password}"`);
 
 		if (response.includes("250 OK")) {
@@ -82,7 +82,7 @@ const sendAuthenticatedCommand = async (command) => {
 		throw new Error("Tor control password file not found");
 	}
 
-	const password = fs.readFileSync(torPasswordFile, "utf-8").trim();
+	const password = (await fs.promises.readFile(torPasswordFile, "utf-8")).trim();
 
 	return new Promise((resolve, reject) => {
 		const socket = createConnection(torControlPort, torControlHost, () => {

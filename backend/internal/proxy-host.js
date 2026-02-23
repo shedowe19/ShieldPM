@@ -103,10 +103,14 @@ const internalProxyHost = {
 		if (createCertificate) {
 			const cert = await internalCertificate.createQuickCertificate(access, thisData);
 			// update host with cert id
-			await internalProxyHost.update(access, {
-				id: row.id,
-				certificate_id: cert.id,
-			});
+			await internalProxyHost.update(
+				access,
+				{
+					id: row.id,
+					certificate_id: cert.id,
+				},
+				{ skip_configure: true },
+			);
 		}
 
 		// re-fetch with cert
@@ -171,7 +175,7 @@ const internalProxyHost = {
 	 * @param  {Array<Object>} [data.host_domains]
 	 * @return {Promise}
 	 */
-	update: async (access, data) => {
+	update: async (access, data, options = {}) => {
 		let thisData = data;
 		const create_certificate = thisData.certificate_id === "new";
 
@@ -296,14 +300,11 @@ const internalProxyHost = {
 			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
 		});
 
-		if (!row.enabled) {
-			// No need to add nginx config if host is disabled
-			return row;
+		if (!options.skip_configure) {
+			// Configure nginx
+			const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
+			row.meta = new_meta;
 		}
-
-		// Configure nginx
-		const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
-		row.meta = new_meta;
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("proxy-host");

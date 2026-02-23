@@ -75,15 +75,18 @@ const internalHost = {
 			redirection_hosts: [],
 		};
 
-		const proxyRes = await proxyHostModel.query().where("is_deleted", 0);
+		const [proxyRes, redirRes, deadRes] = await Promise.all([
+			proxyHostModel.query().where("is_deleted", 0),
+			redirectionHostModel.query().where("is_deleted", 0),
+			deadHostModel.query().where("is_deleted", 0),
+		]);
+
 		responseObject.proxy_hosts = internalHost._getHostsWithDomains(proxyRes, domainNames);
 		responseObject.total_count += responseObject.proxy_hosts.length;
 
-		const redirRes = await redirectionHostModel.query().where("is_deleted", 0);
 		responseObject.redirection_hosts = internalHost._getHostsWithDomains(redirRes, domainNames);
 		responseObject.total_count += responseObject.redirection_hosts.length;
 
-		const deadRes = await deadHostModel.query().where("is_deleted", 0);
 		responseObject.dead_hosts = internalHost._getHostsWithDomains(deadRes, domainNames);
 		responseObject.total_count += responseObject.dead_hosts.length;
 
@@ -103,7 +106,7 @@ const internalHost = {
 			proxyHostModel
 				.query()
 				.where("is_deleted", 0)
-				.andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
+				.whereExists(proxyHostModel.relatedQuery("host_domains").where("domain_name", hostname)),
 			redirectionHostModel
 				.query()
 				.where("is_deleted", 0)

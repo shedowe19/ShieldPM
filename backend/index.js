@@ -1,5 +1,14 @@
 #!/usr/bin/env node
 
+process.on("unhandledRejection", (reason, promise) => {
+	logger.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+	logger.error("Uncaught Exception:", err);
+	process.exit(1);
+});
+
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";

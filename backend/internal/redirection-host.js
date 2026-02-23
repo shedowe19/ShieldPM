@@ -75,10 +75,14 @@ const internalRedirectionHost = {
 		if (createCertificate) {
 			const cert = await internalCertificate.createQuickCertificate(access, thisData);
 			// update host with cert id
-			await internalRedirectionHost.update(access, {
-				id: row.id,
-				certificate_id: cert.id,
-			});
+			await internalRedirectionHost.update(
+				access,
+				{
+					id: row.id,
+					certificate_id: cert.id,
+				},
+				{ skip_configure: true },
+			);
 		}
 
 		// re-fetch with cert
@@ -125,7 +129,7 @@ const internalRedirectionHost = {
 	 * @param  {Object}  [data.meta]
 	 * @return {Promise}
 	 */
-	update: async (access, data) => {
+	update: async (access, data, options = {}) => {
 		let thisData = /** @type {any} */ (data || {});
 		const createCertificate = thisData.certificate_id === "new";
 
@@ -198,9 +202,11 @@ const internalRedirectionHost = {
 			expand: ["owner", "certificate"],
 		});
 
-		// Configure nginx
-		const new_meta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
-		row.meta = new_meta;
+		if (!options.skip_configure) {
+			// Configure nginx
+			const new_meta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+			row.meta = new_meta;
+		}
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("redirection-host");

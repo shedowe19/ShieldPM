@@ -163,9 +163,11 @@ subjectAltName = ${sanList}
 
 	// 4. Create Fullchain (Leaf + Root)
 	// This allows clients that trust the Root to trust the Leaf.
-	const leafContent = fs.readFileSync(certPath, "utf8");
-	const rootContent = fs.readFileSync(rootCaCrt, "utf8");
-	fs.writeFileSync(certPath, `${leafContent}\n${rootContent}`);
+	const [leafContent, rootContent] = await Promise.all([
+		fs.promises.readFile(certPath, "utf8"),
+		fs.promises.readFile(rootCaCrt, "utf8"),
+	]);
+	await fs.promises.writeFile(certPath, `${leafContent}\n${rootContent}`);
 
 	// Cleanup temp files
 	fs.unlinkSync(csrPath);
@@ -307,7 +309,7 @@ extendedKeyUsage = clientAuth
  */
 const getRootCa = async () => {
 	await ensureRootCa();
-	return fs.readFileSync(rootCaCrt, "utf8");
+	return await fs.promises.readFile(rootCaCrt, "utf8");
 };
 
 export default {

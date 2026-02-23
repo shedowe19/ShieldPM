@@ -69,10 +69,14 @@ const internalDeadHost = {
 			const cert = await internalCertificate.createQuickCertificate(access, data);
 
 			// update host with cert id
-			await internalDeadHost.update(access, {
-				id: row.id,
-				certificate_id: cert.id,
-			});
+			await internalDeadHost.update(
+				access,
+				{
+					id: row.id,
+					certificate_id: cert.id,
+				},
+				{ skip_configure: true },
+			);
 		}
 
 		// re-fetch with cert
@@ -101,7 +105,7 @@ const internalDeadHost = {
 	 * @param  {any}  data
 	 * @return {Promise}
 	 */
-	update: async (access, data) => {
+	update: async (access, data, options = {}) => {
 		let thisData = /** @type {any} */ (data);
 		const createCertificate = thisData.certificate_id === "new";
 		if (createCertificate) {
@@ -175,9 +179,11 @@ const internalDeadHost = {
 			expand: ["owner", "certificate"],
 		});
 
-		// Configure nginx
-		const newMeta = await internalNginx.configure(deadHostModel, "dead_host", row);
-		row.meta = newMeta;
+		if (!options.skip_configure) {
+			// Configure nginx
+			const newMeta = await internalNginx.configure(deadHostModel, "dead_host", row);
+			row.meta = newMeta;
+		}
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("dead-host");

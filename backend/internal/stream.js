@@ -78,11 +78,15 @@ const internalStream = {
 
 		if (create_certificate) {
 			const cert = await internalCertificate.createQuickCertificate(access, /** @type {any} */ (data));
-			// update host with cert id
-			await internalStream.update(access, {
-				id: row.id,
-				certificate_id: cert.id,
-			});
+			// update host with cert id, skip nginx configure as we do it below
+			await internalStream.update(
+				access,
+				{
+					id: row.id,
+					certificate_id: cert.id,
+				},
+				{ skip_configure: true },
+			);
 		}
 
 		// re-fetch with cert
@@ -122,7 +126,7 @@ const internalStream = {
 	 * @param  {number}  [data.forwarding_port]
 	 * @return {Promise}
 	 */
-	update: async (access, data) => {
+	update: async (access, data, options = {}) => {
 		let thisData = data;
 		const create_certificate = thisData.certificate_id === "new";
 
@@ -202,8 +206,10 @@ const internalStream = {
 
 		row = await internalStream.get(access, { id: thisData.id, expand: ["owner", "certificate"] });
 
-		const new_meta = await internalNginx.configure(streamModel, "stream", row);
-		row.meta = new_meta;
+		if (!options.skip_configure) {
+			const new_meta = await internalNginx.configure(streamModel, "stream", row);
+			row.meta = new_meta;
+		}
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("stream");

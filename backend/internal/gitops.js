@@ -820,71 +820,75 @@ const internalGitOps = {
 			const importedIds = [];
 
 			if (fs.existsSync(dirPath)) {
-				const files = fs.readdirSync(dirPath).filter((f) => f.endsWith(".yaml"));
-				for (const file of files) {
-					try {
-						const content = fs.readFileSync(path.join(dirPath, file), "utf8");
-						const data = yaml.load(content);
+				const files = await fs.promises.readdir(dirPath);
+				const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
+				
+				await Promise.all(
+					yamlFiles.map(async (file) => {
+						try {
+							const content = await fs.promises.readFile(path.join(dirPath, file), "utf8");
+							const data = yaml.load(content);
 
-						if (data && typeof data === "object") {
-							const itemData = /** @type {any} */ (data);
-							const existingId = itemData.id;
+							if (data && typeof data === "object") {
+								const itemData = /** @type {any} */ (data);
+								const existingId = itemData.id;
 
-							if (existingId) {
-								importedIds.push(existingId);
-								const existing = await modelClass.query().findById(existingId);
-								if (existing && !options.overwrite) {
-									skipped++;
-									continue;
-								}
-							}
-
-							// Ensure item is not marked as deleted upon restore
-							itemData.is_deleted = 0;
-
-							// Ensure owner_user_id is valid
-							if (itemData.owner_user_id) {
-								// Check if user exists, if not set to current user to avoid constraint error
-							}
-
-							if (options.overwrite && existingId) {
-								// Use upsertGraph for complex models
-								if (relationGraph) {
-									await modelClass.query().upsertGraph(itemData, {
-										insertMissing: true,
-										relate: true,
-										update: true,
-										noDelete: false, // Delete missing children (items/clients)
-									});
-								} else {
+								if (existingId) {
+									importedIds.push(existingId);
 									const existing = await modelClass.query().findById(existingId);
-									if (existing) {
-										await modelClass.query().patchAndFetchById(existingId, itemData);
-									} else {
-										await modelClass.query().insert(itemData);
+									if (existing && !options.overwrite) {
+										skipped++;
+										return;
 									}
 								}
-							} else {
-								if (!options.overwrite) delete itemData.id;
-								if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId();
 
-								let newRow;
-								if (relationGraph) {
-									newRow = await modelClass.query().insertGraph(itemData);
-								} else {
-									newRow = await modelClass.query().insert(itemData);
+								// Ensure item is not marked as deleted upon restore
+								itemData.is_deleted = 0;
+
+								// Ensure owner_user_id is valid
+								if (itemData.owner_user_id) {
+									// Check if user exists, if not set to current user to avoid constraint error
 								}
 
-								if (itemData.id) importedIds.push(itemData.id);
-								else if (newRow?.id) importedIds.push(newRow.id);
+								if (options.overwrite && existingId) {
+									// Use upsertGraph for complex models
+									if (relationGraph) {
+										await modelClass.query().upsertGraph(itemData, {
+											insertMissing: true,
+											relate: true,
+											update: true,
+											noDelete: false, // Delete missing children (items/clients)
+										});
+									} else {
+										const existing = await modelClass.query().findById(existingId);
+										if (existing) {
+											await modelClass.query().patchAndFetchById(existingId, itemData);
+										} else {
+											await modelClass.query().insert(itemData);
+										}
+									}
+								} else {
+									if (!options.overwrite) delete itemData.id;
+									if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId();
+
+									let newRow;
+									if (relationGraph) {
+										newRow = await modelClass.query().insertGraph(itemData);
+									} else {
+										newRow = await modelClass.query().insert(itemData);
+									}
+
+									if (itemData.id) importedIds.push(itemData.id);
+									else if (newRow?.id) importedIds.push(newRow.id);
+								}
+								imported++;
 							}
-							imported++;
+						} catch (err) {
+							logger.error(`Import failed for ${dirName}/${file}:`, err);
+							errors.push(`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
 						}
-					} catch (err) {
-						logger.error(`Import failed for ${dirName}/${file}:`, err);
-						errors.push(`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
-					}
-				}
+					}),
+				);
 			}
 
 			// FULL SYNC: Delete items not in importedIds
@@ -938,27 +942,31 @@ const internalGitOps = {
 			// 5. Import Settings
 			const settingsDir = path.join(configDir, "settings");
 			if (fs.existsSync(settingsDir)) {
-				const files = fs.readdirSync(settingsDir).filter((f) => f.endsWith(".yaml"));
-				for (const file of files) {
-					try {
-						const content = fs.readFileSync(path.join(settingsDir, file), "utf8");
-						const data = yaml.load(content);
-						if (data && typeof data === "object") {
-							const settingData = /** @type {any} */ (data);
-							if (settingData.id === "gitops-config") continue;
+				const files = await fs.promises.readdir(settingsDir);
+				const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
 
-							const existing = await settingModel.query().findById(settingData.id);
-							if (existing) {
-								await settingModel.query().patchAndFetchById(settingData.id, settingData);
-							} else {
-								await settingModel.query().insert(settingData);
+				await Promise.all(
+					yamlFiles.map(async (file) => {
+						try {
+							const content = await fs.promises.readFile(path.join(settingsDir, file), "utf8");
+							const data = yaml.load(content);
+							if (data && typeof data === "object") {
+								const settingData = /** @type {any} */ (data);
+								if (settingData.id === "gitops-config") return;
+
+								const existing = await settingModel.query().findById(settingData.id);
+								if (existing) {
+									await settingModel.query().patchAndFetchById(settingData.id, settingData);
+								} else {
+									await settingModel.query().insert(settingData);
+								}
+								imported++;
 							}
-							imported++;
+						} catch (err) {
+							errors.push(`settings/${file}: ${err.message}`);
 						}
-					} catch (err) {
-						errors.push(`settings/${file}: ${err.message}`);
-					}
-				}
+					}),
+				);
 			}
 
 			// 6. Restore Certificate Files

@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import { dirname } from "node:path";
 import { global as logger } from "../logger.js";
 
 const dataPath = process.env.DATA_PATH || "/data";
@@ -160,6 +161,10 @@ const generateKeys = () => {
 
 	// Write keys config
 	try {
+		const dir = dirname(keysFile);
+		if (!fs.existsSync(dir)) {
+			fs.mkdirSync(dir, { recursive: true });
+		}
 		fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2));
 	} catch (err) {
 		logger.error(`Could not write JWT key pair to config file: ${keysFile}: ${err.message}`);
