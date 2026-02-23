@@ -33,6 +33,9 @@ interface AccessListFormValues extends Partial<AccessList> {
 	authType?: string;
 	authentikHost?: string;
 	oauth2ProxyHost?: string;
+	oauth2AllowedGroups?: string;
+	oauth2AllowedEmails?: string;
+	oauth2AllowedEmailDomains?: string;
 	oidcDiscoveryUrl?: string;
 	oidcClientId?: string;
 	oidcClientSecret?: string;
@@ -112,6 +115,12 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				auth_type: authType,
 				authentik_host: authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY ? values.authentikHost : undefined,
 				oauth2_proxy_host: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ProxyHost : undefined,
+				oauth2_allowed_groups:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedGroups : undefined,
+				oauth2_allowed_emails:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedEmails : undefined,
+				oauth2_allowed_email_domains:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedEmailDomains : undefined,
 				oidc_discovery_url: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcDiscoveryUrl : undefined,
 				oidc_client_id: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientId : undefined,
 				oidc_client_secret: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientSecret : undefined,
@@ -205,6 +214,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								authType: initialAuthType,
 								authentikHost: meta.authentik_host || meta.authentikHost || "",
 								oauth2ProxyHost: meta.oauth2_proxy_host || meta.oauth2ProxyHost || "",
+								oauth2AllowedGroups: meta.oauth2_allowed_groups || meta.oauth2AllowedGroups || "",
+								oauth2AllowedEmails: meta.oauth2_allowed_emails || meta.oauth2AllowedEmails || "",
+								oauth2AllowedEmailDomains:
+									meta.oauth2_allowed_email_domains || meta.oauth2AllowedEmailDomains || "",
 								oidcDiscoveryUrl: meta.oidc_discovery_url || meta.oidcDiscoveryUrl || "",
 								oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
 								oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
@@ -403,22 +416,73 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											)}
 
 											{values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY && (
-												<div className="space-y-2">
-													<Label htmlFor="oauth2ProxyHost">OAuth2 Proxy Host URL</Label>
-													<Field name="oauth2ProxyHost">
-														{({ field }: FieldProps) => (
-															<Input
-																{...field}
-																id="oauth2ProxyHost"
-																placeholder="http://oauth2-proxy:4180"
-															/>
-														)}
-													</Field>
-													<div className="text-sm text-muted-foreground">
-														Full URL to your OAuth2 Proxy instance. Uses Nginx
-														`auth_request`.
+												<>
+													<div className="space-y-2">
+														<Label htmlFor="oauth2ProxyHost">OAuth2 Proxy Host URL</Label>
+														<Field name="oauth2ProxyHost">
+															{({ field }: FieldProps) => (
+																<Input
+																	{...field}
+																	id="oauth2ProxyHost"
+																	placeholder="http://oauth2-proxy:4180"
+																/>
+															)}
+														</Field>
+														<div className="text-sm text-muted-foreground">
+															Full URL to your OAuth2 Proxy instance. Uses Nginx
+															`auth_request`.
+														</div>
 													</div>
-												</div>
+													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+														<div className="space-y-2">
+															<Label htmlFor="oauth2AllowedGroups">Allowed Groups</Label>
+															<Field name="oauth2AllowedGroups">
+																{({ field }: FieldProps) => (
+																	<Input
+																		{...field}
+																		id="oauth2AllowedGroups"
+																		placeholder="admin,dev"
+																	/>
+																)}
+															</Field>
+															<div className="text-xs text-muted-foreground">
+																Comma-separated list of allowed groups.
+															</div>
+														</div>
+														<div className="space-y-2">
+															<Label htmlFor="oauth2AllowedEmails">Allowed Emails</Label>
+															<Field name="oauth2AllowedEmails">
+																{({ field }: FieldProps) => (
+																	<Input
+																		{...field}
+																		id="oauth2AllowedEmails"
+																		placeholder="user@example.com,user2@example.com"
+																	/>
+																)}
+															</Field>
+															<div className="text-xs text-muted-foreground">
+																Comma-separated list of allowed emails.
+															</div>
+														</div>
+														<div className="space-y-2">
+															<Label htmlFor="oauth2AllowedEmailDomains">
+																Allowed Domains
+															</Label>
+															<Field name="oauth2AllowedEmailDomains">
+																{({ field }: FieldProps) => (
+																	<Input
+																		{...field}
+																		id="oauth2AllowedEmailDomains"
+																		placeholder="example.com"
+																	/>
+																)}
+															</Field>
+															<div className="text-xs text-muted-foreground">
+																Comma-separated list of allowed email domains.
+															</div>
+														</div>
+													</div>
+												</>
 											)}
 
 											{values.authType === ACCESS_LIST_AUTH_TYPE.OIDC && (
