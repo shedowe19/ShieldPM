@@ -44,8 +44,8 @@ vi.mock("node:https", () => {
 // Mock fs
 vi.mock("node:fs", async (importOriginal) => {
 	const actual = await importOriginal();
-	return {
-		...actual,
+	const mockFs = {
+		...actual.default,
 		mkdirSync: vi.fn(),
 		writeFileSync: vi.fn(),
 		unlinkSync: vi.fn(),
@@ -68,6 +68,12 @@ vi.mock("node:fs", async (importOriginal) => {
 			}
 			return Buffer.from("");
 		}),
+	};
+
+	return {
+		...actual,
+		default: mockFs,
+		...mockFs,
 	};
 });
 
