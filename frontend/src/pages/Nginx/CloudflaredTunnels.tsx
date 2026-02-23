@@ -1,7 +1,7 @@
 import { IconEdit, IconHelp, IconPlus, IconRefresh, IconTrash } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { Cloud, Lock } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CloudflaredTunnel } from "@/api/backend";
 import { CloudflaredTunnelModal } from "@/components/Nginx/CloudflaredTunnelModal";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +16,26 @@ import { showHelpModal } from "@/modals";
 
 export function CloudflaredTunnels() {
 	const health = useHealth();
-	const { data: tunnels, isLoading, refetch } = useCloudflaredTunnels();
+	const { data: rawTunnels, isLoading, refetch } = useCloudflaredTunnels();
 	const { remove } = useCloudflaredTunnel();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [selectedTunnel, setSelectedTunnel] = useState<CloudflaredTunnel | null>(null);
+
+	const tunnels = useMemo(() => {
+		if (!rawTunnels) return [];
+		return rawTunnels.map((t) => {
+			let meta = t.meta;
+			if (typeof meta === "string") {
+				try {
+					meta = JSON.parse(meta);
+				} catch (e) {
+					console.error("Failed to parse tunnel meta:", e);
+					meta = {};
+				}
+			}
+			return { ...t, meta };
+		});
+	}, [rawTunnels]);
 
 	const handleEdit = (tunnel: CloudflaredTunnel) => {
 		setSelectedTunnel(tunnel);
@@ -38,16 +54,7 @@ export function CloudflaredTunnels() {
 	};
 
 	const getStatusBadge = (tunnel: CloudflaredTunnel) => {
-		// Ensure meta is an object (handle SQLite/serialization edge cases)
-		let meta = tunnel.meta;
-		if (typeof meta === "string") {
-			try {
-				meta = JSON.parse(meta);
-			} catch (e) {
-				console.error("Failed to parse tunnel meta:", e);
-				meta = {};
-			}
-		}
+		const meta = tunnel.meta as Record<string, unknown>;
 
 		switch (tunnel.status) {
 			case 0:

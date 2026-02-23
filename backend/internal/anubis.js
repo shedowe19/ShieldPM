@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import yaml from "js-yaml";
+import _ from "lodash";
 import { internal as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 
@@ -24,7 +25,7 @@ const internalAnubis = {
 	 *
 	 * @returns {Promise<void>}
 	 */
-	generatePolicy: async () => {
+	generatePolicy: _.debounce(async () => {
 		try {
 			logger.info("Generating Anubis Policy...");
 
@@ -133,7 +134,7 @@ const internalAnubis = {
 		} catch (err) {
 			logger.error("Failed to generate Anubis policy:", err);
 		}
-	},
+	}, 2000),
 
 	/**
 	 * Reloads Anubis configuration
