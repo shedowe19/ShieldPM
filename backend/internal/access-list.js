@@ -12,6 +12,7 @@ import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalGitOps from "./gitops.js";
 import internalNginx from "./nginx.js";
+import internalOAuth2Proxy from "./oauth2-proxy.js";
 
 const omissions = () => {
 	return ["is_deleted"];
@@ -107,6 +108,11 @@ const internalAccessList = {
 
 		if (Number.parseInt(freshRow.proxy_host_count, 10)) {
 			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
+		}
+
+		// Manage OAuth2 Proxy
+		if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") {
+			await internalOAuth2Proxy.start(freshRow);
 		}
 
 		// Add to audit log
@@ -248,6 +254,15 @@ const internalAccessList = {
 		if (Number.parseInt(freshRow.proxy_host_count, 10)) {
 			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
 		}
+
+		// Manage OAuth2 Proxy
+		if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") {
+			await internalOAuth2Proxy.restart(freshRow);
+		} else {
+			// If it WAS oauth2_proxy but changed, or disabled, ensure stop
+			await internalOAuth2Proxy.stop(freshRow.id);
+		}
+
 		await internalNginx.reload();
 
 		// Trigger GitOps auto-push
@@ -364,6 +379,9 @@ const internalAccessList = {
 		} catch (_err) {
 			// do nothing
 		}
+
+		// Stop OAuth2 Proxy if running
+		await internalOAuth2Proxy.stop(row.id);
 
 		// 4. audit log
 		await internalAuditLog.add(access, {

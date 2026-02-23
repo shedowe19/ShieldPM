@@ -32,7 +32,13 @@ interface Props extends InnerModalProps {
 interface AccessListFormValues extends Partial<AccessList> {
 	authType?: string;
 	authentikHost?: string;
-	oauth2ProxyHost?: string;
+	oauth2ProxyHost?: string; // Still used? Removed in favor of managed process
+	oauth2Provider?: string;
+	oauth2ClientId?: string;
+	oauth2ClientSecret?: string;
+	oauth2CookieSecret?: string;
+	oauth2OidcIssuerUrl?: string;
+	oauth2ProxyPrefix?: string;
 	oauth2AllowedGroups?: string;
 	oauth2AllowedEmails?: string;
 	oauth2AllowedEmailDomains?: string;
@@ -70,7 +76,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}
 
 		if (values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY) {
-			if (!values.oauth2ProxyHost) return "OAuth2 Proxy Host is required";
+			if (!values.oauth2ClientId) return "Client ID is required";
+			if (!values.oauth2ClientSecret) return "Client Secret is required";
+			if (!values.oauth2CookieSecret) return "Cookie Secret is required";
+			if (values.oauth2Provider === "oidc" && !values.oauth2OidcIssuerUrl)
+				return "OIDC Issuer URL is required for OIDC provider";
 		}
 
 		if (values.mtlsEnabled && !values.mtlsUseInternal && !values.mtlsContent) {
@@ -114,7 +124,17 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				...data?.meta,
 				auth_type: authType,
 				authentik_host: authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY ? values.authentikHost : undefined,
-				oauth2_proxy_host: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ProxyHost : undefined,
+				// oauth2_proxy_host is removed as we manage it locally
+				oauth2_provider: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2Provider : undefined,
+				oauth2_client_id: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ClientId : undefined,
+				oauth2_client_secret:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ClientSecret : undefined,
+				oauth2_cookie_secret:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2CookieSecret : undefined,
+				oauth2_oidc_issuer_url:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2OidcIssuerUrl : undefined,
+				oauth2_proxy_prefix:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ProxyPrefix : undefined,
 				oauth2_allowed_groups:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedGroups : undefined,
 				oauth2_allowed_emails:
@@ -213,7 +233,12 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								// Determine initial authType
 								authType: initialAuthType,
 								authentikHost: meta.authentik_host || meta.authentikHost || "",
-								oauth2ProxyHost: meta.oauth2_proxy_host || meta.oauth2ProxyHost || "",
+								oauth2Provider: meta.oauth2_provider || "google",
+								oauth2ClientId: meta.oauth2_client_id || "",
+								oauth2ClientSecret: meta.oauth2_client_secret || "",
+								oauth2CookieSecret: meta.oauth2_cookie_secret || "",
+								oauth2OidcIssuerUrl: meta.oauth2_oidc_issuer_url || "",
+								oauth2ProxyPrefix: meta.oauth2_proxy_prefix || meta.oauth2ProxyPrefix || "/oauth2/",
 								oauth2AllowedGroups: meta.oauth2_allowed_groups || meta.oauth2AllowedGroups || "",
 								oauth2AllowedEmails: meta.oauth2_allowed_emails || meta.oauth2AllowedEmails || "",
 								oauth2AllowedEmailDomains:
@@ -417,20 +442,119 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 											{values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY && (
 												<>
+													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+														<div className="space-y-2">
+															<Label htmlFor="oauth2Provider">Provider</Label>
+															<Field name="oauth2Provider">
+																{({ field }: FieldProps) => (
+																	<Select
+																		value={field.value || "google"}
+																		onValueChange={(val) =>
+																			setFieldValue("oauth2Provider", val)
+																		}
+																	>
+																		<SelectTrigger id="oauth2Provider">
+																			<SelectValue placeholder="Select Provider" />
+																		</SelectTrigger>
+																		<SelectContent>
+																			<SelectItem value="google">Google</SelectItem>
+																			<SelectItem value="github">GitHub</SelectItem>
+																			<SelectItem value="oidc">OpenID Connect</SelectItem>
+																			<SelectItem value="azure">Azure</SelectItem>
+																			<SelectItem value="gitlab">GitLab</SelectItem>
+																			<SelectItem value="keycloak-oidc">
+																				Keycloak
+																			</SelectItem>
+																		</SelectContent>
+																	</Select>
+																)}
+															</Field>
+														</div>
+														<div className="space-y-2">
+															<Label htmlFor="oauth2ProxyPrefix">Proxy Prefix</Label>
+															<Field name="oauth2ProxyPrefix">
+																{({ field }: FieldProps) => (
+																	<Input
+																		{...field}
+																		id="oauth2ProxyPrefix"
+																		placeholder="/oauth2/"
+																	/>
+																)}
+															</Field>
+														</div>
+													</div>
+
+													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+														<div className="space-y-2">
+															<Label htmlFor="oauth2ClientId">Client ID</Label>
+															<Field name="oauth2ClientId">
+																{({ field }: FieldProps) => (
+																	<Input {...field} id="oauth2ClientId" />
+																)}
+															</Field>
+														</div>
+														<div className="space-y-2">
+															<Label htmlFor="oauth2ClientSecret">Client Secret</Label>
+															<Field name="oauth2ClientSecret">
+																{({ field }: FieldProps) => (
+																	<Input
+																		{...field}
+																		type="password"
+																		id="oauth2ClientSecret"
+																	/>
+																)}
+															</Field>
+														</div>
+													</div>
+
 													<div className="space-y-2">
-														<Label htmlFor="oauth2ProxyHost">OAuth2 Proxy Host URL</Label>
-														<Field name="oauth2ProxyHost">
+														<Label htmlFor="oauth2CookieSecret">Cookie Secret</Label>
+														<div className="flex gap-2">
+															<Field name="oauth2CookieSecret">
+																{({ field }: FieldProps) => (
+																	<Input
+																		{...field}
+																		type="password"
+																		id="oauth2CookieSecret"
+																		placeholder="16, 24, or 32 bytes"
+																	/>
+																)}
+															</Field>
+															{/* Ideally we'd have a generate button here */}
+														</div>
+														<div className="text-xs text-muted-foreground">
+															Must be 16, 24, or 32 bytes.
+														</div>
+													</div>
+
+													{values.oauth2Provider === "oidc" && (
+														<div className="space-y-2">
+															<Label htmlFor="oauth2OidcIssuerUrl">OIDC Issuer URL</Label>
+															<Field name="oauth2OidcIssuerUrl">
+																{({ field }: FieldProps) => (
+																	<Input
+																		{...field}
+																		id="oauth2OidcIssuerUrl"
+																		placeholder="https://accounts.google.com"
+																	/>
+																)}
+															</Field>
+														</div>
+													)}
+
+													<div className="space-y-2">
+														<Label htmlFor="oauth2ProxyPrefix">Proxy Prefix</Label>
+														<Field name="oauth2ProxyPrefix">
 															{({ field }: FieldProps) => (
 																<Input
 																	{...field}
-																	id="oauth2ProxyHost"
-																	placeholder="http://oauth2-proxy:4180"
+																	id="oauth2ProxyPrefix"
+																	placeholder="/oauth2/"
 																/>
 															)}
 														</Field>
 														<div className="text-sm text-muted-foreground">
-															Full URL to your OAuth2 Proxy instance. Uses Nginx
-															`auth_request`.
+															URL path prefix. Defaults to /oauth2/.
 														</div>
 													</div>
 													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
