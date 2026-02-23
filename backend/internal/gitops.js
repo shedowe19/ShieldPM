@@ -822,7 +822,7 @@ const internalGitOps = {
 			if (fs.existsSync(dirPath)) {
 				const files = await fs.promises.readdir(dirPath);
 				const yamlFiles = files.filter((f) => f.endsWith(".yaml"));
-				
+
 				await Promise.all(
 					yamlFiles.map(async (file) => {
 						try {
