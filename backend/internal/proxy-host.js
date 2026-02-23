@@ -246,8 +246,6 @@ const internalProxyHost = {
 			thisData.terminal_private_key = encrypt(data.terminal_private_key);
 		}
 
-
-
 		// Let's double check `backend/internal/proxy-host.js` old content.
 		// `.patch(thisData).then(utils.omitRow(omissions())).then((saved_row) => { ... })`
 		// If `saved_row` was `{}`, then `return saved_row` at the end would return empty object.
