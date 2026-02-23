@@ -246,22 +246,7 @@ const internalProxyHost = {
 			thisData.terminal_private_key = encrypt(data.terminal_private_key);
 		}
 
-		let _saved_row = await proxyHostModel
-			.query()
-			.where({ id: thisData.id })
-			.patch(/** @type {any} */ (thisData));
 
-		// fetch updated row to be safe and consistent with previous logic if patch returns count
-		// wait, patch returns count. We need to fetch it or rely on logic.
-		// The original code was: .patch(thisData).then(utils.omitRow(omissions()))
-		// But .patch() usually returns number of affected rows in Objection.js unless .returning('*') is used (PG only).
-		// Wait, the original code had: .patch(thisData).then(utils.omitRow(omissions()))
-		// If patch returns a number, omitRow will crash or return garbage.
-		// Let's check existing usage. `proxyHostModel.query().where(...).patch(...)` returns count.
-		// So `utils.omitRow` on a count (number) is weird.
-		// Ah, `utils.omitRow` does `_.omit(row, omissions)`. If row is a number, `_.omit` returns `{}`.
-		// So the previous code might have been returning `{}` which is WRONG.
-		// UNLESS `patchAndFetchById` was used? No, it was `patch`.
 
 		// Let's double check `backend/internal/proxy-host.js` old content.
 		// `.patch(thisData).then(utils.omitRow(omissions())).then((saved_row) => { ... })`
@@ -281,11 +266,9 @@ const internalProxyHost = {
 		}
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel
-				.query()
-				.upsertGraphAndFetch(/** @type {any} */ (thisData), { relate: true, unrelate: true })
+			await proxyHostModel.query().upsertGraphAndFetch(/** @type {any} */ (thisData))
 		);
-		_saved_row = utils.omitRow(omissions())(new_saved_row);
+		const _saved_row = utils.omitRow(omissions())(new_saved_row);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
