@@ -39,9 +39,11 @@ interface AccessListFormValues extends Partial<AccessList> {
 	oauth2CookieSecret?: string;
 	oauth2OidcIssuerUrl?: string;
 	oauth2ProxyPrefix?: string;
+	oauth2Scope?: string;
 	oauth2AllowedGroups?: string;
 	oauth2AllowedEmails?: string;
 	oauth2AllowedEmailDomains?: string;
+	oauth2InsecureOidcAllowUnverifiedEmail?: boolean;
 	oidcDiscoveryUrl?: string;
 	oidcClientId?: string;
 	oidcClientSecret?: string;
@@ -135,12 +137,17 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2OidcIssuerUrl : undefined,
 				oauth2_proxy_prefix:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ProxyPrefix : undefined,
+				oauth2_scope: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2Scope : undefined,
 				oauth2_allowed_groups:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedGroups : undefined,
 				oauth2_allowed_emails:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedEmails : undefined,
 				oauth2_allowed_email_domains:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedEmailDomains : undefined,
+				oauth2_insecure_oidc_allow_unverified_email:
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY
+						? values.oauth2InsecureOidcAllowUnverifiedEmail
+						: undefined,
 				oidc_discovery_url: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcDiscoveryUrl : undefined,
 				oidc_client_id: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientId : undefined,
 				oidc_client_secret: authType === ACCESS_LIST_AUTH_TYPE.OIDC ? values.oidcClientSecret : undefined,
@@ -239,10 +246,13 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								oauth2CookieSecret: meta.oauth2_cookie_secret || "",
 								oauth2OidcIssuerUrl: meta.oauth2_oidc_issuer_url || "",
 								oauth2ProxyPrefix: meta.oauth2_proxy_prefix || meta.oauth2ProxyPrefix || "/oauth2/",
+								oauth2Scope: meta.oauth2_scope || "",
 								oauth2AllowedGroups: meta.oauth2_allowed_groups || meta.oauth2AllowedGroups || "",
 								oauth2AllowedEmails: meta.oauth2_allowed_emails || meta.oauth2AllowedEmails || "",
 								oauth2AllowedEmailDomains:
 									meta.oauth2_allowed_email_domains || meta.oauth2AllowedEmailDomains || "",
+								oauth2InsecureOidcAllowUnverifiedEmail:
+									!!meta.oauth2_insecure_oidc_allow_unverified_email,
 								oidcDiscoveryUrl: meta.oidc_discovery_url || meta.oidcDiscoveryUrl || "",
 								oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
 								oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
@@ -457,19 +467,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectValue placeholder="Select Provider" />
 																		</SelectTrigger>
 																		<SelectContent>
-																			<SelectItem value="google">
-																				Google
-																			</SelectItem>
-																			<SelectItem value="github">
-																				GitHub
-																			</SelectItem>
-																			<SelectItem value="oidc">
-																				OpenID Connect
-																			</SelectItem>
+																			<SelectItem value="google">Google</SelectItem>
+																			<SelectItem value="github">GitHub</SelectItem>
+																			<SelectItem value="oidc">OpenID Connect</SelectItem>
 																			<SelectItem value="azure">Azure</SelectItem>
-																			<SelectItem value="gitlab">
-																				GitLab
-																			</SelectItem>
+																			<SelectItem value="gitlab">GitLab</SelectItem>
 																			<SelectItem value="keycloak-oidc">
 																				Keycloak
 																			</SelectItem>
@@ -551,18 +553,47 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													)}
 
 													<div className="space-y-2">
-														<Label htmlFor="oauth2ProxyPrefix">Proxy Prefix</Label>
-														<Field name="oauth2ProxyPrefix">
+														<Label htmlFor="oauth2Scope">Scope</Label>
+														<Field name="oauth2Scope">
 															{({ field }: FieldProps) => (
 																<Input
 																	{...field}
-																	id="oauth2ProxyPrefix"
-																	placeholder="/oauth2/"
+																	id="oauth2Scope"
+																	placeholder="openid profile email"
 																/>
 															)}
 														</Field>
 														<div className="text-sm text-muted-foreground">
-															URL path prefix. Defaults to /oauth2/.
+															OAuth scopes (space separated). Leave empty for defaults.
+														</div>
+													</div>
+
+													<div className="space-y-2">
+														<div className="flex items-center justify-between">
+															<Label
+																htmlFor="oauth2InsecureOidcAllowUnverifiedEmail"
+																className="cursor-pointer"
+															>
+																Allow Unverified Email
+															</Label>
+															<Field name="oauth2InsecureOidcAllowUnverifiedEmail">
+																{({ field }: FieldProps) => (
+																	<Switch
+																		id="oauth2InsecureOidcAllowUnverifiedEmail"
+																		checked={field.value}
+																		onCheckedChange={(checked) =>
+																			setFieldValue(
+																				"oauth2InsecureOidcAllowUnverifiedEmail",
+																				checked,
+																			)
+																		}
+																	/>
+																)}
+															</Field>
+														</div>
+														<div className="text-xs text-muted-foreground">
+															Don't fail if an email address in an id_token is not
+															verified.
 														</div>
 													</div>
 													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
