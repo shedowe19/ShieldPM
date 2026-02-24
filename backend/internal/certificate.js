@@ -1,10 +1,11 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "path";
 import archiver from "archiver";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import _ from "lodash";
-import tempWrite from "temp-write";
 import error from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
@@ -20,6 +21,14 @@ dayjs.extend(customParseFormat);
 const omissions = () => {
 	return ["is_deleted", "owner.is_deleted", "meta.dns_provider_credentials"];
 };
+
+async function tempWrite(content, filepath) {
+	const dir = filepath || os.tmpdir();
+	const name = crypto.randomUUID();
+	const file = path.join(dir, name);
+	await fs.promises.writeFile(file, content);
+	return file;
+}
 
 const internalCertificate = {
 	allowedSslFiles: ["certificate", "certificate_key", "intermediate_certificate"],

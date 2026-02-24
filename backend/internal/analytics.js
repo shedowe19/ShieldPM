@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import dayjs from "dayjs";
-import { Tail } from "tail";
+import TailFile from "@logdna/tail-file";
 import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
@@ -49,12 +49,22 @@ class AnalyticsService {
 
 		// Tail the log file
 		try {
-			this.tail = new Tail(this.logFile);
-			this.tail.on("line", (line) => {
-				// Prevent event loop blocking under high load by deferring processing
-				setImmediate(() => this.processLine(line));
+			this.tail = new TailFile(this.logFile, { encoding: "utf8" });
+			let buffer = "";
+
+			this.tail.on("data", (chunk) => {
+				buffer += chunk;
+				const lines = buffer.split("\n");
+				buffer = lines.pop();
+
+				for (const line of lines) {
+					// Prevent event loop blocking under high load by deferring processing
+					setImmediate(() => this.processLine(line));
+				}
 			});
+
 			this.tail.on("error", (error) => logger.error(`Tail error: ${error}`));
+			this.tail.start().catch((err) => logger.error(`Failed to start tail: ${err.message}`));
 		} catch (err) {
 			logger.error(`Failed to initialize tail: ${err.message}`);
 		}
