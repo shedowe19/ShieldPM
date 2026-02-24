@@ -64,6 +64,7 @@ class AnalyticsService {
 			});
 
 			this.tail.on("error", (error) => logger.error(`Tail error: ${error}`));
+			this.tail.on("tail_error", (error) => logger.error(`Tail file error: ${error}`));
 			this.tail.start().catch((err) => logger.error(`Failed to start tail: ${err.message}`));
 		} catch (err) {
 			logger.error(`Failed to initialize tail: ${err.message}`);

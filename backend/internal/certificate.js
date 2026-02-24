@@ -22,10 +22,24 @@ const omissions = () => {
 	return ["is_deleted", "owner.is_deleted", "meta.dns_provider_credentials"];
 };
 
-async function tempWrite(content, filepath) {
-	const dir = filepath || os.tmpdir();
+async function tempWrite(content, dir) {
+	const directory = dir || os.tmpdir();
+
+	// Verify directory exists and is a directory
+	try {
+		const stats = await fs.promises.stat(directory);
+		if (!stats.isDirectory()) {
+			throw new Error(`Path is not a directory: ${directory}`);
+		}
+	} catch (err) {
+		// If explicit directory provided but invalid, throw
+		if (dir) throw err;
+		// If falling back to tmpdir but it fails (unlikely), let it bubble
+		throw err;
+	}
+
 	const name = crypto.randomUUID();
-	const file = path.join(dir, name);
+	const file = path.join(directory, name);
 	await fs.promises.writeFile(file, content);
 	return file;
 }
