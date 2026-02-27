@@ -33,8 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     curl -L "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.14.2/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" -o "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" && \
     curl -L "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.14.2/oauth2-proxy-v7.14.2.linux-${TARGETARCH}-sha256sum.txt" -o "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}-sha256sum.txt" && \
     cd /tmp && sha256sum -c "oauth2-proxy-v7.14.2.linux-${TARGETARCH}-sha256sum.txt" && \
-    tar -xzf "oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.14.2.linux-${TARGETARCH}/oauth2-proxy" && \
-    rm "oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" "oauth2-proxy-v7.14.2.linux-${TARGETARCH}-sha256sum.txt" && cd - && \
+    tar -xzf "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.14.2.linux-${TARGETARCH}/oauth2-proxy" && \
+    rm "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}-sha256sum.txt" && cd - && \
     chmod +x /app/oauth2-proxy && \
     npm install -g yarn && \
     yarn install --production=false && \
