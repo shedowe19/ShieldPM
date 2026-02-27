@@ -526,7 +526,8 @@ if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
             echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
         fi
         rm -rf "$OAUTH2_TMP_DIR"
-    else
+    fi
+else
     echo "--> Skipping OAuth2 Proxy."
 fi
 
