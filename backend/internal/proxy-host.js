@@ -45,9 +45,7 @@ const _cleanupOAuth2Proxy = async (accessListId) => {
 			return;
 		}
 		// Check if any other active proxy host still uses this access list
-		const otherHosts = await proxyHostModel.query()
-			.where("access_list_id", accessListId)
-			.where("is_deleted", 0);
+		const otherHosts = await proxyHostModel.query().where("access_list_id", accessListId).where("is_deleted", 0);
 		if (otherHosts.length === 0) {
 			await internalOAuth2Proxy.stop(accessListId);
 		}
