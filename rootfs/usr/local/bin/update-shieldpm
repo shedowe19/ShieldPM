@@ -325,7 +325,7 @@ if [[ -n "$OAUTH2_ARCH" ]]; then
 
         if [ -s "$OAUTH2_TAR" ] && [ -s "$OAUTH2_SHA" ]; then
             cd "$OAUTH2_TMP_DIR"
-            if sha256sum -c "$OAUTH2_SHA"; then
+            if sha256sum -c "oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}-sha256sum.txt"; then
                 # Safe Extraction check
                 if tar -xzf "$OAUTH2_TARBALL"; then
                     # Check if extracted binary exists before moving

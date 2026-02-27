@@ -505,7 +505,7 @@ if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
 
         if [ -s "$OAUTH2_TAR" ] && [ -s "$OAUTH2_SHA" ]; then
             cd "$OAUTH2_TMP_DIR"
-            if sha256sum -c "$OAUTH2_SHA"; then
+            if sha256sum -c "oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}-sha256sum.txt"; then
                 if tar -xzf "$OAUTH2_TARBALL"; then
                     EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
                     if [ -f "$EXTRACTED_BIN" ]; then
