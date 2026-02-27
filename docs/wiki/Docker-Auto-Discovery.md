@@ -4,11 +4,47 @@ ShieldPM supports **Docker Auto-Discovery**, a feature that allows you to automa
 
 ## How it Works
 
+### Architecture
+
+```
+  ┌──────────────────────────────────────────────────────────────────┐
+  │                        ShieldPM Backend                          │
+  │                                                                  │
+  │  ┌────────────────┐     ┌──────────────────┐   ┌────────────┐   │
+  │  │ Docker Watcher │────▶│  Label Parser    │──▶│ ProxyHost  │   │
+  │  │ (dockerode)    │     │  (shieldpm.*)    │   │ CRUD API   │   │
+  │  └───────┬────────┘     └──────────────────┘   └──────┬─────┘   │
+  │          │                                            │         │
+  │          │ events: start/stop/die                      ▼         │
+  │          │                                    ┌──────────────┐  │
+  │          │                                    │  nginx.js    │  │
+  │          │                                    │  (Generate   │  │
+  │          │                                    │   .conf)     │  │
+  │          │                                    └──────┬───────┘  │
+  └──────────┼───────────────────────────────────────────┼──────────┘
+             │                                           │
+             ▼                                           ▼
+  ┌──────────────────┐                          ┌──────────────┐
+  │ Docker Socket    │                          │ nginx -s     │
+  │ /var/run/docker  │                          │    reload    │
+  │     .sock        │                          └──────────────┘
+  └──────────────────┘
+```
+
+**Key Points:**
+
+- ShieldPM monitors Docker container events in real-time via the Docker socket
+- Labels prefixed with `shieldpm.*` on containers define proxy host configuration
+- When a container starts, ShieldPM automatically creates/updates the corresponding proxy host
+- When a container stops, the proxy host can be cleaned up automatically
+
 ### Prerequisites
+
 - Docker Socket mounted (`/var/run/docker.sock`).
 - Optional: `DOCKER_HOSTS` for *additional* remote hosts (the local socket is **always monitored**).
 
 ### Multiple Docker Hosts
+
 To monitor additional remote Docker daemons, set the `DOCKER_HOSTS` environment variable in your `compose.yaml`.
 ShieldPM will effectively merge containers from all sources into one view.
 
@@ -16,6 +52,7 @@ ShieldPM will effectively merge containers from all sources into one view.
 environment:
   - DOCKER_HOSTS=tcp://10.0.0.5:2375,tcp://192.168.1.50:2375
 ```
+
 **Note**: For remote hosts, ShieldPM prioritizes the *Host IP* (e.g., `10.0.0.5`) and attempts to find the mapped public port. If no public port is mapped, it falls back to the internal port (which might not be reachable).
 
 ## Configuration (Labels)
@@ -23,6 +60,7 @@ environment:
 To expose a container, add the `shieldpm.hostname` label. All other labels are optional.
 
 ### Quick Start Example
+
 ```yaml
 services:
   whoami:
@@ -47,6 +85,7 @@ services:
 | `shieldpm.access_list_id` | ID of an existing Access List (check URL in UI for ID). | - |
 
 ### Advanced Options (Booleans)
+
 Set these to `true` or `1` to enable.
 
 | Label | Description | Default |
@@ -71,6 +110,7 @@ Set these to `true` or `1` to enable.
 | `shieldpm.advanced_config` | Injects raw Nginx configuration into the server block. | `proxy_set_header X-Custom "Value";` |
 
 ### SSL / Let's Encrypt
+
 Automatically obtain certificates.
 
 | Label | Description | Example |
@@ -84,6 +124,7 @@ Automatically obtain certificates.
 > **DNS Validation**: For Wildcard certs or Cloudflare DNS validation, create the certificate manually in ShieldPM first, then use `shieldpm.certificate_id=<ID>` to attach it to your auto-discovered containers.
 
 ### Rate Limiting
+
 Limit request rate to prevent abuse.
 
 | Label | Description | Example |
@@ -121,7 +162,7 @@ services:
 > **Zero Config / Overwrite**: This feature is designed to be declarative ("Configuration as Code"). Any changes you make manually to an auto-discovered Host via the ShieldPM UI **will be overwritten** the next time the container restarts or the labels change. Always make configuration changes **via labels** in your `compose.yaml`.
 
 ### Troubleshooting
-*   **Logs**: Check `docker logs shieldpm` for "Docker Auto-Discovery" messages.
-*   **Collision**: If you see "Collision detected!", it means a manually created host already uses the domain. ShieldPM will NOT overwrite it to prevent data loss.
-*   **"Welcome to Nginx"**: If you see the default page, check logs. It might be that the configuration failed to reload. (Fixed in recent versions).
 
+* **Logs**: Check `docker logs shieldpm` for "Docker Auto-Discovery" messages.
+- **Collision**: If you see "Collision detected!", it means a manually created host already uses the domain. ShieldPM will NOT overwrite it to prevent data loss.
+- **"Welcome to Nginx"**: If you see the default page, check logs. It might be that the configuration failed to reload. (Fixed in recent versions).
