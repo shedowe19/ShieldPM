@@ -1,43 +1,108 @@
 # Request Rate Limiting
 
-ShieldPM includes a built-in Request Rate Limiting feature to protect your services from abuse, scraping, and brute-force attacks. This feature allows you to define a maximum number of requests a single IP address can make within a specified timeframe.
+ShieldPM includes a built-in Rate Limiting feature to protect your services from abuse, scraping, and brute-force attacks. It allows you to define a maximum number of requests a single IP address can make within a specified timeframe.
 
-## How it Works
+---
 
-The Rate Limiting implementation uses Nginx's `resty.limit.req` (Lua) module. It tracks requests per IP address in a high-performance shared memory zone (`ip_req_limit`).
+## 🏗️ How it Works
 
-When a client exceeds the defined rate (plus any allowed burst), Nginx will reject the request with a **429 Too Many Requests** status code.
+```
+  ┌──────────┐         ┌──────────────────────────────────┐
+  │  Client   │────────▶│          Rate Limiter             │
+  │  (IP)     │         │    (Lua resty.limit.req)         │
+  └──────────┘         │                                  │
+                       │  Request count per IP:           │
+                       │  ┌───────────────────────────┐   │
+                       │  │  IP: 1.2.3.4 → 8/10 req  │───▶ ✅ ALLOW
+                       │  │  IP: 5.6.7.8 → 15/10 req │───▶ ❌ 429 Too Many
+                       │  │  IP: 9.0.1.2 → 3/10 req  │───▶ ✅ ALLOW
+                       │  └───────────────────────────┘   │
+                       │                                  │
+                       │  Storage: Shared Memory (20MB)   │
+                       └──────────────────────────────────┘
+```
 
-## Configuration
+When a client exceeds the defined rate (plus any allowed burst), Nginx rejects the request with **HTTP 429 Too Many Requests**.
 
-You can configure Rate Limiting on a per-host basis in the **Proxy Host** dialog.
+---
 
-1.  Edit a Proxy Host.
-2.  Navigate to the **Security** tab.
-3.  **Rate (Requests)**: Enter the number of requests allowed (e.g., `10`). Set to `0` or leave empty to disable.
-4.  **Per**: Select the time unit:
-    *   **Second**: Useful for high-traffic APIs or strict limiting.
-    *   **Minute**: Useful for softer limits or general browsing.
-5.  **Burst**: Enter the number of allowed pre-queued requests (e.g., `20`). This allows legitimate traffic spikes to pass through without being rejected immediately, as long as the average rate stays within limits.
+## ⚙️ Configuration
 
-## Example Scenarios
+Configure Rate Limiting on a per-host basis:
 
-### Anti-Abuse for Login Pages
-If you want to protect a login page from brute-force attempts:
-*   **Rate**: 5 requests
-*   **Per**: Minute
-*   **Burst**: 0
-*   *Result:* An IP can only make 5 requests per minute. Anything more is blocked immediately.
+1. Edit a **Proxy Host**
+2. Navigate to the **Security** tab
+3. Set the following fields:
 
-### API Protection
-If you are hosting an API and want to prevent a single user from hogging resources:
-*   **Rate**: 100 requests
-*   **Per**: Second
-*   **Burst**: 50
-*   *Result:* Users can make up to 100 req/s. Short bursts up to 150 req/s are tolerated, but sustained high traffic will be throttled or blocked.
+| Field | Description | Example |
+| :--- | :--- | :--- |
+| **Rate** | Number of requests allowed per time unit. `0` = disabled. | `10` |
+| **Per** | Time unit: `second` or `minute` | `minute` |
+| **Burst** | Extra requests to queue (softens spikes) | `20` |
 
-## Technical Details
+### How Burst Works
 
-*   **HTTP Status**: `429 Too Many Requests`
-*   **Storage**: Shared Memory (`20MiB` dedicated zone).
-*   **Lua Module**: `resty.limit.req`
+| Without Burst (Burst = 0) | With Burst (Burst = 20) |
+| :--- | :--- |
+| Requests over the rate are **immediately rejected** (429) | Up to 20 extra requests are **queued** and processed at the defined rate |
+| Strict enforcement | More forgiving for legitimate traffic spikes |
+| Best for: Login pages, sensitive APIs | Best for: General browsing, public APIs |
+
+---
+
+## 📋 Example Scenarios
+
+### Anti-Brute Force (Login Pages)
+
+Protect login pages from brute-force attacks:
+
+| Setting | Value |
+| :--- | :--- |
+| **Rate** | 5 |
+| **Per** | Minute |
+| **Burst** | 0 |
+
+**Result:** An IP can only make 5 requests per minute. Any additional request is immediately blocked with 429.
+
+### General API Protection
+
+Prevent a single user from monopolizing API resources:
+
+| Setting | Value |
+| :--- | :--- |
+| **Rate** | 100 |
+| **Per** | Second |
+| **Burst** | 50 |
+
+**Result:** Users can sustain 100 req/s. Short bursts up to 150 req/s are tolerated, but sustained high traffic is throttled.
+
+### Light Website Protection
+
+Soft rate limiting for a public website:
+
+| Setting | Value |
+| :--- | :--- |
+| **Rate** | 30 |
+| **Per** | Minute |
+| **Burst** | 60 |
+
+**Result:** Normal browsing (30 req/min) is unaffected. Fast page loads with many assets are queued. Only abusive crawlers are blocked.
+
+---
+
+## 🔬 Technical Details
+
+| Property | Value |
+| :--- | :--- |
+| **HTTP Status Code** | `429 Too Many Requests` |
+| **Storage Backend** | Shared memory zone (`ip_req_limit`, 20 MiB) |
+| **Lua Module** | `resty.limit.req` (OpenResty) |
+| **Tracking** | Per client IP address |
+| **Scope** | Per Proxy Host (independent limits per host) |
+
+> [!TIP]
+> Rate limiting works best when combined with **[CrowdSec](CrowdSec)** for repeat offenders. CrowdSec can permanently ban IPs that trigger too many 429 responses.
+
+---
+
+[🏠 Home](Home) | [🛡️ Security Overview](Security) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

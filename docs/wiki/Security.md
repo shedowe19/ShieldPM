@@ -1,28 +1,105 @@
 # Security Overview
 
-ShieldPM integrates robust security features to protect your services.
-
-## 🛡️ Core Features
-*   **HTTP/3 (QUIC) & TLS 1.3:** Modern, secure protocols enabled by default.
-*   **HSTS:** Enforce HTTPS security headers.
-
-## 🦅 CrowdSec (IPS)
-Detect and block attacks using community-driven threat intelligence.
-👉 **[Read the CrowdSec Deep Dive](CrowdSec)**
-
-## 🔥 ModSecurity (WAF)
-Inspect traffic for malicious payloads using OWASP Core Rule Set.
-👉 **[Read the ModSecurity Deep Dive](ModSecurity)**
-
-## 🛑 Access Control
-Restrict access using Basic Auth and IP ranges.
-👉 **[Read the Access Lists Guide](Access-Lists)**
-
-## 🔐 OpenAppSec
-AI-based WAF using machine learning — no signature databases needed.
-*   Requires `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true`.
-
-👉 **[Read the OpenAppSec Guide](OpenAppSec)**
+ShieldPM provides a **layered security architecture** that protects your services at multiple levels — from network to application layer.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
+
+## 🏗️ Security Layers
+
+```
+  ┌──────────┐     ┌──────────────────────────────────────────────────┐
+  │  Client   │────▶│                    ShieldPM                      │
+  └──────────┘     │                                                  │
+                   │  Layer 1: Network                                │
+                   │  ┌────────────┐  ┌────────────┐  ┌───────────┐  │
+                   │  │ Rate Limit │  │ IP Access  │  │  mTLS     │  │
+                   │  │ (429)      │  │ Lists      │  │  Client   │  │
+                   │  └─────┬──────┘  └─────┬──────┘  └─────┬─────┘  │
+                   │        ▼               ▼               ▼        │
+                   │  Layer 2: Authentication                         │
+                   │  ┌────────────┐  ┌────────────┐                 │
+                   │  │ Basic Auth │  │  OAuth2 /  │                 │
+                   │  │            │  │  SSO       │                 │
+                   │  └─────┬──────┘  └─────┬──────┘                 │
+                   │        ▼               ▼                        │
+                   │  Layer 3: Application Firewall                   │
+                   │  ┌────────────┐  ┌────────────┐  ┌───────────┐  │
+                   │  │ ModSec     │  │ OpenAppSec │  │  Anubis   │  │
+                   │  │ (CRS WAF)  │  │ (AI WAF)   │  │ (AI FW)   │  │
+                   │  └─────┬──────┘  └─────┬──────┘  └─────┬─────┘  │
+                   │        ▼               ▼               ▼        │
+                   │  Layer 4: Threat Intelligence                    │
+                   │  ┌────────────────────────────────────────────┐  │
+                   │  │           CrowdSec (IPS)                   │  │
+                   │  │     Community-driven IP Reputation          │  │
+                   │  └────────────────────────────────────────────┘  │
+                   └──────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+                              ┌──────────────────┐
+                              │   Your Backend    │
+                              │   (Protected)     │
+                              └──────────────────┘
+```
+
+---
+
+## 🛡️ Feature Comparison
+
+| Feature | Type | Protection Against | Configuration |
+| :--- | :--- | :--- | :--- |
+| **[CrowdSec](CrowdSec)** | IPS | Brute force, botnets, known malicious IPs | Sidecar / System service |
+| **[ModSecurity](ModSecurity)** | WAF | SQL injection, XSS, path traversal | Per-host toggle |
+| **[OpenAppSec](OpenAppSec)** | AI WAF | Zero-day attacks, unknown patterns | Module + Agent |
+| **[Anubis](Anubis)** | AI Firewall | AI crawlers, automated bots, scrapers | Environment variable |
+| **[Access Lists](Access-Lists)** | ACL | Unauthorized access | Per-host assignment |
+| **[OAuth2-Proxy](OAuth2-Proxy)** | SSO | Unauthorized access via Identity Provider | Per-host assignment |
+| **[Rate Limiting](Request-Rate-Limiting)** | DDoS | Abuse, scraping, brute force | Per-host config |
+| **[mTLS](Internal-PKI)** | Zero Trust | All unauthorized clients | Access List + Internal CA |
+| **Block Exploits** | Basic Rules | Common attack patterns | Per-host toggle |
+| **HSTS** | Header | Protocol downgrade attacks | Per-host / global |
+
+---
+
+## 🔐 Encryption
+
+### TLS Protocols
+
+ShieldPM supports modern TLS protocols out of the box:
+
+| Protocol | Status | Notes |
+| :--- | :--- | :--- |
+| **TLS 1.3** | ✅ Default | Fastest, most secure |
+| **TLS 1.2** | ✅ Supported | For older client compatibility |
+| **HTTP/3 (QUIC)** | ✅ Enabled | UDP-based, improved mobile performance |
+| **ML-KEM-768** | ✅ Available | Post-quantum key exchange (via Internal PKI) |
+
+### Certificate Management
+
+| Method | Best For | Automation |
+| :--- | :--- | :--- |
+| **Let's Encrypt** | Public-facing services | ✅ Auto-renew |
+| **DNS Challenge** | Wildcards, blocked port 80 | ✅ Auto-renew |
+| **Custom Cert** | Corporate CAs, bought certs | ❌ Manual |
+| **Internal CA** | Private/internal services | ✅ Auto-issue |
+
+👉 **[SSL Certificates Guide](SSL-Certificates)** | **[Internal PKI Guide](Internal-PKI)**
+
+---
+
+## 📋 Security Hardening Checklist
+
+- [ ] Admin UI not publicly accessible (use tunnel/VPN or Access List)
+- [ ] HSTS enabled on production hosts
+- [ ] Block Exploits enabled on all Proxy Hosts
+- [ ] CrowdSec installed and configured
+- [ ] ModSecurity enabled on sensitive hosts (login pages, APIs)
+- [ ] Rate Limiting configured on authentication endpoints
+- [ ] Dead Host (`*.yourdomain.com`) catching undefined subdomains
+- [ ] SSL certificates configured for all public hosts
+- [ ] HTTP/3 enabled (UDP 443 open)
+- [ ] Regular backups via [GitOps](GitOps) or manual `tar`
+
+---
+
+[🏠 Home](Home) | [🔒 SSL Certificates](SSL-Certificates) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
