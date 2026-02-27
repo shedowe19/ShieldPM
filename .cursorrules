@@ -1,0 +1,217 @@
+# Project Rules: ShieldPM v4.1.0
+
+## Project Overview
+
+ShieldPM (Shedowe's Shield Proxy Manager) is an advanced fork of Nginx Proxy Manager.
+It provides a web UI for managing Nginx Reverse Proxies with emphasis on security (WAF, IPS),
+modern protocols (HTTP/3, QUIC), and native performance.
+
+**Primary outputs**: Docker Image (`shedowe19/shieldpm:develop`), Native Installer (`install.sh`), and LXC container deployments (via the same installer).
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Backend Runtime** | Node.js `v22+` (ESM modules) |
+| **Backend Framework** | Express.js `v5.2` |
+| **ORM** | Objection.js `v3.1` / Knex.js `v3.1` |
+| **Database (Dev)** | SQLite (`better-sqlite3`) |
+| **Database (Prod)** | MySQL (`mysql2`) or PostgreSQL (`pg`) |
+| **Frontend Framework** | React `v19.2` (TypeScript) |
+| **Build Tool** | Vite `v7.3` |
+| **Styling** | Tailwind CSS `v3.4`, shadcn/ui (Radix UI) |
+| **State Management** | React Query `v5.90` |
+| **i18n** | i18next / react-i18next |
+| **Linter/Formatter** | Biome `v2.4` (both frontend & backend) |
+| **Tests** | Vitest `v4.0` (both frontend & backend) |
+| **Web Server** | OpenResty-based custom Nginx |
+| **Package Manager** | Yarn |
+
+## Architecture
+
+### Repository Structure
+
+```
+ShieldPM/
+├── backend/                # Express.js API (ESM)
+│   ├── internal/           # Business logic services (singleton objects)
+│   ├── models/             # Objection.js ORM models
+│   ├── routes/             # Express route handlers
+│   ├── schema/             # JSON Schema / API validation
+│   ├── templates/          # EJS templates for Nginx configs
+│   ├── migrations/         # Knex.js database migrations
+│   ├── lib/                # Shared utilities (error, encryption, helpers)
+│   └── app.js              # Express app setup
+├── frontend/               # React SPA (TypeScript)
+│   └── src/
+│       ├── api/            # API client hooks (React Query)
+│       ├── components/     # Reusable UI components (shadcn/ui)
+│       ├── context/        # React context (auth, theme)
+│       ├── hooks/          # Custom React hooks
+│       ├── locale/         # i18n translation files
+│       ├── modals/         # Modal dialog components
+│       ├── pages/          # Route-level page components
+│       └── Router.tsx      # App routing (react-router-dom)
+├── rootfs/                 # Docker overlay files (startup scripts)
+├── scripts/                # install.sh for native deployments
+├── docs/                   # Project documentation
+└── Dockerfile              # Multi-stage build
+```
+
+### Component Responsibilities
+
+| Path | Role |
+|---|---|
+| `backend/internal/nginx.js` | **Config Engine**: Reads DB → renders EJS templates → writes `.conf` → reloads Nginx |
+| `backend/internal/proxy-host.js` | CRUD + enable/disable logic for proxy hosts |
+| `backend/internal/ai/` | AI integration (Gemini, Ollama, OpenAI-compatible) |
+| `backend/internal/chat.js` | Telegram ChatOps bot (Telegraf) |
+| `backend/internal/gitops.js` | GitOps config sync via isomorphic-git |
+| `backend/internal/tor.js` | Tor Hidden Service management |
+| `backend/templates/*.conf` | EJS templates defining Nginx vhost configurations |
+| `rootfs/usr/local/bin/` | Container startup scripts (`launch.sh`, `start.sh`) |
+| `scripts/install.sh` | Bash installer for **LXC containers** and bare-metal (native) deployments |
+
+### Two-Repository Model
+
+> **CRITICAL**: This app spans TWO repos. Never confuse them.
+
+- **`ShieldPM`** (this repo) — Application source code (backend, frontend, migrations, installer). Supports **Docker**, **LXC**, and **native** deployments.
+- **`shieldpm-nginx`** (external) — Base Docker image + compiled Nginx binaries. Changes to Nginx modules, compilation flags, or the root `nginx.conf` go there.
+
+## Coding Standards
+
+### Naming Conventions
+
+| Element | Convention | Example |
+|---|---|---|
+| JS Variables/Functions | `camelCase` | `proxyHost`, `getAll` |
+| DB Columns | `snake_case` | `owner_user_id`, `ssl_forced` |
+| DB Tables | `snake_case` | `proxy_host`, `access_list` |
+| React Components | `PascalCase` | `ProxyHosts`, `SiteHeader` |
+| React Files | `PascalCase.tsx` | `Dashboard.tsx`, `Router.tsx` |
+| CSS Classes | Tailwind utility classes | `flex flex-col min-h-screen` |
+| Migration Files | `YYYYMMDDHHMMSS_description.js` | `20260101120000_add_anubis.js` |
+| Locale Keys | `dot.separated.camelCase` | `proxy.host.create` |
+
+### Code Style (Biome)
+
+- **Indent**: Tabs, width 4
+- **Line width**: 120 characters max
+- **Quotes**: Double quotes (`"`) for JS/TS strings
+- **Semicolons**: Required
+- **Imports**: Organized by Biome groups (node → npm → local)
+- **Self-closing elements**: Required for empty JSX tags
+- **No parameter reassign**: Error
+
+### Module System
+
+- **Backend**: ESM (`"type": "module"` in package.json). Use `import/export`, never `require()`.
+- **Frontend**: ESM + TypeScript with Vite path aliases (`src/...`).
+- **Migrations**: ESM with named `up`/`down` exports.
+- **Exception**: Files ending in `.cjs` (e.g., `validate-env.cjs`) may use CommonJS.
+
+### Error Handling
+
+Backend errors use a centralized error factory (`backend/lib/error.js`):
+
+```javascript
+import errs from "../lib/error.js";
+
+// Throw structured errors with HTTP status mapping
+throw new errs.ItemNotFoundError(id);
+throw new errs.AuthError("Invalid credentials");
+throw new errs.PermissionError("Not allowed");
+```
+
+- Always use the `errs` factory — never throw raw `Error` objects in route/internal code.
+- Let Express error middleware handle response formatting.
+
+### Async Patterns
+
+- **Backend**: Use `async/await` with try/catch. Return Promises from service methods.
+- **Frontend**: Use React Query (`useQuery`, `useMutation`) for all API calls. Never use raw `fetch` in components.
+- **Nginx operations**: Are async with debounced reload (2s delay) to avoid CPU spikes.
+
+### Database Patterns (Objection.js)
+
+- Models extend `Model` from Objection.js and define `tableName`, `jsonAttributes`, and `relationMappings`.
+- Boolean fields are stored as integers in SQLite; models handle conversion via `convertBoolFieldsToInt`/`convertIntFieldsToBool` helpers.
+- Always use `$beforeInsert` and `$beforeUpdate` lifecycle hooks for timestamps.
+- Soft-delete pattern: Set `is_deleted = 1`, filter in relation `modify()` callbacks.
+
+### Backend Service Pattern
+
+Business logic lives in `backend/internal/` as **singleton objects** (not classes):
+
+```javascript
+const internalProxyHost = {
+    create(access, data) { /* ... */ },
+    update(access, data) { /* ... */ },
+    get(access, data) { /* ... */ },
+    delete(access, data) { /* ... */ },
+    getAll(access, expand, search_query) { /* ... */ },
+};
+export default internalProxyHost;
+```
+
+- First parameter is always `access` (contains user identity + permissions).
+- Services call other services (e.g., `internalNginx.configure()`) — never reach into DB directly from routes.
+
+### Frontend Patterns
+
+- **Lazy loading**: All page components use `React.lazy()` with `<Suspense>`.
+- **Animations**: Use `framer-motion` `<AnimatePresence>` for page transitions.
+- **Forms**: Mix of Formik and React Hook Form (+ Zod for validation). New forms should prefer React Hook Form + Zod.
+- **UI Components**: Use shadcn/ui primitives (Radix-based). Do not introduce new UI libraries.
+- **Icons**: Use `@tabler/icons-react` and `lucide-react`. Do not add other icon libraries.
+
+## Critical Rules
+
+1. ❌ **Never use `require()`** in backend code — the project is ESM-only.
+2. ❌ **Never modify Nginx compilation flags** in this repo — that belongs to `shieldpm-nginx`.
+3. ❌ **Never throw raw `Error` objects** in backend internal/route code — use `errs` factory.
+4. ❌ **Never use raw `fetch`** in React components — use React Query hooks.
+5. ❌ **Never store dynamic data outside `/data/`** — all persistent state must reside there.
+6. ❌ **Never skip `$beforeInsert`/`$beforeUpdate`** lifecycle hooks when creating Objection models.
+7. ✅ **Always validate with JSON Schema** before accepting API input (see `backend/schema/`).
+8. ✅ **Always debounce Nginx reloads** — never call `nginx -s reload` directly; use `internalNginx.reload()`.
+9. ✅ **Always use `access` parameter** as the first argument in internal service methods.
+10. ✅ **Always add translations** for new UI text in `frontend/src/locale/lang/en.json` at minimum.
+
+## Code Smells to Avoid
+
+- **God functions**: Break services into focused methods; the `create` method should not exceed ~100 lines.
+- **Inline SQL**: Always go through Objection.js query builder, not raw Knex queries (unless migration).
+- **Hardcoded paths**: Use path constants or environment variables, never hardcode `/data/nginx/...`.
+- **Unused imports**: Biome will flag these — fix before committing.
+- **Mixed boolean types**: DB uses `0/1` integers for booleans. The model layer handles conversion. Do not mix `true/false` and `0/1` outside models.
+
+## Testing Guidelines
+
+- **Framework**: Vitest (both backend and frontend).
+- **Frontend tests**: Use Testing Library (`@testing-library/react`).
+- **Run tests**: `cd backend && yarn test` / `cd frontend && yarn test`.
+- **Coverage**: Focus on service logic (`backend/internal/`) and complex UI interactions.
+- **Mocking**: Mock external dependencies (Docker, Nginx, Tor, Telegram) — never hit real services in tests.
+
+## Documentation Standards
+
+- Use JSDoc `@param` and `@returns` comments on all backend service methods (see `proxy-host.js` for pattern).
+- Use `/** @type {Type} */` annotations for model field types.
+- Keep `GEMINI.md` up to date — it is the source of truth for AI agents.
+
+## Security Considerations
+
+- **JWT tokens**: Managed via `backend/internal/token.js`. Temporary tokens for ChatOps use `ctx.shieldAccess`.
+- **CSRF**: Enabled via `csrf-csrf` middleware.
+- **Rate limiting**: Applied via `express-rate-limit`.
+- **Helmet**: Security headers enabled globally.
+- **Encryption**: Use `backend/lib/encryption.js` for sensitive field storage (passwords, keys).
+- **WAF layers**: ModSecurity (CRS v4), OpenAppSec (AI WAF), CrowdSec (IPS via Lua). Integration changes require coordination with `shieldpm-nginx`.
+
+## Versioning
+
+- **Source of truth**: `backend/package.json` + `frontend/package.json` + `.version` (root).
+- When bumping version: update all three files, then tag the git commit.
+- Always discuss Patch/Minor/Major impact with the user before bumping.
