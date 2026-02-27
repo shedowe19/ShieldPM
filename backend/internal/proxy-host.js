@@ -246,6 +246,7 @@ const internalProxyHost = {
 		}
 
 		let row = await internalProxyHost.get(access, { id: thisData.id });
+		const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
@@ -337,7 +338,6 @@ const internalProxyHost = {
 		internalGitDeploy.startPollingForHost(row);
 
 		// Handle OAuth2 Proxy lifecycle on access_list_id change
-		const oldAccessListId = data.id ? (await proxyHostModel.query().findById(data.id))?.access_list_id : null;
 		if (row.access_list_id !== oldAccessListId) {
 			// Start new OAuth2 Proxy if needed
 			await _ensureOAuth2Proxy(row.access_list_id);
