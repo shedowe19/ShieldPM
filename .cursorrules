@@ -6,7 +6,7 @@ ShieldPM (Shedowe's Shield Proxy Manager) is an advanced fork of Nginx Proxy Man
 It provides a web UI for managing Nginx Reverse Proxies with emphasis on security (WAF, IPS),
 modern protocols (HTTP/3, QUIC), and native performance.
 
-**Primary outputs**: Docker Image (`shedowe19/shieldpm:develop`), Native Installer (`install.sh`), and LXC container deployments (via the same installer).
+**Primary outputs**: Docker Image (`ghcr.io/shedowe19/shieldpm:develop`), Native Installer (`install.sh`), and LXC container deployments (via the same installer).
 
 ## Tech Stack
 
