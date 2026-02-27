@@ -87,6 +87,6 @@
   },
   "files": {
     "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"],
-    "exclude": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/.git/**"]
+    "exclude": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/[.]git/**", "**/.agent/**", "**/.tscanner/**"]
   }
 }

@@ -23,5 +23,5 @@ for (const file of data.files) {
   }
 }
 
-// Output results to stdout without newline to avoid issues, or with newline is fine usually
-process.stdout.write(`${JSON.stringify(issues)}\n`);
+// Output results in the format tscanner expects: { issues: [...] }
+process.stdout.write(JSON.stringify({ issues }) + '\n');
