@@ -140,8 +140,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2CookieSecret : undefined,
 				oauth2_oidc_issuer_url:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2OidcIssuerUrl : undefined,
-				oauth2_proxy_prefix:
-					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? formattedProxyPrefix : undefined,
+				oauth2_proxy_prefix: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? formattedProxyPrefix : undefined,
 				oauth2_scope: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2Scope : undefined,
 				oauth2_allowed_groups:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedGroups : undefined,

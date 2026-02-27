@@ -185,7 +185,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 		const child = processes.get(id);
 		if (child) {
 			logger.info(`Stopping OAuth2 Proxy #${id}...`);
-			
+
 			const exitPromise = new Promise((resolve) => {
 				const timeout = setTimeout(() => {
 					logger.warn(`OAuth2 Proxy #${id} stop timed out, proceeding anyway.`);
@@ -203,7 +203,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 
 			child.kill("SIGTERM");
 			processes.delete(id);
-			
+
 			await exitPromise;
 		}
 	},
