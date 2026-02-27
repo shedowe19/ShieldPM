@@ -64,7 +64,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			values.items?.length === 0 &&
 			values.clients?.length === 0 &&
 			!values.authentikHost &&
-			!values.oauth2ProxyHost &&
+			values.authType !== ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY &&
 			values.authType !== ACCESS_LIST_AUTH_TYPE.OIDC &&
 			!values.mtlsEnabled
 		) {
