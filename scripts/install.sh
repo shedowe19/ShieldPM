@@ -466,7 +466,65 @@ else
     echo "--> Skipping Anubis."
 fi
 
-# 14. OpenAppSec WAF (Optional)
+# 14. OAuth2 Proxy (Optional)
+echo ""
+echo "=== OAuth2 Proxy (Optional) ==="
+echo "OAuth2 Proxy protects your applications using an external OAuth2 provider."
+echo "It handles authentication flow and passes user identity to the backend."
+echo ""
+read -r -p "Install OAuth2 Proxy? [y/N] (Default: N): " oauth2_choice
+
+if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
+    echo "--> Installing OAuth2 Proxy..."
+
+    # Detect Architecture
+    ARCH=$(dpkg --print-architecture)
+    # Map Debian arch to OAuth2 Proxy binary naming (linux-amd64, linux-arm64)
+    if [ "$ARCH" = "amd64" ]; then
+        OAUTH2_ARCH="amd64"
+    elif [ "$ARCH" = "arm64" ]; then
+        OAUTH2_ARCH="arm64"
+    else
+        echo "  > Warning: Unsupported architecture $ARCH. OAuth2 Proxy might not work."
+        OAUTH2_ARCH="$ARCH"
+    fi
+
+    if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
+        OAUTH2_VERSION="7.14.2"
+        OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
+        OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
+        
+        OAUTH2_TMP_DIR=$(mktemp -d)
+        OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
+
+        echo "  > Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
+        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
+
+        if [ -s "$OAUTH2_TAR" ]; then
+            cd "$OAUTH2_TMP_DIR"
+            if tar -xzf "$OAUTH2_TARBALL"; then
+                EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
+                if [ -f "$EXTRACTED_BIN" ]; then
+                    mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
+                    chmod +x /usr/local/bin/oauth2-proxy
+                    echo "  > OAuth2 Proxy installed successfully."
+                else
+                    echo "  ! Failed to locate extracted OAuth2 Proxy binary."
+                fi
+            else
+                echo "  ! Failed to extract OAuth2 Proxy."
+            fi
+            cd - > /dev/null
+        else
+            echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
+        fi
+        rm -rf "$OAUTH2_TMP_DIR"
+    fi
+else
+    echo "--> Skipping OAuth2 Proxy."
+fi
+
+# 15. OpenAppSec WAF (Optional)
 echo ""
 echo "=== OpenAppSec WAF (Optional) ==="
 echo "OpenAppSec is an AI-based Web Application Firewall (WAF) that protects"

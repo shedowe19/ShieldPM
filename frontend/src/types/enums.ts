@@ -206,6 +206,7 @@ export type ShadcnVariant = (typeof SHADCN_VARIANT)[keyof typeof SHADCN_VARIANT]
 export const ACCESS_LIST_AUTH_TYPE = {
 	NONE: "none",
 	AUTHENTIK_PROXY: "authentik_proxy",
+	OAUTH2_PROXY: "oauth2_proxy",
 	OIDC: "oidc",
 } as const;
 export type AccessListAuthType = (typeof ACCESS_LIST_AUTH_TYPE)[keyof typeof ACCESS_LIST_AUTH_TYPE];

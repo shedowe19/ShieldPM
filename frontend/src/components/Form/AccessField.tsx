@@ -81,7 +81,7 @@ export function AccessField({
 					{isError ? <div className="text-destructive text-sm font-medium">{`${error}`}</div> : null}
 					{!isLoading && !isError ? (
 						<Select
-							className="react-select-container text-black"
+							className="react-select-container"
 							classNamePrefix="react-select"
 							defaultValue={options.find((o) => o.value === field.value) || options[0]}
 							options={options}
@@ -91,6 +91,7 @@ export function AccessField({
 									...base,
 									height: "100%",
 									backgroundColor: "transparent",
+									color: "hsl(var(--foreground))",
 									":hover": {
 										backgroundColor: "hsl(var(--accent))",
 										color: "hsl(var(--accent-foreground))",
@@ -109,6 +110,10 @@ export function AccessField({
 									border: "1px solid hsl(var(--border))",
 								}),
 								singleValue: (base) => ({
+									...base,
+									color: "hsl(var(--foreground))",
+								}),
+								input: (base) => ({
 									...base,
 									color: "hsl(var(--foreground))",
 								}),

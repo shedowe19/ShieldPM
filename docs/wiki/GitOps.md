@@ -11,6 +11,40 @@ The GitOps feature enables:
 - **Disaster Recovery**: Restore configuration from any previous commit
 - **Infrastructure as Code**: Store your configuration alongside your other IaC files
 
+## 🏗️ Architecture
+
+```
+  ┌──────────────────┐      ┌───────────────────┐      ┌──────────────────┐
+  │   ShieldPM UI    │─────▶│  ShieldPM Backend  │─────▶│  Git Repository  │
+  │  Export / Import │      │                    │      │  (GitHub/GitLab) │
+  └──────────────────┘      │  ┌──────────────┐ │      └──────────────────┘
+                            │  │   Database    │ │             ▲
+                            │  │  (Source of   │ │             │
+                            │  │   Truth)      │ │             │
+                            │  └──────┬───────┘ │      ┌──────┴──────┐
+                            │         │         │      │ isomorphic- │
+                            │         ▼         │      │    git      │
+                            │  ┌──────────────┐ │      │ (commit,    │
+                            │  │ YAML Export  │─┼──────▶  push, pull)│
+                            │  │ Engine       │ │      └─────────────┘
+                            │  └──────────────┘ │
+                            └───────────────────┘
+
+  Auto-Push Flow:
+  ┌──────────┐      ┌────────────┐      ┌──────────┐      ┌──────────┐
+  │ Host     │─────▶│ Export     │─────▶│ git      │─────▶│ Remote   │
+  │ Changed  │      │ to YAML   │      │ commit   │      │ Push     │
+  └──────────┘      └────────────┘      └──────────┘      └──────────┘
+      (debounced 5s)
+```
+
+**Key Points:**
+
+- The database is the **source of truth** — YAML files are derived from it
+- Auto-push is debounced (5s) to avoid excessive commits during bulk operations
+- Credentials (PAT) are encrypted with **AES-256-GCM** before storage
+- Import can optionally **overwrite** existing hosts
+
 ## Configuration
 
 Navigate to **Settings → GitOps** to configure the feature.
@@ -40,6 +74,7 @@ Click **Test Connection** to verify that ShieldPM can access your repository. Th
 ### Export & Push
 
 Click **Export & Push** to:
+
 1. Export all hosts and access lists as YAML files
 2. Stage and commit all changes
 3. Push to the remote repository
@@ -50,7 +85,7 @@ Click **Pull Now** to fetch the latest changes from the remote repository. This 
 
 ### Import from Git
 
-Click **Import from Git** to import configuration from the YAML files into the database. 
+Click **Import from Git** to import configuration from the YAML files into the database.
 
 > [!WARNING]
 > This can overwrite existing hosts if **Overwrite** is enabled. Use with caution.
@@ -58,6 +93,7 @@ Click **Import from Git** to import configuration from the YAML files into the d
 ### Commit History
 
 The history section shows recent commits with:
+
 - Commit SHA
 - Commit message
 - Author
@@ -158,11 +194,11 @@ Your Git credentials (Personal Access Token) are encrypted using **AES-256-GCM**
 ### Private Repositories
 
 Always use **private repositories** for your configuration backups. The export includes:
+
 - Internal hostnames and IP addresses
 - Hashed passwords for Basic Auth
 - Private keys for SSL certificates
 - User email addresses
-
 
 ## Creating a Personal Access Token
 

@@ -11,13 +11,53 @@ OpenAppSec has two components:
 | **Nginx Attachment Module** | Plugin loaded by Nginx to intercept traffic | ✅ Already compiled in |
 | **Agent** (`cp-nano-agent`) | ML engine that analyzes traffic and makes decisions | ❌ Needs installation |
 
----
+```
+  ┌──────────┐       ┌──────────────────────────────────────────────┐
+  │  Client   │──────▶│                  Nginx                       │
+  └──────────┘       │  ┌──────────────────────────────────────┐    │
+                     │  │  OpenAppSec Attachment Module         │    │
+                     │  │  (Intercept HTTP request/response)   │    │
+                     │  └──────────────┬───────────────────────┘    │
+                     └─────────────────┼────────────────────────────┘
+                                       │ IPC (shared memory)
+                                       ▼
+                     ┌──────────────────────────────────────────────┐
+                     │           cp-nano-agent (Agent)              │
+                     │  ┌──────────────┐   ┌────────────────────┐  │
+                     │  │  ML Engine   │   │  Policy Engine     │  │
+                     │  │  (AI Model)  │   │  (local_policy     │  │
+                     │  │              │   │   .yaml)           │  │
+                     │  └──────┬───────┘   └────────────────────┘  │
+                     │         │                                    │
+                     │         ▼                                    │
+                     │  ┌──────────────────┐                       │
+                     │  │ Decision:        │                       │
+                     │  │ ALLOW / BLOCK /  │                       │
+                     │  │ DETECT           │                       │
+                     │  └──────────────────┘                       │
+                     └──────────────────────────────────────────────┘
+                                  ▲ (optional)
+                                  │
+                     ┌────────────┴─────────────┐
+                     │  Cloud Portal            │
+                     │  my.openappsec.io        │
+                     │  (Centralized Mgmt)      │
+                     └──────────────────────────┘
+```
+
+**Key Points:**
+
+- The **Attachment Module** is compiled into Nginx and intercepts all HTTP traffic
+- The **Agent** runs as a separate process and uses **machine learning** for threat detection
+- Communication between Nginx and Agent uses **shared memory (IPC)** for minimal latency
+- Can be managed locally via `local_policy.yaml` or centrally via the Cloud Portal
 
 ## 🐳 Docker Setup
 
 Uncomment the `openappsec-agent` service in your `compose.yaml` (see [Docker Compose Reference](Docker-Compose-Reference) for the full configuration).
 
 1. **Enable the Nginx Module:**
+
    ```yaml
    environment:
      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true"
@@ -94,17 +134,20 @@ OpenAppSec uses machine learning models for threat detection. Two models are ava
 ### Installation
 
 **During Install:** The installer prompts for the model path:
+
 ```
 Path to Advanced Model .tgz (leave empty to skip): /path/to/open-appsec-advanced-model.tgz
 ```
 
 **Docker:** Mount as a volume in `compose.yaml`:
+
 ```yaml
 volumes:
   - "/opt/openappsec/open-appsec-advanced-model.tgz:/advanced-model/open-appsec-advanced-model.tgz"
 ```
 
 **Native / LXC (manually):**
+
 ```bash
 cp open-appsec-advanced-model.tgz /etc/cp/conf/open-appsec-advanced-model.tgz
 open-appsec-ctl --apply-policy
@@ -189,9 +232,9 @@ open-appsec-ctl --list-policies       # Show active policies
 
 ## 🔗 Resources
 
-*   [OpenAppSec Documentation](https://docs.openappsec.io/)
-*   [Cloud Management Portal](https://my.openappsec.io)
-*   [GitHub Repository](https://github.com/openappsec/openappsec)
+- [OpenAppSec Documentation](https://docs.openappsec.io/)
+- [Cloud Management Portal](https://my.openappsec.io)
+- [GitHub Repository](https://github.com/openappsec/openappsec)
 
 ---
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

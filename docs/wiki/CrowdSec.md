@@ -2,6 +2,47 @@
 
 [CrowdSec](https://www.crowdsec.net/) is a collaborative IPS (Intrusion Prevention System) that analyzes logs to detect and block malicious behavior.
 
+## 🏗️ Architecture
+
+```
+  ┌──────────┐        ┌──────────────────────────────────────────┐
+  │  Client   │───────▶│                  Nginx                   │
+  └──────────┘        │                                          │
+                      │  ┌────────────────────────────────────┐  │
+                      │  │      Lua Bouncer (init_by_lua)     │  │
+                      │  │  ┌─────────────────────────────┐   │  │
+                      │  │  │ Check IP against CrowdSec   │   │  │
+                      │  │  │ Local API Decisions Cache    │   │  │
+                      │  │  └──────────┬──────────────────┘   │  │
+                      │  └─────────────┼──────────────────────┘  │
+                      └────────────────┼─────────────────────────┘
+                           ┌───────────┴───────────┐
+                           ▼                       ▼
+                     ┌──────────┐            ┌──────────┐
+                     │  ALLOW   │            │  BLOCK   │
+                     │ (proxy)  │            │ (403/Ban │
+                     └──────────┘            │  Page)   │
+                                             └──────────┘
+                                                   ▲
+  ┌──────────────────────────────────────┐         │
+  │         CrowdSec Agent               │         │
+  │  ┌──────────┐    ┌───────────────┐   │      Decisions
+  │  │ Log Parser│───▶│ Scenario      │───┼────────┘
+  │  │ (acquis)  │    │ Engine        │   │
+  │  └──────────┘    └───────────────┘   │
+  │       ▲                              │
+  │       │ reads                        │
+  │  /data/nginx/json_access.log         │
+  └──────────────────────────────────────┘
+```
+
+**Key Points:**
+
+- The **Lua Bouncer** is built into Nginx and checks every request against CrowdSec decisions
+- The **Agent** continuously parses Nginx logs and creates ban decisions for malicious IPs
+- Communication between Bouncer and Agent uses the **Local API** (HTTP on port 8080)
+- Decisions are cached locally for sub-millisecond lookup performance
+
 ## Installation / Configuration
 
 To enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyzes logs) and the **Bouncer** (enforces blocks in Nginx). The Nginx Bouncer is **already built-in** — you only need to install and connect the Agent.
@@ -16,6 +57,7 @@ To enable CrowdSec with ShieldPM, you need two components: the **Agent** (analyz
 > **Initialization Order Matters!**
 > ShieldPM creates the necessary configuration files (`parser.yaml`, `collection.yaml`) on first boot in your data directory.
 > **You must start ShieldPM FIRST** before enabling the CrowdSec container.
+>
 > 1. Start ShieldPM (`docker compose up -d shieldpm`).
 > 2. Wait for it to initialize (check logs).
 > 3. Restart or start CrowdSec (`docker compose up -d crowdsec`).
@@ -55,21 +97,25 @@ Add the CrowdSec container to your `compose.yaml`.
 
 ### 3. Connect ShieldPM (The Bouncer)
 
-1.  **Generate API Key:**
+1. **Generate API Key:**
     Inside the *CrowdSec container*:
+
     ```bash
     docker exec crowdsec cscli bouncers add shieldpm
     ```
+
     *Copy the API Key printed.*
 
-2.  **Configure ShieldPM:**
+2. **Configure ShieldPM:**
     Edit `data/crowdsec/crowdsec.conf`:
+
     ```ini
     API_KEY=your-generated-key
     API_URL=http://<crowdsec-container-ip>:8080
     ```
 
-3.  **Restart ShieldPM:**
+3. **Restart ShieldPM:**
+
     ```bash
     docker restart shieldpm
     ```
@@ -90,6 +136,7 @@ Install CrowdSec? [y/N]:
 ```
 
 Selecting **Y** will automatically:
+
 1. Install the CrowdSec Agent via `apt`
 2. Configure log acquisition (pointing to `/data/nginx/json_access.log` and `/data/nginx/error.log`)
 3. Install the ShieldPM parser and security collections
@@ -103,13 +150,15 @@ Selecting **Y** will automatically:
 
 If you skipped CrowdSec during installation or want to add it later:
 
-1.  **Install CrowdSec:**
+1. **Install CrowdSec:**
+
     ```bash
     curl -s https://install.crowdsec.net | bash
     apt install -y crowdsec
     ```
 
-2.  **Create Acquisition Config:**
+2. **Create Acquisition Config:**
+
     ```bash
     mkdir -p /etc/crowdsec/acquis.d
     cat > /etc/crowdsec/acquis.d/shieldpm.yaml << 'EOF'
@@ -121,7 +170,8 @@ If you skipped CrowdSec during installation or want to add it later:
     EOF
     ```
 
-3.  **Install Parsers & Collections:**
+3. **Install Parsers & Collections:**
+
     ```bash
     cscli hub update
     cscli parsers install shedowe19/shieldpm-logs
@@ -130,20 +180,24 @@ If you skipped CrowdSec during installation or want to add it later:
     cscli collections install crowdsecurity/appsec-virtual-patching
     ```
 
-4.  **Generate Bouncer Key & Configure:**
+4. **Generate Bouncer Key & Configure:**
+
     ```bash
     cscli bouncers add shieldpm-bouncer
     # Copy the printed API key, then:
     nano /data/crowdsec/crowdsec.conf
     ```
+
     Set:
+
     ```ini
     ENABLED=true
     API_KEY=your-generated-key
     API_URL=http://127.0.0.1:8080
     ```
 
-5.  **Restart Services:**
+5. **Restart Services:**
+
     ```bash
     systemctl enable --now crowdsec
     systemctl restart shieldpm

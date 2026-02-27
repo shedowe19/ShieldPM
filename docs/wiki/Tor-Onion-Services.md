@@ -14,6 +14,29 @@ Tor Onion Services work by creating a `.onion` address that is only accessible v
 - Encrypt all traffic end-to-end
 - Provide anonymity for both server and client
 
+```
+  ┌──────────────┐     ┌─────────────────────┐     ┌─────────────────────────┐
+  │  Tor Browser  │────▶│     Tor Network      │────▶│       ShieldPM          │
+  │  (Client)     │     │  (3-hop encrypted    │     │                         │
+  └──────────────┘     │   relay circuit)     │     │  ┌───────────────────┐  │
+                       └─────────────────────┘     │  │   Tor Daemon      │  │
+                                                   │  │  (Hidden Service) │  │
+                                                   │  │  *.onion:80/443   │  │
+                                                   │  └────────┬──────────┘  │
+                                                   │           │             │
+                                                   │           ▼             │
+                                                   │  ┌───────────────────┐  │
+                                                   │  │  Nginx (Proxy)    │  │
+                                                   │  │  Access Lists,    │  │
+                                                   │  │  WAF, Caching     │  │
+                                                   │  └────────┬──────────┘  │
+                                                   └───────────┼─────────────┘
+                                                               ▼
+                                                   ┌───────────────────────┐
+                                                   │   Backend Service     │
+                                                   └───────────────────────┘
+```
+
 ShieldPM manages Onion Services by communicating with the Tor daemon via the **Control Port** (localhost:9051).
 
 ## 📋 Prerequisites
@@ -33,6 +56,7 @@ ShieldPM manages Onion Services by communicating with the Tor daemon via the **C
 4. Click **Save**
 
 ShieldPM will:
+
 - Generate a new **ED25519-V3** keypair
 - Create a unique `.onion` address (56 characters)
 - Start the Hidden Service immediately
@@ -68,6 +92,7 @@ Onion Service private keys are **encrypted at rest** using AES-256-GCM. The encr
 ### Control Port Authentication
 
 The Tor Control Port is:
+
 - Only accessible from `127.0.0.1` (localhost)
 - Protected by an auto-generated password stored in `/data/shieldpm/tor-control-password`
 - Never exposed to the network
@@ -110,15 +135,19 @@ Tor Onion Services are **completely disabled** in Demo Mode for security reasons
 
 A common question is whether you need HTTPS (SSL/TLS) for an Onion Service.
 
-### Short Answer: No!
+### Short Answer: No
+
 Onion Services provide **end-to-end encryption and authentication** natively by the Tor protocol. When you connect to a `.onion` address, the Tor circuit itself ensures that:
+
 - The connection is encrypted
 - You are talking to the correct server (the address is a hash of the public key)
 
 Because of this, **Port 80 (HTTP) is completely safe** for sensitive content over Tor.
 
 ### When to use HTTPS (Port 443)?
+
 You should only use HTTPS over Tor if:
+
 1. **Frontend Requirements**: Your backend application *enforces* HTTPS and won't work without it.
 2. **Double Encryption**: You want an extra layer of security (e.g., from the browser process to the app container).
 3. **EV Certificates**: You have an expensive Extended Validation certificate for your onion address (rare).
@@ -138,6 +167,7 @@ This feature is **not** intended to facilitate illegal activities, the hosting o
 If you see "Tor daemon is not available":
 
 1. Check if Tor is running:
+
    ```bash
    # Docker
    docker exec shieldpm pgrep tor
@@ -147,6 +177,7 @@ If you see "Tor daemon is not available":
    ```
 
 2. Check Tor logs:
+
    ```bash
    # Docker
    docker exec shieldpm cat /data/tor/tor.log
@@ -167,6 +198,7 @@ If you see "Tor daemon is not available":
 ### Control Port Connection Failed
 
 1. Verify password file exists:
+
    ```bash
    # Docker
    docker exec shieldpm cat /data/shieldpm/tor-control-password
@@ -176,6 +208,7 @@ If you see "Tor daemon is not available":
    ```
 
 2. Check Tor configuration:
+
    ```bash
    # Docker
    docker exec shieldpm cat /etc/tor/torrc

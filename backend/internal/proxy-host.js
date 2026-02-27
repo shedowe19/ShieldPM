@@ -2,6 +2,7 @@ import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
+import AccessList from "../models/access_list.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
@@ -9,9 +10,48 @@ import internalGitDeploy from "./git-deploy.js";
 import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
+import internalOAuth2Proxy from "./oauth2-proxy.js";
 
 const omissions = () => {
 	return ["is_deleted", "owner.is_deleted"];
+};
+
+/**
+ * Ensure OAuth2 Proxy is running for the given access_list_id (if it's an OAuth2-type list).
+ * @param {number} accessListId
+ */
+const _ensureOAuth2Proxy = async (accessListId) => {
+	if (!accessListId) return;
+	try {
+		const list = await AccessList.query().where("id", accessListId).where("is_deleted", 0).first();
+		if (list?.meta && (list.meta.auth_type === "oauth2_proxy" || list.meta.authType === "oauth2_proxy")) {
+			await internalOAuth2Proxy.start(list);
+		}
+	} catch (err) {
+		// Non-fatal: log but don't block proxy host operation
+		console.error(`[OAuth2Proxy] Error ensuring proxy for access list #${accessListId}:`, err);
+	}
+};
+
+/**
+ * Stop OAuth2 Proxy for the given access_list_id if no other active proxy host uses it.
+ * @param {number} accessListId
+ */
+const _cleanupOAuth2Proxy = async (accessListId) => {
+	if (!accessListId) return;
+	try {
+		const list = await AccessList.query().where("id", accessListId).where("is_deleted", 0).first();
+		if (!list || !list.meta || (list.meta.auth_type !== "oauth2_proxy" && list.meta.authType !== "oauth2_proxy")) {
+			return;
+		}
+		// Check if any other active proxy host still uses this access list
+		const otherHosts = await proxyHostModel.query().where("access_list_id", accessListId).where("is_deleted", 0);
+		if (otherHosts.length === 0) {
+			await internalOAuth2Proxy.stop(accessListId);
+		}
+	} catch (err) {
+		console.error(`[OAuth2Proxy] Error cleaning up proxy for access list #${accessListId}:`, err);
+	}
 };
 
 const internalProxyHost = {
@@ -141,6 +181,9 @@ const internalProxyHost = {
 			internalGitDeploy.startPollingForHost(row);
 		}
 
+		// Start OAuth2 Proxy if needed
+		await _ensureOAuth2Proxy(row.access_list_id);
+
 		return row;
 	},
 
@@ -203,6 +246,7 @@ const internalProxyHost = {
 		}
 
 		let row = await internalProxyHost.get(access, { id: thisData.id });
+		const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
@@ -293,6 +337,14 @@ const internalProxyHost = {
 		// Restart Git Deploy polling
 		internalGitDeploy.startPollingForHost(row);
 
+		// Handle OAuth2 Proxy lifecycle on access_list_id change
+		if (row.access_list_id !== oldAccessListId) {
+			// Start new OAuth2 Proxy if needed
+			await _ensureOAuth2Proxy(row.access_list_id);
+			// Stop old one if no longer used
+			await _cleanupOAuth2Proxy(oldAccessListId);
+		}
+
 		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
 	},
 
@@ -380,6 +432,9 @@ const internalProxyHost = {
 
 		// Stop Git Deploy polling
 		internalGitDeploy.stopPolling(data.id);
+
+		// Stop OAuth2 Proxy if this was the last host using it
+		await _cleanupOAuth2Proxy(row.access_list_id);
 
 		return true;
 	},
