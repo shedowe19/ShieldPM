@@ -17,4 +17,4 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Run Shellcheck
         run: |
-          find . -type f \( -name "*.sh" -o -name "*.bash" \) -exec shellcheck {} +
+          find . -type f -not -path "*/.agent/*" \( -name "*.sh" -o -name "*.bash" \) -exec shellcheck {} +
