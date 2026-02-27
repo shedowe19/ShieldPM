@@ -1,33 +1,106 @@
 # User Management
 
-Manage who can access your ShieldPM instance and how they access your services.
+Manage who can access your ShieldPM instance and define their permissions.
 
-## 👥 Users & Permissions
+---
 
-*   **Admin User:** Full control over all hosts, settings, and users.
-*   **Initial User:** Created on first launch (default: `admin@example.org`).
-*   **Permissions:** You can restrict users to specific capabilities (e.g., only manage their own hosts, read-only access).
+## 🏗️ Architecture
 
-## 🛑 Access Lists (ACLs)
+```
+  ┌───────────────────────────────────────────────────────┐
+  │                  ShieldPM Users                       │
+  │                                                       │
+  │  ┌─────────────┐     ┌─────────────┐                 │
+  │  │    Admin     │     │   Regular   │                 │
+  │  │  Full Access │     │  Limited    │                 │
+  │  │  All Hosts   │     │  Own Hosts  │                 │
+  │  │  Settings    │     │  No Users   │                 │
+  │  │  Users       │     │  No Settings│                 │
+  │  │  Audit Log   │     │             │                 │
+  │  └─────────────┘     └─────────────┘                 │
+  └───────────────────────────────────────────────────────┘
+```
 
-Access Lists allow you to protect your Proxy Hosts with Basic Authentication or IP Whitelisting.
+---
 
-1.  Navigate to **Access Lists** in the UI.
-2.  Create a new list (e.g., "Home Network Only", "Admin Auth").
-3.  **Authorization:** Add username/password pairs.
-4.  **Access:** Add IP ranges to Allow/Deny (e.g., `192.168.1.0/24`).
-5.  **Apply:** In any Proxy Host configuration, select the Access List from the dropdown.
+## 👥 Creating Users
+
+1. Navigate to **Users** in the sidebar
+2. Click **Add User**
+3. Fill in:
+
+| Field | Description | Required |
+| :--- | :--- | :---: |
+| **Full Name** | Display name | ✅ |
+| **Email** | Login email (unique) | ✅ |
+| **Password** | Minimum 8 characters | ✅ |
+| **Nickname** | Short name for display | ❌ |
+| **Avatar** | Gravatar-based (uses email) | Auto |
+| **Disabled** | Block login without deleting | ❌ |
+
+> [!IMPORTANT]
+> The first admin user is created during the **Setup Wizard** on initial launch. There are no default credentials — you create them yourself.
+
+---
+
+## 🔑 Permissions
+
+Permissions control what each user can do. Admins can set permissions per user:
+
+| Permission | Description |
+| :--- | :--- |
+| **Administrator** | Full access to everything (users, settings, all hosts) |
+| **Manage Proxy Hosts** | Create, edit, delete proxy hosts |
+| **Manage Redirection Hosts** | Create, edit, delete redirection hosts |
+| **Manage Dead Hosts** | Create, edit, delete 404 hosts |
+| **Manage Streams** | Create, edit, delete TCP/UDP streams |
+| **Manage Access Lists** | Create, edit, delete access lists |
+| **Manage SSL Certificates** | Create, manage SSL certificates |
+| **Only See Own Hosts** | User can only see and manage hosts they created |
+
+> [!TIP]
+> For a **read-only user** that can view the dashboard but not modify anything, disable all management permissions.
+
+---
 
 ## 📜 Audit Log
 
-The **Audit Log** tracks changes made within the ShieldPM interface.
+The Audit Log tracks all changes made within ShieldPM.
 
-*   **What is logged?**
-    *   creation/update/deletion of Hosts.
-    *   User logins and password changes.
-    *   Settings updates.
-*   **Visibility:** Only Admins can view the full Audit Log.
-*   **Usage:** Useful for troubleshooting "who changed what" and for security compliance.
+### What is Logged
+
+| Event | Details Tracked |
+| :--- | :--- |
+| **Host Changes** | Create, update, delete (proxy, stream, redirect, dead) |
+| **User Actions** | Login, logout, password change, permission changes |
+| **Certificate Actions** | Request, renew, delete |
+| **Settings Changes** | Any settings update |
+| **AI Agent Actions** | All actions performed via AI (marked as AI-initiated) |
+| **Access List Changes** | Create, update, delete |
+
+### Accessing the Audit Log
+
+- Navigate to **Audit Log** in the sidebar (Admin only)
+- Each entry shows: **Timestamp**, **User**, **Action**, **Object Type**, **Details**
+- IP addresses of the acting user are recorded
+
+> [!NOTE]
+> The Audit Log is read-only. Entries cannot be edited or deleted by any user, ensuring an tamper-proof trail for security compliance.
 
 ---
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
+
+## 🔐 API Tokens
+
+Users can create API tokens for programmatic access:
+
+1. Navigate to your **Profile** (click your avatar/name)
+2. Click **API Tokens**
+3. Create a new token with optional expiry date
+4. Use the token in the `Authorization: Bearer <token>` header
+
+> [!WARNING]
+> API tokens have the same permissions as the user who created them. Keep them secure and rotate them regularly.
+
+---
+
+[🏠 Home](Home) | [🔒 Access Lists](Access-Lists) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
