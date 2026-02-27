@@ -27,7 +27,7 @@ const internalOAuth2Proxy = {
 		const lists = await AccessList.query().where("is_deleted", 0);
 
 		for (const list of lists) {
-			if (list.meta && list.meta.auth_type === "oauth2_proxy") {
+			if (list.meta && (list.meta.auth_type === "oauth2_proxy" || list.meta.authType === "oauth2_proxy")) {
 				await internalOAuth2Proxy.start(list);
 			}
 		}
