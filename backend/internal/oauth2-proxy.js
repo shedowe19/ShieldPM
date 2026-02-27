@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-import errs from "../lib/error.js";
+
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import ProxyHost from "../models/proxy_host.js";
@@ -20,7 +20,7 @@ const internalOAuth2Proxy = {
 			logger.info("Cleaning up old OAuth2 Proxy instances...");
 			const { execSync } = await import("node:child_process");
 			execSync("pkill -TERM -f oauth2-proxy", { stdio: "ignore" });
-		} catch (e) {
+		} catch (_e) {
 			// pkill returns 1 if no process found, ignore
 		}
 
@@ -104,15 +104,8 @@ oidc_issuer_url = "${meta.oauth2_oidc_issuer_url}"
 		}
 
 		if (meta.oauth2_allowed_emails) {
-			// Create authenticated emails file
+			// The emails file is written in start() — here we only reference it in the config
 			const emailsFile = `${dataPath}/access/oauth2/${id}/allowed_emails`;
-			const emailsContent = meta.oauth2_allowed_emails
-				.split(",")
-				.map((e) => e.trim())
-				.join("\n");
-			// We write this file synchronously here as it's part of config generation logic,
-			// but better to do it in start() async.
-			// For config string generation, we just reference it.
 			config += `
 authenticated_emails_file = "${emailsFile}"
 `;
