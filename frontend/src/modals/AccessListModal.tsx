@@ -546,7 +546,9 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</div>
 													</div>
 
-													{["oidc", "keycloak-oidc", "azure"].includes(values.oauth2Provider || "") && (
+													{["oidc", "keycloak-oidc", "azure"].includes(
+														values.oauth2Provider || "",
+													) && (
 														<div className="space-y-2">
 															<Label htmlFor="oauth2OidcIssuerUrl">OIDC Issuer URL</Label>
 															<Field name="oauth2OidcIssuerUrl">

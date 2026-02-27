@@ -128,7 +128,9 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 			if (!oauth2_client_id) missing.push("oauth2_client_id");
 			if (!oauth2_client_secret) missing.push("oauth2_client_secret");
 			if (!oauth2_cookie_secret) missing.push("oauth2_cookie_secret");
-			logger.error(`Missing required OAuth2 Proxy fields for Access List #${list.id}: ${missing.join(", ")}. Skipping proxy start.`);
+			logger.error(
+				`Missing required OAuth2 Proxy fields for Access List #${list.id}: ${missing.join(", ")}. Skipping proxy start.`,
+			);
 			return;
 		}
 
