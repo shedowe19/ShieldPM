@@ -312,41 +312,16 @@ if [[ -n "$OAUTH2_ARCH" ]]; then
     if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
         OAUTH2_VERSION="7.14.2"
         OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
-        OAUTH2_SHA_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz-sha256sum.txt"
-        
-        OAUTH2_TMP_DIR=$(mktemp -d)
-        OAUTH2_TAR="$OAUTH2_TMP_DIR/oauth2-proxy.tar.gz"
-        OAUTH2_SHA="$OAUTH2_TMP_DIR/oauth2-proxy.tar.gz-sha256sum.txt"
-
         echo "    - Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
-        curl -L -f -o "$OAUTH2_SHA" "$OAUTH2_SHA_URL" || true
-
-        if [ -s "$OAUTH2_TAR" ] && [ -s "$OAUTH2_SHA" ]; then
-            cd "$OAUTH2_TMP_DIR"
-            if sha256sum -c oauth2-proxy.tar.gz-sha256sum.txt; then
-                # Safe Extraction check
-                if tar -xzf oauth2-proxy.tar.gz; then
-                    # Check if extracted binary exists before moving
-                    EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-                    if [ -f "$EXTRACTED_BIN" ]; then
-                        mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                        chmod +x /usr/local/bin/oauth2-proxy
-                        echo "    - OAuth2 Proxy installed successfully."
-                    else
-                        echo "    ! Failed to locate extracted OAuth2 Proxy binary."
-                    fi
-                else
-                    echo "    ! Failed to extract OAuth2 Proxy."
-                fi
-            else
-                echo "    ! Checksum verification failed for OAuth2 Proxy."
-            fi
-            cd - > /dev/null
+        curl -L -f -o /tmp/oauth2-proxy.tar.gz "$OAUTH2_URL"
+        if [ -s /tmp/oauth2-proxy.tar.gz ]; then
+            tar -xzf /tmp/oauth2-proxy.tar.gz -C /usr/local/bin --strip-components=1 "oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
+            rm /tmp/oauth2-proxy.tar.gz
+            chmod +x /usr/local/bin/oauth2-proxy
+            echo "    - OAuth2 Proxy installed successfully."
         else
-            echo "    ! Failed to download OAuth2 Proxy or checksum. Check internet connection."
+            echo "    ! Failed to download OAuth2 Proxy. Check internet connection."
         fi
-        rm -rf "$OAUTH2_TMP_DIR"
     else
         echo "    - Skipping OAuth2 Proxy update/install."
     fi
