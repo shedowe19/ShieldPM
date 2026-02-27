@@ -66,7 +66,6 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			!values.authentikHost &&
 			!values.oauth2ProxyHost &&
 			values.authType !== ACCESS_LIST_AUTH_TYPE.OIDC &&
-			values.authType !== ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY &&
 			!values.mtlsEnabled
 		) {
 			return intl.formatMessage({ id: "error.access.at-least-one" });
@@ -468,19 +467,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			<SelectValue placeholder="Select Provider" />
 																		</SelectTrigger>
 																		<SelectContent>
-																			<SelectItem value="google">
-																				Google
-																			</SelectItem>
-																			<SelectItem value="github">
-																				GitHub
-																			</SelectItem>
-																			<SelectItem value="oidc">
-																				OpenID Connect
-																			</SelectItem>
+																			<SelectItem value="google">Google</SelectItem>
+																			<SelectItem value="github">GitHub</SelectItem>
+																			<SelectItem value="oidc">OpenID Connect</SelectItem>
 																			<SelectItem value="azure">Azure</SelectItem>
-																			<SelectItem value="gitlab">
-																				GitLab
-																			</SelectItem>
+																			<SelectItem value="gitlab">GitLab</SelectItem>
 																			<SelectItem value="keycloak-oidc">
 																				Keycloak
 																			</SelectItem>
@@ -546,9 +537,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</div>
 													</div>
 
-													{["oidc", "keycloak-oidc", "azure"].includes(
-														values.oauth2Provider || "",
-													) && (
+													{values.oauth2Provider === "oidc" && (
 														<div className="space-y-2">
 															<Label htmlFor="oauth2OidcIssuerUrl">OIDC Issuer URL</Label>
 															<Field name="oauth2OidcIssuerUrl">

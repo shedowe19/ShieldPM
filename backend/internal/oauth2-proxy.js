@@ -81,10 +81,7 @@ oidc_issuer_url = "${meta.oauth2_oidc_issuer_url}"
 		if (meta.oauth2_allowed_emails) {
 			// Create authenticated emails file
 			const emailsFile = `${dataPath}/access/${id}/allowed_emails`;
-			const emailsContent = meta.oauth2_allowed_emails
-				.split(",")
-				.map((e) => e.trim())
-				.join("\n");
+			const emailsContent = meta.oauth2_allowed_emails.split(",").map((e) => e.trim()).join("\n");
 			// We write this file synchronously here as it's part of config generation logic,
 			// but better to do it in start() async.
 			// For config string generation, we just reference it.
@@ -121,33 +118,17 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 		const accessDir = `${dataPath}/access/${list.id}`;
 		await fs.promises.mkdir(accessDir, { recursive: true });
 
-		// Validate required OAuth2 Proxy fields
-		const { oauth2_client_id, oauth2_client_secret, oauth2_cookie_secret } = list.meta;
-		if (!oauth2_client_id || !oauth2_client_secret || !oauth2_cookie_secret) {
-			const missing = [];
-			if (!oauth2_client_id) missing.push("oauth2_client_id");
-			if (!oauth2_client_secret) missing.push("oauth2_client_secret");
-			if (!oauth2_cookie_secret) missing.push("oauth2_cookie_secret");
-			logger.error(
-				`Missing required OAuth2 Proxy fields for Access List #${list.id}: ${missing.join(", ")}. Skipping proxy start.`,
-			);
-			return;
-		}
-
 		// Write Allowed Emails File if needed
 		if (list.meta.oauth2_allowed_emails) {
 			const emailsFile = `${accessDir}/allowed_emails`;
-			const emailsContent = list.meta.oauth2_allowed_emails
-				.split(",")
-				.map((e) => e.trim())
-				.join("\n");
+			const emailsContent = list.meta.oauth2_allowed_emails.split(",").map((e) => e.trim()).join("\n");
 			await fs.promises.writeFile(emailsFile, emailsContent);
 		}
 
 		// Generate and Write Config
 		const configContent = internalOAuth2Proxy.generateConfig(list);
 		const configFile = `${accessDir}/oauth2-proxy.cfg`;
-		await fs.promises.writeFile(configFile, configContent, { mode: 0o600 });
+		await fs.promises.writeFile(configFile, configContent);
 
 		// Ensure socket directory
 		await fs.promises.mkdir("/run/shieldpm", { recursive: true });
@@ -185,6 +166,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 			child.on("error", (err) => {
 				logger.error(`Failed to spawn OAuth2 Proxy #${list.id}:`, err);
 			});
+
 		} catch (err) {
 			logger.error(`Error starting OAuth2 Proxy #${list.id}:`, err);
 		}
@@ -211,7 +193,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 	 */
 	restart: async (list) => {
 		await internalOAuth2Proxy.start(list);
-	},
+	}
 };
 
 export default internalOAuth2Proxy;
