@@ -75,6 +75,10 @@ pass_authorization_header = true
 # But oauth2-proxy needs an upstream defined.
 upstreams = [ "static://200" ]
 
+# Allow redirects to any domain managed by ShieldPM
+whitelist_domains = ["*"]
+skip_provider_button = true
+
 email_domains = [
 ${(meta.oauth2_allowed_email_domains || "*")
 	.split(",")
