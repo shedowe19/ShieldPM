@@ -1,21 +1,45 @@
 # Access Lists (ACLs)
 
-Access Lists provide a way to restrict access to your services *before* the request reaches the backend.
+Access Lists provide a way to restrict access to your services *before* the request reaches the backend. They support multiple authentication methods that can be combined.
+
+## 🏗️ How it Works
+
+```
+  ┌──────────┐     ┌──────────────────────────────────────────┐     ┌──────────┐
+  │  Client   │────▶│               Access List                │────▶│ Backend  │
+  └──────────┘     │                                          │     └──────────┘
+                   │  ┌──────────┐  ┌──────────┐  ┌────────┐ │
+                   │  │ IP Check │→ │Basic Auth│→ │ OAuth2 │ │
+                   │  │ Allow/   │  │ User/    │  │ SSO    │ │
+                   │  │ Deny     │  │ Pass     │  │        │ │
+                   │  └──────────┘  └──────────┘  └────────┘ │
+                   │                                          │
+                   │  ┌──────────┐                            │
+                   │  │  mTLS    │  Client Certificate Check  │
+                   │  └──────────┘                            │
+                   └──────────────────────────────────────────┘
+```
+
+**Key Points:**
+
+- Access Lists are created once and can be **shared** across multiple Proxy Hosts
+- Multiple protection layers can be combined on a single list
+- Use **Satisfy Any** to allow access if *any* condition is met (instead of requiring all)
 
 ## 👤 Basic Authentication
 
 Protect a site with a username and password popup.
 
-1.  **Create List:** Go to **Access Lists** -> **Add Access List**.
-2.  **Add User:** Click **Add User**. Enter Username and Password.
-3.  **Apply:** In your Proxy Host, select this list under **Access List**.
+1. **Create List:** Go to **Access Lists** -> **Add Access List**.
+2. **Add User:** Click **Add User**. Enter Username and Password.
+3. **Apply:** In your Proxy Host, select this list under **Access List**.
 
 ## 🛑 IP Access Control
 
 Restrict access to specific IP addresses or ranges.
 
-*   **Allow:** `192.168.1.5` (Single IP) or `10.0.0.0/24` (Subnet).
-*   **Deny:** Block specific malicious IPs.
+- **Allow:** `192.168.1.5` (Single IP) or `10.0.0.0/24` (Subnet).
+- **Deny:** Block specific malicious IPs.
 
 > [!NOTE]
 > **Logic:** If *any* Allow rule exists, all other IPs are implicitly denied (unless they match another Allow rule). If only Deny rules exist, everyone else is allowed.
@@ -23,51 +47,58 @@ Restrict access to specific IP addresses or ranges.
 ## 🔐 Advanced Authorization
 
 ### Pass Basic Auth to Backend
+
 If your backend service *also* supports Basic Auth, you might want to pass the credentials through.
-*   **Option:** Check **Pass Auth to Host**.
-*   **Effect:** ShieldPM verifies the credentials, then sends the `Authorization: Basic ...` header to the backend.
+- **Option:** Check **Pass Auth to Host**.
+- **Effect:** ShieldPM verifies the credentials, then sends the `Authorization: Basic ...` header to the backend.
 
 ### Satisfy Any
+
 By default, if you have both Auth and IP rules, Nginx usually requires **all** conditions.
-*   **Satisfy Any:** If checked, a user can access if they match the IP rule OR if they provide valid credentials. Useful for "No Auth inside Home Network, Auth required from Internet".
+- **Satisfy Any:** If checked, a user can access if they match the IP rule OR if they provide valid credentials. Useful for "No Auth inside Home Network, Auth required from Internet".
 
 ## 🔑 OpenID Connect (OIDC) / OAuth2
 
 ShieldPM supports modern Single Sign-On using OpenID Connect (supported by Keycloak, Google, Authentik, Authelia, etc.).
 
 ### Configuration
+
 In the **Access List** dialog, scroll to the Authorization section:
 
-1.  **Select Provider:** Choose "OpenID Connect" (or specific presets if available).
-2.  **Discovery Document URL:** The `.well-known/openid-configuration` endpoint of your IdP.
-    *   *Example:* `https://auth.example.com/realms/master/.well-known/openid-configuration`
-3.  **Client ID & Client Secret:** Credentials you generated in your Identity Provider.
-4.  **Redirect URI:** Ensure your IdP allows the callback URL: `https://<your-service>/oauth2/callback`.
+1. **Select Provider:** Choose "OpenID Connect" (or specific presets if available).
+2. **Discovery Document URL:** The `.well-known/openid-configuration` endpoint of your IdP.
+    - *Example:* `https://auth.example.com/realms/master/.well-known/openid-configuration`
+3. **Client ID & Client Secret:** Credentials you generated in your Identity Provider.
+4. **Redirect URI:** Ensure your IdP allows the callback URL: `https://<your-service>/oauth2/callback`.
 
 ### How it works
-1.  User visits your site.
-2.  Nginx checks for a valid session cookie.
-3.  If missing, user is redirected to the IdP (e.g., "Sign in with Google").
-4.  After success, IdP redirects back to the callback URL.
-5.  Nginx verifies the token, sets a session cookie, and allows access.
+
+1. User visits your site.
+2. Nginx checks for a valid session cookie.
+3. If missing, user is redirected to the IdP (e.g., "Sign in with Google").
+4. After success, IdP redirects back to the callback URL.
+5. Nginx verifies the token, sets a session cookie, and allows access.
 
 ## 🛡️ Mutual TLS (mTLS) 🆕
+>
 > **Available since v3.0.0.19**
 
 Strictly require clients to present a valid SSL Certificate to access your service. This is ideal for Zero-Trust environments or private APIs.
 
 ### Configuration
-1.  **Generate a CA:** Create a private Certificate Authority (CA) and sign client certificates.
-2.  **Enable mTLS:** In the Access List modal, go to the **mTLS** tab.
-3.  **Choose CA Source:**
-    *   **Option A (Internal CA):** Enable the **"Use Internal CA"** switch. Nginx will verify clients using your built-in Internal Root CA. No file upload needed.
-    *   **Option B (Custom CA):** Paste the **Public Certificate** of your external CA (in PEM format).
-4.  **Save & Apply:** Assign the list to a Proxy Host.
+
+1. **Generate a CA:** Create a private Certificate Authority (CA) and sign client certificates.
+2. **Enable mTLS:** In the Access List modal, go to the **mTLS** tab.
+3. **Choose CA Source:**
+    - **Option A (Internal CA):** Enable the **"Use Internal CA"** switch. Nginx will verify clients using your built-in Internal Root CA. No file upload needed.
+    - **Option B (Custom CA):** Paste the **Public Certificate** of your external CA (in PEM format).
+4. **Save & Apply:** Assign the list to a Proxy Host.
 
 ### Behavior
-*   **Enforcement:** Nginx immediately rejects connections during the TLS Handshake if the client does not provide a valid certificate signed by the configured CA.
-*   **Browser:** Users will be prompted by their browser to select a certificate.
-*   **API/CLI:** Use `--cert client.crt --key client.key` (e.g. with curl).
+
+* **Enforcement:** Nginx immediately rejects connections during the TLS Handshake if the client does not provide a valid certificate signed by the configured CA.
+- **Browser:** Users will be prompted by their browser to select a certificate.
+- **API/CLI:** Use `--cert client.crt --key client.key` (e.g. with curl).
 
 ---
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
