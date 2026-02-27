@@ -13,6 +13,16 @@ const internalOAuth2Proxy = {
 	 */
 	init: async () => {
 		logger.info("Initializing OAuth2 Proxies...");
+
+		// Clean up any zombie proxies from previous runs before we initialize new ones
+		try {
+			logger.info("Cleaning up old OAuth2 Proxy instances...");
+			const { execSync } = await import("node:child_process");
+			execSync("pkill -TERM -f oauth2-proxy", { stdio: "ignore" });
+		} catch (e) {
+			// pkill returns 1 if no process found, ignore
+		}
+
 		// Find all Access Lists that use oauth2_proxy
 		const lists = await AccessList.query().where("is_deleted", 0);
 
@@ -136,16 +146,16 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 		const configFile = `${accessDir}/oauth2-proxy.cfg`;
 		await fs.promises.writeFile(configFile, configContent);
 
-		// Ensure socket directory
-		await fs.promises.mkdir("/run/shieldpm", { recursive: true });
-
-		logger.info(`Starting OAuth2 Proxy for Access List #${list.id} (${list.name})...`);
-
 		try {
+			// Ensure socket directory exists before spawning
+			await fs.promises.mkdir("/run/shieldpm", { recursive: true });
+
 			const child = spawn("oauth2-proxy", [`--config=${configFile}`], {
 				stdio: ["ignore", "pipe", "pipe"],
-				detached: false,
+				detached: true,
 			});
+
+			child.unref(); // allow node to exit without waiting for this child
 
 			processes.set(list.id, child);
 
