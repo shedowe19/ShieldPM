@@ -274,7 +274,80 @@ else
     echo "    - Skipping Anubis: Architecture $ARCH not supported."
 fi
 
-echo "--> [8/8] Restarting ShieldPM..."
+echo "--> [8/8] Checking for OAuth2 Proxy Updates..."
+# Check if OAuth2 Proxy is installed
+OAUTH2_INSTALLED=false
+if [ -f "/usr/local/bin/oauth2-proxy" ]; then
+    OAUTH2_INSTALLED=true
+fi
+
+# Detect Arch for OAuth2 Proxy (reuse ARCH from nginx step if valid, else re-detect)
+# OAuth2 Proxy uses "amd64" / "arm64" suffix
+OAUTH2_ARCH=""
+if [[ "$ARCH" == "amd64" ]]; then
+    OAUTH2_ARCH="amd64"
+elif [[ "$ARCH" == "arm64" ]]; then
+    OAUTH2_ARCH="arm64"
+fi
+
+if [[ -n "$OAUTH2_ARCH" ]]; then
+    SHOULD_UPDATE_OAUTH2=false
+
+    if [ "$OAUTH2_INSTALLED" = true ]; then
+        echo "    - OAuth2 Proxy is installed."
+        read -p "    ? Update OAuth2 Proxy binary? [Y/n] " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            SHOULD_UPDATE_OAUTH2=true
+        fi
+    else
+        echo "    - OAuth2 Proxy is NOT installed."
+        read -p "    ? Install OAuth2 Proxy? [y/N] " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            SHOULD_UPDATE_OAUTH2=true
+        fi
+    fi
+
+    if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
+        OAUTH2_VERSION="7.14.2"
+        OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
+        OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
+        
+        OAUTH2_TMP_DIR=$(mktemp -d)
+        OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
+
+        echo "    - Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
+        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
+
+        if [ -s "$OAUTH2_TAR" ]; then
+            cd "$OAUTH2_TMP_DIR"
+            if tar -xzf "$OAUTH2_TARBALL"; then
+                # Check if extracted binary exists before moving
+                EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
+                if [ -f "$EXTRACTED_BIN" ]; then
+                    mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
+                    chmod +x /usr/local/bin/oauth2-proxy
+                    echo "    - OAuth2 Proxy installed successfully."
+                else
+                    echo "    ! Failed to locate extracted OAuth2 Proxy binary."
+                fi
+            else
+                echo "    ! Failed to extract OAuth2 Proxy."
+            fi
+            cd - > /dev/null
+        else
+            echo "    ! Failed to download OAuth2 Proxy or checksum. Check internet connection."
+        fi
+        rm -rf "$OAUTH2_TMP_DIR"
+    else
+        echo "    - Skipping OAuth2 Proxy update/install."
+    fi
+else
+    echo "    - Skipping OAuth2 Proxy: Architecture $ARCH not supported."
+fi
+
+echo "--> [9/9] Restarting ShieldPM..."
 systemctl daemon-reload
 if systemctl is-active --quiet shieldpm; then
     systemctl restart shieldpm
