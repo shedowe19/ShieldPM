@@ -66,6 +66,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			!values.authentikHost &&
 			!values.oauth2ProxyHost &&
 			values.authType !== ACCESS_LIST_AUTH_TYPE.OIDC &&
+			values.authType !== ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY &&
 			!values.mtlsEnabled
 		) {
 			return intl.formatMessage({ id: "error.access.at-least-one" });
@@ -545,7 +546,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</div>
 													</div>
 
-													{values.oauth2Provider === "oidc" && (
+													{["oidc", "keycloak-oidc", "azure"].includes(values.oauth2Provider || "") && (
 														<div className="space-y-2">
 															<Label htmlFor="oauth2OidcIssuerUrl">OIDC Issuer URL</Label>
 															<Field name="oauth2OidcIssuerUrl">

@@ -121,6 +121,17 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 		const accessDir = `${dataPath}/access/${list.id}`;
 		await fs.promises.mkdir(accessDir, { recursive: true });
 
+		// Validate required OAuth2 Proxy fields
+		const { oauth2_client_id, oauth2_client_secret, oauth2_cookie_secret } = list.meta;
+		if (!oauth2_client_id || !oauth2_client_secret || !oauth2_cookie_secret) {
+			const missing = [];
+			if (!oauth2_client_id) missing.push("oauth2_client_id");
+			if (!oauth2_client_secret) missing.push("oauth2_client_secret");
+			if (!oauth2_cookie_secret) missing.push("oauth2_cookie_secret");
+			logger.error(`Missing required OAuth2 Proxy fields for Access List #${list.id}: ${missing.join(", ")}. Skipping proxy start.`);
+			return;
+		}
+
 		// Write Allowed Emails File if needed
 		if (list.meta.oauth2_allowed_emails) {
 			const emailsFile = `${accessDir}/allowed_emails`;
@@ -134,7 +145,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 		// Generate and Write Config
 		const configContent = internalOAuth2Proxy.generateConfig(list);
 		const configFile = `${accessDir}/oauth2-proxy.cfg`;
-		await fs.promises.writeFile(configFile, configContent);
+		await fs.promises.writeFile(configFile, configContent, { mode: 0o600 });
 
 		// Ensure socket directory
 		await fs.promises.mkdir("/run/shieldpm", { recursive: true });

@@ -486,22 +486,38 @@ if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
         OAUTH2_ARCH="arm64"
     else
         echo "  > Warning: Unsupported architecture $ARCH. OAuth2 Proxy might not work."
-        OAUTH2_ARCH="$ARCH"
+        OAUTH2_ARCH="$ARCH" # Assign for URL construction even if unsupported
     fi
 
-    VERSION="7.14.2"
-    URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${VERSION}/oauth2-proxy-v${VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
+    # The original script had a fixed version and direct download.
+    # The new instruction implies a SHOULD_UPDATE_OAUTH2 variable,
+    # but since this is an installation script, we assume it should always
+    # attempt to install/update if the user chooses 'y'.
+    # We'll integrate the new download logic directly.
 
-    echo "  > Downloading from $URL..."
-    curl -L -o /tmp/oauth2-proxy.tar.gz "$URL"
+    OAUTH2_VERSION="7.14.2"
+    OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
+    OAUTH2_SHA_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz-sha256sum.txt"
+    echo "  > Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
+    curl -L -f -o /tmp/oauth2-proxy.tar.gz "$OAUTH2_URL" || true
+    curl -L -f -o /tmp/oauth2-proxy.tar.gz-sha256sum.txt "$OAUTH2_SHA_URL" || true
 
-    if [ -s /tmp/oauth2-proxy.tar.gz ]; then
-        tar -xzf /tmp/oauth2-proxy.tar.gz -C /usr/local/bin --strip-components=1 "oauth2-proxy-v${VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-        rm /tmp/oauth2-proxy.tar.gz
-        chmod +x /usr/local/bin/oauth2-proxy
-        echo "  > OAuth2 Proxy installed to /usr/local/bin/oauth2-proxy"
+    if [ -s /tmp/oauth2-proxy.tar.gz ] && [ -s /tmp/oauth2-proxy.tar.gz-sha256sum.txt ]; then
+        cd /tmp
+        if sha256sum -c oauth2-proxy.tar.gz-sha256sum.txt; then
+            if tar -xzf oauth2-proxy.tar.gz -C /usr/local/bin --strip-components=1 "oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"; then
+                chmod +x /usr/local/bin/oauth2-proxy
+                echo "  > OAuth2 Proxy installed successfully."
+            else
+                echo "  ! Failed to extract OAuth2 Proxy."
+            fi
+        else
+            echo "  ! Checksum verification failed for OAuth2 Proxy."
+        fi
+        rm -f oauth2-proxy.tar.gz oauth2-proxy.tar.gz-sha256sum.txt
+        cd - > /dev/null
     else
-        echo "  > Download failed!"
+        echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
     fi
 else
     echo "--> Skipping OAuth2 Proxy."
