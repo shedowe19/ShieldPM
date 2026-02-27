@@ -81,7 +81,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			if (!values.oauth2ClientId) return "Client ID is required";
 			if (!values.oauth2ClientSecret) return "Client Secret is required";
 			if (!values.oauth2CookieSecret) return "Cookie Secret is required";
-			if (values.oauth2Provider === "oidc" && !values.oauth2OidcIssuerUrl)
+			if (["oidc", "keycloak-oidc", "azure"].includes(values.oauth2Provider || "") && !values.oauth2OidcIssuerUrl)
 				return "OIDC Issuer URL is required for OIDC provider";
 		}
 
@@ -113,6 +113,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 		const authType = values.authType === ACCESS_LIST_AUTH_TYPE.NONE ? "" : values.authType;
 
+		let formattedProxyPrefix = values.oauth2ProxyPrefix?.trim() || "";
+		if (formattedProxyPrefix) {
+			formattedProxyPrefix = "/" + formattedProxyPrefix.replace(/^\/+|\/+$/g, "") + "/";
+		}
+
 		const payload: Partial<AccessList> = {
 			id: id === "new" ? undefined : id,
 			name: values.name,
@@ -136,7 +141,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				oauth2_oidc_issuer_url:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2OidcIssuerUrl : undefined,
 				oauth2_proxy_prefix:
-					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2ProxyPrefix : undefined,
+					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? formattedProxyPrefix : undefined,
 				oauth2_scope: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2Scope : undefined,
 				oauth2_allowed_groups:
 					authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2AllowedGroups : undefined,
