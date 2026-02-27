@@ -62,7 +62,7 @@ pass_authorization_header = true
 # Generic Upstream (Nginx intercepts this anyway, but required by oauth2-proxy)
 # We point it to a dummy location or localhost, Nginx uses auth_request so this isn't strictly used for traffic
 # But oauth2-proxy needs an upstream defined.
-upstream = "static://200"
+upstreams = [ "static://200" ]
 
 email_domains = [
 ${(meta.oauth2_allowed_email_domains || "*")
