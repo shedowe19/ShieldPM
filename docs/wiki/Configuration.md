@@ -170,8 +170,8 @@ If you switch from SQLite to MySQL/PostgreSQL:
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `INITIAL_ADMIN_EMAIL` | Override the default admin email on first start | `admin@example.com` |
-| `INITIAL_ADMIN_PASSWORD` | Override the default admin password on first start | `changeme` |
+| `INITIAL_ADMIN_EMAIL` | Skip the Setup Wizard and auto-create an admin with this email | — |
+| `INITIAL_ADMIN_PASSWORD` | Password for the auto-created admin (requires `INITIAL_ADMIN_EMAIL`) | — |
 | `INITIAL_DEFAULT_PAGE` | Default page for undefined hostnames (`444` = close connection) | `congratulations` |
 | `ENABLE_PRERUN` | Execute `/data/prerun.sh` before startup | `false` |
 

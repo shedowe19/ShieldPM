@@ -6,15 +6,12 @@ Ensure your ShieldPM installation is secure, reliable, and performant with these
 
 ## 🛡️ Security Hardening
 
-### Change Default Credentials Immediately
+### Initial Setup Wizard
 
-After your first login, immediately change the default admin credentials:
+When you access ShieldPM for the first time, a **Setup Wizard** guides you through creating your admin account. There are **no default credentials** — you choose your own email and password during setup.
 
-1. Log in with `admin@example.com` / `changeme`
-2. Go to **Users** → Click your admin user → Change email and password
-
-> [!CAUTION]
-> The default credentials are publicly known. Leaving them unchanged is a critical security risk.
+> [!TIP]
+> Use a strong, unique password for your admin account. Consider using a password manager to generate one.
 
 ### Security Headers
 
@@ -165,7 +162,7 @@ update-shieldpm
 
 Before exposing ShieldPM to the internet, verify:
 
-- [ ] Default credentials changed
+- [ ] Setup Wizard completed (admin account created)
 - [ ] Admin UI not publicly accessible (or protected by Access List)
 - [ ] ACME email configured for Let's Encrypt
 - [ ] Time zone set correctly (`TZ` variable)
