@@ -3,6 +3,7 @@ import fs from "node:fs";
 import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
+import ProxyHost from "../models/proxy_host.js";
 
 const processes = new Map();
 const dataPath = process.env.DATA_PATH || "/data";
@@ -28,7 +29,17 @@ const internalOAuth2Proxy = {
 
 		for (const list of lists) {
 			if (list.meta && (list.meta.auth_type === "oauth2_proxy" || list.meta.authType === "oauth2_proxy")) {
-				await internalOAuth2Proxy.start(list);
+				// Only start if this access list is actually assigned to at least one active proxy host
+				const assignedHosts = await ProxyHost.query()
+					.where("access_list_id", list.id)
+					.where("is_deleted", 0);
+
+				if (assignedHosts.length > 0) {
+					logger.info(`OAuth2 Proxy #${list.id} is assigned to ${assignedHosts.length} proxy host(s), starting...`);
+					await internalOAuth2Proxy.start(list);
+				} else {
+					logger.info(`OAuth2 Proxy #${list.id} is not assigned to any proxy host, skipping.`);
+				}
 			}
 		}
 	},
