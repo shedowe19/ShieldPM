@@ -61,6 +61,7 @@ cookie_httponly = true
 cookie_refresh = "1h"
 
 # Provider Settings
+ssl_insecure_skip_verify = true
 ${meta.oauth2_scope ? `scope = "${meta.oauth2_scope}"` : ""}
 ${meta.oauth2_insecure_oidc_allow_unverified_email ? "insecure_oidc_allow_unverified_email = true" : ""}
 
