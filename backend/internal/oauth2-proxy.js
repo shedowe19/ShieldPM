@@ -122,8 +122,12 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 	/**
 	 * Start or Restart an OAuth2 Proxy process for an Access List
 	 * @param {AccessList} list
+	 * @param {number} [retryCount=0] - Internal retry counter
 	 */
-	start: async (list) => {
+	start: async (list, retryCount = 0) => {
+		const MAX_RETRIES = 3;
+		const RETRY_DELAY_MS = 3000; // 3 seconds between retries
+
 		if (processes.has(list.id)) {
 			await internalOAuth2Proxy.stop(list.id);
 		}
@@ -172,12 +176,27 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 			});
 
 			child.on("exit", (code, signal) => {
-				logger.warn(`OAuth2 Proxy #${list.id} exited with code ${code} / signal ${signal}`);
 				processes.delete(list.id);
 
-				// Optional: Restart policy?
-				// For now, we don't loop restart to avoid death spirals,
-				// but in a real init system we would.
+				// Retry on failure (e.g. OIDC Discovery 404 during boot because Nginx hasn't fully reloaded)
+				if (code !== 0 && signal === null && retryCount < MAX_RETRIES) {
+					const nextRetry = retryCount + 1;
+					const delay = RETRY_DELAY_MS * nextRetry; // Linear backoff: 3s, 6s, 9s
+					logger.warn(
+						`OAuth2 Proxy #${list.id} exited with code ${code}, retrying in ${delay / 1000}s (attempt ${nextRetry}/${MAX_RETRIES})...`,
+					);
+					setTimeout(() => {
+						internalOAuth2Proxy.start(list, nextRetry).catch((err) => {
+							logger.error(`OAuth2 Proxy #${list.id} retry ${nextRetry} failed:`, err);
+						});
+					}, delay);
+				} else if (code !== 0) {
+					logger.error(
+						`OAuth2 Proxy #${list.id} exited with code ${code} / signal ${signal} after ${retryCount} retries. Giving up.`,
+					);
+				} else {
+					logger.info(`OAuth2 Proxy #${list.id} stopped (code ${code}, signal ${signal}).`);
+				}
 			});
 
 			child.on("error", (err) => {
