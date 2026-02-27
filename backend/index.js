@@ -52,10 +52,10 @@ async function appStart() {
 
 		internalCertificate.initTimer();
 		internalMaintenance.initTimer();
-		internalNginx.reload();
+		await internalNginx.reload();
 		internalCloudflared.init();
 		internalTor.init();
-		internalOAuth2Proxy.init();
+		await internalOAuth2Proxy.init();
 		internalDocker.init();
 		internalGitOps.init();
 		internalDdns.initTimer();
