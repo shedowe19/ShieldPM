@@ -80,7 +80,7 @@ oidc_issuer_url = "${meta.oauth2_oidc_issuer_url}"
 
 		if (meta.oauth2_allowed_emails) {
 			// Create authenticated emails file
-			const emailsFile = `${dataPath}/access/${id}/allowed_emails`;
+			const emailsFile = `${dataPath}/access/oauth2/${id}/allowed_emails`;
 			const emailsContent = meta.oauth2_allowed_emails
 				.split(",")
 				.map((e) => e.trim())
@@ -118,7 +118,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 		}
 
 		// Ensure directory exists
-		const accessDir = `${dataPath}/access/${list.id}`;
+		const accessDir = `${dataPath}/access/oauth2/${list.id}`;
 		await fs.promises.mkdir(accessDir, { recursive: true });
 
 		// Write Allowed Emails File if needed
