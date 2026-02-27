@@ -249,8 +249,12 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								oauth2Scope: meta.oauth2_scope || meta.oauth2Scope || "",
 								oauth2AllowedGroups: meta.oauth2_allowed_groups || meta.oauth2AllowedGroups || "",
 								oauth2AllowedEmails: meta.oauth2_allowed_emails || meta.oauth2AllowedEmails || "",
-								oauth2AllowedEmailDomains: meta.oauth2_allowed_email_domains || meta.oauth2AllowedEmailDomains || "",
-								oauth2InsecureOidcAllowUnverifiedEmail: !!(meta.oauth2_insecure_oidc_allow_unverified_email || meta.oauth2InsecureOidcAllowUnverifiedEmail),
+								oauth2AllowedEmailDomains:
+									meta.oauth2_allowed_email_domains || meta.oauth2AllowedEmailDomains || "",
+								oauth2InsecureOidcAllowUnverifiedEmail: !!(
+									meta.oauth2_insecure_oidc_allow_unverified_email ||
+									meta.oauth2InsecureOidcAllowUnverifiedEmail
+								),
 								oidcDiscoveryUrl: meta.oidc_discovery_url || meta.oidcDiscoveryUrl || "",
 								oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
 								oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
