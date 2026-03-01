@@ -23,9 +23,10 @@
     }
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "cross-env NODE_ENV=development node server.js",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "start": "cross-env NODE_ENV=production node server.js",
     "test": "vitest"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
     "@tanstack/react-table": "8.21.3",
     "@types/d3-geo": "^3.1.0",
     "@types/d3-scale": "^4.0.9",
+    "@types/express": "^5.0.6",
     "@types/react-simple-maps": "^3.0.6",
     "@types/ua-parser-js": "^0.7.39",
     "@uiw/react-textarea-code-editor": "3.1.1",
@@ -60,11 +62,13 @@
     "class-variance-authority": "^0.7.1",
     "classnames": "2.5.1",
     "clsx": "^2.1.1",
+    "compression": "^1.8.1",
     "country-flag-icons": "^1.6.15",
     "d3-geo": "^3.1.1",
     "d3-scale": "^4.0.2",
     "date-fns": "4.1.0",
     "dayjs": "1.11.19",
+    "express": "^5.2.1",
     "ez-modal-react": "1.0.5",
     "formik": "2.4.9",
     "framer-motion": "^12.34.3",
@@ -87,9 +91,12 @@
     "recharts": "^3.7.0",
     "remark-gfm": "^4.0.1",
     "rooks": "9.5.0",
+    "serve-static": "^2.2.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "ua-parser-js": "^2.0.9",
+    "vike": "^0.4.255",
+    "vike-react": "^0.6.20",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -107,6 +114,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.27",
+    "cross-env": "^10.1.0",
     "happy-dom": "^20.7.0",
     "postcss": "^8.5.6",
     "postcss-simple-vars": "7.0.1",

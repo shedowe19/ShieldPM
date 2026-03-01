@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import vike from "vike/plugin";
 import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -8,6 +9,7 @@ import "vitest/config";
 export default defineConfig({
 	plugins: [
 		react(),
+		vike(),
 		checker({
 			typescript: true,
 		}),

@@ -196,20 +196,18 @@ function Router() {
 	}
 
 	return (
-		<BrowserRouter>
-			<Page>
-				<Sidebar />
-				<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
-					<SiteHeader />
-					<SiteContainer>
-						<Suspense fallback={<LoadingPage noLogo />}>
-							<Content />
-						</Suspense>
-					</SiteContainer>
-					<SiteFooter />
-				</div>
-			</Page>
-		</BrowserRouter>
+		<Page>
+			<Sidebar />
+			<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
+				<SiteHeader />
+				<SiteContainer>
+					<Suspense fallback={<LoadingPage noLogo />}>
+						<Content />
+					</Suspense>
+				</SiteContainer>
+				<SiteFooter />
+			</div>
+		</Page>
 	);
 }
 
