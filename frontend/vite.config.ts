@@ -30,37 +30,38 @@ export default defineConfig({
 	build: {
 		rollupOptions: {
 			output: {
-				manualChunks: {
-					"vendor-react": ["react", "react-dom", "react-router-dom"],
-					"vendor-ui": [
-						"@radix-ui/react-avatar",
-						"@radix-ui/react-checkbox",
-						"@radix-ui/react-dialog",
-						"@radix-ui/react-dropdown-menu",
-						"@radix-ui/react-label",
-						"@radix-ui/react-popover",
-						"@radix-ui/react-scroll-area",
-						"@radix-ui/react-select",
-						"@radix-ui/react-separator",
-						"@radix-ui/react-slot",
-						"@radix-ui/react-switch",
-						"@radix-ui/react-tabs",
-						"@radix-ui/react-toast",
-						"@radix-ui/react-toggle",
-						"@radix-ui/react-toggle-group",
-						"@radix-ui/react-tooltip",
-						"lucide-react",
-						"@tabler/icons-react",
-						"framer-motion",
-					],
-					"vendor-data": [
-						"@tanstack/react-query",
-						"@tanstack/react-table",
-						"zod",
-						"react-hook-form",
-						"@hookform/resolvers",
-					],
-					"vendor-utils": ["date-fns", "dayjs", "jwt-decode", "i18next", "react-i18next", "react-intl"],
+				manualChunks(id) {
+					if (id.includes("node_modules")) {
+						if (id.includes("react") || id.includes("react-dom") || id.includes("react-router-dom")) {
+							return "vendor-react";
+						}
+						if (
+							id.includes("@radix-ui") ||
+							id.includes("lucide-react") ||
+							id.includes("@tabler/icons-react") ||
+							id.includes("framer-motion")
+						) {
+							return "vendor-ui";
+						}
+						if (
+							id.includes("@tanstack") ||
+							id.includes("zod") ||
+							id.includes("react-hook-form") ||
+							id.includes("@hookform")
+						) {
+							return "vendor-data";
+						}
+						if (
+							id.includes("date-fns") ||
+							id.includes("dayjs") ||
+							id.includes("jwt-decode") ||
+							id.includes("i18next") ||
+							id.includes("react-i18next") ||
+							id.includes("react-intl")
+						) {
+							return "vendor-utils";
+						}
+					}
 				},
 			},
 		},

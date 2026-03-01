@@ -1,7 +1,8 @@
 import React from "react";
-import { BrowserRouter, StaticRouter } from "react-router-dom";
+import { StaticRouter } from "react-router";
+import { BrowserRouter } from "react-router-dom";
 import { usePageContext } from "vike-react/usePageContext";
-import "src/index.css";
+import "../src/index.css";
 
 function RouterWrapper({ children }: { children: React.ReactNode }) {
 	const pageContext = usePageContext();

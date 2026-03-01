@@ -1,4 +1,3 @@
-// biome-ignore assist/source/organizeImports: <@tabler/icons-react>
 import { IconNote, IconRoute, IconSettings } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";

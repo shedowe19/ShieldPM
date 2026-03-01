@@ -1,4 +1,3 @@
-// biome-ignore assist/source/organizeImports: <@tabler/icons-react>
 import {
 	IconBolt,
 	IconGitBranch,

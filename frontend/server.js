@@ -28,7 +28,9 @@ async function startServer() {
 
 		if (pageContext.httpResponse) {
 			const { body, statusCode, headers } = pageContext.httpResponse;
-			headers.forEach(([name, value]) => res.setHeader(name, value));
+			headers.forEach(([name, value]) => {
+				res.setHeader(name, value);
+			});
 			res.status(statusCode).send(body);
 		} else {
 			next();

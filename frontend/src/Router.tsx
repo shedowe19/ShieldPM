@@ -1,6 +1,6 @@
 import { AnimatePresence } from "framer-motion";
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import {
 	AnimatedPage,
 	ErrorNotFound,
