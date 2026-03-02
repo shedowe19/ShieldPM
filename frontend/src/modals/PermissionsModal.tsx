@@ -88,14 +88,9 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}
 		// certs are required for proxy and redirection hosts, and streams
 		if (
-			[
-				"proxyHosts",
-				"redirectionHosts",
-				"deadHosts",
-				"streams",
-				"cloudflaredTunnels",
-				"torOnions",
-			].includes(field.name) &&
+			["proxyHosts", "redirectionHosts", "deadHosts", "streams", "cloudflaredTunnels", "torOnions"].includes(
+				field.name,
+			) &&
 			perm !== PERMISSION_LEVEL.HIDDEN &&
 			form.values.certificates === PERMISSION_LEVEL.HIDDEN
 		) {
