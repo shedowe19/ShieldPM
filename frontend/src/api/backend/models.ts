@@ -29,6 +29,11 @@ export interface UserPermissions {
 	streams: string;
 	accessLists: string;
 	certificates: string;
+	cloudflaredTunnels: string;
+	analytics: string;
+	ddnsProviders: string;
+	torOnions: string;
+	dashboardNotes: string;
 }
 
 export interface User {

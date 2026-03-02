@@ -7,7 +7,7 @@
             "type": "object",
             "required": [
                 "roles",
-                "permission_dashboard_notes"
+                "permission_analytics"
             ],
             "properties": {
                 "roles": {
@@ -16,8 +16,11 @@
                         "const": "user"
                     }
                 },
-                "permission_dashboard_notes": {
-                    "const": "manage"
+                "permission_analytics": {
+                    "enum": [
+                        "manage",
+                        "view"
+                    ]
                 }
             }
         }

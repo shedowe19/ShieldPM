@@ -33,6 +33,7 @@ router.use((req, res, next) => {
  */
 router.get("/", async (_req, res, next) => {
 	try {
+		await res.locals.access.can("tor_onions:list");
 		const services = await TorOnion.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
@@ -56,6 +57,7 @@ router.get("/", async (_req, res, next) => {
  */
 router.get("/:id", async (req, res, next) => {
 	try {
+		await res.locals.access.can("tor_onions:get", req.params.id);
 		const service = await TorOnion.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
@@ -81,6 +83,7 @@ router.post("/", async (req, res, next) => {
 	let trx;
 	try {
 		const payload = await apiValidator(getValidationSchema("/nginx/tor-onion", "post"), req.body);
+		await res.locals.access.can("tor_onions:create", payload);
 		payload.owner_user_id = res.locals.access.token.getUserId(1);
 		payload.meta = {};
 		payload.status = 0; // Initially stopped
@@ -127,6 +130,7 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
 	let trx;
 	try {
+		await res.locals.access.can("tor_onions:update", req.params.id);
 		const service = await TorOnion.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
@@ -178,6 +182,7 @@ router.put("/:id", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
 	let trx;
 	try {
+		await res.locals.access.can("tor_onions:delete", req.params.id);
 		const service = await TorOnion.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
@@ -221,6 +226,7 @@ router.delete("/:id", async (req, res, next) => {
  */
 router.post("/:id/start", async (req, res, next) => {
 	try {
+		await res.locals.access.can("tor_onions:update", req.params.id);
 		const service = await TorOnion.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
@@ -265,6 +271,7 @@ router.post("/:id/start", async (req, res, next) => {
  */
 router.post("/:id/stop", async (req, res, next) => {
 	try {
+		await res.locals.access.can("tor_onions:update", req.params.id);
 		const service = await TorOnion.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)

@@ -88,7 +88,12 @@
 				"dead_hosts",
 				"streams",
 				"access_lists",
-				"certificates"
+				"certificates",
+				"cloudflared_tunnels",
+				"analytics",
+				"ddns_providers",
+				"tor_onions",
+				"dashboard_notes"
 			],
 			"properties": {
 				"visibility": {
@@ -131,6 +136,36 @@
 					"type": "string",
 					"description": "Certificates access level",
 					"example": "view",
+					"pattern": "^(manage|view|hidden)$"
+				},
+				"cloudflared_tunnels": {
+					"type": "string",
+					"description": "Cloudflared Tunnels access level",
+					"example": "manage",
+					"pattern": "^(manage|view|hidden)$"
+				},
+				"analytics": {
+					"type": "string",
+					"description": "Analytics access level",
+					"example": "manage",
+					"pattern": "^(manage|view|hidden)$"
+				},
+				"ddns_providers": {
+					"type": "string",
+					"description": "DDNS Providers access level",
+					"example": "manage",
+					"pattern": "^(manage|view|hidden)$"
+				},
+				"tor_onions": {
+					"type": "string",
+					"description": "Tor Onion Services access level",
+					"example": "manage",
+					"pattern": "^(manage|view|hidden)$"
+				},
+				"dashboard_notes": {
+					"type": "string",
+					"description": "Dashboard Notes access level",
+					"example": "manage",
 					"pattern": "^(manage|view|hidden)$"
 				}
 			}

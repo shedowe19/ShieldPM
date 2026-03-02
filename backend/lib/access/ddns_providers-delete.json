@@ -7,7 +7,7 @@
             "type": "object",
             "required": [
                 "roles",
-                "permission_dashboard_notes"
+                "permission_ddns_providers"
             ],
             "properties": {
                 "roles": {
@@ -16,7 +16,7 @@
                         "const": "user"
                     }
                 },
-                "permission_dashboard_notes": {
+                "permission_ddns_providers": {
                     "const": "manage"
                 }
             }

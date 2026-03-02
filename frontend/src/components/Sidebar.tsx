@@ -30,6 +30,10 @@ import {
 	type Section,
 	STREAMS,
 	VIEW,
+	CLOUDFLARED_TUNNELS,
+	ANALYTICS,
+	DDNS_PROVIDERS,
+	TOR_ONIONS,
 } from "src/modules/Permissions";
 
 interface MenuItem {
@@ -51,6 +55,8 @@ const menuItems: MenuItem[] = [
 		to: "/analytics",
 		icon: IconActivity,
 		label: "analytics.title",
+		permissionSection: ANALYTICS,
+		permission: VIEW,
 	},
 	{
 		icon: IconDeviceDesktop,
@@ -77,14 +83,20 @@ const menuItems: MenuItem[] = [
 			{
 				to: "/nginx/cloudflared",
 				label: "cloudflared.title",
+				permissionSection: CLOUDFLARED_TUNNELS,
+				permission: VIEW,
 			},
 			{
 				to: "/nginx/ddns",
 				label: "ddns-providers",
+				permissionSection: DDNS_PROVIDERS,
+				permission: VIEW,
 			},
 			{
 				to: "/nginx/tor",
 				label: "tor.title",
+				permissionSection: TOR_ONIONS,
+				permission: VIEW,
 			},
 
 			{

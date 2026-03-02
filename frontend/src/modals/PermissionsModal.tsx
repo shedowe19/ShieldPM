@@ -6,6 +6,11 @@ import {
 	IconEye,
 	IconLock,
 	IconShield,
+	IconCloud,
+	IconChartBar,
+	IconServer,
+	IconNetwork,
+	IconFileText,
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
@@ -40,6 +45,11 @@ interface PermissionsValues {
 	proxyHosts: string;
 	redirectionHosts: string;
 	streams: string;
+	cloudflaredTunnels: string;
+	analytics: string;
+	ddnsProviders: string;
+	torOnions: string;
+	dashboardNotes: string;
 }
 
 const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
@@ -78,7 +88,14 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}
 		// certs are required for proxy and redirection hosts, and streams
 		if (
-			["proxyHosts", "redirectionHosts", "deadHosts", "streams"].includes(field.name) &&
+			[
+				"proxyHosts",
+				"redirectionHosts",
+				"deadHosts",
+				"streams",
+				"cloudflaredTunnels",
+				"torOnions",
+			].includes(field.name) &&
 			perm !== PERMISSION_LEVEL.HIDDEN &&
 			form.values.certificates === PERMISSION_LEVEL.HIDDEN
 		) {
@@ -98,7 +115,9 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				form.values.proxyHosts !== PERMISSION_LEVEL.HIDDEN ||
 				form.values.redirectionHosts !== PERMISSION_LEVEL.HIDDEN ||
 				form.values.deadHosts !== PERMISSION_LEVEL.HIDDEN ||
-				form.values.streams !== PERMISSION_LEVEL.HIDDEN;
+				form.values.streams !== PERMISSION_LEVEL.HIDDEN ||
+				form.values.cloudflaredTunnels !== PERMISSION_LEVEL.HIDDEN ||
+				form.values.torOnions !== PERMISSION_LEVEL.HIDDEN;
 		}
 
 		return (
@@ -181,6 +200,11 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							proxyHosts: data.permissions?.proxyHosts || PERMISSION_SCOPE.ALL,
 							redirectionHosts: data.permissions?.redirectionHosts || PERMISSION_SCOPE.ALL,
 							streams: data.permissions?.streams || PERMISSION_SCOPE.ALL,
+							cloudflaredTunnels: data.permissions?.cloudflaredTunnels || PERMISSION_SCOPE.ALL,
+							analytics: data.permissions?.analytics || PERMISSION_SCOPE.ALL,
+							ddnsProviders: data.permissions?.ddnsProviders || PERMISSION_SCOPE.ALL,
+							torOnions: data.permissions?.torOnions || PERMISSION_SCOPE.ALL,
+							dashboardNotes: data.permissions?.dashboardNotes || PERMISSION_SCOPE.ALL,
 						}}
 						onSubmit={onSubmit}
 					>
@@ -262,6 +286,61 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<T id="streams" />
 												</Label>
 												<Field name="streams">
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
+													}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconCloud className="h-4 w-4 text-muted-foreground" />
+													Cloudflared Tunnels
+												</Label>
+												<Field name="cloudflaredTunnels">
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
+													}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconNetwork className="h-4 w-4 text-muted-foreground" />
+													Tor Onion Services
+												</Label>
+												<Field name="torOnions">
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
+													}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconServer className="h-4 w-4 text-muted-foreground" />
+													DDNS Providers
+												</Label>
+												<Field name="ddnsProviders">
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
+													}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconChartBar className="h-4 w-4 text-muted-foreground" />
+													Analytics
+												</Label>
+												<Field name="analytics">
+													{({ field, form }: FieldProps<string, PermissionsValues>) =>
+														getPermissionButtons(field, form)
+													}
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Label className="flex items-center gap-2">
+													<IconFileText className="h-4 w-4 text-muted-foreground" />
+													Dashboard Notes
+												</Label>
+												<Field name="dashboardNotes">
 													{({ field, form }: FieldProps<string, PermissionsValues>) =>
 														getPermissionButtons(field, form)
 													}

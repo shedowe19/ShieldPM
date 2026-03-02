@@ -21,6 +21,7 @@ router.use(jwtdecode());
 
 router.get("/", async (_req, res, next) => {
 	try {
+		await res.locals.access.can("cloudflared_tunnels:list");
 		const tunnels = await CloudflaredTunnel.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
@@ -44,6 +45,7 @@ router.get("/", async (_req, res, next) => {
  */
 router.get("/:id", async (req, res, next) => {
 	try {
+		await res.locals.access.can("cloudflared_tunnels:get", req.params.id);
 		const tunnel = await CloudflaredTunnel.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)
@@ -68,6 +70,7 @@ router.post("/", async (req, res, next) => {
 	let trx;
 	try {
 		const payload = await apiValidator(getValidationSchema("/nginx/cloudflared-tunnels", "post"), req.body);
+		await res.locals.access.can("cloudflared_tunnels:create", payload);
 		payload.owner_user_id = res.locals.access.token.getUserId(1);
 		payload.meta = {};
 
@@ -106,6 +109,7 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
 	let trx;
 	try {
+		await res.locals.access.can("cloudflared_tunnels:update", req.params.id);
 		const tunnel = await CloudflaredTunnel.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1)) // Ensure ownership
 			.andWhere("is_deleted", 0)
@@ -151,6 +155,7 @@ router.put("/:id", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
 	let trx;
 	try {
+		await res.locals.access.can("cloudflared_tunnels:delete", req.params.id);
 		const tunnel = await CloudflaredTunnel.query()
 			.where("owner_user_id", res.locals.access.token.getUserId(1))
 			.andWhere("is_deleted", 0)

@@ -137,7 +137,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.post(async (req, res, next) => {
+	.post(async (req, res) => {
 		try {
 			const originalToken = req.cookies?.shieldpm_jwt_original;
 			if (!originalToken) {

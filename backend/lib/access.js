@@ -240,6 +240,11 @@ export default function (tokenString) {
 						permission_streams: permissions.streams,
 						permission_access_lists: permissions.access_lists,
 						permission_certificates: permissions.certificates,
+						permission_cloudflared_tunnels: permissions.cloudflared_tunnels,
+						permission_analytics: permissions.analytics,
+						permission_ddns_providers: permissions.ddns_providers,
+						permission_tor_onions: permissions.tor_onions,
+						permission_dashboard_notes: permissions.dashboard_notes,
 					},
 				};
 

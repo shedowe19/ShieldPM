@@ -7,7 +7,7 @@
             "type": "object",
             "required": [
                 "roles",
-                "permission_dashboard_notes"
+                "permission_tor_onions"
             ],
             "properties": {
                 "roles": {
@@ -16,7 +16,7 @@
                         "const": "user"
                     }
                 },
-                "permission_dashboard_notes": {
+                "permission_tor_onions": {
                     "const": "manage"
                 }
             }
