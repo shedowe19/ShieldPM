@@ -34,10 +34,7 @@ router.use((req, res, next) => {
 router.get("/", async (_req, res, next) => {
 	try {
 		const accessData = await res.locals.access.can("tor_onions:list");
-		const query = TorOnion.query()
-			.andWhere("is_deleted", 0)
-			.withGraphFetched("proxy_host")
-			.orderBy("name", "ASC");
+		const query = TorOnion.query().andWhere("is_deleted", 0).withGraphFetched("proxy_host").orderBy("name", "ASC");
 
 		if (accessData.permission_visibility !== "all") {
 			query.where("owner_user_id", res.locals.access.token.getUserId(1));
@@ -71,7 +68,7 @@ router.get("/:id", async (req, res, next) => {
 		if (accessData.permission_visibility !== "all") {
 			query.where("owner_user_id", res.locals.access.token.getUserId(1));
 		}
-		
+
 		const service = await query.first();
 
 		if (!service) {
