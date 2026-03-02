@@ -21,11 +21,16 @@ router.use(jwtdecode());
 
 router.get("/", async (_req, res, next) => {
 	try {
-		await res.locals.access.can("cloudflared_tunnels:list");
-		const tunnels = await CloudflaredTunnel.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
+		const accessData = await res.locals.access.can("cloudflared_tunnels:list");
+		const query = CloudflaredTunnel.query()
 			.andWhere("is_deleted", 0)
 			.orderBy("name", "ASC");
+
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+
+		const tunnels = await query;
 
 		// Debug log
 		tunnels.forEach((t) => {
@@ -45,12 +50,16 @@ router.get("/", async (_req, res, next) => {
  */
 router.get("/:id", async (req, res, next) => {
 	try {
-		await res.locals.access.can("cloudflared_tunnels:get", req.params.id);
-		const tunnel = await CloudflaredTunnel.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
+		const accessData = await res.locals.access.can("cloudflared_tunnels:get", req.params.id);
+		const query = CloudflaredTunnel.query()
 			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+			.where("id", req.params.id);
+
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+		
+		const tunnel = await query.first();
 
 		if (!tunnel) {
 			res.status(404).send({ error: "Tunnel not found" });

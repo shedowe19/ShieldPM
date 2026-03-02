@@ -33,12 +33,17 @@ router.use((req, res, next) => {
  */
 router.get("/", async (_req, res, next) => {
 	try {
-		await res.locals.access.can("tor_onions:list");
-		const services = await TorOnion.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
+		const accessData = await res.locals.access.can("tor_onions:list");
+		const query = TorOnion.query()
 			.andWhere("is_deleted", 0)
 			.withGraphFetched("proxy_host")
 			.orderBy("name", "ASC");
+
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+
+		const services = await query;
 
 		// Get Tor availability info
 		const torInfo = await internalTor.getInfo();
@@ -57,13 +62,17 @@ router.get("/", async (_req, res, next) => {
  */
 router.get("/:id", async (req, res, next) => {
 	try {
-		await res.locals.access.can("tor_onions:get", req.params.id);
-		const service = await TorOnion.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
+		const accessData = await res.locals.access.can("tor_onions:get", req.params.id);
+		const query = TorOnion.query()
 			.andWhere("is_deleted", 0)
 			.where("id", req.params.id)
-			.withGraphFetched("proxy_host")
-			.first();
+			.withGraphFetched("proxy_host");
+
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+		
+		const service = await query.first();
 
 		if (!service) {
 			res.status(404).send({ error: "Onion Service not found" });

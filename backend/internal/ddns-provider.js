@@ -76,20 +76,14 @@ const internalDdnsProvider = {
 	 * @return {Promise}
 	 */
 	get: async (access, data) => {
-		const userId = access.token.getUserId(1);
-		const query = DdnsProvider.query().where("id", data.id).first();
+		const accessData = await access.can("ddns_providers:get", data.id);
+		const query = DdnsProvider.query().where("id", data.id);
 
-		// If simple user, enforce owner check
-		// We assume access object has some way to check if admin, but here we'll just check owner
-		// For now, let's just assume restrictive: must be owner
-		// Real implementation should check access.param.roles or similar
-		if (access.token.getUserId(1) !== 0) {
-			// If not system user (0), checking if user is admin is harder without access.can
-			// We will just filter by owner for now to be safe
-			query.where("owner_user_id", userId);
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", access.token.getUserId(1));
 		}
 
-		const row = await query;
+		const row = await query.first();
 		if (!row) throw new errs.ItemNotFoundError(data.id);
 		return row;
 	},
@@ -99,13 +93,11 @@ const internalDdnsProvider = {
 	 * @return {Promise}
 	 */
 	getAll: async (access) => {
-		const userId = access.token.getUserId(1);
+		const accessData = await access.can("ddns_providers:list");
 		const query = DdnsProvider.query().orderBy("name", "ASC");
 
-		// Filter by owner if not likely admin (simplified)
-		// Assuming we want users to only see their own
-		if (userId !== 0) {
-			query.where("owner_user_id", userId);
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", access.token.getUserId(1));
 		}
 
 		return await query;
