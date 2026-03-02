@@ -24,6 +24,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Label } from "src/components/ui/label";
+import { ScrollArea } from "src/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { useHealth, useUser } from "src/hooks";
 import { T } from "src/locale";
@@ -241,8 +242,9 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 								{!isAdmin && (
 									<Card className="border-dashed">
-										<CardContent className="p-4 grid grid-cols-1 gap-4">
-											<div className="space-y-2">
+										<ScrollArea className="h-[400px]">
+											<CardContent className="p-4 grid grid-cols-1 gap-4">
+												<div className="space-y-2">
 												<Label className="flex items-center gap-2">
 													<IconBolt className="h-4 w-4 text-muted-foreground" />
 													<T id="proxy-hosts" />
@@ -364,6 +366,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</Field>
 											</div>
 										</CardContent>
+										</ScrollArea>
 									</Card>
 								)}
 
