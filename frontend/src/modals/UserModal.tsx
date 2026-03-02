@@ -54,18 +54,22 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			id: id === "new" ? undefined : (id as number),
 			roles: [],
 			...values,
+			is_disabled: values.isDisabled,
 		};
 
 		if (data?.id === currentUser?.id) {
 			// Prevent user from locking themselves out
-			delete payload.isDisabled;
+			delete payload.is_disabled;
 			delete payload.roles;
 		} else if (payload.isAdmin) {
 			payload.roles = [USER_ROLE.ADMIN];
 		}
 
-		// this isn't a real field, just for the form
+		// these aren't real fields, just for the form
 		delete payload.isAdmin;
+		delete payload.isDisabled;
+		delete payload.avatar_type;
+		delete payload.avatar_value;
 
 		setUser(payload as unknown as User, {
 			onError: (err) => {
@@ -407,6 +411,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<Input
 													id="file_upload"
 													type="file"
+													className="text-foreground file:text-foreground"
 													accept="image/png, image/jpeg, image/gif, image/webp"
 													onChange={(event) => {
 														const file = event.currentTarget.files?.[0];
