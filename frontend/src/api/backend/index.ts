@@ -62,6 +62,7 @@ export * from "./models";
 export * from "./refreshToken";
 export * from "./renewCertificate";
 export * from "./responseTypes";
+export * from "./restoreSession";
 export * from "./setPermissions";
 export * from "./testDdnsProvider";
 export * from "./testHttpCertificate";

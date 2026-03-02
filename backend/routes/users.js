@@ -377,6 +377,17 @@ router
 	.all(jwtdecode())
 	.post(loginAsRateLimiter, async (req, res, next) => {
 		try {
+			// Save the original session to allow "Return to Admin" logic on logout
+			if (req.cookies?.shieldpm_jwt) {
+				res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
+					httpOnly: true,
+					secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+					sameSite: "strict",
+					// Backup cookie lives longer or same length
+					maxAge: 1000 * 60 * 60 * 24 * 30, 
+				});
+			}
+
 			const result = await internalUser.loginAs(res.locals.access, {
 				id: Number.parseInt(req.params.user_id, 10),
 			});

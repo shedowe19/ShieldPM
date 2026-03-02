@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useIntervalWhen } from "rooks";
-import { getToken, loginAsUser, refreshToken, type TokenResponse } from "src/api/backend";
+import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import AuthStore from "src/modules/AuthStore";
 
 // Context
@@ -57,18 +57,21 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		window.location.reload();
 	};
 
-	const logout = () => {
-		if (AuthStore.count() >= 2) {
-			AuthStore.drop();
+	const logout = async () => {
+		try {
+			// Check if we have a backup admin session cookie on the backend
+			const response = await restoreSession();
+			AuthStore.add(response);
 			queryClient.clear();
 			window.location.reload();
-			return;
+		} catch (_err) {
+			// No backup session found or failed to restore, do a full logout
+			AuthStore.clear();
+			setAuthenticated(false);
+			queryClient.clear();
+			// Call API to clear cookie
+			await fetch("/api/tokens", { method: "DELETE" });
 		}
-		AuthStore.clear();
-		setAuthenticated(false);
-		queryClient.clear();
-		// Call API to clear cookie
-		fetch("/api/tokens", { method: "DELETE" });
 	};
 
 	const refresh = async () => {

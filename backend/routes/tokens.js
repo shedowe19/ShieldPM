@@ -128,7 +128,68 @@ router
 
 	.delete(async (_req, res) => {
 		res.clearCookie("shieldpm_jwt");
+		res.clearCookie("shieldpm_jwt_original");
 		res.sendStatus(204);
+	});
+
+router
+	.route("/restore")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.post(async (req, res, next) => {
+		try {
+			const originalToken = req.cookies?.shieldpm_jwt_original;
+			if (!originalToken) {
+				return res.status(400).send({
+					error: {
+						code: 400,
+						message: "No backup session found to restore.",
+					},
+				});
+			}
+
+			// Verify the original token to get expiry/user info
+			// If it's invalid/expired, internalToken.getFreshToken logic or jwt verify would fail
+			// We can set res.locals.access to a dummy or decode it directly.
+			// The easiest way is to let the frontend parse it or just set it as the new cookie
+			// and let the next frontend get() call validate it. But frontend needs expire time.
+			// To get expire time quickly, we can just decode it:
+			const tokenParts = originalToken.split(".");
+			if (tokenParts.length !== 3) {
+				throw new Error("Invalid token format");
+			}
+
+			const payload = JSON.parse(Buffer.from(tokenParts[1], "base64").toString("utf-8"));
+
+			// Set original token back to main cookie
+			res.cookie("shieldpm_jwt", originalToken, {
+				httpOnly: true,
+				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				sameSite: "strict",
+				maxAge: payload.exp ? payload.exp * 1000 - Date.now() : undefined,
+			});
+
+			// Clear the backup cookie
+			res.clearCookie("shieldpm_jwt_original");
+
+			// Respond with user/expiry so frontend AuthStore can update its state
+			res.status(200).send({
+				expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
+				user: {
+					id: payload.id,
+				},
+			});
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			res.clearCookie("shieldpm_jwt_original");
+			res.status(400).send({
+				error: {
+					code: 400,
+					message: "Failed to restore session.",
+				},
+			});
+		}
 	});
 
 export default router;
