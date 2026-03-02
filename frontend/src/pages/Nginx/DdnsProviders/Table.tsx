@@ -16,6 +16,8 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { HasPermission } from "src/components/HasPermission";
+import { DDNS_PROVIDERS, MANAGE } from "src/modules/Permissions";
 
 interface Props {
 	data: DdnsProvider[];
@@ -116,29 +118,31 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, isFil
 				id: "actions",
 				cell: (info) => {
 					return (
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" className="h-8 w-8 p-0">
-									<span className="sr-only">Open menu</span>
-									<IconDotsVertical className="h-4 w-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuLabel>Actions</DropdownMenuLabel>
-								<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
-									<IconEdit className="mr-2 h-4 w-4" />
-									<T id="action.edit" />
-								</DropdownMenuItem>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem
-									className="text-red-600 focus:text-red-500"
-									onClick={() => onDelete?.(info.row.original.id)}
-								>
-									<IconTrash className="mr-2 h-4 w-4" />
-									<T id="action.delete" />
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<HasPermission section={DDNS_PROVIDERS} permission={MANAGE} hideError>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="ghost" className="h-8 w-8 p-0">
+										<span className="sr-only">Open menu</span>
+										<IconDotsVertical className="h-4 w-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuLabel>Actions</DropdownMenuLabel>
+									<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
+										<IconEdit className="mr-2 h-4 w-4" />
+										<T id="action.edit" />
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										className="text-red-600 focus:text-red-500"
+										onClick={() => onDelete?.(info.row.original.id)}
+									>
+										<IconTrash className="mr-2 h-4 w-4" />
+										<T id="action.delete" />
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</HasPermission>
 					);
 				},
 				meta: {

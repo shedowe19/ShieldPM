@@ -12,7 +12,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
 import { T } from "@/locale";
+import { HasPermission } from "@/components/HasPermission";
 import { showHelpModal } from "@/modals";
+import { CLOUDFLARED_TUNNELS, MANAGE } from "@/modules/Permissions";
 
 export function CloudflaredTunnels() {
 	const health = useHealth();
@@ -136,14 +138,16 @@ export function CloudflaredTunnels() {
 					<Button variant="outline" size="icon" onClick={() => showHelpModal("CloudflaredTunnels", "orange")}>
 						<IconHelp className="h-4 w-4" />
 					</Button>
-					<Button
-						size="sm"
-						onClick={handleAdd}
-						className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
-					>
-						<IconPlus className="mr-2 h-4 w-4" />
-						<T id="cloudflared.add" />
-					</Button>
+					<HasPermission section={CLOUDFLARED_TUNNELS} permission={MANAGE} hideError>
+						<Button
+							size="sm"
+							onClick={handleAdd}
+							className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
+						>
+							<IconPlus className="mr-2 h-4 w-4" />
+							<T id="cloudflared.add" />
+						</Button>
+					</HasPermission>
 				</div>
 			</CardHeader>
 
@@ -186,17 +190,19 @@ export function CloudflaredTunnels() {
 										<TableCell>{getStatusBadge(tunnel)}</TableCell>
 										<TableCell>{dayjs(tunnel.createdOn).format("YYYY-MM-DD HH:mm:ss")}</TableCell>
 										<TableCell className="text-right space-x-2">
-											<Button variant="ghost" size="icon" onClick={() => handleEdit(tunnel)}>
-												<IconEdit className="h-4 w-4" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="text-destructive"
-												onClick={() => handleDelete(tunnel)}
-											>
-												<IconTrash className="h-4 w-4" />
-											</Button>
+											<HasPermission section={CLOUDFLARED_TUNNELS} permission={MANAGE} hideError>
+												<Button variant="ghost" size="icon" onClick={() => handleEdit(tunnel)}>
+													<IconEdit className="h-4 w-4" />
+												</Button>
+												<Button
+													variant="ghost"
+													size="icon"
+													className="text-destructive"
+													onClick={() => handleDelete(tunnel)}
+												>
+													<IconTrash className="h-4 w-4" />
+												</Button>
+											</HasPermission>
 										</TableCell>
 									</TableRow>
 								))

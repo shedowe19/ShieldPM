@@ -22,7 +22,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
+import { HasPermission } from "@/components/HasPermission";
 import { showHelpModal } from "@/modals";
+import { MANAGE, TOR_ONIONS } from "@/modules/Permissions";
 
 export function TorOnionServices() {
 	const health = useHealth();
@@ -134,15 +136,17 @@ export function TorOnionServices() {
 					<Button variant="outline" size="icon" onClick={() => showHelpModal("TorOnionServices", "purple")}>
 						<IconHelp className="h-4 w-4" />
 					</Button>
-					<Button
-						size="sm"
-						onClick={handleAdd}
-						className="bg-purple-600/90 hover:bg-purple-600 text-white shadow-sm"
-						disabled={!torInfo?.available}
-					>
-						<IconPlus className="mr-2 h-4 w-4" />
-						<T id="tor.add" />
-					</Button>
+					<HasPermission section={TOR_ONIONS} permission={MANAGE} hideError>
+						<Button
+							size="sm"
+							onClick={handleAdd}
+							className="bg-purple-600/90 hover:bg-purple-600 text-white shadow-sm"
+							disabled={!torInfo?.available}
+						>
+							<IconPlus className="mr-2 h-4 w-4" />
+							<T id="tor.add" />
+						</Button>
+					</HasPermission>
 				</div>
 			</CardHeader>
 
@@ -228,36 +232,38 @@ export function TorOnionServices() {
 										<TableCell>{service.targetPort}</TableCell>
 										<TableCell>{getStatusBadge(service.status)}</TableCell>
 										<TableCell className="text-right space-x-1">
-											{service.status === TOR_ONION_STATUS.RUNNING ? (
+											<HasPermission section={TOR_ONIONS} permission={MANAGE} hideError>
+												{service.status === TOR_ONION_STATUS.RUNNING ? (
+													<Button
+														variant="ghost"
+														size="icon"
+														onClick={() => stop.mutate(service.id)}
+														disabled={stop.isPending}
+													>
+														<IconPlayerStop className="h-4 w-4" />
+													</Button>
+												) : (
+													<Button
+														variant="ghost"
+														size="icon"
+														onClick={() => start.mutate(service.id)}
+														disabled={start.isPending}
+													>
+														<IconPlayerPlay className="h-4 w-4" />
+													</Button>
+												)}
+												<Button variant="ghost" size="icon" onClick={() => handleEdit(service)}>
+													<IconEdit className="h-4 w-4" />
+												</Button>
 												<Button
 													variant="ghost"
 													size="icon"
-													onClick={() => stop.mutate(service.id)}
-													disabled={stop.isPending}
+													className="text-destructive"
+													onClick={() => handleDelete(service)}
 												>
-													<IconPlayerStop className="h-4 w-4" />
+													<IconTrash className="h-4 w-4" />
 												</Button>
-											) : (
-												<Button
-													variant="ghost"
-													size="icon"
-													onClick={() => start.mutate(service.id)}
-													disabled={start.isPending}
-												>
-													<IconPlayerPlay className="h-4 w-4" />
-												</Button>
-											)}
-											<Button variant="ghost" size="icon" onClick={() => handleEdit(service)}>
-												<IconEdit className="h-4 w-4" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="text-destructive"
-												onClick={() => handleDelete(service)}
-											>
-												<IconTrash className="h-4 w-4" />
-											</Button>
+											</HasPermission>
 										</TableCell>
 									</TableRow>
 								))

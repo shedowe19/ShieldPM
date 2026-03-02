@@ -12,6 +12,8 @@ import { intl, T } from "src/locale";
 import { showDdnsProviderModal, showDeleteConfirmModal, showHelpModal } from "src/modals";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { HasPermission } from "src/components/HasPermission";
+import { DDNS_PROVIDERS, MANAGE } from "src/modules/Permissions";
 import Table from "./Table";
 
 export default function TableWrapper() {
@@ -74,18 +76,20 @@ export default function TableWrapper() {
 					<Button variant="outline" size="icon" onClick={() => showHelpModal("DdnsProviders", "cyan")}>
 						<IconHelp className="h-4 w-4" />
 					</Button>
-					<Button
-						size="sm"
-						className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
-						disabled={!data}
-						onClick={() => showDdnsProviderModal()}
-					>
-						<IconPlus className="mr-2 h-4 w-4" />
-						<T
-							id="object.add"
-							tData={{ object: intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER }) }}
-						/>
-					</Button>
+					<HasPermission section={DDNS_PROVIDERS} permission={MANAGE} hideError>
+						<Button
+							size="sm"
+							className="bg-cyan-600/90 hover:bg-cyan-600 text-white shadow-sm"
+							disabled={!data}
+							onClick={() => showDdnsProviderModal()}
+						>
+							<IconPlus className="mr-2 h-4 w-4" />
+							<T
+								id="object.add"
+								tData={{ object: intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER }) }}
+							/>
+						</Button>
+					</HasPermission>
 				</div>
 			</CardHeader>
 			<CardContent>

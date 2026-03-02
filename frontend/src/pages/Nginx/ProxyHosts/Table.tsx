@@ -124,11 +124,11 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 										data={{ id: info.row.original.id }}
 									/>
 								</DropdownMenuLabel>
-								<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
-									<IconEdit className="mr-2 h-4 w-4" />
-									<T id="action.edit" />
-								</DropdownMenuItem>
 								<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
+									<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
+										<IconEdit className="mr-2 h-4 w-4" />
+										<T id="action.edit" />
+									</DropdownMenuItem>
 									<DropdownMenuItem
 										onClick={() =>
 											onDisableToggle?.(info.row.original.id, !info.row.original.enabled)
