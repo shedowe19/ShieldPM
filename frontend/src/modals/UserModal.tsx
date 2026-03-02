@@ -331,6 +331,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<div className="bg-background rounded-full p-1 shadow-sm border mb-4">
 												{/* Preview Logic */}
 												<UserAvatar
+													className="h-24 w-24"
 													name={values.name || "User"}
 													url={
 														values.avatar_type === "upload" && selectedFile
