@@ -245,127 +245,127 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<ScrollArea className="h-[400px]">
 											<CardContent className="p-4 grid grid-cols-1 gap-4">
 												<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconBolt className="h-4 w-4 text-muted-foreground" />
-													<T id="proxy-hosts" />
-												</Label>
-												<Field name="proxyHosts">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconArrowsRightLeft className="h-4 w-4 text-muted-foreground" />
-													<T id="redirection-hosts" />
-												</Label>
-												<Field name="redirectionHosts">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconBoltOff className="h-4 w-4 text-muted-foreground" />
-													<T id="dead-hosts" />
-												</Label>
-												<Field name="deadHosts">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconDisc className="h-4 w-4 text-muted-foreground" />
-													<T id="streams" />
-												</Label>
-												<Field name="streams">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconCloud className="h-4 w-4 text-muted-foreground" />
-													Cloudflared Tunnels
-												</Label>
-												<Field name="cloudflaredTunnels">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconNetwork className="h-4 w-4 text-muted-foreground" />
-													Tor Onion Services
-												</Label>
-												<Field name="torOnions">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconServer className="h-4 w-4 text-muted-foreground" />
-													DDNS Providers
-												</Label>
-												<Field name="ddnsProviders">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconChartBar className="h-4 w-4 text-muted-foreground" />
-													Analytics
-												</Label>
-												<Field name="analytics">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconFileText className="h-4 w-4 text-muted-foreground" />
-													Dashboard Notes
-												</Label>
-												<Field name="dashboardNotes">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconLock className="h-4 w-4 text-muted-foreground" />
-													<T id="access-lists" />
-												</Label>
-												<Field name="accessLists">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-											<div className="space-y-2">
-												<Label className="flex items-center gap-2">
-													<IconShield className="h-4 w-4 text-muted-foreground" />
-													<T id="certificates" />
-												</Label>
-												<Field name="certificates">
-													{({ field, form }: FieldProps<string, PermissionsValues>) =>
-														getPermissionButtons(field, form)
-													}
-												</Field>
-											</div>
-										</CardContent>
+													<Label className="flex items-center gap-2">
+														<IconBolt className="h-4 w-4 text-muted-foreground" />
+														<T id="proxy-hosts" />
+													</Label>
+													<Field name="proxyHosts">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconArrowsRightLeft className="h-4 w-4 text-muted-foreground" />
+														<T id="redirection-hosts" />
+													</Label>
+													<Field name="redirectionHosts">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconBoltOff className="h-4 w-4 text-muted-foreground" />
+														<T id="dead-hosts" />
+													</Label>
+													<Field name="deadHosts">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconDisc className="h-4 w-4 text-muted-foreground" />
+														<T id="streams" />
+													</Label>
+													<Field name="streams">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconCloud className="h-4 w-4 text-muted-foreground" />
+														Cloudflared Tunnels
+													</Label>
+													<Field name="cloudflaredTunnels">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconNetwork className="h-4 w-4 text-muted-foreground" />
+														Tor Onion Services
+													</Label>
+													<Field name="torOnions">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconServer className="h-4 w-4 text-muted-foreground" />
+														DDNS Providers
+													</Label>
+													<Field name="ddnsProviders">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconChartBar className="h-4 w-4 text-muted-foreground" />
+														Analytics
+													</Label>
+													<Field name="analytics">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconFileText className="h-4 w-4 text-muted-foreground" />
+														Dashboard Notes
+													</Label>
+													<Field name="dashboardNotes">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconLock className="h-4 w-4 text-muted-foreground" />
+														<T id="access-lists" />
+													</Label>
+													<Field name="accessLists">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconShield className="h-4 w-4 text-muted-foreground" />
+														<T id="certificates" />
+													</Label>
+													<Field name="certificates">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+											</CardContent>
 										</ScrollArea>
 									</Card>
 								)}
