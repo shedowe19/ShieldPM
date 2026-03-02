@@ -380,7 +380,16 @@ router
 			const result = await internalUser.loginAs(res.locals.access, {
 				id: Number.parseInt(req.params.user_id, 10),
 			});
-			res.status(200).send(result);
+
+			// Set Cookie
+			res.cookie("shieldpm_jwt", result.token, {
+				httpOnly: true,
+				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				sameSite: "strict",
+				maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
+			});
+
+			res.status(200).send({ ...result, token: undefined });
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			next(err);
