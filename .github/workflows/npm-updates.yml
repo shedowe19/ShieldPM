@@ -1,0 +1,71 @@
+name: NPM Dependency Updates
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-frontend-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Update Frontend Dependencies (Minor/Patch)
+        working-directory: ./frontend
+        run: |
+          yarn install
+          # Uses yarn upgrade-interactive to update without major version bumps.
+          # Yarn 1.x doesn't have a direct "upgrade all minor/patch" flag out of the box that works non-interactively like npm update, but we can use npm-check-updates or similar.
+          # Actually, yarn upgrade updates everything based on package.json ranges.
+          # Let's use npx npm-check-updates -u --target minor
+          npx npm-check-updates -u --target minor
+          yarn install
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          signoff: true
+          delete-branch: true
+          commit-message: "chore(deps): update frontend dependencies (minor/patch)"
+          branch: "update-frontend-deps"
+          title: "chore(deps): update frontend dependencies (minor/patch)"
+          body: "Automated frontend dependency updates (minor and patch versions only)."
+
+  update-backend-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Update Backend Dependencies (Minor/Patch)
+        working-directory: ./backend
+        run: |
+          yarn install
+          npx npm-check-updates -u --target minor
+          yarn install
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          signoff: true
+          delete-branch: true
+          commit-message: "chore(deps): update backend dependencies (minor/patch)"
+          branch: "update-backend-deps"
+          title: "chore(deps): update backend dependencies (minor/patch)"
+          body: "Automated backend dependency updates (minor and patch versions only)."
