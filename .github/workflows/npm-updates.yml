@@ -2,8 +2,9 @@ name: NPM Dependency Updates
 
 on:
   schedule:
+    # Run everyday at midnight
     - cron: "0 0 * * *"
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual triggering
 
 permissions:
   contents: write
@@ -12,11 +13,8 @@ permissions:
 jobs:
   update-dependencies:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        directory: [frontend, backend]
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -24,14 +22,64 @@ jobs:
         with:
           node-version: 22
           cache: "yarn"
-          cache-dependency-path: ./${{ matrix.directory }}/yarn.lock
+          # Cache both frontend and backend yarn.lock to speed up installs
+          cache-dependency-path: |
+            frontend/yarn.lock
+            backend/yarn.lock
 
-      - name: Update Dependencies (Minor/Patch)
-        working-directory: ./${{ matrix.directory }}
+      - name: Update Frontend Dependencies
+        working-directory: ./frontend
         run: |
+          echo "Installing current frontend dependencies..."
           yarn install
-          npx npm-check-updates -u --target minor
+
+          echo "Checking for minor/patch updates..."
+          echo "### Frontend Updates" > ../frontend-updates.txt
+          echo '```text' >> ../frontend-updates.txt
+          # Run npm-check-updates, update package.json, and capture the output
+          # -u: upgrade package.json
+          # --target minor: only upgrade to minor/patch versions, ignoring major
+          npx npm-check-updates -u --target minor >> ../frontend-updates.txt || true
+          echo '```' >> ../frontend-updates.txt
+
+          echo "Installing updated frontend dependencies to update yarn.lock..."
           yarn install
+
+      - name: Update Backend Dependencies
+        working-directory: ./backend
+        run: |
+          echo "Installing current backend dependencies..."
+          yarn install
+
+          echo "Checking for minor/patch updates..."
+          echo "### Backend Updates" > ../backend-updates.txt
+          echo '```text' >> ../backend-updates.txt
+          # Run npm-check-updates, update package.json, and capture the output
+          # -u: upgrade package.json
+          # --target minor: only upgrade to minor/patch versions, ignoring major
+          npx npm-check-updates -u --target minor >> ../backend-updates.txt || true
+          echo '```' >> ../backend-updates.txt
+
+          echo "Installing updated backend dependencies to update yarn.lock..."
+          yarn install
+
+      - name: Generate Third-Party Notices
+        run: |
+          echo "Generating updated THIRD-PARTY-NOTICES.md..."
+          # Run the generate-notices.js script to update the license notices
+          node scripts/generate-notices.js
+
+      - name: Prepare PR Body
+        run: |
+          echo "## Automated Dependency Updates" > pr_body.txt
+          echo "This PR updates both frontend and backend dependencies to their latest **minor** and **patch** versions." >> pr_body.txt
+          echo "" >> pr_body.txt
+          cat frontend-updates.txt >> pr_body.txt
+          echo "" >> pr_body.txt
+          cat backend-updates.txt >> pr_body.txt
+          echo "" >> pr_body.txt
+          echo "### Additional Actions" >> pr_body.txt
+          echo "- Ran \`scripts/generate-notices.js\` to update \`THIRD-PARTY-NOTICES.md\` to reflect these changes." >> pr_body.txt
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -39,7 +87,7 @@ jobs:
           base: "develop"
           signoff: true
           delete-branch: true
-          commit-message: "chore(deps): update ${{ matrix.directory }} dependencies (minor/patch)"
-          branch: "update-${{ matrix.directory }}-deps"
-          title: "chore(deps): update ${{ matrix.directory }} dependencies (minor/patch)"
-          body: "Automated ${{ matrix.directory }} dependency updates (minor and patch versions only)."
+          commit-message: "chore(deps): update frontend and backend dependencies (minor/patch)"
+          branch: "update-all-deps"
+          title: "chore(deps): update npm dependencies (minor/patch)"
+          body-path: pr_body.txt
