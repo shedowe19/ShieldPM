@@ -1,0 +1,45 @@
+name: NPM Dependency Updates
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: [frontend, backend]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "yarn"
+          cache-dependency-path: ./${{ matrix.directory }}/yarn.lock
+
+      - name: Update Dependencies (Minor/Patch)
+        working-directory: ./${{ matrix.directory }}
+        run: |
+          yarn install
+          npx npm-check-updates -u --target minor
+          yarn install
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          base: "develop"
+          signoff: true
+          delete-branch: true
+          commit-message: "chore(deps): update ${{ matrix.directory }} dependencies (minor/patch)"
+          branch: "update-${{ matrix.directory }}-deps"
+          title: "chore(deps): update ${{ matrix.directory }} dependencies (minor/patch)"
+          body: "Automated ${{ matrix.directory }} dependency updates (minor and patch versions only)."
