@@ -1,7 +1,0 @@
-### Frontend Updates
-```text
-Using yarn
-Upgrading /home/runner/work/ShieldPM/ShieldPM/frontend/package.json
-
-All dependencies match the minor package versions :)
-```
