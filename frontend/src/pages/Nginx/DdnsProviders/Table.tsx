@@ -3,6 +3,7 @@ import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/re
 import { useMemo } from "react";
 import type { DdnsProvider } from "src/api/backend";
 import { EmptyData } from "src/components";
+import { HasPermission } from "src/components/HasPermission";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Badge } from "src/components/ui/badge";
 import { Button } from "src/components/ui/button";
@@ -15,9 +16,8 @@ import {
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
-import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
-import { HasPermission } from "src/components/HasPermission";
 import { DDNS_PROVIDERS, MANAGE } from "src/modules/Permissions";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: DdnsProvider[];

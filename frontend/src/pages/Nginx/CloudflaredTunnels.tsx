@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { Cloud, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { CloudflaredTunnel } from "@/api/backend";
+import { HasPermission } from "@/components/HasPermission";
 import { CloudflaredTunnelModal } from "@/components/Nginx/CloudflaredTunnelModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
 import { T } from "@/locale";
-import { HasPermission } from "@/components/HasPermission";
 import { showHelpModal } from "@/modals";
 import { CLOUDFLARED_TUNNELS, MANAGE } from "@/modules/Permissions";
 
