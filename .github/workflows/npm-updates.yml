@@ -2,8 +2,9 @@ name: NPM Dependency Updates
 
 on:
   schedule:
+    # Run everyday at midnight
     - cron: "0 0 * * *"
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual triggering
 
 permissions:
   contents: write
@@ -12,11 +13,8 @@ permissions:
 jobs:
   update-dependencies:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        directory: [frontend, backend]
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -24,22 +22,87 @@ jobs:
         with:
           node-version: 22
           cache: "yarn"
-          cache-dependency-path: ./${{ matrix.directory }}/yarn.lock
+          # Cache both frontend and backend yarn.lock to speed up installs
+          cache-dependency-path: |
+            frontend/yarn.lock
+            backend/yarn.lock
 
-      - name: Update Dependencies (Minor/Patch)
-        working-directory: ./${{ matrix.directory }}
+      - name: Update Frontend Dependencies
+        working-directory: ./frontend
         run: |
+          echo "Installing current frontend dependencies..."
           yarn install
-          npx npm-check-updates -u --target minor
+
+          echo "Checking for minor/patch updates..."
+          echo "### Frontend Updates" > /tmp/frontend-updates.txt
+          echo '```text' >> /tmp/frontend-updates.txt
+          # Run npm-check-updates, update package.json, and capture the output
+          # -u: upgrade package.json
+          # --target minor: only upgrade to minor/patch versions, ignoring major
+          npx npm-check-updates -u --target minor >> /tmp/frontend-updates.txt || true
+          echo '```' >> /tmp/frontend-updates.txt
+
+          echo "Installing updated frontend dependencies to update yarn.lock..."
           yarn install
+
+      - name: Update Backend Dependencies
+        working-directory: ./backend
+        run: |
+          echo "Installing current backend dependencies..."
+          yarn install
+
+          echo "Checking for minor/patch updates..."
+          echo "### Backend Updates" > /tmp/backend-updates.txt
+          echo '```text' >> /tmp/backend-updates.txt
+          # Run npm-check-updates, update package.json, and capture the output
+          # -u: upgrade package.json
+          # --target minor: only upgrade to minor/patch versions, ignoring major
+          npx npm-check-updates -u --target minor >> /tmp/backend-updates.txt || true
+          echo '```' >> /tmp/backend-updates.txt
+
+          echo "Installing updated backend dependencies to update yarn.lock..."
+          yarn install
+
+      - name: Check for Changes
+        id: check_changes
+        run: |
+          # Check if any package.json or yarn.lock was changed
+          if git diff --quiet frontend/package.json frontend/yarn.lock backend/package.json backend/yarn.lock; then
+            echo "No dependencies were updated."
+            echo "updates_found=false" >> $GITHUB_OUTPUT
+          else
+            echo "Dependencies were updated."
+            echo "updates_found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Third-Party Notices
+        if: steps.check_changes.outputs.updates_found == 'true'
+        run: |
+          echo "Generating updated THIRD-PARTY-NOTICES.md..."
+          # Run the generate-notices.js script to update the license notices
+          node scripts/generate-notices.js
+
+      - name: Prepare PR Body
+        if: steps.check_changes.outputs.updates_found == 'true'
+        run: |
+          echo "## Automated Dependency Updates" > /tmp/pr_body.txt
+          echo "This PR updates both frontend and backend dependencies to their latest **minor** and **patch** versions." >> /tmp/pr_body.txt
+          echo "" >> /tmp/pr_body.txt
+          cat /tmp/frontend-updates.txt >> /tmp/pr_body.txt
+          echo "" >> /tmp/pr_body.txt
+          cat /tmp/backend-updates.txt >> /tmp/pr_body.txt
+          echo "" >> /tmp/pr_body.txt
+          echo "### Additional Actions" >> /tmp/pr_body.txt
+          echo "- Ran \`scripts/generate-notices.js\` to update \`THIRD-PARTY-NOTICES.md\` to reflect these changes." >> /tmp/pr_body.txt
 
       - name: Create Pull Request
+        if: steps.check_changes.outputs.updates_found == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           base: "develop"
           signoff: true
           delete-branch: true
-          commit-message: "chore(deps): update ${{ matrix.directory }} dependencies (minor/patch)"
-          branch: "update-${{ matrix.directory }}-deps"
-          title: "chore(deps): update ${{ matrix.directory }} dependencies (minor/patch)"
-          body: "Automated ${{ matrix.directory }} dependency updates (minor and patch versions only)."
+          commit-message: "chore(deps): update frontend and backend dependencies (minor/patch)"
+          branch: "update-all-deps"
+          title: "chore(deps): update npm dependencies (minor/patch)"
+          body-path: /tmp/pr_body.txt

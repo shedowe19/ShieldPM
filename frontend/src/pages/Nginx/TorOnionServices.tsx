@@ -12,6 +12,7 @@ import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
 import { BADGE_VARIANT, type BadgeVariant, TOR_ONION_STATUS, type TorOnionStatus } from "src/types/enums";
 import type { TorOnion } from "@/api/backend";
+import { HasPermission } from "@/components/HasPermission";
 import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
-import { HasPermission } from "@/components/HasPermission";
 import { showHelpModal } from "@/modals";
 import { MANAGE, TOR_ONIONS } from "@/modules/Permissions";
 

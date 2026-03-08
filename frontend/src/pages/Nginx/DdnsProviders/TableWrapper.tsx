@@ -4,16 +4,16 @@ import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { deleteDdnsProvider, getDdnsProviders } from "src/api/backend";
 import { LoadingPage } from "src/components";
+import { HasPermission } from "src/components/HasPermission";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { intl, T } from "src/locale";
 import { showDdnsProviderModal, showDeleteConfirmModal, showHelpModal } from "src/modals";
+import { DDNS_PROVIDERS, MANAGE } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
-import { HasPermission } from "src/components/HasPermission";
-import { DDNS_PROVIDERS, MANAGE } from "src/modules/Permissions";
 import Table from "./Table";
 
 export default function TableWrapper() {

@@ -2,15 +2,15 @@ import {
 	IconArrowsRightLeft,
 	IconBolt,
 	IconBoltOff,
+	IconChartBar,
+	IconCloud,
 	IconDisc,
 	IconEye,
-	IconLock,
-	IconShield,
-	IconCloud,
-	IconChartBar,
-	IconServer,
-	IconNetwork,
 	IconFileText,
+	IconLock,
+	IconNetwork,
+	IconServer,
+	IconShield,
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";

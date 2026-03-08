@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import ProxyHost from "../models/proxy_host.js";

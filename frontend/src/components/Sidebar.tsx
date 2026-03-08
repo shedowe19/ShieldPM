@@ -22,18 +22,18 @@ import { T } from "src/locale";
 import {
 	ACCESS_LISTS,
 	ADMIN,
+	ANALYTICS,
 	CERTIFICATES,
+	CLOUDFLARED_TUNNELS,
+	DDNS_PROVIDERS,
 	DEAD_HOSTS,
 	type MANAGE,
 	PROXY_HOSTS,
 	REDIRECTION_HOSTS,
 	type Section,
 	STREAMS,
-	VIEW,
-	CLOUDFLARED_TUNNELS,
-	ANALYTICS,
-	DDNS_PROVIDERS,
 	TOR_ONIONS,
+	VIEW,
 } from "src/modules/Permissions";
 
 interface MenuItem {
