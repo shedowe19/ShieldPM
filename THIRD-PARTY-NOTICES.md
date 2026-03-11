@@ -898,7 +898,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - gensync@1.0.0-beta.2 - MIT[](https://www.npmjs.com/package/gensync/v/1.0.0-beta.2)
 - globrex@0.1.2 - MIT[](https://www.npmjs.com/package/globrex/v/0.1.2)
 - happy-dom@20.8.3 - MIT[](https://www.npmjs.com/package/happy-dom/v/20.8.3)
-- immutable@5.1.4 - MIT[](https://www.npmjs.com/package/immutable/v/5.1.4)
+- immutable@5.1.5 - MIT[](https://www.npmjs.com/package/immutable/v/5.1.5)
 - indent-string@4.0.0 - MIT[](https://www.npmjs.com/package/indent-string/v/4.0.0)
 - is-binary-path@2.1.0 - MIT[](https://www.npmjs.com/package/is-binary-path/v/2.1.0)
 - json5@2.2.3 - MIT[](https://www.npmjs.com/package/json5/v/2.2.3)
@@ -920,7 +920,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - read-cache@1.0.0 - MIT[](https://www.npmjs.com/package/read-cache/v/1.0.0)
 - redent@3.0.0 - MIT[](https://www.npmjs.com/package/redent/v/3.0.0)
 - rollup@4.59.0 - MIT[](https://www.npmjs.com/package/rollup/v/4.59.0)
-- sass@1.97.3 - MIT[](https://www.npmjs.com/package/sass/v/1.97.3)
+- sass@1.98.0 - MIT[](https://www.npmjs.com/package/sass/v/1.98.0)
 - semver@6.3.1 - ISC[](https://www.npmjs.com/package/semver/v/6.3.1)
 - shieldpm@4.2.0 - UNLICENSED[](https://www.npmjs.com/package/shieldpm/v/4.2.0)
 - siginfo@2.0.0 - ISC[](https://www.npmjs.com/package/siginfo/v/2.0.0)
@@ -945,4 +945,4 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - ws@8.19.0 - MIT[](https://www.npmjs.com/package/ws/v/8.19.0)
 - yallist@3.1.1 - ISC[](https://www.npmjs.com/package/yallist/v/3.1.1)
 
-The above information is based solely on the NPM Registry data as of March 10, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information is based solely on the NPM Registry data as of March 11, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
