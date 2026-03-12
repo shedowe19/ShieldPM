@@ -631,7 +631,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - html-void-elements@3.0.0 - MIT[](https://www.npmjs.com/package/html-void-elements/v/3.0.0)
 - humps@2.0.1 - MIT[](https://www.npmjs.com/package/humps/v/2.0.1)
 - i18n-iso-countries@7.14.0 - MIT[](https://www.npmjs.com/package/i18n-iso-countries/v/7.14.0)
-- i18next@25.8.17 - MIT[](https://www.npmjs.com/package/i18next/v/25.8.17)
+- i18next@25.8.18 - MIT[](https://www.npmjs.com/package/i18next/v/25.8.18)
 - ieee754@1.2.1 - BSD-3-Clause[](https://www.npmjs.com/package/ieee754/v/1.2.1)
 - immer@10.2.0 - MIT[](https://www.npmjs.com/package/immer/v/10.2.0)
 - import-fresh@3.3.1 - MIT[](https://www.npmjs.com/package/import-fresh/v/3.3.1)
@@ -739,7 +739,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - react-dom@19.2.4 - MIT[](https://www.npmjs.com/package/react-dom/v/19.2.4)
 - react-fast-compare@2.0.4 - MIT[](https://www.npmjs.com/package/react-fast-compare/v/2.0.4)
 - react-hook-form@7.71.2 - MIT[](https://www.npmjs.com/package/react-hook-form/v/7.71.2)
-- react-i18next@16.5.6 - MIT[](https://www.npmjs.com/package/react-i18next/v/16.5.6)
+- react-i18next@16.5.8 - MIT[](https://www.npmjs.com/package/react-i18next/v/16.5.8)
 - react-intl@8.1.3 - BSD-3-Clause[](https://www.npmjs.com/package/react-intl/v/8.1.3)
 - react-is@19.2.4 - MIT[](https://www.npmjs.com/package/react-is/v/19.2.4)
 - react-markdown@10.1.0 - MIT[](https://www.npmjs.com/package/react-markdown/v/10.1.0)
@@ -945,4 +945,4 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - ws@8.19.0 - MIT[](https://www.npmjs.com/package/ws/v/8.19.0)
 - yallist@3.1.1 - ISC[](https://www.npmjs.com/package/yallist/v/3.1.1)
 
-The above information is based solely on the NPM Registry data as of March 11, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information is based solely on the NPM Registry data as of March 12, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
