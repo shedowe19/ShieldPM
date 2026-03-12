@@ -1,8 +1,12 @@
 import dayjs from "dayjs";
 import express from "express";
+import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
 
 const router = express.Router();
+
+// Apply auth to all analytics endpoints
+router.use(jwtdecode());
 
 /**
  * GET /api/analytics/summary

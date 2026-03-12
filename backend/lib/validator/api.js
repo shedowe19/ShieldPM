@@ -24,6 +24,17 @@ const apiValidator = async (schema, payload /*, description*/) => {
 		throw new errs.ValidationError("Payload is undefined");
 	}
 
+	// 🛡️ Nginx Config Injection Sanitizer
+	if (payload && typeof payload.advanced_config === "string") {
+		const toxics = ["lua", "alias", "root", "exec", "system", "os.execute"];
+		const lowerConfig = payload.advanced_config.toLowerCase();
+		for (const keyword of toxics) {
+			if (lowerConfig.includes(keyword)) {
+				throw new errs.ValidationError(`Security restriction: Toxic keyword '${keyword}' is not allowed in advanced_config.`);
+			}
+		}
+	}
+
 	const validate = ajv.compile(schema);
 
 	const valid = validate(payload);
