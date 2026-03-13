@@ -28,31 +28,39 @@ router
 	 *
 	 * Retrieve all proxy-hosts
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const data = await validator(
-				{
-					additionalProperties: false,
-					properties: {
-						expand: {
-							$ref: "common#/properties/expand",
-						},
-						query: {
-							$ref: "common#/properties/query",
-						},
+	.get(async (req, res) => {
+		const data = await validator(
+			{
+				additionalProperties: false,
+				properties: {
+					expand: {
+						$ref: "common#/properties/expand",
+					},
+					query: {
+						$ref: "common#/properties/query",
+					},
+					page: {
+						type: "integer",
+						minimum: 1,
+						default: 1,
+					},
+					limit: {
+						type: "integer",
+						minimum: 1,
+						maximum: 500,
+						default: 50,
 					},
 				},
-				{
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-					query: typeof req.query.query === "string" ? req.query.query : null,
-				},
-			);
-			const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query);
-			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+			},
+			{
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				query: typeof req.query.query === "string" ? req.query.query : null,
+				page: req.query.page ? Number.parseInt(req.query.page, 10) : 1,
+				limit: req.query.limit ? Number.parseInt(req.query.limit, 10) : 50,
+			},
+		);
+		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query, data.page, data.limit);
+		res.status(200).send(rows);
 	})
 
 	/**
@@ -60,15 +68,10 @@ router
 	 *
 	 * Create a new proxy-host
 	 */
-	.post(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts", "post"), req.body);
-			const result = await internalProxyHost.create(res.locals.access, payload);
-			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err} ${JSON.stringify(err.debug, null, 2)}`);
-			next(err);
-		}
+	.post(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts", "post"), req.body);
+		const result = await internalProxyHost.create(res.locals.access, payload);
+		res.status(201).send(result);
 	});
 
 /**
@@ -88,35 +91,30 @@ router
 	 *
 	 * Retrieve a specific proxy-host
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const data = await validator(
-				{
-					required: ["host_id"],
-					additionalProperties: false,
-					properties: {
-						host_id: {
-							$ref: "common#/properties/id",
-						},
-						expand: {
-							$ref: "common#/properties/expand",
-						},
+	.get(async (req, res) => {
+		const data = await validator(
+			{
+				required: ["host_id"],
+				additionalProperties: false,
+				properties: {
+					host_id: {
+						$ref: "common#/properties/id",
+					},
+					expand: {
+						$ref: "common#/properties/expand",
 					},
 				},
-				{
-					host_id: req.params.host_id,
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				},
-			);
-			const row = await internalProxyHost.get(res.locals.access, {
+			},
+			{
+				host_id: req.params.host_id,
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+			},
+		);
+		const row = await internalProxyHost.get(res.locals.access, {
 				id: Number.parseInt(data.host_id, 10),
 				expand: data.expand,
-			});
-			res.status(200).send(row);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		});
+		res.status(200).send(row);
 	})
 
 	/**
@@ -124,17 +122,11 @@ router
 	 *
 	 * Update and existing proxy-host
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}", "put"), req.body);
-
-			payload.id = Number.parseInt(req.params.host_id, 10);
-			const result = await internalProxyHost.update(res.locals.access, payload);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.put(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}", "put"), req.body);
+		payload.id = Number.parseInt(req.params.host_id, 10);
+		const result = await internalProxyHost.update(res.locals.access, payload);
+		res.status(200).send(result);
 	})
 
 	/**
@@ -142,16 +134,11 @@ router
 	 *
 	 * Update and existing proxy-host
 	 */
-	.delete(async (req, res, next) => {
-		try {
-			const result = await internalProxyHost.delete(res.locals.access, {
-				id: Number.parseInt(req.params.host_id, 10),
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.delete(async (req, res) => {
+		const result = await internalProxyHost.delete(res.locals.access, {
+			id: Number.parseInt(req.params.host_id, 10),
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -169,16 +156,11 @@ router
 	/**
 	 * POST /api/nginx/proxy-hosts/123/enable
 	 */
-	.post(async (req, res, next) => {
-		try {
-			const result = await internalProxyHost.enable(res.locals.access, {
-				id: Number.parseInt(req.params.host_id, 10),
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.post(async (req, res) => {
+		const result = await internalProxyHost.enable(res.locals.access, {
+			id: Number.parseInt(req.params.host_id, 10),
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -196,16 +178,11 @@ router
 	/**
 	 * POST /api/nginx/proxy-hosts/123/disable
 	 */
-	.post(async (req, res, next) => {
-		try {
-			const result = await internalProxyHost.disable(res.locals.access, {
-				id: Number.parseInt(req.params.host_id, 10),
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.post(async (req, res) => {
+		const result = await internalProxyHost.disable(res.locals.access, {
+			id: Number.parseInt(req.params.host_id, 10),
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -225,16 +202,11 @@ router
 	 *
 	 * Trigger a manual Git sync for a path-based proxy host
 	 */
-	.post(async (req, res, next) => {
-		try {
-			const hostId = Number.parseInt(req.params.host_id, 10);
-			await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-sync", "post"), req.body);
-			const result = await internalGitDeploy.sync(hostId);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.post(async (req, res) => {
+		const hostId = Number.parseInt(req.params.host_id, 10);
+		await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-sync", "post"), req.body);
+		const result = await internalGitDeploy.sync(hostId);
+		res.status(200).send(result);
 	});
 
 /**
@@ -254,15 +226,10 @@ router
 	 *
 	 * Get Git sync status for a proxy host
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const hostId = Number.parseInt(req.params.host_id, 10);
-			const result = await internalGitDeploy.getStatus(hostId);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.get(async (req, res) => {
+		const hostId = Number.parseInt(req.params.host_id, 10);
+		const result = await internalGitDeploy.getStatus(hostId);
+		res.status(200).send(result);
 	})
 
 	/**
@@ -270,19 +237,14 @@ router
 	 *
 	 * Update Git sync configuration for a proxy host
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const hostId = Number.parseInt(req.params.host_id, 10);
-			const payload = await apiValidator(
-				getValidationSchema("/nginx/proxy-hosts/{hostID}/git-status", "put"),
-				req.body,
-			);
-			const result = await internalGitDeploy.updateConfig(res.locals.access, hostId, payload);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.put(async (req, res) => {
+		const hostId = Number.parseInt(req.params.host_id, 10);
+		const payload = await apiValidator(
+			getValidationSchema("/nginx/proxy-hosts/{hostID}/git-status", "put"),
+			req.body,
+		);
+		const result = await internalGitDeploy.updateConfig(res.locals.access, hostId, payload);
+		res.status(200).send(result);
 	});
 
 export default router;

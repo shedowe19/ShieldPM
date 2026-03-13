@@ -533,9 +533,11 @@ const internalProxyHost = {
 	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
+	 * @param   {Number}  [page]
+	 * @param   {Number}  [limit]
 	 * @returns {Promise}
 	 */
-	getAll: async (access, expand, search_query) => {
+	getAll: async (access, expand, search_query, page = 1, limit = 50) => {
 		const accessData = await access.can("proxy_hosts:list");
 		const query = proxyHostModel
 			.query()
@@ -560,7 +562,15 @@ const internalProxyHost = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		const rows = await query;
+		// Calculate offset
+		const offset = (page - 1) * limit;
+		
+		// Use Objection's page/limit or knex limit/offset.
+		// Objection's `.page(pageIndex, limit)` is 0-indexed.
+		const result = await query.page(page - 1, limit);
+
+		// result is an object { results: [...], total: X } from Objection.js
+		const rows = result.results;
 
 		// return rows with count
 		if (rows) {
@@ -574,7 +584,12 @@ const internalProxyHost = {
 			});
 		}
 
-		return rows;
+		return {
+			data: rows,
+			total: result.total,
+			page: page,
+			limit: limit,
+		};
 	},
 
 	/**
