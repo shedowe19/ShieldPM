@@ -542,7 +542,7 @@ const internalProxyHost = {
 			.where("is_deleted", 0)
 			.groupBy("id")
 			.allowGraph("[owner,access_list,certificate,host_domains]")
-			.withGraphFetched("host_domains")
+			.withGraphFetched("[host_domains, certificate, access_list]")
 			.orderBy("id", "DESC"); // Order by id DESC since domain_names is no longer a simple column
 
 		if (accessData.permission_visibility !== "all") {
