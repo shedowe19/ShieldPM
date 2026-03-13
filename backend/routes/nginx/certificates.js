@@ -1,4 +1,5 @@
 import express from "express";
+import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import internalCertificate from "../../internal/certificate.js";
@@ -9,6 +10,14 @@ import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
 import { debug, express as logger } from "../../logger.js";
 import { getValidationSchema } from "../../schema/index.js";
+
+const certificateUpload = fileUpload({
+	limits: {
+		fileSize: 10 * 1024 * 1024,
+	},
+	abortOnLimit: true,
+	useTempFiles: false,
+});
 
 const router = express.Router({
 	caseSensitive: true,
@@ -242,7 +251,7 @@ router
 	 *
 	 * Validate certificates
 	 */
-	.post(async (req, res, next) => {
+	.post(certificateUpload, async (req, res, next) => {
 		if (!req.files) {
 			res.status(400).send({ error: "No files were uploaded" });
 			return;
@@ -347,7 +356,7 @@ router
 	 *
 	 * Upload certificates
 	 */
-	.post(async (req, res, next) => {
+	.post(certificateUpload, async (req, res, next) => {
 		if (!req.files) {
 			res.status(400).send({ error: "No files were uploaded" });
 			return;

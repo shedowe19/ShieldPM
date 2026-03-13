@@ -26,7 +26,6 @@ services:
     volumes:
       - "/opt/shieldpm:/data"
       # - "/var/www:/var/www" # optional, if you want to use ShieldPM directly as a webserver for html/php
-      # - "/path/to/old/npm/letsencrypt/folder:/etc/letsencrypt" # Only needed for initial migration from original nginx-proxy-manager to this fork, remove after migration
       # - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml and set ipc: host
 
       # --------------------------------------------------------------------------
@@ -195,10 +194,7 @@ services:
       # --- Database: Postgres ---
       #  db:
       #    container_name: shieldpm-db
-      #  db:
-      #    container_name: shieldpm-db
       #    image: postgres:17-bookworm
-      #    restart: always
       #    restart: always
       #    network_mode: bridge
       #    environment:
@@ -302,10 +298,7 @@ services:
 
       #  openappsec-db:
       #    container_name: openappsec-db
-      #  openappsec-db:
-      #    container_name: openappsec-db
       #    image: postgres:17-bookworm
-      #    restart: always
       #    restart: always
       #    environment:
       #      - "TZ=Europe/Berlin"

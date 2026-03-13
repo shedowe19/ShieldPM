@@ -21,6 +21,51 @@ const getGravatarUrl = (email) => {
 
 const DEFAULT_AVATAR = getGravatarUrl("admin@example.com");
 
+const AVATAR_SIGNATURES = [
+	{
+		mimeType: "image/png",
+		extension: ".png",
+		matches: (buffer) =>
+			buffer.length >= 8 &&
+			buffer[0] === 0x89 &&
+			buffer[1] === 0x50 &&
+			buffer[2] === 0x4e &&
+			buffer[3] === 0x47 &&
+			buffer[4] === 0x0d &&
+			buffer[5] === 0x0a &&
+			buffer[6] === 0x1a &&
+			buffer[7] === 0x0a,
+	},
+	{
+		mimeType: "image/jpeg",
+		extension: ".jpg",
+		matches: (buffer) => buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
+	},
+	{
+		mimeType: "image/gif",
+		extension: ".gif",
+		matches: (buffer) =>
+			buffer.length >= 6 &&
+			(buffer.subarray(0, 6).toString("ascii") === "GIF87a" || buffer.subarray(0, 6).toString("ascii") === "GIF89a"),
+	},
+	{
+		mimeType: "image/webp",
+		extension: ".webp",
+		matches: (buffer) =>
+			buffer.length >= 12 &&
+			buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+			buffer.subarray(8, 12).toString("ascii") === "WEBP",
+	},
+];
+
+const detectAvatarFileType = (buffer) => {
+	if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+		return null;
+	}
+
+	return AVATAR_SIGNATURES.find((signature) => signature.matches(buffer)) || null;
+};
+
 const internalUser = {
 	/**
 	 * Create a user can happen unauthenticated only once and only when no active users exist.
@@ -488,19 +533,17 @@ const internalUser = {
 		}
 
 		const file = data.file;
-		const allowedTypes = {
-			"image/jpeg": ".jpg",
-			"image/png": ".png",
-			"image/gif": ".gif",
-			"image/webp": ".webp",
-		};
-
-		if (!Object.keys(allowedTypes).includes(file.mimetype)) {
-			throw new errs.ValidationError("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.");
-		}
-
 		if (file.size > 2 * 1024 * 1024) {
 			throw new errs.ValidationError("File too large. Maximum size is 2MB.");
+		}
+
+		if (!file.data || !Buffer.isBuffer(file.data)) {
+			throw new errs.ValidationError("Uploaded avatar data is invalid.");
+		}
+
+		const detectedType = detectAvatarFileType(file.data);
+		if (!detectedType) {
+			throw new errs.ValidationError("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.");
 		}
 
 		const dataPath = process.env.DATA_PATH || "/data";
@@ -518,11 +561,10 @@ const internalUser = {
 			}
 		}
 
-		const ext = allowedTypes[file.mimetype];
-		const filename = `${user.id}-${Date.now()}${ext}`;
+		const filename = `${user.id}-${Date.now()}${detectedType.extension}`;
 		const filePath = path.join(avatarDir, filename);
 
-		await file.mv(filePath);
+		await fs.promises.writeFile(filePath, file.data);
 
 		await userModel.query().patchAndFetchById(user.id, {
 			avatar_type: "upload",
@@ -532,6 +574,7 @@ const internalUser = {
 
 		return {
 			url: `/api/users/${user.id}/avatar/image`,
+			mime_type: detectedType.mimeType,
 		};
 	},
 
@@ -554,7 +597,16 @@ const internalUser = {
 			throw new errs.ItemNotFoundError("Avatar file missing");
 		}
 
-		return filePath;
+		const fileBuffer = await fs.promises.readFile(filePath);
+		const detectedType = detectAvatarFileType(fileBuffer);
+		if (!detectedType) {
+			throw new errs.ValidationError("Avatar file has an invalid image signature.");
+		}
+
+		return {
+			filePath,
+			mimeType: detectedType.mimeType,
+		};
 	},
 };
 

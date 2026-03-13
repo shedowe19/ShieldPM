@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
 import express from "express";
+import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import AnalyticCount from "../../models/analytic_count.js";
-import ProxyHostModel from "../../models/proxy_host.js";
+import internalAnalytics from "../../internal/analytics.js";
 
 const router = express.Router({
 	mergeParams: true,
@@ -18,13 +19,7 @@ router.get("/:hostId", jwtdecode(), async (req, res, next) => {
 		const hostId = Number.parseInt(req.params.hostId, 10);
 		const range = req.query.range || "24h";
 
-		// Security: Check if user owns the host (or admin)
-		// Assuming standard access control middleware handles extensive checks,
-		// but here we do a quick check if host exists and is not deleted.
-		const host = await ProxyHostModel.query().where("id", hostId).andWhere("is_deleted", 0).first();
-		if (!host) {
-			return res.status(404).json({ error: "Host not found" });
-		}
+		await internalAnalytics.assertHostAccess(res.locals.access, hostId);
 
 		let since;
 		const now = dayjs();
@@ -47,9 +42,6 @@ router.get("/:hostId", jwtdecode(), async (req, res, next) => {
 				break;
 		}
 
-		// Use Aggregated Counts for charts
-		// We sum up counts per time bucket
-		// (Actually stored as 1-minute buckets, frontend might want to aggregate further for 30d view)
 		const data = await AnalyticCount.query()
 			.where("proxy_host_id", hostId)
 			.andWhere("timestamp", ">=", since.toISOString())
@@ -57,6 +49,12 @@ router.get("/:hostId", jwtdecode(), async (req, res, next) => {
 
 		res.json(data);
 	} catch (err) {
+		if (err instanceof errs.PermissionError) {
+			return res.status(403).json({ error: "Forbidden" });
+		}
+		if (err instanceof errs.ItemNotFoundError) {
+			return res.status(404).json({ error: "Host not found" });
+		}
 		next(err);
 	}
 });
@@ -71,13 +69,8 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
 		const hostId = Number.parseInt(req.params.hostId, 10);
 		const range = req.query.range || "24h";
 
-		// Access Check
-		// Use shared service logic
-		// This keeps logic consistent between Dashboard and AI
-		const internalAnalytics = (await import("../../internal/analytics.js")).default;
-		const summary = await internalAnalytics.getHostSummary(hostId, range);
+		const summary = await internalAnalytics.getHostSummary(res.locals.access, hostId, range);
 
-		// Map to expected frontend format (service structure is slightly cleaner/nested)
 		res.json({
 			...summary.stats,
 			top_countries: summary.top_countries,
@@ -88,6 +81,12 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
 			recent_requests: summary.recent_requests,
 		});
 	} catch (err) {
+		if (err instanceof errs.PermissionError) {
+			return res.status(403).json({ error: "Forbidden" });
+		}
+		if (err instanceof errs.ItemNotFoundError) {
+			return res.status(404).json({ error: "Host not found" });
+		}
 		next(err);
 	}
 });

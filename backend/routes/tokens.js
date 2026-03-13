@@ -3,6 +3,7 @@ import internalToken from "../internal/token.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
+import User from "../models/user.js";
 import { getValidationSchema } from "../schema/index.js";
 
 const router = express.Router({
@@ -11,17 +12,151 @@ const router = express.Router({
 	mergeParams: true,
 });
 
-const loginAttempts = new Map();
+const LOGIN_ATTEMPT_TABLE = "login_attempts";
+const LOGIN_ATTEMPT_LIMIT = 5;
+const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_ATTEMPT_BLOCK_MS = 15 * 60 * 1000;
+let loginAttemptTableInitPromise = null;
 
-// Clean up login attempts every 15 minutes to prevent memory leaks
-setInterval(() => {
-	const now = Date.now();
-	for (const [ip, data] of loginAttempts.entries()) {
-		if (now > data.blockedUntil && now - data.lastAttempt > 900000) {
-			loginAttempts.delete(ip);
+const getLoginAttemptKnex = () => User.knex();
+
+const normalizeLoginIdentifier = (body) => {
+	if (!body || typeof body !== "object") {
+		return null;
+	}
+
+	const candidates = [body.identity, body.email, body.username];
+	for (const candidate of candidates) {
+		if (typeof candidate === "string" && candidate.trim()) {
+			return candidate.trim().toLowerCase();
 		}
 	}
-}, 900000);
+
+	return null;
+};
+
+const ensureLoginAttemptStorage = async () => {
+	if (!loginAttemptTableInitPromise) {
+		loginAttemptTableInitPromise = (async () => {
+			const knex = getLoginAttemptKnex();
+			const hasTable = await knex.schema.hasTable(LOGIN_ATTEMPT_TABLE);
+			if (!hasTable) {
+				await knex.schema.createTable(LOGIN_ATTEMPT_TABLE, (table) => {
+					table.increments("id").primary();
+					table.string("scope", 32).notNullable();
+					table.string("identifier", 255).notNullable();
+					table.integer("attempt_count").notNullable().defaultTo(0);
+					table.bigInteger("first_attempt_at").notNullable();
+					table.bigInteger("last_attempt_at").notNullable();
+					table.bigInteger("blocked_until").notNullable().defaultTo(0);
+					table.unique(["scope", "identifier"]);
+					table.index(["last_attempt_at"]);
+					table.index(["blocked_until"]);
+				});
+			}
+		})();
+	}
+
+	return loginAttemptTableInitPromise;
+};
+
+const cleanupExpiredLoginAttempts = async (now = Date.now()) => {
+	await ensureLoginAttemptStorage();
+	await getLoginAttemptKnex()(LOGIN_ATTEMPT_TABLE)
+		.where("last_attempt_at", "<", now - LOGIN_ATTEMPT_WINDOW_MS)
+		.andWhere("blocked_until", "<", now)
+		.delete();
+};
+
+const getLoginAttemptState = async (scope, identifier, now = Date.now()) => {
+	await ensureLoginAttemptStorage();
+	const record = await getLoginAttemptKnex()(LOGIN_ATTEMPT_TABLE)
+		.where({ scope, identifier })
+		.first();
+
+	if (!record) {
+		return { count: 0, blockedUntil: 0 };
+	}
+
+	if (record.blocked_until > now) {
+		return {
+			count: record.attempt_count,
+			blockedUntil: record.blocked_until,
+		};
+	}
+
+	if (now - record.last_attempt_at >= LOGIN_ATTEMPT_WINDOW_MS) {
+		await getLoginAttemptKnex()(LOGIN_ATTEMPT_TABLE).where({ scope, identifier }).delete();
+		return { count: 0, blockedUntil: 0 };
+	}
+
+	return {
+		count: record.attempt_count,
+		blockedUntil: 0,
+	};
+};
+
+const registerFailedLoginAttempt = async (scope, identifier, now = Date.now()) => {
+	await ensureLoginAttemptStorage();
+	const knex = getLoginAttemptKnex();
+	const windowMs = LOGIN_ATTEMPT_WINDOW_MS;
+	const blockMs = LOGIN_ATTEMPT_BLOCK_MS;
+	const limit = LOGIN_ATTEMPT_LIMIT;
+
+	await knex(LOGIN_ATTEMPT_TABLE)
+		.insert({
+			scope,
+			identifier,
+			attempt_count: 1,
+			first_attempt_at: now,
+			last_attempt_at: now,
+			blocked_until: 0,
+		})
+		.onConflict(["scope", "identifier"])
+		.merge({
+			attempt_count: knex.raw(
+				`CASE
+					WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN 1
+					ELSE ${LOGIN_ATTEMPT_TABLE}.attempt_count + 1
+				END`,
+				[now, windowMs],
+			),
+			first_attempt_at: knex.raw(
+				`CASE
+					WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN ?
+					ELSE ${LOGIN_ATTEMPT_TABLE}.first_attempt_at
+				END`,
+				[now, windowMs, now],
+			),
+			last_attempt_at: now,
+			blocked_until: knex.raw(
+				`CASE
+					WHEN (CASE
+						WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN 1
+						ELSE ${LOGIN_ATTEMPT_TABLE}.attempt_count + 1
+					END) >= ? THEN ? + ?
+					ELSE 0
+				END`,
+				[now, windowMs, limit, now, blockMs],
+			),
+		});
+};
+
+const clearLoginAttempts = async (identifiers) => {
+	await ensureLoginAttemptStorage();
+	const filters = identifiers.filter((entry) => entry.identifier);
+	if (filters.length === 0) {
+		return;
+	}
+
+	await getLoginAttemptKnex()(LOGIN_ATTEMPT_TABLE)
+		.where((builder) => {
+			for (const filter of filters) {
+				builder.orWhere({ scope: filter.scope, identifier: filter.identifier });
+			}
+		})
+		.delete();
+};
 
 router
 	.route("/")
@@ -71,35 +206,32 @@ router
 	 * Create a new Token
 	 */
 	.post(async (req, res, next) => {
-		const ip = req.ip;
+		const ip = req.ip || "unknown";
 		const now = Date.now();
-
-		// DoS Protection: Cap the memory usage of the rate limiter
-		if (loginAttempts.size > 5000 && !loginAttempts.has(ip)) {
-			// If map is full and IP is new, reject or prune. Pruning is safer for legit users.
-			// Simple strategy: Clear the map if it gets too big (Heavy handed but effective against exhaustion)
-			// Better: Do not track new IPs if full, but that allows bruteforce.
-			// Best generically without Redis: Clear 10% or just clear all.
-			logger.warn("Login Rate Limiter full, flushing memory.");
-			loginAttempts.clear();
-		}
-
-		const attempts = loginAttempts.get(ip) || { count: 0, blockedUntil: 0, lastAttempt: 0 };
-
-		if (now < attempts.blockedUntil) {
-			res.status(429).send({
-				error: {
-					code: 429,
-					message: "Too many login attempts. Please try again later.",
-				},
-			});
-			return;
-		}
+		const loginIdentifier = normalizeLoginIdentifier(req.body);
+		const trackedIdentifiers = [
+			{ scope: "ip", identifier: ip },
+			...(loginIdentifier ? [{ scope: "login", identifier: loginIdentifier }] : []),
+		];
 
 		try {
+			await cleanupExpiredLoginAttempts(now);
+
+			for (const tracked of trackedIdentifiers) {
+				const state = await getLoginAttemptState(tracked.scope, tracked.identifier, now);
+				if (state.blockedUntil > now) {
+					return res.status(429).send({
+						error: {
+							code: 429,
+							message: "Too many login attempts. Please try again later.",
+						},
+					});
+				}
+			}
+
 			const data = await apiValidator(getValidationSchema("/tokens", "post"), req.body);
 			const result = await internalToken.getTokenFromEmail(data);
-			loginAttempts.delete(ip);
+			await clearLoginAttempts(trackedIdentifiers);
 
 			// Set Cookie
 			res.cookie("shieldpm_jwt", result.token, {
@@ -111,13 +243,18 @@ router
 
 			res.status(200).send({ ...result, token: undefined }); // Omit token
 		} catch (err) {
-			attempts.count++;
-			attempts.lastAttempt = now;
-			if (attempts.count >= 5) {
-				attempts.blockedUntil = now + 900000; // Block for 15 minutes
-				logger.warn(`IP ${ip} blocked due to too many failed login attempts.`);
+			try {
+				for (const tracked of trackedIdentifiers) {
+					await registerFailedLoginAttempt(tracked.scope, tracked.identifier, now);
+				}
+
+				const ipState = await getLoginAttemptState("ip", ip, now);
+				if (ipState.blockedUntil > now) {
+					logger.warn(`IP ${ip} blocked due to too many failed login attempts.`);
+				}
+			} catch (rateLimitErr) {
+				logger.error(`Failed to persist login attempt state for IP ${ip}: ${rateLimitErr.message}`);
 			}
-			loginAttempts.set(ip, attempts);
 
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			// Small delay to deter timing attacks

@@ -269,7 +269,6 @@ const internalGitOps = {
 			"certificates",
 			"users",
 			"settings",
-			"settings",
 			"cloudflared-tunnels",
 			"ddns-providers",
 		];
@@ -934,7 +933,6 @@ const internalGitOps = {
 			await importModel(ProxyHost, "proxy-hosts", "proxy_host");
 			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
 			await importModel(DeadHost, "dead-hosts", "dead_host");
-			await importModel(Stream, "streams", "stream");
 			await importModel(Stream, "streams", "stream");
 			await importModel(CloudflaredTunnel, "cloudflared-tunnels");
 			await importModel(DdnsProvider, "ddns-providers");

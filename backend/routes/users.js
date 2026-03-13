@@ -1,4 +1,5 @@
 import express from "express";
+import fileUpload from "express-fileupload";
 import { rateLimit } from "express-rate-limit";
 
 const avatarLimiter = rateLimit({
@@ -30,6 +31,14 @@ const loginAsRateLimiter = rateLimit({
 	message: { error: "Too many login attempts, please try again later." },
 	standardHeaders: true, // Return rate limit info in the RateLimit-* headers
 	legacyHeaders: false, // Disable the X-RateLimit-* headers
+});
+
+const avatarUpload = fileUpload({
+	limits: {
+		fileSize: 2 * 1024 * 1024,
+	},
+	abortOnLimit: true,
+	useTempFiles: false,
 });
 
 const router = express.Router({
@@ -89,23 +98,24 @@ router
 		const body = req.body;
 
 		try {
-			// If we are in setup mode, we don't check access for current user
-			const setup = await isSetup();
-			if (!setup) {
-				logger.info("Creating a new user in setup mode");
+			const setupComplete = await isSetup();
+			const currentUserId = res.locals.access?.token?.getUserId?.(0) || 0;
+
+			if (!setupComplete) {
+				logger.info("Creating initial admin user during first-time setup");
 				const access = new Access(null);
 				await access.load(true);
 				res.locals.access = access;
 
-				// We are in setup mode, set some defaults for this first new user, such as making
-				// them an admin.
 				body.is_disabled = false;
 				if (typeof body.roles !== "object" || body.roles === null) {
 					body.roles = [];
 				}
-				if (body.roles.indexOf("admin") === -1) {
+				if (!body.roles.includes("admin")) {
 					body.roles.push("admin");
 				}
+			} else if (!currentUserId) {
+				throw new errs.PermissionError("Initial setup is already complete. Authenticated user creation is required.");
 			}
 
 			const payload = await apiValidator(getValidationSchema("/users", "post"), body);
@@ -240,7 +250,7 @@ router
 	})
 	.all(jwtdecode())
 	.all(userIdFromMe)
-	.post(async (req, res, next) => {
+	.post(avatarUpload, async (req, res, next) => {
 		try {
 			// Check if file exists in req.files
 			if (!req.files || Object.keys(req.files).length === 0) {
@@ -267,32 +277,14 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	// No auth required for viewing avatars? Usually yes for profile pics.
-	// But let's check access just in case, or make it public if desired.
-	// Requirement said "securely".
-	// Integrating with system auth.
-	// .all(jwtdecode()) // Optional: if we want public avatars, remove this.
-	// Typically avatars are public in many systems, but for privacy, maybe protected.
-	// Let's protect it but allow via cookie?
-	// The frontend loads images via <img> src.
-	// If protected, <img> tag needs to send cookies. Browsers do this for Same-Origin.
-	// So we can protect it.
 	.get(avatarLimiter, async (req, res) => {
 		try {
-			// For image serving, we might not always have Bearer token in header (img tag).
-			// We can rely on Cookie if enabled?
-			// ShieldPM uses JWT in header mostly.
-			// If we want it secure, we need a way to serve it.
-			// Let's keep it open for now or check if we can parse query param token?
-			// Or just make it public for simplicity as avatars are usually low risk.
-			// However, Step 4 in plan said "securely".
-			// Let's assume public for now as it makes frontend integration 100x easier.
-			// If privacy is paramount, we need a refined auth strategy for assets.
-
-			const filePath = await internalUser.getAvatarImage(new Access("public"), {
+			const avatar = await internalUser.getAvatarImage(new Access("public"), {
 				id: req.params.user_id,
 			});
-			res.sendFile(filePath);
+			res.setHeader("Content-Type", avatar.mimeType);
+			res.setHeader("X-Content-Type-Options", "nosniff");
+			res.sendFile(avatar.filePath);
 		} catch (err) {
 			// Don't log 404s for avatars to keep logs clean
 			if (!(err instanceof errs.ItemNotFoundError)) {

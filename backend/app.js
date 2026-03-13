@@ -1,7 +1,6 @@
 import cookieParser from "cookie-parser";
 import { doubleCsrf } from "csrf-csrf";
 import express from "express";
-import fileUpload from "express-fileupload";
 import helmet from "helmet";
 import analyticsService from "./internal/analytics.js";
 import jwt from "./lib/express/jwt.js";
@@ -15,6 +14,27 @@ analyticsService.init();
 // Global API Rate Limiter
 import rateLimit from "express-rate-limit";
 
+const resolveTrustProxy = () => {
+	const raw = process.env.TRUST_PROXY;
+	if (typeof raw === "undefined" || raw === null || raw === "") {
+		return 1;
+	}
+
+	const normalized = String(raw).trim().toLowerCase();
+	if (["true", "yes", "on"].includes(normalized)) {
+		return true;
+	}
+	if (["false", "no", "off"].includes(normalized)) {
+		return false;
+	}
+	if (/^\d+$/.test(normalized)) {
+		return Number.parseInt(normalized, 10);
+	}
+	return raw;
+};
+
+const TRUST_PROXY = resolveTrustProxy();
+
 const globalApiLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutes
 	max: 500, // Limit each IP to 500 requests per 15 minutes
@@ -26,6 +46,10 @@ const globalApiLimiter = rateLimit({
 	},
 	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+	validate: {
+		trustProxy: false,
+		xForwardedForHeader: false,
+	},
 });
 
 /**
@@ -76,17 +100,16 @@ const csrf = () => doubleCsrfProtection;
 // codeql[js/missing-token-validation]
 app.use(cookieParser());
 
-// CSRF middleware with setup mode bypass
-// During initial setup (no admin account), CSRF is skipped for POST /api/users
+// CSRF middleware with a strict first-time-setup bypass.
+// Only skip CSRF for POST /api/users while the system has no active users yet.
 app.use(async (req, res, next) => {
-	const setup = await isSetup();
+	const setupComplete = await isSetup();
+	const isInitialSetupUserCreation = !setupComplete && req.method === "POST" && req.path === "/api/users";
 
-	// Skip CSRF validation during setup mode for user creation
-	if (!setup && req.method === "POST" && req.path === "/users") {
+	if (isInitialSetupUserCreation) {
 		return next();
 	}
 
-	// Normal CSRF validation
 	return csrf()(req, res, next);
 });
 
@@ -97,7 +120,6 @@ app.use((req, res, next) => {
 	next();
 });
 
-app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -106,8 +128,9 @@ app.use(express.urlencoded({ extended: true }));
  */
 
 app.disable("x-powered-by");
-app.set("trust proxy", true);
+app.set("trust proxy", TRUST_PROXY);
 app.enable("strict routing");
+logger.info(`Express trust proxy configured as: ${typeof TRUST_PROXY === "string" ? TRUST_PROXY : JSON.stringify(TRUST_PROXY)}`);
 
 // pretty print JSON when not live
 app.set("json spaces", 2);

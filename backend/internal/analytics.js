@@ -2,6 +2,7 @@ import fs from "node:fs";
 import dayjs from "dayjs";
 import { Tail } from "tail";
 import { analytics as logger } from "../logger.js";
+import errs from "../lib/error.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
 import ProxyHost from "../models/proxy_host.js";
@@ -10,6 +11,10 @@ const LOG_FILE = "/data/nginx/json_access.log";
 const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds flush
 const RETENTION_INTERVAL_MS = 60 * 60 * 1000; // 1 hour check
 const RETENTION_HOURS = 24; // Default retention
+const DETAILED_LOG_BUFFER_LIMIT = 1000;
+const AGGREGATION_BUFFER_LIMIT = 500;
+const INSERT_CHUNK_SIZE = 250;
+const DROP_LOG_INTERVAL_MS = 60 * 1000;
 
 class AnalyticsService {
 	constructor(logFile) {
@@ -26,6 +31,8 @@ class AnalyticsService {
 		this.hostCache = new Map(); // hostname -> id
 		this.flushTimer = null;
 		this.retentionTimer = null;
+		this.flushPromise = null;
+		this.lastDropLogAt = 0;
 	}
 
 	async init() {
@@ -60,7 +67,9 @@ class AnalyticsService {
 		}
 
 		// Start timers
-		this.flushTimer = setInterval(() => this.flush(), FLUSH_INTERVAL_MS);
+		this.flushTimer = setInterval(() => {
+			void this.flush();
+		}, FLUSH_INTERVAL_MS);
 		this.retentionTimer = setInterval(() => this.runRetention(), RETENTION_INTERVAL_MS);
 
 		// Run retention once on startup
@@ -148,50 +157,156 @@ class AnalyticsService {
 				user_agent: data.http_user_agent || null,
 				duration: Math.floor(Number.parseFloat(data.request_time || 0) * 1000), // ms
 			});
+
+			this.applyBackpressure();
 		} catch (_err) {
 			// Ignore parse errors
 		}
 	}
 
-	async flush() {
-		// 1. Flush Detailed Logs
-		if (this.detailedLogBuffer.length > 0) {
-			const batch = [...this.detailedLogBuffer];
-			this.detailedLogBuffer = []; // Clear immediately
+	applyBackpressure() {
+		let shouldFlush = false;
 
-			try {
-				// Chunking might be needed for very high traffic, but start simple
-				await AnalyticsLogs.knex().table("analytics_logs").insert(batch);
-			} catch (err) {
-				logger.error(`Failed to flush detailed logs: ${err.message}`);
-			}
+		if (this.detailedLogBuffer.length >= DETAILED_LOG_BUFFER_LIMIT) {
+			shouldFlush = true;
 		}
 
-		// 2. Flush Aggregation
-		if (this.aggregationBuffer.size > 0) {
-			const entries = Array.from(this.aggregationBuffer.values());
-			this.aggregationBuffer.clear();
+		if (this.aggregationBuffer.size >= AGGREGATION_BUFFER_LIMIT) {
+			shouldFlush = true;
+		}
+
+		if (shouldFlush) {
+			void this.flush();
+		}
+	}
+
+	chunkArray(items, chunkSize) {
+		const chunks = [];
+		for (let index = 0; index < items.length; index += chunkSize) {
+			chunks.push(items.slice(index, index + chunkSize));
+		}
+		return chunks;
+	}
+
+	logDroppedAnalyticsData(details) {
+		const now = Date.now();
+		if (now - this.lastDropLogAt < DROP_LOG_INTERVAL_MS) {
+			return;
+		}
+
+		this.lastDropLogAt = now;
+		logger.error(
+			`Dropping analytics data due to DB failure (detailed_logs=${details.detailedLogsDropped}, aggregations=${details.aggregationsDropped})`,
+		);
+	}
+
+	async flushDetailedLogs(batch) {
+		if (batch.length === 0) {
+			return;
+		}
+
+		const tableName = AnalyticsLogs.tableName || "analytics_logs";
+		for (const chunk of this.chunkArray(batch, INSERT_CHUNK_SIZE)) {
+			await AnalyticsLogs.knex().table(tableName).insert(chunk);
+		}
+	}
+
+	async flushAggregations(entries) {
+		if (entries.length === 0) {
+			return;
+		}
+
+		const rows = entries.map((entry) => ({
+			proxy_host_id: entry.host_id === 0 ? null : entry.host_id,
+			timestamp: entry.timestamp,
+			status_code_2xx: entry.status_2xx,
+			status_code_3xx: entry.status_3xx,
+			status_code_4xx: entry.status_4xx,
+			status_code_5xx: entry.status_5xx,
+			bytes_sent: entry.bytes,
+			request_count: entry.count,
+		}));
+
+		for (const chunk of this.chunkArray(rows, INSERT_CHUNK_SIZE)) {
+			await AnalyticCount.query()
+				.insert(chunk)
+				.onConflict(["proxy_host_id", "timestamp"])
+				.merge({
+					status_code_2xx: AnalyticCount.knex().raw(
+						"coalesce(status_code_2xx, 0) + excluded.status_code_2xx",
+					),
+					status_code_3xx: AnalyticCount.knex().raw(
+						"coalesce(status_code_3xx, 0) + excluded.status_code_3xx",
+					),
+					status_code_4xx: AnalyticCount.knex().raw(
+						"coalesce(status_code_4xx, 0) + excluded.status_code_4xx",
+					),
+					status_code_5xx: AnalyticCount.knex().raw(
+						"coalesce(status_code_5xx, 0) + excluded.status_code_5xx",
+					),
+					bytes_sent: AnalyticCount.knex().raw("coalesce(bytes_sent, 0) + excluded.bytes_sent"),
+					request_count: AnalyticCount.knex().raw(
+						"coalesce(request_count, 0) + excluded.request_count",
+					),
+				});
+		}
+	}
+
+	async flush() {
+		if (this.flushPromise) {
+			return this.flushPromise;
+		}
+
+		this.flushPromise = (async () => {
+			const detailedBatch = this.detailedLogBuffer;
+			const aggregationBatch = Array.from(this.aggregationBuffer.values());
+
+			this.detailedLogBuffer = [];
+			this.aggregationBuffer = new Map();
 
 			try {
-				await AnalyticCount.knex().transaction(async (trx) => {
-					for (const entry of entries) {
-						// Note: We might want to "upsert" here if the same minute is flushed twice (e.g. restart),
-						// but standard insert is safer for now. We can handle summing in query.
-						await AnalyticCount.query(trx).insert({
-							proxy_host_id: entry.host_id === 0 ? null : entry.host_id,
-							timestamp: entry.timestamp,
-							status_code_2xx: entry.status_2xx,
-							status_code_3xx: entry.status_3xx,
-							status_code_4xx: entry.status_4xx,
-							status_code_5xx: entry.status_5xx,
-							bytes_sent: entry.bytes,
-							request_count: entry.count,
-						});
-					}
-				});
+				await this.flushDetailedLogs(detailedBatch);
+			} catch (err) {
+				logger.error(`Failed to flush detailed logs: ${err.message}`);
+				const restoredDetailedLogs = detailedBatch.concat(this.detailedLogBuffer);
+				const detailedLogsDropped = Math.max(0, restoredDetailedLogs.length - DETAILED_LOG_BUFFER_LIMIT);
+				this.detailedLogBuffer = restoredDetailedLogs.slice(-DETAILED_LOG_BUFFER_LIMIT);
+				if (detailedLogsDropped > 0) {
+					this.logDroppedAnalyticsData({ detailedLogsDropped, aggregationsDropped: 0 });
+				}
+			}
+
+			try {
+				await this.flushAggregations(aggregationBatch);
 			} catch (err) {
 				logger.error(`Failed to flush aggregated counts: ${err.message}`);
+				let aggregationsDropped = 0;
+				for (const entry of aggregationBatch) {
+					const key = `${entry.host_id}|${entry.timestamp}`;
+					const existing = this.aggregationBuffer.get(key);
+					if (existing) {
+						existing.count += entry.count;
+						existing.bytes += entry.bytes;
+						existing.status_2xx += entry.status_2xx;
+						existing.status_3xx += entry.status_3xx;
+						existing.status_4xx += entry.status_4xx;
+						existing.status_5xx += entry.status_5xx;
+					} else if (this.aggregationBuffer.size < AGGREGATION_BUFFER_LIMIT) {
+						this.aggregationBuffer.set(key, entry);
+					} else {
+						aggregationsDropped++;
+					}
+				}
+				if (aggregationsDropped > 0) {
+					this.logDroppedAnalyticsData({ detailedLogsDropped: 0, aggregationsDropped });
+				}
 			}
+		})();
+
+		try {
+			await this.flushPromise;
+		} finally {
+			this.flushPromise = null;
 		}
 	}
 
@@ -211,9 +326,23 @@ class AnalyticsService {
 	 * @param {number} hostId
 	 * @param {String} range (1h, 24h, 7d, 30d)
 	 */
-	async getHostSummary(hostId, range) {
+	async assertHostAccess(access, hostId) {
 		const host = await ProxyHost.query().where("id", hostId).andWhere("is_deleted", 0).first();
-		if (!host) throw new Error("Host not found");
+		if (!host) {
+			throw new errs.ItemNotFoundError("Host not found");
+		}
+
+		const userId = access?.token?.getUserId?.(0) || 0;
+		const isAdmin = access?.token?.hasScope?.("admin") || false;
+		if (!isAdmin && host.owner_user_id !== userId) {
+			throw new errs.PermissionError("You do not have permission to access analytics for this host.");
+		}
+
+		return host;
+	}
+
+	async getHostSummary(access, hostId, range) {
+		await this.assertHostAccess(access, hostId);
 
 		let since;
 		const now = dayjs();

@@ -39,7 +39,7 @@ const setupDefaultUser = async () => {
 	const userIsetup = await isSetup();
 	if (!userIsetup) {
 		// Create a new user and set password
-		logger.info(`Creating a new user: ${initialAdminEmail} with password: ${initialAdminPassword}`);
+		logger.info(`Creating initial admin user: ${initialAdminEmail} (password: [HIDDEN])`);
 
 		const data = {
 			is_deleted: 0,
@@ -69,7 +69,7 @@ const setupDefaultUser = async () => {
 			access_lists: "manage",
 			certificates: "manage",
 		});
-		logger.info("Initial admin setup completed");
+		logger.info("Initial admin setup completed. Credentials stored securely in DB; password output suppressed.");
 	}
 };
 
