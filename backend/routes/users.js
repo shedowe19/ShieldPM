@@ -173,36 +173,32 @@ router
 	 *
 	 * Retrieve a specific user
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const data = await validator(
-				{
-					required: ["user_id"],
-					additionalProperties: false,
-					properties: {
-						user_id: {
-							$ref: "common#/properties/id",
-						},
-						expand: {
-							$ref: "common#/properties/expand",
-						},
+	.get(async (req, res) => {
+		const data = await validator(
+			{
+				required: ["user_id"],
+				additionalProperties: false,
+				properties: {
+					user_id: {
+						$ref: "common#/properties/id",
+					},
+					expand: {
+						$ref: "common#/properties/expand",
 					},
 				},
-				{
-					user_id: req.params.user_id,
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				},
-			);
+			},
+			{
+				user_id: req.params.user_id,
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+			},
+		);
 
-			const user = await internalUser.get(res.locals.access, {
-				id: data.user_id,
-				expand: data.expand,
-				omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
-			});
-			res.status(200).send(user);
-		} catch (err) {
-			next(err);
-		}
+		const user = await internalUser.get(res.locals.access, {
+			id: data.user_id,
+			expand: data.expand,
+			omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
+		});
+		res.status(200).send(user);
 	})
 
 	/**

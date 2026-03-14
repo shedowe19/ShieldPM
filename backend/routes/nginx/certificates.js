@@ -153,7 +153,7 @@ router
 			try {
 				await fs.rm(tmpDir, { recursive: true, force: true });
 			} catch (cleanupErr) {
-				debug(logger, `Cleanup failed for ${tmpDir}: ${cleanupErr}`);
+				logger.warn(`Cleanup failed for ${tmpDir}: ${cleanupErr.message}`);
 			}
 		};
 

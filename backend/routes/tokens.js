@@ -171,25 +171,21 @@ router
 	 * We also piggy back on to this method, allowing admins to get tokens
 	 * for services like Job board and Worker.
 	 */
-	.get(jwtdecode(), async (req, res, next) => {
-		try {
-			const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
-			const scope = typeof req.query.scope === "string" ? req.query.scope : null;
-			const query = { expiry, scope };
-			const data = await internalToken.getFreshToken(res.locals.access, query);
+	.get(jwtdecode(), async (req, res) => {
+		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
+		const scope = typeof req.query.scope === "string" ? req.query.scope : null;
+		const query = { expiry, scope };
+		const data = await internalToken.getFreshToken(res.locals.access, query);
 
-			res.cookie("shieldpm_jwt", data.token, {
-				httpOnly: true,
-				secure: req.secure,
-				sameSite: "strict",
-				maxAge: data.expires ? Math.max(0, new Date(data.expires).getTime() - Date.now()) : undefined,
-			});
+		res.cookie("shieldpm_jwt", data.token, {
+			httpOnly: true,
+			secure: req.secure,
+			sameSite: "strict",
+			maxAge: data.expires ? Math.max(0, new Date(data.expires).getTime() - Date.now()) : undefined,
+		});
 
-			res.clearCookie("shieldpm_oidc");
-			res.status(200).send({ ...data, token: undefined });
-		} catch (err) {
-			next(err);
-		}
+		res.clearCookie("shieldpm_oidc");
+		res.status(200).send({ ...data, token: undefined });
 	})
 
 	/**

@@ -17,22 +17,18 @@ router
 	/**
 	 * GET /schema
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const swaggerJSON = await getCompiledSchema();
-			const clonedSwaggerJSON = structuredClone(swaggerJSON);
-			const origin = `${req.protocol}://${req.get("host")}`;
+	.get(async (req, res) => {
+		const swaggerJSON = await getCompiledSchema();
+		const clonedSwaggerJSON = structuredClone(swaggerJSON);
+		const origin = `${req.protocol}://${req.get("host")}`;
 
-			clonedSwaggerJSON.info = clonedSwaggerJSON.info || {};
-			clonedSwaggerJSON.info.version = PACKAGE.version;
-			if (!clonedSwaggerJSON.servers?.[0]) {
-				clonedSwaggerJSON.servers = [{}];
-			}
-			clonedSwaggerJSON.servers[0].url = `${origin}/api`;
-			res.status(200).send(clonedSwaggerJSON);
-		} catch (err) {
-			next(err);
+		clonedSwaggerJSON.info = clonedSwaggerJSON.info || {};
+		clonedSwaggerJSON.info.version = PACKAGE.version;
+		if (!clonedSwaggerJSON.servers?.[0]) {
+			clonedSwaggerJSON.servers = [{}];
 		}
+		clonedSwaggerJSON.servers[0].url = `${origin}/api`;
+		res.status(200).send(clonedSwaggerJSON);
 	});
 
 export default router;
