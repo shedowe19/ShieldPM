@@ -19,53 +19,45 @@ const router = express.Router({
  */
 router.use(jwtdecode());
 
-router.get("/", async (_req, res, next) => {
-	try {
-		const accessData = await res.locals.access.can("cloudflared_tunnels:list");
-		const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).orderBy("name", "ASC");
+router.get("/", async (_req, res) => {
+	const accessData = await res.locals.access.can("cloudflared_tunnels:list");
+	const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).orderBy("name", "ASC");
 
-		if (accessData.permission_visibility !== "all") {
-			query.where("owner_user_id", res.locals.access.token.getUserId(1));
-		}
-
-		const tunnels = await query;
-
-		// Debug log
-		tunnels.forEach((t) => {
-			if (t.status === 3) {
-				logger.info(`[API Debug] Tunnel ${t.id} (Status 3) Meta:`, JSON.stringify(t.meta));
-			}
-		});
-
-		res.status(200).send(tunnels);
-	} catch (err) {
-		next(err);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
 	}
+
+	const tunnels = await query;
+
+	// Debug log
+	tunnels.forEach((t) => {
+		if (t.status === 3) {
+			logger.info(`[API Debug] Tunnel ${t.id} (Status 3) Meta:`, JSON.stringify(t.meta));
+		}
+	});
+
+	res.status(200).send(tunnels);
 });
 
 /**
  * GET /api/nginx/cloudflared-tunnels/:id
  */
-router.get("/:id", async (req, res, next) => {
-	try {
-		const accessData = await res.locals.access.can("cloudflared_tunnels:get", req.params.id);
-		const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).where("id", req.params.id);
+router.get("/:id", async (req, res) => {
+	const accessData = await res.locals.access.can("cloudflared_tunnels:get", req.params.id);
+	const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).where("id", req.params.id);
 
-		if (accessData.permission_visibility !== "all") {
-			query.where("owner_user_id", res.locals.access.token.getUserId(1));
-		}
-
-		const tunnel = await query.first();
-
-		if (!tunnel) {
-			res.status(404).send({ error: "Tunnel not found" });
-			return;
-		}
-
-		res.status(200).send(tunnel);
-	} catch (err) {
-		next(err);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
 	}
+
+	const tunnel = await query.first();
+
+	if (!tunnel) {
+		res.status(404).send({ error: "Tunnel not found" });
+		return;
+	}
+
+	res.status(200).send(tunnel);
 });
 
 /**

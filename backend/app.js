@@ -150,10 +150,15 @@ app.use("/", mainRoutes);
 
 // production error handler
 // no stacktraces leaked to user
-app.use((err, _req, res, _) => {
+app.use((err, _req, res, next) => {
+	if (res.headersSent) {
+		return next(err);
+	}
+
+	const status = err.status || err.statusCode || 500;
 	const payload = {
 		error: {
-			code: err.status,
+			code: status,
 			message: err.public ? err.message : "Internal Error",
 		},
 	};
@@ -170,7 +175,7 @@ app.use((err, _req, res, _) => {
 		}
 	}
 
-	res.status(err.status || 500).send(payload);
+	return res.status(status).json(payload);
 });
 
 export default app;
