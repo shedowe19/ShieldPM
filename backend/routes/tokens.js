@@ -1,8 +1,10 @@
 import express from "express";
 import internalToken from "../internal/token.js";
+import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
+import TokenModel from "../models/token.js";
 import User from "../models/user.js";
 import { getValidationSchema } from "../schema/index.js";
 
@@ -286,18 +288,14 @@ router
 				});
 			}
 
-			// Verify the original token to get expiry/user info
-			// If it's invalid/expired, internalToken.getFreshToken logic or jwt verify would fail
-			// We can set res.locals.access to a dummy or decode it directly.
-			// The easiest way is to let the frontend parse it or just set it as the new cookie
-			// and let the next frontend get() call validate it. But frontend needs expire time.
-			// To get expire time quickly, we can just decode it:
-			const tokenParts = originalToken.split(".");
-			if (tokenParts.length !== 3) {
-				throw new Error("Invalid token format");
+			// Verify the original token to get expiry/user info securely
+			let payload;
+			try {
+				const Token = TokenModel();
+				payload = await Token.load(originalToken);
+			} catch (verifyErr) {
+				throw new errs.AuthError("Backup session token is invalid or expired");
 			}
-
-			const payload = JSON.parse(Buffer.from(tokenParts[1], "base64").toString("utf-8"));
 
 			// Set original token back to main cookie
 			res.cookie("shieldpm_jwt", originalToken, {
@@ -314,16 +312,17 @@ router
 			res.status(200).send({
 				expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
 				user: {
-					id: payload.id,
+					id: payload.attrs?.id || payload.id,
 				},
 			});
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			res.clearCookie("shieldpm_jwt_original");
-			res.status(400).send({
+			const code = err instanceof errs.AuthError ? 401 : 400;
+			res.status(code).send({
 				error: {
-					code: 400,
-					message: "Failed to restore session.",
+					code,
+					message: "Failed to restore session. Token invalid or expired.",
 				},
 			});
 		}

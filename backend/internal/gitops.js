@@ -265,11 +265,9 @@ const internalGitOps = {
 			"redirection-hosts",
 			"dead-hosts",
 			"streams",
-			"access-lists",
 			"certificates",
 			"users",
 			"settings",
-			"cloudflared-tunnels",
 			"ddns-providers",
 		];
 		for (const dir of dirs) {
@@ -319,17 +317,6 @@ const internalGitOps = {
 			exportedFiles.push(filePath);
 		}
 
-		// Export Access Lists (with items and clients - including hashed passwords)
-		const accessLists = await AccessList.query().where("is_deleted", 0).withGraphFetched("[items, clients]");
-		for (const list of accessLists) {
-			const filename = `${list.id}-${(list.name || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
-			const filePath = path.join(configDir, "access-lists", filename);
-			const exportData = internalGitOps.sanitizeForExport(list, ["is_deleted"]);
-			// Keep hashed passwords for full restore capability
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
-			exportedFiles.push(filePath);
-		}
-
 		// Export Certificates (database entries only, not the actual cert files)
 		const certificates = await Certificate.query().where("is_deleted", 0);
 		for (const cert of certificates) {
@@ -356,21 +343,6 @@ const internalGitOps = {
 			const filename = `${setting.id}.yaml`;
 			const filePath = path.join(configDir, "settings", filename);
 			const exportData = { ...setting };
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
-			exportedFiles.push(filePath);
-		}
-
-		// Export Cloudflared Tunnels (including decrypted tokens for restore)
-		const cloudflaredDir = path.join(configDir, "cloudflared-tunnels");
-		if (!fs.existsSync(cloudflaredDir)) {
-			fs.mkdirSync(cloudflaredDir, { recursive: true });
-		}
-		const tunnels = await CloudflaredTunnel.query().where("is_deleted", 0);
-		for (const tunnel of tunnels) {
-			const filename = `${tunnel.id}-${(tunnel.name || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
-			const filePath = path.join(cloudflaredDir, filename);
-			// Token is already decrypted by the model's $parseDatabaseJson
-			const exportData = internalGitOps.sanitizeForExport(tunnel, ["is_deleted"]);
 			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -428,8 +400,8 @@ const internalGitOps = {
 				if (!fs.existsSync(targetDir)) {
 					fs.mkdirSync(targetDir, { recursive: true });
 				}
-				// Copy cert files
-				const certFiles = ["fullchain.pem", "privkey.pem", "cert.pem", "chain.pem"];
+				// Copy cert files (exclude private keys)
+				const certFiles = ["fullchain.pem", "cert.pem", "chain.pem"];
 				for (const file of certFiles) {
 					const srcPath = path.join(domainDir, file);
 					const destPath = path.join(targetDir, file);
@@ -455,8 +427,10 @@ const internalGitOps = {
 				const stats = fs.statSync(srcPath);
 
 				if (stats.isFile()) {
-					fs.copyFileSync(srcPath, destPath);
-					exportedFiles.push(destPath);
+					if (!item.includes("privkey") && !item.endsWith(".key")) {
+						fs.copyFileSync(srcPath, destPath);
+						exportedFiles.push(destPath);
+					}
 				} else if (stats.isDirectory() && item.startsWith("npm-")) {
 					// Custom certs are often in folders like "npm-12"
 					if (!fs.existsSync(destPath)) {
@@ -464,11 +438,13 @@ const internalGitOps = {
 					}
 					const files = fs.readdirSync(srcPath);
 					for (const file of files) {
-						const srcFile = path.join(srcPath, file);
-						const destFile = path.join(destPath, file);
-						if (fs.statSync(srcFile).isFile()) {
-							fs.copyFileSync(srcFile, destFile);
-							exportedFiles.push(destFile);
+						if (!file.includes("privkey") && !file.endsWith(".key")) {
+							const srcFile = path.join(srcPath, file);
+							const destFile = path.join(destPath, file);
+							if (fs.statSync(srcFile).isFile()) {
+								fs.copyFileSync(srcFile, destFile);
+								exportedFiles.push(destFile);
+							}
 						}
 					}
 				}
@@ -483,8 +459,8 @@ const internalGitOps = {
 				fs.mkdirSync(internalTargetDir, { recursive: true });
 			}
 
-			// Export Root CA files
-			const rootFiles = ["root_ca.crt", "root_ca.key", "root_ca.srl"];
+			// Export Root CA files (exclude private keys)
+			const rootFiles = ["root_ca.crt", "root_ca.srl"];
 			for (const file of rootFiles) {
 				const srcPath = path.join(internalDir, file);
 				const destPath = path.join(internalTargetDir, file);
@@ -507,10 +483,12 @@ const internalGitOps = {
 					// Copy folder content
 					const files = fs.readdirSync(itemPath);
 					for (const file of files) {
-						const srcFile = path.join(itemPath, file);
-						const destFile = path.join(destDir, file);
-						fs.copyFileSync(srcFile, destFile);
-						exportedFiles.push(destFile);
+						if (!file.includes("privkey") && !file.endsWith(".key")) {
+							const srcFile = path.join(itemPath, file);
+							const destFile = path.join(destDir, file);
+							fs.copyFileSync(srcFile, destFile);
+							exportedFiles.push(destFile);
+						}
 					}
 				}
 			}

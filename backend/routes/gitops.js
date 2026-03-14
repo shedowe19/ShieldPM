@@ -26,10 +26,22 @@ const demoCheck = (_req, res, next) => {
 };
 
 /**
+ * Access check middleware
+ */
+const accessCheck = async (_req, res, next) => {
+	try {
+		await res.locals.access.can("settings:update", "gitops-config");
+		next();
+	} catch (err) {
+		next(err);
+	}
+};
+
+/**
  * GET /api/gitops/config
  * Get GitOps configuration
  */
-router.get("/config", jwtdecode(), async (req, res, next) => {
+router.get("/config", jwtdecode(), accessCheck, async (req, res, next) => {
 	try {
 		const config = await internalGitOps.getConfig();
 		res.status(200).json(config);
@@ -57,7 +69,7 @@ router.put("/config", jwtdecode(), demoCheck, async (req, res, next) => {
  * POST /api/gitops/test
  * Test repository connection
  */
-router.post("/test", jwtdecode(), demoCheck, async (req, res, next) => {
+router.post("/test", jwtdecode(), demoCheck, accessCheck, async (req, res, next) => {
 	try {
 		const result = await internalGitOps.testConnection();
 		res.status(200).json(result);
@@ -71,7 +83,7 @@ router.post("/test", jwtdecode(), demoCheck, async (req, res, next) => {
  * POST /api/gitops/export
  * Export current configuration to YAML files
  */
-router.post("/export", jwtdecode(), demoCheck, async (req, res, next) => {
+router.post("/export", jwtdecode(), demoCheck, accessCheck, async (req, res, next) => {
 	try {
 		const files = await internalGitOps.exportConfig();
 		res.status(200).json({
@@ -88,7 +100,7 @@ router.post("/export", jwtdecode(), demoCheck, async (req, res, next) => {
  * POST /api/gitops/push
  * Commit and push changes to remote
  */
-router.post("/push", jwtdecode(), demoCheck, async (req, res, next) => {
+router.post("/push", jwtdecode(), demoCheck, accessCheck, async (req, res, next) => {
 	try {
 		const { message } = req.body;
 		// First export, then push
@@ -105,7 +117,7 @@ router.post("/push", jwtdecode(), demoCheck, async (req, res, next) => {
  * POST /api/gitops/pull
  * Pull from remote repository
  */
-router.post("/pull", jwtdecode(), demoCheck, async (req, res, next) => {
+router.post("/pull", jwtdecode(), demoCheck, accessCheck, async (req, res, next) => {
 	try {
 		const result = await internalGitOps.pull();
 		res.status(200).json(result);
@@ -119,7 +131,7 @@ router.post("/pull", jwtdecode(), demoCheck, async (req, res, next) => {
  * GET /api/gitops/history
  * Get commit history
  */
-router.get("/history", jwtdecode(), async (req, res, next) => {
+router.get("/history", jwtdecode(), accessCheck, async (req, res, next) => {
 	try {
 		const limit = Number.parseInt(/** @type {string} */ (req.query.limit), 10) || 20;
 		const commits = await internalGitOps.getHistory(limit);
