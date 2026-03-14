@@ -172,28 +172,28 @@ router
 	 * for services like Job board and Worker.
 	 */
 	.get(jwtdecode(), async (req, res, next) => {
-			// Backwards compatibility: Check header first, then cookie
-			// Actually jwtdecode middleware handles header -> res.locals.access
-			// If we want to support cookie-based refresh loop:
-			// The `jwtdecode` middleware needs to be updated too, but for now let's assume valid access token is present
+		// Backwards compatibility: Check header first, then cookie
+		// Actually jwtdecode middleware handles header -> res.locals.access
+		// If we want to support cookie-based refresh loop:
+		// The `jwtdecode` middleware needs to be updated too, but for now let's assume valid access token is present
 
-			const data = await internalToken.getFreshToken(res.locals.access, {
-				expiry: typeof req.query.expiry !== "undefined" ? req.query.expiry : null,
-				scope: typeof req.query.scope !== "undefined" ? req.query.scope : null,
-			});
+		const data = await internalToken.getFreshToken(res.locals.access, {
+			expiry: typeof req.query.expiry !== "undefined" ? req.query.expiry : null,
+			scope: typeof req.query.scope !== "undefined" ? req.query.scope : null,
+		});
 
-			// Set new cookie
-			res.cookie("shieldpm_jwt", data.token, {
-				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
-				sameSite: "strict",
-				maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days (example, matches typical expiry)
-			});
+		// Set new cookie
+		res.cookie("shieldpm_jwt", data.token, {
+			httpOnly: true,
+			secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+			sameSite: "strict",
+			maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days (example, matches typical expiry)
+		});
 
-			// clear this temporary cookie following a successful oidc authentication
-			res.clearCookie("shieldpm_oidc");
-			res.status(200).send({ ...data, token: undefined }); // Don't send token in body
-		})
+		// clear this temporary cookie following a successful oidc authentication
+		res.clearCookie("shieldpm_oidc");
+		res.status(200).send({ ...data, token: undefined }); // Don't send token in body
+	})
 
 	/**
 	 * POST /tokens

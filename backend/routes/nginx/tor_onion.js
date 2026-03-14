@@ -55,10 +55,7 @@ router.get("/", async (_req, res) => {
  */
 router.get("/:id", async (req, res) => {
 	const accessData = await res.locals.access.can("tor_onions:get", req.params.id);
-	const query = TorOnion.query()
-		.andWhere("is_deleted", 0)
-		.where("id", req.params.id)
-		.withGraphFetched("proxy_host");
+	const query = TorOnion.query().andWhere("is_deleted", 0).where("id", req.params.id).withGraphFetched("proxy_host");
 
 	if (accessData.permission_visibility !== "all") {
 		query.where("owner_user_id", res.locals.access.token.getUserId(1));

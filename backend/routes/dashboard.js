@@ -27,9 +27,9 @@ router
 	 * Retrieve all dashboard notes
 	 */
 	.get(async (req, res, next) => {
-			const rows = await internalDashboardNote.getAll(res.locals.access);
-			res.status(200).send(rows);
-		})
+		const rows = await internalDashboardNote.getAll(res.locals.access);
+		res.status(200).send(rows);
+	})
 
 	/**
 	 * POST /api/dashboard/notes
@@ -37,10 +37,10 @@ router
 	 * Create a new dashboard note
 	 */
 	.post(async (req, res, next) => {
-			const payload = await apiValidator(getValidationSchema("/dashboard/notes", "post"), req.body);
-			const result = await internalDashboardNote.create(res.locals.access, payload);
-			res.status(201).send(result);
-		});
+		const payload = await apiValidator(getValidationSchema("/dashboard/notes", "post"), req.body);
+		const result = await internalDashboardNote.create(res.locals.access, payload);
+		res.status(201).send(result);
+	});
 
 /**
  * /api/dashboard/notes/:id
@@ -58,11 +58,11 @@ router
 	 * Update a note
 	 */
 	.put(async (req, res, next) => {
-			const payload = await apiValidator(getValidationSchema("/dashboard/notes/{noteID}", "put"), req.body);
-			payload.id = req.params.id; // Ensure ID from path is used
-			const result = await internalDashboardNote.update(res.locals.access, payload);
-			res.status(200).send(result);
-		})
+		const payload = await apiValidator(getValidationSchema("/dashboard/notes/{noteID}", "put"), req.body);
+		payload.id = req.params.id; // Ensure ID from path is used
+		const result = await internalDashboardNote.update(res.locals.access, payload);
+		res.status(200).send(result);
+	})
 
 	/**
 	 * DELETE /api/dashboard/notes/:id
@@ -70,8 +70,8 @@ router
 	 * Delete a note
 	 */
 	.delete(async (req, res, next) => {
-			const result = await internalDashboardNote.delete(res.locals.access, { id: req.params.id });
-			res.status(200).send(result);
-		});
+		const result = await internalDashboardNote.delete(res.locals.access, { id: req.params.id });
+		res.status(200).send(result);
+	});
 
 export default router;

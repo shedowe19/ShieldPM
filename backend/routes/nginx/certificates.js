@@ -83,26 +83,26 @@ router
 	 * Retrieve all certificates
 	 */
 	.get(async (req, res, next) => {
-			const data = await validator(
-				{
-					additionalProperties: false,
-					properties: {
-						expand: {
-							$ref: "common#/properties/expand",
-						},
-						query: {
-							$ref: "common#/properties/query",
-						},
+		const data = await validator(
+			{
+				additionalProperties: false,
+				properties: {
+					expand: {
+						$ref: "common#/properties/expand",
+					},
+					query: {
+						$ref: "common#/properties/query",
 					},
 				},
-				{
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-					query: typeof req.query.query === "string" ? req.query.query : null,
-				},
-			);
-			const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
-			res.status(200).send(rows);
-		})
+			},
+			{
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				query: typeof req.query.query === "string" ? req.query.query : null,
+			},
+		);
+		const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
+		res.status(200).send(rows);
+	})
 
 	/**
 	 * POST /api/nginx/certificates
@@ -110,11 +110,11 @@ router
 	 * Create a new certificate
 	 */
 	.post(async (req, res, next) => {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
-			req.setTimeout(900000); // 15 minutes timeout
-			const result = await internalCertificate.create(res.locals.access, payload);
-			res.status(201).send(result);
-		});
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
+		req.setTimeout(900000); // 15 minutes timeout
+		const result = await internalCertificate.create(res.locals.access, payload);
+		res.status(201).send(result);
+	});
 
 router
 	.route("/internal/client")
@@ -124,36 +124,36 @@ router
 	.all(createCertLimiter)
 	.all(jwtdecode())
 	.post(async (req, res, next) => {
-			// Basic validation inline for now, or add to schema later
-			const { common_name, password, years } = req.body;
-			if (!common_name || !password) {
-				throw new errs.ValidationError("Common Name and Password are required");
+		// Basic validation inline for now, or add to schema later
+		const { common_name, password, years } = req.body;
+		if (!common_name || !password) {
+			throw new errs.ValidationError("Common Name and Password are required");
+		}
+
+		// Create a temp dir for this generation
+		const tmpDir = `/tmp/client-cert-${Date.now()}`;
+
+		const p12Path = await internalPki.createClientCert(
+			{
+				common_name,
+				password,
+				years: Number(years) || 1,
+			},
+			tmpDir,
+		);
+
+		res.download(p12Path, `${common_name}.p12`, (err) => {
+			// Cleanup after download
+			try {
+				import("node:fs").then((fs) => fs.rmSync(tmpDir, { recursive: true, force: true }));
+			} catch (e) {
+				console.error("Cleanup failed", e);
 			}
-
-			// Create a temp dir for this generation
-			const tmpDir = `/tmp/client-cert-${Date.now()}`;
-
-			const p12Path = await internalPki.createClientCert(
-				{
-					common_name,
-					password,
-					years: Number(years) || 1,
-				},
-				tmpDir,
-			);
-
-			res.download(p12Path, `${common_name}.p12`, (err) => {
-				// Cleanup after download
-				try {
-					import("node:fs").then((fs) => fs.rmSync(tmpDir, { recursive: true, force: true }));
-				} catch (e) {
-					console.error("Cleanup failed", e);
-				}
-				if (err) {
-					next(err);
-				}
-			});
+			if (err) {
+				next(err);
+			}
 		});
+	});
 
 /**
  * /api/nginx/certificates/dns-providers
@@ -171,18 +171,18 @@ router
 	 * Get list of all supported DNS providers
 	 */
 	.get(async (req, res, next) => {
-			if (!res.locals.access.token.getUserId()) {
-				throw new errs.PermissionError("Login required");
-			}
-			const clean = Object.keys(dnsPlugins).map((key) => ({
-				id: key,
-				name: dnsPlugins[key].name,
-				credentials: dnsPlugins[key].credentials,
-			}));
+		if (!res.locals.access.token.getUserId()) {
+			throw new errs.PermissionError("Login required");
+		}
+		const clean = Object.keys(dnsPlugins).map((key) => ({
+			id: key,
+			name: dnsPlugins[key].name,
+			credentials: dnsPlugins[key].credentials,
+		}));
 
-			clean.sort((a, b) => a.name.localeCompare(b.name));
-			res.status(200).send(clean);
-		});
+		clean.sort((a, b) => a.name.localeCompare(b.name));
+		res.status(200).send(clean);
+	});
 
 /**
  * Test HTTP challenge for domains
@@ -202,12 +202,12 @@ router
 	 * Test HTTP challenge for domains
 	 */
 	.post(async (req, res, next) => {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), req.body);
-			req.setTimeout(60000); // 1 minute timeout
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), req.body);
+		req.setTimeout(60000); // 1 minute timeout
 
-			const result = await internalCertificate.testHttpsChallenge(res.locals.access, payload);
-			res.status(200).send(result);
-		});
+		const result = await internalCertificate.testHttpsChallenge(res.locals.access, payload);
+		res.status(200).send(result);
+	});
 
 /**
  * Validate Certs before saving
@@ -285,12 +285,12 @@ router
 	 * Updates a specific certificate
 	 */
 	.put(async (req, res, next) => {
-			const data = { id: req.params.certificate_id, ...req.body };
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), data);
+		const data = { id: req.params.certificate_id, ...req.body };
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), data);
 
-			const result = await internalCertificate.update(res.locals.access, payload);
-			res.status(201).send(result);
-		})
+		const result = await internalCertificate.update(res.locals.access, payload);
+		res.status(201).send(result);
+	})
 
 	/**
 	 * DELETE /api/nginx/certificates/123
@@ -298,11 +298,11 @@ router
 	 * Update and existing certificate
 	 */
 	.delete(async (req, res, next) => {
-			const result = await internalCertificate.delete(res.locals.access, {
-				id: Number.parseInt(req.params.certificate_id, 10),
-			});
-			res.status(200).send(result);
+		const result = await internalCertificate.delete(res.locals.access, {
+			id: Number.parseInt(req.params.certificate_id, 10),
 		});
+		res.status(200).send(result);
+	});
 
 /**
  * Upload Certs
@@ -388,11 +388,11 @@ router
 	 * Download certificate
 	 */
 	.post(async (req, res, next) => {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
-			const result = await internalCertificate.download(res.locals.access, {
-				id: Number.parseInt(payload.id, 10),
-			});
-			res.status(200).download(result.fileName);
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
+		const result = await internalCertificate.download(res.locals.access, {
+			id: Number.parseInt(payload.id, 10),
 		});
+		res.status(200).download(result.fileName);
+	});
 
 export default router;

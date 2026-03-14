@@ -63,26 +63,26 @@ router
 	 * Retrieve all users
 	 */
 	.get(async (req, res, next) => {
-			const data = await validator(
-				{
-					additionalProperties: false,
-					properties: {
-						expand: {
-							$ref: "common#/properties/expand",
-						},
-						query: {
-							$ref: "common#/properties/query",
-						},
+		const data = await validator(
+			{
+				additionalProperties: false,
+				properties: {
+					expand: {
+						$ref: "common#/properties/expand",
+					},
+					query: {
+						$ref: "common#/properties/query",
 					},
 				},
-				{
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-					query: typeof req.query.query === "string" ? req.query.query : null,
-				},
-			);
-			const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
-			res.status(200).send(users);
-		})
+			},
+			{
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				query: typeof req.query.query === "string" ? req.query.query : null,
+			},
+		);
+		const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
+		res.status(200).send(users);
+	})
 
 	/**
 	 * POST /api/users
@@ -170,32 +170,32 @@ router
 	 * Retrieve a specific user
 	 */
 	.get(async (req, res, next) => {
-			const data = await validator(
-				{
-					required: ["user_id"],
-					additionalProperties: false,
-					properties: {
-						user_id: {
-							$ref: "common#/properties/id",
-						},
-						expand: {
-							$ref: "common#/properties/expand",
-						},
+		const data = await validator(
+			{
+				required: ["user_id"],
+				additionalProperties: false,
+				properties: {
+					user_id: {
+						$ref: "common#/properties/id",
+					},
+					expand: {
+						$ref: "common#/properties/expand",
 					},
 				},
-				{
-					user_id: req.params.user_id,
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				},
-			);
+			},
+			{
+				user_id: req.params.user_id,
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+			},
+		);
 
-			const user = await internalUser.get(res.locals.access, {
-				id: data.user_id,
-				expand: data.expand,
-				omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
-			});
-			res.status(200).send(user);
-		})
+		const user = await internalUser.get(res.locals.access, {
+			id: data.user_id,
+			expand: data.expand,
+			omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
+		});
+		res.status(200).send(user);
+	})
 
 	/**
 	 * PUT /api/users/123
@@ -203,11 +203,11 @@ router
 	 * Update and existing user
 	 */
 	.put(async (req, res, next) => {
-			const payload = await apiValidator(getValidationSchema("/users/{userID}", "put"), req.body);
-			payload.id = req.params.user_id;
-			const result = await internalUser.update(res.locals.access, payload);
-			res.status(200).send(result);
-		})
+		const payload = await apiValidator(getValidationSchema("/users/{userID}", "put"), req.body);
+		payload.id = req.params.user_id;
+		const result = await internalUser.update(res.locals.access, payload);
+		res.status(200).send(result);
+	})
 
 	/**
 	 * DELETE /api/users/123
@@ -215,11 +215,11 @@ router
 	 * Update and existing user
 	 */
 	.delete(async (req, res, next) => {
-			const result = await internalUser.delete(res.locals.access, {
-				id: req.params.user_id,
-			});
-			res.status(200).send(result);
+		const result = await internalUser.delete(res.locals.access, {
+			id: req.params.user_id,
 		});
+		res.status(200).send(result);
+	});
 
 /**
  * Avatar Upload
@@ -233,17 +233,17 @@ router
 	.all(jwtdecode())
 	.all(userIdFromMe)
 	.post(avatarUpload, async (req, res, next) => {
-			// Check if file exists in req.files
-			if (!req.files || Object.keys(req.files).length === 0) {
-				throw new errs.ValidationError("No files were uploaded.");
-			}
+		// Check if file exists in req.files
+		if (!req.files || Object.keys(req.files).length === 0) {
+			throw new errs.ValidationError("No files were uploaded.");
+		}
 
-			const result = await internalUser.uploadAvatar(res.locals.access, {
-				id: req.params.user_id,
-				file: req.files.avatar || req.files.file, // Support 'avatar' or 'file' field
-			});
-			res.status(200).send(result);
+		const result = await internalUser.uploadAvatar(res.locals.access, {
+			id: req.params.user_id,
+			file: req.files.avatar || req.files.file, // Support 'avatar' or 'file' field
 		});
+		res.status(200).send(result);
+	});
 
 /**
  * Get Avatar Image
@@ -335,30 +335,30 @@ router
 	})
 	.all(jwtdecode())
 	.post(loginAsRateLimiter, async (req, res) => {
-			// Save the original session to allow "Return to Admin" logic on logout
-			if (req.cookies?.shieldpm_jwt) {
-				res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
-					httpOnly: true,
-					secure: req.secure || req.headers["x-forwarded-proto"] === "https",
-					sameSite: "strict",
-					// Backup cookie lives longer or same length
-					maxAge: 1000 * 60 * 60 * 24 * 30,
-				});
-			}
-
-			const result = await internalUser.loginAs(res.locals.access, {
-				id: Number.parseInt(req.params.user_id, 10),
-			});
-
-			// Set Cookie
-			res.cookie("shieldpm_jwt", result.token, {
+		// Save the original session to allow "Return to Admin" logic on logout
+		if (req.cookies?.shieldpm_jwt) {
+			res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
 				httpOnly: true,
 				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
 				sameSite: "strict",
-				maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
+				// Backup cookie lives longer or same length
+				maxAge: 1000 * 60 * 60 * 24 * 30,
 			});
+		}
 
-			res.status(200).send({ ...result, token: undefined });
+		const result = await internalUser.loginAs(res.locals.access, {
+			id: Number.parseInt(req.params.user_id, 10),
 		});
+
+		// Set Cookie
+		res.cookie("shieldpm_jwt", result.token, {
+			httpOnly: true,
+			secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+			sameSite: "strict",
+			maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
+		});
+
+		res.status(200).send({ ...result, token: undefined });
+	});
 
 export default router;
