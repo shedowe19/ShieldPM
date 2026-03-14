@@ -229,24 +229,20 @@ router
 	 * Update and existing user
 	 */
 	.delete(async (req, res, next) => {
-		try {
-			const params = await validator(
-				{
-					required: ["user_id"],
-					additionalProperties: false,
-					properties: {
-						user_id: { $ref: "common#/properties/id" },
-					},
+		const params = await validator(
+			{
+				required: ["user_id"],
+				additionalProperties: false,
+				properties: {
+					user_id: { $ref: "common#/properties/id" },
 				},
-				{ user_id: req.params.user_id },
-			);
-			const result = await internalUser.delete(res.locals.access, {
-				id: params.user_id,
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			next(err);
-		}
+			},
+			{ user_id: req.params.user_id },
+		);
+		const result = await internalUser.delete(res.locals.access, {
+			id: params.user_id,
+		});
+		res.status(200).send(result);
 	});
 
 /**
