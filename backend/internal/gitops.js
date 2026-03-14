@@ -1017,8 +1017,9 @@ const internalGitOps = {
 								try {
 									await restoreFile(path.join(srcPath, file), path.join(destPath, file));
 								} catch (err) {
-									logger.error(`GitOps restore failed for ${path.join(srcPath, file)} -> ${path.join(destPath, file)}: ${err instanceof Error ? err.message : err}`);
-									continue;
+									logger.error(
+										`GitOps restore failed for ${path.join(srcPath, file)} -> ${path.join(destPath, file)}: ${err instanceof Error ? err.message : err}`,
+									);
 								}
 							}
 						}
