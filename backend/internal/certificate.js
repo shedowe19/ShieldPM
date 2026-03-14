@@ -355,19 +355,20 @@ const internalCertificate = {
 			throw new error.ItemNotFoundError(`Certificate ${certificate.nice_name} does not exist on disk`);
 		}
 
-		const certFiles = fs
-			.readdirSync(zipDirectory)
-			.filter((fn) => fn.endsWith(".pem") || fn.endsWith(".crt") || fn.endsWith(".key"))
-			.map((fn) => fs.realpathSync(path.join(zipDirectory, fn)));
+		const certFiles = (await fs.promises.readdir(zipDirectory))
+			.filter((fn) => fn.endsWith(".pem") || fn.endsWith(".crt") || fn.endsWith(".key"));
+		const certFilesWithRealPaths = await Promise.all(
+			certFiles.map((fn) => fs.promises.realpath(path.join(zipDirectory, fn))),
+		);
 
-		if (certFiles.length === 0) {
+		if (certFilesWithRealPaths.length === 0) {
 			throw new error.ItemNotFoundError(`No certificate files found for ${certificate.nice_name}`);
 		}
 
 		const downloadName = `npm-${data.id}-${Date.now()}.zip`;
 		const opName = `/tmp/${downloadName}`;
 
-		await internalCertificate.zipFiles(certFiles, opName);
+		await internalCertificate.zipFiles(certFilesWithRealPaths, opName);
 		debug(logger, "zip completed : ", opName);
 		return {
 			fileName: opName,
@@ -508,7 +509,7 @@ const internalCertificate = {
 
 		const dir = `/data/tls/custom/npm-${certificate.id}`;
 
-		return new Promise((resolve, reject) => {
+		return new Promise(async (resolve, reject) => {
 			if (certificate.provider === "letsencrypt" || certificate.provider === "internal") {
 				reject(new Error("Refusing to write certbot/internal certs here"));
 				return;
@@ -521,7 +522,7 @@ const internalCertificate = {
 
 			try {
 				if (!fs.existsSync(dir)) {
-					fs.mkdirSync(dir);
+					await fs.promises.mkdir(dir);
 				}
 			} catch (err) {
 				reject(err);

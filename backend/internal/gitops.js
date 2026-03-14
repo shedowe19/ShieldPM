@@ -46,9 +46,9 @@ const CONFIG_SUBDIR = "shieldpm-config";
 /**
  * Ensures the GitOps directory exists
  */
-const ensureDir = () => {
+const ensureDir = async () => {
 	if (!fs.existsSync(GITOPS_DIR)) {
-		fs.mkdirSync(GITOPS_DIR, { recursive: true });
+		await fs.promises.mkdir(GITOPS_DIR, { recursive: true });
 	}
 };
 
@@ -176,11 +176,11 @@ const internalGitOps = {
 	 * @returns {Promise<void>}
 	 */
 	initRepo: async () => {
-		ensureDir();
+		await ensureDir();
 		const configDir = getConfigDir();
 
 		if (!fs.existsSync(configDir)) {
-			fs.mkdirSync(configDir, { recursive: true });
+			await fs.promises.mkdir(configDir, { recursive: true });
 		}
 
 		const gitDir = path.join(GITOPS_DIR, ".git");
@@ -273,7 +273,7 @@ const internalGitOps = {
 		for (const dir of dirs) {
 			const dirPath = path.join(configDir, dir);
 			if (!fs.existsSync(dirPath)) {
-				fs.mkdirSync(dirPath, { recursive: true });
+				await fs.promises.mkdir(dirPath, { recursive: true });
 			}
 		}
 
@@ -283,7 +283,7 @@ const internalGitOps = {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "proxy-hosts", filename);
 			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -293,7 +293,7 @@ const internalGitOps = {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "redirection-hosts", filename);
 			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -303,7 +303,7 @@ const internalGitOps = {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "dead-hosts", filename);
 			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -313,7 +313,7 @@ const internalGitOps = {
 			const filename = `${stream.id}-${stream.incoming_port || "unknown"}.yaml`;
 			const filePath = path.join(configDir, "streams", filename);
 			const exportData = internalGitOps.sanitizeForExport(stream, ["is_deleted"]);
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -323,7 +323,7 @@ const internalGitOps = {
 			const filename = `${cert.id}-${(cert.nice_name || cert.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "certificates", filename);
 			const exportData = internalGitOps.sanitizeForExport(cert, ["is_deleted"]);
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -333,7 +333,7 @@ const internalGitOps = {
 			const filename = `${user.id}-${(user.nickname || user.email || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "users", filename);
 			const exportData = internalGitOps.sanitizeForExport(user, ["is_deleted"]);
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -343,7 +343,7 @@ const internalGitOps = {
 			const filename = `${setting.id}.yaml`;
 			const filePath = path.join(configDir, "settings", filename);
 			const exportData = { ...setting };
-			fs.writeFileSync(filePath, yaml.dump(exportData, { indent: 2 }));
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -352,28 +352,28 @@ const internalGitOps = {
 
 		// Prune stale files (files that exist in the config dir but were not just exported)
 		// This ensures that deleted items are removed from the git repository
-		const pruneDirectory = (dir) => {
+		const pruneDirectory = async (dir) => {
 			if (!fs.existsSync(dir)) return;
-			const items = fs.readdirSync(dir);
+			const items = await fs.promises.readdir(dir);
 			for (const item of items) {
 				const fullPath = path.join(dir, item);
 				const stat = fs.statSync(fullPath);
 				if (stat.isDirectory()) {
-					pruneDirectory(fullPath);
+					await pruneDirectory(fullPath);
 					// If empty after prune, delete dir
-					if (fs.readdirSync(fullPath).length === 0) {
-						fs.rmdirSync(fullPath);
+					if ((await fs.promises.readdir(fullPath)).length === 0) {
+						await fs.promises.rmdir(fullPath);
 					}
 				} else {
 					if (!exportedFiles.includes(fullPath)) {
-						fs.unlinkSync(fullPath);
+						await fs.promises.unlink(fullPath);
 						logger.info(`GitOps: Pruned stale file: ${fullPath.replace(GITOPS_DIR, "")}`);
 					}
 				}
 			}
 		};
 
-		pruneDirectory(configDir);
+		await pruneDirectory(configDir);
 
 		logger.info(`Exported ${exportedFiles.length} configuration files`);
 		return exportedFiles;
@@ -387,18 +387,18 @@ const internalGitOps = {
 	exportCertificateFiles: async (configDir, exportedFiles) => {
 		const certFilesDir = path.join(configDir, "certificate-files");
 		if (!fs.existsSync(certFilesDir)) {
-			fs.mkdirSync(certFilesDir, { recursive: true });
+			await fs.promises.mkdir(certFilesDir, { recursive: true });
 		}
 
 		// Export Let's Encrypt certificates
 		const letsencryptDir = "/data/tls/certbot/live";
 		if (fs.existsSync(letsencryptDir)) {
-			const domains = fs.readdirSync(letsencryptDir).filter((d) => !d.startsWith("."));
+			const domains = (await fs.promises.readdir(letsencryptDir)).filter((d) => !d.startsWith("."));
 			for (const domain of domains) {
 				const domainDir = path.join(letsencryptDir, domain);
 				const targetDir = path.join(certFilesDir, "letsencrypt", domain);
 				if (!fs.existsSync(targetDir)) {
-					fs.mkdirSync(targetDir, { recursive: true });
+					await fs.promises.mkdir(targetDir, { recursive: true });
 				}
 				// Copy cert files (exclude private keys)
 				const certFiles = ["fullchain.pem", "cert.pem", "chain.pem"];
@@ -416,10 +416,10 @@ const internalGitOps = {
 		// Export custom certificates
 		const customDir = "/data/tls/custom";
 		if (fs.existsSync(customDir)) {
-			const items = fs.readdirSync(customDir);
+			const items = await fs.promises.readdir(customDir);
 			const customTargetDir = path.join(certFilesDir, "custom");
 			if (!fs.existsSync(customTargetDir)) {
-				fs.mkdirSync(customTargetDir, { recursive: true });
+				await fs.promises.mkdir(customTargetDir, { recursive: true });
 			}
 			for (const item of items) {
 				const srcPath = path.join(customDir, item);
@@ -434,9 +434,9 @@ const internalGitOps = {
 				} else if (stats.isDirectory() && item.startsWith("npm-")) {
 					// Custom certs are often in folders like "npm-12"
 					if (!fs.existsSync(destPath)) {
-						fs.mkdirSync(destPath, { recursive: true });
+						await fs.promises.mkdir(destPath, { recursive: true });
 					}
-					const files = fs.readdirSync(srcPath);
+					const files = await fs.promises.readdir(srcPath);
 					for (const file of files) {
 						if (!file.includes("privkey") && !file.endsWith(".key")) {
 							const srcFile = path.join(srcPath, file);
@@ -456,7 +456,7 @@ const internalGitOps = {
 		if (fs.existsSync(internalDir)) {
 			const internalTargetDir = path.join(certFilesDir, "internal");
 			if (!fs.existsSync(internalTargetDir)) {
-				fs.mkdirSync(internalTargetDir, { recursive: true });
+				await fs.promises.mkdir(internalTargetDir, { recursive: true });
 			}
 
 			// Export Root CA files (exclude private keys)
@@ -471,17 +471,17 @@ const internalGitOps = {
 			}
 
 			// Export leaf cert directories (npm-*)
-			const items = fs.readdirSync(internalDir);
+			const items = await fs.promises.readdir(internalDir);
 			for (const item of items) {
 				const itemPath = path.join(internalDir, item);
 				if (fs.statSync(itemPath).isDirectory() && item.startsWith("npm-")) {
 					const destDir = path.join(internalTargetDir, item);
 					if (!fs.existsSync(destDir)) {
-						fs.mkdirSync(destDir, { recursive: true });
+						await fs.promises.mkdir(destDir, { recursive: true });
 					}
 
 					// Copy folder content
-					const files = fs.readdirSync(itemPath);
+					const files = await fs.promises.readdir(itemPath);
 					for (const file of files) {
 						if (!file.includes("privkey") && !file.endsWith(".key")) {
 							const srcFile = path.join(itemPath, file);
@@ -964,14 +964,14 @@ const internalGitOps = {
 				// Restore Let's Encrypt
 				const leDir = path.join(certFilesDir, "letsencrypt");
 				if (fs.existsSync(leDir)) {
-					const domains = fs.readdirSync(leDir);
+					const domains = await fs.promises.readdir(leDir);
 					for (const domain of domains) {
 						const srcDir = path.join(leDir, domain);
 						const targetDir = path.join("/data/tls/certbot/live", domain);
 						if (!fs.existsSync(targetDir)) {
-							fs.mkdirSync(targetDir, { recursive: true });
+							await fs.promises.mkdir(targetDir, { recursive: true });
 						}
-						const files = fs.readdirSync(srcDir);
+						const files = await fs.promises.readdir(srcDir);
 						for (const file of files) {
 							restoreFile(path.join(srcDir, file), path.join(targetDir, file));
 						}
@@ -983,9 +983,9 @@ const internalGitOps = {
 				if (fs.existsSync(customDir)) {
 					const targetDir = "/data/tls/custom";
 					if (!fs.existsSync(targetDir)) {
-						fs.mkdirSync(targetDir, { recursive: true });
+						await fs.promises.mkdir(targetDir, { recursive: true });
 					}
-					const items = fs.readdirSync(customDir);
+					const items = await fs.promises.readdir(customDir);
 					for (const item of items) {
 						const srcPath = path.join(customDir, item);
 						const destPath = path.join(targetDir, item);
@@ -995,9 +995,9 @@ const internalGitOps = {
 							restoreFile(srcPath, destPath);
 						} else if (stats.isDirectory() && item.startsWith("npm-")) {
 							if (!fs.existsSync(destPath)) {
-								fs.mkdirSync(destPath, { recursive: true });
+								await fs.promises.mkdir(destPath, { recursive: true });
 							}
-							const files = fs.readdirSync(srcPath);
+							const files = await fs.promises.readdir(srcPath);
 							for (const file of files) {
 								restoreFile(path.join(srcPath, file), path.join(destPath, file));
 							}
@@ -1010,10 +1010,10 @@ const internalGitOps = {
 				if (fs.existsSync(internalDir)) {
 					const targetBaseDir = "/data/tls/internal";
 					if (!fs.existsSync(targetBaseDir)) {
-						fs.mkdirSync(targetBaseDir, { recursive: true });
+						await fs.promises.mkdir(targetBaseDir, { recursive: true });
 					}
 
-					const internalItems = fs.readdirSync(internalDir);
+					const internalItems = await fs.promises.readdir(internalDir);
 					for (const item of internalItems) {
 						const srcPath = path.join(internalDir, item);
 						const destPath = path.join(targetBaseDir, item);
@@ -1024,9 +1024,9 @@ const internalGitOps = {
 						} else if (stat.isDirectory() && item.startsWith("npm-")) {
 							const destDir = path.join(targetBaseDir, item);
 							if (!fs.existsSync(destDir)) {
-								fs.mkdirSync(destDir, { recursive: true });
+								await fs.promises.mkdir(destDir, { recursive: true });
 							}
-							const files = fs.readdirSync(srcPath);
+							const files = await fs.promises.readdir(srcPath);
 							for (const file of files) {
 								restoreFile(path.join(srcPath, file), path.join(destDir, file));
 							}
