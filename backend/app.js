@@ -130,7 +130,9 @@ app.use(express.urlencoded({ extended: true }));
 app.disable("x-powered-by");
 app.set("trust proxy", TRUST_PROXY);
 app.enable("strict routing");
-logger.info(`Express trust proxy configured as: ${typeof TRUST_PROXY === "string" ? TRUST_PROXY : JSON.stringify(TRUST_PROXY)}`);
+logger.info(
+	`Express trust proxy configured as: ${typeof TRUST_PROXY === "string" ? TRUST_PROXY : JSON.stringify(TRUST_PROXY)}`,
+);
 
 // pretty print JSON when not live
 app.set("json spaces", 2);

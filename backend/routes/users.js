@@ -115,7 +115,9 @@ router
 					body.roles.push("admin");
 				}
 			} else if (!currentUserId) {
-				throw new errs.PermissionError("Initial setup is already complete. Authenticated user creation is required.");
+				throw new errs.PermissionError(
+					"Initial setup is already complete. Authenticated user creation is required.",
+				);
 			}
 
 			const payload = await apiValidator(getValidationSchema("/users", "post"), body);

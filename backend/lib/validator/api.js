@@ -30,7 +30,9 @@ const apiValidator = async (schema, payload /*, description*/) => {
 		const lowerConfig = payload.advanced_config.toLowerCase();
 		for (const keyword of toxics) {
 			if (lowerConfig.includes(keyword)) {
-				throw new errs.ValidationError(`Security restriction: Toxic keyword '${keyword}' is not allowed in advanced_config.`);
+				throw new errs.ValidationError(
+					`Security restriction: Toxic keyword '${keyword}' is not allowed in advanced_config.`,
+				);
 			}
 		}
 	}

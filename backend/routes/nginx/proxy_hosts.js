@@ -111,8 +111,8 @@ router
 			},
 		);
 		const row = await internalProxyHost.get(res.locals.access, {
-				id: Number.parseInt(data.host_id, 10),
-				expand: data.expand,
+			id: Number.parseInt(data.host_id, 10),
+			expand: data.expand,
 		});
 		res.status(200).send(row);
 	})

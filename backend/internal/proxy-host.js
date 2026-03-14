@@ -564,7 +564,7 @@ const internalProxyHost = {
 
 		// Calculate offset
 		const offset = (page - 1) * limit;
-		
+
 		// Use Objection's page/limit or knex limit/offset.
 		// Objection's `.page(pageIndex, limit)` is 0-indexed.
 		const result = await query.page(page - 1, limit);

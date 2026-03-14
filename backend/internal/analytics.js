@@ -245,9 +245,7 @@ class AnalyticsService {
 						"coalesce(status_code_5xx, 0) + excluded.status_code_5xx",
 					),
 					bytes_sent: AnalyticCount.knex().raw("coalesce(bytes_sent, 0) + excluded.bytes_sent"),
-					request_count: AnalyticCount.knex().raw(
-						"coalesce(request_count, 0) + excluded.request_count",
-					),
+					request_count: AnalyticCount.knex().raw("coalesce(request_count, 0) + excluded.request_count"),
 				});
 		}
 	}

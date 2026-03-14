@@ -72,9 +72,7 @@ const cleanupExpiredLoginAttempts = async (now = Date.now()) => {
 
 const getLoginAttemptState = async (scope, identifier, now = Date.now()) => {
 	await ensureLoginAttemptStorage();
-	const record = await getLoginAttemptKnex()(LOGIN_ATTEMPT_TABLE)
-		.where({ scope, identifier })
-		.first();
+	const record = await getLoginAttemptKnex()(LOGIN_ATTEMPT_TABLE).where({ scope, identifier }).first();
 
 	if (!record) {
 		return { count: 0, blockedUntil: 0 };
