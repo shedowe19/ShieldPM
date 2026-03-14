@@ -63,7 +63,6 @@ router
 	 * Retrieve all users
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const data = await validator(
 				{
 					additionalProperties: false,
@@ -83,11 +82,7 @@ router
 			);
 			const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
 			res.status(200).send(users);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * POST /api/users
@@ -175,7 +170,6 @@ router
 	 * Retrieve a specific user
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const data = await validator(
 				{
 					required: ["user_id"],
@@ -201,11 +195,7 @@ router
 				omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
 			});
 			res.status(200).send(user);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * PUT /api/users/123
@@ -213,16 +203,11 @@ router
 	 * Update and existing user
 	 */
 	.put(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/users/{userID}", "put"), req.body);
 			payload.id = req.params.user_id;
 			const result = await internalUser.update(res.locals.access, payload);
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * DELETE /api/users/123
@@ -230,16 +215,11 @@ router
 	 * Update and existing user
 	 */
 	.delete(async (req, res, next) => {
-		try {
 			const result = await internalUser.delete(res.locals.access, {
 				id: req.params.user_id,
 			});
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Avatar Upload
@@ -253,7 +233,6 @@ router
 	.all(jwtdecode())
 	.all(userIdFromMe)
 	.post(avatarUpload, async (req, res, next) => {
-		try {
 			// Check if file exists in req.files
 			if (!req.files || Object.keys(req.files).length === 0) {
 				throw new errs.ValidationError("No files were uploaded.");
@@ -264,11 +243,7 @@ router
 				file: req.files.avatar || req.files.file, // Support 'avatar' or 'file' field
 			});
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Get Avatar Image
@@ -316,16 +291,11 @@ router
 	 *
 	 * Update password for a user
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/users/{userID}/auth", "put"), req.body);
-			payload.id = req.params.user_id;
-			const result = await internalUser.setPassword(res.locals.access, payload);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.put(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/users/{userID}/auth", "put"), req.body);
+		payload.id = req.params.user_id;
+		const result = await internalUser.setPassword(res.locals.access, payload);
+		res.status(200).send(result);
 	});
 
 /**
@@ -346,16 +316,11 @@ router
 	 *
 	 * Set some or all permissions for a user
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/users/{userID}/permissions", "put"), req.body);
-			payload.id = req.params.user_id;
-			const result = await internalUser.setPermissions(res.locals.access, payload);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.put(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/users/{userID}/permissions", "put"), req.body);
+		payload.id = req.params.user_id;
+		const result = await internalUser.setPermissions(res.locals.access, payload);
+		res.status(200).send(result);
 	});
 
 /**
@@ -369,8 +334,7 @@ router
 		res.sendStatus(204);
 	})
 	.all(jwtdecode())
-	.post(loginAsRateLimiter, async (req, res, next) => {
-		try {
+	.post(loginAsRateLimiter, async (req, res) => {
 			// Save the original session to allow "Return to Admin" logic on logout
 			if (req.cookies?.shieldpm_jwt) {
 				res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
@@ -395,10 +359,6 @@ router
 			});
 
 			res.status(200).send({ ...result, token: undefined });
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 export default router;

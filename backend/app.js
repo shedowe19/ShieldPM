@@ -155,7 +155,8 @@ app.use((err, _req, res, next) => {
 		return next(err);
 	}
 
-	const status = err.status || err.statusCode || 500;
+	const rawStatus = Number.parseInt(err.status || err.statusCode, 10);
+	const status = Number.isInteger(rawStatus) && rawStatus >= 100 && rawStatus <= 599 ? rawStatus : 500;
 	const payload = {
 		error: {
 			code: status,

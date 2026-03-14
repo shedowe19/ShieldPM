@@ -172,7 +172,6 @@ router
 	 * for services like Job board and Worker.
 	 */
 	.get(jwtdecode(), async (req, res, next) => {
-		try {
 			// Backwards compatibility: Check header first, then cookie
 			// Actually jwtdecode middleware handles header -> res.locals.access
 			// If we want to support cookie-based refresh loop:
@@ -194,11 +193,7 @@ router
 			// clear this temporary cookie following a successful oidc authentication
 			res.clearCookie("shieldpm_oidc");
 			res.status(200).send({ ...data, token: undefined }); // Don't send token in body
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * POST /tokens

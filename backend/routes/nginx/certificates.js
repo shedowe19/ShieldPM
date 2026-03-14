@@ -83,7 +83,6 @@ router
 	 * Retrieve all certificates
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const data = await validator(
 				{
 					additionalProperties: false,
@@ -103,11 +102,7 @@ router
 			);
 			const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
 			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * POST /api/nginx/certificates
@@ -115,16 +110,11 @@ router
 	 * Create a new certificate
 	 */
 	.post(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
 			req.setTimeout(900000); // 15 minutes timeout
 			const result = await internalCertificate.create(res.locals.access, payload);
 			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 router
 	.route("/internal/client")
@@ -134,7 +124,6 @@ router
 	.all(createCertLimiter)
 	.all(jwtdecode())
 	.post(async (req, res, next) => {
-		try {
 			// Basic validation inline for now, or add to schema later
 			const { common_name, password, years } = req.body;
 			if (!common_name || !password) {
@@ -164,11 +153,7 @@ router
 					next(err);
 				}
 			});
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * /api/nginx/certificates/dns-providers
@@ -186,7 +171,6 @@ router
 	 * Get list of all supported DNS providers
 	 */
 	.get(async (req, res, next) => {
-		try {
 			if (!res.locals.access.token.getUserId()) {
 				throw new errs.PermissionError("Login required");
 			}
@@ -198,11 +182,7 @@ router
 
 			clean.sort((a, b) => a.name.localeCompare(b.name));
 			res.status(200).send(clean);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Test HTTP challenge for domains
@@ -222,17 +202,12 @@ router
 	 * Test HTTP challenge for domains
 	 */
 	.post(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), req.body);
 			req.setTimeout(60000); // 1 minute timeout
 
 			const result = await internalCertificate.testHttpsChallenge(res.locals.access, payload);
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Validate Certs before saving
@@ -310,17 +285,12 @@ router
 	 * Updates a specific certificate
 	 */
 	.put(async (req, res, next) => {
-		try {
 			const data = { id: req.params.certificate_id, ...req.body };
 			const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), data);
 
 			const result = await internalCertificate.update(res.locals.access, payload);
 			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * DELETE /api/nginx/certificates/123
@@ -328,16 +298,11 @@ router
 	 * Update and existing certificate
 	 */
 	.delete(async (req, res, next) => {
-		try {
 			const result = await internalCertificate.delete(res.locals.access, {
 				id: Number.parseInt(req.params.certificate_id, 10),
 			});
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Upload Certs
@@ -423,16 +388,11 @@ router
 	 * Download certificate
 	 */
 	.post(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
 			const result = await internalCertificate.download(res.locals.access, {
 				id: Number.parseInt(payload.id, 10),
 			});
 			res.status(200).download(result.fileName);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 export default router;

@@ -28,14 +28,9 @@ router
 	 * Retrieve all settings
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const rows = await internalSetting.getAll(res.locals.access);
 			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Specific setting
@@ -55,7 +50,6 @@ router
 	 * Retrieve a specific setting
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const data = await validator(
 				{
 					required: ["setting_id"],
@@ -89,11 +83,7 @@ router
 				res.clearCookie("shieldpm_oidc_error");
 			}
 			res.status(200).send(row);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * PUT /api/settings/something
@@ -101,15 +91,10 @@ router
 	 * Update and existing setting
 	 */
 	.put(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
 			payload.id = req.params.setting_id;
 			const result = await internalSetting.update(res.locals.access, payload);
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 export default router;

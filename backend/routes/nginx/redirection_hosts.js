@@ -28,7 +28,6 @@ router
 	 * Retrieve all redirection-hosts
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const data = await validator(
 				{
 					additionalProperties: false,
@@ -48,11 +47,7 @@ router
 			);
 			const rows = await internalRedirectionHost.getAll(res.locals.access, data.expand, data.query);
 			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * POST /api/nginx/redirection-hosts
@@ -60,15 +55,10 @@ router
 	 * Create a new redirection-host
 	 */
 	.post(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/nginx/redirection-hosts", "post"), req.body);
 			const result = await internalRedirectionHost.create(res.locals.access, payload);
 			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Specific redirection-host
@@ -88,7 +78,6 @@ router
 	 * Retrieve a specific redirection-host
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const data = await validator(
 				{
 					required: ["host_id"],
@@ -112,11 +101,7 @@ router
 				expand: data.expand,
 			});
 			res.status(200).send(row);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * PUT /api/nginx/redirection-hosts/123
@@ -124,7 +109,6 @@ router
 	 * Update and existing redirection-host
 	 */
 	.put(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(
 				getValidationSchema("/nginx/redirection-hosts/{hostID}", "put"),
 				req.body,
@@ -132,11 +116,7 @@ router
 			payload.id = Number.parseInt(req.params.host_id, 10);
 			const result = await internalRedirectionHost.update(res.locals.access, payload);
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * DELETE /api/nginx/redirection-hosts/123
@@ -144,16 +124,11 @@ router
 	 * Update and existing redirection-host
 	 */
 	.delete(async (req, res, next) => {
-		try {
 			const result = await internalRedirectionHost.delete(res.locals.access, {
 				id: Number.parseInt(req.params.host_id, 10),
 			});
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Enable redirection-host
@@ -171,16 +146,11 @@ router
 	 * POST /api/nginx/redirection-hosts/123/enable
 	 */
 	.post(async (req, res, next) => {
-		try {
 			const result = await internalRedirectionHost.enable(res.locals.access, {
 				id: Number.parseInt(req.params.host_id, 10),
 			});
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * Disable redirection-host
@@ -198,15 +168,10 @@ router
 	 * POST /api/nginx/redirection-hosts/123/disable
 	 */
 	.post(async (req, res, next) => {
-		try {
 			const result = await internalRedirectionHost.disable(res.locals.access, {
 				id: Number.parseInt(req.params.host_id, 10),
 			});
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 export default router;

@@ -27,14 +27,9 @@ router
 	 * Retrieve all dashboard notes
 	 */
 	.get(async (req, res, next) => {
-		try {
 			const rows = await internalDashboardNote.getAll(res.locals.access);
 			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * POST /api/dashboard/notes
@@ -42,15 +37,10 @@ router
 	 * Create a new dashboard note
 	 */
 	.post(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/dashboard/notes", "post"), req.body);
 			const result = await internalDashboardNote.create(res.locals.access, payload);
 			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 /**
  * /api/dashboard/notes/:id
@@ -68,16 +58,11 @@ router
 	 * Update a note
 	 */
 	.put(async (req, res, next) => {
-		try {
 			const payload = await apiValidator(getValidationSchema("/dashboard/notes/{noteID}", "put"), req.body);
 			payload.id = req.params.id; // Ensure ID from path is used
 			const result = await internalDashboardNote.update(res.locals.access, payload);
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	})
+		})
 
 	/**
 	 * DELETE /api/dashboard/notes/:id
@@ -85,13 +70,8 @@ router
 	 * Delete a note
 	 */
 	.delete(async (req, res, next) => {
-		try {
 			const result = await internalDashboardNote.delete(res.locals.access, { id: req.params.id });
 			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
-	});
+		});
 
 export default router;
