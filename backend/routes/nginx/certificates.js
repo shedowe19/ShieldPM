@@ -309,10 +309,19 @@ router
 	 * Update and existing certificate
 	 */
 	.delete(async (req, res, next) => {
-		const result = await internalCertificate.delete(res.locals.access, {
-			id: Number.parseInt(req.params.certificate_id, 10),
-		});
-		res.status(200).send(result);
+		try {
+			const parsedId = Number.parseInt(req.params.certificate_id, 10);
+			if (Number.isNaN(parsedId)) {
+				return res.status(400).send({ error: { code: 400, message: "Invalid certificate id" } });
+			}
+			const result = await internalCertificate.delete(res.locals.access, {
+				id: parsedId,
+			});
+			res.status(200).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
 	});
 
 /**
@@ -399,11 +408,16 @@ router
 	 * Download certificate
 	 */
 	.post(async (req, res, next) => {
-		const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
-		const result = await internalCertificate.download(res.locals.access, {
-			id: Number.parseInt(payload.id, 10),
-		});
-		res.status(200).download(result.fileName);
+		try {
+			const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
+			const result = await internalCertificate.download(res.locals.access, {
+				id: Number.parseInt(payload.id, 10),
+			});
+			res.status(200).download(result.fileName);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
 	});
 
 export default router;

@@ -1014,7 +1014,12 @@ const internalGitOps = {
 							}
 							const files = await fs.promises.readdir(srcPath);
 							for (const file of files) {
-								await restoreFile(path.join(srcPath, file), path.join(destPath, file));
+								try {
+									await restoreFile(path.join(srcPath, file), path.join(destPath, file));
+								} catch (err) {
+									logger.error(`GitOps restore failed for ${path.join(srcPath, file)} -> ${path.join(destPath, file)}: ${err instanceof Error ? err.message : err}`);
+									continue;
+								}
 							}
 						}
 					}

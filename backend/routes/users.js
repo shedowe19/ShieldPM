@@ -215,10 +215,24 @@ router
 	 * Update and existing user
 	 */
 	.delete(async (req, res, next) => {
-		const result = await internalUser.delete(res.locals.access, {
-			id: req.params.user_id,
-		});
-		res.status(200).send(result);
+		try {
+			const params = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: { $ref: "common#/properties/id" },
+					},
+				},
+				{ user_id: req.params.user_id },
+			);
+			const result = await internalUser.delete(res.locals.access, {
+				id: params.user_id,
+			});
+			res.status(200).send(result);
+		} catch (err) {
+			next(err);
+		}
 	});
 
 /**
@@ -233,16 +247,19 @@ router
 	.all(jwtdecode())
 	.all(userIdFromMe)
 	.post(avatarUpload, async (req, res, next) => {
-		// Check if file exists in req.files
-		if (!req.files || Object.keys(req.files).length === 0) {
-			throw new errs.ValidationError("No files were uploaded.");
-		}
+		try {
+			if (!req.files || Object.keys(req.files).length === 0) {
+				throw new errs.ValidationError("No files were uploaded.");
+			}
 
-		const result = await internalUser.uploadAvatar(res.locals.access, {
-			id: req.params.user_id,
-			file: req.files.avatar || req.files.file, // Support 'avatar' or 'file' field
-		});
-		res.status(200).send(result);
+			const result = await internalUser.uploadAvatar(res.locals.access, {
+				id: req.params.user_id,
+				file: req.files.avatar || req.files.file,
+			});
+			res.status(200).send(result);
+		} catch (err) {
+			next(err);
+		}
 	});
 
 /**
@@ -363,3 +380,4 @@ router
 	});
 
 export default router;
+uter;

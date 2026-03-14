@@ -52,7 +52,7 @@ router
 	/**
 	 * GET /api/nginx/ddns-providers/:id
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res) => {
 		await res.locals.access.can("ddns_providers:get", req.params.id);
 		const result = await internalDdnsProvider.get(res.locals.access, {
 			id: Number.parseInt(req.params.id, 10),
