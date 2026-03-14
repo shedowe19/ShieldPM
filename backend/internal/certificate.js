@@ -355,8 +355,9 @@ const internalCertificate = {
 			throw new error.ItemNotFoundError(`Certificate ${certificate.nice_name} does not exist on disk`);
 		}
 
-		const certFiles = (await fs.promises.readdir(zipDirectory))
-			.filter((fn) => fn.endsWith(".pem") || fn.endsWith(".crt") || fn.endsWith(".key"));
+		const certFiles = (await fs.promises.readdir(zipDirectory)).filter(
+			(fn) => fn.endsWith(".pem") || fn.endsWith(".crt") || fn.endsWith(".key"),
+		);
 		const certFilesWithRealPaths = await Promise.all(
 			certFiles.map((fn) => fs.promises.realpath(path.join(zipDirectory, fn))),
 		);
@@ -525,7 +526,6 @@ const internalCertificate = {
 		await fs.promises.writeFile(`${dir}/fullchain.pem`, certData);
 		await fs.promises.writeFile(`${dir}/privkey.pem`, certificate.meta.certificate_key);
 	},
-
 
 	/**
 	 * @param   {import("../lib/types.js").Access}   access

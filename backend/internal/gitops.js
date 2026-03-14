@@ -950,16 +950,16 @@ const internalGitOps = {
 			if (fs.existsSync(certFilesDir)) {
 				const restoreFile = (src, dest) => {
 					return fs.promises.copyFile(src, dest).then(async () => {
-					// Set permissions
-					if (dest.endsWith(".key") || dest.endsWith(".pem")) {
-						const filename = path.basename(dest);
-						if (filename === "privkey.pem" || filename.endsWith(".key")) {
-							await fs.promises.chmod(dest, 0o600);
-						} else {
-							await fs.promises.chmod(dest, 0o644);
+						// Set permissions
+						if (dest.endsWith(".key") || dest.endsWith(".pem")) {
+							const filename = path.basename(dest);
+							if (filename === "privkey.pem" || filename.endsWith(".key")) {
+								await fs.promises.chmod(dest, 0o600);
+							} else {
+								await fs.promises.chmod(dest, 0o644);
+							}
 						}
-					}
-				});
+					});
 				};
 
 				// Restore Let's Encrypt
