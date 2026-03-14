@@ -25,11 +25,8 @@ router
 
 			clonedSwaggerJSON.info = clonedSwaggerJSON.info || {};
 			clonedSwaggerJSON.info.version = PACKAGE.version;
-			if (!Array.isArray(clonedSwaggerJSON.servers)) {
-				clonedSwaggerJSON.servers = [];
-			}
-			if (!clonedSwaggerJSON.servers[0]) {
-				clonedSwaggerJSON.servers[0] = {};
+			if (!clonedSwaggerJSON.servers?.[0]) {
+				clonedSwaggerJSON.servers = [{}];
 			}
 			clonedSwaggerJSON.servers[0].url = `${origin}/api`;
 			res.status(200).send(clonedSwaggerJSON);

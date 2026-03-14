@@ -182,7 +182,7 @@ router
 				httpOnly: true,
 				secure: req.secure,
 				sameSite: "strict",
-				maxAge: 1000 * 60 * 60 * 24 * 30,
+				maxAge: data.expires ? Math.max(0, new Date(data.expires).getTime() - Date.now()) : undefined,
 			});
 
 			res.clearCookie("shieldpm_oidc");
