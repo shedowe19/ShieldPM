@@ -92,28 +92,24 @@ router
 	 *
 	 * Update and existing setting
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const params = await validator(
-				{
-					required: ["setting_id"],
-					additionalProperties: false,
-					properties: {
-						setting_id: {
-							type: "string",
-							minLength: 1,
-						},
+	.put(async (req, res) => {
+		const params = await validator(
+			{
+				required: ["setting_id"],
+				additionalProperties: false,
+				properties: {
+					setting_id: {
+						type: "string",
+						minLength: 1,
 					},
 				},
-				{ setting_id: req.params.setting_id },
-			);
-			const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
-			payload.id = params.setting_id;
-			const result = await internalSetting.update(res.locals.access, payload);
-			res.status(200).send(result);
-		} catch (err) {
-			next(err);
-		}
+			},
+			{ setting_id: req.params.setting_id },
+		);
+		const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
+		payload.id = params.setting_id;
+		const result = await internalSetting.update(res.locals.access, payload);
+		res.status(200).send(result);
 	});
 
 export default router;
