@@ -977,7 +977,9 @@ const internalGitOps = {
 							try {
 								await restoreFile(path.join(srcDir, file), path.join(targetDir, file));
 							} catch (err) {
-								logger.error(`GitOps restore failed for ${path.join(srcDir, file)}: ${err instanceof Error ? err.message : "Unknown error"}`);
+								logger.error(
+									`GitOps restore failed for ${path.join(srcDir, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
+								);
 								throw err;
 							}
 						}
@@ -1001,10 +1003,12 @@ const internalGitOps = {
 							try {
 								await restoreFile(srcPath, destPath);
 							} catch (err) {
-								logger.error(`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`);
+								logger.error(
+									`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`,
+								);
 								throw err;
 							}
-						} else if (stats.isDirectory() && item.startsWith("npm-") ) {
+						} else if (stats.isDirectory() && item.startsWith("npm-")) {
 							if (!fs.existsSync(destPath)) {
 								await fs.promises.mkdir(destPath, { recursive: true });
 							}
@@ -1034,7 +1038,9 @@ const internalGitOps = {
 							try {
 								await restoreFile(srcPath, destPath);
 							} catch (err) {
-								logger.error(`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`);
+								logger.error(
+									`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`,
+								);
 								throw err;
 							}
 						} else if (stat.isDirectory() && item.startsWith("npm-")) {
@@ -1047,7 +1053,9 @@ const internalGitOps = {
 								try {
 									await restoreFile(path.join(srcPath, file), path.join(destDir, file));
 								} catch (err) {
-									logger.error(`GitOps restore failed for ${path.join(srcPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`);
+									logger.error(
+										`GitOps restore failed for ${path.join(srcPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
+									);
 									throw err;
 								}
 							}
