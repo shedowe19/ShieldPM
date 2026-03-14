@@ -53,38 +53,42 @@ router
 	 * Retrieve a specific setting
 	 */
 	.get(async (req, res, next) => {
-		const data = await validator(
-			{
-				required: ["setting_id"],
-				additionalProperties: false,
-				properties: {
-					setting_id: {
-						type: "string",
-						minLength: 1,
+		try {
+			const data = await validator(
+				{
+					required: ["setting_id"],
+					additionalProperties: false,
+					properties: {
+						setting_id: {
+							type: "string",
+							minLength: 1,
+						},
 					},
 				},
-			},
-			{
-				setting_id: req.params.setting_id,
-			},
-		);
-		const row = await internalSetting.get(res.locals.access, {
-			id: data.setting_id,
-		});
-		if (row.id === "oidc-config") {
-			// Redact oidc configuration via api (unauthenticated get call)
-			const m = row.meta;
-			row.meta = {
-				name: m.name,
-				enabled:
-					m.enabled === true && !!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
-			};
+				{
+					setting_id: req.params.setting_id,
+				},
+			);
+			const row = await internalSetting.get(res.locals.access, {
+				id: data.setting_id,
+			});
+			if (row.id === "oidc-config") {
+				// Redact oidc configuration via api (unauthenticated get call)
+				const m = row.meta;
+				row.meta = {
+					name: m.name,
+					enabled:
+						m.enabled === true && !!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
+				};
 
-			// Remove these temporary cookies used during oidc authentication
-			res.clearCookie("shieldpm_oidc");
-			res.clearCookie("shieldpm_oidc_error");
+				// Remove these temporary cookies used during oidc authentication
+				res.clearCookie("shieldpm_oidc");
+				res.clearCookie("shieldpm_oidc_error");
+			}
+			res.status(200).send(row);
+		} catch (err) {
+			next(err);
 		}
-		res.status(200).send(row);
 	})
 
 	/**

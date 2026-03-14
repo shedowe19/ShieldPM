@@ -948,18 +948,17 @@ const internalGitOps = {
 			// 6. Restore Certificate Files
 			const certFilesDir = path.join(configDir, "certificate-files");
 			if (fs.existsSync(certFilesDir)) {
-				const restoreFile = (src, dest) => {
-					return fs.promises.copyFile(src, dest).then(async () => {
-						// Set permissions
-						if (dest.endsWith(".key") || dest.endsWith(".pem")) {
-							const filename = path.basename(dest);
-							if (filename === "privkey.pem" || filename.endsWith(".key")) {
-								await fs.promises.chmod(dest, 0o600);
-							} else {
-								await fs.promises.chmod(dest, 0o644);
-							}
+				const restoreFile = async (src, dest) => {
+					await fs.promises.copyFile(src, dest);
+					// Set permissions
+					if (dest.endsWith(".key") || dest.endsWith(".pem")) {
+						const filename = path.basename(dest);
+						if (filename === "privkey.pem" || filename.endsWith(".key")) {
+							await fs.promises.chmod(dest, 0o600);
+						} else {
+							await fs.promises.chmod(dest, 0o644);
 						}
-					});
+					}
 				};
 
 				// Restore Let's Encrypt
@@ -1018,8 +1017,9 @@ const internalGitOps = {
 									await restoreFile(path.join(srcPath, file), path.join(destPath, file));
 								} catch (err) {
 									logger.error(
-										`GitOps restore failed for ${path.join(srcPath, file)} -> ${path.join(destPath, file)}: ${err instanceof Error ? err.message : err}`,
+										`GitOps restore failed for ${path.join(srcPath, file)} -> ${path.join(destPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`,
 									);
+									throw err;
 								}
 							}
 						}

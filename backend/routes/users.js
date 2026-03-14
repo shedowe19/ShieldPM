@@ -63,25 +63,29 @@ router
 	 * Retrieve all users
 	 */
 	.get(async (req, res, next) => {
-		const data = await validator(
-			{
-				additionalProperties: false,
-				properties: {
-					expand: {
-						$ref: "common#/properties/expand",
-					},
-					query: {
-						$ref: "common#/properties/query",
+		try {
+			const data = await validator(
+				{
+					additionalProperties: false,
+					properties: {
+						expand: {
+							$ref: "common#/properties/expand",
+						},
+						query: {
+							$ref: "common#/properties/query",
+						},
 					},
 				},
-			},
-			{
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				query: typeof req.query.query === "string" ? req.query.query : null,
-			},
-		);
-		const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
-		res.status(200).send(users);
+				{
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+					query: typeof req.query.query === "string" ? req.query.query : null,
+				},
+			);
+			const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
+			res.status(200).send(users);
+		} catch (err) {
+			next(err);
+		}
 	})
 
 	/**
@@ -170,31 +174,35 @@ router
 	 * Retrieve a specific user
 	 */
 	.get(async (req, res, next) => {
-		const data = await validator(
-			{
-				required: ["user_id"],
-				additionalProperties: false,
-				properties: {
-					user_id: {
-						$ref: "common#/properties/id",
-					},
-					expand: {
-						$ref: "common#/properties/expand",
+		try {
+			const data = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: {
+							$ref: "common#/properties/id",
+						},
+						expand: {
+							$ref: "common#/properties/expand",
+						},
 					},
 				},
-			},
-			{
-				user_id: req.params.user_id,
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-			},
-		);
+				{
+					user_id: req.params.user_id,
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				},
+			);
 
-		const user = await internalUser.get(res.locals.access, {
-			id: data.user_id,
-			expand: data.expand,
-			omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
-		});
-		res.status(200).send(user);
+			const user = await internalUser.get(res.locals.access, {
+				id: data.user_id,
+				expand: data.expand,
+				omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
+			});
+			res.status(200).send(user);
+		} catch (err) {
+			next(err);
+		}
 	})
 
 	/**
@@ -203,8 +211,18 @@ router
 	 * Update and existing user
 	 */
 	.put(async (req, res, next) => {
+		const params = await validator(
+			{
+				required: ["user_id"],
+				additionalProperties: false,
+				properties: {
+					user_id: { $ref: "common#/properties/id" },
+				},
+			},
+			{ user_id: req.params.user_id },
+		);
 		const payload = await apiValidator(getValidationSchema("/users/{userID}", "put"), req.body);
-		payload.id = req.params.user_id;
+		payload.id = params.user_id;
 		const result = await internalUser.update(res.locals.access, payload);
 		res.status(200).send(result);
 	})
@@ -309,8 +327,18 @@ router
 	 * Update password for a user
 	 */
 	.put(async (req, res) => {
+		const params = await validator(
+			{
+				required: ["user_id"],
+				additionalProperties: false,
+				properties: {
+					user_id: { $ref: "common#/properties/id" },
+				},
+			},
+			{ user_id: req.params.user_id },
+		);
 		const payload = await apiValidator(getValidationSchema("/users/{userID}/auth", "put"), req.body);
-		payload.id = req.params.user_id;
+		payload.id = params.user_id;
 		const result = await internalUser.setPassword(res.locals.access, payload);
 		res.status(200).send(result);
 	});
@@ -334,8 +362,18 @@ router
 	 * Set some or all permissions for a user
 	 */
 	.put(async (req, res) => {
+		const params = await validator(
+			{
+				required: ["user_id"],
+				additionalProperties: false,
+				properties: {
+					user_id: { $ref: "common#/properties/id" },
+				},
+			},
+			{ user_id: req.params.user_id },
+		);
 		const payload = await apiValidator(getValidationSchema("/users/{userID}/permissions", "put"), req.body);
-		payload.id = req.params.user_id;
+		payload.id = params.user_id;
 		const result = await internalUser.setPermissions(res.locals.access, payload);
 		res.status(200).send(result);
 	});
@@ -352,7 +390,21 @@ router
 	})
 	.all(jwtdecode())
 	.post(loginAsRateLimiter, async (req, res) => {
-		// Save the original session to allow "Return to Admin" logic on logout
+		const params = await validator(
+			{
+				required: ["user_id"],
+				additionalProperties: false,
+				properties: {
+					user_id: { $ref: "common#/properties/id" },
+				},
+			},
+			{ user_id: req.params.user_id },
+		);
+
+		const result = await internalUser.loginAs(res.locals.access, {
+			id: Number(params.user_id),
+		});
+
 		if (req.cookies?.shieldpm_jwt) {
 			res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
 				httpOnly: true,
@@ -362,10 +414,6 @@ router
 				maxAge: 1000 * 60 * 60 * 24 * 30,
 			});
 		}
-
-		const result = await internalUser.loginAs(res.locals.access, {
-			id: Number.parseInt(req.params.user_id, 10),
-		});
 
 		const safeMaxAge = result.expires ? Math.max(0, new Date(result.expires).getTime() - Date.now()) : undefined;
 
@@ -380,4 +428,3 @@ router
 	});
 
 export default router;
-uter;

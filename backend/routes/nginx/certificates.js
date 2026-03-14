@@ -130,30 +130,50 @@ router
 	.all(createCertLimiter)
 	.all(jwtdecode())
 	.post(async (req, res, next) => {
-		// Basic validation inline for now, or add to schema later
-		const { common_name, password, years } = req.body;
-		if (!common_name || !password) {
-			throw new errs.ValidationError("Common Name and Password are required");
-		}
-
-		// Create a temp dir for this generation
-		const tmpDir = `/tmp/client-cert-${Date.now()}`;
-
-		const p12Path = await internalPki.createClientCert(
+		const payload = await validator(
 			{
-				common_name,
-				password,
-				years: Number(years) || 1,
+				type: "object",
+				additionalProperties: false,
+				required: ["common_name", "password"],
+				properties: {
+					common_name: { type: "string", minLength: 1, maxLength: 255 },
+					password: { type: "string", minLength: 1, maxLength: 1024 },
+					years: { type: "integer", minimum: 1, maximum: 10 },
+				},
 			},
-			tmpDir,
+			{
+				common_name: req.body?.common_name,
+				password: req.body?.password,
+				years: req.body?.years === undefined ? 1 : Number(req.body.years),
+			},
 		);
 
-		res.download(p12Path, `${common_name}.p12`, async (err) => {
+		const tmpDir = `/tmp/client-cert-${Date.now()}`;
+		const cleanupTmpDir = async () => {
 			try {
 				await fs.rm(tmpDir, { recursive: true, force: true });
-			} catch (e) {
-				console.error("Cleanup failed", e);
+			} catch (cleanupErr) {
+				debug(logger, `Cleanup failed for ${tmpDir}: ${cleanupErr}`);
 			}
+		};
+
+		let p12Path;
+		try {
+			p12Path = await internalPki.createClientCert(
+				{
+					common_name: payload.common_name,
+					password: payload.password,
+					years: payload.years,
+				},
+				tmpDir,
+			);
+		} catch (err) {
+			await cleanupTmpDir();
+			throw err;
+		}
+
+		res.download(p12Path, `${payload.common_name}.p12`, async (err) => {
+			await cleanupTmpDir();
 			if (err) {
 				next(err);
 			}

@@ -32,7 +32,7 @@ router
 	/**
 	 * POST /api/nginx/ddns-providers
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/ddns-providers", "post"), req.body);
 		await res.locals.access.can("ddns_providers:create", payload);
 		const result = await internalDdnsProvider.create(res.locals.access, payload);
