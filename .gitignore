@@ -6,3 +6,5 @@
 certbot-help.txt
 */node_modules
 package-lock.json
+.tmp_pr_body.md
+backend/analyze.js
