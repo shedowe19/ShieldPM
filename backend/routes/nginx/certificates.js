@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import express from "express";
 import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
@@ -142,10 +143,9 @@ router
 			tmpDir,
 		);
 
-		res.download(p12Path, `${common_name}.p12`, (err) => {
-			// Cleanup after download
+		res.download(p12Path, `${common_name}.p12`, async (err) => {
 			try {
-				import("node:fs").then((fs) => fs.rmSync(tmpDir, { recursive: true, force: true }));
+				await fs.rm(tmpDir, { recursive: true, force: true });
 			} catch (e) {
 				console.error("Cleanup failed", e);
 			}

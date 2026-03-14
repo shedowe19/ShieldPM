@@ -135,7 +135,7 @@ router
 	 *
 	 * Do NOT set those env vars in a production environment!
 	 */
-	.delete(async (_, res, next) => {
+	.delete(async (req, res, next) => {
 		if (isDestructiveTestMode()) {
 			try {
 				logger.warn("Deleting all users - Destructive Test Mode enabled, allowing this operation");
@@ -339,7 +339,7 @@ router
 		if (req.cookies?.shieldpm_jwt) {
 			res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
 				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				secure: req.secure,
 				sameSite: "strict",
 				// Backup cookie lives longer or same length
 				maxAge: 1000 * 60 * 60 * 24 * 30,
@@ -353,7 +353,7 @@ router
 		// Set Cookie
 		res.cookie("shieldpm_jwt", result.token, {
 			httpOnly: true,
-			secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+			secure: req.secure,
 			sameSite: "strict",
 			maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
 		});

@@ -106,7 +106,7 @@ router.get("/history", jwtdecode(), accessCheck, async (req, res) => {
  * POST /api/gitops/revert
  * Revert to a specific commit
  */
-router.post("/revert", jwtdecode(), demoCheck, async (req, res) => {
+router.post("/revert", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
 	const { sha } = req.body;
 	if (!sha) {
 		return res.status(400).json({

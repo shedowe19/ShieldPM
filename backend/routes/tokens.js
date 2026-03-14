@@ -176,16 +176,17 @@ router
 		// Actually jwtdecode middleware handles header -> res.locals.access
 		// If we want to support cookie-based refresh loop:
 		// The `jwtdecode` middleware needs to be updated too, but for now let's assume valid access token is present
-
-		const data = await internalToken.getFreshToken(res.locals.access, {
+		const query = await apiValidator(getValidationSchema("/tokens", "post"), {
 			expiry: typeof req.query.expiry !== "undefined" ? req.query.expiry : null,
 			scope: typeof req.query.scope !== "undefined" ? req.query.scope : null,
 		});
 
+		const data = await internalToken.getFreshToken(res.locals.access, query);
+
 		// Set new cookie
 		res.cookie("shieldpm_jwt", data.token, {
 			httpOnly: true,
-			secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+			secure: req.secure,
 			sameSite: "strict",
 			maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days (example, matches typical expiry)
 		});
@@ -231,7 +232,7 @@ router
 			// Set Cookie
 			res.cookie("shieldpm_jwt", result.token, {
 				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				secure: req.secure,
 				sameSite: "strict",
 				maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
 			});
@@ -293,7 +294,7 @@ router
 			// Set original token back to main cookie
 			res.cookie("shieldpm_jwt", originalToken, {
 				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				secure: req.secure,
 				sameSite: "strict",
 				maxAge: payload.exp ? payload.exp * 1000 - Date.now() : undefined,
 			});

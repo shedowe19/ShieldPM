@@ -2,7 +2,6 @@ import express from "express";
 import internalDdnsProvider from "../../internal/ddns-provider.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
-import { debug, express as logger } from "../../logger.js";
 import { getValidationSchema } from "../../schema/index.js";
 
 const router = express.Router({
@@ -75,7 +74,7 @@ router
 	/**
 	 * DELETE /api/nginx/ddns-providers/:id
 	 */
-	.delete(async (req, res, next) => {
+	.delete(async (req, res) => {
 		await res.locals.access.can("ddns_providers:delete", req.params.id);
 		const result = await internalDdnsProvider.delete(res.locals.access, {
 			id: Number.parseInt(req.params.id, 10),
@@ -92,7 +91,7 @@ router
 		res.sendStatus(204);
 	})
 	.all(jwtdecode())
-	.post(async (req, res, next) => {
+	.post(async (req, res) => {
 		await res.locals.access.can("ddns_providers:update", req.params.id);
 		const result = await internalDdnsProvider.test(res.locals.access, {
 			id: Number.parseInt(req.params.id, 10),

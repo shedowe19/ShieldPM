@@ -3,7 +3,6 @@ import internalSetting from "../internal/setting.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import validator from "../lib/validator/index.js";
-import { debug, express as logger } from "../logger.js";
 import { getValidationSchema } from "../schema/index.js";
 
 const router = express.Router({
@@ -27,7 +26,7 @@ router
 	 *
 	 * Retrieve all settings
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res) => {
 		const rows = await internalSetting.getAll(res.locals.access);
 		res.status(200).send(rows);
 	});
@@ -89,7 +88,7 @@ router
 	 *
 	 * Update and existing setting
 	 */
-	.put(async (req, res, next) => {
+	.put(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
 		payload.id = req.params.setting_id;
 		const result = await internalSetting.update(res.locals.access, payload);

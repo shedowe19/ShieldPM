@@ -1,5 +1,6 @@
 import express from "express";
 import internalChat from "../internal/chat.js";
+import errs from "../lib/error.js";
 import { encrypt } from "../lib/encryption.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
@@ -10,23 +11,10 @@ const router = express.Router();
 
 /**
  * GET /api/chat-integrations
- * List all chat integrations for the current user (or all if admin?)
- * For now, let's limit to user's own integrations or admin view.
+ * List all chat integrations for the current user.
  */
 router.get("/", jwtdecode(), async (_req, res) => {
-	// Use 'settings:list' or 'users:list' as proxy for admin?
-	// Or creating a new permission 'chat:list'?
-	// Let's stick to standard RBAC: user sees own, admin sees all.
-	// NOTE: access.js logic needed to enforce this properly.
-	// For MVP: Return all if admin, specific if user.
-
-	const integrations = await ChatIntegrationModel.query()
-		.where("user_id", res.locals.access.token.getUserId())
-		.orWhere(() => {
-			// If admin, show all? TODO: Add proper Admin check
-			// For now simpler: Users manage THEIR OWN bots.
-		});
-
+	const integrations = await ChatIntegrationModel.query().where("user_id", res.locals.access.token.getUserId());
 	res.json(integrations);
 });
 
@@ -35,10 +23,6 @@ router.get("/", jwtdecode(), async (_req, res) => {
  * Create a new integration
  */
 router.post("/", jwtdecode(), async (req, res) => {
-	// Reusing settings permission or create new?
-	// Let's assume if you can login, you can create a bot for yourself.
-
-	// Validation Schema
 	const payload = await apiValidator(getValidationSchema("/chat", "post"), req.body);
 
 	if (payload.token) {
@@ -52,9 +36,7 @@ router.post("/", jwtdecode(), async (req, res) => {
 		config: payload.config || { allowed_ids: [] },
 	});
 
-	// Start the bot immediately
 	await internalChat.startBot(integration);
-
 	res.json(integration);
 });
 
@@ -64,10 +46,9 @@ router.post("/", jwtdecode(), async (req, res) => {
  */
 router.put("/:id", jwtdecode(), async (req, res) => {
 	const integration = await ChatIntegrationModel.query().findById(req.params.id);
-	if (!integration) throw new Error("Not Found");
+	if (!integration) throw new errs.ItemNotFoundError();
 
 	if (integration.user_id !== res.locals.access.token.getUserId()) {
-		// Check generic admin permission if not owner
 		await res.locals.access.can("settings:update", "chat");
 	}
 
@@ -92,7 +73,7 @@ router.put("/:id", jwtdecode(), async (req, res) => {
  */
 router.delete("/:id", jwtdecode(), async (req, res) => {
 	const integration = await ChatIntegrationModel.query().findById(req.params.id);
-	if (!integration) throw new Error("Not Found");
+	if (!integration) throw new errs.ItemNotFoundError();
 
 	if (integration.user_id !== res.locals.access.token.getUserId()) {
 		await res.locals.access.can("settings:update", "chat");

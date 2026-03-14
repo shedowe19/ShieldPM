@@ -357,7 +357,7 @@ const internalGitOps = {
 			const items = await fs.promises.readdir(dir);
 			for (const item of items) {
 				const fullPath = path.join(dir, item);
-				const stat = fs.statSync(fullPath);
+				const stat = await fs.promises.stat(fullPath);
 				if (stat.isDirectory()) {
 					await pruneDirectory(fullPath);
 					// If empty after prune, delete dir
@@ -406,7 +406,7 @@ const internalGitOps = {
 					const srcPath = path.join(domainDir, file);
 					const destPath = path.join(targetDir, file);
 					if (fs.existsSync(srcPath)) {
-						fs.copyFileSync(srcPath, destPath);
+						await fs.promises.copyFile(srcPath, destPath);
 						exportedFiles.push(destPath);
 					}
 				}
@@ -424,11 +424,11 @@ const internalGitOps = {
 			for (const item of items) {
 				const srcPath = path.join(customDir, item);
 				const destPath = path.join(customTargetDir, item);
-				const stats = fs.statSync(srcPath);
+				const stats = await fs.promises.stat(srcPath);
 
 				if (stats.isFile()) {
 					if (!item.includes("privkey") && !item.endsWith(".key")) {
-						fs.copyFileSync(srcPath, destPath);
+						await fs.promises.copyFile(srcPath, destPath);
 						exportedFiles.push(destPath);
 					}
 				} else if (stats.isDirectory() && item.startsWith("npm-")) {
@@ -441,7 +441,7 @@ const internalGitOps = {
 						if (!file.includes("privkey") && !file.endsWith(".key")) {
 							const srcFile = path.join(srcPath, file);
 							const destFile = path.join(destPath, file);
-							if (fs.statSync(srcFile).isFile()) {
+							if ((await fs.promises.stat(srcFile)).isFile()) {
 								fs.copyFileSync(srcFile, destFile);
 								exportedFiles.push(destFile);
 							}
@@ -465,7 +465,7 @@ const internalGitOps = {
 				const srcPath = path.join(internalDir, file);
 				const destPath = path.join(internalTargetDir, file);
 				if (fs.existsSync(srcPath)) {
-					fs.copyFileSync(srcPath, destPath);
+					await fs.promises.copyFile(srcPath, destPath);
 					exportedFiles.push(destPath);
 				}
 			}
@@ -474,7 +474,7 @@ const internalGitOps = {
 			const items = await fs.promises.readdir(internalDir);
 			for (const item of items) {
 				const itemPath = path.join(internalDir, item);
-				if (fs.statSync(itemPath).isDirectory() && item.startsWith("npm-")) {
+				if ((await fs.promises.stat(itemPath)).isDirectory() && item.startsWith("npm-")) {
 					const destDir = path.join(internalTargetDir, item);
 					if (!fs.existsSync(destDir)) {
 						await fs.promises.mkdir(destDir, { recursive: true });
@@ -939,7 +939,7 @@ const internalGitOps = {
 								imported++;
 							}
 						} catch (err) {
-							errors.push(`settings/${file}: ${err.message}`);
+							errors.push(`settings/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
 						}
 					}),
 				);
@@ -949,16 +949,17 @@ const internalGitOps = {
 			const certFilesDir = path.join(configDir, "certificate-files");
 			if (fs.existsSync(certFilesDir)) {
 				const restoreFile = (src, dest) => {
-					fs.copyFileSync(src, dest);
+					return fs.promises.copyFile(src, dest).then(async () => {
 					// Set permissions
 					if (dest.endsWith(".key") || dest.endsWith(".pem")) {
 						const filename = path.basename(dest);
 						if (filename === "privkey.pem" || filename.endsWith(".key")) {
-							fs.chmodSync(dest, 0o600);
+							await fs.promises.chmod(dest, 0o600);
 						} else {
-							fs.chmodSync(dest, 0o644);
+							await fs.promises.chmod(dest, 0o644);
 						}
 					}
+				});
 				};
 
 				// Restore Let's Encrypt
@@ -989,7 +990,7 @@ const internalGitOps = {
 					for (const item of items) {
 						const srcPath = path.join(customDir, item);
 						const destPath = path.join(targetDir, item);
-						const stats = fs.statSync(srcPath);
+						const stats = await fs.promises.stat(srcPath);
 
 						if (stats.isFile()) {
 							restoreFile(srcPath, destPath);
@@ -999,7 +1000,7 @@ const internalGitOps = {
 							}
 							const files = await fs.promises.readdir(srcPath);
 							for (const file of files) {
-								restoreFile(path.join(srcPath, file), path.join(destPath, file));
+								await restoreFile(path.join(srcPath, file), path.join(destPath, file));
 							}
 						}
 					}
@@ -1017,7 +1018,7 @@ const internalGitOps = {
 					for (const item of internalItems) {
 						const srcPath = path.join(internalDir, item);
 						const destPath = path.join(targetBaseDir, item);
-						const stat = fs.statSync(srcPath);
+						const stat = await fs.promises.stat(srcPath);
 
 						if (stat.isFile()) {
 							restoreFile(srcPath, destPath);

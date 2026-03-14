@@ -19,16 +19,7 @@ router
 	 */
 	.get(async (req, res) => {
 		const swaggerJSON = await getCompiledSchema();
-
-		let proto = req.protocol;
-		if (typeof req.headers["x-forwarded-proto"] !== "undefined" && req.headers["x-forwarded-proto"]) {
-			proto = req.headers["x-forwarded-proto"];
-		}
-
-		let origin = `${proto}://${req.hostname}`;
-		if (typeof req.headers.origin !== "undefined" && req.headers.origin) {
-			origin = req.headers.origin;
-		}
+		const origin = `${req.protocol}://${req.hostname}`;
 
 		swaggerJSON.info.version = PACKAGE.version;
 		swaggerJSON.servers[0].url = `${origin}/api`;
