@@ -78,7 +78,8 @@ router
 				row.meta = {
 					name: m.name,
 					enabled:
-						m.enabled === true && !!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
+						m.enabled === true &&
+						!!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
 				};
 
 				// Remove these temporary cookies used during oidc authentication
