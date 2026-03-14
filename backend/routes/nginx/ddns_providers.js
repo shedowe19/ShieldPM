@@ -23,7 +23,7 @@ router
 	/**
 	 * GET /api/nginx/ddns-providers
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res) => {
 		await res.locals.access.can("ddns_providers:list");
 		const rows = await internalDdnsProvider.getAll(res.locals.access);
 		res.status(200).send(rows);
@@ -63,7 +63,7 @@ router
 	/**
 	 * PUT /api/nginx/ddns-providers/:id
 	 */
-	.put(async (req, res, next) => {
+	.put(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/ddns-providers/providerID", "put"), req.body);
 		await res.locals.access.can("ddns_providers:update", req.params.id);
 		payload.id = Number.parseInt(req.params.id, 10);

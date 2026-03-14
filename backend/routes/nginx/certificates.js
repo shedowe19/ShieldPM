@@ -84,25 +84,30 @@ router
 	 * Retrieve all certificates
 	 */
 	.get(async (req, res, next) => {
-		const data = await validator(
-			{
-				additionalProperties: false,
-				properties: {
-					expand: {
-						$ref: "common#/properties/expand",
-					},
-					query: {
-						$ref: "common#/properties/query",
+		try {
+			const data = await validator(
+				{
+					additionalProperties: false,
+					properties: {
+						expand: {
+							$ref: "common#/properties/expand",
+						},
+						query: {
+							$ref: "common#/properties/query",
+						},
 					},
 				},
-			},
-			{
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				query: typeof req.query.query === "string" ? req.query.query : null,
-			},
-		);
-		const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
-		res.status(200).send(rows);
+				{
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+					query: typeof req.query.query === "string" ? req.query.query : null,
+				},
+			);
+			const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
+			res.status(200).send(rows);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
 	})
 
 	/**
@@ -285,11 +290,17 @@ router
 	 * Updates a specific certificate
 	 */
 	.put(async (req, res, next) => {
-		const data = { id: req.params.certificate_id, ...req.body };
-		const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), data);
-
-		const result = await internalCertificate.update(res.locals.access, payload);
-		res.status(201).send(result);
+		try {
+			const payload = await apiValidator(getValidationSchema("/nginx/certificates/{certID}", "put"), {
+				...req.body,
+				id: req.params.certificate_id,
+			});
+			const result = await internalCertificate.update(res.locals.access, payload);
+			res.status(201).send(result);
+		} catch (err) {
+			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
+			next(err);
+		}
 	})
 
 	/**

@@ -442,7 +442,7 @@ const internalGitOps = {
 							const srcFile = path.join(srcPath, file);
 							const destFile = path.join(destPath, file);
 							if ((await fs.promises.stat(srcFile)).isFile()) {
-								fs.copyFileSync(srcFile, destFile);
+								await fs.promises.copyFile(srcFile, destFile);
 								exportedFiles.push(destFile);
 							}
 						}
@@ -486,7 +486,7 @@ const internalGitOps = {
 						if (!file.includes("privkey") && !file.endsWith(".key")) {
 							const srcFile = path.join(itemPath, file);
 							const destFile = path.join(destDir, file);
-							fs.copyFileSync(srcFile, destFile);
+							await fs.promises.copyFile(srcFile, destFile);
 							exportedFiles.push(destFile);
 						}
 					}
@@ -974,7 +974,12 @@ const internalGitOps = {
 						}
 						const files = await fs.promises.readdir(srcDir);
 						for (const file of files) {
-							restoreFile(path.join(srcDir, file), path.join(targetDir, file));
+							try {
+								await restoreFile(path.join(srcDir, file), path.join(targetDir, file));
+							} catch (err) {
+								logger.error(`GitOps restore failed for ${path.join(srcDir, file)}: ${err instanceof Error ? err.message : "Unknown error"}`);
+								throw err;
+							}
 						}
 					}
 				}
@@ -993,8 +998,13 @@ const internalGitOps = {
 						const stats = await fs.promises.stat(srcPath);
 
 						if (stats.isFile()) {
-							restoreFile(srcPath, destPath);
-						} else if (stats.isDirectory() && item.startsWith("npm-")) {
+							try {
+								await restoreFile(srcPath, destPath);
+							} catch (err) {
+								logger.error(`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`);
+								throw err;
+							}
+						} else if (stats.isDirectory() && item.startsWith("npm-") ) {
 							if (!fs.existsSync(destPath)) {
 								await fs.promises.mkdir(destPath, { recursive: true });
 							}
@@ -1021,7 +1031,12 @@ const internalGitOps = {
 						const stat = await fs.promises.stat(srcPath);
 
 						if (stat.isFile()) {
-							restoreFile(srcPath, destPath);
+							try {
+								await restoreFile(srcPath, destPath);
+							} catch (err) {
+								logger.error(`GitOps restore failed for ${srcPath}: ${err instanceof Error ? err.message : "Unknown error"}`);
+								throw err;
+							}
 						} else if (stat.isDirectory() && item.startsWith("npm-")) {
 							const destDir = path.join(targetBaseDir, item);
 							if (!fs.existsSync(destDir)) {
@@ -1029,7 +1044,12 @@ const internalGitOps = {
 							}
 							const files = await fs.promises.readdir(srcPath);
 							for (const file of files) {
-								restoreFile(path.join(srcPath, file), path.join(destDir, file));
+								try {
+									await restoreFile(path.join(srcPath, file), path.join(destDir, file));
+								} catch (err) {
+									logger.error(`GitOps restore failed for ${path.join(srcPath, file)}: ${err instanceof Error ? err.message : "Unknown error"}`);
+									throw err;
+								}
 							}
 						}
 					}

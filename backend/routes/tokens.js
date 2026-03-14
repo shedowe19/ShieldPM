@@ -172,28 +172,24 @@ router
 	 * for services like Job board and Worker.
 	 */
 	.get(jwtdecode(), async (req, res, next) => {
-		// Backwards compatibility: Check header first, then cookie
-		// Actually jwtdecode middleware handles header -> res.locals.access
-		// If we want to support cookie-based refresh loop:
-		// The `jwtdecode` middleware needs to be updated too, but for now let's assume valid access token is present
-		const query = await apiValidator(getValidationSchema("/tokens", "post"), {
-			expiry: typeof req.query.expiry !== "undefined" ? req.query.expiry : null,
-			scope: typeof req.query.scope !== "undefined" ? req.query.scope : null,
-		});
+		try {
+			const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
+			const scope = typeof req.query.scope === "string" ? req.query.scope : null;
+			const query = { expiry, scope };
+			const data = await internalToken.getFreshToken(res.locals.access, query);
 
-		const data = await internalToken.getFreshToken(res.locals.access, query);
+			res.cookie("shieldpm_jwt", data.token, {
+				httpOnly: true,
+				secure: req.secure,
+				sameSite: "strict",
+				maxAge: 1000 * 60 * 60 * 24 * 30,
+			});
 
-		// Set new cookie
-		res.cookie("shieldpm_jwt", data.token, {
-			httpOnly: true,
-			secure: req.secure,
-			sameSite: "strict",
-			maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days (example, matches typical expiry)
-		});
-
-		// clear this temporary cookie following a successful oidc authentication
-		res.clearCookie("shieldpm_oidc");
-		res.status(200).send({ ...data, token: undefined }); // Don't send token in body
+			res.clearCookie("shieldpm_oidc");
+			res.status(200).send({ ...data, token: undefined });
+		} catch (err) {
+			next(err);
+		}
 	})
 
 	/**

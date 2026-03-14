@@ -350,12 +350,15 @@ router
 			id: Number.parseInt(req.params.user_id, 10),
 		});
 
-		// Set Cookie
+		const safeMaxAge = result.expires
+			? Math.max(0, new Date(result.expires).getTime() - Date.now())
+			: undefined;
+
 		res.cookie("shieldpm_jwt", result.token, {
 			httpOnly: true,
 			secure: req.secure,
 			sameSite: "strict",
-			maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
+			maxAge: safeMaxAge,
 		});
 
 		res.status(200).send({ ...result, token: undefined });
