@@ -228,25 +228,35 @@ class AnalyticsService {
 		}));
 
 		for (const chunk of this.chunkArray(rows, INSERT_CHUNK_SIZE)) {
-			await AnalyticCount.query()
-				.insert(chunk)
-				.onConflict(["proxy_host_id", "timestamp"])
-				.merge({
-					status_code_2xx: AnalyticCount.knex().raw(
-						"coalesce(status_code_2xx, 0) + excluded.status_code_2xx",
-					),
-					status_code_3xx: AnalyticCount.knex().raw(
-						"coalesce(status_code_3xx, 0) + excluded.status_code_3xx",
-					),
-					status_code_4xx: AnalyticCount.knex().raw(
-						"coalesce(status_code_4xx, 0) + excluded.status_code_4xx",
-					),
-					status_code_5xx: AnalyticCount.knex().raw(
-						"coalesce(status_code_5xx, 0) + excluded.status_code_5xx",
-					),
-					bytes_sent: AnalyticCount.knex().raw("coalesce(bytes_sent, 0) + excluded.bytes_sent"),
-					request_count: AnalyticCount.knex().raw("coalesce(request_count, 0) + excluded.request_count"),
-				});
+			// Knex/Objection does not support batch insert with onConflict merge for sqlite/mysql well.
+			// Insert individually to prevent "batch insert only works with Postgresql and SQL Server"
+			await AnalyticCount.transaction(async (trx) => {
+				for (const row of chunk) {
+					await AnalyticCount.query(trx)
+						.insert(row)
+						.onConflict(["proxy_host_id", "timestamp"])
+						.merge({
+							status_code_2xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_2xx, 0) + ?", [row.status_code_2xx]
+							),
+							status_code_3xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_3xx, 0) + ?", [row.status_code_3xx]
+							),
+							status_code_4xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_4xx, 0) + ?", [row.status_code_4xx]
+							),
+							status_code_5xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_5xx, 0) + ?", [row.status_code_5xx]
+							),
+							bytes_sent: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.bytes_sent, 0) + ?", [row.bytes_sent]
+							),
+							request_count: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.request_count, 0) + ?", [row.request_count]
+							),
+						});
+				}
+			});
 		}
 	}
 
