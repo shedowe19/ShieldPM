@@ -948,7 +948,33 @@ const internalGitOps = {
 			// 6. Restore Certificate Files
 			const certFilesDir = path.join(configDir, "certificate-files");
 			if (fs.existsSync(certFilesDir)) {
+				const isBlockedPrivateKeyRestore = (filePath) => {
+					const filename = path.basename(filePath).toLowerCase();
+					return (
+						filename.endsWith(".key") || filename === "privkey.pem" || filename === "root_ca.key"
+					);
+				};
+
+				const getSafeStats = async (srcPath) => {
+					const stats = await fs.promises.lstat(srcPath);
+					if (stats.isSymbolicLink()) {
+						logger.warn(`GitOps restore: skipping symbolic link ${srcPath}`);
+						return null;
+					}
+					return stats;
+				};
+
 				const restoreFile = async (src, dest) => {
+					const stats = await getSafeStats(src);
+					if (!stats || !stats.isFile()) {
+						return false;
+					}
+
+					if (isBlockedPrivateKeyRestore(src) || isBlockedPrivateKeyRestore(dest)) {
+						logger.warn(`GitOps restore: blocked private key restore for ${src}`);
+						return false;
+					}
+
 					await fs.promises.copyFile(src, dest);
 					// Set permissions
 					if (dest.endsWith(".key") || dest.endsWith(".pem")) {
@@ -959,6 +985,8 @@ const internalGitOps = {
 							await fs.promises.chmod(dest, 0o644);
 						}
 					}
+
+					return true;
 				};
 
 				// Restore Let's Encrypt
@@ -967,6 +995,11 @@ const internalGitOps = {
 					const domains = await fs.promises.readdir(leDir);
 					for (const domain of domains) {
 						const srcDir = path.join(leDir, domain);
+						const srcDirStats = await getSafeStats(srcDir);
+						if (!srcDirStats || !srcDirStats.isDirectory()) {
+							continue;
+						}
+
 						const targetDir = path.join("/data/tls/certbot/live", domain);
 						if (!fs.existsSync(targetDir)) {
 							await fs.promises.mkdir(targetDir, { recursive: true });
@@ -996,7 +1029,11 @@ const internalGitOps = {
 					for (const item of items) {
 						const srcPath = path.join(customDir, item);
 						const destPath = path.join(targetDir, item);
-						const stats = await fs.promises.stat(srcPath);
+						const stats = await getSafeStats(srcPath);
+
+						if (!stats) {
+							continue;
+						}
 
 						if (stats.isFile()) {
 							try {
@@ -1038,7 +1075,11 @@ const internalGitOps = {
 					for (const item of internalItems) {
 						const srcPath = path.join(internalDir, item);
 						const destPath = path.join(targetBaseDir, item);
-						const stat = await fs.promises.stat(srcPath);
+						const stat = await getSafeStats(srcPath);
+
+						if (!stat) {
+							continue;
+						}
 
 						if (stat.isFile()) {
 							try {
