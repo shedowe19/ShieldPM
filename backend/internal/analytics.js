@@ -237,23 +237,27 @@ class AnalyticsService {
 						.onConflict(["proxy_host_id", "timestamp"])
 						.merge({
 							status_code_2xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_2xx, 0) + ?", [row.status_code_2xx]
+								"coalesce(analytic_count.status_code_2xx, 0) + ?",
+								[row.status_code_2xx],
 							),
 							status_code_3xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_3xx, 0) + ?", [row.status_code_3xx]
+								"coalesce(analytic_count.status_code_3xx, 0) + ?",
+								[row.status_code_3xx],
 							),
 							status_code_4xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_4xx, 0) + ?", [row.status_code_4xx]
+								"coalesce(analytic_count.status_code_4xx, 0) + ?",
+								[row.status_code_4xx],
 							),
 							status_code_5xx: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.status_code_5xx, 0) + ?", [row.status_code_5xx]
+								"coalesce(analytic_count.status_code_5xx, 0) + ?",
+								[row.status_code_5xx],
 							),
-							bytes_sent: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.bytes_sent, 0) + ?", [row.bytes_sent]
-							),
-							request_count: AnalyticCount.knex().raw(
-								"coalesce(analytic_count.request_count, 0) + ?", [row.request_count]
-							),
+							bytes_sent: AnalyticCount.knex().raw("coalesce(analytic_count.bytes_sent, 0) + ?", [
+								row.bytes_sent,
+							]),
+							request_count: AnalyticCount.knex().raw("coalesce(analytic_count.request_count, 0) + ?", [
+								row.request_count,
+							]),
 						});
 				}
 			});
