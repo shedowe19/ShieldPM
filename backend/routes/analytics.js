@@ -9,11 +9,8 @@ const router = express.Router();
 router.use(jwtdecode());
 
 // Enforce global admin access for platform-wide analytics
-router.use((req, res, next) => {
-	const isAdmin = res.locals.access?.token?.hasScope?.("admin") || false;
-	if (!isAdmin) {
-		return res.status(403).json({ error: "Forbidden: Global analytics require admin privileges" });
-	}
+router.use(async (req, res, next) => {
+	await res.locals.access.can("analytics:list");
 	next();
 });
 
