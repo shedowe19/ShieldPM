@@ -950,9 +950,7 @@ const internalGitOps = {
 			if (fs.existsSync(certFilesDir)) {
 				const isBlockedPrivateKeyRestore = (filePath) => {
 					const filename = path.basename(filePath).toLowerCase();
-					return (
-						filename.endsWith(".key") || filename === "privkey.pem" || filename === "root_ca.key"
-					);
+					return filename.endsWith(".key") || filename === "privkey.pem" || filename === "root_ca.key";
 				};
 
 				const getSafeStats = async (srcPath) => {
