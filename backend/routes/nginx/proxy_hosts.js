@@ -38,27 +38,14 @@ router
 					query: {
 						$ref: "common#/properties/query",
 					},
-					page: {
-						type: "integer",
-						minimum: 1,
-						default: 1,
-					},
-					limit: {
-						type: "integer",
-						minimum: 1,
-						maximum: 500,
-						default: 50,
-					},
 				},
 			},
 			{
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 				query: typeof req.query.query === "string" ? req.query.query : null,
-				page: req.query.page ? Number.parseInt(req.query.page, 10) : 1,
-				limit: req.query.limit ? Number.parseInt(req.query.limit, 10) : 50,
 			},
 		);
-		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query, data.page, data.limit);
+		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	})
 
