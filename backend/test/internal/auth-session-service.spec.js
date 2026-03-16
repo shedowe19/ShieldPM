@@ -75,10 +75,30 @@ vi.mock("../../lib/helpers.js", () => ({
 
 vi.mock("../../lib/error.js", () => ({
 	default: {
-		InternalError: class InternalError extends Error { constructor(m) { super(m); this.name = "InternalError"; } },
-		AuthError: class AuthError extends Error { constructor(m) { super(m); this.name = "AuthError"; } },
-		UnauthorizedError: class UnauthorizedError extends Error { constructor(m) { super(m); this.name = "UnauthorizedError"; } },
-		ValidationError: class ValidationError extends Error { constructor(m) { super(m); this.name = "ValidationError"; } },
+		InternalError: class InternalError extends Error {
+			constructor(m) {
+				super(m);
+				this.name = "InternalError";
+			}
+		},
+		AuthError: class AuthError extends Error {
+			constructor(m) {
+				super(m);
+				this.name = "AuthError";
+			}
+		},
+		UnauthorizedError: class UnauthorizedError extends Error {
+			constructor(m) {
+				super(m);
+				this.name = "UnauthorizedError";
+			}
+		},
+		ValidationError: class ValidationError extends Error {
+			constructor(m) {
+				super(m);
+				this.name = "ValidationError";
+			}
+		},
 	},
 }));
 
@@ -158,8 +178,18 @@ describe("auth-session-service", () => {
 
 describe("token rotation flow (integration-style)", () => {
 	it("login produces access_token and refresh_token (2-cookie model)", async () => {
-		const mockUser = { id: 42, name: "Alice", email: "alice@test.com", nickname: "alice", avatar: "", roles: ["user"] };
-		const pair = await authSessionService.issueTokenPair(mockUser, "user", { ip: "10.0.0.1", userAgent: "test-agent" });
+		const mockUser = {
+			id: 42,
+			name: "Alice",
+			email: "alice@test.com",
+			nickname: "alice",
+			avatar: "",
+			roles: ["user"],
+		};
+		const pair = await authSessionService.issueTokenPair(mockUser, "user", {
+			ip: "10.0.0.1",
+			userAgent: "test-agent",
+		});
 
 		expect(pair.access_token).toBeTruthy();
 		expect(pair.refresh_token).toBeTruthy();
@@ -174,6 +204,8 @@ describe("token rotation flow (integration-style)", () => {
 	it("revokeFamily revokes entire family (used in replay detection)", async () => {
 		// revokeFamily should not throw for valid familyId
 		// (returns a query promise; with mock it resolves)
-		await expect(authSessionService.revokeFamily("family_001", "refresh_token_replay_detected")).resolves.not.toThrow();
+		await expect(
+			authSessionService.revokeFamily("family_001", "refresh_token_replay_detected"),
+		).resolves.not.toThrow();
 	});
 });
