@@ -1,0 +1,38 @@
+{
+	"operationId": "logoutToken",
+	"summary": "Logout and revoke the current refresh token family",
+	"description": "Clears Access and Refresh cookies and revokes the associated session/token family server-side.",
+	"tags": [
+		"tokens"
+	],
+	"security": [],
+	"parameters": [],
+	"responses": {
+		"200": {
+			"description": "Logout successful. Cookies cleared and session revoked.",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"success": {
+								"type": "boolean",
+								"example": true
+							}
+						}
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "No valid session to revoke",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

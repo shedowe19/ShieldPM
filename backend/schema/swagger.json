@@ -391,6 +391,16 @@
 				"$ref": "./paths/tokens/post.json"
 			}
 		},
+		"/tokens/refresh": {
+			"post": {
+				"$ref": "./paths/tokens/refresh/post.json"
+			}
+		},
+		"/tokens/logout": {
+			"post": {
+				"$ref": "./paths/tokens/logout/post.json"
+			}
+		},
 		"/version/check": {
 			"get": {
 				"$ref": "./paths/version/check/get.json"

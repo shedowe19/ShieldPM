@@ -31,55 +31,44 @@ router.use((req, res, next) => {
 /**
  * GET /api/nginx/tor-onion
  */
-router.get("/", async (_req, res, next) => {
-	try {
-		const accessData = await res.locals.access.can("tor_onions:list");
-		const query = TorOnion.query().andWhere("is_deleted", 0).withGraphFetched("proxy_host").orderBy("name", "ASC");
+router.get("/", async (_req, res) => {
+	const accessData = await res.locals.access.can("tor_onions:list");
+	const query = TorOnion.query().andWhere("is_deleted", 0).withGraphFetched("proxy_host").orderBy("name", "ASC");
 
-		if (accessData.permission_visibility !== "all") {
-			query.where("owner_user_id", res.locals.access.token.getUserId(1));
-		}
-
-		const services = await query;
-
-		// Get Tor availability info
-		const torInfo = await internalTor.getInfo();
-
-		res.status(200).send({
-			services,
-			tor: torInfo,
-		});
-	} catch (err) {
-		next(err);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
 	}
+
+	const services = await query;
+
+	// Get Tor availability info
+	const torInfo = await internalTor.getInfo();
+
+	res.status(200).send({
+		services,
+		tor: torInfo,
+	});
 });
 
 /**
  * GET /api/nginx/tor-onion/:id
  */
-router.get("/:id", async (req, res, next) => {
-	try {
-		const accessData = await res.locals.access.can("tor_onions:get", req.params.id);
-		const query = TorOnion.query()
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.withGraphFetched("proxy_host");
+router.get("/:id", async (req, res) => {
+	const accessData = await res.locals.access.can("tor_onions:get", req.params.id);
+	const query = TorOnion.query().andWhere("is_deleted", 0).where("id", req.params.id).withGraphFetched("proxy_host");
 
-		if (accessData.permission_visibility !== "all") {
-			query.where("owner_user_id", res.locals.access.token.getUserId(1));
-		}
-
-		const service = await query.first();
-
-		if (!service) {
-			res.status(404).send({ error: "Onion Service not found" });
-			return;
-		}
-
-		res.status(200).send(service);
-	} catch (err) {
-		next(err);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
 	}
+
+	const service = await query.first();
+
+	if (!service) {
+		res.status(404).send({ error: "Onion Service not found" });
+		return;
+	}
+
+	res.status(200).send(service);
 });
 
 /**
@@ -230,86 +219,78 @@ router.delete("/:id", async (req, res, next) => {
 /**
  * POST /api/nginx/tor-onion/:id/start
  */
-router.post("/:id/start", async (req, res, next) => {
-	try {
-		await res.locals.access.can("tor_onions:update", req.params.id);
-		const service = await TorOnion.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+router.post("/:id/start", async (req, res) => {
+	await res.locals.access.can("tor_onions:update", req.params.id);
+	const service = await TorOnion.query()
+		.where("owner_user_id", res.locals.access.token.getUserId(1))
+		.andWhere("is_deleted", 0)
+		.where("id", req.params.id)
+		.first();
 
-		if (!service) {
-			res.status(404).send({ error: "Onion Service not found" });
-			return;
-		}
-
-		// If no private key yet, create the onion service
-		if (!service.private_key) {
-			await internalTor.create(service);
-		} else {
-			await internalTor.start(service);
-		}
-
-		// Refetch with updated status
-		const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
-
-		// Audit Log
-		await internalAuditLog.add(res.locals.access, {
-			action: "updated",
-			object_type: "tor-onion",
-			object_id: updatedService.id,
-			meta: {
-				name: updatedService.name,
-				onion_address: updatedService.onionAddress,
-				status: "started",
-			},
-		});
-
-		res.status(200).send(updatedService);
-	} catch (err) {
-		next(err);
+	if (!service) {
+		res.status(404).send({ error: "Onion Service not found" });
+		return;
 	}
+
+	// If no private key yet, create the onion service
+	if (!service.private_key) {
+		await internalTor.create(service);
+	} else {
+		await internalTor.start(service);
+	}
+
+	// Refetch with updated status
+	const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
+
+	// Audit Log
+	await internalAuditLog.add(res.locals.access, {
+		action: "updated",
+		object_type: "tor-onion",
+		object_id: updatedService.id,
+		meta: {
+			name: updatedService.name,
+			onion_address: updatedService.onionAddress,
+			status: "started",
+		},
+	});
+
+	res.status(200).send(updatedService);
 });
 
 /**
  * POST /api/nginx/tor-onion/:id/stop
  */
-router.post("/:id/stop", async (req, res, next) => {
-	try {
-		await res.locals.access.can("tor_onions:update", req.params.id);
-		const service = await TorOnion.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+router.post("/:id/stop", async (req, res) => {
+	await res.locals.access.can("tor_onions:update", req.params.id);
+	const service = await TorOnion.query()
+		.where("owner_user_id", res.locals.access.token.getUserId(1))
+		.andWhere("is_deleted", 0)
+		.where("id", req.params.id)
+		.first();
 
-		if (!service) {
-			res.status(404).send({ error: "Onion Service not found" });
-			return;
-		}
-
-		await internalTor.stop(service);
-
-		// Refetch with updated status
-		const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
-
-		// Audit Log
-		await internalAuditLog.add(res.locals.access, {
-			action: "updated",
-			object_type: "tor-onion",
-			object_id: updatedService.id,
-			meta: {
-				name: updatedService.name,
-				onion_address: updatedService.onionAddress,
-				status: "stopped",
-			},
-		});
-
-		res.status(200).send(updatedService);
-	} catch (err) {
-		next(err);
+	if (!service) {
+		res.status(404).send({ error: "Onion Service not found" });
+		return;
 	}
+
+	await internalTor.stop(service);
+
+	// Refetch with updated status
+	const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
+
+	// Audit Log
+	await internalAuditLog.add(res.locals.access, {
+		action: "updated",
+		object_type: "tor-onion",
+		object_id: updatedService.id,
+		meta: {
+			name: updatedService.name,
+			onion_address: updatedService.onionAddress,
+			status: "stopped",
+		},
+	});
+
+	res.status(200).send(updatedService);
 });
 
 export default router;

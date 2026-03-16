@@ -355,19 +355,21 @@ const internalCertificate = {
 			throw new error.ItemNotFoundError(`Certificate ${certificate.nice_name} does not exist on disk`);
 		}
 
-		const certFiles = fs
-			.readdirSync(zipDirectory)
-			.filter((fn) => fn.endsWith(".pem") || fn.endsWith(".crt") || fn.endsWith(".key"))
-			.map((fn) => fs.realpathSync(path.join(zipDirectory, fn)));
+		const certFiles = (await fs.promises.readdir(zipDirectory)).filter(
+			(fn) => fn.endsWith(".pem") || fn.endsWith(".crt") || fn.endsWith(".key"),
+		);
+		const certFilesWithRealPaths = await Promise.all(
+			certFiles.map((fn) => fs.promises.realpath(path.join(zipDirectory, fn))),
+		);
 
-		if (certFiles.length === 0) {
+		if (certFilesWithRealPaths.length === 0) {
 			throw new error.ItemNotFoundError(`No certificate files found for ${certificate.nice_name}`);
 		}
 
 		const downloadName = `npm-${data.id}-${Date.now()}.zip`;
 		const opName = `/tmp/${downloadName}`;
 
-		await internalCertificate.zipFiles(certFiles, opName);
+		await internalCertificate.zipFiles(certFilesWithRealPaths, opName);
 		debug(logger, "zip completed : ", opName);
 		return {
 			fileName: opName,
@@ -429,8 +431,8 @@ const internalCertificate = {
 			// Revoke the cert
 			await internalCertificate.revokeCertbot(row);
 		} else {
-			fs.rmSync(`/data/tls/custom/npm-${row.id}`, { force: true, recursive: true });
-			fs.rmSync(`/data/tls/custom/npm-${row.id}.der`, { force: true });
+			await fs.promises.rm(`/data/tls/custom/npm-${row.id}`, { force: true, recursive: true });
+			await fs.promises.rm(`/data/tls/custom/npm-${row.id}.der`, { force: true });
 		}
 
 		internalGitOps.triggerAutoPush("certificate");
@@ -508,44 +510,21 @@ const internalCertificate = {
 
 		const dir = `/data/tls/custom/npm-${certificate.id}`;
 
-		return new Promise((resolve, reject) => {
-			if (certificate.provider === "letsencrypt" || certificate.provider === "internal") {
-				reject(new Error("Refusing to write certbot/internal certs here"));
-				return;
-			}
+		if (certificate.provider === "letsencrypt" || certificate.provider === "internal") {
+			throw new Error("Refusing to write certbot/internal certs here");
+		}
 
-			let certData = certificate.meta.certificate;
-			if (typeof certificate.meta.intermediate_certificate !== "undefined") {
-				certData = `${certData}\n${certificate.meta.intermediate_certificate}`;
-			}
+		let certData = certificate.meta.certificate;
+		if (typeof certificate.meta.intermediate_certificate !== "undefined") {
+			certData = `${certData}\n${certificate.meta.intermediate_certificate}`;
+		}
 
-			try {
-				if (!fs.existsSync(dir)) {
-					fs.mkdirSync(dir);
-				}
-			} catch (err) {
-				reject(err);
-				return;
-			}
+		if (!fs.existsSync(dir)) {
+			await fs.promises.mkdir(dir);
+		}
 
-			fs.writeFile(`${dir}/fullchain.pem`, certData, (err) => {
-				if (err) {
-					reject(err);
-				} else {
-					resolve();
-				}
-			});
-		}).then(() => {
-			return new Promise((resolve, reject) => {
-				fs.writeFile(`${dir}/privkey.pem`, certificate.meta.certificate_key, (err) => {
-					if (err) {
-						reject(err);
-					} else {
-						resolve();
-					}
-				});
-			});
-		});
+		await fs.promises.writeFile(`${dir}/fullchain.pem`, certData);
+		await fs.promises.writeFile(`${dir}/privkey.pem`, certificate.meta.certificate_key);
 	},
 
 	/**

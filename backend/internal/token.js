@@ -5,6 +5,7 @@ import { parseDatePeriod } from "../lib/helpers.js";
 import authModel from "../models/auth.js";
 import TokenModel from "../models/token.js";
 import userModel from "../models/user.js";
+import authSessionService from "./auth-session-service.js";
 
 const ERROR_MESSAGE_INVALID_AUTH = "Invalid email or password";
 const ERROR_MESSAGE_INVALID_AUTH_I18N = "error.invalid-auth";
@@ -221,4 +222,9 @@ export default {
 			user: user,
 		};
 	},
+
+	issueTokenPair: authSessionService.issueTokenPair,
+	refreshTokenPair: authSessionService.refreshTokenPair,
+	revokeSession: authSessionService.revokeSession,
+	revokeFamily: authSessionService.revokeFamily,
 };

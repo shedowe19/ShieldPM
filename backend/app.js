@@ -1,4 +1,5 @@
 import cookieParser from "cookie-parser";
+import crypto from "node:crypto";
 import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
@@ -34,6 +35,77 @@ const resolveTrustProxy = () => {
 };
 
 const TRUST_PROXY = resolveTrustProxy();
+const CSRF_SECRET = process.env.CSRF_SECRET || crypto.randomBytes(32).toString("hex");
+
+const decodeJwtPayload = (token) => {
+	if (!token || typeof token !== "string") {
+		return null;
+	}
+
+	const parts = token.split(".");
+	if (parts.length < 2 || !parts[1]) {
+		return null;
+	}
+
+	try {
+		return JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+	} catch {
+		return null;
+	}
+};
+
+const getRequestToken = (req) => {
+	const authorization = req.headers.authorization;
+	if (typeof authorization === "string") {
+		const [scheme, token] = authorization.split(" ");
+		if (scheme === "Bearer" && token) {
+			return token;
+		}
+	}
+
+	if (typeof req.cookies?.shieldpm_jwt === "string" && req.cookies.shieldpm_jwt) {
+		return req.cookies.shieldpm_jwt;
+	}
+
+	return null;
+};
+
+const getAnonymousCsrfIdentifier = (req) => {
+	const fingerprint = [req.ip || "unknown-ip", req.headers["user-agent"] || "unknown-agent"].join("|");
+	return `anon:${crypto.createHash("sha256").update(fingerprint).digest("hex")}`;
+};
+
+const resolveCsrfSessionIdentifier = (req) => {
+	// Use a stable identifier that does NOT change on token refresh/rotation.
+	// The JWT changes on every refresh, so we cannot use jti or token hash.
+	// Instead, extract the user ID (stable across sessions) or fall back to
+	// an anonymous fingerprint for unauthenticated requests.
+	const token = getRequestToken(req);
+	const payload = decodeJwtPayload(token);
+	const userId = payload?.attrs?.id || payload?.sub;
+
+	if (userId) {
+		return `user:${userId}`;
+	}
+
+	// For unauthenticated requests, use a stable anonymous fingerprint.
+	// Do NOT use jti or token hash — they change on every refresh and
+	// would invalidate the CSRF token.
+	return getAnonymousCsrfIdentifier(req);
+};
+
+const isHttpsRequest = (req) => {
+	if (req.secure) {
+		return true;
+	}
+
+	const forwardedProto = req.headers["x-forwarded-proto"];
+	if (typeof forwardedProto === "string") {
+		return forwardedProto.split(",")[0].trim().toLowerCase() === "https";
+	}
+
+	return false;
+};
 
 const globalApiLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutes
@@ -56,6 +128,13 @@ const globalApiLimiter = rateLimit({
  * App
  */
 const app = express();
+app.disable("x-powered-by");
+app.set("trust proxy", TRUST_PROXY);
+app.enable("strict routing");
+logger.info(
+	`Express trust proxy configured as: ${typeof TRUST_PROXY === "string" ? TRUST_PROXY : JSON.stringify(TRUST_PROXY)}`,
+);
+
 app.use(
 	helmet({
 		contentSecurityPolicy: {
@@ -77,19 +156,22 @@ app.use(
 );
 
 // CSRF Protection (Double Submit Cookie)
+const csrfCookieOptions = {
+	sameSite: "strict",
+	path: "/",
+};
 
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
-	getSecret: () => process.env.CSRF_SECRET || "DevelopmentSecretKEY-CHANGE-IN-PROD",
+	getSecret: () => CSRF_SECRET,
 	cookieName: "XSRF-TOKEN",
 	cookieOptions: {
-		sameSite: "strict",
-		secure: false, // Allow both HTTP and HTTPS (sameSite provides protection)
-		path: "/",
+		...csrfCookieOptions,
+		secure: false,
 	},
 	size: 64,
 	ignoredMethods: ["GET", "HEAD", "OPTIONS"],
 	getCsrfTokenFromRequest: (req) => req.headers["x-xsrf-token"],
-	getSessionIdentifier: (_req) => "stateless-session",
+	getSessionIdentifier: (req) => resolveCsrfSessionIdentifier(req),
 });
 
 // CodeQL expects a middleware factory (like csurf/lusca), but csrf-csrf provides a direct middleware.
@@ -99,14 +181,24 @@ const csrf = () => doubleCsrfProtection;
 // lgtm[js/missing-token-validation]
 // codeql[js/missing-token-validation]
 app.use(cookieParser());
+app.use(jwt());
 
 // CSRF middleware with a strict first-time-setup bypass.
 // Only skip CSRF for POST /api/users while the system has no active users yet.
 app.use(async (req, res, next) => {
 	const setupComplete = await isSetup();
-	const isInitialSetupUserCreation = !setupComplete && req.method === "POST" && req.path === "/api/users";
 
-	if (isInitialSetupUserCreation) {
+	// Bypass CSRF for specific endpoints that are protected by other mechanisms.
+	// Match both with and without /api prefix to handle different proxy configurations.
+	const path = req.path;
+	const method = req.method;
+	const isInitialSetupUserCreation =
+		!setupComplete && method === "POST" && (path === "/api/users" || path === "/users");
+	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
+	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
+	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
+
+	if (isInitialSetupUserCreation || isLoginRequest || isTokenRefresh || isTokenLogout) {
 		return next();
 	}
 
@@ -115,7 +207,12 @@ app.use(async (req, res, next) => {
 
 // Generate Token and set cookie/local
 app.use((req, res, next) => {
-	const token = generateCsrfToken(req, res);
+	const token = generateCsrfToken(req, res, {
+		cookieOptions: {
+			...csrfCookieOptions,
+			secure: isHttpsRequest(req),
+		},
+	});
 	res.locals.csrfToken = token;
 	next();
 });
@@ -127,21 +224,12 @@ app.use(express.urlencoded({ extended: true }));
  * General Logging, BEFORE routes
  */
 
-app.disable("x-powered-by");
-app.set("trust proxy", TRUST_PROXY);
-app.enable("strict routing");
-logger.info(
-	`Express trust proxy configured as: ${typeof TRUST_PROXY === "string" ? TRUST_PROXY : JSON.stringify(TRUST_PROXY)}`,
-);
-
 // pretty print JSON when not live
 app.set("json spaces", 2);
 
 import checkDemoMode from "./lib/express/demo.js";
 
 app.use(checkDemoMode);
-
-app.use(jwt());
 
 // Apply global rate limiter to all API routes
 app.use("/api", globalApiLimiter);
@@ -150,10 +238,16 @@ app.use("/", mainRoutes);
 
 // production error handler
 // no stacktraces leaked to user
-app.use((err, _req, res, _) => {
+app.use((err, _req, res, next) => {
+	if (res.headersSent) {
+		return next(err);
+	}
+
+	const rawStatus = Number.parseInt(err.status || err.statusCode, 10);
+	const status = Number.isInteger(rawStatus) && rawStatus >= 100 && rawStatus <= 599 ? rawStatus : 500;
 	const payload = {
 		error: {
-			code: err.status,
+			code: status,
 			message: err.public ? err.message : "Internal Error",
 		},
 	};
@@ -170,7 +264,7 @@ app.use((err, _req, res, _) => {
 		}
 	}
 
-	res.status(err.status || 500).send(payload);
+	return res.status(status).json(payload);
 });
 
 export default app;

@@ -115,7 +115,7 @@ router
 			// Set Session Cookie
 			res.cookie("shieldpm_jwt", token, {
 				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				secure: req.secure,
 				sameSite: "strict",
 				maxAge: new Date(expires).getTime() - Date.now(),
 			});

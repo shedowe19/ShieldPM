@@ -79,10 +79,15 @@ const intervalToMs = (interval, unit) => {
 const internalGitDeploy = {
 	/**
 	 * Sync a proxy host from its Git repository
+	 * @param {import("../lib/types.js").Access | null | undefined} access
 	 * @param {number} hostId
 	 * @returns {Promise<{success: boolean, commit?: string, message?: string}>}
 	 */
-	sync: async (hostId) => {
+	sync: async (access, hostId) => {
+		if (access) {
+			await access.can("proxy_hosts:update", hostId);
+		}
+
 		if (isDemoMode()) {
 			throw new errs.AuthError("Git Deploy is disabled in Demo Mode");
 		}
@@ -207,10 +212,15 @@ const internalGitDeploy = {
 
 	/**
 	 * Get sync status for a proxy host
+	 * @param {import("../lib/types.js").Access | null | undefined} access
 	 * @param {number} hostId
 	 * @returns {Promise<Object>}
 	 */
-	getStatus: async (hostId) => {
+	getStatus: async (access, hostId) => {
+		if (access) {
+			await access.can("proxy_hosts:get", hostId);
+		}
+
 		const host = await ProxyHost.query().findById(hostId);
 		if (!host) {
 			throw new errs.ItemNotFoundError(hostId);
@@ -298,7 +308,7 @@ const internalGitDeploy = {
 		}
 
 		logger.info(`[git-deploy] Config updated for host ${hostId}`);
-		return internalGitDeploy.getStatus(hostId);
+		return internalGitDeploy.getStatus(access, hostId);
 	},
 
 	/**
@@ -347,7 +357,7 @@ const internalGitDeploy = {
 
 		const timer = setInterval(async () => {
 			try {
-				await internalGitDeploy.sync(host.id);
+				await internalGitDeploy.sync(null, host.id);
 			} catch (err) {
 				logger.error(`[git-deploy] Polling sync failed for host ${host.id}:`, err);
 			}
@@ -356,7 +366,7 @@ const internalGitDeploy = {
 		pollingTimers.set(host.id, timer);
 
 		// Trigger immediate sync
-		internalGitDeploy.sync(host.id).catch((err) => {
+		internalGitDeploy.sync(null, host.id).catch((err) => {
 			logger.error(`[git-deploy] Initial sync failed for host ${host.id}:`, err);
 		});
 	},

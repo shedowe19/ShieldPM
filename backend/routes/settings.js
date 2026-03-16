@@ -3,7 +3,6 @@ import internalSetting from "../internal/setting.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import validator from "../lib/validator/index.js";
-import { debug, express as logger } from "../logger.js";
 import { getValidationSchema } from "../schema/index.js";
 
 const router = express.Router({
@@ -27,14 +26,9 @@ router
 	 *
 	 * Retrieve all settings
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const rows = await internalSetting.getAll(res.locals.access);
-			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.get(async (_req, res) => {
+		const rows = await internalSetting.getAll(res.locals.access);
+		res.status(200).send(rows);
 	});
 
 /**
@@ -54,45 +48,39 @@ router
 	 *
 	 * Retrieve a specific setting
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const data = await validator(
-				{
-					required: ["setting_id"],
-					additionalProperties: false,
-					properties: {
-						setting_id: {
-							type: "string",
-							minLength: 1,
-						},
+	.get(async (req, res) => {
+		const data = await validator(
+			{
+				required: ["setting_id"],
+				additionalProperties: false,
+				properties: {
+					setting_id: {
+						type: "string",
+						minLength: 1,
 					},
 				},
-				{
-					setting_id: req.params.setting_id,
-				},
-			);
-			const row = await internalSetting.get(res.locals.access, {
-				id: data.setting_id,
-			});
-			if (row.id === "oidc-config") {
-				// Redact oidc configuration via api (unauthenticated get call)
-				const m = row.meta;
-				row.meta = {
-					name: m.name,
-					enabled:
-						m.enabled === true &&
-						!!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
-				};
+			},
+			{
+				setting_id: req.params.setting_id,
+			},
+		);
+		const row = await internalSetting.get(res.locals.access, {
+			id: data.setting_id,
+		});
+		if (row.id === "oidc-config") {
+			// Redact oidc configuration via api (unauthenticated get call)
+			const m = row.meta;
+			row.meta = {
+				name: m.name,
+				enabled:
+					m.enabled === true && !!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
+			};
 
-				// Remove these temporary cookies used during oidc authentication
-				res.clearCookie("shieldpm_oidc");
-				res.clearCookie("shieldpm_oidc_error");
-			}
-			res.status(200).send(row);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
+			// Remove these temporary cookies used during oidc authentication
+			res.clearCookie("shieldpm_oidc");
+			res.clearCookie("shieldpm_oidc_error");
 		}
+		res.status(200).send(row);
 	})
 
 	/**
@@ -100,16 +88,24 @@ router
 	 *
 	 * Update and existing setting
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
-			payload.id = req.params.setting_id;
-			const result = await internalSetting.update(res.locals.access, payload);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.put(async (req, res) => {
+		const params = await validator(
+			{
+				required: ["setting_id"],
+				additionalProperties: false,
+				properties: {
+					setting_id: {
+						type: "string",
+						minLength: 1,
+					},
+				},
+			},
+			{ setting_id: req.params.setting_id },
+		);
+		const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
+		payload.id = params.setting_id;
+		const result = await internalSetting.update(res.locals.access, payload);
+		res.status(200).send(result);
 	});
 
 export default router;

@@ -1,0 +1,38 @@
+{
+	"operationId": "refreshTokenRotation",
+	"summary": "Rotate refresh token and obtain new access/refresh cookie pair",
+	"description": "Consumes the current refresh-token cookie, rotates the token family, and sets new httpOnly Access and Refresh cookies. If a previously-used refresh token is replayed, the entire token family is revoked (replay detection).",
+	"tags": [
+		"tokens"
+	],
+	"security": [],
+	"parameters": [],
+	"responses": {
+		"200": {
+			"description": "Tokens rotated successfully. New Access and Refresh cookies are set.",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"success": {
+								"type": "boolean",
+								"example": true
+							}
+						}
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Refresh token missing, invalid, expired, or replayed (family revoked)",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

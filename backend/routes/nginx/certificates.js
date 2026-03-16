@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import express from "express";
 import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
@@ -8,7 +9,7 @@ import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
-import { debug, express as logger } from "../../logger.js";
+import { express as logger } from "../../logger.js";
 import { getValidationSchema } from "../../schema/index.js";
 
 const certificateUpload = fileUpload({
@@ -57,17 +58,12 @@ const createCertLimiter = rateLimit({
  *
  * Download Root CA
  */
-router.get("/root-ca", async (req, res, next) => {
-	try {
-		const certContent = await internalPki.getRootCa();
-		res.status(200)
-			.header("Content-Type", "application/x-pem-file")
-			.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
-			.send(certContent);
-	} catch (err) {
-		debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-		next(err);
-	}
+router.get("/root-ca", async (_req, res) => {
+	const certContent = await internalPki.getRootCa();
+	res.status(200)
+		.header("Content-Type", "application/x-pem-file")
+		.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
+		.send(certContent);
 });
 
 router
@@ -82,31 +78,26 @@ router
 	 *
 	 * Retrieve all certificates
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const data = await validator(
-				{
-					additionalProperties: false,
-					properties: {
-						expand: {
-							$ref: "common#/properties/expand",
-						},
-						query: {
-							$ref: "common#/properties/query",
-						},
+	.get(async (req, res) => {
+		const data = await validator(
+			{
+				additionalProperties: false,
+				properties: {
+					expand: {
+						$ref: "common#/properties/expand",
+					},
+					query: {
+						$ref: "common#/properties/query",
 					},
 				},
-				{
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-					query: typeof req.query.query === "string" ? req.query.query : null,
-				},
-			);
-			const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
-			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+			},
+			{
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				query: typeof req.query.query === "string" ? req.query.query : null,
+			},
+		);
+		const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
+		res.status(200).send(rows);
 	})
 
 	/**
@@ -115,15 +106,10 @@ router
 	 * Create a new certificate
 	 */
 	.post(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
-			req.setTimeout(900000); // 15 minutes timeout
-			const result = await internalCertificate.create(res.locals.access, payload);
-			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
+		req.setTimeout(900000); // 15 minutes timeout
+		const result = await internalCertificate.create(res.locals.access, payload);
+		res.status(201).send(result);
 	});
 
 router
@@ -134,40 +120,54 @@ router
 	.all(createCertLimiter)
 	.all(jwtdecode())
 	.post(async (req, res, next) => {
-		try {
-			// Basic validation inline for now, or add to schema later
-			const { common_name, password, years } = req.body;
-			if (!common_name || !password) {
-				throw new errs.ValidationError("Common Name and Password are required");
+		const payload = await validator(
+			{
+				type: "object",
+				additionalProperties: false,
+				required: ["common_name", "password"],
+				properties: {
+					common_name: { type: "string", minLength: 1, maxLength: 255 },
+					password: { type: "string", minLength: 1, maxLength: 1024 },
+					years: { type: "integer", minimum: 1, maximum: 10 },
+				},
+			},
+			{
+				common_name: req.body?.common_name,
+				password: req.body?.password,
+				years: req.body?.years === undefined ? 1 : Number(req.body.years),
+			},
+		);
+
+		const tmpDir = `/tmp/client-cert-${Date.now()}`;
+		const cleanupTmpDir = async () => {
+			try {
+				await fs.rm(tmpDir, { recursive: true, force: true });
+			} catch (cleanupErr) {
+				logger.warn(`Cleanup failed for ${tmpDir}: ${cleanupErr.message}`);
 			}
+		};
 
-			// Create a temp dir for this generation
-			const tmpDir = `/tmp/client-cert-${Date.now()}`;
-
-			const p12Path = await internalPki.createClientCert(
+		let p12Path;
+		try {
+			p12Path = await internalPki.createClientCert(
 				{
-					common_name,
-					password,
-					years: Number(years) || 1,
+					common_name: payload.common_name,
+					password: payload.password,
+					years: payload.years,
 				},
 				tmpDir,
 			);
-
-			res.download(p12Path, `${common_name}.p12`, (err) => {
-				// Cleanup after download
-				try {
-					import("node:fs").then((fs) => fs.rmSync(tmpDir, { recursive: true, force: true }));
-				} catch (e) {
-					console.error("Cleanup failed", e);
-				}
-				if (err) {
-					next(err);
-				}
-			});
 		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
+			await cleanupTmpDir();
+			throw err;
 		}
+
+		res.download(p12Path, `${payload.common_name}.p12`, async (err) => {
+			await cleanupTmpDir();
+			if (err) {
+				next(err);
+			}
+		});
 	});
 
 /**
@@ -186,22 +186,17 @@ router
 	 * Get list of all supported DNS providers
 	 */
 	.get(async (req, res, next) => {
-		try {
-			if (!res.locals.access.token.getUserId()) {
-				throw new errs.PermissionError("Login required");
-			}
-			const clean = Object.keys(dnsPlugins).map((key) => ({
-				id: key,
-				name: dnsPlugins[key].name,
-				credentials: dnsPlugins[key].credentials,
-			}));
-
-			clean.sort((a, b) => a.name.localeCompare(b.name));
-			res.status(200).send(clean);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
+		if (!res.locals.access.token.getUserId()) {
+			throw new errs.PermissionError("Login required");
 		}
+		const clean = Object.keys(dnsPlugins).map((key) => ({
+			id: key,
+			name: dnsPlugins[key].name,
+			credentials: dnsPlugins[key].credentials,
+		}));
+
+		clean.sort((a, b) => a.name.localeCompare(b.name));
+		res.status(200).send(clean);
 	});
 
 /**
@@ -222,16 +217,11 @@ router
 	 * Test HTTP challenge for domains
 	 */
 	.post(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), req.body);
-			req.setTimeout(60000); // 1 minute timeout
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), req.body);
+		req.setTimeout(60000); // 1 minute timeout
 
-			const result = await internalCertificate.testHttpsChallenge(res.locals.access, payload);
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const result = await internalCertificate.testHttpsChallenge(res.locals.access, payload);
+		res.status(200).send(result);
 	});
 
 /**
@@ -251,21 +241,16 @@ router
 	 *
 	 * Validate certificates
 	 */
-	.post(certificateUpload, async (req, res, next) => {
+	.post(certificateUpload, async (req, res) => {
 		if (!req.files) {
 			res.status(400).send({ error: "No files were uploaded" });
 			return;
 		}
 
-		try {
-			const result = await internalCertificate.validate({
-				files: req.files,
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const result = await internalCertificate.validate({
+			files: req.files,
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -273,23 +258,18 @@ router
  *
  * /api/nginx/certificates/retrieve
  */
-router.post("/retrieve", jwtdecode(), async (req, res, next) => {
-	try {
-		const { id, expand } = req.body;
-		const certificateId = Number.parseInt(id, 10);
-		if (Number.isNaN(certificateId) || certificateId < 1) {
-			throw new errs.ValidationError("id must be an integer greater than 0");
-		}
-
-		const row = await internalCertificate.get(res.locals.access, {
-			id: certificateId,
-			expand: expand,
-		});
-		res.status(200).send(row);
-	} catch (err) {
-		debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-		next(err);
+router.post("/retrieve", jwtdecode(), async (req, res) => {
+	const { id, expand } = req.body;
+	const certificateId = Number.parseInt(id, 10);
+	if (Number.isNaN(certificateId) || certificateId < 1) {
+		throw new errs.ValidationError("id must be an integer greater than 0");
 	}
+
+	const row = await internalCertificate.get(res.locals.access, {
+		id: certificateId,
+		expand: expand,
+	});
+	res.status(200).send(row);
 });
 
 /**
@@ -309,17 +289,13 @@ router
 	 *
 	 * Updates a specific certificate
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const data = { id: req.params.certificate_id, ...req.body };
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), data);
-
-			const result = await internalCertificate.update(res.locals.access, payload);
-			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.put(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/{certID}", "put"), {
+			...req.body,
+			id: req.params.certificate_id,
+		});
+		const result = await internalCertificate.update(res.locals.access, payload);
+		res.status(201).send(result);
 	})
 
 	/**
@@ -327,16 +303,15 @@ router
 	 *
 	 * Update and existing certificate
 	 */
-	.delete(async (req, res, next) => {
-		try {
-			const result = await internalCertificate.delete(res.locals.access, {
-				id: Number.parseInt(req.params.certificate_id, 10),
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
+	.delete(async (req, res) => {
+		const parsedId = Number.parseInt(req.params.certificate_id, 10);
+		if (Number.isNaN(parsedId)) {
+			return res.status(400).send({ error: { code: 400, message: "Invalid certificate id" } });
 		}
+		const result = await internalCertificate.delete(res.locals.access, {
+			id: parsedId,
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -356,22 +331,17 @@ router
 	 *
 	 * Upload certificates
 	 */
-	.post(certificateUpload, async (req, res, next) => {
+	.post(certificateUpload, async (req, res) => {
 		if (!req.files) {
 			res.status(400).send({ error: "No files were uploaded" });
 			return;
 		}
 
-		try {
-			const result = await internalCertificate.upload(res.locals.access, {
-				id: Number.parseInt(req.params.certificate_id, 10),
-				files: req.files,
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const result = await internalCertificate.upload(res.locals.access, {
+			id: Number.parseInt(req.params.certificate_id, 10),
+			files: req.files,
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -391,17 +361,12 @@ router
 	 *
 	 * Renew certificate
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res) => {
 		req.setTimeout(900000); // 15 minutes timeout
-		try {
-			const result = await internalCertificate.renew(res.locals.access, {
-				id: Number.parseInt(req.params.certificate_id, 10),
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const result = await internalCertificate.renew(res.locals.access, {
+			id: Number.parseInt(req.params.certificate_id, 10),
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -422,17 +387,12 @@ router
 	 *
 	 * Download certificate
 	 */
-	.post(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
-			const result = await internalCertificate.download(res.locals.access, {
-				id: Number.parseInt(payload.id, 10),
-			});
-			res.status(200).download(result.fileName);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.post(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
+		const result = await internalCertificate.download(res.locals.access, {
+			id: Number.parseInt(payload.id, 10),
+		});
+		res.status(200).download(result.fileName);
 	});
 
 export default router;

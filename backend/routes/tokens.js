@@ -1,4 +1,6 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
+import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import internalToken from "../internal/token.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
@@ -7,6 +9,18 @@ import { debug, express as logger } from "../logger.js";
 import TokenModel from "../models/token.js";
 import User from "../models/user.js";
 import { getValidationSchema } from "../schema/index.js";
+
+/**
+ * Rate limiter for sensitive auth endpoints (refresh, logout, restore).
+ * Complements the per-IP login attempt tracking on POST /tokens.
+ */
+const authRateLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 30, // limit each IP to 30 requests per window
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: { error: { code: 429, message: "Too many requests, please try again later." } },
+});
 
 const router = express.Router({
 	caseSensitive: true,
@@ -171,33 +185,23 @@ router
 	 * We also piggy back on to this method, allowing admins to get tokens
 	 * for services like Job board and Worker.
 	 */
-	.get(jwtdecode(), async (req, res, next) => {
-		try {
-			// Backwards compatibility: Check header first, then cookie
-			// Actually jwtdecode middleware handles header -> res.locals.access
-			// If we want to support cookie-based refresh loop:
-			// The `jwtdecode` middleware needs to be updated too, but for now let's assume valid access token is present
+	.get(authRateLimiter, jwtdecode(), async (req, res) => {
+		logger.warn(`Legacy GET /tokens accessed from IP ${req.ip || "unknown"} – migrate to POST /tokens/refresh`);
 
-			const data = await internalToken.getFreshToken(res.locals.access, {
-				expiry: typeof req.query.expiry !== "undefined" ? req.query.expiry : null,
-				scope: typeof req.query.scope !== "undefined" ? req.query.scope : null,
-			});
+		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
+		const scope = typeof req.query.scope === "string" ? req.query.scope : null;
+		const query = { expiry, scope };
+		const data = await internalToken.getFreshToken(res.locals.access, query);
 
-			// Set new cookie
-			res.cookie("shieldpm_jwt", data.token, {
-				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
-				sameSite: "strict",
-				maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days (example, matches typical expiry)
-			});
+		res.cookie("shieldpm_jwt", data.token, {
+			httpOnly: true,
+			secure: req.secure,
+			sameSite: "strict",
+			maxAge: data.expires ? Math.max(0, new Date(data.expires).getTime() - Date.now()) : undefined,
+		});
 
-			// clear this temporary cookie following a successful oidc authentication
-			res.clearCookie("shieldpm_oidc");
-			res.status(200).send({ ...data, token: undefined }); // Don't send token in body
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		res.clearCookie("shieldpm_oidc");
+		res.status(200).send({ ...data, token: undefined });
 	})
 
 	/**
@@ -205,7 +209,7 @@ router
 	 *
 	 * Create a new Token
 	 */
-	.post(async (req, res, next) => {
+	.post(authRateLimiter, async (req, res, next) => {
 		const ip = req.ip || "unknown";
 		const now = Date.now();
 		const loginIdentifier = normalizeLoginIdentifier(req.body);
@@ -233,15 +237,24 @@ router
 			const result = await internalToken.getTokenFromEmail(data);
 			await clearLoginAttempts(trackedIdentifiers);
 
-			// Set Cookie
-			res.cookie("shieldpm_jwt", result.token, {
-				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
-				sameSite: "strict",
-				maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
+			// Issue refresh-token pair alongside the access token
+			const meta = { ip, userAgent: req.headers["user-agent"] || null };
+			const pair = await internalToken.issueTokenPair(result.user, data.scope || "user", meta);
+
+			// Set both cookies
+			setAuthCookies(res, req, {
+				accessToken: pair.access_token,
+				accessExpires: pair.access_expires,
+				refreshToken: pair.refresh_token,
+				refreshExpires: pair.refresh_expires,
 			});
 
-			res.status(200).send({ ...result, token: undefined }); // Omit token
+			// Backward-compatible response (no tokens in body)
+			res.status(200).send({
+				expires: pair.access_expires,
+				user: pair.user,
+				csrfToken: res.locals.csrfToken,
+			});
 		} catch (err) {
 			try {
 				for (const tracked of trackedIdentifiers) {
@@ -263,18 +276,101 @@ router
 		}
 	})
 
-	.delete(async (_req, res) => {
-		res.clearCookie("shieldpm_jwt");
+	.delete(async (req, res) => {
+		// Try to revoke the refresh session if a refresh token is present
+		const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
+		if (rawRefreshToken) {
+			try {
+				const AuthSession = (await import("../models/auth-session.js")).default;
+				const lookup = AuthSession.buildLookup(rawRefreshToken);
+				const session = await AuthSession.query().findOne(lookup);
+				if (session && !session.revoked_at) {
+					await internalToken.revokeSession(session.id, "logout");
+				}
+			} catch (err) {
+				debug(logger, `Failed to revoke refresh session on logout: ${err}`);
+			}
+		}
+
+		clearAuthCookies(res);
 		res.clearCookie("shieldpm_jwt_original");
 		res.sendStatus(204);
 	});
+
+/**
+ * POST /tokens/refresh
+ *
+ * Exchange a valid refresh token for a new access + refresh token pair.
+ * Reads refresh token from cookie first, body fallback.
+ */
+router.post("/refresh", authRateLimiter, async (req, res) => {
+	try {
+		const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
+
+		if (!rawRefreshToken) {
+			return res.status(400).send({
+				error: { code: 400, message: "Missing refresh token" },
+			});
+		}
+
+		const meta = { ip: req.ip || "unknown", userAgent: req.headers["user-agent"] || null };
+		const pair = await internalToken.refreshTokenPair(rawRefreshToken, meta);
+
+		setAuthCookies(res, req, {
+			accessToken: pair.access_token,
+			accessExpires: pair.access_expires,
+			refreshToken: pair.refresh_token,
+			refreshExpires: pair.refresh_expires,
+		});
+
+		// Backward-compatible response (no tokens in body)
+		res.status(200).send({
+			expires: pair.access_expires,
+			user: pair.user,
+			csrfToken: res.locals.csrfToken,
+		});
+	} catch (err) {
+		debug(logger, `POST /tokens/refresh: ${err}`);
+		const code = err instanceof errs.AuthError || err instanceof errs.UnauthorizedError ? 401 : 500;
+		clearAuthCookies(res);
+		res.status(code).send({
+			error: { code, message: err.message || "Token refresh failed" },
+		});
+	}
+});
+
+/**
+ * POST /tokens/logout
+ *
+ * Revoke the refresh session and clear all auth cookies.
+ */
+router.post("/logout", authRateLimiter, async (req, res) => {
+	const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
+
+	if (rawRefreshToken) {
+		try {
+			const AuthSession = (await import("../models/auth-session.js")).default;
+			const lookup = AuthSession.buildLookup(rawRefreshToken);
+			const session = await AuthSession.query().findOne(lookup);
+			if (session && !session.revoked_at) {
+				await internalToken.revokeSession(session.id, "logout");
+			}
+		} catch (err) {
+			debug(logger, `POST /tokens/logout: revoke failed: ${err}`);
+		}
+	}
+
+	clearAuthCookies(res);
+	res.clearCookie("shieldpm_jwt_original");
+	res.sendStatus(204);
+});
 
 router
 	.route("/restore")
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.post(async (req, res) => {
+	.post(authRateLimiter, async (req, res) => {
 		try {
 			const originalToken = req.cookies?.shieldpm_jwt_original;
 			if (!originalToken) {
@@ -298,7 +394,7 @@ router
 			// Set original token back to main cookie
 			res.cookie("shieldpm_jwt", originalToken, {
 				httpOnly: true,
-				secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+				secure: req.secure,
 				sameSite: "strict",
 				maxAge: payload.exp ? payload.exp * 1000 - Date.now() : undefined,
 			});

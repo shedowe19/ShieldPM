@@ -4,7 +4,6 @@ import internalProxyHost from "../../internal/proxy-host.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
-import { debug, express as logger } from "../../logger.js";
 import { getValidationSchema } from "../../schema/index.js";
 
 const router = express.Router({
@@ -39,27 +38,14 @@ router
 					query: {
 						$ref: "common#/properties/query",
 					},
-					page: {
-						type: "integer",
-						minimum: 1,
-						default: 1,
-					},
-					limit: {
-						type: "integer",
-						minimum: 1,
-						maximum: 500,
-						default: 50,
-					},
 				},
 			},
 			{
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 				query: typeof req.query.query === "string" ? req.query.query : null,
-				page: req.query.page ? Number.parseInt(req.query.page, 10) : 1,
-				limit: req.query.limit ? Number.parseInt(req.query.limit, 10) : 50,
 			},
 		);
-		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query, data.page, data.limit);
+		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	})
 
@@ -204,8 +190,9 @@ router
 	 */
 	.post(async (req, res) => {
 		const hostId = Number.parseInt(req.params.host_id, 10);
+		await res.locals.access.can("proxy_hosts:update", hostId);
 		await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-sync", "post"), req.body);
-		const result = await internalGitDeploy.sync(hostId);
+		const result = await internalGitDeploy.sync(res.locals.access, hostId);
 		res.status(200).send(result);
 	});
 
@@ -228,7 +215,8 @@ router
 	 */
 	.get(async (req, res) => {
 		const hostId = Number.parseInt(req.params.host_id, 10);
-		const result = await internalGitDeploy.getStatus(hostId);
+		await res.locals.access.can("proxy_hosts:get", hostId);
+		const result = await internalGitDeploy.getStatus(res.locals.access, hostId);
 		res.status(200).send(result);
 	})
 
