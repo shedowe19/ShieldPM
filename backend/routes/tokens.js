@@ -185,7 +185,7 @@ router
 	 * We also piggy back on to this method, allowing admins to get tokens
 	 * for services like Job board and Worker.
 	 */
-	.get(jwtdecode(), async (req, res) => {
+	.get(authRateLimiter, jwtdecode(), async (req, res) => {
 		logger.warn(`Legacy GET /tokens accessed from IP ${req.ip || "unknown"} – migrate to POST /tokens/refresh`);
 
 		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
@@ -209,7 +209,7 @@ router
 	 *
 	 * Create a new Token
 	 */
-	.post(async (req, res, next) => {
+	.post(authRateLimiter, async (req, res, next) => {
 		const ip = req.ip || "unknown";
 		const now = Date.now();
 		const loginIdentifier = normalizeLoginIdentifier(req.body);
