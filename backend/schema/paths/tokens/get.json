@@ -1,6 +1,7 @@
 {
 	"operationId": "refreshToken",
-	"summary": "Refresh your access token",
+	"summary": "Refresh your access token (DEPRECATED — use POST /tokens/refresh)",
+	"deprecated": true,
 	"tags": [
 		"tokens"
 	],
