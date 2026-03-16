@@ -26,13 +26,9 @@ router
 	 *
 	 * Retrieve all settings
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const rows = await internalSetting.getAll(res.locals.access);
-			res.status(200).send(rows);
-		} catch (err) {
-			next(err);
-		}
+	.get(async (_req, res) => {
+		const rows = await internalSetting.getAll(res.locals.access);
+		res.status(200).send(rows);
 	});
 
 /**

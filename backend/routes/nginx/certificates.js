@@ -9,7 +9,7 @@ import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
-import { debug, express as logger } from "../../logger.js";
+import { express as logger } from "../../logger.js";
 import { getValidationSchema } from "../../schema/index.js";
 
 const certificateUpload = fileUpload({
@@ -58,17 +58,12 @@ const createCertLimiter = rateLimit({
  *
  * Download Root CA
  */
-router.get("/root-ca", async (req, res, next) => {
-	try {
-		const certContent = await internalPki.getRootCa();
-		res.status(200)
-			.header("Content-Type", "application/x-pem-file")
-			.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
-			.send(certContent);
-	} catch (err) {
-		debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-		next(err);
-	}
+router.get("/root-ca", async (_req, res) => {
+	const certContent = await internalPki.getRootCa();
+	res.status(200)
+		.header("Content-Type", "application/x-pem-file")
+		.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
+		.send(certContent);
 });
 
 router
@@ -83,31 +78,26 @@ router
 	 *
 	 * Retrieve all certificates
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const data = await validator(
-				{
-					additionalProperties: false,
-					properties: {
-						expand: {
-							$ref: "common#/properties/expand",
-						},
-						query: {
-							$ref: "common#/properties/query",
-						},
+	.get(async (req, res) => {
+		const data = await validator(
+			{
+				additionalProperties: false,
+				properties: {
+					expand: {
+						$ref: "common#/properties/expand",
+					},
+					query: {
+						$ref: "common#/properties/query",
 					},
 				},
-				{
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-					query: typeof req.query.query === "string" ? req.query.query : null,
-				},
-			);
-			const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
-			res.status(200).send(rows);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+			},
+			{
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				query: typeof req.query.query === "string" ? req.query.query : null,
+			},
+		);
+		const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
+		res.status(200).send(rows);
 	})
 
 	/**
@@ -251,21 +241,16 @@ router
 	 *
 	 * Validate certificates
 	 */
-	.post(certificateUpload, async (req, res, next) => {
+	.post(certificateUpload, async (req, res) => {
 		if (!req.files) {
 			res.status(400).send({ error: "No files were uploaded" });
 			return;
 		}
 
-		try {
-			const result = await internalCertificate.validate({
-				files: req.files,
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const result = await internalCertificate.validate({
+			files: req.files,
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -273,23 +258,18 @@ router
  *
  * /api/nginx/certificates/retrieve
  */
-router.post("/retrieve", jwtdecode(), async (req, res, next) => {
-	try {
-		const { id, expand } = req.body;
-		const certificateId = Number.parseInt(id, 10);
-		if (Number.isNaN(certificateId) || certificateId < 1) {
-			throw new errs.ValidationError("id must be an integer greater than 0");
-		}
-
-		const row = await internalCertificate.get(res.locals.access, {
-			id: certificateId,
-			expand: expand,
-		});
-		res.status(200).send(row);
-	} catch (err) {
-		debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-		next(err);
+router.post("/retrieve", jwtdecode(), async (req, res) => {
+	const { id, expand } = req.body;
+	const certificateId = Number.parseInt(id, 10);
+	if (Number.isNaN(certificateId) || certificateId < 1) {
+		throw new errs.ValidationError("id must be an integer greater than 0");
 	}
+
+	const row = await internalCertificate.get(res.locals.access, {
+		id: certificateId,
+		expand: expand,
+	});
+	res.status(200).send(row);
 });
 
 /**
@@ -309,18 +289,13 @@ router
 	 *
 	 * Updates a specific certificate
 	 */
-	.put(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/{certID}", "put"), {
-				...req.body,
-				id: req.params.certificate_id,
-			});
-			const result = await internalCertificate.update(res.locals.access, payload);
-			res.status(201).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.put(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/{certID}", "put"), {
+			...req.body,
+			id: req.params.certificate_id,
+		});
+		const result = await internalCertificate.update(res.locals.access, payload);
+		res.status(201).send(result);
 	})
 
 	/**
@@ -328,20 +303,15 @@ router
 	 *
 	 * Update and existing certificate
 	 */
-	.delete(async (req, res, next) => {
-		try {
-			const parsedId = Number.parseInt(req.params.certificate_id, 10);
-			if (Number.isNaN(parsedId)) {
-				return res.status(400).send({ error: { code: 400, message: "Invalid certificate id" } });
-			}
-			const result = await internalCertificate.delete(res.locals.access, {
-				id: parsedId,
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
+	.delete(async (req, res) => {
+		const parsedId = Number.parseInt(req.params.certificate_id, 10);
+		if (Number.isNaN(parsedId)) {
+			return res.status(400).send({ error: { code: 400, message: "Invalid certificate id" } });
 		}
+		const result = await internalCertificate.delete(res.locals.access, {
+			id: parsedId,
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -361,22 +331,17 @@ router
 	 *
 	 * Upload certificates
 	 */
-	.post(certificateUpload, async (req, res, next) => {
+	.post(certificateUpload, async (req, res) => {
 		if (!req.files) {
 			res.status(400).send({ error: "No files were uploaded" });
 			return;
 		}
 
-		try {
-			const result = await internalCertificate.upload(res.locals.access, {
-				id: Number.parseInt(req.params.certificate_id, 10),
-				files: req.files,
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const result = await internalCertificate.upload(res.locals.access, {
+			id: Number.parseInt(req.params.certificate_id, 10),
+			files: req.files,
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -396,17 +361,12 @@ router
 	 *
 	 * Renew certificate
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res) => {
 		req.setTimeout(900000); // 15 minutes timeout
-		try {
-			const result = await internalCertificate.renew(res.locals.access, {
-				id: Number.parseInt(req.params.certificate_id, 10),
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+		const result = await internalCertificate.renew(res.locals.access, {
+			id: Number.parseInt(req.params.certificate_id, 10),
+		});
+		res.status(200).send(result);
 	});
 
 /**
@@ -427,17 +387,12 @@ router
 	 *
 	 * Download certificate
 	 */
-	.post(async (req, res, next) => {
-		try {
-			const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
-			const result = await internalCertificate.download(res.locals.access, {
-				id: Number.parseInt(payload.id, 10),
-			});
-			res.status(200).download(result.fileName);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
-		}
+	.post(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
+		const result = await internalCertificate.download(res.locals.access, {
+			id: Number.parseInt(payload.id, 10),
+		});
+		res.status(200).download(result.fileName);
 	});
 
 export default router;

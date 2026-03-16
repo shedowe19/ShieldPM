@@ -62,30 +62,26 @@ router
 	 *
 	 * Retrieve all users
 	 */
-	.get(async (req, res, next) => {
-		try {
-			const data = await validator(
-				{
-					additionalProperties: false,
-					properties: {
-						expand: {
-							$ref: "common#/properties/expand",
-						},
-						query: {
-							$ref: "common#/properties/query",
-						},
+	.get(async (req, res) => {
+		const data = await validator(
+			{
+				additionalProperties: false,
+				properties: {
+					expand: {
+						$ref: "common#/properties/expand",
+					},
+					query: {
+						$ref: "common#/properties/query",
 					},
 				},
-				{
-					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-					query: typeof req.query.query === "string" ? req.query.query : null,
-				},
-			);
-			const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
-			res.status(200).send(users);
-		} catch (err) {
-			next(err);
-		}
+			},
+			{
+				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				query: typeof req.query.query === "string" ? req.query.query : null,
+			},
+		);
+		const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
+		res.status(200).send(users);
 	})
 
 	/**
@@ -93,39 +89,31 @@ router
 	 *
 	 * Create a new User
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res) => {
 		const body = req.body;
+		const setupComplete = await isSetup();
+		const currentUserId = res.locals.access?.token?.getUserId?.(0) || 0;
 
-		try {
-			const setupComplete = await isSetup();
-			const currentUserId = res.locals.access?.token?.getUserId?.(0) || 0;
+		if (!setupComplete) {
+			logger.info("Creating initial admin user during first-time setup");
+			const access = new Access(null);
+			await access.load(true);
+			res.locals.access = access;
 
-			if (!setupComplete) {
-				logger.info("Creating initial admin user during first-time setup");
-				const access = new Access(null);
-				await access.load(true);
-				res.locals.access = access;
-
-				body.is_disabled = false;
-				if (typeof body.roles !== "object" || body.roles === null) {
-					body.roles = [];
-				}
-				if (!body.roles.includes("admin")) {
-					body.roles.push("admin");
-				}
-			} else if (!currentUserId) {
-				throw new errs.PermissionError(
-					"Initial setup is already complete. Authenticated user creation is required.",
-				);
+			body.is_disabled = false;
+			if (typeof body.roles !== "object" || body.roles === null) {
+				body.roles = [];
 			}
-
-			const payload = await apiValidator(getValidationSchema("/users", "post"), body);
-			const user = await internalUser.create(res.locals.access, payload);
-			res.status(201).send(user);
-		} catch (err) {
-			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-			next(err);
+			if (!body.roles.includes("admin")) {
+				body.roles.push("admin");
+			}
+		} else if (!currentUserId) {
+			throw new errs.PermissionError("Initial setup is already complete. Authenticated user creation is required.");
 		}
+
+		const payload = await apiValidator(getValidationSchema("/users", "post"), body);
+		const user = await internalUser.create(res.locals.access, payload);
+		res.status(201).send(user);
 	})
 
 	/**
@@ -139,16 +127,11 @@ router
 	 *
 	 * Do NOT set those env vars in a production environment!
 	 */
-	.delete(async (req, res, next) => {
+	.delete(async (_req, res, next) => {
 		if (isDestructiveTestMode()) {
-			try {
-				logger.warn("Deleting all users - Destructive Test Mode enabled, allowing this operation");
-				await internalUser.deleteAll();
-				res.status(200).send(true);
-			} catch (err) {
-				debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
-				next(err);
-			}
+			logger.warn("Deleting all users - Destructive Test Mode enabled, allowing this operation");
+			await internalUser.deleteAll();
+			res.status(200).send(true);
 			return;
 		}
 
@@ -256,20 +239,16 @@ router
 	})
 	.all(jwtdecode())
 	.all(userIdFromMe)
-	.post(avatarUpload, async (req, res, next) => {
-		try {
-			if (!req.files || Object.keys(req.files).length === 0) {
-				throw new errs.ValidationError("No files were uploaded.");
-			}
-
-			const result = await internalUser.uploadAvatar(res.locals.access, {
-				id: req.params.user_id,
-				file: req.files.avatar || req.files.file,
-			});
-			res.status(200).send(result);
-		} catch (err) {
-			next(err);
+	.post(avatarUpload, async (req, res) => {
+		if (!req.files || Object.keys(req.files).length === 0) {
+			throw new errs.ValidationError("No files were uploaded.");
 		}
+
+		const result = await internalUser.uploadAvatar(res.locals.access, {
+			id: req.params.user_id,
+			file: req.files.avatar || req.files.file,
+		});
+		res.status(200).send(result);
 	});
 
 /**
