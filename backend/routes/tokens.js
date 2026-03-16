@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import internalToken from "../internal/token.js";
 import errs from "../lib/error.js";
@@ -8,6 +9,18 @@ import { debug, express as logger } from "../logger.js";
 import TokenModel from "../models/token.js";
 import User from "../models/user.js";
 import { getValidationSchema } from "../schema/index.js";
+
+/**
+ * Rate limiter for sensitive auth endpoints (refresh, logout, restore).
+ * Complements the per-IP login attempt tracking on POST /tokens.
+ */
+const authRateLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 30, // limit each IP to 30 requests per window
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: { error: { code: 429, message: "Too many requests, please try again later." } },
+});
 
 const router = express.Router({
 	caseSensitive: true,
@@ -290,7 +303,7 @@ router
  * Exchange a valid refresh token for a new access + refresh token pair.
  * Reads refresh token from cookie first, body fallback.
  */
-router.post("/refresh", async (req, res) => {
+router.post("/refresh", authRateLimiter, async (req, res) => {
 	try {
 		const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
 
@@ -331,7 +344,7 @@ router.post("/refresh", async (req, res) => {
  *
  * Revoke the refresh session and clear all auth cookies.
  */
-router.post("/logout", async (req, res) => {
+router.post("/logout", authRateLimiter, async (req, res) => {
 	const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
 
 	if (rawRefreshToken) {
@@ -357,7 +370,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.post(async (req, res) => {
+	.post(authRateLimiter, async (req, res) => {
 		try {
 			const originalToken = req.cookies?.shieldpm_jwt_original;
 			if (!originalToken) {
