@@ -189,8 +189,12 @@ app.use(async (req, res, next) => {
 	const setupComplete = await isSetup();
 	const isInitialSetupUserCreation = !setupComplete && req.method === "POST" && req.path === "/api/users";
 	const isLoginRequest = req.method === "POST" && req.path === "/api/tokens";
+	// Token refresh and logout are protected by httpOnly refresh cookie (not readable by attackers).
+	// CSRF is redundant here and breaks due to session identifier changes after login/rotation.
+	const isTokenRefresh = req.method === "POST" && req.path === "/api/tokens/refresh";
+	const isTokenLogout = req.method === "POST" && req.path === "/api/tokens/logout";
 
-	if (isInitialSetupUserCreation || isLoginRequest) {
+	if (isInitialSetupUserCreation || isLoginRequest || isTokenRefresh || isTokenLogout) {
 		return next();
 	}
 
