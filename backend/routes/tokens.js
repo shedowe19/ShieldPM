@@ -240,6 +240,7 @@ router
 			res.status(200).send({
 				expires: pair.access_expires,
 				user: pair.user,
+				csrfToken: res.locals.csrfToken,
 			});
 		} catch (err) {
 			try {
@@ -313,6 +314,7 @@ router.post("/refresh", async (req, res) => {
 		res.status(200).send({
 			expires: pair.access_expires,
 			user: pair.user,
+			csrfToken: res.locals.csrfToken,
 		});
 	} catch (err) {
 		debug(logger, `POST /tokens/refresh: ${err}`);

@@ -76,6 +76,10 @@ const getAnonymousCsrfIdentifier = (req) => {
 };
 
 const resolveCsrfSessionIdentifier = (req) => {
+	// Use a stable identifier that does NOT change on token refresh/rotation.
+	// The JWT changes on every refresh, so we cannot use jti or token hash.
+	// Instead, extract the user ID (stable across sessions) or fall back to
+	// an anonymous fingerprint for unauthenticated requests.
 	const token = getRequestToken(req);
 	const payload = decodeJwtPayload(token);
 	const userId = payload?.attrs?.id || payload?.sub;
@@ -84,14 +88,9 @@ const resolveCsrfSessionIdentifier = (req) => {
 		return `user:${userId}`;
 	}
 
-	if (payload?.jti) {
-		return `token:${payload.jti}`;
-	}
-
-	if (token) {
-		return `token:${crypto.createHash("sha256").update(token).digest("hex")}`;
-	}
-
+	// For unauthenticated requests, use a stable anonymous fingerprint.
+	// Do NOT use jti or token hash — they change on every refresh and
+	// would invalidate the CSRF token.
 	return getAnonymousCsrfIdentifier(req);
 };
 
