@@ -189,8 +189,9 @@ app.use(jwt());
 app.use(async (req, res, next) => {
 	const setupComplete = await isSetup();
 	const isInitialSetupUserCreation = !setupComplete && req.method === "POST" && req.path === "/api/users";
+	const isLoginRequest = req.method === "POST" && req.path === "/api/tokens";
 
-	if (isInitialSetupUserCreation) {
+	if (isInitialSetupUserCreation || isLoginRequest) {
 		return next();
 	}
 

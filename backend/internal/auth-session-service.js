@@ -47,7 +47,7 @@ const buildAccessToken = async (user, scope) => {
 
 const buildTokenResponse = ({ accessToken, refreshToken, refreshSession, user }) => ({
 	access_token: accessToken.token,
-	access_expires: dayjs.unix(accessToken.payload.exp).toISOString(),
+	access_expires: parseDatePeriod(ACCESS_TOKEN_TTL).toISOString(),
 	refresh_token: refreshToken,
 	refresh_expires: refreshSession.expires_at,
 	token_type: "Bearer",
