@@ -85,7 +85,7 @@ const createRefreshSession = async ({
 		parent_session_id: parentSessionId,
 		token_hash: AuthSession.hashToken(rawRefreshToken),
 		scope: AuthSession.normalizeScope(scope),
-		expires_at: REFRESH_TOKEN_EXPIRY.toISOString(),
+		expires_at: parseDatePeriod(REFRESH_TOKEN_TTL).format("YYYY-MM-DD HH:mm:ss"),
 		...sanitizeMeta(meta),
 	});
 

@@ -68,8 +68,21 @@ vi.mock("../../models/token.js", () => ({
 
 vi.mock("../../lib/helpers.js", () => ({
 	parseDatePeriod: (expr) => {
-		const map = { "15m": new Date(Date.now() + 15 * 60000), "30d": new Date(Date.now() + 30 * 86400000) };
-		return map[expr] || new Date(Date.now() + 3600000);
+		const map = { "15m": Date.now() + 15 * 60000, "30d": Date.now() + 30 * 86400000 };
+		const ts = map[expr] || Date.now() + 3600000;
+		const d = new Date(ts);
+		return {
+			toISOString: () => d.toISOString(),
+			format: (fmt) => {
+				if (fmt === "YYYY-MM-DD HH:mm:ss") {
+					return d.toISOString().slice(0, 19).replace("T", " ");
+				}
+				return d.toISOString();
+			},
+			isBefore: (other) => d < (other instanceof Date ? other : new Date(other)),
+			unix: () => Math.floor(d.getTime() / 1000),
+			diff: (other) => d.getTime() - new Date(other).getTime(),
+		};
 	},
 }));
 
