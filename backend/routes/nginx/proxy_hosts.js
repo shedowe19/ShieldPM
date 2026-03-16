@@ -190,8 +190,9 @@ router
 	 */
 	.post(async (req, res) => {
 		const hostId = Number.parseInt(req.params.host_id, 10);
+		await res.locals.access.can("proxy_hosts:update", hostId);
 		await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-sync", "post"), req.body);
-		const result = await internalGitDeploy.sync(hostId);
+		const result = await internalGitDeploy.sync(res.locals.access, hostId);
 		res.status(200).send(result);
 	});
 
@@ -214,7 +215,8 @@ router
 	 */
 	.get(async (req, res) => {
 		const hostId = Number.parseInt(req.params.host_id, 10);
-		const result = await internalGitDeploy.getStatus(hostId);
+		await res.locals.access.can("proxy_hosts:get", hostId);
+		const result = await internalGitDeploy.getStatus(res.locals.access, hostId);
 		res.status(200).send(result);
 	})
 
