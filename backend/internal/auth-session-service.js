@@ -60,17 +60,25 @@ const buildTokenResponse = ({ accessToken, refreshToken, refreshSession, user })
 	},
 	user: user
 		? {
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			nickname: user.nickname,
-			avatar: user.avatar,
-			roles: user.roles,
-		  }
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				nickname: user.nickname,
+				avatar: user.avatar,
+				roles: user.roles,
+			}
 		: undefined,
 });
 
-const createRefreshSession = async ({ trx, user, scope, rawRefreshToken, familyId, parentSessionId = null, meta = {} }) => {
+const createRefreshSession = async ({
+	trx,
+	user,
+	scope,
+	rawRefreshToken,
+	familyId,
+	parentSessionId = null,
+	meta = {},
+}) => {
 	const session = await AuthSession.query(trx).insertAndFetch({
 		user_id: user.id,
 		family_id: familyId,
@@ -150,9 +158,7 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 	const lookup = AuthSession.buildLookup(rawRefreshToken);
 
 	return transaction(AuthSession.knex(), async (trx) => {
-		const session = await AuthSession.query(trx)
-			.findOne(lookup)
-			.withGraphFetched("user");
+		const session = await AuthSession.query(trx).findOne(lookup).withGraphFetched("user");
 
 		if (!session) {
 			throw new errs.AuthError(TOKEN_NOT_FOUND_MESSAGE);

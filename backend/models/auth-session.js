@@ -3,12 +3,7 @@
 
 import { Model } from "objection";
 import db from "../db.js";
-import {
-	createFamilyId,
-	createJti,
-	hashToken,
-	normalizeScope,
-} from "../lib/auth-session-token.js";
+import { createFamilyId, createJti, hashToken, normalizeScope } from "../lib/auth-session-token.js";
 import User from "./user.js";
 
 Model.knex(db());

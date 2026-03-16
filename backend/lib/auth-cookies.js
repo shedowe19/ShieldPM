@@ -8,8 +8,7 @@
 const ACCESS_COOKIE = "shieldpm_jwt";
 const REFRESH_COOKIE = "shieldpm_refresh";
 
-const isSecure = (req) =>
-	req.secure || req.headers["x-forwarded-proto"] === "https";
+const isSecure = (req) => req.secure || req.headers["x-forwarded-proto"] === "https";
 
 /**
  * Set both auth cookies on the response.
