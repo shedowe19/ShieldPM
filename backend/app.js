@@ -192,7 +192,8 @@ app.use(async (req, res, next) => {
 	// Match both with and without /api prefix to handle different proxy configurations.
 	const path = req.path;
 	const method = req.method;
-	const isInitialSetupUserCreation = !setupComplete && method === "POST" && (path === "/api/users" || path === "/users");
+	const isInitialSetupUserCreation =
+		!setupComplete && method === "POST" && (path === "/api/users" || path === "/users");
 	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
