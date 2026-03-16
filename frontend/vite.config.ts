@@ -30,7 +30,11 @@ export default defineConfig({
 			output: {
 				manualChunks(id) {
 					if (id.includes("node_modules")) {
-						if (["react/", "react-dom/", "react-router-dom/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+						if (
+							["react/", "react-dom/", "react-router-dom/"].some((pkg) =>
+								id.includes(`node_modules/${pkg}`),
+							)
+						) {
 							return "vendor-react";
 						}
 						if (
