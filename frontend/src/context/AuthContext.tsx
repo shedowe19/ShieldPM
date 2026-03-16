@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
+import * as api from "src/api/backend/base";
 import AuthStore from "src/modules/AuthStore";
 
 // Context
@@ -10,7 +11,6 @@ export interface AuthContextType {
 	login: (username: string, password: string) => Promise<void>;
 	loginAs: (id: number) => Promise<void>;
 	logout: () => void;
-	token?: string;
 	loading?: boolean;
 }
 
@@ -69,8 +69,8 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			AuthStore.clear();
 			setAuthenticated(false);
 			queryClient.clear();
-			// Call API to clear cookie
-			await fetch("/api/tokens", { method: "DELETE" });
+			// Call API to clear cookie (uses internal client for CSRF)
+			await api.post({ url: "/tokens/logout", silentAuth: true });
 		}
 	};
 

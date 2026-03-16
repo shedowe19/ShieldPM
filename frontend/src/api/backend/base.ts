@@ -106,7 +106,7 @@ async function baseGet({ url, params }: GetArgs, abortController?: AbortControll
 	const method = "GET";
 	const headers = buildAuthHeader();
 	const signal = abortController?.signal;
-	const response = await fetch(apiUrl, { method, headers, signal });
+	const response = await fetch(apiUrl, { method, headers, signal, credentials: "include" });
 	return response;
 }
 
@@ -116,7 +116,7 @@ export async function get<T = DynamicResponse>(args: GetArgs, abortController?: 
 
 export async function download({ url, params }: GetArgs, filename = "download.file") {
 	const headers = buildAuthHeader();
-	const res = await fetch(buildUrl({ url, params }), { headers });
+	const res = await fetch(buildUrl({ url, params }), { headers, credentials: "include" });
 	const bl = await res.blob();
 	const u = window.URL.createObjectURL(bl);
 	const a = document.createElement("a");
@@ -151,7 +151,7 @@ export async function downloadPost({ url, params, data, noAuth }: PostArgs, file
 		body = buildBody(data as Record<string, unknown>);
 	}
 
-	const res = await fetch(apiUrl, { method, headers, body });
+	const res = await fetch(apiUrl, { method, headers, body, credentials: "include" });
 	const bl = await res.blob();
 	const u = window.URL.createObjectURL(bl);
 	const a = document.createElement("a");
@@ -190,7 +190,7 @@ export async function post<T = DynamicResponse>(
 	}
 
 	const signal = abortController?.signal;
-	const response = await fetch(apiUrl, { method, headers, body, signal });
+	const response = await fetch(apiUrl, { method, headers, body, signal, credentials: "include" });
 	return processResponse(response, silentAuth);
 }
 
@@ -206,7 +206,7 @@ export async function put<T = DynamicResponse>(
 	};
 	const signal = abortController?.signal;
 	const body = buildBody(data);
-	const response = await fetch(apiUrl, { method, headers, body, signal });
+	const response = await fetch(apiUrl, { method, headers, body, signal, credentials: "include" });
 	return processResponse(response, silentAuth);
 }
 
@@ -221,7 +221,7 @@ export async function del<T = DynamicResponse>(
 		[contentTypeHeader]: "application/json",
 	};
 	const signal = abortController?.signal;
-	const response = await fetch(apiUrl, { method, headers, signal });
+	const response = await fetch(apiUrl, { method, headers, signal, credentials: "include" });
 	return processResponse<T>(response, silentAuth);
 }
 

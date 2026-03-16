@@ -40,11 +40,12 @@ export class AuthStore {
 		return false;
 	}
 
-	// Set session details from login response
+	// Set session details from login/refresh response
+	// Preserves existing userId if the response doesn't include user data (e.g. refresh)
 	set(data: { expires: number; user?: { id: number } }) {
 		this.state = {
 			expires: data.expires,
-			userId: data.user?.id,
+			userId: data.user?.id ?? this.state?.userId,
 		};
 	}
 
