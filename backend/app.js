@@ -187,12 +187,15 @@ app.use(jwt());
 // Only skip CSRF for POST /api/users while the system has no active users yet.
 app.use(async (req, res, next) => {
 	const setupComplete = await isSetup();
-	const isInitialSetupUserCreation = !setupComplete && req.method === "POST" && req.path === "/api/users";
-	const isLoginRequest = req.method === "POST" && req.path === "/api/tokens";
-	// Token refresh and logout are protected by httpOnly refresh cookie (not readable by attackers).
-	// CSRF is redundant here and breaks due to session identifier changes after login/rotation.
-	const isTokenRefresh = req.method === "POST" && req.path === "/api/tokens/refresh";
-	const isTokenLogout = req.method === "POST" && req.path === "/api/tokens/logout";
+
+	// Bypass CSRF for specific endpoints that are protected by other mechanisms.
+	// Match both with and without /api prefix to handle different proxy configurations.
+	const path = req.path;
+	const method = req.method;
+	const isInitialSetupUserCreation = !setupComplete && method === "POST" && (path === "/api/users" || path === "/users");
+	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
+	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
+	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
 
 	if (isInitialSetupUserCreation || isLoginRequest || isTokenRefresh || isTokenLogout) {
 		return next();
