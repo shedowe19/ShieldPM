@@ -1,4 +1,5 @@
 import express from "express";
+import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import internalToken from "../internal/token.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
@@ -172,6 +173,8 @@ router
 	 * for services like Job board and Worker.
 	 */
 	.get(jwtdecode(), async (req, res) => {
+		logger.warn(`Legacy GET /tokens accessed from IP ${req.ip || "unknown"} – migrate to POST /tokens/refresh`);
+
 		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
 		const scope = typeof req.query.scope === "string" ? req.query.scope : null;
 		const query = { expiry, scope };
@@ -221,15 +224,23 @@ router
 			const result = await internalToken.getTokenFromEmail(data);
 			await clearLoginAttempts(trackedIdentifiers);
 
-			// Set Cookie
-			res.cookie("shieldpm_jwt", result.token, {
-				httpOnly: true,
-				secure: req.secure,
-				sameSite: "strict",
-				maxAge: result.expires ? new Date(result.expires).getTime() - Date.now() : undefined,
+			// Issue refresh-token pair alongside the access token
+			const meta = { ip, userAgent: req.headers["user-agent"] || null };
+			const pair = await internalToken.issueTokenPair(result.user, data.scope || "user", meta);
+
+			// Set both cookies
+			setAuthCookies(res, req, {
+				accessToken: pair.access_token,
+				accessExpires: pair.access_expires,
+				refreshToken: pair.refresh_token,
+				refreshExpires: pair.refresh_expires,
 			});
 
-			res.status(200).send({ ...result, token: undefined }); // Omit token
+			// Backward-compatible response (no tokens in body)
+			res.status(200).send({
+				expires: pair.access_expires,
+				user: pair.user,
+			});
 		} catch (err) {
 			try {
 				for (const tracked of trackedIdentifiers) {
@@ -251,11 +262,93 @@ router
 		}
 	})
 
-	.delete(async (_req, res) => {
-		res.clearCookie("shieldpm_jwt");
+	.delete(async (req, res) => {
+		// Try to revoke the refresh session if a refresh token is present
+		const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
+		if (rawRefreshToken) {
+			try {
+				const AuthSession = (await import("../models/auth-session.js")).default;
+				const lookup = AuthSession.buildLookup(rawRefreshToken);
+				const session = await AuthSession.query().findOne(lookup);
+				if (session && !session.revoked_at) {
+					await internalToken.revokeSession(session.id, "logout");
+				}
+			} catch (err) {
+				debug(logger, `Failed to revoke refresh session on logout: ${err}`);
+			}
+		}
+
+		clearAuthCookies(res);
 		res.clearCookie("shieldpm_jwt_original");
 		res.sendStatus(204);
 	});
+
+/**
+ * POST /tokens/refresh
+ *
+ * Exchange a valid refresh token for a new access + refresh token pair.
+ * Reads refresh token from cookie first, body fallback.
+ */
+router.post("/refresh", async (req, res) => {
+	try {
+		const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
+
+		if (!rawRefreshToken) {
+			return res.status(400).send({
+				error: { code: 400, message: "Missing refresh token" },
+			});
+		}
+
+		const meta = { ip: req.ip || "unknown", userAgent: req.headers["user-agent"] || null };
+		const pair = await internalToken.refreshTokenPair(rawRefreshToken, meta);
+
+		setAuthCookies(res, req, {
+			accessToken: pair.access_token,
+			accessExpires: pair.access_expires,
+			refreshToken: pair.refresh_token,
+			refreshExpires: pair.refresh_expires,
+		});
+
+		// Backward-compatible response (no tokens in body)
+		res.status(200).send({
+			expires: pair.access_expires,
+			user: pair.user,
+		});
+	} catch (err) {
+		debug(logger, `POST /tokens/refresh: ${err}`);
+		const code = err instanceof errs.AuthError || err instanceof errs.UnauthorizedError ? 401 : 500;
+		clearAuthCookies(res);
+		res.status(code).send({
+			error: { code, message: err.message || "Token refresh failed" },
+		});
+	}
+});
+
+/**
+ * POST /tokens/logout
+ *
+ * Revoke the refresh session and clear all auth cookies.
+ */
+router.post("/logout", async (req, res) => {
+	const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
+
+	if (rawRefreshToken) {
+		try {
+			const AuthSession = (await import("../models/auth-session.js")).default;
+			const lookup = AuthSession.buildLookup(rawRefreshToken);
+			const session = await AuthSession.query().findOne(lookup);
+			if (session && !session.revoked_at) {
+				await internalToken.revokeSession(session.id, "logout");
+			}
+		} catch (err) {
+			debug(logger, `POST /tokens/logout: revoke failed: ${err}`);
+		}
+	}
+
+	clearAuthCookies(res);
+	res.clearCookie("shieldpm_jwt_original");
+	res.sendStatus(204);
+});
 
 router
 	.route("/restore")
