@@ -67,7 +67,7 @@
     "dayjs": "1.11.20",
     "ez-modal-react": "1.0.5",
     "formik": "2.4.9",
-    "framer-motion": "^12.35.2",
+    "framer-motion": "^12.37.0",
     "generate-password-browser": "1.1.0",
     "humps": "2.0.1",
     "i18n-iso-countries": "^7.14.0",
@@ -93,21 +93,21 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@babel/runtime": "^7.28.6",
-    "@biomejs/biome": "^2.4.6",
-    "@formatjs/cli": "^6.13.1",
+    "@babel/runtime": "^7.29.2",
+    "@biomejs/biome": "^2.4.7",
+    "@formatjs/cli": "^6.13.3",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/country-flag-icons": "1.2.2",
     "@types/humps": "^2.0.6",
-    "@types/node": "^25.4.0",
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
-    "happy-dom": "^20.8.3",
+    "happy-dom": "^20.8.4",
     "postcss": "^8.5.8",
     "postcss-simple-vars": "7.0.1",
     "prop-types": "^15.8.1",
@@ -119,6 +119,6 @@
     "vite": "^8.0.0",
     "vite-plugin-checker": "0.12.0",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.0"
   }
 }
