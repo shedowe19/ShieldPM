@@ -5,12 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import {
-	begin2faPasskeyAuth,
-	begin2faDuoAuth,
-	complete2faPasskeyAuth,
-	verify2faCode,
-} from "src/api/backend";
+import { begin2faPasskeyAuth, begin2faDuoAuth, complete2faPasskeyAuth, verify2faCode } from "src/api/backend";
 import type { TokenResponse } from "src/api/backend/responseTypes";
 import AuthStore from "src/modules/AuthStore";
 
