@@ -226,7 +226,7 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 		setLoading(true);
 		try {
 			const { options, challengeId } = await beginPasskeyRegistration("me");
-			const registrationResponse = await startRegistration({ optionsJSON: options });
+			const registrationResponse = await startRegistration({ optionsJSON: options as any });
 			const result = await completePasskeyRegistration(
 				"me",
 				challengeId,

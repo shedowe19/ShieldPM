@@ -9,7 +9,6 @@ import {
 	begin2faPasskeyAuth,
 	begin2faDuoAuth,
 	complete2faPasskeyAuth,
-	complete2faDuoAuth,
 	verify2faCode,
 } from "src/api/backend";
 import type { TokenResponse } from "src/api/backend/responseTypes";
@@ -44,7 +43,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 	const [loading, setLoading] = useState(false);
 
 	// Include backup_code as a fallback option if any method is active
-	const availableMethods = [...methods, "backup_code"] as ActiveMethod[];
+	// backup_code is always available as fallback
 
 	const handleCodeSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -72,7 +71,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 		setLoading(true);
 		try {
 			const { options, challengeId } = await begin2faPasskeyAuth(pendingToken);
-			const authResponse = await startAuthentication({ optionsJSON: options });
+			const authResponse = await startAuthentication({ optionsJSON: options as any });
 			const response = await complete2faPasskeyAuth(pendingToken, challengeId, authResponse);
 			AuthStore.set(response);
 			onSuccess(response);
