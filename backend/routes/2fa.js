@@ -67,10 +67,7 @@ router.get("/", async (req, res) => {
 		.whereIn("type", ["totp", "yubikey", "passkey", "duo"])
 		.select("id", "type", "label", "is_verified", "created_on", "modified_on");
 
-	const backupCount = await UserTwoFaBackupCode.query()
-		.where({ user_id: userId })
-		.whereNull("used_at")
-		.resultSize();
+	const backupCount = await UserTwoFaBackupCode.query().where({ user_id: userId }).whereNull("used_at").resultSize();
 
 	res.status(200).json({ methods, backup_codes_remaining: backupCount });
 });

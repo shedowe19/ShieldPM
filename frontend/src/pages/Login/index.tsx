@@ -141,7 +141,9 @@ export default function Login() {
 																className={`bg-background/50 py-6 ${errors.email && touched.email ? "border-destructive" : ""}`}
 															/>
 															{errors.email && touched.email && (
-																<p className="text-sm text-destructive">{errors.email}</p>
+																<p className="text-sm text-destructive">
+																	{errors.email}
+																</p>
 															)}
 														</div>
 													)}
@@ -165,7 +167,9 @@ export default function Login() {
 																className={`bg-background/50 py-6 ${errors.password && touched.password ? "border-destructive" : ""}`}
 															/>
 															{errors.password && touched.password && (
-																<p className="text-sm text-destructive">{errors.password}</p>
+																<p className="text-sm text-destructive">
+																	{errors.password}
+																</p>
 															)}
 														</div>
 													)}

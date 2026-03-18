@@ -22,9 +22,7 @@ export default function Profile() {
 						</button>
 					</nav>
 				</aside>
-				<div className="flex-1 lg:max-w-2xl">
-					{activeTab === "security" && <SecuritySettings />}
-				</div>
+				<div className="flex-1 lg:max-w-2xl">{activeTab === "security" && <SecuritySettings />}</div>
 			</div>
 		</div>
 	);

@@ -550,7 +550,9 @@ router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/passkey/begin: ${err}`);
 		const code = err.status || 500;
-		res.status(code).send({ error: { code, message: err.public ? err.message : "Failed to begin passkey authentication" } });
+		res.status(code).send({
+			error: { code, message: err.public ? err.message : "Failed to begin passkey authentication" },
+		});
 	}
 });
 
@@ -563,7 +565,9 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
 	const { pending_token, challenge_id, auth_response } = req.body;
 
 	if (!pending_token || !challenge_id || !auth_response) {
-		return res.status(400).send({ error: { code: 400, message: "pending_token, challenge_id, and auth_response are required" } });
+		return res
+			.status(400)
+			.send({ error: { code: 400, message: "pending_token, challenge_id, and auth_response are required" } });
 	}
 
 	try {
@@ -638,7 +642,9 @@ router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/duo/begin: ${err}`);
 		const code = err.status || 500;
-		res.status(code).send({ error: { code, message: err.public ? err.message : "Failed to initiate Duo authentication" } });
+		res.status(code).send({
+			error: { code, message: err.public ? err.message : "Failed to initiate Duo authentication" },
+		});
 	}
 });
 

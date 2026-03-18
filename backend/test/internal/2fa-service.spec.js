@@ -12,8 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 let fakeUserTwoFaRows = [];
 let fakeBackupCodeRows = [];
 
-const matchesFilter = (row, filter) =>
-	Object.entries(filter).every(([k, v]) => row[k] === v);
+const matchesFilter = (row, filter) => Object.entries(filter).every(([k, v]) => row[k] === v);
 
 /**
  * Returns a Promise<array> that also exposes Objection-like chainable methods.
@@ -54,7 +53,13 @@ vi.mock("../../models/user-2fa.js", () => ({
 			insert: vi.fn((data) => {
 				const rows = Array.isArray(data) ? data : [data];
 				for (const row of rows) {
-					fakeUserTwoFaRows.push({ id: fakeUserTwoFaRows.length + 1, is_verified: 0, is_deleted: 0, counter: 0, ...row });
+					fakeUserTwoFaRows.push({
+						id: fakeUserTwoFaRows.length + 1,
+						is_verified: 0,
+						is_deleted: 0,
+						counter: 0,
+						...row,
+					});
 				}
 				return Promise.resolve();
 			}),
@@ -68,9 +73,7 @@ vi.mock("../../models/user-2fa.js", () => ({
 		})),
 		getActiveForUser: vi.fn((userId) =>
 			Promise.resolve(
-				fakeUserTwoFaRows.filter(
-					(r) => r.user_id === userId && r.is_verified === 1 && r.is_deleted === 0,
-				),
+				fakeUserTwoFaRows.filter((r) => r.user_id === userId && r.is_verified === 1 && r.is_deleted === 0),
 			),
 		),
 		hasActive2FA: vi.fn(async (userId) => {
@@ -158,9 +161,15 @@ vi.mock("@simplewebauthn/server", () => ({
 vi.mock("@duosecurity/duo_universal", () => {
 	class Client {
 		constructor(_config) {}
-		healthCheck() { return Promise.resolve(); }
-		createAuthUrl(_user, state) { return Promise.resolve(`https://api.duo.test/authorize?state=${state}`); }
-		exchangeAuthorizationCodeFor2FAResult() { return Promise.resolve({ sub: "testuser" }); }
+		healthCheck() {
+			return Promise.resolve();
+		}
+		createAuthUrl(_user, state) {
+			return Promise.resolve(`https://api.duo.test/authorize?state=${state}`);
+		}
+		exchangeAuthorizationCodeFor2FAResult() {
+			return Promise.resolve({ sub: "testuser" });
+		}
 	}
 	return { Client };
 });

@@ -192,11 +192,7 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 			</p>
 			<div className="space-y-1">
 				<Label>Label (optional)</Label>
-				<Input
-					value={label}
-					onChange={(e) => setLabel(e.target.value)}
-					placeholder="My YubiKey"
-				/>
+				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="My YubiKey" />
 			</div>
 			<div className="space-y-1">
 				<Label>YubiKey OTP</Label>
@@ -231,7 +227,12 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 		try {
 			const { options, challengeId } = await beginPasskeyRegistration("me");
 			const registrationResponse = await startRegistration({ optionsJSON: options });
-			const result = await completePasskeyRegistration("me", challengeId, registrationResponse, label || "Passkey");
+			const result = await completePasskeyRegistration(
+				"me",
+				challengeId,
+				registrationResponse,
+				label || "Passkey",
+			);
 			onComplete(result.backupCodes);
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);
@@ -253,11 +254,7 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 			</p>
 			<div className="space-y-1">
 				<Label>Label (optional)</Label>
-				<Input
-					value={label}
-					onChange={(e) => setLabel(e.target.value)}
-					placeholder="My iPhone"
-				/>
+				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="My iPhone" />
 			</div>
 			<Button onClick={handleRegister} className="w-full" disabled={loading}>
 				{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
@@ -384,8 +381,8 @@ export default function SecuritySettings() {
 					Two-Factor Authentication
 				</h3>
 				<p className="text-sm text-muted-foreground mt-1">
-					Add an extra layer of security to your account. When enabled, you will need to verify
-					your identity using a second method each time you sign in.
+					Add an extra layer of security to your account. When enabled, you will need to verify your identity
+					using a second method each time you sign in.
 				</p>
 			</div>
 
@@ -422,7 +419,8 @@ export default function SecuritySettings() {
 					<CardHeader className="pb-3">
 						<CardTitle className="text-base">Active Methods</CardTitle>
 						<CardDescription>
-							{data?.backupCodesRemaining ?? 0} backup code{data?.backupCodesRemaining !== 1 ? "s" : ""} remaining
+							{data?.backupCodesRemaining ?? 0} backup code{data?.backupCodesRemaining !== 1 ? "s" : ""}{" "}
+							remaining
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2">
@@ -481,24 +479,11 @@ export default function SecuritySettings() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						{setupView === "totp" && (
-							<TotpSetup onComplete={() => handleSetupComplete()} />
-						)}
-						{setupView === "yubikey" && (
-							<YubikeySetup onComplete={() => handleSetupComplete()} />
-						)}
-						{setupView === "passkey" && (
-							<PasskeySetup onComplete={(codes) => handleSetupComplete(codes)} />
-						)}
-						{setupView === "duo" && (
-							<DuoSetup onComplete={() => handleSetupComplete()} />
-						)}
-						<Button
-							variant="ghost"
-							size="sm"
-							className="mt-4 w-full"
-							onClick={() => setSetupView(null)}
-						>
+						{setupView === "totp" && <TotpSetup onComplete={() => handleSetupComplete()} />}
+						{setupView === "yubikey" && <YubikeySetup onComplete={() => handleSetupComplete()} />}
+						{setupView === "passkey" && <PasskeySetup onComplete={(codes) => handleSetupComplete(codes)} />}
+						{setupView === "duo" && <DuoSetup onComplete={() => handleSetupComplete()} />}
+						<Button variant="ghost" size="sm" className="mt-4 w-full" onClick={() => setSetupView(null)}>
 							Cancel
 						</Button>
 					</CardContent>

@@ -5,9 +5,7 @@ import TwoFAStep from "./TwoFAStep";
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 vi.mock("@simplewebauthn/browser", () => ({
-	startAuthentication: vi.fn(() =>
-		Promise.resolve({ id: "cred_id", type: "public-key", response: {} }),
-	),
+	startAuthentication: vi.fn(() => Promise.resolve({ id: "cred_id", type: "public-key", response: {} })),
 }));
 
 vi.mock("src/api/backend", () => ({
@@ -24,24 +22,13 @@ vi.mock("src/modules/AuthStore", () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const {
-	verify2faCode,
-	begin2faPasskeyAuth,
-	complete2faPasskeyAuth,
-	begin2faDuoAuth,
-} = await import("src/api/backend");
+const { verify2faCode, begin2faPasskeyAuth, complete2faPasskeyAuth, begin2faDuoAuth } = await import("src/api/backend");
 const AuthStore = (await import("src/modules/AuthStore")).default;
 
 const mockOnSuccess = vi.fn();
 
 const renderStep = (methods = ["totp"]) =>
-	render(
-		<TwoFAStep
-			pendingToken="mock_pending_token"
-			methods={methods}
-			onSuccess={mockOnSuccess}
-		/>,
-	);
+	render(<TwoFAStep pendingToken="mock_pending_token" methods={methods} onSuccess={mockOnSuccess} />);
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 

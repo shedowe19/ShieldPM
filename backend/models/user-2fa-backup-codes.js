@@ -36,16 +36,12 @@ class UserTwoFaBackupCode extends Model {
 	 * @returns {Promise<UserTwoFaBackupCode|null>}
 	 */
 	static async findAndConsume(userId, plainCode) {
-		const unused = await UserTwoFaBackupCode.query()
-			.where({ user_id: userId })
-			.whereNull("used_at");
+		const unused = await UserTwoFaBackupCode.query().where({ user_id: userId }).whereNull("used_at");
 
 		for (const record of unused) {
 			const matches = await bcrypt.compare(plainCode, record.code_hash);
 			if (matches) {
-				await UserTwoFaBackupCode.query()
-					.patch({ used_at: now() })
-					.where({ id: record.id });
+				await UserTwoFaBackupCode.query().patch({ used_at: now() }).where({ id: record.id });
 				return record;
 			}
 		}

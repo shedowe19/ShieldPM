@@ -31,7 +31,12 @@ const BACKUP_CODE_LENGTH = 10; // chars (alphanumeric)
 // ---------------------------------------------------------------------------
 
 const generateBackupCode = () =>
-	crypto.randomBytes(8).toString("base64url").replace(/[^a-zA-Z0-9]/g, "").slice(0, BACKUP_CODE_LENGTH).toUpperCase();
+	crypto
+		.randomBytes(8)
+		.toString("base64url")
+		.replace(/[^a-zA-Z0-9]/g, "")
+		.slice(0, BACKUP_CODE_LENGTH)
+		.toUpperCase();
 
 /**
  * Generate and store fresh backup codes for a user, replacing any old ones.
@@ -181,7 +186,12 @@ const addYubikey = async (userId, otp, label = "YubiKey") => {
 	const { deviceId } = await validateYubikeyOtp(otp);
 
 	// Prevent duplicate registration of the same key
-	const existing = await UserTwoFa.query().findOne({ user_id: userId, type: "yubikey", secret: deviceId, is_deleted: 0 });
+	const existing = await UserTwoFa.query().findOne({
+		user_id: userId,
+		type: "yubikey",
+		secret: deviceId,
+		is_deleted: 0,
+	});
 	if (existing) {
 		throw new errs.ValidationError("This YubiKey is already registered");
 	}

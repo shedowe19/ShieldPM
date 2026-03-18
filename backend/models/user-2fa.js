@@ -98,9 +98,7 @@ class UserTwoFa extends Model {
 	 * @returns {Promise<boolean>}
 	 */
 	static async hasActive2FA(userId) {
-		const count = await UserTwoFa.query()
-			.where({ user_id: userId, is_verified: 1, is_deleted: 0 })
-			.resultSize();
+		const count = await UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 }).resultSize();
 		return count > 0;
 	}
 }
