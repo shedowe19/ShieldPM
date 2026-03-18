@@ -47,6 +47,13 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	const login = async (identity: string, secret: string) => {
 		const response = await getToken(identity, secret);
+		// If the server requires 2FA, it returns an object with requires_2fa: true.
+		// We surface this to the caller as a thrown value so the Login page can
+		// switch to the 2FA step without treating it as an error.
+		if (response && typeof response === "object" && "requires2fa" in response) {
+			// Throw the challenge payload — Login/index.tsx catches it
+			throw response;
+		}
 		handleTokenUpdate(response);
 	};
 

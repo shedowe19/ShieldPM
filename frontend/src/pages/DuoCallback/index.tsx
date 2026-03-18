@@ -1,0 +1,73 @@
+/**
+ * Duo Security callback page.
+ *
+ * After the user authenticates in Duo's hosted UI, Duo redirects here with
+ * `duo_code` and `state` query parameters. We complete the authentication
+ * and issue full session tokens.
+ */
+
+import { Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { complete2faDuoAuth } from "src/api/backend";
+import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import AuthStore from "src/modules/AuthStore";
+
+export default function DuoCallback() {
+	const [searchParams] = useSearchParams();
+	const [error, setError] = useState("");
+	const called = useRef(false);
+
+	useEffect(() => {
+		if (called.current) return;
+		called.current = true;
+
+		const duoCode = searchParams.get("duo_code");
+		const pendingToken = sessionStorage.getItem("duo_pending_token");
+
+		if (!duoCode || !pendingToken) {
+			setError("Missing Duo authorization code or session token. Please try signing in again.");
+			return;
+		}
+
+		sessionStorage.removeItem("duo_pending_token");
+
+		complete2faDuoAuth(pendingToken, duoCode)
+			.then((response) => {
+				AuthStore.set(response);
+				window.location.replace("/");
+			})
+			.catch((err: Error) => {
+				setError(err.message || "Duo authentication failed. Please try again.");
+			});
+	}, [searchParams]);
+
+	if (error) {
+		return (
+			<div className="flex min-h-screen items-center justify-center p-4">
+				<div className="w-full max-w-md">
+					<Alert variant="destructive">
+						<AlertCircle className="h-4 w-4" />
+						<AlertTitle>Authentication Failed</AlertTitle>
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+					<a
+						href="/login"
+						className="mt-4 block text-center text-sm text-primary underline-offset-4 hover:underline"
+					>
+						Return to sign in
+					</a>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex min-h-screen items-center justify-center">
+			<div className="flex flex-col items-center gap-4">
+				<Loader2 className="h-10 w-10 animate-spin text-primary" />
+				<p className="text-sm text-muted-foreground">Completing Duo authentication…</p>
+			</div>
+		</div>
+	);
+}
