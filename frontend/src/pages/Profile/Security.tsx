@@ -72,8 +72,7 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 			.finally(() => setLoading(false));
 	}, []);
 
-	const handleEnable = async (e: React.FormEvent) => {
-		e.preventDefault();
+	const handleEnable = async () => {
 		setError("");
 		setLoading(true);
 		try {
@@ -127,12 +126,13 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 						Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
 					</p>
 					<img src={qr} alt="TOTP QR Code" className="rounded-lg border w-48 h-48" />
-					<form onSubmit={handleEnable} className="w-full space-y-3">
+					<div className="w-full space-y-3">
 						<div className="space-y-1">
 							<Label>Verification Code</Label>
 							<Input
 								value={code}
 								onChange={(e) => setCode(e.target.value)}
+								onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); handleEnable(); } }}
 								placeholder="123456"
 								inputMode="numeric"
 								maxLength={6}
@@ -140,11 +140,11 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 								className="font-mono tracking-widest"
 							/>
 						</div>
-						<Button type="submit" className="w-full" disabled={loading || code.length < 6}>
+						<Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEnable(); }} className="w-full" disabled={loading || code.length < 6}>
 							{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 							Verify &amp; Enable
 						</Button>
-					</form>
+					</div>
 				</div>
 			)}
 		</div>
@@ -165,8 +165,8 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 		otpRef.current?.focus();
 	}, []);
 
-	const handleAdd = async (e: React.FormEvent) => {
-		e.preventDefault();
+	const handleAdd = async (e?: React.SyntheticEvent) => {
+		if (e) e.preventDefault();
 		setError("");
 		setLoading(true);
 		try {
@@ -180,7 +180,7 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 	};
 
 	return (
-		<form onSubmit={handleAdd} className="space-y-4">
+		<div className="space-y-4" onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(e); }}>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
@@ -205,11 +205,11 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 					type="text"
 				/>
 			</div>
-			<Button type="submit" className="w-full" disabled={loading || otp.length < 32}>
+			<Button type="button" onClick={handleAdd} className="w-full" disabled={loading || otp.length < 32}>
 				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 				Add YubiKey
 			</Button>
-		</form>
+		</div>
 	);
 }
 
@@ -272,8 +272,7 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	const handleSetup = async (e: React.FormEvent) => {
-		e.preventDefault();
+	const handleSetup = async () => {
 		setError("");
 		setLoading(true);
 		try {
@@ -290,7 +289,7 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 		setForm((f) => ({ ...f, [key]: e.target.value }));
 
 	return (
-		<form onSubmit={handleSetup} className="space-y-4">
+		<div className="space-y-4" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleSetup(); } }}>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
@@ -317,11 +316,11 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 					/>
 				</div>
 			))}
-			<Button type="submit" className="w-full" disabled={loading}>
+			<Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSetup(); }} className="w-full" disabled={loading}>
 				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 				Save &amp; Verify Duo Configuration
 			</Button>
-		</form>
+		</div>
 	);
 }
 
