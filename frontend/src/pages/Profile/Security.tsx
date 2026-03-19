@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { intl, T } from "src/locale";
 import {
 	get2fa,
 	setup2faTotp,
@@ -41,10 +42,10 @@ import { Label } from "src/components/ui/label";
 const QUERY_KEY = ["2fa", "me"] as const;
 
 const METHOD_LABELS: Record<string, string> = {
-	totp: "Authenticator App (TOTP)",
-	yubikey: "YubiKey",
-	passkey: "Passkey",
-	duo: "Duo Security",
+	totp: intl.formatMessage({ id: "2fa.method.totp" }),
+	yubikey: intl.formatMessage({ id: "2fa.method.yubikey" }),
+	passkey: intl.formatMessage({ id: "2fa.method.passkey" }),
+	duo: intl.formatMessage({ id: "2fa.method.duo" }),
 };
 
 const METHOD_ICONS: Record<string, React.ReactNode> = {
@@ -90,9 +91,9 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 			<div className="space-y-4">
 				<Alert>
 					<CheckCircle2 className="h-4 w-4 text-green-500" />
-					<AlertTitle>Authenticator App Enabled!</AlertTitle>
+					<AlertTitle><T id="2fa.totp.enabled" /></AlertTitle>
 					<AlertDescription>
-						Save these backup codes in a safe place. Each can only be used once.
+						<T id="2fa.backup-codes.save-info" />
 					</AlertDescription>
 				</Alert>
 				<div className="grid grid-cols-2 gap-2 font-mono text-sm bg-muted p-4 rounded-md">
@@ -101,7 +102,7 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 					))}
 				</div>
 				<Button onClick={onComplete} className="w-full">
-					Done
+					<T id="2fa.done" />
 				</Button>
 			</div>
 		);
@@ -123,12 +124,12 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 			{qr && (
 				<div className="flex flex-col items-center space-y-4">
 					<p className="text-sm text-muted-foreground text-center">
-						Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+						<T id="2fa.totp.scan-qr" />
 					</p>
-					<img src={qr} alt="TOTP QR Code" className="rounded-lg border w-48 h-48" />
+					<img src={qr} alt={intl.formatMessage({ id: "2fa.totp.qr-alt" })} className="rounded-lg border w-48 h-48" />
 					<div className="w-full space-y-3">
 						<div className="space-y-1">
-							<Label>Verification Code</Label>
+							<Label><T id="2fa.totp.verification-code" /></Label>
 							<Input
 								value={code}
 								onChange={(e) => setCode(e.target.value)}
@@ -142,7 +143,7 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 						</div>
 						<Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEnable(); }} className="w-full" disabled={loading || code.length < 6}>
 							{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-							Verify &amp; Enable
+							<T id="2fa.totp.verify-enable" />
 						</Button>
 					</div>
 				</div>
@@ -170,7 +171,7 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 		setError("");
 		setLoading(true);
 		try {
-			await add2faYubikey("me", otp, label || "YubiKey");
+			await add2faYubikey("me", otp, label || intl.formatMessage({ id: "2fa.method.yubikey" }));
 			onComplete();
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);
@@ -188,26 +189,26 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 				</Alert>
 			)}
 			<p className="text-sm text-muted-foreground">
-				Click the field below, then press your YubiKey button to generate a one-time password.
+				<T id="2fa.yubikey.instruction" />
 			</p>
 			<div className="space-y-1">
-				<Label>Label (optional)</Label>
-				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="My YubiKey" />
+				<Label><T id="2fa.label-optional" /></Label>
+				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={intl.formatMessage({ id: "2fa.yubikey.label-placeholder" })} />
 			</div>
 			<div className="space-y-1">
-				<Label>YubiKey OTP</Label>
+				<Label><T id="2fa.yubikey.otp" /></Label>
 				<Input
 					ref={otpRef}
 					value={otp}
 					onChange={(e) => setOtp(e.target.value)}
-					placeholder="Touch your YubiKey…"
+					placeholder={intl.formatMessage({ id: "2fa.yubikey.otp-placeholder" })}
 					className="font-mono"
 					type="text"
 				/>
 			</div>
 			<Button type="button" onClick={handleAdd} className="w-full" disabled={loading || otp.length < 32}>
 				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-				Add YubiKey
+				<T id="2fa.yubikey.add" />
 			</Button>
 		</div>
 	);
@@ -231,7 +232,7 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 				"me",
 				challengeId,
 				registrationResponse,
-				label || "Passkey",
+				label || intl.formatMessage({ id: "2fa.method.passkey" }),
 			);
 			onComplete(result.backupCodes);
 		} catch (err) {
@@ -250,15 +251,15 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 				</Alert>
 			)}
 			<p className="text-sm text-muted-foreground">
-				Register a passkey using your device biometrics (fingerprint, face ID) or a hardware security key.
+				<T id="2fa.passkey.instruction" />
 			</p>
 			<div className="space-y-1">
-				<Label>Label (optional)</Label>
-				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="My iPhone" />
+				<Label><T id="2fa.label-optional" /></Label>
+				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={intl.formatMessage({ id: "2fa.passkey.label-placeholder" })} />
 			</div>
 			<Button onClick={handleRegister} className="w-full" disabled={loading}>
 				{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-				Register Passkey
+				<T id="2fa.passkey.register" />
 			</Button>
 		</div>
 	);
@@ -288,6 +289,13 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 	const update = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
 		setForm((f) => ({ ...f, [key]: e.target.value }));
 
+	const duoFields = [
+		{ key: "clientId", labelId: "2fa.duo.client-id", placeholder: "DI..." },
+		{ key: "clientSecret", labelId: "2fa.duo.client-secret", placeholder: "•••••••••••••••••••••" },
+		{ key: "apiHost", labelId: "2fa.duo.api-hostname", placeholder: "api-XXXXXXXX.duosecurity.com" },
+		{ key: "redirectUrl", labelId: "2fa.duo.redirect-url", placeholder: "https://your-app.com/duo-callback" },
+	];
+
 	return (
 		<div className="space-y-4" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleSetup(); } }}>
 			{error && (
@@ -297,16 +305,11 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 				</Alert>
 			)}
 			<p className="text-sm text-muted-foreground">
-				Enter your Duo Security Universal Prompt credentials from the Duo Admin Panel.
+				<T id="2fa.duo.instruction" />
 			</p>
-			{[
-				{ key: "clientId", label: "Client ID", placeholder: "DI..." },
-				{ key: "clientSecret", label: "Client Secret", placeholder: "•••••••••••••••••••••" },
-				{ key: "apiHost", label: "API Hostname", placeholder: "api-XXXXXXXX.duosecurity.com" },
-				{ key: "redirectUrl", label: "Redirect URL", placeholder: "https://your-app.com/duo-callback" },
-			].map(({ key, label, placeholder }) => (
+			{duoFields.map(({ key, labelId, placeholder }) => (
 				<div key={key} className="space-y-1">
-					<Label>{label}</Label>
+					<Label><T id={labelId} /></Label>
 					<Input
 						value={(form as Record<string, string>)[key]}
 						onChange={update(key)}
@@ -318,7 +321,7 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 			))}
 			<Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSetup(); }} className="w-full" disabled={loading}>
 				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-				Save &amp; Verify Duo Configuration
+				<T id="2fa.duo.save-verify" />
 			</Button>
 		</div>
 	);
@@ -377,18 +380,17 @@ export default function SecuritySettings() {
 			<div>
 				<h3 className="text-lg font-semibold flex items-center gap-2">
 					<Shield className="h-5 w-5" />
-					Two-Factor Authentication
+					<T id="2fa.title" />
 				</h3>
 				<p className="text-sm text-muted-foreground mt-1">
-					Add an extra layer of security to your account. When enabled, you will need to verify your identity
-					using a second method each time you sign in.
+					<T id="2fa.description" />
 				</p>
 			</div>
 
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
-					<AlertTitle>Error</AlertTitle>
+					<AlertTitle><T id="2fa.error" /></AlertTitle>
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
@@ -397,16 +399,16 @@ export default function SecuritySettings() {
 			{backupCodes && (
 				<Alert>
 					<CheckCircle2 className="h-4 w-4 text-green-500" />
-					<AlertTitle>Save These Backup Codes</AlertTitle>
+					<AlertTitle><T id="2fa.backup-codes.save-title" /></AlertTitle>
 					<AlertDescription>
-						<p className="mb-2">Each code can only be used once. Store them somewhere safe.</p>
+						<p className="mb-2"><T id="2fa.backup-codes.save-info" /></p>
 						<div className="grid grid-cols-2 gap-1 font-mono text-sm bg-muted p-3 rounded">
 							{backupCodes.map((c) => (
 								<span key={c}>{c}</span>
 							))}
 						</div>
 						<Button variant="outline" size="sm" className="mt-2" onClick={() => setBackupCodes(null)}>
-							I have saved these codes
+							<T id="2fa.backup-codes.saved" />
 						</Button>
 					</AlertDescription>
 				</Alert>
@@ -416,10 +418,9 @@ export default function SecuritySettings() {
 			{hasMethods && (
 				<Card>
 					<CardHeader className="pb-3">
-						<CardTitle className="text-base">Active Methods</CardTitle>
+						<CardTitle className="text-base"><T id="2fa.active-methods" /></CardTitle>
 						<CardDescription>
-							{data?.backupCodesRemaining ?? 0} backup code{data?.backupCodesRemaining !== 1 ? "s" : ""}{" "}
-							remaining
+							<T id="2fa.backup-codes.remaining" data={{ count: data?.backupCodesRemaining ?? 0 }} />
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-2">
@@ -461,7 +462,7 @@ export default function SecuritySettings() {
 								) : (
 									<RefreshCw className="mr-2 h-4 w-4" />
 								)}
-								Regenerate Backup Codes
+								<T id="2fa.backup-codes.regenerate" />
 							</Button>
 						</div>
 					</CardContent>
@@ -474,7 +475,7 @@ export default function SecuritySettings() {
 					<CardHeader>
 						<CardTitle className="text-base flex items-center gap-2">
 							{METHOD_ICONS[setupView] ?? <Shield className="h-5 w-5" />}
-							Set up {METHOD_LABELS[setupView] ?? setupView}
+							<T id="2fa.setup" data={{ method: METHOD_LABELS[setupView] ?? setupView }} />
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
@@ -483,7 +484,7 @@ export default function SecuritySettings() {
 						{setupView === "passkey" && <PasskeySetup onComplete={(codes) => handleSetupComplete(codes)} />}
 						{setupView === "duo" && <DuoSetup onComplete={() => handleSetupComplete()} />}
 						<Button variant="ghost" size="sm" className="mt-4 w-full" onClick={() => setSetupView(null)}>
-							Cancel
+							<T id="2fa.cancel" />
 						</Button>
 					</CardContent>
 				</Card>
@@ -493,25 +494,16 @@ export default function SecuritySettings() {
 			{!setupView && (
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Add a New Method</CardTitle>
+						<CardTitle className="text-base"><T id="2fa.add-method" /></CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="grid gap-3 sm:grid-cols-2">
 							{[
-								{
-									type: "totp" as const,
-									description: "Google Authenticator, Authy, or any TOTP app",
-								},
-								{ type: "yubikey" as const, description: "Hardware security key from Yubico" },
-								{
-									type: "passkey" as const,
-									description: "Biometric or hardware passkey (FIDO2/WebAuthn)",
-								},
-								{
-									type: "duo" as const,
-									description: "Enterprise 2FA via Duo Security Universal Prompt",
-								},
-							].map(({ type, description }) => (
+								{ type: "totp" as const, descId: "2fa.totp.description" },
+								{ type: "yubikey" as const, descId: "2fa.yubikey.description" },
+								{ type: "passkey" as const, descId: "2fa.passkey.description" },
+								{ type: "duo" as const, descId: "2fa.duo.description" },
+							].map(({ type, descId }) => (
 								<button
 									key={type}
 									type="button"
@@ -521,7 +513,7 @@ export default function SecuritySettings() {
 									{METHOD_ICONS[type]}
 									<div>
 										<p className="text-sm font-medium">{METHOD_LABELS[type]}</p>
-										<p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+										<p className="text-xs text-muted-foreground mt-0.5"><T id={descId} /></p>
 									</div>
 								</button>
 							))}

@@ -1,6 +1,7 @@
 import { startAuthentication } from "@simplewebauthn/browser";
 import { AlertCircle, Key, Loader2, ShieldCheck, Smartphone, Lock } from "lucide-react";
 import { useState } from "react";
+import { intl, T } from "src/locale";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
@@ -25,10 +26,10 @@ const METHOD_ICONS: Record<string, React.ReactNode> = {
 };
 
 const METHOD_LABELS: Record<string, string> = {
-	totp: "Authenticator App",
-	yubikey: "YubiKey",
-	passkey: "Passkey",
-	duo: "Duo Security",
+	totp: intl.formatMessage({ id: "2fa.method.totp" }),
+	yubikey: intl.formatMessage({ id: "2fa.method.yubikey" }),
+	passkey: intl.formatMessage({ id: "2fa.method.passkey" }),
+	duo: intl.formatMessage({ id: "2fa.method.duo" }),
 };
 
 export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFAStepProps) {
@@ -36,9 +37,6 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 	const [code, setCode] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-
-	// Include backup_code as a fallback option if any method is active
-	// backup_code is always available as fallback
 
 	const handleCodeSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -82,7 +80,6 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 		setLoading(true);
 		try {
 			const { authUrl } = await begin2faDuoAuth(pendingToken);
-			// Store the pending token so the callback page can complete auth
 			sessionStorage.setItem("duo_pending_token", pendingToken);
 			window.location.href = authUrl;
 		} catch (err) {
@@ -147,24 +144,30 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 
 	const inputPlaceholder: Record<string, string> = {
 		totp: "123456",
-		yubikey: "Press your YubiKey…",
-		backup_code: "BACKUP-CODE",
+		yubikey: intl.formatMessage({ id: "2fa.yubikey.otp-placeholder" }),
+		backup_code: intl.formatMessage({ id: "2fa.backup-code.placeholder" }),
+	};
+
+	const inputLabel: Record<string, string> = {
+		totp: intl.formatMessage({ id: "2fa.login.totp-code" }),
+		yubikey: intl.formatMessage({ id: "2fa.yubikey.otp" }),
+		backup_code: intl.formatMessage({ id: "2fa.login.backup-code" }),
 	};
 
 	return (
 		<div className="space-y-4">
 			<div className="text-center space-y-1">
 				<ShieldCheck className="mx-auto h-10 w-10 text-primary" />
-				<h2 className="text-xl font-semibold">Two-Factor Verification</h2>
+				<h2 className="text-xl font-semibold"><T id="2fa.login.title" /></h2>
 				<p className="text-sm text-muted-foreground">
-					Your account is protected with an additional verification step.
+					<T id="2fa.login.description" />
 				</p>
 			</div>
 
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
-					<AlertTitle>Error</AlertTitle>
+					<AlertTitle><T id="2fa.error" /></AlertTitle>
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
@@ -177,13 +180,11 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 				<form onSubmit={handleCodeSubmit} className="space-y-3 pt-2 border-t">
 					<div className="space-y-1">
 						<Label htmlFor="2fa-code">
-							{activeMethod === "totp" && "Authenticator Code"}
-							{activeMethod === "yubikey" && "YubiKey OTP"}
-							{activeMethod === "backup_code" && "Backup Code"}
+							{inputLabel[activeMethod] || ""}
 						</Label>
 						<Input
 							id="2fa-code"
-							type={activeMethod === "yubikey" ? "text" : "text"}
+							type="text"
 							inputMode={activeMethod === "totp" ? "numeric" : "text"}
 							value={code}
 							onChange={(e) => setCode(e.target.value)}
@@ -195,7 +196,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 					</div>
 					<Button type="submit" className="w-full" disabled={loading || !code.trim()}>
 						{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-						Verify
+						<T id="2fa.login.verify" />
 					</Button>
 				</form>
 			)}
@@ -211,7 +212,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 						setError("");
 					}}
 				>
-					Use a backup code instead
+					<T id="2fa.login.use-backup" />
 				</button>
 			</div>
 		</div>
