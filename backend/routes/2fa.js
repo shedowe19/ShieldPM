@@ -39,12 +39,17 @@ router.use(userIdFromMe);
  */
 const requireSelfOrAdmin = (req, res) => {
 	const access = res.locals.access;
-	const targetUserId = Number(req.params.user_id);
 	const requesterId = Number(access?.token?.getUserId?.());
 
-	if (!requesterId) {
+	if (!requesterId || !Number.isFinite(requesterId)) {
 		throw new errs.UnauthorizedError("Authentication required");
 	}
+
+	// userIdFromMe middleware resolves "me" to the token user ID as a Number.
+	// As a safety net, if "me" was not resolved (access unavailable during middleware),
+	// treat it as the requester's own ID — "me" unambiguously means the current user.
+	const rawParam = req.params.user_id;
+	const targetUserId = rawParam === "me" ? requesterId : Number(rawParam);
 
 	const isAdmin = access?.token?.hasScope?.("admin") === true;
 	if (!isAdmin && requesterId !== targetUserId) {
