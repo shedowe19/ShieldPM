@@ -56,7 +56,7 @@ const regenerateBackupCodes = async (userId) => {
 		})),
 	);
 
-	await UserTwoFaBackupCode.query().insert(rows);
+	await Promise.all(rows.map((row) => UserTwoFaBackupCode.query().insert(row)));
 	return codes;
 };
 
