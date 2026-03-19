@@ -9,7 +9,7 @@ import crypto from "node:crypto";
 import https from "node:https";
 import bcrypt from "bcryptjs";
 import qrcode from "qrcode";
-import { authenticator } from "otplib";
+import { generateSecret, generateURI, generateSync, verifySync } from "otplib";
 import {
 	generateRegistrationOptions,
 	verifyRegistrationResponse,
@@ -72,8 +72,8 @@ const regenerateBackupCodes = async (userId) => {
  * @returns {Promise<{ secret: string, otpauthUrl: string, qrDataUrl: string }>}
  */
 const setupTotp = async (userId, userEmail) => {
-	const secret = authenticator.generateSecret(20);
-	const otpauthUrl = authenticator.keyuri(userEmail, APP_NAME, secret);
+	const secret = generateSecret();
+	const otpauthUrl = generateURI({ secret, issuer: APP_NAME, label: userEmail, algorithm: "SHA1", digits: 6, period: 30, type: "totp" });
 	const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
 
 	// Persist an *unverified* TOTP record (overwrite any existing unverified TOTP)
@@ -101,7 +101,7 @@ const verifyAndEnableTotp = async (userId, code) => {
 		throw new errs.ValidationError("No pending TOTP setup found. Please restart setup.");
 	}
 
-	const isValid = authenticator.verify({ token: code, secret: record.secret });
+	const isValid = verifySync({ token: code, secret: record.secret }).valid;
 	if (!isValid) {
 		throw new errs.ValidationError("Invalid TOTP code");
 	}
@@ -121,7 +121,7 @@ const verifyTotp = async (userId, code) => {
 	if (!record) {
 		return false;
 	}
-	return authenticator.verify({ token: code, secret: record.secret });
+	return verifySync({ token: code, secret: record.secret }).valid;
 };
 
 // ---------------------------------------------------------------------------
