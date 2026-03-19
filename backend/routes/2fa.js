@@ -39,15 +39,14 @@ router.use(userIdFromMe);
  */
 const requireSelfOrAdmin = (req, res) => {
 	const access = res.locals.access;
-	// After userIdFromMe middleware, req.params.user_id is already a number
 	const targetUserId = Number(req.params.user_id);
-	const requesterId = access?.token?.getUserId?.(0);
+	const requesterId = Number(access?.token?.getUserId?.());
 
 	if (!requesterId) {
 		throw new errs.UnauthorizedError("Authentication required");
 	}
 
-	const isAdmin = access?.token?.hasScope?.("admin");
+	const isAdmin = access?.token?.hasScope?.("admin") === true;
 	if (!isAdmin && requesterId !== targetUserId) {
 		throw new errs.PermissionError("You can only manage your own 2FA settings");
 	}
