@@ -91,7 +91,9 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 			<div className="space-y-4">
 				<Alert>
 					<CheckCircle2 className="h-4 w-4 text-green-500" />
-					<AlertTitle><T id="2fa.totp.enabled" /></AlertTitle>
+					<AlertTitle>
+						<T id="2fa.totp.enabled" />
+					</AlertTitle>
 					<AlertDescription>
 						<T id="2fa.backup-codes.save-info" />
 					</AlertDescription>
@@ -126,14 +128,26 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 					<p className="text-sm text-muted-foreground text-center">
 						<T id="2fa.totp.scan-qr" />
 					</p>
-					<img src={qr} alt={intl.formatMessage({ id: "2fa.totp.qr-alt" })} className="rounded-lg border w-48 h-48" />
+					<img
+						src={qr}
+						alt={intl.formatMessage({ id: "2fa.totp.qr-alt" })}
+						className="rounded-lg border w-48 h-48"
+					/>
 					<div className="w-full space-y-3">
 						<div className="space-y-1">
-							<Label><T id="2fa.totp.verification-code" /></Label>
+							<Label>
+								<T id="2fa.totp.verification-code" />
+							</Label>
 							<Input
 								value={code}
 								onChange={(e) => setCode(e.target.value)}
-								onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); handleEnable(); } }}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") {
+										e.preventDefault();
+										e.stopPropagation();
+										handleEnable();
+									}
+								}}
 								placeholder="123456"
 								inputMode="numeric"
 								maxLength={6}
@@ -141,7 +155,16 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 								className="font-mono tracking-widest"
 							/>
 						</div>
-						<Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEnable(); }} className="w-full" disabled={loading || code.length < 6}>
+						<Button
+							type="button"
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								handleEnable();
+							}}
+							className="w-full"
+							disabled={loading || code.length < 6}
+						>
 							{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 							<T id="2fa.totp.verify-enable" />
 						</Button>
@@ -181,7 +204,13 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 	};
 
 	return (
-		<div className="space-y-4" role="form" onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(e); }}>
+		<div
+			className="space-y-4"
+			role="form"
+			onKeyDown={(e) => {
+				if (e.key === "Enter") handleAdd(e);
+			}}
+		>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
@@ -192,11 +221,19 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 				<T id="2fa.yubikey.instruction" />
 			</p>
 			<div className="space-y-1">
-				<Label><T id="2fa.label-optional" /></Label>
-				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={intl.formatMessage({ id: "2fa.yubikey.label-placeholder" })} />
+				<Label>
+					<T id="2fa.label-optional" />
+				</Label>
+				<Input
+					value={label}
+					onChange={(e) => setLabel(e.target.value)}
+					placeholder={intl.formatMessage({ id: "2fa.yubikey.label-placeholder" })}
+				/>
 			</div>
 			<div className="space-y-1">
-				<Label><T id="2fa.yubikey.otp" /></Label>
+				<Label>
+					<T id="2fa.yubikey.otp" />
+				</Label>
 				<Input
 					ref={otpRef}
 					value={otp}
@@ -254,8 +291,14 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 				<T id="2fa.passkey.instruction" />
 			</p>
 			<div className="space-y-1">
-				<Label><T id="2fa.label-optional" /></Label>
-				<Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={intl.formatMessage({ id: "2fa.passkey.label-placeholder" })} />
+				<Label>
+					<T id="2fa.label-optional" />
+				</Label>
+				<Input
+					value={label}
+					onChange={(e) => setLabel(e.target.value)}
+					placeholder={intl.formatMessage({ id: "2fa.passkey.label-placeholder" })}
+				/>
 			</div>
 			<Button onClick={handleRegister} className="w-full" disabled={loading}>
 				{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
@@ -297,7 +340,17 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 	];
 
 	return (
-		<div className="space-y-4" role="form" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleSetup(); } }}>
+		<div
+			className="space-y-4"
+			role="form"
+			onKeyDown={(e) => {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					e.stopPropagation();
+					handleSetup();
+				}
+			}}
+		>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
@@ -309,7 +362,9 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 			</p>
 			{duoFields.map(({ key, labelId, placeholder }) => (
 				<div key={key} className="space-y-1">
-					<Label><T id={labelId} /></Label>
+					<Label>
+						<T id={labelId} />
+					</Label>
 					<Input
 						value={(form as Record<string, string>)[key]}
 						onChange={update(key)}
@@ -319,7 +374,16 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 					/>
 				</div>
 			))}
-			<Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSetup(); }} className="w-full" disabled={loading}>
+			<Button
+				type="button"
+				onClick={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					handleSetup();
+				}}
+				className="w-full"
+				disabled={loading}
+			>
 				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 				<T id="2fa.duo.save-verify" />
 			</Button>
@@ -390,7 +454,9 @@ export default function SecuritySettings() {
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
-					<AlertTitle><T id="2fa.error" /></AlertTitle>
+					<AlertTitle>
+						<T id="2fa.error" />
+					</AlertTitle>
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
@@ -399,9 +465,13 @@ export default function SecuritySettings() {
 			{backupCodes && (
 				<Alert>
 					<CheckCircle2 className="h-4 w-4 text-green-500" />
-					<AlertTitle><T id="2fa.backup-codes.save-title" /></AlertTitle>
+					<AlertTitle>
+						<T id="2fa.backup-codes.save-title" />
+					</AlertTitle>
 					<AlertDescription>
-						<p className="mb-2"><T id="2fa.backup-codes.save-info" /></p>
+						<p className="mb-2">
+							<T id="2fa.backup-codes.save-info" />
+						</p>
 						<div className="grid grid-cols-2 gap-1 font-mono text-sm bg-muted p-3 rounded">
 							{backupCodes.map((c) => (
 								<span key={c}>{c}</span>
@@ -418,7 +488,9 @@ export default function SecuritySettings() {
 			{hasMethods && (
 				<Card>
 					<CardHeader className="pb-3">
-						<CardTitle className="text-base"><T id="2fa.active-methods" /></CardTitle>
+						<CardTitle className="text-base">
+							<T id="2fa.active-methods" />
+						</CardTitle>
 						<CardDescription>
 							<T id="2fa.backup-codes.remaining" data={{ count: data?.backupCodesRemaining ?? 0 }} />
 						</CardDescription>
@@ -494,7 +566,9 @@ export default function SecuritySettings() {
 			{!setupView && (
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base"><T id="2fa.add-method" /></CardTitle>
+						<CardTitle className="text-base">
+							<T id="2fa.add-method" />
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="grid gap-3 sm:grid-cols-2">
@@ -513,7 +587,9 @@ export default function SecuritySettings() {
 									{METHOD_ICONS[type]}
 									<div>
 										<p className="text-sm font-medium">{METHOD_LABELS[type]}</p>
-										<p className="text-xs text-muted-foreground mt-0.5"><T id={descId} /></p>
+										<p className="text-xs text-muted-foreground mt-0.5">
+											<T id={descId} />
+										</p>
 									</div>
 								</button>
 							))}

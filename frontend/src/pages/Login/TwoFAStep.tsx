@@ -158,7 +158,9 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 		<div className="space-y-4">
 			<div className="text-center space-y-1">
 				<ShieldCheck className="mx-auto h-10 w-10 text-primary" />
-				<h2 className="text-xl font-semibold"><T id="2fa.login.title" /></h2>
+				<h2 className="text-xl font-semibold">
+					<T id="2fa.login.title" />
+				</h2>
 				<p className="text-sm text-muted-foreground">
 					<T id="2fa.login.description" />
 				</p>
@@ -167,7 +169,9 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
-					<AlertTitle><T id="2fa.error" /></AlertTitle>
+					<AlertTitle>
+						<T id="2fa.error" />
+					</AlertTitle>
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			)}
@@ -179,9 +183,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 			{(activeMethod === "totp" || activeMethod === "yubikey" || activeMethod === "backup_code") && (
 				<form onSubmit={handleCodeSubmit} className="space-y-3 pt-2 border-t">
 					<div className="space-y-1">
-						<Label htmlFor="2fa-code">
-							{inputLabel[activeMethod] || ""}
-						</Label>
+						<Label htmlFor="2fa-code">{inputLabel[activeMethod] || ""}</Label>
 						<Input
 							id="2fa-code"
 							type="text"
