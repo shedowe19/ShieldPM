@@ -544,7 +544,7 @@ router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
 		}
 
 		const userId = payload.attrs?.id;
-		const { options, challengeId } = await twoFaService.beginPasskeyAuthentication(userId);
+		const { options, challengeId } = await twoFaService.beginPasskeyAuthentication(userId, req);
 
 		res.status(200).json({ options, challenge_id: challengeId });
 	} catch (err) {
@@ -580,7 +580,7 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
 		}
 
 		const userId = payload.attrs?.id;
-		await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response);
+		await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response, req);
 
 		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
 		if (!user) {

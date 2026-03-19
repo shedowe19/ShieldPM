@@ -240,9 +240,27 @@ const verifyYubikey = async (userId, otp) => {
 // Passkey / WebAuthn
 // ---------------------------------------------------------------------------
 
-const PASSKEY_RP_ID = process.env.PASSKEY_RP_ID || "localhost";
+const PASSKEY_RP_ID = process.env.PASSKEY_RP_ID || null; // null = derive dynamically from request
 const PASSKEY_RP_NAME = process.env.PASSKEY_RP_NAME || APP_NAME;
-const PASSKEY_ORIGIN = process.env.PASSKEY_ORIGIN || "http://localhost:3000";
+const PASSKEY_ORIGIN = process.env.PASSKEY_ORIGIN || null; // null = derive dynamically from request
+
+/**
+ * Derive rpID and origin from the request when not explicitly configured.
+ * @param {object} req  Express request object
+ * @returns {{ rpID: string, origin: string }}
+ */
+const getPasskeyContext = (req) => {
+	const origin = PASSKEY_ORIGIN || req.headers.origin || `${req.protocol}://${req.hostname}`;
+	let rpID = PASSKEY_RP_ID;
+	if (!rpID) {
+		try {
+			rpID = new URL(origin).hostname;
+		} catch {
+			rpID = req.hostname || "localhost";
+		}
+	}
+	return { rpID, origin };
+};
 
 /**
  * Begin passkey registration: generate options and store the challenge.
@@ -250,7 +268,8 @@ const PASSKEY_ORIGIN = process.env.PASSKEY_ORIGIN || "http://localhost:3000";
  * @param {string} userEmail
  * @returns {Promise<{ options: PublicKeyCredentialCreationOptionsJSON, challengeId: string }>}
  */
-const beginPasskeyRegistration = async (userId, userEmail) => {
+const beginPasskeyRegistration = async (userId, userEmail, req) => {
+	const { rpID } = getPasskeyContext(req);
 	const existingPasskeys = await UserTwoFa.query().where({ user_id: userId, type: "passkey", is_deleted: 0 });
 
 	const excludeCredentials = existingPasskeys.map((pk) => ({
@@ -263,7 +282,7 @@ const beginPasskeyRegistration = async (userId, userEmail) => {
 
 	const options = await generateRegistrationOptions({
 		rpName: PASSKEY_RP_NAME,
-		rpID: PASSKEY_RP_ID,
+		rpID,
 		userID: Buffer.from(String(userId)),
 		userName: userEmail,
 		userDisplayName: user?.name || userEmail,
@@ -297,7 +316,8 @@ const beginPasskeyRegistration = async (userId, userEmail) => {
  * @param {string} [label]
  * @returns {Promise<{ backupCodes: string[] }>}
  */
-const completePasskeyRegistration = async (userId, challengeId, registrationResponse, label = "Passkey") => {
+const completePasskeyRegistration = async (userId, challengeId, registrationResponse, label = "Passkey", req) => {
+	const { rpID, origin } = getPasskeyContext(req);
 	const challengeRecord = await UserTwoFa.query().findOne({
 		user_id: userId,
 		type: "passkey_challenge",
@@ -317,8 +337,8 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 	const verification = await verifyRegistrationResponse({
 		response: registrationResponse,
 		expectedChallenge,
-		expectedOrigin: PASSKEY_ORIGIN,
-		expectedRPID: PASSKEY_RP_ID,
+		expectedOrigin: origin,
+		expectedRPID: rpID,
 	});
 
 	if (!verification.verified || !verification.registrationInfo) {
@@ -352,7 +372,8 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
  * @param {number} userId
  * @returns {Promise<{ options: PublicKeyCredentialRequestOptionsJSON, challengeId: string }>}
  */
-const beginPasskeyAuthentication = async (userId) => {
+const beginPasskeyAuthentication = async (userId, req) => {
+	const { rpID } = getPasskeyContext(req);
 	const passkeys = await UserTwoFa.query().where({ user_id: userId, type: "passkey", is_verified: 1, is_deleted: 0 });
 
 	if (passkeys.length === 0) {
@@ -366,7 +387,7 @@ const beginPasskeyAuthentication = async (userId) => {
 	}));
 
 	const options = await generateAuthenticationOptions({
-		rpID: PASSKEY_RP_ID,
+		rpID,
 		allowCredentials,
 		userVerification: "preferred",
 	});
@@ -391,7 +412,8 @@ const beginPasskeyAuthentication = async (userId) => {
  * @param {object} authResponse  Credential from navigator.credentials.get()
  * @returns {Promise<boolean>}
  */
-const completePasskeyAuthentication = async (userId, challengeId, authResponse) => {
+const completePasskeyAuthentication = async (userId, challengeId, authResponse, req) => {
+	const { rpID, origin } = getPasskeyContext(req);
 	const challengeRecord = await UserTwoFa.query().findOne({
 		user_id: userId,
 		type: "passkey_auth_challenge",
@@ -423,8 +445,8 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse) 
 	const verification = await verifyAuthenticationResponse({
 		response: authResponse,
 		expectedChallenge,
-		expectedOrigin: PASSKEY_ORIGIN,
-		expectedRPID: PASSKEY_RP_ID,
+		expectedOrigin: origin,
+		expectedRPID: rpID,
 		credential: {
 			id: passkey.secret,
 			publicKey: new Uint8Array(publicKeyBuffer),

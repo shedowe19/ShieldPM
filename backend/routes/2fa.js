@@ -168,7 +168,7 @@ router.post("/passkey/register/begin", twoFaRateLimiter, async (req, res) => {
 		throw new errs.ItemNotFoundError(`User ${userId}`);
 	}
 
-	const { options, challengeId } = await twoFaService.beginPasskeyRegistration(userId, user.email);
+	const { options, challengeId } = await twoFaService.beginPasskeyRegistration(userId, user.email, req);
 	res.status(200).json({ options, challenge_id: challengeId });
 });
 
@@ -184,7 +184,7 @@ router.post("/passkey/register/complete", twoFaRateLimiter, async (req, res) => 
 		throw new errs.ValidationError("challenge_id and registration_response are required");
 	}
 
-	const result = await twoFaService.completePasskeyRegistration(userId, challenge_id, registration_response, label);
+	const result = await twoFaService.completePasskeyRegistration(userId, challenge_id, registration_response, label, req);
 	res.status(201).json({ message: "Passkey registered successfully", backup_codes: result.backupCodes });
 });
 
