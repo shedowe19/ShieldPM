@@ -593,11 +593,14 @@ const removeTwoFaMethod = async (userId, methodId) => {
 	}
 
 	const activeCount = await UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 }).resultSize();
-	if (activeCount <= 1) {
-		throw new errs.ValidationError("Cannot remove the last 2FA method. Disable 2FA first or add another method.");
-	}
 
 	await UserTwoFa.query().patch({ is_deleted: 1 }).where({ id: methodId });
+
+	// If this was the last active method, 2FA is now disabled.
+	// Clean up backup codes so they don't linger.
+	if (activeCount <= 1) {
+		await UserTwoFaBackupCode.query().delete().where({ user_id: userId });
+	}
 };
 
 // ---------------------------------------------------------------------------
