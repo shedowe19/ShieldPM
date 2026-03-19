@@ -476,13 +476,13 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
 
-		const scope = payload.get("scope") || payload.scope;
+		const scope = payload.scope;
 		const scopes = Array.isArray(scope) ? scope : [scope];
 		if (!scopes.includes("2fa_pending")) {
 			return res.status(401).send({ error: { code: 401, message: "Invalid token scope for 2FA verification" } });
 		}
 
-		const userId = payload.getUserId(0) || payload.attrs?.id;
+		const userId = payload.attrs?.id;
 		if (!userId) {
 			return res.status(401).send({ error: { code: 401, message: "Invalid pending token" } });
 		}
@@ -543,7 +543,7 @@ router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
 
-		const userId = payload.getUserId(0) || payload.attrs?.id;
+		const userId = payload.attrs?.id;
 		const { options, challengeId } = await twoFaService.beginPasskeyAuthentication(userId);
 
 		res.status(200).json({ options, challenge_id: challengeId });
@@ -579,7 +579,7 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
 
-		const userId = payload.getUserId(0) || payload.attrs?.id;
+		const userId = payload.attrs?.id;
 		await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response);
 
 		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
@@ -631,7 +631,7 @@ router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
 
-		const userId = payload.getUserId(0) || payload.attrs?.id;
+		const userId = payload.attrs?.id;
 		const user = await User.query().findById(userId);
 		if (!user) {
 			return res.status(401).send({ error: { code: 401, message: "User not found" } });
@@ -669,7 +669,7 @@ router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
 
-		const userId = payload.getUserId(0) || payload.attrs?.id;
+		const userId = payload.attrs?.id;
 		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
 		if (!user) {
 			return res.status(401).send({ error: { code: 401, message: "User not found" } });
