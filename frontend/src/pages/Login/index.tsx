@@ -2,6 +2,8 @@ import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { claimOidcToken } from "src/api/backend";
+import type { TwoFaChallengeResponse } from "src/api/backend/verify2fa";
+import type { TokenResponse } from "src/api/backend/responseTypes";
 import { LocalePicker, ThemeSwitcher } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -13,6 +15,7 @@ import { useHealth } from "src/hooks";
 import { intl, T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 import { validateEmail, validateString } from "src/modules/Validations";
+import TwoFAStep from "./TwoFAStep";
 
 interface LoginValues {
 	email: string;
@@ -22,18 +25,32 @@ interface LoginValues {
 export default function Login() {
 	const emailRef = useRef<HTMLInputElement>(null);
 	const [formErr, setFormErr] = useState("");
+	const [pending2FA, setPending2FA] = useState<{ token: string; methods: string[] } | null>(null);
 	const { login } = useAuthState();
 
 	const onSubmit = async (values: LoginValues, { setSubmitting }: FormikHelpers<LoginValues>) => {
 		setFormErr("");
 		try {
+			// login() may throw a TwoFaChallengeResponse if 2FA is required
 			await login(values.email, values.password);
 		} catch (err) {
-			if (err instanceof Error) {
+			// Check if the error carries a 2FA challenge payload
+			if (err && typeof err === "object" && "requires2fa" in err) {
+				const challenge = err as TwoFaChallengeResponse;
+				if (challenge.csrfToken) {
+					AuthStore.setCsrfToken(challenge.csrfToken);
+				}
+				setPending2FA({ token: challenge.pendingToken, methods: challenge.methods });
+			} else if (err instanceof Error) {
 				setFormErr(err.message);
 			}
 		}
 		setSubmitting(false);
+	};
+
+	const handle2FASuccess = (response: TokenResponse) => {
+		AuthStore.set(response);
+		window.location.reload();
 	};
 
 	useEffect(() => {
@@ -75,90 +92,106 @@ export default function Login() {
 						<CardTitle className="text-3xl font-bold text-center tracking-tight">
 							<T id="login.title" />
 						</CardTitle>
-						<CardDescription className="text-center">Enter your credentials to continue</CardDescription>
+						<CardDescription className="text-center">
+							{pending2FA ? "Complete two-factor verification" : "Enter your credentials to continue"}
+						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						{formErr !== "" && (
-							<Alert variant="destructive" className="mb-6">
-								<AlertCircle className="h-4 w-4" />
-								<AlertTitle>Error</AlertTitle>
-								<AlertDescription>{formErr}</AlertDescription>
-							</Alert>
-						)}
+						{pending2FA ? (
+							<TwoFAStep
+								pendingToken={pending2FA.token}
+								methods={pending2FA.methods}
+								onSuccess={handle2FASuccess}
+							/>
+						) : (
+							<>
+								{formErr !== "" && (
+									<Alert variant="destructive" className="mb-6">
+										<AlertCircle className="h-4 w-4" />
+										<AlertTitle>Error</AlertTitle>
+										<AlertDescription>{formErr}</AlertDescription>
+									</Alert>
+								)}
 
-						<Formik
-							initialValues={{
-								email: "",
-								password: "",
-							}}
-							onSubmit={onSubmit}
-						>
-							{({ isSubmitting, errors, touched }) => (
-								<Form className="space-y-4">
-									<div className="space-y-2">
-										<Field name="email" validate={validateEmail()}>
-											{({ field }: FieldProps) => (
-												<div className="grid gap-2">
-													<Label htmlFor="email">
-														<T id="email-address" />
-													</Label>
-													<Input
-														{...field}
-														id="email"
-														ref={emailRef}
-														type="email"
-														required
-														placeholder={intl.formatMessage({
-															id: "form.placeholder.email",
-														})}
-														className={`bg-background/50 py-6 ${errors.email && touched.email ? "border-destructive" : ""}`}
-													/>
-													{errors.email && touched.email && (
-														<p className="text-sm text-destructive">{errors.email}</p>
+								<Formik
+									initialValues={{
+										email: "",
+										password: "",
+									}}
+									onSubmit={onSubmit}
+								>
+									{({ isSubmitting, errors, touched }) => (
+										<Form className="space-y-4">
+											<div className="space-y-2">
+												<Field name="email" validate={validateEmail()}>
+													{({ field }: FieldProps) => (
+														<div className="grid gap-2">
+															<Label htmlFor="email">
+																<T id="email-address" />
+															</Label>
+															<Input
+																{...field}
+																id="email"
+																ref={emailRef}
+																type="email"
+																required
+																placeholder={intl.formatMessage({
+																	id: "form.placeholder.email",
+																})}
+																className={`bg-background/50 py-6 ${errors.email && touched.email ? "border-destructive" : ""}`}
+															/>
+															{errors.email && touched.email && (
+																<p className="text-sm text-destructive">
+																	{errors.email}
+																</p>
+															)}
+														</div>
 													)}
-												</div>
-											)}
-										</Field>
-									</div>
-									<div className="space-y-2">
-										<Field name="password" validate={validateString(8, 255)}>
-											{({ field }: FieldProps) => (
-												<div className="grid gap-2">
-													<Label htmlFor="password">
-														<T id="password" />
-													</Label>
-													<Input
-														{...field}
-														id="password"
-														type="password"
-														autoComplete="current-password"
-														required
-														maxLength={255}
-														placeholder="••••••••"
-														className={`bg-background/50 py-6 ${errors.password && touched.password ? "border-destructive" : ""}`}
-													/>
-													{errors.password && touched.password && (
-														<p className="text-sm text-destructive">{errors.password}</p>
+												</Field>
+											</div>
+											<div className="space-y-2">
+												<Field name="password" validate={validateString(8, 255)}>
+													{({ field }: FieldProps) => (
+														<div className="grid gap-2">
+															<Label htmlFor="password">
+																<T id="password" />
+															</Label>
+															<Input
+																{...field}
+																id="password"
+																type="password"
+																autoComplete="current-password"
+																required
+																maxLength={255}
+																placeholder="••••••••"
+																className={`bg-background/50 py-6 ${errors.password && touched.password ? "border-destructive" : ""}`}
+															/>
+															{errors.password && touched.password && (
+																<p className="text-sm text-destructive">
+																	{errors.password}
+																</p>
+															)}
+														</div>
 													)}
-												</div>
-											)}
-										</Field>
-									</div>
-									<Button
-										type="submit"
-										size="lg"
-										className="w-full py-6 text-lg bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25"
-										disabled={isSubmitting}
-									>
-										{isSubmitting ? (
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										) : (
-											<T id="sign-in" />
-										)}
-									</Button>
-								</Form>
-							)}
-						</Formik>
+												</Field>
+											</div>
+											<Button
+												type="submit"
+												size="lg"
+												className="w-full py-6 text-lg bg-primary hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/25"
+												disabled={isSubmitting}
+											>
+												{isSubmitting ? (
+													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												) : (
+													<T id="sign-in" />
+												)}
+											</Button>
+										</Form>
+									)}
+								</Formik>
+							</>
+						)}
 					</CardContent>
 				</Card>
 				<div className="text-center text-xs text-muted-foreground/50 mt-8 font-mono">{getVersion()}</div>

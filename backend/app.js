@@ -198,7 +198,10 @@ app.use(async (req, res, next) => {
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
 
-	if (isInitialSetupUserCreation || isLoginRequest || isTokenRefresh || isTokenLogout) {
+	// 2FA verification endpoints during login use the pending_token for auth, no CSRF cookie yet
+	const is2FaVerify = method === "POST" && /^\/(api\/)?tokens\/2fa\//.test(path);
+
+	if (isInitialSetupUserCreation || isLoginRequest || isTokenRefresh || isTokenLogout || is2FaVerify) {
 		return next();
 	}
 

@@ -2,7 +2,6 @@ import express from "express";
 import internalAuditLog from "../internal/audit-log.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import validator from "../lib/validator/index.js";
-import { debug, express as logger } from "../logger.js";
 
 const router = express.Router({
 	caseSensitive: true,
@@ -25,7 +24,7 @@ router
 	 *
 	 * Retrieve all logs
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res, _next) => {
 		const data = await validator(
 			{
 				additionalProperties: false,
@@ -64,7 +63,7 @@ router
 	 *
 	 * Retrieve a specific entry
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res, _next) => {
 		const data = await validator(
 			{
 				required: ["event_id"],

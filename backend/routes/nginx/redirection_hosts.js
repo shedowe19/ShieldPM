@@ -3,7 +3,6 @@ import internalRedirectionHost from "../../internal/redirection-host.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
-import { debug, express as logger } from "../../logger.js";
 import { getValidationSchema } from "../../schema/index.js";
 
 const router = express.Router({
@@ -27,7 +26,7 @@ router
 	 *
 	 * Retrieve all redirection-hosts
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res, _next) => {
 		const data = await validator(
 			{
 				additionalProperties: false,
@@ -54,7 +53,7 @@ router
 	 *
 	 * Create a new redirection-host
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/redirection-hosts", "post"), req.body);
 		const result = await internalRedirectionHost.create(res.locals.access, payload);
 		res.status(201).send(result);
@@ -77,7 +76,7 @@ router
 	 *
 	 * Retrieve a specific redirection-host
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res, _next) => {
 		const data = await validator(
 			{
 				required: ["host_id"],
@@ -108,7 +107,7 @@ router
 	 *
 	 * Update and existing redirection-host
 	 */
-	.put(async (req, res, next) => {
+	.put(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/redirection-hosts/{hostID}", "put"), req.body);
 		payload.id = Number.parseInt(req.params.host_id, 10);
 		const result = await internalRedirectionHost.update(res.locals.access, payload);
@@ -120,7 +119,7 @@ router
 	 *
 	 * Update and existing redirection-host
 	 */
-	.delete(async (req, res, next) => {
+	.delete(async (req, res, _next) => {
 		const result = await internalRedirectionHost.delete(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
@@ -142,7 +141,7 @@ router
 	/**
 	 * POST /api/nginx/redirection-hosts/123/enable
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const result = await internalRedirectionHost.enable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
@@ -164,7 +163,7 @@ router
 	/**
 	 * POST /api/nginx/redirection-hosts/123/disable
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const result = await internalRedirectionHost.disable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});

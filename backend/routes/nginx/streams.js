@@ -3,7 +3,6 @@ import internalStream from "../../internal/stream.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
-import { debug, express as logger } from "../../logger.js";
 import { getValidationSchema } from "../../schema/index.js";
 
 const router = express.Router({
@@ -27,7 +26,7 @@ router
 	 *
 	 * Retrieve all streams
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res, _next) => {
 		const data = await validator(
 			{
 				additionalProperties: false,
@@ -54,7 +53,7 @@ router
 	 *
 	 * Create a new stream
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/streams", "post"), req.body);
 		const result = await internalStream.create(res.locals.access, payload);
 		res.status(201).send(result);
@@ -77,7 +76,7 @@ router
 	 *
 	 * Retrieve a specific stream
 	 */
-	.get(async (req, res, next) => {
+	.get(async (req, res, _next) => {
 		const data = await validator(
 			{
 				required: ["stream_id"],
@@ -108,7 +107,7 @@ router
 	 *
 	 * Update and existing stream
 	 */
-	.put(async (req, res, next) => {
+	.put(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/streams/{streamID}", "put"), req.body);
 		payload.id = Number.parseInt(req.params.stream_id, 10);
 		const result = await internalStream.update(res.locals.access, payload);
@@ -120,7 +119,7 @@ router
 	 *
 	 * Update and existing stream
 	 */
-	.delete(async (req, res, next) => {
+	.delete(async (req, res, _next) => {
 		const result = await internalStream.delete(res.locals.access, {
 			id: Number.parseInt(req.params.stream_id, 10),
 		});
@@ -142,7 +141,7 @@ router
 	/**
 	 * POST /api/nginx/streams/123/enable
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const result = await internalStream.enable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
@@ -164,7 +163,7 @@ router
 	/**
 	 * POST /api/nginx/streams/123/disable
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const result = await internalStream.disable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});

@@ -39,6 +39,7 @@
 * **[Security Overview](Security)**: Introduction to security features.
 * **[CrowdSec Deep Dive](CrowdSec)**: Setup, Bouncer, and Collections.
 * **[ModSecurity Deep Dive](ModSecurity)**: OWASP CRS, Paranoia Levels, and Tuning.
+* **[Two-Factor Authentication (2FA)](Two-Factor-Authentication)**: TOTP, YubiKey, Passkey (FIDO2), and Duo Security.
 * **[Access Lists](Access-Lists)**: Basic Auth, IP Ranges, and Authorization.
 * **[OAuth2-Proxy Integration](OAuth2-Proxy)**: Setup Single Sign-On using Google, GitHub, Azure, OIDC, etc.
 * **[Anubis AI Firewall](Anubis)**: Stop AI crawlers and automated bots.

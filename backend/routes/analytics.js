@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(jwtdecode());
 
 // Enforce global admin access for platform-wide analytics
-router.use(async (req, res, next) => {
+router.use(async (_req, res, next) => {
 	await res.locals.access.can("analytics:list");
 	next();
 });

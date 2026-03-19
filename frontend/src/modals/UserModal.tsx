@@ -1,4 +1,13 @@
-import { IconId, IconMail, IconPhoto, IconPower, IconSettings, IconShield, IconUser } from "@tabler/icons-react";
+import {
+	IconId,
+	IconLock,
+	IconMail,
+	IconPhoto,
+	IconPower,
+	IconSettings,
+	IconShield,
+	IconUser,
+} from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -15,6 +24,7 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { useHealth, useSetUser, useUser } from "src/hooks";
+import SecuritySettings from "src/pages/Profile/Security";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
@@ -100,6 +110,8 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	};
 
 	const health = useHealth();
+	const isSelf =
+		id === "me" || (data?.id !== undefined && currentUser?.id !== undefined && data.id === currentUser.id);
 
 	if (health.data?.demo) {
 		return (
@@ -175,7 +187,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								)}
 
 								<Tabs defaultValue="details" className="w-full">
-									<TabsList className="grid w-full grid-cols-2 mb-4">
+									<TabsList className={`grid w-full mb-4 ${isSelf ? "grid-cols-3" : "grid-cols-2"}`}>
 										<TabsTrigger value="details" className="flex items-center gap-2">
 											<IconUser className="h-4 w-4" />
 											<span className="hidden sm:inline">
@@ -186,6 +198,12 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<IconPhoto className="h-4 w-4" />
 											<span className="hidden sm:inline">Profile Picture</span>
 										</TabsTrigger>
+										{isSelf && (
+											<TabsTrigger value="security" className="flex items-center gap-2">
+												<IconLock className="h-4 w-4" />
+												<span className="hidden sm:inline">Security</span>
+											</TabsTrigger>
+										)}
 									</TabsList>
 
 									<TabsContent value="details" className="space-y-4">
@@ -425,6 +443,15 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</div>
 										)}
 									</TabsContent>
+
+									{isSelf && (
+										<TabsContent
+											value="security"
+											className="space-y-4 animate-in fade-in slide-in-from-bottom-2"
+										>
+											<SecuritySettings />
+										</TabsContent>
+									)}
 								</Tabs>
 
 								<DialogFooter className="mt-6">

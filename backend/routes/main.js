@@ -25,6 +25,7 @@ import schemaRoutes from "./schema.js";
 import servicesRoutes from "./services.js";
 import settingsRoutes from "./settings.js";
 import tokensRoutes from "./tokens.js";
+import twoFaRoutes from "./2fa.js";
 import usersRoutes from "./users.js";
 import versionRoutes from "./version.js";
 
@@ -55,6 +56,7 @@ router.use("/schema", schemaRoutes);
 router.use("/tokens", tokensRoutes);
 router.use("/oidc", oidcRoutes);
 router.use("/users", usersRoutes);
+router.use("/users/:user_id/2fa", twoFaRoutes);
 router.use("/audit-log", auditLogRoutes);
 router.use("/reports", reportsRoutes);
 router.use("/settings", settingsRoutes);

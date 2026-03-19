@@ -2,12 +2,14 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import internalToken from "../internal/token.js";
+import twoFaService from "../internal/2fa-service.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
 import TokenModel from "../models/token.js";
 import User from "../models/user.js";
+import UserTwoFa from "../models/user-2fa.js";
 import { getValidationSchema } from "../schema/index.js";
 
 /**
@@ -237,7 +239,32 @@ router
 			const result = await internalToken.getTokenFromEmail(data);
 			await clearLoginAttempts(trackedIdentifiers);
 
-			// Issue refresh-token pair alongside the access token
+			// Check whether the user has any active 2FA methods
+			const has2FA = await UserTwoFa.hasActive2FA(result.user.id);
+
+			if (has2FA) {
+				// Issue a short-lived "pending 2FA" token (5 minutes)
+				const Token = TokenModel();
+				const pending = await Token.create({
+					iss: "api",
+					attrs: { id: result.user.id },
+					scope: ["2fa_pending"],
+					expiresIn: "5m",
+				});
+
+				// Return which methods are available so the UI can present the right input
+				const activeMethods = await UserTwoFa.getActiveForUser(result.user.id);
+				const methodTypes = [...new Set(activeMethods.map((m) => m.type))];
+
+				return res.status(202).send({
+					requires_2fa: true,
+					pending_token: pending.token,
+					methods: methodTypes,
+					csrfToken: res.locals.csrfToken,
+				});
+			}
+
+			// No 2FA — issue refresh-token pair alongside the access token
 			const meta = { ip, userAgent: req.headers["user-agent"] || null };
 			const pair = await internalToken.issueTokenPair(result.user, data.scope || "user", meta);
 
@@ -387,7 +414,7 @@ router
 			try {
 				const Token = TokenModel();
 				payload = await Token.load(originalToken);
-			} catch (verifyErr) {
+			} catch (_verifyErr) {
 				throw new errs.AuthError("Backup session token is invalid or expired");
 			}
 
@@ -421,5 +448,259 @@ router
 			});
 		}
 	});
+
+// ---------------------------------------------------------------------------
+// 2FA verification during login
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /tokens/2fa/verify
+ *
+ * Verify a TOTP code, YubiKey OTP, or backup code using a pending 2FA token.
+ * On success, issues full access + refresh tokens and sets auth cookies.
+ */
+router.post("/2fa/verify", authRateLimiter, async (req, res) => {
+	const { pending_token, method, code } = req.body;
+
+	if (!pending_token || !method || !code) {
+		return res.status(400).send({ error: { code: 400, message: "pending_token, method, and code are required" } });
+	}
+
+	try {
+		// Verify the short-lived pending token
+		const Token = TokenModel();
+		let payload;
+		try {
+			payload = await Token.load(pending_token);
+		} catch (_err) {
+			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
+		}
+
+		const scope = payload.scope;
+		const scopes = Array.isArray(scope) ? scope : [scope];
+		if (!scopes.includes("2fa_pending")) {
+			return res.status(401).send({ error: { code: 401, message: "Invalid token scope for 2FA verification" } });
+		}
+
+		const userId = payload.attrs?.id;
+		if (!userId) {
+			return res.status(401).send({ error: { code: 401, message: "Invalid pending token" } });
+		}
+
+		// Verify the provided 2FA code
+		const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
+		if (!valid) {
+			return res.status(401).send({ error: { code: 401, message: "Invalid 2FA code" } });
+		}
+
+		// 2FA passed — load the user and issue full tokens
+		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
+		if (!user) {
+			return res.status(401).send({ error: { code: 401, message: "User not found" } });
+		}
+
+		const ip = req.ip || "unknown";
+		const meta = { ip, userAgent: req.headers["user-agent"] || null };
+		const pair = await internalToken.issueTokenPair(user, "user", meta);
+
+		setAuthCookies(res, req, {
+			accessToken: pair.access_token,
+			accessExpires: pair.access_expires,
+			refreshToken: pair.refresh_token,
+			refreshExpires: pair.refresh_expires,
+		});
+
+		res.status(200).send({
+			expires: pair.access_expires,
+			user: pair.user,
+			csrfToken: res.locals.csrfToken,
+		});
+	} catch (err) {
+		debug(logger, `POST /tokens/2fa/verify: ${err}`);
+		const code = err.status || 500;
+		res.status(code).send({ error: { code, message: err.public ? err.message : "2FA verification failed" } });
+	}
+});
+
+/**
+ * POST /tokens/2fa/passkey/begin
+ *
+ * Begin passkey authentication during the login 2FA step.
+ */
+router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
+	const { pending_token } = req.body;
+
+	if (!pending_token) {
+		return res.status(400).send({ error: { code: 400, message: "pending_token is required" } });
+	}
+
+	try {
+		const Token = TokenModel();
+		let payload;
+		try {
+			payload = await Token.load(pending_token);
+		} catch (_err) {
+			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
+		}
+
+		const userId = payload.attrs?.id;
+		const { options, challengeId } = await twoFaService.beginPasskeyAuthentication(userId, req);
+
+		res.status(200).json({ options, challenge_id: challengeId });
+	} catch (err) {
+		debug(logger, `POST /tokens/2fa/passkey/begin: ${err}`);
+		const code = err.status || 500;
+		res.status(code).send({
+			error: { code, message: err.public ? err.message : "Failed to begin passkey authentication" },
+		});
+	}
+});
+
+/**
+ * POST /tokens/2fa/passkey/complete
+ *
+ * Complete passkey authentication and issue full tokens.
+ */
+router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
+	const { pending_token, challenge_id, auth_response } = req.body;
+
+	if (!pending_token || !challenge_id || !auth_response) {
+		return res
+			.status(400)
+			.send({ error: { code: 400, message: "pending_token, challenge_id, and auth_response are required" } });
+	}
+
+	try {
+		const Token = TokenModel();
+		let payload;
+		try {
+			payload = await Token.load(pending_token);
+		} catch (_err) {
+			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
+		}
+
+		const userId = payload.attrs?.id;
+		await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response, req);
+
+		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
+		if (!user) {
+			return res.status(401).send({ error: { code: 401, message: "User not found" } });
+		}
+
+		const ip = req.ip || "unknown";
+		const meta = { ip, userAgent: req.headers["user-agent"] || null };
+		const pair = await internalToken.issueTokenPair(user, "user", meta);
+
+		setAuthCookies(res, req, {
+			accessToken: pair.access_token,
+			accessExpires: pair.access_expires,
+			refreshToken: pair.refresh_token,
+			refreshExpires: pair.refresh_expires,
+		});
+
+		res.status(200).send({
+			expires: pair.access_expires,
+			user: pair.user,
+			csrfToken: res.locals.csrfToken,
+		});
+	} catch (err) {
+		debug(logger, `POST /tokens/2fa/passkey/complete: ${err}`);
+		const code = err.status || 500;
+		res.status(code).send({ error: { code, message: err.public ? err.message : "Passkey authentication failed" } });
+	}
+});
+
+/**
+ * POST /tokens/2fa/duo/begin
+ *
+ * Generate a Duo auth URL for the pending user.
+ */
+router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
+	const { pending_token } = req.body;
+
+	if (!pending_token) {
+		return res.status(400).send({ error: { code: 400, message: "pending_token is required" } });
+	}
+
+	try {
+		const Token = TokenModel();
+		let payload;
+		try {
+			payload = await Token.load(pending_token);
+		} catch (_err) {
+			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
+		}
+
+		const userId = payload.attrs?.id;
+		const user = await User.query().findById(userId);
+		if (!user) {
+			return res.status(401).send({ error: { code: 401, message: "User not found" } });
+		}
+
+		const { authUrl, state } = await twoFaService.beginDuoAuthentication(userId, user.email);
+		res.status(200).json({ auth_url: authUrl, state });
+	} catch (err) {
+		debug(logger, `POST /tokens/2fa/duo/begin: ${err}`);
+		const code = err.status || 500;
+		res.status(code).send({
+			error: { code, message: err.public ? err.message : "Failed to initiate Duo authentication" },
+		});
+	}
+});
+
+/**
+ * POST /tokens/2fa/duo/complete
+ *
+ * Complete Duo authentication and issue full tokens.
+ */
+router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
+	const { pending_token, duo_code } = req.body;
+
+	if (!pending_token || !duo_code) {
+		return res.status(400).send({ error: { code: 400, message: "pending_token and duo_code are required" } });
+	}
+
+	try {
+		const Token = TokenModel();
+		let payload;
+		try {
+			payload = await Token.load(pending_token);
+		} catch (_err) {
+			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
+		}
+
+		const userId = payload.attrs?.id;
+		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
+		if (!user) {
+			return res.status(401).send({ error: { code: 401, message: "User not found" } });
+		}
+
+		const valid = await twoFaService.completeDuoAuthentication(userId, user.email, duo_code);
+		if (!valid) {
+			return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });
+		}
+
+		const ip = req.ip || "unknown";
+		const meta = { ip, userAgent: req.headers["user-agent"] || null };
+		const pair = await internalToken.issueTokenPair(user, "user", meta);
+
+		setAuthCookies(res, req, {
+			accessToken: pair.access_token,
+			accessExpires: pair.access_expires,
+			refreshToken: pair.refresh_token,
+			refreshExpires: pair.refresh_expires,
+		});
+
+		res.status(200).send({
+			expires: pair.access_expires,
+			user: pair.user,
+			csrfToken: res.locals.csrfToken,
+		});
+	} catch (err) {
+		debug(logger, `POST /tokens/2fa/duo/complete: ${err}`);
+		const code = err.status || 500;
+		res.status(code).send({ error: { code, message: err.public ? err.message : "Duo authentication failed" } });
+	}
+});
 
 export default router;
