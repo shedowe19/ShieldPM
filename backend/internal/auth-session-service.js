@@ -28,8 +28,8 @@ const requireValidTtl = (expression, label) => {
 	return parsed;
 };
 
-const ACCESS_TOKEN_EXPIRY = requireValidTtl(ACCESS_TOKEN_TTL, "access token");
-const REFRESH_TOKEN_EXPIRY = requireValidTtl(REFRESH_TOKEN_TTL, "refresh token");
+const _ACCESS_TOKEN_EXPIRY = requireValidTtl(ACCESS_TOKEN_TTL, "access token");
+const _REFRESH_TOKEN_EXPIRY = requireValidTtl(REFRESH_TOKEN_TTL, "refresh token");
 
 const buildRefreshToken = () => crypto.randomBytes(48).toString("base64url");
 

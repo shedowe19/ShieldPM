@@ -105,7 +105,7 @@ router
 	 *
 	 * Create a new certificate
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
 		req.setTimeout(900000); // 15 minutes timeout
 		const result = await internalCertificate.create(res.locals.access, payload);
@@ -185,7 +185,7 @@ router
 	 *
 	 * Get list of all supported DNS providers
 	 */
-	.get(async (req, res, next) => {
+	.get(async (_req, res, _next) => {
 		if (!res.locals.access.token.getUserId()) {
 			throw new errs.PermissionError("Login required");
 		}
@@ -216,7 +216,7 @@ router
 	 *
 	 * Test HTTP challenge for domains
 	 */
-	.post(async (req, res, next) => {
+	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), req.body);
 		req.setTimeout(60000); // 1 minute timeout
 

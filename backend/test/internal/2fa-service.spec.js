@@ -160,7 +160,6 @@ vi.mock("@simplewebauthn/server", () => ({
 
 vi.mock("@duosecurity/duo_universal", () => {
 	class Client {
-		constructor(_config) {}
 		healthCheck() {
 			return Promise.resolve();
 		}

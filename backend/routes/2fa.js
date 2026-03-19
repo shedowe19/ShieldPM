@@ -184,7 +184,7 @@ router.post("/passkey/register/complete", twoFaRateLimiter, async (req, res) => 
 		throw new errs.ValidationError("challenge_id and registration_response are required");
 	}
 
-	const result = await twoFaService.completePasskeyRegistration(userId, challenge_id, registration_response, label, req);
+	const result = await twoFaService.completePasskeyRegistration(userId, challenge_id, registration_response, req, label);
 	res.status(201).json({ message: "Passkey registered successfully", backup_codes: result.backupCodes });
 });
 

@@ -9,7 +9,7 @@ import crypto from "node:crypto";
 import https from "node:https";
 import bcrypt from "bcryptjs";
 import qrcode from "qrcode";
-import { generateSecret, generateURI, generateSync, verifySync } from "otplib";
+import { generateSecret, generateURI, verifySync } from "otplib";
 import {
 	generateRegistrationOptions,
 	verifyRegistrationResponse,
@@ -316,7 +316,7 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
  * @param {string} [label]
  * @returns {Promise<{ backupCodes: string[] }>}
  */
-const completePasskeyRegistration = async (userId, challengeId, registrationResponse, label = "Passkey", req) => {
+const completePasskeyRegistration = async (userId, challengeId, registrationResponse, req, label = "Passkey") => {
 	const { rpID, origin } = getPasskeyContext(req);
 	const challengeRecord = await UserTwoFa.query().findOne({
 		user_id: userId,

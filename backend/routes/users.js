@@ -191,7 +191,7 @@ router
 	 *
 	 * Update and existing user
 	 */
-	.put(async (req, res, next) => {
+	.put(async (req, res, _next) => {
 		const params = await validator(
 			{
 				required: ["user_id"],
@@ -213,7 +213,7 @@ router
 	 *
 	 * Update and existing user
 	 */
-	.delete(async (req, res, next) => {
+	.delete(async (req, res, _next) => {
 		const params = await validator(
 			{
 				required: ["user_id"],

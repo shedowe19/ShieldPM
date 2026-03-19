@@ -23,7 +23,7 @@ router
 	/**
 	 * GET /api/nginx/ddns-providers
 	 */
-	.get(async (req, res) => {
+	.get(async (_req, res) => {
 		await res.locals.access.can("ddns_providers:list");
 		const rows = await internalDdnsProvider.getAll(res.locals.access);
 		res.status(200).send(rows);

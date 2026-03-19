@@ -120,7 +120,7 @@ vi.mock("../../lib/error.js", () => ({
 
 vi.mock("../../lib/helpers.js", () => ({
 	parseDatePeriod: (expr) => {
-		const ms = expr.endsWith("m") ? Number.parseInt(expr) * 60000 : 86400000;
+		const ms = expr.endsWith("m") ? Number.parseInt(expr, 10) * 60000 : 86400000;
 		const d = new Date(Date.now() + ms);
 		return {
 			toISOString: () => d.toISOString(),

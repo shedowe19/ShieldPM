@@ -414,7 +414,7 @@ router
 			try {
 				const Token = TokenModel();
 				payload = await Token.load(originalToken);
-			} catch (verifyErr) {
+			} catch (_verifyErr) {
 				throw new errs.AuthError("Backup session token is invalid or expired");
 			}
 

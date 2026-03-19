@@ -14,21 +14,21 @@ vi.mock("objection", () => ({
 
 // Fake AuthSession model
 let sessionsInDb = [];
-let patchCalledWith = {};
-let insertCalledWith = {};
+let _patchCalledWith = {};
+let _insertCalledWith = {};
 
 const buildFakeQueryBuilder = (resolveWith) => {
 	const qb = {
 		findOne: vi.fn(() => qb),
 		withGraphFetched: vi.fn(() => Promise.resolve(resolveWith)),
 		insertAndFetch: vi.fn((data) => {
-			insertCalledWith = data;
+			_insertCalledWith = data;
 			const inserted = { id: sessionsInDb.length + 100, ...data };
 			sessionsInDb.push(inserted);
 			return Promise.resolve(inserted);
 		}),
 		patch: vi.fn((data) => {
-			patchCalledWith = data;
+			_patchCalledWith = data;
 			return qb;
 		}),
 		where: vi.fn(() => qb),
@@ -131,8 +131,8 @@ describe("auth-session-service", () => {
 
 	beforeEach(() => {
 		sessionsInDb = [];
-		patchCalledWith = {};
-		insertCalledWith = {};
+		_patchCalledWith = {};
+		_insertCalledWith = {};
 		queryBuilderResolve = null;
 	});
 
