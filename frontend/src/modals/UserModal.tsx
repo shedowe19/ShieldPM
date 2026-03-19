@@ -1,4 +1,13 @@
-import { IconId, IconLock, IconMail, IconPhoto, IconPower, IconSettings, IconShield, IconUser } from "@tabler/icons-react";
+import {
+	IconId,
+	IconLock,
+	IconMail,
+	IconPhoto,
+	IconPower,
+	IconSettings,
+	IconShield,
+	IconUser,
+} from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -102,8 +111,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 	const health = useHealth();
 	const isSelf =
-		id === "me" ||
-		(data?.id !== undefined && currentUser?.id !== undefined && data.id === currentUser.id);
+		id === "me" || (data?.id !== undefined && currentUser?.id !== undefined && data.id === currentUser.id);
 
 	if (health.data?.demo) {
 		return (
@@ -179,9 +187,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								)}
 
 								<Tabs defaultValue="details" className="w-full">
-									<TabsList
-										className={`grid w-full mb-4 ${isSelf ? "grid-cols-3" : "grid-cols-2"}`}
-									>
+									<TabsList className={`grid w-full mb-4 ${isSelf ? "grid-cols-3" : "grid-cols-2"}`}>
 										<TabsTrigger value="details" className="flex items-center gap-2">
 											<IconUser className="h-4 w-4" />
 											<span className="hidden sm:inline">
@@ -438,14 +444,14 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										)}
 									</TabsContent>
 
-								{isSelf && (
-									<TabsContent
-										value="security"
-										className="space-y-4 animate-in fade-in slide-in-from-bottom-2"
-									>
-										<SecuritySettings />
-									</TabsContent>
-								)}
+									{isSelf && (
+										<TabsContent
+											value="security"
+											className="space-y-4 animate-in fade-in slide-in-from-bottom-2"
+										>
+											<SecuritySettings />
+										</TabsContent>
+									)}
 								</Tabs>
 
 								<DialogFooter className="mt-6">
