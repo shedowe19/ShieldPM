@@ -46,6 +46,7 @@ export async function complete2faPasskeyAuth(
 			challenge_id: challengeId,
 			auth_response: authResponse,
 		},
+		rawKeys: true,
 	});
 }
 

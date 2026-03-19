@@ -23,5 +23,6 @@ export async function completePasskeyRegistration(
 	return api.post({
 		url: `/users/${userId}/2fa/passkey/register/complete`,
 		data: { challenge_id: challengeId, registration_response: registrationResponse, label },
+		rawKeys: true,
 	});
 }

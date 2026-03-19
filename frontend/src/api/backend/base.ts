@@ -86,6 +86,8 @@ interface PostArgs {
 	data?: object | FormData;
 	noAuth?: boolean;
 	silentAuth?: boolean;
+	/** Skip key decamelization — required for WebAuthn payloads where key casing matters */
+	rawKeys?: boolean;
 }
 
 interface PutArgs {
@@ -162,7 +164,7 @@ export async function downloadPost({ url, params, data, noAuth }: PostArgs, file
 }
 
 export async function post<T = DynamicResponse>(
-	{ url, params, data, noAuth, silentAuth }: PostArgs,
+	{ url, params, data, noAuth, silentAuth, rawKeys }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
 	const apiUrl = buildUrl({ url, params });
@@ -186,7 +188,7 @@ export async function post<T = DynamicResponse>(
 			...headers,
 			[contentTypeHeader]: "application/json",
 		};
-		body = buildBody(data as Record<string, unknown>);
+		body = rawKeys && data ? JSON.stringify(data) : buildBody(data as Record<string, unknown>);
 	}
 
 	const signal = abortController?.signal;
