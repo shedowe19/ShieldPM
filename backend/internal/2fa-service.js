@@ -73,7 +73,15 @@ const regenerateBackupCodes = async (userId) => {
  */
 const setupTotp = async (userId, userEmail) => {
 	const secret = generateSecret();
-	const otpauthUrl = generateURI({ secret, issuer: APP_NAME, label: userEmail, algorithm: "SHA1", digits: 6, period: 30, type: "totp" });
+	const otpauthUrl = generateURI({
+		secret,
+		issuer: APP_NAME,
+		label: userEmail,
+		algorithm: "SHA1",
+		digits: 6,
+		period: 30,
+		type: "totp",
+	});
 	const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
 
 	// Persist an *unverified* TOTP record (overwrite any existing unverified TOTP)
