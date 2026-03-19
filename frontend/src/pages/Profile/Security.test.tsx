@@ -75,14 +75,14 @@ describe("SecuritySettings", () => {
 
 	it("shows TOTP setup card when Authenticator App is clicked", async () => {
 		render(<SecuritySettings />, { wrapper: makeWrapper() });
-		await waitFor(() => screen.getByText("Authenticator App (TOTP)"));
+		await waitFor(() => screen.getByText("Authenticator App"));
 
 		mockSetup2faTotp.mockResolvedValue({
 			qrDataUrl: "data:image/png;base64,fakeqr",
 			otpauthUrl: "otpauth://totp/test",
 		});
 
-		fireEvent.click(screen.getByText("Authenticator App (TOTP)"));
+		fireEvent.click(screen.getByText("Authenticator App"));
 
 		await waitFor(() => {
 			expect(mockSetup2faTotp).toHaveBeenCalledWith("me");
@@ -132,7 +132,7 @@ describe("SecuritySettings", () => {
 
 		await waitFor(() => {
 			expect(screen.getByText("Active Methods")).toBeInTheDocument();
-			expect(screen.getByText("Authenticator App")).toBeInTheDocument();
+			expect(screen.getAllByText("Authenticator App").length).toBeGreaterThanOrEqual(1);
 			expect(screen.getByText("8 backup codes remaining")).toBeInTheDocument();
 		});
 	});
