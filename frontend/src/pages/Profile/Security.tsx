@@ -181,7 +181,7 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 	};
 
 	return (
-		<div className="space-y-4" onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(e); }}>
+		<div className="space-y-4" role="form" onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(e); }}>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
@@ -297,7 +297,7 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 	];
 
 	return (
-		<div className="space-y-4" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleSetup(); } }}>
+		<div className="space-y-4" role="form" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleSetup(); } }}>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />

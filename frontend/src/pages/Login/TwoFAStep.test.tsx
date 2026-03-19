@@ -97,7 +97,7 @@ describe("TwoFAStep", () => {
 		await waitFor(() => screen.getByLabelText("Authenticator Code"));
 		const codeInput = screen.getByLabelText("Authenticator Code");
 		fireEvent.change(codeInput, { target: { value: "123456" } });
-		fireEvent.submit(codeInput.closest("form")!);
+		fireEvent.submit(codeInput.closest("form") as HTMLFormElement);
 
 		await waitFor(() => {
 			expect(verify2faCode).toHaveBeenCalledWith({
@@ -118,7 +118,7 @@ describe("TwoFAStep", () => {
 
 		await waitFor(() => screen.getByLabelText("Authenticator Code"));
 		fireEvent.change(screen.getByLabelText("Authenticator Code"), { target: { value: "000000" } });
-		fireEvent.submit(screen.getByLabelText("Authenticator Code").closest("form")!);
+		fireEvent.submit(screen.getByLabelText("Authenticator Code").closest("form") as HTMLFormElement);
 
 		await waitFor(() => {
 			expect(screen.getByText("Invalid TOTP code")).toBeInTheDocument();
