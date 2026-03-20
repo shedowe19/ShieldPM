@@ -14,7 +14,7 @@ import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
 import { cloudflaredService } from "./modules/cloudflared/index.js";
 import { ddnsService } from "./modules/ddns/index.js";
-import internalDocker from "./internal/docker.js";
+import { dockerService } from "./modules/docker/index.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
@@ -56,7 +56,7 @@ async function appStart() {
 		cloudflaredService.init();
 		internalTor.init();
 		await oauth2ProxyService.init();
-		internalDocker.init();
+		dockerService.init();
 		internalGitOps.init();
 		ddnsService.initTimer();
 		await internalChat.init();
