@@ -2,7 +2,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import internalToken from "../internal/token.js";
-import twoFaService from "../internal/2fa-service.js";
+import { twoFaService } from "../modules/auth/index.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";

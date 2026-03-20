@@ -5,6 +5,7 @@ This directory contains domain-oriented backend modules.
 ## Current modules
 
 - `analytics/` — analytics ingestion, retention, authorization checks, and host summary queries
+- `auth/` — authentication domain entrypoints, currently starting with 2FA service routing imports
 
 ## Migration rule
 

@@ -7,7 +7,7 @@
 
 import express from "express";
 import rateLimit from "express-rate-limit";
-import twoFaService from "../internal/2fa-service.js";
+import { twoFaService } from "../modules/auth/index.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import userIdFromMe from "../lib/express/user-id-from-me.js";
