@@ -84,7 +84,9 @@ const importConfig = async (access, options = {}) => {
 	if (isDemoMode()) throw new errs.AuthError("GitOps is disabled in Demo Mode");
 	await access.can("settings:update", "gitops-config");
 	const configDir = getConfigDir();
-	let imported = 0, skipped = 0, deleted = 0;
+	let imported = 0;
+	let skipped = 0;
+	let deleted = 0;
 	const errors = [];
 	const importModel = async (modelClass, dirName, hostType = null, relationGraph = null) => {
 		const dirPath = path.join(configDir, dirName);

@@ -57,7 +57,7 @@ vi.mock("../../models/auth-session.js", () => {
 
 vi.mock("../../models/token.js", () => ({
 	default: () => ({
-		create: vi.fn(({ attrs, scope, expiresIn }) =>
+		create: vi.fn((_opts) =>
 			Promise.resolve({
 				token: "mock_access_jwt",
 				payload: { exp: Math.floor(Date.now() / 1000) + 900 },

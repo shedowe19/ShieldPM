@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import bcrypt from "bcryptjs";
-import _ from "lodash";
 import { access as logger } from "../../logger.js";
 
 const omissions = () => ["is_deleted"];

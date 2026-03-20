@@ -17,7 +17,6 @@ import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
 import TokenModel from "../models/token.js";
-import User from "../models/user.js";
 import UserTwoFa from "../models/user-2fa.js";
 import { getValidationSchema } from "../schema/index.js";
 

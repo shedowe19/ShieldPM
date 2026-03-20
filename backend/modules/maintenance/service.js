@@ -9,7 +9,7 @@ const scheduleTimers = (hostId, start, end) => {
 	const timerKey = `host_${hostId}`;
 	if (maintenanceState.scheduledTimers.has(timerKey)) {
 		const existingTimers = maintenanceState.scheduledTimers.get(timerKey);
-		existingTimers.forEach((timer) => clearTimeout(timer));
+		existingTimers.forEach((timer) => { clearTimeout(timer); });
 	}
 	const newTimers = [];
 	if (start && now.isBefore(start)) {

@@ -1,15 +1,13 @@
-import { execFile } from "node:child_process";
 import fs from "node:fs";
 import https from "node:https";
 import punycode from "node:punycode";
-import util from "node:util";
 import { ProxyAgent } from "proxy-agent";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { installPlugin } from "../../lib/certbot.js";
 import utils from "../../lib/utils.js";
 import { ssl as logger } from "../../logger.js";
 import pjson from "../../package.json" with { type: "json" };
-import { getArchiveCertPath, getLiveCertPath, getRenewalConfigPath } from "./paths.js";
+import { getLiveCertPath } from "./paths.js";
 
 // State variable for processing lock
 let processing = false;
