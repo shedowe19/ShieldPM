@@ -38,6 +38,12 @@ export default defineConfig(({ mode }) => ({
 						if (["react/", "react-dom/", "react-router-dom/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-react";
 						}
+						if (["recharts/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+							return "vendor-analytics-charts";
+						}
+						if (["react-simple-maps/", "d3-geo/", "i18n-iso-countries/", "world-atlas/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+							return "vendor-analytics-map";
+						}
 						if (
 							[
 								"@radix-ui/",
