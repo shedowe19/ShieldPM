@@ -11,9 +11,8 @@ import {
 	IconUser,
 } from "@tabler/icons-react";
 import type React from "react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AiChat } from "src/components/AiChat/AiChat";
 import { HasPermission } from "src/components/HasPermission";
 import { Button } from "src/components/ui/button";
 import { ScrollArea } from "src/components/ui/scroll-area";
@@ -35,6 +34,8 @@ import {
 	TOR_ONIONS,
 	VIEW,
 } from "src/modules/Permissions";
+
+const AiChat = lazy(() => import("src/components/AiChat/AiChat").then((module) => ({ default: module.AiChat })));
 
 interface MenuItem {
 	label: string;
@@ -224,7 +225,9 @@ export function Sidebar() {
 										<SidebarItem key={item.to || item.label} item={item} />
 									))}
 									<div className="pt-4 border-t border-slate-800 mt-2">
-										<AiChat />
+										<Suspense fallback={null}>
+											<AiChat />
+										</Suspense>
 									</div>
 								</nav>
 							</ScrollArea>
@@ -253,7 +256,9 @@ export function Sidebar() {
 							<SidebarItem key={item.to || item.label} item={item} />
 						))}
 						<div className="pt-4 border-t border-slate-800 mt-2">
-							<AiChat />
+							<Suspense fallback={null}>
+								<AiChat />
+							</Suspense>
 						</div>
 					</nav>
 				</ScrollArea>
