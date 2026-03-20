@@ -26,6 +26,7 @@ This directory contains domain-oriented backend modules.
 - `token/` — token domain split into auth credential issuance, fresh/user token issuance, and auth-session delegation
 - `user/` — user domain split into reads, mutations, avatar handling, and shared constants/helpers
 - `auth-session/` — auth session domain split into token/session builders, constants, rotation, and revocation service
+- `setting/` — setting domain split into reads and update/runtime reconfiguration mutations
 
 ## Migration rule
 

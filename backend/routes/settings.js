@@ -1,5 +1,5 @@
 import express from "express";
-import internalSetting from "../internal/setting.js";
+import { settingService } from "../modules/setting/index.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import validator from "../lib/validator/index.js";
@@ -27,7 +27,7 @@ router
 	 * Retrieve all settings
 	 */
 	.get(async (_req, res) => {
-		const rows = await internalSetting.getAll(res.locals.access);
+		const rows = await settingService.getAll(res.locals.access);
 		res.status(200).send(rows);
 	});
 
@@ -64,7 +64,7 @@ router
 				setting_id: req.params.setting_id,
 			},
 		);
-		const row = await internalSetting.get(res.locals.access, {
+		const row = await settingService.get(res.locals.access, {
 			id: data.setting_id,
 		});
 		if (row.id === "oidc-config") {
@@ -104,7 +104,7 @@ router
 		);
 		const payload = await apiValidator(getValidationSchema("/settings/{settingID}", "put"), req.body);
 		payload.id = params.setting_id;
-		const result = await internalSetting.update(res.locals.access, payload);
+		const result = await settingService.update(res.locals.access, payload);
 		res.status(200).send(result);
 	});
 
