@@ -32,6 +32,7 @@ This directory contains domain-oriented backend modules.
 - `terminal/` — terminal runtime split into websocket/service lifecycle and SSH/session bridge helpers
 - `tor/` — onion-service runtime split into config/key helpers and tor lifecycle orchestration
 - `certbot/` — certbot/TLS automation split into path helpers and request/renew/revoke service orchestration
+- `pki/` — internal PKI split into root-CA/bootstrap helpers and leaf certificate generation
 
 ## Migration rule
 

@@ -7,7 +7,7 @@ import certificateModel from "../../models/certificate.js";
 import internalAuditLog from "../../internal/audit-log.js";
 import * as certbot from "../../internal/certbot.js";
 import internalGitOps from "../../internal/gitops.js";
-import internalPki from "../../internal/pki.js";
+import { pkiService } from "../../modules/pki/index.js";
 import { allowedSslFiles, cleanMeta, getCertificateInfoFromFile, omissions, validate } from "./helpers.js";
 import { get } from "./reads.js";
 
@@ -48,7 +48,7 @@ const create = async (access, data) => {
 		}
 		if (certificate.provider === "internal") {
 			const outDir = `/data/tls/internal/npm-${certificate.id}`;
-			const result = await internalPki.createLeadCert({ domain_names: certificate.domain_names, years: Number.parseInt(certificate.meta.years, 10) || 10 }, outDir);
+			const result = await pkiService.createLeadCert({ domain_names: certificate.domain_names, years: Number.parseInt(certificate.meta.years, 10) || 10 }, outDir);
 			const certInfo = await getCertificateInfoFromFile(result.fullchain);
 			const savedRow = await certificateModel.query().patchAndFetchById(certificate.id, { expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss"), meta: _.assign({}, certificate.meta, { certificate: result.fullchain, certificate_key: result.privkey }) }).then(utils.omitRow(omissions()));
 			await addCreatedAuditLog(access, certificate.id, savedRow);

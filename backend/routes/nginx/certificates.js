@@ -4,7 +4,7 @@ import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { certificateService } from "../../modules/certificate/index.js";
-import internalPki from "../../internal/pki.js";
+import { pkiService } from "../../modules/pki/index.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
@@ -59,7 +59,7 @@ const createCertLimiter = rateLimit({
  * Download Root CA
  */
 router.get("/root-ca", async (_req, res) => {
-	const certContent = await internalPki.getRootCa();
+	const certContent = await pkiService.getRootCa();
 	res.status(200)
 		.header("Content-Type", "application/x-pem-file")
 		.header("Content-Disposition", 'attachment; filename="root_ca.crt"')
@@ -149,7 +149,7 @@ router
 
 		let p12Path;
 		try {
-			p12Path = await internalPki.createClientCert(
+			p12Path = await pkiService.createClientCert(
 				{
 					common_name: payload.common_name,
 					password: payload.password,
