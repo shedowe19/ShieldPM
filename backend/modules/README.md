@@ -34,6 +34,10 @@ This directory contains domain-oriented backend modules.
 - `certbot/` — certbot/TLS automation split into path helpers and request/renew/revoke service orchestration
 - `pki/` — internal PKI split into root-CA/bootstrap helpers and leaf certificate generation
 - `anubis/` — Anubis bot-policy engine split into pure policy builder and service lifecycle
+- `dashboard-note/` — dashboard notes CRUD service
+- `report/` — hosts report aggregation service
+- `remote-version/` — GitHub release version check with caching
+- `ip-ranges/` — Cloudflare IP ranges fetcher and nginx config generator
 
 ## Migration rule
 
