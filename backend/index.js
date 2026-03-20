@@ -11,7 +11,7 @@ process.on("uncaughtException", (err) => {
 
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
-import internalChat from "./internal/chat.js";
+import { chatService } from "./modules/chat/index.js";
 import { cloudflaredService } from "./modules/cloudflared/index.js";
 import { ddnsService } from "./modules/ddns/index.js";
 import { dockerService } from "./modules/docker/index.js";
@@ -59,7 +59,7 @@ async function appStart() {
 		dockerService.init();
 		internalGitOps.init();
 		ddnsService.initTimer();
-		await internalChat.init();
+		await chatService.init();
 		internalGitDeploy.init();
 
 		const server = app.listen("/run/shieldpm.sock", () => {

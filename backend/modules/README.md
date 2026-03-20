@@ -28,6 +28,7 @@ This directory contains domain-oriented backend modules.
 - `auth-session/` — auth session domain split into token/session builders, constants, rotation, and revocation service
 - `setting/` — setting domain split into reads and update/runtime reconfiguration mutations
 - `ai/` — AI domain split into config, model discovery, and chat/tool orchestration facade
+- `chat/` — chat integration domain split into helpers, bot state, and bot lifecycle/message orchestration
 
 ## Migration rule
 

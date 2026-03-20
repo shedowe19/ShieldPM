@@ -1,5 +1,5 @@
 import express from "express";
-import internalChat from "../internal/chat.js";
+import { chatService } from "../modules/chat/index.js";
 import errs from "../lib/error.js";
 import { encrypt } from "../lib/encryption.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
@@ -36,7 +36,7 @@ router.post("/", jwtdecode(), async (req, res) => {
 		config: payload.config || { allowed_ids: [] },
 	});
 
-	await internalChat.startBot(integration);
+	await chatService.startBot(integration);
 	res.json(integration);
 });
 
@@ -64,7 +64,7 @@ router.put("/:id", jwtdecode(), async (req, res) => {
 		modified_on: new Date().toISOString(),
 	});
 
-	await internalChat.reload(updated.id);
+	await chatService.reload(updated.id);
 	res.json(updated);
 });
 
@@ -79,7 +79,7 @@ router.delete("/:id", jwtdecode(), async (req, res) => {
 		await res.locals.access.can("settings:update", "chat");
 	}
 
-	await internalChat.stopBot(integration.id);
+	await chatService.stopBot(integration.id);
 	await ChatIntegrationModel.query().deleteById(Number.parseInt(req.params.id, 10));
 
 	res.json({ status: "ok" });

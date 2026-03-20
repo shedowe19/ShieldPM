@@ -1,0 +1,3 @@
+const bots = {};
+
+export { bots };
