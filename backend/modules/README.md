@@ -31,6 +31,7 @@ This directory contains domain-oriented backend modules.
 - `chat/` — chat integration domain split into helpers, bot state, and bot lifecycle/message orchestration
 - `terminal/` — terminal runtime split into websocket/service lifecycle and SSH/session bridge helpers
 - `tor/` — onion-service runtime split into config/key helpers and tor lifecycle orchestration
+- `certbot/` — certbot/TLS automation split into path helpers and request/renew/revoke service orchestration
 
 ## Migration rule
 
