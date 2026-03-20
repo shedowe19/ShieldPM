@@ -1,5 +1,5 @@
 import express from "express";
-import internalDdnsProvider from "../../internal/ddns-provider.js";
+import { ddnsProviderService } from "../../modules/ddns-provider/index.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import { getValidationSchema } from "../../schema/index.js";
@@ -25,7 +25,7 @@ router
 	 */
 	.get(async (_req, res) => {
 		await res.locals.access.can("ddns_providers:list");
-		const rows = await internalDdnsProvider.getAll(res.locals.access);
+		const rows = await ddnsProviderService.getAll(res.locals.access);
 		res.status(200).send(rows);
 	})
 
@@ -35,7 +35,7 @@ router
 	.post(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/ddns-providers", "post"), req.body);
 		await res.locals.access.can("ddns_providers:create", payload);
-		const result = await internalDdnsProvider.create(res.locals.access, payload);
+		const result = await ddnsProviderService.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
 
@@ -54,7 +54,7 @@ router
 	 */
 	.get(async (req, res) => {
 		await res.locals.access.can("ddns_providers:get", req.params.id);
-		const result = await internalDdnsProvider.get(res.locals.access, {
+		const result = await ddnsProviderService.get(res.locals.access, {
 			id: Number.parseInt(req.params.id, 10),
 		});
 		res.status(200).send(result);
@@ -67,7 +67,7 @@ router
 		const payload = await apiValidator(getValidationSchema("/nginx/ddns-providers/providerID", "put"), req.body);
 		await res.locals.access.can("ddns_providers:update", req.params.id);
 		payload.id = Number.parseInt(req.params.id, 10);
-		const result = await internalDdnsProvider.update(res.locals.access, payload);
+		const result = await ddnsProviderService.update(res.locals.access, payload);
 		res.status(200).send(result);
 	})
 
@@ -76,7 +76,7 @@ router
 	 */
 	.delete(async (req, res) => {
 		await res.locals.access.can("ddns_providers:delete", req.params.id);
-		const result = await internalDdnsProvider.delete(res.locals.access, {
+		const result = await ddnsProviderService.delete(res.locals.access, {
 			id: Number.parseInt(req.params.id, 10),
 		});
 		res.status(200).send(result);
@@ -93,7 +93,7 @@ router
 	.all(jwtdecode())
 	.post(async (req, res) => {
 		await res.locals.access.can("ddns_providers:update", req.params.id);
-		const result = await internalDdnsProvider.test(res.locals.access, {
+		const result = await ddnsProviderService.test(res.locals.access, {
 			id: Number.parseInt(req.params.id, 10),
 		});
 		res.status(200).send(result);

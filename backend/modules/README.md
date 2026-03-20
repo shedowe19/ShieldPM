@@ -16,6 +16,7 @@ This directory contains domain-oriented backend modules.
 - `dead-host/` — dead-host domain split into reads, mutations, lifecycle, and helpers
 - `redirection-host/` — redirection-host domain split into reads, mutations, lifecycle, and helpers
 - `ddns/` — DDNS runner split into WAN IP fetch, provider handlers, and timer/process orchestration
+- `ddns-provider/` — DDNS provider CRUD/test domain split into reads and mutations
 
 ## Migration rule
 
