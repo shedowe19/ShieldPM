@@ -44,16 +44,14 @@ export default defineConfig(({ mode }) => ({
 						if (["react-simple-maps/", "d3-geo/", "i18n-iso-countries/", "world-atlas/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-analytics-map";
 						}
-						if (
-							[
-								"@radix-ui/",
-								"lucide-react/",
-								"@tabler/icons-react/",
-								"framer-motion/",
-								"motion-dom/",
-							].some((pkg) => id.includes(`node_modules/${pkg}`))
-						) {
-							return "vendor-ui";
+						if (["@radix-ui/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+							return "vendor-ui-radix";
+						}
+						if (["lucide-react/", "@tabler/icons-react/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+							return "vendor-ui-icons";
+						}
+						if (["framer-motion/", "motion-dom/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+							return "vendor-ui-motion";
 						}
 						if (["@tanstack/", "zod/", "react-hook-form/", "@hookform/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-data";
