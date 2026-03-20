@@ -13,6 +13,7 @@ This directory contains domain-oriented backend modules.
 - `nginx/` — nginx domain entrypoint, prepared for later split of config generation, file ops, and reload/test flow
 - `access-list/` — access control domain entrypoints for lists, clients, items, and file build lifecycle
 - `stream/` — stream domain split into reads, mutations, lifecycle, and helpers
+- `dead-host/` — dead-host domain split into reads, mutations, lifecycle, and helpers
 
 ## Migration rule
 
