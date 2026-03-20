@@ -6,6 +6,7 @@ This directory contains domain-oriented backend modules.
 
 - `analytics/` — analytics ingestion, retention, authorization checks, and host summary queries
 - `auth/` — authentication domain entrypoints and split 2FA submodules (`totp`, `backup-codes`, `yubikey`, `passkeys`, `duo`)
+- `proxy-host/` — proxy host domain entrypoints for nginx host lifecycle work
 
 ## Migration rule
 

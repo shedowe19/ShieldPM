@@ -1,6 +1,6 @@
 import express from "express";
 import internalGitDeploy from "../../internal/git-deploy.js";
-import internalProxyHost from "../../internal/proxy-host.js";
+import { proxyHostService } from "../../modules/proxy-host/index.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
@@ -45,7 +45,7 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query);
+		const rows = await proxyHostService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	})
 
@@ -56,7 +56,7 @@ router
 	 */
 	.post(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts", "post"), req.body);
-		const result = await internalProxyHost.create(res.locals.access, payload);
+		const result = await proxyHostService.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
 
@@ -96,7 +96,7 @@ router
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 			},
 		);
-		const row = await internalProxyHost.get(res.locals.access, {
+		const row = await proxyHostService.get(res.locals.access, {
 			id: Number.parseInt(data.host_id, 10),
 			expand: data.expand,
 		});
@@ -111,7 +111,7 @@ router
 	.put(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}", "put"), req.body);
 		payload.id = Number.parseInt(req.params.host_id, 10);
-		const result = await internalProxyHost.update(res.locals.access, payload);
+		const result = await proxyHostService.update(res.locals.access, payload);
 		res.status(200).send(result);
 	})
 
@@ -121,7 +121,7 @@ router
 	 * Update and existing proxy-host
 	 */
 	.delete(async (req, res) => {
-		const result = await internalProxyHost.delete(res.locals.access, {
+		const result = await proxyHostService.delete(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
@@ -143,7 +143,7 @@ router
 	 * POST /api/nginx/proxy-hosts/123/enable
 	 */
 	.post(async (req, res) => {
-		const result = await internalProxyHost.enable(res.locals.access, {
+		const result = await proxyHostService.enable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
@@ -165,7 +165,7 @@ router
 	 * POST /api/nginx/proxy-hosts/123/disable
 	 */
 	.post(async (req, res) => {
-		const result = await internalProxyHost.disable(res.locals.access, {
+		const result = await proxyHostService.disable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
