@@ -1,5 +1,5 @@
 import express from "express";
-import internalStream from "../../internal/stream.js";
+import { streamService } from "../../modules/stream/index.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
@@ -44,7 +44,7 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const rows = await internalStream.getAll(res.locals.access, data.expand, data.query);
+		const rows = await streamService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	})
 
@@ -55,7 +55,7 @@ router
 	 */
 	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/streams", "post"), req.body);
-		const result = await internalStream.create(res.locals.access, payload);
+		const result = await streamService.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
 
@@ -95,7 +95,7 @@ router
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 			},
 		);
-		const row = await internalStream.get(res.locals.access, {
+		const row = await streamService.get(res.locals.access, {
 			id: Number.parseInt(data.stream_id, 10),
 			expand: data.expand,
 		});
@@ -110,7 +110,7 @@ router
 	.put(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/streams/{streamID}", "put"), req.body);
 		payload.id = Number.parseInt(req.params.stream_id, 10);
-		const result = await internalStream.update(res.locals.access, payload);
+		const result = await streamService.update(res.locals.access, payload);
 		res.status(200).send(result);
 	})
 
@@ -120,7 +120,7 @@ router
 	 * Update and existing stream
 	 */
 	.delete(async (req, res, _next) => {
-		const result = await internalStream.delete(res.locals.access, {
+		const result = await streamService.delete(res.locals.access, {
 			id: Number.parseInt(req.params.stream_id, 10),
 		});
 		res.status(200).send(result);
@@ -142,7 +142,7 @@ router
 	 * POST /api/nginx/streams/123/enable
 	 */
 	.post(async (req, res, _next) => {
-		const result = await internalStream.enable(res.locals.access, {
+		const result = await streamService.enable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
@@ -164,7 +164,7 @@ router
 	 * POST /api/nginx/streams/123/disable
 	 */
 	.post(async (req, res, _next) => {
-		const result = await internalStream.disable(res.locals.access, {
+		const result = await streamService.disable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);

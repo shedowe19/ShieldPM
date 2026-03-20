@@ -12,6 +12,7 @@ This directory contains domain-oriented backend modules.
 - `git-deploy/` — Git repository sync for path-based proxy hosts, split into config, sync, polling, and helpers
 - `nginx/` — nginx domain entrypoint, prepared for later split of config generation, file ops, and reload/test flow
 - `access-list/` — access control domain entrypoints for lists, clients, items, and file build lifecycle
+- `stream/` — stream domain split into reads, mutations, lifecycle, and helpers
 
 ## Migration rule
 
