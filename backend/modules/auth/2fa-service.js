@@ -1,1 +1,1 @@
-export { default } from "../../internal/2fa-service.js";
+export { default } from "./service.js";
