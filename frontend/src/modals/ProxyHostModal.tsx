@@ -14,7 +14,6 @@ import { lazy, Suspense, type ReactNode, useState } from "react";
 import type { ProxyHost } from "src/api/backend";
 import {
 	AccessField,
-	AnubisRulesField,
 	DomainNamesField,
 	HasPermission,
 	Loading,
@@ -51,6 +50,7 @@ import {
 } from "src/types/enums";
 
 const GitSyncTab = lazy(() => import("src/components/GitSyncTab").then((module) => ({ default: module.GitSyncTab })));
+const AnubisRulesField = lazy(() => import("src/components/AnubisRulesField").then((module) => ({ default: module.default })));
 
 const DEFAULT_ANUBIS_RULES = [
 	{
@@ -1131,7 +1131,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													{({ field }: FieldProps) =>
 														field.value && (
 															<div className="animate-in fade-in slide-in-from-top-2 duration-300">
-																<AnubisRulesField />
+																<Suspense fallback={<div className="py-4"><Loading noLogo /></div>}>
+																	<AnubisRulesField />
+																</Suspense>
 															</div>
 														)
 													}
