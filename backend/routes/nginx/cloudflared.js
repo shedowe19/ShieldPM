@@ -1,7 +1,7 @@
 import express from "express";
 import { transaction } from "objection";
 import internalAuditLog from "../../internal/audit-log.js";
-import internalCloudflared from "../../internal/cloudflared.js";
+import { cloudflaredService } from "../../modules/cloudflared/index.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import { global as logger } from "../../logger.js";
@@ -79,7 +79,7 @@ router.post("/", async (req, res, next) => {
 		const newTunnel = await CloudflaredTunnel.query().findById(tunnel.id);
 
 		// Start the process
-		internalCloudflared.start(newTunnel);
+		cloudflaredService.start(newTunnel);
 
 		// Audit Log
 		await internalAuditLog.add(res.locals.access, {
@@ -125,7 +125,7 @@ router.put("/:id", async (req, res, next) => {
 		await trx.commit();
 
 		// Restart with new config
-		internalCloudflared.restart(result);
+		cloudflaredService.restart(result);
 
 		// Audit Log
 		await internalAuditLog.add(res.locals.access, {
@@ -165,7 +165,7 @@ router.delete("/:id", async (req, res, next) => {
 		}
 
 		// Stop process
-		internalCloudflared.stop(tunnel.id);
+		cloudflaredService.stop(tunnel.id);
 
 		trx = await transaction.start(CloudflaredTunnel.knex());
 		await tunnel.$query(trx).delete();

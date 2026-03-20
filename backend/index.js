@@ -12,7 +12,7 @@ process.on("uncaughtException", (err) => {
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
-import internalCloudflared from "./internal/cloudflared.js";
+import { cloudflaredService } from "./modules/cloudflared/index.js";
 import { ddnsService } from "./modules/ddns/index.js";
 import internalDocker from "./internal/docker.js";
 import internalGitDeploy from "./internal/git-deploy.js";
@@ -53,7 +53,7 @@ async function appStart() {
 		internalCertificate.initTimer();
 		internalMaintenance.initTimer();
 		await internalNginx.reload();
-		internalCloudflared.init();
+		cloudflaredService.init();
 		internalTor.init();
 		await internalOAuth2Proxy.init();
 		internalDocker.init();
