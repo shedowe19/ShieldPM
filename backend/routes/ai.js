@@ -1,5 +1,5 @@
 import express from "express";
-import internalAi from "../internal/ai.js";
+import { aiService } from "../modules/ai/index.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { express as logger } from "../logger.js";
@@ -13,7 +13,7 @@ const router = express.Router();
  * @param {express.NextFunction} next
  */
 router.get("/config", jwtdecode(), async (_req, res) => {
-	const result = await internalAi.getConfig(res.locals.access);
+	const result = await aiService.getConfig(res.locals.access);
 	res.status(200).json(result);
 });
 
@@ -24,7 +24,7 @@ router.get("/config", jwtdecode(), async (_req, res) => {
  */
 router.put("/config", jwtdecode(), async (req, res) => {
 	const payload = await apiValidator(getValidationSchema("/ai/config", "put"), req.body);
-	const result = await internalAi.setConfig(res.locals.access, payload);
+	const result = await aiService.setConfig(res.locals.access, payload);
 	res.status(200).json(result);
 });
 
@@ -35,7 +35,7 @@ router.put("/config", jwtdecode(), async (req, res) => {
  */
 router.post("/models", jwtdecode(), async (req, res) => {
 	const payload = await apiValidator(getValidationSchema("/ai/models", "post"), req.body);
-	const result = await internalAi.getModels(res.locals.access, payload);
+	const result = await aiService.getModels(res.locals.access, payload);
 	res.status(200).json(result);
 });
 
@@ -51,7 +51,7 @@ router.post("/chat", jwtdecode(), async (req, res) => {
 	});
 	const payload = await apiValidator(getValidationSchema("/ai/chat", "post"), req.body);
 	const { message, history } = payload;
-	const result = await internalAi.chat(res.locals.access, message, history);
+	const result = await aiService.chat(res.locals.access, message, history);
 	logger.debug("AI Chat response:", result);
 	res.status(200).json(result);
 });
