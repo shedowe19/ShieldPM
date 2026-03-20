@@ -18,6 +18,7 @@ This directory contains domain-oriented backend modules.
 - `ddns/` — DDNS runner split into WAN IP fetch, provider handlers, and timer/process orchestration
 - `ddns-provider/` — DDNS provider CRUD/test domain split into reads and mutations
 - `cloudflared/` — Cloudflared tunnel lifecycle split into state and service orchestration
+- `oauth2-proxy/` — OAuth2 Proxy lifecycle split into process state and service/config orchestration
 
 ## Migration rule
 

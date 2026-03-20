@@ -12,7 +12,7 @@ import proxyHostModel from "../../models/proxy_host.js";
 import internalAuditLog from "../../internal/audit-log.js";
 import { gitOpsService } from "../../modules/gitops/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
-import internalOAuth2Proxy from "../../internal/oauth2-proxy.js";
+import { oauth2ProxyService } from "../../modules/oauth2-proxy/index.js";
 import { build, getFilename, maskItems, omissions } from "./helpers.js";
 import { get } from "./reads.js";
 
@@ -46,7 +46,7 @@ const create = async (access, data) => {
 	data.meta = _.assign({}, data.meta || {}, freshRow.meta);
 	await build(freshRow);
 	if (Number.parseInt(freshRow.proxy_host_count, 10)) await nginxService.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
-	if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") await internalOAuth2Proxy.start(freshRow);
+	if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") await oauth2ProxyService.start(freshRow);
 	await internalAuditLog.add(access, { action: "created", object_type: "access-list", object_id: freshRow.id, meta: maskItems(data) });
 	gitOpsService.triggerAutoPush("access-list");
 	return maskItems(freshRow);
@@ -92,8 +92,8 @@ const update = async (access, data) => {
 	logger.info(`[Update Result] Access List #${data.id} fresh meta: ${JSON.stringify(freshRow.meta)}`);
 	await build(freshRow);
 	if (Number.parseInt(freshRow.proxy_host_count, 10)) await nginxService.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
-	if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") await internalOAuth2Proxy.restart(freshRow);
-	else await internalOAuth2Proxy.stop(freshRow.id);
+	if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") await oauth2ProxyService.restart(freshRow);
+	else await oauth2ProxyService.stop(freshRow.id);
 	await nginxService.reload();
 	gitOpsService.triggerAutoPush("access-list");
 	return maskItems(freshRow);
@@ -114,7 +114,7 @@ const remove = async (access, data) => {
 	}
 	await nginxService.reload();
 	try { await fs.promises.unlink(getFilename(row)); } catch {}
-	await internalOAuth2Proxy.stop(row.id);
+	await oauth2ProxyService.stop(row.id);
 	await internalAuditLog.add(access, { action: "deleted", object_type: "access-list", object_id: row.id, meta: _.omit(maskItems(row), ["is_deleted", "proxy_hosts"]) });
 	gitOpsService.triggerAutoPush("access-list");
 	return true;

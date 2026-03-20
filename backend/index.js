@@ -20,7 +20,7 @@ import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
 import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
-import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
+import { oauth2ProxyService } from "./modules/oauth2-proxy/index.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
@@ -55,7 +55,7 @@ async function appStart() {
 		await internalNginx.reload();
 		cloudflaredService.init();
 		internalTor.init();
-		await internalOAuth2Proxy.init();
+		await oauth2ProxyService.init();
 		internalDocker.init();
 		internalGitOps.init();
 		ddnsService.initTimer();

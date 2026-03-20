@@ -2,7 +2,7 @@ import _ from "lodash";
 import { encrypt } from "../../lib/encryption.js";
 import AccessList from "../../models/access_list.js";
 import proxyHostModel from "../../models/proxy_host.js";
-import internalOAuth2Proxy from "../../internal/oauth2-proxy.js";
+import { oauth2ProxyService } from "../../modules/oauth2-proxy/index.js";
 
 const omissions = () => ["is_deleted", "owner.is_deleted"];
 
@@ -11,7 +11,7 @@ const ensureOAuth2Proxy = async (accessListId) => {
 	try {
 		const list = await AccessList.query().where("id", accessListId).where("is_deleted", 0).first();
 		if (list?.meta && (list.meta.auth_type === "oauth2_proxy" || list.meta.authType === "oauth2_proxy")) {
-			await internalOAuth2Proxy.start(list);
+			await oauth2ProxyService.start(list);
 		}
 	} catch (err) {
 		console.error(`[OAuth2Proxy] Error ensuring proxy for access list #${accessListId}:`, err);
@@ -27,7 +27,7 @@ const cleanupOAuth2Proxy = async (accessListId) => {
 		}
 		const otherHosts = await proxyHostModel.query().where("access_list_id", accessListId).where("is_deleted", 0);
 		if (otherHosts.length === 0) {
-			await internalOAuth2Proxy.stop(accessListId);
+			await oauth2ProxyService.stop(accessListId);
 		}
 	} catch (err) {
 		console.error(`[OAuth2Proxy] Error cleaning up proxy for access list #${accessListId}:`, err);
