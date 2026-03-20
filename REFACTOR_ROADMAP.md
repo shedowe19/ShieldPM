@@ -1,80 +1,91 @@
 # ShieldPM Refactor Roadmap
 
-## Status
+## ✅ Phase 1: Backend-Modularisierung — ABGESCHLOSSEN
 
-Bereits modularisiert:
+Die gesamte `internal/`-Schicht wurde in fachlich geschnittene `modules/`-Unterordner aufgeteilt.
+`backend/internal/` ist vollständig gelöscht — alle Imports zeigen direkt auf `modules/`.
 
-- Analytics
-- Auth / 2FA
-- Token-Flow
-- Proxy-Host
-- Certificate
-- GitOps
-- Git-Deploy
-- Nginx
+### Modularisierte Domänen (34 Module)
 
-Verifiziert mit wiederholten Testläufen:
+| Domäne | Dateien |
+|---|---|
+| analytics | service |
+| auth | 2fa, backup-codes, duo, login-attempts, passkeys, pending-2fa, totp, yubikey, token-response, service |
+| token | auth, constants, issue, service |
+| auth-session | builders, constants, service |
+| proxy-host | helpers, lifecycle, mutations, reads, service |
+| certificate | downloads, helpers, mutations, reads, renewal, service |
+| certbot | paths, service |
+| pki | ca, leaf, service |
+| gitops | exporter, helpers, sync, service |
+| git-deploy | config, helpers, polling, sync, service |
+| setting | mutations, reads, service |
+| user | avatar, constants, mutations, reads, service |
+| access-list | helpers, mutations, reads, service |
+| dead-host | helpers, lifecycle, mutations, reads, service |
+| redirection-host | helpers, lifecycle, mutations, reads, service |
+| stream | helpers, lifecycle, mutations, reads, service |
+| ddns-provider | mutations, reads, service |
+| ddns | helpers, providers, service |
+| nginx | files, helpers, render, runtime, service |
+| host | certificate, domains, service |
+| docker | state, service |
+| cloudflared | state, service |
+| oauth2-proxy | state, service |
+| maintenance | state, service |
+| ai | config, models, chat, executor, prompt, providers, tools, service |
+| chat | helpers, state, service |
+| terminal | ssh, service |
+| tor | helpers, service |
+| anubis | policy, service |
+| audit-log | mutations, reads, service |
+| dashboard-note | service |
+| report | service |
+| remote-version | service |
+| ip-ranges | service |
 
-- Backend: 61/61 Tests grün
-- Frontend: Build erfolgreich, Frontend-Tests zuvor grün
+### Verifizierung
 
----
-
-## Nächste Refactor-Blöcke
-
-### 1. Access Lists
-**Ziel:** Zugriffskontrolle, Listen, Clients, Items und Lifecycle aus breiten internen Services in fachliche Module schneiden.
-
-**Geplante Split-Punkte:**
-- reads
-- mutations
-- client/item helpers
-- lifecycle / enable-disable / cleanup
-
-**Nutzen:**
-- wichtiger Kernbereich für Security und Host-Zugriffe
-- gute Ergänzung zu Proxy-Host / Nginx / Auth
-
----
-
-### 2. Streams
-**Ziel:** Stream-spezifische Logik von CRUD, Nginx-Konfiguration und Spezialfällen trennen.
-
-**Geplante Split-Punkte:**
-- reads
-- mutations
-- lifecycle
-- helpers
-
----
-
-### 3. Dead Hosts / Redirection Hosts
-**Ziel:** kleinere Host-Domains analog zu Proxy-Host modularisieren.
-
-**Nutzen:**
-- einheitliche Host-Architektur
-- geringeres Wartungschaos
+- Backend: **61/61 Tests grün** nach jeder Änderung
+- Frontend: Build erfolgreich
+- Alle Imports zeigen direkt auf `modules/` — keine Indirektion mehr
 
 ---
 
-### 4. DDNS / Cloudflared
-**Ziel:** externe Integrationen klarer kapseln.
+## Phase 2: Nächste Schritte (offen)
 
-**Nutzen:**
-- stabilere Adapter-Grenzen
-- sauberere Fehlerpfade
-- bessere Testbarkeit
-
----
-
-### 5. Frontend Performance Runde 2
+### 1. Frontend Performance Runde 2
 **Ziel:** nach Backend-Konsolidierung weitere Bundle-/UX-Optimierungen.
 
 **Schwerpunkte:**
 - nächste schwere Seiten identifizieren
 - Lazy-Splits erweitern
 - React Query/Data-Flows weiter vereinheitlichen
-- evtl. gezielte Bundle-Analyse
+- gezielte Bundle-Analyse
+
+### 2. Route-Layer Konsolidierung
+**Ziel:** Routes direkt an Module binden statt über flache Service-Objekte.
+
+**Schwerpunkte:**
+- Router-Middleware vereinheitlichen
+- Request-Validierung zentralisieren
+- Error-Handling-Pattern konsolidieren
+
+### 3. Test-Coverage erweitern
+**Ziel:** bestehende 61 Tests als Basis, Coverage auf kritische Module ausweiten.
+
+**Schwerpunkte:**
+- AI-Modul (Chat-Loop, Tool-Execution)
+- Zertifikatsmanagement (Certbot, PKI)
+- Host-Lifecycle-Flows
+
+### 4. Shared Infrastructure
+**Ziel:** Querschnittsthemen sauber kapseln.
+
+**Schwerpunkte:**
+- Logger-Instanz-Management
+- Encryption-/Config-Helpers
+- Model-Layer Patterns
 
 ---
 
