@@ -1,5 +1,5 @@
 import express from "express";
-import internalGitOps from "../internal/gitops.js";
+import { gitOpsService } from "../modules/gitops/index.js";
 import { isDemoMode } from "../lib/config.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 
@@ -37,7 +37,7 @@ const accessCheck = async (_req, res, next) => {
  * Get GitOps configuration
  */
 router.get("/config", jwtdecode(), accessCheck, async (_req, res) => {
-	const config = await internalGitOps.getConfig();
+	const config = await gitOpsService.getConfig();
 	res.status(200).json(config);
 });
 
@@ -46,7 +46,7 @@ router.get("/config", jwtdecode(), accessCheck, async (_req, res) => {
  * Update GitOps configuration
  */
 router.put("/config", jwtdecode(), demoCheck, async (req, res) => {
-	const config = await internalGitOps.updateConfig(res.locals.access, req.body);
+	const config = await gitOpsService.updateConfig(res.locals.access, req.body);
 	res.status(200).json(config);
 });
 
@@ -55,7 +55,7 @@ router.put("/config", jwtdecode(), demoCheck, async (req, res) => {
  * Test repository connection
  */
 router.post("/test", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
-	const result = await internalGitOps.testConnection();
+	const result = await gitOpsService.testConnection();
 	res.status(200).json(result);
 });
 
@@ -64,7 +64,7 @@ router.post("/test", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
  * Export current configuration to YAML files
  */
 router.post("/export", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
-	const files = await internalGitOps.exportConfig();
+	const files = await gitOpsService.exportConfig();
 	res.status(200).json({
 		success: true,
 		files_exported: files.length,
@@ -78,8 +78,8 @@ router.post("/export", jwtdecode(), demoCheck, accessCheck, async (_req, res) =>
 router.post("/push", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
 	const { message } = req.body;
 	// First export, then push
-	await internalGitOps.exportConfig();
-	const result = await internalGitOps.commitAndPush(message);
+	await gitOpsService.exportConfig();
+	const result = await gitOpsService.commitAndPush(message);
 	res.status(200).json(result);
 });
 
@@ -88,7 +88,7 @@ router.post("/push", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
  * Pull from remote repository
  */
 router.post("/pull", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
-	const result = await internalGitOps.pull();
+	const result = await gitOpsService.pull();
 	res.status(200).json(result);
 });
 
@@ -98,7 +98,7 @@ router.post("/pull", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
  */
 router.get("/history", jwtdecode(), accessCheck, async (req, res) => {
 	const limit = Number.parseInt(/** @type {string} */ (req.query.limit), 10) || 20;
-	const commits = await internalGitOps.getHistory(limit);
+	const commits = await gitOpsService.getHistory(limit);
 	res.status(200).json(commits);
 });
 
@@ -113,7 +113,7 @@ router.post("/revert", jwtdecode(), demoCheck, accessCheck, async (req, res) => 
 			error: { message: "SHA is required", code: 400 },
 		});
 	}
-	const result = await internalGitOps.revertToCommit(res.locals.access, sha);
+	const result = await gitOpsService.revertToCommit(res.locals.access, sha);
 	res.status(200).json(result);
 });
 
@@ -123,7 +123,7 @@ router.post("/revert", jwtdecode(), demoCheck, accessCheck, async (req, res) => 
  */
 router.post("/import", jwtdecode(), demoCheck, async (req, res) => {
 	const { overwrite } = req.body;
-	const result = await internalGitOps.importConfig(res.locals.access, { overwrite: !!overwrite });
+	const result = await gitOpsService.importConfig(res.locals.access, { overwrite: !!overwrite });
 	res.status(200).json(result);
 });
 

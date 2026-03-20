@@ -8,6 +8,7 @@ This directory contains domain-oriented backend modules.
 - `auth/` — authentication domain entrypoints and split 2FA submodules (`totp`, `backup-codes`, `yubikey`, `passkeys`, `duo`)
 - `proxy-host/` — proxy host domain split into `reads`, `mutations`, `lifecycle`, and shared helpers
 - `certificate/` — certificate domain split into `reads`, `mutations`, `downloads`, `renewal`, and shared helpers
+- `gitops/` — GitOps domain entrypoints for config/export/import/sync flows
 
 ## Migration rule
 
