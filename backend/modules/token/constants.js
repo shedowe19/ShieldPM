@@ -1,0 +1,5 @@
+const ERROR_MESSAGE_INVALID_AUTH = "Invalid email or password";
+const ERROR_MESSAGE_INVALID_AUTH_I18N = "error.invalid-auth";
+const DUMMY_HASH = "$2a$13$mzC9.T8Qed0f/M9.2v.9JO/1.1.1.1.1.1.1.1.1.1.1.1.1.1";
+
+export { DUMMY_HASH, ERROR_MESSAGE_INVALID_AUTH, ERROR_MESSAGE_INVALID_AUTH_I18N };

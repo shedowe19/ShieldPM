@@ -1,7 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { clearAuthCookies } from "../lib/auth-cookies.js";
-import internalToken from "../internal/token.js";
+import { tokenService } from "../modules/token/index.js";
 import { twoFaService } from "../modules/auth/index.js";
 import {
 	clearLoginAttempts,
@@ -37,7 +37,7 @@ const revokeRefreshSession = async (rawRefreshToken, reason = "logout") => {
 	const lookup = AuthSession.buildLookup(rawRefreshToken);
 	const session = await AuthSession.query().findOne(lookup);
 	if (session && !session.revoked_at) {
-		await internalToken.revokeSession(session.id, reason);
+		await tokenService.revokeSession(session.id, reason);
 	}
 };
 
@@ -50,7 +50,7 @@ router
 		logger.warn(`Legacy GET /tokens accessed from IP ${req.ip || "unknown"} - migrate to POST /tokens/refresh`);
 		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
 		const scope = typeof req.query.scope === "string" ? req.query.scope : null;
-		const data = await internalToken.getFreshToken(res.locals.access, { expiry, scope });
+		const data = await tokenService.getFreshToken(res.locals.access, { expiry, scope });
 		res.cookie("shieldpm_jwt", data.token, {
 			httpOnly: true,
 			secure: req.secure,
@@ -76,7 +76,7 @@ router
 			}
 
 			const data = await apiValidator(getValidationSchema("/tokens", "post"), req.body);
-			const result = await internalToken.getTokenFromEmail(data);
+			const result = await tokenService.getTokenFromEmail(data);
 			await clearLoginAttempts(trackedIdentifiers);
 			const has2FA = await UserTwoFa.hasActive2FA(result.user.id);
 			if (has2FA) {
@@ -85,7 +85,7 @@ router
 
 			res.status(200).send(
 				await issueAuthResponse({
-					internalToken,
+					tokenService,
 					user: result.user,
 					scope: data.scope || "user",
 					req,
@@ -131,9 +131,9 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 			return res.status(400).send({ error: { code: 400, message: "Missing refresh token" } });
 		}
 		const meta = { ip: req.ip || "unknown", userAgent: req.headers["user-agent"] || null };
-		const pair = await internalToken.refreshTokenPair(rawRefreshToken, meta);
+		const pair = await tokenService.refreshTokenPair(rawRefreshToken, meta);
 		res.status(200).send(
-			await issueAuthResponse({ internalToken: { issueTokenPair: async () => pair }, user: pair.user, req, res, csrfToken: res.locals.csrfToken }),
+			await issueAuthResponse({ tokenService: { issueTokenPair: async () => pair }, user: pair.user, req, res, csrfToken: res.locals.csrfToken }),
 		);
 	} catch (err) {
 		debug(logger, `POST /tokens/refresh: ${err}`);
@@ -201,7 +201,7 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
 		if (!valid) return res.status(401).send({ error: { code: 401, message: "Invalid 2FA code" } });
-		res.status(200).send(await issueAuthResponse({ internalToken, user, req, res, csrfToken: res.locals.csrfToken }));
+		res.status(200).send(await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }));
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/verify: ${err}`);
 		const code = err.status || 500;
@@ -232,7 +232,7 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
 		const { userId, user } = await loadPendingTwoFaUser(pending_token);
 		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response, req);
-		res.status(200).send(await issueAuthResponse({ internalToken, user, req, res, csrfToken: res.locals.csrfToken }));
+		res.status(200).send(await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }));
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/passkey/complete: ${err}`);
 		const code = err.status || 500;
@@ -265,7 +265,7 @@ router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
 		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		const valid = await twoFaService.completeDuoAuthentication(userId, user.email, duo_code);
 		if (!valid) return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });
-		res.status(200).send(await issueAuthResponse({ internalToken, user, req, res, csrfToken: res.locals.csrfToken }));
+		res.status(200).send(await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }));
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/duo/complete: ${err}`);
 		const code = err.status || 500;

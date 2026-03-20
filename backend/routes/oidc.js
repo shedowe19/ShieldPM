@@ -1,7 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import * as client from "openid-client";
-import internalToken from "../internal/token.js";
+import { tokenService } from "../modules/token/index.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
@@ -217,7 +217,7 @@ const validateCallback = async (req, settings) => {
 	}
 	logger.info(`Successful authentication for email ${claims.email.toLowerCase()}`);
 
-	return internalToken.getTokenFromOAuthClaim({ identity: claims.email.toLowerCase() });
+	return tokenService.getTokenFromOAuthClaim({ identity: claims.email.toLowerCase() });
 };
 
 const redirectToAuthorizationURL = (res, params) => {
