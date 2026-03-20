@@ -30,6 +30,7 @@ This directory contains domain-oriented backend modules.
 - `ai/` — AI domain split into config, model discovery, and chat/tool orchestration facade
 - `chat/` — chat integration domain split into helpers, bot state, and bot lifecycle/message orchestration
 - `terminal/` — terminal runtime split into websocket/service lifecycle and SSH/session bridge helpers
+- `tor/` — onion-service runtime split into config/key helpers and tor lifecycle orchestration
 
 ## Migration rule
 

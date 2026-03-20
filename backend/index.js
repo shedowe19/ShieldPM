@@ -22,7 +22,7 @@ import { maintenanceService } from "./modules/maintenance/index.js";
 import internalNginx from "./internal/nginx.js";
 import { oauth2ProxyService } from "./modules/oauth2-proxy/index.js";
 import { terminalService } from "./modules/terminal/index.js";
-import internalTor from "./internal/tor.js";
+import { torService } from "./modules/tor/index.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";
@@ -54,7 +54,7 @@ async function appStart() {
 		maintenanceService.initTimer();
 		await internalNginx.reload();
 		cloudflaredService.init();
-		internalTor.init();
+		torService.init();
 		await oauth2ProxyService.init();
 		dockerService.init();
 		internalGitOps.init();
