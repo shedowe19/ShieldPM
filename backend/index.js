@@ -18,7 +18,7 @@ import { dockerService } from "./modules/docker/index.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
-import internalMaintenance from "./internal/maintenance.js";
+import { maintenanceService } from "./modules/maintenance/index.js";
 import internalNginx from "./internal/nginx.js";
 import { oauth2ProxyService } from "./modules/oauth2-proxy/index.js";
 import internalTerminal from "./internal/terminal.js";
@@ -51,7 +51,7 @@ async function appStart() {
 		}
 
 		internalCertificate.initTimer();
-		internalMaintenance.initTimer();
+		maintenanceService.initTimer();
 		await internalNginx.reload();
 		cloudflaredService.init();
 		internalTor.init();
