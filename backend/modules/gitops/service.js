@@ -1,1 +1,27 @@
-export { default } from "../../internal/gitops.js";
+import { exportCertificateFiles, exportConfig, sanitizeForExport } from "./exporter.js";
+import { CONFIG_SUBDIR, GITOPS_DIR, ensureDir, getAuth, getConfig, getConfigDir, getConfigInternal, initRepo, testConnection, updateConfig } from "./helpers.js";
+import { autoPushTimer, commitAndPush, getHistory, importConfig, init, pull, revertToCommit, triggerAutoPush } from "./sync.js";
+
+export default {
+	getConfig,
+	getConfigInternal,
+	updateConfig,
+	initRepo,
+	testConnection,
+	exportConfig,
+	exportCertificateFiles,
+	sanitizeForExport,
+	commitAndPush,
+	pull,
+	getHistory,
+	revertToCommit,
+	importConfig,
+	init,
+	_autoPushTimer: autoPushTimer,
+	triggerAutoPush,
+	ensureDir,
+	getConfigDir,
+	getAuth,
+	GITOPS_DIR,
+	CONFIG_SUBDIR,
+};
