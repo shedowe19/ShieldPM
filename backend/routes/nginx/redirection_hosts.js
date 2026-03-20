@@ -1,5 +1,5 @@
 import express from "express";
-import internalRedirectionHost from "../../internal/redirection-host.js";
+import { redirectionHostService } from "../../modules/redirection-host/index.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
@@ -44,7 +44,7 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const rows = await internalRedirectionHost.getAll(res.locals.access, data.expand, data.query);
+		const rows = await redirectionHostService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	})
 
@@ -55,7 +55,7 @@ router
 	 */
 	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/redirection-hosts", "post"), req.body);
-		const result = await internalRedirectionHost.create(res.locals.access, payload);
+		const result = await redirectionHostService.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
 
@@ -95,7 +95,7 @@ router
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 			},
 		);
-		const row = await internalRedirectionHost.get(res.locals.access, {
+		const row = await redirectionHostService.get(res.locals.access, {
 			id: Number.parseInt(data.host_id, 10),
 			expand: data.expand,
 		});
@@ -110,7 +110,7 @@ router
 	.put(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/redirection-hosts/{hostID}", "put"), req.body);
 		payload.id = Number.parseInt(req.params.host_id, 10);
-		const result = await internalRedirectionHost.update(res.locals.access, payload);
+		const result = await redirectionHostService.update(res.locals.access, payload);
 		res.status(200).send(result);
 	})
 
@@ -120,7 +120,7 @@ router
 	 * Update and existing redirection-host
 	 */
 	.delete(async (req, res, _next) => {
-		const result = await internalRedirectionHost.delete(res.locals.access, {
+		const result = await redirectionHostService.delete(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
@@ -142,7 +142,7 @@ router
 	 * POST /api/nginx/redirection-hosts/123/enable
 	 */
 	.post(async (req, res, _next) => {
-		const result = await internalRedirectionHost.enable(res.locals.access, {
+		const result = await redirectionHostService.enable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
@@ -164,7 +164,7 @@ router
 	 * POST /api/nginx/redirection-hosts/123/disable
 	 */
 	.post(async (req, res, _next) => {
-		const result = await internalRedirectionHost.disable(res.locals.access, {
+		const result = await redirectionHostService.disable(res.locals.access, {
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
