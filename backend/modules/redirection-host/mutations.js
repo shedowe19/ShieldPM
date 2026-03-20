@@ -5,7 +5,7 @@ import redirectionHostModel from "../../models/redirection_host.js";
 import internalAuditLog from "../../internal/audit-log.js";
 import { certificateService } from "../../modules/certificate/index.js";
 import { gitOpsService } from "../../modules/gitops/index.js";
-import internalHost from "../../internal/host.js";
+import { hostService } from "../../modules/host/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
 import { omissions } from "./helpers.js";
 import { get } from "./reads.js";
@@ -13,7 +13,7 @@ import { get } from "./reads.js";
 const assertDomainsAvailable = async (domainNames, mode, id) => {
 	const checks = [];
 	domainNames.map((domainName) => {
-		checks.push(internalHost.isHostnameTaken(domainName, mode, id));
+		checks.push(hostService.isHostnameTaken(domainName, mode, id));
 		return true;
 	});
 	const results = await Promise.all(checks);
@@ -30,7 +30,7 @@ const create = async (access, data) => {
 	await access.can("redirection_hosts:create", thisData);
 	await assertDomainsAvailable(thisData.domain_names);
 	thisData.owner_user_id = access.token.getUserId(1);
-	thisData = internalHost.cleanSslHstsData(createCertificate, thisData);
+	thisData = hostService.cleanSslHstsData(createCertificate, thisData);
 	if (typeof data.advanced_config === "undefined") data.advanced_config = "";
 	let row = await redirectionHostModel.query().insertAndFetch(thisData);
 	row = utils.omitRow(omissions())(row);
@@ -59,7 +59,7 @@ const update = async (access, data, options = {}) => {
 		thisData.certificate_id = cert.id;
 	}
 	thisData = _.assign({}, { domain_names: row.domain_names }, thisData);
-	thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);
+	thisData = hostService.cleanSslHstsData(createCertificate, thisData, row);
 	await redirectionHostModel.query().patchAndFetchById(thisData.id, thisData).then(utils.omitRow(omissions()));
 	await internalAuditLog.add(access, { action: "updated", object_type: "redirection-host", object_id: row.id, meta: thisData });
 	row = await get(access, { id: thisData.id, expand: ["owner", "certificate"] });
@@ -68,7 +68,7 @@ const update = async (access, data, options = {}) => {
 		row.meta = newMeta;
 	}
 	gitOpsService.triggerAutoPush("redirection-host");
-	return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
+	return _.omit(hostService.cleanRowCertificateMeta(row), omissions());
 };
 
 export { create, update };

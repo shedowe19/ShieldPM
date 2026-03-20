@@ -3,7 +3,7 @@ import errs from "../../lib/error.js";
 import { castJsonIfNeed } from "../../lib/helpers.js";
 import utils from "../../lib/utils.js";
 import streamModel from "../../models/stream.js";
-import internalHost from "../../internal/host.js";
+import { hostService } from "../../modules/host/index.js";
 import { omissions } from "./helpers.js";
 
 const get = async (access, data) => {
@@ -15,7 +15,7 @@ const get = async (access, data) => {
 	let row = await query;
 	row = utils.omitRow(omissions())(row);
 	if (!row || !row.id) throw new errs.ItemNotFoundError(thisData.id);
-	row = internalHost.cleanRowCertificateMeta(row);
+	row = hostService.cleanRowCertificateMeta(row);
 	if (typeof thisData.omit !== "undefined" && thisData.omit !== null) return _.omit(row, thisData.omit);
 	return row;
 };
@@ -33,7 +33,7 @@ const getAll = async (access, expand, searchQuery) => {
 	let rows = await query;
 	rows = utils.omitRows(omissions())(rows);
 	if (typeof expand !== "undefined" && expand !== null && expand.indexOf("certificate") !== -1) {
-		return internalHost.cleanAllRowsCertificateMeta(rows);
+		return hostService.cleanAllRowsCertificateMeta(rows);
 	}
 	return rows;
 };

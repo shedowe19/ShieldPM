@@ -6,7 +6,7 @@ import internalAuditLog from "../../internal/audit-log.js";
 import internalCertificate from "../../internal/certificate.js";
 import internalGitDeploy from "../../internal/git-deploy.js";
 import internalGitOps from "../../internal/gitops.js";
-import internalHost from "../../internal/host.js";
+import { hostService } from "../../modules/host/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
 import { attachHostDomains, cleanupOAuth2Proxy, ensureOAuth2Proxy, omissions, prepareEncryptedFields } from "./helpers.js";
 import { get } from "./reads.js";
@@ -16,13 +16,13 @@ const create = async (access, data) => {
 	const createCertificate = thisData.certificate_id === "new";
 	if (createCertificate) delete thisData.certificate_id;
 	await access.can("proxy_hosts:create", thisData);
-	const checkResults = await Promise.all(thisData.domain_names.map((domainName) => internalHost.isHostnameTaken(domainName)));
+	const checkResults = await Promise.all(thisData.domain_names.map((domainName) => hostService.isHostnameTaken(domainName)));
 	checkResults.map((result) => {
 		if (result.is_taken) throw new errs.ValidationError(`${result.hostname} is already in use`);
 		return true;
 	});
 	thisData.owner_user_id = access.token.getUserId(1);
-	thisData = internalHost.cleanSslHstsData(createCertificate, thisData);
+	thisData = hostService.cleanSslHstsData(createCertificate, thisData);
 	if (typeof thisData.advanced_config === "undefined") thisData.advanced_config = "";
 	thisData = attachHostDomains(prepareEncryptedFields(thisData));
 	let row = await proxyHostModel.query().insertGraphAndFetch(thisData);
@@ -47,7 +47,7 @@ const update = async (access, data, options = {}) => {
 	if (createCertificate) delete thisData.certificate_id;
 	await access.can("proxy_hosts:update", thisData.id);
 	if (typeof thisData.domain_names !== "undefined") {
-		const checkResults = await Promise.all(thisData.domain_names.map((domainName) => internalHost.isHostnameTaken(domainName, "proxy", thisData.id)));
+		const checkResults = await Promise.all(thisData.domain_names.map((domainName) => hostService.isHostnameTaken(domainName, "proxy", thisData.id)));
 		checkResults.map((result) => {
 			if (result.is_taken) throw new errs.ValidationError(`${result.hostname} is already in use`);
 			return true;
@@ -61,7 +61,7 @@ const update = async (access, data, options = {}) => {
 		thisData.certificate_id = cert.id;
 	}
 	thisData = _.assign({}, { domain_names: row.domain_names }, data);
-	thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);
+	thisData = hostService.cleanSslHstsData(createCertificate, thisData, row);
 	thisData = attachHostDomains(prepareEncryptedFields(thisData));
 	await proxyHostModel.query().upsertGraphAndFetch(thisData);
 	await internalAuditLog.add(access, { action: "updated", object_type: "proxy-host", object_id: row.id, meta: thisData });
@@ -76,7 +76,7 @@ const update = async (access, data, options = {}) => {
 		await ensureOAuth2Proxy(row.access_list_id);
 		await cleanupOAuth2Proxy(oldAccessListId);
 	}
-	return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
+	return _.omit(hostService.cleanRowCertificateMeta(row), omissions());
 };
 
 export { create, update };

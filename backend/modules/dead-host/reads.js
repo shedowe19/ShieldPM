@@ -3,7 +3,7 @@ import errs from "../../lib/error.js";
 import { castJsonIfNeed } from "../../lib/helpers.js";
 import utils from "../../lib/utils.js";
 import deadHostModel from "../../models/dead_host.js";
-import internalHost from "../../internal/host.js";
+import { hostService } from "../../modules/host/index.js";
 import { omissions } from "./helpers.js";
 
 const get = async (access, data) => {
@@ -32,7 +32,7 @@ const getAll = async (access, expand, searchQuery) => {
 	let rows = await query;
 	rows = utils.omitRows(omissions())(rows);
 	if (typeof expand !== "undefined" && expand !== null && expand.indexOf("certificate") !== -1) {
-		internalHost.cleanAllRowsCertificateMeta(rows);
+		hostService.cleanAllRowsCertificateMeta(rows);
 	}
 	return rows;
 };

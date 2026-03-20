@@ -2,7 +2,7 @@ import _ from "lodash";
 import errs from "../../lib/error.js";
 import utils from "../../lib/utils.js";
 import proxyHostModel from "../../models/proxy_host.js";
-import internalHost from "../../internal/host.js";
+import { hostService } from "../../modules/host/index.js";
 import { omissions } from "./helpers.js";
 
 const get = async (access, data) => {
@@ -28,7 +28,7 @@ const get = async (access, data) => {
 	if (!row || !row.id) {
 		throw new errs.ItemNotFoundError(thisData.id);
 	}
-	const cleanRow = internalHost.cleanRowCertificateMeta(row);
+	const cleanRow = hostService.cleanRowCertificateMeta(row);
 	if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
 		return _.omit(row, thisData.omit);
 	}

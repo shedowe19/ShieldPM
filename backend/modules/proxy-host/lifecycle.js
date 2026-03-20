@@ -4,7 +4,7 @@ import proxyHostModel from "../../models/proxy_host.js";
 import internalAuditLog from "../../internal/audit-log.js";
 import internalGitDeploy from "../../internal/git-deploy.js";
 import internalGitOps from "../../internal/gitops.js";
-import internalHost from "../../internal/host.js";
+import { hostService } from "../../modules/host/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
 import { cleanupOAuth2Proxy, omissions } from "./helpers.js";
 import { get } from "./reads.js";

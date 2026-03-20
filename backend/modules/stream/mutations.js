@@ -5,7 +5,7 @@ import streamModel from "../../models/stream.js";
 import internalAuditLog from "../../internal/audit-log.js";
 import { certificateService } from "../../modules/certificate/index.js";
 import { gitOpsService } from "../../modules/gitops/index.js";
-import internalHost from "../../internal/host.js";
+import { hostService } from "../../modules/host/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
 import { omissions } from "./helpers.js";
 import { get } from "./reads.js";
@@ -73,7 +73,7 @@ const update = async (access, data, options = {}) => {
 		row.meta = newMeta;
 	}
 	gitOpsService.triggerAutoPush("stream");
-	return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
+	return _.omit(hostService.cleanRowCertificateMeta(row), omissions());
 };
 
 export { create, update };
