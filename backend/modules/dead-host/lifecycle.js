@@ -15,7 +15,12 @@ const remove = async (access, data) => {
 	await deadHostModel.query().where("id", row.id).patch({ is_deleted: 1 });
 	await nginxService.deleteConfig("dead_host", row);
 	await nginxService.reload();
-	await internalAuditLog.add(access, { action: "deleted", object_type: "dead-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "deleted",
+		object_type: "dead-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	gitOpsService.triggerAutoPush("dead-host");
 	return true;
 };
@@ -29,7 +34,12 @@ const enable = async (access, data) => {
 	row.enabled = 1;
 	await deadHostModel.query().where("id", row.id).patch({ enabled: 1 });
 	await nginxService.configure(deadHostModel, "dead_host", row);
-	await internalAuditLog.add(access, { action: "enabled", object_type: "dead-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "enabled",
+		object_type: "dead-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	return true;
 };
 
@@ -43,7 +53,12 @@ const disable = async (access, data) => {
 	await deadHostModel.query().where("id", row.id).patch({ enabled: 0 });
 	await nginxService.deleteConfig("dead_host", row);
 	await nginxService.reload();
-	await internalAuditLog.add(access, { action: "disabled", object_type: "dead-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "disabled",
+		object_type: "dead-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	return true;
 };
 

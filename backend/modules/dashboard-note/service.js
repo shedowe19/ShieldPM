@@ -6,7 +6,12 @@ const dashboardNoteService = {
 	create: async (access, data) => {
 		await access.can("dashboard_notes:create");
 		const row = await dashboardNoteModel.query().insertAndFetch(data);
-		await internalAuditLog.add(access, { action: "created", object_type: "dashboard_note", object_id: row.id, meta: row });
+		await internalAuditLog.add(access, {
+			action: "created",
+			object_type: "dashboard_note",
+			object_id: row.id,
+			meta: row,
+		});
 		return row;
 	},
 
@@ -15,7 +20,12 @@ const dashboardNoteService = {
 		await dashboardNoteService.get(access, { id: data.id });
 		await dashboardNoteModel.query().where({ id: data.id }).patch(data);
 		const updatedRow = await dashboardNoteService.get(access, { id: data.id });
-		await internalAuditLog.add(access, { action: "updated", object_type: "dashboard_note", object_id: updatedRow.id, meta: updatedRow });
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "dashboard_note",
+			object_id: updatedRow.id,
+			meta: updatedRow,
+		});
 		return updatedRow;
 	},
 
@@ -23,7 +33,12 @@ const dashboardNoteService = {
 		await access.can("dashboard_notes:delete", data.id);
 		const row = await dashboardNoteService.get(access, { id: data.id });
 		await dashboardNoteModel.query().where({ id: data.id }).delete();
-		await internalAuditLog.add(access, { action: "deleted", object_type: "dashboard_note", object_id: row.id, meta: row });
+		await internalAuditLog.add(access, {
+			action: "deleted",
+			object_type: "dashboard_note",
+			object_id: row.id,
+			meta: row,
+		});
 		return true;
 	},
 

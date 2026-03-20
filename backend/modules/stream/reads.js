@@ -9,9 +9,15 @@ import { omissions } from "./helpers.js";
 const get = async (access, data) => {
 	const thisData = data || {};
 	const accessData = await access.can("streams:get", thisData.id);
-	const query = streamModel.query().where("is_deleted", 0).andWhere("id", thisData.id).allowGraph("[owner,certificate]").first();
+	const query = streamModel
+		.query()
+		.where("is_deleted", 0)
+		.andWhere("id", thisData.id)
+		.allowGraph("[owner,certificate]")
+		.first();
 	if (accessData.permission_visibility !== "all") query.andWhere("owner_user_id", access.token.getUserId(1));
-	if (typeof thisData.expand !== "undefined" && thisData.expand !== null) query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
+	if (typeof thisData.expand !== "undefined" && thisData.expand !== null)
+		query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 	let row = await query;
 	row = utils.omitRow(omissions())(row);
 	if (!row || !row.id) throw new errs.ItemNotFoundError(thisData.id);
@@ -22,7 +28,12 @@ const get = async (access, data) => {
 
 const getAll = async (access, expand, searchQuery) => {
 	const accessData = await access.can("streams:list");
-	const query = streamModel.query().where("is_deleted", 0).groupBy("id").allowGraph("[owner,certificate]").orderBy("incoming_port", "ASC");
+	const query = streamModel
+		.query()
+		.where("is_deleted", 0)
+		.groupBy("id")
+		.allowGraph("[owner,certificate]")
+		.orderBy("incoming_port", "ASC");
 	if (accessData.permission_visibility !== "all") query.andWhere("owner_user_id", access.token.getUserId(1));
 	if (typeof searchQuery === "string" && searchQuery.length > 0) {
 		query.where(function () {

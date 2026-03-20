@@ -28,7 +28,9 @@ export default function Layout() {
 					<CardContent>
 						<div className="p-8 text-center text-muted-foreground">
 							<p className="text-lg font-semibold">Global Settings are disabled in Demo Mode.</p>
-							<p className="mt-2">For security reasons, changing global configurations is not permitted.</p>
+							<p className="mt-2">
+								For security reasons, changing global configurations is not permitted.
+							</p>
 						</div>
 					</CardContent>
 				</Card>
@@ -71,7 +73,13 @@ export default function Layout() {
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
-					<Suspense fallback={<div className="py-8"><Loading /></div>}>
+					<Suspense
+						fallback={
+							<div className="py-8">
+								<Loading />
+							</div>
+						}
+					>
 						{activeTab === SETTINGS_TAB.DEFAULT_SITE && <DefaultSite />}
 						{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
 						{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}

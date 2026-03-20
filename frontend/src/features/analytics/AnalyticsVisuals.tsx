@@ -13,10 +13,22 @@ interface Props {
 export const AnalyticsVisuals = ({ summary, series }: Props) => {
 	return (
 		<>
-			<Suspense fallback={<div className="p-8 text-center"><Loading /></div>}>
+			<Suspense
+				fallback={
+					<div className="p-8 text-center">
+						<Loading />
+					</div>
+				}
+			>
 				<AnalyticsCharts series={series} />
 			</Suspense>
-			<Suspense fallback={<div className="p-8 text-center"><Loading /></div>}>
+			<Suspense
+				fallback={
+					<div className="p-8 text-center">
+						<Loading />
+					</div>
+				}
+			>
 				<AnalyticsMap summary={summary} />
 			</Suspense>
 		</>

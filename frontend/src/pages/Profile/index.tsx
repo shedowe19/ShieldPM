@@ -25,7 +25,13 @@ export default function Profile() {
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-2xl">
-					<Suspense fallback={<div className="py-8"><Loading /></div>}>
+					<Suspense
+						fallback={
+							<div className="py-8">
+								<Loading />
+							</div>
+						}
+					>
 						{activeTab === "security" && <SecuritySettings />}
 					</Suspense>
 				</div>

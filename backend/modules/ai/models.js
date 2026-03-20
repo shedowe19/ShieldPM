@@ -15,7 +15,8 @@ const getModels = async (access, config) => {
 	let targetUrl;
 	try {
 		const parsedBase = new URL(baseUrl);
-		if (!["http:", "https:"].includes(parsedBase.protocol)) throw new Error("Only HTTP/HTTPS protocols are allowed for base_url");
+		if (!["http:", "https:"].includes(parsedBase.protocol))
+			throw new Error("Only HTTP/HTTPS protocols are allowed for base_url");
 		targetUrl = new URL("v1/models", parsedBase);
 	} catch (err) {
 		throw new Error(`Invalid base_url: ${err.message}`);

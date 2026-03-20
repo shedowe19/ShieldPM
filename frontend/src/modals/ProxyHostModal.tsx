@@ -50,7 +50,9 @@ import {
 } from "src/types/enums";
 
 const GitSyncTab = lazy(() => import("src/components/GitSyncTab").then((module) => ({ default: module.GitSyncTab })));
-const AnubisRulesField = lazy(() => import("src/components/AnubisRulesField").then((module) => ({ default: module.default })));
+const AnubisRulesField = lazy(() =>
+	import("src/components/AnubisRulesField").then((module) => ({ default: module.default })),
+);
 
 const DEFAULT_ANUBIS_RULES = [
 	{
@@ -1131,7 +1133,13 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													{({ field }: FieldProps) =>
 														field.value && (
 															<div className="animate-in fade-in slide-in-from-top-2 duration-300">
-																<Suspense fallback={<div className="py-4"><Loading noLogo /></div>}>
+																<Suspense
+																	fallback={
+																		<div className="py-4">
+																			<Loading noLogo />
+																		</div>
+																	}
+																>
 																	<AnubisRulesField />
 																</Suspense>
 															</div>
@@ -1344,9 +1352,17 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															value={PROXY_HOST_TAB.GIT_SYNC}
 															className="mt-0 space-y-4"
 														>
-															<Suspense fallback={<div className="py-8"><Loading noLogo /></div>}>
-														<GitSyncTab hostId={typeof id === "number" ? id : null} />
-													</Suspense>
+															<Suspense
+																fallback={
+																	<div className="py-8">
+																		<Loading noLogo />
+																	</div>
+																}
+															>
+																<GitSyncTab
+																	hostId={typeof id === "number" ? id : null}
+																/>
+															</Suspense>
 														</TabsContent>
 													)
 												}

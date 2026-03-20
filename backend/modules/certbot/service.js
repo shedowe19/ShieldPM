@@ -17,11 +17,17 @@ const isProcessing = () => processing;
 const requestCertbot = async (certificate) => {
 	logger.info(`Requesting Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 	const result = await utils.execFile("certbot", [
-		"--config", "/etc/certbot.ini", "certonly",
-		"--cert-name", `npm-${certificate.id}`,
-		"--domains", certificate.domain_names.map((d) => punycode.toASCII(d)).join(","),
-		"--server", process.env.ACME_SERVER,
-		"--authenticator", "webroot",
+		"--config",
+		"/etc/certbot.ini",
+		"certonly",
+		"--cert-name",
+		`npm-${certificate.id}`,
+		"--domains",
+		certificate.domain_names.map((d) => punycode.toASCII(d)).join(","),
+		"--server",
+		process.env.ACME_SERVER,
+		"--authenticator",
+		"webroot",
 	]);
 	logger.success(result);
 	return result;
@@ -32,23 +38,31 @@ const requestCertbotWithDnsChallenge = async (certificate) => {
 	if (!dnsPlugin) throw Error(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
 	await installPlugin(certificate.meta.dns_provider);
 
-	logger.info(`Requesting LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
+	logger.info(
+		`Requesting LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
+	);
 
 	const credentialsLocation = `/data/certbot-credentials/credentials-${certificate.id}`;
 	fs.writeFileSync(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
 	const credentialsArg = dnsPlugin.credentials_argument || `dns-${certificate.meta.dns_provider}-credentials`;
 
 	const result = await utils.execFile("certbot", [
-		"--config", "/etc/certbot.ini", "certonly",
-		"--cert-name", `npm-${certificate.id}`,
-		"--domains", certificate.domain_names.map((d) => punycode.toASCII(d)).join(","),
+		"--config",
+		"/etc/certbot.ini",
+		"certonly",
+		"--cert-name",
+		`npm-${certificate.id}`,
+		"--domains",
+		certificate.domain_names.map((d) => punycode.toASCII(d)).join(","),
 		dnsPlugin.full_plugin_name ? "--authenticator" : `--dns-${certificate.meta.dns_provider}`,
 		...(dnsPlugin.full_plugin_name ? [dnsPlugin.full_plugin_name] : []),
-		`--${credentialsArg}`, credentialsLocation,
+		`--${credentialsArg}`,
+		credentialsLocation,
 		...(certificate.meta.propagation_seconds
 			? [`--dns-${certificate.meta.dns_provider}-propagation-seconds`, certificate.meta.propagation_seconds]
 			: []),
-		"--server", process.env.ACME_SERVER,
+		"--server",
+		process.env.ACME_SERVER,
 	]);
 	logger.success(result);
 	return result;
@@ -60,9 +74,13 @@ const renewCertbot = async (certificate) => {
 	logger.info(`Renewing Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 	try {
 		const result = await utils.execFile("certbot", [
-			"--config", "/etc/certbot.ini", "renew",
-			"--server", process.env.ACME_SERVER,
-			"--cert-name", `npm-${certificate.id}`,
+			"--config",
+			"/etc/certbot.ini",
+			"renew",
+			"--server",
+			process.env.ACME_SERVER,
+			"--cert-name",
+			`npm-${certificate.id}`,
 			"--force-renewal",
 		]);
 		logger.info(result);
@@ -76,13 +94,22 @@ const renewCertbotWithDnsChallenge = async (certificate) => {
 	if (processing) throw new Error("Another Certbot process is currently running. Please try again later.");
 	processing = true;
 	const dnsPlugin = dnsPlugins[certificate.meta.dns_provider];
-	if (!dnsPlugin) { processing = false; throw Error(`Unknown DNS provider '${certificate.meta.dns_provider}'`); }
-	logger.info(`Renewing LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
+	if (!dnsPlugin) {
+		processing = false;
+		throw Error(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
+	}
+	logger.info(
+		`Renewing LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
+	);
 	try {
 		const result = await utils.execFile("certbot", [
-			"--config", "/etc/certbot.ini", "renew",
-			"--server", process.env.ACME_SERVER,
-			"--cert-name", `npm-${certificate.id}`,
+			"--config",
+			"/etc/certbot.ini",
+			"renew",
+			"--server",
+			process.env.ACME_SERVER,
+			"--cert-name",
+			`npm-${certificate.id}`,
 			"--force-renewal",
 		]);
 		logger.info(result);
@@ -96,9 +123,13 @@ const revokeCertbot = async (certificate, throwErrors) => {
 	logger.info(`Revoking Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 	try {
 		const result = await utils.execFile("certbot", [
-			"--config", "/etc/certbot.ini", "revoke",
-			"--cert-name", `npm-${certificate.id}`,
-			"--reason", "unspecified",
+			"--config",
+			"/etc/certbot.ini",
+			"revoke",
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--reason",
+			"unspecified",
 			"--delete-after-revoke",
 		]);
 		fs.rmSync(`/data/tls/certbot/live/npm-${certificate.id}.der`, { force: true });
@@ -126,7 +157,12 @@ const testHttpsChallenge = async (access, payload) => {
 
 	const finalResult = Object.create(null);
 	for (const [domain, result] of results) {
-		Object.defineProperty(finalResult, domain, { value: result, enumerable: true, writable: true, configurable: true });
+		Object.defineProperty(finalResult, domain, {
+			value: result,
+			enumerable: true,
+			writable: true,
+			configurable: true,
+		});
 	}
 	return finalResult;
 };
@@ -149,21 +185,29 @@ const performTestForDomain = async (domain) => {
 	const result = await new Promise((resolve) => {
 		const req = https.request("https://www.site24x7.com/tools/restapi-tester", options, (res) => {
 			let responseBody = "";
-			res.on("data", (chunk) => { responseBody += chunk; });
+			res.on("data", (chunk) => {
+				responseBody += chunk;
+			});
 			res.on("end", () => {
 				try {
 					const parsedBody = JSON.parse(responseBody);
 					if (res.statusCode !== 200) {
-						logger.warn(`Failed to test HTTP challenge for domain ${domain} because HTTP status code ${res.statusCode} was returned: ${parsedBody.message}`);
+						logger.warn(
+							`Failed to test HTTP challenge for domain ${domain} because HTTP status code ${res.statusCode} was returned: ${parsedBody.message}`,
+						);
 						resolve(undefined);
 					} else {
 						resolve(parsedBody);
 					}
 				} catch (err) {
 					if (res.statusCode !== 200) {
-						logger.warn(`Failed to test HTTP challenge for domain ${domain} because HTTP status code ${res.statusCode} was returned`);
+						logger.warn(
+							`Failed to test HTTP challenge for domain ${domain} because HTTP status code ${res.statusCode} was returned`,
+						);
 					} else {
-						logger.warn(`Failed to test HTTP challenge for domain ${domain} because response failed to be parsed: ${err.message}`);
+						logger.warn(
+							`Failed to test HTTP challenge for domain ${domain} because response failed to be parsed: ${err.message}`,
+						);
 					}
 					resolve(undefined);
 				}
@@ -178,11 +222,29 @@ const performTestForDomain = async (domain) => {
 	});
 
 	if (!result) return "failed";
-	if (result.error) { logger.info(`HTTP challenge test failed for domain ${domain} because error was returned: ${result.error.msg}`); return `other:${result.error.msg}`; }
+	if (result.error) {
+		logger.info(`HTTP challenge test failed for domain ${domain} because error was returned: ${result.error.msg}`);
+		return `other:${result.error.msg}`;
+	}
 	if (`${result.responsecode}` === "200" && result.htmlresponse === "Success") return "ok";
-	if (`${result.responsecode}` === "200") { logger.info(`HTTP challenge test failed for domain ${domain} because of invalid returned data:`, result.htmlresponse); return "wrong-data"; }
-	if (`${result.responsecode}` === "404") { logger.info(`HTTP challenge test failed for domain ${domain} because code 404 was returned`); return "404"; }
-	if (`${result.responsecode}` === "0" || (typeof result.reason === "string" && result.reason.toLowerCase() === "host unavailable")) { logger.info(`HTTP challenge test failed for domain ${domain} the host was not found`); return "no-host"; }
+	if (`${result.responsecode}` === "200") {
+		logger.info(
+			`HTTP challenge test failed for domain ${domain} because of invalid returned data:`,
+			result.htmlresponse,
+		);
+		return "wrong-data";
+	}
+	if (`${result.responsecode}` === "404") {
+		logger.info(`HTTP challenge test failed for domain ${domain} because code 404 was returned`);
+		return "404";
+	}
+	if (
+		`${result.responsecode}` === "0" ||
+		(typeof result.reason === "string" && result.reason.toLowerCase() === "host unavailable")
+	) {
+		logger.info(`HTTP challenge test failed for domain ${domain} the host was not found`);
+		return "no-host";
+	}
 	logger.info(`HTTP challenge test failed for domain ${domain} because code ${result.responsecode} was returned`);
 	return `other:${result.responsecode}`;
 };

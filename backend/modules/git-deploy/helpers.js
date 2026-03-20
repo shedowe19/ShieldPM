@@ -27,10 +27,14 @@ const getAuth = (encryptedCredentials) => {
 
 const intervalToMs = (interval, unit) => {
 	switch (unit) {
-		case "s": return interval * 1000;
-		case "m": return interval * 60 * 1000;
-		case "h": return interval * 60 * 60 * 1000;
-		default: return interval * 60 * 1000;
+		case "s":
+			return interval * 1000;
+		case "m":
+			return interval * 60 * 1000;
+		case "h":
+			return interval * 60 * 60 * 1000;
+		default:
+			return interval * 60 * 1000;
 	}
 };
 

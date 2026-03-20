@@ -24,13 +24,20 @@ const uploadAvatar = async (access, data) => {
 	const filename = `${user.id}-${Date.now()}${detectedType.extension}`;
 	const filePath = path.join(avatarDir, filename);
 	await fs.promises.writeFile(filePath, file.data);
-	await userModel.query().patchAndFetchById(user.id, { avatar_type: "upload", avatar_value: filename, avatar: `/api/users/${user.id}/avatar/image` });
+	await userModel
+		.query()
+		.patchAndFetchById(user.id, {
+			avatar_type: "upload",
+			avatar_value: filename,
+			avatar: `/api/users/${user.id}/avatar/image`,
+		});
 	return { url: `/api/users/${user.id}/avatar/image`, mime_type: detectedType.mimeType };
 };
 
 const getAvatarImage = async (_access, data) => {
 	const user = await userModel.query().findById(data.id);
-	if (!user || user.avatar_type !== "upload" || !user.avatar_value) throw new errs.ItemNotFoundError("Avatar not found");
+	if (!user || user.avatar_type !== "upload" || !user.avatar_value)
+		throw new errs.ItemNotFoundError("Avatar not found");
 	const dataPath = process.env.DATA_PATH || "/data";
 	const filePath = path.join(dataPath, "avatars", user.avatar_value);
 	if (!fs.existsSync(filePath)) throw new errs.ItemNotFoundError("Avatar file missing");

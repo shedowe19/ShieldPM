@@ -10,10 +10,32 @@ const test = async () => utils.execFile("nginx", ["-tq"]);
 const reload = async () => {
 	const promises = [];
 	if (process.env.ACME_OCSP_STAPLING === "true") {
-		promises.push(utils.execFile("certbot-ocsp-fetcher.sh", ["-c", "/data/tls/certbot/live", "-o", "/data/tls/certbot/live", "--no-reload-webserver", "--quiet"]).catch(() => {}));
+		promises.push(
+			utils
+				.execFile("certbot-ocsp-fetcher.sh", [
+					"-c",
+					"/data/tls/certbot/live",
+					"-o",
+					"/data/tls/certbot/live",
+					"--no-reload-webserver",
+					"--quiet",
+				])
+				.catch(() => {}),
+		);
 	}
 	if (process.env.CUSTOM_OCSP_STAPLING === "true") {
-		promises.push(utils.execFile("certbot-ocsp-fetcher.sh", ["-c", "/data/tls/custom", "-o", "/data/tls/custom", "--no-reload-webserver", "--quiet"]).catch(() => {}));
+		promises.push(
+			utils
+				.execFile("certbot-ocsp-fetcher.sh", [
+					"-c",
+					"/data/tls/custom",
+					"-o",
+					"/data/tls/custom",
+					"--no-reload-webserver",
+					"--quiet",
+				])
+				.catch(() => {}),
+		);
 	}
 	await Promise.all(promises);
 	await test();
@@ -41,7 +63,10 @@ const configure = async (model, hostType, host, options = {}) => {
 		logger.error(`Nginx test failed: ${err.message}`);
 		await renameConfigAsError(hostType, host);
 		await restoreConfig(hostType, host);
-		combinedMeta = _.assign({}, host.meta, { nginx_online: false, nginx_err: `[Rolled back] Configuration failed: ${err.message}` });
+		combinedMeta = _.assign({}, host.meta, {
+			nginx_online: false,
+			nginx_err: `[Rolled back] Configuration failed: ${err.message}`,
+		});
 		await model.query().where("id", host.id).patch({ meta: combinedMeta });
 	}
 	if (!skipReload) await reload();

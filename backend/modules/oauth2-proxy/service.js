@@ -37,7 +37,10 @@ upstreams = [ "static://200" ]
 whitelist_domains = ["*"]
 
 email_domains = [
-${(meta.oauth2_allowed_email_domains || "*").split(",").map((d) => `  "${d.trim()}"`).join(",\n")}
+${(meta.oauth2_allowed_email_domains || "*")
+	.split(",")
+	.map((d) => `  "${d.trim()}"`)
+	.join(",\n")}
 ]
 `;
 	if (meta.oauth2_provider === "oidc") {
@@ -80,7 +83,10 @@ const start = async (list, retryCount = 0) => {
 	await fs.promises.mkdir(accessDir, { recursive: true });
 	if (list.meta.oauth2_allowed_emails) {
 		const emailsFile = `${accessDir}/allowed_emails`;
-		const emailsContent = list.meta.oauth2_allowed_emails.split(",").map((e) => e.trim()).join("\n");
+		const emailsContent = list.meta.oauth2_allowed_emails
+			.split(",")
+			.map((e) => e.trim())
+			.join("\n");
 		await fs.promises.writeFile(emailsFile, emailsContent);
 	}
 	const configContent = generateConfig(list);
@@ -88,27 +94,42 @@ const start = async (list, retryCount = 0) => {
 	await fs.promises.writeFile(configFile, configContent);
 	try {
 		await fs.promises.mkdir("/run/shieldpm", { recursive: true });
-		const child = spawn("oauth2-proxy", [`--config=${configFile}`], { stdio: ["ignore", "pipe", "pipe"], detached: true });
+		const child = spawn("oauth2-proxy", [`--config=${configFile}`], {
+			stdio: ["ignore", "pipe", "pipe"],
+			detached: true,
+		});
 		child.unref();
 		setProcess(list.id, child);
-		child.stdout.on("data", (data) => { logger.debug(`[OAuth2Proxy #${list.id}] ${data.toString().trim()}`); });
-		child.stderr.on("data", (data) => { logger.info(`[OAuth2Proxy #${list.id}] ${data.toString().trim()}`); });
+		child.stdout.on("data", (data) => {
+			logger.debug(`[OAuth2Proxy #${list.id}] ${data.toString().trim()}`);
+		});
+		child.stderr.on("data", (data) => {
+			logger.info(`[OAuth2Proxy #${list.id}] ${data.toString().trim()}`);
+		});
 		child.on("exit", (code, signal) => {
 			deleteProcess(list.id);
 			if (code !== 0 && signal === null && retryCount < MAX_RETRIES) {
 				const nextRetry = retryCount + 1;
 				const delay = RETRY_DELAY_MS * nextRetry;
-				logger.warn(`OAuth2 Proxy #${list.id} exited with code ${code}, retrying in ${delay / 1000}s (attempt ${nextRetry}/${MAX_RETRIES})...`);
+				logger.warn(
+					`OAuth2 Proxy #${list.id} exited with code ${code}, retrying in ${delay / 1000}s (attempt ${nextRetry}/${MAX_RETRIES})...`,
+				);
 				setTimeout(() => {
-					start(list, nextRetry).catch((err) => logger.error(`OAuth2 Proxy #${list.id} retry ${nextRetry} failed:`, err));
+					start(list, nextRetry).catch((err) =>
+						logger.error(`OAuth2 Proxy #${list.id} retry ${nextRetry} failed:`, err),
+					);
 				}, delay);
 			} else if (code !== 0) {
-				logger.error(`OAuth2 Proxy #${list.id} exited with code ${code} / signal ${signal} after ${retryCount} retries. Giving up.`);
+				logger.error(
+					`OAuth2 Proxy #${list.id} exited with code ${code} / signal ${signal} after ${retryCount} retries. Giving up.`,
+				);
 			} else {
 				logger.info(`OAuth2 Proxy #${list.id} stopped (code ${code}, signal ${signal}).`);
 			}
 		});
-		child.on("error", (err) => { logger.error(`Failed to spawn OAuth2 Proxy #${list.id}:`, err); });
+		child.on("error", (err) => {
+			logger.error(`Failed to spawn OAuth2 Proxy #${list.id}:`, err);
+		});
 	} catch (err) {
 		logger.error(`Error starting OAuth2 Proxy #${list.id}:`, err);
 	}
@@ -129,7 +150,9 @@ const init = async () => {
 		if (list.meta && (list.meta.auth_type === "oauth2_proxy" || list.meta.authType === "oauth2_proxy")) {
 			const assignedHosts = await ProxyHost.query().where("access_list_id", list.id).where("is_deleted", 0);
 			if (assignedHosts.length > 0) {
-				logger.info(`OAuth2 Proxy #${list.id} is assigned to ${assignedHosts.length} proxy host(s), starting...`);
+				logger.info(
+					`OAuth2 Proxy #${list.id} is assigned to ${assignedHosts.length} proxy host(s), starting...`,
+				);
 				await start(list);
 			} else {
 				logger.info(`OAuth2 Proxy #${list.id} is not assigned to any proxy host, skipping.`);

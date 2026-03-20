@@ -9,7 +9,9 @@ const scheduleTimers = (hostId, start, end) => {
 	const timerKey = `host_${hostId}`;
 	if (maintenanceState.scheduledTimers.has(timerKey)) {
 		const existingTimers = maintenanceState.scheduledTimers.get(timerKey);
-		existingTimers.forEach((timer) => { clearTimeout(timer); });
+		existingTimers.forEach((timer) => {
+			clearTimeout(timer);
+		});
 	}
 	const newTimers = [];
 	if (start && now.isBefore(start)) {
@@ -38,9 +40,12 @@ const processMaintenance = async () => {
 	maintenanceState.intervalProcessing = true;
 	try {
 		const now = dayjs();
-		const hosts = await proxyHostModel.query().where("is_deleted", 0).andWhere(function () {
-			this.whereNotNull("maintenance_start").orWhereNotNull("maintenance_end");
-		});
+		const hosts = await proxyHostModel
+			.query()
+			.where("is_deleted", 0)
+			.andWhere(function () {
+				this.whereNotNull("maintenance_start").orWhereNotNull("maintenance_end");
+			});
 		let reloadNeeded = false;
 		for (const host of hosts) {
 			const start = host.maintenance_start ? dayjs(host.maintenance_start) : null;
@@ -63,7 +68,10 @@ const processMaintenance = async () => {
 					logger.info(`Cleared expired maintenance window for Host #${host.id}`);
 				}
 				await proxyHostModel.query().findById(host.id).patch(patchData);
-				const updatedHost = await proxyHostModel.query().findById(host.id).withGraphFetched("[owner, access_list, certificate]");
+				const updatedHost = await proxyHostModel
+					.query()
+					.findById(host.id)
+					.withGraphFetched("[owner, access_list, certificate]");
 				await nginxService.configure(proxyHostModel, "proxy_host", updatedHost, { skip_reload: true });
 				reloadNeeded = true;
 			}

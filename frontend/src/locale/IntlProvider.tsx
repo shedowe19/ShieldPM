@@ -39,7 +39,10 @@ const getLocaleMessages = async (locale?: string) => {
 	const thisLocale = (locale || "en").slice(0, 2);
 	const normalizedLocale = localeOptions.find(([code]) => code === thisLocale)?.[0] || "en";
 	const englishMessages = langEn as Record<string, string>;
-	const localeMessages = normalizedLocale === "en" ? englishMessages : ((await localeLoaders[`./lang/${normalizedLocale}.json`]()) || {}) as Record<string, string>;
+	const localeMessages =
+		normalizedLocale === "en"
+			? englishMessages
+			: (((await localeLoaders[`./lang/${normalizedLocale}.json`]()) || {}) as Record<string, string>);
 
 	return Object.assign({}, langList, englishMessages, localeMessages);
 };

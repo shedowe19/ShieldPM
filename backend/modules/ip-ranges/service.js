@@ -36,10 +36,16 @@ const ipRangesService = {
 				.get(url, { agent }, (res) => {
 					res.setEncoding("utf8");
 					let raw_data = "";
-					res.on("data", (chunk) => { raw_data += chunk; });
-					res.on("end", () => { resolve(raw_data); });
+					res.on("data", (chunk) => {
+						raw_data += chunk;
+					});
+					res.on("end", () => {
+						resolve(raw_data);
+					});
 				})
-				.on("error", (err) => { reject(err); });
+				.on("error", (err) => {
+					reject(err);
+				});
 		});
 	},
 

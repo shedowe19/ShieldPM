@@ -15,7 +15,12 @@ const remove = async (access, data) => {
 	await proxyHostModel.query().where("id", row.id).patch({ is_deleted: 1 });
 	await nginxService.deleteConfig("proxy_host", row);
 	await nginxService.reload();
-	await internalAuditLog.add(access, { action: "deleted", object_type: "proxy-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "deleted",
+		object_type: "proxy-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	internalGitOps.triggerAutoPush("proxy-host");
 	internalGitDeploy.stopPolling(data.id);
 	await cleanupOAuth2Proxy(row.access_list_id);
@@ -31,7 +36,12 @@ const enable = async (access, data) => {
 	await proxyHostModel.query().where("id", row.id).patch({ enabled: 1 });
 	await nginxService.configure(proxyHostModel, "proxy_host", row);
 	if (row.git_sync_enabled && row.git_repo_url) internalGitDeploy.startPollingForHost(row);
-	await internalAuditLog.add(access, { action: "enabled", object_type: "proxy-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "enabled",
+		object_type: "proxy-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	return true;
 };
 
@@ -45,7 +55,12 @@ const disable = async (access, data) => {
 	await nginxService.deleteConfig("proxy_host", row);
 	await nginxService.reload();
 	internalGitDeploy.stopPolling(data.id);
-	await internalAuditLog.add(access, { action: "disabled", object_type: "proxy-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "disabled",
+		object_type: "proxy-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	return true;
 };
 

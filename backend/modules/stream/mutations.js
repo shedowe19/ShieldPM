@@ -26,7 +26,8 @@ const assertNoPortCollision = async (data, excludeId) => {
 		});
 	if (excludeId) query.andWhereNot("id", excludeId);
 	const collision = await query.first();
-	if (collision) throw new errs.ValidationError(`Incoming port ${data.incoming_port} is already in use by another stream.`);
+	if (collision)
+		throw new errs.ValidationError(`Incoming port ${data.incoming_port} is already in use by another stream.`);
 };
 
 const create = async (access, data) => {
@@ -58,9 +59,15 @@ const update = async (access, data, options = {}) => {
 	await access.can("streams:update", thisData.id);
 	if (typeof thisData.incoming_port !== "undefined") await assertNoPortCollision(thisData, thisData.id);
 	let row = await get(access, { id: thisData.id });
-	if (row.id !== thisData.id) throw new errs.InternalValidationError(`Stream could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`);
+	if (row.id !== thisData.id)
+		throw new errs.InternalValidationError(
+			`Stream could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
+		);
 	if (createCertificate) {
-		const cert = await certificateService.createQuickCertificate(access, { domain_names: thisData.domain_names || row.domain_names, meta: _.assign({}, row.meta, thisData.meta) });
+		const cert = await certificateService.createQuickCertificate(access, {
+			domain_names: thisData.domain_names || row.domain_names,
+			meta: _.assign({}, row.meta, thisData.meta),
+		});
 		thisData.certificate_id = cert.id;
 	}
 	thisData = _.assign({}, { domain_names: row.domain_names }, data);

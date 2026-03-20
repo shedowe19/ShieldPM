@@ -106,7 +106,16 @@ const exportConfig = async () => {
 	await initRepo();
 	const configDir = getConfigDir();
 	const exportedFiles = [];
-	for (const dir of ["proxy-hosts", "redirection-hosts", "dead-hosts", "streams", "certificates", "users", "settings", "ddns-providers"]) {
+	for (const dir of [
+		"proxy-hosts",
+		"redirection-hosts",
+		"dead-hosts",
+		"streams",
+		"certificates",
+		"users",
+		"settings",
+		"ddns-providers",
+	]) {
 		const dirPath = path.join(configDir, dir);
 		if (!fs.existsSync(dirPath)) await fs.promises.mkdir(dirPath, { recursive: true });
 	}

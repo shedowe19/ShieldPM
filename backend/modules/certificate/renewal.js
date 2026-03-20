@@ -25,20 +25,38 @@ const processExpiringHosts = async () => {
 		processing = true;
 		logger.info("Renewing Certbot TLS certs close to expiry...");
 		try {
-			const result = await utils.execFile("certbot", ["--config", "/etc/certbot.ini", "renew", "--server", process.env.ACME_SERVER, "--quiet"]);
+			const result = await utils.execFile("certbot", [
+				"--config",
+				"/etc/certbot.ini",
+				"renew",
+				"--server",
+				process.env.ACME_SERVER,
+				"--quiet",
+			]);
 			if (result) logger.info(`Renew Result: ${result}`);
 			await nginxService.reload();
 			logger.info("Renew Complete");
-			const certificates = await certificateModel.query().where("is_deleted", 0).andWhere("provider", "letsencrypt");
+			const certificates = await certificateModel
+				.query()
+				.where("is_deleted", 0)
+				.andWhere("provider", "letsencrypt");
 			if (certificates && certificates.length > 0) {
-				await Promise.all(certificates.map(async (certificate) => {
-					try {
-						const certInfo = await getCertificateInfoFromFile(`${getLiveCertPath(certificate.id)}/fullchain.pem`);
-						await certificateModel.query().where("id", certificate.id).andWhere("provider", "letsencrypt").patch({ expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss") });
-					} catch (err) {
-						logger.error(err.message);
-					}
-				}));
+				await Promise.all(
+					certificates.map(async (certificate) => {
+						try {
+							const certInfo = await getCertificateInfoFromFile(
+								`${getLiveCertPath(certificate.id)}/fullchain.pem`,
+							);
+							await certificateModel
+								.query()
+								.where("id", certificate.id)
+								.andWhere("provider", "letsencrypt")
+								.patch({ expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss") });
+						} catch (err) {
+							logger.error(err.message);
+						}
+					}),
+				);
 			}
 		} catch (err) {
 			logger.error(err);
@@ -64,9 +82,27 @@ const renew = async (access, data) => {
 	const renewMethod = certificate.meta.dns_challenge ? renewCertbotWithDnsChallenge : renewCertbot;
 	await renewMethod(certificate);
 	const certInfo = await getCertificateInfoFromFile(`${getLiveCertPath(certificate.id)}/fullchain.pem`);
-	const updatedCertificate = await certificateModel.query().patchAndFetchById(certificate.id, { expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss") });
-	await internalAuditLog.add(access, { action: "renewed", object_type: "certificate", object_id: updatedCertificate.id, meta: updatedCertificate });
+	const updatedCertificate = await certificateModel
+		.query()
+		.patchAndFetchById(certificate.id, { expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss") });
+	await internalAuditLog.add(access, {
+		action: "renewed",
+		object_type: "certificate",
+		object_id: updatedCertificate.id,
+		meta: updatedCertificate,
+	});
 	return updatedCertificate;
 };
 
-export { initTimer, interval, intervalProcessing, performTestForDomain, processExpiringHosts, processing, renew, renewCertbot, renewCertbotWithDnsChallenge, testHttpsChallenge };
+export {
+	initTimer,
+	interval,
+	intervalProcessing,
+	performTestForDomain,
+	processExpiringHosts,
+	processing,
+	renew,
+	renewCertbot,
+	renewCertbotWithDnsChallenge,
+	testHttpsChallenge,
+};

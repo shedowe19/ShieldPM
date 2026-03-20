@@ -28,11 +28,15 @@ const getWanIps = async () => {
 };
 
 async function updateCloudflareRecord(token, zone_id, domain, type, ip, results) {
-	const listRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?type=${type}&name=${domain}`, {
-		headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-	});
+	const listRes = await fetch(
+		`https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?type=${type}&name=${domain}`,
+		{
+			headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+		},
+	);
 	const listData = await listRes.json();
-	if (!listData.success) throw new Error(`Cloudflare List Error for ${domain} (${type}): ${JSON.stringify(listData.errors)}`);
+	if (!listData.success)
+		throw new Error(`Cloudflare List Error for ${domain} (${type}): ${JSON.stringify(listData.errors)}`);
 	let recordId = null;
 	let proxied = false;
 	if (listData.result.length > 0) {
@@ -49,7 +53,8 @@ async function updateCloudflareRecord(token, zone_id, domain, type, ip, results)
 		body: JSON.stringify({ type, name: domain, content: ip, ttl: 1, proxied }),
 	});
 	const updateData = await updateRes.json();
-	if (!updateData.success) throw new Error(`Cloudflare Update Error for ${domain} (${type}): ${JSON.stringify(updateData.errors)}`);
+	if (!updateData.success)
+		throw new Error(`Cloudflare Update Error for ${domain} (${type}): ${JSON.stringify(updateData.errors)}`);
 	results.push(`${domain} (${type})`);
 }
 
@@ -57,7 +62,10 @@ const updateProvider = async (provider, ips) => {
 	try {
 		const handler = providers[provider.provider];
 		if (!handler) throw new Error(`Unknown provider: ${provider.provider}`);
-		const filteredIps = { ipv4: provider.ip_ver !== "v6" ? ips.ipv4 : null, ipv6: provider.ip_ver !== "v4" ? ips.ipv6 : null };
+		const filteredIps = {
+			ipv4: provider.ip_ver !== "v6" ? ips.ipv4 : null,
+			ipv6: provider.ip_ver !== "v4" ? ips.ipv6 : null,
+		};
 		const result = await handler(provider, filteredIps, updateCloudflareRecord);
 		await DdnsProvider.query().patchAndFetchById(provider.id, {
 			last_ipv4: filteredIps.ipv4,

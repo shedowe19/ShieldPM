@@ -8,8 +8,14 @@ const get = async (access, data) => {
 	const thisData = data || {};
 	if (typeof thisData.id === "undefined" || !thisData.id) thisData.id = access.token.getUserId(0);
 	await access.can("users:get", thisData.id);
-	const query = userModel.query().where("is_deleted", 0).andWhere("id", thisData.id).allowGraph("[permissions]").first();
-	if (typeof thisData.expand !== "undefined" && thisData.expand !== null) query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
+	const query = userModel
+		.query()
+		.where("is_deleted", 0)
+		.andWhere("id", thisData.id)
+		.allowGraph("[permissions]")
+		.first();
+	if (typeof thisData.expand !== "undefined" && thisData.expand !== null)
+		query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 	let row = await query;
 	row = _.omit(row, omissions());
 	if (!row || !row.id) throw new errs.ItemNotFoundError(thisData.id);
@@ -20,7 +26,12 @@ const get = async (access, data) => {
 
 const getAll = async (access, expand, search_query) => {
 	await access.can("users:list");
-	const query = userModel.query().where("is_deleted", 0).groupBy("id").allowGraph("[permissions]").orderBy("name", "ASC");
+	const query = userModel
+		.query()
+		.where("is_deleted", 0)
+		.groupBy("id")
+		.allowGraph("[permissions]")
+		.orderBy("name", "ASC");
 	if (typeof search_query === "string") {
 		query.where(function () {
 			this.where("name", "like", `%${search_query}%`).orWhere("email", "like", `%${search_query}%`);

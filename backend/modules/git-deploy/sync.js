@@ -15,7 +15,8 @@ const sync = async (access, hostId) => {
 	if (isDemoMode()) throw new errs.AuthError("Git Deploy is disabled in Demo Mode");
 	const host = await ProxyHost.query().findById(hostId);
 	if (!host) throw new errs.ItemNotFoundError(hostId);
-	if (host.forward_scheme !== "path") throw new errs.ValidationError("Git Deploy is only available for path-based proxy hosts");
+	if (host.forward_scheme !== "path")
+		throw new errs.ValidationError("Git Deploy is only available for path-based proxy hosts");
 	if (!host.git_repo_url) throw new errs.ValidationError("Git repository URL not configured");
 	const dir = getWebsiteDir(hostId);
 	const gitDir = path.join(dir, ".git");
@@ -31,13 +32,36 @@ const sync = async (access, hostId) => {
 			}
 		}
 		if (fs.existsSync(gitDir)) {
-			await git.pull({ fs, http, dir, ref: host.git_branch || "main", singleBranch: true, author: { name: "ShieldPM GitDeploy", email: "gitdeploy@shieldpm.local" }, ...getAuth(host.git_credentials) });
+			await git.pull({
+				fs,
+				http,
+				dir,
+				ref: host.git_branch || "main",
+				singleBranch: true,
+				author: { name: "ShieldPM GitDeploy", email: "gitdeploy@shieldpm.local" },
+				...getAuth(host.git_credentials),
+			});
 		} else {
-			await git.clone({ fs, http, dir, url: host.git_repo_url, ref: host.git_branch || "main", singleBranch: true, depth: 1, ...getAuth(host.git_credentials) });
+			await git.clone({
+				fs,
+				http,
+				dir,
+				url: host.git_repo_url,
+				ref: host.git_branch || "main",
+				singleBranch: true,
+				depth: 1,
+				...getAuth(host.git_credentials),
+			});
 		}
 		const commits = await git.log({ fs, dir, depth: 1 });
 		const latestCommit = commits[0]?.oid || null;
-		await ProxyHost.query().findById(hostId).patch({ git_last_sync: dayjs().format("YYYY-MM-DD HH:mm:ss"), git_last_commit: latestCommit, git_last_error: null });
+		await ProxyHost.query()
+			.findById(hostId)
+			.patch({
+				git_last_sync: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+				git_last_commit: latestCommit,
+				git_last_error: null,
+			});
 		if (host.forward_host !== dir) {
 			await ProxyHost.query().findById(hostId).patch({ forward_host: dir });
 			const updatedHost = await ProxyHost.query().findById(hostId).withGraphFetched("access_list");

@@ -43,7 +43,15 @@ const buildTokenResponse = ({ accessToken, refreshToken, refreshSession, user })
 		: undefined,
 });
 
-const createRefreshSession = async ({ trx, user, scope, rawRefreshToken, familyId, parentSessionId = null, meta = {} }) => {
+const createRefreshSession = async ({
+	trx,
+	user,
+	scope,
+	rawRefreshToken,
+	familyId,
+	parentSessionId = null,
+	meta = {},
+}) => {
 	return AuthSession.query(trx).insertAndFetch({
 		user_id: user.id,
 		family_id: familyId,

@@ -1,4 +1,11 @@
-import { backupConfig, deleteBackupConfig, deleteConfig, deleteFile, renameConfigAsError, restoreConfig } from "./files.js";
+import {
+	backupConfig,
+	deleteBackupConfig,
+	deleteConfig,
+	deleteFile,
+	renameConfigAsError,
+	restoreConfig,
+} from "./files.js";
 import { advancedConfigHasDefaultLocation, getConfigName, getFileFriendlyHostType } from "./helpers.js";
 import { generateConfig, renderLocations } from "./render.js";
 import { bulkGenerateConfigs, configure, reload, test } from "./runtime.js";

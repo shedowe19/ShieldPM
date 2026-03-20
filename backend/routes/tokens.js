@@ -10,7 +10,11 @@ import {
 	normalizeLoginIdentifier,
 	registerFailedLoginAttempt,
 } from "../modules/auth/login-attempts.js";
-import { createPendingTwoFaChallenge, loadPendingTwoFaPayload, loadPendingTwoFaUser } from "../modules/auth/pending-2fa.js";
+import {
+	createPendingTwoFaChallenge,
+	loadPendingTwoFaPayload,
+	loadPendingTwoFaUser,
+} from "../modules/auth/pending-2fa.js";
 import { issueAuthResponse } from "../modules/auth/token-response.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
@@ -63,14 +67,19 @@ router
 		const ip = req.ip || "unknown";
 		const now = Date.now();
 		const loginIdentifier = normalizeLoginIdentifier(req.body);
-		const trackedIdentifiers = [{ scope: "ip", identifier: ip }, ...(loginIdentifier ? [{ scope: "login", identifier: loginIdentifier }] : [])];
+		const trackedIdentifiers = [
+			{ scope: "ip", identifier: ip },
+			...(loginIdentifier ? [{ scope: "login", identifier: loginIdentifier }] : []),
+		];
 
 		try {
 			await cleanupExpiredLoginAttempts(now);
 			for (const tracked of trackedIdentifiers) {
 				const state = await getLoginAttemptState(tracked.scope, tracked.identifier, now);
 				if (state.blockedUntil > now) {
-					return res.status(429).send({ error: { code: 429, message: "Too many login attempts. Please try again later." } });
+					return res
+						.status(429)
+						.send({ error: { code: 429, message: "Too many login attempts. Please try again later." } });
 				}
 			}
 
@@ -132,7 +141,13 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 		const meta = { ip: req.ip || "unknown", userAgent: req.headers["user-agent"] || null };
 		const pair = await tokenService.refreshTokenPair(rawRefreshToken, meta);
 		res.status(200).send(
-			await issueAuthResponse({ tokenService: { issueTokenPair: async () => pair }, user: pair.user, req, res, csrfToken: res.locals.csrfToken }),
+			await issueAuthResponse({
+				tokenService: { issueTokenPair: async () => pair },
+				user: pair.user,
+				req,
+				res,
+				csrfToken: res.locals.csrfToken,
+			}),
 		);
 	} catch (err) {
 		debug(logger, `POST /tokens/refresh: ${err}`);
@@ -181,7 +196,10 @@ router
 				maxAge: payload.exp ? payload.exp * 1000 - Date.now() : undefined,
 			});
 			res.clearCookie("shieldpm_jwt_original");
-			res.status(200).send({ expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : null, user: { id: payload.attrs?.id || payload.id } });
+			res.status(200).send({
+				expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
+				user: { id: payload.attrs?.id || payload.id },
+			});
 		} catch (err) {
 			debug(logger, `${req.method.toUpperCase()} ${req.path}: ${err}`);
 			res.clearCookie("shieldpm_jwt_original");
@@ -200,7 +218,9 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
 		if (!valid) return res.status(401).send({ error: { code: 401, message: "Invalid 2FA code" } });
-		res.status(200).send(await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }));
+		res.status(200).send(
+			await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
+		);
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/verify: ${err}`);
 		const code = err.status || 500;
@@ -218,20 +238,26 @@ router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/passkey/begin: ${err}`);
 		const code = err.status || 500;
-		res.status(code).send({ error: { code, message: err.public ? err.message : "Failed to begin passkey authentication" } });
+		res.status(code).send({
+			error: { code, message: err.public ? err.message : "Failed to begin passkey authentication" },
+		});
 	}
 });
 
 router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
 	const { pending_token, challenge_id, auth_response } = req.body;
 	if (!pending_token || !challenge_id || !auth_response) {
-		return res.status(400).send({ error: { code: 400, message: "pending_token, challenge_id, and auth_response are required" } });
+		return res
+			.status(400)
+			.send({ error: { code: 400, message: "pending_token, challenge_id, and auth_response are required" } });
 	}
 	try {
 		const { userId, user } = await loadPendingTwoFaUser(pending_token);
 		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response, req);
-		res.status(200).send(await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }));
+		res.status(200).send(
+			await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
+		);
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/passkey/complete: ${err}`);
 		const code = err.status || 500;
@@ -250,7 +276,9 @@ router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/duo/begin: ${err}`);
 		const code = err.status || 500;
-		res.status(code).send({ error: { code, message: err.public ? err.message : "Failed to initiate Duo authentication" } });
+		res.status(code).send({
+			error: { code, message: err.public ? err.message : "Failed to initiate Duo authentication" },
+		});
 	}
 });
 
@@ -264,7 +292,9 @@ router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
 		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		const valid = await twoFaService.completeDuoAuthentication(userId, user.email, duo_code);
 		if (!valid) return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });
-		res.status(200).send(await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }));
+		res.status(200).send(
+			await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
+		);
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/duo/complete: ${err}`);
 		const code = err.status || 500;

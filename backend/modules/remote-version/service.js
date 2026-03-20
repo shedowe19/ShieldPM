@@ -19,7 +19,11 @@ const remoteVersionService = {
 			const raw = await remoteVersionService.fetchUrl(VERSION_URL);
 			const data = await new Promise((resolve, reject) => {
 				setImmediate(() => {
-					try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
+					try {
+						resolve(JSON.parse(raw));
+					} catch (e) {
+						reject(e);
+					}
 				});
 			});
 			remoteVersionService.last_result = data;
@@ -43,10 +47,16 @@ const remoteVersionService = {
 			const req = https.get(url, { agent, headers }, (res) => {
 				res.setEncoding("utf8");
 				let raw_data = "";
-				res.on("data", (chunk) => { raw_data += chunk; });
-				res.on("end", () => { resolve(raw_data); });
+				res.on("data", (chunk) => {
+					raw_data += chunk;
+				});
+				res.on("end", () => {
+					resolve(raw_data);
+				});
 			});
-			req.on("error", (err) => { reject(err); });
+			req.on("error", (err) => {
+				reject(err);
+			});
 		});
 	},
 };

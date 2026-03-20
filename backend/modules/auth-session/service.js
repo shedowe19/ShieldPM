@@ -16,12 +16,18 @@ import {
 
 const revokeSession = async (sessionId, reason = "revoked", trx = null) => {
 	if (!sessionId) throw new errs.ValidationError("sessionId is required");
-	return AuthSession.query(trx).patch({ revoked_at: db().fn.now(), revoked_reason: reason }).where("id", sessionId).whereNull("revoked_at");
+	return AuthSession.query(trx)
+		.patch({ revoked_at: db().fn.now(), revoked_reason: reason })
+		.where("id", sessionId)
+		.whereNull("revoked_at");
 };
 
 const revokeFamily = async (familyId, reason = "family_revoked", trx = null) => {
 	if (!familyId) throw new errs.ValidationError("familyId is required");
-	return AuthSession.query(trx).patch({ revoked_at: db().fn.now(), revoked_reason: reason }).where("family_id", familyId).whereNull("revoked_at");
+	return AuthSession.query(trx)
+		.patch({ revoked_at: db().fn.now(), revoked_reason: reason })
+		.where("family_id", familyId)
+		.whereNull("revoked_at");
 };
 
 const issueTokenPair = async (user, scope = "user", meta = {}) => {
@@ -29,7 +35,14 @@ const issueTokenPair = async (user, scope = "user", meta = {}) => {
 	const rawRefreshToken = buildRefreshToken();
 	const familyId = meta.family_id || meta.familyId || AuthSession.createFamilyId();
 	return transaction(AuthSession.knex(), async (trx) => {
-		const refreshSession = await createRefreshSession({ trx, user, scope: normalizedScope, rawRefreshToken, familyId, meta });
+		const refreshSession = await createRefreshSession({
+			trx,
+			user,
+			scope: normalizedScope,
+			rawRefreshToken,
+			familyId,
+			meta,
+		});
 		const accessToken = await buildAccessToken(user, normalizedScope);
 		return buildTokenResponse({ accessToken, refreshToken: rawRefreshToken, refreshSession, user });
 	});
@@ -51,7 +64,15 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 			throw new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE);
 		}
 		const nextRefreshToken = buildRefreshToken();
-		const nextSession = await createRefreshSession({ trx, user: session.user, scope: session.scope, rawRefreshToken: nextRefreshToken, familyId: session.family_id, parentSessionId: session.id, meta });
+		const nextSession = await createRefreshSession({
+			trx,
+			user: session.user,
+			scope: session.scope,
+			rawRefreshToken: nextRefreshToken,
+			familyId: session.family_id,
+			parentSessionId: session.id,
+			meta,
+		});
 		const updatedRows = await AuthSession.query(trx)
 			.patch({ rotated_at: db().fn.now(), replaced_by_session_id: nextSession.id, last_used_at: db().fn.now() })
 			.where("id", session.id)
@@ -62,7 +83,12 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 			throw new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE);
 		}
 		const accessToken = await buildAccessToken(session.user, session.scope);
-		return buildTokenResponse({ accessToken, refreshToken: nextRefreshToken, refreshSession: nextSession, user: session.user });
+		return buildTokenResponse({
+			accessToken,
+			refreshToken: nextRefreshToken,
+			refreshSession: nextSession,
+			user: session.user,
+		});
 	});
 };
 

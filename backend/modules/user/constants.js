@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 
-const omissions = () => ["is_deleted", "permissions.id", "permissions.user_id", "permissions.created_on", "permissions.modified_on"];
+const omissions = () => [
+	"is_deleted",
+	"permissions.id",
+	"permissions.user_id",
+	"permissions.created_on",
+	"permissions.modified_on",
+];
 
 const getGravatarUrl = (email) => {
 	const hash = crypto.createHash("md5").update(email.trim().toLowerCase()).digest("hex");
@@ -34,7 +40,8 @@ const AVATAR_SIGNATURES = [
 		extension: ".gif",
 		matches: (buffer) =>
 			buffer.length >= 6 &&
-			(buffer.subarray(0, 6).toString("ascii") === "GIF87a" || buffer.subarray(0, 6).toString("ascii") === "GIF89a"),
+			(buffer.subarray(0, 6).toString("ascii") === "GIF87a" ||
+				buffer.subarray(0, 6).toString("ascii") === "GIF89a"),
 	},
 	{
 		mimeType: "image/webp",

@@ -70,10 +70,19 @@ const registerFailedLoginAttempt = async (scope, identifier, now = Date.now()) =
 		.insert({ scope, identifier, attempt_count: 1, first_attempt_at: now, last_attempt_at: now, blocked_until: 0 })
 		.onConflict(["scope", "identifier"])
 		.merge({
-			attempt_count: knex.raw(`CASE WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN 1 ELSE ${LOGIN_ATTEMPT_TABLE}.attempt_count + 1 END`, [now, LOGIN_ATTEMPT_WINDOW_MS]),
-			first_attempt_at: knex.raw(`CASE WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN ? ELSE ${LOGIN_ATTEMPT_TABLE}.first_attempt_at END`, [now, LOGIN_ATTEMPT_WINDOW_MS, now]),
+			attempt_count: knex.raw(
+				`CASE WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN 1 ELSE ${LOGIN_ATTEMPT_TABLE}.attempt_count + 1 END`,
+				[now, LOGIN_ATTEMPT_WINDOW_MS],
+			),
+			first_attempt_at: knex.raw(
+				`CASE WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN ? ELSE ${LOGIN_ATTEMPT_TABLE}.first_attempt_at END`,
+				[now, LOGIN_ATTEMPT_WINDOW_MS, now],
+			),
 			last_attempt_at: now,
-			blocked_until: knex.raw(`CASE WHEN (CASE WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN 1 ELSE ${LOGIN_ATTEMPT_TABLE}.attempt_count + 1 END) >= ? THEN ? + ? ELSE 0 END`, [now, LOGIN_ATTEMPT_WINDOW_MS, LOGIN_ATTEMPT_LIMIT, now, LOGIN_ATTEMPT_BLOCK_MS]),
+			blocked_until: knex.raw(
+				`CASE WHEN (CASE WHEN (? - ${LOGIN_ATTEMPT_TABLE}.last_attempt_at) >= ? THEN 1 ELSE ${LOGIN_ATTEMPT_TABLE}.attempt_count + 1 END) >= ? THEN ? + ? ELSE 0 END`,
+				[now, LOGIN_ATTEMPT_WINDOW_MS, LOGIN_ATTEMPT_LIMIT, now, LOGIN_ATTEMPT_BLOCK_MS],
+			),
 		});
 };
 

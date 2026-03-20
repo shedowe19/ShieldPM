@@ -41,7 +41,9 @@ const startBot = async (integration) => {
 			if (!msg) return;
 			try {
 				const sendTyping = async () => {
-					try { await ctx.sendChatAction("typing"); } catch {}
+					try {
+						await ctx.sendChatAction("typing");
+					} catch {}
 				};
 				await sendTyping();
 				const typingInterval = setInterval(sendTyping, 4000);
@@ -56,8 +58,13 @@ const startBot = async (integration) => {
 					try {
 						await ctx.reply(smartEscape(response.content), { parse_mode: "MarkdownV2" });
 					} catch (sendErr) {
-						if (sendErr.message.includes("can't parse entities") || sendErr.message.includes("Can't find end of the entity")) {
-							logger.warn(`[ChatOps] Markdown send failed (${sendErr.message}), falling back to plain text.`);
+						if (
+							sendErr.message.includes("can't parse entities") ||
+							sendErr.message.includes("Can't find end of the entity")
+						) {
+							logger.warn(
+								`[ChatOps] Markdown send failed (${sendErr.message}), falling back to plain text.`,
+							);
 							await ctx.reply(response.content);
 						} else throw sendErr;
 					}

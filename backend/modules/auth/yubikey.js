@@ -43,7 +43,12 @@ const validateYubikeyOtp = (otp) => {
 
 const addYubikey = async (userId, otp, label = "YubiKey") => {
 	const { deviceId } = await validateYubikeyOtp(otp);
-	const existing = await UserTwoFa.query().findOne({ user_id: userId, type: "yubikey", secret: deviceId, is_deleted: 0 });
+	const existing = await UserTwoFa.query().findOne({
+		user_id: userId,
+		type: "yubikey",
+		secret: deviceId,
+		is_deleted: 0,
+	});
 	if (existing) {
 		throw new errs.ValidationError("This YubiKey is already registered");
 	}
@@ -62,7 +67,13 @@ const addYubikey = async (userId, otp, label = "YubiKey") => {
 
 const verifyYubikey = async (userId, otp) => {
 	const { deviceId } = await validateYubikeyOtp(otp);
-	const record = await UserTwoFa.query().findOne({ user_id: userId, type: "yubikey", secret: deviceId, is_verified: 1, is_deleted: 0 });
+	const record = await UserTwoFa.query().findOne({
+		user_id: userId,
+		type: "yubikey",
+		secret: deviceId,
+		is_verified: 1,
+		is_deleted: 0,
+	});
 	return !!record;
 };
 

@@ -9,7 +9,9 @@ const update = async (access, data) => {
 	await access.can("settings:update", data.id);
 	const row = await get(access, { id: data.id });
 	if (row.id !== data.id) {
-		throw new errs.InternalValidationError(`Setting could not be updated, IDs do not match: ${row.id} !== ${data.id}`);
+		throw new errs.InternalValidationError(
+			`Setting could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
+		);
 	}
 	await settingModel.query().where({ id: data.id }).patch(data);
 	const updatedRow = await get(access, { id: data.id });

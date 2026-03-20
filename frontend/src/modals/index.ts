@@ -10,12 +10,16 @@ export * from "./InternalCertificateModal";
 export * from "./RenewCertificateModal";
 export * from "./SetPasswordModal";
 
-export const showAccessListModal = async (...args: Parameters<typeof import("./AccessListModal")["showAccessListModal"]>) => {
+export const showAccessListModal = async (
+	...args: Parameters<typeof import("./AccessListModal")["showAccessListModal"]>
+) => {
 	const module = await import("./AccessListModal");
 	return module.showAccessListModal(...args);
 };
 
-export const showDdnsProviderModal = async (...args: Parameters<typeof import("./DdnsProviderModal")["showDdnsProviderModal"]>) => {
+export const showDdnsProviderModal = async (
+	...args: Parameters<typeof import("./DdnsProviderModal")["showDdnsProviderModal"]>
+) => {
 	const module = await import("./DdnsProviderModal");
 	return module.showDdnsProviderModal(...args);
 };
@@ -25,17 +29,23 @@ export const showDeadHostModal = async (...args: Parameters<typeof import("./Dea
 	return module.showDeadHostModal(...args);
 };
 
-export const showPermissionsModal = async (...args: Parameters<typeof import("./PermissionsModal")["showPermissionsModal"]>) => {
+export const showPermissionsModal = async (
+	...args: Parameters<typeof import("./PermissionsModal")["showPermissionsModal"]>
+) => {
 	const module = await import("./PermissionsModal");
 	return module.showPermissionsModal(...args);
 };
 
-export const showProxyHostModal = async (...args: Parameters<typeof import("./ProxyHostModal")["showProxyHostModal"]>) => {
+export const showProxyHostModal = async (
+	...args: Parameters<typeof import("./ProxyHostModal")["showProxyHostModal"]>
+) => {
 	const module = await import("./ProxyHostModal");
 	return module.showProxyHostModal(...args);
 };
 
-export const showRedirectionHostModal = async (...args: Parameters<typeof import("./RedirectionHostModal")["showRedirectionHostModal"]>) => {
+export const showRedirectionHostModal = async (
+	...args: Parameters<typeof import("./RedirectionHostModal")["showRedirectionHostModal"]>
+) => {
 	const module = await import("./RedirectionHostModal");
 	return module.showRedirectionHostModal(...args);
 };

@@ -56,20 +56,43 @@ const getHostsWithDomains = async (domainNames) => {
 
 const isHostnameTaken = async (hostname, ignore_type, ignore_id) => {
 	const promises = [
-		proxyHostModel.query().where("is_deleted", 0).whereExists(proxyHostModel.relatedQuery("host_domains").where("domain_name", hostname)),
-		redirectionHostModel.query().where("is_deleted", 0).andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
+		proxyHostModel
+			.query()
+			.where("is_deleted", 0)
+			.whereExists(proxyHostModel.relatedQuery("host_domains").where("domain_name", hostname)),
+		redirectionHostModel
+			.query()
+			.where("is_deleted", 0)
+			.andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
 		deadHostModel.query().where("is_deleted", 0).andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
 	];
 	const promisesResults = await Promise.all(promises);
 	let is_taken = false;
 	if (promisesResults[0]) {
-		if (checkHostnameRecordsTaken(hostname, promisesResults[0], ignore_type === "proxy" && ignore_id ? ignore_id : 0)) is_taken = true;
+		if (
+			checkHostnameRecordsTaken(
+				hostname,
+				promisesResults[0],
+				ignore_type === "proxy" && ignore_id ? ignore_id : 0,
+			)
+		)
+			is_taken = true;
 	}
 	if (promisesResults[1]) {
-		if (checkHostnameRecordsTaken(hostname, promisesResults[1], ignore_type === "redirection" && ignore_id ? ignore_id : 0)) is_taken = true;
+		if (
+			checkHostnameRecordsTaken(
+				hostname,
+				promisesResults[1],
+				ignore_type === "redirection" && ignore_id ? ignore_id : 0,
+			)
+		)
+			is_taken = true;
 	}
 	if (promisesResults[2]) {
-		if (checkHostnameRecordsTaken(hostname, promisesResults[2], ignore_type === "dead" && ignore_id ? ignore_id : 0)) is_taken = true;
+		if (
+			checkHostnameRecordsTaken(hostname, promisesResults[2], ignore_type === "dead" && ignore_id ? ignore_id : 0)
+		)
+			is_taken = true;
 	}
 	return { hostname, is_taken };
 };

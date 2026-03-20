@@ -10,7 +10,12 @@ const create = async (access, data) => {
 	const thisData = _.cloneDeep(data);
 	thisData.owner_user_id = access.token.getUserId(1);
 	const row = await DdnsProvider.query().insertAndFetch(thisData);
-	await internalAuditLog.add(access, { action: "created", object_type: "ddns-provider", object_id: row.id, meta: row });
+	await internalAuditLog.add(access, {
+		action: "created",
+		object_type: "ddns-provider",
+		object_id: row.id,
+		meta: row,
+	});
 	ddnsService.process(true);
 	gitOpsService.triggerAutoPush("ddns-provider");
 	return row;
@@ -22,7 +27,12 @@ const update = async (access, data) => {
 	const thisData = _.cloneDeep(data);
 	await DdnsProvider.query().patchAndFetchById(thisData.id, thisData);
 	const row = await get(access, { id: thisData.id });
-	await internalAuditLog.add(access, { action: "updated", object_type: "ddns-provider", object_id: row.id, meta: row });
+	await internalAuditLog.add(access, {
+		action: "updated",
+		object_type: "ddns-provider",
+		object_id: row.id,
+		meta: row,
+	});
 	ddnsService.process(true);
 	gitOpsService.triggerAutoPush("ddns-provider");
 	return row;
@@ -32,7 +42,12 @@ const remove = async (access, data) => {
 	const provider = await DdnsProvider.query().findById(data.id);
 	if (!provider) throw new errs.NotFoundError("DDNS Provider not found");
 	await DdnsProvider.query().deleteById(data.id);
-	await internalAuditLog.add(access, { action: "deleted", object_type: "ddns-provider", object_id: data.id, meta: { name: provider.name } });
+	await internalAuditLog.add(access, {
+		action: "deleted",
+		object_type: "ddns-provider",
+		object_id: data.id,
+		meta: { name: provider.name },
+	});
 	gitOpsService.triggerAutoPush("ddns-provider");
 	return true;
 };

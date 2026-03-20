@@ -7,9 +7,15 @@ import { cleanExpansions, omissions } from "./helpers.js";
 const get = async (access, data) => {
 	const thisData = data || {};
 	const accessData = await access.can("certificates:get", thisData.id);
-	const query = certificateModel.query().where("is_deleted", 0).andWhere("id", thisData.id).allowGraph("[owner,proxy_hosts,redirection_hosts,dead_hosts,streams]").first();
+	const query = certificateModel
+		.query()
+		.where("is_deleted", 0)
+		.andWhere("id", thisData.id)
+		.allowGraph("[owner,proxy_hosts,redirection_hosts,dead_hosts,streams]")
+		.first();
 	if (accessData.permission_visibility !== "all") query.andWhere("owner_user_id", access.token.getUserId(1));
-	if (typeof thisData.expand !== "undefined" && thisData.expand !== null) query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
+	if (typeof thisData.expand !== "undefined" && thisData.expand !== null)
+		query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 	const row = await query.then(utils.omitRow(omissions()));
 	if (!row || !row.id) throw new error.ItemNotFoundError(thisData.id);
 	if (typeof thisData.omit !== "undefined" && thisData.omit !== null) return _.omit(row, [...thisData.omit]);
@@ -18,9 +24,17 @@ const get = async (access, data) => {
 
 const getAll = async (access, expand, searchQuery) => {
 	const accessData = await access.can("certificates:list");
-	const query = certificateModel.query().where("is_deleted", 0).groupBy("id").allowGraph("[owner,proxy_hosts,redirection_hosts,dead_hosts,streams]").orderBy("nice_name", "ASC");
+	const query = certificateModel
+		.query()
+		.where("is_deleted", 0)
+		.groupBy("id")
+		.allowGraph("[owner,proxy_hosts,redirection_hosts,dead_hosts,streams]")
+		.orderBy("nice_name", "ASC");
 	if (accessData.permission_visibility !== "all") query.andWhere("owner_user_id", access.token.getUserId(1));
-	if (typeof searchQuery === "string") query.where(function () { this.where("nice_name", "like", `%${searchQuery}%`); });
+	if (typeof searchQuery === "string")
+		query.where(function () {
+			this.where("nice_name", "like", `%${searchQuery}%`);
+		});
 	if (typeof expand !== "undefined" && expand !== null) query.withGraphFetched(`[${expand.join(", ")}]`);
 	const rows = await query.then(utils.omitRows(omissions()));
 	for (let i = 0; i < rows.length; i++) rows[i] = cleanExpansions(rows[i]);

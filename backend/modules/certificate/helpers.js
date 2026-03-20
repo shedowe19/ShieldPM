@@ -16,7 +16,8 @@ const omissions = () => ["is_deleted", "owner.is_deleted", "meta.dns_provider_cr
 
 const cleanExpansions = (row) => {
 	if (typeof row.proxy_hosts !== "undefined") row.proxy_hosts = utils.omitRows(["is_deleted"])(row.proxy_hosts);
-	if (typeof row.redirection_hosts !== "undefined") row.redirection_hosts = utils.omitRows(["is_deleted"])(row.redirection_hosts);
+	if (typeof row.redirection_hosts !== "undefined")
+		row.redirection_hosts = utils.omitRows(["is_deleted"])(row.redirection_hosts);
 	if (typeof row.dead_hosts !== "undefined") row.dead_hosts = utils.omitRows(["is_deleted"])(row.dead_hosts);
 	if (typeof row.streams !== "undefined") row.streams = utils.omitRows(["is_deleted"])(row.streams);
 	return row;
@@ -52,12 +53,15 @@ const zipFiles = async (source, out) => {
 const checkPrivateKey = async (privateKey) => {
 	const filepath = await tempWrite(privateKey, "/tmp");
 	const failTimeout = setTimeout(() => {
-		throw new error.ValidationError("Result Validation Error: Validation timed out. This could be due to the key being passphrase-protected.");
+		throw new error.ValidationError(
+			"Result Validation Error: Validation timed out. This could be due to the key being passphrase-protected.",
+		);
 	}, 10000);
 	try {
 		const result = await utils.execFile("openssl", ["pkey", "-in", filepath, "-check", "-noout"]);
 		clearTimeout(failTimeout);
-		if (!result.toLowerCase().includes("key is valid")) throw new error.ValidationError(`Result Validation Error: ${result}`);
+		if (!result.toLowerCase().includes("key is valid"))
+			throw new error.ValidationError(`Result Validation Error: ${result}`);
 		fs.unlinkSync(filepath);
 		return true;
 	} catch (err) {
@@ -92,7 +96,8 @@ const getCertificateInfoFromFile = async (certificateFile, throwExpired) => {
 			}
 			return true;
 		});
-		if (!validFrom || !validTo) throw new error.ValidationError(`Could not determine dates from certificate: ${result3}`);
+		if (!validFrom || !validTo)
+			throw new error.ValidationError(`Could not determine dates from certificate: ${result3}`);
 		if (throwExpired && validTo < dayjs().unix()) throw new error.ValidationError("Certificate has expired");
 		certData.dates = { from: validFrom, to: validTo };
 		return certData;
@@ -121,7 +126,11 @@ const validate = (data) => {
 	});
 	const promises = [];
 	Object.entries(files).forEach(([type, content]) => {
-		promises.push(Promise.resolve(type === "certificate_key" ? checkPrivateKey(content) : getCertificateInfo(content, true)).then((res) => ({ [type]: res })));
+		promises.push(
+			Promise.resolve(
+				type === "certificate_key" ? checkPrivateKey(content) : getCertificateInfo(content, true),
+			).then((res) => ({ [type]: res })),
+		);
 	});
 	return Promise.all(promises).then((fileResults) => {
 		let merged = {};
@@ -132,4 +141,14 @@ const validate = (data) => {
 	});
 };
 
-export { allowedSslFiles, checkPrivateKey, cleanExpansions, cleanMeta, getCertificateInfo, getCertificateInfoFromFile, omissions, validate, zipFiles };
+export {
+	allowedSslFiles,
+	checkPrivateKey,
+	cleanExpansions,
+	cleanMeta,
+	getCertificateInfo,
+	getCertificateInfoFromFile,
+	omissions,
+	validate,
+	zipFiles,
+};

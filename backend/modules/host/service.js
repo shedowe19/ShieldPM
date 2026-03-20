@@ -1,5 +1,10 @@
 import { cleanAllRowsCertificateMeta, cleanRowCertificateMeta, cleanSslHstsData } from "./certificate.js";
-import { checkHostnameRecordsTaken, getHostsWithDomains, getHostsWithDomainsFromList, isHostnameTaken } from "./domains.js";
+import {
+	checkHostnameRecordsTaken,
+	getHostsWithDomains,
+	getHostsWithDomainsFromList,
+	isHostnameTaken,
+} from "./domains.js";
 
 export default {
 	cleanSslHstsData,

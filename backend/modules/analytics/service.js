@@ -193,12 +193,28 @@ class AnalyticsService {
 						.insert(row)
 						.onConflict(["proxy_host_id", "timestamp"])
 						.merge({
-							status_code_2xx: AnalyticCount.knex().raw("coalesce(analytic_count.status_code_2xx, 0) + ?", [row.status_code_2xx]),
-							status_code_3xx: AnalyticCount.knex().raw("coalesce(analytic_count.status_code_3xx, 0) + ?", [row.status_code_3xx]),
-							status_code_4xx: AnalyticCount.knex().raw("coalesce(analytic_count.status_code_4xx, 0) + ?", [row.status_code_4xx]),
-							status_code_5xx: AnalyticCount.knex().raw("coalesce(analytic_count.status_code_5xx, 0) + ?", [row.status_code_5xx]),
-							bytes_sent: AnalyticCount.knex().raw("coalesce(analytic_count.bytes_sent, 0) + ?", [row.bytes_sent]),
-							request_count: AnalyticCount.knex().raw("coalesce(analytic_count.request_count, 0) + ?", [row.request_count]),
+							status_code_2xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_2xx, 0) + ?",
+								[row.status_code_2xx],
+							),
+							status_code_3xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_3xx, 0) + ?",
+								[row.status_code_3xx],
+							),
+							status_code_4xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_4xx, 0) + ?",
+								[row.status_code_4xx],
+							),
+							status_code_5xx: AnalyticCount.knex().raw(
+								"coalesce(analytic_count.status_code_5xx, 0) + ?",
+								[row.status_code_5xx],
+							),
+							bytes_sent: AnalyticCount.knex().raw("coalesce(analytic_count.bytes_sent, 0) + ?", [
+								row.bytes_sent,
+							]),
+							request_count: AnalyticCount.knex().raw("coalesce(analytic_count.request_count, 0) + ?", [
+								row.request_count,
+							]),
 						});
 				}
 			});
@@ -220,7 +236,8 @@ class AnalyticsService {
 				const restoredDetailedLogs = detailedBatch.concat(this.detailedLogBuffer);
 				const detailedLogsDropped = Math.max(0, restoredDetailedLogs.length - DETAILED_LOG_BUFFER_LIMIT);
 				this.detailedLogBuffer = restoredDetailedLogs.slice(-DETAILED_LOG_BUFFER_LIMIT);
-				if (detailedLogsDropped > 0) this.logDroppedAnalyticsData({ detailedLogsDropped, aggregationsDropped: 0 });
+				if (detailedLogsDropped > 0)
+					this.logDroppedAnalyticsData({ detailedLogsDropped, aggregationsDropped: 0 });
 			}
 
 			try {
@@ -244,7 +261,8 @@ class AnalyticsService {
 						aggregationsDropped++;
 					}
 				}
-				if (aggregationsDropped > 0) this.logDroppedAnalyticsData({ detailedLogsDropped: 0, aggregationsDropped });
+				if (aggregationsDropped > 0)
+					this.logDroppedAnalyticsData({ detailedLogsDropped: 0, aggregationsDropped });
 			}
 		})();
 
@@ -282,23 +300,83 @@ class AnalyticsService {
 		let since;
 		const now = dayjs();
 		switch (range) {
-			case "1h": since = now.subtract(1, "hour"); break;
-			case "24h": since = now.subtract(24, "hour"); break;
-			case "7d": since = now.subtract(7, "day"); break;
-			case "30d": since = now.subtract(30, "day"); break;
-			default: since = now.subtract(24, "hour"); break;
+			case "1h":
+				since = now.subtract(1, "hour");
+				break;
+			case "24h":
+				since = now.subtract(24, "hour");
+				break;
+			case "7d":
+				since = now.subtract(7, "day");
+				break;
+			case "30d":
+				since = now.subtract(30, "day");
+				break;
+			default:
+				since = now.subtract(24, "hour");
+				break;
 		}
 
 		const sinceIso = since.toISOString();
 		const knex = AnalyticsLogs.knex();
 		const [topCountries, topIps, topReferers, topUserAgents, topPaths, recent, resultTotals] = await Promise.all([
-			knex("analytics_logs").select("country_code").count("* as count").where("host_id", hostId).andWhere("time", ">=", sinceIso).groupBy("country_code").orderBy("count", "desc").limit(10),
-			knex("analytics_logs").select("ip", "country_code").count("* as count").where("host_id", hostId).andWhere("time", ">=", sinceIso).groupBy("ip", "country_code").orderBy("count", "desc").limit(10),
-			knex("analytics_logs").select("referer").count("* as count").where("host_id", hostId).andWhere("time", ">=", sinceIso).whereNotNull("referer").andWhereNot("referer", "-").groupBy("referer").orderBy("count", "desc").limit(10),
-			knex("analytics_logs").select("user_agent").count("* as count").where("host_id", hostId).andWhere("time", ">=", sinceIso).groupBy("user_agent").orderBy("count", "desc").limit(10),
-			knex("analytics_logs").select("path").count("* as count").where("host_id", hostId).andWhere("time", ">=", sinceIso).groupBy("path").orderBy("count", "desc").limit(10),
-			knex("analytics_logs").select("*").where("host_id", hostId).andWhere("time", ">=", sinceIso).orderBy("time", "desc").limit(20),
-			AnalyticCount.query().where("proxy_host_id", hostId).andWhere("timestamp", ">=", sinceIso).sum("request_count as count").sum("status_code_2xx as s2xx").sum("status_code_3xx as s3xx").sum("status_code_4xx as s4xx").sum("status_code_5xx as s5xx").first(),
+			knex("analytics_logs")
+				.select("country_code")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("country_code")
+				.orderBy("count", "desc")
+				.limit(10),
+			knex("analytics_logs")
+				.select("ip", "country_code")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("ip", "country_code")
+				.orderBy("count", "desc")
+				.limit(10),
+			knex("analytics_logs")
+				.select("referer")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.whereNotNull("referer")
+				.andWhereNot("referer", "-")
+				.groupBy("referer")
+				.orderBy("count", "desc")
+				.limit(10),
+			knex("analytics_logs")
+				.select("user_agent")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("user_agent")
+				.orderBy("count", "desc")
+				.limit(10),
+			knex("analytics_logs")
+				.select("path")
+				.count("* as count")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.groupBy("path")
+				.orderBy("count", "desc")
+				.limit(10),
+			knex("analytics_logs")
+				.select("*")
+				.where("host_id", hostId)
+				.andWhere("time", ">=", sinceIso)
+				.orderBy("time", "desc")
+				.limit(20),
+			AnalyticCount.query()
+				.where("proxy_host_id", hostId)
+				.andWhere("timestamp", ">=", sinceIso)
+				.sum("request_count as count")
+				.sum("status_code_2xx as s2xx")
+				.sum("status_code_3xx as s3xx")
+				.sum("status_code_4xx as s4xx")
+				.sum("status_code_5xx as s5xx")
+				.first(),
 		]);
 
 		const totals = resultTotals || {};

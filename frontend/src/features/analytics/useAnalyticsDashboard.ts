@@ -48,10 +48,11 @@ export const useAnalyticsDashboard = (hostId?: number, range = "24h", enabled = 
 
 	const dbStatsQuery = useQuery<DbStats>({
 		queryKey: ["analytics", "db-stats"],
-		queryFn: () => fetch("/api/analytics/db-stats").then((res) => {
-			if (!res.ok) throw new Error("Failed to fetch DB stats");
-			return res.json();
-		}),
+		queryFn: () =>
+			fetch("/api/analytics/db-stats").then((res) => {
+				if (!res.ok) throw new Error("Failed to fetch DB stats");
+				return res.json();
+			}),
 		enabled,
 		refetchInterval: enabled ? 30_000 : false,
 		staleTime: 15_000,

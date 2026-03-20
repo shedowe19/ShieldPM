@@ -18,7 +18,9 @@ const writeTorKeyFiles = async (dir, token) => {
 	await fs.promises.writeFile(path.join(dir, "hs_ed25519_secret_key"), secret, { mode: 0o600 });
 	const pub = Buffer.alloc(32, 0);
 	const pubHeader = Buffer.from([0x3d, 0x3d, 0x00, 0x02, 0x2b, 0x35, 0x03, 0x20]);
-	await fs.promises.writeFile(path.join(dir, "hs_ed25519_public_key"), Buffer.concat([pubHeader, pub]), { mode: 0o600 });
+	await fs.promises.writeFile(path.join(dir, "hs_ed25519_public_key"), Buffer.concat([pubHeader, pub]), {
+		mode: 0o600,
+	});
 	return hostname;
 };
 

@@ -9,9 +9,15 @@ import { omissions } from "./helpers.js";
 const get = async (access, data) => {
 	const thisData = data || {};
 	const accessData = await access.can("dead_hosts:get", thisData.id);
-	const query = deadHostModel.query().where("is_deleted", 0).andWhere("id", thisData.id).allowGraph("[owner,certificate]").first();
+	const query = deadHostModel
+		.query()
+		.where("is_deleted", 0)
+		.andWhere("id", thisData.id)
+		.allowGraph("[owner,certificate]")
+		.first();
 	if (accessData.permission_visibility !== "all") query.andWhere("owner_user_id", access.token.getUserId(1));
-	if (typeof thisData.expand !== "undefined" && thisData.expand !== null) query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
+	if (typeof thisData.expand !== "undefined" && thisData.expand !== null)
+		query.withGraphFetched(`[${thisData.expand.join(", ")}]`);
 	let row = await query;
 	if (!row || !row.id) throw new errs.ItemNotFoundError(thisData.id);
 	row = utils.omitRow(omissions())(row);
@@ -21,7 +27,12 @@ const get = async (access, data) => {
 
 const getAll = async (access, expand, searchQuery) => {
 	const accessData = await access.can("dead_hosts:list");
-	const query = deadHostModel.query().where("is_deleted", 0).groupBy("id").allowGraph("[owner,certificate]").orderBy(castJsonIfNeed("domain_names"), "ASC");
+	const query = deadHostModel
+		.query()
+		.where("is_deleted", 0)
+		.groupBy("id")
+		.allowGraph("[owner,certificate]")
+		.orderBy(castJsonIfNeed("domain_names"), "ASC");
 	if (accessData.permission_visibility !== "all") query.andWhere("owner_user_id", access.token.getUserId(1));
 	if (typeof searchQuery === "string" && searchQuery.length > 0) {
 		query.where(function () {

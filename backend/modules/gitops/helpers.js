@@ -59,7 +59,10 @@ const updateConfig = async (access, data) => {
 	if (data.auto_push !== undefined) newConfig.auto_push = data.auto_push;
 	if (data.auto_pull_on_startup !== undefined) newConfig.auto_pull_on_startup = data.auto_pull_on_startup;
 	if (data.credentials) newConfig.encrypted_credentials = encrypt(data.credentials);
-	await settingModel.query().where("id", "gitops-config").patch({ value: newConfig.enabled ? "enabled" : "disabled", meta: newConfig });
+	await settingModel
+		.query()
+		.where("id", "gitops-config")
+		.patch({ value: newConfig.enabled ? "enabled" : "disabled", meta: newConfig });
 	logger.info("GitOps configuration updated");
 	return getConfig();
 };
@@ -88,7 +91,8 @@ const testConnection = async () => {
 			isPublic = true;
 		} catch {}
 		const result = { success: true, message: `Connected successfully. Default branch: ${info.HEAD || "unknown"}` };
-		if (isPublic) result.warning = "WARNING: This repository appears to be PUBLIC! Please use a PRIVATE repository.";
+		if (isPublic)
+			result.warning = "WARNING: This repository appears to be PUBLIC! Please use a PRIVATE repository.";
 		return result;
 	} catch (err) {
 		logger.error("GitOps connection test failed:", err);
@@ -96,4 +100,15 @@ const testConnection = async () => {
 	}
 };
 
-export { CONFIG_SUBDIR, GITOPS_DIR, ensureDir, getAuth, getConfig, getConfigDir, getConfigInternal, initRepo, testConnection, updateConfig };
+export {
+	CONFIG_SUBDIR,
+	GITOPS_DIR,
+	ensureDir,
+	getAuth,
+	getConfig,
+	getConfigDir,
+	getConfigInternal,
+	initRepo,
+	testConnection,
+	updateConfig,
+};

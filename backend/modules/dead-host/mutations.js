@@ -33,13 +33,19 @@ const create = async (access, data) => {
 	if (typeof data.advanced_config === "undefined") thisData.advanced_config = "";
 	let row = await deadHostModel.query().insertAndFetch(thisData);
 	row = utils.omitRow(omissions())(row);
-	await internalAuditLog.add(access, { action: "created", object_type: "dead-host", object_id: row.id, meta: thisData });
+	await internalAuditLog.add(access, {
+		action: "created",
+		object_type: "dead-host",
+		object_id: row.id,
+		meta: thisData,
+	});
 	if (createCertificate) {
 		const cert = await certificateService.createQuickCertificate(access, data);
 		await update(access, { id: row.id, certificate_id: cert.id }, { skip_configure: true });
 	}
 	const freshRow = await get(access, { id: row.id, expand: ["certificate", "owner"] });
-	if (createCertificate && !freshRow.certificate_id) throw new errs.InternalValidationError("The host was created but the Certificate creation failed.");
+	if (createCertificate && !freshRow.certificate_id)
+		throw new errs.InternalValidationError("The host was created but the Certificate creation failed.");
 	await nginxService.configure(deadHostModel, "dead_host", freshRow);
 	gitOpsService.triggerAutoPush("dead-host");
 	return freshRow;
@@ -50,17 +56,29 @@ const update = async (access, data, options = {}) => {
 	const createCertificate = thisData.certificate_id === "new";
 	if (createCertificate) delete thisData.certificate_id;
 	await access.can("dead_hosts:update", thisData.id);
-	if (typeof thisData.domain_names !== "undefined") await assertDomainsAvailable(thisData.domain_names, "dead", thisData.id);
+	if (typeof thisData.domain_names !== "undefined")
+		await assertDomainsAvailable(thisData.domain_names, "dead", thisData.id);
 	const row = await get(access, { id: thisData.id });
-	if (row.id !== thisData.id) throw new errs.InternalValidationError(`404 Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`);
+	if (row.id !== thisData.id)
+		throw new errs.InternalValidationError(
+			`404 Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
+		);
 	if (createCertificate) {
-		const cert = await certificateService.createQuickCertificate(access, { domain_names: thisData.domain_names || row.domain_names, meta: _.assign({}, row.meta, thisData.meta) });
+		const cert = await certificateService.createQuickCertificate(access, {
+			domain_names: thisData.domain_names || row.domain_names,
+			meta: _.assign({}, row.meta, thisData.meta),
+		});
 		thisData.certificate_id = cert.id;
 	}
 	thisData = _.assign({}, { domain_names: row.domain_names }, data);
 	thisData = hostService.cleanSslHstsData(createCertificate, thisData, row);
 	await deadHostModel.query().where({ id: data.id }).patch(data);
-	await internalAuditLog.add(access, { action: "updated", object_type: "dead-host", object_id: row.id, meta: thisData });
+	await internalAuditLog.add(access, {
+		action: "updated",
+		object_type: "dead-host",
+		object_id: row.id,
+		meta: thisData,
+	});
 	const thisRow = await get(access, { id: thisData.id, expand: ["owner", "certificate"] });
 	if (!options.skip_configure) {
 		const newMeta = await nginxService.configure(deadHostModel, "dead_host", row);

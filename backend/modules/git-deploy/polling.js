@@ -19,7 +19,11 @@ const startPollingForHost = (host) => {
 	if (!host.git_sync_enabled || !host.git_repo_url) return;
 	const intervalMs = intervalToMs(host.git_poll_interval, host.git_poll_unit);
 	const timer = setInterval(async () => {
-		try { await sync(null, host.id); } catch (err) { logger.error(`[git-deploy] Polling sync failed for host ${host.id}:`, err); }
+		try {
+			await sync(null, host.id);
+		} catch (err) {
+			logger.error(`[git-deploy] Polling sync failed for host ${host.id}:`, err);
+		}
 	}, intervalMs);
 	pollingTimers.set(host.id, timer);
 	sync(null, host.id).catch((err) => logger.error(`[git-deploy] Initial sync failed for host ${host.id}:`, err));
@@ -28,7 +32,11 @@ const startPollingForHost = (host) => {
 const startPolling = async () => {
 	if (isDemoMode()) return;
 	try {
-		const hosts = await ProxyHost.query().where("is_deleted", 0).where("forward_scheme", "path").where("git_sync_enabled", true).whereNotNull("git_repo_url");
+		const hosts = await ProxyHost.query()
+			.where("is_deleted", 0)
+			.where("forward_scheme", "path")
+			.where("git_sync_enabled", true)
+			.whereNotNull("git_repo_url");
 		for (const host of hosts) startPollingForHost(host);
 	} catch (err) {
 		logger.error("[git-deploy] Failed to start polling:", err);

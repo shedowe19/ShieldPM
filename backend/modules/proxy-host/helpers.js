@@ -59,4 +59,11 @@ const attachHostDomains = (data) => {
 
 const omitProxyHostRow = (row) => _.omit(row, omissions());
 
-export { attachHostDomains, cleanupOAuth2Proxy, ensureOAuth2Proxy, omitProxyHostRow, omissions, prepareEncryptedFields };
+export {
+	attachHostDomains,
+	cleanupOAuth2Proxy,
+	ensureOAuth2Proxy,
+	omitProxyHostRow,
+	omissions,
+	prepareEncryptedFields,
+};

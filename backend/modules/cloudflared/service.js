@@ -36,11 +36,15 @@ const start = async (tunnel) => {
 			if (newStatus === 3 && errorLog) meta.last_error = errorLog.trim();
 			else delete meta.last_error;
 			patchData.meta = meta;
-			tunnel.$query().patch(patchData).then(() => {
-				logger.info(`[Cloudflared ${tunnel.id}] Updated status to ${newStatus}`);
-			}).catch((err) => {
-				logger.error(`[Cloudflared ${tunnel.id}] Failed to update status:`, err);
-			});
+			tunnel
+				.$query()
+				.patch(patchData)
+				.then(() => {
+					logger.info(`[Cloudflared ${tunnel.id}] Updated status to ${newStatus}`);
+				})
+				.catch((err) => {
+					logger.error(`[Cloudflared ${tunnel.id}] Failed to update status:`, err);
+				});
 		});
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 		if (hasProcess(tunnel.id)) {

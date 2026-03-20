@@ -1,5 +1,10 @@
 import crypto from "node:crypto";
-import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";
+import {
+	generateAuthenticationOptions,
+	generateRegistrationOptions,
+	verifyAuthenticationResponse,
+	verifyRegistrationResponse,
+} from "@simplewebauthn/server";
 import errs from "../../lib/error.js";
 import UserTwoFa from "../../models/user-2fa.js";
 import userModel from "../../models/user.js";
@@ -26,7 +31,11 @@ const getPasskeyContext = (req) => {
 const beginPasskeyRegistration = async (userId, userEmail, req) => {
 	const { rpID } = getPasskeyContext(req);
 	const existingPasskeys = await UserTwoFa.query().where({ user_id: userId, type: "passkey", is_deleted: 0 });
-	const excludeCredentials = existingPasskeys.map((pk) => ({ id: pk.secret, type: "public-key", transports: pk.transports ? pk.transports.split(",") : [] }));
+	const excludeCredentials = existingPasskeys.map((pk) => ({
+		id: pk.secret,
+		type: "public-key",
+		transports: pk.transports ? pk.transports.split(",") : [],
+	}));
 	const user = await userModel.query().findById(userId);
 
 	const options = await generateRegistrationOptions({
@@ -42,14 +51,25 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
 
 	const challengeId = crypto.randomUUID();
 	await UserTwoFa.query().delete().where({ user_id: userId, type: "passkey_challenge", is_verified: 0 });
-	await UserTwoFa.query().insert({ user_id: userId, type: "passkey_challenge", secret: challengeId, meta: { challenge: options.challenge }, is_verified: 0 });
+	await UserTwoFa.query().insert({
+		user_id: userId,
+		type: "passkey_challenge",
+		secret: challengeId,
+		meta: { challenge: options.challenge },
+		is_verified: 0,
+	});
 
 	return { options, challengeId };
 };
 
 const completePasskeyRegistration = async (userId, challengeId, registrationResponse, req, label = "Passkey") => {
 	const { rpID, origin } = getPasskeyContext(req);
-	const challengeRecord = await UserTwoFa.query().findOne({ user_id: userId, type: "passkey_challenge", secret: challengeId, is_verified: 0 });
+	const challengeRecord = await UserTwoFa.query().findOne({
+		user_id: userId,
+		type: "passkey_challenge",
+		secret: challengeId,
+		is_verified: 0,
+	});
 	if (!challengeRecord) {
 		throw new errs.ValidationError("Passkey registration challenge not found or expired");
 	}
@@ -59,7 +79,12 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 		throw new errs.ValidationError("Invalid challenge record");
 	}
 
-	const verification = await verifyRegistrationResponse({ response: registrationResponse, expectedChallenge, expectedOrigin: origin, expectedRPID: rpID });
+	const verification = await verifyRegistrationResponse({
+		response: registrationResponse,
+		expectedChallenge,
+		expectedOrigin: origin,
+		expectedRPID: rpID,
+	});
 	if (!verification.verified || !verification.registrationInfo) {
 		throw new errs.ValidationError("Passkey registration verification failed");
 	}
@@ -89,26 +114,47 @@ const beginPasskeyAuthentication = async (userId, req) => {
 		throw new errs.ValidationError("No passkeys registered for this user");
 	}
 
-	const allowCredentials = passkeys.map((pk) => ({ id: pk.secret, type: "public-key", transports: pk.transports ? pk.transports.split(",") : [] }));
+	const allowCredentials = passkeys.map((pk) => ({
+		id: pk.secret,
+		type: "public-key",
+		transports: pk.transports ? pk.transports.split(",") : [],
+	}));
 	const options = await generateAuthenticationOptions({ rpID, allowCredentials, userVerification: "preferred" });
 
 	const challengeId = crypto.randomUUID();
 	await UserTwoFa.query().delete().where({ user_id: userId, type: "passkey_auth_challenge", is_verified: 0 });
-	await UserTwoFa.query().insert({ user_id: userId, type: "passkey_auth_challenge", secret: challengeId, meta: { challenge: options.challenge }, is_verified: 0 });
+	await UserTwoFa.query().insert({
+		user_id: userId,
+		type: "passkey_auth_challenge",
+		secret: challengeId,
+		meta: { challenge: options.challenge },
+		is_verified: 0,
+	});
 
 	return { options, challengeId };
 };
 
 const completePasskeyAuthentication = async (userId, challengeId, authResponse, req) => {
 	const { rpID, origin } = getPasskeyContext(req);
-	const challengeRecord = await UserTwoFa.query().findOne({ user_id: userId, type: "passkey_auth_challenge", secret: challengeId, is_verified: 0 });
+	const challengeRecord = await UserTwoFa.query().findOne({
+		user_id: userId,
+		type: "passkey_auth_challenge",
+		secret: challengeId,
+		is_verified: 0,
+	});
 	if (!challengeRecord) {
 		throw new errs.ValidationError("Passkey authentication challenge not found or expired");
 	}
 
 	const expectedChallenge = challengeRecord.meta?.challenge;
 	const credentialId = authResponse.id;
-	const passkey = await UserTwoFa.query().findOne({ user_id: userId, type: "passkey", secret: credentialId, is_verified: 1, is_deleted: 0 });
+	const passkey = await UserTwoFa.query().findOne({
+		user_id: userId,
+		type: "passkey",
+		secret: credentialId,
+		is_verified: 1,
+		is_deleted: 0,
+	});
 	if (!passkey) {
 		throw new errs.ValidationError("Passkey not found");
 	}
@@ -119,7 +165,12 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 		expectedChallenge,
 		expectedOrigin: origin,
 		expectedRPID: rpID,
-		credential: { id: passkey.secret, publicKey: new Uint8Array(publicKeyBuffer), counter: passkey.counter, transports: passkey.transports ? passkey.transports.split(",") : [] },
+		credential: {
+			id: passkey.secret,
+			publicKey: new Uint8Array(publicKeyBuffer),
+			counter: passkey.counter,
+			transports: passkey.transports ? passkey.transports.split(",") : [],
+		},
 	});
 	if (!verification.verified) {
 		throw new errs.ValidationError("Passkey authentication failed");
@@ -130,4 +181,10 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 	return true;
 };
 
-export { beginPasskeyAuthentication, beginPasskeyRegistration, completePasskeyAuthentication, completePasskeyRegistration, getPasskeyContext };
+export {
+	beginPasskeyAuthentication,
+	beginPasskeyRegistration,
+	completePasskeyAuthentication,
+	completePasskeyRegistration,
+	getPasskeyContext,
+};

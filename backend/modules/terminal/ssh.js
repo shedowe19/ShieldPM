@@ -4,7 +4,11 @@ import { decrypt } from "../../lib/encryption.js";
 import ProxyHost from "../../models/proxy_host.js";
 
 const resolveHost = async (hostId) => {
-	return ProxyHost.query().findById(hostId).where("forward_scheme", "terminal").where("is_deleted", 0).throwIfNotFound();
+	return ProxyHost.query()
+		.findById(hostId)
+		.where("forward_scheme", "terminal")
+		.where("is_deleted", 0)
+		.throwIfNotFound();
 };
 
 const buildSshConfig = (host) => {

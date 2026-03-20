@@ -12,7 +12,11 @@ export const AnalyticsCharts = ({ series }: Props) => {
 	return (
 		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
 			<Card className="col-span-4">
-				<CardHeader><CardTitle><T id="analytics.requests-over-time" /></CardTitle></CardHeader>
+				<CardHeader>
+					<CardTitle>
+						<T id="analytics.requests-over-time" />
+					</CardTitle>
+				</CardHeader>
 				<CardContent className="pl-2">
 					<div className="h-[350px] flex items-center justify-center">
 						{series.length > 0 ? (
@@ -24,11 +28,34 @@ export const AnalyticsCharts = ({ series }: Props) => {
 											<stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
 										</linearGradient>
 									</defs>
-									<XAxis dataKey="timeDisplay" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} minTickGap={30} />
-									<YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+									<XAxis
+										dataKey="timeDisplay"
+										stroke="#888888"
+										fontSize={12}
+										tickLine={false}
+										axisLine={false}
+										minTickGap={30}
+									/>
+									<YAxis
+										stroke="#888888"
+										fontSize={12}
+										tickLine={false}
+										axisLine={false}
+										tickFormatter={(value) => `${value}`}
+									/>
 									<CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
-									<Tooltip contentStyle={{ backgroundColor: "#1f2937", border: "none" }} labelStyle={{ color: "#f3f4f6" }} />
-									<Area type="monotone" dataKey="count" stroke="#06b6d4" fillOpacity={1} fill="url(#colorCount)" strokeWidth={2} />
+									<Tooltip
+										contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
+										labelStyle={{ color: "#f3f4f6" }}
+									/>
+									<Area
+										type="monotone"
+										dataKey="count"
+										stroke="#06b6d4"
+										fillOpacity={1}
+										fill="url(#colorCount)"
+										strokeWidth={2}
+									/>
 								</AreaChart>
 							</ResponsiveContainer>
 						) : (
@@ -42,14 +69,28 @@ export const AnalyticsCharts = ({ series }: Props) => {
 			</Card>
 
 			<Card className="col-span-3">
-				<CardHeader><CardTitle><T id="analytics.status-codes" /></CardTitle></CardHeader>
+				<CardHeader>
+					<CardTitle>
+						<T id="analytics.status-codes" />
+					</CardTitle>
+				</CardHeader>
 				<CardContent>
 					<div className="h-[350px] flex items-center justify-center">
 						{series.length > 0 ? (
 							<ResponsiveContainer width="100%" height="100%">
 								<BarChart data={series}>
-									<XAxis dataKey="timeDisplay" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} minTickGap={30} />
-									<Tooltip cursor={{ fill: "transparent" }} contentStyle={{ backgroundColor: "#1f2937", border: "none" }} />
+									<XAxis
+										dataKey="timeDisplay"
+										stroke="#888888"
+										fontSize={12}
+										tickLine={false}
+										axisLine={false}
+										minTickGap={30}
+									/>
+									<Tooltip
+										cursor={{ fill: "transparent" }}
+										contentStyle={{ backgroundColor: "#1f2937", border: "none" }}
+									/>
 									<Bar dataKey="s2xx" name="2xx" stackId="a" fill="#22c55e" radius={[0, 0, 4, 4]} />
 									<Bar dataKey="s3xx" name="3xx" stackId="a" fill="#3b82f6" />
 									<Bar dataKey="s4xx" name="4xx" stackId="a" fill="#eab308" />

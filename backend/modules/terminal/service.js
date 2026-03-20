@@ -61,7 +61,15 @@ const terminalService = {
 				}
 			} catch {}
 		});
-		attachShellBridge({ ws, sshClient, initialCols, initialRows, onStream: (stream) => { sshStream = stream; } });
+		attachShellBridge({
+			ws,
+			sshClient,
+			initialCols,
+			initialRows,
+			onStream: (stream) => {
+				sshStream = stream;
+			},
+		});
 		ws.on("close", () => {
 			sshClient.end();
 		});

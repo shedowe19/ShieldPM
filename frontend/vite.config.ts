@@ -35,28 +35,46 @@ export default defineConfig(({ mode }) => ({
 			output: {
 				manualChunks(id) {
 					if (id.includes("node_modules")) {
-						if (["react/", "react-dom/", "react-router-dom/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+						if (
+							["react/", "react-dom/", "react-router-dom/"].some((pkg) =>
+								id.includes(`node_modules/${pkg}`),
+							)
+						) {
 							return "vendor-react";
 						}
 						if (["recharts/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-analytics-charts";
 						}
-						if (["react-simple-maps/", "d3-geo/", "i18n-iso-countries/", "world-atlas/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+						if (
+							["react-simple-maps/", "d3-geo/", "i18n-iso-countries/", "world-atlas/"].some((pkg) =>
+								id.includes(`node_modules/${pkg}`),
+							)
+						) {
 							return "vendor-analytics-map";
 						}
 						if (["@radix-ui/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-ui-radix";
 						}
-						if (["lucide-react/", "@tabler/icons-react/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+						if (
+							["lucide-react/", "@tabler/icons-react/"].some((pkg) => id.includes(`node_modules/${pkg}`))
+						) {
 							return "vendor-ui-icons";
 						}
 						if (["framer-motion/", "motion-dom/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-ui-motion";
 						}
-						if (["@tanstack/", "zod/", "react-hook-form/", "@hookform/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+						if (
+							["@tanstack/", "zod/", "react-hook-form/", "@hookform/"].some((pkg) =>
+								id.includes(`node_modules/${pkg}`),
+							)
+						) {
 							return "vendor-data";
 						}
-						if (["date-fns/", "dayjs/", "jwt-decode/", "i18next/", "react-i18next/", "react-intl/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
+						if (
+							["date-fns/", "dayjs/", "jwt-decode/", "i18next/", "react-i18next/", "react-intl/"].some(
+								(pkg) => id.includes(`node_modules/${pkg}`),
+							)
+						) {
 							return "vendor-utils";
 						}
 					}

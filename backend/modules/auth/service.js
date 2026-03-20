@@ -2,8 +2,18 @@ import errs from "../../lib/error.js";
 import UserTwoFa from "../../models/user-2fa.js";
 import UserTwoFaBackupCode from "../../models/user-2fa-backup-codes.js";
 import { beginDuoAuthentication, completeDuoAuthentication, setupDuo } from "./duo.js";
-import { ensureBackupCodesExist, getRemainingBackupCodeCount, regenerateBackupCodes, verifyBackupCode } from "./backup-codes.js";
-import { beginPasskeyAuthentication, beginPasskeyRegistration, completePasskeyAuthentication, completePasskeyRegistration } from "./passkeys.js";
+import {
+	ensureBackupCodesExist,
+	getRemainingBackupCodeCount,
+	regenerateBackupCodes,
+	verifyBackupCode,
+} from "./backup-codes.js";
+import {
+	beginPasskeyAuthentication,
+	beginPasskeyRegistration,
+	completePasskeyAuthentication,
+	completePasskeyRegistration,
+} from "./passkeys.js";
 import { setupTotp, verifyAndEnableTotp, verifyTotp } from "./totp.js";
 import { addYubikey, verifyYubikey } from "./yubikey.js";
 

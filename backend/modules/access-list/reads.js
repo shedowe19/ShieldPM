@@ -44,7 +44,8 @@ const getAll = async (access, expand, searchQuery) => {
 		.groupBy("access_list.id")
 		.allowGraph("[owner,items,clients]")
 		.orderBy("access_list.name", "ASC");
-	if (accessData.permission_visibility !== "all") query.andWhere("access_list.owner_user_id", access.token.getUserId(1));
+	if (accessData.permission_visibility !== "all")
+		query.andWhere("access_list.owner_user_id", access.token.getUserId(1));
 	if (typeof searchQuery === "string") {
 		query.where(function () {
 			this.where("name", "like", `%${searchQuery}%`);

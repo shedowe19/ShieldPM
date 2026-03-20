@@ -14,11 +14,10 @@ const smartEscape = (text) => {
 
 const createShieldAccess = (integrationUserId) => {
 	const secret = /** @type {string} */ (getPrivateKey());
-	const generatedToken = jwt.sign(
-		{ scope: ["user"], attrs: { id: integrationUserId } },
-		secret,
-		{ algorithm: "RS256", expiresIn: "5m" },
-	);
+	const generatedToken = jwt.sign({ scope: ["user"], attrs: { id: integrationUserId } }, secret, {
+		algorithm: "RS256",
+		expiresIn: "5m",
+	});
 	return new access(generatedToken);
 };
 

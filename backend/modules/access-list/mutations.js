@@ -38,16 +38,36 @@ const create = async (access, data) => {
 	});
 	promises.push(...itemsPromises);
 	data.clients?.map((client) => {
-		promises.push(accessListClientModel.query().insert({ access_list_id: data.id, address: client.address, directive: client.directive, created_on: now(), modified_on: now() }));
+		promises.push(
+			accessListClientModel
+				.query()
+				.insert({
+					access_list_id: data.id,
+					address: client.address,
+					directive: client.directive,
+					created_on: now(),
+					modified_on: now(),
+				}),
+		);
 		return true;
 	});
 	await Promise.all(promises);
-	const freshRow = await get(access, { id: data.id, expand: ["owner", "items", "clients", "proxy_hosts.access_list.[clients,items]"] }, true);
+	const freshRow = await get(
+		access,
+		{ id: data.id, expand: ["owner", "items", "clients", "proxy_hosts.access_list.[clients,items]"] },
+		true,
+	);
 	data.meta = _.assign({}, data.meta || {}, freshRow.meta);
 	await build(freshRow);
-	if (Number.parseInt(freshRow.proxy_host_count, 10)) await nginxService.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
+	if (Number.parseInt(freshRow.proxy_host_count, 10))
+		await nginxService.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
 	if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") await oauth2ProxyService.start(freshRow);
-	await internalAuditLog.add(access, { action: "created", object_type: "access-list", object_id: freshRow.id, meta: maskItems(data) });
+	await internalAuditLog.add(access, {
+		action: "created",
+		object_type: "access-list",
+		object_id: freshRow.id,
+		meta: maskItems(data),
+	});
 	gitOpsService.triggerAutoPush("access-list");
 	return maskItems(freshRow);
 };
@@ -55,10 +75,23 @@ const create = async (access, data) => {
 const update = async (access, data) => {
 	await access.can("access_lists:update", data);
 	const row = await get(access, { id: data.id });
-	if (row.id !== data.id) throw new errs.InternalValidationError(`Access List could not be updated, IDs do not match: ${row.id} !== ${data.id}`);
+	if (row.id !== data.id)
+		throw new errs.InternalValidationError(
+			`Access List could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
+		);
 	if (typeof data.name !== "undefined" && data.name) {
 		logger.info(`[Update] Access List #${data.id} meta: ${JSON.stringify(data.meta)}`);
-		await accessListModel.query().where({ id: data.id }).patch({ name: data.name, satisfy_any: data.satisfy_any, pass_auth: data.pass_auth, mtls_enabled: data.mtls_enabled, mtls_use_internal: data.mtls_use_internal, meta: data.meta });
+		await accessListModel
+			.query()
+			.where({ id: data.id })
+			.patch({
+				name: data.name,
+				satisfy_any: data.satisfy_any,
+				pass_auth: data.pass_auth,
+				mtls_enabled: data.mtls_enabled,
+				mtls_use_internal: data.mtls_use_internal,
+				meta: data.meta,
+			});
 	}
 	if (typeof data.items !== "undefined" && data.items) {
 		const promises = [];
@@ -67,7 +100,9 @@ const update = async (access, data) => {
 			if (item.password) {
 				let finalPass = item.password;
 				if (!finalPass.startsWith("$2")) finalPass = await bcrypt.hash(item.password, 13);
-				return accessListAuthModel.query().insert({ access_list_id: data.id, username: item.username, password: finalPass });
+				return accessListAuthModel
+					.query()
+					.insert({ access_list_id: data.id, username: item.username, password: finalPass });
 			}
 			itemsToKeep.push(item.username);
 			return null;
@@ -87,11 +122,21 @@ const update = async (access, data) => {
 		await accessListClientModel.query().delete().where("access_list_id", data.id);
 		if (clientPromises.length) await Promise.all(clientPromises);
 	}
-	await internalAuditLog.add(access, { action: "updated", object_type: "access-list", object_id: data.id, meta: maskItems(data) });
-	const freshRow = await get(access, { id: data.id, expand: ["owner", "items", "clients", "proxy_hosts.[certificate,access_list.[clients,items]]"] }, true);
+	await internalAuditLog.add(access, {
+		action: "updated",
+		object_type: "access-list",
+		object_id: data.id,
+		meta: maskItems(data),
+	});
+	const freshRow = await get(
+		access,
+		{ id: data.id, expand: ["owner", "items", "clients", "proxy_hosts.[certificate,access_list.[clients,items]]"] },
+		true,
+	);
 	logger.info(`[Update Result] Access List #${data.id} fresh meta: ${JSON.stringify(freshRow.meta)}`);
 	await build(freshRow);
-	if (Number.parseInt(freshRow.proxy_host_count, 10)) await nginxService.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
+	if (Number.parseInt(freshRow.proxy_host_count, 10))
+		await nginxService.bulkGenerateConfigs(proxyHostModel, "proxy_host", freshRow.proxy_hosts);
 	if (freshRow.meta && freshRow.meta.auth_type === "oauth2_proxy") await oauth2ProxyService.restart(freshRow);
 	else await oauth2ProxyService.stop(freshRow.id);
 	await nginxService.reload();
@@ -113,9 +158,16 @@ const remove = async (access, data) => {
 		await nginxService.bulkGenerateConfigs(proxyHostModel, "proxy_host", row.proxy_hosts);
 	}
 	await nginxService.reload();
-	try { await fs.promises.unlink(getFilename(row)); } catch {}
+	try {
+		await fs.promises.unlink(getFilename(row));
+	} catch {}
 	await oauth2ProxyService.stop(row.id);
-	await internalAuditLog.add(access, { action: "deleted", object_type: "access-list", object_id: row.id, meta: _.omit(maskItems(row), ["is_deleted", "proxy_hosts"]) });
+	await internalAuditLog.add(access, {
+		action: "deleted",
+		object_type: "access-list",
+		object_id: row.id,
+		meta: _.omit(maskItems(row), ["is_deleted", "proxy_hosts"]),
+	});
 	gitOpsService.triggerAutoPush("access-list");
 	return true;
 };

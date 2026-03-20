@@ -11,16 +11,36 @@ import { __dirname, advancedConfigHasDefaultLocation, getConfigName, getFileFrie
 const renderLocations = async (host) => {
 	const renderEngine = utils.getRenderEngine();
 	const templatePath = `${__dirname}/../../templates/_proxy_host_custom_location.conf`;
-	const renderedLocationsArray = await Promise.all(host.locations.map(async (location) => {
-		const locationCopy = Object.assign({}, { access_list_id: host.access_list_id }, { certificate_id: host.certificate_id }, { ssl_forced: host.ssl_forced }, { caching_enabled: host.caching_enabled }, { block_exploits: host.block_exploits }, { allow_websocket_upgrade: host.allow_websocket_upgrade }, { http2_support: host.http2_support }, { hsts_enabled: host.hsts_enabled }, { hsts_subdomains: host.hsts_subdomains }, { access_list: host.access_list }, { certificate: host.certificate }, location);
-		if (locationCopy.forward_host.indexOf("/") > -1 && !locationCopy.forward_host.startsWith("/") && !locationCopy.forward_host.startsWith("unix")) {
-			const split = locationCopy.forward_host.split("/");
-			locationCopy.forward_host = split.shift();
-			locationCopy.forward_path = `/${split.join("/")}`;
-		}
-		locationCopy.env = process.env;
-		return renderEngine.renderFile(templatePath, locationCopy);
-	}));
+	const renderedLocationsArray = await Promise.all(
+		host.locations.map(async (location) => {
+			const locationCopy = Object.assign(
+				{},
+				{ access_list_id: host.access_list_id },
+				{ certificate_id: host.certificate_id },
+				{ ssl_forced: host.ssl_forced },
+				{ caching_enabled: host.caching_enabled },
+				{ block_exploits: host.block_exploits },
+				{ allow_websocket_upgrade: host.allow_websocket_upgrade },
+				{ http2_support: host.http2_support },
+				{ hsts_enabled: host.hsts_enabled },
+				{ hsts_subdomains: host.hsts_subdomains },
+				{ access_list: host.access_list },
+				{ certificate: host.certificate },
+				location,
+			);
+			if (
+				locationCopy.forward_host.indexOf("/") > -1 &&
+				!locationCopy.forward_host.startsWith("/") &&
+				!locationCopy.forward_host.startsWith("unix")
+			) {
+				const split = locationCopy.forward_host.split("/");
+				locationCopy.forward_host = split.shift();
+				locationCopy.forward_path = `/${split.join("/")}`;
+			}
+			locationCopy.env = process.env;
+			return renderEngine.renderFile(templatePath, locationCopy);
+		}),
+	);
 	return renderedLocationsArray.join("");
 };
 
@@ -49,7 +69,12 @@ const generateConfig = async (hostType, hostRow) => {
 			return true;
 		});
 	}
-	if (host.forward_host && host.forward_host.indexOf("/") > -1 && !host.forward_host.startsWith("/") && !host.forward_host.startsWith("unix")) {
+	if (
+		host.forward_host &&
+		host.forward_host.indexOf("/") > -1 &&
+		!host.forward_host.startsWith("/") &&
+		!host.forward_host.startsWith("unix")
+	) {
 		const split = host.forward_host.split("/");
 		host.forward_host = split.shift();
 		host.forward_path = `/${split.join("/")}`;
@@ -81,7 +106,9 @@ const generateConfig = async (hostType, hostRow) => {
 		throw new errs.ConfigurationError(err.message);
 	}
 	if (process.env.DISABLE_NGINX_BEAUTIFIER === "false") {
-		try { await utils.execFile("nginxbeautifier", ["-s", "4", filename]); } catch {}
+		try {
+			await utils.execFile("nginxbeautifier", ["-s", "4", filename]);
+		} catch {}
 	}
 	return true;
 };

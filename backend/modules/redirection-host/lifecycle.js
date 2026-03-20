@@ -14,7 +14,12 @@ const remove = async (access, data) => {
 	await redirectionHostModel.query().where("id", row.id).patch({ is_deleted: 1 });
 	await nginxService.deleteConfig("redirection_host", row);
 	await nginxService.reload();
-	await internalAuditLog.add(access, { action: "deleted", object_type: "redirection-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "deleted",
+		object_type: "redirection-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	gitOpsService.triggerAutoPush("redirection-host");
 	return true;
 };
@@ -27,7 +32,12 @@ const enable = async (access, data) => {
 	row.enabled = 1;
 	await redirectionHostModel.query().where("id", row.id).patch({ enabled: 1 });
 	await nginxService.configure(redirectionHostModel, "redirection_host", row);
-	await internalAuditLog.add(access, { action: "enabled", object_type: "redirection-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "enabled",
+		object_type: "redirection-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	return true;
 };
 
@@ -40,7 +50,12 @@ const disable = async (access, data) => {
 	await redirectionHostModel.query().where("id", row.id).patch({ enabled: 0 });
 	await nginxService.deleteConfig("redirection_host", row);
 	await nginxService.reload();
-	await internalAuditLog.add(access, { action: "disabled", object_type: "redirection-host", object_id: row.id, meta: _.omit(row, omissions()) });
+	await internalAuditLog.add(access, {
+		action: "disabled",
+		object_type: "redirection-host",
+		object_id: row.id,
+		meta: _.omit(row, omissions()),
+	});
 	return true;
 };
 
