@@ -98,7 +98,8 @@ vi.mock("../../models/user-2fa-backup-codes.js", () => ({
 				resultSize: vi.fn(() => Promise.resolve(fakeBackupCodeRows.length)),
 			})),
 			insert: vi.fn((rows) => {
-				fakeBackupCodeRows.push(...rows);
+				const normalizedRows = Array.isArray(rows) ? rows : [rows];
+				fakeBackupCodeRows.push(...normalizedRows);
 				return Promise.resolve();
 			}),
 		})),
@@ -119,11 +120,9 @@ vi.mock("../../models/user.js", () => ({
 // ── Mock: otplib ────────────────────────────────────────────────────────────
 
 vi.mock("otplib", () => ({
-	authenticator: {
-		generateSecret: vi.fn(() => "JBSWY3DPEHPK3PXP"),
-		keyuri: vi.fn(() => "otpauth://totp/ShieldPM:test@example.com?secret=JBSWY3DPEHPK3PXP"),
-		verify: vi.fn(() => true),
-	},
+	generateSecret: vi.fn(() => "JBSWY3DPEHPK3PXP"),
+	generateURI: vi.fn(() => "otpauth://totp/ShieldPM:test@example.com?secret=JBSWY3DPEHPK3PXP"),
+	verifySync: vi.fn(() => ({ valid: true })),
 }));
 
 // ── Mock: qrcode ────────────────────────────────────────────────────────────
@@ -308,7 +307,8 @@ describe("2fa-service", () => {
 
 	describe("beginPasskeyRegistration", () => {
 		it("returns WebAuthn options and a challengeId", async () => {
-			const result = await twoFaService.beginPasskeyRegistration(1, "test@example.com");
+			const req = { headers: { origin: "http://localhost:3000" }, protocol: "http", hostname: "localhost" };
+			const result = await twoFaService.beginPasskeyRegistration(1, "test@example.com", req);
 			expect(result).toHaveProperty("options");
 			expect(result).toHaveProperty("challengeId");
 			expect(typeof result.challengeId).toBe("string");
@@ -318,8 +318,9 @@ describe("2fa-service", () => {
 
 	describe("completePasskeyRegistration", () => {
 		it("throws ValidationError when challenge record is not found", async () => {
+			const req = { headers: { origin: "http://localhost:3000" }, protocol: "http", hostname: "localhost" };
 			await expect(
-				twoFaService.completePasskeyRegistration(1, "invalid-challenge-id", {}, "My Key"),
+				twoFaService.completePasskeyRegistration(1, "invalid-challenge-id", {}, req, "My Key"),
 			).rejects.toMatchObject({
 				name: "ValidationError",
 				message: expect.stringContaining("not found"),
@@ -329,7 +330,8 @@ describe("2fa-service", () => {
 
 	describe("beginPasskeyAuthentication", () => {
 		it("throws ValidationError when no passkeys are registered", async () => {
-			await expect(twoFaService.beginPasskeyAuthentication(1)).rejects.toMatchObject({
+			const req = { headers: { origin: "http://localhost:3000" }, protocol: "http", hostname: "localhost" };
+			await expect(twoFaService.beginPasskeyAuthentication(1, req)).rejects.toMatchObject({
 				name: "ValidationError",
 				message: expect.stringContaining("No passkeys"),
 			});
