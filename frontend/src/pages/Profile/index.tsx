@@ -1,6 +1,8 @@
 import { Shield } from "lucide-react";
-import { useState } from "react";
-import SecuritySettings from "./Security";
+import { lazy, Suspense, useState } from "react";
+import { Loading } from "src/components";
+
+const SecuritySettings = lazy(() => import("./Security"));
 
 type ProfileTab = "security";
 
@@ -22,7 +24,11 @@ export default function Profile() {
 						</button>
 					</nav>
 				</aside>
-				<div className="flex-1 lg:max-w-2xl">{activeTab === "security" && <SecuritySettings />}</div>
+				<div className="flex-1 lg:max-w-2xl">
+					<Suspense fallback={<div className="py-8"><Loading /></div>}>
+						{activeTab === "security" && <SecuritySettings />}
+					</Suspense>
+				</div>
 			</div>
 		</div>
 	);

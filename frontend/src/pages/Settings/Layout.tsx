@@ -1,13 +1,15 @@
 import { IconGitBranch, IconRobot, IconSettings } from "@tabler/icons-react";
 import { Lock } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
+import { Loading } from "src/components";
 import { T } from "src/locale";
 import { SETTINGS_TAB, type SettingsTab } from "src/types/enums";
-import AiConfigPage from "./Ai";
-import DefaultSite from "./DefaultSite";
-import GitOps from "./GitOps";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHealth } from "@/hooks/useHealth";
+
+const AiConfigPage = lazy(() => import("./Ai"));
+const DefaultSite = lazy(() => import("./DefaultSite"));
+const GitOps = lazy(() => import("./GitOps"));
 
 export default function Layout() {
 	const health = useHealth();
@@ -26,9 +28,7 @@ export default function Layout() {
 					<CardContent>
 						<div className="p-8 text-center text-muted-foreground">
 							<p className="text-lg font-semibold">Global Settings are disabled in Demo Mode.</p>
-							<p className="mt-2">
-								For security reasons, changing global configurations is not permitted.
-							</p>
+							<p className="mt-2">For security reasons, changing global configurations is not permitted.</p>
 						</div>
 					</CardContent>
 				</Card>
@@ -71,9 +71,11 @@ export default function Layout() {
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
-					{activeTab === SETTINGS_TAB.DEFAULT_SITE && <DefaultSite />}
-					{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
-					{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}
+					<Suspense fallback={<div className="py-8"><Loading /></div>}>
+						{activeTab === SETTINGS_TAB.DEFAULT_SITE && <DefaultSite />}
+						{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
+						{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}
+					</Suspense>
 				</div>
 			</div>
 		</div>
