@@ -13,7 +13,7 @@ import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
 import internalCloudflared from "./internal/cloudflared.js";
-import internalDdns from "./internal/ddns.js";
+import { ddnsService } from "./modules/ddns/index.js";
 import internalDocker from "./internal/docker.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
@@ -58,7 +58,7 @@ async function appStart() {
 		await internalOAuth2Proxy.init();
 		internalDocker.init();
 		internalGitOps.init();
-		internalDdns.initTimer();
+		ddnsService.initTimer();
 		await internalChat.init();
 		internalGitDeploy.init();
 
