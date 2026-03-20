@@ -10,6 +10,7 @@ This directory contains domain-oriented backend modules.
 - `certificate/` — certificate domain split into `reads`, `mutations`, `downloads`, `renewal`, and shared helpers
 - `gitops/` — GitOps domain split into config/helpers, exporter, and sync/import flows
 - `git-deploy/` — Git repository sync for path-based proxy hosts, split into config, sync, polling, and helpers
+- `nginx/` — nginx domain entrypoint, prepared for later split of config generation, file ops, and reload/test flow
 
 ## Migration rule
 

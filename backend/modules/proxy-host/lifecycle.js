@@ -5,7 +5,7 @@ import internalAuditLog from "../../internal/audit-log.js";
 import internalGitDeploy from "../../internal/git-deploy.js";
 import internalGitOps from "../../internal/gitops.js";
 import internalHost from "../../internal/host.js";
-import internalNginx from "../../internal/nginx.js";
+import { nginxService } from "../../modules/nginx/index.js";
 import { cleanupOAuth2Proxy, omissions } from "./helpers.js";
 import { get } from "./reads.js";
 
@@ -14,8 +14,8 @@ const remove = async (access, data) => {
 	const row = await get(access, { id: data.id });
 	if (!row || !row.id) throw new errs.ItemNotFoundError(data.id);
 	await proxyHostModel.query().where("id", row.id).patch({ is_deleted: 1 });
-	await internalNginx.deleteConfig("proxy_host", row);
-	await internalNginx.reload();
+	await nginxService.deleteConfig("proxy_host", row);
+	await nginxService.reload();
 	await internalAuditLog.add(access, { action: "deleted", object_type: "proxy-host", object_id: row.id, meta: _.omit(row, omissions()) });
 	internalGitOps.triggerAutoPush("proxy-host");
 	internalGitDeploy.stopPolling(data.id);
@@ -30,7 +30,7 @@ const enable = async (access, data) => {
 	if (row.enabled) throw new errs.ValidationError("Host is already enabled");
 	row.enabled = 1;
 	await proxyHostModel.query().where("id", row.id).patch({ enabled: 1 });
-	await internalNginx.configure(proxyHostModel, "proxy_host", row);
+	await nginxService.configure(proxyHostModel, "proxy_host", row);
 	if (row.git_sync_enabled && row.git_repo_url) internalGitDeploy.startPollingForHost(row);
 	await internalAuditLog.add(access, { action: "enabled", object_type: "proxy-host", object_id: row.id, meta: _.omit(row, omissions()) });
 	return true;
@@ -43,8 +43,8 @@ const disable = async (access, data) => {
 	if (!row.enabled) throw new errs.ValidationError("Host is already disabled");
 	row.enabled = 0;
 	await proxyHostModel.query().where("id", row.id).patch({ enabled: 0 });
-	await internalNginx.deleteConfig("proxy_host", row);
-	await internalNginx.reload();
+	await nginxService.deleteConfig("proxy_host", row);
+	await nginxService.reload();
 	internalGitDeploy.stopPolling(data.id);
 	await internalAuditLog.add(access, { action: "disabled", object_type: "proxy-host", object_id: row.id, meta: _.omit(row, omissions()) });
 	return true;

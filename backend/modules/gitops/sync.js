@@ -16,7 +16,7 @@ import RedirectionHost from "../../models/redirection_host.js";
 import settingModel from "../../models/setting.js";
 import Stream from "../../models/stream.js";
 import User from "../../models/user.js";
-import internalNginx from "../../internal/nginx.js";
+import { nginxService } from "../../modules/nginx/index.js";
 import { exportConfig } from "./exporter.js";
 import { GITOPS_DIR, getAuth, getConfigInternal, getConfigDir, initRepo } from "./helpers.js";
 
@@ -128,7 +128,7 @@ const importConfig = async (access, options = {}) => {
 			try {
 				const staleItems = await modelClass.query().whereNotIn('id', importedIds);
 				await Promise.allSettled(staleItems.map(async (item) => {
-					if (hostType) await internalNginx.deleteConfig(hostType, item);
+					if (hostType) await nginxService.deleteConfig(hostType, item);
 					if (item.is_deleted !== undefined) await modelClass.query().patchAndFetchById(item.id, { is_deleted: 1 });
 					else await modelClass.query().deleteById(item.id);
 					deleted++;
@@ -166,11 +166,11 @@ const importConfig = async (access, options = {}) => {
 				} catch (err) { errors.push(`settings/${file}: ${err instanceof Error ? err.message : 'Unknown error'}`); }
 			}));
 		}
-		await internalNginx.bulkGenerateConfigs(ProxyHost, 'proxy_host', await ProxyHost.query().where('is_deleted', 0));
-		await internalNginx.bulkGenerateConfigs(RedirectionHost, 'redirection_host', await RedirectionHost.query().where('is_deleted', 0));
-		await internalNginx.bulkGenerateConfigs(DeadHost, 'dead_host', await DeadHost.query().where('is_deleted', 0));
-		await internalNginx.bulkGenerateConfigs(Stream, 'stream', await Stream.query().where('is_deleted', 0));
-		await internalNginx.reload();
+		await nginxService.bulkGenerateConfigs(ProxyHost, 'proxy_host', await ProxyHost.query().where('is_deleted', 0));
+		await nginxService.bulkGenerateConfigs(RedirectionHost, 'redirection_host', await RedirectionHost.query().where('is_deleted', 0));
+		await nginxService.bulkGenerateConfigs(DeadHost, 'dead_host', await DeadHost.query().where('is_deleted', 0));
+		await nginxService.bulkGenerateConfigs(Stream, 'stream', await Stream.query().where('is_deleted', 0));
+		await nginxService.reload();
 		logger.info(`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`);
 		return { success: true, imported, skipped, deleted, errors };
 	} catch (err) {

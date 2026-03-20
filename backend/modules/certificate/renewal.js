@@ -3,7 +3,7 @@ import utils from "../../lib/utils.js";
 import { ssl as logger } from "../../logger.js";
 import certificateModel from "../../models/certificate.js";
 import internalAuditLog from "../../internal/audit-log.js";
-import internalNginx from "../../internal/nginx.js";
+import { nginxService } from "../../modules/nginx/index.js";
 import * as certbot from "../../internal/certbot.js";
 import { get } from "./reads.js";
 import { getCertificateInfoFromFile } from "./helpers.js";
@@ -27,7 +27,7 @@ const processExpiringHosts = async () => {
 		try {
 			const result = await utils.execFile("certbot", ["--config", "/etc/certbot.ini", "renew", "--server", process.env.ACME_SERVER, "--quiet"]);
 			if (result) logger.info(`Renew Result: ${result}`);
-			await internalNginx.reload();
+			await nginxService.reload();
 			logger.info("Renew Complete");
 			const certificates = await certificateModel.query().where("is_deleted", 0).andWhere("provider", "letsencrypt");
 			if (certificates && certificates.length > 0) {

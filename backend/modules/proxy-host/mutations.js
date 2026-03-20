@@ -7,7 +7,7 @@ import internalCertificate from "../../internal/certificate.js";
 import internalGitDeploy from "../../internal/git-deploy.js";
 import internalGitOps from "../../internal/gitops.js";
 import internalHost from "../../internal/host.js";
-import internalNginx from "../../internal/nginx.js";
+import { nginxService } from "../../modules/nginx/index.js";
 import { attachHostDomains, cleanupOAuth2Proxy, ensureOAuth2Proxy, omissions, prepareEncryptedFields } from "./helpers.js";
 import { get } from "./reads.js";
 
@@ -32,7 +32,7 @@ const create = async (access, data) => {
 		await update(access, { id: row.id, certificate_id: cert.id }, { skip_configure: true });
 	}
 	row = await get(access, { id: row.id, expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"] });
-	await internalNginx.configure(proxyHostModel, "proxy_host", row);
+	await nginxService.configure(proxyHostModel, "proxy_host", row);
 	thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
 	await internalAuditLog.add(access, { action: "created", object_type: "proxy-host", object_id: row.id, meta: thisData });
 	internalGitOps.triggerAutoPush("proxy-host");
@@ -67,7 +67,7 @@ const update = async (access, data, options = {}) => {
 	await internalAuditLog.add(access, { action: "updated", object_type: "proxy-host", object_id: row.id, meta: thisData });
 	row = await get(access, { id: thisData.id, expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"] });
 	if (!options.skip_configure) {
-		const newMeta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
+		const newMeta = await nginxService.configure(proxyHostModel, "proxy_host", row);
 		row.meta = newMeta;
 	}
 	internalGitOps.triggerAutoPush("proxy-host");

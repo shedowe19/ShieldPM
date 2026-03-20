@@ -7,7 +7,7 @@ import { isDemoMode } from "../../lib/config.js";
 import errs from "../../lib/error.js";
 import { global as logger } from "../../logger.js";
 import ProxyHost from "../../models/proxy_host.js";
-import internalNginx from "../../internal/nginx.js";
+import { nginxService } from "../../modules/nginx/index.js";
 import { getAuth, getWebsiteDir } from "./helpers.js";
 
 const sync = async (access, hostId) => {
@@ -41,7 +41,7 @@ const sync = async (access, hostId) => {
 		if (host.forward_host !== dir) {
 			await ProxyHost.query().findById(hostId).patch({ forward_host: dir });
 			const updatedHost = await ProxyHost.query().findById(hostId).withGraphFetched("access_list");
-			await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
+			await nginxService.configure(ProxyHost, "proxy_host", updatedHost);
 		}
 		logger.info(`[git-deploy] Sync complete for host ${hostId}, commit: ${latestCommit}`);
 		return { success: true, commit: latestCommit };
