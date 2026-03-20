@@ -1,4 +1,4 @@
-import { Page } from "src/components";
+import { Page } from "src/components/Page";
 
 export function Unhealthy() {
 	return (
