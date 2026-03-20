@@ -3,7 +3,7 @@ import express from "express";
 import fileUpload from "express-fileupload";
 import rateLimit from "express-rate-limit";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
-import internalCertificate from "../../internal/certificate.js";
+import { certificateService } from "../../modules/certificate/index.js";
 import internalPki from "../../internal/pki.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
@@ -96,7 +96,7 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const rows = await internalCertificate.getAll(res.locals.access, data.expand, data.query);
+		const rows = await certificateService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	})
 
@@ -108,7 +108,7 @@ router
 	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates", "post"), req.body);
 		req.setTimeout(900000); // 15 minutes timeout
-		const result = await internalCertificate.create(res.locals.access, payload);
+		const result = await certificateService.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
 
@@ -220,7 +220,7 @@ router
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates/test-http", "post"), req.body);
 		req.setTimeout(60000); // 1 minute timeout
 
-		const result = await internalCertificate.testHttpsChallenge(res.locals.access, payload);
+		const result = await certificateService.testHttpsChallenge(res.locals.access, payload);
 		res.status(200).send(result);
 	});
 
@@ -247,7 +247,7 @@ router
 			return;
 		}
 
-		const result = await internalCertificate.validate({
+		const result = await certificateService.validate({
 			files: req.files,
 		});
 		res.status(200).send(result);
@@ -265,7 +265,7 @@ router.post("/retrieve", jwtdecode(), async (req, res) => {
 		throw new errs.ValidationError("id must be an integer greater than 0");
 	}
 
-	const row = await internalCertificate.get(res.locals.access, {
+	const row = await certificateService.get(res.locals.access, {
 		id: certificateId,
 		expand: expand,
 	});
@@ -294,7 +294,7 @@ router
 			...req.body,
 			id: req.params.certificate_id,
 		});
-		const result = await internalCertificate.update(res.locals.access, payload);
+		const result = await certificateService.update(res.locals.access, payload);
 		res.status(201).send(result);
 	})
 
@@ -308,7 +308,7 @@ router
 		if (Number.isNaN(parsedId)) {
 			return res.status(400).send({ error: { code: 400, message: "Invalid certificate id" } });
 		}
-		const result = await internalCertificate.delete(res.locals.access, {
+		const result = await certificateService.delete(res.locals.access, {
 			id: parsedId,
 		});
 		res.status(200).send(result);
@@ -337,7 +337,7 @@ router
 			return;
 		}
 
-		const result = await internalCertificate.upload(res.locals.access, {
+		const result = await certificateService.upload(res.locals.access, {
 			id: Number.parseInt(req.params.certificate_id, 10),
 			files: req.files,
 		});
@@ -363,7 +363,7 @@ router
 	 */
 	.post(async (req, res) => {
 		req.setTimeout(900000); // 15 minutes timeout
-		const result = await internalCertificate.renew(res.locals.access, {
+		const result = await certificateService.renew(res.locals.access, {
 			id: Number.parseInt(req.params.certificate_id, 10),
 		});
 		res.status(200).send(result);
@@ -389,7 +389,7 @@ router
 	 */
 	.post(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
-		const result = await internalCertificate.download(res.locals.access, {
+		const result = await certificateService.download(res.locals.access, {
 			id: Number.parseInt(payload.id, 10),
 		});
 		res.status(200).download(result.fileName);
