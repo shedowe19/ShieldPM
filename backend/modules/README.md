@@ -25,6 +25,7 @@ This directory contains domain-oriented backend modules.
 - `host/` — shared host domain helpers split into certificate/meta cleanup and hostname/domain checks
 - `token/` — token domain split into auth credential issuance, fresh/user token issuance, and auth-session delegation
 - `user/` — user domain split into reads, mutations, avatar handling, and shared constants/helpers
+- `auth-session/` — auth session domain split into token/session builders, constants, rotation, and revocation service
 
 ## Migration rule
 
