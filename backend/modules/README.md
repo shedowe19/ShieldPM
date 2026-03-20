@@ -33,6 +33,7 @@ This directory contains domain-oriented backend modules.
 - `tor/` — onion-service runtime split into config/key helpers and tor lifecycle orchestration
 - `certbot/` — certbot/TLS automation split into path helpers and request/renew/revoke service orchestration
 - `pki/` — internal PKI split into root-CA/bootstrap helpers and leaf certificate generation
+- `anubis/` — Anubis bot-policy engine split into pure policy builder and service lifecycle
 
 ## Migration rule
 
