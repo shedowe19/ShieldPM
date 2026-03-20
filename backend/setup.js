@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import internalNginx from "./internal/nginx.js";
+import internalNginx from "./modules/nginx/service.js";
 import { installPlugins } from "./lib/certbot.js";
 import utils from "./lib/utils.js";
 import { setup as logger } from "./logger.js";

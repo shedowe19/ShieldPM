@@ -2,9 +2,9 @@ import dayjs from "dayjs";
 import utils from "../../lib/utils.js";
 import { ssl as logger } from "../../logger.js";
 import certificateModel from "../../models/certificate.js";
-import internalAuditLog from "../../internal/audit-log.js";
+import internalAuditLog from "../audit-log/service.js";
 import { nginxService } from "../../modules/nginx/index.js";
-import * as certbot from "../../internal/certbot.js";
+import * as certbot from "../certbot/service.js";
 import { get } from "./reads.js";
 import { getCertificateInfoFromFile } from "./helpers.js";
 

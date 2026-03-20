@@ -10,16 +10,16 @@ process.on("uncaughtException", (err) => {
 });
 
 import app from "./app.js";
-import internalCertificate from "./internal/certificate.js";
+import internalCertificate from "./modules/certificate/service.js";
 import { chatService } from "./modules/chat/index.js";
 import { cloudflaredService } from "./modules/cloudflared/index.js";
 import { ddnsService } from "./modules/ddns/index.js";
 import { dockerService } from "./modules/docker/index.js";
-import internalGitDeploy from "./internal/git-deploy.js";
-import internalGitOps from "./internal/gitops.js";
-import internalIpRanges from "./internal/ip_ranges.js";
+import internalGitDeploy from "./modules/git-deploy/service.js";
+import internalGitOps from "./modules/gitops/service.js";
+import internalIpRanges from "./modules/ip-ranges/service.js";
 import { maintenanceService } from "./modules/maintenance/index.js";
-import internalNginx from "./internal/nginx.js";
+import internalNginx from "./modules/nginx/service.js";
 import { oauth2ProxyService } from "./modules/oauth2-proxy/index.js";
 import { terminalService } from "./modules/terminal/index.js";
 import { torService } from "./modules/tor/index.js";

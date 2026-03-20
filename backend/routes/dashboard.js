@@ -1,5 +1,5 @@
 import express from "express";
-import internalDashboardNote from "../internal/dashboard_note.js";
+import internalDashboardNote from "../modules/dashboard-note/service.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { getValidationSchema } from "../schema/index.js";

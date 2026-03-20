@@ -6,9 +6,9 @@ process.env.INITIAL_ADMIN_PASSWORD = "changeme";
 process.env.INITIAL_DEFAULT_PAGE = "congratulations";
 
 import app from "./app.js";
-import internalCertificate from "./internal/certificate.js";
-import internalIpRanges from "./internal/ip_ranges.js";
-import internalNginx from "./internal/nginx.js";
+import internalCertificate from "./modules/certificate/service.js";
+import internalIpRanges from "./modules/ip-ranges/service.js";
+import internalNginx from "./modules/nginx/service.js";
 import utils from "./lib/utils.js";
 import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";

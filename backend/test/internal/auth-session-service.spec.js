@@ -116,7 +116,7 @@ vi.mock("../../lib/error.js", () => ({
 }));
 
 // ── Import SUT ───────────────────────────────────────────────────────────────
-const { default: authSessionService } = await import("../../internal/auth-session-service.js");
+const { default: authSessionService } = await import("../../modules/auth-session/service.js");
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 describe("auth-session-service", () => {

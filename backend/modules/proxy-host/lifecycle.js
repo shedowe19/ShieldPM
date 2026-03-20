@@ -1,9 +1,9 @@
 import _ from "lodash";
 import errs from "../../lib/error.js";
 import proxyHostModel from "../../models/proxy_host.js";
-import internalAuditLog from "../../internal/audit-log.js";
-import internalGitDeploy from "../../internal/git-deploy.js";
-import internalGitOps from "../../internal/gitops.js";
+import internalAuditLog from "../audit-log/service.js";
+import internalGitDeploy from "../git-deploy/service.js";
+import internalGitOps from "../gitops/service.js";
 import { hostService } from "../../modules/host/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
 import { cleanupOAuth2Proxy, omissions } from "./helpers.js";

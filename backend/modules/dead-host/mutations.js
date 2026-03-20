@@ -2,7 +2,7 @@ import _ from "lodash";
 import errs from "../../lib/error.js";
 import utils from "../../lib/utils.js";
 import deadHostModel from "../../models/dead_host.js";
-import internalAuditLog from "../../internal/audit-log.js";
+import internalAuditLog from "../audit-log/service.js";
 import { certificateService } from "../../modules/certificate/index.js";
 import { gitOpsService } from "../../modules/gitops/index.js";
 import { hostService } from "../../modules/host/index.js";

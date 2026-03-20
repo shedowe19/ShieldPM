@@ -6,7 +6,7 @@ import { ProxyAgent } from "proxy-agent";
 import errs from "../../lib/error.js";
 import utils from "../../lib/utils.js";
 import { ipRanges as logger } from "../../logger.js";
-import internalNginx from "../../internal/nginx.js";
+import internalNginx from "../nginx/service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

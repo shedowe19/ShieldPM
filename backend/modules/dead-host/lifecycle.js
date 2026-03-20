@@ -1,7 +1,7 @@
 import _ from "lodash";
 import errs from "../../lib/error.js";
 import deadHostModel from "../../models/dead_host.js";
-import internalAuditLog from "../../internal/audit-log.js";
+import internalAuditLog from "../audit-log/service.js";
 import { gitOpsService } from "../../modules/gitops/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
 import { omissions } from "./helpers.js";

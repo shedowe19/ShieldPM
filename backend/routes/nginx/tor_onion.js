@@ -1,7 +1,7 @@
 import express from "express";
 import { transaction } from "objection";
 import { auditLogService } from "../../modules/audit-log/index.js";
-import internalTor from "../../internal/tor.js";
+import internalTor from "../../modules/tor/service.js";
 import { isDemoMode } from "../../lib/config.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";

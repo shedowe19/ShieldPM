@@ -56,7 +56,7 @@ vi.mock("../../models/user-2fa.js", () => ({
 	},
 }));
 
-vi.mock("../../internal/auth-session-service.js", () => ({
+vi.mock("../../modules/auth-session/service.js", () => ({
 	default: {
 		ACCESS_TOKEN_TTL: "15m",
 		REFRESH_TOKEN_TTL: "30d",
@@ -138,7 +138,7 @@ vi.mock("bcryptjs", () => ({
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-const { default: internalToken } = await import("../../internal/token.js");
+const { default: internalToken } = await import("../../modules/token/service.js");
 const { default: UserTwoFa } = await import("../../models/user-2fa.js");
 
 describe("internalToken.getTokenFromEmail (2FA-aware login)", () => {

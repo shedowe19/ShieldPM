@@ -1,6 +1,6 @@
 import { decrypt, encrypt } from "../../lib/encryption.js";
 import settingModel from "../../models/setting.js";
-import internalSetting from "../../internal/setting.js";
+import internalSetting from "../setting/service.js";
 
 const AI_CONFIG_ID = "ai-config";
 

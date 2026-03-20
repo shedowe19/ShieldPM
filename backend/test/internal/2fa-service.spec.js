@@ -203,7 +203,7 @@ vi.mock("../../lib/error.js", () => ({
 
 // ── Import SUT ──────────────────────────────────────────────────────────────
 
-const { default: twoFaService } = await import("../../internal/2fa-service.js");
+const { default: twoFaService } = await import("../../modules/auth/service.js");
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 

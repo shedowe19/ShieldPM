@@ -1,7 +1,7 @@
 import _ from "lodash";
 import errs from "../../lib/error.js";
 import DdnsProvider from "../../models/ddns_provider.js";
-import internalAuditLog from "../../internal/audit-log.js";
+import internalAuditLog from "../audit-log/service.js";
 import { ddnsService } from "../../modules/ddns/index.js";
 import { gitOpsService } from "../../modules/gitops/index.js";
 import { get } from "./reads.js";

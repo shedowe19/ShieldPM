@@ -1,4 +1,4 @@
-import authSessionService from "../../internal/auth-session-service.js";
+import authSessionService from "../auth-session/service.js";
 import { getTokenFromEmail, getTokenFromOAuthClaim } from "./auth.js";
 import { getFreshToken, getTokenFromUser } from "./issue.js";
 

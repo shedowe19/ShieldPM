@@ -1,4 +1,4 @@
-import internalNginx from "../internal/nginx.js";
+import internalNginx from "../modules/nginx/service.js";
 import { migrate as logger } from "../logger.js";
 
 const migrateName = "regenerate_default_host";

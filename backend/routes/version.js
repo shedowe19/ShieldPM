@@ -1,5 +1,5 @@
 import express from "express";
-import internalRemoteVersion from "../internal/remote-version.js";
+import internalRemoteVersion from "../modules/remote-version/service.js";
 import { debug, express as logger } from "../logger.js";
 
 const router = express.Router({

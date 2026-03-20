@@ -1,6 +1,6 @@
 import errs from "../../lib/error.js";
 import dashboardNoteModel from "../../models/dashboard_note.js";
-import internalAuditLog from "../../internal/audit-log.js";
+import internalAuditLog from "../audit-log/service.js";
 
 const dashboardNoteService = {
 	create: async (access, data) => {

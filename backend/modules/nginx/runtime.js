@@ -1,7 +1,7 @@
 import _ from "lodash";
 import utils from "../../lib/utils.js";
 import { nginx as logger } from "../../logger.js";
-import internalAnubis from "../../internal/anubis.js";
+import internalAnubis from "../anubis/service.js";
 import { backupConfig, deleteBackupConfig, renameConfigAsError, restoreConfig } from "./files.js";
 import { generateConfig } from "./render.js";
 

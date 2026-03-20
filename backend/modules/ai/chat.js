@@ -1,8 +1,8 @@
 import { global as logger } from "../../logger.js";
-import * as aiProviders from "../../internal/ai/providers.js";
-import { executeTools } from "../../internal/ai/executor.js";
-import { getSystemPrompt } from "../../internal/ai/prompt.js";
-import { getToolDefinitions } from "../../internal/ai/tools.js";
+import * as aiProviders from "./providers.js";
+import { executeTools } from "./executor.js";
+import { getSystemPrompt } from "./prompt.js";
+import { getToolDefinitions } from "./tools.js";
 import { getConfigForChat } from "./config.js";
 
 const extractToolsFromText = (resp) => {

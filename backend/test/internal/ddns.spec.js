@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ddnsService from "../../internal/ddns.js";
+import ddnsService from "../../modules/ddns/service.js";
 import DdnsProvider from "../../models/ddns_provider.js";
 
 // Mock DB

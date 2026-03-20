@@ -9,7 +9,7 @@ import accessListAuthModel from "../../models/access_list_auth.js";
 import accessListClientModel from "../../models/access_list_client.js";
 import now from "../../models/now_helper.js";
 import proxyHostModel from "../../models/proxy_host.js";
-import internalAuditLog from "../../internal/audit-log.js";
+import internalAuditLog from "../audit-log/service.js";
 import { gitOpsService } from "../../modules/gitops/index.js";
 import { nginxService } from "../../modules/nginx/index.js";
 import { oauth2ProxyService } from "../../modules/oauth2-proxy/index.js";

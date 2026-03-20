@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock dependencies to avoid side effects (db connection, file writing)
 vi.mock("../../models/certificate.js", () => ({ default: {} }));
-vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
-vi.mock("../../internal/certbot.js", () => ({
+vi.mock("../../modules/audit-log/service.js", () => ({ default: {} }));
+vi.mock("../../modules/nginx/service.js", () => ({ default: {} }));
+vi.mock("../../modules/certbot/service.js", () => ({
 	installPlugin: vi.fn(),
 	testHttpsChallenge: vi.fn().mockImplementation((_access, domains) => {
 		const result = Object.create(null);
@@ -72,7 +72,7 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 
 // Import the module under test
-import internalCertificate from "../../internal/certificate.js";
+import internalCertificate from "../../modules/certificate/service.js";
 
 describe("Security Fix: Prototype Pollution", () => {
 	beforeEach(() => {

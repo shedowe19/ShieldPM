@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import internalAi from "../../internal/ai.js";
-import internalProxyHost from "../../internal/proxy-host.js";
-import internalSetting from "../../internal/setting.js";
+import internalAi from "../../modules/ai/service.js";
+import internalProxyHost from "../../modules/proxy-host/service.js";
+import internalSetting from "../../modules/setting/service.js";
 import SettingModel from "../../models/setting.js";
 
 // Mock dependencies
-vi.mock("../../internal/setting.js");
-vi.mock("../../internal/proxy-host.js");
+vi.mock("../../modules/setting/service.js");
+vi.mock("../../modules/proxy-host/service.js");
 vi.mock("../../models/setting.js");
 vi.mock("../../lib/logger.js", () => ({
 	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },

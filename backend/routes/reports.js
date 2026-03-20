@@ -1,5 +1,5 @@
 import express from "express";
-import internalReport from "../internal/report.js";
+import internalReport from "../modules/report/service.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 
 const router = express.Router({

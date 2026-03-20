@@ -10,23 +10,23 @@ import { isDemoMode } from "../../lib/config.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import ProxyHost from "../../models/proxy_host.js";
 import TorOnion from "../../models/tor_onion.js";
-import internalAccessList from "../access-list.js";
-import internalAuditLog from "../audit-log.js";
-import internalCertificate from "../certificate.js";
-import internalDdnsProvider from "../ddns-provider.js";
-import internalDeadHost from "../dead-host.js";
-import internalIpRanges from "../ip_ranges.js";
-import internalMaintenance from "../maintenance.js";
-import internalNginx from "../nginx.js";
-import internalPki from "../pki.js";
-import internalProxyHost from "../proxy-host.js";
-import internalRedirectionHost from "../redirection-host.js";
-import internalReport from "../report.js";
-import internalSetting from "../setting.js";
-import internalStream from "../stream.js";
-import internalToken from "../token.js";
-import internalTor from "../tor.js";
-import internalUser from "../user.js";
+import internalAccessList from "../access-list/service.js";
+import internalAuditLog from "../audit-log/service.js";
+import internalCertificate from "../certificate/service.js";
+import internalDdnsProvider from "../ddns-provider/service.js";
+import internalDeadHost from "../dead-host/service.js";
+import internalIpRanges from "../ip-ranges/service.js";
+import internalMaintenance from "../maintenance/service.js";
+import internalNginx from "../nginx/service.js";
+import internalPki from "../pki/service.js";
+import internalProxyHost from "../proxy-host/service.js";
+import internalRedirectionHost from "../redirection-host/service.js";
+import internalReport from "../report/service.js";
+import internalSetting from "../setting/service.js";
+import internalStream from "../stream/service.js";
+import internalToken from "../token/service.js";
+import internalTor from "../tor/service.js";
+import internalUser from "../user/service.js";
 
 /**
  * Validate host data in Demo Mode - blocks private IPs and advanced config
@@ -666,7 +666,7 @@ export const executeTools = async (access, toolCalls) => {
 				// Analytics Alias
 				case "get_analytics_summary": {
 					// Redirect to getHostSummary logic
-					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					const internalAnalytics = (await import("../analytics/service.js")).default;
 					// Use 'all' or first host if not specified, though summary implies specific.
 					// If no host, maybe dashboard summary?
 					// Let's assume dashboard summary if no args
@@ -741,7 +741,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "get_analytics_series": {
 					// Redirect to the robust summary tool logic
-					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					const internalAnalytics = (await import("../analytics/service.js")).default;
 					const summary = await internalAnalytics.getHostSummary(
 						call.args.proxy_host_id || call.args.host_id,
 						call.args.time_range || call.args.range || "24h",
@@ -750,7 +750,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "get_host_analytics": {
-					const internalAnalytics = (await import("../../internal/analytics.js")).default;
+					const internalAnalytics = (await import("../analytics/service.js")).default;
 					const summary = await internalAnalytics.getHostSummary(call.args.host_id, call.args.range || "24h");
 					result = JSON.stringify(summary, null, 2);
 					break;

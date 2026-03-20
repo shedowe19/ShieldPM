@@ -1,7 +1,7 @@
-import internalDeadHost from "../../internal/dead-host.js";
-import internalProxyHost from "../../internal/proxy-host.js";
-import internalRedirectionHost from "../../internal/redirection-host.js";
-import internalStream from "../../internal/stream.js";
+import internalDeadHost from "../dead-host/service.js";
+import internalProxyHost from "../proxy-host/service.js";
+import internalRedirectionHost from "../redirection-host/service.js";
+import internalStream from "../stream/service.js";
 
 const reportService = {
 	getHostsReport: async (access) => {
