@@ -9,6 +9,7 @@ This directory contains domain-oriented backend modules.
 - `proxy-host/` — proxy host domain split into `reads`, `mutations`, `lifecycle`, and shared helpers
 - `certificate/` — certificate domain split into `reads`, `mutations`, `downloads`, `renewal`, and shared helpers
 - `gitops/` — GitOps domain split into config/helpers, exporter, and sync/import flows
+- `git-deploy/` — Git repository sync for path-based proxy hosts, split into config, sync, polling, and helpers
 
 ## Migration rule
 

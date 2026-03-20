@@ -1,5 +1,5 @@
 import express from "express";
-import internalGitDeploy from "../../internal/git-deploy.js";
+import { gitDeployService } from "../../modules/git-deploy/index.js";
 import { proxyHostService } from "../../modules/proxy-host/index.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
@@ -192,7 +192,7 @@ router
 		const hostId = Number.parseInt(req.params.host_id, 10);
 		await res.locals.access.can("proxy_hosts:update", hostId);
 		await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/git-sync", "post"), req.body);
-		const result = await internalGitDeploy.sync(res.locals.access, hostId);
+		const result = await gitDeployService.sync(res.locals.access, hostId);
 		res.status(200).send(result);
 	});
 
@@ -216,7 +216,7 @@ router
 	.get(async (req, res) => {
 		const hostId = Number.parseInt(req.params.host_id, 10);
 		await res.locals.access.can("proxy_hosts:get", hostId);
-		const result = await internalGitDeploy.getStatus(res.locals.access, hostId);
+		const result = await gitDeployService.getStatus(res.locals.access, hostId);
 		res.status(200).send(result);
 	})
 
@@ -231,7 +231,7 @@ router
 			getValidationSchema("/nginx/proxy-hosts/{hostID}/git-status", "put"),
 			req.body,
 		);
-		const result = await internalGitDeploy.updateConfig(res.locals.access, hostId, payload);
+		const result = await gitDeployService.updateConfig(res.locals.access, hostId, payload);
 		res.status(200).send(result);
 	});
 
