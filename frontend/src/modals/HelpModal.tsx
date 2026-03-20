@@ -6,12 +6,31 @@ import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter } from "src/components/ui/dialog";
 import { ScrollArea } from "src/components/ui/scroll-area";
 import { getLocale, T } from "src/locale";
-import { getHelpFile } from "src/locale/HelpDoc";
 
 interface Props extends InnerModalProps {
 	section: string;
 	color?: string;
 }
+
+const helpDocLoaders = import.meta.glob("../locale/HelpDoc/*/*.md", {
+	query: "?raw",
+	import: "default",
+});
+
+const fallbackLang = "en";
+
+const loadHelpFile = async (lang: string, section: string): Promise<string> => {
+	const candidates = [`../locale/HelpDoc/${lang}/${section}.md`, `../locale/HelpDoc/${fallbackLang}/${section}.md`];
+
+	for (const candidate of candidates) {
+		const loader = helpDocLoaders[candidate];
+		if (loader) {
+			return (await loader()) as string;
+		}
+	}
+
+	throw new Error(`Cannot load help doc for ${lang}-${section}`);
+};
 
 const showHelpModal = (section: string, color?: string) => {
 	EasyModal.show(HelpModal, { section, color });
@@ -22,14 +41,25 @@ const HelpModal = EasyModal.create(({ section, visible, remove }: Props) => {
 	const lang = getLocale(true);
 
 	useEffect(() => {
-		try {
-			const docFile = getHelpFile(lang, section);
-			fetch(docFile)
-				.then((response) => response.text())
-				.then(setMarkdownText);
-		} catch (ex) {
-			if (ex instanceof Error) setMarkdownText(`**ERROR:** ${ex.message}`);
-		}
+		let active = true;
+
+		const run = async () => {
+			try {
+				const doc = await loadHelpFile(lang, section);
+				if (active) {
+					setMarkdownText(doc);
+				}
+			} catch (ex) {
+				if (active && ex instanceof Error) {
+					setMarkdownText(`**ERROR:** ${ex.message}`);
+				}
+			}
+		};
+
+		void run();
+		return () => {
+			active = false;
+		};
 	}, [lang, section]);
 
 	return (

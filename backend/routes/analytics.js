@@ -4,6 +4,23 @@ import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
 const router = express.Router();
 
+const responseCache = new Map();
+
+const withCachedJson = async (key, ttlMs, producer) => {
+	const cached = responseCache.get(key);
+	const now = Date.now();
+	if (cached && cached.expiresAt > now) {
+		return cached.value;
+	}
+
+	const value = await producer();
+	responseCache.set(key, {
+		value,
+		expiresAt: now + ttlMs,
+	});
+	return value;
+};
+
 // Apply auth to all analytics endpoints
 router.use(jwtdecode());
 
@@ -143,17 +160,17 @@ router.get("/top-hosts", async (req, res) => {
 import si from "systeminformation";
 router.get("/status", async (_req, res) => {
 	try {
-		const net = await si.networkStats();
-		// Sum up all interfaces or specifically 'eth0' if known?
-		// Usually, the first non-internal interface is good.
-		// sum rx_sec and tx_sec (received/transferred bytes per second)
-		const rx = net.reduce((acc, iface) => acc + (iface.rx_sec || 0), 0);
-		const tx = net.reduce((acc, iface) => acc + (iface.tx_sec || 0), 0);
-		res.json({
-			rx_sec: rx,
-			tx_sec: tx,
-			total_sec: rx + tx,
+		const payload = await withCachedJson("analytics-status", 5000, async () => {
+			const net = await si.networkStats();
+			const rx = net.reduce((acc, iface) => acc + (iface.rx_sec || 0), 0);
+			const tx = net.reduce((acc, iface) => acc + (iface.tx_sec || 0), 0);
+			return {
+				rx_sec: rx,
+				tx_sec: tx,
+				total_sec: rx + tx,
+			};
 		});
+		res.json(payload);
 	} catch (err) {
 		res.status(500).json({
 			error: err.message,
@@ -168,87 +185,78 @@ import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
  */
 router.get("/db-stats", async (_req, res) => {
 	try {
-		const knex = AnalyticCount.knex();
-		const stats = {
-			engine: "unknown",
-			size: 0,
-			connections: {
-				open: 0,
-				used: 0,
-				max: 0,
-			},
-			io: {
-				reads: 0,
-				writes: 0,
-			},
-		};
-		if (isSqlite()) {
-			stats.engine = "sqlite";
-			// Get database file size via PRAGMA
-			const pageCount = await knex.raw("PRAGMA page_count");
-			const pageSize = await knex.raw("PRAGMA page_size");
-			stats.size = pageCount[0].page_count * pageSize[0].page_size;
-			// SQLite with better-sqlite3 uses synchronous single connection
-			stats.connections = {
-				open: 1,
-				used: 1,
-				max: 1,
+		const payload = await withCachedJson("analytics-db-stats", 15000, async () => {
+			const knex = AnalyticCount.knex();
+			const stats = {
+				engine: "unknown",
+				size: 0,
+				connections: {
+					open: 0,
+					used: 0,
+					max: 0,
+				},
+				io: {
+					reads: 0,
+					writes: 0,
+				},
 			};
-			// SQLite doesn't expose cumulative read/write stats easily,
-			// but we can get cache hit ratio from PRAGMA
+			if (isSqlite()) {
+				stats.engine = "sqlite";
+				const pageCount = await knex.raw("PRAGMA page_count");
+				const pageSize = await knex.raw("PRAGMA page_size");
+				stats.size = pageCount[0].page_count * pageSize[0].page_size;
+				stats.connections = {
+					open: 1,
+					used: 1,
+					max: 1,
+				};
 
-			const cacheStats = await knex.raw("PRAGMA cache_stats");
-			if (cacheStats?.[0]) {
-				stats.io.reads = cacheStats[0].read || 0;
-				stats.io.writes = cacheStats[0].write || 0;
+				const cacheStats = await knex.raw("PRAGMA cache_stats");
+				if (cacheStats?.[0]) {
+					stats.io.reads = cacheStats[0].read || 0;
+					stats.io.writes = cacheStats[0].write || 0;
+				}
+			} else if (isMysql()) {
+				stats.engine = "mysql";
+				const [sizeResult] = await knex.raw(`
+					SELECT SUM(data_length + index_length) as size
+					FROM information_schema.tables
+					WHERE table_schema = DATABASE()
+				`);
+				stats.size = Number.parseInt(sizeResult[0]?.size || 0, 10);
+				const [connResult] = await knex.raw("SHOW STATUS LIKE 'Threads_connected'");
+				stats.connections.open = Number.parseInt(connResult[0]?.Value || 0, 10);
+				const [readResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Handler_read_rnd_next'");
+				const [writeResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Handler_write'");
+				stats.io.reads = Number.parseInt(readResult[0]?.Value || 0, 10);
+				stats.io.writes = Number.parseInt(writeResult[0]?.Value || 0, 10);
+			} else if (isPostgres()) {
+				stats.engine = "postgresql";
+				const sizeResult = await knex.raw("SELECT pg_database_size(current_database()) as size");
+				stats.size = Number.parseInt(sizeResult.rows[0]?.size || 0, 10);
+				const connResult = await knex.raw(`
+					SELECT count(*) as open FROM pg_stat_activity
+					WHERE datname = current_database()
+				`);
+				stats.connections.open = Number.parseInt(connResult.rows[0]?.open || 0, 10);
+				const ioResult = await knex.raw(`
+					SELECT blks_read, blks_hit, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted
+					FROM pg_stat_database
+					WHERE datname = current_database()
+				`);
+				if (ioResult.rows[0]) {
+					stats.io.reads =
+						Number.parseInt(ioResult.rows[0].blks_read || 0, 10) +
+						Number.parseInt(ioResult.rows[0].blks_hit || 0, 10);
+					stats.io.writes =
+						Number.parseInt(ioResult.rows[0].tup_inserted || 0, 10) +
+						Number.parseInt(ioResult.rows[0].tup_updated || 0, 10) +
+						Number.parseInt(ioResult.rows[0].tup_deleted || 0, 10);
+				}
 			}
-		} else if (isMysql()) {
-			stats.engine = "mysql";
-			// MySQL database size
-			const [sizeResult] = await knex.raw(`
-				SELECT SUM(data_length + index_length) as size
-				FROM information_schema.tables
-				WHERE table_schema = DATABASE()
-			`);
-			stats.size = Number.parseInt(sizeResult[0]?.size || 0, 10);
-			// MySQL connections
-			const [connResult] = await knex.raw("SHOW STATUS LIKE 'Threads_connected'");
-			stats.connections.open = Number.parseInt(connResult[0]?.Value || 0, 10);
-			// MySQL I/O stats (Handler-based, works with all storage engines)
-			const [readResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Handler_read_rnd_next'");
-			const [writeResult] = await knex.raw("SHOW GLOBAL STATUS LIKE 'Handler_write'");
-			stats.io.reads = Number.parseInt(readResult[0]?.Value || 0, 10);
-			stats.io.writes = Number.parseInt(writeResult[0]?.Value || 0, 10);
-		} else if (isPostgres()) {
-			stats.engine = "postgresql";
-			// PostgreSQL database size
-			const sizeResult = await knex.raw("SELECT pg_database_size(current_database()) as size");
-			stats.size = Number.parseInt(sizeResult.rows[0]?.size || 0, 10);
-			// PostgreSQL connections
-			const connResult = await knex.raw(`
-				SELECT count(*) as open FROM pg_stat_activity
-				WHERE datname = current_database()
-			`);
-			stats.connections.open = Number.parseInt(connResult.rows[0]?.open || 0, 10);
-			// PostgreSQL I/O stats from pg_stat_database
-			const ioResult = await knex.raw(`
-				SELECT blks_read, blks_hit, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted
-				FROM pg_stat_database
-				WHERE datname = current_database()
-			`);
-			if (ioResult.rows[0]) {
-				// Reads = blocks read from disk + blocks from cache (hit)
-				stats.io.reads =
-					Number.parseInt(ioResult.rows[0].blks_read || 0, 10) +
-					Number.parseInt(ioResult.rows[0].blks_hit || 0, 10);
-				// Writes = inserts + updates + deletes
-				stats.io.writes =
-					Number.parseInt(ioResult.rows[0].tup_inserted || 0, 10) +
-					Number.parseInt(ioResult.rows[0].tup_updated || 0, 10) +
-					Number.parseInt(ioResult.rows[0].tup_deleted || 0, 10);
-			}
-		}
-		res.json(stats);
+			return stats;
+		});
+		res.json(payload);
 	} catch (err) {
 		res.status(500).json({
 			error: err.message,

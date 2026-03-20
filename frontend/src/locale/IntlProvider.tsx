@@ -1,68 +1,25 @@
 import { createIntl, createIntlCache } from "react-intl";
-import langBg from "./lang/bg.json";
-import langDe from "./lang/de.json";
 import langEn from "./lang/en.json";
-import langEs from "./lang/es.json";
-import langIt from "./lang/it.json";
-import langJa from "./lang/ja.json";
-import langKo from "./lang/ko.json";
 import langList from "./lang/lang-list.json";
-import langNl from "./lang/nl.json";
-import langPl from "./lang/pl.json";
-import langRu from "./lang/ru.json";
-import langSk from "./lang/sk.json";
-import langVi from "./lang/vi.json";
-import langZh from "./lang/zh.json";
 
-// Force HMR reload
-
-// first item of each array should be the language code,
-// not the country code
-// Remember when adding to this list, also update check-locales.js script
-export type LocaleOption = [string, string, Record<string, string>];
-const localeOptions: LocaleOption[] = [
-	["en", "en-US", langEn],
-	["de", "de-DE", langDe],
-	["es", "es-ES", langEs],
-	["ja", "ja-JP", langJa],
-	["it", "it-IT", langIt],
-	["nl", "nl-NL", langNl],
-	["pl", "pl-PL", langPl],
-	["ru", "ru-RU", langRu],
-	["sk", "sk-SK", langSk],
-	["vi", "vi-VN", langVi],
-	["zh", "zh-CN", langZh],
-	["ko", "ko-KR", langKo],
-	["bg", "bg-BG", langBg],
+export type LocaleOption = [string, string];
+export const localeOptions: LocaleOption[] = [
+	["en", "en-US"],
+	["de", "de-DE"],
+	["es", "es-ES"],
+	["ja", "ja-JP"],
+	["it", "it-IT"],
+	["nl", "nl-NL"],
+	["pl", "pl-PL"],
+	["ru", "ru-RU"],
+	["sk", "sk-SK"],
+	["vi", "vi-VN"],
+	["zh", "zh-CN"],
+	["ko", "ko-KR"],
+	["bg", "bg-BG"],
 ];
 
-const loadMessages = (locale?: string): typeof langList & typeof langEn => {
-	const thisLocale = (locale || "en").slice(0, 2);
-
-	// find language
-	const found = localeOptions.find(([code]) => code === thisLocale);
-	const messages = found ? found[2] : langEn;
-
-	return Object.assign({}, langList, langEn, messages);
-};
-
-const getFlagCodeForLocale = (locale?: string) => {
-	const thisLocale = (locale || "en").slice(0, 2);
-
-	// only add to this if your flag is different from the locale code
-	const specialCases: Record<string, string> = {
-		ja: "jp", // Japan
-		zh: "cn", // China
-		vi: "vn", // Vietnam
-		ko: "kr", // Korea
-		en: "gb", // English (UK)
-	};
-
-	if (specialCases[thisLocale]) {
-		return specialCases[thisLocale].toUpperCase();
-	}
-	return thisLocale.toUpperCase();
-};
+const localeLoaders = import.meta.glob<Record<string, string>>("./lang/*.json", { import: "default" });
 
 const getLocale = (short = false) => {
 	let loc = window.localStorage.getItem("locale");
@@ -72,27 +29,54 @@ const getLocale = (short = false) => {
 	if (short) {
 		return loc ? loc.slice(0, 2) : "en";
 	}
-	// finally, fallback
 	if (!loc) {
 		loc = "en";
 	}
 	return loc;
 };
 
-const cache = createIntlCache();
+const getLocaleMessages = async (locale?: string) => {
+	const thisLocale = (locale || "en").slice(0, 2);
+	const normalizedLocale = localeOptions.find(([code]) => code === thisLocale)?.[0] || "en";
+	const englishMessages = langEn as Record<string, string>;
+	const localeMessages = normalizedLocale === "en" ? englishMessages : ((await localeLoaders[`./lang/${normalizedLocale}.json`]()) || {}) as Record<string, string>;
 
-const initialMessages = loadMessages(getLocale());
-let intl = createIntl({ locale: getLocale(), messages: initialMessages }, cache);
+	return Object.assign({}, langList, englishMessages, localeMessages);
+};
+
+const getFlagCodeForLocale = (locale?: string) => {
+	const thisLocale = (locale || "en").slice(0, 2);
+	const specialCases: Record<string, string> = {
+		ja: "jp",
+		zh: "cn",
+		vi: "vn",
+		ko: "kr",
+		en: "gb",
+	};
+
+	if (specialCases[thisLocale]) {
+		return specialCases[thisLocale].toUpperCase();
+	}
+	return thisLocale.toUpperCase();
+};
+
+const cache = createIntlCache();
+const defaultMessages = Object.assign({}, langList, langEn);
+let intl = createIntl({ locale: "en", messages: defaultMessages }, cache);
+
+const initLocale = async () => {
+	const locale = getLocale();
+	const messages = await getLocaleMessages(locale);
+	intl = createIntl({ locale, messages }, cache);
+	document.documentElement.lang = locale;
+	return intl;
+};
 
 const changeLocale = (locale: string): void => {
-	const messages = loadMessages(locale);
-	intl = createIntl({ locale, messages }, cache);
 	window.localStorage.setItem("locale", locale);
 	document.documentElement.lang = locale;
 };
 
-// This is a translation component that wraps the translation in a span with a data
-// attribute so devs can inspect the element to see the translation ID
 const T = ({
 	id,
 	data,
@@ -104,7 +88,6 @@ const T = ({
 }) => {
 	const translatedData: Record<string, string> = {};
 	if (tData) {
-		// iterate over tData and translate each value
 		Object.entries(tData).forEach(([key, value]) => {
 			translatedData[key] = intl.formatMessage({ id: value });
 		});
@@ -122,4 +105,4 @@ const T = ({
 	);
 };
 
-export { localeOptions, getFlagCodeForLocale, getLocale, createIntl, changeLocale, intl, T };
+export { getFlagCodeForLocale, getLocale, createIntl, changeLocale, intl, initLocale, T };

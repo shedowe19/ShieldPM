@@ -1,18 +1,23 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
-import tsconfigPaths from "vite-tsconfig-paths";
 import "vitest/config";
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
 	plugins: [
 		react(),
-		checker({
-			typescript: true,
-		}),
-		tsconfigPaths(),
+		...(mode === "development"
+			? [
+					checker({
+						typescript: true,
+					}),
+				]
+			: []),
 	],
+	resolve: {
+		tsconfigPaths: true,
+	},
 	server: {
 		host: true,
 		port: 5173,
@@ -30,11 +35,7 @@ export default defineConfig({
 			output: {
 				manualChunks(id) {
 					if (id.includes("node_modules")) {
-						if (
-							["react/", "react-dom/", "react-router-dom/"].some((pkg) =>
-								id.includes(`node_modules/${pkg}`),
-							)
-						) {
+						if (["react/", "react-dom/", "react-router-dom/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-react";
 						}
 						if (
@@ -48,18 +49,10 @@ export default defineConfig({
 						) {
 							return "vendor-ui";
 						}
-						if (
-							["@tanstack/", "zod/", "react-hook-form/", "@hookform/"].some((pkg) =>
-								id.includes(`node_modules/${pkg}`),
-							)
-						) {
+						if (["@tanstack/", "zod/", "react-hook-form/", "@hookform/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-data";
 						}
-						if (
-							["date-fns/", "dayjs/", "jwt-decode/", "i18next/", "react-i18next/", "react-intl/"].some(
-								(pkg) => id.includes(`node_modules/${pkg}`),
-							)
-						) {
+						if (["date-fns/", "dayjs/", "jwt-decode/", "i18next/", "react-i18next/", "react-intl/"].some((pkg) => id.includes(`node_modules/${pkg}`))) {
 							return "vendor-utils";
 						}
 					}
@@ -67,10 +60,9 @@ export default defineConfig({
 			},
 		},
 	},
-
 	test: {
 		environment: "happy-dom",
 		setupFiles: ["./vitest-setup.js"],
 	},
 	assetsInclude: ["**/*.md", "**/*.png", "**/*.svg"],
-});
+}));
