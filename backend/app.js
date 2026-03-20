@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
-import analyticsService from "./internal/analytics.js";
+import { analyticsService } from "./modules/analytics/index.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";

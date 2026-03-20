@@ -3,7 +3,7 @@ import express from "express";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import AnalyticCount from "../../models/analytic_count.js";
-import internalAnalytics from "../../internal/analytics.js";
+import { analyticsService } from "../../modules/analytics/index.js";
 
 const router = express.Router({
 	mergeParams: true,
@@ -19,7 +19,7 @@ router.get("/:hostId", jwtdecode(), async (req, res, next) => {
 		const hostId = Number.parseInt(req.params.hostId, 10);
 		const range = req.query.range || "24h";
 
-		await internalAnalytics.assertHostAccess(res.locals.access, hostId);
+		await analyticsService.assertHostAccess(res.locals.access, hostId);
 
 		let since;
 		const now = dayjs();
@@ -69,7 +69,7 @@ router.get("/:hostId/summary", jwtdecode(), async (req, res, next) => {
 		const hostId = Number.parseInt(req.params.hostId, 10);
 		const range = req.query.range || "24h";
 
-		const summary = await internalAnalytics.getHostSummary(res.locals.access, hostId, range);
+		const summary = await analyticsService.getHostSummary(res.locals.access, hostId, range);
 
 		res.json({
 			...summary.stats,
