@@ -1,5 +1,5 @@
 import express from "express";
-import internalAccessList from "../../internal/access-list.js";
+import { accessListService } from "../../modules/access-list/index.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
@@ -44,7 +44,7 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const rows = await internalAccessList.getAll(res.locals.access, data.expand, data.query);
+		const rows = await accessListService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	})
 
@@ -55,7 +55,7 @@ router
 	 */
 	.post(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/access-lists", "post"), req.body);
-		const result = await internalAccessList.create(res.locals.access, payload);
+		const result = await accessListService.create(res.locals.access, payload);
 		res.status(201).send(result);
 	});
 
@@ -95,7 +95,7 @@ router
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 			},
 		);
-		const row = await internalAccessList.get(res.locals.access, {
+		const row = await accessListService.get(res.locals.access, {
 			id: Number.parseInt(data.list_id, 10),
 			expand: data.expand,
 		});
@@ -110,7 +110,7 @@ router
 	.put(async (req, res, _next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/access-lists/{listID}", "put"), req.body);
 		payload.id = Number.parseInt(req.params.list_id, 10);
-		const result = await internalAccessList.update(res.locals.access, payload);
+		const result = await accessListService.update(res.locals.access, payload);
 		res.status(200).send(result);
 	})
 
@@ -120,7 +120,7 @@ router
 	 * Delete and existing access-list
 	 */
 	.delete(async (req, res, _next) => {
-		const result = await internalAccessList.delete(res.locals.access, {
+		const result = await accessListService.delete(res.locals.access, {
 			id: Number.parseInt(req.params.list_id, 10),
 		});
 		res.status(200).send(result);
