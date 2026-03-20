@@ -29,6 +29,7 @@ This directory contains domain-oriented backend modules.
 - `setting/` — setting domain split into reads and update/runtime reconfiguration mutations
 - `ai/` — AI domain split into config, model discovery, and chat/tool orchestration facade
 - `chat/` — chat integration domain split into helpers, bot state, and bot lifecycle/message orchestration
+- `terminal/` — terminal runtime split into websocket/service lifecycle and SSH/session bridge helpers
 
 ## Migration rule
 

@@ -21,7 +21,7 @@ import internalIpRanges from "./internal/ip_ranges.js";
 import { maintenanceService } from "./modules/maintenance/index.js";
 import internalNginx from "./internal/nginx.js";
 import { oauth2ProxyService } from "./modules/oauth2-proxy/index.js";
-import internalTerminal from "./internal/terminal.js";
+import { terminalService } from "./modules/terminal/index.js";
 import internalTor from "./internal/tor.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
@@ -66,7 +66,7 @@ async function appStart() {
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);
 
 			// Initialize Terminal WebSocket (needs server instance)
-			internalTerminal.init(server);
+			terminalService.init(server);
 
 			process.on("SIGTERM", () => {
 				logger.info(`PID ${process.pid} received SIGTERM`);
