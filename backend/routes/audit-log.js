@@ -1,5 +1,5 @@
 import express from "express";
-import internalAuditLog from "../internal/audit-log.js";
+import { auditLogService } from "../modules/audit-log/index.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import validator from "../lib/validator/index.js";
 
@@ -42,7 +42,7 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const rows = await internalAuditLog.getAll(res.locals.access, data.expand, data.query);
+		const rows = await auditLogService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
 	});
 
@@ -83,7 +83,7 @@ router
 			},
 		);
 
-		const item = await internalAuditLog.get(res.locals.access, {
+		const item = await auditLogService.get(res.locals.access, {
 			id: data.event_id,
 			expand: data.expand,
 		});

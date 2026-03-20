@@ -21,6 +21,7 @@ This directory contains domain-oriented backend modules.
 - `oauth2-proxy/` — OAuth2 Proxy lifecycle split into process state and service/config orchestration
 - `docker/` — Docker auto-discovery split into client/state management and service orchestration
 - `maintenance/` — maintenance window runtime split into timer/state and service orchestration
+- `audit-log/` — audit log domain split into reads and mutations/add service
 
 ## Migration rule
 

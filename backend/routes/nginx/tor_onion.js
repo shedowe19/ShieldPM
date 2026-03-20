@@ -1,6 +1,6 @@
 import express from "express";
 import { transaction } from "objection";
-import internalAuditLog from "../../internal/audit-log.js";
+import { auditLogService } from "../../modules/audit-log/index.js";
 import internalTor from "../../internal/tor.js";
 import { isDemoMode } from "../../lib/config.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
@@ -97,7 +97,7 @@ router.post("/", async (req, res, next) => {
 		const finalService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
 
 		// Audit Log
-		await internalAuditLog.add(res.locals.access, {
+		await auditLogService.add(res.locals.access, {
 			action: "created",
 			object_type: "tor-onion",
 			object_id: finalService.id,
@@ -152,7 +152,7 @@ router.put("/:id", async (req, res, next) => {
 		const updatedService = await TorOnion.query().findById(result.id).withGraphFetched("proxy_host");
 
 		// Audit Log
-		await internalAuditLog.add(res.locals.access, {
+		await auditLogService.add(res.locals.access, {
 			action: "updated",
 			object_type: "tor-onion",
 			object_id: updatedService.id,
@@ -197,7 +197,7 @@ router.delete("/:id", async (req, res, next) => {
 		await trx.commit();
 
 		// Audit Log
-		await internalAuditLog.add(res.locals.access, {
+		await auditLogService.add(res.locals.access, {
 			action: "deleted",
 			object_type: "tor-onion",
 			object_id: service.id,
@@ -243,7 +243,7 @@ router.post("/:id/start", async (req, res) => {
 	const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
 
 	// Audit Log
-	await internalAuditLog.add(res.locals.access, {
+	await auditLogService.add(res.locals.access, {
 		action: "updated",
 		object_type: "tor-onion",
 		object_id: updatedService.id,
@@ -279,7 +279,7 @@ router.post("/:id/stop", async (req, res) => {
 	const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
 
 	// Audit Log
-	await internalAuditLog.add(res.locals.access, {
+	await auditLogService.add(res.locals.access, {
 		action: "updated",
 		object_type: "tor-onion",
 		object_id: updatedService.id,
