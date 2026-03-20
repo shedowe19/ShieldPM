@@ -12,7 +12,7 @@ const avatarLimiter = rateLimit({
 	},
 });
 
-import internalUser from "../internal/user.js";
+import { userService } from "../modules/user/index.js";
 import Access from "../lib/access.js";
 import { isDestructiveTestMode } from "../lib/config.js";
 import errs from "../lib/error.js";
@@ -80,7 +80,7 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const users = await internalUser.getAll(res.locals.access, data.expand, data.query);
+		const users = await userService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(users);
 	})
 
@@ -114,7 +114,7 @@ router
 		}
 
 		const payload = await apiValidator(getValidationSchema("/users", "post"), body);
-		const user = await internalUser.create(res.locals.access, payload);
+		const user = await userService.create(res.locals.access, payload);
 		res.status(201).send(user);
 	})
 
@@ -132,7 +132,7 @@ router
 	.delete(async (_req, res, next) => {
 		if (isDestructiveTestMode()) {
 			logger.warn("Deleting all users - Destructive Test Mode enabled, allowing this operation");
-			await internalUser.deleteAll();
+			await userService.deleteAll();
 			res.status(200).send(true);
 			return;
 		}
@@ -178,10 +178,10 @@ router
 			},
 		);
 
-		const user = await internalUser.get(res.locals.access, {
+		const user = await userService.get(res.locals.access, {
 			id: data.user_id,
 			expand: data.expand,
-			omit: internalUser.getUserOmisionsByAccess(res.locals.access, data.user_id),
+			omit: userService.getUserOmisionsByAccess(res.locals.access, data.user_id),
 		});
 		res.status(200).send(user);
 	})
@@ -204,7 +204,7 @@ router
 		);
 		const payload = await apiValidator(getValidationSchema("/users/{userID}", "put"), req.body);
 		payload.id = params.user_id;
-		const result = await internalUser.update(res.locals.access, payload);
+		const result = await userService.update(res.locals.access, payload);
 		res.status(200).send(result);
 	})
 
@@ -224,7 +224,7 @@ router
 			},
 			{ user_id: req.params.user_id },
 		);
-		const result = await internalUser.delete(res.locals.access, {
+		const result = await userService.delete(res.locals.access, {
 			id: params.user_id,
 		});
 		res.status(200).send(result);
@@ -246,7 +246,7 @@ router
 			throw new errs.ValidationError("No files were uploaded.");
 		}
 
-		const result = await internalUser.uploadAvatar(res.locals.access, {
+		const result = await userService.uploadAvatar(res.locals.access, {
 			id: req.params.user_id,
 			file: req.files.avatar || req.files.file,
 		});
@@ -264,7 +264,7 @@ router
 	})
 	.get(avatarLimiter, async (req, res) => {
 		try {
-			const avatar = await internalUser.getAvatarImage(new Access("public"), {
+			const avatar = await userService.getAvatarImage(new Access("public"), {
 				id: req.params.user_id,
 			});
 			res.setHeader("Content-Type", avatar.mimeType);
@@ -312,7 +312,7 @@ router
 		);
 		const payload = await apiValidator(getValidationSchema("/users/{userID}/auth", "put"), req.body);
 		payload.id = params.user_id;
-		const result = await internalUser.setPassword(res.locals.access, payload);
+		const result = await userService.setPassword(res.locals.access, payload);
 		res.status(200).send(result);
 	});
 
@@ -347,7 +347,7 @@ router
 		);
 		const payload = await apiValidator(getValidationSchema("/users/{userID}/permissions", "put"), req.body);
 		payload.id = params.user_id;
-		const result = await internalUser.setPermissions(res.locals.access, payload);
+		const result = await userService.setPermissions(res.locals.access, payload);
 		res.status(200).send(result);
 	});
 
@@ -374,7 +374,7 @@ router
 			{ user_id: req.params.user_id },
 		);
 
-		const result = await internalUser.loginAs(res.locals.access, {
+		const result = await userService.loginAs(res.locals.access, {
 			id: Number(params.user_id),
 		});
 
