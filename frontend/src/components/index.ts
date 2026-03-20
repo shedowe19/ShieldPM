@@ -5,7 +5,6 @@ export * from "./EmptyData";
 export * from "./ErrorNotFound";
 export * from "./Flag";
 export * from "./Form";
-export * from "./GitSyncTab";
 export * from "./HasPermission";
 export * from "./Loading";
 export * from "./LoadingPage";

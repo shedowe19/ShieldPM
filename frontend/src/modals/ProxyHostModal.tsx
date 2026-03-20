@@ -10,13 +10,12 @@ import {
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { lazy, Suspense, type ReactNode, useState } from "react";
 import type { ProxyHost } from "src/api/backend";
 import {
 	AccessField,
 	AnubisRulesField,
 	DomainNamesField,
-	GitSyncTab,
 	HasPermission,
 	Loading,
 	LocationsFields,
@@ -50,6 +49,8 @@ import {
 	TIME_UNIT,
 	AUDIT_LOG_OBJECT_TYPE,
 } from "src/types/enums";
+
+const GitSyncTab = lazy(() => import("src/components/GitSyncTab").then((module) => ({ default: module.GitSyncTab })));
 
 const DEFAULT_ANUBIS_RULES = [
 	{
@@ -1341,7 +1342,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															value={PROXY_HOST_TAB.GIT_SYNC}
 															className="mt-0 space-y-4"
 														>
-															<GitSyncTab hostId={typeof id === "number" ? id : null} />
+															<Suspense fallback={<div className="py-8"><Loading noLogo /></div>}>
+														<GitSyncTab hostId={typeof id === "number" ? id : null} />
+													</Suspense>
 														</TabsContent>
 													)
 												}
