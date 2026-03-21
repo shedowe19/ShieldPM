@@ -1,9 +1,10 @@
 import { setAuthCookies } from "../../lib/auth-cookies.js";
 
-const issueAuthResponse = async ({ internalToken, user, scope = "user", req, res, csrfToken }) => {
+const issueAuthResponse = async ({ internalToken, tokenService, user, scope = "user", req, res, csrfToken }) => {
+	const tokenProvider = internalToken || tokenService;
 	const ip = req.ip || "unknown";
 	const meta = { ip, userAgent: req.headers["user-agent"] || null };
-	const pair = await internalToken.issueTokenPair(user, scope, meta);
+	const pair = await tokenProvider.issueTokenPair(user, scope, meta);
 
 	setAuthCookies(res, req, {
 		accessToken: pair.access_token,
