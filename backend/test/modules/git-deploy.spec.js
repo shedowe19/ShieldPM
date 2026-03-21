@@ -86,7 +86,7 @@ const mockProxyHostQuery = {
 	withGraphFetched: vi.fn().mockResolvedValue({ id: 1 }),
 };
 
-import { intervalToMs, getWebsiteDir, WEBSITES_DIR } from "../../modules/git-deploy/helpers.js";
+import { intervalToMs, getWebsiteDir, WEBSITES_DIR, getAuth, pollingTimers } from "../../modules/git-deploy/helpers.js";
 
 describe("git-deploy module", () => {
 	beforeEach(() => vi.clearAllMocks());
@@ -119,6 +119,45 @@ describe("git-deploy module", () => {
 		it("should create directory path based on hostId", () => {
 			const dir = getWebsiteDir(42);
 			expect(dir).toContain("host-42");
+		});
+
+		it("should return different dirs for different hosts", () => {
+			const dir1 = getWebsiteDir(1);
+			const dir2 = getWebsiteDir(2);
+			expect(dir1).not.toBe(dir2);
+		});
+	});
+
+	describe("helpers – getAuth", () => {
+		it("should return empty object when no credentials", () => {
+			expect(getAuth(null)).toEqual({});
+			expect(getAuth(undefined)).toEqual({});
+		});
+
+		it("should return onAuth function when credentials exist", () => {
+			const auth = getAuth("encrypted-token");
+			expect(auth).toHaveProperty("onAuth");
+			expect(typeof auth.onAuth).toBe("function");
+		});
+
+		it("should decrypt credentials in onAuth", () => {
+			const auth = getAuth("my-token");
+			const result = auth.onAuth();
+			expect(result.username).toBe("git");
+			expect(result.password).toBe("decrypted-my-token");
+		});
+	});
+
+	describe("helpers – pollingTimers", () => {
+		it("should be a Map", () => {
+			expect(pollingTimers).toBeInstanceOf(Map);
+		});
+
+		it("should allow setting and clearing timers", () => {
+			pollingTimers.set(99, "fake-timer");
+			expect(pollingTimers.has(99)).toBe(true);
+			pollingTimers.delete(99);
+			expect(pollingTimers.has(99)).toBe(false);
 		});
 	});
 });

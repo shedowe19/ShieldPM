@@ -105,5 +105,63 @@ describe("docker module", () => {
 			expect(reloadState).toHaveProperty("timer");
 			expect(reloadState.timer).toBeNull();
 		});
+
+		it("should allow setting timer", () => {
+			reloadState.timer = setTimeout(() => {}, 100);
+			expect(reloadState.timer).not.toBeNull();
+			clearTimeout(reloadState.timer);
+			reloadState.timer = null;
+		});
+	});
+
+	describe("DockerService – init", () => {
+		it("should be a function", async () => {
+			const dockerService = (await import("../../modules/docker/service.js")).default;
+			expect(typeof dockerService.init).toBe("function");
+		});
+	});
+
+	describe("DockerService – addClient", () => {
+		it("should add a valid client", async () => {
+			const dockerService = (await import("../../modules/docker/service.js")).default;
+			clearClients();
+			dockerService.addClient("/var/run/docker.sock");
+			expect(getClients().length).toBeGreaterThanOrEqual(1);
+		});
+	});
+
+	describe("DockerService – sync", () => {
+		it("should be a function", async () => {
+			const dockerService = (await import("../../modules/docker/service.js")).default;
+			expect(typeof dockerService.sync).toBe("function");
+		});
+	});
+
+	describe("DockerService – triggerReload", () => {
+		it("should set a timer on reloadState", async () => {
+			const dockerService = (await import("../../modules/docker/service.js")).default;
+			dockerService.triggerReload();
+			expect(reloadState.timer).not.toBeNull();
+			clearTimeout(reloadState.timer);
+			reloadState.timer = null;
+		});
+
+		it("should debounce multiple calls", async () => {
+			const dockerService = (await import("../../modules/docker/service.js")).default;
+			dockerService.triggerReload();
+			const timer1 = reloadState.timer;
+			dockerService.triggerReload();
+			expect(reloadState.timer).not.toBe(timer1);
+			clearTimeout(reloadState.timer);
+			reloadState.timer = null;
+		});
+	});
+
+	describe("DockerService – disableContainerHost", () => {
+		it("should not throw for unknown container", async () => {
+			const dockerService = (await import("../../modules/docker/service.js")).default;
+			await dockerService.disableContainerHost("nonexistent-container-id");
+			// No error
+		});
 	});
 });

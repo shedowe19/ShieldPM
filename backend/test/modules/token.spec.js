@@ -52,7 +52,7 @@ vi.mock("../../models/auth.js", () => ({
 
 vi.mock("../../models/token.js", () => {
 	const tokenInstance = {
-		create: vi.fn(({ scope, expiresIn }) =>
+		create: vi.fn(({ scope, expiresIn: _expiresIn }) =>
 			Promise.resolve({
 				token: `signed_token_${Array.isArray(scope) ? scope.join(",") : scope}`,
 				payload: {},
@@ -340,5 +340,110 @@ describe("token module – service exports", () => {
 		expect(typeof tokenService.refreshTokenPair).toBe("function");
 		expect(typeof tokenService.revokeSession).toBe("function");
 		expect(typeof tokenService.revokeFamily).toBe("function");
+	});
+});
+
+// ── Expanded getFreshToken edge cases ──────────────────────────────────────
+
+describe("token module – getFreshToken edge cases", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("should use default expiry of 1d when data is null", async () => {
+		const access = {
+			token: {
+				getUserId: vi.fn(() => 1),
+				get: vi.fn(() => ["user"]),
+				hasScope: vi.fn(() => false),
+			},
+		};
+		const result = await getFreshToken(access, null);
+		expect(result).toHaveProperty("token");
+		expect(result).toHaveProperty("expires");
+	});
+
+	it("should use default expiry of 1d when data is undefined", async () => {
+		const access = {
+			token: {
+				getUserId: vi.fn(() => 1),
+				get: vi.fn(() => ["user"]),
+				hasScope: vi.fn(() => false),
+			},
+		};
+		const result = await getFreshToken(access);
+		expect(result).toHaveProperty("token");
+	});
+
+	it("should throw UnauthorizedError when userId is 0 and no admin scope override", async () => {
+		const access = {
+			token: {
+				getUserId: vi.fn(() => 0),
+			},
+		};
+		await expect(getFreshToken(access, {})).rejects.toThrow("No active session found");
+	});
+
+	it("should not override scope when user is not admin", async () => {
+		const access = {
+			token: {
+				getUserId: vi.fn(() => 1),
+				get: vi.fn(() => ["user"]),
+				hasScope: vi.fn(() => false),
+			},
+		};
+		const result = await getFreshToken(access, { scope: "admin", expiry: "1d" });
+		// scope override should be ignored since hasScope('admin') is false
+		expect(result).toHaveProperty("token");
+		expect(result.user.id).toBe(1); // Not 0
+	});
+
+	it("should set id to 0 for worker scope when admin", async () => {
+		const access = {
+			token: {
+				getUserId: vi.fn(() => 5),
+				get: vi.fn(() => ["admin"]),
+				hasScope: vi.fn((s) => s === "admin"),
+			},
+		};
+		const result = await getFreshToken(access, { scope: "worker", expiry: "1d" });
+		expect(result.user.id).toBe(0);
+	});
+
+	it("should keep original user id for non-special scopes as admin", async () => {
+		const access = {
+			token: {
+				getUserId: vi.fn(() => 5),
+				get: vi.fn(() => ["admin"]),
+				hasScope: vi.fn((s) => s === "admin"),
+			},
+		};
+		const result = await getFreshToken(access, { scope: "custom-scope", expiry: "1d" });
+		expect(result.user.id).toBe(5);
+	});
+});
+
+// ── Expanded getTokenFromUser error paths ──────────────────────────────────
+
+describe("token module – getTokenFromUser extended", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("should include the user object in the response", async () => {
+		const user = { id: 42, name: "Charlie", email: "charlie@test.com" };
+		const result = await getTokenFromUser(user);
+		expect(result.user).toBe(user);
+		expect(result.user.id).toBe(42);
+	});
+
+	it("should return a valid expires ISO string", async () => {
+		const user = { id: 1 };
+		const result = await getTokenFromUser(user);
+		expect(result.expires).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+	});
+
+	it("should always use user scope", async () => {
+		const user = { id: 1, roles: ["admin"] };
+		const result = await getTokenFromUser(user);
+		expect(result).toHaveProperty("token");
+		// The token includes 'user' scope per the signed_token_ mock
+		expect(result.token).toContain("signed_token_user");
 	});
 });

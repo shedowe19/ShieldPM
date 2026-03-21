@@ -10,35 +10,59 @@ vi.mock("lodash", () => ({
 			}
 			return result;
 		},
+		has: (obj, key) => {
+			const keys = key.split(".");
+			let cur = obj;
+			for (const k of keys) {
+				if (cur == null || typeof cur !== "object" || !(k in cur)) return false;
+				cur = cur[k];
+			}
+			return true;
+		},
+		get: (obj, key, def) => {
+			const keys = key.split(".");
+			let cur = obj;
+			for (const k of keys) {
+				if (cur == null || typeof cur !== "object" || !(k in cur)) return def;
+				cur = cur[k];
+			}
+			return cur;
+		},
 	},
 }));
 
-// Mock all dependencies before imports
+// Factory to create a full thenable query builder
+const createMockQuery = (resolveValue = null) => {
+	const q = {};
+	q._resolveValue = resolveValue;
+	q.where = vi.fn(() => q);
+	q.andWhere = vi.fn(() => q);
+	q.allowGraph = vi.fn(() => q);
+	q.withGraphFetched = vi.fn(() => q);
+	q.first = vi.fn(() => q);
+	q.groupBy = vi.fn(() => q);
+	q.orderBy = vi.fn(() => q);
+	q.whereExists = vi.fn(() => q);
+	q.count = vi.fn(() => q);
+	q.patch = vi.fn(() => Promise.resolve(1));
+	q.insertGraphAndFetch = vi.fn((data) => Promise.resolve({ id: 1, ...data }));
+	q.upsertGraphAndFetch = vi.fn((data) => Promise.resolve({ id: 1, ...data }));
+	// biome-ignore lint/suspicious/noThenProperty: mock query builder needs .then
+	q.then = (onFulfill, onReject) => Promise.resolve(q._resolveValue).then(onFulfill, onReject);
+	return q;
+};
+
 vi.mock("../../models/proxy_host.js", () => {
-	const mockQuery = {
-		where: vi.fn().mockReturnThis(),
-		andWhere: vi.fn().mockReturnThis(),
-		allowGraph: vi.fn().mockReturnThis(),
-		withGraphFetched: vi.fn().mockReturnThis(),
-		first: vi.fn().mockResolvedValue(null),
-		groupBy: vi.fn().mockReturnThis(),
-		orderBy: vi.fn().mockReturnThis(),
-		whereExists: vi.fn().mockReturnThis(),
-		count: vi.fn().mockReturnThis(),
-		patch: vi.fn().mockResolvedValue(1),
-		insertGraphAndFetch: vi.fn().mockResolvedValue({ id: 1 }),
-		upsertGraphAndFetch: vi.fn().mockResolvedValue({ id: 1 }),
-	};
 	return {
 		default: {
-			query: vi.fn(() => ({ ...mockQuery })),
+			query: vi.fn(() => createMockQuery()),
 			relatedQuery: vi.fn(() => ({ where: vi.fn() })),
 		},
 	};
 });
 
 vi.mock("../../models/access_list.js", () => ({
-	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), first: vi.fn() })) },
+	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) }) })) },
 }));
 
 vi.mock("../../lib/error.js", () => {
@@ -101,19 +125,19 @@ vi.mock("../../modules/audit-log/index.js", () => ({
 	auditLogService: { add: vi.fn().mockResolvedValue() },
 }));
 
-vi.mock("../audit-log/service.js", () => ({
+vi.mock("../../modules/audit-log/service.js", () => ({
 	default: { add: vi.fn().mockResolvedValue() },
 }));
 
-vi.mock("../certificate/service.js", () => ({
+vi.mock("../../modules/certificate/service.js", () => ({
 	default: { createQuickCertificate: vi.fn().mockResolvedValue({ id: 10 }) },
 }));
 
-vi.mock("../git-deploy/service.js", () => ({
+vi.mock("../../modules/git-deploy/service.js", () => ({
 	default: { startPollingForHost: vi.fn(), stopPolling: vi.fn() },
 }));
 
-vi.mock("../gitops/service.js", () => ({
+vi.mock("../../modules/gitops/service.js", () => ({
 	default: { triggerAutoPush: vi.fn() },
 }));
 
@@ -122,7 +146,8 @@ vi.mock("../../modules/oauth2-proxy/index.js", () => ({
 }));
 
 vi.mock("../../logger.js", () => ({
-	default: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+	default: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+	global: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
 // Import helpers (pure functions) directly
@@ -202,6 +227,327 @@ describe("proxy-host module", () => {
 			const result = prepareEncryptedFields(data);
 			expect(result.name).toBe("test");
 			expect(encrypt).not.toHaveBeenCalled();
+		});
+	});
+
+	// ── reads ───────────────────────────────────────────────────────────
+
+	describe("getAll", () => {
+		it("should return rows for admin visibility", async () => {
+			const { getAll } = await import("../../modules/proxy-host/reads.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const rowData = [{ id: 1, access_list_id: "2", count: 3, domain_names: ["a.com"] }];
+			const q = createMockQuery(rowData);
+			proxyHostModel.query.mockReturnValueOnce(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			const result = await getAll(access);
+			expect(access.can).toHaveBeenCalledWith("proxy_hosts:list");
+			expect(result).toBeDefined();
+		});
+
+		it("should filter by owner for non-admin", async () => {
+			const { getAll } = await import("../../modules/proxy-host/reads.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery([]);
+			proxyHostModel.query.mockReturnValueOnce(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "user" }),
+				token: { getUserId: () => 5 },
+			};
+			const _result = await getAll(access);
+			expect(q.andWhere).toHaveBeenCalledWith("owner_user_id", 5);
+		});
+
+		it("should filter by search query when provided", async () => {
+			const { getAll } = await import("../../modules/proxy-host/reads.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery([]);
+			proxyHostModel.query.mockReturnValueOnce(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			await getAll(access, undefined, "test");
+			expect(q.whereExists).toHaveBeenCalled();
+		});
+	});
+
+	describe("getCount", () => {
+		it("should return numeric count for admin", async () => {
+			const { getCount } = await import("../../modules/proxy-host/reads.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery();
+			q.first = vi.fn().mockResolvedValue({ count: "7" });
+			proxyHostModel.query.mockReturnValueOnce(q);
+			const result = await getCount(1, "all");
+			expect(result).toBe(7);
+			expect(typeof result).toBe("number");
+		});
+
+		it("should filter by owner for non-admin", async () => {
+			const { getCount } = await import("../../modules/proxy-host/reads.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery();
+			q.first = vi.fn().mockResolvedValue({ count: "3" });
+			proxyHostModel.query.mockReturnValueOnce(q);
+			const result = await getCount(5, "user");
+			expect(result).toBe(3);
+			expect(q.andWhere).toHaveBeenCalledWith("owner_user_id", 5);
+		});
+
+		it("should handle zero count", async () => {
+			const { getCount } = await import("../../modules/proxy-host/reads.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery();
+			q.first = vi.fn().mockResolvedValue({ count: "0" });
+			proxyHostModel.query.mockReturnValueOnce(q);
+			const result = await getCount(1, "all");
+			expect(result).toBe(0);
+		});
+	});
+
+	// ── ensureOAuth2Proxy ───────────────────────────────────────────────
+
+	describe("ensureOAuth2Proxy", () => {
+		it("should do nothing when accessListId is falsy", async () => {
+			const { ensureOAuth2Proxy } = await import("../../modules/proxy-host/helpers.js");
+			const { oauth2ProxyService } = await import("../../modules/oauth2-proxy/index.js");
+			await ensureOAuth2Proxy(null);
+			expect(oauth2ProxyService.start).not.toHaveBeenCalled();
+		});
+
+		it("should start oauth2 proxy when access list has oauth2_proxy auth_type", async () => {
+			const { ensureOAuth2Proxy } = await import("../../modules/proxy-host/helpers.js");
+			const AccessList = (await import("../../models/access_list.js")).default;
+			const { oauth2ProxyService } = await import("../../modules/oauth2-proxy/index.js");
+			const listData = { id: 1, meta: { auth_type: "oauth2_proxy" } };
+			AccessList.query.mockReturnValueOnce({
+				where: vi.fn().mockReturnValue({
+					where: vi.fn().mockReturnValue({
+						first: vi.fn().mockResolvedValue(listData),
+					}),
+				}),
+			});
+			await ensureOAuth2Proxy(1);
+			expect(oauth2ProxyService.start).toHaveBeenCalledWith(listData);
+		});
+
+		it("should not throw on error (catches internally)", async () => {
+			const { ensureOAuth2Proxy } = await import("../../modules/proxy-host/helpers.js");
+			const AccessList = (await import("../../models/access_list.js")).default;
+			AccessList.query.mockReturnValueOnce({
+				where: vi.fn().mockReturnValue({
+					where: vi.fn().mockReturnValue({
+						first: vi.fn().mockRejectedValue(new Error("DB error")),
+					}),
+				}),
+			});
+			await expect(ensureOAuth2Proxy(1)).resolves.toBeUndefined();
+		});
+	});
+
+	// ── cleanupOAuth2Proxy ──────────────────────────────────────────────
+
+	describe("cleanupOAuth2Proxy", () => {
+		it("should do nothing when accessListId is falsy", async () => {
+			const { cleanupOAuth2Proxy } = await import("../../modules/proxy-host/helpers.js");
+			const { oauth2ProxyService } = await import("../../modules/oauth2-proxy/index.js");
+			await cleanupOAuth2Proxy(0);
+			expect(oauth2ProxyService.stop).not.toHaveBeenCalled();
+		});
+
+		it("should stop oauth2 proxy when no other hosts use the access list", async () => {
+			const { cleanupOAuth2Proxy } = await import("../../modules/proxy-host/helpers.js");
+			const AccessList = (await import("../../models/access_list.js")).default;
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const { oauth2ProxyService } = await import("../../modules/oauth2-proxy/index.js");
+			AccessList.query.mockReturnValueOnce({
+				where: vi.fn().mockReturnValue({
+					where: vi.fn().mockReturnValue({
+						first: vi.fn().mockResolvedValue({ id: 1, meta: { auth_type: "oauth2_proxy" } }),
+					}),
+				}),
+			});
+			proxyHostModel.query.mockReturnValueOnce({
+				where: vi.fn().mockReturnValue({
+					where: vi.fn().mockResolvedValue([]),
+				}),
+			});
+			await cleanupOAuth2Proxy(1);
+			expect(oauth2ProxyService.stop).toHaveBeenCalledWith(1);
+		});
+
+		it("should not throw on error", async () => {
+			const { cleanupOAuth2Proxy } = await import("../../modules/proxy-host/helpers.js");
+			const AccessList = (await import("../../models/access_list.js")).default;
+			AccessList.query.mockReturnValueOnce({
+				where: vi.fn().mockReturnValue({
+					where: vi.fn().mockReturnValue({
+						first: vi.fn().mockRejectedValue(new Error("fail")),
+					}),
+				}),
+			});
+			await expect(cleanupOAuth2Proxy(1)).resolves.toBeUndefined();
+		});
+	});
+
+	// ── lifecycle: remove, enable, disable ──────────────────────────────
+
+	describe("remove", () => {
+		it("should mark host as deleted and cleanup", async () => {
+			const { remove } = await import("../../modules/proxy-host/lifecycle.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const { nginxService } = await import("../../modules/nginx/index.js");
+			const q = createMockQuery({ id: 5, access_list_id: 2, enabled: 1 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			const result = await remove(access, { id: 5 });
+			expect(result).toBe(true);
+			expect(nginxService.deleteConfig).toHaveBeenCalled();
+			expect(nginxService.reload).toHaveBeenCalled();
+		});
+
+		it("should check permissions before deleting", async () => {
+			const { remove } = await import("../../modules/proxy-host/lifecycle.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery({ id: 5, access_list_id: 0 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			await remove(access, { id: 5 });
+			expect(access.can).toHaveBeenCalledWith("proxy_hosts:delete", 5);
+		});
+	});
+
+	describe("enable", () => {
+		it("should enable a disabled host", async () => {
+			const { enable } = await import("../../modules/proxy-host/lifecycle.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const { nginxService } = await import("../../modules/nginx/index.js");
+			const q = createMockQuery({ id: 3, enabled: 0, access_list_id: 0 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			const result = await enable(access, { id: 3 });
+			expect(result).toBe(true);
+			expect(nginxService.configure).toHaveBeenCalled();
+		});
+
+		it("should throw if host is already enabled", async () => {
+			const { enable } = await import("../../modules/proxy-host/lifecycle.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery({ id: 3, enabled: 1, access_list_id: 0 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			await expect(enable(access, { id: 3 })).rejects.toThrow("already enabled");
+		});
+	});
+
+	describe("disable", () => {
+		it("should disable an enabled host", async () => {
+			const { disable } = await import("../../modules/proxy-host/lifecycle.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const { nginxService } = await import("../../modules/nginx/index.js");
+			const q = createMockQuery({ id: 3, enabled: 1, access_list_id: 0 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			const result = await disable(access, { id: 3 });
+			expect(result).toBe(true);
+			expect(nginxService.deleteConfig).toHaveBeenCalled();
+			expect(nginxService.reload).toHaveBeenCalled();
+		});
+
+		it("should throw if host is already disabled", async () => {
+			const { disable } = await import("../../modules/proxy-host/lifecycle.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery({ id: 3, enabled: 0, access_list_id: 0 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			await expect(disable(access, { id: 3 })).rejects.toThrow("already disabled");
+		});
+	});
+
+	// ── mutations: create, update ───────────────────────────────────────
+
+	describe("create", () => {
+		it("should create a proxy host and configure nginx", async () => {
+			const { create } = await import("../../modules/proxy-host/mutations.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const { nginxService } = await import("../../modules/nginx/index.js");
+			const { hostService } = await import("../../modules/host/index.js");
+			hostService.isHostnameTaken.mockResolvedValue({ hostname: "test.com", is_taken: false });
+			const q = createMockQuery({ id: 1, domain_names: ["test.com"], access_list_id: 0, meta: {} });
+			q.insertGraphAndFetch = vi.fn().mockResolvedValue({ id: 1 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			const data = { domain_names: ["test.com"], forward_scheme: "https", forward_host: "localhost", forward_port: 3000 };
+			const result = await create(access, data);
+			expect(result).toBeDefined();
+			expect(nginxService.configure).toHaveBeenCalled();
+		});
+
+		it("should throw ValidationError if domain is taken", async () => {
+			const { create } = await import("../../modules/proxy-host/mutations.js");
+			const { hostService } = await import("../../modules/host/index.js");
+			hostService.isHostnameTaken.mockResolvedValue({ hostname: "taken.com", is_taken: true });
+			const access = {
+				can: vi.fn().mockResolvedValue({}),
+				token: { getUserId: () => 1 },
+			};
+			const data = { domain_names: ["taken.com"] };
+			await expect(create(access, data)).rejects.toThrow("already in use");
+		});
+	});
+
+	describe("update", () => {
+		it("should update a proxy host", async () => {
+			const { update } = await import("../../modules/proxy-host/mutations.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const { nginxService } = await import("../../modules/nginx/index.js");
+			const q = createMockQuery({ id: 1, domain_names: ["old.com"], access_list_id: 0, meta: {} });
+			q.upsertGraphAndFetch = vi.fn().mockResolvedValue({ id: 1 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			const result = await update(access, { id: 1, forward_host: "newhost" });
+			expect(result).toBeDefined();
+			expect(nginxService.configure).toHaveBeenCalled();
+		});
+
+		it("should throw when IDs do not match", async () => {
+			const { update } = await import("../../modules/proxy-host/mutations.js");
+			const proxyHostModel = (await import("../../models/proxy_host.js")).default;
+			const q = createMockQuery({ id: 99, domain_names: ["x.com"], access_list_id: 0 });
+			proxyHostModel.query.mockReturnValue(q);
+			const access = {
+				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
+				token: { getUserId: () => 1 },
+			};
+			await expect(update(access, { id: 1 })).rejects.toThrow("IDs do not match");
 		});
 	});
 });

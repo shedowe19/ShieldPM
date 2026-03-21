@@ -1,6 +1,148 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
 
+// ── Mocks for user mutations/reads tests ───────────────────────────────────
+
+const mockUserRecord = {
+	id: 1,
+	name: "Alice",
+	email: "alice@example.com",
+	nickname: "alice",
+	avatar: "",
+	avatar_type: "gravatar",
+	avatar_value: "",
+	roles: ["user"],
+	is_deleted: 0,
+};
+
+const mockQueryBuilder = () => {
+	const qb = {
+		where: vi.fn(() => qb),
+		andWhere: vi.fn(() => qb),
+		first: vi.fn(() => Promise.resolve(mockUserRecord)),
+		findById: vi.fn(() => Promise.resolve(mockUserRecord)),
+		allowGraph: vi.fn(() => qb),
+		withGraphFetched: vi.fn(() => qb),
+		groupBy: vi.fn(() => qb),
+		orderBy: vi.fn(() => qb),
+		count: vi.fn(() => qb),
+		insertAndFetch: vi.fn((data) => Promise.resolve({ id: 99, ...data })),
+		patchAndFetchById: vi.fn((id, data) => Promise.resolve({ ...mockUserRecord, ...data, id })),
+		patch: vi.fn(() => Promise.resolve(1)),
+		insert: vi.fn((data) => Promise.resolve({ id: 100, ...data })),
+		orWhere: vi.fn(() => qb),
+		// biome-ignore lint/suspicious/noThenProperty: mock query builder needs .then
+		then: vi.fn((cb) => Promise.resolve(mockUserRecord).then(cb)),
+	};
+	return qb;
+};
+
+vi.mock("../../models/user.js", () => ({
+	default: {
+		query: vi.fn(() => mockQueryBuilder()),
+		transaction: vi.fn(async (cb) => cb({})),
+	},
+}));
+
+vi.mock("../../models/auth.js", () => ({
+	default: {
+		query: vi.fn(() => {
+			const qb = {
+				where: vi.fn(() => qb),
+				andWhere: vi.fn(() => qb),
+				first: vi.fn(() => Promise.resolve({ secret: "hash", verifyPassword: vi.fn(() => Promise.resolve(true)) })),
+				insert: vi.fn(() => Promise.resolve()),
+				patch: vi.fn(() => Promise.resolve()),
+			};
+			return qb;
+		}),
+	},
+}));
+
+vi.mock("../../models/user_permission.js", () => ({
+	default: {
+		query: vi.fn(() => {
+			const qb = {
+				where: vi.fn(() => qb),
+				first: vi.fn(() => Promise.resolve({ id: 1 })),
+				insert: vi.fn(() => Promise.resolve({ id: 1 })),
+				insertAndFetch: vi.fn((data) => Promise.resolve({ id: 1, ...data })),
+				patchAndFetchById: vi.fn((id, data) => Promise.resolve({ id, ...data })),
+			};
+			return qb;
+		}),
+	},
+}));
+
+vi.mock("../../modules/audit-log/index.js", () => ({
+	auditLogService: {
+		add: vi.fn(() => Promise.resolve()),
+	},
+}));
+
+vi.mock("../../modules/token/index.js", () => ({
+	tokenService: {
+		getTokenFromEmail: vi.fn(() => Promise.resolve({ token: "tok" })),
+		getTokenFromUser: vi.fn((user) => Promise.resolve({ token: "tok", expires: "2026-01-01", user })),
+	},
+}));
+
+vi.mock("../../lib/error.js", () => ({
+	default: {
+		ValidationError: class ValidationError extends Error {
+			constructor(m) { super(m); this.name = "ValidationError"; }
+		},
+		ItemNotFoundError: class ItemNotFoundError extends Error {
+			constructor(m) { super(m ? `Not Found - ${m}` : "Not Found"); this.name = "ItemNotFoundError"; }
+		},
+		PermissionError: class PermissionError extends Error {
+			constructor(m) { super(m); this.name = "PermissionError"; }
+		},
+		InternalValidationError: class InternalValidationError extends Error {
+			constructor(m) { super(m); this.name = "InternalValidationError"; }
+		},
+		InternalError: class InternalError extends Error {
+			constructor(m) { super(m); this.name = "InternalError"; }
+		},
+	},
+}));
+
+vi.mock("../../lib/utils.js", () => ({
+	default: {
+		omitRows: () => (rows) => rows,
+		omitRow: () => (row) => row,
+	},
+}));
+
+vi.mock("lodash", () => ({
+	default: {
+		omit: (obj, keys) => {
+			const result = { ...obj };
+			for (const k of (Array.isArray(keys) ? keys : [keys])) delete result[k];
+			return result;
+		},
+		assign: Object.assign,
+		each: (arr, fn) => arr.forEach(fn),
+		map: (arr, fn) => arr.map(fn),
+	},
+}));
+
+vi.mock("node:fs", () => ({
+	default: {
+		existsSync: vi.fn(() => true),
+		mkdirSync: vi.fn(),
+		unlinkSync: vi.fn(),
+		promises: {
+			writeFile: vi.fn(() => Promise.resolve()),
+			readFile: vi.fn(() => Promise.resolve(Buffer.from([0xff, 0xd8, 0xff, 0xe0]))),
+			readdir: vi.fn(() => Promise.resolve(["fullchain.pem", "privkey.pem"])),
+			mkdir: vi.fn(() => Promise.resolve()),
+			rm: vi.fn(() => Promise.resolve()),
+			realpath: vi.fn((p) => Promise.resolve(p)),
+		},
+	},
+}));
+
 // We test the pure helpers from constants.js directly
 import { DEFAULT_AVATAR, detectAvatarFileType, getGravatarUrl, omissions } from "../../modules/user/constants.js";
 
@@ -57,6 +199,23 @@ describe("user module – constants & helpers", () => {
 	});
 
 	// ── detectAvatarFileType ────────────────────────────────────────────
+
+	// ── omissions extended ─────────────────────────────────────────────
+
+	describe("omissions – extended", () => {
+		it("should include permissions.created_on and permissions.modified_on", () => {
+			const result = omissions();
+			expect(result).toContain("permissions.created_on");
+			expect(result).toContain("permissions.modified_on");
+		});
+
+		it("should return a fresh array each call", () => {
+			const a = omissions();
+			const b = omissions();
+			expect(a).not.toBe(b);
+			expect(a).toEqual(b);
+		});
+	});
 
 	describe("detectAvatarFileType", () => {
 		it("should detect PNG files", () => {

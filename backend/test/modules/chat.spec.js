@@ -4,9 +4,13 @@ vi.mock("../../lib/encryption.js", () => ({
 	decrypt: vi.fn((v) => `decrypted-${v}`),
 }));
 
-vi.mock("../../lib/access.js", () => ({
-	default: vi.fn().mockImplementation((token) => ({ token, can: vi.fn().mockResolvedValue(true) })),
-}));
+vi.mock("../../lib/access.js", () => {
+	const MockAccess = vi.fn(function (token) {
+		this.token = token;
+		this.can = vi.fn().mockResolvedValue(true);
+	});
+	return { default: MockAccess };
+});
 
 vi.mock("../../lib/config.js", () => ({
 	getPrivateKey: vi.fn(() => {
@@ -55,7 +59,7 @@ const mockChatQuery = {
 	findById: vi.fn().mockResolvedValue(null),
 };
 
-import { smartEscape } from "../../modules/chat/helpers.js";
+import { smartEscape, createShieldAccess } from "../../modules/chat/helpers.js";
 import { bots } from "../../modules/chat/state.js";
 
 describe("chat module", () => {
@@ -96,6 +100,24 @@ describe("chat module", () => {
 		it("should handle triple-backtick code blocks", () => {
 			const result = smartEscape("text ```code_block*test``` more");
 			expect(result).toContain("```code_block*test```");
+		});
+	});
+
+	describe("createShieldAccess", () => {
+		it("should generate a JWT token and return access object", () => {
+			const result = createShieldAccess(42);
+			expect(result).toBeDefined();
+			expect(result.token).toBe("mock-jwt-token");
+		});
+
+		it("should accept any user id", () => {
+			const result = createShieldAccess(999);
+			expect(result).toBeDefined();
+		});
+
+		it("should call access constructor with the generated token", () => {
+			const result = createShieldAccess(1);
+			expect(result.can).toBeDefined();
 		});
 	});
 

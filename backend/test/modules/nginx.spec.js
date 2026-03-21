@@ -146,7 +146,7 @@ describe("nginx module", () => {
 		});
 	});
 
-	// ── files (deleteFile, backupConfig, etc.) ──────────────────────────
+	// ── files ───────────────────────────────────────────────────────────
 
 	describe("deleteConfig", () => {
 		it("should call fs unlink for config and .err file", async () => {
@@ -154,6 +154,11 @@ describe("nginx module", () => {
 			const fs = await import("node:fs");
 			await deleteConfig("proxy_host", { id: 3 });
 			expect(fs.default.promises.unlink).toHaveBeenCalled();
+		});
+
+		it("should handle undefined host gracefully", async () => {
+			const { deleteConfig } = await import("../../modules/nginx/files.js");
+			await expect(deleteConfig("proxy_host", undefined)).resolves.toBeUndefined();
 		});
 	});
 
@@ -163,6 +168,54 @@ describe("nginx module", () => {
 			const fs = await import("node:fs");
 			await backupConfig("proxy_host", { id: 3 });
 			expect(fs.default.promises.copyFile).toHaveBeenCalled();
+		});
+
+		it("should not throw when source file doesn't exist", async () => {
+			const { backupConfig } = await import("../../modules/nginx/files.js");
+			const fs = await import("node:fs");
+			fs.default.promises.copyFile.mockRejectedValueOnce({ code: "ENOENT" });
+			await expect(backupConfig("proxy_host", { id: 99 })).resolves.toBeUndefined();
+		});
+	});
+
+	describe("deleteBackupConfig", () => {
+		it("should delete the .bak file", async () => {
+			const { deleteBackupConfig } = await import("../../modules/nginx/files.js");
+			const fs = await import("node:fs");
+			await deleteBackupConfig("proxy_host", { id: 3 });
+			expect(fs.default.promises.unlink).toHaveBeenCalled();
+		});
+	});
+
+	describe("renameConfigAsError", () => {
+		it("should rename config file to .err", async () => {
+			const { renameConfigAsError } = await import("../../modules/nginx/files.js");
+			const fs = await import("node:fs");
+			await renameConfigAsError("proxy_host", { id: 3 });
+			expect(fs.default.promises.rename).toHaveBeenCalled();
+		});
+
+		it("should not throw on rename failure", async () => {
+			const { renameConfigAsError } = await import("../../modules/nginx/files.js");
+			const fs = await import("node:fs");
+			fs.default.promises.rename.mockRejectedValueOnce(new Error("fail"));
+			await expect(renameConfigAsError("proxy_host", { id: 3 })).resolves.toBeUndefined();
+		});
+	});
+
+	describe("restoreConfig", () => {
+		it("should rename .bak back to config file", async () => {
+			const { restoreConfig } = await import("../../modules/nginx/files.js");
+			const fs = await import("node:fs");
+			await restoreConfig("proxy_host", { id: 3 });
+			expect(fs.default.promises.rename).toHaveBeenCalled();
+		});
+
+		it("should not throw when backup doesn't exist", async () => {
+			const { restoreConfig } = await import("../../modules/nginx/files.js");
+			const fs = await import("node:fs");
+			fs.default.promises.rename.mockRejectedValueOnce({ code: "ENOENT" });
+			await expect(restoreConfig("proxy_host", { id: 3 })).resolves.toBeUndefined();
 		});
 	});
 
@@ -174,6 +227,75 @@ describe("nginx module", () => {
 			const utils = (await import("../../lib/utils.js")).default;
 			await test();
 			expect(utils.execFile).toHaveBeenCalledWith("nginx", ["-tq"]);
+		});
+	});
+
+	describe("reload", () => {
+		it("should test nginx config then reload", async () => {
+			const { reload } = await import("../../modules/nginx/runtime.js");
+			const utils = (await import("../../lib/utils.js")).default;
+			await reload();
+			expect(utils.execFile).toHaveBeenCalledWith("nginx", ["-tq"]);
+			expect(utils.execFile).toHaveBeenCalledWith("nginx", ["-s", "reload"]);
+		});
+	});
+
+	describe("configure", () => {
+		it("should generate config, test, and update meta on success", async () => {
+			const { configure } = await import("../../modules/nginx/runtime.js");
+			const { generateConfig } = await import("../../modules/nginx/render.js");
+			const _utils = (await import("../../lib/utils.js")).default;
+			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
+			const host = { id: 1, meta: {} };
+			const result = await configure(mockModel, "proxy_host", host);
+			expect(generateConfig).toHaveBeenCalledWith("proxy_host", host);
+			expect(result.nginx_online).toBe(true);
+		});
+
+		it("should rollback config on nginx test failure", async () => {
+			const { configure } = await import("../../modules/nginx/runtime.js");
+			const utils = (await import("../../lib/utils.js")).default;
+			// First call is backupConfig internal, generateConfig ok, but test fails
+			utils.execFile.mockRejectedValueOnce(new Error("nginx test failed"));
+			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
+			const host = { id: 1, meta: {} };
+			const result = await configure(mockModel, "proxy_host", host);
+			expect(result.nginx_online).toBe(false);
+			expect(result.nginx_err).toContain("Rolled back");
+		});
+
+		it("should skip reload when skip_reload option is set", async () => {
+			const { configure } = await import("../../modules/nginx/runtime.js");
+			const utils = (await import("../../lib/utils.js")).default;
+			utils.execFile.mockResolvedValue("ok");
+			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
+			const host = { id: 1, meta: {} };
+			// Track calls before
+			utils.execFile.mockClear();
+			await configure(mockModel, "proxy_host", host, { skip_reload: true });
+			// Should call test but not reload
+			const calls = utils.execFile.mock.calls.map(c => c[1]);
+			expect(calls.some(c => c.includes("-tq"))).toBe(true);
+			// Should NOT have called nginx -s reload
+			expect(calls.some(c => c.includes("reload"))).toBe(false);
+		});
+	});
+
+	describe("bulkGenerateConfigs", () => {
+		it("should configure each host with skip_reload", async () => {
+			const { bulkGenerateConfigs } = await import("../../modules/nginx/runtime.js");
+			const utils = (await import("../../lib/utils.js")).default;
+			utils.execFile.mockResolvedValue("ok");
+			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
+			const hosts = [{ id: 1, meta: {} }, { id: 2, meta: {} }];
+			await bulkGenerateConfigs(mockModel, "proxy_host", hosts);
+			// Should not throw
+		});
+
+		it("should handle empty hosts array", async () => {
+			const { bulkGenerateConfigs } = await import("../../modules/nginx/runtime.js");
+			const mockModel = { query: vi.fn() };
+			await expect(bulkGenerateConfigs(mockModel, "proxy_host", [])).resolves.toBeUndefined();
 		});
 	});
 });

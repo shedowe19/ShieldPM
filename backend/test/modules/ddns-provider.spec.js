@@ -36,7 +36,7 @@ vi.mock("../../lib/error.js", () => {
 	return { default: { ItemNotFoundError, NotFoundError } };
 });
 
-vi.mock("../audit-log/service.js", () => ({
+vi.mock("../../modules/audit-log/service.js", () => ({
 	default: { add: vi.fn().mockResolvedValue() },
 }));
 
@@ -53,10 +53,31 @@ vi.mock("../../modules/gitops/index.js", () => ({
 }));
 
 vi.mock("lodash", () => ({
-	default: { cloneDeep: vi.fn((obj) => ({ ...obj })) },
+	default: {
+		cloneDeep: vi.fn((obj) => ({ ...obj })),
+		has: (obj, key) => {
+			const keys = key.split(".");
+			let cur = obj;
+			for (const k of keys) {
+				if (cur == null || typeof cur !== "object" || !(k in cur)) return false;
+				cur = cur[k];
+			}
+			return true;
+		},
+		get: (obj, key, def) => {
+			const keys = key.split(".");
+			let cur = obj;
+			for (const k of keys) {
+				if (cur == null || typeof cur !== "object" || !(k in cur)) return def;
+				cur = cur[k];
+			}
+			return cur;
+		},
+	},
 }));
 
 import { get, getAll } from "../../modules/ddns-provider/reads.js";
+import { create, update, remove } from "../../modules/ddns-provider/mutations.js";
 
 describe("ddns-provider module", () => {
 	const mockAccess = {
@@ -104,6 +125,49 @@ describe("ddns-provider module", () => {
 		it("should check ddns_providers:list permission", async () => {
 			await getAll(mockAccess);
 			expect(mockAccess.can).toHaveBeenCalledWith("ddns_providers:list");
+		});
+	});
+
+	describe("mutations – create", () => {
+		it("should insert new provider and trigger ddns process", async () => {
+			const data = { name: "New Provider", provider: "cloudflare", domains: ["test.com"], config: { token: "t", zone_id: "z" } };
+			const result = await create(mockAccess, data);
+			expect(result).toMatchObject({ id: 1, name: "New Provider" });
+		});
+
+		it("should set owner_user_id from access token", async () => {
+			const data = { name: "Test", provider: "cloudflare", domains: ["a.com"] };
+			await create(mockAccess, data);
+			expect(mockAccess.token.getUserId).toHaveBeenCalled();
+		});
+	});
+
+	describe("mutations – update", () => {
+		it("should update existing provider", async () => {
+			_mock.queryResult = { id: 1, name: "Old Name" };
+			const data = { id: 1, name: "New Name" };
+			const result = await update(mockAccess, data);
+			expect(result).toMatchObject({ id: 1 });
+		});
+
+		it("should throw if provider not found", async () => {
+			_mock.queryResult = null;
+			await expect(update(mockAccess, { id: 999, name: "X" })).rejects.toMatchObject({
+				name: "ItemNotFoundError",
+			});
+		});
+	});
+
+	describe("mutations – remove", () => {
+		it("should delete existing provider", async () => {
+			_mock.queryResult = { id: 1, name: "ToDelete" };
+			const result = await remove(mockAccess, { id: 1 });
+			expect(result).toBe(true);
+		});
+
+		it("should throw NotFoundError if provider doesn't exist", async () => {
+			_mock.queryResult = null;
+			await expect(remove(mockAccess, { id: 999 })).rejects.toThrow();
 		});
 	});
 });

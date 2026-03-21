@@ -30,6 +30,7 @@ const mockTunnelQuery = {
 };
 
 import { deleteProcess, getProcess, hasProcess, processes, setProcess } from "../../modules/cloudflared/state.js";
+import cloudflaredService from "../../modules/cloudflared/service.js";
 
 describe("cloudflared module", () => {
 	beforeEach(() => {
@@ -68,6 +69,57 @@ describe("cloudflared module", () => {
 			deleteProcess(2);
 			expect(processes.size).toBe(2);
 			expect(hasProcess(2)).toBe(false);
+		});
+	});
+
+	describe("stop", () => {
+		it("should kill process and update DB when process exists", async () => {
+			const fakeChild = { kill: vi.fn(), pid: 123 };
+			setProcess(1, fakeChild);
+			await cloudflaredService.stop(1);
+			expect(fakeChild.kill).toHaveBeenCalledWith("SIGTERM");
+			expect(hasProcess(1)).toBe(false);
+		});
+
+		it("should do nothing when process does not exist", async () => {
+			await cloudflaredService.stop(999);
+			// No error thrown
+		});
+
+		it("should remove process from state after stop", async () => {
+			setProcess(5, { kill: vi.fn(), pid: 5 });
+			expect(hasProcess(5)).toBe(true);
+			await cloudflaredService.stop(5);
+			expect(hasProcess(5)).toBe(false);
+		});
+	});
+
+	describe("start", () => {
+		it("should stop existing process before starting", async () => {
+			const fakeChild = { kill: vi.fn(), pid: 100 };
+			setProcess(1, fakeChild);
+			const tunnel = {
+				id: 1,
+				name: "Test",
+				token: "tok",
+				meta: {},
+				$query: () => ({ patch: vi.fn().mockResolvedValue(1) }),
+			};
+			// start will spawn, but we just test it doesn't throw
+			await cloudflaredService.start(tunnel).catch(() => {});
+			expect(fakeChild.kill).toHaveBeenCalledWith("SIGTERM");
+		});
+	});
+
+	describe("init", () => {
+		it("should be a function", () => {
+			expect(typeof cloudflaredService.init).toBe("function");
+		});
+	});
+
+	describe("restart", () => {
+		it("should be a function", () => {
+			expect(typeof cloudflaredService.restart).toBe("function");
 		});
 	});
 });

@@ -187,5 +187,42 @@ describe("gitops module", () => {
 			const result = sanitizeForExport(obj, ["nonexistent"]);
 			expect(result).toEqual({ id: 1 });
 		});
+
+		it("should handle nested objects (shallow copy)", () => {
+			const obj = { id: 1, meta: { key: "value" } };
+			const result = sanitizeForExport(obj, []);
+			expect(result.meta).toEqual({ key: "value" });
+		});
+	});
+
+	describe("helpers – getConfig", () => {
+		it("should retrieve gitops config from settings", async () => {
+			const { getConfig } = await import("../../modules/gitops/helpers.js");
+			const mockAccess = { can: vi.fn().mockResolvedValue(true) };
+			const config = await getConfig(mockAccess);
+			expect(config).toBeDefined();
+		});
+	});
+
+	describe("helpers – ensureDir", () => {
+		it("should create directory if not exists", async () => {
+			const { ensureDir } = await import("../../modules/gitops/helpers.js");
+			await ensureDir("/data/gitops/test");
+			// No error means success
+		});
+	});
+
+	describe("helpers – getAuth", () => {
+		it("should return empty object when no credentials", async () => {
+			const { getAuth } = await import("../../modules/gitops/helpers.js");
+			const auth = getAuth({});
+			expect(auth).toEqual({});
+		});
+
+		it("should return onAuth for encrypted credentials", async () => {
+			const { getAuth } = await import("../../modules/gitops/helpers.js");
+			const auth = getAuth({ encrypted_credentials: "enc-token" });
+			expect(auth).toHaveProperty("onAuth");
+		});
 	});
 });
