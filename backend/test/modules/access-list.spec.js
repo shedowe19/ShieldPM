@@ -110,11 +110,7 @@ describe("access-list module – helpers", () => {
 				mtls_enabled: false,
 			};
 			await build(list);
-			expect(fs.default.promises.writeFile).toHaveBeenCalledWith(
-				"/data/access/5",
-				"",
-				{ encoding: "utf8" },
-			);
+			expect(fs.default.promises.writeFile).toHaveBeenCalledWith("/data/access/5", "", { encoding: "utf8" });
 			expect(fs.default.promises.appendFile).toHaveBeenCalled();
 		});
 
@@ -122,11 +118,7 @@ describe("access-list module – helpers", () => {
 			const fs = await import("node:fs");
 			const list = { id: 3, name: "Empty", items: [], mtls_enabled: false };
 			await build(list);
-			expect(fs.default.promises.writeFile).toHaveBeenCalledWith(
-				"/data/access/3",
-				"",
-				{ encoding: "utf8" },
-			);
+			expect(fs.default.promises.writeFile).toHaveBeenCalledWith("/data/access/3", "", { encoding: "utf8" });
 			expect(fs.default.promises.appendFile).not.toHaveBeenCalled();
 		});
 

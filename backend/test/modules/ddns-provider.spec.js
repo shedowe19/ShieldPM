@@ -20,10 +20,18 @@ vi.mock("../../models/ddns_provider.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(id) { super(`Not Found - ${id}`); this.name = "ItemNotFoundError"; this.status = 404; }
+		constructor(id) {
+			super(`Not Found - ${id}`);
+			this.name = "ItemNotFoundError";
+			this.status = 404;
+		}
 	}
 	class NotFoundError extends Error {
-		constructor(m) { super(m); this.name = "NotFoundError"; this.status = 404; }
+		constructor(m) {
+			super(m);
+			this.name = "NotFoundError";
+			this.status = 404;
+		}
 	}
 	return { default: { ItemNotFoundError, NotFoundError } };
 });

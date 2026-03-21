@@ -6,8 +6,12 @@ vi.mock("dockerode", () => {
 			constructor(opts) {
 				this.opts = opts;
 			}
-			ping() { return Promise.resolve("OK"); }
-			listContainers() { return Promise.resolve([]); }
+			ping() {
+				return Promise.resolve("OK");
+			}
+			listContainers() {
+				return Promise.resolve([]);
+			}
 			getEvents() {}
 			getContainer() {}
 		},
@@ -23,7 +27,14 @@ vi.mock("../../logger.js", () => ({
 }));
 
 vi.mock("../../models/proxy_host.js", () => ({
-	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), findById: vi.fn().mockReturnThis(), withGraphFetched: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue(null) })) },
+	default: {
+		query: vi.fn(() => ({
+			where: vi.fn().mockReturnThis(),
+			findById: vi.fn().mockReturnThis(),
+			withGraphFetched: vi.fn().mockReturnThis(),
+			first: vi.fn().mockResolvedValue(null),
+		})),
+	},
 }));
 
 vi.mock("../../modules/certificate/index.js", () => ({
@@ -34,13 +45,7 @@ vi.mock("../../modules/nginx/index.js", () => ({
 	nginxService: { generateConfig: vi.fn(), deleteConfig: vi.fn(), reload: vi.fn() },
 }));
 
-import {
-	clearClients,
-	createDockerClient,
-	getClients,
-	pushClient,
-	reloadState,
-} from "../../modules/docker/state.js";
+import { clearClients, createDockerClient, getClients, pushClient, reloadState } from "../../modules/docker/state.js";
 
 describe("docker module", () => {
 	beforeEach(() => {

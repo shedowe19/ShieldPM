@@ -28,13 +28,22 @@ vi.mock("../../lib/config.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class AuthError extends Error {
-		constructor(m) { super(m); this.name = "AuthError"; }
+		constructor(m) {
+			super(m);
+			this.name = "AuthError";
+		}
 	}
 	class ItemNotFoundError extends Error {
-		constructor(id) { super(`Not Found - ${id}`); this.name = "ItemNotFoundError"; }
+		constructor(id) {
+			super(`Not Found - ${id}`);
+			this.name = "ItemNotFoundError";
+		}
 	}
 	class ValidationError extends Error {
-		constructor(m) { super(m); this.name = "ValidationError"; }
+		constructor(m) {
+			super(m);
+			this.name = "ValidationError";
+		}
 	}
 	return { default: { AuthError, ItemNotFoundError, ValidationError } };
 });

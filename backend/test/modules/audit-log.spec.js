@@ -18,7 +18,7 @@ const makeChainableQuery = () => {
 		withGraphFetched: vi.fn(),
 		first: vi.fn(),
 		insert: vi.fn(() => Promise.resolve(_mock.insertResult)),
-	// biome-ignore lint/suspicious/noThenProperty: mock needs .then for query builder chain
+		// biome-ignore lint/suspicious/noThenProperty: mock needs .then for query builder chain
 		then: (resolve) => resolve(_mock.firstResult),
 	};
 	qb.where.mockReturnValue(qb);
@@ -42,10 +42,18 @@ vi.mock("../../models/audit-log.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(id) { super(`Not Found - ${id}`); this.name = "ItemNotFoundError"; this.status = 404; }
+		constructor(id) {
+			super(`Not Found - ${id}`);
+			this.name = "ItemNotFoundError";
+			this.status = 404;
+		}
 	}
 	class InternalValidationError extends Error {
-		constructor(m) { super(m); this.name = "InternalValidationError"; this.status = 400; }
+		constructor(m) {
+			super(m);
+			this.name = "InternalValidationError";
+			this.status = 400;
+		}
 	}
 	return { default: { ItemNotFoundError, InternalValidationError } };
 });

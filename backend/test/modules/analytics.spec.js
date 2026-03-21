@@ -45,10 +45,18 @@ vi.mock("tail", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(m) { super(m); this.name = "ItemNotFoundError"; this.status = 404; }
+		constructor(m) {
+			super(m);
+			this.name = "ItemNotFoundError";
+			this.status = 404;
+		}
 	}
 	class PermissionError extends Error {
-		constructor(m) { super(m); this.name = "PermissionError"; this.status = 403; }
+		constructor(m) {
+			super(m);
+			this.name = "PermissionError";
+			this.status = 403;
+		}
 	}
 	return { default: { ItemNotFoundError, PermissionError } };
 });
@@ -160,15 +168,17 @@ describe("analytics module", () => {
 
 			const statuses = [200, 301, 404, 500];
 			for (const status of statuses) {
-				svc.processLine(JSON.stringify({
-					server_name: "test.com",
-					status: String(status),
-					body_bytes_sent: "100",
-					time_iso8601: "2024-01-01T12:00:00Z",
-					request_method: "GET",
-					request_uri: "/",
-					remote_addr: "1.1.1.1",
-				}));
+				svc.processLine(
+					JSON.stringify({
+						server_name: "test.com",
+						status: String(status),
+						body_bytes_sent: "100",
+						time_iso8601: "2024-01-01T12:00:00Z",
+						request_method: "GET",
+						request_uri: "/",
+						remote_addr: "1.1.1.1",
+					}),
+				);
 			}
 
 			const entry = Array.from(svc.aggregationBuffer.values())[0];
@@ -186,16 +196,18 @@ describe("analytics module", () => {
 			svc.hostCache = new Map([["fallback.com", 3]]);
 			svc.lastDropLogAt = 0;
 
-			svc.processLine(JSON.stringify({
-				server_name: "_",
-				http_host: "fallback.com",
-				status: "200",
-				body_bytes_sent: "0",
-				time_iso8601: "2024-01-01T12:00:00Z",
-				request_method: "GET",
-				request_uri: "/",
-				remote_addr: "1.1.1.1",
-			}));
+			svc.processLine(
+				JSON.stringify({
+					server_name: "_",
+					http_host: "fallback.com",
+					status: "200",
+					body_bytes_sent: "0",
+					time_iso8601: "2024-01-01T12:00:00Z",
+					request_method: "GET",
+					request_uri: "/",
+					remote_addr: "1.1.1.1",
+				}),
+			);
 
 			expect(svc.detailedLogBuffer[0].host_id).toBe(3);
 		});

@@ -37,7 +37,10 @@ vi.mock("../../logger.js", () => ({
 vi.mock("../../lib/error.js", () => ({
 	default: {
 		ConfigurationError: class ConfigurationError extends Error {
-			constructor(m) { super(m); this.name = "ConfigurationError"; }
+			constructor(m) {
+				super(m);
+				this.name = "ConfigurationError";
+			}
 		},
 	},
 }));
@@ -52,7 +55,9 @@ vi.mock("lodash", () => ({
 		map: (arr, fn) => arr.map(fn),
 		omit: (obj, keys) => {
 			const result = { ...obj };
-			for (const k of keys) { delete result[k]; };
+			for (const k of keys) {
+				delete result[k];
+			}
 			return result;
 		},
 	},

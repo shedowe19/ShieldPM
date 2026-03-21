@@ -59,10 +59,16 @@ vi.mock("../../lib/encryption.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(id) { super(`Not Found - ${id}`); this.name = "ItemNotFoundError"; }
+		constructor(id) {
+			super(`Not Found - ${id}`);
+			this.name = "ItemNotFoundError";
+		}
 	}
 	class AuthError extends Error {
-		constructor(m) { super(m); this.name = "AuthError"; }
+		constructor(m) {
+			super(m);
+			this.name = "AuthError";
+		}
 	}
 	return { default: { ItemNotFoundError, AuthError } };
 });
@@ -77,15 +83,35 @@ vi.mock("../../models/setting.js", () => ({
 	},
 }));
 
-vi.mock("../../models/proxy_host.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/redirection_host.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/dead_host.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/stream.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/certificate.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/user.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), withGraphFetched: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/access_list.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/cloudflared_tunnel.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
-vi.mock("../../models/ddns_provider.js", () => ({ default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) } }));
+vi.mock("../../models/proxy_host.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
+vi.mock("../../models/redirection_host.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
+vi.mock("../../models/dead_host.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
+vi.mock("../../models/stream.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
+vi.mock("../../models/certificate.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
+vi.mock("../../models/user.js", () => ({
+	default: {
+		query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), withGraphFetched: vi.fn().mockResolvedValue([]) })),
+	},
+}));
+vi.mock("../../models/access_list.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
+vi.mock("../../models/cloudflared_tunnel.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
+vi.mock("../../models/ddns_provider.js", () => ({
+	default: { query: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) },
+}));
 
 vi.mock("../../modules/nginx/index.js", () => ({
 	nginxService: {

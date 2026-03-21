@@ -42,7 +42,14 @@ const mockProxyHostQuery = {
 	where: vi.fn().mockReturnThis(),
 };
 
-import { deleteProcess, getProcess, hasProcess, processes, setProcess, dataPath } from "../../modules/oauth2-proxy/state.js";
+import {
+	deleteProcess,
+	getProcess,
+	hasProcess,
+	processes,
+	setProcess,
+	dataPath,
+} from "../../modules/oauth2-proxy/state.js";
 import oauth2ProxyService from "../../modules/oauth2-proxy/service.js";
 
 describe("oauth2-proxy module", () => {

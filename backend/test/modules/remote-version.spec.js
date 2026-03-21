@@ -17,8 +17,7 @@ vi.mock("node:https", () => ({
 }));
 
 vi.mock("proxy-agent", () => ({
-	ProxyAgent: class ProxyAgent {
-	},
+	ProxyAgent: class ProxyAgent {},
 }));
 
 vi.mock("../../logger.js", () => ({

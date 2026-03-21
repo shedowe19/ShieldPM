@@ -22,7 +22,11 @@ vi.mock("../../models/dashboard_note.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(id) { super(`Not Found - ${id}`); this.name = "ItemNotFoundError"; this.status = 404; }
+		constructor(id) {
+			super(`Not Found - ${id}`);
+			this.name = "ItemNotFoundError";
+			this.status = 404;
+		}
 	}
 	return { default: { ItemNotFoundError } };
 });

@@ -45,10 +45,12 @@ describe("anubis module – buildPolicy", () => {
 	});
 
 	it("should create rules from host anubis_rules", () => {
-		const hosts = [{
-			domain_names: ["example.com"],
-			anubis_rules: [{ action: "ALLOW", path: "/api", name: "allow-api" }],
-		}];
+		const hosts = [
+			{
+				domain_names: ["example.com"],
+				anubis_rules: [{ action: "ALLOW", path: "/api", name: "allow-api" }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots).toHaveLength(1);
 		expect(result.bots[0].name).toBe("allow-api");
@@ -58,79 +60,97 @@ describe("anubis module – buildPolicy", () => {
 	});
 
 	it("should handle multiple domains with regex OR", () => {
-		const hosts = [{
-			domain_names: ["a.com", "b.com"],
-			anubis_rules: [{ action: "DENY" }],
-		}];
+		const hosts = [
+			{
+				domain_names: ["a.com", "b.com"],
+				anubis_rules: [{ action: "DENY" }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots[0].headers_regex["X-Shieldpm-Host"]).toBe("^(a\\.com|b\\.com)$");
 	});
 
 	it("should skip rules without action", () => {
-		const hosts = [{
-			domain_names: ["test.com"],
-			anubis_rules: [{ path: "/skip" }],
-		}];
+		const hosts = [
+			{
+				domain_names: ["test.com"],
+				anubis_rules: [{ path: "/skip" }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots).toHaveLength(1);
 		expect(result.bots[0].name).toBe("shieldpm-placeholder");
 	});
 
 	it("should skip hosts without domain_names", () => {
-		const hosts = [{
-			domain_names: [],
-			anubis_rules: [{ action: "ALLOW" }],
-		}];
+		const hosts = [
+			{
+				domain_names: [],
+				anubis_rules: [{ action: "ALLOW" }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots).toHaveLength(1);
 		expect(result.bots[0].name).toBe("shieldpm-placeholder");
 	});
 
 	it("should handle user_agent_regex", () => {
-		const hosts = [{
-			domain_names: ["test.com"],
-			anubis_rules: [{ action: "DENY", userAgent: "Googlebot" }],
-		}];
+		const hosts = [
+			{
+				domain_names: ["test.com"],
+				anubis_rules: [{ action: "DENY", userAgent: "Googlebot" }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots[0].user_agent_regex).toBe("Googlebot");
 	});
 
 	it("should handle remote_addresses", () => {
-		const hosts = [{
-			domain_names: ["test.com"],
-			anubis_rules: [{ action: "ALLOW", remoteAddresses: ["10.0.0.0/8"] }],
-		}];
+		const hosts = [
+			{
+				domain_names: ["test.com"],
+				anubis_rules: [{ action: "ALLOW", remoteAddresses: ["10.0.0.0/8"] }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots[0].remote_addresses).toEqual(["10.0.0.0/8"]);
 	});
 
 	it("should handle CHALLENGE action with difficulty and algorithm", () => {
-		const hosts = [{
-			domain_names: ["test.com"],
-			anubis_rules: [{
-				action: "CHALLENGE",
-				challengeDifficulty: "5",
-				challengeAlgorithm: "fast",
-			}],
-		}];
+		const hosts = [
+			{
+				domain_names: ["test.com"],
+				anubis_rules: [
+					{
+						action: "CHALLENGE",
+						challengeDifficulty: "5",
+						challengeAlgorithm: "fast",
+					},
+				],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots[0].challenge).toEqual({ difficulty: 5, algorithm: "fast" });
 	});
 
 	it("should not include challenge for non-CHALLENGE actions", () => {
-		const hosts = [{
-			domain_names: ["test.com"],
-			anubis_rules: [{ action: "ALLOW", challengeDifficulty: "5" }],
-		}];
+		const hosts = [
+			{
+				domain_names: ["test.com"],
+				anubis_rules: [{ action: "ALLOW", challengeDifficulty: "5" }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots[0].challenge).toBeUndefined();
 	});
 
 	it("should generate auto name when rule has no name", () => {
-		const hosts = [{
-			domain_names: ["my-site.com"],
-			anubis_rules: [{ action: "DENY" }],
-		}];
+		const hosts = [
+			{
+				domain_names: ["my-site.com"],
+				anubis_rules: [{ action: "DENY" }],
+			},
+		];
 		const result = buildPolicy(hosts);
 		expect(result.bots[0].name).toMatch(/^shieldpm-my-site-com-/);
 	});

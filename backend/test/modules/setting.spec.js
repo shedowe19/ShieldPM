@@ -17,13 +17,25 @@ vi.mock("../../models/setting.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(id) { super(`Not Found - ${id}`); this.name = "ItemNotFoundError"; this.status = 404; }
+		constructor(id) {
+			super(`Not Found - ${id}`);
+			this.name = "ItemNotFoundError";
+			this.status = 404;
+		}
 	}
 	class InternalValidationError extends Error {
-		constructor(m) { super(m); this.name = "InternalValidationError"; this.status = 400; }
+		constructor(m) {
+			super(m);
+			this.name = "InternalValidationError";
+			this.status = 400;
+		}
 	}
 	class ValidationError extends Error {
-		constructor(m) { super(m); this.name = "ValidationError"; this.status = 400; }
+		constructor(m) {
+			super(m);
+			this.name = "ValidationError";
+			this.status = 400;
+		}
 	}
 	return {
 		default: { ItemNotFoundError, InternalValidationError, ValidationError },

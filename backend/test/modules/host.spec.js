@@ -27,10 +27,7 @@ import {
 	cleanRowCertificateMeta,
 	cleanSslHstsData,
 } from "../../modules/host/certificate.js";
-import {
-	checkHostnameRecordsTaken,
-	getHostsWithDomainsFromList,
-} from "../../modules/host/domains.js";
+import { checkHostnameRecordsTaken, getHostsWithDomainsFromList } from "../../modules/host/domains.js";
 
 describe("host module – certificate helpers", () => {
 	// ── cleanSslHstsData ────────────────────────────────────────────────
@@ -122,37 +119,27 @@ describe("host module – domain helpers", () => {
 
 	describe("checkHostnameRecordsTaken", () => {
 		it("should return true when hostname is found in existing rows", () => {
-			const existing = [
-				{ id: 1, domain_names: ["example.com", "www.example.com"] },
-			];
+			const existing = [{ id: 1, domain_names: ["example.com", "www.example.com"] }];
 			expect(checkHostnameRecordsTaken("example.com", existing)).toBe(true);
 		});
 
 		it("should return false when hostname is not found", () => {
-			const existing = [
-				{ id: 1, domain_names: ["example.com"] },
-			];
+			const existing = [{ id: 1, domain_names: ["example.com"] }];
 			expect(checkHostnameRecordsTaken("other.com", existing)).toBe(false);
 		});
 
 		it("should be case-insensitive", () => {
-			const existing = [
-				{ id: 1, domain_names: ["Example.COM"] },
-			];
+			const existing = [{ id: 1, domain_names: ["Example.COM"] }];
 			expect(checkHostnameRecordsTaken("example.com", existing)).toBe(true);
 		});
 
 		it("should respect ignoreId", () => {
-			const existing = [
-				{ id: 5, domain_names: ["example.com"] },
-			];
+			const existing = [{ id: 5, domain_names: ["example.com"] }];
 			expect(checkHostnameRecordsTaken("example.com", existing, 5)).toBe(false);
 		});
 
 		it("should still return true when ignoreId does not match", () => {
-			const existing = [
-				{ id: 5, domain_names: ["example.com"] },
-			];
+			const existing = [{ id: 5, domain_names: ["example.com"] }];
 			expect(checkHostnameRecordsTaken("example.com", existing, 99)).toBe(true);
 		});
 

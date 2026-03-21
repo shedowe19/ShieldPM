@@ -5,7 +5,9 @@ vi.mock("lodash", () => ({
 		assign: Object.assign,
 		omit: (obj, keys) => {
 			const result = { ...obj };
-			for (const k of keys) { delete result[k]; };
+			for (const k of keys) {
+				delete result[k];
+			}
 			return result;
 		},
 	},
@@ -41,13 +43,25 @@ vi.mock("../../models/access_list.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(id) { super(`Not Found - ${id}`); this.name = "ItemNotFoundError"; this.status = 404; }
+		constructor(id) {
+			super(`Not Found - ${id}`);
+			this.name = "ItemNotFoundError";
+			this.status = 404;
+		}
 	}
 	class ValidationError extends Error {
-		constructor(m) { super(m); this.name = "ValidationError"; this.status = 400; }
+		constructor(m) {
+			super(m);
+			this.name = "ValidationError";
+			this.status = 400;
+		}
 	}
 	class InternalValidationError extends Error {
-		constructor(m) { super(m); this.name = "InternalValidationError"; this.status = 400; }
+		constructor(m) {
+			super(m);
+			this.name = "InternalValidationError";
+			this.status = 400;
+		}
 	}
 	return {
 		default: { ItemNotFoundError, ValidationError, InternalValidationError },
@@ -134,10 +148,7 @@ describe("proxy-host module", () => {
 		it("should attach host_domains from domain_names array", () => {
 			const data = { domain_names: ["a.com", "b.com"] };
 			const result = attachHostDomains(data);
-			expect(result.host_domains).toEqual([
-				{ domain_name: "a.com" },
-				{ domain_name: "b.com" },
-			]);
+			expect(result.host_domains).toEqual([{ domain_name: "a.com" }, { domain_name: "b.com" }]);
 		});
 
 		it("should return data unchanged when domain_names is missing", () => {

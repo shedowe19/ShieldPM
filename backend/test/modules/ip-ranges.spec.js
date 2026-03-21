@@ -18,12 +18,15 @@ vi.mock("node:https", () => ({
 }));
 
 vi.mock("proxy-agent", () => ({
-	ProxyAgent: class ProxyAgent { },
+	ProxyAgent: class ProxyAgent {},
 }));
 
 vi.mock("../../lib/error.js", () => {
 	class ConfigurationError extends Error {
-		constructor(m) { super(m); this.name = "ConfigurationError"; }
+		constructor(m) {
+			super(m);
+			this.name = "ConfigurationError";
+		}
 	}
 	return { default: { ConfigurationError } };
 });

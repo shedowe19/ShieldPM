@@ -85,11 +85,7 @@ vi.mock("../../models/token.js", () => ({
 
 vi.mock("../../models/user-2fa.js", () => ({
 	default: {
-		getActiveForUser: vi.fn(async () => [
-			{ type: "totp" },
-			{ type: "totp" },
-			{ type: "yubikey" },
-		]),
+		getActiveForUser: vi.fn(async () => [{ type: "totp" }, { type: "totp" }, { type: "yubikey" }]),
 	},
 }));
 
@@ -124,9 +120,9 @@ describe("auth module – normalizeLoginIdentifier", () => {
 	});
 
 	it("should prefer identity over email and username", () => {
-		expect(
-			normalizeLoginIdentifier({ identity: "First", email: "second@test.com", username: "third" }),
-		).toBe("first");
+		expect(normalizeLoginIdentifier({ identity: "First", email: "second@test.com", username: "third" })).toBe(
+			"first",
+		);
 	});
 
 	it("should return null for null/undefined/non-object", () => {
@@ -213,11 +209,10 @@ describe("auth module – issueAuthResponse", () => {
 			csrfToken: "csrf-tok",
 		});
 
-		expect(mockTokenService.issueTokenPair).toHaveBeenCalledWith(
-			{ id: 1 },
-			"user",
-			{ ip: "127.0.0.1", userAgent: "test" },
-		);
+		expect(mockTokenService.issueTokenPair).toHaveBeenCalledWith({ id: 1 }, "user", {
+			ip: "127.0.0.1",
+			userAgent: "test",
+		});
 		expect(setAuthCookies).toHaveBeenCalledWith(res, req, {
 			accessToken: "at",
 			accessExpires: "2026-01-01T00:00:00Z",
@@ -265,11 +260,7 @@ describe("auth module – issueAuthResponse", () => {
 
 		await issueAuthResponse({ tokenService: svc, user: { id: 3 }, req, res: {} });
 
-		expect(svc.issueTokenPair).toHaveBeenCalledWith(
-			{ id: 3 },
-			"user",
-			{ ip: "unknown", userAgent: null },
-		);
+		expect(svc.issueTokenPair).toHaveBeenCalledWith({ id: 3 }, "user", { ip: "unknown", userAgent: null });
 	});
 });
 

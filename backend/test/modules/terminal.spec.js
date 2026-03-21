@@ -16,7 +16,10 @@ vi.mock("ssh2", () => {
 			constructor() {
 				this._handlers = {};
 			}
-			on(evt, fn) { this._handlers[evt] = fn; return this; }
+			on(evt, fn) {
+				this._handlers[evt] = fn;
+				return this;
+			}
 			connect(_cfg) {}
 			end() {}
 			shell(_opts, _cb) {}

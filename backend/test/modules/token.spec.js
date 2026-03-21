@@ -188,9 +188,9 @@ describe("token module – getTokenFromEmail", () => {
 			})),
 		});
 
-		await expect(
-			getTokenFromEmail({ identity: "unknown@test.com", secret: "pw" }),
-		).rejects.toThrow("Invalid email or password");
+		await expect(getTokenFromEmail({ identity: "unknown@test.com", secret: "pw" })).rejects.toThrow(
+			"Invalid email or password",
+		);
 	});
 
 	it("should throw AuthError when no auth record exists", async () => {
@@ -202,9 +202,9 @@ describe("token module – getTokenFromEmail", () => {
 			})),
 		});
 
-		await expect(
-			getTokenFromEmail({ identity: "alice@example.com", secret: "pw" }),
-		).rejects.toThrow("Invalid email or password");
+		await expect(getTokenFromEmail({ identity: "alice@example.com", secret: "pw" })).rejects.toThrow(
+			"Invalid email or password",
+		);
 	});
 
 	it("should throw AuthError when password is invalid", async () => {
@@ -221,9 +221,9 @@ describe("token module – getTokenFromEmail", () => {
 			})),
 		});
 
-		await expect(
-			getTokenFromEmail({ identity: "alice@example.com", secret: "wrong" }),
-		).rejects.toThrow("Invalid email or password");
+		await expect(getTokenFromEmail({ identity: "alice@example.com", secret: "wrong" })).rejects.toThrow(
+			"Invalid email or password",
+		);
 	});
 
 	it("should throw AuthError for invalid scope", async () => {
@@ -262,9 +262,9 @@ describe("token module – getTokenFromOAuthClaim", () => {
 			})),
 		});
 
-		await expect(
-			getTokenFromOAuthClaim({ identity: "unknown@test.com" }),
-		).rejects.toThrow("Invalid email or password");
+		await expect(getTokenFromOAuthClaim({ identity: "unknown@test.com" })).rejects.toThrow(
+			"Invalid email or password",
+		);
 	});
 });
 
