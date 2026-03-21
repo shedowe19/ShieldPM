@@ -149,14 +149,12 @@ const importConfig = async (access, options = {}) => {
 							itemData.is_deleted = 0;
 							if (options.overwrite && existingId) {
 								if (relationGraph)
-									await modelClass
-										.query()
-										.upsertGraph(itemData, {
-											insertMissing: true,
-											relate: true,
-											update: true,
-											noDelete: false,
-										});
+									await modelClass.query().upsertGraph(itemData, {
+										insertMissing: true,
+										relate: true,
+										update: true,
+										noDelete: false,
+									});
 								else {
 									const existing = await modelClass.query().findById(existingId);
 									if (existing) await modelClass.query().patchAndFetchById(existingId, itemData);

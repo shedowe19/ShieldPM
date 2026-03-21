@@ -25,20 +25,18 @@ const create = async (access, data) => {
 		if (auth) {
 			await authModel.query(trx).insert({ user_id: user.id, type: auth.type, secret: auth.secret, meta: {} });
 		}
-		await userPermissionModel
-			.query(trx)
-			.insert({
-				user_id: user.id,
-				visibility: "user",
-				access_lists: "manage",
-				certificates: "manage",
-				proxy_hosts: "manage",
-				redirection_hosts: "manage",
-				streams: "manage",
-				dead_hosts: "manage",
-				cloudflared_tunnels: "manage",
-				analytics: "view",
-			});
+		await userPermissionModel.query(trx).insert({
+			user_id: user.id,
+			visibility: "user",
+			access_lists: "manage",
+			certificates: "manage",
+			proxy_hosts: "manage",
+			redirection_hosts: "manage",
+			streams: "manage",
+			dead_hosts: "manage",
+			cloudflared_tunnels: "manage",
+			analytics: "view",
+		});
 	});
 	user = await get(access, { id: user.id, expand: ["permissions"] });
 	user = _.omit(user, omissions());

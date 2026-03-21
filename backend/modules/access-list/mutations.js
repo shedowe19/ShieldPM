@@ -39,15 +39,13 @@ const create = async (access, data) => {
 	promises.push(...itemsPromises);
 	data.clients?.map((client) => {
 		promises.push(
-			accessListClientModel
-				.query()
-				.insert({
-					access_list_id: data.id,
-					address: client.address,
-					directive: client.directive,
-					created_on: now(),
-					modified_on: now(),
-				}),
+			accessListClientModel.query().insert({
+				access_list_id: data.id,
+				address: client.address,
+				directive: client.directive,
+				created_on: now(),
+				modified_on: now(),
+			}),
 		);
 		return true;
 	});
@@ -81,17 +79,14 @@ const update = async (access, data) => {
 		);
 	if (typeof data.name !== "undefined" && data.name) {
 		logger.info(`[Update] Access List #${data.id} meta: ${JSON.stringify(data.meta)}`);
-		await accessListModel
-			.query()
-			.where({ id: data.id })
-			.patch({
-				name: data.name,
-				satisfy_any: data.satisfy_any,
-				pass_auth: data.pass_auth,
-				mtls_enabled: data.mtls_enabled,
-				mtls_use_internal: data.mtls_use_internal,
-				meta: data.meta,
-			});
+		await accessListModel.query().where({ id: data.id }).patch({
+			name: data.name,
+			satisfy_any: data.satisfy_any,
+			pass_auth: data.pass_auth,
+			mtls_enabled: data.mtls_enabled,
+			mtls_use_internal: data.mtls_use_internal,
+			meta: data.meta,
+		});
 	}
 	if (typeof data.items !== "undefined" && data.items) {
 		const promises = [];

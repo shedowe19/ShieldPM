@@ -24,13 +24,11 @@ const uploadAvatar = async (access, data) => {
 	const filename = `${user.id}-${Date.now()}${detectedType.extension}`;
 	const filePath = path.join(avatarDir, filename);
 	await fs.promises.writeFile(filePath, file.data);
-	await userModel
-		.query()
-		.patchAndFetchById(user.id, {
-			avatar_type: "upload",
-			avatar_value: filename,
-			avatar: `/api/users/${user.id}/avatar/image`,
-		});
+	await userModel.query().patchAndFetchById(user.id, {
+		avatar_type: "upload",
+		avatar_value: filename,
+		avatar: `/api/users/${user.id}/avatar/image`,
+	});
 	return { url: `/api/users/${user.id}/avatar/image`, mime_type: detectedType.mimeType };
 };
 
