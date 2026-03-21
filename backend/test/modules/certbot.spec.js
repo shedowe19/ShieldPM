@@ -133,9 +133,10 @@ describe("certbot module", () => {
 			const cert = { id: 1, domain_names: ["test.com"] };
 			const result = await requestCertbot(cert);
 			expect(result).toBe("certbot output");
-			expect(utils.execFile).toHaveBeenCalledWith("certbot", expect.arrayContaining([
-				"certonly", "--cert-name", "npm-1",
-			]));
+			expect(utils.execFile).toHaveBeenCalledWith(
+				"certbot",
+				expect.arrayContaining(["certonly", "--cert-name", "npm-1"]),
+			);
 		});
 
 		it("should join multiple domains with comma", async () => {
@@ -143,7 +144,7 @@ describe("certbot module", () => {
 			const utils = (await import("../../lib/utils.js")).default;
 			const cert = { id: 2, domain_names: ["a.com", "b.com"] };
 			await requestCertbot(cert);
-			const args = utils.execFile.mock.calls.find(c => c[0] === "certbot")?.[1];
+			const args = utils.execFile.mock.calls.find((c) => c[0] === "certbot")?.[1];
 			expect(args).toContain("a.com,b.com");
 		});
 
@@ -151,7 +152,7 @@ describe("certbot module", () => {
 			const { requestCertbot } = await import("../../modules/certbot/service.js");
 			const utils = (await import("../../lib/utils.js")).default;
 			await requestCertbot({ id: 1, domain_names: ["x.com"] });
-			const args = utils.execFile.mock.calls.find(c => c[0] === "certbot")?.[1];
+			const args = utils.execFile.mock.calls.find((c) => c[0] === "certbot")?.[1];
 			expect(args).toContain("webroot");
 		});
 	});
@@ -165,9 +166,10 @@ describe("certbot module", () => {
 			const cert = { id: 1, domain_names: ["test.com"] };
 			const result = await renewCertbot(cert);
 			expect(result).toBe("certbot output");
-			expect(utils.execFile).toHaveBeenCalledWith("certbot", expect.arrayContaining([
-				"renew", "--force-renewal", "--cert-name", "npm-1",
-			]));
+			expect(utils.execFile).toHaveBeenCalledWith(
+				"certbot",
+				expect.arrayContaining(["renew", "--force-renewal", "--cert-name", "npm-1"]),
+			);
 		});
 
 		it("should throw when another process is running", async () => {
@@ -175,7 +177,12 @@ describe("certbot module", () => {
 			const utils = (await import("../../lib/utils.js")).default;
 			// Make the first call hang
 			let resolveFirst;
-			utils.execFile.mockImplementationOnce(() => new Promise(r => { resolveFirst = r; }));
+			utils.execFile.mockImplementationOnce(
+				() =>
+					new Promise((r) => {
+						resolveFirst = r;
+					}),
+			);
 			const first = renewCertbot({ id: 1, domain_names: ["a.com"] });
 			// Second call should fail
 			await expect(renewCertbot({ id: 2, domain_names: ["b.com"] })).rejects.toThrow("currently running");
@@ -200,10 +207,7 @@ describe("certbot module", () => {
 			const cert = { id: 1, domain_names: ["test.com"] };
 			const result = await revokeCertbot(cert);
 			expect(result).toBe("certbot output");
-			expect(fs.rmSync).toHaveBeenCalledWith(
-				expect.stringContaining("npm-1.der"),
-				{ force: true },
-			);
+			expect(fs.rmSync).toHaveBeenCalledWith(expect.stringContaining("npm-1.der"), { force: true });
 		});
 
 		it("should not throw on error when throwErrors is false", async () => {
@@ -300,7 +304,9 @@ describe("certbot module", () => {
 				domain_names: ["test.com"],
 				meta: { dns_provider: "cloudflare" },
 			};
-			try { await renewCertbotWithDnsChallenge(cert); } catch {}
+			try {
+				await renewCertbotWithDnsChallenge(cert);
+			} catch {}
 			expect(isProcessing()).toBe(false);
 		});
 	});

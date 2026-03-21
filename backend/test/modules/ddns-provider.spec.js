@@ -130,7 +130,12 @@ describe("ddns-provider module", () => {
 
 	describe("mutations – create", () => {
 		it("should insert new provider and trigger ddns process", async () => {
-			const data = { name: "New Provider", provider: "cloudflare", domains: ["test.com"], config: { token: "t", zone_id: "z" } };
+			const data = {
+				name: "New Provider",
+				provider: "cloudflare",
+				domains: ["test.com"],
+				config: { token: "t", zone_id: "z" },
+			};
 			const result = await create(mockAccess, data);
 			expect(result).toMatchObject({ id: 1, name: "New Provider" });
 		});

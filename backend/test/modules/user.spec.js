@@ -50,7 +50,9 @@ vi.mock("../../models/auth.js", () => ({
 			const qb = {
 				where: vi.fn(() => qb),
 				andWhere: vi.fn(() => qb),
-				first: vi.fn(() => Promise.resolve({ secret: "hash", verifyPassword: vi.fn(() => Promise.resolve(true)) })),
+				first: vi.fn(() =>
+					Promise.resolve({ secret: "hash", verifyPassword: vi.fn(() => Promise.resolve(true)) }),
+				),
 				insert: vi.fn(() => Promise.resolve()),
 				patch: vi.fn(() => Promise.resolve()),
 			};
@@ -90,19 +92,34 @@ vi.mock("../../modules/token/index.js", () => ({
 vi.mock("../../lib/error.js", () => ({
 	default: {
 		ValidationError: class ValidationError extends Error {
-			constructor(m) { super(m); this.name = "ValidationError"; }
+			constructor(m) {
+				super(m);
+				this.name = "ValidationError";
+			}
 		},
 		ItemNotFoundError: class ItemNotFoundError extends Error {
-			constructor(m) { super(m ? `Not Found - ${m}` : "Not Found"); this.name = "ItemNotFoundError"; }
+			constructor(m) {
+				super(m ? `Not Found - ${m}` : "Not Found");
+				this.name = "ItemNotFoundError";
+			}
 		},
 		PermissionError: class PermissionError extends Error {
-			constructor(m) { super(m); this.name = "PermissionError"; }
+			constructor(m) {
+				super(m);
+				this.name = "PermissionError";
+			}
 		},
 		InternalValidationError: class InternalValidationError extends Error {
-			constructor(m) { super(m); this.name = "InternalValidationError"; }
+			constructor(m) {
+				super(m);
+				this.name = "InternalValidationError";
+			}
 		},
 		InternalError: class InternalError extends Error {
-			constructor(m) { super(m); this.name = "InternalError"; }
+			constructor(m) {
+				super(m);
+				this.name = "InternalError";
+			}
 		},
 	},
 }));
@@ -118,7 +135,7 @@ vi.mock("lodash", () => ({
 	default: {
 		omit: (obj, keys) => {
 			const result = { ...obj };
-			for (const k of (Array.isArray(keys) ? keys : [keys])) delete result[k];
+			for (const k of Array.isArray(keys) ? keys : [keys]) delete result[k];
 			return result;
 		},
 		assign: Object.assign,

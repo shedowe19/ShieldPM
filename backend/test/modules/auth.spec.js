@@ -324,8 +324,16 @@ const mockUserTwoFaQueryBuilder = () => {
 			}
 			if (criteria?.type === "duo" && criteria?.is_verified === 1) {
 				return Promise.resolve({
-					id: 20, user_id: 1, type: "duo", is_verified: 1,
-					meta: { clientId: "cid", clientSecret: "csec", apiHost: "api.duo.com", redirectUrl: "https://example.com/callback" },
+					id: 20,
+					user_id: 1,
+					type: "duo",
+					is_verified: 1,
+					meta: {
+						clientId: "cid",
+						clientSecret: "csec",
+						apiHost: "api.duo.com",
+						redirectUrl: "https://example.com/callback",
+					},
 				});
 			}
 			if (criteria?.type === "yubikey" && criteria?.secret && criteria?.is_deleted === 0) {
@@ -333,16 +341,35 @@ const mockUserTwoFaQueryBuilder = () => {
 				return Promise.resolve(null);
 			}
 			if (criteria?.type === "passkey_challenge") {
-				return Promise.resolve({ id: 40, user_id: 1, type: "passkey_challenge", secret: "challenge-id", meta: { challenge: "mockchallenge" }, is_verified: 0 });
+				return Promise.resolve({
+					id: 40,
+					user_id: 1,
+					type: "passkey_challenge",
+					secret: "challenge-id",
+					meta: { challenge: "mockchallenge" },
+					is_verified: 0,
+				});
 			}
 			if (criteria?.type === "passkey_auth_challenge") {
-				return Promise.resolve({ id: 41, user_id: 1, type: "passkey_auth_challenge", secret: "auth-challenge-id", meta: { challenge: "mockchallenge" }, is_verified: 0 });
+				return Promise.resolve({
+					id: 41,
+					user_id: 1,
+					type: "passkey_auth_challenge",
+					secret: "auth-challenge-id",
+					meta: { challenge: "mockchallenge" },
+					is_verified: 0,
+				});
 			}
 			if (criteria?.type === "passkey" && criteria?.secret) {
 				return Promise.resolve({
-					id: 50, user_id: 1, type: "passkey", secret: criteria.secret,
+					id: 50,
+					user_id: 1,
+					type: "passkey",
+					secret: criteria.secret,
 					public_key: Buffer.from("mockpublickey").toString("base64"),
-					counter: 0, transports: "usb,ble", is_verified: 1,
+					counter: 0,
+					transports: "usb,ble",
+					is_verified: 1,
 				});
 			}
 			// For removeTwoFaMethod
@@ -353,7 +380,11 @@ const mockUserTwoFaQueryBuilder = () => {
 		}),
 		where: vi.fn((criteria) => {
 			// For passkey queries that expect an array result
-			if (criteria?.type === "passkey" || criteria?.type === "passkey_challenge" || criteria?.type === "passkey_auth_challenge") {
+			if (
+				criteria?.type === "passkey" ||
+				criteria?.type === "passkey_challenge" ||
+				criteria?.type === "passkey_auth_challenge"
+			) {
 				return Promise.resolve([]);
 			}
 			// For other where() calls, return a thenable with resultSize support
@@ -372,11 +403,7 @@ const mockUserTwoFaQueryBuilder = () => {
 vi.mock("../../models/user-2fa.js", () => ({
 	default: {
 		query: vi.fn(() => mockUserTwoFaQueryBuilder()),
-		getActiveForUser: vi.fn(async () => [
-			{ type: "totp" },
-			{ type: "totp" },
-			{ type: "yubikey" },
-		]),
+		getActiveForUser: vi.fn(async () => [{ type: "totp" }, { type: "totp" }, { type: "yubikey" }]),
 	},
 }));
 
@@ -407,14 +434,18 @@ vi.mock("../../models/user-2fa-backup-codes.js", () => ({
 vi.mock("@simplewebauthn/server", () => ({
 	generateRegistrationOptions: vi.fn(() => Promise.resolve({ challenge: "regchallenge123", rp: {} })),
 	generateAuthenticationOptions: vi.fn(() => Promise.resolve({ challenge: "authchallenge123" })),
-	verifyRegistrationResponse: vi.fn(() => Promise.resolve({
-		verified: true,
-		registrationInfo: { credential: { id: "cred-id-1", publicKey: new Uint8Array([1, 2, 3]), counter: 0 } },
-	})),
-	verifyAuthenticationResponse: vi.fn(() => Promise.resolve({
-		verified: true,
-		authenticationInfo: { newCounter: 1 },
-	})),
+	verifyRegistrationResponse: vi.fn(() =>
+		Promise.resolve({
+			verified: true,
+			registrationInfo: { credential: { id: "cred-id-1", publicKey: new Uint8Array([1, 2, 3]), counter: 0 } },
+		}),
+	),
+	verifyAuthenticationResponse: vi.fn(() =>
+		Promise.resolve({
+			verified: true,
+			authenticationInfo: { newCounter: 1 },
+		}),
+	),
 }));
 
 vi.mock("@duosecurity/duo_universal", () => {
@@ -445,9 +476,17 @@ vi.mock("node:https", () => ({
 
 import twoFaService from "../../modules/auth/service.js";
 import { setupTotp, verifyAndEnableTotp, verifyTotp } from "../../modules/auth/totp.js";
-import { regenerateBackupCodes, verifyBackupCode, getRemainingBackupCodeCount } from "../../modules/auth/backup-codes.js";
+import {
+	regenerateBackupCodes,
+	verifyBackupCode,
+	getRemainingBackupCodeCount,
+} from "../../modules/auth/backup-codes.js";
 import { addYubikey } from "../../modules/auth/yubikey.js";
-import { beginPasskeyRegistration, completePasskeyRegistration, beginPasskeyAuthentication } from "../../modules/auth/passkeys.js";
+import {
+	beginPasskeyRegistration,
+	completePasskeyRegistration,
+	beginPasskeyAuthentication,
+} from "../../modules/auth/passkeys.js";
 import { setupDuo, beginDuoAuthentication } from "../../modules/auth/duo.js";
 import {
 	cleanupExpiredLoginAttempts,
@@ -666,7 +705,11 @@ describe("auth module – beginPasskeyRegistration", () => {
 	});
 
 	it("should use hostname from origin header", async () => {
-		const req = { headers: { origin: "https://custom.example.com" }, protocol: "https", hostname: "custom.example.com" };
+		const req = {
+			headers: { origin: "https://custom.example.com" },
+			protocol: "https",
+			hostname: "custom.example.com",
+		};
 		const result = await beginPasskeyRegistration(1, "user@example.com", req);
 		expect(result.challengeId).toBeTruthy();
 	});
@@ -691,8 +734,9 @@ describe("auth module – completePasskeyRegistration", () => {
 			insert: vi.fn(() => Promise.resolve()),
 		});
 		const req = { headers: { origin: "https://example.com" }, protocol: "https", hostname: "example.com" };
-		await expect(completePasskeyRegistration(1, "bad-id", {}, req))
-			.rejects.toThrow("Passkey registration challenge not found");
+		await expect(completePasskeyRegistration(1, "bad-id", {}, req)).rejects.toThrow(
+			"Passkey registration challenge not found",
+		);
 	});
 });
 
@@ -702,9 +746,7 @@ describe("auth module – beginPasskeyAuthentication", () => {
 	it("should return options and challengeId for user with passkeys", async () => {
 		const UserTwoFa = (await import("../../models/user-2fa.js")).default;
 		UserTwoFa.query.mockReturnValueOnce({
-			where: vi.fn(() => Promise.resolve([
-				{ id: 50, secret: "cred-1", transports: "usb" },
-			])),
+			where: vi.fn(() => Promise.resolve([{ id: 50, secret: "cred-1", transports: "usb" }])),
 			delete: vi.fn(() => Promise.resolve()),
 			insert: vi.fn(() => Promise.resolve()),
 			findOne: vi.fn(() => Promise.resolve(null)),
@@ -824,16 +866,13 @@ describe("auth module – clearLoginAttempts", () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it("should not throw for valid identifiers", async () => {
-		await expect(clearLoginAttempts([
-			{ scope: "login", identifier: "user@example.com" },
-		])).resolves.toBeUndefined();
+		await expect(clearLoginAttempts([{ scope: "login", identifier: "user@example.com" }])).resolves.toBeUndefined();
 	});
 
 	it("should skip entries with no identifier", async () => {
-		await expect(clearLoginAttempts([
-			{ scope: "login", identifier: "" },
-			{ scope: "login" },
-		])).resolves.toBeUndefined();
+		await expect(
+			clearLoginAttempts([{ scope: "login", identifier: "" }, { scope: "login" }]),
+		).resolves.toBeUndefined();
 	});
 
 	it("should handle empty array", async () => {

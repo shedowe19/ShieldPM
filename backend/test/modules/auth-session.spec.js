@@ -225,7 +225,12 @@ describe("token rotation flow (integration-style)", () => {
 
 // ── Tests for builders.js ────────────────────────────────────────────────────
 
-import { buildAccessToken, buildTokenResponse, createRefreshSession, sanitizeMeta } from "../../modules/auth-session/builders.js";
+import {
+	buildAccessToken,
+	buildTokenResponse,
+	createRefreshSession,
+	sanitizeMeta,
+} from "../../modules/auth-session/builders.js";
 
 describe("auth-session – sanitizeMeta", () => {
 	it("should extract ip and userAgent from meta", () => {

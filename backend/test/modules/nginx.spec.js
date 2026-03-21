@@ -245,7 +245,9 @@ describe("nginx module", () => {
 			const { configure } = await import("../../modules/nginx/runtime.js");
 			const { generateConfig } = await import("../../modules/nginx/render.js");
 			const _utils = (await import("../../lib/utils.js")).default;
-			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
+			const mockModel = {
+				query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })),
+			};
 			const host = { id: 1, meta: {} };
 			const result = await configure(mockModel, "proxy_host", host);
 			expect(generateConfig).toHaveBeenCalledWith("proxy_host", host);
@@ -257,7 +259,9 @@ describe("nginx module", () => {
 			const utils = (await import("../../lib/utils.js")).default;
 			// First call is backupConfig internal, generateConfig ok, but test fails
 			utils.execFile.mockRejectedValueOnce(new Error("nginx test failed"));
-			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
+			const mockModel = {
+				query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })),
+			};
 			const host = { id: 1, meta: {} };
 			const result = await configure(mockModel, "proxy_host", host);
 			expect(result.nginx_online).toBe(false);
@@ -268,16 +272,18 @@ describe("nginx module", () => {
 			const { configure } = await import("../../modules/nginx/runtime.js");
 			const utils = (await import("../../lib/utils.js")).default;
 			utils.execFile.mockResolvedValue("ok");
-			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
+			const mockModel = {
+				query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })),
+			};
 			const host = { id: 1, meta: {} };
 			// Track calls before
 			utils.execFile.mockClear();
 			await configure(mockModel, "proxy_host", host, { skip_reload: true });
 			// Should call test but not reload
-			const calls = utils.execFile.mock.calls.map(c => c[1]);
-			expect(calls.some(c => c.includes("-tq"))).toBe(true);
+			const calls = utils.execFile.mock.calls.map((c) => c[1]);
+			expect(calls.some((c) => c.includes("-tq"))).toBe(true);
 			// Should NOT have called nginx -s reload
-			expect(calls.some(c => c.includes("reload"))).toBe(false);
+			expect(calls.some((c) => c.includes("reload"))).toBe(false);
 		});
 	});
 
@@ -286,8 +292,13 @@ describe("nginx module", () => {
 			const { bulkGenerateConfigs } = await import("../../modules/nginx/runtime.js");
 			const utils = (await import("../../lib/utils.js")).default;
 			utils.execFile.mockResolvedValue("ok");
-			const mockModel = { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })) };
-			const hosts = [{ id: 1, meta: {} }, { id: 2, meta: {} }];
+			const mockModel = {
+				query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), patch: vi.fn().mockResolvedValue(1) })),
+			};
+			const hosts = [
+				{ id: 1, meta: {} },
+				{ id: 2, meta: {} },
+			];
 			await bulkGenerateConfigs(mockModel, "proxy_host", hosts);
 			// Should not throw
 		});

@@ -62,7 +62,13 @@ vi.mock("../../models/proxy_host.js", () => {
 });
 
 vi.mock("../../models/access_list.js", () => ({
-	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) }) })) },
+	default: {
+		query: vi.fn(() => ({
+			where: vi
+				.fn()
+				.mockReturnValue({ where: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) }),
+		})),
+	},
 }));
 
 vi.mock("../../lib/error.js", () => {
@@ -502,7 +508,12 @@ describe("proxy-host module", () => {
 				can: vi.fn().mockResolvedValue({ permission_visibility: "all" }),
 				token: { getUserId: () => 1 },
 			};
-			const data = { domain_names: ["test.com"], forward_scheme: "https", forward_host: "localhost", forward_port: 3000 };
+			const data = {
+				domain_names: ["test.com"],
+				forward_scheme: "https",
+				forward_host: "localhost",
+				forward_port: 3000,
+			};
 			const result = await create(access, data);
 			expect(result).toBeDefined();
 			expect(nginxService.configure).toHaveBeenCalled();
