@@ -3,7 +3,7 @@ import fs from "node:fs";
 
 vi.mock("node:https", () => ({
 	default: {
-		get: vi.fn((url, opts, cb) => {
+		get: vi.fn((_url, _opts, cb) => {
 			const res = {
 				setEncoding: vi.fn(),
 				on: vi.fn((event, handler) => {
@@ -18,7 +18,7 @@ vi.mock("node:https", () => ({
 }));
 
 vi.mock("proxy-agent", () => ({
-	ProxyAgent: class ProxyAgent { constructor() {} },
+	ProxyAgent: class ProxyAgent { },
 }));
 
 vi.mock("../../lib/error.js", () => {
@@ -31,7 +31,7 @@ vi.mock("../../lib/error.js", () => {
 vi.mock("../../lib/utils.js", () => ({
 	default: {
 		getRenderEngine: vi.fn(() => ({
-			parseAndRender: vi.fn((template, data) => {
+			parseAndRender: vi.fn((_template, data) => {
 				return Promise.resolve((data.ip_ranges || []).map((ip) => `set_real_ip_from ${ip};`).join("\n"));
 			}),
 		})),

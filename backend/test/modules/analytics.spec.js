@@ -5,7 +5,7 @@ vi.mock("../../models/analytic_count.js", () => ({
 	default: {
 		tableName: "analytic_count",
 		knex: vi.fn(() => ({
-			raw: vi.fn((sql, params) => sql),
+			raw: vi.fn((sql, _params) => sql),
 		})),
 		query: vi.fn(() => mockAnalyticCountQuery),
 		transaction: vi.fn(async (cb) => cb({})),
@@ -75,7 +75,7 @@ const mockProxyHostQuery = {
 	first: vi.fn().mockResolvedValue(null),
 };
 
-const mockKnex = vi.fn((tableName) => ({
+const mockKnex = vi.fn((_tableName) => ({
 	insert: vi.fn().mockResolvedValue([]),
 	select: vi.fn().mockReturnThis(),
 	count: vi.fn().mockReturnThis(),

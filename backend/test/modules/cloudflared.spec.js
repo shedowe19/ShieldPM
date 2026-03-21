@@ -25,6 +25,7 @@ const mockChild = {
 const mockTunnelQuery = {
 	findById: vi.fn().mockReturnThis(),
 	patch: vi.fn().mockResolvedValue(1),
+	// biome-ignore lint/suspicious/noThenProperty: mock needs .then for query builder chain
 	then: vi.fn(),
 };
 

@@ -9,7 +9,7 @@ vi.mock("../../logger.js", () => ({
 }));
 
 vi.mock("node:child_process", () => ({
-	exec: vi.fn((cmd, cb) => cb && cb(null)),
+	exec: vi.fn((_cmd, cb) => cb?.(null)),
 }));
 
 vi.mock("node:fs", () => ({

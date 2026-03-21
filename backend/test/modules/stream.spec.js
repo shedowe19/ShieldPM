@@ -13,7 +13,7 @@ describe("stream module – helpers", () => {
 		it("should return an array of strings", () => {
 			const result = omissions();
 			expect(Array.isArray(result)).toBe(true);
-			result.forEach((item) => expect(typeof item).toBe("string"));
+			for (const item of result) { expect(typeof item).toBe("string"); };
 		});
 
 		it("should return 3 items", () => {

@@ -18,6 +18,7 @@ const makeChainableQuery = () => {
 		withGraphFetched: vi.fn(),
 		first: vi.fn(),
 		insert: vi.fn(() => Promise.resolve(_mock.insertResult)),
+	// biome-ignore lint/suspicious/noThenProperty: mock needs .then for query builder chain
 		then: (resolve) => resolve(_mock.firstResult),
 	};
 	qb.where.mockReturnValue(qb);

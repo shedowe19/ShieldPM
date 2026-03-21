@@ -5,7 +5,7 @@ vi.mock("lodash", () => ({
 		assign: Object.assign,
 		omit: (obj, keys) => {
 			const result = { ...obj };
-			keys.forEach((k) => delete result[k]);
+			for (const k of keys) { delete result[k]; };
 			return result;
 		},
 	},

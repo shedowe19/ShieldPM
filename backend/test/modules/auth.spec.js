@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockKnexSchemaHasTable = vi.fn(() => Promise.resolve(true));
 const mockKnexSchemaCreateTable = vi.fn(() => Promise.resolve());
-const mockKnexDeleteWhere = vi.fn(() => Promise.resolve(0));
+const _mockKnexDeleteWhere = vi.fn(() => Promise.resolve(0));
 const mockKnexFirst = vi.fn(() => Promise.resolve(null));
 const mockKnexInsert = vi.fn(() => ({
 	onConflict: vi.fn(() => ({
@@ -20,7 +20,7 @@ const mockKnexInsert = vi.fn(() => ({
 	})),
 }));
 const mockKnexDelete = vi.fn(() => Promise.resolve(0));
-const mockKnexOrWhere = vi.fn();
+const _mockKnexOrWhere = vi.fn();
 
 const mockKnexInstance = vi.fn(() => ({
 	where: vi.fn(() => ({
@@ -36,7 +36,7 @@ mockKnexInstance.schema = {
 	hasTable: mockKnexSchemaHasTable,
 	createTable: mockKnexSchemaCreateTable,
 };
-mockKnexInstance.raw = vi.fn((sql, bindings) => sql);
+mockKnexInstance.raw = vi.fn((sql, _bindings) => sql);
 
 vi.mock("../../models/user.js", () => ({
 	default: {

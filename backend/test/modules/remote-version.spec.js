@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:https", () => ({
 	default: {
-		get: vi.fn((url, opts, cb) => {
+		get: vi.fn((_url, _opts, cb) => {
 			const res = {
 				setEncoding: vi.fn(),
 				on: vi.fn((event, handler) => {
@@ -18,7 +18,6 @@ vi.mock("node:https", () => ({
 
 vi.mock("proxy-agent", () => ({
 	ProxyAgent: class ProxyAgent {
-		constructor() {}
 	},
 }));
 

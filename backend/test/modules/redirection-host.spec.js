@@ -83,6 +83,7 @@ const mockRedirQuery = {
 	patch: vi.fn().mockResolvedValue(1),
 	insertAndFetch: vi.fn().mockResolvedValue({ id: 1 }),
 	patchAndFetchById: vi.fn().mockReturnThis(),
+	// biome-ignore lint/suspicious/noThenProperty: mock needs .then for query builder chain
 	then: vi.fn((cb) => cb({ id: 1 })),
 };
 

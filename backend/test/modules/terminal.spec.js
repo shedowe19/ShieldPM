@@ -17,16 +17,15 @@ vi.mock("ssh2", () => {
 				this._handlers = {};
 			}
 			on(evt, fn) { this._handlers[evt] = fn; return this; }
-			connect(cfg) {}
+			connect(_cfg) {}
 			end() {}
-			shell(opts, cb) {}
+			shell(_opts, _cb) {}
 		},
 	};
 });
 
 vi.mock("ws", () => ({
 	WebSocketServer: class WSS {
-		constructor() {}
 		on() {}
 		handleUpgrade() {}
 		emit() {}
