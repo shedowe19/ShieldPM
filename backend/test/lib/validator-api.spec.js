@@ -54,9 +54,7 @@ describe("validator/api", () => {
 
 	it("blocks alias keyword in advanced_config", async () => {
 		const schema = { type: "object", properties: { advanced_config: { type: "string" } } };
-		await expect(apiValidator(schema, { advanced_config: "alias /etc/passwd;" })).rejects.toThrow(
-			"Toxic keyword",
-		);
+		await expect(apiValidator(schema, { advanced_config: "alias /etc/passwd;" })).rejects.toThrow("Toxic keyword");
 	});
 
 	it("allows advanced_config without toxic keywords", async () => {

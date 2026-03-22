@@ -49,10 +49,20 @@ vi.mock("../../lib/auth-cookies.js", () => ({
 
 vi.mock("../../lib/error.js", () => {
 	class AuthError extends Error {
-		constructor(m) { super(m); this.name = "AuthError"; this.status = 400; this.public = true; }
+		constructor(m) {
+			super(m);
+			this.name = "AuthError";
+			this.status = 400;
+			this.public = true;
+		}
 	}
 	class UnauthorizedError extends Error {
-		constructor(m) { super(m || "Unauthorized"); this.name = "UnauthorizedError"; this.status = 401; this.public = true; }
+		constructor(m) {
+			super(m || "Unauthorized");
+			this.name = "UnauthorizedError";
+			this.status = 401;
+			this.public = true;
+		}
 	}
 	return {
 		default: { AuthError, UnauthorizedError },
@@ -135,7 +145,10 @@ const createApp = async () => {
 	const { default: router } = await import("../../routes/tokens.js");
 	const app = express();
 	app.use(express.json());
-	app.use((req, _res, next) => { req.cookies = req.cookies || {}; next(); });
+	app.use((req, _res, next) => {
+		req.cookies = req.cookies || {};
+		next();
+	});
 	app.use("/tokens", router);
 	// Error handler
 	app.use((err, _req, res, _next) => {

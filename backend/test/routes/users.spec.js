@@ -17,20 +17,36 @@ const mockUserService = {
 
 vi.mock("../../modules/user/index.js", () => ({ userService: mockUserService }));
 vi.mock("../../lib/access.js", () => {
-	return { default: class Access { async load() {} } };
+	return {
+		default: class Access {
+			async load() {}
+		},
+	};
 });
 vi.mock("../../lib/config.js", () => ({
 	isDestructiveTestMode: vi.fn(() => false),
 }));
 vi.mock("../../lib/error.js", () => {
 	class PermissionError extends Error {
-		constructor(m) { super(m); this.status = 403; this.public = true; }
+		constructor(m) {
+			super(m);
+			this.status = 403;
+			this.public = true;
+		}
 	}
 	class ItemNotFoundError extends Error {
-		constructor(m) { super(m || "Not Found"); this.status = 404; this.public = true; }
+		constructor(m) {
+			super(m || "Not Found");
+			this.status = 404;
+			this.public = true;
+		}
 	}
 	class ValidationError extends Error {
-		constructor(m) { super(m); this.status = 400; this.public = true; }
+		constructor(m) {
+			super(m);
+			this.status = 400;
+			this.public = true;
+		}
 	}
 	return { default: { PermissionError, ItemNotFoundError, ValidationError } };
 });
@@ -115,7 +131,9 @@ describe("users routes", () => {
 			const setupComplete = await isSetup();
 			expect(setupComplete).toBe(true);
 			// Without currentUserId, should throw
-			expect(() => { throw new errs.PermissionError("Auth required"); }).toThrow("Auth required");
+			expect(() => {
+				throw new errs.PermissionError("Auth required");
+			}).toThrow("Auth required");
 		});
 	});
 

@@ -38,16 +38,40 @@ vi.mock("../models/certificate.js", () => ({
 	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), andWhere: vi.fn(() => Promise.resolve([])) })) },
 }));
 vi.mock("../models/proxy_host.js", () => ({
-	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), withGraphFetched: vi.fn(() => Promise.resolve([])) })) },
+	default: {
+		query: vi.fn(() => ({
+			where: vi.fn().mockReturnThis(),
+			andWhere: vi.fn().mockReturnThis(),
+			withGraphFetched: vi.fn(() => Promise.resolve([])),
+		})),
+	},
 }));
 vi.mock("../models/redirection_host.js", () => ({
-	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), withGraphFetched: vi.fn(() => Promise.resolve([])) })) },
+	default: {
+		query: vi.fn(() => ({
+			where: vi.fn().mockReturnThis(),
+			andWhere: vi.fn().mockReturnThis(),
+			withGraphFetched: vi.fn(() => Promise.resolve([])),
+		})),
+	},
 }));
 vi.mock("../models/dead_host.js", () => ({
-	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), withGraphFetched: vi.fn(() => Promise.resolve([])) })) },
+	default: {
+		query: vi.fn(() => ({
+			where: vi.fn().mockReturnThis(),
+			andWhere: vi.fn().mockReturnThis(),
+			withGraphFetched: vi.fn(() => Promise.resolve([])),
+		})),
+	},
 }));
 vi.mock("../models/stream.js", () => ({
-	default: { query: vi.fn(() => ({ where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), withGraphFetched: vi.fn(() => Promise.resolve([])) })) },
+	default: {
+		query: vi.fn(() => ({
+			where: vi.fn().mockReturnThis(),
+			andWhere: vi.fn().mockReturnThis(),
+			withGraphFetched: vi.fn(() => Promise.resolve([])),
+		})),
+	},
 }));
 
 vi.mock("../modules/nginx/service.js", () => ({

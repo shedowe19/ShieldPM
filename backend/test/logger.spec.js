@@ -49,9 +49,20 @@ describe("logger.js", () => {
 	it("exports all expected scoped loggers", async () => {
 		const logger = await import("../logger.js");
 		const expectedScopes = [
-			"global", "migrate", "express", "access", "nginx", "ssl",
-			"certbot", "importer", "setup", "ipRanges", "remoteVersion",
-			"oidc", "analytics", "internal",
+			"global",
+			"migrate",
+			"express",
+			"access",
+			"nginx",
+			"ssl",
+			"certbot",
+			"importer",
+			"setup",
+			"ipRanges",
+			"remoteVersion",
+			"oidc",
+			"analytics",
+			"internal",
 		];
 		for (const scope of expectedScopes) {
 			expect(logger[scope]).toBeDefined();

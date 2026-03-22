@@ -5,12 +5,14 @@ vi.mock("../../package.json", () => ({
 }));
 
 vi.mock("../../schema/index.js", () => ({
-	getCompiledSchema: vi.fn(() => Promise.resolve({
-		openapi: "3.0.0",
-		info: { title: "ShieldPM API" },
-		servers: [{ url: "/api" }],
-		paths: {},
-	})),
+	getCompiledSchema: vi.fn(() =>
+		Promise.resolve({
+			openapi: "3.0.0",
+			info: { title: "ShieldPM API" },
+			servers: [{ url: "/api" }],
+			paths: {},
+		}),
+	),
 	getValidationSchema: vi.fn(() => ({})),
 }));
 

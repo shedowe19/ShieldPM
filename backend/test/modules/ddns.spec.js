@@ -184,20 +184,18 @@ describe("DDNS Service", () => {
 
 		it("should process forced update", async () => {
 			DdnsProvider.query.mockReturnValue({
-				where: vi
-					.fn()
-					.mockResolvedValue([
-						{
-							id: 1,
-							name: "Test",
-							provider: "cloudflare",
-							domains: ["test.com"],
-							config: { token: "t", zone_id: "z" },
-							last_ipv4: null,
-							last_ipv6: null,
-							ip_ver: "v4",
-						},
-					]),
+				where: vi.fn().mockResolvedValue([
+					{
+						id: 1,
+						name: "Test",
+						provider: "cloudflare",
+						domains: ["test.com"],
+						config: { token: "t", zone_id: "z" },
+						last_ipv4: null,
+						last_ipv6: null,
+						ip_ver: "v4",
+					},
+				]),
 			});
 			fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ip: "9.9.9.9" }) });
 			fetchMock.mockRejectedValueOnce(new Error("no v6"));
@@ -206,20 +204,18 @@ describe("DDNS Service", () => {
 			fetchMock.mockResolvedValueOnce({ json: async () => ({ success: true }) });
 			const patchAndFetchById = vi.fn().mockResolvedValue({});
 			DdnsProvider.query.mockReturnValueOnce({
-				where: vi
-					.fn()
-					.mockResolvedValue([
-						{
-							id: 1,
-							name: "Test",
-							provider: "cloudflare",
-							domains: ["test.com"],
-							config: { token: "t", zone_id: "z" },
-							last_ipv4: null,
-							last_ipv6: null,
-							ip_ver: "v4",
-						},
-					]),
+				where: vi.fn().mockResolvedValue([
+					{
+						id: 1,
+						name: "Test",
+						provider: "cloudflare",
+						domains: ["test.com"],
+						config: { token: "t", zone_id: "z" },
+						last_ipv4: null,
+						last_ipv6: null,
+						ip_ver: "v4",
+					},
+				]),
 			});
 			DdnsProvider.query.mockReturnValue({ patchAndFetchById });
 			await ddnsService.process(true);

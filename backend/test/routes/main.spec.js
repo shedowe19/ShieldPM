@@ -5,7 +5,11 @@ vi.mock("../../lib/config.js", () => ({
 }));
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor(page) { super(page ? `Not Found - ${page}` : "Not Found"); this.status = 404; this.public = true; }
+		constructor(page) {
+			super(page ? `Not Found - ${page}` : "Not Found");
+			this.status = 404;
+			this.public = true;
+		}
 	}
 	return { default: { ItemNotFoundError } };
 });

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockTwoFaService = {
-	setupTotp: vi.fn(() => Promise.resolve({ qrDataUrl: "data:image/png;base64,abc", otpauthUrl: "otpauth://totp/test" })),
+	setupTotp: vi.fn(() =>
+		Promise.resolve({ qrDataUrl: "data:image/png;base64,abc", otpauthUrl: "otpauth://totp/test" }),
+	),
 	verifyAndEnableTotp: vi.fn(() => Promise.resolve(["CODE1", "CODE2"])),
 	addYubikey: vi.fn(() => Promise.resolve({ id: 1, type: "yubikey", label: "My Key", created_on: "2024-01-01" })),
 	beginPasskeyRegistration: vi.fn(() => Promise.resolve({ options: {}, challengeId: "ch1" })),
@@ -16,16 +18,32 @@ vi.mock("../../modules/auth/index.js", () => ({ twoFaService: mockTwoFaService }
 
 vi.mock("../../lib/error.js", () => {
 	class UnauthorizedError extends Error {
-		constructor(m) { super(m || "Unauthorized"); this.status = 401; this.public = true; }
+		constructor(m) {
+			super(m || "Unauthorized");
+			this.status = 401;
+			this.public = true;
+		}
 	}
 	class PermissionError extends Error {
-		constructor(m) { super(m); this.status = 403; this.public = true; }
+		constructor(m) {
+			super(m);
+			this.status = 403;
+			this.public = true;
+		}
 	}
 	class ValidationError extends Error {
-		constructor(m) { super(m); this.status = 400; this.public = true; }
+		constructor(m) {
+			super(m);
+			this.status = 400;
+			this.public = true;
+		}
 	}
 	class ItemNotFoundError extends Error {
-		constructor(m) { super(m || "Not Found"); this.status = 404; this.public = true; }
+		constructor(m) {
+			super(m || "Not Found");
+			this.status = 404;
+			this.public = true;
+		}
 	}
 	return { default: { UnauthorizedError, PermissionError, ValidationError, ItemNotFoundError } };
 });
@@ -33,7 +51,11 @@ vi.mock("../../lib/error.js", () => {
 vi.mock("../../lib/express/jwt-decode.js", () => ({
 	default: () => (_req, res, next) => {
 		res.locals.access = {
-			token: { getUserId: () => 1, hasScope: (s) => s === "admin", get: (k) => k === "email" ? "test@test.com" : null },
+			token: {
+				getUserId: () => 1,
+				hasScope: (s) => s === "admin",
+				get: (k) => (k === "email" ? "test@test.com" : null),
+			},
 		};
 		next();
 	},
@@ -173,7 +195,11 @@ describe("2fa routes", () => {
 
 	describe("POST /2fa/duo/setup", () => {
 		it("sets up Duo", async () => {
-			const result = await mockTwoFaService.setupDuo(1, { clientId: "cid", clientSecret: "cs", apiHost: "api.duo.com" });
+			const result = await mockTwoFaService.setupDuo(1, {
+				clientId: "cid",
+				clientSecret: "cs",
+				apiHost: "api.duo.com",
+			});
 			expect(result.type).toBe("duo");
 		});
 	});

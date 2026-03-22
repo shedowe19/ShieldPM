@@ -11,7 +11,11 @@ const mockIntegrationRecord = { id: 1, user_id: 1, type: "telegram", token: "enc
 vi.mock("../../modules/chat/index.js", () => ({ chatService: mockChatService }));
 vi.mock("../../lib/error.js", () => {
 	class ItemNotFoundError extends Error {
-		constructor() { super("Not Found"); this.status = 404; this.public = true; }
+		constructor() {
+			super("Not Found");
+			this.status = 404;
+			this.public = true;
+		}
 	}
 	return { default: { ItemNotFoundError } };
 });

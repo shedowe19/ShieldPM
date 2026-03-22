@@ -11,9 +11,19 @@ const mockKnex = {
 const mockQuery = {
 	where: vi.fn().mockReturnThis(),
 	andWhere: vi.fn().mockReturnThis(),
-	orderBy: vi.fn(() => Promise.resolve([
-		{ timestamp: "2024-01-01T00:00:00Z", request_count: 10, bytes_sent: "500", status_code_2xx: 8, status_code_3xx: 1, status_code_4xx: 1, status_code_5xx: 0 },
-	])),
+	orderBy: vi.fn(() =>
+		Promise.resolve([
+			{
+				timestamp: "2024-01-01T00:00:00Z",
+				request_count: 10,
+				bytes_sent: "500",
+				status_code_2xx: 8,
+				status_code_3xx: 1,
+				status_code_4xx: 1,
+				status_code_5xx: 0,
+			},
+		]),
+	),
 };
 
 vi.mock("../../models/analytic_count.js", () => ({
@@ -50,7 +60,10 @@ vi.mock("../../logger.js", () => ({
 }));
 
 vi.mock("dayjs", () => {
-	const m = () => ({ subtract: () => ({ toISOString: () => "2024-01-01T00:00:00Z" }), toISOString: () => "2024-01-02T00:00:00Z" });
+	const m = () => ({
+		subtract: () => ({ toISOString: () => "2024-01-01T00:00:00Z" }),
+		toISOString: () => "2024-01-02T00:00:00Z",
+	});
 	m.default = m;
 	return { default: m };
 });
@@ -78,7 +91,12 @@ describe("analytics routes", () => {
 
 	describe("GET /analytics/summary", () => {
 		it("returns aggregated stats", async () => {
-			const result = await mockKnex.from("analytic_count").where("timestamp", ">=", "2024-01-01").andWhere("timestamp", "<=", "2024-01-02").sum("request_count as count").first();
+			const result = await mockKnex
+				.from("analytic_count")
+				.where("timestamp", ">=", "2024-01-01")
+				.andWhere("timestamp", "<=", "2024-01-02")
+				.sum("request_count as count")
+				.first();
 			expect(result.count).toBe(100);
 		});
 
@@ -92,15 +110,34 @@ describe("analytics routes", () => {
 
 	describe("GET /analytics/series", () => {
 		it("returns time-series data grouped by timestamp", async () => {
-			const data = await mockQuery.where("timestamp", ">=", "2024-01-01").andWhere("timestamp", "<=", "2024-01-02").orderBy("timestamp", "asc");
+			const data = await mockQuery
+				.where("timestamp", ">=", "2024-01-01")
+				.andWhere("timestamp", "<=", "2024-01-02")
+				.orderBy("timestamp", "asc");
 			expect(data).toHaveLength(1);
 			expect(data[0].request_count).toBe(10);
 		});
 
 		it("groups data by timestamp correctly", () => {
 			const data = [
-				{ timestamp: "t1", request_count: 5, bytes_sent: "100", status_code_2xx: 4, status_code_3xx: 0, status_code_4xx: 1, status_code_5xx: 0 },
-				{ timestamp: "t1", request_count: 3, bytes_sent: "50", status_code_2xx: 2, status_code_3xx: 1, status_code_4xx: 0, status_code_5xx: 0 },
+				{
+					timestamp: "t1",
+					request_count: 5,
+					bytes_sent: "100",
+					status_code_2xx: 4,
+					status_code_3xx: 0,
+					status_code_4xx: 1,
+					status_code_5xx: 0,
+				},
+				{
+					timestamp: "t1",
+					request_count: 3,
+					bytes_sent: "50",
+					status_code_2xx: 2,
+					status_code_3xx: 1,
+					status_code_4xx: 0,
+					status_code_5xx: 0,
+				},
 			];
 			const grouped = {};
 			for (const row of data) {

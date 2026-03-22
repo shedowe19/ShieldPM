@@ -11,7 +11,11 @@ vi.mock("../../lib/encryption.js", () => ({
 }));
 vi.mock("../../lib/error.js", () => {
 	class AuthError extends Error {
-		constructor(m) { super(m); this.status = 400; this.public = true; }
+		constructor(m) {
+			super(m);
+			this.status = 400;
+			this.public = true;
+		}
 	}
 	return { default: { AuthError } };
 });
@@ -30,10 +34,17 @@ vi.mock("../../models/setting.js", () => ({
 	default: {
 		query: vi.fn(() => ({
 			where: vi.fn().mockReturnThis(),
-			first: vi.fn(() => Promise.resolve({
-				id: "oidc-config",
-				meta: { issuerURL: "https://auth.example.com", clientID: "cid", clientSecret: "cs", redirectURL: "https://app.example.com/callback" },
-			})),
+			first: vi.fn(() =>
+				Promise.resolve({
+					id: "oidc-config",
+					meta: {
+						issuerURL: "https://auth.example.com",
+						clientID: "cid",
+						clientSecret: "cs",
+						redirectURL: "https://app.example.com/callback",
+					},
+				}),
+			),
 		})),
 	},
 }));

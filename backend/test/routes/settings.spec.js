@@ -46,13 +46,22 @@ describe("settings routes", () => {
 		it("redacts OIDC configuration", () => {
 			const row = {
 				id: "oidc-config",
-				meta: { name: "OIDC", enabled: true, clientID: "secret", clientSecret: "secret", issuerURL: "https://a.com", redirectURL: "https://b.com" },
+				meta: {
+					name: "OIDC",
+					enabled: true,
+					clientID: "secret",
+					clientSecret: "secret",
+					issuerURL: "https://a.com",
+					redirectURL: "https://b.com",
+				},
 			};
 			if (row.id === "oidc-config") {
 				const m = row.meta;
 				row.meta = {
 					name: m.name,
-					enabled: m.enabled === true && !!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
+					enabled:
+						m.enabled === true &&
+						!!(m.clientID && m.clientSecret && m.issuerURL && m.redirectURL && m.name),
 				};
 			}
 			expect(row.meta.clientID).toBeUndefined();
