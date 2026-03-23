@@ -1,12 +1,13 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import * as client from "openid-client";
+import { settingService } from "../modules/setting/index.js";
 import { tokenService } from "../modules/token/index.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { auth } from "../lib/express/middleware.js";
+import { asyncHandler } from "../lib/express/route-handler.js";
 import { oidc as logger } from "../logger.js";
-import settingModel from "../models/setting.js";
 
 // Set up rate limiter: for example, 100 requests per 15 minutes per IP
 const oidcRateLimiter = rateLimit({
@@ -27,16 +28,17 @@ router
 		res.sendStatus(204);
 	})
 	.all(oidcRateLimiter)
-	.all(jwtdecode())
+	.all(auth())
 
 	/**
 	 * GET /api/oidc
 	 *
 	 * OAuth Authorization Code flow initialisation
+	 * NOTE: Intentionally does NOT use asyncHandler — errors redirect instead of JSON.
 	 */
 	.get(async (_req, res) => {
 		try {
-			const settings = await settingModel.query().where({ id: "oidc-config" }).first();
+			const settings = await settingService.getOidcConfig();
 			const params = await getInitParams(settings);
 			redirectToAuthorizationURL(res, params);
 		} catch (err) {
@@ -49,16 +51,17 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 
 	/**
 	 * GET /api/oidc/callback
 	 *
 	 * Oauth Authorization Code flow callback
+	 * NOTE: Intentionally does NOT use asyncHandler — errors redirect instead of JSON.
 	 */
 	.get(async (req, res) => {
 		try {
-			const settings = await settingModel.query().where({ id: "oidc-config" }).first();
+			const settings = await settingService.getOidcConfig();
 			const token = await validateCallback(req, settings);
 			redirectWithJwtToken(res, token);
 		} catch (err) {
@@ -72,8 +75,8 @@ router
 		res.sendStatus(204);
 	})
 	.all(oidcRateLimiter)
-	.post(async (req, res) => {
-		try {
+	.post(
+		asyncHandler(async (req, res) => {
 			if (!req.headers || !req.headers.cookie) {
 				throw new errs.AuthError("No cookie provided");
 			}
@@ -105,11 +108,6 @@ router
 				throw new errs.AuthError("Invalid token data in cookie");
 			}
 
-			// Decode token to get user ID (without verification, signature is trusted from encryption)
-			// We can use the global jwt-decode middleware logic? Or just manual decode since we trust the source (our own encrypted cookie)
-			// But better to use library to be safe.
-			// Let's assume we import jsonwebtoken or just rely on the fact we just decrypted it.
-			// For user ID, we need to parse the base64 payload.
 			const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
 
 			// Set Session Cookie
@@ -127,10 +125,8 @@ router
 				expires,
 				user: { id: payload.attrs.id },
 			});
-		} catch (err) {
-			res.status(400).send({ error: { message: err.message } });
-		}
-	});
+		}),
+	);
 
 /**
  * Executes discovery and returns the configured `openid-client` client

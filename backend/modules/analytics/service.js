@@ -283,6 +283,40 @@ class AnalyticsService {
 		}
 	}
 
+	getKnex() {
+		return AnalyticCount.knex();
+	}
+
+	async getSummaryByRange(start, end) {
+		const stats =
+			(await AnalyticCount.knex()
+				.from("analytic_count")
+				.where("timestamp", ">=", start)
+				.andWhere("timestamp", "<=", end)
+				.sum("request_count as count")
+				.sum("bytes_sent as bytes")
+				.sum("status_code_2xx as s2xx")
+				.sum("status_code_3xx as s3xx")
+				.sum("status_code_4xx as s4xx")
+				.sum("status_code_5xx as s5xx")
+				.first()) || {};
+		return stats;
+	}
+
+	async getSeriesByRange(start, end) {
+		return AnalyticCount.query()
+			.where("timestamp", ">=", start)
+			.andWhere("timestamp", "<=", end)
+			.orderBy("timestamp", "asc");
+	}
+
+	async getHostTimeSeries(hostId, since) {
+		return AnalyticCount.query()
+			.where("proxy_host_id", hostId)
+			.andWhere("timestamp", ">=", since)
+			.orderBy("timestamp", "asc");
+	}
+
 	async assertHostAccess(access, hostId) {
 		const host = await ProxyHost.query().where("id", hostId).andWhere("is_deleted", 0).first();
 		if (!host) throw new errs.ItemNotFoundError("Host not found");

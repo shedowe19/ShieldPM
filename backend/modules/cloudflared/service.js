@@ -74,6 +74,55 @@ const restart = async (tunnel) => {
 	await start(tunnel);
 };
 
+const list = async (access) => {
+	const accessData = await access.can("cloudflared_tunnels:list");
+	const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).orderBy("name", "ASC");
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", access.token.getUserId(1));
+	}
+	return query;
+};
+
+const get = async (access, id) => {
+	const accessData = await access.can("cloudflared_tunnels:get", id);
+	const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).where("id", id);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", access.token.getUserId(1));
+	}
+	return query.first();
+};
+
+const create = async (access, payload) => {
+	await access.can("cloudflared_tunnels:create", payload);
+	payload.owner_user_id = access.token.getUserId(1);
+	payload.meta = {};
+	const tunnel = await CloudflaredTunnel.query().insert(payload);
+	return CloudflaredTunnel.query().findById(tunnel.id);
+};
+
+const update = async (access, id, payload) => {
+	await access.can("cloudflared_tunnels:update", id);
+	const tunnel = await CloudflaredTunnel.query()
+		.where("owner_user_id", access.token.getUserId(1))
+		.andWhere("is_deleted", 0)
+		.where("id", id)
+		.first();
+	if (!tunnel) return null;
+	return tunnel.$query().patchAndFetch(payload);
+};
+
+const remove = async (access, id) => {
+	await access.can("cloudflared_tunnels:delete", id);
+	const tunnel = await CloudflaredTunnel.query()
+		.where("owner_user_id", access.token.getUserId(1))
+		.andWhere("is_deleted", 0)
+		.where("id", id)
+		.first();
+	if (!tunnel) return null;
+	await tunnel.$query().delete();
+	return tunnel;
+};
+
 const init = async () => {
 	logger.info("Initializing Cloudflared Tunnels...");
 	const tunnels = await CloudflaredTunnel.query();
@@ -83,4 +132,4 @@ const init = async () => {
 	}
 };
 
-export default { init, start, stop, restart };
+export default { init, start, stop, restart, list, get, create, update, remove };

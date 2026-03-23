@@ -90,6 +90,26 @@ const startBot = async (integration) => {
 	}
 };
 
+const listByUser = async (userId) => {
+	return ChatIntegrationModel.query().where("user_id", userId);
+};
+
+const create = async (data) => {
+	return ChatIntegrationModel.query().insertAndFetch(data);
+};
+
+const getById = async (id) => {
+	return ChatIntegrationModel.query().findById(id);
+};
+
+const update = async (id, data) => {
+	return ChatIntegrationModel.query().patchAndFetchById(id, data);
+};
+
+const remove = async (id) => {
+	return ChatIntegrationModel.query().deleteById(id);
+};
+
 const init = async () => {
 	try {
 		const integrations = await ChatIntegrationModel.query().where("enabled", 1).withGraphFetched("user");
@@ -106,4 +126,4 @@ const reload = async (integrationId) => {
 	else await stopBot(integrationId);
 };
 
-export default { init, startBot, stopBot, reload };
+export default { init, startBot, stopBot, reload, listByUser, create, getById, update, remove };

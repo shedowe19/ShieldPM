@@ -1,7 +1,10 @@
 import dayjs from "dayjs";
 import express from "express";
+import si from "systeminformation";
+import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
-import AnalyticCount from "../models/analytic_count.js";
+import { asyncHandler } from "../lib/express/route-handler.js";
+import { analyticsService } from "../modules/analytics/index.js";
 const router = express.Router();
 
 const responseCache = new Map();
@@ -34,23 +37,13 @@ router.use(async (_req, res, next) => {
  * GET /api/analytics/summary
  * Returns aggregated totals for a given time range.
  */
-router.get("/summary", async (req, res) => {
-	try {
+router.get(
+	"/summary",
+	asyncHandler(async (req, res) => {
 		// Default to last 24h
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
-		const stats =
-			(await AnalyticCount.knex()
-				.from("analytic_count")
-				.where("timestamp", ">=", start)
-				.andWhere("timestamp", "<=", end)
-				.sum("request_count as count")
-				.sum("bytes_sent as bytes")
-				.sum("status_code_2xx as s2xx")
-				.sum("status_code_3xx as s3xx")
-				.sum("status_code_4xx as s4xx")
-				.sum("status_code_5xx as s5xx")
-				.first()) || {};
+		const stats = await analyticsService.getSummaryByRange(start, end);
 		const defaults = {
 			count: 0,
 			bytes: 0,
@@ -71,31 +64,20 @@ router.get("/summary", async (req, res) => {
 			status_4xx: Number.parseInt(safeStats.s4xx || 0, 10),
 			status_5xx: Number.parseInt(safeStats.s5xx || 0, 10),
 		});
-	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
-	}
-});
+	}),
+);
 
 /**
  * GET /api/analytics/series
  * Returns time-series data for graphing.
  */
-router.get("/series", async (req, res) => {
-	try {
+router.get(
+	"/series",
+	asyncHandler(async (req, res) => {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
 
-		// Fetch raw bucketed data
-		// For performance on large sets, we might want to aggregate by hour if range > 24h
-		const data = await AnalyticCount.query()
-			.where("timestamp", ">=", start)
-			.andWhere("timestamp", "<=", end)
-			.orderBy("timestamp", "asc");
-
-		// We might want to aggregate further per timestamp if multiple hosts exist
-		// But for now, we just pass the raw rows or aggregate in JS
+		const data = await analyticsService.getSeriesByRange(start, end);
 
 		// Group by timestamp
 		const grouped = {};
@@ -113,53 +95,34 @@ router.get("/series", async (req, res) => {
 			}
 			const g = grouped[row.timestamp];
 			g.count += row.request_count;
-			g.bytes += Number.parseInt(row.bytes_sent, 10); // sqlite might return string for bigint
+			g.bytes += Number.parseInt(row.bytes_sent, 10);
 			g.s2xx += row.status_code_2xx;
 			g.s3xx += row.status_code_3xx;
 			g.s4xx += row.status_code_4xx;
 			g.s5xx += row.status_code_5xx;
 		}
 		res.json(Object.values(grouped));
-	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
-	}
-});
+	}),
+);
 
 /**
  * GET /api/analytics/top-hosts
  * Returns top hosts by request count
  */
-router.get("/top-hosts", async (req, res) => {
-	try {
-		const _start = req.query.start || dayjs().subtract(24, "hour").toISOString();
-		const _end = req.query.end || dayjs().toISOString();
-
-		// We need raw KNEX for group by query usually, but let's try with Model if we can join ProxyHost
-		// Since we didn't resolve IDs yet (set to NULL), this will be empty for now.
-		// BUT, our service buffers by hostname.
-		// If we want this to work, we MUST fix the ID resolution in internal/analytics.js
-		// OR store the hostname in the analytics table (which is what I should have done for simplicity).
-
-		// For now, return empty or implement a fix step next?
-		// Let's implement the endpoint assuming we WILL fix the data source.
-
+router.get(
+	"/top-hosts",
+	asyncHandler(async (_req, res) => {
 		res.json([]);
-	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
-	}
-});
+	}),
+);
 
 /**
  * GET /api/analytics/status
  * Returns real-time system status (Network Bandwidth)
  */
-import si from "systeminformation";
-router.get("/status", async (_req, res) => {
-	try {
+router.get(
+	"/status",
+	asyncHandler(async (_req, res) => {
 		const payload = await withCachedJson("analytics-status", 5000, async () => {
 			const net = await si.networkStats();
 			const rx = net.reduce((acc, iface) => acc + (iface.rx_sec || 0), 0);
@@ -171,22 +134,18 @@ router.get("/status", async (_req, res) => {
 			};
 		});
 		res.json(payload);
-	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
-	}
-});
-import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
+	}),
+);
 
 /**
  * GET /api/analytics/db-stats
  * Returns database statistics (size, connections, engine type)
  */
-router.get("/db-stats", async (_req, res) => {
-	try {
+router.get(
+	"/db-stats",
+	asyncHandler(async (_req, res) => {
 		const payload = await withCachedJson("analytics-db-stats", 15000, async () => {
-			const knex = AnalyticCount.knex();
+			const knex = analyticsService.getKnex();
 			const stats = {
 				engine: "unknown",
 				size: 0,
@@ -257,10 +216,6 @@ router.get("/db-stats", async (_req, res) => {
 			return stats;
 		});
 		res.json(payload);
-	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
-	}
-});
+	}),
+);
 export default router;

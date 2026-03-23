@@ -1,12 +1,9 @@
 import express from "express";
-import { transaction } from "objection";
 import { auditLogService } from "../../modules/audit-log/index.js";
 import { cloudflaredService } from "../../modules/cloudflared/index.js";
-import jwtdecode from "../../lib/express/jwt-decode.js";
-import apiValidator from "../../lib/validator/api.js";
+import { auth, validate } from "../../lib/express/middleware.js";
+import { asyncHandler } from "../../lib/express/route-handler.js";
 import { global as logger } from "../../logger.js";
-import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
-import { getValidationSchema } from "../../schema/index.js";
 
 const router = express.Router({
 	caseSensitive: true,
@@ -14,43 +11,29 @@ const router = express.Router({
 	mergeParams: true,
 });
 
+router.use(auth());
+
 /**
  * GET /api/nginx/cloudflared-tunnels
  */
-router.use(jwtdecode());
-
-router.get("/", async (_req, res) => {
-	const accessData = await res.locals.access.can("cloudflared_tunnels:list");
-	const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).orderBy("name", "ASC");
-
-	if (accessData.permission_visibility !== "all") {
-		query.where("owner_user_id", res.locals.access.token.getUserId(1));
-	}
-
-	const tunnels = await query;
+router.get("/", asyncHandler(async (_req, res) => {
+	const tunnels = await cloudflaredService.list(res.locals.access);
 
 	// Debug log
-	tunnels.forEach((t) => {
+	for (const t of tunnels) {
 		if (t.status === 3) {
 			logger.info(`[API Debug] Tunnel ${t.id} (Status 3) Meta:`, JSON.stringify(t.meta));
 		}
-	});
+	}
 
 	res.status(200).send(tunnels);
-});
+}));
 
 /**
  * GET /api/nginx/cloudflared-tunnels/:id
  */
-router.get("/:id", async (req, res) => {
-	const accessData = await res.locals.access.can("cloudflared_tunnels:get", req.params.id);
-	const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).where("id", req.params.id);
-
-	if (accessData.permission_visibility !== "all") {
-		query.where("owner_user_id", res.locals.access.token.getUserId(1));
-	}
-
-	const tunnel = await query.first();
+router.get("/:id", asyncHandler(async (req, res) => {
+	const tunnel = await cloudflaredService.get(res.locals.access, req.params.id);
 
 	if (!tunnel) {
 		res.status(404).send({ error: "Tunnel not found" });
@@ -58,136 +41,78 @@ router.get("/:id", async (req, res) => {
 	}
 
 	res.status(200).send(tunnel);
-});
+}));
 
 /**
  * POST /api/nginx/cloudflared-tunnels
  */
-router.post("/", async (req, res, next) => {
-	let trx;
-	try {
-		const payload = await apiValidator(getValidationSchema("/nginx/cloudflared-tunnels", "post"), req.body);
-		await res.locals.access.can("cloudflared_tunnels:create", payload);
-		payload.owner_user_id = res.locals.access.token.getUserId(1);
-		payload.meta = {};
+router.post("/", asyncHandler(async (req, res) => {
+	const payload = await validate("/nginx/cloudflared-tunnels", "post")(req.body);
+	const newTunnel = await cloudflaredService.create(res.locals.access, payload);
 
-		trx = await transaction.start(CloudflaredTunnel.knex());
-		const tunnel = await CloudflaredTunnel.query(trx).insert(payload);
-		await trx.commit();
+	// Start the process
+	cloudflaredService.start(newTunnel);
 
-		// Refetch to get decrypted token for the process
-		const newTunnel = await CloudflaredTunnel.query().findById(tunnel.id);
+	// Audit Log
+	await auditLogService.add(res.locals.access, {
+		action: "created",
+		object_type: "cloudflared-tunnel",
+		object_id: newTunnel.id,
+		meta: { name: newTunnel.name },
+	});
 
-		// Start the process
-		cloudflaredService.start(newTunnel);
-
-		// Audit Log
-		await auditLogService.add(res.locals.access, {
-			action: "created",
-			object_type: "cloudflared-tunnel",
-			object_id: newTunnel.id,
-			meta: {
-				name: newTunnel.name,
-			},
-		});
-
-		res.status(201).send(newTunnel);
-	} catch (err) {
-		if (trx) {
-			await trx.rollback();
-		}
-		next(err);
-	}
-});
+	res.status(201).send(newTunnel);
+}));
 
 /**
  * PUT /api/nginx/cloudflared-tunnels/:id
  */
-router.put("/:id", async (req, res, next) => {
-	let trx;
-	try {
-		await res.locals.access.can("cloudflared_tunnels:update", req.params.id);
-		const tunnel = await CloudflaredTunnel.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1)) // Ensure ownership
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+router.put("/:id", asyncHandler(async (req, res) => {
+	const payload = await validate("/nginx/cloudflared-tunnels/{id}", "put")(req.body);
+	const result = await cloudflaredService.update(res.locals.access, req.params.id, payload);
 
-		if (!tunnel) {
-			res.status(404).send({ error: "Tunnel not found" });
-			return;
-		}
-
-		const payload = await apiValidator(getValidationSchema("/nginx/cloudflared-tunnels/{id}", "put"), req.body);
-
-		trx = await transaction.start(CloudflaredTunnel.knex());
-		const result = await tunnel.$query(trx).patchAndFetch(payload);
-		await trx.commit();
-
-		// Restart with new config
-		cloudflaredService.restart(result);
-
-		// Audit Log
-		await auditLogService.add(res.locals.access, {
-			action: "updated",
-			object_type: "cloudflared-tunnel",
-			object_id: result.id,
-			meta: {
-				name: result.name,
-			},
-		});
-
-		res.status(200).send(result);
-	} catch (err) {
-		if (trx) {
-			await trx.rollback();
-		}
-		next(err);
+	if (!result) {
+		res.status(404).send({ error: "Tunnel not found" });
+		return;
 	}
-});
+
+	// Restart with new config
+	cloudflaredService.restart(result);
+
+	// Audit Log
+	await auditLogService.add(res.locals.access, {
+		action: "updated",
+		object_type: "cloudflared-tunnel",
+		object_id: result.id,
+		meta: { name: result.name },
+	});
+
+	res.status(200).send(result);
+}));
 
 /**
  * DELETE /api/nginx/cloudflared-tunnels/:id
  */
-router.delete("/:id", async (req, res, next) => {
-	let trx;
-	try {
-		await res.locals.access.can("cloudflared_tunnels:delete", req.params.id);
-		const tunnel = await CloudflaredTunnel.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+router.delete("/:id", asyncHandler(async (req, res) => {
+	const tunnel = await cloudflaredService.remove(res.locals.access, req.params.id);
 
-		if (!tunnel) {
-			res.status(404).send({ error: "Tunnel not found" });
-			return;
-		}
-
-		// Stop process
-		cloudflaredService.stop(tunnel.id);
-
-		trx = await transaction.start(CloudflaredTunnel.knex());
-		await tunnel.$query(trx).delete();
-		await trx.commit();
-
-		// Audit Log
-		await auditLogService.add(res.locals.access, {
-			action: "deleted",
-			object_type: "cloudflared-tunnel",
-			object_id: tunnel.id,
-			meta: {
-				name: tunnel.name,
-			},
-		});
-
-		res.status(200).send({ status: "OK" });
-	} catch (err) {
-		if (trx) {
-			await trx.rollback();
-		}
-		next(err);
+	if (!tunnel) {
+		res.status(404).send({ error: "Tunnel not found" });
+		return;
 	}
-});
+
+	// Stop process
+	cloudflaredService.stop(tunnel.id);
+
+	// Audit Log
+	await auditLogService.add(res.locals.access, {
+		action: "deleted",
+		object_type: "cloudflared-tunnel",
+		object_id: tunnel.id,
+		meta: { name: tunnel.name },
+	});
+
+	res.status(200).send({ status: "OK" });
+}));
 
 export default router;

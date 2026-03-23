@@ -17,6 +17,21 @@ import {
 import { setupTotp, verifyAndEnableTotp, verifyTotp } from "./totp.js";
 import { addYubikey, verifyYubikey } from "./yubikey.js";
 
+const listMethods = async (userId) => {
+	return UserTwoFa.query()
+		.where({ user_id: userId, is_deleted: 0 })
+		.whereIn("type", ["totp", "yubikey", "passkey", "duo"])
+		.select("id", "type", "label", "is_verified", "created_on", "modified_on");
+};
+
+const getBackupCodeCount = async (userId) => {
+	return UserTwoFaBackupCode.query().where({ user_id: userId }).whereNull("used_at").resultSize();
+};
+
+const hasActive2FA = async (userId) => {
+	return UserTwoFa.hasActive2FA(userId);
+};
+
 const removeTwoFaMethod = async (userId, methodId) => {
 	const record = await UserTwoFa.query().findOne({ id: methodId, user_id: userId, is_deleted: 0 });
 	if (!record) {
@@ -44,6 +59,9 @@ const verifyLoginChallenge = async (userId, method, code) => {
 };
 
 export default {
+	listMethods,
+	getBackupCodeCount,
+	hasActive2FA,
 	setupTotp,
 	verifyAndEnableTotp,
 	verifyTotp,

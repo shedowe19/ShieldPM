@@ -18,10 +18,9 @@ import {
 import { issueAuthResponse } from "../modules/auth/token-response.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
+import { asyncHandler } from "../lib/express/route-handler.js";
 import apiValidator from "../lib/validator/api.js";
 import { debug, express as logger } from "../logger.js";
-import TokenModel from "../models/token.js";
-import UserTwoFa from "../models/user-2fa.js";
 import { getValidationSchema } from "../schema/index.js";
 
 const authRateLimiter = rateLimit({
@@ -49,7 +48,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.get(authRateLimiter, jwtdecode(), async (req, res) => {
+	.get(authRateLimiter, jwtdecode(), asyncHandler(async (req, res) => {
 		logger.warn(`Legacy GET /tokens accessed from IP ${req.ip || "unknown"} - migrate to POST /tokens/refresh`);
 		const expiry = typeof req.query.expiry === "string" ? req.query.expiry : null;
 		const scope = typeof req.query.scope === "string" ? req.query.scope : null;
@@ -62,7 +61,7 @@ router
 		});
 		res.clearCookie("shieldpm_oidc");
 		res.status(200).send({ ...data, token: undefined });
-	})
+	}))
 	.post(authRateLimiter, async (req, res, next) => {
 		const ip = req.ip || "unknown";
 		const now = Date.now();
@@ -86,7 +85,7 @@ router
 			const data = await apiValidator(getValidationSchema("/tokens", "post"), req.body);
 			const result = await tokenService.getTokenFromEmail(data);
 			await clearLoginAttempts(trackedIdentifiers);
-			const has2FA = await UserTwoFa.hasActive2FA(result.user.id);
+			const has2FA = await twoFaService.hasActive2FA(result.user.id);
 			if (has2FA) {
 				return res.status(202).send(await createPendingTwoFaChallenge(result.user.id, res.locals.csrfToken));
 			}
@@ -118,7 +117,7 @@ router
 			next(err);
 		}
 	})
-	.delete(async (req, res) => {
+	.delete(asyncHandler(async (req, res) => {
 		const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
 		if (rawRefreshToken) {
 			try {
@@ -130,7 +129,7 @@ router
 		clearAuthCookies(res);
 		res.clearCookie("shieldpm_jwt_original");
 		res.sendStatus(204);
-	});
+	}));
 
 router.post("/refresh", authRateLimiter, async (req, res) => {
 	try {
@@ -157,7 +156,7 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 	}
 });
 
-router.post("/logout", authRateLimiter, async (req, res) => {
+router.post("/logout", authRateLimiter, asyncHandler(async (req, res) => {
 	const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
 	if (rawRefreshToken) {
 		try {
@@ -169,7 +168,7 @@ router.post("/logout", authRateLimiter, async (req, res) => {
 	clearAuthCookies(res);
 	res.clearCookie("shieldpm_jwt_original");
 	res.sendStatus(204);
-});
+}));
 
 router
 	.route("/restore")
@@ -184,8 +183,7 @@ router
 			}
 			let payload;
 			try {
-				const Token = TokenModel();
-				payload = await Token.load(originalToken);
+				payload = await tokenService.loadToken(originalToken);
 			} catch {
 				throw new errs.AuthError("Backup session token is invalid or expired");
 			}
@@ -208,98 +206,64 @@ router
 		}
 	});
 
-router.post("/2fa/verify", authRateLimiter, async (req, res) => {
+router.post("/2fa/verify", authRateLimiter, asyncHandler(async (req, res) => {
 	const { pending_token, method, code } = req.body;
 	if (!pending_token || !method || !code) {
 		return res.status(400).send({ error: { code: 400, message: "pending_token, method, and code are required" } });
 	}
-	try {
-		const { userId, user } = await loadPendingTwoFaUser(pending_token);
-		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
-		const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
-		if (!valid) return res.status(401).send({ error: { code: 401, message: "Invalid 2FA code" } });
-		res.status(200).send(
-			await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
-		);
-	} catch (err) {
-		debug(logger, `POST /tokens/2fa/verify: ${err}`);
-		const code = err.status || 500;
-		res.status(code).send({ error: { code, message: err.public ? err.message : "2FA verification failed" } });
-	}
-});
+	const { userId, user } = await loadPendingTwoFaUser(pending_token);
+	if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
+	const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
+	if (!valid) return res.status(401).send({ error: { code: 401, message: "Invalid 2FA code" } });
+	res.status(200).send(
+		await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
+	);
+}));
 
-router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
+router.post("/2fa/passkey/begin", authRateLimiter, asyncHandler(async (req, res) => {
 	const { pending_token } = req.body;
 	if (!pending_token) return res.status(400).send({ error: { code: 400, message: "pending_token is required" } });
-	try {
-		const payload = await loadPendingTwoFaPayload(pending_token);
-		const { options, challengeId } = await twoFaService.beginPasskeyAuthentication(payload.attrs.id, req);
-		res.status(200).json({ options, challenge_id: challengeId });
-	} catch (err) {
-		debug(logger, `POST /tokens/2fa/passkey/begin: ${err}`);
-		const code = err.status || 500;
-		res.status(code).send({
-			error: { code, message: err.public ? err.message : "Failed to begin passkey authentication" },
-		});
-	}
-});
+	const payload = await loadPendingTwoFaPayload(pending_token);
+	const { options, challengeId } = await twoFaService.beginPasskeyAuthentication(payload.attrs.id, req);
+	res.status(200).json({ options, challenge_id: challengeId });
+}));
 
-router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
+router.post("/2fa/passkey/complete", authRateLimiter, asyncHandler(async (req, res) => {
 	const { pending_token, challenge_id, auth_response } = req.body;
 	if (!pending_token || !challenge_id || !auth_response) {
 		return res
 			.status(400)
 			.send({ error: { code: 400, message: "pending_token, challenge_id, and auth_response are required" } });
 	}
-	try {
-		const { userId, user } = await loadPendingTwoFaUser(pending_token);
-		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
-		await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response, req);
-		res.status(200).send(
-			await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
-		);
-	} catch (err) {
-		debug(logger, `POST /tokens/2fa/passkey/complete: ${err}`);
-		const code = err.status || 500;
-		res.status(code).send({ error: { code, message: err.public ? err.message : "Passkey authentication failed" } });
-	}
-});
+	const { userId, user } = await loadPendingTwoFaUser(pending_token);
+	if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
+	await twoFaService.completePasskeyAuthentication(userId, challenge_id, auth_response, req);
+	res.status(200).send(
+		await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
+	);
+}));
 
-router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
+router.post("/2fa/duo/begin", authRateLimiter, asyncHandler(async (req, res) => {
 	const { pending_token } = req.body;
 	if (!pending_token) return res.status(400).send({ error: { code: 400, message: "pending_token is required" } });
-	try {
-		const { userId, user } = await loadPendingTwoFaUser(pending_token);
-		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
-		const { authUrl, state } = await twoFaService.beginDuoAuthentication(userId, user.email);
-		res.status(200).json({ auth_url: authUrl, state });
-	} catch (err) {
-		debug(logger, `POST /tokens/2fa/duo/begin: ${err}`);
-		const code = err.status || 500;
-		res.status(code).send({
-			error: { code, message: err.public ? err.message : "Failed to initiate Duo authentication" },
-		});
-	}
-});
+	const { userId, user } = await loadPendingTwoFaUser(pending_token);
+	if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
+	const { authUrl, state } = await twoFaService.beginDuoAuthentication(userId, user.email);
+	res.status(200).json({ auth_url: authUrl, state });
+}));
 
-router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
+router.post("/2fa/duo/complete", authRateLimiter, asyncHandler(async (req, res) => {
 	const { pending_token, duo_code } = req.body;
 	if (!pending_token || !duo_code) {
 		return res.status(400).send({ error: { code: 400, message: "pending_token and duo_code are required" } });
 	}
-	try {
-		const { userId, user } = await loadPendingTwoFaUser(pending_token);
-		if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
-		const valid = await twoFaService.completeDuoAuthentication(userId, user.email, duo_code);
-		if (!valid) return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });
-		res.status(200).send(
-			await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
-		);
-	} catch (err) {
-		debug(logger, `POST /tokens/2fa/duo/complete: ${err}`);
-		const code = err.status || 500;
-		res.status(code).send({ error: { code, message: err.public ? err.message : "Duo authentication failed" } });
-	}
-});
+	const { userId, user } = await loadPendingTwoFaUser(pending_token);
+	if (!user) return res.status(401).send({ error: { code: 401, message: "User not found" } });
+	const valid = await twoFaService.completeDuoAuthentication(userId, user.email, duo_code);
+	if (!valid) return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });
+	res.status(200).send(
+		await issueAuthResponse({ tokenService, user, req, res, csrfToken: res.locals.csrfToken }),
+	);
+}));
 
 export default router;

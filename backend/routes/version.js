@@ -21,6 +21,8 @@ router
 	 * GET /api/version/check
 	 *
 	 * Check for available updates
+	 * NOTE: Intentionally does NOT use asyncHandler — always returns 200
+	 * even on error to avoid triggering repeated update checks in the UI.
 	 */
 	.get(async (req, res, _next) => {
 		try {

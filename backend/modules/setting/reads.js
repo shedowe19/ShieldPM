@@ -19,4 +19,8 @@ const getAll = async (access) => {
 	return settingModel.query().orderBy("description", "ASC");
 };
 
-export { get, getAll, getCount };
+const getOidcConfig = async () => {
+	return settingModel.query().where({ id: "oidc-config" }).first();
+};
+
+export { get, getAll, getCount, getOidcConfig };

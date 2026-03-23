@@ -1,5 +1,5 @@
 import express from "express";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { auth } from "../lib/express/middleware.js";
 import { detectService, getAllServices, getIconUrl } from "../lib/service-icons.js";
 
 const router = express.Router({
@@ -12,7 +12,7 @@ const router = express.Router({
  * GET /api/services/icons
  * Returns list of all available service icons for picker/autocomplete
  */
-router.get("/icons", jwtdecode(), (_req, res) => {
+router.get("/icons", auth(), (_req, res) => {
 	res.json(getAllServices());
 });
 
@@ -21,7 +21,7 @@ router.get("/icons", jwtdecode(), (_req, res) => {
  * Detects service based on port and hostname
  * Query params: port (required), hostname (optional)
  */
-router.get("/detect", jwtdecode(), (req, res) => {
+router.get("/detect", auth(), (req, res) => {
 	const { port, hostname } = req.query;
 
 	if (!port) {

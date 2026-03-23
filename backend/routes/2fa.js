@@ -8,11 +8,10 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { twoFaService } from "../modules/auth/index.js";
+import userService from "../modules/user/service.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import userIdFromMe from "../lib/express/user-id-from-me.js";
-import UserTwoFa from "../models/user-2fa.js";
-import UserTwoFaBackupCode from "../models/user-2fa-backup-codes.js";
 
 const twoFaRateLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000,
@@ -66,12 +65,9 @@ const requireSelfOrAdmin = (req, res) => {
 router.get("/", async (req, res) => {
 	const userId = requireSelfOrAdmin(req, res);
 
-	const methods = await UserTwoFa.query()
-		.where({ user_id: userId, is_deleted: 0 })
-		.whereIn("type", ["totp", "yubikey", "passkey", "duo"])
-		.select("id", "type", "label", "is_verified", "created_on", "modified_on");
+	const methods = await twoFaService.listMethods(userId);
 
-	const backupCount = await UserTwoFaBackupCode.query().where({ user_id: userId }).whereNull("used_at").resultSize();
+	const backupCount = await twoFaService.getBackupCodeCount(userId);
 
 	res.status(200).json({ methods, backup_codes_remaining: backupCount });
 });
@@ -92,8 +88,7 @@ router.post("/totp/setup", twoFaRateLimiter, async (req, res) => {
 	// Fetch email from DB if not in token
 	let email = userEmail;
 	if (!email) {
-		const { default: userModel } = await import("../models/user.js");
-		const user = await userModel.query().findById(userId);
+		const user = await userService.get(res.locals.access, { id: userId, omit: [] });
 		email = user?.email;
 	}
 
@@ -161,8 +156,7 @@ router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
  */
 router.post("/passkey/register/begin", twoFaRateLimiter, async (req, res) => {
 	const userId = requireSelfOrAdmin(req, res);
-	const { default: userModel } = await import("../models/user.js");
-	const user = await userModel.query().findById(userId);
+	const user = await userService.get(res.locals.access, { id: userId, omit: [] });
 
 	if (!user) {
 		throw new errs.ItemNotFoundError(`User ${userId}`);
