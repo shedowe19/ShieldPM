@@ -17,7 +17,7 @@ export async function list(access) {
 	const query = baseQuery().withGraphFetched("proxy_host").orderBy("name", "ASC");
 	ownerFilter(query, accessData);
 	const services = await query;
-	const torInfo = await torService.getInfo?.() || {};
+	const torInfo = (await torService.getInfo?.()) || {};
 	return { services, tor: torInfo };
 }
 
@@ -39,7 +39,7 @@ export async function create(payload, access) {
 		const service = await TorOnion.query(trx).insert(payload);
 		await trx.commit();
 
-		await torService.create?.(service) || torService.regenerateTorConfig?.();
+		(await torService.create?.(service)) || torService.regenerateTorConfig?.();
 		const finalService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
 
 		await auditLogService.add(access, {
@@ -58,10 +58,7 @@ export async function create(payload, access) {
 
 export async function update(id, body, access) {
 	await access.can("tor_onions:update", id);
-	const service = await baseQuery()
-		.where("owner_user_id", access.token.getUserId(1))
-		.where("id", id)
-		.first();
+	const service = await baseQuery().where("owner_user_id", access.token.getUserId(1)).where("id", id).first();
 
 	if (!service) return null;
 
@@ -92,10 +89,7 @@ export async function update(id, body, access) {
 
 export async function remove(id, access) {
 	await access.can("tor_onions:delete", id);
-	const service = await baseQuery()
-		.where("owner_user_id", access.token.getUserId(1))
-		.where("id", id)
-		.first();
+	const service = await baseQuery().where("owner_user_id", access.token.getUserId(1)).where("id", id).first();
 
 	if (!service) return null;
 
@@ -122,15 +116,12 @@ export async function remove(id, access) {
 
 export async function startOnion(id, access) {
 	await access.can("tor_onions:update", id);
-	const service = await baseQuery()
-		.where("owner_user_id", access.token.getUserId(1))
-		.where("id", id)
-		.first();
+	const service = await baseQuery().where("owner_user_id", access.token.getUserId(1)).where("id", id).first();
 
 	if (!service) return null;
 
 	if (!service.private_key) {
-		await torService.create?.(service) || torService.regenerateTorConfig?.();
+		(await torService.create?.(service)) || torService.regenerateTorConfig?.();
 	} else {
 		await torService.start?.(service);
 	}
@@ -149,10 +140,7 @@ export async function startOnion(id, access) {
 
 export async function stopOnion(id, access) {
 	await access.can("tor_onions:update", id);
-	const service = await baseQuery()
-		.where("owner_user_id", access.token.getUserId(1))
-		.where("id", id)
-		.first();
+	const service = await baseQuery().where("owner_user_id", access.token.getUserId(1)).where("id", id).first();
 
 	if (!service) return null;
 

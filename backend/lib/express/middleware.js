@@ -14,9 +14,7 @@ export const auth = jwtdecode;
  * Both forms return an async function: (payload) => validatedData.
  */
 export const validate = (pathOrSchemaId, method) => {
-	const schema = method
-		? getValidationSchema(pathOrSchemaId, method)
-		: getValidationSchema(pathOrSchemaId);
+	const schema = method ? getValidationSchema(pathOrSchemaId, method) : getValidationSchema(pathOrSchemaId);
 	return (payload) => apiValidator(schema, payload);
 };
 
