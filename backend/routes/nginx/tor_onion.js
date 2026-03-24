@@ -4,8 +4,6 @@ import { isDemoMode } from "../../lib/config.js";
 import { asyncHandler } from "../../lib/express/route-handler.js";
 import { auth, validate } from "../../lib/express/middleware.js";
 
-
-
 const router = express.Router({
 	caseSensitive: true,
 	strict: true,

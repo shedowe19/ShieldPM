@@ -25,27 +25,29 @@ router
 	 *
 	 * Retrieve all logs
 	 */
-	.get(asyncHandler(async (req, res) => {
-		const data = await validator(
-			{
-				additionalProperties: false,
-				properties: {
-					expand: {
-						$ref: "common#/properties/expand",
-					},
-					query: {
-						$ref: "common#/properties/query",
+	.get(
+		asyncHandler(async (req, res) => {
+			const data = await validator(
+				{
+					additionalProperties: false,
+					properties: {
+						expand: {
+							$ref: "common#/properties/expand",
+						},
+						query: {
+							$ref: "common#/properties/query",
+						},
 					},
 				},
-			},
-			{
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				query: typeof req.query.query === "string" ? req.query.query : null,
-			},
-		);
-		const rows = await auditLogService.getAll(res.locals.access, data.expand, data.query);
-		res.status(200).send(rows);
-	}));
+				{
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+					query: typeof req.query.query === "string" ? req.query.query : null,
+				},
+			);
+			const rows = await auditLogService.getAll(res.locals.access, data.expand, data.query);
+			res.status(200).send(rows);
+		}),
+	);
 
 /**
  * Specific audit log entry
@@ -64,31 +66,33 @@ router
 	 *
 	 * Retrieve a specific entry
 	 */
-	.get(asyncHandler(async (req, res) => {
-		const data = await validator(
-			{
-				required: ["event_id"],
-				additionalProperties: false,
-				properties: {
-					event_id: {
-						$ref: "common#/properties/id",
-					},
-					expand: {
-						$ref: "common#/properties/expand",
+	.get(
+		asyncHandler(async (req, res) => {
+			const data = await validator(
+				{
+					required: ["event_id"],
+					additionalProperties: false,
+					properties: {
+						event_id: {
+							$ref: "common#/properties/id",
+						},
+						expand: {
+							$ref: "common#/properties/expand",
+						},
 					},
 				},
-			},
-			{
-				event_id: req.params.event_id,
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-			},
-		);
+				{
+					event_id: req.params.event_id,
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				},
+			);
 
-		const item = await auditLogService.get(res.locals.access, {
-			id: data.event_id,
-			expand: data.expand,
-		});
-		res.status(200).send(item);
-	}));
+			const item = await auditLogService.get(res.locals.access, {
+				id: data.event_id,
+				expand: data.expand,
+			});
+			res.status(200).send(item);
+		}),
+	);
 
 export default router;
