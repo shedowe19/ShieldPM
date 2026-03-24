@@ -310,7 +310,10 @@ router
 	 */
 	.put(
 		asyncHandler(async (req, res) => {
-			const payload = await validate("/nginx/certificates/{certID}", "put")({
+			const payload = await validate(
+				"/nginx/certificates/{certID}",
+				"put",
+			)({
 				...req.body,
 				id: req.params.certificate_id,
 			});
