@@ -1,4 +1,4 @@
-import { renderHook, } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("src/api/backend", () => ({
@@ -18,8 +18,8 @@ vi.mock("@tanstack/react-query", async () => {
 		...actual,
 		useQuery: vi.fn(({ queryFn: _queryFn }) => {
 			// Simple sync mock that calls queryFn and returns result
-			let data: unknown ;
-			let error: unknown ;
+			let data: unknown;
+			let error: unknown;
 			let isLoading = true;
 			try {
 				// We'll just return a resolved mock
