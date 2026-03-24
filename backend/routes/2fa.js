@@ -11,6 +11,7 @@ import { twoFaService } from "../modules/auth/index.js";
 import userService from "../modules/user/service.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
+import { asyncHandler } from "../lib/express/route-handler.js";
 import userIdFromMe from "../lib/express/user-id-from-me.js";
 
 const twoFaRateLimiter = rateLimit({
@@ -62,15 +63,18 @@ const requireSelfOrAdmin = (req, res) => {
 // GET /api/users/:id/2fa
 // List active 2FA methods for a user
 // ---------------------------------------------------------------------------
-router.get("/", async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+router.get(
+	"/",
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
 
-	const methods = await twoFaService.listMethods(userId);
+		const methods = await twoFaService.listMethods(userId);
 
-	const backupCount = await twoFaService.getBackupCodeCount(userId);
+		const backupCount = await twoFaService.getBackupCodeCount(userId);
 
-	res.status(200).json({ methods, backup_codes_remaining: backupCount });
-});
+		res.status(200).json({ methods, backup_codes_remaining: backupCount });
+	}),
+);
 
 // ---------------------------------------------------------------------------
 // TOTP
@@ -80,46 +84,54 @@ router.get("/", async (req, res) => {
  * POST /api/users/:id/2fa/totp/setup
  * Begin TOTP setup — returns a QR code data URL.
  */
-router.post("/totp/setup", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const access = res.locals.access;
-	const userEmail = access?.token?.get("email") || req.body.email;
+router.post(
+	"/totp/setup",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const access = res.locals.access;
+		const userEmail = access?.token?.get("email") || req.body.email;
 
-	// Fetch email from DB if not in token
-	let email = userEmail;
-	if (!email) {
-		const user = await userService.get(res.locals.access, { id: userId, omit: [] });
-		email = user?.email;
-	}
+		// Fetch email from DB if not in token
+		let email = userEmail;
+		if (!email) {
+			const user = await userService.get(res.locals.access, { id: userId, omit: [] });
+			email = user?.email;
+		}
 
-	if (!email) {
-		throw new errs.ValidationError("Cannot determine user email for TOTP setup");
-	}
+		if (!email) {
+			throw new errs.ValidationError("Cannot determine user email for TOTP setup");
+		}
 
-	const result = await twoFaService.setupTotp(userId, email);
+		const result = await twoFaService.setupTotp(userId, email);
 
-	// Do not expose the raw secret in production; return only the QR
-	res.status(200).json({
-		qr_data_url: result.qrDataUrl,
-		otpauth_url: result.otpauthUrl,
-	});
-});
+		// Do not expose the raw secret in production; return only the QR
+		res.status(200).json({
+			qr_data_url: result.qrDataUrl,
+			otpauth_url: result.otpauthUrl,
+		});
+	}),
+);
 
 /**
  * POST /api/users/:id/2fa/totp/enable
  * Verify a TOTP code and activate the method.
  */
-router.post("/totp/enable", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const { code } = req.body;
+router.post(
+	"/totp/enable",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const { code } = req.body;
 
-	if (!code || typeof code !== "string") {
-		throw new errs.ValidationError("TOTP code is required");
-	}
+		if (!code || typeof code !== "string") {
+			throw new errs.ValidationError("TOTP code is required");
+		}
 
-	const backupCodes = await twoFaService.verifyAndEnableTotp(userId, code);
-	res.status(200).json({ message: "TOTP enabled successfully", backup_codes: backupCodes });
-});
+		const backupCodes = await twoFaService.verifyAndEnableTotp(userId, code);
+		res.status(200).json({ message: "TOTP enabled successfully", backup_codes: backupCodes });
+	}),
+);
 
 // ---------------------------------------------------------------------------
 // YubiKey
@@ -129,22 +141,26 @@ router.post("/totp/enable", twoFaRateLimiter, async (req, res) => {
  * POST /api/users/:id/2fa/yubikey/add
  * Register a YubiKey by validating a fresh OTP.
  */
-router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const { otp, label } = req.body;
+router.post(
+	"/yubikey/add",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const { otp, label } = req.body;
 
-	if (!otp || typeof otp !== "string") {
-		throw new errs.ValidationError("YubiKey OTP is required");
-	}
+		if (!otp || typeof otp !== "string") {
+			throw new errs.ValidationError("YubiKey OTP is required");
+		}
 
-	const record = await twoFaService.addYubikey(userId, otp, label);
-	res.status(201).json({
-		id: record.id,
-		type: record.type,
-		label: record.label,
-		created_on: record.created_on,
-	});
-});
+		const record = await twoFaService.addYubikey(userId, otp, label);
+		res.status(201).json({
+			id: record.id,
+			type: record.type,
+			label: record.label,
+			created_on: record.created_on,
+		});
+	}),
+);
 
 // ---------------------------------------------------------------------------
 // Passkey / WebAuthn
@@ -154,39 +170,47 @@ router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
  * POST /api/users/:id/2fa/passkey/register/begin
  * Generate WebAuthn registration options.
  */
-router.post("/passkey/register/begin", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const user = await userService.get(res.locals.access, { id: userId, omit: [] });
+router.post(
+	"/passkey/register/begin",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const user = await userService.get(res.locals.access, { id: userId, omit: [] });
 
-	if (!user) {
-		throw new errs.ItemNotFoundError(`User ${userId}`);
-	}
+		if (!user) {
+			throw new errs.ItemNotFoundError(`User ${userId}`);
+		}
 
-	const { options, challengeId } = await twoFaService.beginPasskeyRegistration(userId, user.email, req);
-	res.status(200).json({ options, challenge_id: challengeId });
-});
+		const { options, challengeId } = await twoFaService.beginPasskeyRegistration(userId, user.email, req);
+		res.status(200).json({ options, challenge_id: challengeId });
+	}),
+);
 
 /**
  * POST /api/users/:id/2fa/passkey/register/complete
  * Verify WebAuthn registration and store the credential.
  */
-router.post("/passkey/register/complete", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const { challenge_id, registration_response, label } = req.body;
+router.post(
+	"/passkey/register/complete",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const { challenge_id, registration_response, label } = req.body;
 
-	if (!challenge_id || !registration_response) {
-		throw new errs.ValidationError("challenge_id and registration_response are required");
-	}
+		if (!challenge_id || !registration_response) {
+			throw new errs.ValidationError("challenge_id and registration_response are required");
+		}
 
-	const result = await twoFaService.completePasskeyRegistration(
-		userId,
-		challenge_id,
-		registration_response,
-		req,
-		label,
-	);
-	res.status(201).json({ message: "Passkey registered successfully", backup_codes: result.backupCodes });
-});
+		const result = await twoFaService.completePasskeyRegistration(
+			userId,
+			challenge_id,
+			registration_response,
+			req,
+			label,
+		);
+		res.status(201).json({ message: "Passkey registered successfully", backup_codes: result.backupCodes });
+	}),
+);
 
 // ---------------------------------------------------------------------------
 // Duo Security
@@ -196,24 +220,28 @@ router.post("/passkey/register/complete", twoFaRateLimiter, async (req, res) => 
  * POST /api/users/:id/2fa/duo/setup
  * Configure Duo Security integration.
  */
-router.post("/duo/setup", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const { client_id, client_secret, api_host, redirect_url } = req.body;
+router.post(
+	"/duo/setup",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const { client_id, client_secret, api_host, redirect_url } = req.body;
 
-	const record = await twoFaService.setupDuo(userId, {
-		clientId: client_id,
-		clientSecret: client_secret,
-		apiHost: api_host,
-		redirectUrl: redirect_url,
-	});
+		const record = await twoFaService.setupDuo(userId, {
+			clientId: client_id,
+			clientSecret: client_secret,
+			apiHost: api_host,
+			redirectUrl: redirect_url,
+		});
 
-	res.status(201).json({
-		id: record.id,
-		type: record.type,
-		label: record.label,
-		created_on: record.created_on,
-	});
-});
+		res.status(201).json({
+			id: record.id,
+			type: record.type,
+			label: record.label,
+			created_on: record.created_on,
+		});
+	}),
+);
 
 // ---------------------------------------------------------------------------
 // Remove a 2FA method
@@ -223,17 +251,21 @@ router.post("/duo/setup", twoFaRateLimiter, async (req, res) => {
  * DELETE /api/users/:id/2fa/:methodId
  * Remove a specific 2FA method.
  */
-router.delete("/:methodId", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const methodId = Number.parseInt(req.params.methodId, 10);
+router.delete(
+	"/:methodId",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const methodId = Number.parseInt(req.params.methodId, 10);
 
-	if (!methodId || Number.isNaN(methodId)) {
-		throw new errs.ValidationError("Invalid method ID");
-	}
+		if (!methodId || Number.isNaN(methodId)) {
+			throw new errs.ValidationError("Invalid method ID");
+		}
 
-	await twoFaService.removeTwoFaMethod(userId, methodId);
-	res.sendStatus(204);
-});
+		await twoFaService.removeTwoFaMethod(userId, methodId);
+		res.sendStatus(204);
+	}),
+);
 
 // ---------------------------------------------------------------------------
 // Backup Codes
@@ -243,20 +275,27 @@ router.delete("/:methodId", twoFaRateLimiter, async (req, res) => {
  * GET /api/users/:id/2fa/backup-codes/count
  * Return the number of unused backup codes.
  */
-router.get("/backup-codes/count", async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const count = await twoFaService.getRemainingBackupCodeCount(userId);
-	res.status(200).json({ remaining: count });
-});
+router.get(
+	"/backup-codes/count",
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const count = await twoFaService.getRemainingBackupCodeCount(userId);
+		res.status(200).json({ remaining: count });
+	}),
+);
 
 /**
  * POST /api/users/:id/2fa/backup-codes/regenerate
  * Regenerate all backup codes (invalidates existing ones).
  */
-router.post("/backup-codes/regenerate", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
-	const codes = await twoFaService.regenerateBackupCodes(userId);
-	res.status(200).json({ backup_codes: codes });
-});
+router.post(
+	"/backup-codes/regenerate",
+	twoFaRateLimiter,
+	asyncHandler(async (req, res) => {
+		const userId = requireSelfOrAdmin(req, res);
+		const codes = await twoFaService.regenerateBackupCodes(userId);
+		res.status(200).json({ backup_codes: codes });
+	}),
+);
 
 export default router;

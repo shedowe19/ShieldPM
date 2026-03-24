@@ -1,9 +1,8 @@
 import express from "express";
 import { accessListService } from "../../modules/access-list/index.js";
-import jwtdecode from "../../lib/express/jwt-decode.js";
-import apiValidator from "../../lib/validator/api.js";
+import { auth, validate } from "../../lib/express/middleware.js";
+import { asyncHandler } from "../../lib/express/route-handler.js";
 import validator from "../../lib/validator/index.js";
-import { getValidationSchema } from "../../schema/index.js";
 
 const router = express.Router({
 	caseSensitive: true,
@@ -19,45 +18,49 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 
 	/**
 	 * GET /api/nginx/access-lists
 	 *
 	 * Retrieve all access-lists
 	 */
-	.get(async (req, res, _next) => {
-		const data = await validator(
-			{
-				additionalProperties: false,
-				properties: {
-					expand: {
-						$ref: "common#/properties/expand",
-					},
-					query: {
-						$ref: "common#/properties/query",
+	.get(
+		asyncHandler(async (req, res) => {
+			const data = await validator(
+				{
+					additionalProperties: false,
+					properties: {
+						expand: {
+							$ref: "common#/properties/expand",
+						},
+						query: {
+							$ref: "common#/properties/query",
+						},
 					},
 				},
-			},
-			{
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				query: typeof req.query.query === "string" ? req.query.query : null,
-			},
-		);
-		const rows = await accessListService.getAll(res.locals.access, data.expand, data.query);
-		res.status(200).send(rows);
-	})
+				{
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+					query: typeof req.query.query === "string" ? req.query.query : null,
+				},
+			);
+			const rows = await accessListService.getAll(res.locals.access, data.expand, data.query);
+			res.status(200).send(rows);
+		}),
+	)
 
 	/**
 	 * POST /api/nginx/access-lists
 	 *
 	 * Create a new access-list
 	 */
-	.post(async (req, res, _next) => {
-		const payload = await apiValidator(getValidationSchema("/nginx/access-lists", "post"), req.body);
-		const result = await accessListService.create(res.locals.access, payload);
-		res.status(201).send(result);
-	});
+	.post(
+		asyncHandler(async (req, res) => {
+			const payload = await validate("/nginx/access-lists", "post")(req.body);
+			const result = await accessListService.create(res.locals.access, payload);
+			res.status(201).send(result);
+		}),
+	);
 
 /**
  * Specific access-list
@@ -69,61 +72,67 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 
 	/**
 	 * GET /api/nginx/access-lists/123
 	 *
 	 * Retrieve a specific access-list
 	 */
-	.get(async (req, res, _next) => {
-		const data = await validator(
-			{
-				required: ["list_id"],
-				additionalProperties: false,
-				properties: {
-					list_id: {
-						$ref: "common#/properties/id",
-					},
-					expand: {
-						$ref: "common#/properties/expand",
+	.get(
+		asyncHandler(async (req, res) => {
+			const data = await validator(
+				{
+					required: ["list_id"],
+					additionalProperties: false,
+					properties: {
+						list_id: {
+							$ref: "common#/properties/id",
+						},
+						expand: {
+							$ref: "common#/properties/expand",
+						},
 					},
 				},
-			},
-			{
-				list_id: req.params.list_id,
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-			},
-		);
-		const row = await accessListService.get(res.locals.access, {
-			id: Number.parseInt(data.list_id, 10),
-			expand: data.expand,
-		});
-		res.status(200).send(row);
-	})
+				{
+					list_id: req.params.list_id,
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				},
+			);
+			const row = await accessListService.get(res.locals.access, {
+				id: Number.parseInt(data.list_id, 10),
+				expand: data.expand,
+			});
+			res.status(200).send(row);
+		}),
+	)
 
 	/**
 	 * PUT /api/nginx/access-lists/123
 	 *
 	 * Update and existing access-list
 	 */
-	.put(async (req, res, _next) => {
-		const payload = await apiValidator(getValidationSchema("/nginx/access-lists/{listID}", "put"), req.body);
-		payload.id = Number.parseInt(req.params.list_id, 10);
-		const result = await accessListService.update(res.locals.access, payload);
-		res.status(200).send(result);
-	})
+	.put(
+		asyncHandler(async (req, res) => {
+			const payload = await validate("/nginx/access-lists/{listID}", "put")(req.body);
+			payload.id = Number.parseInt(req.params.list_id, 10);
+			const result = await accessListService.update(res.locals.access, payload);
+			res.status(200).send(result);
+		}),
+	)
 
 	/**
 	 * DELETE /api/nginx/access-lists/123
 	 *
 	 * Delete and existing access-list
 	 */
-	.delete(async (req, res, _next) => {
-		const result = await accessListService.delete(res.locals.access, {
-			id: Number.parseInt(req.params.list_id, 10),
-		});
-		res.status(200).send(result);
-	});
+	.delete(
+		asyncHandler(async (req, res) => {
+			const result = await accessListService.delete(res.locals.access, {
+				id: Number.parseInt(req.params.list_id, 10),
+			});
+			res.status(200).send(result);
+		}),
+	);
 
 export default router;

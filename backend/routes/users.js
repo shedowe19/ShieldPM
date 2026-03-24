@@ -16,12 +16,11 @@ import { userService } from "../modules/user/index.js";
 import Access from "../lib/access.js";
 import { isDestructiveTestMode } from "../lib/config.js";
 import errs from "../lib/error.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { auth, validate } from "../lib/express/middleware.js";
+import { asyncHandler } from "../lib/express/route-handler.js";
 import userIdFromMe from "../lib/express/user-id-from-me.js";
-import apiValidator from "../lib/validator/api.js";
 import validator from "../lib/validator/index.js";
 import { debug, express as logger } from "../logger.js";
-import { getValidationSchema } from "../schema/index.js";
 import { isSetup } from "../setup.js";
 
 // Rate limiter for loginAs endpoint
@@ -55,68 +54,72 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 
 	/**
 	 * GET /api/users
 	 *
 	 * Retrieve all users
 	 */
-	.get(async (req, res) => {
-		const data = await validator(
-			{
-				additionalProperties: false,
-				properties: {
-					expand: {
-						$ref: "common#/properties/expand",
-					},
-					query: {
-						$ref: "common#/properties/query",
+	.get(
+		asyncHandler(async (req, res) => {
+			const data = await validator(
+				{
+					additionalProperties: false,
+					properties: {
+						expand: {
+							$ref: "common#/properties/expand",
+						},
+						query: {
+							$ref: "common#/properties/query",
+						},
 					},
 				},
-			},
-			{
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-				query: typeof req.query.query === "string" ? req.query.query : null,
-			},
-		);
-		const users = await userService.getAll(res.locals.access, data.expand, data.query);
-		res.status(200).send(users);
-	})
+				{
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+					query: typeof req.query.query === "string" ? req.query.query : null,
+				},
+			);
+			const users = await userService.getAll(res.locals.access, data.expand, data.query);
+			res.status(200).send(users);
+		}),
+	)
 
 	/**
 	 * POST /api/users
 	 *
 	 * Create a new User
 	 */
-	.post(async (req, res) => {
-		const body = req.body;
-		const setupComplete = await isSetup();
-		const currentUserId = res.locals.access?.token?.getUserId?.(0) || 0;
+	.post(
+		asyncHandler(async (req, res) => {
+			const body = req.body;
+			const setupComplete = await isSetup();
+			const currentUserId = res.locals.access?.token?.getUserId?.(0) || 0;
 
-		if (!setupComplete) {
-			logger.info("Creating initial admin user during first-time setup");
-			const access = new Access(null);
-			await access.load(true);
-			res.locals.access = access;
+			if (!setupComplete) {
+				logger.info("Creating initial admin user during first-time setup");
+				const access = new Access(null);
+				await access.load(true);
+				res.locals.access = access;
 
-			body.is_disabled = false;
-			if (typeof body.roles !== "object" || body.roles === null) {
-				body.roles = [];
+				body.is_disabled = false;
+				if (typeof body.roles !== "object" || body.roles === null) {
+					body.roles = [];
+				}
+				if (!body.roles.includes("admin")) {
+					body.roles.push("admin");
+				}
+			} else if (!currentUserId) {
+				throw new errs.PermissionError(
+					"Initial setup is already complete. Authenticated user creation is required.",
+				);
 			}
-			if (!body.roles.includes("admin")) {
-				body.roles.push("admin");
-			}
-		} else if (!currentUserId) {
-			throw new errs.PermissionError(
-				"Initial setup is already complete. Authenticated user creation is required.",
-			);
-		}
 
-		const payload = await apiValidator(getValidationSchema("/users", "post"), body);
-		const user = await userService.create(res.locals.access, payload);
-		res.status(201).send(user);
-	})
+			const payload = await validate("/users", "post")(body);
+			const user = await userService.create(res.locals.access, payload);
+			res.status(201).send(user);
+		}),
+	)
 
 	/**
 	 * DELETE /api/users
@@ -129,16 +132,18 @@ router
 	 *
 	 * Do NOT set those env vars in a production environment!
 	 */
-	.delete(async (_req, res, next) => {
-		if (isDestructiveTestMode()) {
-			logger.warn("Deleting all users - Destructive Test Mode enabled, allowing this operation");
-			await userService.deleteAll();
-			res.status(200).send(true);
-			return;
-		}
+	.delete(
+		asyncHandler(async (_req, res, next) => {
+			if (isDestructiveTestMode()) {
+				logger.warn("Deleting all users - Destructive Test Mode enabled, allowing this operation");
+				await userService.deleteAll();
+				res.status(200).send(true);
+				return;
+			}
 
-		next(new errs.ItemNotFoundError());
-	});
+			next(new errs.ItemNotFoundError());
+		}),
+	);
 
 /**
  * Specific user
@@ -150,7 +155,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 	.all(userIdFromMe)
 
 	/**
@@ -158,77 +163,83 @@ router
 	 *
 	 * Retrieve a specific user
 	 */
-	.get(async (req, res) => {
-		const data = await validator(
-			{
-				required: ["user_id"],
-				additionalProperties: false,
-				properties: {
-					user_id: {
-						$ref: "common#/properties/id",
-					},
-					expand: {
-						$ref: "common#/properties/expand",
+	.get(
+		asyncHandler(async (req, res) => {
+			const data = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: {
+							$ref: "common#/properties/id",
+						},
+						expand: {
+							$ref: "common#/properties/expand",
+						},
 					},
 				},
-			},
-			{
-				user_id: req.params.user_id,
-				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
-			},
-		);
+				{
+					user_id: req.params.user_id,
+					expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				},
+			);
 
-		const user = await userService.get(res.locals.access, {
-			id: data.user_id,
-			expand: data.expand,
-			omit: userService.getUserOmisionsByAccess(res.locals.access, data.user_id),
-		});
-		res.status(200).send(user);
-	})
+			const user = await userService.get(res.locals.access, {
+				id: data.user_id,
+				expand: data.expand,
+				omit: userService.getUserOmisionsByAccess(res.locals.access, data.user_id),
+			});
+			res.status(200).send(user);
+		}),
+	)
 
 	/**
 	 * PUT /api/users/123
 	 *
 	 * Update and existing user
 	 */
-	.put(async (req, res, _next) => {
-		const params = await validator(
-			{
-				required: ["user_id"],
-				additionalProperties: false,
-				properties: {
-					user_id: { $ref: "common#/properties/id" },
+	.put(
+		asyncHandler(async (req, res) => {
+			const params = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: { $ref: "common#/properties/id" },
+					},
 				},
-			},
-			{ user_id: req.params.user_id },
-		);
-		const payload = await apiValidator(getValidationSchema("/users/{userID}", "put"), req.body);
-		payload.id = params.user_id;
-		const result = await userService.update(res.locals.access, payload);
-		res.status(200).send(result);
-	})
+				{ user_id: req.params.user_id },
+			);
+			const payload = await validate("/users/{userID}", "put")(req.body);
+			payload.id = params.user_id;
+			const result = await userService.update(res.locals.access, payload);
+			res.status(200).send(result);
+		}),
+	)
 
 	/**
 	 * DELETE /api/users/123
 	 *
 	 * Update and existing user
 	 */
-	.delete(async (req, res, _next) => {
-		const params = await validator(
-			{
-				required: ["user_id"],
-				additionalProperties: false,
-				properties: {
-					user_id: { $ref: "common#/properties/id" },
+	.delete(
+		asyncHandler(async (req, res) => {
+			const params = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: { $ref: "common#/properties/id" },
+					},
 				},
-			},
-			{ user_id: req.params.user_id },
-		);
-		const result = await userService.delete(res.locals.access, {
-			id: params.user_id,
-		});
-		res.status(200).send(result);
-	});
+				{ user_id: req.params.user_id },
+			);
+			const result = await userService.delete(res.locals.access, {
+				id: params.user_id,
+			});
+			res.status(200).send(result);
+		}),
+	);
 
 /**
  * Avatar Upload
@@ -239,19 +250,22 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 	.all(userIdFromMe)
-	.post(avatarUpload, async (req, res) => {
-		if (!req.files || Object.keys(req.files).length === 0) {
-			throw new errs.ValidationError("No files were uploaded.");
-		}
+	.post(
+		avatarUpload,
+		asyncHandler(async (req, res) => {
+			if (!req.files || Object.keys(req.files).length === 0) {
+				throw new errs.ValidationError("No files were uploaded.");
+			}
 
-		const result = await userService.uploadAvatar(res.locals.access, {
-			id: req.params.user_id,
-			file: req.files.avatar || req.files.file,
-		});
-		res.status(200).send(result);
-	});
+			const result = await userService.uploadAvatar(res.locals.access, {
+				id: req.params.user_id,
+				file: req.files.avatar || req.files.file,
+			});
+			res.status(200).send(result);
+		}),
+	);
 
 /**
  * Get Avatar Image
@@ -291,7 +305,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 	.all(userIdFromMe)
 
 	/**
@@ -299,22 +313,24 @@ router
 	 *
 	 * Update password for a user
 	 */
-	.put(async (req, res) => {
-		const params = await validator(
-			{
-				required: ["user_id"],
-				additionalProperties: false,
-				properties: {
-					user_id: { $ref: "common#/properties/id" },
+	.put(
+		asyncHandler(async (req, res) => {
+			const params = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: { $ref: "common#/properties/id" },
+					},
 				},
-			},
-			{ user_id: req.params.user_id },
-		);
-		const payload = await apiValidator(getValidationSchema("/users/{userID}/auth", "put"), req.body);
-		payload.id = params.user_id;
-		const result = await userService.setPassword(res.locals.access, payload);
-		res.status(200).send(result);
-	});
+				{ user_id: req.params.user_id },
+			);
+			const payload = await validate("/users/{userID}/auth", "put")(req.body);
+			payload.id = params.user_id;
+			const result = await userService.setPassword(res.locals.access, payload);
+			res.status(200).send(result);
+		}),
+	);
 
 /**
  * Specific user permissions
@@ -326,7 +342,7 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 	.all(userIdFromMe)
 
 	/**
@@ -334,22 +350,24 @@ router
 	 *
 	 * Set some or all permissions for a user
 	 */
-	.put(async (req, res) => {
-		const params = await validator(
-			{
-				required: ["user_id"],
-				additionalProperties: false,
-				properties: {
-					user_id: { $ref: "common#/properties/id" },
+	.put(
+		asyncHandler(async (req, res) => {
+			const params = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: { $ref: "common#/properties/id" },
+					},
 				},
-			},
-			{ user_id: req.params.user_id },
-		);
-		const payload = await apiValidator(getValidationSchema("/users/{userID}/permissions", "put"), req.body);
-		payload.id = params.user_id;
-		const result = await userService.setPermissions(res.locals.access, payload);
-		res.status(200).send(result);
-	});
+				{ user_id: req.params.user_id },
+			);
+			const payload = await validate("/users/{userID}/permissions", "put")(req.body);
+			payload.id = params.user_id;
+			const result = await userService.setPermissions(res.locals.access, payload);
+			res.status(200).send(result);
+		}),
+	);
 
 /**
  * Specific user login as
@@ -361,43 +379,48 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
-	.post(loginAsRateLimiter, async (req, res) => {
-		const params = await validator(
-			{
-				required: ["user_id"],
-				additionalProperties: false,
-				properties: {
-					user_id: { $ref: "common#/properties/id" },
+	.all(auth())
+	.post(
+		loginAsRateLimiter,
+		asyncHandler(async (req, res) => {
+			const params = await validator(
+				{
+					required: ["user_id"],
+					additionalProperties: false,
+					properties: {
+						user_id: { $ref: "common#/properties/id" },
+					},
 				},
-			},
-			{ user_id: req.params.user_id },
-		);
+				{ user_id: req.params.user_id },
+			);
 
-		const result = await userService.loginAs(res.locals.access, {
-			id: Number(params.user_id),
-		});
+			const result = await userService.loginAs(res.locals.access, {
+				id: Number(params.user_id),
+			});
 
-		if (req.cookies?.shieldpm_jwt) {
-			res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
+			if (req.cookies?.shieldpm_jwt) {
+				res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
+					httpOnly: true,
+					secure: req.secure,
+					sameSite: "strict",
+					// Backup cookie lives longer or same length
+					maxAge: 1000 * 60 * 60 * 24 * 30,
+				});
+			}
+
+			const safeMaxAge = result.expires
+				? Math.max(0, new Date(result.expires).getTime() - Date.now())
+				: undefined;
+
+			res.cookie("shieldpm_jwt", result.token, {
 				httpOnly: true,
 				secure: req.secure,
 				sameSite: "strict",
-				// Backup cookie lives longer or same length
-				maxAge: 1000 * 60 * 60 * 24 * 30,
+				maxAge: safeMaxAge,
 			});
-		}
 
-		const safeMaxAge = result.expires ? Math.max(0, new Date(result.expires).getTime() - Date.now()) : undefined;
-
-		res.cookie("shieldpm_jwt", result.token, {
-			httpOnly: true,
-			secure: req.secure,
-			sameSite: "strict",
-			maxAge: safeMaxAge,
-		});
-
-		res.status(200).send({ ...result, token: undefined });
-	});
+			res.status(200).send({ ...result, token: undefined });
+		}),
+	);
 
 export default router;
