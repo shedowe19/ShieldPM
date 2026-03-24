@@ -1,7 +1,7 @@
 import express from "express";
 import { gitOpsService } from "../modules/gitops/index.js";
 import { isDemoMode } from "../lib/config.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { auth } from "../lib/express/middleware.js";
 import { asyncHandler } from "../lib/express/route-handler.js";
 
 const router = express.Router({
@@ -39,7 +39,7 @@ const accessCheck = asyncHandler(async (_req, res, next) => {
  */
 router.get(
 	"/config",
-	jwtdecode(),
+	auth(),
 	accessCheck,
 	asyncHandler(async (_req, res) => {
 		const config = await gitOpsService.getConfig();
@@ -53,7 +53,7 @@ router.get(
  */
 router.put(
 	"/config",
-	jwtdecode(),
+	auth(),
 	demoCheck,
 	asyncHandler(async (req, res) => {
 		const config = await gitOpsService.updateConfig(res.locals.access, req.body);
@@ -67,7 +67,7 @@ router.put(
  */
 router.post(
 	"/test",
-	jwtdecode(),
+	auth(),
 	demoCheck,
 	accessCheck,
 	asyncHandler(async (_req, res) => {
@@ -82,7 +82,7 @@ router.post(
  */
 router.post(
 	"/export",
-	jwtdecode(),
+	auth(),
 	demoCheck,
 	accessCheck,
 	asyncHandler(async (_req, res) => {
@@ -100,7 +100,7 @@ router.post(
  */
 router.post(
 	"/push",
-	jwtdecode(),
+	auth(),
 	demoCheck,
 	accessCheck,
 	asyncHandler(async (req, res) => {
@@ -118,7 +118,7 @@ router.post(
  */
 router.post(
 	"/pull",
-	jwtdecode(),
+	auth(),
 	demoCheck,
 	accessCheck,
 	asyncHandler(async (_req, res) => {
@@ -133,7 +133,7 @@ router.post(
  */
 router.get(
 	"/history",
-	jwtdecode(),
+	auth(),
 	accessCheck,
 	asyncHandler(async (req, res) => {
 		const limit = Number.parseInt(/** @type {string} */ (req.query.limit), 10) || 20;
@@ -148,7 +148,7 @@ router.get(
  */
 router.post(
 	"/revert",
-	jwtdecode(),
+	auth(),
 	demoCheck,
 	accessCheck,
 	asyncHandler(async (req, res) => {
@@ -169,7 +169,7 @@ router.post(
  */
 router.post(
 	"/import",
-	jwtdecode(),
+	auth(),
 	demoCheck,
 	asyncHandler(async (req, res) => {
 		const { overwrite } = req.body;

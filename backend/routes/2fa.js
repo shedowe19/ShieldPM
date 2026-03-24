@@ -10,7 +10,7 @@ import rateLimit from "express-rate-limit";
 import { twoFaService } from "../modules/auth/index.js";
 import userService from "../modules/user/service.js";
 import errs from "../lib/error.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { auth } from "../lib/express/middleware.js";
 import { asyncHandler } from "../lib/express/route-handler.js";
 import userIdFromMe from "../lib/express/user-id-from-me.js";
 
@@ -29,7 +29,7 @@ const router = express.Router({
 });
 
 // All 2FA routes require authentication
-router.use(jwtdecode());
+router.use(auth());
 
 // Resolve :user_id ("me" → numeric id)
 router.use(userIdFromMe);

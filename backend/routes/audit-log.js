@@ -1,6 +1,7 @@
 import express from "express";
 import { auditLogService } from "../modules/audit-log/index.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { auth } from "../lib/express/middleware.js";
+import { asyncHandler } from "../lib/express/route-handler.js";
 import validator from "../lib/validator/index.js";
 
 const router = express.Router({
@@ -17,14 +18,14 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 
 	/**
 	 * GET /api/audit-log
 	 *
 	 * Retrieve all logs
 	 */
-	.get(async (req, res, _next) => {
+	.get(asyncHandler(async (req, res) => {
 		const data = await validator(
 			{
 				additionalProperties: false,
@@ -44,7 +45,7 @@ router
 		);
 		const rows = await auditLogService.getAll(res.locals.access, data.expand, data.query);
 		res.status(200).send(rows);
-	});
+	}));
 
 /**
  * Specific audit log entry
@@ -56,14 +57,14 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
+	.all(auth())
 
 	/**
 	 * GET /api/audit-log/123
 	 *
 	 * Retrieve a specific entry
 	 */
-	.get(async (req, res, _next) => {
+	.get(asyncHandler(async (req, res) => {
 		const data = await validator(
 			{
 				required: ["event_id"],
@@ -88,6 +89,6 @@ router
 			expand: data.expand,
 		});
 		res.status(200).send(item);
-	});
+	}));
 
 export default router;

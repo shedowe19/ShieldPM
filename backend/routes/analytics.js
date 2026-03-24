@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import express from "express";
 import si from "systeminformation";
 import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
+import { auth } from "../lib/express/middleware.js";
 import { asyncHandler } from "../lib/express/route-handler.js";
 import { analyticsService } from "../modules/analytics/index.js";
 const router = express.Router();
@@ -25,7 +25,7 @@ const withCachedJson = async (key, ttlMs, producer) => {
 };
 
 // Apply auth to all analytics endpoints
-router.use(jwtdecode());
+router.use(auth());
 
 // Enforce global admin access for platform-wide analytics
 router.use(async (_req, res, next) => {
