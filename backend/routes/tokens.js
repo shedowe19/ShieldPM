@@ -121,8 +121,7 @@ router
 			next(err);
 		}
 	})
-	.delete(
-		asyncHandler(async (req, res) => {
+	.delete(authRateLimiter, asyncHandler(async (req, res) => {
 			const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
 			if (rawRefreshToken) {
 				try {
