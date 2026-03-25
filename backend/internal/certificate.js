@@ -618,7 +618,9 @@ const internalCertificate = {
 				expires_on: /** @type {any} */ (
 					dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss")
 				),
-				domain_names: Array.from(new Set([validations.certificate.cn, ...(validations.certificate.sans || [])])),
+				domain_names: Array.from(
+					new Set([validations.certificate.cn, ...(validations.certificate.sans || [])]),
+				),
 				meta: _.clone(row.meta), // Prevent the update method from changing this value that we'll use later
 			}),
 		);
