@@ -635,7 +635,7 @@ const internalCertificate = {
 	 * @param {String}  privateKey    This is the entire key contents as a string
 	 */
 	checkPrivateKey: async (privateKey) => {
-		const filepath = await tempWrite(privateKey, "/tmp");
+		const filepath = await tempWrite(privateKey, "key.pem");
 		const failTimeout = setTimeout(() => {
 			throw new error.ValidationError(
 				"Result Validation Error: Validation timed out. This could be due to the key being passphrase-protected.",
@@ -667,7 +667,7 @@ const internalCertificate = {
 	getCertificateInfo: async (certificate, throwExpired) => {
 		let filepath = null;
 		try {
-			filepath = await tempWrite(certificate, "/tmp");
+			filepath = await tempWrite(certificate, "cert.pem");
 			const certData = await internalCertificate.getCertificateInfoFromFile(filepath, throwExpired);
 			fs.unlinkSync(filepath);
 			return certData;
