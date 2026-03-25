@@ -618,7 +618,7 @@ const internalCertificate = {
 				expires_on: /** @type {any} */ (
 					dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss")
 				),
-				domain_names: [validations.certificate.cn],
+				domain_names: Array.from(new Set([validations.certificate.cn, ...(validations.certificate.sans || [])])),
 				meta: _.clone(row.meta), // Prevent the update method from changing this value that we'll use later
 			}),
 		);
@@ -709,6 +709,32 @@ const internalCertificate = {
 			const match2 = regex2.exec(result2);
 			if (match2 && typeof match2[1] !== "undefined") {
 				certData.issuer = match2[1];
+			}
+
+			certData.sans = [];
+			try {
+				const resultSans = await utils.execFile("openssl", [
+					"x509",
+					"-in",
+					certificateFile,
+					"-ext",
+					"subjectAltName",
+					"-noout",
+				]);
+				const linesSans = resultSans.split("\n");
+				for (const line of linesSans) {
+					if (line.includes("DNS:")) {
+						const parts = line.split(",");
+						for (const part of parts) {
+							const trimmed = part.trim();
+							if (trimmed.startsWith("DNS:")) {
+								certData.sans.push(trimmed.substring(4));
+							}
+						}
+					}
+				}
+			} catch (err) {
+				// Certificate might not have SANs, ignore error
 			}
 
 			const result3 = await utils.execFile("openssl", ["x509", "-in", certificateFile, "-dates", "-noout"]);
