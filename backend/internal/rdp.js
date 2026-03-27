@@ -246,7 +246,11 @@ const internalRdp = {
 
 						// Close current session
 						if (rdpClient) {
-							try { rdpClient.close(); } catch (_e) { /* ignore */ }
+							try {
+								rdpClient.close();
+							} catch (_e) {
+								/* ignore */
+							}
 							rdpClient = null;
 						}
 
@@ -269,7 +273,11 @@ const internalRdp = {
 		// -------------------------------------------------------
 		ws.on("close", () => {
 			if (rdpClient) {
-				try { rdpClient.close(); } catch (_e) { /* ignore */ }
+				try {
+					rdpClient.close();
+				} catch (_e) {
+					/* ignore */
+				}
 				rdpClient = null;
 			}
 		});
