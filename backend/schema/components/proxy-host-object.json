@@ -137,7 +137,7 @@
 		},
 		"forward_scheme": {
 			"type": "string",
-			"enum": ["http", "https", "path", "grpc", "grpcs", "terminal"],
+			"enum": ["http", "https", "path", "grpc", "grpcs", "terminal", "rdp"],
 			"example": "http"
 		},
 		"enabled": {
