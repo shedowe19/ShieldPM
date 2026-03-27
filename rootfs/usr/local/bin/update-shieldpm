@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Ensure sbin paths are available (needed when running as root without sudo)
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+
 # Self-update protection: Run from /tmp to allow overwriting the original script file
 SELF_PATH=$(readlink -f "$0")
 if [[ "$SELF_PATH" != "/tmp/shieldpm_update_running" ]]; then

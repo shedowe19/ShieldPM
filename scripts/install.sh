@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Ensure sbin paths are available (needed when running as root without sudo)
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+
 # ShieldPM Generic Installer (Linux AMD64/ARM64)
 # (c) 2026 Shedowe
 # 
