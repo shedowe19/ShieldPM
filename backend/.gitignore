@@ -6,3 +6,8 @@ certbot.log
 node_modules
 core.*
 
+
+# Yarn 4
+.yarn/cache
+.yarn/install-state.gz
+.pnp.*

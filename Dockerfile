@@ -6,9 +6,10 @@ SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY frontend /app
 WORKDIR /app/frontend
-# hadolint ignore=DL3016
+# yarn 4 is bundled via yarnPath — no global install needed
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
-    npm install -g yarn && \
+    npm install -g corepack && \
+    corepack enable && \
     yarn install --production=false && \
     yarn tsc && \
     yarn vite build && \
@@ -34,7 +35,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     tar -xzf "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.14.2.linux-${TARGETARCH}/oauth2-proxy" && \
     rm "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
-    npm install -g yarn && \
+    npm install -g corepack && \
+    corepack enable && \
     yarn install --production=false && \
     yarn cache clean && \
     find node_modules -name "*.map" -delete && \

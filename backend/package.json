@@ -33,6 +33,7 @@
     "liquidjs": "10.25.1",
     "lodash": "^4.17.23",
     "mysql2": "^3.20.0",
+    "node-rdpjs-2": "^0.3.5",
     "objection": "3.1.5",
     "openid-client": "^6.8.2",
     "otplib": "^13.4.0",
@@ -42,7 +43,6 @@
     "punycode.js": "2.3.1",
     "qrcode": "^1.5.4",
     "signale": "1.4.0",
-    "node-rdpjs-2": "^0.3.5",
     "ssh2": "^1.17.0",
     "systeminformation": "^5.31.5",
     "tail": "^2.2.6",
@@ -72,5 +72,6 @@
     "qs": ">=6.14.2",
     "glob": "^13.0.6",
     "minimatch": "^10.2.1"
-  }
+  },
+  "packageManager": "yarn@4.13.0"
 }
