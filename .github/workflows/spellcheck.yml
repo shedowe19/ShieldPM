@@ -19,6 +19,6 @@ jobs:
         with:
           check_filenames: true
           check_hidden: true
-          skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/HelpDoc,./.agent,REFACTOR_ROADMAP.md
+          skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/HelpDoc,./.agent,REFACTOR_ROADMAP.md,./frontend/.yarn/releases,./backend/.yarn/releases
           ignore_words_list: afterAll,alog,nd,devlop,trough,hastable,elease,eleases,ublish,Paket,paket,statics
 

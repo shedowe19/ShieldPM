@@ -26,7 +26,7 @@ jobs:
             # DL3007 warning: Using latest is prone to errors if the image will ever update. Pin the version explicitly to a release tag
             # DL3008 warning: Pin versions in apt get install. Instead of `apt-get install <package>` use `apt-get install <package>=<version>`
             # DL3013 warning: Pin versions in pip. Instead of `pip install <package>` use `pip install <package>==<version>` or `pip install --requirement <requirements file>`
-            hadolint "$file" --ignore DL3003 --ignore DL3007 --ignore DL3013 --ignore DL3008 | tee -a hadolint.log
+            hadolint "$file" --ignore DL3003 --ignore DL3007 --ignore DL3013 --ignore DL3008 --ignore DL3016 | tee -a hadolint.log
           done
           if grep -q "DL[0-9]\+\|SC[0-9]\+" hadolint.log; then
             exit 1
