@@ -175,6 +175,30 @@
 						},
 						"terminal_private_key": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_private_key"
+						},
+						"rdp_host": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_host"
+						},
+						"rdp_port": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_port"
+						},
+						"rdp_username": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_username"
+						},
+						"rdp_domain": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_domain"
+						},
+						"rdp_password": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_password"
+						},
+						"rdp_width": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_width"
+						},
+						"rdp_height": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_height"
+						},
+						"rdp_ignore_cert": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/rdp_ignore_cert"
 						}
 					}
 				},

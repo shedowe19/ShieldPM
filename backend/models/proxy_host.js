@@ -144,6 +144,24 @@ class ProxyHost extends Model {
 	/** @type {string|null} */
 	terminal_private_key;
 
+	// RDP fields (for forward_scheme: 'rdp')
+	/** @type {string|null} */
+	rdp_host;
+	/** @type {number|null} */
+	rdp_port;
+	/** @type {string|null} */
+	rdp_username;
+	/** @type {string|null} */
+	rdp_domain;
+	/** @type {string|null} */
+	rdp_password;
+	/** @type {number|null} */
+	rdp_width;
+	/** @type {number|null} */
+	rdp_height;
+	/** @type {number|null} */
+	rdp_ignore_cert;
+
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());
 		this.modified_on = /** @type {any} */ (now());

@@ -201,6 +201,15 @@ export interface ProxyHost {
 	terminalAuthType?: TerminalAuthType;
 	terminalPassword?: string;
 	terminalPrivateKey?: string;
+	// RDP Fields
+	rdpHost?: string;
+	rdpPort?: number;
+	rdpUsername?: string;
+	rdpDomain?: string;
+	rdpPassword?: string;
+	rdpWidth?: number;
+	rdpHeight?: number;
+	rdpIgnoreCert?: boolean;
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;

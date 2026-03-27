@@ -1,6 +1,6 @@
-import { IconDotsVertical, IconEdit, IconPower, IconTrash } from "@tabler/icons-react";
+import { IconDotsVertical, IconEdit, IconPower, IconScreenShare, IconTrash } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ProxyHost } from "src/api/backend";
 import {
 	AccessListFormatter,
@@ -24,7 +24,8 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
-import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME } from "src/types/enums";
+import RdpViewer from "./RdpViewer";
 
 interface Props {
 	data: ProxyHost[];
@@ -37,6 +38,7 @@ interface Props {
 }
 export default function Table({ data, isFetching, onEdit, onDelete, onDisableToggle, onNew, isFiltered }: Props) {
 	const columnHelper = createColumnHelper<ProxyHost>();
+	const [rdpViewerHostId, setRdpViewerHostId] = useState<number | null>(null);
 	const columns = useMemo(
 		() => [
 			columnHelper.accessor((row) => row, {
@@ -125,6 +127,12 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 									/>
 								</DropdownMenuLabel>
 								<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
+									{info.row.original.forwardScheme === FORWARD_SCHEME.RDP && (
+										<DropdownMenuItem onClick={() => setRdpViewerHostId(info.row.original.id)}>
+											<IconScreenShare className="mr-2 h-4 w-4" />
+											<T id="rdp.connect" />
+										</DropdownMenuItem>
+									)}
 									<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
 										<IconEdit className="mr-2 h-4 w-4" />
 										<T id="action.edit" />
@@ -171,18 +179,27 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 	});
 
 	return (
-		<TableLayout
-			tableInstance={tableInstance}
-			emptyState={
-				<EmptyData
-					object={AUDIT_LOG_OBJECT_TYPE.PROXY_HOST}
-					objects="proxy-hosts"
-					onNew={onNew}
-					isFiltered={isFiltered}
-					color="lime"
-					permissionSection={PROXY_HOSTS}
+		<>
+			<TableLayout
+				tableInstance={tableInstance}
+				emptyState={
+					<EmptyData
+						object={AUDIT_LOG_OBJECT_TYPE.PROXY_HOST}
+						objects="proxy-hosts"
+						onNew={onNew}
+						isFiltered={isFiltered}
+						color="lime"
+						permissionSection={PROXY_HOSTS}
+					/>
+				}
+			/>
+			{rdpViewerHostId !== null && (
+				<RdpViewer
+					hostId={rdpViewerHostId}
+					open={rdpViewerHostId !== null}
+					onClose={() => setRdpViewerHostId(null)}
 				/>
-			}
-		/>
+			)}
+		</>
 	);
 }

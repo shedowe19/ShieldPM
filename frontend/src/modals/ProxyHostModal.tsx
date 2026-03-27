@@ -170,6 +170,13 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								terminalAuthType: data?.terminalAuthType || TERMINAL_AUTH_TYPE.PASSWORD,
 								terminalPassword: data?.terminalPassword || "",
 								terminalPrivateKey: data?.terminalPrivateKey || "",
+								// RDP Fields
+								rdpHost: data?.rdpHost || "",
+								rdpPort: data?.rdpPort || 3389,
+								rdpUsername: data?.rdpUsername || "",
+								rdpDomain: data?.rdpDomain || "",
+								rdpPassword: data?.rdpPassword || "",
+								rdpIgnoreCert: data?.rdpIgnoreCert !== false,
 
 								accessListId: data?.accessListId || 0,
 								cachingEnabled: data?.cachingEnabled || false,
@@ -336,6 +343,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			</SelectItem>
 																			<SelectItem value={FORWARD_SCHEME.TERMINAL}>
 																				terminal
+																			</SelectItem>
+																			<SelectItem value={FORWARD_SCHEME.RDP}>
+																				rdp
 																			</SelectItem>
 																		</SelectContent>
 																	</Select>
@@ -610,7 +620,134 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													}
 												</Field>
 
-												{/* Icon Settings */}
+
+												{/* RDP Fields */}
+												<Field name="forwardScheme">
+													{({ field: schemeField }: FieldProps) =>
+														schemeField.value === FORWARD_SCHEME.RDP && (
+															<Card className="my-3 border-dashed border-blue-500/50">
+																<CardContent className="p-4">
+																	<h4 className="pb-2 text-lg font-semibold text-blue-400">
+																		<T id="rdp.connection-details" />
+																	</h4>
+																	<div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+																		{/* RDP Host */}
+																		<div className="md:col-span-6">
+																			<Field name="rdpHost">
+																				{({ field }: FieldProps) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="rdpHost">
+																							<T id="rdp.host" />
+																						</Label>
+																						<Input
+																							id="rdpHost"
+																							placeholder="192.168.1.100"
+																							autoComplete="off"
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		{/* RDP Port */}
+																		<div className="md:col-span-3">
+																			<Field name="rdpPort">
+																				{({ field }: FieldProps) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="rdpPort">
+																							<T id="rdp.port" />
+																						</Label>
+																						<Input
+																							id="rdpPort"
+																							type="number"
+																							min={1}
+																							max={65535}
+																							placeholder="3389"
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		{/* Ignore Cert */}
+																		<div className="md:col-span-3 flex items-end pb-1">
+																			<Field name="rdpIgnoreCert">
+																				{({ field, form }: FieldProps) => (
+																					<div className="flex items-center gap-2">
+																						<Switch
+																							id="rdpIgnoreCert"
+																							checked={field.value}
+																							onCheckedChange={(v) => form.setFieldValue(field.name, v)}
+																						/>
+																						<Label htmlFor="rdpIgnoreCert">
+																							<T id="rdp.ignore-cert" />
+																						</Label>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		{/* RDP Username */}
+																		<div className="md:col-span-6">
+																			<Field name="rdpUsername">
+																				{({ field }: FieldProps) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="rdpUsername">
+																							<T id="rdp.username" />
+																						</Label>
+																						<Input
+																							id="rdpUsername"
+																							placeholder="Administrator"
+																							autoComplete="new-password"
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		{/* RDP Domain */}
+																		<div className="md:col-span-6">
+																			<Field name="rdpDomain">
+																				{({ field }: FieldProps) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="rdpDomain">
+																							<T id="rdp.domain" />
+																						</Label>
+																						<Input
+																							id="rdpDomain"
+																							placeholder="WORKGROUP"
+																							autoComplete="off"
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																		{/* RDP Password */}
+																		<div className="md:col-span-12">
+																			<Field name="rdpPassword">
+																				{({ field }: FieldProps) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="rdpPassword">
+																							<T id="rdp.password" />
+																						</Label>
+																						<Input
+																							id="rdpPassword"
+																							type="password"
+																							placeholder="••••••••"
+																							autoComplete="new-password"
+																							{...field}
+																						/>
+																					</div>
+																				)}
+																			</Field>
+																		</div>
+																</CardContent>
+															</Card>
+														)
+													}
+												</Field>
+
+																								{/* Icon Settings */}
 												<Card className="my-3 border-dashed border-blue-500/50">
 													<CardContent className="p-4">
 														<h4 className="pb-2 text-lg font-semibold text-blue-400">

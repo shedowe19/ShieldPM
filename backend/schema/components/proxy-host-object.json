@@ -367,6 +367,45 @@
 			"type": ["string", "null"],
 			"description": "Encrypted Private Key",
 			"example": "encrypted..."
+		},
+		"rdp_host": {
+			"type": ["string", "null"],
+			"description": "RDP Host",
+			"example": "192.168.1.10"
+		},
+		"rdp_port": {
+			"type": ["integer", "null"],
+			"description": "RDP Port",
+			"example": 3389
+		},
+		"rdp_username": {
+			"type": ["string", "null"],
+			"description": "RDP Username",
+			"example": "Administrator"
+		},
+		"rdp_domain": {
+			"type": ["string", "null"],
+			"description": "RDP Windows Domain (optional)",
+			"example": "WORKGROUP"
+		},
+		"rdp_password": {
+			"type": ["string", "null"],
+			"description": "Encrypted RDP Password"
+		},
+		"rdp_width": {
+			"type": ["integer", "null"],
+			"description": "RDP Session Width in Pixels",
+			"example": 1280
+		},
+		"rdp_height": {
+			"type": ["integer", "null"],
+			"description": "RDP Session Height in Pixels",
+			"example": 800
+		},
+		"rdp_ignore_cert": {
+			"type": ["integer", "boolean", "null"],
+			"description": "Ignore self-signed RDP certificates",
+			"example": 1
 		}
 	}
 }

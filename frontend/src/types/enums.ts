@@ -107,6 +107,7 @@ export const FORWARD_SCHEME = {
 	GRPC: "grpc",
 	GRPCS: "grpcs",
 	TERMINAL: "terminal",
+	RDP: "rdp",
 } as const;
 export type ForwardScheme = (typeof FORWARD_SCHEME)[keyof typeof FORWARD_SCHEME];
 

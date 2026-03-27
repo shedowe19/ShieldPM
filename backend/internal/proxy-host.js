@@ -132,6 +132,13 @@ const internalProxyHost = {
 			}
 		}
 
+		// Encrypt RDP credentials if present
+		if (thisData.forward_scheme === "rdp") {
+			if (thisData.rdp_password) {
+				thisData.rdp_password = encrypt(thisData.rdp_password);
+			}
+		}
+
 		// Transform domain_names into host_domains relation objects for insertGraph
 		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
 			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
@@ -288,6 +295,11 @@ const internalProxyHost = {
 		}
 		if (data.terminal_private_key) {
 			thisData.terminal_private_key = encrypt(data.terminal_private_key);
+		}
+
+		// Encrypt RDP credentials if present (on update)
+		if (data.rdp_password) {
+			thisData.rdp_password = encrypt(data.rdp_password);
 		}
 
 		// Let's double check `backend/internal/proxy-host.js` old content.

@@ -42,6 +42,7 @@
     "punycode.js": "2.3.1",
     "qrcode": "^1.5.4",
     "signale": "1.4.0",
+    "node-rdpjs-2": "^0.3.5",
     "ssh2": "^1.17.0",
     "systeminformation": "^5.31.5",
     "tail": "^2.2.6",
