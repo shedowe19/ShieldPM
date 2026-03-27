@@ -159,7 +159,7 @@ const internalRdp = {
 	handleConnection: async (ws, request) => {
 		// Parse host ID and optional client-requested dimensions from URL
 		const [pathPart, queryPart] = request.url.split("?");
-		const pathMatch = pathPart.match(/\/proxy-hosts\/(\d+)\/rdp\/ws/);
+		const pathMatch = pathPart.match(/^\/(?:api\/)?nginx\/proxy-hosts\/(\d+)\/rdp\/ws/);
 		if (!pathMatch) {
 			ws.close(1008, "Host ID required");
 			return;

@@ -422,9 +422,10 @@ export default function RdpViewer({ hostId, open, onClose }: RdpViewerProps) {
 	// ── Touch helpers ─────────────────────────────────────
 	const touchState = useRef<{
 		lastX: number; lastY: number;
+		lastScrollY: number; // viewport Y for two-finger scroll (separate from canvas lastY)
 		longPressTimer: ReturnType<typeof setTimeout> | null;
 		pointers: number;
-	}>({ lastX: 0, lastY: 0, longPressTimer: null, pointers: 0 });
+	}>({ lastX: 0, lastY: 0, lastScrollY: 0, longPressTimer: null, pointers: 0 });
 
 	const onTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
 		e.preventDefault();
@@ -432,6 +433,7 @@ export default function RdpViewer({ hostId, open, onClose }: RdpViewerProps) {
 		const { x, y } = getCanvasCoords(t.clientX, t.clientY);
 		touchState.current.lastX = x;
 		touchState.current.lastY = y;
+		touchState.current.lastScrollY = t.clientY; // init viewport Y for scroll tracking
 		touchState.current.pointers = e.touches.length;
 
 		// Long press → right click
@@ -468,15 +470,15 @@ export default function RdpViewer({ hostId, open, onClose }: RdpViewerProps) {
 			touchState.current.lastX = x;
 			touchState.current.lastY = y;
 		} else if (e.touches.length === 2) {
-			// Two-finger scroll
+			// Two-finger scroll — use lastScrollY (viewport coords), never mix with canvas lastY
 			const t0 = e.touches[0];
 			const t1 = e.touches[1];
 			const midX = (t0.clientX + t1.clientX) / 2;
 			const midY = (t0.clientY + t1.clientY) / 2;
 			const { x, y } = getCanvasCoords(midX, midY);
-			const dy = t0.clientY - touchState.current.lastY;
+			const dy = t0.clientY - touchState.current.lastScrollY;
 			sendWs({ type: "wheel", x, y, delta: dy });
-			touchState.current.lastY = t0.clientY;
+			touchState.current.lastScrollY = t0.clientY; // update viewport scroll Y only
 		}
 	}, [getCanvasCoords, sendWs]);
 

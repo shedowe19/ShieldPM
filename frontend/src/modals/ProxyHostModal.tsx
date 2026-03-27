@@ -614,6 +614,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			}
 																		</Field>
 																	</div>
+																	</div>
 																</CardContent>
 															</Card>
 														)

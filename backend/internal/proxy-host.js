@@ -297,9 +297,10 @@ const internalProxyHost = {
 			thisData.terminal_private_key = encrypt(data.terminal_private_key);
 		}
 
-		// Encrypt RDP credentials if present (on update)
-		if (data.rdp_password) {
-			thisData.rdp_password = encrypt(data.rdp_password);
+		// Encrypt RDP credentials if present (on update).
+		// Check existence (not truthiness) so an empty string clears the stored password.
+		if (typeof data.rdp_password === "string") {
+			thisData.rdp_password = data.rdp_password ? encrypt(data.rdp_password) : null;
 		}
 
 		// Let's double check `backend/internal/proxy-host.js` old content.
