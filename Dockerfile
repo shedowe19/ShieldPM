@@ -5,12 +5,12 @@ FROM --platform="$BUILDPLATFORM" debian:trixie-slim AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY frontend /app
-WORKDIR /app/frontend
+WORKDIR /app
 # yarn 4 is bundled via yarnPath — no global install needed
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
     npm install -g corepack && \
     corepack enable && \
-    yarn install --production=false && \
+    yarn install && \
     yarn tsc && \
     yarn vite build && \
     rm -rf /var/lib/apt/lists/*
@@ -37,8 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     chmod +x /app/oauth2-proxy && \
     npm install -g corepack && \
     corepack enable && \
-    yarn install --production=false && \
-    yarn cache clean && \
+    yarn install && \
+    yarn cache clean --all && \
     find node_modules -name "*.map" -delete && \
     rm -r node_modules/better-sqlite3/deps/sqlite3 && \
     find /app/node_modules -name "*.node" -type f -exec strip -s {} \; && \
