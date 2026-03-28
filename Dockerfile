@@ -68,9 +68,14 @@ COPY rootfs /
 # --- Setup ---
 WORKDIR /app
 # Install guacd (Apache Guacamole proxy daemon — FreeRDP backend for RDP/NLA support)
-# hadolint ignore=DL3008
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends guacd && \
+# guacd is only available in Debian Bullseye (not Bookworm/Trixie), so we add the
+# Bullseye repo temporarily, install guacd + its deps, then remove the repo again.
+# libssl1.1 (Bullseye) and libssl3 (Trixie) use different SONAMEs and coexist safely.
+# hadolint ignore=DL3008,DL3009
+RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye-guacd.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends -t bullseye guacd && \
+    rm /etc/apt/sources.list.d/bullseye-guacd.list && \
     rm -rf /var/lib/apt/lists/*
 
 # Download Guacamole JS client (must match guacd protocol version)

@@ -71,8 +71,14 @@ apt-get install -y --no-install-recommends --fix-missing \
     libyajl2 \
     zlib1g \
     zlib1g \
-    zstd \
-    guacd
+    zstd
+
+# Install guacd from Debian Bullseye (not available in Bookworm/Trixie)
+echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye-guacd.list
+apt-get update
+apt-get install -y --no-install-recommends -t bullseye guacd
+rm /etc/apt/sources.list.d/bullseye-guacd.list
+apt-get update
 
 # 2.1 Configure Locale (Interactive)
 echo ">>> Configuring locales..."

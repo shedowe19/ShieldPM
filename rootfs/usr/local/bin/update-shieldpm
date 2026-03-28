@@ -147,8 +147,14 @@ apt-get install -y --no-install-recommends \
     python3-pip \
     python3-setuptools \
     libffi-dev \
-    gyp \
-    guacd
+    gyp
+
+# Install guacd from Debian Bullseye (not available in Bookworm/Trixie)
+echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye-guacd.list
+apt-get update
+apt-get install -y --no-install-recommends -t bullseye guacd
+rm /etc/apt/sources.list.d/bullseye-guacd.list
+apt-get update
 
 # Ensure guacd is running as a service (LXC with systemd)
 systemctl enable guacd 2>/dev/null || true
