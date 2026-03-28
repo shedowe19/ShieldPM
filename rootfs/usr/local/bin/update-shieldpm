@@ -199,7 +199,7 @@ cp -rf "$TEMP_DIR/rootfs/"* /
 # Download Guacamole JS client for the standalone RDP page
 echo "    - Downloading guacamole-common.min.js..."
 mkdir -p /html/rdp
-curl -fsSL "https://cdn.jsdelivr.net/npm/guacamole-common-js@1.5.0/dist/guacamole-common.min.js" \
+curl -fsSL "https://cdn.jsdelivr.net/npm/guacamole-common-js@1.5.0/dist/cjs/guacamole-common.min.js" \
     -o /html/rdp/guacamole-common.min.js || echo "    - WARNING: Could not download guacamole-common.min.js"
 
 echo "--> [6/7] Checking for Nginx Binary Updates..."

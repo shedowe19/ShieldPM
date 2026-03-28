@@ -79,7 +79,7 @@ RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.lis
     rm -rf /var/lib/apt/lists/*
 
 # Download Guacamole JS client (must match guacd protocol version)
-RUN curl -fsSL "https://cdn.jsdelivr.net/npm/guacamole-common-js@1.5.0/dist/guacamole-common.min.js" \
+RUN curl -fsSL "https://cdn.jsdelivr.net/npm/guacamole-common-js@1.5.0/dist/cjs/guacamole-common.min.js" \
     -o /html/rdp/guacamole-common.min.js
 
 RUN echo "exit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d && \
