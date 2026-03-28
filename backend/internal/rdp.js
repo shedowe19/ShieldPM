@@ -53,32 +53,36 @@ const getRdpModule = async () => {
  * Create and connect an RDP client, piping events to the given WebSocket.
  * Returns the rdpClient instance so the caller can close it later.
  */
-// PROTOCOL_RDP = 0x00 (classic RDP security, no TLS)
-// PROTOCOL_SSL = 0x01 (TLS – default in node-rdpjs-2 but rejected by many servers)
+// PROTOCOL_RDP = 0x00 (classic RDP security, no TLS negotiation)
+// node-rdpjs-2 defaults to PROTOCOL_SSL (0x01) which causes X224_NEG_FAILURE
+// code 2 (SSL_NOT_ALLOWED_BY_SERVER) on most Windows RDP servers.
+// We always use PROTOCOL_RDP so the x224 negotiation succeeds without TLS.
 const PROTOCOL_RDP = 0x00000000;
-const PROTOCOL_SSL = 0x00000001;
 
-const buildRdpClient = (rdp, host, width, height, useSSL) => {
+const createRdpSession = (rdp, host, ws, width, height) => {
 	const password = host.rdp_password ? decrypt(host.rdp_password) : "";
-	const client = rdp.createClient({
-		domain: host.rdp_domain || "",
-		userName: host.rdp_username || "",
-		password,
-		enablePerf: true,
-		autoLogin: true,
-		screen: { width, height },
-		logLevel: "ERROR",
-		ignoreCertificate: host.rdp_ignore_cert !== 0,
-	});
-	// Override the negotiated protocol directly on the x224 layer.
-	// node-rdpjs-2 always defaults to PROTOCOL_SSL which causes
-	// X224_NEG_FAILURE code 2 (SSL_NOT_ALLOWED_BY_SERVER) on servers
-	// that only support classic RDP security.
-	client.x224.requestedProtocol = useSSL ? PROTOCOL_SSL : PROTOCOL_RDP;
-	return client;
-};
 
-const attachHandlers = (rdpClient, host, ws) => {
+	let rdpClient;
+	try {
+		rdpClient = rdp.createClient({
+			domain: host.rdp_domain || "",
+			userName: host.rdp_username || "",
+			password,
+			enablePerf: true,
+			autoLogin: true,
+			screen: { width, height },
+			logLevel: "ERROR",
+			ignoreCertificate: host.rdp_ignore_cert !== 0,
+		});
+		// Force classic RDP security — override the x224 layer default of PROTOCOL_SSL.
+		// This prevents X224_NEG_FAILURE (code 2: SSL_NOT_ALLOWED_BY_SERVER).
+		rdpClient.x224.requestedProtocol = PROTOCOL_RDP;
+		rdpClient.x224.selectedProtocol  = PROTOCOL_RDP;
+	} catch (err) {
+		ws.send(JSON.stringify({ type: "error", message: `Failed to create RDP client: ${err.message}` }));
+		return null;
+	}
+
 	rdpClient.on("connect", () => {
 		if (ws.readyState === ws.OPEN) {
 			ws.send(JSON.stringify({ type: "status", status: "connected" }));
@@ -88,6 +92,14 @@ const attachHandlers = (rdpClient, host, ws) => {
 	rdpClient.on("close", () => {
 		if (ws.readyState === ws.OPEN) {
 			ws.send(JSON.stringify({ type: "status", status: "disconnected" }));
+		}
+	});
+
+	rdpClient.on("error", (err) => {
+		const msg = err.message || String(err);
+		logger.error(`[RDP] Error for host ${host.id}: ${msg}`);
+		if (ws.readyState === ws.OPEN) {
+			ws.send(JSON.stringify({ type: "error", message: `RDP Error: ${msg}` }));
 		}
 	});
 
@@ -119,53 +131,15 @@ const attachHandlers = (rdpClient, host, ws) => {
 			ws.send(JSON.stringify({ type: "clipboard", data: data?.toString() || "" }));
 		}
 	});
-};
 
-const createRdpSession = (rdp, host, ws, width, height) => {
-	// Try TLS first; on SSL_NOT_ALLOWED_BY_SERVER (code 2) automatically
-	// fall back to classic RDP security (PROTOCOL_RDP = 0x00).
-	let rdpClient;
-	let usedSSL = true;
+	try {
+		rdpClient.connect(host.rdp_host, host.rdp_port || 3389);
+	} catch (err) {
+		ws.send(JSON.stringify({ type: "error", message: `Connection Failed: ${err.message}` }));
+		return null;
+	}
 
-	const tryConnect = (useSSL) => {
-		try {
-			rdpClient = buildRdpClient(rdp, host, width, height, useSSL);
-		} catch (err) {
-			ws.send(JSON.stringify({ type: "error", message: `Failed to create RDP client: ${err.message}` }));
-			return null;
-		}
-
-		attachHandlers(rdpClient, host, ws);
-
-		rdpClient.on("error", (err) => {
-			const msg = err.message || String(err);
-			// SSL_NOT_ALLOWED_BY_SERVER → retry without TLS
-			if (useSSL && msg.includes("Failure code:2")) {
-				logger.warn(`[RDP] Host ${host.id}: server rejected TLS (code 2), retrying with classic RDP security`);
-				try {
-					rdpClient.close();
-				} catch (_) {}
-				tryConnect(false);
-				return;
-			}
-			logger.error(`[RDP] Error for host ${host.id}: ${msg}`);
-			if (ws.readyState === ws.OPEN) {
-				ws.send(JSON.stringify({ type: "error", message: `RDP Error: ${msg}` }));
-			}
-		});
-
-		try {
-			rdpClient.connect(host.rdp_host, host.rdp_port || 3389);
-		} catch (err) {
-			ws.send(JSON.stringify({ type: "error", message: `Connection Failed: ${err.message}` }));
-			return null;
-		}
-
-		usedSSL = useSSL;
-		return rdpClient;
-	};
-
-	return tryConnect(true);
+	return rdpClient;
 };
 
 const internalRdp = {
@@ -282,11 +256,7 @@ const internalRdp = {
 
 						// Close current session
 						if (rdpClient) {
-							try {
-								rdpClient.close();
-							} catch (_e) {
-								/* ignore */
-							}
+							try { rdpClient.close(); } catch (_e) { /* ignore */ }
 							rdpClient = null;
 						}
 
@@ -309,11 +279,7 @@ const internalRdp = {
 		// -------------------------------------------------------
 		ws.on("close", () => {
 			if (rdpClient) {
-				try {
-					rdpClient.close();
-				} catch (_e) {
-					/* ignore */
-				}
+				try { rdpClient.close(); } catch (_e) { /* ignore */ }
 				rdpClient = null;
 			}
 		});
