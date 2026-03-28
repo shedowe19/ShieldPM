@@ -142,7 +142,9 @@ const createRdpSession = (rdp, host, ws, width, height) => {
 			// SSL_NOT_ALLOWED_BY_SERVER → retry without TLS
 			if (useSSL && msg.includes("Failure code:2")) {
 				logger.warn(`[RDP] Host ${host.id}: server rejected TLS (code 2), retrying with classic RDP security`);
-				try { rdpClient.close(); } catch (_) {}
+				try {
+					rdpClient.close();
+				} catch (_) {}
 				tryConnect(false);
 				return;
 			}
@@ -280,7 +282,11 @@ const internalRdp = {
 
 						// Close current session
 						if (rdpClient) {
-							try { rdpClient.close(); } catch (_e) { /* ignore */ }
+							try {
+								rdpClient.close();
+							} catch (_e) {
+								/* ignore */
+							}
 							rdpClient = null;
 						}
 
@@ -303,7 +309,11 @@ const internalRdp = {
 		// -------------------------------------------------------
 		ws.on("close", () => {
 			if (rdpClient) {
-				try { rdpClient.close(); } catch (_e) { /* ignore */ }
+				try {
+					rdpClient.close();
+				} catch (_e) {
+					/* ignore */
+				}
 				rdpClient = null;
 			}
 		});
