@@ -117,7 +117,7 @@
 </div>
 
 <div id="canvas-wrap">
-    <canvas id="rdp-canvas"></canvas>
+    <canvas id="rdp-canvas" tabindex="0"></canvas>
 </div>
 
 <div id="error-overlay">
@@ -265,9 +265,55 @@
     // ── Bitmap renderer ───────────────────────────────────
     function renderBitmap(msg) {
         if (!msg.data) return;
-        const img = new Image();
-        img.onload = () => ctx.drawImage(img, msg.x||0, msg.y||0);
-        img.src = 'data:image/jpeg;base64,' + msg.data;
+        const x = msg.destLeft || 0;
+        const y = msg.destTop  || 0;
+        const w = msg.width  || Math.max(1, (msg.destRight  || 0) - x);
+        const h = msg.height || Math.max(1, (msg.destBottom || 0) - y);
+        if (w <= 0 || h <= 0) return;
+
+        try {
+            // Decode base64 → Uint8Array
+            const raw = atob(msg.data);
+            const bytes = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+            const imgData = ctx.createImageData(w, h);
+            const px = imgData.data;
+            const bpp = msg.bitsPerPixel || 24;
+
+            if (bpp === 32) {
+                // BGRA → RGBA
+                for (let i = 0, n = w * h; i < n; i++) {
+                    px[i*4]   = bytes[i*4+2]; // R
+                    px[i*4+1] = bytes[i*4+1]; // G
+                    px[i*4+2] = bytes[i*4];   // B
+                    px[i*4+3] = 255;
+                }
+            } else if (bpp === 24) {
+                // BGR → RGBA
+                for (let i = 0, n = w * h; i < n; i++) {
+                    px[i*4]   = bytes[i*3+2]; // R
+                    px[i*4+1] = bytes[i*3+1]; // G
+                    px[i*4+2] = bytes[i*3];   // B
+                    px[i*4+3] = 255;
+                }
+            } else if (bpp === 16) {
+                // BGR565 → RGBA
+                for (let i = 0, n = w * h; i < n; i++) {
+                    const v = bytes[i*2] | (bytes[i*2+1] << 8);
+                    px[i*4]   = Math.round(((v >> 11) & 0x1f) * 255 / 31); // R
+                    px[i*4+1] = Math.round(((v >> 5)  & 0x3f) * 255 / 63); // G
+                    px[i*4+2] = Math.round((v & 0x1f)          * 255 / 31); // B
+                    px[i*4+3] = 255;
+                }
+            } else {
+                // Unknown bpp — skip
+                return;
+            }
+            ctx.putImageData(imgData, x, y);
+        } catch (e) {
+            console.warn('[RDP] bitmap decode error:', e);
+        }
     }
 
     // ── Canvas → RDP coordinate mapping ──────────────────
@@ -281,27 +327,32 @@
         };
     }
 
+    // ── Mouse button mapping: browser (0/1/2) → RDP (1/4/2) ──
+    function rdpBtn(b) { return [1, 4, 2][b] || 0; }
+
     // ── Mouse events ──────────────────────────────────────
     canvas.addEventListener('mousemove', (e) => {
         const {x,y} = canvasCoords(e.clientX, e.clientY);
-        send({type:'mousemove', x, y});
+        send({type:'mouse', x, y, button:0, isDown:false});
     });
 
     canvas.addEventListener('mousedown', (e) => {
+        canvas.focus();
         const {x,y} = canvasCoords(e.clientX, e.clientY);
-        send({type:'mousedown', button: e.button, x, y});
+        send({type:'mouse', x, y, button: rdpBtn(e.button), isDown:true});
     });
 
     canvas.addEventListener('mouseup', (e) => {
         const {x,y} = canvasCoords(e.clientX, e.clientY);
-        send({type:'mouseup', button: e.button, x, y});
+        send({type:'mouse', x, y, button: rdpBtn(e.button), isDown:false});
     });
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
-        send({type:'wheel', delta: e.deltaY > 0 ? 1 : -1});
+        const {x,y} = canvasCoords(e.clientX, e.clientY);
+        send({type:'wheel', x, y, delta: e.deltaY > 0 ? 1 : -1});
     }, {passive: false});
 
     // ── Keyboard events ───────────────────────────────────
@@ -309,12 +360,12 @@
         if (['F5','F11','F12'].includes(e.key)) return; // allow browser shortcuts
         e.preventDefault();
         const sc = SC[e.code];
-        if (sc) send({type:'keydown', scancode: sc});
+        if (sc) send({type:'key', scancode: sc, isDown:true});
     });
 
     document.addEventListener('keyup', (e) => {
         const sc = SC[e.code];
-        if (sc) send({type:'keyup', scancode: sc});
+        if (sc) send({type:'key', scancode: sc, isDown:false});
     });
 
     // ── Touch events ──────────────────────────────────────
@@ -324,8 +375,8 @@
             const t = e.touches[0];
             lastScrollY = t.clientY;
             const {x,y} = canvasCoords(t.clientX, t.clientY);
-            send({type:'mousemove', x, y});
-            send({type:'mousedown', button:0, x, y});
+            send({type:'mouse', x, y, button:0, isDown:false});
+            send({type:'mouse', x, y, button:1, isDown:true});
         } else if (e.touches.length === 2) {
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -338,15 +389,17 @@
         if (e.touches.length === 1) {
             const t = e.touches[0];
             const {x,y} = canvasCoords(t.clientX, t.clientY);
-            send({type:'mousemove', x, y});
+            send({type:'mouse', x, y, button:0, isDown:false});
         } else if (e.touches.length === 2) {
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
             const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             const dist = Math.hypot(dx, dy);
             const delta = lastScrollY - midY;
             if (Math.abs(delta) > 10) {
-                send({type:'wheel', delta: delta > 0 ? 1 : -1});
+                const {x,y} = canvasCoords(midX, midY);
+                send({type:'wheel', x, y, delta: delta > 0 ? 1 : -1});
                 lastScrollY = midY;
             }
             lastTouchDist = dist;
@@ -358,16 +411,16 @@
         if (e.changedTouches.length === 1 && e.touches.length === 0) {
             const t = e.changedTouches[0];
             const {x,y} = canvasCoords(t.clientX, t.clientY);
-            send({type:'mouseup', button:0, x, y});
+            send({type:'mouse', x, y, button:1, isDown:false});
         }
     }, {passive:false});
 
     // ── Virtual keyboard ──────────────────────────────────
     function sendVKey(vk) {
         if (Array.isArray(vk.a)) {
-            // combo
+            // combo: each entry is [scancode, isDown(1/0)]
             for (const [sc, down] of vk.a)
-                send({type: down ? 'keydown' : 'keyup', scancode: sc});
+                send({type:'key', scancode: sc, isDown: !!down});
         } else {
             // modifier toggle or simple key
             if (vk.mod) {
@@ -375,20 +428,20 @@
                 if (vk.mod === 'ctrl')  { stickyCtrl  = !stickyCtrl;  active = stickyCtrl; }
                 if (vk.mod === 'alt')   { stickyAlt   = !stickyAlt;   active = stickyAlt; }
                 if (vk.mod === 'shift') { stickyShift = !stickyShift; active = stickyShift; }
-                send({type: active ? 'keydown' : 'keyup', scancode: vk.a});
+                send({type:'key', scancode: vk.a, isDown: active});
                 refreshVkb();
             } else {
                 // flush sticky modifiers first
-                if (stickyCtrl)  send({type:'keydown', scancode: SC_CTRL});
-                if (stickyAlt)   send({type:'keydown', scancode: SC_ALT});
-                if (stickyShift) send({type:'keydown', scancode: SC_SHIFT});
+                if (stickyCtrl)  send({type:'key', scancode: SC_CTRL,  isDown:true});
+                if (stickyAlt)   send({type:'key', scancode: SC_ALT,   isDown:true});
+                if (stickyShift) send({type:'key', scancode: SC_SHIFT, isDown:true});
 
-                send({type:'keydown', scancode: vk.a});
-                send({type:'keyup',   scancode: vk.a});
+                send({type:'key', scancode: vk.a, isDown:true});
+                send({type:'key', scancode: vk.a, isDown:false});
 
-                if (stickyCtrl)  { send({type:'keyup', scancode: SC_CTRL});  stickyCtrl  = false; }
-                if (stickyAlt)   { send({type:'keyup', scancode: SC_ALT});   stickyAlt   = false; }
-                if (stickyShift) { send({type:'keyup', scancode: SC_SHIFT}); stickyShift = false; }
+                if (stickyCtrl)  { send({type:'key', scancode: SC_CTRL,  isDown:false}); stickyCtrl  = false; }
+                if (stickyAlt)   { send({type:'key', scancode: SC_ALT,   isDown:false}); stickyAlt   = false; }
+                if (stickyShift) { send({type:'key', scancode: SC_SHIFT, isDown:false}); stickyShift = false; }
                 refreshVkb();
             }
         }

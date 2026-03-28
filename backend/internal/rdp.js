@@ -133,7 +133,10 @@ const createRdpSession = (rdp, host, ws, width, height) => {
 	});
 
 	try {
-		rdpClient.connect(host.rdp_host, host.rdp_port || 3389);
+		const rdpHost = host.rdp_host;
+		const rdpPort = host.rdp_port || 3389;
+		logger.info(`[RDP] Connecting host ${host.id} → ${rdpHost}:${rdpPort} (user: ${host.rdp_username || "(none)"})`);
+		rdpClient.connect(rdpHost, rdpPort);
 	} catch (err) {
 		ws.send(JSON.stringify({ type: "error", message: `Connection Failed: ${err.message}` }));
 		return null;
