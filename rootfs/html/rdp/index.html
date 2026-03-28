@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ShieldPM RDP</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%; height: 100%;
+            background: #111;
+            overflow: hidden;
+            font-family: system-ui, sans-serif;
+        }
+
+        #status-bar {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 32px;
+            background: #1a1a2e;
+            display: flex; align-items: center; gap: 8px;
+            padding: 0 12px;
+            font-size: 12px; color: #eee;
+            border-bottom: 1px solid #333;
+            z-index: 1000;
+        }
+
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .dot.connecting { background: #fbbf24; animation: pulse 1s infinite; }
+        .dot.connected  { background: #4ade80; }
+        .dot.disconnected, .dot.error { background: #ef4444; }
+
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+        #actions {
+            margin-left: auto;
+            display: flex; gap: 6px; align-items: center;
+        }
+
+        #actions button {
+            background: #2d2d44; border: 1px solid #444; color: #ccc;
+            padding: 2px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 11px;
+        }
+        #actions button:hover { background: #3d3d5c; }
+
+        #canvas-wrap {
+            position: fixed;
+            top: 32px; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: #000;
+            touch-action: none;
+        }
+
+        #rdp-canvas {
+            display: block;
+            cursor: default;
+            max-width: 100%; max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Virtual keyboard */
+        #vkb {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #1a1a2e;
+            border-top: 1px solid #333;
+            padding: 4px 6px 6px;
+            z-index: 999;
+            display: none;
+        }
+        #vkb.show { display: block; }
+
+        .vkb-row {
+            display: flex; flex-wrap: wrap; gap: 3px;
+            margin-bottom: 3px;
+        }
+
+        .vkb-row:last-child { margin-bottom: 0; }
+
+        .vk {
+            background: #2d2d44; border: 1px solid #444; color: #ccc;
+            padding: 4px 8px; border-radius: 4px; cursor: pointer;
+            font-size: 11px; white-space: nowrap; user-select: none;
+            touch-action: manipulation;
+        }
+        .vk:active, .vk.active { background: #4f46e5; border-color: #6366f1; color: #fff; }
+        .vk.wide { flex: 1; }
+
+        #error-overlay {
+            position: fixed; inset: 32px 0 0 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #0a0a0a; color: #ef4444;
+            font-size: 14px; gap: 12px;
+            display: none;
+        }
+        #error-overlay.show { display: flex; }
+        #error-overlay button {
+            background: #1a1a2e; border: 1px solid #444; color: #ccc;
+            padding: 6px 16px; border-radius: 4px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div id="status-bar">
+    <span id="dot" class="dot connecting"></span>
+    <span id="status-text">Connecting…</span>
+    <div id="actions">
+        <button id="btn-vkb" title="Virtual keyboard">⌨</button>
+        <button id="btn-fs"  title="Fullscreen">⛶</button>
+        <button id="btn-reconnect" title="Reconnect">↺</button>
+        <button id="btn-disconnect" title="Disconnect">■</button>
+    </div>
+</div>
+
+<div id="canvas-wrap">
+    <canvas id="rdp-canvas"></canvas>
+</div>
+
+<div id="error-overlay">
+    <span id="error-msg"></span>
+    <button id="btn-err-retry">Reconnect</button>
+</div>
+
+<div id="vkb">
+    <!-- rows injected by JS -->
+</div>
+
+<script>
+(function () {
+    // ── Scancode map ──────────────────────────────────────
+    const SC = {
+        Escape:0x01,F1:0x3b,F2:0x3c,F3:0x3d,F4:0x3e,F5:0x3f,F6:0x40,
+        F7:0x41,F8:0x42,F9:0x43,F10:0x44,F11:0x57,F12:0x58,
+        Backquote:0x29,Digit1:0x02,Digit2:0x03,Digit3:0x04,Digit4:0x05,
+        Digit5:0x06,Digit6:0x07,Digit7:0x08,Digit8:0x09,Digit9:0x0a,
+        Digit0:0x0b,Minus:0x0c,Equal:0x0d,Backspace:0x0e,Tab:0x0f,
+        KeyQ:0x10,KeyW:0x11,KeyE:0x12,KeyR:0x13,KeyT:0x14,KeyY:0x15,
+        KeyU:0x16,KeyI:0x17,KeyO:0x18,KeyP:0x19,BracketLeft:0x1a,
+        BracketRight:0x1b,Enter:0x1c,ControlLeft:0x1d,KeyA:0x1e,KeyS:0x1f,
+        KeyD:0x20,KeyF:0x21,KeyG:0x22,KeyH:0x23,KeyJ:0x24,KeyK:0x25,
+        KeyL:0x26,Semicolon:0x27,Quote:0x28,ShiftLeft:0x2a,Backslash:0x2b,
+        KeyZ:0x2c,KeyX:0x2d,KeyC:0x2e,KeyV:0x2f,KeyB:0x30,KeyN:0x31,
+        KeyM:0x32,Comma:0x33,Period:0x34,Slash:0x35,ShiftRight:0x36,
+        AltLeft:0x38,Space:0x39,CapsLock:0x3a,ArrowUp:0x48,ArrowLeft:0x4b,
+        ArrowRight:0x4d,ArrowDown:0x50,Delete:0x53,ControlRight:0x9d,
+        AltRight:0xb8,MetaLeft:0xdb,MetaRight:0xdc,ContextMenu:0xdd,
+        Home:0xc7,End:0xcf,PageUp:0xc9,PageDown:0xd1,Insert:0xd2,
+        PrintScreen:0xb7,ScrollLock:0x46,Pause:0xc5,
+    };
+
+    const SC_CTRL=0x1d, SC_ALT=0x38, SC_SHIFT=0x2a, SC_DEL=0x53, SC_WIN=0xdb;
+
+    const VKEY_ROWS = [
+        [
+            {l:'Esc',a:SC.Escape},{l:'F1',a:SC.F1},{l:'F2',a:SC.F2},{l:'F3',a:SC.F3},
+            {l:'F4',a:SC.F4},{l:'F5',a:SC.F5},{l:'F6',a:SC.F6},{l:'F7',a:SC.F7},
+            {l:'F8',a:SC.F8},{l:'F9',a:SC.F9},{l:'F10',a:SC.F10},{l:'F11',a:SC.F11},{l:'F12',a:SC.F12},
+        ],
+        [
+            {l:'Ctrl',a:SC_CTRL,mod:'ctrl'},{l:'Alt',a:SC_ALT,mod:'alt'},
+            {l:'Shift',a:SC_SHIFT,mod:'shift',wide:true},{l:'⊞',a:SC_WIN},
+            {l:'Tab',a:SC.Tab},{l:'Del',a:SC_DEL},{l:'Ins',a:SC.Insert},
+            {l:'Home',a:SC.Home},{l:'End',a:SC.End},
+            {l:'PgUp',a:SC.PageUp},{l:'PgDn',a:SC.PageDown},
+            {l:'↑',a:SC.ArrowUp},{l:'←',a:SC.ArrowLeft},{l:'↓',a:SC.ArrowDown},{l:'→',a:SC.ArrowRight},
+        ],
+        [
+            {l:'Ctrl+Alt+Del',wide:true,a:[[SC_CTRL,1],[SC_ALT,1],[SC_DEL,1],[SC_DEL,0],[SC_ALT,0],[SC_CTRL,0]]},
+            {l:'Ctrl+C',a:[[SC_CTRL,1],[SC.KeyC,1],[SC.KeyC,0],[SC_CTRL,0]]},
+            {l:'Ctrl+V',a:[[SC_CTRL,1],[SC.KeyV,1],[SC.KeyV,0],[SC_CTRL,0]]},
+            {l:'Ctrl+X',a:[[SC_CTRL,1],[SC.KeyX,1],[SC.KeyX,0],[SC_CTRL,0]]},
+            {l:'Ctrl+Z',a:[[SC_CTRL,1],[SC.KeyZ,1],[SC.KeyZ,0],[SC_CTRL,0]]},
+            {l:'Ctrl+A',a:[[SC_CTRL,1],[SC.KeyA,1],[SC.KeyA,0],[SC_CTRL,0]]},
+            {l:'Alt+Tab',a:[[SC_ALT,1],[SC.Tab,1],[SC.Tab,0],[SC_ALT,0]]},
+            {l:'Alt+F4',a:[[SC_ALT,1],[SC.F4,1],[SC.F4,0],[SC_ALT,0]]},
+        ],
+    ];
+
+    // ── State ─────────────────────────────────────────────
+    let ws = null;
+    let sessionW = 1280, sessionH = 800;
+    let stickyCtrl = false, stickyAlt = false, stickyShift = false;
+    let lastTouchDist = 0, lastScrollY = 0;
+    const canvas  = document.getElementById('rdp-canvas');
+    const ctx     = canvas.getContext('2d');
+    const wrap    = document.getElementById('canvas-wrap');
+    const dot     = document.getElementById('dot');
+    const stText  = document.getElementById('status-text');
+    const errOver = document.getElementById('error-overlay');
+    const errMsg  = document.getElementById('error-msg');
+    const vkbEl   = document.getElementById('vkb');
+
+    // ── Helpers ───────────────────────────────────────────
+    function setStatus(s, msg) {
+        dot.className = 'dot ' + s;
+        stText.textContent = {
+            connecting:'Connecting…', connected:'Connected',
+            disconnected:'Disconnected', error:'Error',
+        }[s] || s;
+        if (s === 'error') {
+            errMsg.textContent = msg || 'Connection error';
+            errOver.classList.add('show');
+        } else {
+            errOver.classList.remove('show');
+        }
+    }
+
+    function send(obj) {
+        if (ws && ws.readyState === WebSocket.OPEN)
+            ws.send(JSON.stringify(obj));
+    }
+
+    function canvasDimensions() {
+        return { w: wrap.clientWidth || 1280, h: wrap.clientHeight || 800 };
+    }
+
+    // ── Connect ───────────────────────────────────────────
+    function connect() {
+        if (ws) { try { ws.close(); } catch(_){} }
+        setStatus('connecting');
+        const {w, h} = canvasDimensions();
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${location.host}/ws?width=${w}&height=${h}`);
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen  = () => setStatus('connected');
+        ws.onclose = () => { ws = null; setStatus('disconnected'); };
+        ws.onerror = () => setStatus('error', 'WebSocket connection failed');
+        ws.onmessage = (evt) => {
+            try { handleMessage(JSON.parse(evt.data)); } catch(_) {}
+        };
+    }
+
+    // ── Message handler ───────────────────────────────────
+    function handleMessage(msg) {
+        switch (msg.type) {
+            case 'status':
+                if (msg.status === 'connected')    setStatus('connected');
+                if (msg.status === 'connecting')   setStatus('connecting');
+                if (msg.status === 'disconnected') { setStatus('disconnected'); ws = null; }
+                break;
+            case 'size':
+                sessionW = msg.width  || 1280;
+                sessionH = msg.height || 800;
+                canvas.width  = sessionW;
+                canvas.height = sessionH;
+                break;
+            case 'error':
+                setStatus('error', msg.message);
+                break;
+            case 'bitmap':
+                renderBitmap(msg);
+                break;
+            case 'clipboard':
+                if (msg.data && navigator.clipboard)
+                    navigator.clipboard.writeText(msg.data).catch(()=>{});
+                break;
+        }
+    }
+
+    // ── Bitmap renderer ───────────────────────────────────
+    function renderBitmap(msg) {
+        if (!msg.data) return;
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, msg.x||0, msg.y||0);
+        img.src = 'data:image/jpeg;base64,' + msg.data;
+    }
+
+    // ── Canvas → RDP coordinate mapping ──────────────────
+    function canvasCoords(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        const scaleX = sessionW / r.width;
+        const scaleY = sessionH / r.height;
+        return {
+            x: Math.round((clientX - r.left) * scaleX),
+            y: Math.round((clientY - r.top)  * scaleY),
+        };
+    }
+
+    // ── Mouse events ──────────────────────────────────────
+    canvas.addEventListener('mousemove', (e) => {
+        const {x,y} = canvasCoords(e.clientX, e.clientY);
+        send({type:'mousemove', x, y});
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        const {x,y} = canvasCoords(e.clientX, e.clientY);
+        send({type:'mousedown', button: e.button, x, y});
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+        const {x,y} = canvasCoords(e.clientX, e.clientY);
+        send({type:'mouseup', button: e.button, x, y});
+    });
+
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        send({type:'wheel', delta: e.deltaY > 0 ? 1 : -1});
+    }, {passive: false});
+
+    // ── Keyboard events ───────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (['F5','F11','F12'].includes(e.key)) return; // allow browser shortcuts
+        e.preventDefault();
+        const sc = SC[e.code];
+        if (sc) send({type:'keydown', scancode: sc});
+    });
+
+    document.addEventListener('keyup', (e) => {
+        const sc = SC[e.code];
+        if (sc) send({type:'keyup', scancode: sc});
+    });
+
+    // ── Touch events ──────────────────────────────────────
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+            const t = e.touches[0];
+            lastScrollY = t.clientY;
+            const {x,y} = canvasCoords(t.clientX, t.clientY);
+            send({type:'mousemove', x, y});
+            send({type:'mousedown', button:0, x, y});
+        } else if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            lastTouchDist = Math.hypot(dx, dy);
+        }
+    }, {passive:false});
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+            const t = e.touches[0];
+            const {x,y} = canvasCoords(t.clientX, t.clientY);
+            send({type:'mousemove', x, y});
+        } else if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const dist = Math.hypot(dx, dy);
+            const delta = lastScrollY - midY;
+            if (Math.abs(delta) > 10) {
+                send({type:'wheel', delta: delta > 0 ? 1 : -1});
+                lastScrollY = midY;
+            }
+            lastTouchDist = dist;
+        }
+    }, {passive:false});
+
+    canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        if (e.changedTouches.length === 1 && e.touches.length === 0) {
+            const t = e.changedTouches[0];
+            const {x,y} = canvasCoords(t.clientX, t.clientY);
+            send({type:'mouseup', button:0, x, y});
+        }
+    }, {passive:false});
+
+    // ── Virtual keyboard ──────────────────────────────────
+    function sendVKey(vk) {
+        if (Array.isArray(vk.a)) {
+            // combo
+            for (const [sc, down] of vk.a)
+                send({type: down ? 'keydown' : 'keyup', scancode: sc});
+        } else {
+            // modifier toggle or simple key
+            if (vk.mod) {
+                let active = false;
+                if (vk.mod === 'ctrl')  { stickyCtrl  = !stickyCtrl;  active = stickyCtrl; }
+                if (vk.mod === 'alt')   { stickyAlt   = !stickyAlt;   active = stickyAlt; }
+                if (vk.mod === 'shift') { stickyShift = !stickyShift; active = stickyShift; }
+                send({type: active ? 'keydown' : 'keyup', scancode: vk.a});
+                refreshVkb();
+            } else {
+                // flush sticky modifiers first
+                if (stickyCtrl)  send({type:'keydown', scancode: SC_CTRL});
+                if (stickyAlt)   send({type:'keydown', scancode: SC_ALT});
+                if (stickyShift) send({type:'keydown', scancode: SC_SHIFT});
+
+                send({type:'keydown', scancode: vk.a});
+                send({type:'keyup',   scancode: vk.a});
+
+                if (stickyCtrl)  { send({type:'keyup', scancode: SC_CTRL});  stickyCtrl  = false; }
+                if (stickyAlt)   { send({type:'keyup', scancode: SC_ALT});   stickyAlt   = false; }
+                if (stickyShift) { send({type:'keyup', scancode: SC_SHIFT}); stickyShift = false; }
+                refreshVkb();
+            }
+        }
+    }
+
+    function refreshVkb() {
+        vkbEl.querySelectorAll('.vk[data-mod]').forEach(btn => {
+            const m = btn.dataset.mod;
+            const on = m==='ctrl'?stickyCtrl : m==='alt'?stickyAlt : stickyShift;
+            btn.classList.toggle('active', on);
+        });
+    }
+
+    function buildVkb() {
+        vkbEl.innerHTML = '';
+        for (const row of VKEY_ROWS) {
+            const rowEl = document.createElement('div');
+            rowEl.className = 'vkb-row';
+            for (const vk of row) {
+                const btn = document.createElement('button');
+                btn.className = 'vk' + (vk.wide ? ' wide' : '');
+                btn.textContent = vk.l;
+                if (vk.mod) btn.dataset.mod = vk.mod;
+                btn.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    sendVKey(vk);
+                });
+                rowEl.appendChild(btn);
+            }
+            vkbEl.appendChild(rowEl);
+        }
+    }
+
+    buildVkb();
+
+    // Auto-show VKB on touch devices
+    if (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)
+        vkbEl.classList.add('show');
+
+    // ── Toolbar buttons ───────────────────────────────────
+    document.getElementById('btn-vkb').addEventListener('click', () =>
+        vkbEl.classList.toggle('show'));
+
+    document.getElementById('btn-fs').addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+    });
+
+    document.getElementById('btn-reconnect').addEventListener('click', connect);
+    document.getElementById('btn-disconnect').addEventListener('click', () => {
+        if (ws) { ws.close(); ws = null; }
+        setStatus('disconnected');
+    });
+    document.getElementById('btn-err-retry').addEventListener('click', connect);
+
+    // ── Initial canvas size ───────────────────────────────
+    canvas.width  = sessionW;
+    canvas.height = sessionH;
+
+    // ── Start ─────────────────────────────────────────────
+    connect();
+})();
+</script>
+</body>
+</html>
