@@ -71,7 +71,8 @@ apt-get install -y --no-install-recommends --fix-missing \
     libyajl2 \
     zlib1g \
     zlib1g \
-    zstd
+    zstd \
+    guacd
 
 # 2.1 Configure Locale (Interactive)
 echo ">>> Configuring locales..."

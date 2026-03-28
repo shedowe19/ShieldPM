@@ -147,7 +147,12 @@ apt-get install -y --no-install-recommends \
     python3-pip \
     python3-setuptools \
     libffi-dev \
-    gyp
+    gyp \
+    guacd
+
+# Ensure guacd is running as a service (LXC with systemd)
+systemctl enable guacd 2>/dev/null || true
+systemctl start  guacd 2>/dev/null || true
 
 echo "--> [2/6] Fetching latest source..."
 git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
@@ -184,6 +189,12 @@ echo "    - Updating System Configs (rootfs)..."
 # SAFETY: Remove /data from the update payload to PREVENT overwriting user config (.env) and database
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
+
+# Download Guacamole JS client for the standalone RDP page
+echo "    - Downloading guacamole-common.min.js..."
+mkdir -p /html/rdp
+curl -fsSL "https://cdn.jsdelivr.net/npm/guacamole-common-js@1.5.0/dist/guacamole-common.min.js" \
+    -o /html/rdp/guacamole-common.min.js || echo "    - WARNING: Could not download guacamole-common.min.js"
 
 echo "--> [6/7] Checking for Nginx Binary Updates..."
 RELEASE_BASE="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"

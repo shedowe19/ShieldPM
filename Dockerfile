@@ -67,6 +67,16 @@ COPY rootfs /
 
 # --- Setup ---
 WORKDIR /app
+# Install guacd (Apache Guacamole proxy daemon — FreeRDP backend for RDP/NLA support)
+# hadolint ignore=DL3008
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends guacd && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download Guacamole JS client (must match guacd protocol version)
+RUN curl -fsSL "https://cdn.jsdelivr.net/npm/guacamole-common-js@1.5.0/dist/guacamole-common.min.js" \
+    -o /html/rdp/guacamole-common.min.js
+
 RUN echo "exit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d && \
     # Helper Scripts
     # NOTE: These scripts are specific to ShieldPM logic, so we keep pulling them here or bundled in backend

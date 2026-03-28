@@ -27,4 +27,12 @@ if [ -n "$(ls -A /data/prerun 2> /dev/null)" ] && [ "$ENABLE_PRERUN" = "true" ];
     done
 fi
 
+# Start guacd (Guacamole proxy daemon — required for RDP via FreeRDP/NLA)
+if command -v guacd >/dev/null 2>&1; then
+    guacd -b 127.0.0.1 -l 4822 -L error
+    echo "[entrypoint] guacd started on 127.0.0.1:4822"
+else
+    echo "[entrypoint] WARNING: guacd not found — RDP support unavailable"
+fi
+
 exec envs.sh
