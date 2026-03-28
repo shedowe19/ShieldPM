@@ -77,7 +77,7 @@ const createRdpSession = (rdp, host, ws, width, height) => {
 		// Force classic RDP security — override the x224 layer default of PROTOCOL_SSL.
 		// This prevents X224_NEG_FAILURE (code 2: SSL_NOT_ALLOWED_BY_SERVER).
 		rdpClient.x224.requestedProtocol = PROTOCOL_RDP;
-		rdpClient.x224.selectedProtocol  = PROTOCOL_RDP;
+		rdpClient.x224.selectedProtocol = PROTOCOL_RDP;
 	} catch (err) {
 		ws.send(JSON.stringify({ type: "error", message: `Failed to create RDP client: ${err.message}` }));
 		return null;
@@ -256,7 +256,11 @@ const internalRdp = {
 
 						// Close current session
 						if (rdpClient) {
-							try { rdpClient.close(); } catch (_e) { /* ignore */ }
+							try {
+								rdpClient.close();
+							} catch (_e) {
+								/* ignore */
+							}
 							rdpClient = null;
 						}
 
@@ -279,7 +283,11 @@ const internalRdp = {
 		// -------------------------------------------------------
 		ws.on("close", () => {
 			if (rdpClient) {
-				try { rdpClient.close(); } catch (_e) { /* ignore */ }
+				try {
+					rdpClient.close();
+				} catch (_e) {
+					/* ignore */
+				}
 				rdpClient = null;
 			}
 		});
