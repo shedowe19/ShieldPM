@@ -1,168 +1,301 @@
+import net from "net";
 import { WebSocketServer } from "ws";
 import { decrypt } from "../lib/encryption.js";
 import { debug, internal as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 
 /**
- * RDP WebSocket Handler
+ * RDP WebSocket Handler — Apache Guacamole / guacd backend
  *
- * Bridges browser WebSocket clients to RDP servers using node-rdpjs-2.
+ * Architecture:
+ *   Browser (guacamole-common-js, Guacamole protocol over WebSocket)
+ *     ↕  ws://…/nginx/proxy-hosts/:id/rdp/ws
+ *   ShieldPM backend  ← this file
+ *     ↕  TCP 127.0.0.1:4822 (Guacamole protocol)
+ *   guacd  (Apache Guacamole proxy daemon, uses FreeRDP internally)
+ *     ↕  RDP + NLA/CredSSP  (full Windows authentication)
+ *   Windows RDP Server
  *
- * WebSocket URL patterns:
+ * Guacamole handshake (backend ↔ guacd):
+ *   1. backend → guacd : select rdp
+ *   2. guacd   → backend: args <param-list>
+ *   3. backend → guacd : size / audio / video / image
+ *   4. backend → guacd : connect <param-values in args order>
+ *   5. guacd   → backend: ready <connection-id>
+ *   → pipe everything else transparently both ways
+ *
+ * WebSocket URL:
  *   /api/nginx/proxy-hosts/:id/rdp/ws[?width=W&height=H]
- *   /nginx/proxy-hosts/:id/rdp/ws[?width=W&height=H]  (after Nginx strips /api)
- *
- * Query params:
- *   width  - initial session width  (overrides host default)
- *   height - initial session height (overrides host default)
- *
- * Protocol (Client → Server):
- *   { type: "mouse", x, y, button, isDown }
- *   { type: "key", scancode, isDown }
- *   { type: "wheel", x, y, delta }
- *   { type: "resize", width, height }   ← reconnect with new resolution
- *
- * Protocol (Server → Client):
- *   { type: "status", status: "connecting" | "connected" | "disconnected" }
- *   { type: "error", message }
- *   { type: "size", width, height }
- *   { type: "bitmap", destLeft, destTop, destRight, destBottom, width, height, bitsPerPixel, data, isCompress }
- *   { type: "clipboard", data }
+ *   /nginx/proxy-hosts/:id/rdp/ws[?width=W&height=H]    (after nginx strips /api)
  */
 
-let rdpModule = null;
+const GUACD_HOST = "127.0.0.1";
+const GUACD_PORT = 4822;
+
+// ── Guacamole protocol helpers ──────────────────────────────────────────────
 
 /**
- * Lazy-load the node-rdpjs-2 module.
- * Returns null if the module is not installed.
+ * Build one complete Guacamole instruction.
+ * Format: "len.val,len.val,...;"
  */
-const getRdpModule = async () => {
-	if (rdpModule !== null) return rdpModule;
-	try {
-		const mod = await import("node-rdpjs-2");
-		rdpModule = mod.default || mod;
-		return rdpModule;
-	} catch (_err) {
-		logger.warn("node-rdpjs-2 is not installed. RDP WebSocket support is unavailable.");
-		logger.warn("Install it with: npm install node-rdpjs-2");
-		return null;
+function guacInstruction(...args) {
+	return (
+		args
+			.map((a) => {
+				const s = String(a ?? "");
+				return `${s.length}.${s}`;
+			})
+			.join(",") + ";"
+	);
+}
+
+/**
+ * Parse all complete Guacamole instructions out of `buffer`.
+ * Returns { instructions: [{opcode, args}], remaining: string }
+ *
+ * Each element: LENGTH "." VALUE
+ * Elements separated by "," instruction terminated by ";"
+ */
+function parseInstructions(buffer) {
+	const instructions = [];
+	let i = 0;
+
+	outer: while (i < buffer.length) {
+		const elems = [];
+		let pos = i;
+
+		while (pos < buffer.length) {
+			// Read element length
+			const dot = buffer.indexOf(".", pos);
+			if (dot === -1) break outer; // incomplete, need more data
+
+			const len = parseInt(buffer.substring(pos, dot), 10);
+			if (isNaN(len) || len < 0) {
+				// Malformed — skip to next instruction boundary
+				const semi = buffer.indexOf(";", pos);
+				if (semi === -1) break outer;
+				i = semi + 1;
+				continue outer;
+			}
+
+			const valStart = dot + 1;
+			const valEnd = valStart + len;
+			if (valEnd > buffer.length) break outer; // incomplete
+
+			elems.push(buffer.substring(valStart, valEnd));
+			pos = valEnd;
+
+			const sep = buffer[pos];
+			if (sep === ",") {
+				pos++;
+				continue;
+			}
+			if (sep === ";") {
+				pos++;
+				if (elems.length > 0) {
+					instructions.push({ opcode: elems[0], args: elems.slice(1) });
+				}
+				i = pos;
+				break;
+			}
+			// Malformed separator — skip to next ";"
+			const semi = buffer.indexOf(";", pos);
+			if (semi === -1) break outer;
+			i = semi + 1;
+			continue outer;
+		}
+
+		if (pos === i) break; // no progress — truly incomplete
 	}
-};
+
+	return { instructions, remaining: buffer.substring(i) };
+}
+
+// ── guacd session ───────────────────────────────────────────────────────────
 
 /**
- * Create and connect an RDP client, piping events to the given WebSocket.
- * Returns the rdpClient instance so the caller can close it later.
+ * Connect to guacd, perform the RDP handshake, then pipe WebSocket ↔ TCP.
+ * The browser uses guacamole-common-js which speaks the Guacamole protocol
+ * natively — after the handshake the backend is a transparent bridge.
  */
-// PROTOCOL_RDP = 0x00 (classic RDP security, no TLS negotiation)
-// node-rdpjs-2 defaults to PROTOCOL_SSL (0x01) which causes X224_NEG_FAILURE
-// code 2 (SSL_NOT_ALLOWED_BY_SERVER) on most Windows RDP servers.
-// We always use PROTOCOL_RDP so the x224 negotiation succeeds without TLS.
-const PROTOCOL_RDP = 0x00000000;
-
-const createRdpSession = (rdp, host, ws, width, height) => {
+function createGuacdSession(host, ws, width, height) {
+	const rdpHost = host.rdp_host;
+	const rdpPort = String(host.rdp_port || 3389);
+	const username = host.rdp_username || "";
 	const password = host.rdp_password ? decrypt(host.rdp_password) : "";
+	const domain = host.rdp_domain || "";
+	const ignoreCert = host.rdp_ignore_cert ? "true" : "";
+	const sessionW = String(width);
+	const sessionH = String(height);
 
-	let rdpClient;
-	try {
-		rdpClient = rdp.createClient({
-			domain: host.rdp_domain || "",
-			userName: host.rdp_username || "",
-			password,
-			enablePerf: true,
-			autoLogin: true,
-			screen: { width, height },
-			logLevel: "ERROR",
-			ignoreCertificate: host.rdp_ignore_cert !== 0,
-		});
-		// Force classic RDP security — override the x224 layer default of PROTOCOL_SSL.
-		// This prevents X224_NEG_FAILURE (code 2: SSL_NOT_ALLOWED_BY_SERVER).
-		rdpClient.x224.requestedProtocol = PROTOCOL_RDP;
-		rdpClient.x224.selectedProtocol = PROTOCOL_RDP;
-	} catch (err) {
-		ws.send(JSON.stringify({ type: "error", message: `Failed to create RDP client: ${err.message}` }));
-		return null;
-	}
+	logger.info(
+		`[RDP] Connecting host ${host.id} → guacd → ${rdpHost}:${rdpPort}` +
+			` (user: ${username || "(none)"})`,
+	);
 
-	rdpClient.on("connect", () => {
-		if (ws.readyState === ws.OPEN) {
-			ws.send(JSON.stringify({ type: "status", status: "connected" }));
+	let tcpBuf = "";
+	let handshakeDone = false;
+	let expectedArgs = [];
+	let closed = false;
+
+	// ── helpers ──
+	function safeClose(errMsg) {
+		if (closed) return;
+		closed = true;
+		if (errMsg) {
+			logger.error(`[RDP] Error for host ${host.id}: ${errMsg}`);
+			try {
+				ws.send(guacInstruction("error", errMsg, "512"));
+			} catch (_) {}
 		}
-	});
-
-	rdpClient.on("close", () => {
-		if (ws.readyState === ws.OPEN) {
-			ws.send(JSON.stringify({ type: "status", status: "disconnected" }));
-		}
-	});
-
-	rdpClient.on("error", (err) => {
-		const msg = err.message || String(err);
-		logger.error(`[RDP] Error for host ${host.id}: ${msg}`);
-		if (ws.readyState === ws.OPEN) {
-			ws.send(JSON.stringify({ type: "error", message: `RDP Error: ${msg}` }));
-		}
-	});
-
-	rdpClient.on("bitmap", (bitmap) => {
-		if (ws.readyState !== ws.OPEN) return;
 		try {
-			const data = Buffer.isBuffer(bitmap.data) ? bitmap.data.toString("base64") : bitmap.data;
-			ws.send(
-				JSON.stringify({
-					type: "bitmap",
-					destLeft: bitmap.destLeft,
-					destTop: bitmap.destTop,
-					destRight: bitmap.destRight,
-					destBottom: bitmap.destBottom,
-					width: bitmap.width,
-					height: bitmap.height,
-					bitsPerPixel: bitmap.bitsPerPixel,
-					isCompress: bitmap.isCompress || false,
-					data,
-				}),
-			);
-		} catch (e) {
-			logger.warn(`[RDP] Failed to send bitmap for host ${host.id}: ${e.message}`);
-		}
-	});
-
-	rdpClient.on("clipboard", (data) => {
-		if (ws.readyState === ws.OPEN) {
-			ws.send(JSON.stringify({ type: "clipboard", data: data?.toString() || "" }));
-		}
-	});
-
-	try {
-		const rdpHost = host.rdp_host;
-		const rdpPort = host.rdp_port || 3389;
-		logger.info(
-			`[RDP] Connecting host ${host.id} → ${rdpHost}:${rdpPort} (user: ${host.rdp_username || "(none)"})`,
-		);
-		rdpClient.connect(rdpHost, rdpPort);
-	} catch (err) {
-		ws.send(JSON.stringify({ type: "error", message: `Connection Failed: ${err.message}` }));
-		return null;
+			ws.send(guacInstruction("disconnect"));
+		} catch (_) {}
+		try {
+			guacdSocket.destroy();
+		} catch (_) {}
 	}
 
-	return rdpClient;
-};
+	// ── TCP socket to guacd ──
+	const guacdSocket = net.createConnection(GUACD_PORT, GUACD_HOST);
+
+	guacdSocket.on("error", (err) => {
+		safeClose(
+			`guacd unreachable (127.0.0.1:${GUACD_PORT}): ${err.message}. ` +
+				"Is guacd installed and running?",
+		);
+	});
+
+	guacdSocket.on("close", () => {
+		if (!closed) safeClose(null);
+	});
+
+	// Phase 1 — select protocol
+	guacdSocket.on("connect", () => {
+		guacdSocket.write(guacInstruction("select", "rdp"));
+	});
+
+	guacdSocket.on("data", (chunk) => {
+		tcpBuf += chunk.toString("utf8");
+		const { instructions, remaining } = parseInstructions(tcpBuf);
+		tcpBuf = remaining;
+
+		for (const { opcode, args } of instructions) {
+			if (!handshakeDone) {
+				handleHandshake(opcode, args);
+			} else {
+				// Pipe drawing instruction to browser
+				if (ws.readyState === 1) {
+					try {
+						ws.send(guacInstruction(opcode, ...args));
+					} catch (_) {}
+				}
+			}
+		}
+	});
+
+	// ── Guacamole handshake state machine ──
+	function handleHandshake(opcode, args) {
+		if (opcode === "args") {
+			// Phase 2 — guacd tells us which RDP parameters it expects (in order)
+			expectedArgs = args;
+
+			// Phase 3 — send client capabilities
+			guacdSocket.write(guacInstruction("size", sessionW, sessionH, "96"));
+			guacdSocket.write(guacInstruction("audio"));
+			guacdSocket.write(guacInstruction("video"));
+			guacdSocket.write(
+				guacInstruction("image", "image/png", "image/jpeg", "image/webp"),
+			);
+
+			// Phase 4 — connect: values must be in the exact order guacd asked for.
+			// `security=any` → FreeRDP auto-negotiates NLA → TLS → RDP.
+			// Users no longer need to disable NLA in Windows registry.
+			const paramMap = {
+				hostname: rdpHost,
+				port: rdpPort,
+				username: username,
+				password: password,
+				domain: domain,
+				width: sessionW,
+				height: sessionH,
+				dpi: "96",
+				"color-depth": "24",
+				security: "any",
+				"ignore-cert": ignoreCert,
+				"resize-method": "display-update",
+				"enable-font-smoothing": "true",
+				"enable-wallpaper": "true",
+				"enable-theming": "true",
+				"enable-desktop-composition": "true",
+				"enable-menu-animations": "true",
+			};
+
+			const connectArgs = expectedArgs.map((arg) => paramMap[arg] ?? "");
+			guacdSocket.write(guacInstruction("connect", ...connectArgs));
+		} else if (opcode === "ready") {
+			// Phase 5 — guacd connected to Windows, handshake complete
+			handshakeDone = true;
+			const connId = args[0] || "";
+			logger.info(
+				`[RDP] guacd ready for host ${host.id}, connection: ${connId}`,
+			);
+
+			// Forward `ready` to browser — guacamole-common-js starts rendering
+			if (ws.readyState === 1) {
+				try {
+					ws.send(guacInstruction("ready", connId));
+				} catch (_) {}
+			}
+		} else if (opcode === "error") {
+			const msg = args[0] || "Unknown error";
+			const code = args[1] || "0";
+			safeClose(`${msg} (code ${code})`);
+		}
+		// `nop` and other pre-ready instructions are silently ignored
+	}
+
+	// ── WebSocket → guacd (input events from browser) ──
+	ws.on("message", (rawData) => {
+		if (closed) return;
+		try {
+			guacdSocket.write(rawData.toString());
+		} catch (_) {}
+	});
+
+	ws.on("close", () => safeClose(null));
+	ws.on("error", () => safeClose(null));
+
+	return guacdSocket;
+}
+
+// ── WebSocket server ────────────────────────────────────────────────────────
 
 const internalRdp = {
 	wss: null,
 
 	init: (server) => {
-		internalRdp.wss = new WebSocketServer({ noServer: true });
+		internalRdp.wss = new WebSocketServer({
+			noServer: true,
+			// Accept the `guacamole` subprotocol that guacamole-common-js requests.
+			// Chrome/Firefox reject the WS handshake if the server doesn't acknowledge
+			// the requested subprotocol.
+			handleProtocols: (protocols) => {
+				if (protocols.has("guacamole")) return "guacamole";
+				// Accept raw connections (e.g. direct testing) without subprotocol
+				return protocols.size === 0 ? "" : false;
+			},
+		});
 
 		server.on("upgrade", (request, socket, head) => {
 			const pathname = request.url.split("?")[0];
-
 			if (pathname.match(/^\/(?:api\/)?nginx\/proxy-hosts\/\d+\/rdp\/ws/)) {
 				internalRdp.handleUpgrade(request, socket, head);
 			}
 		});
 
 		internalRdp.wss.on("connection", internalRdp.handleConnection);
-		debug(logger, "WebSocket Server for RDP initialized");
+		debug(logger, "WebSocket Server for RDP (guacd bridge) initialized");
 	},
 
 	handleUpgrade: (request, socket, head) => {
@@ -172,32 +305,23 @@ const internalRdp = {
 	},
 
 	handleConnection: async (ws, request) => {
-		// Parse host ID and optional client-requested dimensions from URL
 		const [pathPart, queryPart] = request.url.split("?");
-		const pathMatch = pathPart.match(/^\/(?:api\/)?nginx\/proxy-hosts\/(\d+)\/rdp\/ws/);
+		const pathMatch = pathPart.match(
+			/^\/(?:api\/)?nginx\/proxy-hosts\/(\d+)\/rdp\/ws/,
+		);
 		if (!pathMatch) {
 			ws.close(1008, "Host ID required");
 			return;
 		}
+
 		const hostId = pathMatch[1];
 		const queryParams = new URLSearchParams(queryPart || "");
-		const clientWidth = Number.parseInt(queryParams.get("width") || "0", 10) || 0;
-		const clientHeight = Number.parseInt(queryParams.get("height") || "0", 10) || 0;
+		const clientWidth =
+			Number.parseInt(queryParams.get("width") || "0", 10) || 1280;
+		const clientHeight =
+			Number.parseInt(queryParams.get("height") || "0", 10) || 800;
 
-		// Load the RDP module
-		const rdp = await getRdpModule();
-		if (!rdp) {
-			ws.send(
-				JSON.stringify({
-					type: "error",
-					message: "RDP support unavailable: node-rdpjs-2 is not installed on the server.",
-				}),
-			);
-			ws.close();
-			return;
-		}
-
-		// Get Host Credentials from ProxyHost (forward_scheme: 'rdp')
+		// Load host config from DB
 		let host;
 		try {
 			host = await ProxyHost.query()
@@ -206,96 +330,18 @@ const internalRdp = {
 				.where("is_deleted", 0)
 				.throwIfNotFound();
 		} catch (_err) {
-			ws.send(JSON.stringify({ type: "error", message: "RDP host not found" }));
+			try {
+				ws.send(guacInstruction("error", "RDP host not found", "512"));
+				ws.send(guacInstruction("disconnect"));
+			} catch (_) {}
 			ws.close(1008, "RDP host not found");
 			return;
 		}
 
-		// Determine session dimensions: client-provided > host config > defaults
-		let sessionWidth = clientWidth || host.rdp_width || 1280;
-		let sessionHeight = clientHeight || host.rdp_height || 800;
+		const sessionWidth = clientWidth || host.rdp_width || 1280;
+		const sessionHeight = clientHeight || host.rdp_height || 800;
 
-		// Notify client of actual session dimensions
-		ws.send(JSON.stringify({ type: "size", width: sessionWidth, height: sessionHeight }));
-		ws.send(JSON.stringify({ type: "status", status: "connecting" }));
-
-		// Start the initial RDP session
-		let rdpClient = createRdpSession(rdp, host, ws, sessionWidth, sessionHeight);
-
-		// -------------------------------------------------------
-		// Browser WebSocket → RDP input forwarding
-		// -------------------------------------------------------
-		ws.on("message", (rawData) => {
-			try {
-				const msg = JSON.parse(rawData.toString());
-				switch (msg.type) {
-					case "mouse":
-						if (rdpClient) {
-							rdpClient.sendPointerEvent(msg.x || 0, msg.y || 0, msg.button || 0, msg.isDown || false);
-						}
-						break;
-					case "wheel":
-						if (rdpClient) {
-							rdpClient.sendPointerEvent(msg.x || 0, msg.y || 0, msg.delta > 0 ? 8 : 16, true);
-						}
-						break;
-					case "key":
-						if (rdpClient) {
-							rdpClient.sendKeyEventScancode(msg.scancode || 0, msg.isDown || false);
-						}
-						break;
-					case "clipboard":
-						if (rdpClient && rdpClient.sendClipboardData && msg.data) {
-							rdpClient.sendClipboardData(msg.data);
-						}
-						break;
-					case "resize": {
-						// Client requests reconnection with new resolution
-						const newW = Math.max(640, Math.min(7680, msg.width || sessionWidth));
-						const newH = Math.max(480, Math.min(4320, msg.height || sessionHeight));
-						if (newW === sessionWidth && newH === sessionHeight) break;
-
-						sessionWidth = newW;
-						sessionHeight = newH;
-						logger.info(`[RDP] Reconnecting host ${hostId} with new resolution ${newW}x${newH}`);
-
-						// Close current session
-						if (rdpClient) {
-							try {
-								rdpClient.close();
-							} catch (_e) {
-								/* ignore */
-							}
-							rdpClient = null;
-						}
-
-						// Notify client and reconnect
-						ws.send(JSON.stringify({ type: "size", width: newW, height: newH }));
-						ws.send(JSON.stringify({ type: "status", status: "connecting" }));
-						rdpClient = createRdpSession(rdp, host, ws, newW, newH);
-						break;
-					}
-					default:
-						break;
-				}
-			} catch (_e) {
-				// Ignore parse errors
-			}
-		});
-
-		// -------------------------------------------------------
-		// WebSocket close → disconnect RDP
-		// -------------------------------------------------------
-		ws.on("close", () => {
-			if (rdpClient) {
-				try {
-					rdpClient.close();
-				} catch (_e) {
-					/* ignore */
-				}
-				rdpClient = null;
-			}
-		});
+		createGuacdSession(host, ws, sessionWidth, sessionHeight);
 	},
 };
 
