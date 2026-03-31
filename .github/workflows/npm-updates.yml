@@ -39,7 +39,8 @@ jobs:
           # Run npm-check-updates, update package.json, and capture the output
           # -u: upgrade package.json
           # --target minor: only upgrade to minor/patch versions, ignoring major
-          npx npm-check-updates -u --target minor >> /tmp/frontend-updates.txt || true
+          # --reject vite: vite is pinned in resolutions and must be updated together with vitest manually
+          npx npm-check-updates -u --target minor --reject vite >> /tmp/frontend-updates.txt || true
           echo '```' >> /tmp/frontend-updates.txt
 
           echo "Installing updated frontend dependencies to update yarn.lock..."
