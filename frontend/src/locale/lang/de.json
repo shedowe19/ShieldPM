@@ -142,6 +142,7 @@
 	"cachingEnabled": "Caching aktiviert",
 	"cancel": "Abbrechen",
 	"certificate": "Zertifikat",
+	"certificate.custom": "Benutzerdefiniertes Zertifikat",
 	"certificate.custom-certificate": "Zertifikat",
 	"certificate.custom-certificate-key": "Privater Schlüssel",
 	"certificate.custom-intermediate": "Zwischen Zertifikat",

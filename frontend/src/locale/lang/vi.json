@@ -142,6 +142,7 @@
 	"cachingEnabled": "Đã bật bộ nhớ đệm",
 	"cancel": "Hủy",
 	"certificate": "Chứng chỉ",
+	"certificate.custom": "Chứng chỉ tùy chỉnh",
 	"certificate.custom-certificate": "Certificate (crt)",
 	"certificate.custom-certificate-key": "Certificate Key",
 	"certificate.custom-intermediate": "Intermediate Certificate",

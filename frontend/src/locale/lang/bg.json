@@ -142,6 +142,7 @@
 	"cachingEnabled": "Кеширането е активирано",
 	"cancel": "Отказ",
 	"certificate": "Сертификат",
+	"certificate.custom": "Потребителски сертификат",
 	"certificate.custom-certificate": "Сертификат",
 	"certificate.custom-certificate-key": "Ключ на сертификата",
 	"certificate.custom-intermediate": "Междинен сертификат",
