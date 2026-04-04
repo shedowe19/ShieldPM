@@ -217,6 +217,7 @@ const internalAccessList = {
 			const clientPromises = [];
 			data.clients.map((/** @type {any} */ client) => {
 				if (client.address) {
+					client.access_list_id = data.id;
 					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */ (client)));
 				}
 				return true;
@@ -334,6 +335,7 @@ const internalAccessList = {
 		await access.can("access_lists:delete", data.id);
 		const row = await internalAccessList.get(access, {
 			id: data.id,
+			expand: ["proxy_hosts"],
 		});
 		// The instruction seems to have intended to add this line in a different context,
 		// likely an insert operation. Placing it here would cause a syntax error.
