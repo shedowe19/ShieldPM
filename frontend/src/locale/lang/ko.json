@@ -142,6 +142,7 @@
 	"cachingEnabled": "캐싱 활성화됨",
 	"cancel": "취소",
 	"certificate": "인증서",
+	"certificate.custom": "사용자 지정 인증서",
 	"certificate.custom-certificate": "인증서",
 	"certificate.custom-certificate-key": "인증서 키",
 	"certificate.custom-intermediate": "중간 인증서",

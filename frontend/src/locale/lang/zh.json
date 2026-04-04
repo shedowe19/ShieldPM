@@ -142,6 +142,7 @@
 	"cachingEnabled": "已启用缓存",
 	"cancel": "取消",
 	"certificate": "证书",
+	"certificate.custom": "自定义证书",
 	"certificate.custom-certificate": "证书",
 	"certificate.custom-certificate-key": "证书密钥",
 	"certificate.custom-intermediate": "中间证书",

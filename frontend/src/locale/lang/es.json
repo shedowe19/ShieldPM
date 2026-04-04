@@ -142,6 +142,7 @@
 	"cachingEnabled": "Caché habilitada",
 	"cancel": "Cancelar",
 	"certificate": "Certificado",
+	"certificate.custom": "Certificado Personalizado",
 	"certificate.custom-certificate": "Certificado",
 	"certificate.custom-certificate-key": "Clave del Certificado",
 	"certificate.custom-intermediate": "Certificado Intermedio",

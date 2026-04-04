@@ -142,6 +142,7 @@
 	"cachingEnabled": "Caching Ingeschakeld",
 	"cancel": "Annuleren",
 	"certificate": "Certificaat",
+	"certificate.custom": "Aangepast Certificaat",
 	"certificate.custom-certificate": "Certificaat",
 	"certificate.custom-certificate-key": "Certificaat Sleutel",
 	"certificate.custom-intermediate": "Intermediate Certificaat",

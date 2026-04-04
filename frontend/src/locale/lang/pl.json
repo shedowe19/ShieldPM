@@ -142,6 +142,7 @@
 	"cachingEnabled": "Buforowanie włączone",
 	"cancel": "Anuluj",
 	"certificate": "Certyfikat",
+	"certificate.custom": "Certyfikat własny",
 	"certificate.custom-certificate": "Certyfikat",
 	"certificate.custom-certificate-key": "Klucz certyfikatu",
 	"certificate.custom-intermediate": "Certyfikat pośredni",

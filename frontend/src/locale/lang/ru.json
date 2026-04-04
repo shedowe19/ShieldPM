@@ -142,6 +142,7 @@
 	"cachingEnabled": "Кэширование включено",
 	"cancel": "Отменить",
 	"certificate": "Сертификат",
+	"certificate.custom": "Свой сертификат",
 	"certificate.custom-certificate": "Сертификат",
 	"certificate.custom-certificate-key": "Ключ сертификата",
 	"certificate.custom-intermediate": "Промежуточный сертификат",

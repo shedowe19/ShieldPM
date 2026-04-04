@@ -191,7 +191,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 													id="certificateKey"
 													type="file"
 													required={mode === CERT_CUSTOM_MODE.UPLOAD}
-													className={`cursor-pointer file:text-foreground ${errors.certificateKey && touched.certificateKey ? "border-destructive" : ""}`}
+													className={`cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 ${errors.certificateKey && touched.certificateKey ? "border-destructive" : ""}`}
 													onChange={(event) => {
 														setFieldValue(
 															"certificateKey",
@@ -211,7 +211,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 													id="certificate"
 													type="file"
 													required={mode === CERT_CUSTOM_MODE.UPLOAD}
-													className={`cursor-pointer file:text-foreground ${errors.certificate && touched.certificate ? "border-destructive" : ""}`}
+													className={`cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 ${errors.certificate && touched.certificate ? "border-destructive" : ""}`}
 													onChange={(event) => {
 														setFieldValue(
 															"certificate",
@@ -230,7 +230,7 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 												<Input
 													id="intermediateCertificate"
 													type="file"
-													className={`cursor-pointer file:text-foreground ${errors.intermediateCertificate && touched.intermediateCertificate ? "border-destructive" : ""}`}
+													className={`cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 ${errors.intermediateCertificate && touched.intermediateCertificate ? "border-destructive" : ""}`}
 													onChange={(event) => {
 														setFieldValue(
 															"intermediateCertificate",

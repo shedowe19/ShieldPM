@@ -142,6 +142,7 @@
 	"cachingEnabled": "Ukladanie do vyrovnávacej pamäte povolené",
 	"cancel": "Zrušiť",
 	"certificate": "Certifikát",
+	"certificate.custom": "Vlastný certifikát",
 	"certificate.custom-certificate": "Certifikát",
 	"certificate.custom-certificate-key": "Kľúč certifikátu",
 	"certificate.custom-intermediate": "Sprostredkovateľský certifikát",

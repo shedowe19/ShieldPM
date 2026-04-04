@@ -142,6 +142,7 @@
 	"cachingEnabled": "キャッシュが有効",
 	"cancel": "キャンセル",
 	"certificate": "証明書",
+	"certificate.custom": "カスタム証明書",
 	"certificate.custom-certificate": "証明書",
 	"certificate.custom-certificate-key": "証明書キー",
 	"certificate.custom-intermediate": "中間証明書",
