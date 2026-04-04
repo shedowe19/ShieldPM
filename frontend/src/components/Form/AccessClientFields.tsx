@@ -42,8 +42,14 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 	};
 
 	const handleChange = (idx: number, field: string, fieldValue: string) => {
+		let finalValue = fieldValue;
+		if (field === "address") {
+			// Only allow numbers, letters a-f A-F, dots, colons, and slashes for IP addresses/CIDR
+			finalValue = finalValue.replace(/[^0-9a-fA-F.:/]/g, "");
+		}
+
 		const newValues = values.map((v: AccessListClient, i: number) =>
-			i === idx ? { ...v, [field]: fieldValue } : v,
+			i === idx ? { ...v, [field]: finalValue } : v,
 		);
 		setValues(newValues);
 		setFormField(newValues);

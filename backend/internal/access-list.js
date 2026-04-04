@@ -217,6 +217,7 @@ const internalAccessList = {
 			const clientPromises = [];
 			data.clients.map((/** @type {any} */ client) => {
 				if (client.address) {
+					client.access_list_id = data.id;
 					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */ (client)));
 				}
 				return true;
