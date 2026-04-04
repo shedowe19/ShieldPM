@@ -60,7 +60,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 				<T id="access-list.help.rules-order" />
 			</p>
 			{values.map((client: AccessListClient, idx: number) => (
-				<div className="flex items-center gap-2" key={`${client.address}-${idx}`}>
+				<div className="flex items-center gap-2" key={idx}>
 					<div className="flex-1 flex gap-2">
 						<div className="w-32 flex-shrink-0">
 							<Select
