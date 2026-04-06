@@ -325,7 +325,7 @@ export function WireguardTunnels() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, listen_port: parseInt(e.target.value, 10) || 51820 })}
 								/>
 							) : (
-								<p className="font-mono text-sm">{settingsForm.listen_port}</p>
+								<p className="font-mono text-sm">{String(settingsForm.listen_port || 51820)}</p>
 							)}
 						</div>
 						<div>

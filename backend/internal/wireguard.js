@@ -55,13 +55,16 @@ const getSubnetBase = (subnet) => {
 /**
  * Execute a shell command and return stdout
  * @param {string} cmd
+ * @param {boolean} silent - Whether to suppress error logging (e.g., for probes)
  * @returns {string}
  */
-const exec = (cmd) => {
+const exec = (cmd, silent = false) => {
 	try {
 		return execSync(cmd, { encoding: "utf-8", timeout: 10000 }).trim();
 	} catch (err) {
-		logger.error(`WireGuard exec failed: ${cmd}`, err.message);
+		if (!silent) {
+			logger.error(`WireGuard exec failed: ${cmd}`, err.message);
+		}
 		throw err;
 	}
 };
@@ -72,7 +75,7 @@ const exec = (cmd) => {
  */
 const isWgAvailable = () => {
 	try {
-		exec("which wg");
+		exec("which wg", true);
 		return true;
 	} catch {
 		return false;
@@ -200,7 +203,8 @@ AllowedIPs = ${peer.client_address}
  */
 const isInterfaceUp = () => {
 	try {
-		exec(`ip link show ${WG_INTERFACE}`);
+		// Pass silent=true so we don't log errors when the interface is legitimately down
+		exec(`ip link show ${WG_INTERFACE} > /dev/null 2>&1`, true);
 		return true;
 	} catch {
 		return false;
@@ -240,7 +244,7 @@ const applyConfig = async () => {
 const parsePeerStatuses = () => {
 	const statuses = new Map();
 	try {
-		const output = exec(`wg show ${WG_INTERFACE} dump`);
+		const output = exec(`wg show ${WG_INTERFACE} dump`, true);
 		const lines = output.split("\n");
 
 		// Skip the first line (interface info)
