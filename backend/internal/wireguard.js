@@ -219,7 +219,7 @@ const applyConfig = async () => {
 		const envPrefix = "WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go";
 		if (isInterfaceUp()) {
 			// Sync config without restarting (graceful)
-			exec(`wg syncconf ${WG_INTERFACE} <(wg-quick strip ${WG_INTERFACE})`);
+			exec(`bash -c "wg syncconf ${WG_INTERFACE} <(wg-quick strip ${WG_INTERFACE})"`);
 			logger.info("WireGuard: Interface config synced");
 		} else {
 			exec(`${envPrefix} wg-quick up ${wgConfFile}`);
