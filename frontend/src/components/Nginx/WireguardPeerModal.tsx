@@ -16,7 +16,7 @@ const formSchema = z.object({
 	name: z.string().min(1, intl.formatMessage({ id: "error.required_field" })),
 	description: z.string().optional(),
 	allowed_ips: z.string().optional(),
-	persistent_keepalive: z.coerce.number().min(0).max(65535).optional(),
+	persistent_keepalive: z.number().min(0).max(65535).optional(),
 	dns: z.string().optional(),
 });
 
@@ -146,7 +146,16 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 												<T id="wireguard.peer.keepalive" />
 											</FormLabel>
 											<FormControl>
-												<Input type="number" min={0} max={65535} {...field} />
+												<Input 
+													type="number" 
+													min={0} 
+													max={65535} 
+													{...field} 
+													onChange={(e) => {
+														const val = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
+														field.onChange(val);
+													}} 
+												/>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
