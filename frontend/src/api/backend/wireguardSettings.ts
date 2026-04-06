@@ -2,9 +2,9 @@ import * as api from "./base";
 
 export interface WireguardSettings {
 	endpoint: string;
-	listen_port: number;
+	listenPort: number;
 	subnet: string;
-	server_address: string;
+	serverAddress: string;
 }
 
 export async function getWireguardSettings(): Promise<WireguardSettings> {

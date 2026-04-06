@@ -66,6 +66,7 @@ COPY rootfs /
 # --- WireGuard Support ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wireguard-tools \
+    wireguard-go \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Setup ---

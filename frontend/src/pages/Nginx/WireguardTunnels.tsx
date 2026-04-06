@@ -53,9 +53,9 @@ export function WireguardTunnels() {
 	const [isSettingsEditing, setIsSettingsEditing] = useState(false);
 	const [settingsForm, setSettingsForm] = useState<WireguardSettings>({
 		endpoint: "",
-		listen_port: 51820,
+		listenPort: 51820,
 		subnet: "10.8.0.0/24",
-		server_address: "10.8.0.1/24",
+		serverAddress: "10.8.0.1/24",
 	});
 
 	const queryClient = useQueryClient();
@@ -321,11 +321,11 @@ export function WireguardTunnels() {
 									min={1}
 									max={65535}
 									className="flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm font-mono"
-									value={settingsForm.listen_port}
-									onChange={(e) => setSettingsForm({ ...settingsForm, listen_port: parseInt(e.target.value, 10) || 51820 })}
+									value={settingsForm.listenPort}
+									onChange={(e) => setSettingsForm({ ...settingsForm, listenPort: parseInt(e.target.value, 10) || 51820 })}
 								/>
 							) : (
-								<p className="font-mono text-sm">{String(settingsForm.listen_port || 51820)}</p>
+								<p className="font-mono text-sm">{String(settingsForm.listenPort || 51820)}</p>
 							)}
 						</div>
 						<div>
@@ -343,6 +343,23 @@ export function WireguardTunnels() {
 								/>
 							) : (
 								<p className="font-mono text-sm">{settingsForm.subnet}</p>
+							)}
+						</div>
+						<div>
+							<label htmlFor="wg-server-address-input" className="text-xs text-muted-foreground block mb-1">
+								Server Address
+							</label>
+							{isSettingsEditing ? (
+								<input
+									id="wg-server-address-input"
+									type="text"
+									className="flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm font-mono"
+									placeholder="10.8.0.1/24"
+									value={settingsForm.serverAddress}
+									onChange={(e) => setSettingsForm({ ...settingsForm, serverAddress: e.target.value })}
+								/>
+							) : (
+								<p className="font-mono text-sm">{settingsForm.serverAddress}</p>
 							)}
 						</div>
 					</div>
