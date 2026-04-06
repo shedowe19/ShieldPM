@@ -1,0 +1,83 @@
+{
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "id": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "created_on": {
+            "type": "string"
+        },
+        "modified_on": {
+            "type": "string"
+        },
+        "owner_user_id": {
+            "type": "integer",
+            "minimum": 1
+        },
+        "is_deleted": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+        },
+        "description": {
+            "type": ["string", "null"],
+            "maxLength": 1024
+        },
+        "client_address": {
+            "type": "string",
+            "minLength": 1
+        },
+        "client_public_key": {
+            "type": "string",
+            "minLength": 1
+        },
+        "client_private_key": {
+            "type": "string"
+        },
+        "preshared_key": {
+            "type": "string"
+        },
+        "server_public_key": {
+            "type": "string"
+        },
+        "endpoint": {
+            "type": ["string", "null"]
+        },
+        "allowed_ips": {
+            "type": "string",
+            "minLength": 1
+        },
+        "persistent_keepalive": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+        },
+        "dns": {
+            "type": ["string", "null"]
+        },
+        "status": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "last_handshake": {
+            "type": ["string", "null"]
+        },
+        "transfer_rx": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "transfer_tx": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "meta": {
+            "type": "object"
+        }
+    }
+}

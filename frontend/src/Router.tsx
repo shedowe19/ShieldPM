@@ -31,6 +31,7 @@ const Streams = lazy(() => import("src/pages/Nginx/Streams"));
 const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
 const DdnsProviders = lazy(() => import("src/pages/Nginx/DdnsProviders"));
 const TorOnionServices = lazy(() => import("src/pages/Nginx/TorOnionServices"));
+const WireguardTunnels = lazy(() => import("src/pages/Nginx/WireguardTunnels"));
 const ChatOps = lazy(() => import("src/pages/ChatOps"));
 const Profile = lazy(() => import("src/pages/Profile"));
 const DuoCallback = lazy(() => import("src/pages/DuoCallback"));
@@ -141,6 +142,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<TorOnionServices />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/nginx/wireguard"
+					element={
+						<AnimatedPage>
+							<WireguardTunnels />
 						</AnimatedPage>
 					}
 				/>

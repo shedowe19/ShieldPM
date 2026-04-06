@@ -1,0 +1,67 @@
+{
+    "operationId": "updateWireguardPeer",
+    "summary": "Update a WireGuard Peer",
+    "tags": [
+        "wireguard"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "wireguard_peers.manage"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "required": true,
+            "description": "Peer ID"
+        }
+    ],
+    "requestBody": {
+        "description": "WireGuard Peer Update",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "name": {
+                            "$ref": "../../../../components/wireguard-peer-object.json#/properties/name"
+                        },
+                        "description": {
+                            "$ref": "../../../../components/wireguard-peer-object.json#/properties/description"
+                        },
+                        "allowed_ips": {
+                            "$ref": "../../../../components/wireguard-peer-object.json#/properties/allowed_ips"
+                        },
+                        "persistent_keepalive": {
+                            "$ref": "../../../../components/wireguard-peer-object.json#/properties/persistent_keepalive"
+                        },
+                        "dns": {
+                            "$ref": "../../../../components/wireguard-peer-object.json#/properties/dns"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/wireguard-peer-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

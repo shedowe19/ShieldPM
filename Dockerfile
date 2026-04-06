@@ -63,6 +63,11 @@ COPY --from=frontend /app/dist /html/frontend
 # Static Files
 COPY rootfs /
 
+# --- WireGuard Support ---
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wireguard-tools \
+    && rm -rf /var/lib/apt/lists/*
+
 # --- Setup ---
 WORKDIR /app
 RUN echo "exit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d && \

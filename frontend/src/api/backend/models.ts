@@ -387,3 +387,40 @@ export interface ChatIntegration {
 	meta: Record<string, unknown>;
 	user?: User;
 }
+
+export interface WireguardPeer {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	ownerUserId: number;
+	name: string;
+	description?: string;
+	clientAddress: string;
+	clientPublicKey: string;
+	serverPublicKey: string;
+	endpoint?: string;
+	allowedIps: string;
+	persistentKeepalive: number;
+	dns?: string;
+	status: number;
+	lastHandshake?: string;
+	transferRx: number;
+	transferTx: number;
+	meta: Record<string, unknown>;
+	owner?: User;
+}
+
+export interface WireguardServer {
+	available: boolean;
+	publicKey: string | null;
+	endpoint: string | null;
+	listenPort: number;
+	subnet: string;
+	interfaceUp: boolean;
+}
+
+export interface WireguardListResponse {
+	peers: WireguardPeer[];
+	server: WireguardServer;
+}
+

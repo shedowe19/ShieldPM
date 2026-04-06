@@ -1,0 +1,43 @@
+{
+    "operationId": "deleteWireguardPeer",
+    "summary": "Delete a WireGuard Peer",
+    "tags": [
+        "wireguard"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "wireguard_peers.manage"
+            ]
+        }
+    ],
+    "parameters": [
+        {
+            "in": "path",
+            "name": "id",
+            "schema": {
+                "type": "integer",
+                "minimum": 1
+            },
+            "required": true,
+            "description": "Peer ID"
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
