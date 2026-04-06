@@ -216,20 +216,22 @@ const isInterfaceUp = () => {
  */
 const applyConfig = async () => {
 	try {
+		const envPrefix = "WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go";
 		if (isInterfaceUp()) {
 			// Sync config without restarting (graceful)
 			exec(`wg syncconf ${WG_INTERFACE} <(wg-quick strip ${WG_INTERFACE})`);
 			logger.info("WireGuard: Interface config synced");
 		} else {
-			exec(`wg-quick up ${wgConfFile}`);
+			exec(`${envPrefix} wg-quick up ${wgConfFile}`);
 			logger.info("WireGuard: Interface brought up");
 		}
 	} catch (err) {
 		logger.error("WireGuard: Failed to apply config:", err.message);
 		// Try a full restart
 		try {
-			exec(`wg-quick down ${wgConfFile} 2>/dev/null || true`);
-			exec(`wg-quick up ${wgConfFile}`);
+			exec(`wg-quick down ${wgConfFile} 2>/dev/null || true`, true);
+			const envPrefix = "WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go";
+			exec(`${envPrefix} wg-quick up ${wgConfFile}`);
 			logger.info("WireGuard: Interface restarted successfully");
 		} catch (restartErr) {
 			logger.error("WireGuard: Failed to restart interface:", restartErr.message);
