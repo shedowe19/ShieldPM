@@ -458,9 +458,9 @@ export function WireguardTunnels() {
 													: "—"}
 											</TableCell>
 											<TableCell className="text-xs font-mono">
-												<span className="text-green-500">↓{formatBytes(peer.transferRx)}</span>
+												<span className="text-green-500">↓{formatBytes(peer.transferRx || 0)}</span>
 												{" / "}
-												<span className="text-blue-500">↑{formatBytes(peer.transferTx)}</span>
+												<span className="text-blue-500">↑{formatBytes(peer.transferTx || 0)}</span>
 											</TableCell>
 											<TableCell className="text-right space-x-1">
 												<HasPermission
