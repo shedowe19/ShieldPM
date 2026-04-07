@@ -353,6 +353,19 @@ const internalWireguard = {
 			meta: JSON.stringify(newMeta),
 		});
 
+		// If endpoint or port changed, update all existing peers' endpoint field to stay in sync
+		if (data.endpoint !== undefined || data.listen_port !== undefined) {
+			const peers = await WireguardPeer.query().where("is_deleted", 0);
+			const newEndpoint = newMeta.endpoint ? `${newMeta.endpoint}:${newMeta.listen_port}` : null;
+			
+			for (const peer of peers) {
+				await WireguardPeer.query().findById(peer.id).patch({
+					endpoint: newEndpoint,
+				});
+			}
+			logger.info(`WireGuard: Updated endpoint for ${peers.length} peer(s) to ${newEndpoint}`);
+		}
+
 		// Re-sync and apply config if WG is available
 		if (isWgAvailable()) {
 			await syncConfig();

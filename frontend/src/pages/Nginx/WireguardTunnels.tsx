@@ -11,7 +11,7 @@ import {
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { Lock, Network, Settings, Shield } from "lucide-react";
+import { Lock, Network, RefreshCcw, Settings, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { WireguardPeer } from "@/api/backend";
 import { getWireguardSettings, updateWireguardSettings } from "@/api/backend/wireguardSettings";
@@ -459,9 +459,19 @@ export function WireguardTunnels() {
 													: "—"}
 											</TableCell>
 											<TableCell className="text-xs font-mono">
-												<span className="text-green-500">↓{formatBytes(peer.transferRx || 0)}</span>
-												{" / "}
-												<span className="text-blue-500">↑{formatBytes(peer.transferTx || 0)}</span>
+												<div className="flex flex-col space-y-0.5">
+													<div className="flex items-center gap-1.5">
+														<span className="text-green-500">↓{formatBytes(peer.transferRx || 0)}</span>
+														<span className="text-muted-foreground opacity-30">|</span>
+														<span className="text-blue-500">↑{formatBytes(peer.transferTx || 0)}</span>
+													</div>
+													{peer.persistentKeepalive > 0 && (
+														<div className="text-[10px] text-muted-foreground flex items-center gap-1 opacity-70">
+															<RefreshCcw className="h-2.5 w-2.5" />
+															<span>Keepalive: {peer.persistentKeepalive}s</span>
+														</div>
+													)}
+												</div>
 											</TableCell>
 											<TableCell className="text-right space-x-1">
 												<HasPermission
