@@ -175,7 +175,7 @@ const syncConfig = async () => {
 PrivateKey = ${serverPrivateKey}
 Address = ${settings.server_address}
 ListenPort = ${settings.listen_port}
-MTU = 1420
+MTU = 1300
 SaveConfig = false
 `;
 
