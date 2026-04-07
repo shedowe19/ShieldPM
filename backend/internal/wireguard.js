@@ -213,26 +213,32 @@ const isInterfaceUp = () => {
 
 /**
  * Bring the WG interface up or reload it
+ * @param {boolean} forceRestart
  */
-const applyConfig = async () => {
+const applyConfig = async (forceRestart = false) => {
 	try {
 		const envPrefix = "WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go";
-		if (isInterfaceUp()) {
+
+		if (!forceRestart && isInterfaceUp()) {
 			// Sync config without restarting (graceful)
 			exec(`bash -c "wg syncconf ${WG_INTERFACE} <(wg-quick strip ${wgConfFile})"`);
 			logger.info("WireGuard: Interface config synced");
 		} else {
+			// Full restart if forced or down
+			if (isInterfaceUp()) {
+				exec(`wg-quick down ${wgConfFile} 2>/dev/null || true`, true);
+			}
 			exec(`${envPrefix} wg-quick up ${wgConfFile}`);
-			logger.info("WireGuard: Interface brought up");
+			logger.info(forceRestart ? "WireGuard: Interface restarted" : "WireGuard: Interface brought up");
 		}
 	} catch (err) {
 		logger.error("WireGuard: Failed to apply config:", err.message);
-		// Try a full restart
+		// Try a fallback restart
 		try {
 			exec(`wg-quick down ${wgConfFile} 2>/dev/null || true`, true);
 			const envPrefix = "WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go";
 			exec(`${envPrefix} wg-quick up ${wgConfFile}`);
-			logger.info("WireGuard: Interface restarted successfully");
+			logger.info("WireGuard: Interface fallback restart successful");
 		} catch (restartErr) {
 			logger.error("WireGuard: Failed to restart interface:", restartErr.message);
 		}
@@ -282,6 +288,16 @@ const internalWireguard = {
 	init: async () => {
 		logger.info("Initializing WireGuard Tunnels...");
 
+		// Global iptables clear as requested by user
+		try {
+			logger.info("WireGuard: Resetting iptables chains...");
+			exec("iptables -F FORWARD", true);
+			exec("iptables -t nat -F POSTROUTING", true);
+			exec("iptables -t mangle -F POSTROUTING", true);
+		} catch (e) {
+			// Might fail if not installed or restricted, continue anyway
+		}
+
 		if (!isWgAvailable()) {
 			logger.warn("WireGuard (wg) CLI not found, skipping initialization");
 			return;
@@ -297,9 +313,9 @@ const internalWireguard = {
 				await WireguardPeer.query().patch({ status: 2 }).where("is_deleted", 0);
 			}
 
-			// Write config and bring interface up
+			// Write config and force restart interface to apply PostUp rules
 			await syncConfig();
-			await applyConfig();
+			await applyConfig(true);
 
 			// Update statuses from live data
 			await internalWireguard.refreshStatuses();
