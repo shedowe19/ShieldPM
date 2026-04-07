@@ -122,9 +122,11 @@ export function WireguardTunnels() {
 	const getStatusBadge = (peer: WireguardPeer) => {
 		const meta = peer.meta as Record<string, unknown>;
 
-		// Check if there was a handshake within the last 3 minutes
-		const isRecentHandshake =
-			peer.lastHandshake && dayjs().diff(dayjs(peer.lastHandshake), "minute") < 3;
+		let isRecentHandshake = false;
+		if (peer.lastHandshake) {
+			const handshakeStr = peer.lastHandshake.endsWith("Z") ? peer.lastHandshake : `${peer.lastHandshake}Z`;
+			isRecentHandshake = dayjs().diff(dayjs(handshakeStr), "minute") < 5;
+		}
 
 		switch (peer.status) {
 			case 0:
