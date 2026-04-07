@@ -456,7 +456,7 @@ export function WireguardTunnels() {
 											<TableCell>{getStatusBadge(peer)}</TableCell>
 											<TableCell className="text-sm">
 												{peer.lastHandshake
-													? dayjs(peer.lastHandshake).fromNow()
+													? dayjs(peer.lastHandshake.endsWith("Z") ? peer.lastHandshake : `${peer.lastHandshake}Z`).fromNow()
 													: "—"}
 											</TableCell>
 											<TableCell className="text-xs font-mono">
