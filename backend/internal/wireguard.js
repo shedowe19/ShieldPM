@@ -246,7 +246,8 @@ const applyConfig = async () => {
 const parsePeerStatuses = () => {
 	const statuses = new Map();
 	try {
-		const output = exec(`wg show ${WG_INTERFACE} dump`, true);
+		// Use absolute path in case systemd/Node lacks /usr/bin in $PATH somehow
+		const output = exec(`/usr/bin/wg show ${WG_INTERFACE} dump`);
 		const lines = output.split("\n");
 
 		// Skip the first line (interface info)
@@ -254,14 +255,14 @@ const parsePeerStatuses = () => {
 			const parts = lines[i].split("\t");
 			if (parts.length >= 7) {
 				const publicKey = parts[0];
-				const lastHandshake = parseInt(parts[4], 10);
-				const transferRx = parseInt(parts[5], 10);
-				const transferTx = parseInt(parts[6], 10);
+				const lastHandshake = parseInt(parts[4], 10) || 0;
+				const transferRx = parseInt(parts[5], 10) || 0;
+				const transferTx = parseInt(parts[6], 10) || 0;
 				statuses.set(publicKey, { lastHandshake, transferRx, transferTx });
 			}
 		}
-	} catch {
-		// Interface might not be up
+	} catch (err) {
+		logger.error("WireGuard: parsePeerStatuses failed: " + err.message);
 	}
 	return statuses;
 };
