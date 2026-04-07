@@ -92,9 +92,13 @@ class WireguardPeer extends Model {
 		}
 
 		// Ensure last_handshake is a proper ISO-8601 string for the frontend
-		if (boolJson.last_handshake && !boolJson.last_handshake.includes("Z")) {
-			// Replace space with T and append Z to mark it as UTC
-			boolJson.last_handshake = boolJson.last_handshake.replace(" ", "T") + "Z";
+		if (boolJson.last_handshake) {
+			if (typeof boolJson.last_handshake.toISOString === "function") {
+				boolJson.last_handshake = boolJson.last_handshake.toISOString();
+			} else if (typeof boolJson.last_handshake === "string" && !boolJson.last_handshake.includes("Z")) {
+				// Replace space with T and append Z to mark it as UTC
+				boolJson.last_handshake = boolJson.last_handshake.replace(" ", "T") + "Z";
+			}
 		}
 
 		return boolJson;
