@@ -90,6 +90,13 @@ class WireguardPeer extends Model {
 				logger.error("Decryption failed for wireguard preshared_key", err);
 			}
 		}
+
+		// Ensure last_handshake is a proper ISO-8601 string for the frontend
+		if (boolJson.last_handshake && !boolJson.last_handshake.includes("Z")) {
+			// Replace space with T and append Z to mark it as UTC
+			boolJson.last_handshake = boolJson.last_handshake.replace(" ", "T") + "Z";
+		}
+
 		return boolJson;
 	}
 

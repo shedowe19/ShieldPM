@@ -124,8 +124,7 @@ export function WireguardTunnels() {
 
 		let isRecentHandshake = false;
 		if (peer.lastHandshake) {
-			const handshakeStr = peer.lastHandshake.endsWith("Z") ? peer.lastHandshake : `${peer.lastHandshake}Z`;
-			isRecentHandshake = dayjs().diff(dayjs(handshakeStr), "minute") < 5;
+			isRecentHandshake = dayjs().diff(dayjs(peer.lastHandshake), "minute") < 5;
 		}
 
 		switch (peer.status) {
@@ -456,7 +455,7 @@ export function WireguardTunnels() {
 											<TableCell>{getStatusBadge(peer)}</TableCell>
 											<TableCell className="text-sm">
 												{peer.lastHandshake
-													? dayjs(peer.lastHandshake.endsWith("Z") ? peer.lastHandshake : `${peer.lastHandshake}Z`).fromNow()
+													? dayjs(peer.lastHandshake).fromNow()
 													: "—"}
 											</TableCell>
 											<TableCell className="text-xs font-mono">
