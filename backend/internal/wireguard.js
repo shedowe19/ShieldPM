@@ -178,9 +178,9 @@ ListenPort = ${settings.listen_port}
 SaveConfig = false
 `;
 
-	// Add PostUp/PostDown for NAT masquerading
-	config += `PostUp = iptables -A FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-PostDown = iptables -D FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+	// Add PostUp/PostDown for NAT masquerading and MTU clamping
+	config += `PostUp = iptables -A FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -I INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -A POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+PostDown = iptables -D FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -D INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -D POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 `;
 
 	for (const peer of peers) {
@@ -608,10 +608,10 @@ PersistentKeepalive = ${peer.persistent_keepalive}
 					transfer_tx: status.transferTx,
 				};
 
-				// A handshake within the last 3 minutes means the peer is "online"
+				// A handshake within the last 5 minutes means the peer is "online"
 				if (status.lastHandshake > 0) {
-					// MySQL requires YYYY-MM-DD HH:MM:SS format, not ISO-8601 with T and Z
-					patchData.last_handshake = new Date(status.lastHandshake * 1000).toISOString().slice(0, 19).replace('T', ' ');
+					// Use native Date object. Knex will format it perfectly for the specific DB driver
+					patchData.last_handshake = new Date(status.lastHandshake * 1000);
 				}
 
 				await peer.$query().patch(patchData);
