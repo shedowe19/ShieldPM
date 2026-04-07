@@ -175,12 +175,13 @@ const syncConfig = async () => {
 PrivateKey = ${serverPrivateKey}
 Address = ${settings.server_address}
 ListenPort = ${settings.listen_port}
+MTU = 1300
 SaveConfig = false
 `;
 
 	// Add PostUp/PostDown for NAT masquerading and MTU clamping
-	config += `PostUp = iptables -A FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -I INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -A POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-PostDown = iptables -D FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -D INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -D POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+	config += `PostUp = sysctl -w net.ipv4.conf.all.rp_filter=0; sysctl -w net.ipv4.conf.${WG_INTERFACE}.rp_filter=0; iptables -I INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -I FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -A POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu; iptables -t mangle -A FORWARD -i ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+PostDown = iptables -D INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -D FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -D POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu; iptables -t mangle -D FORWARD -i ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 `;
 
 	for (const peer of peers) {
