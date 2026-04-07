@@ -610,7 +610,8 @@ PersistentKeepalive = ${peer.persistent_keepalive}
 
 				// A handshake within the last 3 minutes means the peer is "online"
 				if (status.lastHandshake > 0) {
-					patchData.last_handshake = new Date(status.lastHandshake * 1000).toISOString();
+					// MySQL requires YYYY-MM-DD HH:MM:SS format, not ISO-8601 with T and Z
+					patchData.last_handshake = new Date(status.lastHandshake * 1000).toISOString().slice(0, 19).replace('T', ' ');
 				}
 
 				await peer.$query().patch(patchData);
