@@ -9,10 +9,7 @@ export interface UpdateWireguardPeerPayload {
 	dns?: string;
 }
 
-export async function updateWireguardPeer(
-	id: number,
-	payload: UpdateWireguardPeerPayload,
-): Promise<WireguardPeer> {
+export async function updateWireguardPeer(id: number, payload: UpdateWireguardPeerPayload): Promise<WireguardPeer> {
 	return await api.put({
 		url: `/nginx/wireguard/${id}`,
 		data: payload,

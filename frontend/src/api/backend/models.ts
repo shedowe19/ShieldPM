@@ -423,4 +423,3 @@ export interface WireguardListResponse {
 	peers: WireguardPeer[];
 	server: WireguardServer;
 }
-

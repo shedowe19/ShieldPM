@@ -112,7 +112,11 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 											<T id="description" />
 										</FormLabel>
 										<FormControl>
-											<Textarea placeholder="Nextcloud, Home Assistant, etc." {...field} rows={2} />
+											<Textarea
+												placeholder="Nextcloud, Home Assistant, etc."
+												{...field}
+												rows={2}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -146,15 +150,18 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 												<T id="wireguard.peer.keepalive" />
 											</FormLabel>
 											<FormControl>
-												<Input 
-													type="number" 
-													min={0} 
-													max={65535} 
-													{...field} 
+												<Input
+													type="number"
+													min={0}
+													max={65535}
+													{...field}
 													onChange={(e) => {
-														const val = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
+														const val =
+															e.target.value === ""
+																? undefined
+																: Number.parseInt(e.target.value, 10);
 														field.onChange(val);
-													}} 
+													}}
 												/>
 											</FormControl>
 											<FormMessage />

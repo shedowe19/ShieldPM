@@ -262,9 +262,9 @@ const parsePeerStatuses = () => {
 			const parts = lines[i].split("\t");
 			if (parts.length >= 7) {
 				const publicKey = parts[0];
-				const lastHandshake = parseInt(parts[4], 10) || 0;
-				const transferRx = parseInt(parts[5], 10) || 0;
-				const transferTx = parseInt(parts[6], 10) || 0;
+				const lastHandshake = Number.parseInt(parts[4], 10) || 0;
+				const transferRx = Number.parseInt(parts[5], 10) || 0;
+				const transferTx = Number.parseInt(parts[6], 10) || 0;
 				statuses.set(publicKey, { lastHandshake, transferRx, transferTx });
 			}
 		}
@@ -349,15 +349,18 @@ const internalWireguard = {
 			server_address: data.server_address !== undefined ? data.server_address : current.server_address,
 		};
 
-		await settingModel.query().where("id", "wireguard-config").patch({
-			meta: JSON.stringify(newMeta),
-		});
+		await settingModel
+			.query()
+			.where("id", "wireguard-config")
+			.patch({
+				meta: JSON.stringify(newMeta),
+			});
 
 		// If endpoint or port changed, update all existing peers' endpoint field to stay in sync
 		if (data.endpoint !== undefined || data.listen_port !== undefined) {
 			const peers = await WireguardPeer.query().where("is_deleted", 0);
 			const newEndpoint = newMeta.endpoint ? `${newMeta.endpoint}:${newMeta.listen_port}` : null;
-			
+
 			for (const peer of peers) {
 				await WireguardPeer.query().findById(peer.id).patch({
 					endpoint: newEndpoint,
@@ -397,9 +400,7 @@ const internalWireguard = {
 		try {
 			ensureServerKeys();
 			const publicKey = getServerPublicKey();
-			const endpointDisplay = settings.endpoint
-				? `${settings.endpoint}:${settings.listen_port}`
-				: null;
+			const endpointDisplay = settings.endpoint ? `${settings.endpoint}:${settings.listen_port}` : null;
 
 			return {
 				available: true,
@@ -441,9 +442,7 @@ const internalWireguard = {
 		const presharedKey = generatePresharedKey();
 		const serverPublicKey = getServerPublicKey();
 		const clientAddress = await getNextAvailableIP(settings.subnet);
-		const endpoint = settings.endpoint
-			? `${settings.endpoint}:${settings.listen_port}`
-			: null;
+		const endpoint = settings.endpoint ? `${settings.endpoint}:${settings.listen_port}` : null;
 
 		// Insert peer into DB
 		const peerData = {

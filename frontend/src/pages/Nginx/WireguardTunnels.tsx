@@ -146,9 +146,7 @@ export function WireguardTunnels() {
 						<T id="online" />
 					</Badge>
 				) : (
-					<Badge className="bg-purple-500/70 text-white hover:bg-purple-500">
-						Waiting
-					</Badge>
+					<Badge className="bg-purple-500/70 text-white hover:bg-purple-500">Waiting</Badge>
 				);
 			case 3:
 				return (
@@ -234,9 +232,7 @@ export function WireguardTunnels() {
 									<T id="wireguard.server.publicKey" />
 								</p>
 								<p className="font-mono text-xs mt-1 truncate" title={server.publicKey || ""}>
-									{server.publicKey
-										? `${server.publicKey.substring(0, 20)}...`
-										: "—"}
+									{server.publicKey ? `${server.publicKey.substring(0, 20)}...` : "—"}
 								</p>
 							</div>
 							<div>
@@ -270,10 +266,14 @@ export function WireguardTunnels() {
 								</Button>
 							) : (
 								<div className="flex gap-2">
-									<Button variant="outline" size="sm" onClick={() => {
-										setIsSettingsEditing(false);
-										if (wgSettings) setSettingsForm(wgSettings);
-									}}>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											setIsSettingsEditing(false);
+											if (wgSettings) setSettingsForm(wgSettings);
+										}}
+									>
 										<T id="cancel" />
 									</Button>
 									<Button
@@ -305,7 +305,13 @@ export function WireguardTunnels() {
 									onChange={(e) => setSettingsForm({ ...settingsForm, endpoint: e.target.value })}
 								/>
 							) : (
-								<p className="font-mono text-sm">{settingsForm.endpoint || <span className="text-muted-foreground italic"><T id="wireguard.settings.endpoint.placeholder" /></span>}</p>
+								<p className="font-mono text-sm">
+									{settingsForm.endpoint || (
+										<span className="text-muted-foreground italic">
+											<T id="wireguard.settings.endpoint.placeholder" />
+										</span>
+									)}
+								</p>
 							)}
 							<p className="text-xs text-muted-foreground mt-1">
 								<T id="wireguard.settings.endpoint.hint" />
@@ -323,7 +329,12 @@ export function WireguardTunnels() {
 									max={65535}
 									className="flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm font-mono"
 									value={settingsForm.listenPort}
-									onChange={(e) => setSettingsForm({ ...settingsForm, listenPort: parseInt(e.target.value, 10) || 51820 })}
+									onChange={(e) =>
+										setSettingsForm({
+											...settingsForm,
+											listenPort: Number.parseInt(e.target.value, 10) || 51820,
+										})
+									}
 								/>
 							) : (
 								<p className="font-mono text-sm">{String(settingsForm.listenPort || 51820)}</p>
@@ -347,7 +358,10 @@ export function WireguardTunnels() {
 							)}
 						</div>
 						<div>
-							<label htmlFor="wg-server-address-input" className="text-xs text-muted-foreground block mb-1">
+							<label
+								htmlFor="wg-server-address-input"
+								className="text-xs text-muted-foreground block mb-1"
+							>
 								Server Address
 							</label>
 							{isSettingsEditing ? (
@@ -357,7 +371,9 @@ export function WireguardTunnels() {
 									className="flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm font-mono"
 									placeholder="10.8.0.1/24"
 									value={settingsForm.serverAddress}
-									onChange={(e) => setSettingsForm({ ...settingsForm, serverAddress: e.target.value })}
+									onChange={(e) =>
+										setSettingsForm({ ...settingsForm, serverAddress: e.target.value })
+									}
 								/>
 							) : (
 								<p className="font-mono text-sm">{settingsForm.serverAddress}</p>
@@ -449,21 +465,21 @@ export function WireguardTunnels() {
 													)}
 												</div>
 											</TableCell>
-											<TableCell className="font-mono text-sm">
-												{peer.clientAddress}
-											</TableCell>
+											<TableCell className="font-mono text-sm">{peer.clientAddress}</TableCell>
 											<TableCell>{getStatusBadge(peer)}</TableCell>
 											<TableCell className="text-sm">
-												{peer.lastHandshake
-													? dayjs(peer.lastHandshake).fromNow()
-													: "—"}
+												{peer.lastHandshake ? dayjs(peer.lastHandshake).fromNow() : "—"}
 											</TableCell>
 											<TableCell className="text-xs font-mono">
 												<div className="flex flex-col space-y-0.5">
 													<div className="flex items-center gap-1.5">
-														<span className="text-green-500">↓{formatBytes(peer.transferRx || 0)}</span>
+														<span className="text-green-500">
+															↓{formatBytes(peer.transferRx || 0)}
+														</span>
 														<span className="text-muted-foreground opacity-30">|</span>
-														<span className="text-blue-500">↑{formatBytes(peer.transferTx || 0)}</span>
+														<span className="text-blue-500">
+															↑{formatBytes(peer.transferTx || 0)}
+														</span>
 													</div>
 													{peer.persistentKeepalive > 0 && (
 														<div className="text-[10px] text-muted-foreground flex items-center gap-1 opacity-70">
@@ -474,11 +490,7 @@ export function WireguardTunnels() {
 												</div>
 											</TableCell>
 											<TableCell className="text-right space-x-1">
-												<HasPermission
-													section={WIREGUARD_PEERS}
-													permission={MANAGE}
-													hideError
-												>
+												<HasPermission section={WIREGUARD_PEERS} permission={MANAGE} hideError>
 													<TooltipProvider>
 														<Tooltip>
 															<TooltipTrigger asChild>
