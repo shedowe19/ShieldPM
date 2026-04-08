@@ -367,6 +367,11 @@
 			"type": ["string", "null"],
 			"description": "Encrypted Private Key",
 			"example": "encrypted..."
+		},
+		"turbo_loader": {
+			"type": "boolean",
+			"description": "Enable Browser Turbo-Loader (Multi-Part Injection) for large file downloads",
+			"example": false
 		}
 	}
 }

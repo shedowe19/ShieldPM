@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShieldPM Turbo Loader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.4);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.08), transparent 25%);
+            overflow: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .rocket {
+            font-size: 48px;
+            display: inline-block;
+            margin-bottom: 16px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #10b981, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .filename {
+            font-size: 14px;
+            color: var(--text-muted);
+            word-break: break-all;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-block;
+            font-family: monospace;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-2px);
+            background: rgba(0,0,0,0.3);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .primary-value { color: #10b981; }
+        .speed-value { color: #38bdf8; }
+        .eta-value { color: #f43f5e; }
+
+        .progress-container {
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .progress-bar-bg {
+            height: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #38bdf8);
+            border-radius: 999px;
+            width: 0%;
+            transition: width 0.2s linear;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .chunks-container {
+            display: flex;
+            gap: 4px;
+            margin-top: 12px;
+            justify-content: space-between;
+        }
+
+        .chunk {
+            flex: 1;
+            height: 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .chunk-fill {
+            height: 100%;
+            background: #38bdf8;
+            width: 0%;
+            transition: width 0.2s linear;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-start:disabled {
+            background: #334155;
+            color: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        #error-msg {
+            color: #ef4444;
+            margin-top: 16px;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="rocket">🚀</div>
+        <h1>Turbo-Loader</h1>
+        <div class="filename" id="filename">Loading...</div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-label">Progress</div>
+            <div class="stat-value primary-value" id="percent">0%</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Speed</div>
+            <div class="stat-value speed-value" id="speed">0 MB/s</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">ETA</div>
+            <div class="stat-value eta-value" id="eta">--:--</div>
+        </div>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-bar-bg">
+            <div class="progress-fill" id="main-progress"></div>
+        </div>
+        <div class="chunks-container" id="chunks">
+            <!-- Chunks will be generated dynamically -->
+        </div>
+    </div>
+
+    <button class="btn-start" id="start-btn">Start Turbo Download</button>
+    <div id="error-msg"></div>
+</div>
+
+<script>
+    const CHUNK_COUNT = 8;
+    const originUrl = window.location.pathname + window.location.search + (window.location.search ? '&' : '?') + 'turbo=0';
+    let rawFilename = window.location.pathname.split('/').pop() || 'downloaded_file';
+    const filename = decodeURIComponent(rawFilename);
+    let totalSize = 0;
+    
+    document.getElementById('filename').textContent = filename;
+
+    const startBtn = document.getElementById('start-btn');
+    const chunksContainer = document.getElementById('chunks');
+    const percentEl = document.getElementById('percent');
+    const speedEl = document.getElementById('speed');
+    const etaEl = document.getElementById('eta');
+    const mainProgressEl = document.getElementById('main-progress');
+    const errorMsgEl = document.getElementById('error-msg');
+
+    // Create chunk UI
+    for(let i = 0; i < CHUNK_COUNT; i++) {
+        const c = document.createElement('div');
+        c.className = 'chunk';
+        const fill = document.createElement('div');
+        fill.className = 'chunk-fill';
+        fill.id = `chunk-${i}`;
+        c.appendChild(fill);
+        chunksContainer.appendChild(c);
+    }
+
+    function showError(msg) {
+        errorMsgEl.textContent = msg;
+        errorMsgEl.style.display = 'block';
+        startBtn.disabled = false;
+        startBtn.textContent = 'Retry Download';
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+    async function init() {
+        try {
+            const res = await fetch(originUrl, { method: 'HEAD' });
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+            totalSize = parseInt(res.headers.get('Content-Length'), 10);
+            
+            if (!totalSize) {
+                showError("Content-Length not reported by server. Fallback to normal download.");
+                startBtn.textContent = "Standard Download";
+                startBtn.onclick = () => window.location.href = originUrl;
+                return;
+            }
+
+            // Normal init
+            startBtn.addEventListener('click', startDownload);
+        } catch (err) {
+            console.error(err);
+            showError("Failed to fetch file info. Target might be unreachable.");
+            startBtn.textContent = "Standard Download";
+            startBtn.onclick = () => window.location.href = originUrl;
+        }
+    }
+
+    async function startDownload() {
+        startBtn.disabled = true;
+        errorMsgEl.style.display = 'none';
+
+        let fileHandle = null;
+        let writableStream = null;
+        let isFallback = false;
+
+        // Try File System Access API
+        if (window.showSaveFilePicker) {
+            try {
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: filename
+                });
+                writableStream = await fileHandle.createWritable();
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    startBtn.disabled = false;
+                    return; // User cancelled
+                }
+                console.warn(err);
+                isFallback = true;
+            }
+        } else {
+            isFallback = true;
+        }
+
+        if (isFallback) {
+            console.log("Using memory array buffer fallback");
+            // We'll store all chunks in memory. Might crash browser if file > 1-2GB.
+        }
+
+        startBtn.textContent = "Downloading...";
+
+        const chunkSize = Math.ceil(totalSize / CHUNK_COUNT);
+        let downloadedBytes = 0;
+        let startTime = Date.now();
+        let lastReportTime = startTime;
+        let lastReportBytes = 0;
+
+        const allChunksData = isFallback ? new Uint8Array(totalSize) : null;
+
+        const downloadChunk = async (chunkIndex) => {
+            const start = chunkIndex * chunkSize;
+            const end = Math.min(start + chunkSize - 1, totalSize - 1);
+            if (start >= totalSize) return;
+
+            const chunkFillEl = document.getElementById(`chunk-${chunkIndex}`);
+            
+            const res = await fetch(originUrl, {
+                headers: { 'Range': `bytes=${start}-${end}` }
+            });
+
+            if(!res.ok && res.status !== 206) {
+                throw new Error(`Chunk ${chunkIndex} failed with ${res.status}`);
+            }
+
+            const reader = res.body.getReader();
+            let chunkDownloaded = 0;
+            const chunkTotal = end - start + 1;
+
+            while(true) {
+                const { done, value } = await reader.read();
+                if(done) break;
+
+                const len = value.length;
+
+                // Write to stream or memory
+                if (isFallback) {
+                    allChunksData.set(value, start + chunkDownloaded);
+                } else {
+                    await writableStream.write({
+                        type: 'write',
+                        position: start + chunkDownloaded,
+                        data: value
+                    });
+                }
+
+                chunkDownloaded += len;
+                downloadedBytes += len;
+
+                // Update UI for this chunk
+                const chunkPrc = (chunkDownloaded / chunkTotal) * 100;
+                chunkFillEl.style.width = `${chunkPrc}%`;
+
+                // Global Update UI globally every 500ms
+                const now = Date.now();
+                if (now - lastReportTime > 500) {
+                    const diffTime = (now - lastReportTime) / 1000;
+                    const diffBytes = downloadedBytes - lastReportBytes;
+                    const spd = diffBytes / diffTime;
+                    
+                    speedEl.textContent = `${formatBytes(spd)}/s`;
+                    
+                    const leftBytes = totalSize - downloadedBytes;
+                    const etaSec = Math.round(leftBytes / spd);
+                    
+                    const m = Math.floor(etaSec / 60);
+                    const s = etaSec % 60;
+                    etaEl.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                    
+                    const totalPrc = (downloadedBytes / totalSize) * 100;
+                    percentEl.textContent = `${totalPrc.toFixed(1)}%`;
+                    mainProgressEl.style.width = `${totalPrc}%`;
+
+                    lastReportTime = now;
+                    lastReportBytes = downloadedBytes;
+                }
+            }
+        };
+
+        try {
+            const promises = [];
+            for (let i = 0; i < CHUNK_COUNT; i++) {
+                promises.push(downloadChunk(i));
+            }
+            await Promise.all(promises);
+
+            if (!isFallback) {
+                await writableStream.close();
+            } else {
+                // Trigger download from memory blob
+                const blob = new Blob([allChunksData]);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 100);
+            }
+
+            percentEl.textContent = `100%`;
+            mainProgressEl.style.width = `100%`;
+            speedEl.textContent = `Completed`;
+            etaEl.textContent = `00:00`;
+            startBtn.textContent = 'Download Complete! 🎉';
+            startBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+
+        } catch (err) {
+            console.error(err);
+            if (!isFallback && writableStream) {
+                await writableStream.close();
+            }
+            showError("Download failed: " + err.message);
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>
