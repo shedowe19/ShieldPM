@@ -249,9 +249,8 @@
         let lastTime = Date.now();
         let lastBytes = 0;
 
-        // ── download one chunk (with automatic retry + byte-range resume) ──────
-        const MAX_RETRIES = 6;
-        const RETRY_BASE_MS = 1000; // 1s, 2s, 4s, 8s…
+        // ── download one chunk (unlimited retries + byte-range resume) ──────────
+        const RETRY_BASE_MS = 1000; // 1s, 2s, 4s … capped at 30s
 
         async function downloadChunk(idx) {
             const start = idx * chunkSize;
@@ -266,12 +265,12 @@
             let chunkGot    = 0;    // total bytes received so far for this chunk
             let flushedIdx  = 0;    // index into pieces[] already written to FSFA stream
 
-            for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            for (let attempt = 0; ; attempt++) {
                 // On retry: visually indicate pause (amber)
                 if (attempt > 0) {
                     fillEl.style.background = '#f59e0b';
-                    const delay = Math.min(RETRY_BASE_MS * Math.pow(2, attempt - 1), 16000);
-                    console.warn(`[TurboLoader] Chunk ${idx}: retry ${attempt}/${MAX_RETRIES} in ${delay}ms`);
+                    const delay = Math.min(RETRY_BASE_MS * Math.pow(2, attempt - 1), 30000);
+                    console.warn(`[TurboLoader] Chunk ${idx}: retry #${attempt} in ${delay}ms (no limit)`);    
                     await new Promise(r => setTimeout(r, delay));
                     fillEl.style.background = '#38bdf8';
                 }
@@ -352,10 +351,8 @@
                     return; // ✓ success
 
                 } catch (err) {
-                    if (attempt >= MAX_RETRIES) {
-                        throw new Error(`Chunk ${idx} permanently failed after ${MAX_RETRIES} retries: ${err.message}`);
-                    }
-                    // loop → retry
+                    // log and keep retrying — no limit
+                    console.warn(`[TurboLoader] Chunk ${idx} error (attempt ${attempt}):`, err.message);
                 }
             }
         }
