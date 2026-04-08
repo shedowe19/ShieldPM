@@ -1227,17 +1227,22 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<IconBolt className="h-4 w-4 text-emerald-500" />
 													<AlertTitle>Turbo-Loader</AlertTitle>
 													<AlertDescription>
-														Intercept large static files and deliver a specialized HTML interface for maximum parallel download speeds in the browser.
+														Intercept large static files and deliver a specialized HTML
+														interface for maximum parallel download speeds in the browser.
 													</AlertDescription>
 												</Alert>
-												
+
 												<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
 													<div className="space-y-0.5">
-														<Label htmlFor="turboLoader" className="text-base cursor-pointer">
+														<Label
+															htmlFor="turboLoader"
+															className="text-base cursor-pointer"
+														>
 															Enable Multi-Part Injection
 														</Label>
 														<p className="text-sm text-muted-foreground">
-															Converts specific files (.mp4, .zip, etc) into an accelerated HTML download page.
+															Converts specific files (.mp4, .zip, etc) into an
+															accelerated HTML download page.
 														</p>
 													</div>
 													<Field name="turboLoader" type="checkbox">
