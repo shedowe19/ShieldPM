@@ -23,6 +23,7 @@ import internalNginx from "./internal/nginx.js";
 import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
+import internalWireguard from "./internal/wireguard.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";
@@ -55,6 +56,7 @@ async function appStart() {
 		await internalNginx.reload();
 		internalCloudflared.init();
 		internalTor.init();
+		internalWireguard.init();
 		await internalOAuth2Proxy.init();
 		internalDocker.init();
 		internalGitOps.init();

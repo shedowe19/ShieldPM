@@ -1,0 +1,37 @@
+{
+    "operationId": "getWireguardPeers",
+    "summary": "Get all WireGuard Peers",
+    "tags": [
+        "wireguard"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "wireguard_peers.list"
+            ]
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "200 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "peers": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "../../../components/wireguard-peer-object.json"
+                                }
+                            },
+                            "server": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

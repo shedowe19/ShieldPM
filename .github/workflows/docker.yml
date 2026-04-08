@@ -12,6 +12,8 @@ on:
       - backend/**
       - rootfs/**
       - nginx-quic/**
+      - .version
+      - "**/package.json"
 
     tags:
       - 'v*'
@@ -24,6 +26,8 @@ on:
       - backend/**
       - rootfs/**
       - nginx-quic/**
+      - .version
+      - "**/package.json"
 
   workflow_dispatch:
 

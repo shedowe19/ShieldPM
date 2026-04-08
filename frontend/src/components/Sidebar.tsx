@@ -33,6 +33,7 @@ import {
 	type Section,
 	STREAMS,
 	TOR_ONIONS,
+	WIREGUARD_PEERS,
 	VIEW,
 } from "src/modules/Permissions";
 
@@ -98,7 +99,12 @@ const menuItems: MenuItem[] = [
 				permissionSection: TOR_ONIONS,
 				permission: VIEW,
 			},
-
+			{
+				to: "/nginx/wireguard",
+				label: "wireguard.title",
+				permissionSection: WIREGUARD_PEERS,
+				permission: VIEW,
+			},
 			{
 				to: "/nginx/404",
 				label: "dead-hosts",

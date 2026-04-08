@@ -176,6 +176,25 @@
 				"$ref": "./paths/nginx/tor-onion/id/delete.json"
 			}
 		},
+		"/nginx/wireguard": {
+			"get": {
+				"$ref": "./paths/nginx/wireguard/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/wireguard/post.json"
+			}
+		},
+		"/nginx/wireguard/{id}": {
+			"get": {
+				"$ref": "./paths/nginx/wireguard/id/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/wireguard/id/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/wireguard/id/delete.json"
+			}
+		},
 		"/nginx/certificates/test-http": {
 			"post": {
 				"$ref": "./paths/nginx/certificates/test-http/post.json"

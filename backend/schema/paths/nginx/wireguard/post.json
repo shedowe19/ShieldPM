@@ -1,0 +1,58 @@
+{
+    "operationId": "createWireguardPeer",
+    "summary": "Create a WireGuard Peer",
+    "tags": [
+        "wireguard"
+    ],
+    "security": [
+        {
+            "bearerAuth": [
+                "wireguard_peers.manage"
+            ]
+        }
+    ],
+    "requestBody": {
+        "description": "WireGuard Peer Payload",
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "name"
+                    ],
+                    "properties": {
+                        "name": {
+                            "$ref": "../../../components/wireguard-peer-object.json#/properties/name"
+                        },
+                        "description": {
+                            "$ref": "../../../components/wireguard-peer-object.json#/properties/description"
+                        },
+                        "allowed_ips": {
+                            "$ref": "../../../components/wireguard-peer-object.json#/properties/allowed_ips"
+                        },
+                        "persistent_keepalive": {
+                            "$ref": "../../../components/wireguard-peer-object.json#/properties/persistent_keepalive"
+                        },
+                        "dns": {
+                            "$ref": "../../../components/wireguard-peer-object.json#/properties/dns"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "201": {
+            "description": "201 response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../components/wireguard-peer-object.json"
+                    }
+                }
+            }
+        }
+    }
+}
