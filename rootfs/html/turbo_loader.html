@@ -249,7 +249,10 @@
         let lastTime = Date.now();
         let lastBytes = 0;
 
-        // ── download one chunk ─────────────────────────────────────────────────
+        // ── download one chunk (with automatic retry + byte-range resume) ──────
+        const MAX_RETRIES = 6;
+        const RETRY_BASE_MS = 1000; // 1s, 2s, 4s, 8s…
+
         async function downloadChunk(idx) {
             const start = idx * chunkSize;
             const end   = Math.min(start + chunkSize - 1, totalSize - 1);
@@ -258,61 +261,105 @@
             const chunkTotal = end - start + 1;
             const fillEl = document.getElementById(`chunk-${idx}`);
 
-            const res = await fetch(originUrl, { headers: { Range: `bytes=${start}-${end}` } });
-            if (!res.ok && res.status !== 206) {
-                throw new Error(`Chunk ${idx} → HTTP ${res.status}`);
-            }
+            // Persistent state across retries for THIS chunk
+            const pieces    = [];   // all received Uint8Arrays (kept across retries)
+            let chunkGot    = 0;    // total bytes received so far for this chunk
+            let flushedIdx  = 0;    // index into pieces[] already written to FSFA stream
 
-            const reader = res.body.getReader();
-            const pieces = [];        // collect small reads; no upfront allocation
-            let chunkGot = 0;
+            for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                // On retry: visually indicate pause (amber)
+                if (attempt > 0) {
+                    fillEl.style.background = '#f59e0b';
+                    const delay = Math.min(RETRY_BASE_MS * Math.pow(2, attempt - 1), 16000);
+                    console.warn(`[TurboLoader] Chunk ${idx}: retry ${attempt}/${MAX_RETRIES} in ${delay}ms`);
+                    await new Promise(r => setTimeout(r, delay));
+                    fillEl.style.background = '#38bdf8';
+                }
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+                try {
+                    // Resume from where we left off inside this chunk
+                    const resumeFrom = start + chunkGot;
+                    const res = await fetch(originUrl, {
+                        headers: { Range: `bytes=${resumeFrom}-${end}` }
+                    });
 
-                pieces.push(value);
-                chunkGot        += value.length;
-                downloadedBytes += value.length;
-
-                // Chunk bar
-                fillEl.style.width = `${(chunkGot / chunkTotal) * 100}%`;
-
-                // Global stats every 400 ms
-                const now = Date.now();
-                if (now - lastTime > 400) {
-                    const dt = (now - lastTime) / 1000;
-                    const db = downloadedBytes - lastBytes;
-                    if (dt > 0 && db > 0) {
-                        const spd = db / dt;
-                        speedEl.textContent = `${formatBytes(spd)}/s`;
-                        const eta = Math.max(0, Math.round((totalSize - downloadedBytes) / spd));
-                        etaEl.textContent = `${String(Math.floor(eta / 60)).padStart(2,'0')}:${String(eta % 60).padStart(2,'0')}`;
+                    if (!res.ok && res.status !== 206) {
+                        throw new Error(`HTTP ${res.status}`);
                     }
-                    const pct = Math.min(100, (downloadedBytes / totalSize) * 100);
-                    percentEl.textContent = `${pct.toFixed(1)}%`;
-                    progressEl.style.width = `${pct}%`;
-                    lastTime  = now;
-                    lastBytes = downloadedBytes;
-                }
-            }
 
-            // Write or store
-            if (!isFallback) {
-                // FSFA: write each piece at the correct absolute offset
-                let pos = start;
-                for (const piece of pieces) {
-                    await writableStream.write({ type: 'write', position: pos, data: piece });
-                    pos += piece.length;
+                    // If server ignores Range and returns 200, skip already-got bytes
+                    const isFullResponse = res.status === 200;
+                    let skipBytes = isFullResponse ? chunkGot : 0;
+
+                    const reader = res.body.getReader();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        let data = value;
+
+                        if (skipBytes > 0) {
+                            if (data.length <= skipBytes) { skipBytes -= data.length; continue; }
+                            data = data.slice(skipBytes);
+                            skipBytes = 0;
+                        }
+
+                        pieces.push(data);
+                        chunkGot        += data.length;
+                        downloadedBytes += data.length;
+
+                        fillEl.style.width = `${Math.min(100, (chunkGot / chunkTotal) * 100)}%`;
+
+                        const now = Date.now();
+                        if (now - lastTime > 400) {
+                            const dt = (now - lastTime) / 1000;
+                            const db = downloadedBytes - lastBytes;
+                            if (dt > 0 && db > 0) {
+                                const spd = db / dt;
+                                speedEl.textContent = `${formatBytes(spd)}/s`;
+                                const eta = Math.max(0, Math.round((totalSize - downloadedBytes) / spd));
+                                etaEl.textContent = `${String(Math.floor(eta / 60)).padStart(2,'0')}:${String(eta % 60).padStart(2,'0')}`;
+                            }
+                            const pct = Math.min(100, (downloadedBytes / totalSize) * 100);
+                            percentEl.textContent = `${pct.toFixed(1)}%`;
+                            progressEl.style.width = `${pct}%`;
+                            lastTime  = now;
+                            lastBytes = downloadedBytes;
+                        }
+                    }
+
+                    // ✓ Chunk stream done — flush to disk or memory
+                    if (!isFallback) {
+                        // FSFA: write only the NEW pieces since last flush
+                        // flushedIdx tracks how many pieces we've already written to stream
+                        let pos = start;
+                        // Compute starting position for new pieces
+                        for (let i = 0; i < flushedIdx; i++) pos += pieces[i].length;
+                        for (let i = flushedIdx; i < pieces.length; i++) {
+                            await writableStream.write({ type: 'write', position: pos, data: pieces[i] });
+                            pos += pieces[i].length;
+                        }
+                        flushedIdx = pieces.length;
+                    } else {
+                        // Blob fallback: merge all pieces for this chunk
+                        const merged = new Uint8Array(chunkGot);
+                        let off = 0;
+                        for (const p of pieces) { merged.set(p, off); off += p.length; }
+                        completedChunks[idx] = merged;
+                    }
+
+                    return; // ✓ success
+
+                } catch (err) {
+                    if (attempt >= MAX_RETRIES) {
+                        throw new Error(`Chunk ${idx} permanently failed after ${MAX_RETRIES} retries: ${err.message}`);
+                    }
+                    // loop → retry
                 }
-            } else {
-                // Merge pieces into one buffer for this chunk, store by index
-                const merged = new Uint8Array(chunkGot);
-                let off = 0;
-                for (const p of pieces) { merged.set(p, off); off += p.length; }
-                completedChunks[idx] = merged;
             }
         }
+
         // ──────────────────────────────────────────────────────────────────────
 
         try {
