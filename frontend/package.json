@@ -110,7 +110,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
     "happy-dom": "^20.8.9",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.9",
     "postcss-simple-vars": "7.0.1",
     "prop-types": "^15.8.1",
     "react-is": "^19.2.4",
@@ -121,6 +121,6 @@
     "vite": "^8.0.2",
     "vite-plugin-checker": "0.12.0",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.3"
   }
 }
