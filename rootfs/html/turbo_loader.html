@@ -255,10 +255,25 @@
 
                 // Brave/Firefox Shields or other security policy blocks the API
                 if (err.name === 'SecurityError' || err.name === 'NotAllowedError') {
+                    // Check file size BEFORE continuing: prevent Blob crash for large files
+                    if (totalSize > 1.2 * 1024 * 1024 * 1024) {
+                        shieldsWarnEl.innerHTML =
+                            '🚫 <strong>Direct-To-Disk is blocked by Brave Shields</strong><br>' +
+                            'This file (>1.2 GB) is too large for the RAM fallback and will cause a Browser "Network Error" when saving.<br><br>' +
+                            '👉 <strong>Action required:</strong> Click the Lion icon (top right), lower Shields to "Standard", and reload the page.';
+                        shieldsWarnEl.style.display = 'block';
+                        shieldsWarnEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                        shieldsWarnEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                        shieldsWarnEl.style.color = '#fca5a5';
+                        startBtn.disabled = true;
+                        startBtn.style.background = '#334155';
+                        return; // Halt download
+                    }
+
                     shieldsWarnEl.innerHTML =
-                        '🛡️ <strong>Browser Shields are blocking direct file saving.</strong><br>' +
-                        'The file will be buffered in RAM and you\'ll get a <em>Save File</em> button below.<br>' +
-                        '<small>To enable direct saving in Brave: lower Shields to Standard for this site.</small>';
+                        '🛡️ <strong>Browser Shields blockieren Direct-to-Disk saving.</strong><br>' +
+                        'Die Datei wird komplett im Arbeitsspeicher (RAM) geladen. Ein "Speichern"-Button erscheint nach Abschluss.<br>' +
+                        '<small>Tipp: Schalte für echte Perfomance die Brave-Shields für diese Seite auf Standard.</small>';
                     shieldsWarnEl.style.display = 'block';
                 } else {
                     console.warn('[TurboLoader] FSFA error (', err.name, '):', err.message);
@@ -267,6 +282,21 @@
             }
         } else {
             isFallback = true;
+        }
+
+        // For non-FSFA browsers (Firefox etc), also apply 1.2 GB limit
+        if (isFallback && totalSize > 1.2 * 1024 * 1024 * 1024) {
+            shieldsWarnEl.innerHTML =
+                '🚫 <strong>Browser does not support Direct-To-Disk</strong><br>' +
+                'This file (>1.2 GB) is too large to be fully buffered in RAM. Your browser will crash with a "Network Error".<br><br>' +
+                '👉 Please use the standard download instead.';
+            shieldsWarnEl.style.display = 'block';
+            shieldsWarnEl.style.background = 'rgba(239, 68, 68, 0.15)';
+            shieldsWarnEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            shieldsWarnEl.style.color = '#fca5a5';
+            startBtn.disabled = true;
+            startBtn.style.background = '#334155';
+            return;
         }
 
         // Warn user if Blob fallback will buffer a huge file in RAM
@@ -366,6 +396,11 @@
                             lastTime  = now;
                             lastBytes = downloadedBytes;
                         }
+                    }
+
+                    // Check if the stream exited cleanly but prematurely (drop without error)
+                    if (!isFullResponse && chunkGot < chunkTotal) {
+                        throw new Error(`Stream dropped at ${chunkGot}/${chunkTotal} bytes. Retrying remaining bytes...`);
                     }
 
                     // ✓ Chunk stream done — flush to disk or memory
