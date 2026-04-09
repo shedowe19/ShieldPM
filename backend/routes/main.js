@@ -28,6 +28,7 @@ import tokensRoutes from "./tokens.js";
 import twoFaRoutes from "./2fa.js";
 import usersRoutes from "./users.js";
 import versionRoutes from "./version.js";
+import internalAddons from "../internal/addons.js";
 
 const router = express.Router({
 	caseSensitive: true,
@@ -77,6 +78,7 @@ router.use("/nginx/tor-onion", torOnionRoutes);
 router.use("/nginx/wireguard", wireguardRoutes);
 router.use("/gitops", gitopsRoutes);
 router.use("/services", servicesRoutes);
+router.use("/addons", internalAddons.router());
 
 /**
  * API 404 for all other routes
