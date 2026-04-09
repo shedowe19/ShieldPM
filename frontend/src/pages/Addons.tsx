@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { Plug, Download, Trash, RefreshCw, CheckCircle, Package } from "lucide-react";
-import { AppHeader } from "src/components/layout/app-header";
-import { AppMain } from "src/components/layout/app-main";
+import { Download, Trash, RefreshCw, Package } from "lucide-react";
+import { AnimatedPage, SiteHeader, SiteContainer } from "src/components";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "src/components/ui/card";
 import { useToast } from "src/hooks/use-toast";
-import api from "src/api/backend";
+import * as api from "src/api/backend/base";
 
 type Addon = {
 	id: string;
@@ -27,11 +26,11 @@ export default function Addons() {
 		try {
 			setLoading(true);
 			const [storeRes, installedRes] = await Promise.all([
-				api.get("/api/addons/store"),
-				api.get("/api/addons/installed")
+				api.get<Addon[]>({ url: "/addons/store" }),
+				api.get<Addon[]>({ url: "/addons/installed" })
 			]);
-			setStoreAddons(storeRes.data);
-			setInstalledAddons(installedRes.data);
+			setStoreAddons(storeRes);
+			setInstalledAddons(installedRes);
 		} catch (err: any) {
 			toast({
 				title: "Failed to load addons",
@@ -52,7 +51,7 @@ export default function Addons() {
 	const handleInstall = async (addon: Addon) => {
 		setInstalling(addon.id);
 		try {
-			await api.post("/api/addons/install", { id: addon.id, url: addon.url });
+			await api.post({ url: "/addons/install", data: { id: addon.id, url: addon.url } });
 			toast({ title: "Addon installed", description: `${addon.name} installed successfully` });
 			await fetchData();
             // Force a reload so routing picks up any dynamic UI additions
@@ -67,7 +66,7 @@ export default function Addons() {
 	const handleUninstall = async (id: string) => {
 		setInstalling(id);
 		try {
-			await api.delete(`/api/addons/${id}`);
+			await api.del({ url: `/addons/${id}` });
 			toast({ title: "Addon uninstalled" });
 			await fetchData();
             // Force a reload so routing removes it
@@ -80,15 +79,20 @@ export default function Addons() {
 	};
 
 	return (
-		<>
-			<AppHeader title="Addons">
-				<Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
-					<RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-					Refresh
-				</Button>
-			</AppHeader>
+		<AnimatedPage>
+			<SiteHeader />
+			<SiteContainer>
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 className="text-3xl font-bold tracking-tight">Addons</h2>
+                        <p className="text-muted-foreground">Manage third-party integrations and extensions.</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                        Refresh
+                    </Button>
+                </div>
 
-			<AppMain>
 				<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 					{storeAddons.map((addon) => {
 						const installed = isInstalled(addon.id);
@@ -130,7 +134,7 @@ export default function Addons() {
                         </div>
                     )}
 				</div>
-			</AppMain>
-		</>
+			</SiteContainer>
+		</AnimatedPage>
 	);
 }
