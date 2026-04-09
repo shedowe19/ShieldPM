@@ -130,14 +130,6 @@ function Content() {
 					}
 				/>
 				<Route
-					path="/nginx/cloudflared"
-					element={
-						<AnimatedPage>
-							<CloudflaredTunnels />
-						</AnimatedPage>
-					}
-				/>
-				<Route
 					path="/nginx/ddns"
 					element={
 						<AnimatedPage>

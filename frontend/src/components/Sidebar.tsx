@@ -83,12 +83,6 @@ const menuItems: MenuItem[] = [
 				permission: VIEW,
 			},
 			{
-				to: "/nginx/cloudflared",
-				label: "cloudflared.title",
-				permissionSection: CLOUDFLARED_TUNNELS,
-				permission: VIEW,
-			},
-			{
 				to: "/nginx/ddns",
 				label: "ddns-providers",
 				permissionSection: DDNS_PROVIDERS,
