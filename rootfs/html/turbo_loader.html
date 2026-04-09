@@ -103,6 +103,14 @@
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35);
         }
         #save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.45); }
+        #standard-btn {
+            display: none; margin-top: 14px; width: 100%;
+            background: rgba(51, 65, 85, 0.8); color: var(--text-main);
+            border: 1px solid var(--glass-border); padding: 14px 24px;
+            font-size: 15px; font-weight: 600; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        #standard-btn:hover { background: rgba(71, 85, 105, 0.9); }
     </style>
 </head>
 <body>
@@ -139,6 +147,7 @@
     <button class="btn-start" id="start-btn">Start Turbo Download</button>
     <div id="shields-warn"></div>
     <button id="save-btn">💾 Click here to Save File</button>
+    <button id="standard-btn">⬇️ Standard Download</button>
     <div id="error-msg"></div>
 </div>
 
@@ -168,6 +177,9 @@
     const errorMsgEl     = document.getElementById('error-msg');
     const shieldsWarnEl  = document.getElementById('shields-warn');
     const saveBtnEl      = document.getElementById('save-btn');
+    const standardBtnEl  = document.getElementById('standard-btn');
+
+    standardBtnEl.addEventListener('click', () => { window.location.href = originUrl; });
 
     // Will hold Blob URL when fallback assembles the file
     let pendingBlobUrl  = null;
@@ -266,7 +278,8 @@
                         shieldsWarnEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
                         shieldsWarnEl.style.color = '#fca5a5';
                         startBtn.disabled = true;
-                        startBtn.style.background = '#334155';
+                        startBtn.style.display = 'none';
+                        standardBtnEl.style.display = 'block';
                         return; // Halt download
                     }
 
@@ -295,7 +308,8 @@
             shieldsWarnEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
             shieldsWarnEl.style.color = '#fca5a5';
             startBtn.disabled = true;
-            startBtn.style.background = '#334155';
+            startBtn.style.display = 'none';
+            standardBtnEl.style.display = 'block';
             return;
         }
 
