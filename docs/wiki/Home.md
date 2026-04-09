@@ -28,6 +28,7 @@
 
 * **[Proxy Hosts](Proxy-Hosts)**: Detailed guide on configuring hosts, locations, and cache.
 * **[Stream Hosts (TCP/UDP)](Streams)**: Forward raw TCP/UDP traffic (Game Servers, Databases, VPN).
+* **[Turbo-Loader (Parallel Downloads)](Turbo-Loader)**: Accelerate large file downloads.
 * **[Redirection & Dead Hosts](Redirection-Hosts)**: Managing 301/302 redirects and 404 blocks.
 * **[Disable Buffering](Disable-Buffering)**: Optimizing for streaming services (Jellyfin/Plex).
 * **[Maintenance Features](Maintenance)**: Configuring automatic maintenance pages for downtime.
