@@ -9,6 +9,7 @@ import {
 	IconSettings,
 	IconShield,
 	IconUser,
+	IconPackage,
 } from "@tabler/icons-react";
 import type React from "react";
 import { useState } from "react";
@@ -131,6 +132,12 @@ const menuItems: MenuItem[] = [
 		to: "/users",
 		icon: IconUser,
 		label: "users",
+		permissionSection: ADMIN,
+	},
+	{
+		to: "/addons",
+		icon: IconPackage,
+		label: "Addons",
 		permissionSection: ADMIN,
 	},
 	{

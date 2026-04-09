@@ -24,6 +24,7 @@ const Certificates = lazy(() => import("src/pages/Certificates"));
 const Access = lazy(() => import("src/pages/Access"));
 const AuditLog = lazy(() => import("src/pages/AuditLog"));
 const Users = lazy(() => import("src/pages/Users"));
+const Addons = lazy(() => import("src/pages/Addons"));
 const ProxyHosts = lazy(() => import("src/pages/Nginx/ProxyHosts"));
 const RedirectionHosts = lazy(() => import("src/pages/Nginx/RedirectionHosts"));
 const DeadHosts = lazy(() => import("src/pages/Nginx/DeadHosts"));
@@ -86,6 +87,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<Users />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/addons"
+					element={
+						<AnimatedPage>
+							<Addons />
 						</AnimatedPage>
 					}
 				/>

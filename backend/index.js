@@ -12,7 +12,6 @@ process.on("uncaughtException", (err) => {
 import app from "./app.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
-import internalCloudflared from "./internal/cloudflared.js";
 import internalDdns from "./internal/ddns.js";
 import internalDocker from "./internal/docker.js";
 import internalGitDeploy from "./internal/git-deploy.js";
@@ -24,6 +23,7 @@ import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
 import internalWireguard from "./internal/wireguard.js";
+import internalAddons from "./internal/addons.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
 import { migrateUp } from "./migrate.js";
@@ -54,7 +54,6 @@ async function appStart() {
 		internalCertificate.initTimer();
 		internalMaintenance.initTimer();
 		await internalNginx.reload();
-		internalCloudflared.init();
 		internalTor.init();
 		internalWireguard.init();
 		await internalOAuth2Proxy.init();
@@ -63,6 +62,7 @@ async function appStart() {
 		internalDdns.initTimer();
 		await internalChat.init();
 		internalGitDeploy.init();
+		await internalAddons.init(app);
 
 		const server = app.listen("/run/shieldpm.sock", () => {
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);
