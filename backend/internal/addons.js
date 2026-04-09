@@ -4,8 +4,16 @@ import path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import express from "express";
+import { Model, transaction } from "objection";
+
 import { global as logger } from "../logger.js";
 import internalNginx from "./nginx.js";
+import db from "../db.js";
+import { decrypt, encrypt } from "../lib/encryption.js";
+import internalAuditLog from "./audit-log.js";
+import apiValidator from "../lib/validator/api.js";
+import { getValidationSchema } from "../schema/index.js";
+import jwtdecode from "../lib/express/jwt-decode.js";
 
 const execAsync = promisify(exec);
 
@@ -64,7 +72,18 @@ const internalAddons = {
                 // If the module exports a default initialization function, call it
 				if (typeof addonModule.default === "function") {
 					// We pass express app and other context if needed
-					await addonModule.default({ app, logger, backendCore: { internalNginx } });
+					await addonModule.default({
+						app,
+						logger,
+						database: db,
+						objection: { Model, transaction },
+						encryption: { encrypt, decrypt },
+						auditLog: internalAuditLog,
+						validator: apiValidator,
+						schema: { getValidationSchema },
+						jwt: jwtdecode,
+						backendCore: { internalNginx }
+					});
 				}
 			}
 
