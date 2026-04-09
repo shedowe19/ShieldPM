@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShieldPM Turbo Loader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.4);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.08), transparent 25%);
+            overflow: hidden;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp { to { transform: translateY(0); opacity: 1; } }
+        .header { margin-bottom: 30px; }
+        .rocket { font-size: 48px; display: inline-block; margin-bottom: 16px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        h1 {
+            font-size: 28px; font-weight: 700;
+            background: linear-gradient(135deg, #10b981, #38bdf8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .filename {
+            font-size: 14px; color: var(--text-muted); word-break: break-all;
+            background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 8px;
+            display: inline-block; font-family: monospace;
+        }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 30px; }
+        .stat-box {
+            background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border);
+            border-radius: 12px; padding: 16px; transition: transform 0.2s ease;
+        }
+        .stat-box:hover { transform: translateY(-2px); background: rgba(0,0,0,0.3); }
+        .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+        .stat-value { font-size: 20px; font-weight: 600; }
+        .primary-value { color: #10b981; }
+        .speed-value { color: #38bdf8; }
+        .eta-value { color: #f43f5e; }
+        .progress-container { margin-bottom: 30px; position: relative; }
+        .progress-bar-bg { height: 12px; background: rgba(0,0,0,0.3); border-radius: 999px; overflow: hidden; position: relative; }
+        .progress-fill {
+            position: absolute; top: 0; left: 0; height: 100%;
+            background: linear-gradient(90deg, #10b981, #38bdf8);
+            border-radius: 999px; width: 0%; transition: width 0.2s linear;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+        .chunks-container { display: flex; gap: 4px; margin-top: 12px; justify-content: space-between; }
+        .chunk { flex: 1; height: 4px; background: rgba(0,0,0,0.3); border-radius: 2px; overflow: hidden; }
+        .chunk-fill { height: 100%; background: #38bdf8; width: 0%; transition: width 0.2s linear; }
+        .btn-start {
+            background: linear-gradient(135deg, #10b981, #059669); color: white;
+            border: none; padding: 16px 32px; font-size: 16px; font-weight: 600;
+            border-radius: 12px; cursor: pointer; width: 100%; transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
+        .btn-start:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
+        #error-msg { color: #ef4444; margin-top: 16px; font-size: 14px; display: none; }
+        #shields-warn {
+            display: none; margin-top: 14px; padding: 12px 16px;
+            background: rgba(251, 146, 60, 0.12); border: 1px solid rgba(251, 146, 60, 0.35);
+            border-radius: 10px; font-size: 13px; color: #fb923c; line-height: 1.5;
+        }
+        #save-btn {
+            display: none; margin-top: 14px; width: 100%;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white; border: none; padding: 14px 24px;
+            font-size: 15px; font-weight: 600; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35);
+        }
+        #save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.45); }
+        #standard-btn {
+            display: none; margin-top: 14px; width: 100%;
+            background: rgba(51, 65, 85, 0.8); color: var(--text-main);
+            border: 1px solid var(--glass-border); padding: 14px 24px;
+            font-size: 15px; font-weight: 600; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        #standard-btn:hover { background: rgba(71, 85, 105, 0.9); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="rocket">🚀</div>
+        <h1>Turbo-Loader</h1>
+        <div class="filename" id="filename">Loading...</div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-label">Progress</div>
+            <div class="stat-value primary-value" id="percent">0%</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Speed</div>
+            <div class="stat-value speed-value" id="speed">0 MB/s</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">ETA</div>
+            <div class="stat-value eta-value" id="eta">--:--</div>
+        </div>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-bar-bg">
+            <div class="progress-fill" id="main-progress"></div>
+        </div>
+        <div class="chunks-container" id="chunks"></div>
+    </div>
+
+    <button class="btn-start" id="start-btn">Start Turbo Download</button>
+    <div id="shields-warn"></div>
+    <button id="save-btn">💾 Click here to Save File</button>
+    <button id="standard-btn">⬇️ Standard Download</button>
+    <div id="error-msg"></div>
+</div>
+
+<script>
+    const CHUNK_COUNT = 8;
+
+    // Build the real file URL:
+    // The page is served via Nginx internal rewrite, so window.location still reflects the original URL
+    const params = new URLSearchParams(window.location.search);
+    params.delete('turbo');
+    const cleanSearch = params.toString() ? '?' + params.toString() + '&turbo=0' : '?turbo=0';
+    const originUrl = window.location.pathname + cleanSearch;
+
+    // IMPORTANT: Web Apps like Synology DSM (File Station), Nextcloud, etc. often initiate
+    // downloads by creating a hidden iframe. If the Turbo-Loader UI is loaded inside a 
+    // hidden iframe, the user cannot see or click anything -> "nothing happens".
+    // Fix: Detect if we are embedded, and instantly fallback to standard download!
+    if (window !== window.top) {
+        window.location.replace(originUrl);
+        throw new Error("Turbo-Loader is embedded in an iframe. Redirecting to standard download.");
+    }
+
+    const filename = decodeURIComponent(window.location.pathname.split('/').pop() || 'downloaded_file');
+    let totalSize = 0;
+
+    document.getElementById('filename').textContent = filename;
+
+    const startBtn       = document.getElementById('start-btn');
+    const chunksEl       = document.getElementById('chunks');
+    const percentEl      = document.getElementById('percent');
+    const speedEl        = document.getElementById('speed');
+    const etaEl          = document.getElementById('eta');
+    const progressEl     = document.getElementById('main-progress');
+    const errorMsgEl     = document.getElementById('error-msg');
+    const shieldsWarnEl  = document.getElementById('shields-warn');
+    const saveBtnEl      = document.getElementById('save-btn');
+    const standardBtnEl  = document.getElementById('standard-btn');
+
+    standardBtnEl.addEventListener('click', () => { window.location.href = originUrl; });
+
+    // Will hold Blob URL when fallback assembles the file
+    let pendingBlobUrl  = null;
+    let pendingFilename = null;
+
+    saveBtnEl.addEventListener('click', () => {
+        if (!pendingBlobUrl) return;
+        const a = document.createElement('a');
+        a.href = pendingBlobUrl; a.download = pendingFilename;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(pendingBlobUrl); a.remove(); pendingBlobUrl = null; }, 300);
+    });
+
+    // Build per-chunk progress bars
+    for (let i = 0; i < CHUNK_COUNT; i++) {
+        const c = document.createElement('div'); c.className = 'chunk';
+        const f = document.createElement('div'); f.className = 'chunk-fill'; f.id = `chunk-${i}`;
+        c.appendChild(f); chunksEl.appendChild(c);
+    }
+
+    function showError(msg) {
+        errorMsgEl.textContent = msg;
+        errorMsgEl.style.display = 'block';
+        startBtn.disabled = false;
+        startBtn.textContent = 'Retry Download';
+    }
+
+    function formatBytes(bytes, dec = 2) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dec))} ${sizes[i]}`;
+    }
+
+    // ── init: probe the file via HEAD ──────────────────────────────────────────
+    async function init() {
+        try {
+            const res = await fetch(originUrl, { method: 'HEAD' });
+
+            if (res.status === 404) {
+                showError('File not found (404). The path may be incorrect or the file does not exist on the server.');
+                startBtn.textContent = 'Standard Download';
+                startBtn.onclick = () => { window.location.href = originUrl; };
+                return;
+            }
+            if (!res.ok) {
+                throw new Error(`Server returned HTTP ${res.status}`);
+            }
+
+            totalSize = parseInt(res.headers.get('Content-Length') || '0', 10);
+            const acceptRanges = res.headers.get('Accept-Ranges');
+
+            if (!totalSize || acceptRanges === 'none') {
+                showError('Server does not report a file size or does not support Range requests. Using standard download.');
+                startBtn.textContent = 'Standard Download';
+                startBtn.disabled = false;
+                startBtn.onclick = () => { window.location.href = originUrl; };
+                return;
+            }
+
+            startBtn.addEventListener('click', startDownload);
+        } catch (err) {
+            console.error('[TurboLoader] init:', err);
+            showError('Could not probe the file. Make sure the URL with ?turbo=0 is reachable.');
+            startBtn.textContent = 'Standard Download';
+            startBtn.onclick = () => { window.location.href = originUrl; };
+        }
+    }
+
+    // ── main download ──────────────────────────────────────────────────────────
+    async function startDownload() {
+        startBtn.disabled = true;
+        errorMsgEl.style.display = 'none';
+
+        let writableStream = null;
+        let isFallback = false;
+
+        // Attempt File System Access API (Chrome/Edge — writes directly to disk)
+        if (window.showSaveFilePicker) {
+            try {
+                const fh = await window.showSaveFilePicker({ suggestedName: filename });
+                writableStream = await fh.createWritable();
+            } catch (err) {
+                if (err.name === 'AbortError') { startBtn.disabled = false; return; }
+
+                // Brave/Firefox Shields or other security policy blocks the API
+                if (err.name === 'SecurityError' || err.name === 'NotAllowedError') {
+                    // Check file size BEFORE continuing: prevent Blob crash for large files
+                    if (totalSize > 1.2 * 1024 * 1024 * 1024) {
+                        shieldsWarnEl.innerHTML =
+                            '🚫 <strong>Direct-To-Disk is blocked by Brave Shields</strong><br>' +
+                            'This file (>1.2 GB) is too large for the RAM fallback and will cause a Browser "Network Error" when saving.<br><br>' +
+                            '👉 <strong>Action required:</strong> Click the Lion icon (top right), lower Shields to "Standard", and reload the page.';
+                        shieldsWarnEl.style.display = 'block';
+                        shieldsWarnEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                        shieldsWarnEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                        shieldsWarnEl.style.color = '#fca5a5';
+                        startBtn.disabled = true;
+                        startBtn.style.display = 'none';
+                        standardBtnEl.style.display = 'block';
+                        return; // Halt download
+                    }
+
+                    shieldsWarnEl.innerHTML =
+                        '🛡️ <strong>Browser Shields blockieren Direct-to-Disk saving.</strong><br>' +
+                        'Die Datei wird komplett im Arbeitsspeicher (RAM) geladen. Ein "Speichern"-Button erscheint nach Abschluss.<br>' +
+                        '<small>Tipp: Schalte für echte Perfomance die Brave-Shields für diese Seite auf Standard.</small>';
+                    shieldsWarnEl.style.display = 'block';
+                } else {
+                    console.warn('[TurboLoader] FSFA error (', err.name, '):', err.message);
+                }
+                isFallback = true;
+            }
+        } else {
+            isFallback = true;
+        }
+
+        // For non-FSFA browsers (Firefox etc), also apply 1.2 GB limit
+        if (isFallback && totalSize > 1.2 * 1024 * 1024 * 1024) {
+            shieldsWarnEl.innerHTML =
+                '🚫 <strong>Browser does not support Direct-To-Disk</strong><br>' +
+                'This file (>1.2 GB) is too large to be fully buffered in RAM. Your browser will crash with a "Network Error".<br><br>' +
+                '👉 Please use the standard download instead.';
+            shieldsWarnEl.style.display = 'block';
+            shieldsWarnEl.style.background = 'rgba(239, 68, 68, 0.15)';
+            shieldsWarnEl.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            shieldsWarnEl.style.color = '#fca5a5';
+            startBtn.disabled = true;
+            startBtn.style.display = 'none';
+            standardBtnEl.style.display = 'block';
+            return;
+        }
+
+        // Warn user if Blob fallback will buffer a huge file in RAM
+        const SAFE_BLOB_LIMIT = 512 * 1024 * 1024; // 512 MB
+        if (isFallback && totalSize > SAFE_BLOB_LIMIT) {
+            const go = window.confirm(
+                `Your browser does not support direct-to-disk saving.\n\n` +
+                `This file is ${formatBytes(totalSize)} and must be fully buffered in RAM first.\n` +
+                `This may crash the tab for very large files.\n\nContinue anyway?`
+            );
+            if (!go) { startBtn.disabled = false; return; }
+        }
+
+        startBtn.textContent = 'Downloading...';
+
+        const chunkSize = Math.ceil(totalSize / CHUNK_COUNT);
+        // completedChunks[i] = Uint8Array of that chunk (fallback only)
+        const completedChunks = new Array(CHUNK_COUNT).fill(null);
+        let downloadedBytes = 0;
+        let lastTime = Date.now();
+        let lastBytes = 0;
+
+        // ── download one chunk (unlimited retries + byte-range resume) ──────────
+        const RETRY_BASE_MS = 1000; // 1s, 2s, 4s … capped at 30s
+
+        async function downloadChunk(idx) {
+            const start = idx * chunkSize;
+            const end   = Math.min(start + chunkSize - 1, totalSize - 1);
+            if (start >= totalSize) return;
+
+            const chunkTotal = end - start + 1;
+            const fillEl = document.getElementById(`chunk-${idx}`);
+
+            // Persistent state across retries for THIS chunk
+            const pieces    = [];   // all received Uint8Arrays (kept across retries)
+            let chunkGot    = 0;    // total bytes received so far for this chunk
+            let flushedIdx  = 0;    // index into pieces[] already written to FSFA stream
+
+            for (let attempt = 0; ; attempt++) {
+                // On retry: visually indicate pause (amber)
+                if (attempt > 0) {
+                    fillEl.style.background = '#f59e0b';
+                    const delay = Math.min(RETRY_BASE_MS * Math.pow(2, attempt - 1), 30000);
+                    console.warn(`[TurboLoader] Chunk ${idx}: retry #${attempt} in ${delay}ms (no limit)`);    
+                    await new Promise(r => setTimeout(r, delay));
+                    fillEl.style.background = '#38bdf8';
+                }
+
+                try {
+                    // Resume from where we left off inside this chunk
+                    const resumeFrom = start + chunkGot;
+                    const res = await fetch(originUrl, {
+                        headers: { Range: `bytes=${resumeFrom}-${end}` }
+                    });
+
+                    if (!res.ok && res.status !== 206) {
+                        throw new Error(`HTTP ${res.status}`);
+                    }
+
+                    // If server ignores Range and returns 200, skip already-got bytes
+                    const isFullResponse = res.status === 200;
+                    let skipBytes = isFullResponse ? chunkGot : 0;
+
+                    const reader = res.body.getReader();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        let data = value;
+
+                        if (skipBytes > 0) {
+                            if (data.length <= skipBytes) { skipBytes -= data.length; continue; }
+                            data = data.slice(skipBytes);
+                            skipBytes = 0;
+                        }
+
+                        pieces.push(data);
+                        chunkGot        += data.length;
+                        downloadedBytes += data.length;
+
+                        fillEl.style.width = `${Math.min(100, (chunkGot / chunkTotal) * 100)}%`;
+
+                        const now = Date.now();
+                        if (now - lastTime > 400) {
+                            const dt = (now - lastTime) / 1000;
+                            const db = downloadedBytes - lastBytes;
+                            if (dt > 0 && db > 0) {
+                                const spd = db / dt;
+                                speedEl.textContent = `${formatBytes(spd)}/s`;
+                                const eta = Math.max(0, Math.round((totalSize - downloadedBytes) / spd));
+                                etaEl.textContent = `${String(Math.floor(eta / 60)).padStart(2,'0')}:${String(eta % 60).padStart(2,'0')}`;
+                            }
+                            const pct = Math.min(100, (downloadedBytes / totalSize) * 100);
+                            percentEl.textContent = `${pct.toFixed(1)}%`;
+                            progressEl.style.width = `${pct}%`;
+                            lastTime  = now;
+                            lastBytes = downloadedBytes;
+                        }
+                    }
+
+                    // Check if the stream exited cleanly but prematurely (drop without error)
+                    if (!isFullResponse && chunkGot < chunkTotal) {
+                        throw new Error(`Stream dropped at ${chunkGot}/${chunkTotal} bytes. Retrying remaining bytes...`);
+                    }
+
+                    // ✓ Chunk stream done — flush to disk or memory
+                    if (!isFallback) {
+                        // FSFA: write only the NEW pieces since last flush
+                        // flushedIdx tracks how many pieces we've already written to stream
+                        let pos = start;
+                        // Compute starting position for new pieces
+                        for (let i = 0; i < flushedIdx; i++) pos += pieces[i].length;
+                        for (let i = flushedIdx; i < pieces.length; i++) {
+                            await writableStream.write({ type: 'write', position: pos, data: pieces[i] });
+                            pos += pieces[i].length;
+                        }
+                        flushedIdx = pieces.length;
+                    } else {
+                        // Blob fallback: merge all pieces for this chunk
+                        const merged = new Uint8Array(chunkGot);
+                        let off = 0;
+                        for (const p of pieces) { merged.set(p, off); off += p.length; }
+                        completedChunks[idx] = merged;
+                    }
+
+                    return; // ✓ success
+
+                } catch (err) {
+                    // log and keep retrying — no limit
+                    console.warn(`[TurboLoader] Chunk ${idx} error (attempt ${attempt}):`, err.message);
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
+
+        try {
+            await Promise.all(Array.from({ length: CHUNK_COUNT }, (_, i) => downloadChunk(i)));
+
+            if (!isFallback) {
+                await writableStream.close();
+            } else {
+                // Build Blob from ordered chunks — DO NOT auto-click (blocked by Brave/popup blockers)
+                // Instead: expose a prominent Save button the user clicks themselves
+                const blob = new Blob(completedChunks.filter(Boolean));
+                pendingBlobUrl  = URL.createObjectURL(blob);
+                pendingFilename = filename;
+                saveBtnEl.style.display = 'block';
+                saveBtnEl.textContent   = `💾 Save ${filename} (${formatBytes(blob.size)})`;
+            }
+
+            percentEl.textContent   = '100%';
+            progressEl.style.width  = '100%';
+            speedEl.textContent     = 'Completed';
+            etaEl.textContent       = '00:00';
+            startBtn.textContent    = 'Download Complete! 🎉';
+            startBtn.disabled       = false;
+            startBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+
+        } catch (err) {
+            console.error('[TurboLoader] download error:', err);
+            if (writableStream) { try { await writableStream.abort(); } catch (_) {} }
+            showError('Download failed: ' + err.message);
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

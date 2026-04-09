@@ -21,6 +21,7 @@ const fetchProxyHost = (id: number | "new") => {
 			anubisEnabled: false,
 			advancedConfig: "",
 			bandwidthLimit: "",
+			turboLoader: false,
 			meta: {},
 			allowWebsocketUpgrade: false,
 			http2Support: false,

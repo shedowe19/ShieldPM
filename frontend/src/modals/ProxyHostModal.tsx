@@ -191,6 +191,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								// Advanced tab
 								advancedConfig: data?.advancedConfig || "",
 								bandwidthLimit: data?.bandwidthLimit || "",
+								turboLoader: data?.turboLoader || false,
 								advLimitReqRate: data?.advLimitReqRate || undefined,
 								advLimitReqUnit: data?.advLimitReqUnit || TIME_UNIT.SECONDS,
 								advLimitReqBurst: data?.advLimitReqBurst || undefined,
@@ -1221,7 +1222,42 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</div>
 											</TabsContent>
 
-											<TabsContent value={PROXY_HOST_TAB.ADVANCED} className="mt-0">
+											<TabsContent value={PROXY_HOST_TAB.ADVANCED} className="mt-0 space-y-4">
+												<Alert variant="default" className="bg-muted/50 mt-4">
+													<IconBolt className="h-4 w-4 text-emerald-500" />
+													<AlertTitle>Turbo-Loader</AlertTitle>
+													<AlertDescription>
+														Intercept large static files and deliver a specialized HTML
+														interface for maximum parallel download speeds in the browser.
+													</AlertDescription>
+												</Alert>
+
+												<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+													<div className="space-y-0.5">
+														<Label
+															htmlFor="turboLoader"
+															className="text-base cursor-pointer"
+														>
+															Enable Multi-Part Injection
+														</Label>
+														<p className="text-sm text-muted-foreground">
+															Converts specific files (.mp4, .zip, etc) into an
+															accelerated HTML download page.
+														</p>
+													</div>
+													<Field name="turboLoader" type="checkbox">
+														{({ field, form }: FieldProps) => (
+															<Switch
+																id="turboLoader"
+																checked={field.checked}
+																onCheckedChange={(checked: boolean) =>
+																	form.setFieldValue("turboLoader", checked)
+																}
+															/>
+														)}
+													</Field>
+												</div>
+
 												<NginxConfigField />
 											</TabsContent>
 
