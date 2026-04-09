@@ -155,13 +155,20 @@
     const CHUNK_COUNT = 8;
 
     // Build the real file URL:
-    // The page is served via Nginx internal rewrite, so window.location still
-    // reflects the original request URL (e.g. /files/mod.rar).
-    // We strip any existing ?turbo param and append turbo=0 to bypass the rewrite.
+    // The page is served via Nginx internal rewrite, so window.location still reflects the original URL
     const params = new URLSearchParams(window.location.search);
     params.delete('turbo');
     const cleanSearch = params.toString() ? '?' + params.toString() + '&turbo=0' : '?turbo=0';
     const originUrl = window.location.pathname + cleanSearch;
+
+    // IMPORTANT: Web Apps like Synology DSM (File Station), Nextcloud, etc. often initiate
+    // downloads by creating a hidden iframe. If the Turbo-Loader UI is loaded inside a 
+    // hidden iframe, the user cannot see or click anything -> "nothing happens".
+    // Fix: Detect if we are embedded, and instantly fallback to standard download!
+    if (window !== window.top) {
+        window.location.replace(originUrl);
+        throw new Error("Turbo-Loader is embedded in an iframe. Redirecting to standard download.");
+    }
 
     const filename = decodeURIComponent(window.location.pathname.split('/').pop() || 'downloaded_file');
     let totalSize = 0;
