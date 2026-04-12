@@ -13,7 +13,6 @@ import { useMemo, useState } from "react";
 import { installAddon, uninstallAddon, updateAddon, updateAllAddons } from "src/api/backend/addonActions";
 import type { RegistryAddon } from "src/api/backend/getAddonRegistry";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { Badge } from "src/components/ui/badge";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
 import { useAddonRegistry, useInvalidateAddons, useInstalledAddons } from "src/hooks/useAddons";
