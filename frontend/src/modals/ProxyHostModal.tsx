@@ -1095,7 +1095,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															<div className="space-y-0.5">
 																<div className="flex items-center gap-2">
 																	<IconGhost className="h-4 w-4 text-purple-500" />
-																	<Label htmlFor="anubisEnabled" className="text-base">
+																	<Label
+																		htmlFor="anubisEnabled"
+																		className="text-base"
+																	>
 																		Anubis AI Firewall
 																	</Label>
 																</div>
@@ -1113,11 +1116,15 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		id="anubisEnabled"
 																		checked={field.checked}
 																		onCheckedChange={(checked: boolean) => {
-																			form.setFieldValue("anubisEnabled", checked);
+																			form.setFieldValue(
+																				"anubisEnabled",
+																				checked,
+																			);
 																			if (
 																				checked &&
 																				(!form.values.anubisRules ||
-																					form.values.anubisRules.length === 0)
+																					form.values.anubisRules.length ===
+																						0)
 																			) {
 																				form.setFieldValue(
 																					"anubisRules",

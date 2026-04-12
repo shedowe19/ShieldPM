@@ -47,9 +47,7 @@ router.get("/status", jwt, (_req, res, next) => {
 		const dataPath = process.env.DATA_PATH || "/data";
 		res.status(200).json({
 			anubis:
-				addonManager.isInstalled("anubis") ||
-				fs.existsSync("/usr/local/bin/anubis") ||
-				binaryExists("anubis"),
+				addonManager.isInstalled("anubis") || fs.existsSync("/usr/local/bin/anubis") || binaryExists("anubis"),
 			cloudflared:
 				addonManager.isInstalled("cloudflared") ||
 				fs.existsSync("/usr/local/bin/cloudflared") ||

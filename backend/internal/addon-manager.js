@@ -26,8 +26,7 @@ const getArch = () => ARCH_MAP[process.arch] || process.arch;
  * @param {string} [binaryName] - defaults to addonId
  * @returns {string}
  */
-const getBinaryPath = (addonId, binaryName) =>
-	path.join(ADDONS_PATH, addonId, "bin", binaryName || addonId);
+const getBinaryPath = (addonId, binaryName) => path.join(ADDONS_PATH, addonId, "bin", binaryName || addonId);
 
 /**
  * Returns true if the addon is installed.

@@ -422,7 +422,9 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	Authentik Proxy (Forward Auth)
 																</SelectItem>
 																{addonStatus?.oauth2Proxy !== false && (
-																	<SelectItem value={ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY}>
+																	<SelectItem
+																		value={ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY}
+																	>
 																		OAuth2 Proxy
 																	</SelectItem>
 																)}

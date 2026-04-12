@@ -231,12 +231,7 @@ const SidebarNav = ({ onItemClick }: { onItemClick?: () => void }) => {
 	return (
 		<nav className="flex flex-col gap-2 py-4">
 			{menuItems.map((item) => (
-				<SidebarItem
-					key={item.to || item.label}
-					item={item}
-					addonStatus={addonStatus}
-					onClick={onItemClick}
-				/>
+				<SidebarItem key={item.to || item.label} item={item} addonStatus={addonStatus} onClick={onItemClick} />
 			))}
 			<div className="pt-4 border-t border-slate-800 mt-2">
 				<AiChat />
