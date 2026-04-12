@@ -26,9 +26,14 @@ const CATEGORY_STYLES: Record<string, { label: string; className: string }> = {
 };
 
 function CategoryBadge({ category }: { category: string }) {
-	const style = CATEGORY_STYLES[category] ?? { label: category, className: "bg-slate-500/20 text-slate-400 border-slate-500/30" };
+	const style = CATEGORY_STYLES[category] ?? {
+		label: category,
+		className: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+	};
 	return (
-		<span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${style.className}`}>
+		<span
+			className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${style.className}`}
+		>
 			{style.label}
 		</span>
 	);
@@ -71,12 +76,8 @@ function AddonCard({ addon, installedVersion, pending, onInstall, onUninstall, o
 					<CardTitle className="text-base font-semibold leading-tight">{addon.name}</CardTitle>
 					<p className="text-xs text-slate-500 mt-0.5">
 						v{addon.version}
-						{isInstalled && hasUpdate && (
-							<span className="ml-2 text-amber-400">→ update available</span>
-						)}
-						{isInstalled && !hasUpdate && (
-							<span className="ml-2 text-emerald-500">(up to date)</span>
-						)}
+						{isInstalled && hasUpdate && <span className="ml-2 text-amber-400">→ update available</span>}
+						{isInstalled && !hasUpdate && <span className="ml-2 text-emerald-500">(up to date)</span>}
 					</p>
 				</div>
 				<CardDescription className="text-sm text-slate-400 leading-snug">{addon.description}</CardDescription>
@@ -172,7 +173,12 @@ function AddonCard({ addon, installedVersion, pending, onInstall, onUninstall, o
 }
 
 export default function Addons() {
-	const { data: registry, isLoading: registryLoading, error: registryError, refetch: refetchRegistry } = useAddonRegistry();
+	const {
+		data: registry,
+		isLoading: registryLoading,
+		error: registryError,
+		refetch: refetchRegistry,
+	} = useAddonRegistry();
 	const { data: installed, refetch: refetchInstalled } = useInstalledAddons();
 	const invalidateAddons = useInvalidateAddons();
 
@@ -180,10 +186,7 @@ export default function Addons() {
 	const [globalError, setGlobalError] = useState<string | null>(null);
 	const [updatingAll, setUpdatingAll] = useState(false);
 
-	const installedMap = useMemo(
-		() => new Map((installed ?? []).map((a) => [a.id, a.version])),
-		[installed],
-	);
+	const installedMap = useMemo(() => new Map((installed ?? []).map((a) => [a.id, a.version])), [installed]);
 
 	const updatableCount = useMemo(
 		() =>
@@ -267,18 +270,17 @@ export default function Addons() {
 					<Button
 						size="sm"
 						variant="outline"
-						onClick={() => { refetchRegistry(); refetchInstalled(); }}
+						onClick={() => {
+							refetchRegistry();
+							refetchInstalled();
+						}}
 						disabled={registryLoading || pending !== null || updatingAll}
 					>
 						<IconRefresh className="h-4 w-4 mr-1.5" />
 						Refresh
 					</Button>
 					{updatableCount > 0 && (
-						<Button
-							size="sm"
-							onClick={handleUpdateAll}
-							disabled={updatingAll || pending !== null}
-						>
+						<Button size="sm" onClick={handleUpdateAll} disabled={updatingAll || pending !== null}>
 							{updatingAll ? (
 								<Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
 							) : (
