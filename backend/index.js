@@ -10,6 +10,7 @@ process.on("uncaughtException", (err) => {
 });
 
 import app from "./app.js";
+import addonManager from "./internal/addon-manager.js";
 import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
 import internalCloudflared from "./internal/cloudflared.js";
@@ -51,6 +52,7 @@ async function appStart() {
 			}
 		}
 
+		addonManager.init();
 		internalCertificate.initTimer();
 		internalMaintenance.initTimer();
 		await internalNginx.reload();

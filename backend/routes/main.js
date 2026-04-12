@@ -8,6 +8,7 @@ import analyticsRoutes from "./analytics.js";
 import auditLogRoutes from "./audit-log.js";
 import chatRoutes from "./chat.js";
 import dashboardRoutes from "./dashboard.js";
+import addonsRoutes from "./addons.js";
 import gitopsRoutes from "./gitops.js";
 import accessListsRoutes from "./nginx/access_lists.js";
 import nginxAnalyticsRoutes from "./nginx/analytics.js";
@@ -77,6 +78,7 @@ router.use("/nginx/analytics", nginxAnalyticsRoutes);
 router.use("/nginx/cloudflared-tunnels", cloudflaredRoutes);
 router.use("/nginx/tor-onion", torOnionRoutes);
 router.use("/nginx/wireguard", wireguardRoutes);
+router.use("/addons", addonsRoutes);
 router.use("/gitops", gitopsRoutes);
 router.use("/services", servicesRoutes);
 

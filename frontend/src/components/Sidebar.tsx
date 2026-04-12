@@ -18,6 +18,8 @@ import { HasPermission } from "src/components/HasPermission";
 import { Button } from "src/components/ui/button";
 import { ScrollArea } from "src/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "src/components/ui/sheet";
+import { useAddonStatus } from "src/hooks/useAddonStatus";
+import type { AddonStatus } from "src/api/backend/getAddonStatus";
 import { T } from "src/locale";
 import {
 	ACCESS_LISTS,
@@ -44,6 +46,8 @@ interface MenuItem {
 	items?: MenuItem[];
 	permissionSection?: Section | typeof ADMIN;
 	permission?: typeof VIEW | typeof MANAGE;
+	/** Hide this item unless the named addon is installed on the server */
+	requiresAddon?: keyof AddonStatus;
 }
 
 const menuItems: MenuItem[] = [
@@ -86,6 +90,7 @@ const menuItems: MenuItem[] = [
 				label: "cloudflared.title",
 				permissionSection: CLOUDFLARED_TUNNELS,
 				permission: VIEW,
+				requiresAddon: "cloudflared",
 			},
 			{
 				to: "/nginx/ddns",
@@ -98,12 +103,14 @@ const menuItems: MenuItem[] = [
 				label: "tor.title",
 				permissionSection: TOR_ONIONS,
 				permission: VIEW,
+				requiresAddon: "tor",
 			},
 			{
 				to: "/nginx/wireguard",
 				label: "wireguard.title",
 				permissionSection: WIREGUARD_PEERS,
 				permission: VIEW,
+				requiresAddon: "wireguard",
 			},
 			{
 				to: "/nginx/404",
@@ -153,11 +160,22 @@ const menuItems: MenuItem[] = [
 	},
 ];
 
-const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }) => {
+interface SidebarItemProps {
+	item: MenuItem;
+	addonStatus: AddonStatus | undefined;
+	onClick?: () => void;
+}
+
+const SidebarItem = ({ item, addonStatus, onClick }: SidebarItemProps) => {
 	const location = useLocation();
 	const [isOpen, setIsOpen] = useState(false);
 	const isActive = item.to ? location.pathname === item.to : false;
 	const isChildActive = item.items?.some((sub) => sub.to && location.pathname === sub.to);
+
+	// Hide this item if its required addon is not installed
+	if (item.requiresAddon && addonStatus && !addonStatus[item.requiresAddon]) {
+		return null;
+	}
 
 	if (item.items && item.items.length > 0) {
 		return (
@@ -176,7 +194,12 @@ const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }
 					{isOpen || isChildActive ? (
 						<div className="ml-4 space-y-1 border-l pl-2">
 							{item.items.map((subitem, idx) => (
-								<SidebarItem key={`${idx}-${subitem.to}`} item={subitem} onClick={onClick} />
+								<SidebarItem
+									key={`${idx}-${subitem.to}`}
+									item={subitem}
+									addonStatus={addonStatus}
+									onClick={onClick}
+								/>
 							))}
 						</div>
 					) : null}
@@ -199,6 +222,26 @@ const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }
 				</Link>
 			</Button>
 		</HasPermission>
+	);
+};
+
+const SidebarNav = ({ onItemClick }: { onItemClick?: () => void }) => {
+	const { data: addonStatus } = useAddonStatus();
+
+	return (
+		<nav className="flex flex-col gap-2 py-4">
+			{menuItems.map((item) => (
+				<SidebarItem
+					key={item.to || item.label}
+					item={item}
+					addonStatus={addonStatus}
+					onClick={onItemClick}
+				/>
+			))}
+			<div className="pt-4 border-t border-slate-800 mt-2">
+				<AiChat />
+			</div>
+		</nav>
 	);
 };
 
@@ -225,14 +268,7 @@ export function Sidebar() {
 								</Link>
 							</div>
 							<ScrollArea className="flex-1 px-4">
-								<nav className="flex flex-col gap-2 py-4">
-									{menuItems.map((item) => (
-										<SidebarItem key={item.to || item.label} item={item} />
-									))}
-									<div className="pt-4 border-t border-slate-800 mt-2">
-										<AiChat />
-									</div>
-								</nav>
+								<SidebarNav onItemClick={() => {}} />
 							</ScrollArea>
 						</div>
 					</SheetContent>
@@ -254,14 +290,7 @@ export function Sidebar() {
 					</Link>
 				</div>
 				<ScrollArea className="flex-1 px-4">
-					<nav className="flex flex-col gap-2 py-4">
-						{menuItems.map((item) => (
-							<SidebarItem key={item.to || item.label} item={item} />
-						))}
-						<div className="pt-4 border-t border-slate-800 mt-2">
-							<AiChat />
-						</div>
-					</nav>
+					<SidebarNav />
 				</ScrollArea>
 			</div>
 		</>

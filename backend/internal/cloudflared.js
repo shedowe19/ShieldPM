@@ -1,8 +1,21 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import { global as logger } from "../logger.js";
 import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 
 const processes = new Map();
+const dataPath = process.env.DATA_PATH || "/data";
+
+/**
+ * Resolves the cloudflared binary path.
+ * Checks the addon-installed path first, then falls back to the legacy system path.
+ * @returns {string}
+ */
+const getCloudflaredBinary = () => {
+	const addonPath = `${dataPath}/addons/cloudflared/bin/cloudflared`;
+	if (fs.existsSync(addonPath)) return addonPath;
+	return "/usr/local/bin/cloudflared";
+};
 
 const internalCloudflared = {
 	/**
@@ -31,7 +44,7 @@ const internalCloudflared = {
 		await /** @type {any} */ (tunnel).$query().patch({ status: 1 }); // Starting
 
 		try {
-			const child = spawn("/usr/local/bin/cloudflared", ["tunnel", "run"], {
+			const child = spawn(getCloudflaredBinary(), ["tunnel", "run"], {
 				stdio: ["ignore", "pipe", "pipe"],
 				detached: false,
 				env: {

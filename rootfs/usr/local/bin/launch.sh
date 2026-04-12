@@ -78,9 +78,11 @@ if [ "${TOR_ENABLED:-true}" = "true" ] && command -v tor >/dev/null 2>&1; then
     echo "Starting Tor daemon..."
     tor -f /etc/tor/torrc &
 fi
-# Determine Anubis binary path
+# Determine Anubis binary path — addon-installed path takes priority
 ANUBIS_BIN=""
-if [ -x "/usr/local/bin/anubis" ]; then
+if [ -x "/data/addons/anubis/bin/anubis" ]; then
+    ANUBIS_BIN="/data/addons/anubis/bin/anubis"
+elif [ -x "/usr/local/bin/anubis" ]; then
     ANUBIS_BIN="/usr/local/bin/anubis"
 elif command -v anubis >/dev/null 2>&1; then
     ANUBIS_BIN="anubis"

@@ -16,6 +16,7 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useAccessList, useSetAccessList } from "src/hooks";
+import { useAddonStatus } from "src/hooks/useAddonStatus";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
@@ -55,6 +56,7 @@ interface AccessListFormValues extends Partial<AccessList> {
 const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useAccessList(id, ["items", "clients"]);
 	const { mutate: setAccessList } = useSetAccessList();
+	const { data: addonStatus } = useAddonStatus();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -419,9 +421,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																>
 																	Authentik Proxy (Forward Auth)
 																</SelectItem>
-																<SelectItem value={ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY}>
-																	OAuth2 Proxy
-																</SelectItem>
+																{addonStatus?.oauth2Proxy !== false && (
+																	<SelectItem value={ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY}>
+																		OAuth2 Proxy
+																	</SelectItem>
+																)}
 																<SelectItem value={ACCESS_LIST_AUTH_TYPE.OIDC}>
 																	OIDC (OpenID Connect)
 																</SelectItem>

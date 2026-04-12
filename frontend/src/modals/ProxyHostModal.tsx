@@ -36,6 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
+import { useAddonStatus } from "src/hooks/useAddonStatus";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
 import { T, intl } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
@@ -91,6 +92,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
 	const { data, isLoading, error } = useProxyHost(id);
 	const { mutate: setProxyHost } = useSetProxyHost();
+	const { data: addonStatus } = useAddonStatus();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1087,55 +1089,59 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</Field>
 												</div>
 
-												<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
-													<div className="space-y-0.5">
-														<div className="flex items-center gap-2">
-															<IconGhost className="h-4 w-4 text-purple-500" />
-															<Label htmlFor="anubisEnabled" className="text-base">
-																Anubis AI Firewall
-															</Label>
-														</div>
-														<p className="text-sm text-muted-foreground">
-															Weighs the soul of incoming HTTP requests to stop AI
-															crawlers
-														</p>
-													</div>
-													<Field name="anubisEnabled" type="checkbox">
-														{({
-															field,
-															form,
-														}: FieldProps<boolean, ProxyHostFormValues>) => (
-															<Switch
-																id="anubisEnabled"
-																checked={field.checked}
-																onCheckedChange={(checked: boolean) => {
-																	form.setFieldValue("anubisEnabled", checked);
-																	if (
-																		checked &&
-																		(!form.values.anubisRules ||
-																			form.values.anubisRules.length === 0)
-																	) {
-																		form.setFieldValue(
-																			"anubisRules",
-																			DEFAULT_ANUBIS_RULES,
-																		);
-																	}
-																}}
-															/>
-														)}
-													</Field>
-												</div>
-
-												{/* Anubis Rules Editor */}
-												<Field name="anubisEnabled">
-													{({ field }: FieldProps) =>
-														field.value && (
-															<div className="animate-in fade-in slide-in-from-top-2 duration-300">
-																<AnubisRulesField />
+												{addonStatus?.anubis !== false && (
+													<>
+														<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+															<div className="space-y-0.5">
+																<div className="flex items-center gap-2">
+																	<IconGhost className="h-4 w-4 text-purple-500" />
+																	<Label htmlFor="anubisEnabled" className="text-base">
+																		Anubis AI Firewall
+																	</Label>
+																</div>
+																<p className="text-sm text-muted-foreground">
+																	Weighs the soul of incoming HTTP requests to stop AI
+																	crawlers
+																</p>
 															</div>
-														)
-													}
-												</Field>
+															<Field name="anubisEnabled" type="checkbox">
+																{({
+																	field,
+																	form,
+																}: FieldProps<boolean, ProxyHostFormValues>) => (
+																	<Switch
+																		id="anubisEnabled"
+																		checked={field.checked}
+																		onCheckedChange={(checked: boolean) => {
+																			form.setFieldValue("anubisEnabled", checked);
+																			if (
+																				checked &&
+																				(!form.values.anubisRules ||
+																					form.values.anubisRules.length === 0)
+																			) {
+																				form.setFieldValue(
+																					"anubisRules",
+																					DEFAULT_ANUBIS_RULES,
+																				);
+																			}
+																		}}
+																	/>
+																)}
+															</Field>
+														</div>
+
+														{/* Anubis Rules Editor */}
+														<Field name="anubisEnabled">
+															{({ field }: FieldProps) =>
+																field.value && (
+																	<div className="animate-in fade-in slide-in-from-top-2 duration-300">
+																		<AnubisRulesField />
+																	</div>
+																)
+															}
+														</Field>
+													</>
+												)}
 
 												<div className="grid grid-cols-12 gap-4">
 													<div className="col-span-12 md:col-span-4">

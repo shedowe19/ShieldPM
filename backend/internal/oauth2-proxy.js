@@ -7,6 +7,17 @@ import ProxyHost from "../models/proxy_host.js";
 const processes = new Map();
 const dataPath = process.env.DATA_PATH || "/data";
 
+/**
+ * Resolves the oauth2-proxy binary path.
+ * Checks the addon-installed path first, then falls back to PATH.
+ * @returns {string}
+ */
+const getOAuth2ProxyBinary = () => {
+	const addonPath = `${dataPath}/addons/oauth2-proxy/bin/oauth2-proxy`;
+	if (fs.existsSync(addonPath)) return addonPath;
+	return "oauth2-proxy";
+};
+
 const internalOAuth2Proxy = {
 	/**
 	 * Initialize all proxies on startup
@@ -161,7 +172,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 			// Ensure socket directory exists before spawning
 			await fs.promises.mkdir("/run/shieldpm", { recursive: true });
 
-			const child = spawn("oauth2-proxy", [`--config=${configFile}`], {
+			const child = spawn(getOAuth2ProxyBinary(), [`--config=${configFile}`], {
 				stdio: ["ignore", "pipe", "pipe"],
 				detached: true,
 			});
