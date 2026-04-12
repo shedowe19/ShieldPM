@@ -1,9 +1,10 @@
-import { IconGitBranch, IconRobot, IconSettings } from "@tabler/icons-react";
+import { IconGitBranch, IconPackage, IconRobot, IconSettings } from "@tabler/icons-react";
 import { Lock } from "lucide-react";
 import { useState } from "react";
 import { T } from "src/locale";
 import { SETTINGS_TAB, type SettingsTab } from "src/types/enums";
 import AiConfigPage from "./Ai";
+import Addons from "./Addons";
 import DefaultSite from "./DefaultSite";
 import GitOps from "./GitOps";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,12 +69,21 @@ export default function Layout() {
 							<IconGitBranch className="mr-2 h-4 w-4" />
 							<T id="settings.gitops" />
 						</button>
+						<button
+							type="button"
+							className={`justify-start inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 w-full ${activeTab === SETTINGS_TAB.ADDONS ? "bg-secondary text-secondary-foreground" : "hover:bg-transparent hover:underline"}`}
+							onClick={() => setActiveTab(SETTINGS_TAB.ADDONS)}
+						>
+							<IconPackage className="mr-2 h-4 w-4" />
+							Addons
+						</button>
 					</nav>
 				</aside>
 				<div className="flex-1 lg:max-w-4xl">
 					{activeTab === SETTINGS_TAB.DEFAULT_SITE && <DefaultSite />}
 					{activeTab === SETTINGS_TAB.AI && <AiConfigPage />}
 					{activeTab === SETTINGS_TAB.GITOPS && <GitOps />}
+					{activeTab === SETTINGS_TAB.ADDONS && <Addons />}
 				</div>
 			</div>
 		</div>
