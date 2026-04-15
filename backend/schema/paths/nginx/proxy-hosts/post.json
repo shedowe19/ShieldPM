@@ -178,6 +178,15 @@
 						},
 						"turbo_loader": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/turbo_loader"
+						},
+						"keepalive_pool": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/keepalive_pool"
+						},
+						"keepalive_timeout": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/keepalive_timeout"
+						},
+						"keepalive_requests": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/keepalive_requests"
 						}
 					}
 				},
