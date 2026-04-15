@@ -1280,7 +1280,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																		Upstream Connection Pool (Keepalive)
 																	</Label>
 																	<p className="text-sm text-muted-foreground mt-1">
-																		Maintains a pool of active HTTP connections to your backend. Highly recommended for PHP, Nextcloud, and API gateways to dramatically reduce latency.
+																		Maintains a pool of active HTTP connections to
+																		your backend. Highly recommended for PHP,
+																		Nextcloud, and API gateways to dramatically
+																		reduce latency.
 																	</p>
 																</div>
 																<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
