@@ -396,9 +396,9 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - @apidevtools/openapi-schemas@2.1.0 - MIT[](https://www.npmjs.com/package/@apidevtools/openapi-schemas/v/2.1.0)
 - @apidevtools/swagger-methods@3.0.2 - MIT[](https://www.npmjs.com/package/@apidevtools/swagger-methods/v/3.0.2)
 - @apidevtools/swagger-parser@12.1.0 - MIT[](https://www.npmjs.com/package/@apidevtools/swagger-parser/v/12.1.0)
-- @biomejs/biome@2.4.11 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.4.11)
-- @biomejs/cli-linux-x64-musl@2.4.11 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.4.11)
-- @biomejs/cli-linux-x64@2.4.11 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.4.11)
+- @biomejs/biome@2.4.12 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.4.12)
+- @biomejs/cli-linux-x64-musl@2.4.12 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.4.12)
+- @biomejs/cli-linux-x64@2.4.12 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.4.12)
 - @jridgewell/sourcemap-codec@1.5.5 - MIT[](https://www.npmjs.com/package/@jridgewell/sourcemap-codec/v/1.5.5)
 - @oxc-project/types@0.122.0 - MIT[](https://www.npmjs.com/package/@oxc-project/types/v/0.122.0)
 - @rolldown/binding-linux-x64-gnu@1.0.0-rc.11 - MIT[](https://www.npmjs.com/package/@rolldown/binding-linux-x64-gnu/v/1.0.0-rc.11)
@@ -882,9 +882,9 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 
 ### Development Dependencies
 - @adobe/css-tools@4.4.4 - MIT[](https://www.npmjs.com/package/@adobe/css-tools/v/4.4.4)
-- @biomejs/biome@2.4.11 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.4.11)
-- @biomejs/cli-linux-x64-musl@2.4.11 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.4.11)
-- @biomejs/cli-linux-x64@2.4.11 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.4.11)
+- @biomejs/biome@2.4.12 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.4.12)
+- @biomejs/cli-linux-x64-musl@2.4.12 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64-musl/v/2.4.12)
+- @biomejs/cli-linux-x64@2.4.12 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.4.12)
 - @formatjs/cli@6.14.2 - MIT[](https://www.npmjs.com/package/@formatjs/cli/v/6.14.2)
 - @oxc-project/types@0.122.0 - MIT[](https://www.npmjs.com/package/@oxc-project/types/v/0.122.0)
 - @parcel/watcher-linux-x64-glibc@2.5.6 - MIT[](https://www.npmjs.com/package/@parcel/watcher-linux-x64-glibc/v/2.5.6)
@@ -982,4 +982,4 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - why-is-node-running@2.3.0 - MIT[](https://www.npmjs.com/package/why-is-node-running/v/2.3.0)
 - ws@8.19.0 - MIT[](https://www.npmjs.com/package/ws/v/8.19.0)
 
-The above information is based solely on the NPM Registry data as of April 14, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information is based solely on the NPM Registry data as of April 15, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
