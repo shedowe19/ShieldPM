@@ -163,6 +163,9 @@ export interface ProxyHost {
 	advancedConfig: string;
 	bandwidthLimit: string;
 	turboLoader?: boolean;
+	keepalivePool: number;
+	keepaliveTimeout: string;
+	keepaliveRequests: number;
 	meta: Record<string, unknown>;
 	maintenanceOnFailure: boolean;
 	advLimitReqRate?: number;

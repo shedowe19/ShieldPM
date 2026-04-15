@@ -32,7 +32,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 	const newCertificate = v?.certificateId === "new";
 	const hasCertificate =
 		newCertificate || (v?.certificateId && Number(v?.certificateId) > 0 && v?.certificateId !== "0");
-	const { sslForced, http2Support, hstsEnabled, hstsSubdomains, meta } = v;
+	const { sslForced, hstsEnabled, hstsSubdomains, meta } = v;
 	const { dnsChallenge } = meta || {};
 
 	if (forceDNSForNew && newCertificate && !dnsChallenge) {

@@ -103,3 +103,4 @@ export * from "./getWireguardPeerConfig";
 export * from "./getWireguardPeerQRCode";
 export * from "./wireguardPeerActions";
 export * from "./wireguardSettings";
+export * from "./getNginxVersion";
