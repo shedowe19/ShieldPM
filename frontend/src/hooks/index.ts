@@ -27,3 +27,4 @@ export * from "./useTorOnion";
 export * from "./useUser";
 export * from "./useUsers";
 export * from "./useWireguardPeer";
+export * from "./useNginxVersion";

@@ -50,7 +50,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 
 	const getHttpOptions = () => (
 		<div className="space-y-4">
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div className="grid grid-cols-1 md:grid-cols-1 gap-4">
 				<div>
 					<Field name="sslForced">
 						{({ field }: FieldProps) => (
@@ -63,26 +63,6 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 								/>
 								<Label htmlFor="sslForced" className={!hasCertificate ? "text-muted-foreground" : ""}>
 									<T id="domains.force-ssl" />
-								</Label>
-							</div>
-						)}
-					</Field>
-				</div>
-				<div>
-					<Field name="http2Support">
-						{({ field }: FieldProps) => (
-							<div className="flex items-center space-x-2">
-								<Switch
-									id="http2Support"
-									checked={!!http2Support}
-									onCheckedChange={(checked) => handleToggleChange(checked, field.name)}
-									disabled={!hasCertificate}
-								/>
-								<Label
-									htmlFor="http2Support"
-									className={!hasCertificate ? "text-muted-foreground" : ""}
-								>
-									<T id="domains.http2-support" />
 								</Label>
 							</div>
 						)}

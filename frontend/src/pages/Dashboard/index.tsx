@@ -5,7 +5,7 @@ import { FormattedNumber } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { HasPermission } from "src/components";
 import { Card, CardContent } from "src/components/ui/card";
-import { useHostReport, useUser } from "src/hooks";
+import { useHostReport, useNginxVersion, useUser } from "src/hooks";
 import { T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 import { DEAD_HOSTS, PROXY_HOSTS, REDIRECTION_HOSTS, STREAMS, VIEW } from "src/modules/Permissions";
@@ -30,6 +30,7 @@ const item = {
 
 const Dashboard = () => {
 	const { data: hostReport } = useHostReport();
+	const { data: nginxVersion } = useNginxVersion();
 	const navigate = useNavigate();
 	const [userId, setUserId] = useState<number>(0);
 	const { data: userData } = useUser(userId, { enabled: userId !== 0 });
@@ -53,13 +54,23 @@ const Dashboard = () => {
 				<h2 className="text-3xl font-bold tracking-tight">
 					<T id={greeting} />, {userData?.nickname || userData?.name || "User"}
 				</h2>
-				<p className="text-muted-foreground">
-					{date.toLocaleDateString(undefined, {
-						weekday: "long",
-						year: "numeric",
-						month: "long",
-						day: "numeric",
-					})}
+				<p className="text-muted-foreground flex items-center gap-2">
+					<span>
+						{date.toLocaleDateString(undefined, {
+							weekday: "long",
+							year: "numeric",
+							month: "long",
+							day: "numeric",
+						})}
+					</span>
+					{nginxVersion?.version && (
+						<>
+							<span className="text-muted-foreground/40">•</span>
+							<span className="text-xs bg-muted px-2 py-0.5 rounded-full border border-border/50 font-mono text-muted-foreground">
+								Nginx / {nginxVersion.version}
+							</span>
+						</>
+					)}
 				</p>
 			</div>
 

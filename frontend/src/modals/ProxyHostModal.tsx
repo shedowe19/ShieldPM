@@ -85,6 +85,9 @@ interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate"
 	anubisRules?: ProxyHost["anubisRules"];
 	gitCredentials?: string;
 	php_override_ini?: string;
+	keepalivePool?: number | string;
+	keepaliveTimeout?: string;
+	keepaliveRequests?: number | string;
 }
 
 const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
@@ -106,6 +109,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}
 		if (sanitizedValues.advLimitReqBurst === "" || Number.isNaN(Number(sanitizedValues.advLimitReqBurst))) {
 			sanitizedValues.advLimitReqBurst = undefined;
+		}
+		if (sanitizedValues.keepalivePool === "" || Number.isNaN(Number(sanitizedValues.keepalivePool))) {
+			sanitizedValues.keepalivePool = undefined;
+		}
+		if (sanitizedValues.keepaliveRequests === "" || Number.isNaN(Number(sanitizedValues.keepaliveRequests))) {
+			sanitizedValues.keepaliveRequests = undefined;
 		}
 
 		// Map frontend field to backend schema
@@ -196,6 +205,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								advLimitReqUnit: data?.advLimitReqUnit || TIME_UNIT.SECONDS,
 								advLimitReqBurst: data?.advLimitReqBurst || undefined,
 								forwardQuery: data?.forwardQuery || "",
+								keepalivePool: data?.keepalivePool || 0,
+								keepaliveTimeout: data?.keepaliveTimeout || "60s",
+								keepaliveRequests: data?.keepaliveRequests || 1000,
 								maintenanceActive: data?.maintenanceActive || false,
 								// datetime-local requires format: YYYY-MM-DDTHH:mm:ss (no timezone)
 								// API returns ISO format with 'Z' suffix, so we strip it
@@ -1252,6 +1264,104 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																checked={field.checked}
 																onCheckedChange={(checked: boolean) =>
 																	form.setFieldValue("turboLoader", checked)
+																}
+															/>
+														)}
+													</Field>
+												</div>
+
+												<Field name="forwardScheme">
+													{({ field: schemeField }: FieldProps) =>
+														(schemeField.value === FORWARD_SCHEME.HTTP ||
+															schemeField.value === FORWARD_SCHEME.HTTPS) && (
+															<div className="p-4 border rounded-lg bg-card/50 space-y-4">
+																<div className="space-y-0.5 mb-4">
+																	<Label className="text-base text-primary">
+																		Upstream Connection Pool (Keepalive)
+																	</Label>
+																	<p className="text-sm text-muted-foreground mt-1">
+																		Maintains a pool of active HTTP connections to your backend. Highly recommended for PHP, Nextcloud, and API gateways to dramatically reduce latency.
+																	</p>
+																</div>
+																<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+																	<Field name="keepalivePool">
+																		{({ field, form }: FieldProps) => (
+																			<div className="space-y-2">
+																				<Label htmlFor="keepalivePool">
+																					Pool Size (0 = Disable)
+																				</Label>
+																				<Input
+																					id="keepalivePool"
+																					type="number"
+																					min={0}
+																					placeholder="e.g. 10"
+																					className={
+																						form.errors.keepalivePool &&
+																						form.touched.keepalivePool
+																							? "border-destructive"
+																							: ""
+																					}
+																					{...field}
+																				/>
+																			</div>
+																		)}
+																	</Field>
+																	<Field name="keepaliveTimeout">
+																		{({ field }: FieldProps) => (
+																			<div className="space-y-2">
+																				<Label htmlFor="keepaliveTimeout">
+																					Timeout (e.g. 60s)
+																				</Label>
+																				<Input
+																					id="keepaliveTimeout"
+																					type="text"
+																					placeholder="60s"
+																					{...field}
+																				/>
+																			</div>
+																		)}
+																	</Field>
+																	<Field name="keepaliveRequests">
+																		{({ field }: FieldProps) => (
+																			<div className="space-y-2">
+																				<Label htmlFor="keepaliveRequests">
+																					Max Requests per Conn
+																				</Label>
+																				<Input
+																					id="keepaliveRequests"
+																					type="number"
+																					min={1}
+																					placeholder="1000"
+																					{...field}
+																				/>
+																			</div>
+																		)}
+																	</Field>
+																</div>
+															</div>
+														)
+													}
+												</Field>
+
+												<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+													<div className="space-y-0.5">
+														<Label
+															htmlFor="http2Support"
+															className="text-base cursor-pointer"
+														>
+															<T id="domains.http2-support" />
+														</Label>
+														<p className="text-sm text-muted-foreground">
+															<T id="domains.http2-support.hint" />
+														</p>
+													</div>
+													<Field name="http2Support" type="checkbox">
+														{({ field, form }: FieldProps) => (
+															<Switch
+																id="http2Support"
+																checked={field.checked}
+																onCheckedChange={(checked: boolean) =>
+																	form.setFieldValue("http2Support", checked)
 																}
 															/>
 														)}

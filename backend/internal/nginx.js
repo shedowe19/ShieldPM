@@ -438,6 +438,21 @@ const internalNginx = {
 	},
 
 	/**
+	 * @returns {Promise<string>}
+	 */
+	getVersion: async () => {
+		try {
+			const output = await utils.execFile("nginx", ["-v"]);
+			const match = output.match(/nginx\/([0-9.]+)/);
+			return match ? match[1] : "unknown";
+		} catch (err) {
+			const output = err.message || "";
+			const match = output.match(/nginx\/([0-9.]+)/);
+			return match ? match[1] : "unknown";
+		}
+	},
+
+	/**
 	 * @param   {string}  cfg
 	 * @returns {boolean}
 	 */

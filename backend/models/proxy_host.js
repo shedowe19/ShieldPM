@@ -106,6 +106,12 @@ class ProxyHost extends Model {
 	index_file;
 	/** @type {string} */
 	advanced_config;
+	/** @type {number|null} */
+	keepalive_pool;
+	/** @type {string|null} */
+	keepalive_timeout;
+	/** @type {number|null} */
+	keepalive_requests;
 
 	// Git Sync fields
 	/** @type {string|null} */
