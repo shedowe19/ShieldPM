@@ -443,11 +443,11 @@ const internalNginx = {
 	getVersion: async () => {
 		try {
 			const output = await utils.execFile("nginx", ["-v"]);
-			const match = output.match(/nginx\/([0-9.]+)/);
+			const match = output.match(/(?:nginx|ShieldPM)\/([0-9.]+)/i);
 			return match ? match[1] : "unknown";
 		} catch (err) {
 			const output = err.message || "";
-			const match = output.match(/nginx\/([0-9.]+)/);
+			const match = output.match(/(?:nginx|ShieldPM)\/([0-9.]+)/i);
 			return match ? match[1] : "unknown";
 		}
 	},

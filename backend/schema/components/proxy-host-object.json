@@ -372,6 +372,22 @@
 			"type": "boolean",
 			"description": "Enable Browser Turbo-Loader (Multi-Part Injection) for large file downloads",
 			"example": false
+		},
+		"keepalive_pool": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 10000,
+			"example": 0
+		},
+		"keepalive_timeout": {
+			"type": "string",
+			"example": "60s"
+		},
+		"keepalive_requests": {
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 100000,
+			"example": 1000
 		}
 	}
 }
