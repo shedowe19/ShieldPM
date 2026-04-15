@@ -77,7 +77,11 @@ interface Props extends InnerModalProps {
 	remove: () => void;
 }
 
-interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate" | "advLimitReqBurst" | "keepalivePool" | "keepaliveTimeout" | "keepaliveRequests"> {
+interface ProxyHostFormValues
+	extends Omit<
+		Partial<ProxyHost>,
+		"advLimitReqRate" | "advLimitReqBurst" | "keepalivePool" | "keepaliveTimeout" | "keepaliveRequests"
+	> {
 	advLimitReqRate?: number | string;
 	advLimitReqBurst?: number | string;
 	crowdsecEnabled?: boolean;
