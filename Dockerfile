@@ -30,9 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     tar -xzf /tmp/anubis.tar.gz -C /app --strip-components=2 "anubis-1.25.0-linux-${TARGETARCH}/bin/anubis" && \
     rm /tmp/anubis.tar.gz && \
     chmod +x /app/anubis && \
-    curl -L "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.14.2/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" -o "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" && \
-    tar -xzf "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.14.2.linux-${TARGETARCH}/oauth2-proxy" && \
-    rm "/tmp/oauth2-proxy-v7.14.2.linux-${TARGETARCH}.tar.gz" && \
+    curl -L "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.15.2/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" -o "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
+    tar -xzf "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.15.2.linux-${TARGETARCH}/oauth2-proxy" && \
+    rm "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
     npm install -g yarn && \
     yarn install --production=false && \
