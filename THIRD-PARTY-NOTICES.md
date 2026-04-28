@@ -209,7 +209,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - is-stream@2.0.1 - MIT[](https://www.npmjs.com/package/is-stream/v/2.0.1)
 - is-typed-array@1.1.15 - MIT[](https://www.npmjs.com/package/is-typed-array/v/1.1.15)
 - isarray@2.0.5 - MIT[](https://www.npmjs.com/package/isarray/v/2.0.5)
-- isomorphic-git@1.37.5 - MIT[](https://www.npmjs.com/package/isomorphic-git/v/1.37.5)
+- isomorphic-git@1.37.6 - MIT[](https://www.npmjs.com/package/isomorphic-git/v/1.37.6)
 - jose@6.2.1 - MIT[](https://www.npmjs.com/package/jose/v/6.2.1)
 - js-yaml@4.1.1 - MIT[](https://www.npmjs.com/package/js-yaml/v/4.1.1)
 - json-parse-better-errors@1.0.2 - MIT[](https://www.npmjs.com/package/json-parse-better-errors/v/1.0.2)
@@ -247,7 +247,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - mkdirp-classic@0.5.3 - MIT[](https://www.npmjs.com/package/mkdirp-classic/v/0.5.3)
 - mri@1.2.0 - MIT[](https://www.npmjs.com/package/mri/v/1.2.0)
 - ms@2.1.3 - MIT[](https://www.npmjs.com/package/ms/v/2.1.3)
-- mysql2@3.22.2 - MIT[](https://www.npmjs.com/package/mysql2/v/3.22.2)
+- mysql2@3.22.3 - MIT[](https://www.npmjs.com/package/mysql2/v/3.22.3)
 - named-placeholders@1.1.6 - MIT[](https://www.npmjs.com/package/named-placeholders/v/1.1.6)
 - nan@2.25.0 - MIT[](https://www.npmjs.com/package/nan/v/2.25.0)
 - napi-build-utils@2.0.0 - MIT[](https://www.npmjs.com/package/napi-build-utils/v/2.0.0)
@@ -261,7 +261,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - objection@3.1.5 - MIT[](https://www.npmjs.com/package/objection/v/3.1.5)
 - on-finished@2.4.1 - MIT[](https://www.npmjs.com/package/on-finished/v/2.4.1)
 - once@1.4.0 - ISC[](https://www.npmjs.com/package/once/v/1.4.0)
-- openid-client@6.8.3 - MIT[](https://www.npmjs.com/package/openid-client/v/6.8.3)
+- openid-client@6.8.4 - MIT[](https://www.npmjs.com/package/openid-client/v/6.8.4)
 - otplib@13.4.0 - MIT[](https://www.npmjs.com/package/otplib/v/13.4.0)
 - p-limit@1.3.0 - MIT[](https://www.npmjs.com/package/p-limit/v/1.3.0)
 - p-locate@2.0.0 - MIT[](https://www.npmjs.com/package/p-locate/v/2.0.0)
@@ -782,7 +782,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - picomatch@4.0.3 - MIT[](https://www.npmjs.com/package/picomatch/v/4.0.3)
 - pirates@4.0.7 - MIT[](https://www.npmjs.com/package/pirates/v/4.0.7)
 - postcss-selector-parser@6.1.2 - MIT[](https://www.npmjs.com/package/postcss-selector-parser/v/6.1.2)
-- postcss@8.5.10 - MIT[](https://www.npmjs.com/package/postcss/v/8.5.10)
+- postcss@8.5.12 - MIT[](https://www.npmjs.com/package/postcss/v/8.5.12)
 - prop-types@15.8.1 - MIT[](https://www.npmjs.com/package/prop-types/v/15.8.1)
 - property-information@7.1.0 - MIT[](https://www.npmjs.com/package/property-information/v/7.1.0)
 - query-string@9.3.1 - MIT[](https://www.npmjs.com/package/query-string/v/9.3.1)
@@ -984,4 +984,4 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - why-is-node-running@2.3.0 - MIT[](https://www.npmjs.com/package/why-is-node-running/v/2.3.0)
 - ws@8.19.0 - MIT[](https://www.npmjs.com/package/ws/v/8.19.0)
 
-The above information is based solely on the NPM Registry data as of April 26, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information is based solely on the NPM Registry data as of April 28, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
