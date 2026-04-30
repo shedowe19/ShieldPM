@@ -1,479 +1,82 @@
-# ShieldPM (formerly NPMplus)
+# ShieldPM
 
-> [!CAUTION]
-> **MIGRATION WARNING**
-> This project has been renamed from **NPMplus** to **ShieldPM**.
->
-> 1.  **Docker Image**: You **MUST** update your `compose.yaml` to use `ghcr.io/shedowe19/shieldpm:latest`.
-> 2.  **Data Path**: Internal data is now stored in `/data/shieldpm`.
->     *   **Auto-Migration**: When you start the new container, it will **automatically move** your existing data from `/data/npmplus` to `/data/shieldpm`.
->     *   **Action Required**: If you mount the data volume to a host path (e.g., `./data:/data`), you may want to rename your host folder for clarity, but it is not strictly required as the mapping handles it.
-> 3.  **Downgrade**: Migration is **one-way**. Back up your data before upgrading!
-
-> [!IMPORTANT]
-> **ALPINE TO DEBIAN MIGRATION**
-> The base image has been switched from **Alpine Linux** to **Debian Trixie** (Testing).
-> *   **Stability**: Improved compatibility with glibc-based binaries and Python wheels.
-> *   **Package Names**: If you install custom packages (e.g. `PHP82_APKS`), you must now use **Debian package names** (e.g., `php8.2-curl` instead of `php82-curl`).
-> *   **Shell**: The default shell is now `bash` instead of `ash`. `start.sh` and custom scripts should use `#!/usr/bin/env sh` or `#!/bin/bash`.
-
-
+![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/ShieldPM/docker.yml?style=for-the-badge)
 ![Version](https://img.shields.io/github/v/release/shedowe19/ShieldPM?style=for-the-badge&color=blue)
 ![License](https://img.shields.io/badge/license-Proprietary-red?style=for-the-badge)
-![CI Status](https://img.shields.io/github/actions/workflow/status/shedowe19/ShieldPM/docker.yml?style=for-the-badge)
+
+A modern, security-focused reverse proxy manager built on top of Nginx — with a clean web UI, advanced TLS management, and built-in protection features.
 
 ---
 
-## 🎮 Live Demo
-
-Try out the securely locked-down **Public Demo**:  
-👉 **[https://demo-shieldpm.clawsucht.eu](https://demo-shieldpm.clawsucht.eu)**
-
-### 🔑 Credentials
-*   **Email:** `demo.shieldpm@clawsucht.eu`
-*   **Password:** `ShieldPM`
-*   **Reset Schedule:** The database is automatically wiped and restored **every 60 minutes**. ⏳
-
-### 📖 The "Can I Click This?" Guide
-
-**✅ The Fun Stuff (Allowed):**
-*   **Spin it up:** Create Proxy Hosts (forward to `example.com` or `8.8.8.8`).
-*   **Bring your own Domain:** Point your DNS (A Record) to **`37.221.92.8`** and add it to the demo to test real traffic!
-*   **Secure it:** Generate Let's Encrypt certificates (staging) or self-signed ones.
-*   **Watch it:** Stare at the **Advanced Analytics** dashboard until the numbers make sense.
-*   **Chat with it:** Ask the **AI Agent** about Nginx config (it loves talking shop).
-
-**🚫 The "Don't Even Think About It" List (Blocked):**
-*   ❌ **No Home Calls:** Forwarding to `localhost`, `127.0.0.1`, `192.168.x.x`, or internal Docker buddies (`db`, `app`) is a hard no.
-*   ❌ **No Jailbreaking:** Advanced Nginx Configs are locked away in a vault.
-*   ❌ **No God Mode:** You can't change passwords, create admins, or nuke the settings.
-*   ❌ **No Secret Tunnels:** Cloudflare Tunnels are for display purposes only.
-
 > [!CAUTION]
-> # 🚨 BAN HAMMER & AI OVERLORD ONLINE 🚨
->
-> Listen up! This environment is tighter than a drum. It is **aggressively defended**.
->
-> *   🤖 **The AI Watcher:** Our AI never sleeps. It analyzes your behavior in real-time. If you act sus, it *will* know.
-> *   🔨 **CrowdSec Enforcer:** Thinking about running a scanner or fuzzer? **Don't.** You will be **PERMANENTLY BANNED** across our entire infrastructure faster than you can say `sudo`. No appeals. No mercy.
-> *   🛡️ **Paranoid WAF:** ModSecurity is eating exploits for breakfast.
->
-> **TL;DR:** Play nice, or enjoy the void. We ❤️ security researchers, but we ban attackers. �
+> **Migration from NPMplus required.**
+> - Update your `compose.yaml` to use `ghcr.io/shedowe19/shieldpm:latest`
+> - Data now lives at `/data/shieldpm` (auto-migrated from `/data/npmplus` on first start)
+> - Switched from Alpine to **Debian Trixie** — use Debian package names (e.g. `php8.2-curl` instead of `php82-curl`)
+> - Downgrading is not possible — **back up your data before upgrading**
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Download config
+curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
+
+# 2. Set your timezone and ACME email in compose.yaml, then start
+docker compose up -d
+```
+
+Open the admin UI at `https://<your-ip>:81`
+
+**Default credentials:**
+- **Email:** `admin@example.org`
+- **Password:** Check the container logs → `docker logs shieldpm`
+
+---
+
+## ✨ Features
+
+- **Reverse Proxy** — Manage Nginx hosts, redirects, and streams from a clean UI
+- **SSL/TLS** — Automatic Let's Encrypt certificates with HTTP/2 and HTTP/3 (QUIC) support
+- **WAF** — ModSecurity with OWASP CoreRuleSet + OpenAppSec integration
+- **CrowdSec IPS** — Community-powered intrusion prevention
+- **Cloudflare Tunnels** — Create and manage Zero Trust tunnels directly from the UI
+- **PHP-FPM** — Optional PHP 8.2 / 8.3 / 8.4 integration
+- **Analytics** — Built-in GoAccess dashboard on port `:91`
+- **Auth Requests** — SSO support via Authentik and similar providers
+- **Multi-DB** — SQLite (default), MySQL/MariaDB, or PostgreSQL
+- **i18n** — UI available in English, German, Spanish, French, and more
 
 ---
 
 ## 📚 Documentation
 
-Detailed documentation is available in the **[Wiki](https://github.com/shedowe19/ShieldPM/wiki)**.
-It covers installation, configuration, and advanced usage examples.
-
-**ShieldPM** is an advanced, security-focused fork of Nginx Proxy Manager (NPM). It empowers you to manage Nginx reverse proxies with a user-friendly web interface while integrating cutting-edge features like **HTTP/3 (QUIC)**, **CrowdSec IPS**, **ModSecurity (WAF)**, and **enhanced TLS certificate management**.
-
----
-
-
-
-## 🚀 Quick Start
-
-Get up and running in seconds with Docker Compose.
-
-**1. Download Configuration**
-```bash
-curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
-```
-
-**2. Configure**
-Edit `compose.yaml`:
-*   Set `TZ` (Timezone)
-*   Set `ACME_EMAIL` (for Let's Encrypt)
-
-**3. Launch**
-```bash
-docker compose up -d
-```
-
-**4. Access Admin UI**
-Open `https://<your-ip>:81`
-*   **Email:** `admin@example.org`
-*   **Password:** Check logs (`docker logs shieldpm`) for the unique initial password.
-
----
-
+Full setup guides, configuration options, and advanced usage are in the **[Wiki](https://github.com/shedowe19/ShieldPM/wiki)**.
 
 ---
 
 ## 🔨 Development
 
-**Frontend:**
 ```bash
-cd frontend
-yarn install
-yarn dev
-```
+# Frontend
+cd frontend && yarn install && yarn dev
 
-**Backend:**
-```bash
-cd backend
-npm install
-npm run dev
-```
+# Backend
+cd backend && npm install && npm run dev
 
-**Testing:**
-Both projects use `vitest` for testing.
-```bash
+# Tests
 npm test
 ```
-
-### Protocol & Structure
-*   **`nginx-quic/`**: Contains patches used to build Nginx with HTTP/3 support (no longer a base image).
-*   **`backend/`**: Node.js/Express API.
-*   **`frontend/`**: React/Vite SPA.
-*   **`rootfs/`**: Docker filesystem overlays.
-
----
-
-## 🛠️ Tech Stack
-
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-![Express](https://img.shields.io/badge/Express.js-404D59?style=flat-square&logo=express&logoColor=white)
-![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-729B1B?style=flat-square&logo=vitest&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-005C84?style=flat-square&logo=mysql&logoColor=white)
-![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=flat-square&logo=mariadb&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
-![OpenAppSec](https://img.shields.io/badge/OpenAppSec-141D2B?style=flat-square)
-![CrowdSec](https://img.shields.io/badge/CrowdSec-F8A51B?style=flat-square&logo=crowdsec&logoColor=white)
-![ModSecurity](https://img.shields.io/badge/ModSecurity-003545?style=flat-square&logo=owasp&logoColor=white)
-![MaxMind](https://img.shields.io/badge/MaxMind-031E37?style=flat-square)
-![Cloudflare](https://img.shields.io/badge/Cloudflare_Tunnels-F38020?style=flat-square&logo=cloudflare&logoColor=white)
-![Caddy](https://img.shields.io/badge/Caddy-1F88C0?style=flat-square&logo=caddy&logoColor=white)
-![PHP](https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white)
-![GoAccess](https://img.shields.io/badge/GoAccess-373737?style=flat-square&logo=goaccess&logoColor=white)
-![Knex.js](https://img.shields.io/badge/Knex.js-D26B38?style=flat-square&logo=knexdotjs&logoColor=white)
-![Objection.js](https://img.shields.io/badge/Objection.js-222222?style=flat-square)
-![Radix UI](https://img.shields.io/badge/Radix_UI-161618?style=flat-square&logo=radix-ui&logoColor=white)
-![TanStack Query](https://img.shields.io/badge/TanStack_Query-FF4154?style=flat-square&logo=react-query&logoColor=white)
-![Recharts](https://img.shields.io/badge/Recharts-22B5BF?style=flat-square)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white)
-![Lucide](https://img.shields.io/badge/Lucide-F56565?style=flat-square&logo=lucide&logoColor=white)
-
----
-
-## ✨ Key Features
-
-ShieldPM extends the original Nginx Proxy Manager with significant enhancements:
-
-### 🛡️ Core Security
-*   **HTTP/3 (QUIC) Support:** Leverage the latest web protocol for faster, more efficient connections. Requires exposing HTTPS with UDP.
-*   **CrowdSec Integration:** Enhanced security with IPS capabilities to block malicious IPs.
-*   **Advanced Analytics:** Built-in dashboard for real-time traffic monitoring and statistics.
-*   **ModSecurity (WAF):** Web Application Firewall with CoreRuleSet support for added protection.
-*   **Improved TLS Management:**
-    *   Faster certificate creation by minimizing Nginx reloads.
-    *   **OCSP Stapling/Must-Staple** support for enhanced security.
-    *   Automatic cleaning of old, invalid Certbot certificates.
-    *   Support for different ACME servers and **ML-KEM**.
-    *   **Internal PKI**: Built-in ECDSA CA for issuing internal certificates and client certificates.
-
-### ⚡ Performance & Nginx Configuration
-*   **Protocol Optimization:** Only enables TLSv1.2 and TLSv1.3. HTTP/2 is always enabled.
-*   **Load Balancing:** Capabilities for complex upstream setups (requires custom configuration).
-*   **Upload Limits:** Allows infinite upload size (may be limited by ModSecurity).
-*   **Bandwidth Limiting:** built-in support for limiting bandwidth per host.
-*   **Request Rate Limiting:** granular control over request rates per host.
-*   **Mutual TLS (mTLS):** Enforce client certificate authentication for specific access lists (supports custom and internal CAs).
-*   **Disable Buffering:** Support for streaming applications (Plex/Jellyfin) by disabling Nginx buffering.
-*   **Header Security:** `Server` response header hidden by default. Basic security headers added when HSTS is enabled.
-*   **OpenAppSec:** Option to load OpenAppSec attachment module.
-*   **Punycode:** Full support for international domain names.
-### 💻 Usability & Administration
-*   **Internationalization:** Frontend available in multiple languages (English, German, Spanish, French, and more).
-*   **Lightweight:** Docker image based on **Debian Trixie** with systemd support.
-*   **Secure Admin:** Admin backend and default page run securely with HTTPS.
-*   **Database:** Automatic **SQLite** vacuum and password reset utility.
-*   **Networking:** Many environment options optimized for `network_mode: host`.
-*   **Security Secrets:** DNS secrets are saved in the DB and rewritten on container start (no external mounts needed).
-*   **GoAccess:** Real-time web log analyzer (accessible on `:91`).
-*   **Cloudflare Tunnels:** Integrated management of `cloudflared` tunnels (Zero Trust).
-*   **PHP:** Optional PHP-FPM integration (8.2/8.3/8.4).
-
-### ☁️ Cloudflare Tunnels (Zero Trust)
-ShieldPM integrates `cloudflared` directly, allowing you to create and manage tunnels from the UI without needing a separate container.
-*   **Manage Tunnels:** List, Create, Delete tunnels.
-*   **Security:** Tunnel tokens are encrypted at rest using `aes-256-gcm`.
-*   **Status Monitoring:** Real-time online/offline status.
-
-
----
-
-## 📦 Migration & Compatibility
-
-| Feature | Status | Note |
-| :--- | :--- | :--- |
-| **Architectures** | `amd64`, `arm64` | 32-bit not supported |
-| **Database** | SQLite (Rec.) | MySQL/PG supported but offers no major benefit |
-| **From NPM** | One-way | **Cannot downgrade** to original NPM. Backup first! |
-
-### Migration Steps
-**Note: Migrating back to the original version is not possible.**
-
-1.  **Backup** `/data` and `/etc/letsencrypt`.
-2.  **Stop** old NPM container.
-3.  **Update** `compose.yaml` volumes to point to your data.
-4.  **Deploy** ShieldPM (`docker compose up -d`).
-5.  **Clean up**: Remove `/etc/letsencrypt` volume after first run (moved to `/data`).
-6.  **Verify**: Check all host settings and update Proxy Scheme to HTTPS if proxying ShieldPM through itself.
-
----
-
-## 🛡️ Advanced Security Configuration
-
-### CrowdSec (IPS)
-To enable CrowdSec IPS integration:
-
-<details>
-<summary>Click to view setup instructions</summary>
-
-1.  **Install Collection**: Install CrowdSec and the `shedowe19/shieldpm` collection.
-2.  **Enable Logging**: Set `LOGROTATE: "true"` in `compose.yaml`.
-3.  **Configure Acquisition**: Create/update `/opt/crowdsec/conf/acquis.d/shieldpm.yaml`:
-    ```yaml
-    filenames:
-      - /opt/shieldpm/nginx/*.log
-    labels:
-      type: shieldpm
-    ---
-    filenames:
-      - /opt/shieldpm/nginx/*.log
-    labels:
-      type: modsecurity
-    ---
-    listen_addr: 0.0.0.0:7422
-    appsec_config: crowdsecurity/appsec-default
-    name: appsec
-    source: appsec
-    labels:
-      type: appsec
-    ```
-4.  **Host Network**: Ensure `network_mode: host` is used.
-5.  **Bouncer**: Run `docker exec crowdsec cscli bouncers add shieldpm -o raw` and save the key.
-6.  **Config**: Edit `/opt/shieldpm/crowdsec/crowdsec.conf`, set `ENABLED=true` and `API_KEY`.
-7.  **Firewall Bouncer**: Recommended for optimal protection.
-</details>
-
-### ModSecurity (WAF) CoreRuleSet
-1.  **Download** plugin files (`-before.conf`, `-config.conf`, etc.).
-2.  **Place** them in `/opt/shieldpm/modsecurity/crs-plugins`.
-3.  **Configure** the `<plugin-name>-config.conf`.
-
----
-
-## 💾 Database Support
-
-While SQLite is the default and recommended database for most users, ShieldPM supports external database backends for larger deployments.
-
-### Supported Databases
-*   **SQLite** (Default, zero-config)
-*   **MySQL** / **MariaDB**
-*   **PostgreSQL**
-
-### Configuration
-To use an external database, configure the following environment variables in `compose.yaml`:
-
-**MySQL / MariaDB**:
-```yaml
-DB_MYSQL_HOST=db
-DB_MYSQL_PORT=3306
-DB_MYSQL_USER=npm
-DB_MYSQL_PASSWORD=npm
-DB_MYSQL_NAME=npm
-```
-
-**PostgreSQL**:
-```yaml
-DB_POSTGRES_HOST=db
-DB_POSTGRES_PORT=5432
-DB_POSTGRES_USER=npm
-DB_POSTGRES_PASSWORD=npm
-DB_POSTGRES_NAME=npm
-```
-
-### 🔄 Auto-Migration
-ShieldPM includes a built-in **Auto-Migration** feature. If you switch from SQLite to MySQL or PostgreSQL, the application will automatically:
-1.  Detect the new empty database connection.
-2.  Existing `database.sqlite` is found.
-3.  **Migrate all data** from SQLite to the new backend.
-4.  Rename `database.sqlite` to `database.sqlite.migrated`.
-
-This makes scaling up effortless!
-
----
-
-## 🔌 Feature Integrations
-
-### PHP-FPM
-<details>
-<summary><strong>External PHP-FPM (Recommended)</strong></summary>
-
-1.  Create a Proxy Host (dummy data for Scheme/IP/Path).
-2.  In **Advanced Configuration**, add:
-    ```nginx
-    location / {
-        alias /var/www/<site-folder>/;
-        location ~* \.php(?:$|/) {
-          fastcgi_split_path_info ^(.*\.php)(/.*)$;
-          try_files $fastcgi_script_name =404;
-          fastcgi_pass <php-fpm-address>; # socket/tcp
-        }
-    }
-    ```
-</details>
-
-<details>
-<summary><strong>Inbuilt PHP-FPM</strong></summary>
-
-1.  Enable `PHP82`, `PHP83`, or `PHP84` vars in `compose.yaml`.
-2.  In Proxy Host UI, set Forwarding Port to `82`, `83`, or `84`.
-</details>
-
-### Load Balancing
-Define upstream servers in `/opt/shieldpm/custom_nginx/http_top.conf`:
-```nginx
-upstream my_app {
-    server 10.0.0.1:80;
-    server 10.0.0.2:80;
-    server 10.0.0.3:80 backup;
-}
-```
-Then point your Proxy Host to `http://my_app` (or use specific ports as needed).
-
-### Prerun Scripts
-Create `/opt/shieldpm/prerun/` and place shell scripts (`.sh`) there.
-*   Ensure shebang is present (`#!/usr/bin/env sh`).
-*   Set `ENABLE_PRERUN: "true"` in `compose.yaml`.
-
----
-
-## 🔐 Auth Requests (SSO) configuration
-ShieldPM supports easy integration with auth providers via `auth_request`.
-
-<details>
-<summary><strong>Authentik</strong></summary>
-
-**Custom Location `/`**:
-```nginx
-auth_request /outpost.goauthentik.io/auth/nginx;
-error_page 401 = @goauthentik_proxy_signin;
-auth_request_set $auth_cookie $upstream_http_set_cookie;
-add_header Set-Cookie $auth_cookie;
-# ... (See full docs for headers)
-```
-
-**Custom Location `/outpost.goauthentik.io`**:
-Proxy to your Authentik instance (`https://<ip>:9443/outpost.goauthentik.io`).
-
-**Advanced Config**:
-```nginx
-location @goauthentik_proxy_signin {
-    internal;
-    add_header Set-Cookie $auth_cookie;
-    return 302 /outpost.goauthentik.io/start?rd=$request_uri;
-}
-```
-</details>
-
-<details>
-<summary><strong>Authelia</strong></summary>
-
-**Custom Location `/`**:
-```nginx
-auth_request /internal/authelia/authz;
-auth_request_set $redirection_url $upstream_http_location;
-error_page 401 =302 $redirection_url;
-# ... (User/Groups Headers)
-```
-</details>
-
-<details>
-<summary><strong>Anubis</strong></summary>
-Add `auth_request /.within.website/x/cmd/anubis/api/check;` to custom location `/`.
-</details>
-
-<details>
-<summary><strong>TinyAuth</strong></summary>
-Add `auth_request /tinyauth;` to custom location `/`.
-</details>
-
----
-
-## ⚠️ Notes on Cloudflare
-It is **not recommended** to use Cloudflare proxy (`users <=> Cloudflare <=> ShieldPM`) in front of ShieldPM.
-
-*   **MITM:** Cloudflare acts as a Man-in-the-Middle, decrypting traffic.
-*   **Features:** Breaks HTTP/3 between user and ShieldPM.
-*   **Overrides:** Overrides HSTS and TLS settings.
-*   **Uploads:** 100MB upload limit on free plans.
-*   **Privacy:** Cannot protect if real IP is known; does not protect non-HTTP ports.
-
-**Recommendation:** Use CrowdSec for WAF/IPS or Cloudflared tunnels (without proxying) if IP hiding is needed. If you must use Cloudflare, set SSL/TLS to **Full (strict)**.
-
----
-
-## 📝 Privacy & Data Handling (Hints)
-**Disclaimer: This is not legal advice.** Please disclose the following:
-
-1.  **Nginx Error Logs:** Contain user IPs (WARN level+), written to Docker logs.
-2.  **LOGROTATE:** If true, access/error logs (with IPs) are written to disk.
-3.  **CrowdSec:** Metadata sent to CrowdSec if sharing is enabled.
-4.  **IP Blocking:** Disclose use of access lists, GeoIP, etc.
-5.  **GoAccess:** Stores analytics/IPs on disk.
-6.  **PHP-FPM:** Error logs contain IPs.
-7.  **OpenAppSec:** Mention if module is loaded.
-8.  **Custom Data:** Any custom Lua scripts collecting data.
-9.  **Caddy:** If using Caddy redirect container.
-10. **Anubis:** See Anubis privacy policy.
-11. **Extra Configs:** Any user-data related custom configs.
-12. **Backend:** General data handling/storage policies.
-13. **OCSP:** Clients may contact CAs directly.
-14. **Nameservers:** Providers may see DNS requests.
-
----
-
-## 🌐 Expected Connections
-The container may initiate outbound connections to:
-*   Clients & Upstream Services
-*   ACME/OCSP Servers
-*   Gravatar (Profile Pics)
-*   GitHub (Update checks)
-*   PyPI (Certbot plugins)
-*   DNS Providers (Challenges)
-*   Site24x7 (Reachability checks)
-*   Cloudflare (IP Ranges)
-*   CrowdSec LAPI
-
----
 
 ---
 
 ## 🙏 Acknowledgments
 
-Special thanks to **[@ZoeyVid](https://github.com/ZoeyVid)** for their incredible foundational work on NPMplus.
-ShieldPM builds upon this robust legacy with a renewed focus on:
-*   **Feature Expansion**: Bringing more power and flexibility to your fingertips.
-*   **Automation**: Streamlining workflows to save you time.
-*   **Security**: Hardening every layer for peace of mind.
+Special thanks to **[@ZoeyVid](https://github.com/ZoeyVid)** for the foundational work on NPMplus, and to all contributors who help make ShieldPM better.
+
+**Questions or ideas?** Head over to [GitHub Discussions](https://github.com/shedowe19/ShieldPM/discussions) — we'd love to hear from you.
 
 ---
 
-## 🤝 Contributing & Support
-
-*   **Support**: [GitHub Discussions](https://github.com/shedowe19/ShieldPM/discussions)
-*   **Bugs**: [GitHub Issues](https://github.com/shedowe19/ShieldPM/issues)
-
-**Maintained with ❤️ by the ShieldPM Contributors.**
+*Maintained with ❤️ by the ShieldPM Contributors.*
