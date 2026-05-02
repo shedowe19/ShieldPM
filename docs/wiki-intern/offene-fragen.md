@@ -21,7 +21,7 @@ Sammlung offener Fragen und Unsicherheiten, die aus dem Code nicht eindeutig abg
 
 ## Offene Fragen
 
-- TODO: Genauer Inhalt von `backend/routes/`
+- Keine
 
 ## Konventionen
 
