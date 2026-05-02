@@ -54,6 +54,14 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Terminal (SSH)](./module/terminal.md)
 - [Benutzer & Auth](./module/benutzer-auth.md)
 - [2FA-Service](./module/2fa.md)
+- [Anubis (PoW-Gate)](./module/anubis.md)
+
+### Verwaltung
+
+- [Übersicht](./verwaltung/README.md)
+- [Einstellungen](./verwaltung/einstellungen.md)
+- [Audit-Log](./verwaltung/audit-log.md)
+- [System-Reports](./verwaltung/report.md)
 
 ### UI (Frontend)
 
