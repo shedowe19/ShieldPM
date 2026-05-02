@@ -42,15 +42,15 @@ yarn test    # vitest
 
 ## Wichtige Dateien für die Entwicklung
 
-| Datei | Zweck |
-|---|---|
-| `backend/index-dev.js` | Einstiegspunkt für Entwicklung |
-| `backend/index.js` | Einstiegspunkt für Produktion |
-| `backend/knexfile.js` | Knex-Konfiguration (DB-Verbindung) |
-| `backend/db.js` | Datenbankinitialisierung |
-| `backend/setup.js` | Initial-Setup (Admin-User, Default-Einstellungen) |
-| `frontend/vite.config.ts` | Vite-Konfiguration |
-| `frontend/tailwind.config.js` | Tailwind-Konfiguration |
+| Datei                         | Zweck                                             |
+| ----------------------------- | ------------------------------------------------- |
+| `backend/index-dev.js`        | Einstiegspunkt für Entwicklung                    |
+| `backend/index.js`            | Einstiegspunkt für Produktion                     |
+| `backend/knexfile.js`         | Knex-Konfiguration (DB-Verbindung)                |
+| `backend/db.js`               | Datenbankinitialisierung                          |
+| `backend/setup.js`            | Initial-Setup (Admin-User, Default-Einstellungen) |
+| `frontend/vite.config.ts`     | Vite-Konfiguration                                |
+| `frontend/tailwind.config.js` | Tailwind-Konfiguration                            |
 
 ## Datenbank (Entwicklung)
 

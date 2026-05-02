@@ -1,0 +1,5 @@
+1. Identify missing entries in `docs/wiki-intern/module/README.md`
+2. Update `docs/wiki-intern/module/README.md` to include all backend modules
+3. Provide an overview for the AI core modules
+4. Create empty or minimal doc files for the missing modules if applicable, or group them.
+5. Create a pre-commit step.

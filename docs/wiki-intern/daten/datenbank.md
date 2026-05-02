@@ -6,11 +6,11 @@ Dokumentation der Datenbank-Konfiguration und -Verwaltung.
 
 ## Unterstützte Datenbanken
 
-| Engine | Paket | Einsatz |
-|---|---|---|
-| SQLite | `better-sqlite3` v12.9 | Entwicklung, einfache Setups |
-| MySQL / MariaDB | `mysql2` v3.22 | Produktion |
-| PostgreSQL | `pg` v8.20 | Produktion |
+| Engine          | Paket                  | Einsatz                      |
+| --------------- | ---------------------- | ---------------------------- |
+| SQLite          | `better-sqlite3` v12.9 | Entwicklung, einfache Setups |
+| MySQL / MariaDB | `mysql2` v3.22         | Produktion                   |
+| PostgreSQL      | `pg` v8.20             | Produktion                   |
 
 ## Konfiguration
 
@@ -33,6 +33,7 @@ Die Datenbank wird beim Anwendungsstart initialisiert. Migrationen laufen automa
 Datei: `backend/setup.js` (7 KB)
 
 Erstellt beim ersten Start:
+
 - Admin-Benutzer (`admin@example.org`)
 - Default-Einstellungen
 - Default-Zertifikate

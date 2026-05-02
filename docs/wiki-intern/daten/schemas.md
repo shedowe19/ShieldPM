@@ -15,13 +15,13 @@ Die Datenbankschemas werden durch Knex.js-Migrationen definiert und durch Object
 
 ## Schema-Konventionen
 
-| Konvention | Beschreibung |
-|---|---|
-| Primärschlüssel | `id` (auto-incrementing integer) |
-| Timestamps | `created_on`, `modified_on` als `string` (nicht `datetime`) |
-| Booleans (SQLite) | Gespeichert als `0`/`1` Integer, konvertiert im Model |
-| Fremdschlüssel | `*_id` Namenskonvention (z.B. `certificate_id`, `access_list_id`) |
-| Tabellenname | snake_case (z.B. `proxy_host`, `access_list_auth`) |
+| Konvention        | Beschreibung                                                      |
+| ----------------- | ----------------------------------------------------------------- |
+| Primärschlüssel   | `id` (auto-incrementing integer)                                  |
+| Timestamps        | `created_on`, `modified_on` als `string` (nicht `datetime`)       |
+| Booleans (SQLite) | Gespeichert als `0`/`1` Integer, konvertiert im Model             |
+| Fremdschlüssel    | `*_id` Namenskonvention (z.B. `certificate_id`, `access_list_id`) |
+| Tabellenname      | snake_case (z.B. `proxy_host`, `access_list_auth`)                |
 
 ## Modell-Hooks
 

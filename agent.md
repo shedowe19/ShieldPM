@@ -400,3 +400,7 @@ Code ist die Quelle der Wahrheit.
 Das Wiki erklärt die Quelle der Wahrheit.
 
 Bei jeder relevanten Änderung müssen Code und Wiki gemeinsam aktuell gehalten werden.
+
+# Formatierung
+
+- Alle Markdown-Dateien im Wiki müssen mit Prettier formatiert werden (`npx prettier --write "docs/wiki-intern/**/*.md"`). Biome sollte für Markdown in diesem Projekt vermieden werden.

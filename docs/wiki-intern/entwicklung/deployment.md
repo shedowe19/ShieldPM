@@ -28,6 +28,7 @@ bash scripts/install.sh
 ```
 
 Der Installer:
+
 1. Prüft Abhängigkeiten (Node, npm, Nginx, sqlite3, certbot)
 2. Erstellt systemd-Unit-Files
 3. Lädt CrowdSec-Parser/Collections herunter
@@ -35,14 +36,14 @@ Der Installer:
 
 ## Optionale Sidecar-Services
 
-| Service | Image | Zweck |
-|---|---|---|
-| CrowdSec | `crowdsecurity/crowdsec:latest` | IPS |
-| MySQL | `mysql:8` | Produktions-DB |
-| PostgreSQL | `postgres:17-bookworm` | Produktions-DB |
-| GeoIP-Update | `ghcr.io/maxmind/geoipupdate:latest` | GeoIP-Daten |
-| Caddy | `ghcr.io/shedowe19/shieldpm:caddy` | HTTP→HTTPS Redirector |
-| OpenAppSec-Agent | `ghcr.io/openappsec/agent:latest` | AI WAF |
+| Service          | Image                                | Zweck                 |
+| ---------------- | ------------------------------------ | --------------------- |
+| CrowdSec         | `crowdsecurity/crowdsec:latest`      | IPS                   |
+| MySQL            | `mysql:8`                            | Produktions-DB        |
+| PostgreSQL       | `postgres:17-bookworm`               | Produktions-DB        |
+| GeoIP-Update     | `ghcr.io/maxmind/geoipupdate:latest` | GeoIP-Daten           |
+| Caddy            | `ghcr.io/shedowe19/shieldpm:caddy`   | HTTP→HTTPS Redirector |
+| OpenAppSec-Agent | `ghcr.io/openappsec/agent:latest`    | AI WAF                |
 
 ## Versionierung
 

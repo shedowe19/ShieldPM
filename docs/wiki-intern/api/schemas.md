@@ -6,13 +6,13 @@ Beschreibung der OpenAPI/Swagger Schema-Struktur.
 
 ## Dateien
 
-| Datei | Beschreibung |
-|---|---|
-| `backend/schema/swagger.json` | Hauptdatei (11 KB) |
-| `backend/schema/common.json` | Gemeinsame Definitionen (5 KB) |
-| `backend/schema/index.js` | Schema-Loader |
-| `backend/schema/components/` | Wiederverwendbare Schema-Komponenten |
-| `backend/schema/paths/` | Endpunkt-Pfad-Definitionen |
+| Datei                         | Beschreibung                         |
+| ----------------------------- | ------------------------------------ |
+| `backend/schema/swagger.json` | Hauptdatei (11 KB)                   |
+| `backend/schema/common.json`  | Gemeinsame Definitionen (5 KB)       |
+| `backend/schema/index.js`     | Schema-Loader                        |
+| `backend/schema/components/`  | Wiederverwendbare Schema-Komponenten |
+| `backend/schema/paths/`       | Endpunkt-Pfad-Definitionen           |
 
 ## Schema-Validierung
 

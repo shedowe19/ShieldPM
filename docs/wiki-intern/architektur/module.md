@@ -7,48 +7,52 @@
 ## Backend-Schichten
 
 ### 1. Routes (API-Schicht)
+
 **Pfad**: `backend/routes/`
 
 Express-Routen definieren die REST-API-Endpunkte. Sie validieren Eingaben gegen JSON-Schemas und delegieren an die Internal-Schicht.
 
-| Datei | Endpunkte |
-|---|---|
-| `main.js` | Basis-Routen, Health-Checks |
-| `nginx/proxy_hosts.js` | `/api/nginx/proxy-hosts` |
+| Datei                        | Endpunkte                      |
+| ---------------------------- | ------------------------------ |
+| `main.js`                    | Basis-Routen, Health-Checks    |
+| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`       |
 | `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts` |
-| `nginx/dead_hosts.js` | `/api/nginx/dead-hosts` |
-| `nginx/streams.js` | `/api/nginx/streams` |
-| `nginx/certificates.js` | `/api/nginx/certificates` |
-| `nginx/access_lists.js` | `/api/nginx/access-lists` |
-| `nginx/cloudflared.js` | `/api/nginx/cloudflared` |
-| `nginx/tor_onion.js` | `/api/nginx/tor-onion` |
-| `nginx/wireguard.js` | `/api/nginx/wireguard` |
-| `nginx/ddns_providers.js` | `/api/nginx/ddns-providers` |
-| `nginx/analytics.js` | `/api/nginx/analytics` |
-| `users.js` | `/api/users` |
-| `tokens.js` | `/api/tokens` |
-| `settings.js` | `/api/settings` |
-| `ai.js` | `/api/ai` |
-| `chat.js` | `/api/chat` |
-| `gitops.js` | `/api/gitops` |
-| `2fa.js` | `/api/2fa` |
-| `oidc.js` | `/api/oidc` |
-| `audit-log.js` | `/api/audit-log` |
-| `dashboard.js` | `/api/dashboard` |
-| `reports.js` | `/api/reports` |
-| `services.js` | `/api/services` |
+| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`        |
+| `nginx/streams.js`           | `/api/nginx/streams`           |
+| `nginx/certificates.js`      | `/api/nginx/certificates`      |
+| `nginx/access_lists.js`      | `/api/nginx/access-lists`      |
+| `nginx/cloudflared.js`       | `/api/nginx/cloudflared`       |
+| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`         |
+| `nginx/wireguard.js`         | `/api/nginx/wireguard`         |
+| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`    |
+| `nginx/analytics.js`         | `/api/nginx/analytics`         |
+| `users.js`                   | `/api/users`                   |
+| `tokens.js`                  | `/api/tokens`                  |
+| `settings.js`                | `/api/settings`                |
+| `ai.js`                      | `/api/ai`                      |
+| `chat.js`                    | `/api/chat`                    |
+| `gitops.js`                  | `/api/gitops`                  |
+| `2fa.js`                     | `/api/2fa`                     |
+| `oidc.js`                    | `/api/oidc`                    |
+| `audit-log.js`               | `/api/audit-log`               |
+| `dashboard.js`               | `/api/dashboard`               |
+| `reports.js`                 | `/api/reports`                 |
+| `services.js`                | `/api/services`                |
 
 ### 2. Internal (Business-Logik)
+
 **Pfad**: `backend/internal/`
 
 Enthält die gesamte Business-Logik. Jedes Modul prüft Berechtigungen, führt Operationen durch und triggert Nebeneffekte (Nginx-Reload, Audit-Log).
 
 ### 3. Models (Datenzugriff)
+
 **Pfad**: `backend/models/`
 
 Objection.js Modelle definieren Tabellen, Relationen und Hooks (`$beforeInsert`, `$afterGet`).
 
 ### 4. Templates (Konfiguration)
+
 **Pfad**: `backend/templates/`
 
 EJS-Templates für Nginx-Konfigurationsdateien.
@@ -56,30 +60,33 @@ EJS-Templates für Nginx-Konfigurationsdateien.
 ## Frontend-Schichten
 
 ### 1. Pages
+
 **Pfad**: `frontend/src/pages/`
 
-| Seite | Beschreibung |
-|---|---|
-| `Dashboard/` | Hauptansicht mit Statistiken |
-| `Nginx/` | Proxy-Hosts, Redirections, Streams, Dead-Hosts |
-| `Certificates/` | SSL-Zertifikatsverwaltung |
-| `Access/` | Access-Listen |
-| `Users/` | Benutzerverwaltung |
-| `Settings/` | Systemeinstellungen |
-| `Analytics/` | Traffic-Analyse |
-| `AuditLog/` | Protokolle |
-| `Login/` | Anmeldung |
-| `Setup/` | Ersteinrichtung |
-| `Profile/` | Benutzerprofil |
-| `ChatOps.tsx` | Telegram-Integration |
-| `DuoCallback/` | Duo 2FA Callback |
+| Seite           | Beschreibung                                   |
+| --------------- | ---------------------------------------------- |
+| `Dashboard/`    | Hauptansicht mit Statistiken                   |
+| `Nginx/`        | Proxy-Hosts, Redirections, Streams, Dead-Hosts |
+| `Certificates/` | SSL-Zertifikatsverwaltung                      |
+| `Access/`       | Access-Listen                                  |
+| `Users/`        | Benutzerverwaltung                             |
+| `Settings/`     | Systemeinstellungen                            |
+| `Analytics/`    | Traffic-Analyse                                |
+| `AuditLog/`     | Protokolle                                     |
+| `Login/`        | Anmeldung                                      |
+| `Setup/`        | Ersteinrichtung                                |
+| `Profile/`      | Benutzerprofil                                 |
+| `ChatOps.tsx`   | Telegram-Integration                           |
+| `DuoCallback/`  | Duo 2FA Callback                               |
 
 ### 2. Components
+
 **Pfad**: `frontend/src/components/`
 
 Wiederverwendbare UI-Komponenten basierend auf shadcn/ui (Radix UI).
 
 ### 3. API Hooks
+
 **Pfad**: `frontend/src/api/backend/`
 
 React Query Hooks für API-Aufrufe.

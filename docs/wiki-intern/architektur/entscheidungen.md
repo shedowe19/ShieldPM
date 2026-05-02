@@ -49,6 +49,7 @@ Keine zusätzlichen UI-Component-Libraries. Frontend verwendet ausschließlich s
 ### E10: Multi-Stage Docker Build
 
 Der Dockerfile verwendet drei Stages:
+
 1. `frontend` — Baut React-App (Debian Trixie)
 2. `backend` — Installiert Node-Dependencies + Anubis + OAuth2-Proxy
 3. `final` — Basiert auf `shieldpm-nginx:master`, kopiert Artefakte

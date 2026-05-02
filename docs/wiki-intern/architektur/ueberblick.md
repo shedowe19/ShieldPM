@@ -42,40 +42,40 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 
 ### Backend
 
-| Technologie | Version | Zweck |
-|---|---|---|
-| Node.js | v22+ | Runtime |
-| Express.js | v5.2 | Web-Framework |
-| Objection.js | v3.1 | ORM |
-| Knex.js | v3.2 | Query-Builder / Migrationen |
-| better-sqlite3 | v12.9 | SQLite-Treiber (Entwicklung) |
-| mysql2 | v3.22 | MySQL/MariaDB-Treiber (Produktion) |
-| pg | v8.20 | PostgreSQL-Treiber (Produktion) |
+| Technologie    | Version | Zweck                              |
+| -------------- | ------- | ---------------------------------- |
+| Node.js        | v22+    | Runtime                            |
+| Express.js     | v5.2    | Web-Framework                      |
+| Objection.js   | v3.1    | ORM                                |
+| Knex.js        | v3.2    | Query-Builder / Migrationen        |
+| better-sqlite3 | v12.9   | SQLite-Treiber (Entwicklung)       |
+| mysql2         | v3.22   | MySQL/MariaDB-Treiber (Produktion) |
+| pg             | v8.20   | PostgreSQL-Treiber (Produktion)    |
 
 ### Frontend
 
-| Technologie | Version | Zweck |
-|---|---|---|
-| React | v19.2 | UI-Framework |
-| TypeScript | v5.9 | Typsicherheit |
-| Vite | v8.0 | Build-Tool |
-| TanStack React Query | v5.100 | Server-State-Management |
-| Tailwind CSS | v3.4 | Styling |
-| shadcn/ui (Radix) | aktuell | UI-Komponenten |
-| react-router-dom | v7.14 | Routing |
-| Framer Motion | v12.38 | Animationen |
-| i18next | v25.10 | Internationalisierung |
+| Technologie          | Version | Zweck                   |
+| -------------------- | ------- | ----------------------- |
+| React                | v19.2   | UI-Framework            |
+| TypeScript           | v5.9    | Typsicherheit           |
+| Vite                 | v8.0    | Build-Tool              |
+| TanStack React Query | v5.100  | Server-State-Management |
+| Tailwind CSS         | v3.4    | Styling                 |
+| shadcn/ui (Radix)    | aktuell | UI-Komponenten          |
+| react-router-dom     | v7.14   | Routing                 |
+| Framer Motion        | v12.38  | Animationen             |
+| i18next              | v25.10  | Internationalisierung   |
 
 ### Infrastruktur
 
-| Technologie | Zweck |
-|---|---|
+| Technologie       | Zweck                      |
+| ----------------- | -------------------------- |
 | Nginx (OpenResty) | Reverse Proxy / Web Server |
-| ModSecurity | WAF (CRS v4) |
-| CrowdSec | IPS (Lua Bouncer) |
-| OpenAppSec | AI WAF |
-| Anubis | PoW-Gate gegen Bots |
-| OAuth2-Proxy | SSO-Integration |
+| ModSecurity       | WAF (CRS v4)               |
+| CrowdSec          | IPS (Lua Bouncer)          |
+| OpenAppSec        | AI WAF                     |
+| Anubis            | PoW-Gate gegen Bots        |
+| OAuth2-Proxy      | SSO-Integration            |
 
 ## Verzeichnisstruktur
 
