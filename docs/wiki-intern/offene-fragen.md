@@ -16,11 +16,11 @@ Sammlung offener Fragen und Unsicherheiten, die aus dem Code nicht eindeutig abg
 
 ## Offene Fragen
 
-- Unklar: Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?
-- Unklar: Genauer Mechanismus des Docker Auto-Discovery Label-Formats (`backend/internal/docker.js`)
+- ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` (und evtl. Notifications) importiert, EJS ist der Standard für Nginx-Templates.
+- ~~Genauer Mechanismus des Docker Auto-Discovery Label-Formats~~ → Dokumentiert: Sucht nach `shieldpm.hostname` Label. Unterstützt Ports, Access-Lists, Booleans und Zertifikats-Provider (`shieldpm.ssl_provider`).
 - Unklar: Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?
-- Unklar: Backend-`dev`-Script — Gibt es ein `yarn dev` Script oder wird `node index-dev.js` direkt verwendet?
-- Unklar: Umfang der Backend-Tests in `backend/test/` — Existiert dieser Ordner überhaupt?
+- ~~Backend-`dev`-Script~~ → Es gibt kein dediziertes `yarn dev` im package.json, `node index-dev.js` wird direkt gestartet.
+- ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
 
 ## Konventionen
 
