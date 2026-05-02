@@ -12,6 +12,7 @@ ShieldPM verwendet JWT-basierte Authentifizierung mit optionalem 2FA und OIDC.
 
 - `backend/internal/user.js` (17 KB) — Benutzer-Business-Logik
 - `backend/internal/token.js` (6 KB) — JWT-Token-Verwaltung
+- `backend/internal/oauth2-proxy.js` (7 KB) — SSO-Integration (OAuth2 Proxy)
 - `backend/internal/auth-session-service.js` (6 KB) — Session-Verwaltung
 - `backend/models/user.js` (2 KB) — Benutzer-Modell
 - `backend/models/auth.js` (2 KB) — Auth-Modell

@@ -83,9 +83,7 @@ Enthält RBAC-Regeln pro Ressource (ca. 3.3 KB gesamt).
 
 ## Offene Fragen
 
-- TODO: Genauer Inhalt von `lib/access/` (RBAC-Regeln pro Ressource)
-- TODO: Genauer Inhalt von `lib/express/` (Middleware-Kette)
-- TODO: Genauer Inhalt von `lib/validator/` (Validierungsregeln)
+- Keine
 
 ## Verwandte Seiten
 
