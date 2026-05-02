@@ -12,6 +12,7 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 
 - `backend/internal/certificate.js` (27 KB) — Business-Logik
 - `backend/internal/certbot.js` (10 KB) — Let's Encrypt Automatisierung
+- `backend/internal/pki.js` (7 KB) — Interne CA / ML-KEM
 - `backend/models/certificate.js` (3 KB) — Objection.js-Modell
 - `backend/routes/nginx/certificates.js` (10 KB) — API-Routen
 - `backend/certbot/` — Certbot-Hilfsdateien

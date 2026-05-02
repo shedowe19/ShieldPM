@@ -11,6 +11,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 ## Wichtige Dateien
 
 - `backend/internal/access-list.js` (17 KB) — Business-Logik
+- `backend/internal/ip_ranges.js` (3 KB) — Cloudflare IP-Ranges
 - `backend/models/access_list.js` (3 KB) — Objection.js-Modell
 - `backend/models/access_list_auth.js` (1 KB) — Basic-Auth-Modell
 - `backend/models/access_list_client.js` (1 KB) — IP-Client-Modell
