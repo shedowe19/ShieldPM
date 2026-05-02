@@ -14,12 +14,12 @@ Um Änderungen im System nachvollziehbar zu machen (z.B. Erstellung eines Proxy-
 
 ## Verhalten
 
-- Erfasst den ausführenden Benutzer, die Aktion, das betroffene Objekt und die IP-Adresse.
+- Erfasst die Felder `id`, `action`, `user_id`, `object_id`, `object_type`, `meta`, `created_on` und `modified_on`. (Die IP-Adresse wird nicht erfasst).
 - Bietet Methoden zum Abfragen der Logs für Administratoren.
 
 ## Abhängigkeiten
 
-- `backend/models/audit_log.js`
+- `backend/models/audit-log.js`
 
 ## Verwandte Seiten
 

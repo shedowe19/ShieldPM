@@ -20,7 +20,7 @@ Das System bietet Funktionen zum Erstellen von Berichten über die Nutzung und p
 
 ## Abhängigkeiten
 
-- Axios oder native Fetch-API für Remote-Requests
+- Node.js `https` Modul + `ProxyAgent` (für Remote-Requests, siehe `remote-version.js` für Details)
 
 ## Verwandte Seiten
 
