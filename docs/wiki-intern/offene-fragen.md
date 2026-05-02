@@ -17,10 +17,11 @@ Sammlung offener Fragen und Unsicherheiten, die aus dem Code nicht eindeutig abg
 - ~~Genauer Mechanismus des Docker Auto-Discovery Label-Formats~~ → Dokumentiert: Sucht nach `shieldpm.hostname` Label. Unterstützt Ports, Access-Lists, Booleans und Zertifikats-Provider (`shieldpm.ssl_provider`).
 - ~~Backend-`dev`-Script~~ → Es gibt kein dediziertes `yarn dev` im package.json, `node index-dev.js` wird direkt gestartet.
 - ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
+- ~~Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?~~ → Wird im `rootfs/usr/local/bin/entrypoint.sh` Skript durchgeführt. Das Skript prüft, ob `/data/npmplus` existiert und `/data/shieldpm` fehlt, und führt dann ein `mv` aus.
 
 ## Offene Fragen
 
-- Unklar: Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?
+- Keine
 
 ## Konventionen
 
