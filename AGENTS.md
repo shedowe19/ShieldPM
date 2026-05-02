@@ -3,6 +3,11 @@
 > **Read `.cursorrules` first** for detailed coding standards and architecture reference.  
 > **Read `GEMINI.md` for** the authoritative project context (versions, paths, integrations).
 
+> [!CAUTION]
+> **`agent.md` ist PFLICHTLEKTÜRE!** Diese Datei enthält die verbindlichen Regeln für das interne LLM-Wiki (`docs/wiki-intern/`).
+> Jeder Agent **MUSS** `agent.md` vor jeder Arbeitssitzung lesen und die darin definierten Wiki-Pflichtprüfungen (vor und nach jeder Aufgabe) einhalten.
+> Bei Nichtbeachtung wird die Wiki-Wissensbasis veralten und unbrauchbar.
+
 ## 🎯 Available Skills
 
 > [!IMPORTANT]
@@ -49,6 +54,8 @@ ShieldPM is a security-focused Nginx Proxy Manager fork (v4.1.0). It manages rev
 | File | Purpose |
 |---|---|
 | `GEMINI.md` | **Source of truth** for AI agent context |
+| `agent.md` | **PFLICHT** — Wiki-Pflege-Regeln, Pflichtprüfungen vor/nach jeder Aufgabe |
+| `docs/wiki-intern/` | **Internes LLM-Wiki** — Langzeitgedächtnis des Projekts (Deutsch) |
 | `backend/internal/nginx.js` | Nginx config generation engine |
 | `backend/internal/proxy-host.js` | Proxy host CRUD logic |
 | `backend/models/proxy_host.js` | Objection.js model for proxy hosts |

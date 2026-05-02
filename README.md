@@ -86,6 +86,12 @@ Open the admin UI at `https://<your-ip>:81`
 
 Full setup guides, configuration options, and advanced usage are in the **[Wiki](https://github.com/shedowe19/ShieldPM/wiki)**.
 
+### Projekt-Wiki (Intern)
+
+Die interne Entwicklerdokumentation für Entwickler und AI-Agenten befindet sich unter:
+
+- [Internes Projekt-Wiki](docs/wiki-intern/index.md)
+
 ---
 
 ## 🔨 Development

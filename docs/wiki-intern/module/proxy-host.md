@@ -1,0 +1,44 @@
+# Proxy-Host
+
+## Zweck
+
+Verwaltung von Reverse-Proxy-Hosts — das Kernfeature von ShieldPM.
+
+## Kontext
+
+Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie sind das am häufigsten verwendete Feature.
+
+## Wichtige Dateien
+
+- `backend/internal/proxy-host.js` (19 KB) — Business-Logik
+- `backend/models/proxy_host.js` (7 KB) — Objection.js-Modell
+- `backend/templates/proxy_host.conf` (16 KB) — Nginx-Template
+- `backend/templates/_proxy_logic.conf` (17 KB) — Gemeinsame Proxy-Logik
+- `backend/routes/nginx/proxy_hosts.js` (6 KB) — API-Routen
+
+## Verhalten
+
+1. Benutzer erstellt Host über UI oder API
+2. `internal/proxy-host.js` prüft Berechtigungen und validiert
+3. Model speichert in DB (inkl. `host_domains`-Relation)
+4. `nginx.js` rendert Template und schreibt `.conf`
+5. Nginx wird neu geladen
+
+## Abhängigkeiten
+
+- `internal/nginx.js` — Config-Generierung und Reload
+- `internal/certificate.js` — SSL-Zertifikat-Zuordnung
+- `internal/access-list.js` — Zugriffslisten
+- `internal/audit-log.js` — Protokollierung
+- `models/proxy_host.js` — Datenbank-Modell
+- `models/host_domain.js` — Domain-Zuordnung
+
+## Offene Fragen
+
+- Unklar: Genauer Mechanismus der Custom-Locations (`custom_locations` Feld)
+
+## Verwandte Seiten
+
+- [Nginx-Engine](./nginx-engine.md)
+- [Modulübersicht](./README.md)
+- [Datenmodell](../daten/datenmodell.md)
