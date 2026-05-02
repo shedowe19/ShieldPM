@@ -13,14 +13,14 @@ Sammlung offener Fragen und Unsicherheiten, die aus dem Code nicht eindeutig abg
 - ~~`frontend/src/context/`~~ → AuthContext, LocaleContext, ThemeContext → [Frontend-Internas](./ui/frontend-internas.md)
 - ~~`frontend/src/types/`~~ → enums.ts (8 KB) → [Frontend-Internas](./ui/frontend-internas.md)
 - ~~`rootfs/usr/local/bin/`~~ → 9 Scripts dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md)
+- ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` (und evtl. Notifications) importiert, EJS ist der Standard für Nginx-Templates.
+- ~~Genauer Mechanismus des Docker Auto-Discovery Label-Formats~~ → Dokumentiert: Sucht nach `shieldpm.hostname` Label. Unterstützt Ports, Access-Lists, Booleans und Zertifikats-Provider (`shieldpm.ssl_provider`).
+- ~~Backend-`dev`-Script~~ → Es gibt kein dediziertes `yarn dev` im package.json, `node index-dev.js` wird direkt gestartet.
+- ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
 
 ## Offene Fragen
 
-- ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` (und evtl. Notifications) importiert, EJS ist der Standard für Nginx-Templates.
-- ~~Genauer Mechanismus des Docker Auto-Discovery Label-Formats~~ → Dokumentiert: Sucht nach `shieldpm.hostname` Label. Unterstützt Ports, Access-Lists, Booleans und Zertifikats-Provider (`shieldpm.ssl_provider`).
 - Unklar: Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?
-- ~~Backend-`dev`-Script~~ → Es gibt kein dediziertes `yarn dev` im package.json, `node index-dev.js` wird direkt gestartet.
-- ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
 
 ## Konventionen
 
