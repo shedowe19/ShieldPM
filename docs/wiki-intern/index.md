@@ -44,6 +44,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Stream (TCP/UDP)](./module/stream.md)
 - [Host (gemeinsame Logik)](./module/host.md)
 - [Zertifikate](./module/zertifikate.md)
+- [Certbot](./module/certbot.md)
 - [Interne PKI](./module/pki.md)
 - [Access-Lists](./module/access-lists.md)
 - [OAuth2-Proxy (SSO)](./module/oauth2-proxy.md)
@@ -56,12 +57,14 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [WireGuard Tunnels](./module/wireguard.md)
 - [IP-Ranges (Cloudflare-IPs)](./module/ip-ranges.md)
 - [DDNS](./module/ddns.md)
+- [DDNS-Provider](./module/ddns-provider.md)
 - [Docker Auto-Discovery](./module/docker.md)
 - [Analytics](./module/analytics.md)
 - [Maintenance](./module/maintenance.md)
 - [Dashboard-Notizen](./module/dashboard-notes.md)
 - [Terminal (SSH)](./module/terminal.md)
 - [Benutzer & Auth](./module/benutzer-auth.md)
+- [Token](./module/token.md)
 - [2FA-Service](./module/2fa.md)
 - [Anubis (PoW-Gate)](./module/anubis.md)
 
@@ -71,6 +74,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Einstellungen](./verwaltung/einstellungen.md)
 - [Audit-Log](./verwaltung/audit-log.md)
 - [System-Reports](./verwaltung/report.md)
+- [Remote-Version](./module/remote-version.md)
 
 ### UI (Frontend)
 
