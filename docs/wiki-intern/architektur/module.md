@@ -12,32 +12,32 @@
 
 Express-Routen definieren die REST-API-Endpunkte. Sie validieren Eingaben gegen JSON-Schemas und delegieren an die Internal-Schicht.
 
-| Datei                        | Endpunkte                      |
-| ---------------------------- | ------------------------------ |
-| `main.js`                    | Basis-Routen, Health-Checks    |
-| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`       |
-| `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts` |
-| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`        |
-| `nginx/streams.js`           | `/api/nginx/streams`           |
-| `nginx/certificates.js`      | `/api/nginx/certificates`      |
-| `nginx/access_lists.js`      | `/api/nginx/access-lists`      |
-| `nginx/cloudflared.js`       | `/api/nginx/cloudflared`       |
-| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`         |
-| `nginx/wireguard.js`         | `/api/nginx/wireguard`         |
-| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`    |
-| `nginx/analytics.js`         | `/api/nginx/analytics`         |
-| `users.js`                   | `/api/users`                   |
-| `tokens.js`                  | `/api/tokens`                  |
-| `settings.js`                | `/api/settings`                |
-| `ai.js`                      | `/api/ai`                      |
-| `chat.js`                    | `/api/chat`                    |
-| `gitops.js`                  | `/api/gitops`                  |
-| `2fa.js`                     | `/api/2fa`                     |
-| `oidc.js`                    | `/api/oidc`                    |
-| `audit-log.js`               | `/api/audit-log`               |
-| `dashboard.js`               | `/api/dashboard`               |
-| `reports.js`                 | `/api/reports`                 |
-| `services.js`                | `/api/services`                |
+| Datei                        | Endpunkte                        |
+| ---------------------------- | -------------------------------- |
+| `main.js`                    | Basis-Routen, Health-Checks      |
+| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`         |
+| `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`   |
+| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`          |
+| `nginx/streams.js`           | `/api/nginx/streams`             |
+| `nginx/certificates.js`      | `/api/nginx/certificates`        |
+| `nginx/access_lists.js`      | `/api/nginx/access-lists`        |
+| `nginx/cloudflared.js`       | `/api/nginx/cloudflared-tunnels` |
+| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`           |
+| `nginx/wireguard.js`         | `/api/nginx/wireguard`           |
+| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`      |
+| `nginx/analytics.js`         | `/api/nginx/analytics`           |
+| `users.js`                   | `/api/users`                     |
+| `tokens.js`                  | `/api/tokens`                    |
+| `settings.js`                | `/api/settings`                  |
+| `ai.js`                      | `/api/ai`                        |
+| `chat.js`                    | `/api/chat`                      |
+| `gitops.js`                  | `/api/gitops`                    |
+| `2fa.js`                     | `/api/users/:user_id/2fa`        |
+| `oidc.js`                    | `/api/oidc`                      |
+| `audit-log.js`               | `/api/audit-log`                 |
+| `dashboard.js`               | `/api/dashboard`                 |
+| `reports.js`                 | `/api/reports`                   |
+| `services.js`                | `/api/services`                  |
 
 ### 2. Internal (Business-Logik)
 

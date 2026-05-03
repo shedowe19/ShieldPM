@@ -403,4 +403,4 @@ Bei jeder relevanten Änderung müssen Code und Wiki gemeinsam aktuell gehalten 
 
 # Formatierung
 
-- Alle Markdown-Dateien im Wiki müssen mit Prettier formatiert werden (`npx prettier --write "docs/wiki-intern/**/*.md"`). Biome sollte für Markdown in diesem Projekt vermieden werden.
+- Alle Markdown-Dateien im Wiki müssen mit Prettier formatiert werden (`npx prettier --write "docs/wiki/**/*.md"`). Biome sollte für Markdown in diesem Projekt vermieden werden.
