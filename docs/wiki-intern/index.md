@@ -115,6 +115,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Glossar](./glossar.md)
 - [Offene Fragen](./offene-fragen.md)
 - [Wiki-Pflege](./wiki-pflege.md)
+- **Beziehungsgraph (HTML, offline-fähig):** `wiki-graph.html` — wird mit `python3 scripts/wiki-graph.py` neu generiert
 
 ---
 
