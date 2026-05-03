@@ -44,7 +44,7 @@ Die Objection.js-Modelle verwenden folgende Lifecycle-Hooks:
 
 ## Offene Fragen
 
-- Keine (bislang gefunden: `ProxyHost` nutzt `$afterGet()` für die Berechnung von `domain_names` aus der `host_domains` Relation).
+- Keine
 
 ## Verwandte Seiten
 
