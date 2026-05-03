@@ -76,4 +76,4 @@ Jedes Modul folgt dem gleichen Pattern: Es exportiert ein Objekt mit `create`, `
 - [Architektur-Überblick](../architektur/ueberblick.md)
 - [Einzelne Modul-Dokumentationen](./nginx-engine.md)
 
-*Hinweis:* Planungsdokumente (z.B. AI-Agent-Checklisten) befinden sich unter `docs/planning/`.
+_Hinweis:_ Planungsdokumente (z.B. AI-Agent-Checklisten) befinden sich unter `docs/planning/`.
