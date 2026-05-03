@@ -6,11 +6,11 @@ Tipps und Hinweise für die tägliche Entwicklungsarbeit.
 
 ## Backend-Einstiegspunkte
 
-| Datei | Zweck |
-|---|---|
-| `index.js` | Produktion: HTTPS-Server mit Zertifikaten |
-| `index-dev.js` | Entwicklung: HTTP-Server ohne TLS |
-| `app.js` | Express-App-Konfiguration (Middleware, Routen) |
+| Datei          | Zweck                                          |
+| -------------- | ---------------------------------------------- |
+| `index.js`     | Produktion: HTTPS-Server mit Zertifikaten      |
+| `index-dev.js` | Entwicklung: HTTP-Server ohne TLS              |
+| `app.js`       | Express-App-Konfiguration (Middleware, Routen) |
 
 ## Entwicklungs-Workflow
 
@@ -39,6 +39,7 @@ Vorlage siehe: [Migrationen](../daten/migrationen.md)
 Swagger/OpenAPI-Schema: `backend/schema/swagger.json`
 
 Die API-Schemas sind aufgeteilt in:
+
 - `schema/common.json` — Gemeinsame Definitionen
 - `schema/components/` — Wiederverwendbare Komponenten
 - `schema/paths/` — Endpunkt-Definitionen

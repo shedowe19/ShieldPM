@@ -109,4 +109,4 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ---
 
-*Zuletzt aktualisiert: 2026-05-02*
+_Zuletzt aktualisiert: 2026-05-02_

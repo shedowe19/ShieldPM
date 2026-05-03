@@ -24,24 +24,24 @@ import { migrate as logger } from "../logger.js";
 const migrateName = "eindeutiger_name";
 
 const up = (knex) => {
-    logger.info(`[${migrateName}] Migrating Up...`);
-    return knex.schema
-        .createTable("tabellenname", (table) => {
-            table.increments("id").primary();
-            table.string("created_on").notNullable().defaultTo(knex.fn.now());
-            table.string("modified_on").notNullable().defaultTo(knex.fn.now());
-            // Weitere Spalten
-        })
-        .then(() => {
-            logger.info(`[${migrateName}] Tabelle erstellt`);
-        });
+  logger.info(`[${migrateName}] Migrating Up...`);
+  return knex.schema
+    .createTable("tabellenname", (table) => {
+      table.increments("id").primary();
+      table.string("created_on").notNullable().defaultTo(knex.fn.now());
+      table.string("modified_on").notNullable().defaultTo(knex.fn.now());
+      // Weitere Spalten
+    })
+    .then(() => {
+      logger.info(`[${migrateName}] Tabelle erstellt`);
+    });
 };
 
 const down = (knex) => {
-    logger.info(`[${migrateName}] Migrating Down...`);
-    return knex.schema.dropTable("tabellenname").then(() => {
-        logger.info(`[${migrateName}] Tabelle gelöscht`);
-    });
+  logger.info(`[${migrateName}] Migrating Down...`);
+  return knex.schema.dropTable("tabellenname").then(() => {
+    logger.info(`[${migrateName}] Tabelle gelöscht`);
+  });
 };
 
 export { up, down };
@@ -50,6 +50,7 @@ export { up, down };
 ## Migrations-Chronologie (74 Dateien)
 
 ### Basis (2018-2021)
+
 - `20180618015850_initial` — Grundtabellen (proxy_host, redirection_host, dead_host, stream, certificate, access_list, user, auth, audit_log, setting)
 - `20180929054513_websockets` — WebSocket-Support
 - `20181019052346_forward_host` — Forward-Host-Feld
@@ -65,9 +66,11 @@ export { up, down };
 - `20210423103500_stream_domain` — Stream-Domain-Feld
 
 ### Modernisierung (2024-2025)
+
 - Streams SSL, Port-Strings, Proxy-Protocol, Bandwidth-Limits, Forward-Query, Maintenance-Pages, Rate-Limiting, Buffering, Analytics
 
 ### ShieldPM Features (2026)
+
 - `20260103000000_add_access_list_mtls` — mTLS-Support
 - `20260107000000_add_maintenance_schedule` — Geplante Wartungsfenster
 - `20260108000000_add_cloudflared_tunnel` — Cloudflare Tunnels

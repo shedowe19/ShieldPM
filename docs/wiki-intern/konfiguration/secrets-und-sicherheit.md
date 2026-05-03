@@ -8,20 +8,20 @@ Dokumentation geheimer Werte und Sicherheitsmechanismen.
 
 ## Geheime Variablen
 
-| Variable | Beschreibung |
-|---|---|
-| `CSRF_SECRET` | CSRF-Token-Secret (min. 32 Zeichen) |
-| `DB_MYSQL_PASSWORD` | MySQL-Passwort |
-| `DB_POSTGRES_PASSWORD` | PostgreSQL-Passwort |
-| `ACME_EAB_HMAC_KEY` | ACME HMAC-Key |
-| `INITIAL_ADMIN_PASSWORD` | Initiales Admin-Passwort |
+| Variable                 | Beschreibung                        |
+| ------------------------ | ----------------------------------- |
+| `CSRF_SECRET`            | CSRF-Token-Secret (min. 32 Zeichen) |
+| `DB_MYSQL_PASSWORD`      | MySQL-Passwort                      |
+| `DB_POSTGRES_PASSWORD`   | PostgreSQL-Passwort                 |
+| `ACME_EAB_HMAC_KEY`      | ACME HMAC-Key                       |
+| `INITIAL_ADMIN_PASSWORD` | Initiales Admin-Passwort            |
 
 ## Interne Secrets
 
-| Datei | Beschreibung |
-|---|---|
-| `/data/keys.json` | JWT-Signaturschlüssel |
-| `/data/tls/*` | SSL-Zertifikate und private Schlüssel |
+| Datei             | Beschreibung                          |
+| ----------------- | ------------------------------------- |
+| `/data/keys.json` | JWT-Signaturschlüssel                 |
+| `/data/tls/*`     | SSL-Zertifikate und private Schlüssel |
 
 ## Sicherheitsmechanismen
 

@@ -27,9 +27,11 @@ Welche anderen Optionen wurden betrachtet?
 ## Konsequenzen
 
 ### Positiv
+
 - ...
 
 ### Negativ
+
 - ...
 
 ## Verwandte Seiten

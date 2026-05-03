@@ -13,6 +13,7 @@ Regeln und Konventionen für die Pflege dieses internen Wikis.
 ## Wann aktualisieren?
 
 Das Wiki muss aktualisiert werden bei:
+
 - Neuen Features
 - Architekturänderungen
 - Neuen Modulen oder Services
