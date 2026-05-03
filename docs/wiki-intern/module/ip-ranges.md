@@ -16,18 +16,23 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 
 ## Verhalten
 
-1. Holt die aktuellen IPv4- und IPv6-Listen von Cloudflare per HTTP.
-2. Schreibt sie in eine Nginx-Include-Datei.
-3. Triggert einen Nginx-Reload, falls sich die Liste geändert hat.
+1. Holt die aktuellen IPv4-Liste (`https://www.cloudflare.com/ips-v4`) und IPv6-Liste (`https://www.cloudflare.com/ips-v6`) per HTTPS, optional über `proxy-agent`.
+2. Filtert die Einträge per Regex (`^(\d+\.?){4}\/\d+`) und rendert sie via Liquid in `backend/templates/ip_ranges.conf`.
+3. Schreibt das Ergebnis nach `/data/nginx/ip_ranges.conf` und triggert einen Nginx-Reload.
+
+## Konfiguration
+
+- **Update-Intervall**: `interval_timeout = 6h × IPRT` (Umgebungsvariable `IPRT`, ganze Zahl). Ist `IPRT` z. B. `4`, läuft die Aktualisierung alle 24 Stunden.
+- **Manueller Trigger**: AI-Tool `renew_ip_ranges` (siehe `backend/internal/ai/tools.js`) ruft `internalIpRanges.fetch()` direkt auf.
 
 ## Abhängigkeiten
 
 - `internal/nginx.js` — Reload
-- HTTP-Zugriff zu `cloudflare.com` (Outbound erforderlich)
+- `proxy-agent` — Nutzung des System-Proxies (`HTTP_PROXY`/`HTTPS_PROXY`)
+- HTTP(S)-Zugriff zu `cloudflare.com` (Outbound erforderlich)
 
 ## Offene Fragen
 
-- Unklar: Konfigurierbares Update-Intervall (statisch oder per Setting?)
 - TODO: Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen
 
 ## Verwandte Seiten

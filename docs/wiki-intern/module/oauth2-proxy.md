@@ -23,8 +23,23 @@ Während ShieldPM selbst per OIDC Login-fähig ist (siehe [Benutzer & Auth](./be
 
 ## Konfiguration
 
-- Provider, Client-ID, Cookie-Secret etc. werden über Settings/Umgebungsvariablen verwaltet.
-- Geheime Werte (Client-Secret, Cookie-Secret) werden **nicht** im Wiki dokumentiert (siehe [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)).
+- Provider, Client-ID, Cookie-Secret etc. werden pro Access-List in `meta.oauth2_*` gespeichert.
+- Geheime Werte (`oauth2_client_secret`, `oauth2_cookie_secret`) werden **nicht** im Wiki dokumentiert (siehe [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)).
+
+### Unterstützte Provider
+
+In `frontend/src/modals/AccessListModal.tsx` als Auswahl-Optionen verdrahtet, in der oauth2-proxy-Konfiguration als `provider = "<wert>"` gesetzt:
+
+| Wert            | Anzeige        | Hinweis                                                    |
+| --------------- | -------------- | ---------------------------------------------------------- |
+| `google`        | Google         | Standard, falls `oauth2_provider` leer                     |
+| `github`        | GitHub         |                                                            |
+| `oidc`          | OpenID Connect | benötigt `oauth2_oidc_issuer_url`                          |
+| `gitlab`        | GitLab         |                                                            |
+| `azure`         | Azure          |                                                            |
+| `keycloak-oidc` | Keycloak       |                                                            |
+
+Authentik wird **nicht** über oauth2-proxy, sondern als eigener Auth-Typ `AUTHENTIK_PROXY` (Feld `authentik_host`) integriert — er nutzt Authentiks eigenen Forward-Auth-Modus.
 
 ## Abhängigkeiten
 
@@ -34,8 +49,7 @@ Während ShieldPM selbst per OIDC Login-fähig ist (siehe [Benutzer & Auth](./be
 
 ## Offene Fragen
 
-- Unklar: Genaue Provider-Matrix (welche Provider sind getestet?)
-- TODO: End-to-End-Beispiel mit Authentik dokumentieren
+- TODO: End-to-End-Beispiel mit Authentik dokumentieren (Auth-Typ `AUTHENTIK_PROXY` ist parallel zu oauth2-proxy verfügbar)
 
 ## Verwandte Seiten
 

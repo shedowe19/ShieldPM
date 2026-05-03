@@ -24,6 +24,19 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+## Custom Locations
+
+Das Feld `locations` (DB-Feld `custom_locations`, JSON-Array) erlaubt zusätzliche Nginx-`location`-Blöcke pro Host. Jeder Eintrag enthält `path`, `forward_scheme`, `forward_host`, `forward_port`, optional `forward_path` und `advanced_config`.
+
+Mechanik in `nginx.js` → `renderLocations(host)`:
+
+1. Iteration über `host.locations`.
+2. Für jede Location wird eine Kopie mit den Host-Eigenschaften (`access_list_id`, `certificate_id`, `ssl_forced`, `caching_enabled`, `block_exploits`, `allow_websocket_upgrade`, `http2_support`, `hsts_enabled`, `hsts_subdomains`, `access_list`, `certificate`) gemischt.
+3. Enthält `forward_host` einen Slash und beginnt nicht mit `/` oder `unix`, wird nach dem ersten Segment getrennt: erster Teil → `forward_host`, Rest → `forward_path`.
+4. Das Liquid-Template `backend/templates/_proxy_host_custom_location.conf` wird pro Location gerendert.
+5. Alle gerenderten Strings werden konkateniert und als String an das Haupt-Template `proxy_host.conf` übergeben.
+6. Existiert eine Custom-Location mit `path === "/"`, wird die Standard-`/`-Location automatisch deaktiviert (`use_default_location = false`).
+
 ## Abhängigkeiten
 
 - `internal/nginx.js` — Config-Generierung und Reload
@@ -35,7 +48,7 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 
 ## Offene Fragen
 
-- Unklar: Genauer Mechanismus der Custom-Locations (`custom_locations` Feld)
+- Keine
 
 ## Verwandte Seiten
 

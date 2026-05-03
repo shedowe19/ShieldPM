@@ -21,11 +21,16 @@ Sammlung offener Fragen und Unsicherheiten, die aus dem Code nicht eindeutig abg
 
 ## Offene Fragen
 
-- Unklar: Genaue Provider-Matrix für [OAuth2-Proxy](./module/oauth2-proxy.md) (welche Provider sind getestet/empfohlen?)
-- TODO: Liste der unterstützten ML-KEM-Modi je `shieldpm-nginx`-Build dokumentieren ([PKI](./module/pki.md))
-- Unklar: Konfigurierbares Update-Intervall für Cloudflare-IP-Ranges ([IP-Ranges](./module/ip-ranges.md))
-- Unklar: Vorhandensein/Geplant von Webhooks für automatisches Pull in [Git-Deploy](./module/git-deploy.md)
-- Unklar: Genauer Mechanismus der Custom-Locations (`custom_locations` Feld auf [Proxy-Host](./module/proxy-host.md))
+- TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen.
+- TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
+
+## In dieser Session beantwortet
+
+- ~~Provider-Matrix für OAuth2-Proxy~~ → google, github, oidc, gitlab, azure, keycloak-oidc (verdrahtet in `frontend/src/modals/AccessListModal.tsx`); Authentik separat als `AUTHENTIK_PROXY`. Dokumentiert in [oauth2-proxy.md](./module/oauth2-proxy.md).
+- ~~ML-KEM-Modi je Build~~ → Dieses Repo setzt nur `host.use_ml_kem` für interne Zertifikate; tatsächliche Hybrid-Kex-Liste liegt im `shieldpm-nginx`-Repo. Dokumentiert in [pki.md](./module/pki.md).
+- ~~Update-Intervall der Cloudflare-IP-Ranges~~ → `interval_timeout = 6h × IPRT` (Umgebungsvariable). Dokumentiert in [ip-ranges.md](./module/ip-ranges.md).
+- ~~Webhooks für Git-Deploy~~ → Nicht implementiert; Aktualisierung läuft per Polling-Timer pro Host (`git_poll_interval` × `git_poll_unit`). Dokumentiert in [git-deploy.md](./module/git-deploy.md).
+- ~~Mechanismus der Custom-Locations~~ → `nginx.js → renderLocations()` rendert pro Eintrag das Liquid-Template `_proxy_host_custom_location.conf`, mischt Host-Eigenschaften und konkateniert die Strings. Dokumentiert in [proxy-host.md](./module/proxy-host.md).
 
 ## Konventionen
 

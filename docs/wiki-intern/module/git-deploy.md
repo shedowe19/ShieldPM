@@ -24,10 +24,16 @@ Typische Anwendungsfälle:
 
 ## Verhalten
 
-1. Pro Host (Proxy/Dead) kann eine Git-Konfiguration hinterlegt werden (Repo, Branch, Pfad, optional SSH-Key oder Token).
-2. `internal/git-deploy.js` klont/aktualisiert das Repo (via `isomorphic-git`) ins Daten-Verzeichnis.
-3. Nginx serviert den Inhalt als statische/dynamische Seite (je nach Konfiguration).
-4. Aktualisierungen können manuell oder per Cron/Webhook ausgelöst werden.
+1. Pro Host (Proxy/Dead) kann eine Git-Konfiguration hinterlegt werden (`git_repo_url`, `git_branch`, `git_poll_interval`, `git_poll_unit`, optional Auth-Daten).
+2. `internal/git-deploy.js` klont/aktualisiert das Repo (via `isomorphic-git`) in ein Verzeichnis pro Host unter `/data/`.
+3. Beim Branch-Wechsel wird das Repo neu geklont, sonst wird ein `git pull` ausgeführt.
+4. Bei jedem erfolgreichen Sync wird `forward_host` auf das ausgecheckte Verzeichnis gesetzt und Nginx neu geladen.
+5. **Trigger**: pro Host ein eigener `setInterval`-Timer (`git_poll_interval` × `git_poll_unit`, z. B. 5 minutes). Manuelle Sync-Trigger sind über die UI möglich.
+6. Im Demo-Modus ist das Polling deaktiviert.
+
+## Webhooks
+
+Aktuell **nicht implementiert** — die Aktualisierung läuft ausschließlich per Polling-Timer. Externe Webhooks (z. B. von GitHub) werden nicht direkt empfangen. Eine manuelle Sync-Funktion in der UI dient als Workaround.
 
 ## Sicherheit
 
@@ -42,7 +48,7 @@ Typische Anwendungsfälle:
 
 ## Offene Fragen
 
-- Unklar: Webhooks für automatisches Pull (vorhanden? geplant?)
+- Keine (Polling-Mechanik ist beschrieben, Webhook-Empfänger sind nicht implementiert).
 
 ## Verwandte Seiten
 

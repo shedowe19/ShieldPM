@@ -24,10 +24,10 @@ Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeiche
 
 ## Verhalten
 
-- Beim ersten Start wird (auf Anforderung) eine Root-CA mit konfigurierbarem Algorithmus erzeugt.
-- Server-/Client-Zertifikate werden mit der Root-CA signiert.
-- Root-CA kann als `.crt`/`.pem` heruntergeladen werden, um in Browsern oder Clients vertraut zu werden.
-- Für ML-KEM/Hybrid-Schlüssel ist eine kompatible OpenSSL-Version (mit oqs-Provider) im `shieldpm-nginx`-Image notwendig.
+- Beim ersten Start wird (auf Anforderung) eine Root-CA erzeugt. Aktueller Algorithmus laut `pki.js`: **ECDSA P-384 (secp384r1)**, Gültigkeit **10 Jahre**.
+- Server-/Client-Zertifikate werden mit der Root-CA signiert (`openssl req` + `openssl x509 -CA …`).
+- Root-CA kann als `.crt`/`.pem` heruntergeladen werden, um in Browsern oder Clients vertraut zu werden (Frontend-API: `frontend/src/api/backend/downloadRootCa.ts`).
+- Hosts mit `certificate.provider === "internal"` bekommen in `nginx.js` das Flag `host.use_ml_kem = true` gesetzt. Die tatsächliche ML-KEM-/Hybrid-Aktivierung passiert auf Nginx-/OpenSSL-Seite (`shieldpm-nginx`-Image, OpenSSL ≥ 3.5 mit X25519MLKEM768 bzw. oqs-Provider). Die Liste der unterstützten Hybrid-Modi wird durch die Build-Variante des `shieldpm-nginx`-Images bestimmt — siehe Repository [`shieldpm-nginx`](https://github.com/shedowe19/shieldpm-nginx).
 
 ## Sicherheit
 
@@ -42,7 +42,7 @@ Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeiche
 
 ## Offene Fragen
 
-- TODO: Genaue Liste unterstützter ML-KEM-Modi je Build-Variante dokumentieren
+- Keine (Liste der unterstützten Hybrid-Modi liegt im `shieldpm-nginx`-Repo, dieses Repo signalisiert nur per `host.use_ml_kem`, dass ein Host PQC-bereit ist).
 
 ## Verwandte Seiten
 
