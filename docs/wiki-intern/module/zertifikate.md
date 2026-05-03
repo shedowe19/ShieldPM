@@ -36,5 +36,7 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)
+- [Interne PKI](./pki.md)
+- [Access-Lists](./access-lists.md)
 - [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)
 - [Modulübersicht](./README.md)

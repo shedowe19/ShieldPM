@@ -21,7 +21,11 @@ Sammlung offener Fragen und Unsicherheiten, die aus dem Code nicht eindeutig abg
 
 ## Offene Fragen
 
-- Keine
+- Unklar: Genaue Provider-Matrix für [OAuth2-Proxy](./module/oauth2-proxy.md) (welche Provider sind getestet/empfohlen?)
+- TODO: Liste der unterstützten ML-KEM-Modi je `shieldpm-nginx`-Build dokumentieren ([PKI](./module/pki.md))
+- Unklar: Konfigurierbares Update-Intervall für Cloudflare-IP-Ranges ([IP-Ranges](./module/ip-ranges.md))
+- Unklar: Vorhandensein/Geplant von Webhooks für automatisches Pull in [Git-Deploy](./module/git-deploy.md)
+- Unklar: Genauer Mechanismus der Custom-Locations (`custom_locations` Feld auf [Proxy-Host](./module/proxy-host.md))
 
 ## Konventionen
 

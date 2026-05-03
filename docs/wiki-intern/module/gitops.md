@@ -33,5 +33,7 @@ GitOps ermöglicht es, die gesamte ShieldPM-Konfiguration in einem Git-Repositor
 
 ## Verwandte Seiten
 
+- [Git-Deploy](./git-deploy.md)
 - [Modulübersicht](./README.md)
 - [Deployment](../entwicklung/deployment.md)
+- [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)

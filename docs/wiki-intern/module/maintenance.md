@@ -29,4 +29,6 @@ Ermöglicht es, Proxy-Hosts zeitgesteuert in den Wartungsmodus zu versetzen und 
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)
+- [Nginx-Engine](./nginx-engine.md)
+- [Verwaltung](../verwaltung/README.md)
 - [Modulübersicht](./README.md)

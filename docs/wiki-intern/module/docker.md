@@ -32,5 +32,7 @@ Automatische Erkennung und Registrierung von Docker-Containern als Proxy-Hosts.
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)
+- [Host (gemeinsame Logik)](./host.md)
+- [Zertifikate](./zertifikate.md)
 - [Modulübersicht](./README.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)

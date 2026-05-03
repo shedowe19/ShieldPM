@@ -39,18 +39,27 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Modulübersicht](./module/README.md)
 - [Nginx-Engine](./module/nginx-engine.md)
 - [Proxy-Host](./module/proxy-host.md)
+- [Redirection-Host](./module/redirection-host.md)
+- [Dead-Host (404)](./module/dead-host.md)
+- [Stream (TCP/UDP)](./module/stream.md)
+- [Host (gemeinsame Logik)](./module/host.md)
 - [Zertifikate](./module/zertifikate.md)
+- [Interne PKI](./module/pki.md)
 - [Access-Lists](./module/access-lists.md)
+- [OAuth2-Proxy (SSO)](./module/oauth2-proxy.md)
 - [AI-Agent](./module/ai-agent.md)
 - [ChatOps (Telegram)](./module/chatops.md)
 - [GitOps](./module/gitops.md)
+- [Git-Deploy](./module/git-deploy.md)
 - [Tor Onion Services](./module/tor.md)
 - [Cloudflare Tunnels](./module/cloudflared.md)
 - [WireGuard Tunnels](./module/wireguard.md)
+- [IP-Ranges (Cloudflare-IPs)](./module/ip-ranges.md)
 - [DDNS](./module/ddns.md)
 - [Docker Auto-Discovery](./module/docker.md)
 - [Analytics](./module/analytics.md)
 - [Maintenance](./module/maintenance.md)
+- [Dashboard-Notizen](./module/dashboard-notes.md)
 - [Terminal (SSH)](./module/terminal.md)
 - [Benutzer & Auth](./module/benutzer-auth.md)
 - [2FA-Service](./module/2fa.md)
@@ -109,4 +118,4 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ---
 
-_Zuletzt aktualisiert: 2026-05-02_
+_Zuletzt aktualisiert: 2026-05-03_

@@ -35,4 +35,7 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 ## Verwandte Seiten
 
 - [Modulübersicht](./README.md)
+- [Cloudflare Tunnels](./cloudflared.md)
+- [Tor Onion Services](./tor.md)
+- [DDNS](./ddns.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)

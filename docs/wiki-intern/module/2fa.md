@@ -36,4 +36,6 @@ Bietet zusätzliche Sicherheitsebene für Benutzerkonten mit drei verschiedenen 
 ## Verwandte Seiten
 
 - [Benutzer & Auth](./benutzer-auth.md)
+- [OAuth2-Proxy (SSO)](./oauth2-proxy.md)
+- [Audit-Log](../verwaltung/audit-log.md)
 - [Modulübersicht](./README.md)
