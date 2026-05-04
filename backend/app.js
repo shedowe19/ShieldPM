@@ -248,8 +248,10 @@ app.use("/api", globalApiLimiter);
 const swaggerSpec = await getCompiledSchema();
 
 // Swagger UI — must be BEFORE mainRoutes so it doesn't get caught by the catch-all router
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// Load spec dynamically from /api/schema so the server URL is correct
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(undefined, {
 	swaggerOptions: {
+		spec: swaggerSpec,
 		requestInterceptor: (req) => {
 			const csrfToken = req.headers["x-xsrf-token"];
 			if (csrfToken) {
