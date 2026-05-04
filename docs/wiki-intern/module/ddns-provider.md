@@ -22,6 +22,10 @@ Das DDNS-Modul nutzt Provider-spezifische Logik, um IP-Adressen zu aktualisieren
 
 - Keine direkten (nutzt Node.js interne Module für Requests)
 
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [DDNS](./ddns.md)
