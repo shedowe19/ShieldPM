@@ -491,7 +491,12 @@
 							}
 						}
 					}
-				}
+				},
+				"security": [
+					{
+						"jwt": []
+					}
+				]
 			},
 			"put": {
 				"$ref": "./paths/ai/config.json"
