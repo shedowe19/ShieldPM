@@ -255,9 +255,12 @@ app.use("/api", globalApiLimiter);
 // Compile OpenAPI schema once (dereferences $refs)
 const swaggerSpec = await getCompiledSchema();
 
-// Swagger UI — must be BEFORE mainRoutes so it doesn't get caught by the catch-all router
-// Use url option so the spec is fetched from /api/schema which dynamically
-// sets the correct server URL (https://shieldpm.clawsucht.eu/api)
+// Serve raw OpenAPI spec at /docs/swagger.json (before swagger-ui catch-all)
+app.get("/docs/swagger.json", async (_req, res) => {
+	const spec = await getCompiledSchema();
+	res.json(spec);
+});
+
 app.use(
 	"/docs",
 	swaggerUi.serve,
