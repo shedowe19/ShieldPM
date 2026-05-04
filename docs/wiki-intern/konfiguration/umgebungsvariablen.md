@@ -93,6 +93,24 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## Nginx (Erweitert)
 
+| `SKIP_IP_RANGES` | `true` | Cloudflare IP-Ranges nicht automatisch aktualisieren |
+| `FULLCLEAN` | `false` | Volles Cleanup bei Nginx-Reload aktivieren |
+| `IPRT` | `1` | Multiplikator für IP-Ranges-Aktualisierungsintervall |
+| `DEFAULT_CERT_ID` | `0` | Standard-Zertifikat-ID für neue Hosts |
+| `NC_AIO` | — | Nextcloud AIO-Modus aktivieren |
+| `NC_DOMAIN` | — | Nextcloud AIO Domain (required wenn NC_AIO=true) |
+| `PHP_APKS` | — | Zusätzliche PHP-Pakete (deprecated, einzelne PHP-Vars nutzen) |
+
+## ACME / SSL (Erweitert)
+
+| Variable                 | Standard | Beschreibung                          |
+| ------------------------ | -------- | ------------------------------------- |
+| `ACME_PROFILE`           | `none`   | ACME-Profil (z.B. `pebble` für Tests) |
+| `ACME_SERVER_TLS_VERIFY` | `true`   | TLS-Verify für ACME-Server            |
+| `CUSTOM_OCSP_STAPLING`   | `false`  | Eigenes OCSP-Stapling aktivieren      |
+
+## Nginx (Erweitert)
+
 | Variable                        | Standard | Beschreibung                   |
 | ------------------------------- | -------- | ------------------------------ |
 | `NGINX_WORKER_PROCESSES`        | `auto`   | Worker-Prozesse                |
@@ -100,6 +118,8 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 | `NGINX_DISABLE_PROXY_BUFFERING` | `false`  | Proxy-Buffering deaktivieren   |
 | `NGINX_404_REDIRECT`            | `false`  | 404 → / umleiten               |
 | `NGINX_HSTS_SUBDOMAINS`         | `true`   | HSTS für Subdomains            |
+| `NGINX_QUIC_BPF`                | `false`  | BPF für QUIC aktivieren        |
+| `NGINX_LOG_NOT_FOUND`           | `false`  | 404-Logs für "Not Found"       |
 | `X_FRAME_OPTIONS`               | —        | X-Frame-Options Header         |
 | `DISABLE_NGINX_BEAUTIFIER`      | `false`  | Config-Beautifier überspringen |
 
@@ -115,12 +135,12 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## Initialisierung
 
-| Variable                 | Beschreibung                                                |
-| ------------------------ | ----------------------------------------------------------- |
-| `INITIAL_ADMIN_EMAIL`    | Admin-E-Mail beim ersten Start                              |
-| `INITIAL_ADMIN_PASSWORD` | Admin-Passwort beim ersten Start. Wert nicht dokumentieren. |
-| `INITIAL_DEFAULT_PAGE`   | Standard-Seite (z.B. 444)                                   |
-| `ENABLE_PRERUN`          | Pre-Run-Scripts aktivieren                                  |
+| Variable                 | Beschreibung                                                            |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `INITIAL_ADMIN_EMAIL`    | Admin-E-Mail beim ersten Start (muss `@` und `.` enthalten)             |
+| `INITIAL_ADMIN_PASSWORD` | Admin-Passwort beim ersten Start. Wert nicht dokumentieren.             |
+| `INITIAL_DEFAULT_PAGE`   | Standard-Seite: `404`, `444`, `redirect`, `congratulations` oder `html` |
+| `ENABLE_PRERUN`          | Pre-Run-Scripts aktivieren                                              |
 
 ## Sonstiges
 

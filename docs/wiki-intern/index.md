@@ -23,12 +23,14 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Datenfluss](./architektur/datenfluss.md)
 - [Module](./architektur/module.md)
 - [Backend-Hilfsbibliotheken (lib)](./architektur/backend-lib.md)
+- [Express-Middleware](./architektur/express-middleware.md)
 - [Entscheidungen](./architektur/entscheidungen.md)
 - [Externe Abhängigkeiten](./architektur/externe-abhaengigkeiten.md)
 
 ### Entwicklung
 
 - [Setup](./entwicklung/setup.md)
+- [Setup-Interna](./entwicklung/setup-intern.md)
 - [Lokale Entwicklung](./entwicklung/lokale-entwicklung.md)
 - [Tests](./entwicklung/tests.md)
 - [Build](./entwicklung/build.md)
@@ -38,6 +40,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 - [Modulübersicht](./module/README.md)
 - [Nginx-Engine](./module/nginx-engine.md)
+- [Nginx-Templates](./module/nginx-templates.md)
 - [Proxy-Host](./module/proxy-host.md)
 - [Redirection-Host](./module/redirection-host.md)
 - [Dead-Host (404)](./module/dead-host.md)
@@ -82,6 +85,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Komponenten](./ui/komponenten.md)
 - [Frontend-Internas (Hooks, Contexts, Modals)](./ui/frontend-internas.md)
 - [Frontend API-Client](./ui/api-client.md)
+- [Frontend API-Hooks](./ui/api-hooks.md)
 - [Internationalisierung (i18n)](./ui/i18n.md)
 - [Theme & Styling](./ui/theme.md)
 
@@ -89,6 +93,8 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 - [API-Überblick](./api/ueberblick.md)
 - [Routen](./api/routen.md)
+- [Nginx-Analytics Routes](./api/nginx-analytics.md)
+- [DDNS-Provider Routes](./api/nginx-ddns-providers.md)
 - [Schemas](./api/schemas.md)
 
 ### Daten
@@ -123,4 +129,4 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 ---
 
-_Zuletzt aktualisiert: 2026-05-03_
+_Zuletzt aktualisiert: 2026-05-04_
