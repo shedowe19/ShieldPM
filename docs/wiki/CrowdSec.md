@@ -70,24 +70,24 @@ Add the CrowdSec container to your `compose.yaml`.
 **Important:** ShieldPM automatically provisions the necessary Parser and Collection configurations to your data directory (default: `data/crowdsec/`). You **must** mount these into the CrowdSec container.
 
 ```yaml
-  crowdsec:
-    container_name: crowdsec
-    image: docker.io/crowdsecurity/crowdsec:latest
-    restart: always
-    network_mode: bridge
-    environment:
-      - "TZ=Europe/Berlin"
-      - "COLLECTIONS=crowdsecurity/nginx" # Install basic nginx collection
-    volumes:
-      - "./crowdsec-db:/var/lib/crowdsec/data"
-      - "./crowdsec-config:/etc/crowdsec"
-      - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro" # Read logs from ShieldPM
-      # Mount ShieldPM Custom Configs
-      # ⚠️ STANDARD PATH: /opt/shieldpm/crowdsec/
-      # Verify this matches your 'volumes' in shieldpm service!
-      - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
-      - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
-      - "/opt/shieldpm/crowdsec/shieldpm-acquis.yaml:/etc/crowdsec/acquis.d/shieldpm.yaml:ro"
+crowdsec:
+  container_name: crowdsec
+  image: docker.io/crowdsecurity/crowdsec:latest
+  restart: always
+  network_mode: bridge
+  environment:
+    - "TZ=Europe/Berlin"
+    - "COLLECTIONS=crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve crowdsecurity/modsecurity crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules"
+  volumes:
+    - "./crowdsec-db:/var/lib/crowdsec/data"
+    - "./crowdsec-config:/etc/crowdsec"
+    - "/opt/shieldpm/nginx:/opt/shieldpm/nginx:ro" # Read logs from ShieldPM
+    # Mount ShieldPM Custom Configs
+    # ⚠️ STANDARD PATH: /opt/shieldpm/crowdsec/
+    # Verify this matches your 'volumes' in shieldpm service!
+    - "/opt/shieldpm/crowdsec/parser.yaml:/etc/crowdsec/parsers/s01-parse/shieldpm-logs.yaml:ro"
+    - "/opt/shieldpm/crowdsec/collection.yaml:/etc/crowdsec/collections/shieldpm.yaml:ro"
+    - "/opt/shieldpm/crowdsec/shieldpm-acquis.yaml:/etc/crowdsec/acquis.d/shieldpm.yaml:ro"
 ```
 
 > [!WARNING]
@@ -98,31 +98,35 @@ Add the CrowdSec container to your `compose.yaml`.
 ### 3. Connect ShieldPM (The Bouncer)
 
 1. **Generate API Key:**
-    Inside the *CrowdSec container*:
+   Inside the _CrowdSec container_:
 
-    ```bash
-    docker exec crowdsec cscli bouncers add shieldpm
-    ```
+   ```bash
+   docker exec crowdsec cscli bouncers add shieldpm
+   ```
 
-    *Copy the API Key printed.*
+   _Copy the API Key printed._
 
 2. **Configure ShieldPM:**
-    Edit `data/crowdsec/crowdsec.conf`:
+   Edit `data/crowdsec/crowdsec.conf`:
 
-    ```ini
-    API_KEY=your-generated-key
-    API_URL=http://<crowdsec-container-ip>:8080
-    ```
+   ```ini
+   API_KEY=your-generated-key
+   API_URL=http://<crowdsec-container-ip>:8080
+   ```
 
 3. **Restart ShieldPM:**
 
-    ```bash
-    docker restart shieldpm
-    ```
+   ```bash
+   docker restart shieldpm
+   ```
 
 ---
 
 ## 📦 Native / LXC Setup
+
+> [!NOTE]
+> **Same Collections Apply**
+> The COLLECTIONS listed above (`crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve crowdsecurity/modsecurity crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules`) also apply for native/LXC installations using `install.sh`.
 
 For Native and LXC installations, CrowdSec runs as a **local systemd service** — no Docker container needed.
 
@@ -152,82 +156,82 @@ If you skipped CrowdSec during installation or want to add it later:
 
 1. **Install CrowdSec:**
 
-    ```bash
-    curl -s https://install.crowdsec.net | bash
-    apt install -y crowdsec
-    ```
+   ```bash
+   curl -s https://install.crowdsec.net | bash
+   apt install -y crowdsec
+   ```
 
 2. **Create Acquisition Config:**
 
-    ```bash
-    mkdir -p /etc/crowdsec/acquis.d
-    cat > /etc/crowdsec/acquis.d/shieldpm.yaml << 'EOF'
-    filenames:
-      - /data/nginx/json_access.log
-      - /data/nginx/error.log
-    labels:
-      type: shieldpm
-    EOF
-    ```
+   ```bash
+   mkdir -p /etc/crowdsec/acquis.d
+   cat > /etc/crowdsec/acquis.d/shieldpm.yaml << 'EOF'
+   filenames:
+     - /data/nginx/json_access.log
+     - /data/nginx/error.log
+   labels:
+     type: shieldpm
+   EOF
+   ```
 
 3. **Install Parsers & Collections:**
 
-    ```bash
-    cscli hub update
-    cscli parsers install shedowe19/shieldpm-logs
-    cscli collections install crowdsecurity/base-http-scenarios
-    cscli collections install crowdsecurity/http-cve
-    cscli collections install crowdsecurity/appsec-virtual-patching
-    ```
+   ```bash
+   cscli hub update
+   cscli parsers install shedowe19/shieldpm-logs
+   cscli collections install crowdsecurity/base-http-scenarios
+   cscli collections install crowdsecurity/http-cve
+   cscli collections install crowdsecurity/appsec-virtual-patching
+   ```
 
 4. **Generate Bouncer Key & Configure:**
 
-    ```bash
-    cscli bouncers add shieldpm-bouncer
-    # Copy the printed API key, then:
-    nano /data/crowdsec/crowdsec.conf
-    ```
+   ```bash
+   cscli bouncers add shieldpm-bouncer
+   # Copy the printed API key, then:
+   nano /data/crowdsec/crowdsec.conf
+   ```
 
-    Set:
+   Set:
 
-    ```ini
-    ENABLED=true
-    API_KEY=your-generated-key
-    API_URL=http://127.0.0.1:8080
-    ```
+   ```ini
+   ENABLED=true
+   API_KEY=your-generated-key
+   API_URL=http://127.0.0.1:8080
+   ```
 
 5. **Restart Services:**
 
-    ```bash
-    systemctl enable --now crowdsec
-    systemctl restart shieldpm
-    ```
+   ```bash
+   systemctl enable --now crowdsec
+   systemctl restart shieldpm
+   ```
 
 ---
 
 ## 📄 Configuration Reference (`crowdsec.conf`)
 
-| Parameter | Required | Description | Example |
-| :--- | :--- | :--- | :--- |
-| `ENABLED` | **Yes** | Set to `true` to enable the Bouncer. | `true` |
-| `API_URL` | **Yes** | URL of your CrowdSec Agent (Local API). | `http://127.0.0.1:8080` |
-| `API_KEY` | **Yes** | Bouncer API Key generated via `cscli`. | `your-generated-key` |
-| `CACHE_EXPIRATION` | No | How long to cache decisions locally. | `1s` |
-| `BAN_TEMPLATE_PATH` | No | Path to the HTML file for Ban pages. | `/data/crowdsec/ban.html` |
-| `CAPTCHA_TEMPLATE_PATH` | No | Path to the HTML file for Captcha pages. | `/data/crowdsec/captcha.html` |
-| `SITE_KEY` | Conditional | reCaptcha Site Key (required for Captcha). | `your-site-key` |
-| `SECRET_KEY` | Conditional | reCaptcha Secret Key (required for Captcha). | `your-secret-key` |
-| `REDIRECT_LOCATION` | No | URL to redirect banned users to (instead of template). | `https://google.com` |
-| `RET_CODE` | No | HTTP Status Code for bans (Default: 403). | `403` |
+| Parameter               | Required    | Description                                            | Example                       |
+| :---------------------- | :---------- | :----------------------------------------------------- | :---------------------------- |
+| `ENABLED`               | **Yes**     | Set to `true` to enable the Bouncer.                   | `true`                        |
+| `API_URL`               | **Yes**     | URL of your CrowdSec Agent (Local API).                | `http://127.0.0.1:8080`       |
+| `API_KEY`               | **Yes**     | Bouncer API Key generated via `cscli`.                 | `your-generated-key`          |
+| `CACHE_EXPIRATION`      | No          | How long to cache decisions locally.                   | `1s`                          |
+| `BAN_TEMPLATE_PATH`     | No          | Path to the HTML file for Ban pages.                   | `/data/crowdsec/ban.html`     |
+| `CAPTCHA_TEMPLATE_PATH` | No          | Path to the HTML file for Captcha pages.               | `/data/crowdsec/captcha.html` |
+| `SITE_KEY`              | Conditional | reCaptcha Site Key (required for Captcha).             | `your-site-key`               |
+| `SECRET_KEY`            | Conditional | reCaptcha Secret Key (required for Captcha).           | `your-secret-key`             |
+| `REDIRECT_LOCATION`     | No          | URL to redirect banned users to (instead of template). | `https://google.com`          |
+| `RET_CODE`              | No          | HTTP Status Code for bans (Default: 403).              | `403`                         |
 
 ## ⚙️ Acquisition Configuration
 
 ShieldPM automatically provisions the acquisition configuration.
 
-| Deployment | Acquis File Location | Log Paths |
-|:---|:---|:---|
-| **Docker** | mounted via `compose.yaml` | `/opt/shieldpm/nginx/json_access.log` |
-| **Native/LXC** | `/etc/crowdsec/acquis.d/shieldpm.yaml` | `/data/nginx/json_access.log` |
+| Deployment     | Acquis File Location                   | Log Paths                             |
+| :------------- | :------------------------------------- | :------------------------------------ |
+| **Docker**     | mounted via `compose.yaml`             | `/opt/shieldpm/nginx/json_access.log` |
+| **Native/LXC** | `/etc/crowdsec/acquis.d/shieldpm.yaml` | `/data/nginx/json_access.log`         |
 
 ---
 
@@ -246,4 +250,5 @@ cscli decisions delete --ip 1.2.3.4
 ```
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

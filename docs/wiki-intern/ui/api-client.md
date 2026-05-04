@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Dokumentation der 109 API-Client-Dateien unter `frontend/src/api/backend/`.
+Dokumentation der API-Client-Dateien unter `frontend/src/api/backend/`.
 
 ## Kontext
 
@@ -34,7 +34,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Zertifikate
 
-`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `updateCertificate.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getDnsProviders.ts`, `downloadCertificate.ts`, `testHttpChallenge.ts`
+`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `updateCertificate.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getDnsProviders.ts`, `getCertificateDNSProviders.ts`, `downloadCertificate.ts`, `downloadRootCa.ts`, `testHttpCertificate.ts`
 
 ### Access-Lists
 
@@ -42,7 +42,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Benutzer
 
-`createUser.ts`, `getUser.ts`, `getUsers.ts`, `updateUser.ts`, `deleteUser.ts`, `toggleUser.ts`, `updateAuth.ts`, `uploadUserAvatar.ts`
+`createUser.ts`, `getUser.ts`, `getUsers.ts`, `updateUser.ts`, `deleteUser.ts`, `toggleUser.ts`, `updateAuth.ts`, `uploadUserAvatar.ts`, `setPermissions.ts`, `loginAsUser.ts`
 
 ### Cloudflare Tunnels
 
@@ -50,11 +50,11 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Tor Onion
 
-`torOnionActions.ts`, `getTorOnions.ts`, `updateTorOnion.ts`
+`createTorOnion.ts`, `deleteTorOnion.ts`, `getTorOnions.ts`, `torOnionActions.ts`, `updateTorOnion.ts`
 
 ### WireGuard
 
-`wireguardPeerActions.ts`, `getWireguardPeers.ts`, `updateWireguardPeer.ts`, `wireguardSettings.ts`
+`createWireguardPeer.ts`, `deleteWireguardPeer.ts`, `getWireguardPeerConfig.ts`, `getWireguardPeerQRCode.ts`, `getWireguardPeers.ts`, `updateWireguardPeer.ts`, `wireguardPeerActions.ts`, `wireguardSettings.ts`
 
 ### DDNS
 
@@ -66,15 +66,19 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Auth & Tokens
 
-`login.ts`, `refreshToken.ts`, `logout.ts`, `setup2fa.ts`, `verify2fa.ts`, `disable2fa.ts`, `get2faMethods.ts`, `get2faBackupCodes.ts`, `getAuthSessions.ts`, `deleteAuthSession.ts`
+`getToken.ts`, `loginAsUser.ts`, `refreshToken.ts`, `restoreSession.ts`, `claimOidcToken.ts`, `updateAuth.ts`
+
+### 2FA
+
+`get2fa.ts`, `setup2faTotp.ts`, `setup2faPasskey.ts`, `setup2faDuo.ts`, `setup2faYubikey.ts`, `verify2fa.ts`, `remove2fa.ts`, `backupCodes2fa.ts`
 
 ### Einstellungen & System
 
-`getSetting.ts`, `getSettings.ts`, `updateSetting.ts`, `getHealth.ts`, `checkVersion.ts`, `getHostReport.ts`
+`getSetting.ts`, `getSettings.ts`, `updateSetting.ts`, `getHealth.ts`, `checkVersion.ts`, `getHostsReport.ts`, `getDbStats.ts`
 
 ### AI
 
-`aiChat.ts`, `getAiConfig.ts`, `getAiModels.ts`
+`ai.ts`
 
 ### ChatOps
 
@@ -82,11 +86,11 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### GitOps
 
-`gitopsActions.ts`, `getGitStatus.ts`, `updateGitStatus.ts`, `syncGit.ts`
+`gitops.ts`, `gitSync.ts`
 
 ### Analytics
 
-`getAnalytics.ts`, `getAnalyticsCounts.ts`
+`getAnalyticsSeries.ts`, `getAnalyticsSummary.ts`
 
 ### Audit-Log
 

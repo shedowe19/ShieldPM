@@ -45,6 +45,17 @@ Express-Routen definieren die REST-API-Endpunkte. Sie validieren Eingaben gegen 
 
 Enthält die gesamte Business-Logik. Jedes Modul prüft Berechtigungen, führt Operationen durch und triggert Nebeneffekte (Nginx-Reload, Audit-Log).
 
+| Datei          | Beschreibung                                                |
+| -------------- | ----------------------------------------------------------- |
+| `nginx.js`     | Nginx-Konfiguration generieren/reloaden                     |
+| `tor.js`       | Tor Onion Services + `syncProxyHost()`                      |
+| `chat.js`      | Telegram-Bot + `smartEscape()`                              |
+| `ip_ranges.js` | Cloudflare-IP-Ranges herunterladen & Nginx-Config schreiben |
+| `gitops.js`    | GitOps-Auto-Push                                            |
+| `ai/`          | AI-Agent                                                    |
+| `token.js`     | JWT-Token-Erzeugung                                         |
+| `dns.js`       | DNS-Challenge für Let's Encrypt                             |
+
 ### 3. Models (Datenzugriff)
 
 **Pfad**: `backend/models/`

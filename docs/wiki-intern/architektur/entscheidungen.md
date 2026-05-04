@@ -22,13 +22,13 @@ Entwicklung verwendet SQLite (`better-sqlite3`). Produktion unterstützt MySQL u
 
 **Gotcha**: Boolean-Felder in SQLite werden als `0`/`1` gespeichert. Das Objection.js-Modell konvertiert im `$afterGet()`.
 
-### E4: Nginx-Validierung deaktiviert
+### E4: Nginx-Validierung aktiviert
 
-`nginx -t` wird vor dem Reload **nicht** ausgeführt, um die Geschwindigkeit zu erhöhen. Das bedeutet: Template-Fehler können Nginx brechen. Diese Entscheidung basiert auf dem Vertrauen in die EJS-Templates.
+`nginx -t` wird vor dem Reload **aktiv** ausgeführt (via `test()`-Methode = `nginx -tq`). Das schützt vor trivialen Config-Fehlern. Template-Fehler können Nginx dennoch brechen.
 
-### E5: Debounced Nginx-Reload
+### E5: Kein Debouncing in der Nginx-Engine
 
-Nginx wird mit 2 Sekunden Verzögerung neu geladen. Schnelle aufeinanderfolgende Änderungen werden gebündelt, um CPU-Spitzen zu vermeiden.
+Der Nginx-Reload wird **sofort** ausgelöst (keine Verzögerung). Debouncing mit 2s Verzögerung lebt in `docker.js`, nicht in der Nginx-Engine selbst.
 
 ### E6: Objection.js statt Raw SQL
 

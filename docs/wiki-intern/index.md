@@ -62,6 +62,10 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [DDNS](./module/ddns.md)
 - [DDNS-Provider](./module/ddns-provider.md)
 - [Docker Auto-Discovery](./module/docker.md)
+- [Turbo-Loader (Batch-Import)](./module/turbo-loader.md)
+- [OpenAppSec (WAF)](./module/openappsec.md)
+- [2FA-Service](./module/2fa-service.md)
+- [Auth-Session-Service](./module/auth-session-service.md)
 - [Analytics](./module/analytics.md)
 - [Maintenance](./module/maintenance.md)
 - [Dashboard-Notizen](./module/dashboard-notes.md)
@@ -119,6 +123,77 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 ### Features
 
 - [Feature-Übersicht](./features/README.md)
+
+### Modul-Beziehungen
+
+Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten Abhängigkeiten:
+
+- **nginx-engine.js** → zentrale Config-Engine → wird beeinflusst von proxy-host, redirection-host, dead-host, stream, access-lists, certificate, anubis
+- **proxy-host.js** → nutzt certificate, access-list, host, nginx-engine, gitops, audit-log
+- **redirection-host.js** → nutzt host, certificate, nginx-engine, gitops, audit-log
+- **dead-host.js** → nutzt host, certificate, nginx-engine, gitops, audit-log
+- **stream.js** → nutzt certificate, nginx-engine, gitops, audit-log
+- **certificate.js** → zentrales Zertifikatsmodul → genutzt von proxy-host, stream, redirection-host, dead-host, certbot
+- **access-lists.js** → nutzt nginx-engine, audit-log, bcryptjs
+- **host.js** (gemeinsame Logik) → Basis für proxy-host, redirection-host, dead-host, stream
+- **user.js / benutzer-auth.js** → nutzt token, auth-session-service, 2fa-service, audit-log
+- **token.js** → nutzt jsonwebtoken
+- **2fa-service.js** → nutzt otplib, simplewebauthn, duo-universal, qrcode, bcryptjs
+- **auth-session-service.js** → nutzt token, benutzer-auth, 2fa-service
+- **chatops.js** → nutzt telegraf (Telegram), ai-agent, token (JWT-Synthese)
+- **ai-agent.js** → nutzt internal/setting (Provider/Model), internal/token, audit-log; aufgerufen von routes/ai.js und chatops
+- **tor.js** → nutzt nginx-engine, Tor-Daemon; bietet syncProxyHost() für Proxy-Host-Synchronisation
+- **oauth2-proxy.js** → nutzt nginx-engine, setting, audit-log
+- **gitops.js** → nutzt isomorphic-git, archiver, js-yaml; synchronisiert proxy-host, dead-host, stream
+- **git-deploy.js** → nutzt isomorphic-git, proxy-host, dead-host, audit-log
+- **certbot.js** → nutzt nginx-engine, certbot-CLI
+- **ip-ranges.js** → nutzt nginx-engine, proxy-agent, Cloudflare-API
+- **cloudflared.js** → nutzt Cloudflared-Binary, audit-log
+- **wireguard.js** → nutzt wireguard-tools, iproute2
+- **pki.js** → nutzt node:crypto, optional OpenSSL (ML-KEM-Hybrid)
+- **terminal.js** → nutzt ssh2, ws, @xterm/xterm
+- **maintenance.js** → nutzt nginx-engine (Maintenance-Config)
+- **dashboard-notes.js** → nutzt audit-log, lib/access (RBAC)
+- **ddns.js / ddns-provider.js** → HTTP-Client für DNS-APIs
+- **docker.js** → nutzt dockerode, Docker-Socket
+- **turbo-loader.js** → Frontend-Chunk-Download + Nginx-Interception
+- **openappsec.js** → WAF-Modul (nginx-Modul + Docker/native)
+- **anubis.js** → externer Anubis-Service (PoW-Gate)
+
+- **analytics.js** → nutzt recharts, react-simple-maps, GoAccess
+
+### API-Routen (Überblick)
+
+| Route-Datei                  | API-Pfad                         | Modul / Thema                           |
+| ---------------------------- | -------------------------------- | --------------------------------------- |
+| `main.js`                    | `/api/`                          | Hauptendpunkte (health, backup, detect) |
+| `users.js`                   | `/api/users`                     | Benutzerverwaltung                      |
+| `tokens.js`                  | `/api/tokens`                    | Login, Refresh, Logout                  |
+| `2fa.js`                     | `/api/users/:user_id/2fa`        | TOTP, Passkey, Duo, Backup-Codes        |
+| `settings.js`                | `/api/settings`                  | Globale Einstellungen                   |
+| `services.js`                | `/api/services`                  | Service-Management                      |
+| `schema.js`                  | `/api/schema`                    | Validierungs-Schemata                   |
+| `version.js`                 | `/api/version`                   | Versionsabfrage                         |
+| `dashboard.js`               | `/api/dashboard`                 | Dashboard-Stats                         |
+| `analytics.js`               | `/api/analytics`                 | Frontend-Analytics                      |
+| `reports.js`                 | `/api/reports`                   | System-Reports                          |
+| `audit-log.js`               | `/api/audit-log`                 | Audit-Log                               |
+| `oidc.js`                    | `/api/oidc`                      | OpenID Connect                          |
+| `chat.js`                    | `/api/chat`                      | ChatOps / Telegram                      |
+| `gitops.js`                  | `/api/gitops`                    | GitOps Pull/Push                        |
+| `ai.js`                      | `/api/ai`                        | AI-Agent                                |
+| `password-reset.js`          | `/api/password-reset`            | Passwort-Reset                          |
+| `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`         | proxy-host                              |
+| `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`   | redirection-host                        |
+| `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`          | dead-host                               |
+| `nginx/streams.js`           | `/api/nginx/streams`             | stream (TCP/UDP)                        |
+| `nginx/certificates.js`      | `/api/nginx/certificates`        | Zertifikate                             |
+| `nginx/access_lists.js`      | `/api/nginx/access-lists`        | access-lists                            |
+| `nginx/cloudflared.js`       | `/api/nginx/cloudflared-tunnels` | cloudflared                             |
+| `nginx/tor_onion.js`         | `/api/nginx/tor-onion`           | tor                                     |
+| `nginx/wireguard.js`         | `/api/nginx/wireguard`           | wireguard                               |
+| `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`      | ddns-provider                           |
+| `nginx/analytics.js`         | `/api/nginx/analytics`           | Nginx-Analytics                         |
 
 ### Meta
 

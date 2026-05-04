@@ -66,6 +66,32 @@ Verwendung: optionaler Sidecar-Container vor ShieldPM, der Plain-HTTP auf HTTPS 
 
 Siehe [Rootfs-Referenz](./rootfs.md) für vollständige Auflistung.
 
+## Projekt-Dateien
+
+| Datei                    | Zweck                                                                |
+| ------------------------ | -------------------------------------------------------------------- |
+| `README.md`              | Projekt-Dokumentation — öffentlicher Einstiegspunkt                  |
+| `LICENSE`                | GPL-3.0 Lizenz — Urheberrechtsinformationen                          |
+| `THIRD-PARTY-NOTICES.md` | Generierte Lizenz-Attribution für NPM-Drittabhängigkeiten            |
+| `pentest_crowdsec.py`    | Pentest-Skript für CrowdSec-Integrationstests                        |
+| `renovate.json`          | Renovate-Bot Konfiguration für automatische Dependency-Updates       |
+| `.gitignore`             | Git-Ignorierliste                                                    |
+| `.gitattributes`         | Git-Attribute (z.B. linguististische Erkennung)                      |
+| `.imgbotconfig`          | ImgBot-Konfiguration für automatische Bildoptimierung                |
+| `.version`               | ShieldPM Version (z.B. `v4.3.2`) — synchron mit package.json-Dateien |
+
+## Agent-spezifische Dateien
+
+Diese Dateien sind für KI-Agenten relevant und steuern das Verhalten bei der Arbeit mit diesem Projekt:
+
+| Datei | Zweck |
+| {
+|-------|-------|
+| `AGENTS.md` | deflection-Skill-Catalog, Common Code Patterns, Projekt-Constraints. **MUSS** vor jeder Aufgabe gelesen werden. |
+| `GEMINI.md` | **Source of Truth** für AI Agent Context — alle Agenten müssen diese Datei als autoritativ betrachten. |
+| `agent.md` | deflection-Pflicht-Regeln für Wiki-Pflege. Definiert wann und wie das Wiki aktualisiert werden muss. **MUSS** vor jeder Arbeitssitzung gelesen werden. |
+| `.cursorrules` | Coding-Standards, Naming-Conventions, Anti-Patterns. Relevant für alle Code-Änderungen. |
+
 ## Verwandte Seiten
 
 - [Umgebungsvariablen](./umgebungsvariablen.md)

@@ -27,13 +27,37 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 2. Liest aktuelle Daten aus der Datenbank
 3. Rendert EJS-Templates mit Host-Daten
 4. Schreibt `.conf`-Dateien nach `/data/nginx/`
-5. Führt `nginx -s reload` aus (debounced, 2s)
+5. Führt `nginx -s reload` aus (Debouncing passiert in `docker.js`, nicht hier)
 
 ## Wichtige Hinweise
 
-- `nginx -t` wird **nicht** vor dem Reload ausgeführt
-- Reload ist debounced (2s Verzögerung)
+- `nginx -t` wird **aktiv** vor dem Reload ausgeführt via `test()` Methode (`nginx -tq`)
+- Reload ist **nicht** debounced in `nginx.js` — Debouncing passiert in `docker.js`
 - Templates verwenden EJS-Syntax mit Liquid-Fallback
+
+## Erweiterte Methoden
+
+### Config-Backup/Restore
+
+- `backupConfig(host_type, host)` — Erstellt eine `.conf.bak` Sicherungskopie der aktuellen Config vor Änderungen
+- `restoreConfig(host_type, host)` — Stellt die `.conf.bak` Sicherung wieder her (z.B. nach fehlgeschlagenem `nginx -t`)
+- `deleteBackupConfig(host_type, host)` — Löscht die Backup-Datei nach erfolgreichem Configure (Commit)
+
+### Fehlerbehandlung
+
+- `renameConfigAsError(host_type, host)` — Benennt eine fehlerhafte Config als `.conf.err` um, bevor die Backup wiederhergestellt wird
+
+### Bulk-Operationen
+
+- `bulkGenerateConfigs(model, host_type, hosts)` — Generiert mehrere Host-Configs am Stück (ohne Reload) für GitOps oder Massen-Reload-Szenarien. Setzt `skip_reload: true` pro Host und wartet auf alle Promises.
+
+### Config-Parsing
+
+- `advancedConfigHasDefaultLocation(advanced_config)` — Parst das `advanced_config`-Feld und prüft, ob ein `location /` Block definiert ist. Gibt `true` zurück, wenn vorhanden. Beeinflusst, ob der Default-Location-Block hinzugefügt wird.
+
+### Anubis-Integration
+
+Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren.
 
 ## Abhängigkeiten
 
@@ -41,6 +65,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - `internal/proxy-host.js`, `internal/redirection-host.js`, `internal/dead-host.js`, `internal/stream.js` — rufen die Engine bei CRUD auf
 - `internal/certificate.js` — wird beim Generieren der Host-Configs gelesen
 - `internal/access-list.js` — wird in den Templates referenziert
+- `internal/anubis.js` — `generatePolicy()` wird nach erfolgreichem Configure asynchron aufgerufen
 - Externes Binary `nginx` (für `nginx -s reload`)
 
 ## Offene Fragen

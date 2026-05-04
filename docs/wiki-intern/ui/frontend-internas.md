@@ -106,8 +106,8 @@ Beinhaltet Hilfsfunktionen für Toast-Benachrichtigungen.
 
 ## Weitere Komponenten-Strukturen
 
-- `frontend/src/components/Nginx/`: Beinhaltet modale Komponenten zur Konfiguration von Nginx-Erweiterungen wie `CloudflaredTunnelModal.tsx`, `TorOnionModal.tsx`, `WireguardConfigModal.tsx` und `WireguardPeerModal.tsx`.
-- `frontend/src/components/Form/`: Beinhaltet wiederverwendbare Formularfelder für die UI, darunter `AccessClientFields.tsx`, `AccessField.tsx`, `BasicAuthFields.tsx`, `DNSProviderFields.tsx`, `DomainNamesField.tsx`, `LocationsFields.tsx`, `NginxConfigField.tsx`, `SSLCertificateField.tsx` und `SSLOptionsFields.tsx`.
+- `frontend/src/components/Nginx/`: Modale Komponenten für Nginx-Erweiterungen — `CloudflaredTunnelModal.tsx`, `TorOnionModal.tsx`, `WireguardConfigModal.tsx`, `WireguardPeerModal.tsx`.
+- `frontend/src/components/Form/`: Wiederverwendbare Formularfelder — `AccessClientFields.tsx`, `AccessField.tsx`, `BasicAuthFields.tsx`, `DNSProviderFields.tsx`, `DomainNamesField.tsx`, `LocationsFields.tsx`, `NginxConfigField.tsx`, `SSLCertificateField.tsx`, `SSLOptionsFields.tsx`.
 
 ## Offene Fragen
 
