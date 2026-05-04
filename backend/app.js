@@ -4,7 +4,7 @@ import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
-import swaggerSpec from "./schema/swagger.json" with { type: "json" };
+import { getCompiledSchema } from "./schema/index.js";
 import analyticsService from "./internal/analytics.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
@@ -243,6 +243,9 @@ app.use(checkDemoMode);
 
 // Apply global rate limiter to all API routes
 app.use("/api", globalApiLimiter);
+
+// Compile OpenAPI schema once (dereferences $refs)
+const swaggerSpec = await getCompiledSchema();
 
 // Swagger UI — must be BEFORE mainRoutes so it doesn't get caught by the catch-all router
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
