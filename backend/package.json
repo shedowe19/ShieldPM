@@ -43,6 +43,7 @@
     "qrcode": "^1.5.4",
     "signale": "1.4.0",
     "ssh2": "^1.17.0",
+    "swagger-ui-express": "^5.0.1",
     "systeminformation": "^5.31.5",
     "tail": "^2.2.6",
     "telegraf": "^4.16.3",
