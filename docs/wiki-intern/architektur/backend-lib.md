@@ -59,6 +59,8 @@ Die `lib/`-Dateien stellen grundlegende Infrastruktur bereit, die von den `inter
 | `jwt.js`             | 352 B  | JWT-Authentifizierungs-Middleware          |
 | `user-id-from-me.js` | 337 B  | Ersetzt `me` in URL durch aktuelle User-ID |
 
+Siehe auch: [Express-Middleware](./express-middleware.md)
+
 ### Unterordner `validator/`
 
 | Datei      | Größe  | Zweck                    |
@@ -87,5 +89,6 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
+- [Express-Middleware](./express-middleware.md)
 - [Modulübersicht](../module/README.md)
 - [Architektur-Module](../architektur/module.md)

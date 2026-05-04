@@ -47,7 +47,7 @@
 
 ### Overview
 
-ShieldPM is a security-focused Nginx Proxy Manager fork (v4.1.0). It manages reverse proxies via a web UI, with deep integrations for WAF (ModSecurity, OpenAppSec), IPS (CrowdSec), ChatOps (Telegram), AI assistants, GitOps, Tor onion services, Cloudflare Tunnels, and DDNS.
+ShieldPM is a security-focused Nginx Proxy Manager fork (v4.3.2). It manages reverse proxies via a web UI, with deep integrations for WAF (ModSecurity, OpenAppSec), IPS (CrowdSec), ChatOps (Telegram), AI assistants, GitOps, Tor onion services, Cloudflare Tunnels, and DDNS.
 
 ### Key Files
 

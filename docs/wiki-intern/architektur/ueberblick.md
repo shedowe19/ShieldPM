@@ -82,7 +82,7 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 ```
 ShieldPM/
 ├── backend/              # Node.js Backend
-│   ├── internal/         # Business-Logik (35 Module)
+│   ├── internal/         # Business-Logik (36+ Module)
 │   │   └── ai/          # AI-Agent (executor, providers, tools, prompt)
 │   ├── models/           # Objection.js Modelle (27 Dateien)
 │   ├── routes/           # Express-Routen (16 Dateien + nginx/)

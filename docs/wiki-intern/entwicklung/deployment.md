@@ -55,21 +55,21 @@ Der Installer:
 
 Workflows unter `.github/workflows/`:
 
-| Datei                     | Zweck                                                       |
-| ------------------------- | ----------------------------------------------------------- |
-| `docker.yml`              | Multi-Plattform-Docker-Image-Build und Push nach `ghcr.io`  |
-| `docker-latest.yml`       | Latest-Tag-Update                                           |
-| `dockerlint.yml`          | Hadolint-Check für Dockerfile                               |
-| `caddy.yml`               | Build des Caddy-Sidecar-Image (`shieldpm:caddy`)            |
-| `caddy-fmt.yml`           | Formatierungs-Check für `caddy/Caddyfile`                   |
-| `codeql.yml`              | Statische Sicherheitsanalyse (GitHub CodeQL)                |
-| `lint-and-format.yml`     | Biome-Linter und Prettier-Check                             |
-| `shellcheck.yml`          | Lint für `scripts/install.sh` und Rootfs-Shell-Scripts      |
-| `json.yml`                | JSON-Lint (Schema-Files, RBAC-Rules)                        |
-| `spellcheck.yml`          | codespell mit Skip-Liste (siehe Konfig im Workflow)         |
-| `dependency-updates.yml`  | Renovate-Trigger / Updater                                  |
-| `npm-updates.yml`         | NPM-Update-Helper                                           |
-| `wiki-sync.yml`           | Synchronisiert `docs/wiki/` mit dem GitHub-Wiki-Repo        |
+| Datei                    | Zweck                                                      |
+| ------------------------ | ---------------------------------------------------------- |
+| `docker.yml`             | Multi-Plattform-Docker-Image-Build und Push nach `ghcr.io` |
+| `docker-latest.yml`      | Latest-Tag-Update                                          |
+| `dockerlint.yml`         | Hadolint-Check für Dockerfile                              |
+| `caddy.yml`              | Build des Caddy-Sidecar-Image (`shieldpm:caddy`)           |
+| `caddy-fmt.yml`          | Formatierungs-Check für `caddy/Caddyfile`                  |
+| `codeql.yml`             | Statische Sicherheitsanalyse (GitHub CodeQL)               |
+| `lint-and-format.yml`    | Biome-Linter und Prettier-Check                            |
+| `shellcheck.yml`         | Lint für `scripts/install.sh` und Rootfs-Shell-Scripts     |
+| `json.yml`               | JSON-Lint (Schema-Files, RBAC-Rules)                       |
+| `spellcheck.yml`         | codespell mit Skip-Liste (siehe Konfig im Workflow)        |
+| `dependency-updates.yml` | Renovate-Trigger / Updater                                 |
+| `npm-updates.yml`        | NPM-Update-Helper                                          |
+| `wiki-sync.yml`          | Synchronisiert `docs/wiki/` mit dem GitHub-Wiki-Repo       |
 
 ## Hilfs-Skripte
 

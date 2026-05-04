@@ -61,7 +61,8 @@ Wo wird es verwendet?
 
 ## Wichtige Dateien
 
-- `pfad/zur/datei.js`
+- `backend/internal/mein-modul.js`
+- `backend/models/mein_modell.js`
 
 ## Verhalten
 
@@ -77,7 +78,8 @@ Siehe zentrale Sammelseite [Offene Fragen](./offene-fragen.md).
 
 ## Verwandte Seiten
 
-- [Verwandte Seite](./pfad/zur/seite.md)
+- [Offene Fragen](./offene-fragen.md)
+- [Index](./index.md)
 ```
 
 ## Unsicherheiten markieren
@@ -88,8 +90,8 @@ Siehe zentrale Sammelseite [Offene Fragen](./offene-fragen.md).
 
 ## Verlinkung
 
-- **Nur relative Markdown-Links** verwenden: `[Text](./pfad/datei.md)`
-- **Keine** `[[Wiki-Syntax]]`
+- **Nur relative Markdown-Links** verwenden (Format: link text in eckigen Klammern, dann Pfad in runden Klammern)
+- **Keine** Wiki-Syntax
 - **Keine** echten Secrets dokumentieren
 
 ## Formatierung

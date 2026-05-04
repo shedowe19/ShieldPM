@@ -35,26 +35,26 @@
 
 ## Projekt
 
-| Datei                    | Zweck                                                          |
-| ------------------------ | -------------------------------------------------------------- |
-| `.version`               | Versionsdatei (aktuell: 4.3.2)                                 |
-| `renovate.json`          | Dependency-Update-Bot-Konfiguration                            |
-| `.gitignore`             | Git-Ignore-Regeln                                              |
-| `.gitattributes`         | Git-Attribut-Regeln (Line-Endings, Linguist)                   |
-| `.imgbotconfig`          | Image-Optimierungs-Bot                                         |
+| Datei                    | Zweck                                                           |
+| ------------------------ | --------------------------------------------------------------- |
+| `.version`               | Versionsdatei (aktuell: 4.3.2)                                  |
+| `renovate.json`          | Dependency-Update-Bot-Konfiguration                             |
+| `.gitignore`             | Git-Ignore-Regeln                                               |
+| `.gitattributes`         | Git-Attribut-Regeln (Line-Endings, Linguist)                    |
+| `.imgbotconfig`          | Image-Optimierungs-Bot                                          |
 | `.cursorrules`           | Coding-Standards und Architektur-Referenz für Cursor-/AI-Agents |
-| `agent.md`               | Wiki-Pflichtregeln für LLM-Agents                              |
-| `AGENTS.md`              | AI-Agent-Richtlinien                                           |
-| `GEMINI.md`              | Projekt-Kontext für AI-Agents                                  |
-| `THIRD-PARTY-NOTICES.md` | Auto-generierte Lizenzen (von `scripts/generate-notices.js`)   |
-| `pentest_crowdsec.py`    | Hilfsskript zum Testen von CrowdSec-Bouncern (manueller Lauf)  |
+| `agent.md`               | Wiki-Pflichtregeln für LLM-Agents                               |
+| `AGENTS.md`              | AI-Agent-Richtlinien                                            |
+| `GEMINI.md`              | Projekt-Kontext für AI-Agents                                   |
+| `THIRD-PARTY-NOTICES.md` | Auto-generierte Lizenzen (von `scripts/generate-notices.js`)    |
+| `pentest_crowdsec.py`    | Hilfsskript zum Testen von CrowdSec-Bouncern (manueller Lauf)   |
 
 ## Caddy-Sidecar
 
-| Datei              | Zweck                                                                 |
-| ------------------ | --------------------------------------------------------------------- |
+| Datei              | Zweck                                                                    |
+| ------------------ | ------------------------------------------------------------------------ |
 | `caddy/Dockerfile` | Build-Definition des Caddy-Sidecars (`ghcr.io/shedowe19/shieldpm:caddy`) |
-| `caddy/Caddyfile`  | Caddy-Konfiguration: HTTP→HTTPS-Redirector, optional ACME-Helfer        |
+| `caddy/Caddyfile`  | Caddy-Konfiguration: HTTP→HTTPS-Redirector, optional ACME-Helfer         |
 
 Verwendung: optionaler Sidecar-Container vor ShieldPM, der Plain-HTTP auf HTTPS umleitet (siehe [Deployment](../entwicklung/deployment.md)).
 
