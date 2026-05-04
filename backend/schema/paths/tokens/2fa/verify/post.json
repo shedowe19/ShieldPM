@@ -67,7 +67,7 @@
 						}
 					},
 					"schema": {
-						"$ref": "../../components/token-response.json"
+						"$ref": "../../../../components/token-response.json"
 					}
 				}
 			}
