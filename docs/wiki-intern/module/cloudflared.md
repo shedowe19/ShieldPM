@@ -27,9 +27,12 @@ Ermöglicht das Exponieren von Diensten über Cloudflare ohne eingehende Portfre
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
 - [Modulübersicht](./README.md)
 - [Proxy-Host](./proxy-host.md)
+- [IP-Ranges (Cloudflare-IPs)](./ip-ranges.md)
+- [Tor Onion Services](./tor.md)
+- [WireGuard](./wireguard.md)

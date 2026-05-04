@@ -124,6 +124,7 @@ vi.mock("otplib", () => ({
 		keyuri: vi.fn(() => "otpauth://totp/ShieldPM:test@example.com?secret=JBSWY3DPEHPK3PXP"),
 		verify: vi.fn(() => true),
 	},
+	generateSecret: vi.fn(() => "JBSWY3DPEHPK3PXP"),
 }));
 
 // ── Mock: qrcode ────────────────────────────────────────────────────────────

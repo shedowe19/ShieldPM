@@ -13,6 +13,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - `backend/internal/nginx.js` (12 KB) — Hauptlogik
 - `backend/templates/proxy_host.conf` (16 KB) — Proxy-Host-Template
 - `backend/templates/_proxy_logic.conf` (17 KB) — Gemeinsame Proxy-Logik
+- `backend/templates/_proxy_host_custom_location.conf` — Partial für `custom_locations` (Liquid-Syntax, eingebettet in `proxy_host.conf`)
 - `backend/templates/_common.conf` (3 KB) — Gemeinsame Konfiguration
 - `backend/templates/stream.conf` (3 KB) — Stream-Template
 - `backend/templates/redirection_host.conf` — Redirect-Template
@@ -34,7 +35,25 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - Reload ist debounced (2s Verzögerung)
 - Templates verwenden EJS-Syntax mit Liquid-Fallback
 
+## Abhängigkeiten
+
+- `lib/utils.js` — Render-Engine (`getRenderEngine()`, Liquid-basiert)
+- `internal/proxy-host.js`, `internal/redirection-host.js`, `internal/dead-host.js`, `internal/stream.js` — rufen die Engine bei CRUD auf
+- `internal/certificate.js` — wird beim Generieren der Host-Configs gelesen
+- `internal/access-list.js` — wird in den Templates referenziert
+- Externes Binary `nginx` (für `nginx -s reload`)
+
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [Datenfluss](../architektur/datenfluss.md)
 - [Proxy-Host](./proxy-host.md)
+- [Redirection-Host](./redirection-host.md)
+- [Dead-Host](./dead-host.md)
+- [Stream](./stream.md)
+- [Host (gemeinsame Logik)](./host.md)
+- [IP-Ranges](./ip-ranges.md)
+- [Modulübersicht](./README.md)

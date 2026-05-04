@@ -83,7 +83,7 @@ Enthält RBAC-Regeln pro Ressource (ca. 3.3 KB gesamt).
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

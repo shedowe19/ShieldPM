@@ -73,7 +73,7 @@ Welche Module werden verwendet?
 
 ## Offene Fragen
 
-- TODO: ...
+Siehe zentrale Sammelseite [Offene Fragen](./offene-fragen.md).
 
 ## Verwandte Seiten
 
@@ -91,6 +91,16 @@ Welche Module werden verwendet?
 - **Nur relative Markdown-Links** verwenden: `[Text](./pfad/datei.md)`
 - **Keine** `[[Wiki-Syntax]]`
 - **Keine** echten Secrets dokumentieren
+
+## Formatierung
+
+- Markdown mit Prettier formatieren: `npx prettier --write "docs/wiki-intern/**/*.md"`
+- Biome wird im Repo verwendet, ist aber für Markdown nicht zuständig.
+
+## Werkzeuge
+
+- **Beziehungsgraph**: `python3 scripts/wiki-graph.py` erzeugt `docs/wiki-intern/wiki-graph.html` — eine eigenständige, offline-fähige interaktive Visualisierung aller Wiki-Seiten und ihrer Verlinkungen. Nach jeder größeren Wiki-Änderung neu generieren, um die aktuelle Vernetzung zu inspizieren.
+- **Alternative Tools**: Obsidian (Vault auf `docs/wiki-intern/` setzen, `Strg+G`) oder die VS-Code-Extension "Foam" zeigen den gleichen Graph live.
 
 ## Verwandte Seiten
 

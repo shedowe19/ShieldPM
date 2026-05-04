@@ -10,6 +10,13 @@ Diese Module behandeln System-weite Einstellungen, Protokolle, Benachrichtigunge
 
 ## Module
 
-- [Einstellungen](./einstellungen.md) (`setting.js`, `dashboard_note.js`)
+- [Einstellungen](./einstellungen.md) (`setting.js`)
+- [Dashboard-Notizen](../module/dashboard-notes.md) (`dashboard_note.js`)
 - [Audit-Log](./audit-log.md) (`audit-log.js`)
-- [System-Reports](./report.md) (`report.js`, `remote-version.js`)
+- [System-Reports & Versionierung](./report.md) (`report.js`, `remote-version.js`)
+- [Maintenance](../module/maintenance.md) (`maintenance.js`)
+
+## Verwandte Seiten
+
+- [Modulübersicht](../module/README.md)
+- [Index](../index.md)

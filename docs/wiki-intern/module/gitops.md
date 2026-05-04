@@ -29,9 +29,11 @@ GitOps ermöglicht es, die gesamte ShieldPM-Konfiguration in einem Git-Repositor
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
+- [Git-Deploy](./git-deploy.md)
 - [Modulübersicht](./README.md)
 - [Deployment](../entwicklung/deployment.md)
+- [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)

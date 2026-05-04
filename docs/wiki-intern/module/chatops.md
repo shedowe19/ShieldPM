@@ -29,7 +29,7 @@ ChatOps ermöglicht die Steuerung von ShieldPM über einen Telegram-Bot. Der Bot
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

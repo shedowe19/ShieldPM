@@ -59,7 +59,7 @@ Die gleiche Datei existiert als `rootfs/data/.env` für den Container.
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

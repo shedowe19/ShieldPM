@@ -27,8 +27,11 @@ Unterstützt Cloudflare, DuckDNS und benutzerdefinierte URLs als DDNS-Provider.
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
+- [Cloudflare Tunnels](./cloudflared.md)
+- [IP-Ranges](./ip-ranges.md)
+- [Proxy-Host](./proxy-host.md)
 - [Modulübersicht](./README.md)

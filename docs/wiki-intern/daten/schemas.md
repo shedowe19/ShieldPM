@@ -44,7 +44,7 @@ Die Objection.js-Modelle verwenden folgende Lifecycle-Hooks:
 
 ## Offene Fragen
 
-- TODO: Welche Modelle verwenden custom `$afterGet()` Hooks für Feldberechnung?
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

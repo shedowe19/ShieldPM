@@ -60,7 +60,7 @@ ShieldPM bietet eine breite Palette an Features. Diese Seite dient als Einstiegs
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

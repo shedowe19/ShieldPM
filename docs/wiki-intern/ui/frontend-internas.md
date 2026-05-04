@@ -100,13 +100,18 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 
 ## Notifications (`frontend/src/notifications/`)
 
-TODO: Inhalt dieses Ordners prüfen.
+Beinhaltet Hilfsfunktionen für Toast-Benachrichtigungen.
+
+- `helpers.tsx`: Enthält `showSuccess`, `showError` und `showObjectSuccess`, welche die Toast-API (`use-toast`) und Internationalisierung (`intl`) nutzen.
+
+## Weitere Komponenten-Strukturen
+
+- `frontend/src/components/Nginx/`: Beinhaltet modale Komponenten zur Konfiguration von Nginx-Erweiterungen wie `CloudflaredTunnelModal.tsx`, `TorOnionModal.tsx`, `WireguardConfigModal.tsx` und `WireguardPeerModal.tsx`.
+- `frontend/src/components/Form/`: Beinhaltet wiederverwendbare Formularfelder für die UI, darunter `AccessClientFields.tsx`, `AccessField.tsx`, `BasicAuthFields.tsx`, `DNSProviderFields.tsx`, `DomainNamesField.tsx`, `LocationsFields.tsx`, `NginxConfigField.tsx`, `SSLCertificateField.tsx` und `SSLOptionsFields.tsx`.
 
 ## Offene Fragen
 
-- TODO: Genaue Struktur von `frontend/src/notifications/`
-- TODO: Inhalt der `frontend/src/components/Nginx/`-Subkomponenten
-- TODO: Inhalt der `frontend/src/components/Form/`-Subkomponenten
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

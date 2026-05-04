@@ -34,7 +34,8 @@ yarn test
 ## Backend-Tests
 
 - Pfad: `backend/test/`
-- TODO: Umfang der vorhandenen Backend-Tests prüfen
+- Enthalten Unit-Tests für `backend/lib/` (z.B. helpers, user-id-from-me) und `backend/internal/` (z.B. 2fa-service, ai, auth-session-service, certificate, ddns, tokens-2fa).
+- Führen Tests über Vitest aus.
 
 ## Code-Qualität
 
