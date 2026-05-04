@@ -246,8 +246,8 @@ app.use("/api", globalApiLimiter);
 
 app.use("/", mainRoutes);
 
-// Swagger UI at /api/docs
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// Swagger UI at /docs (proxied without /api prefix)
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 	swaggerOptions: {
 		requestInterceptor: (req) => {
 			// Add CSRF token to requests
