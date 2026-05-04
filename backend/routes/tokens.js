@@ -203,7 +203,7 @@ router
 		});
 
 		res.clearCookie("shieldpm_oidc");
-		res.status(200).send({ ...data, token: undefined });
+		res.status(200).send(data);
 	})
 
 	/**
@@ -276,8 +276,8 @@ router
 				refreshExpires: pair.refresh_expires,
 			});
 
-			// Backward-compatible response (no tokens in body)
 			res.status(200).send({
+				token: pair.access_token,
 				expires: pair.access_expires,
 				user: pair.user,
 				csrfToken: res.locals.csrfToken,
@@ -350,8 +350,8 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 			refreshExpires: pair.refresh_expires,
 		});
 
-		// Backward-compatible response (no tokens in body)
 		res.status(200).send({
+			token: pair.access_token,
 			expires: pair.access_expires,
 			user: pair.user,
 			csrfToken: res.locals.csrfToken,
@@ -511,6 +511,7 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
 		});
 
 		res.status(200).send({
+			token: pair.access_token,
 			expires: pair.access_expires,
 			user: pair.user,
 			csrfToken: res.locals.csrfToken,
@@ -599,6 +600,7 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
 		});
 
 		res.status(200).send({
+			token: pair.access_token,
 			expires: pair.access_expires,
 			user: pair.user,
 			csrfToken: res.locals.csrfToken,
@@ -692,6 +694,7 @@ router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
 		});
 
 		res.status(200).send({
+			token: pair.access_token,
 			expires: pair.access_expires,
 			user: pair.user,
 			csrfToken: res.locals.csrfToken,
