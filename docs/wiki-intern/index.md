@@ -205,3 +205,11 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 ---
 
 _Zuletzt aktualisiert: 2026-05-04_
+
+## Verwandte Seiten
+
+- [Projektüberblick](./projekt/ueberblick.md)
+- [Architektur-Überblick](./architektur/ueberblick.md)
+- [Module](./module/README.md)
+- [API-Überblick](./api/ueberblick.md)
+- [Wiki-Pflege](./wiki-pflege.md)
