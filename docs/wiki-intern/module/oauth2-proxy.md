@@ -49,7 +49,7 @@ Authentik wird **nicht** über oauth2-proxy, sondern als eigener Auth-Typ `AUTHE
 
 ## Offene Fragen
 
-- TODO: End-to-End-Beispiel mit Authentik dokumentieren (Auth-Typ `AUTHENTIK_PROXY` ist parallel zu oauth2-proxy verfügbar)
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

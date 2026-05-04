@@ -33,7 +33,7 @@ Dieses Modul bündelt die wiederverwendbare Logik, sodass die einzelnen Host-Mod
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

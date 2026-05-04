@@ -41,7 +41,7 @@ ShieldPM verwendet JWT-basierte Authentifizierung mit optionalem 2FA und OIDC.
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

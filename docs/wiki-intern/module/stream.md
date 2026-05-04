@@ -42,7 +42,7 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

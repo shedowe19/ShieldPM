@@ -29,7 +29,7 @@ Ermöglicht SSH-Verbindungen direkt über die ShieldPM Web-UI.
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

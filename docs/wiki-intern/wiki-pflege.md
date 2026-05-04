@@ -73,7 +73,7 @@ Welche Module werden verwendet?
 
 ## Offene Fragen
 
-- TODO: ...
+Siehe zentrale Sammelseite [Offene Fragen](./offene-fragen.md).
 
 ## Verwandte Seiten
 

@@ -31,7 +31,7 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

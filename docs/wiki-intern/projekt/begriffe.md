@@ -41,7 +41,7 @@ Diese Begriffe tauchen im gesamten Projekt auf — in Code, Konfiguration und Do
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

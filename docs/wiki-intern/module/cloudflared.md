@@ -27,7 +27,7 @@ Ermöglicht das Exponieren von Diensten über Cloudflare ohne eingehende Portfre
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

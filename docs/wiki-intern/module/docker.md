@@ -27,7 +27,7 @@ Automatische Erkennung und Registrierung von Docker-Containern als Proxy-Hosts.
 
 ## Offene Fragen
 
-- Unklar: Genaues Label-Format für Auto-Discovery-Konfiguration
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

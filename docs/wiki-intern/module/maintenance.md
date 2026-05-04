@@ -24,7 +24,7 @@ Ermöglicht es, Proxy-Hosts zeitgesteuert in den Wartungsmodus zu versetzen und 
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

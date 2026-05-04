@@ -28,7 +28,7 @@ Ermöglicht Zugriff auf Proxy-Hosts über `.onion`-Adressen. Nützlich für Priv
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

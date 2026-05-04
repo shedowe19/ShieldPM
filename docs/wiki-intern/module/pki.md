@@ -42,7 +42,7 @@ Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeiche
 
 ## Offene Fragen
 
-- Keine (Liste der unterstützten Hybrid-Modi liegt im `shieldpm-nginx`-Repo, dieses Repo signalisiert nur per `host.use_ml_kem`, dass ein Host PQC-bereit ist).
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

@@ -31,7 +31,7 @@ Notizen sind pro Benutzer/Team verfügbar und werden im Dashboard prominent ange
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

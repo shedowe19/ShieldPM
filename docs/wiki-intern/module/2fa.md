@@ -31,7 +31,7 @@ Bietet zusätzliche Sicherheitsebene für Benutzerkonten mit drei verschiedenen 
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

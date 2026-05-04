@@ -48,7 +48,7 @@ Aktuell **nicht implementiert** — die Aktualisierung läuft ausschließlich pe
 
 ## Offene Fragen
 
-- Keine (Polling-Mechanik ist beschrieben, Webhook-Empfänger sind nicht implementiert).
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

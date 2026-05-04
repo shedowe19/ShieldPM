@@ -30,7 +30,7 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

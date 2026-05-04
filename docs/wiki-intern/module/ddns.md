@@ -27,7 +27,7 @@ Unterstützt Cloudflare, DuckDNS und benutzerdefinierte URLs als DDNS-Provider.
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

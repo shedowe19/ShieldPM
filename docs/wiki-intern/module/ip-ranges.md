@@ -33,7 +33,7 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 
 ## Offene Fragen
 
-- TODO: Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

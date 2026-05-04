@@ -29,7 +29,7 @@ GitOps ermöglicht es, die gesamte ShieldPM-Konfiguration in einem Git-Repositor
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

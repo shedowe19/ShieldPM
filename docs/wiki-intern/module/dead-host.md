@@ -36,7 +36,7 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

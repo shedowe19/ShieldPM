@@ -111,7 +111,7 @@ Beinhaltet Hilfsfunktionen für Toast-Benachrichtigungen.
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

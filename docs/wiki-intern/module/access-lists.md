@@ -32,7 +32,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 

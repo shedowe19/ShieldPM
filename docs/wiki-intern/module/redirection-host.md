@@ -36,7 +36,7 @@ Redirection-Hosts werden verwendet, um eingehende Anfragen z. B. von alten Domai
 
 ## Offene Fragen
 
-- Keine
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
