@@ -248,10 +248,11 @@ app.use("/api", globalApiLimiter);
 const swaggerSpec = await getCompiledSchema();
 
 // Swagger UI — must be BEFORE mainRoutes so it doesn't get caught by the catch-all router
-// Load spec dynamically from /api/schema so the server URL is correct
+// Use url option so the spec is fetched from /api/schema which dynamically
+// sets the correct server URL (https://shieldpm.clawsucht.eu/api)
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(undefined, {
 	swaggerOptions: {
-		spec: swaggerSpec,
+		url: "/api/schema",
 		requestInterceptor: (req) => {
 			const csrfToken = req.headers["x-xsrf-token"];
 			if (csrfToken) {
