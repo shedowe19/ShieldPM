@@ -1,0 +1,93 @@
+{
+	"operationId": "begin2FAPasskey",
+	"summary": "Begin passkey authentication during 2FA login step",
+	"tags": [
+		"tokens"
+	],
+	"requestBody": {
+		"description": "Passkey Begin Payload",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"additionalProperties": false,
+					"properties": {
+						"pending_token": {
+							"description": "Short-lived 2FA pending token issued by POST /tokens when 2FA is required",
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					"required": [
+						"pending_token"
+					],
+					"type": "object"
+				},
+				"example": {
+					"pending_token": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9..."
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "PublicKeyCredentialRequestOptions and challenge ID returned for WebAuthn get() call",
+			"content": {
+				"application/json": {
+					"examples": {
+						"default": {
+							"value": {
+								"options": {
+									"challenge": "YWNjb3VudC10by1yZWRlZW1pbnRlbXBvc3RwdXJwb3Nl",
+									"timeout": 60000,
+									"rpId": "example.com",
+									"allowCredentials": [],
+									"userVerification": "preferred"
+								},
+								"challenge_id": "uuid-of-stored-challenge"
+							}
+						}
+					},
+					"schema": {
+						"additionalProperties": false,
+						"properties": {
+							"options": {
+								"description": "PublicKeyCredentialRequestOptions to pass to navigator.credentials.get()",
+								"type": "object"
+							},
+							"challenge_id": {
+								"description": "Server-side identifier for the stored challenge, needed to complete authentication",
+								"type": "string"
+							}
+						},
+						"required": [
+							"options",
+							"challenge_id"
+						],
+						"type": "object"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Missing pending_token",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/error-object.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Pending 2FA token invalid or expired",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

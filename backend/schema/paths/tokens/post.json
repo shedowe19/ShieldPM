@@ -46,6 +46,7 @@
 	},
 	"responses": {
 		"200": {
+			"description": "Authentication successful — full access + refresh tokens issued",
 			"content": {
 				"application/json": {
 					"examples": {
@@ -60,8 +61,72 @@
 						"$ref": "../../components/token-object.json"
 					}
 				}
-			},
-			"description": "200 response"
+			}
+		},
+		"202": {
+			"description": "2FA required — authenticate using the pending_token with a 2FA sub-endpoint",
+			"content": {
+				"application/json": {
+					"examples": {
+						"requires2FA": {
+							"value": {
+								"requires_2fa": true,
+								"pending_token": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9...",
+								"methods": [
+									"totp",
+									"yubikey"
+								],
+								"csrfToken": "csrf-token-value-here"
+							}
+						}
+					},
+					"schema": {
+						"type": "object",
+						"additionalProperties": false,
+						"properties": {
+							"requires_2fa": {
+								"type": "boolean",
+								"example": true
+							},
+							"pending_token": {
+								"description": "Short-lived JWT (5min TTL) for use with POST /tokens/2fa/* sub-endpoints",
+								"type": "string"
+							},
+							"methods": {
+								"description": "Available 2FA method types for this user",
+								"type": "array",
+								"items": {
+									"type": "string",
+									"enum": [
+										"totp",
+										"yubikey",
+										"passkey",
+										"duo"
+									]
+								}
+							},
+							"csrfToken": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"requires_2fa",
+							"pending_token",
+							"methods"
+						]
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Invalid credentials",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../components/error-object.json"
+					}
+				}
+			}
 		}
 	}
 }

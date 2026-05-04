@@ -1,0 +1,114 @@
+{
+	"operationId": "verify2FA",
+	"summary": "Verify 2FA credentials (TOTP, YubiKey, or backup code) after initial login",
+	"tags": [
+		"tokens"
+	],
+	"requestBody": {
+		"description": "2FA Verification Payload",
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"additionalProperties": false,
+					"properties": {
+						"pending_token": {
+							"description": "Short-lived 2FA pending token issued by POST /tokens when 2FA is required",
+							"type": "string",
+							"minLength": 1
+						},
+						"method": {
+							"description": "The 2FA method used to generate the code",
+							"type": "string",
+							"enum": [
+								"totp",
+								"yubikey",
+								"backup_code"
+							]
+						},
+						"code": {
+							"description": "The 2FA code / OTP / backup code",
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					"required": [
+						"pending_token",
+						"method",
+						"code"
+					],
+					"type": "object"
+				},
+				"example": {
+					"pending_token": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9...",
+					"method": "totp",
+					"code": "123456"
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "2FA verification successful — full auth tokens issued",
+			"content": {
+				"application/json": {
+					"examples": {
+						"default": {
+							"value": {
+								"expires": "2025-02-04T20:40:46.340Z",
+								"user": {
+									"id": 1,
+									"email": "me@example.com",
+									"name": "John Doe",
+									"role": "admin"
+								},
+								"csrfToken": "csrf-token-value-here"
+							}
+						}
+					},
+					"schema": {
+						"$ref": "../../components/token-response.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Missing required fields",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../components/error-object.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Invalid 2FA code or expired pending token",
+			"content": {
+				"application/json": {
+					"examples": {
+						"invalidCode": {
+							"value": {
+								"error": {
+									"code": 401,
+									"message": "Invalid 2FA code"
+								}
+							}
+						},
+						"expiredToken": {
+							"value": {
+								"error": {
+									"code": 401,
+									"message": "Pending 2FA token is invalid or expired"
+								}
+							}
+						}
+					},
+					"schema": {
+						"$ref": "../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,26 @@
+{
+	"type": "object",
+	"description": "Full authentication response including user data",
+	"additionalProperties": false,
+	"properties": {
+		"expires": {
+			"description": "Access token expiry as ISO 8601 time string",
+			"example": "2025-02-04T20:40:46.340Z",
+			"type": "string"
+		},
+		"user": {
+			"description": "Authenticated user object",
+			"$ref": "./user-object.json"
+		},
+		"csrfToken": {
+			"description": "CSRF protection token for subsequent requests",
+			"example": "csrf-token-value-here",
+			"type": "string"
+		}
+	},
+	"required": [
+		"expires",
+		"user",
+		"csrfToken"
+	]
+}
