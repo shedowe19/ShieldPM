@@ -25,6 +25,10 @@ Um Administratoren auf neue Versionen hinzuweisen, ruft das Backend regelmäßig
 - `proxy-agent` — HTTP/HTTPS Proxy Unterstützung
 - `../package.json` — Auslesen der aktuellen Version
 
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [Modulübersicht](./README.md)

@@ -23,6 +23,10 @@ Jede API-Anfrage an das Backend erfordert eine Authentifizierung. Dieses Modul h
 
 - `jsonwebtoken` — JWT Bibliothek
 
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [Benutzer & Auth](./benutzer-auth.md)

@@ -25,6 +25,10 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 - `certbot` (CLI-Tool im Docker-Container)
 - `internal/nginx.js` — Temporäre Nginx-Config für HTTP-Challenges
 
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [Zertifikate](./zertifikate.md)
