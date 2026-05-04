@@ -206,9 +206,17 @@ app.use(async (req, res, next) => {
 	const is2FaVerify = method === "POST" && /^\/(api\/)?tokens\/2fa\//.test(path);
 
 	// Docs endpoints - bypass CSRF for Swagger UI
-	const isDocsRequest = path === "/api/docs" || path === "/docs" || path.startsWith("/api/docs/") || path.startsWith("/docs/");
+	const isDocsRequest =
+		path === "/api/docs" || path === "/docs" || path.startsWith("/api/docs/") || path.startsWith("/docs/");
 
-	if (isInitialSetupUserCreation || isLoginRequest || isTokenRefresh || isTokenLogout || is2FaVerify || isDocsRequest) {
+	if (
+		isInitialSetupUserCreation ||
+		isLoginRequest ||
+		isTokenRefresh ||
+		isTokenLogout ||
+		is2FaVerify ||
+		isDocsRequest
+	) {
 		return next();
 	}
 
@@ -250,23 +258,27 @@ const swaggerSpec = await getCompiledSchema();
 // Swagger UI — must be BEFORE mainRoutes so it doesn't get caught by the catch-all router
 // Use url option so the spec is fetched from /api/schema which dynamically
 // sets the correct server URL (https://shieldpm.clawsucht.eu/api)
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(undefined, {
-	swaggerOptions: {
-		url: "/api/schema",
-		requestInterceptor: (req) => {
-			const csrfToken = req.headers["x-xsrf-token"];
-			if (csrfToken) {
-				req.headers["x-xsrf-token"] = csrfToken;
-			}
-			return req;
+app.use(
+	"/docs",
+	swaggerUi.serve,
+	swaggerUi.setup(undefined, {
+		swaggerOptions: {
+			url: "/api/schema",
+			requestInterceptor: (req) => {
+				const csrfToken = req.headers["x-xsrf-token"];
+				if (csrfToken) {
+					req.headers["x-xsrf-token"] = csrfToken;
+				}
+				return req;
+			},
 		},
-	},
-	customCss: `
+		customCss: `
 		.swagger-ui .topbar { display: none; }
 		.swagger-ui .swagger-ui { max-width: 100%; }
 	`,
-	customSiteTitle: "ShieldPM API Documentation",
-}));
+		customSiteTitle: "ShieldPM API Documentation",
+	}),
+);
 
 app.use("/", mainRoutes);
 
