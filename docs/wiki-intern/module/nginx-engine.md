@@ -35,6 +35,18 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - Reload ist debounced (2s Verzögerung)
 - Templates verwenden EJS-Syntax mit Liquid-Fallback
 
+## Abhängigkeiten
+
+- `lib/utils.js` — Render-Engine (`getRenderEngine()`, Liquid-basiert)
+- `internal/proxy-host.js`, `internal/redirection-host.js`, `internal/dead-host.js`, `internal/stream.js` — rufen die Engine bei CRUD auf
+- `internal/certificate.js` — wird beim Generieren der Host-Configs gelesen
+- `internal/access-list.js` — wird in den Templates referenziert
+- Externes Binary `nginx` (für `nginx -s reload`)
+
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [Datenfluss](../architektur/datenfluss.md)

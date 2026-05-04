@@ -24,6 +24,10 @@ Anubis agiert als Gatekeeper vor bestimmten Proxy-Routen und fordert von Clients
 
 - Externer Anubis-Service
 
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [Architektur-Überblick](../architektur/ueberblick.md)

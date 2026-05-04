@@ -28,11 +28,32 @@ Der AI-Agent ermöglicht natürlichsprachliche Interaktion mit ShieldPM — sowo
 
 ## Tools
 
-Der AI-Agent kann Aktionen im System ausführen (Tool-Calling). Die verfügbaren Tools sind in `tools.js` definiert.
+Der AI-Agent kann Aktionen im System ausführen (Tool-Calling). Die verfügbaren Tools sind in `tools.js` definiert (z. B. Hosts erstellen, Zertifikate erneuern, IP-Ranges aktualisieren, Status abfragen).
+
+## Verhalten
+
+1. UI oder ChatOps schickt eine Nachricht an `routes/ai.js`.
+2. `internal/ai/executor.js` startet den Chat-Loop: System-Prompt aus `prompt.js`, History des Threads, aktueller User-Input.
+3. Der Provider (`providers.js`) ruft das LLM (Gemini, Ollama oder OpenAI-kompatibel) und liefert ggf. Tool-Calls zurück.
+4. Tool-Calls werden in `tools.js` gegen die internen ShieldPM-Module ausgeführt; das Ergebnis wandert zurück in den Loop.
+5. Final-Antwort wird zurück an Frontend/Telegram geschickt.
 
 ## Integration mit ChatOps
 
 Über Telegram kann der AI-Agent gesteuert werden. Dafür synthetisiert `chat.js` temporäre JWT-Tokens (`ctx.shieldAccess`) für authentifizierte Interaktion.
+
+## Abhängigkeiten
+
+- `@google/generative-ai` — Gemini-SDK
+- HTTP-Client für Ollama und OpenAI-kompatible APIs
+- `internal/setting.js` — speichert Provider-Konfiguration (Provider, Model, API-Key, Base-URL)
+- `internal/token.js` — kurzlebige Tokens für Tool-Aufrufe
+- `internal/audit-log.js` — Protokollierung der AI-Aktionen
+- Aufgerufen von `routes/ai.js` und `internal/chat.js` (ChatOps)
+
+## Offene Fragen
+
+Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Verwandte Seiten
 
