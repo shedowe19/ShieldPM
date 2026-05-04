@@ -244,26 +244,25 @@ app.use(checkDemoMode);
 // Apply global rate limiter to all API routes
 app.use("/api", globalApiLimiter);
 
-app.use("/", mainRoutes);
-
-// Swagger UI at /docs (proxied without /api prefix)
+// Swagger UI — must be BEFORE mainRoutes so it doesn't get caught by the catch-all router
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 	swaggerOptions: {
 		requestInterceptor: (req) => {
-			// Add CSRF token to requests
-			const csrfToken = req.headers['x-xsrf-token'];
+			const csrfToken = req.headers["x-xsrf-token"];
 			if (csrfToken) {
-				req.headers['x-xsrf-token'] = csrfToken;
+				req.headers["x-xsrf-token"] = csrfToken;
 			}
 			return req;
-		}
+		},
 	},
 	customCss: `
 		.swagger-ui .topbar { display: none; }
 		.swagger-ui .swagger-ui { max-width: 100%; }
 	`,
-	customSiteTitle: "ShieldPM API Documentation"
+	customSiteTitle: "ShieldPM API Documentation",
 }));
+
+app.use("/", mainRoutes);
 
 // production error handler
 // no stacktraces leaked to user
