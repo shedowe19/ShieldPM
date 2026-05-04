@@ -49,6 +49,7 @@ ShieldPM bietet eine breite Palette an Features. Diese Seite dient als Einstiegs
 | AI-Assistent              | [AI-Agent](../module/ai-agent.md)       | Aktiv    |
 | ChatOps (Telegram)        | [ChatOps](../module/chatops.md)         | Aktiv    |
 | GitOps                    | [GitOps](../module/gitops.md)           | Aktiv    |
+| **Swagger UI (API-Docs)** | [Swagger UI](../features/swagger-ui.md) | Aktiv    |
 | Docker Auto-Discovery     | [Docker](../module/docker.md)           | Aktiv    |
 | Web-Terminal (SSH)        | [Terminal](../module/terminal.md)       | Aktiv    |
 | Analytics (GoAccess)      | [Analytics](../module/analytics.md)     | Aktiv    |

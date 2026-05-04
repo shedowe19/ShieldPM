@@ -123,6 +123,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 ### Features
 
 - [Feature-Übersicht](./features/README.md)
+- [Swagger UI (API-Dokumentation)](./features/swagger-ui.md)
 
 ### Modul-Beziehungen
 

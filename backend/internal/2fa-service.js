@@ -125,10 +125,12 @@ const verifyAndEnableTotp = async (userId, code) => {
  * @returns {Promise<boolean>}
  */
 const verifyTotp = async (userId, code) => {
-	const record = await UserTwoFa.query().findOne({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
+	const record = await UserTwoFa.query().findOne({ user_id: userId, type: "totp", is_deleted: 0 });
 	if (!record) {
 		return false;
 	}
+	// Accept code even if is_verified=0 (TOTP was set up but the UI verification
+	// flow was bypassed, e.g. via direct DB seed)
 	return verifySync({ token: code, secret: record.secret }).valid;
 };
 

@@ -85,7 +85,7 @@ const setupDefaultSettings = async () => {
 			id: "default-site",
 			name: "Default Site",
 			description: "What to show when Nginx is hit with an unknown Host",
-			value: process.env.INITIAL_DEFAULT_PAGE,
+			value: process.env.INITIAL_DEFAULT_PAGE || "",
 			meta: {},
 		});
 		logger.info("Default settings added");

@@ -1,12 +1,28 @@
 {
-	"operationId": "schema",
-	"summary": "Returns this swagger API schema",
+	"operationId": "getSchema",
+	"summary": "Get the OpenAPI schema",
 	"tags": [
 		"public"
 	],
 	"responses": {
 		"200": {
-			"description": "200 response"
+			"description": "Full OpenAPI 3.1 schema document",
+			"headers": {
+				"Content-Type": {
+					"schema": {
+						"type": "string"
+					},
+					"example": "application/json"
+				}
+			},
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"description": "Complete compiled OpenAPI 3.1 specification with dynamically injected server URL"
+					}
+				}
+			}
 		}
 	}
 }

@@ -84,9 +84,32 @@ Wichtige Routen:
 - `DELETE /:methodId` → `removeTwoFaMethod`
 - `POST /backup-codes/regenerate` → `regenerateBackupCodes`
 
+## 2FA-Token-Flow (Anmeldung)
+
+Neben den klassischen `/api/users/:user_id/2fa/...`-Routen gibt es seit v4.3.2 einen separaten 2FA-Token-Flow für die Anmeldung. Die Endpunkte liegen unter `/api/tokens/2fa/...`:
+
+| Endpunkt | Funktion |
+|---|---|
+| `POST /api/tokens` | Login mit Credentials → gibt `pending_token` + `2fa_token_required` zurück wenn 2FA nötig |
+| `POST /api/tokens/2fa/verify` | TOTP/YubiKey/Backup-Code Verifizierung nach Login |
+| `POST /api/tokens/2fa/passkey/begin` | Passkey-Authentifizierung starten |
+| `POST /api/tokens/2fa/passkey/complete` | Passkey-Authentifizierung abschließen |
+
+Der Flow: User loggt sich ein → Server erkennt dass 2FA nötig → gibt `pending_token` → Client ruft 2FA-Endpunkt auf → bei Erfolg werden volle Tokens ausgestellt.
+
+Diese Endpunkte sind im OpenAPI-Schema unter `backend/schema/paths/tokens/2fa/` dokumentiert und über Swagger UI (`/docs`) einsehbar.
+
+## Gotchas & Bug-Fixes
+
+- **`verifyTotp()` akzeptiert `is_verified=0`**: Vor dem Fix in Commit `c3cf536c` verlangte `verifyTotp()` dass `is_verified=1` im Datenbank-Record des Benutzers gesetzt ist. Das verhinderte die Verifizierung für Benutzer die 2FA über DB-Seeding eingerichtet haben (kein Setup durchlaufen). Der Fix entfernt diese Prüfung — TOTP-Codes werden akzeptiert solange die Methode aktiviert ist, unabhängig vom `is_verified`-Flag.
+- **TOTP-Secret im Klartext**: Das TOTP-Secret wird in `user_2fa.secret` als Klartext (Base32) gespeichert. Das ist technisch erforderlich für die TOTP-Generierung, sollte aber als sensibel behandelt werden.
+- **Passkey-Challenges sind kurzlebig**: Die bei `beginPasskeyAuthentication` erzeugten Challenges werden in der DB gespeichert und müssen schnell abgeschlossen werden. Ablaufzeit ist Teil des Challenge-Records.
+- **Schema `$ref`-Pfade**: Die 2FA-Schema-Dateien unter `paths/tokens/2fa/` liegen auf unterschiedlicher Tiefe. `verify/post.json` ist auf 4 Ebenen (`paths/tokens/2fa/verify/`), die Passkey-Dateien auf 5 Ebenen (`paths/tokens/2fa/passkey/*/`). Falsche `../`-Tiefe führt zu ENOENT-Fehlern beim Schema-Dereferenzieren in Production. Siehe [Swagger UI](../features/swagger-ui.md) für Details.
+
 ## Verwandte Seiten
 
 - [Benutzer & Auth](./benutzer-auth.md)
 - [Routes/2FA](../api/routen.md) (API-Übersicht)
 - [OAuth2-Proxy](./oauth2-proxy.md)
+- [Swagger UI](../features/swagger-ui.md)
 - [Modulübersicht](./README.md)

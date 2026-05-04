@@ -420,6 +420,21 @@
 				"$ref": "./paths/tokens/logout/post.json"
 			}
 		},
+		"/tokens/2fa/verify": {
+			"post": {
+				"$ref": "./paths/tokens/2fa/verify/post.json"
+			}
+		},
+		"/tokens/2fa/passkey/begin": {
+			"post": {
+				"$ref": "./paths/tokens/2fa/passkey/begin/post.json"
+			}
+		},
+		"/tokens/2fa/passkey/complete": {
+			"post": {
+				"$ref": "./paths/tokens/2fa/passkey/complete/post.json"
+			}
+		},
 		"/version/check": {
 			"get": {
 				"$ref": "./paths/version/check/get.json"
@@ -476,7 +491,12 @@
 							}
 						}
 					}
-				}
+				},
+				"security": [
+					{
+						"jwt": []
+					}
+				]
 			},
 			"put": {
 				"$ref": "./paths/ai/config.json"
