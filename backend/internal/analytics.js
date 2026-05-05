@@ -348,7 +348,10 @@ class AnalyticsService {
 		// (proxy-hosts visibility already filters which hosts are shown to the user)
 		try {
 			const analyticsPerm = await access.can("analytics:list");
-			if (analyticsPerm && (analyticsPerm.permission_analytics === "manage" || analyticsPerm.permission_analytics === "view")) {
+			if (
+				analyticsPerm &&
+				(analyticsPerm.permission_analytics === "manage" || analyticsPerm.permission_analytics === "view")
+			) {
 				return host;
 			}
 		} catch (_err) {
