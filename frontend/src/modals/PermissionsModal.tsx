@@ -8,6 +8,7 @@ import {
 	IconEye,
 	IconFileText,
 	IconLock,
+	IconMessageCircle,
 	IconNetwork,
 	IconServer,
 	IconShield,
@@ -51,6 +52,7 @@ interface PermissionsValues {
 	ddnsProviders: string;
 	torOnions: string;
 	dashboardNotes: string;
+	chat: string;
 }
 
 const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
@@ -201,6 +203,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							ddnsProviders: data.permissions?.ddnsProviders || PERMISSION_SCOPE.ALL,
 							torOnions: data.permissions?.torOnions || PERMISSION_SCOPE.ALL,
 							dashboardNotes: data.permissions?.dashboardNotes || PERMISSION_SCOPE.ALL,
+								chat: data.permissions?.chat || PERMISSION_SCOPE.ALL,
 						}}
 						onSubmit={onSubmit}
 					>
@@ -338,6 +341,17 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														Dashboard Notes
 													</Label>
 													<Field name="dashboardNotes">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+												</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconMessageCircle className="h-4 w-4 text-muted-foreground" />
+														Chat Integrations
+													</Label>
+													<Field name="chat">
 														{({ field, form }: FieldProps<string, PermissionsValues>) =>
 															getPermissionButtons(field, form)
 														}
