@@ -245,7 +245,7 @@ export default function (tokenString) {
 						permission_ddns_providers: permissions.ddns_providers,
 						permission_tor_onions: permissions.tor_onions,
 						permission_dashboard_notes: permissions.dashboard_notes,
-					permission_chat: permissions.chat,
+						permission_chat: permissions.chat,
 					},
 				};
 
