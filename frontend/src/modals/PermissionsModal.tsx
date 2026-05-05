@@ -203,7 +203,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							ddnsProviders: data.permissions?.ddnsProviders || PERMISSION_SCOPE.ALL,
 							torOnions: data.permissions?.torOnions || PERMISSION_SCOPE.ALL,
 							dashboardNotes: data.permissions?.dashboardNotes || PERMISSION_SCOPE.ALL,
-								chat: data.permissions?.chat || PERMISSION_SCOPE.ALL,
+							chat: data.permissions?.chat || PERMISSION_SCOPE.ALL,
 						}}
 						onSubmit={onSubmit}
 					>
@@ -344,7 +344,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														{({ field, form }: FieldProps<string, PermissionsValues>) =>
 															getPermissionButtons(field, form)
 														}
-												</Field>
+													</Field>
 												</div>
 												<div className="space-y-2">
 													<Label className="flex items-center gap-2">
