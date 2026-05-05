@@ -34,6 +34,7 @@ export interface UserPermissions {
 	ddnsProviders: string;
 	torOnions: string;
 	dashboardNotes: string;
+	chat: string;
 }
 
 export interface User {
