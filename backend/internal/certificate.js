@@ -65,12 +65,13 @@ const internalCertificate = {
 					.query()
 					.where("id", host.id)
 					.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
-				await internalNginx.configure(
-					proxyHostModel,
-					"proxy_host",
-					await proxyHostModel.query().findById(host.id),
-					{ skip_reload: true },
-				);
+				const updatedHost = await proxyHostModel.query().findById(host.id);
+				await internalNginx.generateConfig("proxy_host", updatedHost);
+				if (updatedHost.meta) {
+					updatedHost.meta.nginx_online = true;
+					updatedHost.meta.nginx_err = null;
+					await proxyHostModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
+				}
 				reloadRequired = true;
 			}
 
@@ -89,12 +90,13 @@ const internalCertificate = {
 					.query()
 					.where("id", host.id)
 					.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
-				await internalNginx.configure(
-					redirectionHostModel,
-					"redirection_host",
-					await redirectionHostModel.query().findById(host.id),
-					{ skip_reload: true },
-				);
+				const updatedHost = await redirectionHostModel.query().findById(host.id);
+				await internalNginx.generateConfig("redirection_host", updatedHost);
+				if (updatedHost.meta) {
+					updatedHost.meta.nginx_online = true;
+					updatedHost.meta.nginx_err = null;
+					await redirectionHostModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
+				}
 				reloadRequired = true;
 			}
 
@@ -111,12 +113,13 @@ const internalCertificate = {
 					.query()
 					.where("id", host.id)
 					.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
-				await internalNginx.configure(
-					deadHostModel,
-					"dead_host",
-					await deadHostModel.query().findById(host.id),
-					{ skip_reload: true },
-				);
+				const updatedHost = await deadHostModel.query().findById(host.id);
+				await internalNginx.generateConfig("dead_host", updatedHost);
+				if (updatedHost.meta) {
+					updatedHost.meta.nginx_online = true;
+					updatedHost.meta.nginx_err = null;
+					await deadHostModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
+				}
 				reloadRequired = true;
 			}
 
@@ -130,9 +133,13 @@ const internalCertificate = {
 			for (const host of streams) {
 				logger.warn(`Cleaning up stream ${host.id} due to missing certificate_id ${host.certificate_id}`);
 				await streamModel.query().where("id", host.id).patch({ certificate_id: 0 });
-				await internalNginx.configure(streamModel, "stream", await streamModel.query().findById(host.id), {
-					skip_reload: true,
-				});
+				const updatedHost = await streamModel.query().findById(host.id);
+				await internalNginx.generateConfig("stream", updatedHost);
+				if (updatedHost.meta) {
+					updatedHost.meta.nginx_online = true;
+					updatedHost.meta.nginx_err = null;
+					await streamModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
+				}
 				reloadRequired = true;
 			}
 
