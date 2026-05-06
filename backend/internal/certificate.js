@@ -57,18 +57,23 @@ const internalCertificate = {
 			const activeCertIds = activeCerts.map((c) => c.id);
 
 			// Find proxy hosts pointing to certificates
-			const proxyHosts = await proxyHostModel
-				.query()
-				.where("certificate_id", ">", 0)
-				.andWhere("is_deleted", 0);
+			const proxyHosts = await proxyHostModel.query().where("certificate_id", ">", 0).andWhere("is_deleted", 0);
 
 			for (const host of proxyHosts) {
 				if (!activeCertIds.includes(host.certificate_id)) {
-					logger.warn(`Cleaning up proxy_host ${host.id} due to missing certificate_id ${host.certificate_id}`);
+					logger.warn(
+						`Cleaning up proxy_host ${host.id} due to missing certificate_id ${host.certificate_id}`,
+					);
 					await proxyHostModel
 						.query()
 						.where("id", host.id)
-						.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
+						.patch({
+							certificate_id: 0,
+							ssl_forced: 0,
+							http2_support: 0,
+							hsts_enabled: 0,
+							hsts_subdomains: 0,
+						});
 					const updatedHost = await proxyHostModel.query().findById(host.id);
 					await internalNginx.generateConfig("proxy_host", updatedHost);
 					if (updatedHost.meta) {
@@ -94,7 +99,13 @@ const internalCertificate = {
 					await redirectionHostModel
 						.query()
 						.where("id", host.id)
-						.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
+						.patch({
+							certificate_id: 0,
+							ssl_forced: 0,
+							http2_support: 0,
+							hsts_enabled: 0,
+							hsts_subdomains: 0,
+						});
 					const updatedHost = await redirectionHostModel.query().findById(host.id);
 					await internalNginx.generateConfig("redirection_host", updatedHost);
 					if (updatedHost.meta) {
@@ -107,18 +118,23 @@ const internalCertificate = {
 			}
 
 			// Find dead hosts pointing to certificates
-			const deadHosts = await deadHostModel
-				.query()
-				.where("certificate_id", ">", 0)
-				.andWhere("is_deleted", 0);
+			const deadHosts = await deadHostModel.query().where("certificate_id", ">", 0).andWhere("is_deleted", 0);
 
 			for (const host of deadHosts) {
 				if (!activeCertIds.includes(host.certificate_id)) {
-					logger.warn(`Cleaning up dead_host ${host.id} due to missing certificate_id ${host.certificate_id}`);
+					logger.warn(
+						`Cleaning up dead_host ${host.id} due to missing certificate_id ${host.certificate_id}`,
+					);
 					await deadHostModel
 						.query()
 						.where("id", host.id)
-						.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
+						.patch({
+							certificate_id: 0,
+							ssl_forced: 0,
+							http2_support: 0,
+							hsts_enabled: 0,
+							hsts_subdomains: 0,
+						});
 					const updatedHost = await deadHostModel.query().findById(host.id);
 					await internalNginx.generateConfig("dead_host", updatedHost);
 					if (updatedHost.meta) {
@@ -131,10 +147,7 @@ const internalCertificate = {
 			}
 
 			// Find streams pointing to certificates
-			const streams = await streamModel
-				.query()
-				.where("certificate_id", ">", 0)
-				.andWhere("is_deleted", 0);
+			const streams = await streamModel.query().where("certificate_id", ">", 0).andWhere("is_deleted", 0);
 
 			for (const host of streams) {
 				if (!activeCertIds.includes(host.certificate_id)) {
