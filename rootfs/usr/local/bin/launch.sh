@@ -52,7 +52,24 @@ fi
 
 if ! nginx -tq; then
     echo "WARNING: Nginx configuration test failed!"
-    echo "Continuing anyway to allow the backend to clean up and regenerate configs..."
+    echo "Attempting to disable broken proxy hosts with missing certificates..."
+    for conf in /data/nginx/proxy_host/*.conf /data/nginx/redirection_host/*.conf /data/nginx/dead_host/*.conf /data/nginx/stream/*.conf; do
+        if [ -f "$conf" ]; then
+            # Extract certificate paths referenced in the config
+            missing_certs=$(grep -oE '/data/tls/certbot/live/npm-[0-9]+/fullchain\.pem|/data/tls/custom/npm-[0-9]+/fullchain\.pem' "$conf" || true)
+            for cert in $missing_certs; do
+                if [ ! -f "$cert" ]; then
+                    echo "Disabling $conf because $cert is missing!"
+                    mv "$conf" "$conf.broken"
+                    break
+                fi
+            done
+        fi
+    done
+    echo "Retesting Nginx configuration..."
+    if ! nginx -tq; then
+        echo "Nginx configuration STILL fails. Continuing anyway..."
+    fi
 fi
 if [ "$PHP82" = "true" ]; then
     if ! PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FORt > /dev/null 2>&1; then
