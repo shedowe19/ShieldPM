@@ -53,46 +53,76 @@ const internalCertificate = {
 			let reloadRequired = false;
 
 			// Find proxy hosts pointing to non-existent or deleted certificates
-			const proxyHosts = await proxyHostModel.query()
+			const proxyHosts = await proxyHostModel
+				.query()
 				.where("certificate_id", ">", 0)
 				.whereNotIn("certificate_id", certificateModel.query().select("id").where("is_deleted", 0))
 				.andWhere("is_deleted", 0);
 
 			for (const host of proxyHosts) {
 				logger.warn(`Cleaning up proxy_host ${host.id} due to missing certificate_id ${host.certificate_id}`);
-				await proxyHostModel.query().where("id", host.id).patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
-				await internalNginx.configure(proxyHostModel, "proxy_host", await proxyHostModel.query().findById(host.id), { skip_reload: true });
+				await proxyHostModel
+					.query()
+					.where("id", host.id)
+					.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
+				await internalNginx.configure(
+					proxyHostModel,
+					"proxy_host",
+					await proxyHostModel.query().findById(host.id),
+					{ skip_reload: true },
+				);
 				reloadRequired = true;
 			}
 
 			// Find redirection hosts pointing to non-existent or deleted certificates
-			const redirectionHosts = await redirectionHostModel.query()
+			const redirectionHosts = await redirectionHostModel
+				.query()
 				.where("certificate_id", ">", 0)
 				.whereNotIn("certificate_id", certificateModel.query().select("id").where("is_deleted", 0))
 				.andWhere("is_deleted", 0);
 
 			for (const host of redirectionHosts) {
-				logger.warn(`Cleaning up redirection_host ${host.id} due to missing certificate_id ${host.certificate_id}`);
-				await redirectionHostModel.query().where("id", host.id).patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
-				await internalNginx.configure(redirectionHostModel, "redirection_host", await redirectionHostModel.query().findById(host.id), { skip_reload: true });
+				logger.warn(
+					`Cleaning up redirection_host ${host.id} due to missing certificate_id ${host.certificate_id}`,
+				);
+				await redirectionHostModel
+					.query()
+					.where("id", host.id)
+					.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
+				await internalNginx.configure(
+					redirectionHostModel,
+					"redirection_host",
+					await redirectionHostModel.query().findById(host.id),
+					{ skip_reload: true },
+				);
 				reloadRequired = true;
 			}
 
 			// Find dead hosts pointing to non-existent or deleted certificates
-			const deadHosts = await deadHostModel.query()
+			const deadHosts = await deadHostModel
+				.query()
 				.where("certificate_id", ">", 0)
 				.whereNotIn("certificate_id", certificateModel.query().select("id").where("is_deleted", 0))
 				.andWhere("is_deleted", 0);
 
 			for (const host of deadHosts) {
 				logger.warn(`Cleaning up dead_host ${host.id} due to missing certificate_id ${host.certificate_id}`);
-				await deadHostModel.query().where("id", host.id).patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
-				await internalNginx.configure(deadHostModel, "dead_host", await deadHostModel.query().findById(host.id), { skip_reload: true });
+				await deadHostModel
+					.query()
+					.where("id", host.id)
+					.patch({ certificate_id: 0, ssl_forced: 0, http2_support: 0, hsts_enabled: 0, hsts_subdomains: 0 });
+				await internalNginx.configure(
+					deadHostModel,
+					"dead_host",
+					await deadHostModel.query().findById(host.id),
+					{ skip_reload: true },
+				);
 				reloadRequired = true;
 			}
 
 			// Find streams pointing to non-existent or deleted certificates
-			const streams = await streamModel.query()
+			const streams = await streamModel
+				.query()
 				.where("certificate_id", ">", 0)
 				.whereNotIn("certificate_id", certificateModel.query().select("id").where("is_deleted", 0))
 				.andWhere("is_deleted", 0);
@@ -100,7 +130,9 @@ const internalCertificate = {
 			for (const host of streams) {
 				logger.warn(`Cleaning up stream ${host.id} due to missing certificate_id ${host.certificate_id}`);
 				await streamModel.query().where("id", host.id).patch({ certificate_id: 0 });
-				await internalNginx.configure(streamModel, "stream", await streamModel.query().findById(host.id), { skip_reload: true });
+				await internalNginx.configure(streamModel, "stream", await streamModel.query().findById(host.id), {
+					skip_reload: true,
+				});
 				reloadRequired = true;
 			}
 
