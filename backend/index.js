@@ -51,7 +51,7 @@ async function appStart() {
 			}
 		}
 
-		internalCertificate.initTimer();
+		await internalCertificate.initTimer();
 		internalMaintenance.initTimer();
 		await internalNginx.reload();
 		internalCloudflared.init();
