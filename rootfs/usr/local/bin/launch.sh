@@ -59,8 +59,8 @@ if ! nginx -tq; then
             missing_certs=$(grep -oE '/data/tls/certbot/live/npm-[0-9]+/fullchain\.pem|/data/tls/custom/npm-[0-9]+/fullchain\.pem' "$conf" || true)
             for cert in $missing_certs; do
                 if [ ! -f "$cert" ]; then
-                    echo "Disabling $conf because $cert is missing!"
-                    mv "$conf" "$conf.broken"
+                    echo "Deleting $conf because $cert is missing!"
+                    rm -f "$conf"
                     break
                 fi
             done
