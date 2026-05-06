@@ -51,7 +51,8 @@ fi
 
 
 if ! nginx -tq; then
-    sleep inf
+    echo "WARNING: Nginx configuration test failed!"
+    echo "Continuing anyway to allow the backend to clean up and regenerate configs..."
 fi
 if [ "$PHP82" = "true" ]; then
     if ! PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FORt > /dev/null 2>&1; then
