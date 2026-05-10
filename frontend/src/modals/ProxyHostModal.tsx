@@ -37,6 +37,7 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
+import { useWasmModules } from "src/hooks/useWasmModules";
 import { T, intl } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
@@ -90,6 +91,7 @@ interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate"
 const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
 	const { data, isLoading, error } = useProxyHost(id);
+	const { data: wasmModules } = useWasmModules();
 	const { mutate: setProxyHost } = useSetProxyHost();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,6 +174,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								terminalPrivateKey: data?.terminalPrivateKey || "",
 
 								accessListId: data?.accessListId || 0,
+								wasmModuleId: data?.wasmModuleId || 0,
 								cachingEnabled: data?.cachingEnabled || false,
 								disableBuffering: data?.disableBuffering || false,
 								blockExploits: data?.blockExploits || false,
@@ -1259,6 +1262,42 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</div>
 
 												<NginxConfigField />
+
+												<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+													<div className="space-y-0.5">
+														<Label htmlFor="wasmModuleId" className="text-base">
+															WASM Edge Filter
+														</Label>
+														<p className="text-sm text-muted-foreground">
+															Select a WebAssembly module to execute for this proxy host.
+														</p>
+													</div>
+													<div className="w-1/3">
+														<Field name="wasmModuleId">
+															{({ field, form }: FieldProps) => (
+																<Select
+																	onValueChange={(val: string) =>
+																		form.setFieldValue("wasmModuleId", Number.parseInt(val, 10))
+																	}
+																	value={field.value?.toString() || "0"}
+																>
+																	<SelectTrigger id="wasmModuleId">
+																		<SelectValue />
+																	</SelectTrigger>
+																	<SelectContent>
+																		<SelectItem value="0">None</SelectItem>
+																		{wasmModules?.map((mod) => (
+																			<SelectItem key={mod.id} value={mod.id.toString()}>
+																				{mod.name}
+																			</SelectItem>
+																		))}
+																	</SelectContent>
+																</Select>
+															)}
+														</Field>
+													</div>
+												</div>
+
 											</TabsContent>
 
 											<TabsContent value={PROXY_HOST_TAB.MAINTENANCE} className="mt-0 space-y-4">

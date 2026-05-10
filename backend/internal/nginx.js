@@ -442,6 +442,31 @@ const internalNginx = {
 	 * @returns {boolean}
 	 */
 	advancedConfigHasDefaultLocation: (cfg) => !!cfg.match(/^(?:.*;)?\s*?location\s*?\/\s*?{/im),
+
+	/**
+	 * Generates the global wasm modules configuration
+	 * @returns {Promise}
+	 */
+	generateWasmModulesConfig: async () => {
+		const renderEngine = utils.getRenderEngine();
+		const templatePath = `${__dirname}/../templates/wasm_modules.conf`;
+		const filename = "/data/nginx/custom/wasm_modules.conf";
+
+		// Use dynamic import to prevent circular dependencies
+		const wasmModuleModel = (await import("../models/wasm_module.js")).default;
+		const modules = await wasmModuleModel.query().where("is_deleted", 0);
+
+		try {
+			// Ensure custom directory exists
+			await fs.promises.mkdir(dirname(filename), { recursive: true });
+			const config_text = await renderEngine.renderFile(templatePath, { modules });
+			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
+			debug(logger, "Wrote config:", filename);
+		} catch (err) {
+			logger.error(`Could not write ${filename}:`, err.message);
+			throw new errs.ConfigurationError(err.message);
+		}
+	},
 };
 
 export default internalNginx;

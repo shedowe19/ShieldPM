@@ -111,6 +111,12 @@ const menuItems: MenuItem[] = [
 				permissionSection: DEAD_HOSTS,
 				permission: VIEW,
 			},
+			{
+				to: "/nginx/wasm-modules",
+				label: "WASM Modules",
+				permissionSection: PROXY_HOSTS,
+				permission: VIEW,
+			},
 		],
 	},
 	{

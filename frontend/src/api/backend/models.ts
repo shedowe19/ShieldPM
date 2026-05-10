@@ -154,6 +154,7 @@ export interface ProxyHost {
 	forwardQuery?: string;
 	accessListId: number;
 	certificateId: number;
+	wasmModuleId?: number;
 	sslForced: boolean;
 	cachingEnabled: boolean;
 	disableBuffering: boolean;
@@ -207,6 +208,7 @@ export interface ProxyHost {
 	owner?: User;
 	accessList?: AccessList;
 	certificate?: Certificate;
+	wasmModule?: WasmModule;
 	note?: string;
 }
 
@@ -425,3 +427,17 @@ export interface WireguardListResponse {
 	peers: WireguardPeer[];
 	server: WireguardServer;
 }
+
+export interface WasmModule {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	ownerUserId: number;
+	name: string;
+	description?: string;
+	file_name: string;
+	meta: Record<string, unknown>;
+	owner?: User;
+	proxyHosts?: ProxyHost[];
+}
+

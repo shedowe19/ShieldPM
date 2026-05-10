@@ -46,6 +46,7 @@ Jedes Modul folgt dem gleichen Pattern: Es exportiert ein Objekt mit `create`, `
 | [WireGuard](./wireguard.md)     | `wireguard.js` (19 KB)    | WireGuard VPN-Tunnels        |
 | [DDNS](./ddns.md)               | `ddns.js` (8 KB)          | Dynamic DNS Client           |
 | DDNS-Provider (siehe DDNS)      | `ddns-provider.js` (4 KB) | DDNS-Anbieter-Logik          |
+| [WASM Edge Filters](./wasm-module.md) | `wasm_module.js` (8 KB) | WebAssembly Edge Filter      |
 
 ### Tools & Integrationen
 

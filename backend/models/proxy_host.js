@@ -59,6 +59,8 @@ class ProxyHost extends Model {
 	/** @type {number} */
 	certificate_id;
 	/** @type {number} */
+	wasm_module_id;
+	/** @type {number} */
 	enabled;
 	/** @type {number} */
 	ssl_forced;
@@ -257,6 +259,18 @@ class ProxyHost extends Model {
 				},
 				modify: (qb) => {
 					qb.where("certificate.is_deleted", 0);
+				},
+			},
+			wasm_module: {
+				relation: Model.HasOneRelation,
+				// We use a dynamic import/require string here to avoid circular dependencies
+				modelClass: import.meta.url ? new URL("./wasm_module.js", import.meta.url).pathname : "wasm_module.js",
+				join: {
+					from: "proxy_host.wasm_module_id",
+					to: "wasm_module.id",
+				},
+				modify: (qb) => {
+					qb.where("wasm_module.is_deleted", 0);
 				},
 			},
 			tor_onion: {

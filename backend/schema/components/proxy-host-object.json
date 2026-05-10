@@ -11,6 +11,7 @@
 		"forward_port",
 		"access_list_id",
 		"certificate_id",
+		"wasm_module_id",
 		"ssl_forced",
 		"caching_enabled",
 		"block_exploits",
@@ -63,6 +64,11 @@
 		},
 		"certificate_id": {
 			"$ref": "../common.json#/properties/certificate_id"
+		},
+		"wasm_module_id": {
+			"type": "integer",
+			"minimum": 0,
+			"example": 0
 		},
 		"ssl_forced": {
 			"$ref": "../common.json#/properties/ssl_forced"
