@@ -34,8 +34,7 @@ export const useWasmModule = () => {
 	});
 
 	const update = useMutation({
-		mutationFn: ({ id, data }: { id: number; data: api.UpdateWasmModulePayload }) =>
-			api.updateWasmModule(id, data),
+		mutationFn: ({ id, data }: { id: number; data: api.UpdateWasmModulePayload }) => api.updateWasmModule(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["wasm-modules"] });
 			toast({

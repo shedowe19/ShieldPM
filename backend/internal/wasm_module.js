@@ -27,7 +27,7 @@ const internalWasmModule = {
 	 */
 	create: async (access, data) => {
 		await access.can("wasm_modules:create", data);
-		
+
 		const row = await wasmModuleModel.query().insertAndFetch(
 			/** @type {any} */ ({
 				name: data.name,
@@ -83,7 +83,9 @@ const internalWasmModule = {
 		await access.can("wasm_modules:update", data);
 		const row = await internalWasmModule.get(access, { id: data.id });
 		if (row.id !== data.id) {
-			throw new errs.InternalValidationError(`Wasm Module could not be updated, IDs do not match: ${row.id} !== ${data.id}`);
+			throw new errs.InternalValidationError(
+				`Wasm Module could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
+			);
 		}
 
 		await wasmModuleModel

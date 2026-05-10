@@ -440,4 +440,3 @@ export interface WasmModule {
 	owner?: User;
 	proxyHosts?: ProxyHost[];
 }
-

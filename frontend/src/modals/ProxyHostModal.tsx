@@ -1277,7 +1277,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															{({ field, form }: FieldProps) => (
 																<Select
 																	onValueChange={(val: string) =>
-																		form.setFieldValue("wasmModuleId", Number.parseInt(val, 10))
+																		form.setFieldValue(
+																			"wasmModuleId",
+																			Number.parseInt(val, 10),
+																		)
 																	}
 																	value={field.value?.toString() || "0"}
 																>
@@ -1287,7 +1290,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																	<SelectContent>
 																		<SelectItem value="0">None</SelectItem>
 																		{wasmModules?.map((mod) => (
-																			<SelectItem key={mod.id} value={mod.id.toString()}>
+																			<SelectItem
+																				key={mod.id}
+																				value={mod.id.toString()}
+																			>
 																				{mod.name}
 																			</SelectItem>
 																		))}
@@ -1297,7 +1303,6 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 												</div>
-
 											</TabsContent>
 
 											<TabsContent value={PROXY_HOST_TAB.MAINTENANCE} className="mt-0 space-y-4">

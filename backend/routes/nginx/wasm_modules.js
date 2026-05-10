@@ -54,14 +54,16 @@ router
 	.options((_req, res) => {
 		res.sendStatus(204);
 	})
-	.all(validator({
-		id: {
-			in: ["params"],
-			errorMessage: "ID is invalid",
-			isInt: true,
-			toInt: true,
-		},
-	}))
+	.all(
+		validator({
+			id: {
+				in: ["params"],
+				errorMessage: "ID is invalid",
+				isInt: true,
+				toInt: true,
+			},
+		}),
+	)
 	.get(async (req, res, next) => {
 		try {
 			const expand = typeof req.query.expand === "string" ? req.query.expand.split(",") : null;

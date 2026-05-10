@@ -31,11 +31,13 @@ const up = (knex) => {
 const down = (knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 
-	return knex.schema.table("proxy_host", (table) => {
-		table.dropColumn("wasm_module_id");
-	}).then(() => {
-		logger.info(`[${migrateName}] proxy_host Table altered`);
-	});
+	return knex.schema
+		.table("proxy_host", (table) => {
+			table.dropColumn("wasm_module_id");
+		})
+		.then(() => {
+			logger.info(`[${migrateName}] proxy_host Table altered`);
+		});
 };
 
 export { up, down };
