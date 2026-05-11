@@ -3,7 +3,7 @@ import path from "node:path";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
-import { wasm_module as logger } from "../logger.js";
+import { nginx as logger } from "../logger.js";
 import proxyHostModel from "../models/proxy_host.js";
 import wasmModuleModel from "../models/wasm_module.js";
 import internalAuditLog from "./audit-log.js";
