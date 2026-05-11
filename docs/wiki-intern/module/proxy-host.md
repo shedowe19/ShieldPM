@@ -60,5 +60,6 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Zertifikate](./zertifikate.md)
 - [Access-Lists](./access-lists.md)
 - [Git-Deploy](./git-deploy.md)
+- [WASM Edge Filters](./wasm.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)

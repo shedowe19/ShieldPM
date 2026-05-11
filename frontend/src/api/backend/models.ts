@@ -162,6 +162,7 @@ export interface ProxyHost {
 	anubisEnabled: boolean;
 	anubisRules?: AnubisRule[];
 	advancedConfig: string;
+	wasmConfig?: string;
 	bandwidthLimit: string;
 	turboLoader?: boolean;
 	meta: Record<string, unknown>;

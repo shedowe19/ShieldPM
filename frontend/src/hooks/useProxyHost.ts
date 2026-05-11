@@ -20,6 +20,7 @@ const fetchProxyHost = (id: number | "new") => {
 			securityCrowdsec: false,
 			anubisEnabled: false,
 			advancedConfig: "",
+			wasmConfig: "",
 			bandwidthLimit: "",
 			turboLoader: false,
 			meta: {},

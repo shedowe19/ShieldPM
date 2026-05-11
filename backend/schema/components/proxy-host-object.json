@@ -15,6 +15,7 @@
 		"caching_enabled",
 		"block_exploits",
 		"advanced_config",
+		"wasm_config",
 		"meta",
 		"allow_websocket_upgrade",
 		"http2_support",
@@ -107,6 +108,10 @@
 			"type": "string",
 			"example": ""
 		},
+		"wasm_config": {
+			"type": "string",
+			"example": ""
+		},
 		"bandwidth_limit": {
 			"type": ["string", "null"],
 			"example": ""
@@ -171,6 +176,9 @@
 						"type": ["string", "null"]
 					},
 					"advanced_config": {
+						"type": "string"
+					},
+					"wasm_config": {
 						"type": "string"
 					}
 				}

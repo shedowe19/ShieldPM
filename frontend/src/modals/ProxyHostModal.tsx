@@ -21,6 +21,7 @@ import {
 	Loading,
 	LocationsFields,
 	NginxConfigField,
+	WasmConfigField,
 	NoteWarning,
 	SSLCertificateField,
 	SSLOptionsFields,
@@ -190,6 +191,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								hstsSubdomains: data?.hstsSubdomains || false,
 								// Advanced tab
 								advancedConfig: data?.advancedConfig || "",
+								wasmConfig: data?.wasmConfig || "",
 								bandwidthLimit: data?.bandwidthLimit || "",
 								turboLoader: data?.turboLoader || false,
 								advLimitReqRate: data?.advLimitReqRate || undefined,
@@ -1259,6 +1261,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												</div>
 
 												<NginxConfigField />
+
+												<WasmConfigField />
 											</TabsContent>
 
 											<TabsContent value={PROXY_HOST_TAB.MAINTENANCE} className="mt-0 space-y-4">

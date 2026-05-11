@@ -106,6 +106,8 @@ class ProxyHost extends Model {
 	index_file;
 	/** @type {string} */
 	advanced_config;
+	/** @type {string} */
+	wasm_config;
 
 	// Git Sync fields
 	/** @type {string|null} */

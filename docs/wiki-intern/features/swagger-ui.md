@@ -21,17 +21,23 @@ ShieldPM exponiert seit Version 4.3.2 (Feature-Branch) eine Swagger-UI-Instanz u
 
 ```javascript
 // backend/app.js
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(undefined, {
+app.use(
+  "/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(undefined, {
     swaggerOptions: {
-        url: "/api/schema",
-        requestInterceptor: (req) => { /* CSRF-Header durchreichen */ }
+      url: "/api/schema",
+      requestInterceptor: (req) => {
+        /* CSRF-Header durchreichen */
+      },
     },
     customCss: `
         .swagger-ui .topbar { display: none; }
         .swagger-ui .swagger-ui { max-width: 100%; }
     `,
     customSiteTitle: "ShieldPM API Documentation",
-}));
+  }),
+);
 ```
 
 **Wichtig**: Der Swagger-UI-Mountpoint muss **vor** `app.use("/", mainRoutes)` stehen, da `mainRoutes` alle Pfade abfängt.
@@ -51,21 +57,21 @@ Dadurch zeigt Swagger UI automatisch auf den richtigen Host (`https://shieldpm.c
 
 Das Schema ist in drei Teile gegliedert:
 
-| Verzeichnis | Inhalt |
-|---|---|
-| `schema/paths/` | Ein JSON pro Endpunkt (GET, POST, etc.) |
-| `schema/components/` | Wiederverwendbare Objekte (Error, Token, User, etc.) |
+| Verzeichnis           | Inhalt                                                 |
+| --------------------- | ------------------------------------------------------ |
+| `schema/paths/`       | Ein JSON pro Endpunkt (GET, POST, etc.)                |
+| `schema/components/`  | Wiederverwendbare Objekte (Error, Token, User, etc.)   |
 | `schema/swagger.json` | Hauptdokument — referenziert alle Pfade und Components |
 
 ### $ref-Pfade
 
 `$ref`-Zeiger werden relativ zur Datei aufgelöst. Die Tiefe ist entscheidend:
 
-| Dateiposition | ../-Ebenen zu `components/` |
-|---|---|
-| `paths/*.json` (1 Level) | `../../components/` |
-| `paths/subdir/*.json` (2 Level) | `../../../components/` |
-| `paths/subdir/nested/*.json` (3 Level) | `../../../../components/` |
+| Dateiposition                              | ../-Ebenen zu `components/`  |
+| ------------------------------------------ | ---------------------------- |
+| `paths/*.json` (1 Level)                   | `../../components/`          |
+| `paths/subdir/*.json` (2 Level)            | `../../../components/`       |
+| `paths/subdir/nested/*.json` (3 Level)     | `../../../../components/`    |
 | `paths/subdir/nested/sub/*.json` (4 Level) | `../../../../../components/` |
 
 **Häufiger Fehler**: Nach dem Verschieben einer Datei werden die `../` nicht angepasst → `$RefParser` kann die Datei nicht finden → ENOENT-Fehler in Production.
