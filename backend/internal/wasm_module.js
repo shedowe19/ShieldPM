@@ -28,6 +28,15 @@ const internalWasmModule = {
 	create: async (access, data) => {
 		await access.can("wasm_modules:create", data);
 
+		// Validate WASM magic bytes (0x00 0x61 0x73 0x6d)
+		if (!data.file_content || data.file_content.length < 4 || 
+			data.file_content[0] !== 0x00 || 
+			data.file_content[1] !== 0x61 || 
+			data.file_content[2] !== 0x73 || 
+			data.file_content[3] !== 0x6d) {
+			throw new errs.InternalValidationError("Invalid WASM binary: Missing magic bytes");
+		}
+
 		const row = await wasmModuleModel.query().insertAndFetch(
 			/** @type {any} */ ({
 				name: data.name,
