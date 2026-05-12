@@ -64,7 +64,7 @@ const menuItems: MenuItem[] = [
 			},
 			{
 				to: "/nginx/wasm-modules",
-				label: "WASM Modules",
+				label: "wasm-modules",
 				permissionSection: SETTINGS,
 				permission: VIEW,
 			},

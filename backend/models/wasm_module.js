@@ -51,7 +51,7 @@ class WasmModule extends Model {
 	static get jsonSchema() {
 		return {
 			type: "object",
-			required: ["name", "filename"],
+			required: ["name", "filename", "owner_user_id"],
 			properties: {
 				id: { type: "integer" },
 				owner_user_id: { type: "integer" },
@@ -73,16 +73,18 @@ class WasmModule extends Model {
 					to: "user.id",
 				},
 				modify: (query) => {
-					query.select(
-						"id",
-						"created_on",
-						"modified_on",
-						"is_deleted",
-						"name",
-						"nickname",
-						"email",
-						"avatar",
-					);
+					query
+						.where("user.is_deleted", 0)
+						.select(
+							"id",
+							"created_on",
+							"modified_on",
+							"is_deleted",
+							"name",
+							"nickname",
+							"email",
+							"avatar",
+						);
 				},
 			},
 		};

@@ -15,8 +15,6 @@
 		"caching_enabled",
 		"block_exploits",
 		"advanced_config",
-		"wasm_module_id",
-		"wasm_config",
 		"meta",
 		"allow_websocket_upgrade",
 		"http2_support",

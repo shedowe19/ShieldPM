@@ -29,7 +29,16 @@ router
 	 */
 	.get(jwtDecode(), async (req, res, next) => {
 		try {
-			const result = await internalWasmModule.getAll(res.locals.access, req.query.expand);
+			let expand = req.query.expand;
+			// Normalize expand parameter
+			if (expand === undefined || expand === null) {
+				expand = [];
+			} else if (typeof expand === "string") {
+				expand = expand.includes(",") ? expand.split(",").map((s) => s.trim()) : [expand];
+			} else if (!Array.isArray(expand)) {
+				expand = [];
+			}
+			const result = await internalWasmModule.getAll(res.locals.access, expand);
 			res.status(200).send(result);
 		} catch (err) {
 			next(err);
@@ -54,6 +63,13 @@ router
 		}),
 		async (req, res, next) => {
 			try {
+				if (!req.file) {
+					return res.status(400).send({
+						error: {
+							message: "WASM file is required",
+						},
+					});
+				}
 				const result = await internalWasmModule.create(res.locals.access, req.body, req.file);
 				res.status(201).send(result);
 			} catch (err) {
@@ -105,8 +121,9 @@ router
 		}),
 		async (req, res, next) => {
 			try {
-				req.body.id = Number.parseInt(req.params.id, 10);
-				const result = await internalWasmModule.update(res.locals.access, req.body);
+				const id = Number.parseInt(req.params.id, 10);
+				const data = { ...req.body, id };
+				const result = await internalWasmModule.update(res.locals.access, data);
 				res.status(200).send(result);
 			} catch (err) {
 				next(err);

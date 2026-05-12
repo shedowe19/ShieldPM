@@ -22,7 +22,7 @@ export default function TableWrapper({ data, isLoading }: Props) {
 				<div className="flex gap-2 ml-auto">
 					<Button onClick={() => showWasmModuleModal("new")}>
 						<Plus className="mr-2 h-4 w-4" />
-						Add WASM Module
+						<T id="add-wasm-module" />
 					</Button>
 				</div>
 			</div>
@@ -33,8 +33,8 @@ export default function TableWrapper({ data, isLoading }: Props) {
 					onEdit={(id: number) => showWasmModuleModal(id)}
 					onDelete={(id: number) => {
 						showDeleteConfirmModal({
-							title: "Delete WASM Module",
-							description: "Are you sure you want to delete this module?",
+							title: T({ id: "delete-wasm-module" }),
+							description: T({ id: "delete-wasm-module-confirm" }),
 							onConfirm: () => deleteWasmModule(id),
 						});
 					}}

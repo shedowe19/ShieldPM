@@ -9,6 +9,10 @@ import proxyHostModel from "../models/proxy_host.js";
 const WASM_PATH = "/data/wasm";
 
 const internalWasmModule = {
+	/**
+	 * Setup the WASM directory
+	 * @returns {Promise<void>}
+	 */
 	async setup() {
 		try {
 			await fs.mkdir(WASM_PATH, { recursive: true });
@@ -19,6 +23,13 @@ const internalWasmModule = {
 		}
 	},
 
+	/**
+	 * Create a new WASM module
+	 * @param {Object} access - Access control object
+	 * @param {Object} data - Module data (name, description)
+	 * @param {Object} file - Uploaded file object
+	 * @returns {Promise<WasmModule>}
+	 */
 	async create(access, data, file) {
 		await access.can("settings:list");
 
@@ -59,6 +70,12 @@ const internalWasmModule = {
 		return row;
 	},
 
+	/**
+	 * Update an existing WASM module
+	 * @param {Object} access - Access control object
+	 * @param {Object} data - Module data containing id, name, and description
+	 * @returns {Promise<WasmModule>}
+	 */
 	async update(access, data) {
 		await access.can("settings:list");
 
@@ -84,6 +101,12 @@ const internalWasmModule = {
 		return updatedRow;
 	},
 
+	/**
+	 * Get a specific WASM module by ID
+	 * @param {Object} access - Access control object
+	 * @param {Object} data - Object containing module id
+	 * @returns {Promise<WasmModule>}
+	 */
 	async get(access, data) {
 		await access.can("settings:list");
 
@@ -96,6 +119,12 @@ const internalWasmModule = {
 		return row;
 	},
 
+	/**
+	 * Get all WASM modules
+	 * @param {Object} access - Access control object
+	 * @param {Array<string>} expand - Array of relations to expand (e.g., ['owner'])
+	 * @returns {Promise<Array<WasmModule>>}
+	 */
 	async getAll(access, expand) {
 		await access.can("settings:list");
 
@@ -108,6 +137,12 @@ const internalWasmModule = {
 		return query;
 	},
 
+	/**
+	 * Delete a WASM module (soft delete)
+	 * @param {Object} access - Access control object
+	 * @param {Object} data - Object containing module id
+	 * @returns {Promise<boolean>}
+	 */
 	async delete(access, data) {
 		await access.can("settings:list");
 

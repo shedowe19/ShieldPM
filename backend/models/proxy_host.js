@@ -272,6 +272,9 @@ class ProxyHost extends Model {
 					from: "proxy_host.wasm_module_id",
 					to: "wasm_module.id",
 				},
+				modify: (qb) => {
+					qb.where("wasm_module.is_deleted", false);
+				},
 			},
 			tor_onion: {
 				relation: Model.HasOneRelation,
