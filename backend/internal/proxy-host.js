@@ -365,8 +365,8 @@ const internalProxyHost = {
 			.query()
 			.where("is_deleted", 0)
 			.andWhere("id", thisData.id)
-			.allowGraph("[owner,access_list.[clients,items],certificate,host_domains]")
-			.withGraphFetched("host_domains")
+			.allowGraph("[owner,access_list.[clients,items],certificate,host_domains,wasm_module]")
+			.withGraphFetched("[host_domains, wasm_module]")
 			.first();
 
 		if (access_data.permission_visibility !== "all") {
@@ -543,8 +543,8 @@ const internalProxyHost = {
 			.query()
 			.where("is_deleted", 0)
 			.groupBy("id")
-			.allowGraph("[owner,access_list,certificate,host_domains]")
-			.withGraphFetched("[host_domains, certificate, access_list]")
+			.allowGraph("[owner,access_list,certificate,host_domains,wasm_module]")
+			.withGraphFetched("[host_domains, certificate, access_list, wasm_module]")
 			.orderBy("id", "DESC"); // Order by id DESC since domain_names is no longer a simple column
 
 		if (accessData.permission_visibility !== "all") {

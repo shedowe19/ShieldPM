@@ -175,6 +175,9 @@ const internalNginx = {
 					{ hsts_subdomains: host.hsts_subdomains },
 					{ access_list: host.access_list },
 					{ certificate: host.certificate },
+					{ wasm_module_id: host.wasm_module_id },
+					{ wasm_module: host.wasm_module },
+					{ wasm_config: host.wasm_config },
 					location,
 				);
 

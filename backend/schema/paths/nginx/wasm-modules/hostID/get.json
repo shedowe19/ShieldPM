@@ -1,0 +1,48 @@
+{
+	"tags": ["nginx"],
+	"summary": "Get a WASM Module",
+	"description": "Get a specific WASM Module",
+	"parameters": [
+		{
+			"in": "path",
+			"name": "id",
+			"schema": {
+				"type": "integer"
+			},
+			"required": true,
+			"description": "WASM Module ID"
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "WASM Module",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/wasm-module-object.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Unauthorized",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/error-object.json"
+					}
+				}
+			}
+		},
+		"404": {
+			"description": "Not Found",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

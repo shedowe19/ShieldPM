@@ -106,6 +106,10 @@ class ProxyHost extends Model {
 	index_file;
 	/** @type {string} */
 	advanced_config;
+
+	// WASM
+	/** @type {number} */
+	wasm_module_id;
 	/** @type {string} */
 	wasm_config;
 
@@ -259,6 +263,14 @@ class ProxyHost extends Model {
 				},
 				modify: (qb) => {
 					qb.where("certificate.is_deleted", 0);
+				},
+			},
+			wasm_module: {
+				relation: Model.BelongsToOneRelation,
+				modelClass: import.meta.url ? new URL("./wasm_module.js", import.meta.url).pathname : "wasm_module.js",
+				join: {
+					from: "proxy_host.wasm_module_id",
+					to: "wasm_module.id",
 				},
 			},
 			tor_onion: {

@@ -1,0 +1,43 @@
+{
+	"type": "object",
+	"properties": {
+		"id": {
+			"type": "integer",
+			"description": "WASM Module ID",
+			"example": 1
+		},
+		"created_on": {
+			"type": "string",
+			"description": "Creation Date",
+			"example": "2026-05-11T23:32:00.000Z"
+		},
+		"modified_on": {
+			"type": "string",
+			"description": "Modification Date",
+			"example": "2026-05-11T23:32:00.000Z"
+		},
+		"owner_user_id": {
+			"type": "integer",
+			"description": "Owner User ID",
+			"example": 1
+		},
+		"name": {
+			"type": "string",
+			"description": "Module Name",
+			"example": "My WASM Edge Filter"
+		},
+		"description": {
+			"type": "string",
+			"description": "Module Description",
+			"example": "Logs everything"
+		},
+		"filename": {
+			"type": "string",
+			"description": "Uploaded file name",
+			"example": "uuid.wasm"
+		},
+		"owner": {
+			"$ref": "user-object.json"
+		}
+	}
+}

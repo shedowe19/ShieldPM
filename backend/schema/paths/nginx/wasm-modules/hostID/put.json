@@ -1,0 +1,66 @@
+{
+	"tags": ["nginx"],
+	"summary": "Update a WASM Module",
+	"description": "Update an existing WASM Module's metadata",
+	"parameters": [
+		{
+			"in": "path",
+			"name": "id",
+			"schema": {
+				"type": "integer"
+			},
+			"required": true,
+			"description": "WASM Module ID"
+		}
+	],
+	"requestBody": {
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"properties": {
+						"name": {
+							"type": "string"
+						},
+						"description": {
+							"type": "string"
+						}
+					},
+					"required": ["name"]
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "WASM Module updated",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/wasm-module-object.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Unauthorized",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/error-object.json"
+					}
+				}
+			}
+		},
+		"404": {
+			"description": "Not Found",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

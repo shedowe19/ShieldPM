@@ -1,0 +1,38 @@
+{
+	"tags": ["nginx"],
+	"summary": "Get all WASM Modules",
+	"description": "Get all WASM Modules",
+	"parameters": [
+		{
+			"in": "query",
+			"name": "expand",
+			"schema": {
+				"type": "string"
+			},
+			"description": "Comma separated string of objects to expand in the results",
+			"example": "owner"
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "List of WASM Modules",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/wasm-module-list.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Unauthorized",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

@@ -226,6 +226,25 @@
 				"$ref": "./paths/nginx/certificates/certID/upload/post.json"
 			}
 		},
+		"/nginx/wasm-modules": {
+			"get": {
+				"$ref": "./paths/nginx/wasm-modules/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/wasm-modules/post.json"
+			}
+		},
+		"/nginx/wasm-modules/{id}": {
+			"get": {
+				"$ref": "./paths/nginx/wasm-modules/hostID/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/wasm-modules/hostID/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/wasm-modules/hostID/delete.json"
+			}
+		},
 		"/nginx/proxy-hosts": {
 			"get": {
 				"$ref": "./paths/nginx/proxy-hosts/get.json"

@@ -15,6 +15,7 @@
 		"caching_enabled",
 		"block_exploits",
 		"advanced_config",
+		"wasm_module_id",
 		"wasm_config",
 		"meta",
 		"allow_websocket_upgrade",
@@ -108,6 +109,10 @@
 			"type": "string",
 			"example": ""
 		},
+		"wasm_module_id": {
+			"type": ["integer", "null"],
+			"example": 0
+		},
 		"wasm_config": {
 			"type": "string",
 			"example": ""
@@ -180,6 +185,9 @@
 					},
 					"wasm_config": {
 						"type": "string"
+					},
+					"wasm_module_id": {
+						"type": ["integer", "null"]
 					}
 				}
 			},

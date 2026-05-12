@@ -1,0 +1,48 @@
+{
+	"tags": ["nginx"],
+	"summary": "Delete a WASM Module",
+	"description": "Delete a specific WASM Module",
+	"parameters": [
+		{
+			"in": "path",
+			"name": "id",
+			"schema": {
+				"type": "integer"
+			},
+			"required": true,
+			"description": "WASM Module ID"
+		}
+	],
+	"responses": {
+		"200": {
+			"description": "WASM Module deleted",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "boolean"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Unauthorized",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/error-object.json"
+					}
+				}
+			}
+		},
+		"404": {
+			"description": "Not Found",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

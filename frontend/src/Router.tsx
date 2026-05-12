@@ -28,6 +28,7 @@ const ProxyHosts = lazy(() => import("src/pages/Nginx/ProxyHosts"));
 const RedirectionHosts = lazy(() => import("src/pages/Nginx/RedirectionHosts"));
 const DeadHosts = lazy(() => import("src/pages/Nginx/DeadHosts"));
 const Streams = lazy(() => import("src/pages/Nginx/Streams"));
+const WasmModules = lazy(() => import("src/pages/Nginx/WasmModules"));
 const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
 const DdnsProviders = lazy(() => import("src/pages/Nginx/DdnsProviders"));
 const TorOnionServices = lazy(() => import("src/pages/Nginx/TorOnionServices"));
@@ -46,6 +47,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<ErrorNotFound />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/nginx/wasm-modules"
+					element={
+						<AnimatedPage>
+							<WasmModules />
 						</AnimatedPage>
 					}
 				/>

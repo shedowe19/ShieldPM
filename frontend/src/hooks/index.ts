@@ -26,4 +26,6 @@ export * from "./useTheme";
 export * from "./useTorOnion";
 export * from "./useUser";
 export * from "./useUsers";
+export * from "./useWasmModule";
+export * from "./useWasmModules";
 export * from "./useWireguardPeer";

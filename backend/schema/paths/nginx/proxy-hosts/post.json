@@ -77,6 +77,12 @@
 						"advanced_config": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/advanced_config"
 						},
+						"wasm_module_id": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/wasm_module_id"
+						},
+						"wasm_config": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/wasm_config"
+						},
 						"bandwidth_limit": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/bandwidth_limit"
 						},
@@ -215,6 +221,8 @@
 								"caching_enabled": false,
 								"block_exploits": false,
 								"advanced_config": "",
+								"wasm_module_id": 0,
+								"wasm_config": "",
 								"meta": {},
 								"allow_websocket_upgrade": false,
 								"http2_support": false,

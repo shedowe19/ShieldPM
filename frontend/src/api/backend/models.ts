@@ -142,6 +142,18 @@ export interface ProxyLocation {
 	forwardQuery?: string;
 }
 
+export interface WasmModule {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	ownerUserId: number;
+	name: string;
+	description: string;
+	filename: string;
+	isDeleted: number;
+	owner?: User;
+}
+
 export interface ProxyHost {
 	id: number;
 	createdOn: string;
@@ -162,6 +174,7 @@ export interface ProxyHost {
 	anubisEnabled: boolean;
 	anubisRules?: AnubisRule[];
 	advancedConfig: string;
+	wasmModuleId?: number | null;
 	wasmConfig?: string;
 	bandwidthLimit: string;
 	turboLoader?: boolean;

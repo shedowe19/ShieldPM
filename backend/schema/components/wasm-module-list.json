@@ -1,0 +1,6 @@
+{
+	"type": "array",
+	"items": {
+		"$ref": "./wasm-module-object.json"
+	}
+}

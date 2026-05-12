@@ -1,0 +1,52 @@
+{
+	"tags": ["nginx"],
+	"summary": "Create a WASM Module",
+	"description": "Upload and create a new WASM Module",
+	"requestBody": {
+		"content": {
+			"multipart/form-data": {
+				"schema": {
+					"type": "object",
+					"properties": {
+						"wasm_file": {
+							"type": "string",
+							"format": "binary",
+							"description": "The .wasm file to upload"
+						},
+						"name": {
+							"type": "string",
+							"description": "Name for the WASM module"
+						},
+						"description": {
+							"type": "string",
+							"description": "Description of the WASM module"
+						}
+					},
+					"required": ["wasm_file"]
+				}
+			}
+		}
+	},
+	"responses": {
+		"201": {
+			"description": "WASM Module created",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/wasm-module-object.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Unauthorized",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

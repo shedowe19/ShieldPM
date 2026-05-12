@@ -21,6 +21,7 @@ import {
 	Loading,
 	LocationsFields,
 	NginxConfigField,
+	WasmModuleSelect,
 	WasmConfigField,
 	NoteWarning,
 	SSLCertificateField,
@@ -191,6 +192,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								hstsSubdomains: data?.hstsSubdomains || false,
 								// Advanced tab
 								advancedConfig: data?.advancedConfig || "",
+								wasmModuleId: data?.wasmModuleId || 0,
 								wasmConfig: data?.wasmConfig || "",
 								bandwidthLimit: data?.bandwidthLimit || "",
 								turboLoader: data?.turboLoader || false,
@@ -1262,7 +1264,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 												<NginxConfigField />
 
-												<WasmConfigField />
+												<div className="pt-4 border-t border-muted">
+													<div className="mb-2">
+														<h3 className="font-medium text-lg leading-tight">WASM Edge Filters</h3>
+														<p className="text-sm text-muted-foreground">Select a globally uploaded WASM module and optionally provide directives.</p>
+													</div>
+													<WasmModuleSelect />
+													<WasmConfigField />
+												</div>
 											</TabsContent>
 
 											<TabsContent value={PROXY_HOST_TAB.MAINTENANCE} className="mt-0 space-y-4">

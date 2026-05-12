@@ -86,7 +86,7 @@ export { up, down };
 - `20260319000001_add_user_2fa` — Zwei-Faktor-Authentifizierung
 - `20260407000000_add_wireguard_tunnel` — WireGuard Tunnels
 - `20260409000000_add_turbo_loader` — Turbo-Loader
-- `20260511225041_add_wasm_config` — WASM Edge Filters
+- `20260511233200_add_wasm_module` — Globale WASM Module (ngx_wasm_module)
 
 ## Verwandte Seiten
 

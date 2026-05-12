@@ -19,6 +19,7 @@ import {
 	type MANAGE,
 	PROXY_HOSTS,
 	REDIRECTION_HOSTS,
+	SETTINGS,
 	type Section,
 	STREAMS,
 	VIEW,
@@ -59,6 +60,12 @@ const menuItems: MenuItem[] = [
 				to: "/nginx/stream",
 				label: "streams",
 				permissionSection: STREAMS,
+				permission: VIEW,
+			},
+			{
+				to: "/nginx/wasm-modules",
+				label: "WASM Modules",
+				permissionSection: SETTINGS,
 				permission: VIEW,
 			},
 			{
