@@ -2,6 +2,7 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Textarea } from "src/components/ui/textarea";
@@ -42,6 +43,7 @@ export function WasmModuleModal({ id, visible, hide }: Props) {
 		register,
 		handleSubmit,
 		setValue,
+		reset,
 		formState: { errors, isSubmitting },
 	} = useForm({
 		resolver: zodResolver(schema),
@@ -52,15 +54,17 @@ export function WasmModuleModal({ id, visible, hide }: Props) {
 		},
 	});
 
-	const onSubmit = (values: z.infer<typeof schema>) => {
-		const formData = new FormData();
-		formData.append("name", values.name);
-		formData.append("description", values.description || "");
-
-		if (isNew && "wasmFile" in values) {
-			formData.append("wasm_file", values.wasmFile);
+	useEffect(() => {
+		if (!isNew && data) {
+			reset({
+				id: data.id || 0,
+				name: data.name || "",
+				description: data.description || "",
+			});
 		}
+	}, [data, isNew, reset]);
 
+	const onSubmit = (values: z.infer<typeof schema>) => {
 		const submitData = isNew ? { ...values } : { id: data?.id, ...values };
 
 		setWasmModule(submitData as any, {

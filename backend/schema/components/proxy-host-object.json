@@ -109,6 +109,7 @@
 		},
 		"wasm_module_id": {
 			"type": ["integer", "null"],
+			"minimum": 0,
 			"example": 0
 		},
 		"wasm_config": {
@@ -185,7 +186,8 @@
 						"type": "string"
 					},
 					"wasm_module_id": {
-						"type": ["integer", "null"]
+						"type": ["integer", "null"],
+						"minimum": 0
 					}
 				}
 			},
