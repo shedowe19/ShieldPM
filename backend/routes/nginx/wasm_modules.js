@@ -41,21 +41,26 @@ router
 	 *
 	 * Create a new WASM module
 	 */
-	.post(jwtDecode(), upload.single("wasm_file"), validator({
-		type: "object",
-		properties: {
-			name: { type: "string" },
-			description: { type: "string" }
+	.post(
+		jwtDecode(),
+		upload.single("wasm_file"),
+		validator({
+			type: "object",
+			properties: {
+				name: { type: "string" },
+				description: { type: "string" },
+			},
+			required: ["name"],
+		}),
+		async (req, res, next) => {
+			try {
+				const result = await internalWasmModule.create(res.locals.access, req.body, req.file);
+				res.status(201).send(result);
+			} catch (err) {
+				next(err);
+			}
 		},
-		required: ["name"]
-	}), async (req, res, next) => {
-		try {
-			const result = await internalWasmModule.create(res.locals.access, req.body, req.file);
-			res.status(201).send(result);
-		} catch (err) {
-			next(err);
-		}
-	});
+	);
 
 /**
  * Specific WASM module
@@ -75,7 +80,7 @@ router
 	 */
 	.get(jwtDecode(), async (req, res, next) => {
 		try {
-			const result = await internalWasmModule.get(res.locals.access, { id: parseInt(req.params.id, 10) });
+			const result = await internalWasmModule.get(res.locals.access, { id: Number.parseInt(req.params.id, 10) });
 			res.status(200).send(result);
 		} catch (err) {
 			next(err);
@@ -87,23 +92,27 @@ router
 	 *
 	 * Update an existing WASM module
 	 */
-	.put(jwtDecode(), validator({
-		type: "object",
-		properties: {
-			id: { type: "integer" },
-			name: { type: "string" },
-			description: { type: "string" }
+	.put(
+		jwtDecode(),
+		validator({
+			type: "object",
+			properties: {
+				id: { type: "integer" },
+				name: { type: "string" },
+				description: { type: "string" },
+			},
+			required: ["id", "name"],
+		}),
+		async (req, res, next) => {
+			try {
+				req.body.id = Number.parseInt(req.params.id, 10);
+				const result = await internalWasmModule.update(res.locals.access, req.body);
+				res.status(200).send(result);
+			} catch (err) {
+				next(err);
+			}
 		},
-		required: ["id", "name"]
-	}), async (req, res, next) => {
-		try {
-			req.body.id = parseInt(req.params.id, 10);
-			const result = await internalWasmModule.update(res.locals.access, req.body);
-			res.status(200).send(result);
-		} catch (err) {
-			next(err);
-		}
-	})
+	)
 
 	/**
 	 * DELETE /api/nginx/wasm-modules/:id
@@ -112,7 +121,9 @@ router
 	 */
 	.delete(jwtDecode(), async (req, res, next) => {
 		try {
-			const result = await internalWasmModule.delete(res.locals.access, { id: parseInt(req.params.id, 10) });
+			const result = await internalWasmModule.delete(res.locals.access, {
+				id: Number.parseInt(req.params.id, 10),
+			});
 			res.status(200).send(result);
 		} catch (err) {
 			next(err);

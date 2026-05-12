@@ -73,7 +73,16 @@ class WasmModule extends Model {
 					to: "user.id",
 				},
 				modify: (query) => {
-					query.select("id", "created_on", "modified_on", "is_deleted", "name", "nickname", "email", "avatar");
+					query.select(
+						"id",
+						"created_on",
+						"modified_on",
+						"is_deleted",
+						"name",
+						"nickname",
+						"email",
+						"avatar",
+					);
 				},
 			},
 		};

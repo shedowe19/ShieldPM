@@ -63,5 +63,12 @@ export default function Table({ data, isLoading, onDelete, onEdit }: Props) {
 		[onDelete, onEdit],
 	);
 
-	return <BaseTable data={data || []} columns={columns} isLoading={isLoading} searchFields={["name", "description", "filename"]} />;
+	return (
+		<BaseTable
+			data={data || []}
+			columns={columns}
+			isLoading={isLoading}
+			searchFields={["name", "description", "filename"]}
+		/>
+	);
 }

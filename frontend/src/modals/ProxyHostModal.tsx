@@ -1266,8 +1266,13 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 												<div className="pt-4 border-t border-muted">
 													<div className="mb-2">
-														<h3 className="font-medium text-lg leading-tight">WASM Edge Filters</h3>
-														<p className="text-sm text-muted-foreground">Select a globally uploaded WASM module and optionally provide directives.</p>
+														<h3 className="font-medium text-lg leading-tight">
+															WASM Edge Filters
+														</h3>
+														<p className="text-sm text-muted-foreground">
+															Select a globally uploaded WASM module and optionally
+															provide directives.
+														</p>
 													</div>
 													<WasmModuleSelect />
 													<WasmConfigField />

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type WasmModule } from "src/api/backend/models";
+import type { WasmModule } from "src/api/backend/models";
 import api from "src/api/backend/api";
 
 const getWasmModule = async (id: number) => {

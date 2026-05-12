@@ -118,7 +118,11 @@ const internalWasmModule = {
 		}
 
 		// Check if it's in use by any proxy host
-		const inUseCount = await proxyHostModel.query().where("wasm_module_id", data.id).where("is_deleted", 0).resultSize();
+		const inUseCount = await proxyHostModel
+			.query()
+			.where("wasm_module_id", data.id)
+			.where("is_deleted", 0)
+			.resultSize();
 		if (inUseCount > 0) {
 			throw new errs.ValidationError("WASM Module is currently in use by one or more proxy hosts");
 		}

@@ -7,18 +7,12 @@ interface Props {
 	name?: string;
 	label?: string;
 }
-export function WasmConfigField({
-	name = "wasmConfig",
-	label = "WASM Module Arguments",
-	id = "wasmConfig",
-}: Props) {
+export function WasmConfigField({ name = "wasmConfig", label = "WASM Module Arguments", id = "wasmConfig" }: Props) {
 	return (
 		<Field name={name}>
 			{({ field }: FieldProps) => (
 				<div className="space-y-2 mt-4 ml-[1px]">
-					<Label htmlFor={id}>
-						{label}
-					</Label>
+					<Label htmlFor={id}>{label}</Label>
 					<div className="rounded-md border overflow-hidden">
 						<CodeEditor
 							language="nginx"

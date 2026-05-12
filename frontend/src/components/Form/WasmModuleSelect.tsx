@@ -36,7 +36,7 @@ export function WasmModuleSelect({ name = "wasmModuleId", label = "WASM Module",
 					</div>
 					<Select
 						value={field.value?.toString() || "0"}
-						onValueChange={(val) => form.setFieldValue(name, parseInt(val, 10))}
+						onValueChange={(val) => form.setFieldValue(name, Number.parseInt(val, 10))}
 					>
 						<SelectTrigger id={id} className="w-full bg-input">
 							<SelectValue placeholder="Select a WASM Module..." />
