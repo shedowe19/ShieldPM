@@ -75,16 +75,7 @@ class WasmModule extends Model {
 				modify: (query) => {
 					query
 						.where("user.is_deleted", 0)
-						.select(
-							"id",
-							"created_on",
-							"modified_on",
-							"is_deleted",
-							"name",
-							"nickname",
-							"email",
-							"avatar",
-						);
+						.select("id", "created_on", "modified_on", "is_deleted", "name", "nickname", "email", "avatar");
 				},
 			},
 		};
