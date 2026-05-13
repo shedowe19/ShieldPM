@@ -425,22 +425,30 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										)}
 
 										{values.avatar_type === "upload" && (
-											<div className="space-y-2">
-												<Label htmlFor="file_upload">Upload Image</Label>
-												<Input
-													id="file_upload"
-													type="file"
-													className="text-foreground file:text-foreground"
-													accept="image/png, image/jpeg, image/gif, image/webp"
-													onChange={(event) => {
-														const file = event.currentTarget.files?.[0];
-														setSelectedFile(file || null);
-													}}
-												/>
-												<p className="text-xs text-muted-foreground">
-													Max size: 2MB. Supported formats: PNG, JPG, GIF, WebP.
-												</p>
-											</div>
+									<div className="space-y-2">
+										<Label htmlFor="file_upload">Upload Image</Label>
+										<div className="relative">
+											<Input
+												id="file_upload"
+												type="file"
+												className="hidden"
+												accept="image/png, image/jpeg, image/gif, image/webp"
+												onChange={(event) => {
+												const file = event.currentTarget.files?.[0];
+												setSelectedFile(file || null);
+											}}
+											/>
+											<label
+												htmlFor="file_upload"
+												className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+											>
+											Datei auswählen
+										</label>
+										</div>
+										<p className="text-xs text-muted-foreground">
+											Max size: 2MB. Supported formats: PNG, JPG, GIF, WebP.
+									</p>
+									</div>
 										)}
 									</TabsContent>
 
