@@ -3,7 +3,7 @@ import multer from "multer";
 import os from "node:os";
 import internalWasmModule from "../../internal/wasm-module.js";
 import jwtDecode from "../../lib/express/jwt-decode.js";
-import validator from "../../lib/validator.js";
+import validator from "../../lib/validator/index.js";
 
 const router = express.Router({
 	caseSensitive: true,
