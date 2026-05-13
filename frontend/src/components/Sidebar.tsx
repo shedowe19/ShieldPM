@@ -31,6 +31,7 @@ import {
 	PROXY_HOSTS,
 	REDIRECTION_HOSTS,
 	type Section,
+	SETTINGS,
 	STREAMS,
 	TOR_ONIONS,
 	WIREGUARD_PEERS,
@@ -79,6 +80,12 @@ const menuItems: MenuItem[] = [
 				to: "/nginx/stream",
 				label: "streams",
 				permissionSection: STREAMS,
+				permission: VIEW,
+			},
+			{
+				to: "/nginx/wasm-modules",
+				label: "wasm-modules",
+				permissionSection: SETTINGS,
 				permission: VIEW,
 			},
 			{
