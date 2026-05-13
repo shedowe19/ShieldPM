@@ -49,17 +49,15 @@ export default function Table({ data, onDelete, onEdit }: Props) {
 				header: "Actions",
 				cell: ({ row }) => (
 					<div className="flex items-center gap-2">
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => onEdit(row.original.id)}>
+						<Button variant="ghost" size="icon" onClick={() => onEdit(row.original.id)}>
 							<IconEdit className="h-4 w-4" />
 						</Button>
 						<Button
 							variant="ghost"
 							size="icon"
 							className="text-destructive hover:text-destructive"
-							onClick={() => onDelete(row.original.id)}>
+							onClick={() => onDelete(row.original.id)}
+						>
 							<IconTrash className="h-4 w-4" />
 						</Button>
 					</div>

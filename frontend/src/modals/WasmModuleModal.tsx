@@ -119,7 +119,9 @@ export function WasmModuleModal({ id, visible, hide }: Props) {
 								}}
 							/>
 							{(errors as any).wasmFile && (
-								<div className="text-sm text-destructive">{(errors as any).wasmFile.message as string}</div>
+								<div className="text-sm text-destructive">
+									{(errors as any).wasmFile.message as string}
+								</div>
 							)}
 						</div>
 					)}
