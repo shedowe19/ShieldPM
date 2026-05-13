@@ -42,6 +42,28 @@ const up = async (knex) => {
 			});
 			logger.info(`[${migrateName}] 'description' column added to existing 'wasm_module' table`);
 		}
+		const hasFilename = await knex.schema.hasColumn("wasm_module", "filename");
+		if (!hasFilename) {
+			await knex.schema.table("wasm_module", (table) => {
+				table.string("filename").notNullable().defaultTo("");
+			});
+			logger.info(`[${migrateName}] 'filename' column added to existing 'wasm_module' table`);
+		}
+		const hasOwnerUserId = await knex.schema.hasColumn("wasm_module", "owner_user_id");
+		if (!hasOwnerUserId) {
+			await knex.schema.table("wasm_module", (table) => {
+				table.integer("owner_user_id").notNullable().unsigned().defaultTo(1);
+				table.index("owner_user_id");
+			});
+			logger.info(`[${migrateName}] 'owner_user_id' column added to existing 'wasm_module' table`);
+		}
+		const hasName = await knex.schema.hasColumn("wasm_module", "name");
+		if (!hasName) {
+			await knex.schema.table("wasm_module", (table) => {
+				table.string("name").notNullable().defaultTo("");
+			});
+			logger.info(`[${migrateName}] 'name' column added to existing 'wasm_module' table`);
+		}
 	}
 
 	const hasWasmModuleId = await knex.schema.hasColumn("proxy_host", "wasm_module_id");
