@@ -14,6 +14,7 @@ export const DDNS_PROVIDERS = "ddnsProviders";
 export const TOR_ONIONS = "torOnions";
 export const WIREGUARD_PEERS = "wireguardPeers";
 export const DASHBOARD_NOTES = "dashboardNotes";
+export const SETTINGS = "settings";
 
 export const MANAGE = "manage";
 export const VIEW = "view";
@@ -36,7 +37,8 @@ export type Section =
 	| typeof DDNS_PROVIDERS
 	| typeof TOR_ONIONS
 	| typeof WIREGUARD_PEERS
-	| typeof DASHBOARD_NOTES;
+	| typeof DASHBOARD_NOTES
+	| typeof SETTINGS;
 
 export type Permission = typeof MANAGE | typeof VIEW;
 

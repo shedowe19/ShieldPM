@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { WasmModule } from "src/api/backend/models";
-import api from "src/api/backend/api";
+import { apiClient } from "src/api/backend/base";
 
 const getWasmModules = async (expand: string[] = ["owner"]) => {
-	const params = expand.length ? `?expand=${expand.join(",")}` : "";
-	const response = await api.get(`/nginx/wasm-modules${params}`);
-	return response.data;
+	const params = expand.length ? { expand: expand.join(",") } : {};
+	return await apiClient.get<WasmModule[]>({ url: "/nginx/wasm-modules", params });
 };
 
 const useWasmModules = (options = {}) => {

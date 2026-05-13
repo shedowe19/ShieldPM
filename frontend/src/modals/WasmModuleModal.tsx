@@ -9,14 +9,11 @@ import { Textarea } from "src/components/ui/textarea";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { useWasmModule, useSetWasmModule } from "src/hooks";
-import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 import { Loading } from "src/components";
 
-export const showWasmModuleModal = EasyModal.create(WasmModuleModal);
-
 interface Props extends InnerModalProps {
-	id?: number | "new";
+	id: number | "new";
 }
 
 export function WasmModuleModal({ id, visible, hide }: Props) {
@@ -69,7 +66,7 @@ export function WasmModuleModal({ id, visible, hide }: Props) {
 
 		setWasmModule(submitData as any, {
 			onSuccess: () => {
-				showObjectSuccess(isNew ? "created" : "updated");
+				showObjectSuccess("wasm-module", isNew ? "created" : "updated");
 				hide();
 			},
 		});
@@ -121,8 +118,8 @@ export function WasmModuleModal({ id, visible, hide }: Props) {
 									}
 								}}
 							/>
-							{errors.wasmFile && (
-								<div className="text-sm text-destructive">{errors.wasmFile.message as string}</div>
+							{(errors as any).wasmFile && (
+								<div className="text-sm text-destructive">{(errors as any).wasmFile.message as string}</div>
 							)}
 						</div>
 					)}
@@ -140,3 +137,7 @@ export function WasmModuleModal({ id, visible, hide }: Props) {
 		</Dialog>
 	);
 }
+
+export const showWasmModuleModal = (id: number | "new") => {
+	EasyModal.show(WasmModuleModal, { id });
+};

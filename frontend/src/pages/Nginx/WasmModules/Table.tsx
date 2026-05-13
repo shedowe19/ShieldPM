@@ -1,10 +1,11 @@
 import { IconTrash, IconEdit } from "@tabler/icons-react";
-import React from "react";
+import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { useMemo } from "react";
 import type { WasmModule } from "src/api/backend";
-import { OwnerFormatter } from "src/components";
-import BaseTable from "src/components/Table/BaseTable";
-import { TableActions } from "src/components/Table/TableActions";
+import { UserAvatar } from "src/components";
+import { TableLayout } from "src/components/Table/TableLayout";
 import { DateFormatter } from "src/components/Table/Formatter/DateFormatter";
+import { Button } from "src/components/ui/button";
 
 interface Props {
 	data?: WasmModule[];
@@ -13,62 +14,66 @@ interface Props {
 	onEdit: (id: number) => void;
 }
 
-export default function Table({ data, isLoading, onDelete, onEdit }: Props) {
-	const columns = React.useMemo(
+export default function Table({ data, onDelete, onEdit }: Props) {
+	const columnHelper = createColumnHelper<WasmModule>();
+
+	const columns = useMemo(
 		() => [
-			{
+			columnHelper.accessor("owner", {
+				id: "owner",
+				header: "",
+				cell: (info) => {
+					const owner = info.getValue();
+					return <UserAvatar url={owner?.avatar} name={owner?.name} />;
+				},
+				meta: { className: "w-1" },
+			}),
+			columnHelper.accessor("name", {
 				header: "Name",
-				accessorKey: "name",
-			},
-			{
+				cell: (info) => info.getValue(),
+			}),
+			columnHelper.accessor("description", {
 				header: "Description",
-				accessorKey: "description",
-			},
-			{
+				cell: (info) => info.getValue(),
+			}),
+			columnHelper.accessor("filename", {
 				header: "File",
-				accessorKey: "filename",
-			},
-			{
-				header: "Owner",
-				accessorKey: "owner",
-				cell: ({ row }: any) => <OwnerFormatter owner={row.original.owner} />,
-			},
-			{
+				cell: (info) => info.getValue(),
+			}),
+			columnHelper.accessor("createdOn", {
 				header: "Created",
-				accessorKey: "createdOn",
-				cell: ({ getValue }: any) => <DateFormatter date={getValue()} />,
-			},
-			{
-				header: "Actions",
+				cell: (info) => <DateFormatter value={info.getValue()} />,
+			}),
+			columnHelper.display({
 				id: "actions",
-				cell: ({ row }: any) => (
-					<TableActions
-						items={[
-							{
-								label: "Edit",
-								icon: IconEdit,
-								onClick: () => onEdit(row.original.id),
-							},
-							{
-								label: "Delete",
-								icon: IconTrash,
-								variant: "destructive",
-								onClick: () => onDelete(row.original.id),
-							},
-						]}
-					/>
+				header: "Actions",
+				cell: ({ row }) => (
+					<div className="flex items-center gap-2">
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => onEdit(row.original.id)}>
+							<IconEdit className="h-4 w-4" />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="text-destructive hover:text-destructive"
+							onClick={() => onDelete(row.original.id)}>
+							<IconTrash className="h-4 w-4" />
+						</Button>
+					</div>
 				),
-			},
+			}),
 		],
-		[onDelete, onEdit],
+		[columnHelper, onDelete, onEdit],
 	);
 
-	return (
-		<BaseTable
-			data={data || []}
-			columns={columns}
-			isLoading={isLoading}
-			searchFields={["name", "description", "filename"]}
-		/>
-	);
+	const tableInstance = useReactTable({
+		data: data || [],
+		columns,
+		getCoreRowModel: getCoreRowModel(),
+	});
+
+	return <TableLayout tableInstance={tableInstance} />;
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { WasmModule } from "src/api/backend/models";
-import api from "src/api/backend/api";
+import { apiClient } from "src/api/backend/base";
 
 interface WasmModuleCreateValues {
 	name: string;
@@ -15,8 +15,7 @@ interface WasmModuleUpdateValues extends Partial<WasmModule> {
 type WasmModuleValues = WasmModuleCreateValues | WasmModuleUpdateValues;
 
 const getWasmModule = async (id: number): Promise<WasmModule> => {
-	const response = await api.get(`/nginx/wasm-modules/${id}`);
-	return response.data;
+	return await apiClient.get<WasmModule>({ url: `/nginx/wasm-modules/${id}` });
 };
 
 const createWasmModule = async (values: WasmModuleCreateValues): Promise<WasmModule> => {
@@ -26,18 +25,15 @@ const createWasmModule = async (values: WasmModuleCreateValues): Promise<WasmMod
 	if (values.wasmFile) {
 		formData.append("wasm_file", values.wasmFile);
 	}
-	const response = await api.post("/nginx/wasm-modules", formData);
-	return response.data;
+	return await apiClient.post<WasmModule>({ url: "/nginx/wasm-modules", data: formData });
 };
 
 const updateWasmModule = async (values: WasmModuleUpdateValues): Promise<WasmModule> => {
-	const response = await api.put(`/nginx/wasm-modules/${values.id}`, values);
-	return response.data;
+	return await apiClient.put<WasmModule>({ url: `/nginx/wasm-modules/${values.id}`, data: values });
 };
 
 const deleteWasmModule = async (id: number): Promise<boolean> => {
-	const response = await api.delete(`/nginx/wasm-modules/${id}`);
-	return response.data;
+	return await apiClient.delete<boolean>({ url: `/nginx/wasm-modules/${id}` });
 };
 
 const useWasmModule = (id: number, options = {}) => {

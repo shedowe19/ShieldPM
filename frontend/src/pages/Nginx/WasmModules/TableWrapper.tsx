@@ -33,8 +33,8 @@ export default function TableWrapper({ data, isLoading }: Props) {
 					onEdit={(id: number) => showWasmModuleModal(id)}
 					onDelete={(id: number) => {
 						showDeleteConfirmModal({
-							title: T({ id: "delete-wasm-module" }),
-							description: T({ id: "delete-wasm-module-confirm" }),
+							title: <T id="delete-wasm-module" />,
+							children: <T id="delete-wasm-module-confirm" />,
 							onConfirm: () => deleteWasmModule(id),
 						});
 					}}

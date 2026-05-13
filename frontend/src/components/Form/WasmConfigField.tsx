@@ -1,7 +1,7 @@
 import { Field, type FieldProps } from "formik";
 import { Label } from "src/components/ui/label";
 import { Textarea } from "src/components/ui/textarea";
-import { T } from "src/locale";
+import { T, intl } from "src/locale";
 
 interface Props {
 	id?: string;
@@ -16,7 +16,7 @@ export function WasmConfigField({ name = "wasmConfig", label, id = "wasmConfig" 
 					<Label htmlFor={id}>{label || <T id="wasm-module-arguments" />}</Label>
 					<Textarea
 						id={id}
-						placeholder={T({ id: "wasm-config-placeholder" })}
+						placeholder={intl.formatMessage({ id: "wasm-config-placeholder" })}
 						className="min-h-[200px] font-mono text-sm bg-[#1e1e1e] text-foreground"
 						{...field}
 					/>

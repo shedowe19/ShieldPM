@@ -122,4 +122,8 @@ const T = ({
 	);
 };
 
+export function useTranslator() {
+	return (id: string, values?: Record<string, string | number>) => intl.formatMessage({ id }, values);
+}
+
 export { localeOptions, getFlagCodeForLocale, getLocale, createIntl, changeLocale, intl, T };
