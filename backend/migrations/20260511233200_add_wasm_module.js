@@ -26,7 +26,22 @@ const up = async (knex) => {
 		});
 		logger.info(`[${migrateName}] 'wasm_module' table created`);
 	} else {
-		logger.info(`[${migrateName}] 'wasm_module' table already exists, skipping`);
+		logger.info(`[${migrateName}] 'wasm_module' table already exists, checking for missing columns...`);
+		// Ensure all required columns exist in case the table was created by an earlier incomplete migration
+		const hasIsDeleted = await knex.schema.hasColumn("wasm_module", "is_deleted");
+		if (!hasIsDeleted) {
+			await knex.schema.table("wasm_module", (table) => {
+				table.integer("is_deleted").notNullable().defaultTo(0);
+			});
+			logger.info(`[${migrateName}] 'is_deleted' column added to existing 'wasm_module' table`);
+		}
+		const hasDescription = await knex.schema.hasColumn("wasm_module", "description");
+		if (!hasDescription) {
+			await knex.schema.table("wasm_module", (table) => {
+				table.text("description").notNullable().defaultTo("");
+			});
+			logger.info(`[${migrateName}] 'description' column added to existing 'wasm_module' table`);
+		}
 	}
 
 	const hasWasmModuleId = await knex.schema.hasColumn("proxy_host", "wasm_module_id");

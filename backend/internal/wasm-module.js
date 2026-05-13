@@ -55,6 +55,7 @@ const internalWasmModule = {
 			name: data.name || file.originalname,
 			description: data.description || "",
 			filename: uniqueFilename,
+			is_deleted: 0,
 		};
 
 		const row = await WasmModule.query().insertAndFetch(moduleData);
