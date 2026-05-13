@@ -50,9 +50,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, isFil
 			columnHelper.accessor("description", {
 				id: "description",
 				header: intl.formatMessage({ id: "details" }),
-				cell: (info) => (
-					<span className="text-muted-foreground text-sm">{info.getValue() || "—"}</span>
-				),
+				cell: (info) => <span className="text-muted-foreground text-sm">{info.getValue() || "—"}</span>,
 			}),
 			columnHelper.accessor("filename", {
 				id: "filename",

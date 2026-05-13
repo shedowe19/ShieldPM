@@ -78,7 +78,10 @@ export default function TableWrapper() {
 							onClick={() => showWasmModuleModal("new")}
 						>
 							<IconPlus className="mr-2 h-4 w-4" />
-							<T id="object.add" tData={{ object: intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.WASM_MODULE }) }} />
+							<T
+								id="object.add"
+								tData={{ object: intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.WASM_MODULE }) }}
+							/>
 						</Button>
 					</HasPermission>
 				</div>
