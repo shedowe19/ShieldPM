@@ -32,6 +32,8 @@ const getColorClass = (color: string) => {
 			return "bg-blue-600 hover:bg-blue-700 text-white";
 		case "orange":
 			return "bg-orange-600 hover:bg-orange-700 text-white";
+		case "violet":
+			return "bg-violet-600 hover:bg-violet-700 text-white";
 		default:
 			return "bg-primary text-primary-foreground hover:bg-primary/90";
 	}

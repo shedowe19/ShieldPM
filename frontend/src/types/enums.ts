@@ -230,6 +230,7 @@ export const AUDIT_LOG_OBJECT_TYPE = {
 	SETTING: "setting",
 	DASHBOARD_NOTE: "dashboard_note",
 	TOR_ONION: "tor-onion",
+	WASM_MODULE: "wasm-module",
 } as const;
 export type AuditLogObjectType = (typeof AUDIT_LOG_OBJECT_TYPE)[keyof typeof AUDIT_LOG_OBJECT_TYPE];
 

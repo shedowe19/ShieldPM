@@ -586,5 +586,13 @@
 	"user.switch-dark": "切换到深色模式",
 	"user.switch-light": "切换到浅色模式",
 	"username": "用户名",
-	"users": "用户列表"
+	"users": "用户列表",
+	"wasm-module": "WASM Module",
+	"wasm-module-arguments": "Arguments",
+	"wasm-modules": "WASM Modules",
+	"add-wasm-module": "Add WASM Module",
+	"delete-wasm-module": "Delete WASM Module",
+	"delete-wasm-module-confirm": "Are you sure you want to delete this WASM module?",
+	"wasm-config-placeholder": "{\n  \"key\": \"value\"\n}",
+	"pages.nginx.wasmModules.title": "WASM Modules"
 }

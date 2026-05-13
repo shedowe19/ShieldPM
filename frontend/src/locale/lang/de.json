@@ -621,5 +621,13 @@
 	"wireguard.settings.port": "Listen-Port",
 	"wireguard.settings.subnet": "VPN-Subnetz",
 	"wireguard.settings.title": "WireGuard-Einstellungen",
-	"wireguard.title": "WireGuard Tunnel"
+	"wireguard.title": "WireGuard Tunnel",
+	"wasm-module": "WASM-Modul",
+	"wasm-module-arguments": "Argumente",
+	"wasm-modules": "WASM-Module",
+	"add-wasm-module": "WASM-Modul hinzufügen",
+	"delete-wasm-module": "WASM-Modul löschen",
+	"delete-wasm-module-confirm": "Soll dieses WASM-Modul wirklich gelöscht werden?",
+	"wasm-config-placeholder": "{\n  \"key\": \"value\"\n}",
+	"pages.nginx.wasmModules.title": "WASM-Module"
 }

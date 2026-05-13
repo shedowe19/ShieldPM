@@ -586,5 +586,13 @@
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
-	"users": "ユーザー"
+	"users": "ユーザー",
+	"wasm-module": "WASM Module",
+	"wasm-module-arguments": "Arguments",
+	"wasm-modules": "WASM Modules",
+	"add-wasm-module": "Add WASM Module",
+	"delete-wasm-module": "Delete WASM Module",
+	"delete-wasm-module-confirm": "Are you sure you want to delete this WASM module?",
+	"wasm-config-placeholder": "{\n  \"key\": \"value\"\n}",
+	"pages.nginx.wasmModules.title": "WASM Modules"
 }
