@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import os from "node:os";
 import internalWasmModule from "../../internal/wasm-module.js";
-import { jwtDecode } from "../../lib/express-middlewares.js";
+import jwtDecode from "../../lib/express/jwt-decode.js";
 import validator from "../../lib/validator.js";
 
 const router = express.Router({
