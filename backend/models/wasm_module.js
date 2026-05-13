@@ -1,6 +1,7 @@
 import { Model } from "objection";
 import db from "../db.js";
 import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
+import now from "./now_helper.js";
 
 Model.knex(db());
 
@@ -25,19 +26,19 @@ class WasmModule extends Model {
 	is_deleted;
 
 	$beforeInsert() {
-		this.created_on = new Date().toISOString();
-		this.modified_on = new Date().toISOString();
+		this.created_on = /** @type {any} */ (now());
+		this.modified_on = /** @type {any} */ (now());
 		convertBoolFieldsToInt(this, boolFields);
 	}
 
 	$beforeUpdate() {
-		this.modified_on = new Date().toISOString();
+		this.modified_on = /** @type {any} */ (now());
 		convertBoolFieldsToInt(this, boolFields);
 	}
 
-	$afterGet(context) {
-		super.$afterGet(context);
-		convertIntFieldsToBool(this, boolFields);
+	$parseDatabaseJson(json) {
+		const thisJson = super.$parseDatabaseJson(json);
+		return convertIntFieldsToBool(thisJson, boolFields);
 	}
 
 	static get tableName() {
