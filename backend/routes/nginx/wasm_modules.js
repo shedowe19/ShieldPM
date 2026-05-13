@@ -50,33 +50,32 @@ router
 	 *
 	 * Create a new WASM module
 	 */
-	.post(
-		jwtDecode(),
-		upload.single("wasm_file"),
-		validator({
-			type: "object",
-			properties: {
-				name: { type: "string" },
-				description: { type: "string" },
-			},
-			required: ["name"],
-		}),
-		async (req, res, next) => {
-			try {
-				if (!req.file) {
-					return res.status(400).send({
-						error: {
-							message: "WASM file is required",
-						},
-					});
-				}
-				const result = await internalWasmModule.create(res.locals.access, req.body, req.file);
-				res.status(201).send(result);
-			} catch (err) {
-				next(err);
+	.post(jwtDecode(), upload.single("wasm_file"), async (req, res, next) => {
+		try {
+			await validator(
+				{
+					type: "object",
+					properties: {
+						name: { type: "string" },
+						description: { type: "string" },
+					},
+					required: ["name"],
+				},
+				req.body,
+			);
+			if (!req.file) {
+				return res.status(400).send({
+					error: {
+						message: "WASM file is required",
+					},
+				});
 			}
-		},
-	);
+			const result = await internalWasmModule.create(res.locals.access, req.body, req.file);
+			res.status(201).send(result);
+		} catch (err) {
+			next(err);
+		}
+	});
 
 /**
  * Specific WASM module
@@ -108,28 +107,28 @@ router
 	 *
 	 * Update an existing WASM module
 	 */
-	.put(
-		jwtDecode(),
-		validator({
-			type: "object",
-			properties: {
-				id: { type: "integer" },
-				name: { type: "string" },
-				description: { type: "string" },
-			},
-			required: ["id", "name"],
-		}),
-		async (req, res, next) => {
-			try {
-				const id = Number.parseInt(req.params.id, 10);
-				const data = { ...req.body, id };
-				const result = await internalWasmModule.update(res.locals.access, data);
-				res.status(200).send(result);
-			} catch (err) {
-				next(err);
-			}
-		},
-	)
+	.put(jwtDecode(), async (req, res, next) => {
+		try {
+			const id = Number.parseInt(req.params.id, 10);
+			await validator(
+				{
+					type: "object",
+					properties: {
+						id: { type: "integer" },
+						name: { type: "string" },
+						description: { type: "string" },
+					},
+					required: ["id", "name"],
+				},
+				{ ...req.body, id },
+			);
+			const data = { ...req.body, id };
+			const result = await internalWasmModule.update(res.locals.access, data);
+			res.status(200).send(result);
+		} catch (err) {
+			next(err);
+		}
+	})
 
 	/**
 	 * DELETE /api/nginx/wasm-modules/:id
