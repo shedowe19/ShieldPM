@@ -37,10 +37,7 @@ const internalCertificate = {
 		const crtHours = Number.parseInt(process.env.CRT, 10);
 		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
 		logger.info(`Certbot Renewal Timer initialized (interval: ${intervalTimeout / 1000 / 60 / 60}h)`);
-		internalCertificate.interval = setInterval(
-			internalCertificate.processExpiringHosts,
-			intervalTimeout,
-		);
+		internalCertificate.interval = setInterval(internalCertificate.processExpiringHosts, intervalTimeout);
 		// And do this now as well
 		internalCertificate.processExpiringHosts();
 		await internalCertificate.cleanUpMissingCertificates();
