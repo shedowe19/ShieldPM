@@ -25,7 +25,7 @@ ARG TARGETARCH
 COPY backend /app
 WORKDIR /app
 # hadolint ignore=DL3016
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file curl && \
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file curl make g++ && \
     curl -L "https://github.com/TecharoHQ/anubis/releases/download/v1.25.0/anubis-1.25.0-linux-${TARGETARCH}.tar.gz" -o /tmp/anubis.tar.gz && \
     tar -xzf /tmp/anubis.tar.gz -C /app --strip-components=2 "anubis-1.25.0-linux-${TARGETARCH}/bin/anubis" && \
     rm /tmp/anubis.tar.gz && \
