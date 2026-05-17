@@ -594,6 +594,13 @@ const internalUser = {
 		const dataPath = process.env.DATA_PATH || "/data";
 		const filePath = path.join(dataPath, "avatars", user.avatar_value);
 
+		// SECURITY: Path traversal check — ensure resolved path stays within avatars dir
+		const resolvedPath = path.resolve(filePath);
+		const avatarDir = path.resolve(path.join(dataPath, "avatars"));
+		if (!resolvedPath.startsWith(avatarDir)) {
+			throw new Error("Invalid avatar path");
+		}
+
 		if (!fs.existsSync(filePath)) {
 			throw new errs.ItemNotFoundError("Avatar file missing");
 		}
