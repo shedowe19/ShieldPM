@@ -766,23 +766,37 @@ const internalCertificate = {
 	 */
 	checkPrivateKey: async (privateKey) => {
 		const filepath = await tempWrite(privateKey, "key.pem");
-		const failTimeout = setTimeout(() => {
-			throw new error.ValidationError(
-				"Result Validation Error: Validation timed out. This could be due to the key being passphrase-protected.",
-			);
-		}, 10000);
 
-		try {
+		const timeoutPromise = new Promise((_, reject) => {
+			setTimeout(
+				() =>
+					reject(
+						new error.ValidationError(
+							"Result Validation Error: Validation timed out. This could be due to the key being passphrase-protected.",
+						),
+					),
+				10000,
+			);
+		});
+
+		const checkPromise = (async () => {
 			const result = await utils.execFile("openssl", ["pkey", "-in", filepath, "-check", "-noout"]);
-			clearTimeout(failTimeout);
 			if (!result.toLowerCase().includes("key is valid")) {
 				throw new error.ValidationError(`Result Validation Error: ${result}`);
 			}
-			fs.unlinkSync(filepath);
 			return true;
-		} catch (err) {
-			clearTimeout(failTimeout);
+		})();
+
+		try {
+			const result = await Promise.race([checkPromise, timeoutPromise]);
 			fs.unlinkSync(filepath);
+			return result;
+		} catch (err) {
+			try {
+				fs.unlinkSync(filepath);
+			} catch {
+				/* ignore cleanup error */
+			}
 			throw new error.ValidationError(`Certificate Key is not valid (${err.message})`, err);
 		}
 	},
