@@ -10,7 +10,10 @@ import authSessionService from "./auth-session-service.js";
 const ERROR_MESSAGE_INVALID_AUTH = "Invalid email or password";
 const ERROR_MESSAGE_INVALID_AUTH_I18N = "error.invalid-auth";
 
-const DUMMY_HASH = "$2a$13$mzC9.T8Qed0f/M9.2v.9JO/1.1.1.1.1.1.1.1.1.1.1.1.1.1"; // Cost 13 (High)
+// Valid bcrypt hash (cost 13) used for timing-attack mitigation when a user does not exist or has no password auth.
+// bcrypt.compare() must actually run its full KDF work to prevent user-enumeration via response-time differences.
+// The old value was a malformed hash that caused bcrypt.compare() to throw immediately, defeating the mitigation.
+const DUMMY_HASH = "$2b$13$3w5sK5BtNWq/d7D6YQJfj.G2HM4.3roIvbxytInY6p3WiJjLfVdQ6"; // Cost 13
 
 export default {
 	/**
