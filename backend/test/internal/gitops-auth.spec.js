@@ -55,8 +55,6 @@ describe("Fix #64: revertToCommit requires settings:update permission", () => {
 	});
 
 	it("rejects with Forbidden for unauthorized callers", async () => {
-		await expect(
-			internalGitOps.revertToCommit(deniedAccess, "abc123"),
-		).rejects.toThrow("Forbidden");
+		await expect(internalGitOps.revertToCommit(deniedAccess, "abc123")).rejects.toThrow("Forbidden");
 	});
 });
