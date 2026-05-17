@@ -916,7 +916,7 @@ const internalGitOps = {
 									}
 								} else {
 									if (!options.overwrite) delete itemData.id;
-									if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId();
+									if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId(1);
 
 									let newRow;
 									if (relationGraph) {
