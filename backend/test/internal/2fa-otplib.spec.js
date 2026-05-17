@@ -10,10 +10,7 @@ describe("Fix #69: otplib v13 uses standalone exports", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync(
-			"/Projekte/ShieldPM/backend/internal/2fa-service.js",
-			"utf8",
-		);
+		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/2fa-service.js", "utf8");
 	});
 
 	it("imports otplib standalone functions (generateSecret, generateURI, verifySync)", () => {
