@@ -5,6 +5,47 @@ import DdnsProvider from "../models/ddns_provider.js";
 let timer = null;
 const INTERVAL = 1000 * 60; // 60 seconds
 
+/**
+ * Validate URL is publicly routable (SSRF protection)
+ * @param {string} urlStr
+ * @throws {Error} if URL points to private/internal resource
+ */
+const validatePublicUrl = (urlStr) => {
+	const parsed = new URL(urlStr);
+	const hostname = parsed.hostname;
+
+	// Only allow HTTP(S)
+	if (!["http:", "https:"].includes(parsed.protocol)) {
+		throw new Error(`SSRF: Only HTTP(S) protocols allowed, got ${parsed.protocol}`);
+	}
+
+	// Block localhost and loopback
+	if (["localhost", "127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(hostname)) {
+		throw new Error("SSRF: Localhost URLs are not allowed");
+	}
+
+	// Block cloud metadata endpoints
+	if (hostname === "169.254.169.254" || hostname === "169.254.170.2" || hostname === "100.100.100.100") {
+		throw new Error("SSRF: Cloud metadata URLs are not allowed");
+	}
+
+	// Check private IP ranges
+	const isPrivateIP = (ip) => {
+		const parts = ip.split(".").map(Number);
+		if (parts.length === 4) {
+			if (parts[0] === 10) return true;
+			if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+			if (parts[0] === 192 && parts[1] === 168) return true;
+			if (parts[0] === 127) return true;
+		}
+		return false;
+	};
+
+	if (isPrivateIP(hostname)) {
+		throw new Error("SSRF: Private IP addresses are not allowed");
+	}
+};
+
 // Track last known IPs to avoid log spam
 let lastKnownIps = { ipv4: null, ipv6: null };
 
@@ -106,6 +147,9 @@ const providers = {
 		else finalUrl = finalUrl.replace(/{IPv6}/g, "");
 
 		finalUrl = finalUrl.replace(/{DOMAIN}/g, provider.domains.join(","));
+
+		// SSRF protection — validate URL before fetching
+		validatePublicUrl(finalUrl);
 
 		const res = await fetch(finalUrl);
 		if (!res.ok) {
