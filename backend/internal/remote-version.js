@@ -5,6 +5,27 @@ import pjson from "../package.json" with { type: "json" };
 
 const VERSION_URL = "https://api.github.com/repos/shedowe19/ShieldPM/releases/latest";
 
+/**
+ * Compare two semver version strings.
+ * @param {string} a
+ * @param {string} b
+ * @returns {number} -1 if a < b, 0 if equal, 1 if a > b
+ */
+const compareVersions = (a, b) => {
+	// Strip leading 'v' if present (GitHub tag_name is 'v1.2.3')
+	a = a.replace(/^v/, "");
+	b = b.replace(/^v/, "");
+	const partsA = a.split(".").map(Number);
+	const partsB = b.split(".").map(Number);
+	for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+		const nA = partsA[i] ?? 0;
+		const nB = partsB[i] ?? 0;
+		if (nA < nB) return -1;
+		if (nA > nB) return 1;
+	}
+	return 0;
+};
+
 const internalRemoteVersion = {
 	cache_timeout: 1000 * 60 * 60 * 24, // 1 day
 	last_result: null,
@@ -40,7 +61,7 @@ const internalRemoteVersion = {
 		return {
 			current: currentVersion,
 			latest: latestVersion,
-			update_available: !currentVersion.startsWith(latestVersion) && currentVersion.length >= 13,
+			update_available: compareVersions(currentVersion, latestVersion) < 0,
 		};
 	},
 
