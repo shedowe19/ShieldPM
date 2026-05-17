@@ -95,3 +95,33 @@ describe("Fix #59: internalNginx.getLogs", () => {
 		expect(readFileSpy).toHaveBeenCalledWith(expect.stringContaining("error.log"), "utf8");
 	});
 });
+
+describe("Fix #63: DISABLE_NGINX_BEAUTIFIER env var logic", () => {
+	it("beautifier runs when env var is unset (default on)", () => {
+		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(true);
+	});
+
+	it("beautifier is disabled when DISABLE_NGINX_BEAUTIFIER=true", () => {
+		process.env.DISABLE_NGINX_BEAUTIFIER = "true";
+		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(false);
+		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	});
+
+	it("beautifier runs when DISABLE_NGINX_BEAUTIFIER=false (explicitly enabled)", () => {
+		process.env.DISABLE_NGINX_BEAUTIFIER = "false";
+		expect(process.env.DISABLE_NGINX_BEAUTIFIER !== "true").toBe(true);
+		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	});
+
+	it("OLD bug: === 'false' was always truthy when var was unset or set to 'true'", () => {
+		// When unset: undefined === 'false' → false (beautifier would NOT run — wrong!)
+		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+		expect(process.env.DISABLE_NGINX_BEAUTIFIER === "false").toBe(false);
+
+		// When set to 'true' to disable: 'true' === 'false' → false (beautifier would NOT run — accidentally correct, but wrong reason)
+		process.env.DISABLE_NGINX_BEAUTIFIER = "true";
+		expect(process.env.DISABLE_NGINX_BEAUTIFIER === "false").toBe(false);
+		delete process.env.DISABLE_NGINX_BEAUTIFIER;
+	});
+});

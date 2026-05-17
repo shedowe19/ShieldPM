@@ -297,7 +297,7 @@ const internalNginx = {
 			throw new errs.ConfigurationError(err.message);
 		}
 
-		if (process.env.DISABLE_NGINX_BEAUTIFIER === "false") {
+		if (process.env.DISABLE_NGINX_BEAUTIFIER !== "true") {
 			try {
 				await utils.execFile("nginxbeautifier", ["-s", "4", filename]);
 			} catch {
