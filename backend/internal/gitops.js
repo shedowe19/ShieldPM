@@ -3,6 +3,7 @@ import path from "node:path";
 import git from "isomorphic-git";
 import http from "isomorphic-git/http/node";
 import yaml from "js-yaml";
+import _ from "lodash";
 import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
@@ -21,6 +22,39 @@ import internalNginx from "./nginx.js";
 
 const GITOPS_DIR = "/data/gitops";
 const CONFIG_SUBDIR = "shieldpm-config";
+
+/**
+ * Whitelist of allowed import fields per model.
+ * Only fields listed here are imported from YAML; all others are ignored.
+ * This prevents injection of arbitrary DB fields via malicious YAML content.
+ */
+const ALLOWED_IMPORT_FIELDS = {
+	User: ["id", "email", "nickname", "password", "role", "otp_enabled", "otp_secret", "allowed_ids", "last_login", "last_failed_login", "failed_login_count", "is_deleted", "owner_user_id"],
+	Certificate: ["id", "nice_name", "domain_names", "provider", "expires_on", "is_deleted", "owner_user_id"],
+	AccessList: ["id", "name", "items", "clients", "is_deleted", "owner_user_id"],
+	ProxyHost: ["id", "domain_names", "forward_host", "forward_port", "forward_scheme", "access_list_id", "http_options", "ssl_options", "nginx_options", "nginx_settings", "is_deleted", "owner_user_id"],
+	RedirectionHost: ["id", "domain_names", "target_url", "redirect_code", "access_list_id", "is_deleted", "owner_user_id"],
+	DeadHost: ["id", "domain_names", "alternative_target_url", "mode", "is_deleted", "owner_user_id"],
+	Stream: ["id", "incoming_port", "target_url", "stream_type", "access_list_id", "is_deleted", "owner_user_id"],
+	CloudflaredTunnel: ["id", "name", "tunnel_id", "created_at", "is_deleted", "owner_user_id"],
+	DdnsProvider: ["id", "name", "provider", "config", "is_deleted", "owner_user_id"],
+	Setting: ["id", "value", "meta"],
+};
+
+/**
+ * Sanitize data object by picking only allowed fields.
+ * @param {string} modelName - Model name (key in ALLOWED_IMPORT_FIELDS)
+ * @param {any} data - Raw data object from YAML
+ * @returns {any} Sanitized object with only allowed fields
+ */
+const sanitizeImportData = (modelName, data) => {
+	const allowed = ALLOWED_IMPORT_FIELDS[modelName];
+	if (!allowed) {
+		logger.warn(`GitOps: Unknown model "${modelName}" — skipping import.`);
+		return null;
+	}
+	return _.pick(data, allowed);
+};
 
 /**
  * @typedef {Object} GitOpsConfig
@@ -810,6 +844,15 @@ const internalGitOps = {
 
 							if (data && typeof data === "object") {
 								const itemData = /** @type {any} */ (data);
+
+								// Apply field whitelist validation to prevent DB field injection
+								const sanitized = sanitizeImportData(modelClass.name, itemData);
+								if (!sanitized) {
+									errors.push(`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`);
+									return;
+								}
+								Object.assign(itemData, sanitized);
+
 								const existingId = itemData.id;
 
 								if (existingId) {
@@ -930,6 +973,15 @@ const internalGitOps = {
 							const data = yaml.load(content);
 							if (data && typeof data === "object") {
 								const settingData = /** @type {any} */ (data);
+
+								// Apply field whitelist validation for settings
+								const sanitized = sanitizeImportData("Setting", settingData);
+								if (!sanitized) {
+									errors.push(`settings/${file}: No valid fields allowed`);
+									return;
+								}
+								Object.assign(settingData, sanitized);
+
 								if (settingData.id === "gitops-config") return;
 
 								const existing = await settingModel.query().findById(settingData.id);
@@ -1199,5 +1251,9 @@ const internalGitOps = {
 		}, 5000);
 	},
 };
+
+// Attach sanitization helpers for testing
+internalGitOps.ALLOWED_IMPORT_FIELDS = ALLOWED_IMPORT_FIELDS;
+internalGitOps.sanitizeImportData = sanitizeImportData;
 
 export default internalGitOps;
