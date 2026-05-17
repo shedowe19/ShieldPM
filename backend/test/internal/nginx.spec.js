@@ -40,10 +40,7 @@ describe("Fix #59: internalNginx.getLogs", () => {
 		const access = makeAccess();
 		const result = await internalNginx.getLogs(access, "error");
 		expect(result).toContain("[error]");
-		expect(readFileSpy).toHaveBeenCalledWith(
-			expect.stringContaining("error.log"),
-			"utf8",
-		);
+		expect(readFileSpy).toHaveBeenCalledWith(expect.stringContaining("error.log"), "utf8");
 	});
 
 	it("returns access log contents for log_type='access'", async () => {
@@ -51,10 +48,7 @@ describe("Fix #59: internalNginx.getLogs", () => {
 		const access = makeAccess();
 		const result = await internalNginx.getLogs(access, "access");
 		expect(result).toContain("200");
-		expect(readFileSpy).toHaveBeenCalledWith(
-			expect.stringContaining("access.log"),
-			"utf8",
-		);
+		expect(readFileSpy).toHaveBeenCalledWith(expect.stringContaining("access.log"), "utf8");
 	});
 
 	it("returns friendly message when log file does not exist", async () => {
@@ -83,9 +77,6 @@ describe("Fix #59: internalNginx.getLogs", () => {
 		readFileSpy.mockResolvedValueOnce("error log content");
 		const access = makeAccess();
 		await internalNginx.getLogs(access, "unknown_type");
-		expect(readFileSpy).toHaveBeenCalledWith(
-			expect.stringContaining("error.log"),
-			"utf8",
-		);
+		expect(readFileSpy).toHaveBeenCalledWith(expect.stringContaining("error.log"), "utf8");
 	});
 });
