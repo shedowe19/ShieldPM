@@ -9,10 +9,7 @@ describe("Fix #72: SSRF protection", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync(
-			"/Projekte/ShieldPM/backend/internal/ddns.js",
-			"utf8",
-		);
+		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/ddns.js", "utf8");
 	});
 
 	it("has validatePublicUrl helper function", () => {
@@ -21,7 +18,7 @@ describe("Fix #72: SSRF protection", () => {
 
 	it("blocks non-HTTP protocols", () => {
 		// Only HTTP(S) allowed
-		expect(source).toContain('Only HTTP(S) protocols allowed');
+		expect(source).toContain("Only HTTP(S) protocols allowed");
 	});
 
 	it("blocks localhost/loopback", () => {
