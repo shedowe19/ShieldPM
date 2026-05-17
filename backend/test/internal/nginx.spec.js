@@ -78,20 +78,14 @@ describe("Fix #59: internalNginx.getLogs", () => {
 		const access = makeAccess();
 		const result = await internalNginx.getLogs(access, "json_access");
 		expect(result).toContain("http_host");
-		expect(readFileSpy).toHaveBeenCalledWith(
-			expect.stringContaining("json_access.log"),
-			"utf8",
-		);
+		expect(readFileSpy).toHaveBeenCalledWith(expect.stringContaining("json_access.log"), "utf8");
 	});
 
 	it("returns stream log for log_type='stream'", async () => {
 		readFileSpy.mockResolvedValueOnce("stream log content");
 		const access = makeAccess();
 		await internalNginx.getLogs(access, "stream");
-		expect(readFileSpy).toHaveBeenCalledWith(
-			expect.stringContaining("stream.log"),
-			"utf8",
-		);
+		expect(readFileSpy).toHaveBeenCalledWith(expect.stringContaining("stream.log"), "utf8");
 	});
 
 	it("defaults to error log for unknown log_type", async () => {
