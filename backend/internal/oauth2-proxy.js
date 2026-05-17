@@ -170,10 +170,8 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 
 			const child = spawn("oauth2-proxy", [`--config=${configFile}`], {
 				stdio: ["ignore", "pipe", "pipe"],
-				detached: true,
-			});
-
-			child.unref(); // allow node to exit without waiting for this child
+				detached: false,
+			}); // allow node to exit without waiting for this child
 
 			processes.set(list.id, child);
 
