@@ -98,7 +98,12 @@ vi.mock("../../models/user-2fa-backup-codes.js", () => ({
 				resultSize: vi.fn(() => Promise.resolve(fakeBackupCodeRows.length)),
 			})),
 			insert: vi.fn((rows) => {
-				fakeBackupCodeRows.push(...rows);
+				if (Array.isArray(rows)) {
+					fakeBackupCodeRows.push(...rows);
+				} else {
+					// Single row object (as passed by regenerateBackupCodes after map)
+					fakeBackupCodeRows.push(rows);
+				}
 				return Promise.resolve();
 			}),
 		})),
@@ -118,14 +123,24 @@ vi.mock("../../models/user.js", () => ({
 
 // ── Mock: otplib ────────────────────────────────────────────────────────────
 
-vi.mock("otplib", () => ({
-	authenticator: {
+vi.mock("otplib", async (importOriginal) => {
+	const actual = await importOriginal();
+	return {
+		...actual,
+		authenticator: {
+			generateSecret: vi.fn(() => "JBSWY3DPEHPK3PXP"),
+			generateUri: vi.fn((opts) =>
+				`otpauth://totp/${opts.issuer}:${opts.label}?secret=${opts.secret}&issuer=${opts.issuer}`,
+			),
+			verify: vi.fn(() => true),
+		},
 		generateSecret: vi.fn(() => "JBSWY3DPEHPK3PXP"),
-		keyuri: vi.fn(() => "otpauth://totp/ShieldPM:test@example.com?secret=JBSWY3DPEHPK3PXP"),
-		verify: vi.fn(() => true),
-	},
-	generateSecret: vi.fn(() => "JBSWY3DPEHPK3PXP"),
-}));
+		generateURI: vi.fn((opts) =>
+			`otpauth://totp/${opts.issuer}:${opts.label}?secret=${opts.secret}&issuer=${opts.issuer}`,
+		),
+		verifySync: vi.fn(() => ({ valid: true })),
+	};
+});
 
 // ── Mock: qrcode ────────────────────────────────────────────────────────────
 
@@ -309,7 +324,7 @@ describe("2fa-service", () => {
 
 	describe("beginPasskeyRegistration", () => {
 		it("returns WebAuthn options and a challengeId", async () => {
-			const result = await twoFaService.beginPasskeyRegistration(1, "test@example.com");
+			const result = await twoFaService.beginPasskeyRegistration(1, "test@example.com", { headers: { origin: "https://app.shieldpm.local" }, protocol: "https", hostname: "app.shieldpm.local" });
 			expect(result).toHaveProperty("options");
 			expect(result).toHaveProperty("challengeId");
 			expect(typeof result.challengeId).toBe("string");
@@ -320,7 +335,7 @@ describe("2fa-service", () => {
 	describe("completePasskeyRegistration", () => {
 		it("throws ValidationError when challenge record is not found", async () => {
 			await expect(
-				twoFaService.completePasskeyRegistration(1, "invalid-challenge-id", {}, "My Key"),
+				twoFaService.completePasskeyRegistration(1, "invalid-challenge-id", {}, { headers: { origin: "https://app.shieldpm.local" }, protocol: "https", hostname: "app.shieldpm.local" }, "My Key"),
 			).rejects.toMatchObject({
 				name: "ValidationError",
 				message: expect.stringContaining("not found"),
@@ -330,7 +345,7 @@ describe("2fa-service", () => {
 
 	describe("beginPasskeyAuthentication", () => {
 		it("throws ValidationError when no passkeys are registered", async () => {
-			await expect(twoFaService.beginPasskeyAuthentication(1)).rejects.toMatchObject({
+			await expect(twoFaService.beginPasskeyAuthentication(1, { headers: { origin: "https://app.shieldpm.local" }, protocol: "https", hostname: "app.shieldpm.local" })).rejects.toMatchObject({
 				name: "ValidationError",
 				message: expect.stringContaining("No passkeys"),
 			});
