@@ -837,7 +837,7 @@ export const executeTools = async (access, toolCalls) => {
 				// Auth & Tokens
 				case "login_as_user": {
 					const loginResult = await internalUser.loginAs(access, { id: call.args.id });
-					result = `Logged in as User ${call.args.id}. Token: ${loginResult.token}`;
+					result = `Logged in as User ${call.args.id}. Session created successfully.`;
 					break;
 				}
 				case "create_api_token": {
@@ -847,7 +847,7 @@ export const executeTools = async (access, toolCalls) => {
 						scope: "user", // Default scope as user
 						expiry: expiry,
 					});
-					result = `Created API Token: ${newToken.token}`;
+					result = `Created API Token successfully. Token ID: ${newToken.id}`;
 					break;
 				}
 				case "create_client_certificate": {
