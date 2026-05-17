@@ -16,6 +16,36 @@ const torPasswordFile = `${dataPath}/shieldpm/tor-control-password`;
  * @param {string} command
  * @returns {Promise<string>}
  */
+/**
+ * Validate Tor service parameters to prevent protocol injection.
+ * Tor Control Protocol is line-based (\r\n-separated).
+ * Malicious values with \r\n could inject additional commands.
+ */
+const validateServiceParams = (service) => {
+	// Validate virtual_port: must be a valid integer port
+	const vPort = parseInt(service.virtual_port, 10);
+	if (isNaN(vPort) || vPort < 1 || vPort > 65535) {
+		throw new Error(`Invalid virtual_port: ${service.virtual_port}. Must be 1-65535.`);
+	}
+
+	// Validate target_port: must be a valid integer port
+	const tPort = parseInt(service.target_port, 10);
+	if (isNaN(tPort) || tPort < 1 || tPort > 65535) {
+		throw new Error(`Invalid target_port: ${service.target_port}. Must be 1-65535.`);
+	}
+
+	// Validate private_key: no control characters allowed
+	if (service.private_key) {
+		if (/[\r\n\0]/.test(service.private_key)) {
+			throw new Error("Invalid private_key: control characters not allowed.");
+		}
+		// Basic format check for ED25519-V3 keys
+		if (!/^ED25519-V3:[A-Za-z0-9+/=]+$/.test(service.private_key)) {
+			throw new Error("Invalid private_key: malformed ED25519-V3 key.");
+		}
+	}
+};
+
 const sendCommand = (command) => {
 	return new Promise((resolve, reject) => {
 		const socket = createConnection(torControlPort, torControlHost, () => {
@@ -237,6 +267,9 @@ const internalTor = {
 		try {
 			await service.$query().patch({ status: 1 }); // Starting
 
+			// SECURITY: Validate service params to prevent protocol injection
+			validateServiceParams(service);
+
 			// Create new onion service with ED25519-V3 key
 			const command = `ADD_ONION NEW:ED25519-V3 Flags=Detach Port=${service.virtual_port},127.0.0.1:${service.target_port}`;
 			const response = await sendAuthenticatedCommand(command);
@@ -292,6 +325,9 @@ const internalTor = {
 
 		try {
 			await service.$query().patch({ status: 1 }); // Starting
+
+			// SECURITY: Validate service params to prevent protocol injection
+			validateServiceParams(service);
 
 			// Re-add onion service with existing private key
 			const command = `ADD_ONION ${service.private_key} Flags=Detach Port=${service.virtual_port},127.0.0.1:${service.target_port}`;
