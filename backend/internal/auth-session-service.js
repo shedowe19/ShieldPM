@@ -199,7 +199,7 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 			.whereNull("rotated_at")
 			.whereNull("replaced_by_session_id");
 
-		if (!updatedRows) {
+		if (updatedRows === 0) {
 			await revokeFamily(session.family_id, "refresh_token_rotation_race", trx);
 			throw new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE);
 		}
