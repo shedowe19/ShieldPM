@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import { global as logger } from "../logger.js";
 import settingModel from "../models/setting.js";
@@ -67,7 +67,49 @@ const exec = (cmd, silent = false) => {
 		}
 		throw err;
 	}
-};
+}
+	/**
+	 * Execute a command with data piped via stdin (no shell expansion).
+	 * Prevents command injection when stdin data is untrusted.
+	 * @param {string} command - The command to run (no shell metacharacters)
+	 * @param {string} stdinData - Data to pipe into stdin
+	 * @param {boolean} silent - Suppress error logging
+	 * @returns {Promise<string>}
+	 */
+	const execStdin = (command, stdinData, silent = false) => {
+		return new Promise((resolve, reject) => {
+			const [cmd, ...args] = command.split(" ");
+			const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+			let stdout = "";
+			let stderr = "";
+
+			child.stdout.on("data", (data) => {
+				stdout += data.toString();
+			});
+			child.stderr.on("data", (data) => {
+				stderr += data.toString();
+			});
+			child.on("close", (code) => {
+				if (code === 0) {
+					resolve(stdout.trim());
+				} else {
+					if (!silent) {
+						logger.error(`WireGuard execStdin failed: ${command}`, stderr || "non-zero exit");
+					}
+					reject(new Error(`execStdin failed: ${command}`));
+				}
+			});
+			child.on("error", (err) => {
+				if (!silent) {
+					logger.error(`WireGuard execStdin error: ${command}`, err.message);
+				}
+				reject(err);
+			});
+
+			child.stdin.write(stdinData);
+			child.stdin.end();
+		});
+	};
 
 /**
  * Check if `wg` CLI is available
@@ -86,9 +128,9 @@ const isWgAvailable = () => {
  * Generate a WireGuard key pair
  * @returns {{ privateKey: string, publicKey: string }}
  */
-const generateKeyPair = () => {
+const generateKeyPair = async () => {
 	const privateKey = exec("wg genkey");
-	const publicKey = exec(`echo "${privateKey}" | wg pubkey`);
+	const publicKey = await execStdin("wg pubkey", privateKey);
 	return { privateKey, publicKey };
 };
 
@@ -123,14 +165,14 @@ const getNextAvailableIP = async (subnet) => {
 /**
  * Ensure the WG data directory and server keys exist
  */
-const ensureServerKeys = () => {
+const ensureServerKeys = async () => {
 	if (!fs.existsSync(wgDataDir)) {
 		fs.mkdirSync(wgDataDir, { recursive: true });
 	}
 
 	if (!fs.existsSync(serverKeyFile)) {
 		logger.info("WireGuard: Generating new server key pair...");
-		const { privateKey, publicKey } = generateKeyPair();
+		const { privateKey, publicKey } = await generateKeyPair();
 		fs.writeFileSync(serverKeyFile, privateKey, { mode: 0o600 });
 		fs.writeFileSync(serverPubKeyFile, publicKey, { mode: 0o644 });
 		logger.info("WireGuard: Server key pair generated");
@@ -149,14 +191,14 @@ const getServerPrivateKey = () => {
  * Read server public key
  * @returns {string}
  */
-const getServerPublicKey = () => {
+const getServerPublicKey = async () => {
 	if (fs.existsSync(serverPubKeyFile)) {
 		return fs.readFileSync(serverPubKeyFile, "utf-8").trim();
 	}
 	// Derive from private key
 	const privateKey = getServerPrivateKey();
-	const publicKey = exec(`echo "${privateKey}" | wg pubkey`);
-	fs.writeFileSync(serverPubKeyFile, publicKey, { mode: 0o644 });
+	const publicKey = await execStdin("wg pubkey", privateKey);
+	await fs.promises.writeFile(serverPubKeyFile, publicKey, { mode: 0o644 });
 	return publicKey;
 };
 
@@ -398,8 +440,8 @@ const internalWireguard = {
 		}
 
 		try {
-			ensureServerKeys();
-			const publicKey = getServerPublicKey();
+			await ensureServerKeys();
+			const publicKey = await getServerPublicKey();
 			const endpointDisplay = settings.endpoint ? `${settings.endpoint}:${settings.listen_port}` : null;
 
 			return {
@@ -434,13 +476,13 @@ const internalWireguard = {
 			throw new Error("WireGuard is not available on this system");
 		}
 
-		ensureServerKeys();
+		await ensureServerKeys();
 		const settings = await getWgSettings();
 
 		// Generate keys
-		const clientKeys = generateKeyPair();
+		const clientKeys = await generateKeyPair();
 		const presharedKey = generatePresharedKey();
-		const serverPublicKey = getServerPublicKey();
+		const serverPublicKey = await getServerPublicKey();
 		const clientAddress = await getNextAvailableIP(settings.subnet);
 		const endpoint = settings.endpoint ? `${settings.endpoint}:${settings.listen_port}` : null;
 
