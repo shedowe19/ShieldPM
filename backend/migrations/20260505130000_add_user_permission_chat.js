@@ -42,4 +42,4 @@ const down = async (knex) => {
 	logger.info(`[${migrateName}] Migration complete`);
 };
 
-export { up, down };
+export { down, up };

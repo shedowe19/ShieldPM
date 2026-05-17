@@ -57,4 +57,4 @@ const down = async (knex) => {
 	logger.info(`[${migrateName}] Table '${tableName}' dropped`);
 };
 
-export { up, down };
+export { down, up };

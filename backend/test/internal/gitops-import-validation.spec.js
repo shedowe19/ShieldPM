@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Fix #65: YAML import must validate fields against a whitelist.
@@ -41,8 +41,6 @@ vi.mock("isomorphic-git", () => ({
 vi.mock("isomorphic-git/http/node", () => ({ default: {} }));
 
 import internalGitOps from "../../internal/gitops.js";
-import fs from "node:fs";
-import path from "node:path";
 
 // Mock fs to simulate YAML files
 const mockFiles = {};
@@ -70,7 +68,7 @@ const mockFs = {
 vi.stubGlobal("fs", mockFs);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const mockAccess = {
+const _mockAccess = {
 	can: vi.fn().mockResolvedValue(true),
 	token: { getUserId: () => 1 },
 };

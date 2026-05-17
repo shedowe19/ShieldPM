@@ -87,7 +87,13 @@ upstreams = [ "static://200" ]
 
 # Restrict redirect domains to configured allowed domains
 # If no domains configured, only allow redirects to same origin
-${(meta.oauth2_allowed_email_domains || "").split(",").map(d => `whitelist_domains = ["${d.trim()}"]`).join("\n") || "whitelist_domains = ["$host"]}
+	${(() => {
+		const allowed = meta.oauth2_allowed_email_domains || "";
+		if (!allowed) return `whitelist_domains = ["$host"]`;
+		const domains = allowed.split(",").filter((d) => d.trim());
+		if (!domains.length) return `whitelist_domains = ["$host"]`;
+		return domains.map((d) => `whitelist_domains = ["${d.trim()}"]`).join("\n");
+	})()}
 
 email_domains = [
 ${(meta.oauth2_allowed_email_domains || "*")

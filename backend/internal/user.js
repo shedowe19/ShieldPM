@@ -254,7 +254,7 @@ const internalUser = {
 		let row = await query;
 		row = /** @type {any} */ (_.omit(row, omissions()));
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		// Custom omissions

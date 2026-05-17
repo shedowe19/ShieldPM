@@ -56,4 +56,4 @@ const down = (_db) => {
 	return Promise.resolve(true);
 };
 
-export { up, down };
+export { down, up };

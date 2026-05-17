@@ -25,4 +25,4 @@ const down = (_knex) => {
 	return Promise.resolve();
 };
 
-export { up, down };
+export { down, up };

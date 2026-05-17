@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import dayjs from "dayjs";
 import { Tail } from "tail";
-import { analytics as logger } from "../logger.js";
 import errs from "../lib/error.js";
+import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
 import ProxyHost from "../models/proxy_host.js";

@@ -65,4 +65,4 @@ const down = async (_knex) => {
 	// For now, leaving empty to avoid conflict with the original migration's down script.
 };
 
-export { up, down };
+export { down, up };

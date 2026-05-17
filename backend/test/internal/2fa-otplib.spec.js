@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach } from "vitest";
 import fs from "node:fs";
+import { beforeEach, describe, expect, it } from "vitest";
 
 /**
  * Fix #69: Verify otplib v13 uses standalone exports correctly.

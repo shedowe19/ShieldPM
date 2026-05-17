@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import fs from "node:fs";
+import { beforeEach, describe, expect, it } from "vitest";
 
 /**
  * Fix #70: chat.js — warn when allowed_ids is not configured

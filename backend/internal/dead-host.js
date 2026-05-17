@@ -219,7 +219,7 @@ const internalDeadHost = {
 
 		let row = await query;
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
@@ -243,7 +243,7 @@ const internalDeadHost = {
 		const thisData = /** @type {any} */ (data);
 		await access.can("dead_hosts:delete", thisData.id);
 		const row = await internalDeadHost.get(access, { id: thisData.id });
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
@@ -283,7 +283,7 @@ const internalDeadHost = {
 			id: thisData.id,
 			expand: ["certificate", "owner"],
 		});
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		if (row.enabled) {
@@ -325,7 +325,7 @@ const internalDeadHost = {
 		const thisData = /** @type {any} */ (data);
 		await access.can("dead_hosts:update", thisData.id);
 		const row = await internalDeadHost.get(access, { id: thisData.id });
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		if (!row.enabled) {

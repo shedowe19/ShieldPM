@@ -248,7 +248,7 @@ const internalStream = {
 		let row = await query;
 		row = utils.omitRow(omissions())(row);
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		row = internalHost.cleanRowCertificateMeta(row);
@@ -270,7 +270,7 @@ const internalStream = {
 		await access.can("streams:delete", data.id);
 		const row = await internalStream.get(access, { id: data.id });
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
@@ -310,7 +310,7 @@ const internalStream = {
 			expand: ["certificate", "owner"],
 		});
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 		if (row.enabled) {
@@ -353,7 +353,7 @@ const internalStream = {
 		await access.can("streams:update", data.id);
 		const row = await internalStream.get(access, { id: data.id });
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 		if (!row.enabled) {

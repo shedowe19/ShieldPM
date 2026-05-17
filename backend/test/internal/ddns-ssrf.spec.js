@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
+import { beforeEach, describe, expect, it } from "vitest";
 
 /**
  * Fix #72: SSRF protection in ddns.js custom provider

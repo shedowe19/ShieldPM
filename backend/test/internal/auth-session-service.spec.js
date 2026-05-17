@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
+import { describe, expect, it } from "vitest";
 
 /**
  * Fix #67: Knex patch() returns row count (number), not an object.

@@ -47,4 +47,4 @@ const down = (knex) => {
 	return knex.schema.dropTable("terminal_host");
 };
 
-export { up, down };
+export { down, up };

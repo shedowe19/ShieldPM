@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs";
+import { beforeEach, describe, expect, it } from "vitest";
 
 /**
  * Fix #73: setting.js — only allow value and meta fields in patch

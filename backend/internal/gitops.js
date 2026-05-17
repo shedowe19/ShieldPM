@@ -1043,7 +1043,7 @@ const internalGitOps = {
 
 				const restoreFile = async (src, dest) => {
 					const stats = await getSafeStats(src);
-					if (!stats || !stats.isFile()) {
+					if (!stats?.isFile()) {
 						return false;
 					}
 
@@ -1073,7 +1073,7 @@ const internalGitOps = {
 					for (const domain of domains) {
 						const srcDir = path.join(leDir, domain);
 						const srcDirStats = await getSafeStats(srcDir);
-						if (!srcDirStats || !srcDirStats.isDirectory()) {
+						if (!srcDirStats?.isDirectory()) {
 							continue;
 						}
 

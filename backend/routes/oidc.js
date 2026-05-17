@@ -74,7 +74,7 @@ router
 	.all(oidcRateLimiter)
 	.post(async (req, res) => {
 		try {
-			if (!req.headers || !req.headers.cookie) {
+			if (!req.headers?.cookie) {
 				throw new errs.AuthError("No cookie provided");
 			}
 
@@ -172,7 +172,7 @@ const getInitParams = async (settings) => {
  * @return { {String}, {String} } nonce and state
  * */
 const parseValuesFromCookie = (req) => {
-	if (!req.headers || !req.headers.cookie) {
+	if (!req.headers?.cookie) {
 		return { nonce: undefined, state: undefined };
 	}
 	let nonce;

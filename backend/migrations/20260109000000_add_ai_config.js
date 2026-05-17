@@ -49,4 +49,4 @@ const down = async (knex) => {
 	await knex("setting").where("id", "ai-config").delete();
 };
 
-export { up, down };
+export { down, up };

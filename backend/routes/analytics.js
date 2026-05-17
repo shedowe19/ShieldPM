@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import express from "express";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
+
 const router = express.Router();
 
 // Apply auth to all analytics endpoints
@@ -141,6 +142,7 @@ router.get("/top-hosts", async (req, res) => {
  * Returns real-time system status (Network Bandwidth)
  */
 import si from "systeminformation";
+
 router.get("/status", async (_req, res) => {
 	try {
 		const net = await si.networkStats();
@@ -160,6 +162,7 @@ router.get("/status", async (_req, res) => {
 		});
 	}
 });
+
 import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
 
 /**

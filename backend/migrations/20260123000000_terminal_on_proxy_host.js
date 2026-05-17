@@ -138,4 +138,4 @@ const down = async (knex) => {
 	logger.info(`[${migrateName}] Reverted migration`);
 };
 
-export { up, down };
+export { down, up };

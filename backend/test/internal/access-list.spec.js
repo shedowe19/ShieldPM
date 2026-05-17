@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import fs from "node:fs";
+import { beforeEach, describe, expect, it } from "vitest";
 
 /**
  * Fix #68: Race condition in access-list.js — insert was happening BEFORE delete.

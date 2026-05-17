@@ -45,4 +45,4 @@ const down = (knex) => {
 	return knex.schema.dropTable("tor_onion");
 };
 
-export { up, down };
+export { down, up };

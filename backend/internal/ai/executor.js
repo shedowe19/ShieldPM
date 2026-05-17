@@ -836,7 +836,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Auth & Tokens
 				case "login_as_user": {
-					const loginResult = await internalUser.loginAs(access, { id: call.args.id });
+					const _loginResult = await internalUser.loginAs(access, { id: call.args.id });
 					result = `Logged in as User ${call.args.id}. Session created successfully.`;
 					break;
 				}

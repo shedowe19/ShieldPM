@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
 import express from "express";
+import internalAnalytics from "../../internal/analytics.js";
 import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import AnalyticCount from "../../models/analytic_count.js";
-import internalAnalytics from "../../internal/analytics.js";
 
 const router = express.Router({
 	mergeParams: true,

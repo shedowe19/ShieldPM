@@ -311,7 +311,7 @@ const parsePeerStatuses = () => {
 			}
 		}
 	} catch (err) {
-		logger.error("WireGuard: parsePeerStatuses failed: " + err.message);
+		logger.error(`WireGuard: parsePeerStatuses failed: ${err.message}`);
 	}
 	return statuses;
 };
@@ -337,7 +337,7 @@ const internalWireguard = {
 			exec("iptables -F FORWARD", true);
 			exec("iptables -t nat -F POSTROUTING", true);
 			exec("iptables -t mangle -F POSTROUTING", true);
-		} catch (e) {
+		} catch (_e) {
 			// Might fail if not installed or restricted, continue anyway
 		}
 

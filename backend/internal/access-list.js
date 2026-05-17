@@ -178,7 +178,7 @@ const internalAccessList = {
 			const itemsToKeep = [];
 
 			// Re-implementation of the loop to run hashes concurrently
-			const itemPromises = data.items.map(async (item) => {
+			const _itemPromises = data.items.map(async (item) => {
 				if (item.password) {
 					let finalPass = item.password;
 					if (!finalPass.startsWith("$2")) {
@@ -308,7 +308,7 @@ const internalAccessList = {
 
 		let row = await query;
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
@@ -345,7 +345,7 @@ const internalAccessList = {
 		// If the user intended to modify an existing `insertAndFetch` call, that call is not present here.
 		// Therefore, no change is made at this specific location to avoid syntax errors.
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 

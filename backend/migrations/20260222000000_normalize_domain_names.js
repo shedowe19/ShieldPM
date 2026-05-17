@@ -86,4 +86,4 @@ const down = async (knex) => {
 	logger.info(`[${migrateName}] Dropped host_domain table.`);
 };
 
-export { up, down };
+export { down, up };

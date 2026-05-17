@@ -369,7 +369,7 @@ class DockerService {
 
 			if (sslProvider === "letsencrypt" && !manualCertId) {
 				try {
-					if (!existingHost || !existingHost.certificate_id || labels["shieldpm.force_new_cert"]) {
+					if (!existingHost?.certificate_id || labels["shieldpm.force_new_cert"]) {
 						logger.info(
 							`Docker Auto-Discovery: Requesting Let's Encrypt Certificate for ${domains.join(", ")}...`,
 						);

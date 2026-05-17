@@ -36,4 +36,4 @@ const down = (knex) => {
 	});
 };
 
-export { up, down };
+export { down, up };

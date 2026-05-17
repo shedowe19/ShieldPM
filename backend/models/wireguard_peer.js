@@ -97,7 +97,7 @@ class WireguardPeer extends Model {
 				boolJson.last_handshake = boolJson.last_handshake.toISOString();
 			} else if (typeof boolJson.last_handshake === "string" && !boolJson.last_handshake.includes("Z")) {
 				// Replace space with T and append Z to mark it as UTC
-				boolJson.last_handshake = boolJson.last_handshake.replace(" ", "T") + "Z";
+				boolJson.last_handshake = `${boolJson.last_handshake.replace(" ", "T")}Z`;
 			}
 		}
 

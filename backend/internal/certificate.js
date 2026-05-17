@@ -9,9 +9,9 @@ import error from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
 import certificateModel from "../models/certificate.js";
+import deadHostModel from "../models/dead_host.js";
 import proxyHostModel from "../models/proxy_host.js";
 import redirectionHostModel from "../models/redirection_host.js";
-import deadHostModel from "../models/dead_host.js";
 import streamModel from "../models/stream.js";
 import internalAuditLog from "./audit-log.js";
 import * as certbot from "./certbot.js";
@@ -429,7 +429,7 @@ const internalCertificate = {
 		}
 
 		const row = await query.then(/** @type {any} */ (utils.omitRow(omissions())));
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new error.ItemNotFoundError(thisData.id);
 		}
 		// Custom omissions
@@ -535,7 +535,7 @@ const internalCertificate = {
 		await access.can("certificates:delete", data.id);
 		const row = await internalCertificate.get(access, { id: data.id });
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new error.ItemNotFoundError(data.id);
 		}
 
@@ -877,7 +877,7 @@ const internalCertificate = {
 						}
 					}
 				}
-			} catch (err) {
+			} catch (_err) {
 				// Certificate might not have SANs, ignore error
 			}
 

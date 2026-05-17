@@ -30,7 +30,7 @@ vi.mock("isomorphic-git/http/node", () => ({ default: {} }));
 import internalGitOps from "../../internal/gitops.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const allowedAccess = { can: vi.fn().mockResolvedValue(true) };
+const _allowedAccess = { can: vi.fn().mockResolvedValue(true) };
 const deniedAccess = {
 	can: vi.fn().mockRejectedValue(new Error("Forbidden")),
 };

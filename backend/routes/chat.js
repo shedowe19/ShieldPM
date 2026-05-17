@@ -1,7 +1,7 @@
 import express from "express";
 import internalChat from "../internal/chat.js";
-import errs from "../lib/error.js";
 import { encrypt } from "../lib/encryption.js";
+import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import ChatIntegrationModel from "../models/chat_integration.js";

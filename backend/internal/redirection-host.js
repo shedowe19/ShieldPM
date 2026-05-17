@@ -245,7 +245,7 @@ const internalRedirectionHost = {
 		let row = await query;
 		row = utils.omitRow(omissions())(row);
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		row = internalHost.cleanRowCertificateMeta(row);
@@ -267,7 +267,7 @@ const internalRedirectionHost = {
 		await access.can("redirection_hosts:delete", data.id);
 		const row = await internalRedirectionHost.get(access, { id: data.id });
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
@@ -307,7 +307,7 @@ const internalRedirectionHost = {
 			expand: ["certificate", "owner"],
 		});
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 		if (row.enabled) {
@@ -350,7 +350,7 @@ const internalRedirectionHost = {
 		await access.can("redirection_hosts:update", data.id);
 		const row = await internalRedirectionHost.get(access, { id: data.id });
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 		if (!row.enabled) {

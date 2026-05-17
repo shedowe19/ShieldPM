@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import bcrypt from "bcryptjs";
+import { describe, expect, it } from "vitest";
 
 /**
  * Fix #61: DUMMY_HASH in token.js must be a valid bcrypt hash so that

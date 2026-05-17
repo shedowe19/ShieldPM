@@ -58,4 +58,4 @@ const convertBoolFieldsToInt = (obj, fields) => {
  */
 const castJsonIfNeed = (colName) => (isPostgres() ? ref(colName).castText() : colName);
 
-export { parseDatePeriod, convertIntFieldsToBool, convertBoolFieldsToInt, castJsonIfNeed };
+export { castJsonIfNeed, convertBoolFieldsToInt, convertIntFieldsToBool, parseDatePeriod };

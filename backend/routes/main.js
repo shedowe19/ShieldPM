@@ -3,6 +3,7 @@ import { isDemoMode } from "../lib/config.js";
 import errs from "../lib/error.js";
 import pjson from "../package.json" with { type: "json" };
 import { isSetup } from "../setup.js";
+import twoFaRoutes from "./2fa.js";
 import aiRoutes from "./ai.js";
 import analyticsRoutes from "./analytics.js";
 import auditLogRoutes from "./audit-log.js";
@@ -26,7 +27,6 @@ import schemaRoutes from "./schema.js";
 import servicesRoutes from "./services.js";
 import settingsRoutes from "./settings.js";
 import tokensRoutes from "./tokens.js";
-import twoFaRoutes from "./2fa.js";
 import usersRoutes from "./users.js";
 import versionRoutes from "./version.js";
 

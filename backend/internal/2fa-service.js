@@ -7,20 +7,20 @@
 
 import crypto from "node:crypto";
 import https from "node:https";
-import bcrypt from "bcryptjs";
-import qrcode from "qrcode";
-import { generateSecret, generateURI, verifySync } from "otplib";
-import {
-	generateRegistrationOptions,
-	verifyRegistrationResponse,
-	generateAuthenticationOptions,
-	verifyAuthenticationResponse,
-} from "@simplewebauthn/server";
 import { Client as DuoClient } from "@duosecurity/duo_universal";
+import {
+	generateAuthenticationOptions,
+	generateRegistrationOptions,
+	verifyAuthenticationResponse,
+	verifyRegistrationResponse,
+} from "@simplewebauthn/server";
+import bcrypt from "bcryptjs";
+import { generateSecret, generateURI, verifySync } from "otplib";
+import qrcode from "qrcode";
 import errs from "../lib/error.js";
+import userModel from "../models/user.js";
 import UserTwoFa from "../models/user-2fa.js";
 import UserTwoFaBackupCode from "../models/user-2fa-backup-codes.js";
-import userModel from "../models/user.js";
 
 const APP_NAME = "ShieldPM";
 const BACKUP_CODE_COUNT = 8;

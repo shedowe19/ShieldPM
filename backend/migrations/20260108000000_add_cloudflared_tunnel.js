@@ -41,4 +41,4 @@ const down = (knex) => {
 	return knex.schema.dropTable("cloudflared_tunnel");
 };
 
-export { up, down };
+export { down, up };

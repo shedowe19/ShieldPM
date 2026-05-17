@@ -262,14 +262,14 @@ const getEncryptionKey = () => {
 };
 
 export {
-	isDestructiveTestMode,
-	configHas,
 	configGet,
-	isSqlite,
-	isMysql,
-	isPostgres,
+	configHas,
+	getEncryptionKey,
 	getPrivateKey,
 	getPublicKey,
-	getEncryptionKey,
 	isDemoMode,
+	isDestructiveTestMode,
+	isMysql,
+	isPostgres,
+	isSqlite,
 };

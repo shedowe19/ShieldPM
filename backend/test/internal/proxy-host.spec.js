@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 /**
  * Fix #60: proxy-host.js get() — _.omit must operate on the cleaned row (thisRow)
  * not on the raw uncleaned row, to prevent certificate private-key material leaking.
@@ -8,6 +6,7 @@ import { describe, expect, it } from "vitest";
  * by reproducing the exact three-line pattern that was broken.
  */
 import _ from "lodash";
+import { describe, expect, it } from "vitest";
 
 // Simulate cleanRowCertificateMeta (mirrors host.js implementation)
 const cleanRowCertificateMeta = (row) => {

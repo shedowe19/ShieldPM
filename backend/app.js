@@ -1,14 +1,14 @@
-import cookieParser from "cookie-parser";
 import crypto from "node:crypto";
+import cookieParser from "cookie-parser";
 import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
-import { getCompiledSchema } from "./schema/index.js";
 import analyticsService from "./internal/analytics.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
+import { getCompiledSchema } from "./schema/index.js";
 import { isSetup } from "./setup.js";
 
 // Initialize Analytics Service (starts tailing logs)
@@ -253,7 +253,7 @@ app.use(checkDemoMode);
 app.use("/api", globalApiLimiter);
 
 // Compile OpenAPI schema once (dereferences $refs)
-const swaggerSpec = await getCompiledSchema();
+const _swaggerSpec = await getCompiledSchema();
 
 // Serve raw OpenAPI spec at /docs/swagger.json (before swagger-ui catch-all)
 app.get("/docs/swagger.json", async (_req, res) => {

@@ -41,7 +41,7 @@ const _cleanupOAuth2Proxy = async (accessListId) => {
 	if (!accessListId) return;
 	try {
 		const list = await AccessList.query().where("id", accessListId).where("is_deleted", 0).first();
-		if (!list || !list.meta || (list.meta.auth_type !== "oauth2_proxy" && list.meta.authType !== "oauth2_proxy")) {
+		if (!list?.meta || (list.meta.auth_type !== "oauth2_proxy" && list.meta.authType !== "oauth2_proxy")) {
 			return;
 		}
 		// Check if any other active proxy host still uses this access list
@@ -380,7 +380,7 @@ const internalProxyHost = {
 		let row = await query;
 		row = utils.omitRow(omissions())(row);
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		const thisRow = internalHost.cleanRowCertificateMeta(row);
@@ -402,7 +402,7 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:delete", data.id);
 		const row = await internalProxyHost.get(access, { id: data.id });
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
@@ -453,7 +453,7 @@ const internalProxyHost = {
 			expand: ["certificate", "owner", "access_list", "host_domains"],
 		});
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 		if (row.enabled) {
@@ -496,7 +496,7 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:update", data.id);
 		const row = await internalProxyHost.get(access, { id: data.id });
 
-		if (!row || !row.id) {
+		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 		if (!row.enabled) {
