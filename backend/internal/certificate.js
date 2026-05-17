@@ -27,16 +27,19 @@ const omissions = () => {
 
 const internalCertificate = {
 	allowedSslFiles: ["certificate", "certificate_key", "intermediate_certificate"],
-	intervalTimeout: 1000 * 60 * 60 * Number.parseInt(process.env.CRT, 10),
 	interval: null,
 	intervalProcessing: false,
 	processing: false,
 
 	initTimer: async () => {
-		logger.info("Certbot Renewal Timer initialized");
+		// Defer CRT env var parsing to runtime so NaN is never set at module load time.
+		// Falls back to 72 hours if CRT is unset or not a valid integer.
+		const crtHours = Number.parseInt(process.env.CRT, 10);
+		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
+		logger.info(`Certbot Renewal Timer initialized (interval: ${intervalTimeout / 1000 / 60 / 60}h)`);
 		internalCertificate.interval = setInterval(
 			internalCertificate.processExpiringHosts,
-			internalCertificate.intervalTimeout,
+			intervalTimeout,
 		);
 		// And do this now as well
 		internalCertificate.processExpiringHosts();
