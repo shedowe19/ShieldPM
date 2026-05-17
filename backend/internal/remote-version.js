@@ -13,10 +13,10 @@ const VERSION_URL = "https://api.github.com/repos/shedowe19/ShieldPM/releases/la
  */
 const compareVersions = (a, b) => {
 	// Strip leading 'v' if present (GitHub tag_name is 'v1.2.3')
-	a = a.replace(/^v/, "");
-	b = b.replace(/^v/, "");
-	const partsA = a.split(".").map(Number);
-	const partsB = b.split(".").map(Number);
+	const versionA = a.replace(/^v/, "");
+	const versionB = b.replace(/^v/, "");
+	const partsA = versionA.split(".").map(Number);
+	const partsB = versionB.split(".").map(Number);
 	for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
 		const nA = partsA[i] ?? 0;
 		const nB = partsB[i] ?? 0;
