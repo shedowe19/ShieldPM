@@ -48,14 +48,14 @@ import path from "node:path";
 const mockFiles = {};
 const mockFs = {
 	existsSync: (p) => mockFiles[p] !== undefined,
-	readdir: (p) => Promise.resolve(Object.keys(mockFiles).filter(k => k.startsWith(p))),
+	readdir: (p) => Promise.resolve(Object.keys(mockFiles).filter((k) => k.startsWith(p))),
 	readFile: async (p) => {
 		if (mockFiles[p]) return mockFiles[p];
 		throw new Error("File not found");
 	},
 	promises: {
 		existsSync: (p) => mockFiles[p] !== undefined,
-		readdir: (p) => Promise.resolve(Object.keys(mockFiles).filter(k => k.startsWith(p))),
+		readdir: (p) => Promise.resolve(Object.keys(mockFiles).filter((k) => k.startsWith(p))),
 		readFile: async (p) => {
 			if (mockFiles[p]) return mockFiles[p];
 			throw new Error("File not found");
@@ -189,11 +189,22 @@ describe("Fix #65: YAML import field whitelist validation", () => {
 			arbitrary_field: "REMOVED",
 			another_field: 999,
 		});
-		expect(Object.keys(result).sort()).toEqual([
-			"access_list_id", "domain_names", "forward_host", "forward_port",
-			"forward_scheme", "http_options", "id", "is_deleted", "nginx_options",
-			"nginx_settings", "owner_user_id", "ssl_options",
-		].sort());
+		expect(Object.keys(result).sort()).toEqual(
+			[
+				"access_list_id",
+				"domain_names",
+				"forward_host",
+				"forward_port",
+				"forward_scheme",
+				"http_options",
+				"id",
+				"is_deleted",
+				"nginx_options",
+				"nginx_settings",
+				"owner_user_id",
+				"ssl_options",
+			].sort(),
+		);
 		expect(result.arbitrary_field).toBeUndefined();
 	});
 });

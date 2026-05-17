@@ -29,11 +29,46 @@ const CONFIG_SUBDIR = "shieldpm-config";
  * This prevents injection of arbitrary DB fields via malicious YAML content.
  */
 const ALLOWED_IMPORT_FIELDS = {
-	User: ["id", "email", "nickname", "password", "role", "otp_enabled", "otp_secret", "allowed_ids", "last_login", "last_failed_login", "failed_login_count", "is_deleted", "owner_user_id"],
+	User: [
+		"id",
+		"email",
+		"nickname",
+		"password",
+		"role",
+		"otp_enabled",
+		"otp_secret",
+		"allowed_ids",
+		"last_login",
+		"last_failed_login",
+		"failed_login_count",
+		"is_deleted",
+		"owner_user_id",
+	],
 	Certificate: ["id", "nice_name", "domain_names", "provider", "expires_on", "is_deleted", "owner_user_id"],
 	AccessList: ["id", "name", "items", "clients", "is_deleted", "owner_user_id"],
-	ProxyHost: ["id", "domain_names", "forward_host", "forward_port", "forward_scheme", "access_list_id", "http_options", "ssl_options", "nginx_options", "nginx_settings", "is_deleted", "owner_user_id"],
-	RedirectionHost: ["id", "domain_names", "target_url", "redirect_code", "access_list_id", "is_deleted", "owner_user_id"],
+	ProxyHost: [
+		"id",
+		"domain_names",
+		"forward_host",
+		"forward_port",
+		"forward_scheme",
+		"access_list_id",
+		"http_options",
+		"ssl_options",
+		"nginx_options",
+		"nginx_settings",
+		"is_deleted",
+		"owner_user_id",
+	],
+	RedirectionHost: [
+		"id",
+		"domain_names",
+		"target_url",
+		"redirect_code",
+		"access_list_id",
+		"is_deleted",
+		"owner_user_id",
+	],
 	DeadHost: ["id", "domain_names", "alternative_target_url", "mode", "is_deleted", "owner_user_id"],
 	Stream: ["id", "incoming_port", "target_url", "stream_type", "access_list_id", "is_deleted", "owner_user_id"],
 	CloudflaredTunnel: ["id", "name", "tunnel_id", "created_at", "is_deleted", "owner_user_id"],
@@ -848,7 +883,9 @@ const internalGitOps = {
 								// Apply field whitelist validation to prevent DB field injection
 								const sanitized = sanitizeImportData(modelClass.name, itemData);
 								if (!sanitized) {
-									errors.push(`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`);
+									errors.push(
+										`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
+									);
 									return;
 								}
 								Object.assign(itemData, sanitized);
