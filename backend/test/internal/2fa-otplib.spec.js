@@ -1,13 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import fs from "node:fs";
 
 /**
- * Fix #69: otplib v12+ API changed. verifySync is not a standalone export.
- * Must use authenticator.verify() instead. Also generateSecret/generateURI
- * are now authenticator.generateSecret()/authenticator.generateUri().
+ * Fix #69: Verify otplib v13 uses standalone exports correctly.
+ * otplib v13 provides generateSecret, generateURI, verifySync as top-level
+ * named exports (NOT via an `authenticator` namespace object).
  */
-
-describe("Fix #69: otplib API uses authenticator namespace", () => {
+describe("Fix #69: otplib v13 uses standalone exports", () => {
 	let source;
 
 	beforeEach(() => {
@@ -17,37 +16,25 @@ describe("Fix #69: otplib API uses authenticator namespace", () => {
 		);
 	});
 
-	it("imports authenticator from otplib (not standalone functions)", () => {
-		// The old import was: import { generateSecret, generateURI, verifySync } from "otplib";
-		// The fix imports: import { authenticator } from "otplib";
-		expect(source).toContain('import { authenticator } from "otplib"');
-		// verifySync must not appear anywhere (no such standalone export)
-		expect(source).not.toContain('verifySync');
-		// generateSecret must only appear as authenticator.generateSecret()
-		// not as a standalone import
-		expect(source).not.toMatch(/^\s*import.+\bgenerateSecret/m);
-		// generateURI must only appear as authenticator.generateUri()
-		// not as a standalone import
-		expect(source).not.toMatch(/^\s*import.+\bgenerateURI\b/m);
+	it("imports otplib standalone functions (generateSecret, generateURI, verifySync)", () => {
+		expect(source).toContain('import { generateSecret, generateURI, verifySync } from "otplib"');
 	});
 
-	it("uses authenticator.verify() for TOTP verification", () => {
-		// verifyAndEnableTotp must use authenticator.verify({ token, secret })
-		expect(source).toContain('authenticator.verify({ token: code, secret: record.secret })');
+	it("uses generateSecret() for secret generation", () => {
+		expect(source).toContain("generateSecret()");
 	});
 
-	it("uses authenticator.generateSecret() for secret generation", () => {
-		// setupTotp must use authenticator.generateSecret()
-		expect(source).toContain("authenticator.generateSecret()");
+	it("uses generateURI() for URI generation", () => {
+		expect(source).toContain("generateURI({");
 	});
 
-	it("uses authenticator.generateUri() for URI generation", () => {
-		// setupTotp must use authenticator.generateUri()
-		expect(source).toContain("authenticator.generateUri(");
+	it("uses verifySync().valid for TOTP verification", () => {
+		// Both verifyAndEnableTotp and verifyTotp use verifySync({ token, secret }).valid
+		expect(source).toContain("verifySync({ token: code, secret: record.secret }).valid");
 	});
 
-	it("no references to non-existent standalone verifySync function", () => {
-		// verifySync must not appear anywhere
-		expect(source).not.toContain("verifySync");
+	it("does not use non-existent authenticator namespace", () => {
+		// The incorrect import that was tried:
+		expect(source).not.toContain('import { authenticator } from "otplib"');
 	});
 });
