@@ -84,6 +84,10 @@ const createLeadCert = async (data, outDir) => {
 		}
 	}
 
+	if (!data.domain_names || data.domain_names.length === 0) {
+		throw new Error("At least one domain name is required for certificate creation");
+	}
+
 	const keyPath = path.join(outDir, "privkey.pem");
 	const csrPath = path.join(outDir, "request.csr");
 	const certPath = path.join(outDir, "fullchain.pem"); // Nginx expects fullchain usually, but here it's just the leaf + root maybe?
