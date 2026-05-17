@@ -10,7 +10,7 @@ const internalCloudflared = {
 	 */
 	init: async () => {
 		logger.info("Initializing Cloudflared Tunnels...");
-		const tunnels = await CloudflaredTunnel.query();
+		const tunnels = await CloudflaredTunnel.query().where("is_deleted", 0);
 		for (const tunnel of tunnels) {
 			// Reset status to stopped on boot, then start
 			await /** @type {any} */ (tunnel).$query().patch({ status: 0 });
