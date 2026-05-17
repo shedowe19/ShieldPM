@@ -12,8 +12,7 @@ const internalDdnsProvider = {
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		// Basic permission check - assuming any logged in user can create
-		// Ideally: await access.can("ddns_providers:create", data);
+		await access.can("ddns_providers:create", data);
 
 		const thisData = _.cloneDeep(data);
 		thisData.owner_user_id = access.token.getUserId(1);
@@ -110,6 +109,8 @@ const internalDdnsProvider = {
 	 * @returns {Promise}
 	 */
 	delete: async (access, data) => {
+		await access.can("ddns_providers:delete", { id: data.id });
+
 		const provider = await /** @type {any} */ (DdnsProvider).query().findById(data.id);
 
 		if (!provider) {
