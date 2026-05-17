@@ -68,6 +68,12 @@ const internalChat = {
 				const userId = ctx.from?.id;
 				const allowedIds = integration.config?.allowed_ids || [];
 
+				// Warn when allowed_ids is not configured — otherwise all access is silently denied
+				if (!integration.config?.allowed_ids?.length) {
+					logger.warn("[ChatOps] WARNING: allowed_ids is not configured — all access denied");
+					return;
+				}
+
 				// Check if user is allowed
 				// allowed_ids store strings or numbers, so loose check is safer or cast to string
 				const isAllowed = allowedIds.some((id) => String(id) === String(userId));
