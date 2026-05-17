@@ -657,10 +657,15 @@ const internalGitOps = {
 			// Update last sync time — patch only necessary fields, never spread
 			// the full config object to avoid accidentally overwriting encrypted_credentials
 			// with [REDACTED] if getConfig() was used instead of getConfigInternal()
-			await settingModel.query().where("id", "gitops-config").patch({
-				last_sync: new Date().toISOString(),
-				last_error: null,
-			});
+			// Update only last_sync/last_error fields within the meta JSON.
+			// Using a raw expression to JSON-merge only those fields, without
+			// touching encrypted_credentials or other meta fields.
+			await settingModel.query().where("id", "gitops-config").patch(
+				settingModel.knex().raw(
+					"meta = JSON_MERGE_PATCH(COALESCE(meta, '{}'), ?)",
+					JSON.stringify({ last_sync: new Date().toISOString(), last_error: null }),
+				),
+			);
 
 			logger.info(`GitOps: Committed and pushed ${sha}`);
 			return { success: true, commit: sha };
@@ -669,9 +674,12 @@ const internalGitOps = {
 			logger.error("GitOps commit/push failed:", err);
 
 			// Update error state — patch only last_error, not entire config
-			await settingModel.query().where("id", "gitops-config").patch({
-				last_error: errorMessage,
-			});
+			await settingModel.query().where("id", "gitops-config").patch(
+				settingModel.knex().raw(
+					"meta = JSON_MERGE_PATCH(COALESCE(meta, '{}'), ?)",
+					JSON.stringify({ last_error: errorMessage }),
+				),
+			);
 
 			return { success: false, message: errorMessage };
 		}
@@ -722,10 +730,15 @@ const internalGitOps = {
 			});
 
 			// Update last sync time
-			await settingModel.query().where("id", "gitops-config").patch({
-				last_sync: new Date().toISOString(),
-				last_error: null,
-			});
+			// Update only last_sync/last_error fields within the meta JSON.
+			// Using a raw expression to JSON-merge only those fields, without
+			// touching encrypted_credentials or other meta fields.
+			await settingModel.query().where("id", "gitops-config").patch(
+				settingModel.knex().raw(
+					"meta = JSON_MERGE_PATCH(COALESCE(meta, '{}'), ?)",
+					JSON.stringify({ last_sync: new Date().toISOString(), last_error: null }),
+				),
+			);
 
 			logger.info("GitOps: Pulled from remote");
 			return { success: true, message: "Pull successful" };
