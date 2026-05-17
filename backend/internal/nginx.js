@@ -442,6 +442,30 @@ const internalNginx = {
 	 * @returns {boolean}
 	 */
 	advancedConfigHasDefaultLocation: (cfg) => !!cfg.match(/^(?:.*;)?\s*?location\s*?\/\s*?{/im),
+
+	/**
+	 * Read nginx log file contents.
+	 * @param   {Access}  access
+	 * @param   {"error"|"access"}  logType
+	 * @returns {Promise<string>}
+	 */
+	getLogs: async (access, logType) => {
+		await access.can("settings:read");
+		const dataPath = process.env.DATA_PATH || "/data";
+		const logPaths = {
+			error: `${dataPath}/logs/error.log`,
+			access: `${dataPath}/logs/access.log`,
+		};
+		const logPath = logPaths[logType] || logPaths.error;
+		try {
+			return await fs.promises.readFile(logPath, "utf8");
+		} catch (err) {
+			if (err.code === "ENOENT") {
+				return `Log file not found: ${logPath}`;
+			}
+			throw err;
+		}
+	},
 };
 
 export default internalNginx;
