@@ -558,7 +558,7 @@ const internalWireguard = {
 			return false;
 		}
 
-		await peer.$query().delete();
+		await peer.$query().patch({ is_deleted: 1 });
 
 		// Re-sync config
 		await syncConfig();
