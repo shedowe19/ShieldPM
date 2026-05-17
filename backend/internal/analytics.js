@@ -159,8 +159,14 @@ class AnalyticsService {
 			});
 
 			this.applyBackpressure();
-		} catch (_err) {
-			// Ignore parse errors
+		} catch (err) {
+			// Only ignore parse errors for individual log lines
+			if (err instanceof SyntaxError) {
+				return; // Ignore malformed JSON lines
+			}
+			// All other errors (DB, logic, etc.) must be surfaced
+			logger.error("Unexpected error in processLine:", err);
+			throw err;
 		}
 	}
 
