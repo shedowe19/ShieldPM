@@ -37,10 +37,12 @@ const resolveTrustProxy = () => {
 };
 
 const TRUST_PROXY = resolveTrustProxy();
-const CSRF_SECRET = process.env.CSRF_SECRET || (() => {
-	logger.warn("WARNING: CSRF_SECRET not set. CSRF tokens will be invalidated on every restart!");
-	return crypto.randomBytes(32).toString("hex");
-})();
+const CSRF_SECRET =
+	process.env.CSRF_SECRET ||
+	(() => {
+		logger.warn("WARNING: CSRF_SECRET not set. CSRF tokens will be invalidated on every restart!");
+		return crypto.randomBytes(32).toString("hex");
+	})();
 
 const decodeJwtPayload = (token) => {
 	if (!token || typeof token !== "string") {
