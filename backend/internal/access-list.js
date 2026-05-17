@@ -197,16 +197,16 @@ const internalAccessList = {
 				return null;
 			});
 
-			promises.push(...(await Promise.all(itemPromises)).filter(Boolean));
-
+			// 1. First delete old items (those not in itemsToKeep)
+			//    Moving delete BEFORE insert prevents the race condition where
+			//    newly inserted items could be immediately deleted by the query below.
 			const query = accessListAuthModel.query().delete().where("access_list_id", data.id);
-
 			if (itemsToKeep.length) {
 				query.andWhere("username", "NOT IN", itemsToKeep);
 			}
-
 			await query;
-			// Add new items
+
+			// 2. Then insert new items (after delete to avoid race condition)
 			if (promises.length) {
 				await Promise.all(promises);
 			}
