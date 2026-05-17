@@ -23,13 +23,13 @@ const torPasswordFile = `${dataPath}/shieldpm/tor-control-password`;
  */
 const validateServiceParams = (service) => {
 	// Validate virtual_port: must be a valid integer port
-	const vPort = parseInt(service.virtual_port, 10);
+	const vPort = Number.parseInt(service.virtual_port, 10);
 	if (isNaN(vPort) || vPort < 1 || vPort > 65535) {
 		throw new Error(`Invalid virtual_port: ${service.virtual_port}. Must be 1-65535.`);
 	}
 
 	// Validate target_port: must be a valid integer port
-	const tPort = parseInt(service.target_port, 10);
+	const tPort = Number.parseInt(service.target_port, 10);
 	if (isNaN(tPort) || tPort < 1 || tPort > 65535) {
 		throw new Error(`Invalid target_port: ${service.target_port}. Must be 1-65535.`);
 	}
