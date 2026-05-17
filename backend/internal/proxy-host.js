@@ -384,9 +384,9 @@ const internalProxyHost = {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		const thisRow = internalHost.cleanRowCertificateMeta(row);
-		// Custom omissions
+		// Custom omissions — must use thisRow (cleaned) not raw row to avoid leaking certificate private keys
 		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
-			return _.omit(row, thisData.omit);
+			return _.omit(thisRow, thisData.omit);
 		}
 		return thisRow;
 	},
