@@ -718,6 +718,8 @@ const internalGitOps = {
 	 * @returns {Promise<{success: boolean, message?: string}>}
 	 */
 	revertToCommit: async (access, sha) => {
+		await access.can("settings:update", "gitops-config");
+
 		if (isDemoMode()) {
 			throw new errs.AuthError("GitOps is disabled in Demo Mode");
 		}
