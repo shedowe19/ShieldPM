@@ -12,10 +12,7 @@ describe("Fix #68: Delete before insert prevents race condition", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync(
-			"/Projekte/ShieldPM/backend/internal/access-list.js",
-			"utf8",
-		);
+		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/access-list.js", "utf8");
 	});
 
 	it("delete query appears before insert in the items section", () => {
