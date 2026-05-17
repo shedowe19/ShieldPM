@@ -357,7 +357,7 @@ const internalGitOps = {
 		}
 
 		// Export Redirection Hosts
-		const redirectionHosts = await RedirectionHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
+		const redirectionHosts = await RedirectionHost.query().where("is_deleted", 0);
 		for (const host of redirectionHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "redirection-hosts", filename);
@@ -367,7 +367,7 @@ const internalGitOps = {
 		}
 
 		// Export Dead Hosts
-		const deadHosts = await DeadHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
+		const deadHosts = await DeadHost.query().where("is_deleted", 0);
 		for (const host of deadHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "dead-hosts", filename);
@@ -1197,7 +1197,7 @@ const internalGitOps = {
 			await internalNginx.bulkGenerateConfigs(
 				RedirectionHost,
 				"redirection_host",
-				await RedirectionHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
+				await RedirectionHost.query().where("is_deleted", 0),
 			);
 			await internalNginx.bulkGenerateConfigs(
 				DeadHost,
