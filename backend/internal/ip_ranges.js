@@ -18,7 +18,7 @@ const regIpV4 = /^(\d+\.?){4}\/\d+/;
 const regIpV6 = /^(([\\da-fA-F]+)?:)+\/\\d+/;
 
 const internalIpRanges = {
-	interval_timeout: 1000 * 60 * 60 * 6 * Number.parseInt(process.env.IPRT, 10),
+	interval_timeout: 1000 * 60 * 60 * 6 * (Number.parseInt(process.env.IPRT, 10) || 1),
 	interval: null,
 	interval_processing: false,
 	iteration_count: 0,
