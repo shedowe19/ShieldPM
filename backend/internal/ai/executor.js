@@ -133,7 +133,7 @@ export const executeTools = async (access, toolCalls) => {
 				];
 				if (blockedTools.includes(call.name)) {
 					result = "Error: This action is prohibited in the public Demo Mode.";
-					toolResults.push({ name: call.name, result });
+					toolResults.push({ name: call.name, toolCallId: call.id, result });
 					continue;
 				}
 			}
@@ -961,7 +961,7 @@ export const executeTools = async (access, toolCalls) => {
 			}
 
 			// Add result to list
-			toolResults.push({ name: call.name, result });
+			toolResults.push({ name: call.name, toolCallId: call.id, result });
 		} catch (err) {
 			console.error(`[AI Executor] Error processing tool ${call.name}:`, err);
 			toolResults.push({ name: call.name, result: `Error: ${err.message}` });

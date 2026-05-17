@@ -313,9 +313,9 @@ export const callLocalWithResults = async (config, systemPrompt, message, histor
 			}),
 		},
 		// Tool Outputs
-		...toolResults.map((tr, idx) => ({
+		...toolResults.map((tr) => ({
 			role: "tool",
-			tool_call_id: previousResponse.toolCalls[idx].id, // Need to match ID
+			tool_call_id: tr.toolCallId,
 			content: tr.result,
 		})),
 	];
