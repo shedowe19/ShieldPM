@@ -753,7 +753,11 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "get_host_analytics": {
 					const internalAnalytics = (await import("../../internal/analytics.js")).default;
-					const summary = await internalAnalytics.getHostSummary(access, call.args.host_id, call.args.range || "24h");
+					const summary = await internalAnalytics.getHostSummary(
+						access,
+						call.args.host_id,
+						call.args.range || "24h",
+					);
 					result = JSON.stringify(summary, null, 2);
 					break;
 				}
