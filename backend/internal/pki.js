@@ -76,6 +76,14 @@ const createLeadCert = async (data, outDir) => {
 		fs.mkdirSync(outDir, { recursive: true });
 	}
 
+	// SECURITY: Validate domain_names to prevent OpenSSL config injection
+	const validDomain = /^[a-zA-Z0-9.-]+$/;
+	for (const domain of data.domain_names) {
+		if (!validDomain.test(domain)) {
+			throw new Error(`Invalid domain name: ${domain}. Only alphanumeric, dots, and dashes allowed.`);
+		}
+	}
+
 	const keyPath = path.join(outDir, "privkey.pem");
 	const csrPath = path.join(outDir, "request.csr");
 	const certPath = path.join(outDir, "fullchain.pem"); // Nginx expects fullchain usually, but here it's just the leaf + root maybe?
