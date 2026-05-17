@@ -453,8 +453,10 @@ const internalNginx = {
 		await access.can("settings:read");
 		const dataPath = process.env.DATA_PATH || "/data";
 		const logPaths = {
-			error: `${dataPath}/logs/error.log`,
-			access: `${dataPath}/logs/access.log`,
+			error: `${dataPath}/nginx/error.log`,
+			access: `${dataPath}/nginx/access.log`,
+			json_access: `${dataPath}/nginx/json_access.log`,
+			stream: `${dataPath}/nginx/stream.log`,
 		};
 		const logPath = logPaths[logType] || logPaths.error;
 		try {
