@@ -676,6 +676,7 @@ export const executeTools = async (access, toolCalls) => {
 						result = JSON.stringify(counts);
 					} else {
 						const summary = await internalAnalytics.getHostSummary(
+							access,
 							call.args.host_id || call.args.proxy_host_id,
 							call.args.range || "24h",
 						);
@@ -743,6 +744,7 @@ export const executeTools = async (access, toolCalls) => {
 					// Redirect to the robust summary tool logic
 					const internalAnalytics = (await import("../../internal/analytics.js")).default;
 					const summary = await internalAnalytics.getHostSummary(
+						access,
 						call.args.proxy_host_id || call.args.host_id,
 						call.args.time_range || call.args.range || "24h",
 					);
@@ -751,7 +753,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "get_host_analytics": {
 					const internalAnalytics = (await import("../../internal/analytics.js")).default;
-					const summary = await internalAnalytics.getHostSummary(call.args.host_id, call.args.range || "24h");
+					const summary = await internalAnalytics.getHostSummary(access, call.args.host_id, call.args.range || "24h");
 					result = JSON.stringify(summary, null, 2);
 					break;
 				}
