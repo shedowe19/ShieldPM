@@ -71,7 +71,7 @@ cookie_httponly = true
 cookie_refresh = "1h"
 
 # Provider Settings
-ssl_insecure_skip_verify = true
+${meta.oauth2_insecure_ssl ? "ssl_insecure_skip_verify = true" : ""}
 ${meta.oauth2_scope ? `scope = "${meta.oauth2_scope}"` : ""}
 ${meta.oauth2_insecure_oidc_allow_unverified_email ? "insecure_oidc_allow_unverified_email = true" : ""}
 
@@ -85,8 +85,9 @@ pass_authorization_header = true
 # But oauth2-proxy needs an upstream defined.
 upstreams = [ "static://200" ]
 
-# Allow redirects to any domain managed by ShieldPM
-whitelist_domains = ["*"]
+# Restrict redirect domains to configured allowed domains
+# If no domains configured, only allow redirects to same origin
+${(meta.oauth2_allowed_email_domains || "").split(",").map(d => `whitelist_domains = ["${d.trim()}"]`).join("\n") || "whitelist_domains = ["$host"]}
 
 email_domains = [
 ${(meta.oauth2_allowed_email_domains || "*")
