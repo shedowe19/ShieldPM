@@ -111,7 +111,7 @@ export default {
 	 * @returns {Promise}
 	 */
 	getTokenFromOAuthClaim: async (data) => {
-		const Token = new /** @type {any} */ (TokenModel)();
+		const Token = TokenModel(); // Factory pattern — must NOT use `new`, consistent with all other call sites
 
 		data.scope = "user";
 		data.expiry = "1d";
