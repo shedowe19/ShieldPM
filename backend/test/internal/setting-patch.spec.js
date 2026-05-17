@@ -9,10 +9,7 @@ describe("Fix #73: setting.js field whitelist", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync(
-			"/Projekte/ShieldPM/backend/internal/setting.js",
-			"utf8",
-		);
+		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/setting.js", "utf8");
 	});
 
 	it("patches only value and meta fields (not full data object)", () => {

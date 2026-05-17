@@ -23,9 +23,9 @@ const internalSetting = {
 		}
 
 		await settingModel.query().where({ id: data.id }).patch({
-            value: data.value,
-            meta: data.meta,
-        });
+			value: data.value,
+			meta: data.meta,
+		});
 		const updatedRow = await internalSetting.get(access, {
 			id: data.id,
 		});
