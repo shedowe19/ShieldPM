@@ -657,13 +657,10 @@ const internalGitOps = {
 			// Update last sync time — patch only necessary fields, never spread
 			// the full config object to avoid accidentally overwriting encrypted_credentials
 			// with [REDACTED] if getConfig() was used instead of getConfigInternal()
-			await settingModel
-				.query()
-				.where("id", "gitops-config")
-				.patch({
-					last_sync: new Date().toISOString(),
-					last_error: null,
-				});
+			await settingModel.query().where("id", "gitops-config").patch({
+				last_sync: new Date().toISOString(),
+				last_error: null,
+			});
 
 			logger.info(`GitOps: Committed and pushed ${sha}`);
 			return { success: true, commit: sha };
@@ -672,12 +669,9 @@ const internalGitOps = {
 			logger.error("GitOps commit/push failed:", err);
 
 			// Update error state — patch only last_error, not entire config
-			await settingModel
-				.query()
-				.where("id", "gitops-config")
-				.patch({
-					last_error: errorMessage,
-				});
+			await settingModel.query().where("id", "gitops-config").patch({
+				last_error: errorMessage,
+			});
 
 			return { success: false, message: errorMessage };
 		}
@@ -728,13 +722,10 @@ const internalGitOps = {
 			});
 
 			// Update last sync time
-			await settingModel
-				.query()
-				.where("id", "gitops-config")
-				.patch({
-					last_sync: new Date().toISOString(),
-					last_error: null,
-				});
+			await settingModel.query().where("id", "gitops-config").patch({
+				last_sync: new Date().toISOString(),
+				last_error: null,
+			});
 
 			logger.info("GitOps: Pulled from remote");
 			return { success: true, message: "Pull successful" };
