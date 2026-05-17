@@ -67,49 +67,49 @@ const exec = (cmd, silent = false) => {
 		}
 		throw err;
 	}
-}
-	/**
-	 * Execute a command with data piped via stdin (no shell expansion).
-	 * Prevents command injection when stdin data is untrusted.
-	 * @param {string} command - The command to run (no shell metacharacters)
-	 * @param {string} stdinData - Data to pipe into stdin
-	 * @param {boolean} silent - Suppress error logging
-	 * @returns {Promise<string>}
-	 */
-	const execStdin = (command, stdinData, silent = false) => {
-		return new Promise((resolve, reject) => {
-			const [cmd, ...args] = command.split(" ");
-			const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
-			let stdout = "";
-			let stderr = "";
+};
+/**
+ * Execute a command with data piped via stdin (no shell expansion).
+ * Prevents command injection when stdin data is untrusted.
+ * @param {string} command - The command to run (no shell metacharacters)
+ * @param {string} stdinData - Data to pipe into stdin
+ * @param {boolean} silent - Suppress error logging
+ * @returns {Promise<string>}
+ */
+const execStdin = (command, stdinData, silent = false) => {
+	return new Promise((resolve, reject) => {
+		const [cmd, ...args] = command.split(" ");
+		const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+		let stdout = "";
+		let stderr = "";
 
-			child.stdout.on("data", (data) => {
-				stdout += data.toString();
-			});
-			child.stderr.on("data", (data) => {
-				stderr += data.toString();
-			});
-			child.on("close", (code) => {
-				if (code === 0) {
-					resolve(stdout.trim());
-				} else {
-					if (!silent) {
-						logger.error(`WireGuard execStdin failed: ${command}`, stderr || "non-zero exit");
-					}
-					reject(new Error(`execStdin failed: ${command}`));
-				}
-			});
-			child.on("error", (err) => {
-				if (!silent) {
-					logger.error(`WireGuard execStdin error: ${command}`, err.message);
-				}
-				reject(err);
-			});
-
-			child.stdin.write(stdinData);
-			child.stdin.end();
+		child.stdout.on("data", (data) => {
+			stdout += data.toString();
 		});
-	};
+		child.stderr.on("data", (data) => {
+			stderr += data.toString();
+		});
+		child.on("close", (code) => {
+			if (code === 0) {
+				resolve(stdout.trim());
+			} else {
+				if (!silent) {
+					logger.error(`WireGuard execStdin failed: ${command}`, stderr || "non-zero exit");
+				}
+				reject(new Error(`execStdin failed: ${command}`));
+			}
+		});
+		child.on("error", (err) => {
+			if (!silent) {
+				logger.error(`WireGuard execStdin error: ${command}`, err.message);
+			}
+			reject(err);
+		});
+
+		child.stdin.write(stdinData);
+		child.stdin.end();
+	});
+};
 
 /**
  * Check if `wg` CLI is available
