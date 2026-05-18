@@ -439,7 +439,7 @@ class DockerService {
 				// SECURITY: Whitelist approach — only allow known-safe directives
 				// Block anything not explicitly allowed (blocklist is always incomplete)
 				const allowedDirectives =
-					/^(server_name|listen|ssl_certificate|ssl_certificate_key|ssl_protocols|ssl_ciphers|proxy_pass|return|rewrite|try_files|gzip|expires|add_header|proxy_set_header|proxy_hide_header|include|allow|deny|proxy_read_timeout|proxy_connect_timeout|proxy_send_timeout|client_max_body_size|keepalive_timeout|send_timeout)\s/mi;
+					/^(server_name|listen|ssl_certificate|ssl_certificate_key|ssl_protocols|ssl_ciphers|proxy_pass|return|rewrite|try_files|gzip|expires|add_header|proxy_set_header|proxy_hide_header|include|allow|deny|proxy_read_timeout|proxy_connect_timeout|proxy_send_timeout|client_max_body_size|keepalive_timeout|send_timeout)\s/im;
 				const lines = cleanAdvancedConfig.split("\n");
 				const safeLines = lines.filter((line) => {
 					const trimmed = line.trim();
@@ -448,9 +448,7 @@ class DockerService {
 				});
 				cleanAdvancedConfig = safeLines.join("\n");
 				if (cleanAdvancedConfig !== advancedConfig) {
-					logger.warn(
-						`Docker Auto-Discovery: Removed unsafe directives from advanced config for ${domains}`,
-					);
+					logger.warn(`Docker Auto-Discovery: Removed unsafe directives from advanced config for ${domains}`);
 				}
 			}
 			payload.advanced_config = cleanAdvancedConfig;
