@@ -101,8 +101,9 @@ const ai = {
 			await internalSetting.get(access, { id: AI_CONFIG_ID });
 			exists = true;
 		} catch (err) {
-			if (err.code !== 404 && err.message !== AI_CONFIG_ID) {
-				// Rethrow if it's not a "Not Found" error
+			// Only ignore "not found" errors — 404 means the setting doesn't exist yet
+			// Any other error (DB, network, etc.) should be surfaced
+			if (err.code !== 404) {
 				throw err;
 			}
 		}
