@@ -57,6 +57,8 @@ const internalMaintenance = {
 
 		if (newTimers.length > 0) {
 			internalMaintenance.scheduledTimers.set(timerKey, newTimers);
+		} else {
+			internalMaintenance.scheduledTimers.delete(timerKey);
 		}
 	},
 
