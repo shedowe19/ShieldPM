@@ -384,6 +384,10 @@ const internalProxyHost = {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 		const thisRow = internalHost.cleanRowCertificateMeta(row);
+		// SECURITY: Mask internal paths in forward_host from API responses
+		if (thisRow.forward_host && thisRow.forward_host.startsWith("/data/websites/")) {
+			thisRow.forward_host = "(managed)";
+		}
 		// Custom omissions — must use thisRow (cleaned) not raw row to avoid leaking certificate private keys
 		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
 			return _.omit(thisRow, thisData.omit);
@@ -572,6 +576,11 @@ const internalProxyHost = {
 				row.connected_tunnels = /** @type {any} */ (row).count || 0;
 				// @ts-expect-error
 				delete row.count;
+				// SECURITY: Mask internal paths in forward_host from API responses
+				// /data/websites/host-N paths expose server filesystem layout to users
+				if (row.forward_host && row.forward_host.startsWith("/data/websites/")) {
+					row.forward_host = "(managed)";
+				}
 				return row;
 			});
 		}
