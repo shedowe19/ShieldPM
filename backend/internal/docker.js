@@ -436,14 +436,21 @@ class DockerService {
 			// SECURITY: Sanitize advanced_config to prevent RCE
 			let cleanAdvancedConfig = advancedConfig || "";
 			if (cleanAdvancedConfig) {
-				// Block dangerous directives
-				const dangerous =
-					/lua_|perl_|exec|include|root|alias|types|so_|load_module|access_log|error_log|client_body_temp_path|fastcgi_temp_path|uwsgi_temp_path|scgi_temp_path/i;
-				if (dangerous.test(cleanAdvancedConfig)) {
+				// SECURITY: Whitelist approach — only allow known-safe directives
+				// Block anything not explicitly allowed (blocklist is always incomplete)
+				const allowedDirectives =
+					/^(server_name|listen|ssl_certificate|ssl_certificate_key|ssl_protocols|ssl_ciphers|proxy_pass|return|rewrite|try_files|gzip|expires|add_header|proxy_set_header|proxy_hide_header|include|allow|deny|proxy_read_timeout|proxy_connect_timeout|proxy_send_timeout|client_max_body_size|keepalive_timeout|send_timeout)\s/mi;
+				const lines = cleanAdvancedConfig.split("\n");
+				const safeLines = lines.filter((line) => {
+					const trimmed = line.trim();
+					if (!trimmed || trimmed.startsWith("#")) return true; // Allow comments
+					return allowedDirectives.test(trimmed);
+				});
+				cleanAdvancedConfig = safeLines.join("\n");
+				if (cleanAdvancedConfig !== advancedConfig) {
 					logger.warn(
-						`Docker Auto-Discovery: Blocking dangerous advanced config for ${domains}: ${cleanAdvancedConfig}`,
+						`Docker Auto-Discovery: Removed unsafe directives from advanced config for ${domains}`,
 					);
-					cleanAdvancedConfig = "# Dangerous config blocked by ShieldPM Security";
 				}
 			}
 			payload.advanced_config = cleanAdvancedConfig;
