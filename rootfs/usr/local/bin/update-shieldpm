@@ -177,6 +177,7 @@ echo "$LATEST_SHA_FULL" > "$BACKEND_DIR/.git-commit"
 echo "    - Updating Frontend at $FRONTEND_DIR..."
 rm -rf "${FRONTEND_DIR:?}"/*
 cp -r "$TEMP_DIR/frontend/dist/"* "$FRONTEND_DIR/"
+cp -f "$TEMP_DIR/.yarnrc.yml" "$FRONTEND_DIR/.yarnrc.yml" 2>/dev/null || true
 
 # Rootfs (System Scripts & Configs)
 echo "    - Updating System Configs (rootfs)..."
