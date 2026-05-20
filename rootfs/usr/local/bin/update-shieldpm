@@ -146,10 +146,10 @@ apt-get install -y --no-install-recommends \
     libffi-dev \
     gyp
 
-echo "--> [2/6] Fetching latest source..."
+echo "--> [2/9] Fetching latest source..."
 git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
 
-echo "--> [3/6] Building Backend..."
+echo "--> [3/9] Building Backend..."
 cd "$TEMP_DIR/backend"
 # LXC compatible: Run as root
 # Fix for node-gyp on Python 3.13: Ensure dist-packages is in python path
@@ -158,17 +158,19 @@ yarn install
 # Cleanup Dev Dependencies to save space
 # yarn workspaces focus --production
 
-echo "--> [4/6] Building Frontend..."
+echo "--> [4/9] Building Frontend..."
 cd "$TEMP_DIR/frontend"
 # LXC compatible: Run as root
 yarn install
 yarn run build
 
-echo "--> [5/6] Swapping files..."
+echo "--> [5/9] Swapping files..."
 # Backend
 echo "    - Updating Backend at $BACKEND_DIR..."
 # Preserve config/keys if any (though usually strictly in /data)
 cp -r "$TEMP_DIR/backend/"* "$BACKEND_DIR/"
+# Copy root .yarnrc.yml so Yarn v4 uses node-modules linker at runtime
+cp -f "$TEMP_DIR/.yarnrc.yml" "$BACKEND_DIR/.yarnrc.yml" 2>/dev/null || true
 echo "$LATEST_SHA_FULL" > "$BACKEND_DIR/.git-commit"
 
 # Frontend
@@ -182,7 +184,7 @@ echo "    - Updating System Configs (rootfs)..."
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
 
-echo "--> [6/7] Checking for Nginx Binary Updates..."
+echo "--> [6/9] Checking for Nginx Binary Updates..."
 RELEASE_BASE="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"
 ARCH=$(dpkg --print-architecture)
 
@@ -207,7 +209,7 @@ else
     echo "    - Skipping Nginx update: Architecture $ARCH not supported for auto-update."
 fi
 
-echo "--> [7/7] Checking for Anubis AI Firewall Updates..."
+echo "--> [7/9] Checking for Anubis AI Firewall Updates..."
 # Check if Anubis is installed or enabled
 ANUBIS_INSTALLED=false
 if [ -f "/usr/local/bin/anubis" ]; then
@@ -275,7 +277,7 @@ else
     echo "    - Skipping Anubis: Architecture $ARCH not supported."
 fi
 
-echo "--> [8/8] Checking for OAuth2 Proxy Updates..."
+echo "--> [8/9] Checking for OAuth2 Proxy Updates..."
 # Check if OAuth2 Proxy is installed
 OAUTH2_INSTALLED=false
 if [ -f "/usr/local/bin/oauth2-proxy" ]; then
