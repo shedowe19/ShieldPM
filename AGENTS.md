@@ -8,23 +8,7 @@
 > Jeder Agent **MUSS** `agent.md` vor jeder Arbeitssitzung lesen und die darin definierten Wiki-Pflichtprüfungen (vor und nach jeder Aufgabe) einhalten.
 > Bei Nichtbeachtung wird die Wiki-Wissensbasis veralten und unbrauchbar.
 
-## 🎯 Available Skills
-
-> [!IMPORTANT]
-> **Skills are constantly updated!** Before any task:
->
-> 1. Open `.agent/skills/CATALOG.md`
-> 2. Search for skills matching your current task
-> 3. Read the relevant `SKILL.md` files
-> 4. Follow the best practices described
-
-### How to Find Skills
-
-1. **By keyword search**: Search CATALOG.md for relevant terms
-2. **By category**: Browse the categorized skill list
-3. **By trigger**: Look at the "Triggers" column for matching keywords
-
-### Helpful Keywords for This Project
+## 🎯 Helpful Keywords for This Project
 
 | Area | Keywords to Search |
 |---|---|

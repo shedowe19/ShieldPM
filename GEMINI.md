@@ -7,8 +7,7 @@
 > **Also read these companion files:**
 >
 > - **`.cursorrules`** — Coding standards, naming conventions, critical rules, and anti-patterns.
-> - **`AGENTS.md`** — Dynamic skill discovery (via `.agent/skills/CATALOG.md`), common code patterns, and project constraints.
-> - **`.agent/skills/CATALOG.md`** — Full catalog of 950+ AI skills. Search by keyword before starting any task.
+> - **`AGENTS.md`** — Common code patterns, and project constraints.
 
 ## 1. Project Identity & Purpose
 
