@@ -5,7 +5,8 @@ FROM --platform="$BUILDPLATFORM" debian:trixie-slim AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY frontend /app
-WORKDIR /app/frontend
+COPY .yarnrc.yml /app/.yarnrc.yml
+WORKDIR /app
 # hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
     corepack enable yarn && \
@@ -23,6 +24,7 @@ SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 ARG TARGETARCH
 COPY backend /app
+COPY .yarnrc.yml /app/.yarnrc.yml
 WORKDIR /app
 # hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file curl make g++ && \
