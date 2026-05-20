@@ -133,6 +133,7 @@ DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
 # Ensure Yarn is installed via corepack as the user requested
+npm uninstall -g yarn || true
 corepack enable yarn
 
 apt-get install -y --no-install-recommends \
