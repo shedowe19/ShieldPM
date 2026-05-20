@@ -90,4 +90,4 @@ const validateDomains = (allowWildcards = false, maxDomains?: number) => {
 	};
 };
 
-export { validateEmail, validateNumber, validateString, validateDomains, validateDomain };
+export { validateDomain, validateDomains, validateEmail, validateNumber, validateString };

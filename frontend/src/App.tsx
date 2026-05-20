@@ -8,7 +8,14 @@ import Router from "src/Router.tsx";
 import { Toaster } from "@/components/ui/toaster";
 
 // Create a client
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			staleTime: 1000 * 30, // 30 seconds
+			refetchOnWindowFocus: false,
+		},
+	},
+});
 
 function App() {
 	return (

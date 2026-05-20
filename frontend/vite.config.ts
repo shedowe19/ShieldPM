@@ -1,8 +1,7 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import type { PluginOption } from "vite";
 import checker from "vite-plugin-checker";
-import tsconfigPaths from "vite-tsconfig-paths";
-import "vitest/config";
+import { defineConfig } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,8 +10,10 @@ export default defineConfig({
 		checker({
 			typescript: true,
 		}),
-		tsconfigPaths(),
-	],
+	] as PluginOption[],
+	resolve: {
+		tsconfigPaths: true,
+	},
 	server: {
 		host: true,
 		port: 5173,
@@ -61,6 +62,13 @@ export default defineConfig({
 							)
 						) {
 							return "vendor-utils";
+						}
+						if (
+							["recharts/", "react-simple-maps/", "d3-geo/", "d3-scale/", "d3-color/"].some((pkg) =>
+								id.includes(`node_modules/${pkg}`),
+							)
+						) {
+							return "vendor-charts";
 						}
 					}
 				},

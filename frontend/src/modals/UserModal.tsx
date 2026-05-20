@@ -24,10 +24,10 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { useHealth, useSetUser, useUser } from "src/hooks";
-import SecuritySettings from "src/pages/Profile/Security";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import SecuritySettings from "src/pages/Profile/Security";
 import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, type AvatarType, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
 
 const showUserModal = (id: number | "me" | "new") => {

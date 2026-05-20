@@ -6,7 +6,7 @@
  * and issue full session tokens.
  */
 
-import { Loader2, AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { complete2faDuoAuth } from "src/api/backend";

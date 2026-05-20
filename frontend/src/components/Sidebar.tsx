@@ -33,8 +33,8 @@ import {
 	type Section,
 	STREAMS,
 	TOR_ONIONS,
-	WIREGUARD_PEERS,
 	VIEW,
+	WIREGUARD_PEERS,
 } from "src/modules/Permissions";
 
 interface MenuItem {
@@ -175,8 +175,8 @@ const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }
 					</Button>
 					{isOpen || isChildActive ? (
 						<div className="ml-4 space-y-1 border-l pl-2">
-							{item.items.map((subitem, idx) => (
-								<SidebarItem key={`${idx}-${subitem.to}`} item={subitem} onClick={onClick} />
+							{item.items.map((subitem) => (
+								<SidebarItem key={subitem.to || subitem.label} item={subitem} onClick={onClick} />
 							))}
 						</div>
 					) : null}

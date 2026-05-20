@@ -124,6 +124,12 @@ export default {
 			.first();
 
 		if (!user) {
+			// Fake work to prevent timing attacks
+			try {
+				await bcrypt.compare(data.secret || "", DUMMY_HASH);
+			} catch (_err) {
+				// Ignore
+			}
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
 		}
 

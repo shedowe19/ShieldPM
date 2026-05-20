@@ -189,4 +189,4 @@ function useToast() {
 
 export type UseToastToast = Omit<ToasterToast, "id">;
 
-export { useToast, toast };
+export { toast, useToast };

@@ -7,6 +7,7 @@
   "private": true,
   "main": "index.js",
   "type": "module",
+  "packageManager": "yarn@4.15.0",
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^15.3.5",
     "@duosecurity/duo_universal": "^3.0.1",
@@ -17,6 +18,7 @@
     "batchflow": "0.4.0",
     "bcryptjs": "3.0.3",
     "better-sqlite3": "^12.9.0",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "csrf-csrf": "^4.0.3",
     "dayjs": "1.11.20",
@@ -54,6 +56,7 @@
     "@apidevtools/swagger-parser": "12.1.0",
     "@biomejs/biome": "^2.4.13",
     "@types/json-schema": "^7.0.15",
+    "@types/node": "^22.15.0",
     "openapi-types": "^12.1.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"
@@ -90,6 +93,7 @@
     "postcss": ">=8.5.10",
     "brace-expansion": ">=5.0.5",
     "uuid": ">=14.0.0",
-    "axios": "^1.15.2"
+    "axios": "^1.15.2",
+    "ip-address": ">=10.1.1"
   }
 }

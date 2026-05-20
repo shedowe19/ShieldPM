@@ -10,7 +10,7 @@ describe("Fix #70: allowed_ids configuration warning", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/chat.js", "utf8");
+		source = fs.readFileSync("./internal/chat.js", "utf8");
 	});
 
 	it("warns when allowed_ids is not configured", () => {

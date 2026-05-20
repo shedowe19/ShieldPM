@@ -4,7 +4,7 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers, type FormikProps } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { type RedirectionHost, createRedirectionHost, updateRedirectionHost } from "src/api/backend";
+import { createRedirectionHost, type RedirectionHost, updateRedirectionHost } from "src/api/backend";
 import { DomainNamesField, NginxConfigField, NoteWarning, SSLCertificateField, SSLOptionsFields } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";

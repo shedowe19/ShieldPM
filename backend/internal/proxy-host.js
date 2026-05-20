@@ -385,7 +385,7 @@ const internalProxyHost = {
 		}
 		const thisRow = internalHost.cleanRowCertificateMeta(row);
 		// SECURITY: Mask internal paths in forward_host from API responses
-		if (thisRow.forward_host && thisRow.forward_host.startsWith("/data/websites/")) {
+		if (thisRow.forward_host?.startsWith("/data/websites/")) {
 			thisRow.forward_host = "(managed)";
 		}
 		// Custom omissions — must use thisRow (cleaned) not raw row to avoid leaking certificate private keys
@@ -578,7 +578,7 @@ const internalProxyHost = {
 				delete row.count;
 				// SECURITY: Mask internal paths in forward_host from API responses
 				// /data/websites/host-N paths expose server filesystem layout to users
-				if (row.forward_host && row.forward_host.startsWith("/data/websites/")) {
+				if (row.forward_host?.startsWith("/data/websites/")) {
 					row.forward_host = "(managed)";
 				}
 				return row;

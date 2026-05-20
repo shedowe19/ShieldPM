@@ -39,4 +39,4 @@ const formatDateTime = (value: string | number): string => {
 	}
 };
 
-export { formatDateTime, parseDate, isUnixTimestamp };
+export { formatDateTime, isUnixTimestamp, parseDate };

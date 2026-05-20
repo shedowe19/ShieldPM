@@ -1,7 +1,7 @@
 import {
 	IconBolt,
-	IconGitBranch,
 	IconGhost,
+	IconGitBranch,
 	IconNote,
 	IconSettings,
 	IconShieldLock,
@@ -22,9 +22,9 @@ import {
 	LocationsFields,
 	NginxConfigField,
 	NoteWarning,
+	ServiceIcon,
 	SSLCertificateField,
 	SSLOptionsFields,
-	ServiceIcon,
 } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -37,18 +37,18 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
-import { T, intl } from "src/locale";
+import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateNumber, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 import {
+	AUDIT_LOG_OBJECT_TYPE,
 	FORWARD_SCHEME,
 	ICON_TYPE,
 	PHP_VERSION,
 	PROXY_HOST_TAB,
 	TERMINAL_AUTH_TYPE,
 	TIME_UNIT,
-	AUDIT_LOG_OBJECT_TYPE,
 } from "src/types/enums";
 
 const DEFAULT_ANUBIS_RULES = [
