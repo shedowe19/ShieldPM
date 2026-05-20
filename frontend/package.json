@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "private": true,
   "type": "module",
-  "packageManager": "yarn@4.6.0",
+  "packageManager": "yarn@4.15.0",
   "lint-staged": {
     "*.{js,ts,tsx}": [
       "biome check",
