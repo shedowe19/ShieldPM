@@ -47,7 +47,7 @@
 | `biome.json`             | Vereinheitlichte Biome-Konfiguration (Root-Ebene)               |
 | `.yarnrc.yml`            | Yarn v4 Konfiguration (nodeLinker, enableScripts)               |
 | `THIRD-PARTY-NOTICES.md` | Auto-generierte Lizenzen (von `scripts/generate-notices.js`)    |
-| `pentest_crowdsec.py`    | Hilfsskript zum Testen von CrowdSec-Bouncern (manueller Lauf)  |
+| `pentest_crowdsec.py`    | Hilfsskript zum Testen von CrowdSec-Bouncern (manueller Lauf)   |
 
 ## Caddy-Sidecar
 

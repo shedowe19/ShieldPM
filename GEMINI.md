@@ -120,6 +120,9 @@ bash scripts/install.sh
 
 ### Development Environment
 
+> [!IMPORTANT]
+> This project uses **Yarn 4.15.0** via Corepack. Run `corepack enable yarn` once before starting.
+
 ```bash
 # Frontend
 cd frontend
@@ -195,6 +198,8 @@ yarn dev # Nodemon
 | `/rootfs/usr/local/bin/` | **Startup Scripts** | `launch.sh`, `start.sh`. Run inside container/service on boot. |
 | `/scripts/install.sh` | **Installer** | The Bash script for non-Docker deployments. |
 | `/data/` | **Persistent Storage** | **Contract**: All dynamic data MUST reside here. |
+| `.yarnrc.yml` | **Yarn Config** | Yarn 4 config: `nodeLinker: node-modules`, `enableScripts: true`. |
+| `biome.json` | **Linter Config** | Unified Biome configuration (root-level, covers backend + frontend). |
 
 ## 8. Agent Cookbook
 

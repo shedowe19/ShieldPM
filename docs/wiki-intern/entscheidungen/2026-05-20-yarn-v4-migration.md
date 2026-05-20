@@ -19,16 +19,16 @@ Migration auf **Yarn 4.15.0** (Berry) mit folgenden Maßnahmen:
 
 ## Betroffene Dateien
 
-| Datei | Änderung |
-| --- | --- |
-| `.yarnrc.yml` (Root, NEU) | Zentrale Yarn-Konfiguration |
-| `backend/package.json` | `packageManager: yarn@4.15.0` |
-| `frontend/package.json` | `packageManager: yarn@4.15.0` |
-| `Dockerfile` | `corepack enable yarn` statt `npm install -g yarn` |
-| `rootfs/usr/local/bin/update-shieldpm` | Altes Yarn deinstallieren, Corepack aktivieren |
-| `.github/workflows/lint-and-format.yml` | `corepack: true` + expliziter Enable-Step |
-| `backend/.yarnrc.yml` | Gelöscht (durch Root ersetzt) |
-| `frontend/.yarnrc.yml` | Gelöscht (durch Root ersetzt) |
+| Datei                                   | Änderung                                           |
+| --------------------------------------- | -------------------------------------------------- |
+| `.yarnrc.yml` (Root, NEU)               | Zentrale Yarn-Konfiguration                        |
+| `backend/package.json`                  | `packageManager: yarn@4.15.0`                      |
+| `frontend/package.json`                 | `packageManager: yarn@4.15.0`                      |
+| `Dockerfile`                            | `corepack enable yarn` statt `npm install -g yarn` |
+| `rootfs/usr/local/bin/update-shieldpm`  | Altes Yarn deinstallieren, Corepack aktivieren     |
+| `.github/workflows/lint-and-format.yml` | `corepack: true` + expliziter Enable-Step          |
+| `backend/.yarnrc.yml`                   | Gelöscht (durch Root ersetzt)                      |
+| `frontend/.yarnrc.yml`                  | Gelöscht (durch Root ersetzt)                      |
 
 ## Entfernte Yarn-v1-Flags
 
