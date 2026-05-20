@@ -9,7 +9,6 @@
 | Datei                   | Zweck                                     |
 | ----------------------- | ----------------------------------------- |
 | `backend/knexfile.js`   | Knex-Datenbank-Konfiguration              |
-| `backend/biome.json`    | Biome Linting-Konfiguration               |
 | `backend/jsconfig.json` | JavaScript-Pfad-Konfiguration             |
 | `backend/tsconfig.json` | TypeScript-Konfiguration (für Typprüfung) |
 
@@ -21,7 +20,6 @@
 | `frontend/tailwind.config.js` | Tailwind CSS Konfiguration         |
 | `frontend/postcss.config.js`  | PostCSS Konfiguration              |
 | `frontend/tsconfig.json`      | TypeScript-Konfiguration           |
-| `frontend/biome.json`         | Biome Linting-Konfiguration        |
 | `frontend/components.json`    | shadcn/ui Komponentenkonfiguration |
 
 ## Docker
@@ -46,8 +44,10 @@
 | `agent.md`               | Wiki-Pflichtregeln für LLM-Agents                               |
 | `AGENTS.md`              | AI-Agent-Richtlinien                                            |
 | `GEMINI.md`              | Projekt-Kontext für AI-Agents                                   |
+| `biome.json`             | Vereinheitlichte Biome-Konfiguration (Root-Ebene)               |
+| `.yarnrc.yml`            | Yarn v4 Konfiguration (nodeLinker, enableScripts)               |
 | `THIRD-PARTY-NOTICES.md` | Auto-generierte Lizenzen (von `scripts/generate-notices.js`)    |
-| `pentest_crowdsec.py`    | Hilfsskript zum Testen von CrowdSec-Bouncern (manueller Lauf)   |
+| `pentest_crowdsec.py`    | Hilfsskript zum Testen von CrowdSec-Bouncern (manueller Lauf)  |
 
 ## Caddy-Sidecar
 

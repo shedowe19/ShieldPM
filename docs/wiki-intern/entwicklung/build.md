@@ -13,7 +13,7 @@ Das `Dockerfile` verwendet drei Stages:
 #### Stage 1: Frontend
 
 - **Basis**: `debian:trixie-slim`
-- **Aktion**: Installiert Node.js/npm/yarn, baut React-App mit TypeScript + Vite
+- **Aktion**: Installiert Node.js/npm, aktiviert Corepack (Yarn 4.15.0), baut React-App mit TypeScript + Vite
 - **Ausgabe**: `/app/dist` (statische Dateien)
 
 #### Stage 2: Backend
@@ -40,7 +40,7 @@ docker build -t shieldpm:local .
 
 ```bash
 cd frontend
-yarn install --production=false
+yarn install
 yarn tsc          # TypeScript-Prüfung
 yarn vite build   # Produktions-Build
 ```
@@ -68,3 +68,4 @@ Die aktuelle Version wird in `.version` gespeichert (Plain Text, z.B. `v4.3.2`).
 
 - [Deployment](./deployment.md)
 - [Setup](./setup.md)
+- [Yarn v4 Migration](../entscheidungen/2026-05-20-yarn-v4-migration.md)

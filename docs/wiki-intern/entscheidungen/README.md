@@ -10,6 +10,7 @@ Die Haupt-Entscheidungen sind zusammengefasst in:
 
 - [Architektur-Entscheidungen](../architektur/entscheidungen.md)
 - [Performance & Code Optimierungen](./2026-05-20-performance-optimizations.md)
+- [Yarn v4 Migration (Corepack)](./2026-05-20-yarn-v4-migration.md)
 
 ## Neue ADR anlegen
 

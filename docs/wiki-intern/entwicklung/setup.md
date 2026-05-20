@@ -6,9 +6,14 @@ Anleitung zur Einrichtung der lokalen Entwicklungsumgebung.
 
 ## Voraussetzungen
 
-- Node.js v22+
-- npm / yarn
+- Node.js v22+ (mit Corepack)
 - Git
+
+Corepack muss aktiviert sein:
+
+```bash
+corepack enable yarn
+```
 
 ## Frontend starten
 
@@ -64,10 +69,11 @@ npx biome check .
 npx biome check --write .
 ```
 
-Konfiguration: `backend/biome.json` und `frontend/biome.json`.
+Konfiguration: `biome.json` (Root-Ebene, vereinheitlicht für Backend und Frontend).
 
 ## Verwandte Seiten
 
 - [Build](./build.md)
 - [Tests](./tests.md)
 - [Lokale Entwicklung](./lokale-entwicklung.md)
+- [Yarn v4 Migration](../entscheidungen/2026-05-20-yarn-v4-migration.md)
