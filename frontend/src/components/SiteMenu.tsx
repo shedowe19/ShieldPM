@@ -155,10 +155,10 @@ const getMenuDropown = (item: MenuItem, onClick?: () => void) => {
 					</span>
 				</a>
 				<div className="dropdown-menu">
-					{item.items?.map((subitem, idx) => {
+					{item.items?.map((subitem) => {
 						return (
 							<HasPermission
-								key={`${idx}-${subitem.to}`}
+								key={subitem.to || subitem.label}
 								section={subitem.permissionSection}
 								permission={subitem.permission || VIEW}
 								hideError

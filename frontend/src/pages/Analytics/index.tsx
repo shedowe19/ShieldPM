@@ -487,8 +487,8 @@ const Analytics = () => {
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topIps && summary.topIps.length > 0 ? (
-								summary.topIps.map((i, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
+								summary.topIps.map((i) => (
+									<div key={i.ip} className="flex justify-between text-xs items-center">
 										<span
 											className="truncate flex-1 min-w-0 mr-2 font-mono"
 											title={isDemo ? "Hidden IP" : i.ip}
@@ -515,8 +515,8 @@ const Analytics = () => {
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topReferers && summary.topReferers.length > 0 ? (
-								summary.topReferers.map((r, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
+								summary.topReferers.map((r) => (
+									<div key={r.referer} className="flex justify-between text-xs items-center">
 										<span className="truncate flex-1 min-w-0 mr-2" title={r.referer}>
 											{r.referer}
 										</span>
@@ -540,8 +540,8 @@ const Analytics = () => {
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topPaths && summary.topPaths.length > 0 ? (
-								summary.topPaths.map((p, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
+								summary.topPaths.map((p) => (
+									<div key={p.path} className="flex justify-between text-xs items-center">
 										<span className="truncate flex-1 min-w-0 mr-2" title={p.path}>
 											{p.path}
 										</span>
@@ -565,8 +565,8 @@ const Analytics = () => {
 					<CardContent>
 						<div className="space-y-3">
 							{summary?.topUserAgents && summary.topUserAgents.length > 0 ? (
-								summary.topUserAgents.map((u, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
+								summary.topUserAgents.map((u) => (
+									<div key={u.userAgent} className="flex justify-between text-xs items-center">
 										<span className="truncate flex-1 min-w-0 mr-2" title={u.userAgent}>
 											{u.userAgent}
 										</span>
@@ -615,9 +615,9 @@ const Analytics = () => {
 									</tr>
 								</thead>
 								<tbody className="[&_tr:last-child]:border-0">
-									{summary.recentRequests.map((req, idx) => (
+									{summary.recentRequests.map((req) => (
 										<tr
-											key={idx}
+											key={`${req.time}-${req.ip}-${req.path}`}
 											className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
 										>
 											<td className="p-4 align-middle">{dayjs(req.time).format("HH:mm:ss")}</td>

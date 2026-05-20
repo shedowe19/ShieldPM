@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { type PluginOption } from "vite";
+import type { PluginOption } from "vite";
 import checker from "vite-plugin-checker";
 import { defineConfig } from "vitest/config";
 

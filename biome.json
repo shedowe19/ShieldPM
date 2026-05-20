@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "!**/dist/**/*"]
+		"includes": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "!**/dist/**/*", "!scripts/lib/vis-network.min.js"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -47,7 +47,8 @@
 				"useUniqueElementIds": "off"
 			},
 			"suspicious": {
-				"noExplicitAny": "off"
+				"noExplicitAny": "off",
+				"noArrayIndexKey": "off"
 			},
 			"performance": {
 				"noDelete": "off"
