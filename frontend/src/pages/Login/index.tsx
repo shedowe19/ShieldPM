@@ -2,8 +2,8 @@ import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { claimOidcToken } from "src/api/backend";
-import type { TwoFaChallengeResponse } from "src/api/backend/verify2fa";
 import type { TokenResponse } from "src/api/backend/responseTypes";
+import type { TwoFaChallengeResponse } from "src/api/backend/verify2fa";
 import { LocalePicker, ThemeSwitcher } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";

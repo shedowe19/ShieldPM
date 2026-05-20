@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import { doubleCsrf } from "csrf-csrf";
 import express from "express";
@@ -240,6 +241,7 @@ app.use((req, res, next) => {
 	next();
 });
 
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

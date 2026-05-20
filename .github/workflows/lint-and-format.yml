@@ -19,18 +19,13 @@ jobs:
           node-version: 24.12.0
       - name: install-sponge
         run: sudo apt-get install -y moreutils
-      - name: biome-backend
+      - name: biome-check
         run: |
-          cd backend
-          yarn install --production=false
-          yarn biome lint --write
-          yarn biome format --write
-      - name: biome-frontend
+          npx @biomejs/biome check --write --unsafe .
+      - name: vitest-and-scripts
         run: |
           cd frontend
           yarn --production=false
-          yarn biome lint --write
-          yarn biome format --write
           yarn vitest
           ./src/locale/scripts/locale-sort.sh
 

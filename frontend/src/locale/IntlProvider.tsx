@@ -122,4 +122,4 @@ const T = ({
 	);
 };
 
-export { localeOptions, getFlagCodeForLocale, getLocale, createIntl, changeLocale, intl, T };
+export { changeLocale, createIntl, getFlagCodeForLocale, getLocale, intl, localeOptions, T };

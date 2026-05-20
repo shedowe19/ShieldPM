@@ -9,6 +9,7 @@ Architecture Decision Records (ADR) dokumentieren wichtige technische Entscheidu
 Die Haupt-Entscheidungen sind zusammengefasst in:
 
 - [Architektur-Entscheidungen](../architektur/entscheidungen.md)
+- [Performance & Code Optimierungen](./2026-05-20-performance-optimizations.md)
 
 ## Neue ADR anlegen
 

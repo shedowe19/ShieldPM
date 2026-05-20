@@ -9,7 +9,7 @@ describe("Fix #72: SSRF protection", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/ddns.js", "utf8");
+		source = fs.readFileSync("./internal/ddns.js", "utf8");
 	});
 
 	it("has validatePublicUrl helper function", () => {

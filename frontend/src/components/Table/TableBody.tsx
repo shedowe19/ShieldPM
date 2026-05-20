@@ -69,4 +69,5 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 }
 
 const MemoizedTableBody = React.memo(TableBody) as typeof TableBody;
+
 export { MemoizedTableBody as TableBody };

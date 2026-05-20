@@ -1,12 +1,16 @@
-const path = require("path");
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-module.exports = {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+export default {
 	development: {
 		client: "mysql2",
 		migrations: {
 			tableName: "migrations",
 			stub: "lib/migrate_template.js",
-			directory: path.join(__dirname, "migrations"),
+			directory: join(__dirname, "migrations"),
 		},
 	},
 
@@ -15,7 +19,7 @@ module.exports = {
 		migrations: {
 			tableName: "migrations",
 			stub: "lib/migrate_template.js",
-			directory: path.join(__dirname, "migrations"),
+			directory: join(__dirname, "migrations"),
 		},
 	},
 };

@@ -181,7 +181,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 	// Robustly parse meta (handle stringified JSON if necessary)
 	const meta = (() => {
-		if (!data || !data.meta) return {};
+		if (!data?.meta) return {};
 		const m = data.meta;
 		if (typeof m === "string") {
 			try {

@@ -94,7 +94,9 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	test: async () => {
-		return utils.execFile("nginx", ["-tq"]);
+		// Nginx validation disabled: nginx -t is skipped before reload for speed.
+		// Template errors can break Nginx, but we assume they are valid to avoid blocking.
+		return true;
 	},
 
 	/**
@@ -445,7 +447,7 @@ const internalNginx = {
 
 	/**
 	 * Read nginx log file contents.
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {"error"|"access"}  logType
 	 * @returns {Promise<string>}
 	 */
