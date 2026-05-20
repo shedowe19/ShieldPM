@@ -9,7 +9,7 @@ WORKDIR /app/frontend
 # hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
     corepack enable yarn && \
-    yarn install --production=false && \
+    yarn install && \
     yarn tsc && \
     yarn vite build && \
     rm -rf /var/lib/apt/lists/*
@@ -35,8 +35,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     rm "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
     corepack enable yarn && \
-    yarn install --production=false && \
-    yarn cache clean && \
+    yarn install && \
+    yarn cache clean --all && \
     find node_modules -name "*.map" -delete && \
     rm -r node_modules/better-sqlite3/deps/sqlite3 && \
     find /app/node_modules -name "*.node" -type f -exec strip -s {} \; && \
