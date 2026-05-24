@@ -26,6 +26,17 @@ Ermöglicht Zugriff auf Proxy-Hosts über `.onion`-Adressen. Nützlich für Priv
 - Tor-Daemon (muss installiert sein)
 - `internal/nginx.js` — Config-Generierung
 
+## Architektur: TorClient & Connection Pool
+
+Um TCP-Overhead und Socket-Erschöpfung bei Batch-Prozessen (z.B. beim Systemstart) zu vermeiden, nutzt `tor.js` einen **persistenten Connection-Pool** über die Klasse `TorClient`.
+
+- **Persistente Verbindung:** Es wird genau eine TCP-Verbindung zum Tor Control Port (`9051`) offengehalten.
+- **Asynchrone Queue:** Da das Tor Control Protocol asynchron auf einem einzelnen Socket arbeitet, reiht die `commandQueue` alle eingehenden Befehle ein und sendet sie streng sequenziell nacheinander an Tor.
+- **Lazy Reconnect:** Die Verbindung wird beim ersten Aufruf (lazy) aufgebaut. Falls Tor neu startet oder der Socket schließt, verbindet sich der Client beim nächsten Befehl automatisch neu.
+- **Mehrzeilige Antworten:** Der Client puffert fragmentierte TCP-Pakete und baut sie zu vollständigen `250 OK`-Antwortblöcken zusammen.
+
+Die internen Helfer-Funktionen `authenticate()` und `sendAuthenticatedCommand()` leiten Aufrufe nahtlos an den `TorClient` weiter.
+
 ## syncProxyHost() — Automatische Proxy-Host-Synchronisation
 
 Beim Anlegen oder Aktualisieren eines Onion-Service wird automatisch die Funktion `syncProxyHost()` aufgerufen (Zeile 137 in `tor.js`):
