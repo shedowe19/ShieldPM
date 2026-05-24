@@ -32,6 +32,8 @@ jobs:
 
       - name: Update Frontend Dependencies
         working-directory: ./frontend
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
         run: |
           echo "Installing current frontend dependencies..."
           yarn install
@@ -51,6 +53,8 @@ jobs:
 
       - name: Update Backend Dependencies
         working-directory: ./backend
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
         run: |
           echo "Installing current backend dependencies..."
           yarn install
