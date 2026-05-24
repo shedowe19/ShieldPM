@@ -97,12 +97,9 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:create", thisData);
 
 		// Get a list of the domain names and check each of them against existing records
-		const domain_name_check_promises = [];
-
-		thisData.domain_names.map((domain_name) => {
-			domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name));
-			return true;
-		});
+		const domain_name_check_promises = thisData.domain_names.map((domain_name) =>
+			internalHost.isHostnameTaken(domain_name),
+		);
 
 		const check_results = await Promise.all(domain_name_check_promises);
 		check_results.map((result) => {
@@ -229,12 +226,10 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:update", thisData.id);
 
 		// Get a list of the domain names and check each of them against existing records
-		const domain_name_check_promises = [];
-
 		if (typeof thisData.domain_names !== "undefined") {
-			thisData.domain_names.map((domain_name) => {
-				return domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name, "proxy", thisData.id));
-			});
+			const domain_name_check_promises = thisData.domain_names.map((domain_name) =>
+				internalHost.isHostnameTaken(domain_name, "proxy", thisData.id),
+			);
 
 			const check_results = await Promise.all(domain_name_check_promises);
 			check_results.map((result) => {
@@ -537,8 +532,6 @@ const internalProxyHost = {
 	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
-	 * @param   {Number}  [page]
-	 * @param   {Number}  [limit]
 	 * @returns {Promise}
 	 */
 	getAll: async (access, expand, search_query) => {

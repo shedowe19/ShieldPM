@@ -1,7 +1,7 @@
 import { IconPlus, IconSearch, IconUsers } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Lock } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteUser, toggleUser } from "src/api/backend";
 import { LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -23,6 +23,69 @@ export default function TableWrapper() {
 	const { isFetching, isLoading, isError, error, data } = useUsers(["permissions"]);
 	const { data: currentUser } = useUser("me");
 	const health = useHealth();
+
+	const handleLoginAs = useCallback(
+		async (id: number) => {
+			try {
+				await loginAs(id);
+			} catch (err) {
+				if (err instanceof Error) {
+					showError(err.message);
+				}
+			}
+		},
+		[loginAs],
+	);
+
+	const handleDelete = useCallback(async (id: number) => {
+		await deleteUser(id);
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, "deleted");
+	}, []);
+
+	const handleDisableToggle = useCallback(
+		async (id: number, enabled: boolean) => {
+			await toggleUser(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["users"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, enabled ? "enabled" : "disabled");
+		},
+		[queryClient],
+	);
+
+	const filtered = useMemo(() => {
+		if (search && data) {
+			return data.filter((item) => {
+				return (
+					item.name.toLowerCase().includes(search) ||
+					item.nickname.toLowerCase().includes(search) ||
+					item.email.toLowerCase().includes(search)
+				);
+			});
+		}
+		return null;
+	}, [search, data]);
+
+	useEffect(() => {
+		if (search !== "" && (!data || data.length === 0)) {
+			setSearch("");
+		}
+	}, [search, data]);
+
+	const handleEditUser = useCallback((id: number) => showUserModal(id), []);
+	const handleEditPermissions = useCallback((id: number) => showPermissionsModal(id), []);
+	const handleSetPassword = useCallback((id: number) => showSetPasswordModal(id), []);
+	const handleNewUser = useCallback(() => showUserModal("new"), []);
+	const handleDeleteConfirm = useCallback(
+		(id: number) => {
+			showDeleteConfirmModal({
+				title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />,
+				onConfirm: () => handleDelete(id),
+				invalidations: [["users"], [AUDIT_LOG_OBJECT_TYPE.USER, id]],
+				children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />,
+			});
+		},
+		[handleDelete],
+	);
 
 	if (health.data?.demo) {
 		return (
@@ -51,46 +114,12 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="notification.error" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
-	}
-
-	const handleLoginAs = async (id: number) => {
-		try {
-			await loginAs(id);
-		} catch (err) {
-			if (err instanceof Error) {
-				showError(err.message);
-			}
-		}
-	};
-
-	const handleDelete = async (id: number) => {
-		await deleteUser(id);
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, "deleted");
-	};
-
-	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleUser(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["users"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, enabled ? "enabled" : "disabled");
-	};
-
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter((item) => {
-			return (
-				item.name.toLowerCase().includes(search) ||
-				item.nickname.toLowerCase().includes(search) ||
-				item.email.toLowerCase().includes(search)
-			);
-		});
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -129,19 +158,12 @@ export default function TableWrapper() {
 					isFiltered={!!search}
 					isFetching={isFetching}
 					currentUserId={currentUser?.id}
-					onEditUser={(id: number) => showUserModal(id)}
-					onEditPermissions={(id: number) => showPermissionsModal(id)}
-					onSetPassword={(id: number) => showSetPasswordModal(id)}
-					onDeleteUser={(id: number) =>
-						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />,
-							onConfirm: () => handleDelete(id),
-							invalidations: [["users"], [AUDIT_LOG_OBJECT_TYPE.USER, id]],
-							children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />,
-						})
-					}
+					onEditUser={handleEditUser}
+					onEditPermissions={handleEditPermissions}
+					onSetPassword={handleSetPassword}
+					onDeleteUser={handleDeleteConfirm}
 					onDisableToggle={handleDisableToggle}
-					onNewUser={() => showUserModal("new")}
+					onNewUser={handleNewUser}
 					onLoginAs={handleLoginAs}
 				/>
 			</CardContent>

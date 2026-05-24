@@ -1,7 +1,7 @@
 import { IconHelp, IconPlus, IconSearch, IconServer } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteProxyHost, toggleProxyHost } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -25,6 +25,53 @@ export default function TableWrapper() {
 		AUDIT_LOG_OBJECT_TYPE.CERTIFICATE,
 	]);
 
+	const handleDelete = useCallback(async (id: number) => {
+		await deleteProxyHost(id);
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, "deleted");
+	}, []);
+
+	const handleDisableToggle = useCallback(
+		async (id: number, enabled: boolean) => {
+			await toggleProxyHost(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
+		},
+		[queryClient],
+	);
+
+	const filtered = useMemo(() => {
+		if (search && data) {
+			return data.filter(
+				(item) =>
+					item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
+					item.forwardHost.toLowerCase().includes(search) ||
+					`${item.forwardPort}`.includes(search),
+			);
+		}
+		return null;
+	}, [search, data]);
+
+	useEffect(() => {
+		if (search !== "" && (!data || data.length === 0)) {
+			setSearch("");
+		}
+	}, [search, data]);
+
+	const handleEdit = useCallback((id: number) => showProxyHostModal(id), []);
+	const handleNew = useCallback(() => showProxyHostModal("new"), []);
+	const handleDeleteConfirm = useCallback(
+		(id: number) => {
+			showDeleteConfirmModal({
+				title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />,
+				onConfirm: () => handleDelete(id),
+				invalidations: [["proxy-hosts"], [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id]],
+				children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />,
+			});
+		},
+		[handleDelete],
+	);
+
 	if (isLoading) {
 		return <LoadingPage />;
 	}
@@ -33,35 +80,12 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="notification.error" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
-	}
-
-	const handleDelete = async (id: number) => {
-		await deleteProxyHost(id);
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, "deleted");
-	};
-
-	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleProxyHost(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
-	};
-
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter(
-			(item) =>
-				item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
-				item.forwardHost.toLowerCase().includes(search) ||
-				`${item.forwardPort}`.includes(search),
-		);
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -105,19 +129,10 @@ export default function TableWrapper() {
 					data={filtered ?? data ?? []}
 					isFiltered={!!search}
 					isFetching={isFetching}
-					onEdit={(id: number) => showProxyHostModal(id)}
-					onDelete={(id: number) =>
-						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />,
-							onConfirm: () => handleDelete(id),
-							invalidations: [["proxy-hosts"], [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id]],
-							children: (
-								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
-							),
-						})
-					}
+					onEdit={handleEdit}
+					onDelete={handleDeleteConfirm}
 					onDisableToggle={handleDisableToggle}
-					onNew={() => showProxyHostModal("new")}
+					onNew={handleNew}
 				/>
 			</CardContent>
 		</Card>

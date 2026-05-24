@@ -46,36 +46,180 @@ const validateServiceParams = (service) => {
 	}
 };
 
-const sendCommand = (command) => {
-	return new Promise((resolve, reject) => {
-		const socket = createConnection(torControlPort, torControlHost, () => {
-			socket.write(`${command}\r\n`);
+class TorClient {
+	constructor() {
+		this.socket = null;
+		this.commandQueue = [];
+		this.isProcessing = false;
+		this.buffer = "";
+		this.authenticated = false;
+	}
+
+	async getPassword() {
+		if (!fs.existsSync(torPasswordFile)) {
+			throw new Error("Tor control password file not found");
+		}
+		return (await fs.promises.readFile(torPasswordFile, "utf-8")).trim();
+	}
+
+	connect() {
+		if (this.socket && !this.socket.destroyed && this.authenticated) {
+			return Promise.resolve();
+		}
+
+		if (this.connectPromise) {
+			return this.connectPromise;
+		}
+
+		this.connectPromise = new Promise((resolve, reject) => {
+			let connectTimeout;
+
+			const cleanup = () => {
+				clearTimeout(connectTimeout);
+				this.connectPromise = null;
+			};
+
+			connectTimeout = setTimeout(() => {
+				if (this.socket && !this.socket.destroyed) {
+					this.socket.destroy();
+				}
+				cleanup();
+				reject(new Error("Tor connection/authentication timeout"));
+			}, 10000);
+
+			this.socket = createConnection(torControlPort, torControlHost, async () => {
+				try {
+					const password = await this.getPassword();
+					this.socket.write(`AUTHENTICATE "${password}"\r\n`);
+				} catch (err) {
+					cleanup();
+					this._rejectAll(err);
+					reject(err);
+				}
+			});
+
+			this.authenticated = false;
+			this.buffer = "";
+
+			this.socket.on("data", (chunk) => {
+				this.buffer += chunk.toString();
+
+				if (!this.authenticated) {
+					if (this.buffer.includes("250 OK\r\n")) {
+						this.authenticated = true;
+						const idx = this.buffer.indexOf("250 OK\r\n") + 8;
+						this.buffer = this.buffer.substring(idx);
+						cleanup();
+						resolve();
+						this._processQueue();
+					} else if (/(^|\r?\n)5\d\d [^\r\n]*\r?\n/.test(this.buffer)) {
+						const err = new Error(`Tor authentication failed: ${this.buffer.trim()}`);
+						cleanup();
+						this.socket.destroy();
+						reject(err);
+					}
+					return;
+				}
+
+				// Check if the command response is complete
+				const match = this.buffer.match(/(^|\r?\n)(250 OK|5\d\d [^\r\n]*)\r?\n/);
+				if (match) {
+					const responseEndIdx = match.index + match[0].length;
+					const responseStr = this.buffer.substring(0, responseEndIdx).trim();
+					this.buffer = this.buffer.substring(responseEndIdx);
+
+					if (this.commandQueue.length > 0) {
+						const { resolve: cmdResolve } = this.commandQueue.shift();
+						this.isProcessing = false;
+						cmdResolve(responseStr);
+						this._processQueue();
+					}
+				}
+			});
+
+			this.socket.on("error", (err) => {
+				cleanup();
+				this._rejectAll(err);
+				reject(err);
+			});
+
+			this.socket.on("close", () => {
+				cleanup();
+				this.socket = null;
+				this.authenticated = false;
+				this.buffer = "";
+				this._rejectAll(new Error("Tor socket closed"));
+			});
 		});
 
-		let data = "";
-		socket.on("data", (chunk) => {
-			data += chunk.toString();
-			// Check if we have a complete response (ends with 250 or 5xx)
-			if (/^(250|5\d\d) /m.test(data)) {
-				socket.end();
-			}
-		});
+		return this.connectPromise;
+	}
 
-		socket.on("end", () => {
-			resolve(data);
-		});
+	_rejectAll(err) {
+		this.isProcessing = false;
+		const queue = [...this.commandQueue];
+		this.commandQueue = [];
+		for (const req of queue) {
+			req.reject(err);
+		}
+	}
 
-		socket.on("error", (err) => {
-			reject(err);
-		});
+	async _processQueue() {
+		if (this.isProcessing || this.commandQueue.length === 0 || !this.socket || this.socket.destroyed) {
+			return;
+		}
 
-		// Timeout after 10 seconds
-		socket.setTimeout(10000, () => {
-			socket.destroy();
-			reject(new Error("Tor control port connection timeout"));
+		this.isProcessing = true;
+		const { command } = this.commandQueue[0];
+		this.socket.write(`${command}\r\n`);
+	}
+
+	execute(command) {
+		return new Promise((resolve, reject) => {
+			const timeoutId = setTimeout(() => {
+				const index = this.commandQueue.findIndex((c) => c.resolve === wrappedResolve);
+				if (index !== -1) {
+					this.commandQueue.splice(index, 1);
+					if (index === 0 && this.isProcessing && this.socket) {
+						// Command was already sent, socket state is now out of sync.
+						// We must destroy the socket so it reconnects for the next commands.
+						this.socket.destroy();
+					}
+					this._processQueue();
+				}
+				reject(new Error("Tor command timeout"));
+			}, 30000);
+
+			const wrappedResolve = (val) => {
+				clearTimeout(timeoutId);
+				resolve(val);
+			};
+
+			const wrappedReject = (err) => {
+				clearTimeout(timeoutId);
+				reject(err);
+			};
+
+			this.commandQueue.push({ command, resolve: wrappedResolve, reject: wrappedReject });
+
+			this.connect()
+				.then(() => {
+					if (!this.isProcessing) {
+						this._processQueue();
+					}
+				})
+				.catch((err) => {
+					const index = this.commandQueue.findIndex((c) => c.resolve === wrappedResolve);
+					if (index !== -1) {
+						this.commandQueue.splice(index, 1);
+						wrappedReject(err);
+					}
+				});
 		});
-	});
-};
+	}
+}
+
+const torClient = new TorClient();
 
 /**
  * Authenticates with the Tor Control Port
@@ -83,19 +227,8 @@ const sendCommand = (command) => {
  */
 const authenticate = async () => {
 	try {
-		if (!fs.existsSync(torPasswordFile)) {
-			logger.warn("Tor control password file not found, Tor may not be running");
-			return false;
-		}
-
-		const password = (await fs.promises.readFile(torPasswordFile, "utf-8")).trim();
-		const response = await sendCommand(`AUTHENTICATE "${password}"`);
-
-		if (response.includes("250 OK")) {
-			return true;
-		}
-		logger.error("Tor authentication failed:", response);
-		return false;
+		await torClient.connect();
+		return true;
 	} catch (err) {
 		logger.debug("Tor control port not available:", err.message);
 		return false;
@@ -108,54 +241,7 @@ const authenticate = async () => {
  * @returns {Promise<string>}
  */
 const sendAuthenticatedCommand = async (command) => {
-	if (!fs.existsSync(torPasswordFile)) {
-		throw new Error("Tor control password file not found");
-	}
-
-	const password = (await fs.promises.readFile(torPasswordFile, "utf-8")).trim();
-
-	return new Promise((resolve, reject) => {
-		const socket = createConnection(torControlPort, torControlHost, () => {
-			// First authenticate
-			socket.write(`AUTHENTICATE "${password}"\r\n`);
-		});
-
-		let authenticated = false;
-		let data = "";
-
-		socket.on("data", (chunk) => {
-			data += chunk.toString();
-
-			if (!authenticated && data.includes("250 OK")) {
-				authenticated = true;
-				data = ""; // Reset for command response
-				socket.write(`${command}\r\n`);
-				return;
-			}
-
-			// Check if command response is complete
-			if (authenticated && (/^250 OK/m.test(data) || /^5\d\d /m.test(data))) {
-				socket.end();
-			}
-		});
-
-		socket.on("end", () => {
-			if (!authenticated) {
-				reject(new Error("Tor authentication failed"));
-				return;
-			}
-			resolve(data);
-		});
-
-		socket.on("error", (err) => {
-			reject(err);
-		});
-
-		socket.setTimeout(30000, () => {
-			socket.destroy();
-			reject(new Error("Tor command timeout"));
-		});
-	});
+	return await torClient.execute(command);
 };
 
 /**

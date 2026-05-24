@@ -1,7 +1,7 @@
 import { IconHelp, IconPlus, IconSearch, IconWorld } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteDdnsProvider, getDdnsProviders } from "src/api/backend";
 import { LoadingPage } from "src/components";
 import { HasPermission } from "src/components/HasPermission";
@@ -23,6 +23,45 @@ export default function TableWrapper() {
 		queryFn: getDdnsProviders,
 	});
 
+	const handleDelete = useCallback(async (id: number) => {
+		await deleteDdnsProvider(id);
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER, "deleted");
+	}, []);
+
+	const filtered = useMemo(() => {
+		if (search && data) {
+			return data.filter(
+				(item) =>
+					item.name.toLowerCase().includes(search) ||
+					item.provider.toLowerCase().includes(search) ||
+					item.domains.some((d) => d.toLowerCase().includes(search)),
+			);
+		}
+		return null;
+	}, [search, data]);
+
+	useEffect(() => {
+		if (search !== "" && (!data || data.length === 0)) {
+			setSearch("");
+		}
+	}, [search, data]);
+
+	const handleEdit = useCallback((id: number) => showDdnsProviderModal(id), []);
+	const handleNew = useCallback(() => showDdnsProviderModal(), []);
+	const handleDeleteConfirm = useCallback(
+		(id: number) => {
+			showDeleteConfirmModal({
+				title: <T id="object.delete" tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }} />,
+				onConfirm: () => handleDelete(id),
+				invalidations: [["ddns-providers"]],
+				children: (
+					<T id="object.delete.content" tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }} />
+				),
+			});
+		},
+		[handleDelete],
+	);
+
 	if (isLoading) {
 		return <LoadingPage />;
 	}
@@ -31,27 +70,12 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="notification.error" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
-	}
-
-	const handleDelete = async (id: number) => {
-		await deleteDdnsProvider(id);
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER, "deleted");
-	};
-
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter(
-			(item) =>
-				item.name.toLowerCase().includes(search) ||
-				item.provider.toLowerCase().includes(search) ||
-				item.domains.some((d) => d.toLowerCase().includes(search)),
-		);
-	} else if (search !== "") {
-		setSearch("");
 	}
 
 	return (
@@ -97,23 +121,9 @@ export default function TableWrapper() {
 					data={filtered ?? data ?? []}
 					isFiltered={!!search}
 					isFetching={isFetching}
-					onEdit={(id: number) => showDdnsProviderModal(id)}
-					onDelete={(id: number) =>
-						showDeleteConfirmModal({
-							title: (
-								<T id="object.delete" tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }} />
-							),
-							onConfirm: () => handleDelete(id),
-							invalidations: [["ddns-providers"]],
-							children: (
-								<T
-									id="object.delete.content"
-									tData={{ object: intl.formatMessage({ id: "ddns-provider" }) }}
-								/>
-							),
-						})
-					}
-					onNew={() => showDdnsProviderModal()}
+					onEdit={handleEdit}
+					onDelete={handleDeleteConfirm}
+					onNew={handleNew}
 				/>
 			</CardContent>
 		</Card>

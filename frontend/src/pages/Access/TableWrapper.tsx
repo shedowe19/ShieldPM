@@ -1,6 +1,6 @@
 import { IconHelp, IconPlus, IconSearch, IconShieldLock } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteAccessList } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -19,6 +19,40 @@ export default function TableWrapper() {
 	const [search, setSearch] = useState("");
 	const { isFetching, isLoading, isError, error, data } = useAccessLists(["owner", "items", "clients"]);
 
+	const handleDelete = useCallback(async (id: number) => {
+		await deleteAccessList(id);
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, "deleted");
+	}, []);
+
+	const filtered = useMemo(() => {
+		if (search && data) {
+			return data.filter((item) => {
+				return item.name.toLowerCase().includes(search);
+			});
+		}
+		return null;
+	}, [search, data]);
+
+	useEffect(() => {
+		if (search !== "" && (!data || data.length === 0)) {
+			setSearch("");
+		}
+	}, [search, data]);
+
+	const handleEdit = useCallback((id: number) => showAccessListModal(id), []);
+	const handleNew = useCallback(() => showAccessListModal("new"), []);
+	const handleDeleteConfirm = useCallback(
+		(id: number) => {
+			showDeleteConfirmModal({
+				title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }} />,
+				onConfirm: () => handleDelete(id),
+				invalidations: [["access-lists"], [AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, id]],
+				children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }} />,
+			});
+		},
+		[handleDelete],
+	);
+
 	if (isLoading) {
 		return <LoadingPage />;
 	}
@@ -27,25 +61,12 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="notification.error" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
-	}
-
-	const handleDelete = async (id: number) => {
-		await deleteAccessList(id);
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, "deleted");
-	};
-
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter((item) => {
-			return item.name.toLowerCase().includes(search);
-		});
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -89,18 +110,9 @@ export default function TableWrapper() {
 					data={filtered ?? data ?? []}
 					isFetching={isFetching}
 					isFiltered={!!filtered}
-					onEdit={(id: number) => showAccessListModal(id)}
-					onDelete={(id: number) =>
-						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }} />,
-							onConfirm: () => handleDelete(id),
-							invalidations: [["access-lists"], [AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, id]],
-							children: (
-								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST }} />
-							),
-						})
-					}
-					onNew={() => showAccessListModal("new")}
+					onEdit={handleEdit}
+					onDelete={handleDeleteConfirm}
+					onNew={handleNew}
 				/>
 			</CardContent>
 		</Card>

@@ -1,7 +1,7 @@
 import { IconHelp, IconPlus, IconRoute, IconSearch } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteRedirectionHost, toggleRedirectionHost } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -24,6 +24,53 @@ export default function TableWrapper() {
 		AUDIT_LOG_OBJECT_TYPE.CERTIFICATE,
 	]);
 
+	const handleDelete = useCallback(async (id: number) => {
+		await deleteRedirectionHost(id);
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, "deleted");
+	}, []);
+
+	const handleDisableToggle = useCallback(
+		async (id: number, enabled: boolean) => {
+			await toggleRedirectionHost(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, enabled ? "enabled" : "disabled");
+		},
+		[queryClient],
+	);
+
+	const filtered = useMemo(() => {
+		if (search && data) {
+			return data.filter((item) => {
+				return (
+					item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
+					item.forwardDomainName.toLowerCase().includes(search)
+				);
+			});
+		}
+		return null;
+	}, [search, data]);
+
+	useEffect(() => {
+		if (search !== "" && (!data || data.length === 0)) {
+			setSearch("");
+		}
+	}, [search, data]);
+
+	const handleEdit = useCallback((id: number) => showRedirectionHostModal(id), []);
+	const handleNew = useCallback(() => showRedirectionHostModal("new"), []);
+	const handleDeleteConfirm = useCallback(
+		(id: number) => {
+			showDeleteConfirmModal({
+				title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST }} />,
+				onConfirm: () => handleDelete(id),
+				invalidations: [["redirection-hosts"], [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id]],
+				children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST }} />,
+			});
+		},
+		[handleDelete],
+	);
+
 	if (isLoading) {
 		return <LoadingPage />;
 	}
@@ -32,35 +79,12 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="notification.error" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
-	}
-
-	const handleDelete = async (id: number) => {
-		await deleteRedirectionHost(id);
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, "deleted");
-	};
-
-	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleRedirectionHost(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, enabled ? "enabled" : "disabled");
-	};
-
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter((item) => {
-			return (
-				item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
-				item.forwardDomainName.toLowerCase().includes(search)
-			);
-		});
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -104,22 +128,10 @@ export default function TableWrapper() {
 					data={filtered ?? data ?? []}
 					isFiltered={!!search}
 					isFetching={isFetching}
-					onEdit={(id: number) => showRedirectionHostModal(id)}
-					onDelete={(id: number) =>
-						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST }} />,
-							onConfirm: () => handleDelete(id),
-							invalidations: [["redirection-hosts"], [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id]],
-							children: (
-								<T
-									id="object.delete.content"
-									tData={{ object: AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST }}
-								/>
-							),
-						})
-					}
+					onEdit={handleEdit}
+					onDelete={handleDeleteConfirm}
 					onDisableToggle={handleDisableToggle}
-					onNew={() => showRedirectionHostModal("new")}
+					onNew={handleNew}
 				/>
 			</CardContent>
 		</Card>

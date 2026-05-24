@@ -1,6 +1,6 @@
 import { IconCertificate, IconChevronDown, IconHelp, IconPlus, IconSearch, IconShieldLock } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
-import { type ChangeEvent, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { type Certificate, deleteCertificate, downloadCertificate, downloadRootCa } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -42,6 +42,48 @@ export default function TableWrapper() {
 		"streams",
 	]);
 
+	const handleDelete = useCallback(async (id: number) => {
+		await deleteCertificate(id);
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "deleted");
+	}, []);
+
+	const handleDownload = useCallback(async (id: number) => {
+		try {
+			await downloadCertificate(id);
+		} catch (err) {
+			if (err instanceof Error) showError(err.message);
+		}
+	}, []);
+
+	const filtered = useMemo(() => {
+		if (search && data) {
+			return data.filter(
+				(item: Certificate) =>
+					item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
+					item.niceName.toLowerCase().includes(search),
+			);
+		}
+		return null;
+	}, [search, data]);
+
+	useEffect(() => {
+		if (search !== "" && (!data || data.length === 0)) {
+			setSearch("");
+		}
+	}, [search, data]);
+
+	const handleDeleteConfirm = useCallback(
+		(id: number) => {
+			showDeleteConfirmModal({
+				title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />,
+				onConfirm: () => handleDelete(id),
+				invalidations: [["certificates"], [AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, id]],
+				children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />,
+			});
+		},
+		[handleDelete],
+	);
+
 	if (isLoading) {
 		return <LoadingPage />;
 	}
@@ -50,35 +92,12 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="notification.error" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
-	}
-
-	const handleDelete = async (id: number) => {
-		await deleteCertificate(id);
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "deleted");
-	};
-
-	const handleDownload = async (id: number) => {
-		try {
-			await downloadCertificate(id);
-		} catch (err) {
-			if (err instanceof Error) showError(err.message);
-		}
-	};
-
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter(
-			(item: Certificate) =>
-				item.domainNames.some((domain: string) => domain.toLowerCase().includes(search)) ||
-				item.niceName.toLowerCase().includes(search),
-		);
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -155,16 +174,7 @@ export default function TableWrapper() {
 					isFetching={isFetching}
 					onRenew={showRenewCertificateModal}
 					onDownload={handleDownload}
-					onDelete={(id: number) =>
-						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />,
-							onConfirm: () => handleDelete(id),
-							invalidations: [["certificates"], [AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, id]],
-							children: (
-								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.CERTIFICATE }} />
-							),
-						})
-					}
+					onDelete={handleDeleteConfirm}
 				/>
 			</CardContent>
 		</Card>

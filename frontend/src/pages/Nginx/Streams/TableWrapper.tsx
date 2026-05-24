@@ -1,7 +1,7 @@
 import { IconArrowsRightLeft, IconHelp, IconPlus, IconSearch } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteStream, toggleStream } from "src/api/backend";
 import { HasPermission, LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -22,6 +22,54 @@ export default function TableWrapper() {
 	const [_deleteId, _setDeleteIdd] = useState(0);
 	const { isFetching, isLoading, isError, error, data } = useStreams(["owner", AUDIT_LOG_OBJECT_TYPE.CERTIFICATE]);
 
+	const handleDelete = useCallback(async (id: number) => {
+		await deleteStream(id);
+		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, "deleted");
+	}, []);
+
+	const handleDisableToggle = useCallback(
+		async (id: number, enabled: boolean) => {
+			await toggleStream(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["streams"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.STREAM, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, enabled ? "enabled" : "disabled");
+		},
+		[queryClient],
+	);
+
+	const filtered = useMemo(() => {
+		if (search && data) {
+			return data.filter((item) => {
+				return (
+					`${item.incomingPort}`.includes(search) ||
+					`${item.forwardingPort}`.includes(search) ||
+					item.forwardingHost.includes(search)
+				);
+			});
+		}
+		return null;
+	}, [search, data]);
+
+	useEffect(() => {
+		if (search !== "" && (!data || data.length === 0)) {
+			setSearch("");
+		}
+	}, [search, data]);
+
+	const handleEdit = useCallback((id: number) => showStreamModal(id), []);
+	const handleNew = useCallback(() => showStreamModal("new"), []);
+	const handleDeleteConfirm = useCallback(
+		(id: number) => {
+			showDeleteConfirmModal({
+				title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }} />,
+				onConfirm: () => handleDelete(id),
+				invalidations: [["streams"], [AUDIT_LOG_OBJECT_TYPE.STREAM, id]],
+				children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }} />,
+			});
+		},
+		[handleDelete],
+	);
+
 	if (isLoading) {
 		return <LoadingPage />;
 	}
@@ -30,36 +78,12 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="notification.error" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
-	}
-
-	const handleDelete = async (id: number) => {
-		await deleteStream(id);
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, "deleted");
-	};
-
-	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleStream(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["streams"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.STREAM, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, enabled ? "enabled" : "disabled");
-	};
-
-	let filtered = null;
-	if (search && data) {
-		filtered = data?.filter((item) => {
-			return (
-				`${item.incomingPort}`.includes(search) ||
-				`${item.forwardingPort}`.includes(search) ||
-				item.forwardingHost.includes(search)
-			);
-		});
-	} else if (search !== "") {
-		// this can happen if someone deletes the last item while searching
-		setSearch("");
 	}
 
 	return (
@@ -103,17 +127,10 @@ export default function TableWrapper() {
 					data={filtered ?? data ?? []}
 					isFetching={isFetching}
 					isFiltered={!!filtered}
-					onEdit={(id: number) => showStreamModal(id)}
-					onDelete={(id: number) =>
-						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }} />,
-							onConfirm: () => handleDelete(id),
-							invalidations: [["streams"], [AUDIT_LOG_OBJECT_TYPE.STREAM, id]],
-							children: <T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.STREAM }} />,
-						})
-					}
+					onEdit={handleEdit}
+					onDelete={handleDeleteConfirm}
 					onDisableToggle={handleDisableToggle}
-					onNew={() => showStreamModal("new")}
+					onNew={handleNew}
 				/>
 			</CardContent>
 		</Card>
