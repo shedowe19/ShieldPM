@@ -21,14 +21,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+          corepack: true
           cache: "yarn"
           # Cache both frontend and backend yarn.lock to speed up installs
           cache-dependency-path: |
             frontend/yarn.lock
             backend/yarn.lock
-
-      - name: Enable Corepack
-        run: corepack enable yarn
 
       - name: Update Frontend Dependencies
         working-directory: ./frontend
