@@ -27,6 +27,9 @@ jobs:
             frontend/yarn.lock
             backend/yarn.lock
 
+      - name: Enable Corepack
+        run: corepack enable yarn
+
       - name: Update Frontend Dependencies
         working-directory: ./frontend
         run: |
