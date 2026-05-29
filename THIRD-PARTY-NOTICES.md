@@ -38,7 +38,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - @peculiar/x509@1.14.3 - MIT[](https://www.npmjs.com/package/@peculiar/x509/v/1.14.3)
 - @scarf/scarf@1.4.0 - Apache-2.0[](https://www.npmjs.com/package/@scarf/scarf/v/1.4.0)
 - @scure/base@2.2.0 - MIT[](https://www.npmjs.com/package/@scure/base/v/2.2.0)
-- @simplewebauthn/server@13.3.0 - MIT[](https://www.npmjs.com/package/@simplewebauthn/server/v/13.3.0)
+- @simplewebauthn/server@13.3.1 - MIT[](https://www.npmjs.com/package/@simplewebauthn/server/v/13.3.1)
 - @telegraf/types@7.1.0 - MIT[](https://www.npmjs.com/package/@telegraf/types/v/7.1.0)
 - @types/json-schema@7.0.15 - MIT[](https://www.npmjs.com/package/@types/json-schema/v/7.0.15)
 - @types/node@22.19.19 - MIT[](https://www.npmjs.com/package/@types/node/v/22.19.19)
@@ -114,7 +114,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - crc32-stream@6.0.0 - MIT[](https://www.npmjs.com/package/crc32-stream/v/6.0.0)
 - csrf-csrf@4.0.3 - ISC[](https://www.npmjs.com/package/csrf-csrf/v/4.0.3)
 - data-uri-to-buffer@7.0.0 - MIT[](https://www.npmjs.com/package/data-uri-to-buffer/v/7.0.0)
-- dayjs@1.11.20 - MIT[](https://www.npmjs.com/package/dayjs/v/1.11.20)
+- dayjs@1.11.21 - MIT[](https://www.npmjs.com/package/dayjs/v/1.11.21)
 - db-errors@0.2.3 - MIT[](https://www.npmjs.com/package/db-errors/v/0.2.3)
 - debug@4.4.3 - MIT[](https://www.npmjs.com/package/debug/v/4.4.3)
 - decompress-response@6.0.0 - MIT[](https://www.npmjs.com/package/decompress-response/v/6.0.0)
@@ -207,7 +207,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - is-stream@2.0.1 - MIT[](https://www.npmjs.com/package/is-stream/v/2.0.1)
 - is-typed-array@1.1.15 - MIT[](https://www.npmjs.com/package/is-typed-array/v/1.1.15)
 - isarray@1.0.0 - MIT[](https://www.npmjs.com/package/isarray/v/1.0.0)
-- isomorphic-git@1.38.1 - MIT[](https://www.npmjs.com/package/isomorphic-git/v/1.38.1)
+- isomorphic-git@1.38.3 - MIT[](https://www.npmjs.com/package/isomorphic-git/v/1.38.3)
 - jose@6.2.3 - MIT[](https://www.npmjs.com/package/jose/v/6.2.3)
 - js-yaml@4.1.1 - MIT[](https://www.npmjs.com/package/js-yaml/v/4.1.1)
 - json-parse-better-errors@1.0.2 - MIT[](https://www.npmjs.com/package/json-parse-better-errors/v/1.0.2)
@@ -245,7 +245,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - mkdirp-classic@0.5.3 - MIT[](https://www.npmjs.com/package/mkdirp-classic/v/0.5.3)
 - mri@1.2.0 - MIT[](https://www.npmjs.com/package/mri/v/1.2.0)
 - ms@2.1.3 - MIT[](https://www.npmjs.com/package/ms/v/2.1.3)
-- mysql2@3.22.3 - MIT[](https://www.npmjs.com/package/mysql2/v/3.22.3)
+- mysql2@3.22.4 - MIT[](https://www.npmjs.com/package/mysql2/v/3.22.4)
 - named-placeholders@1.1.6 - MIT[](https://www.npmjs.com/package/named-placeholders/v/1.1.6)
 - nan@2.27.0 - MIT[](https://www.npmjs.com/package/nan/v/2.27.0)
 - napi-build-utils@2.0.0 - MIT[](https://www.npmjs.com/package/napi-build-utils/v/2.0.0)
@@ -395,8 +395,8 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - @apidevtools/openapi-schemas@2.1.0 - MIT[](https://www.npmjs.com/package/@apidevtools/openapi-schemas/v/2.1.0)
 - @apidevtools/swagger-methods@3.0.2 - MIT[](https://www.npmjs.com/package/@apidevtools/swagger-methods/v/3.0.2)
 - @apidevtools/swagger-parser@12.1.0 - MIT[](https://www.npmjs.com/package/@apidevtools/swagger-parser/v/12.1.0)
-- @biomejs/biome@2.4.15 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.4.15)
-- @biomejs/cli-linux-x64@2.4.15 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.4.15)
+- @biomejs/biome@2.4.16 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.4.16)
+- @biomejs/cli-linux-x64@2.4.16 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.4.16)
 - @isaacs/fs-minipass@4.0.1 - ISC[](https://www.npmjs.com/package/@isaacs/fs-minipass/v/4.0.1)
 - @jridgewell/sourcemap-codec@1.5.5 - MIT[](https://www.npmjs.com/package/@jridgewell/sourcemap-codec/v/1.5.5)
 - @oxc-project/types@0.130.0 - MIT[](https://www.npmjs.com/package/@oxc-project/types/v/0.130.0)
@@ -477,4 +477,4 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 ### Development Dependencies
 
 
-The above information is based solely on the NPM Registry data as of May 24, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information is based solely on the NPM Registry data as of May 29, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
