@@ -15,6 +15,7 @@ export interface AnalyticsSummary {
 }
 
 export interface AnalyticsRequestLog {
+	id?: number;
 	time: string;
 	method: string;
 	status: number;

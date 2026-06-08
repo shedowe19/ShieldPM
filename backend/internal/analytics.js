@@ -462,8 +462,8 @@ class AnalyticsService {
 				.select("*")
 				.where("host_id", hostId)
 				.andWhere("time", ">=", sinceIso)
-				.orderBy("id", "desc")
 				.orderBy("time", "desc")
+				.orderBy("id", "desc")
 				.limit(20),
 
 			// Aggregated Totals

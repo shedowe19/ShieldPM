@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
+	type AnalyticsRequestLog,
 	type AnalyticsSummary,
 	type DbStats,
 	getAnalyticsSeries,
@@ -41,6 +42,21 @@ const formatProtocol = (http3?: string | null) => (http3 ? "HTTP/3" : "-");
 const formatTlsSignal = (sslSigalg?: string | null, sslClientSigalg?: string | null) =>
 	sslSigalg || sslClientSigalg || "-";
 
+const sortRecentRequests = (requests?: AnalyticsRequestLog[]) =>
+	[...(requests || [])].sort((a, b) => {
+		const timeDiff = dayjs(b.time).valueOf() - dayjs(a.time).valueOf();
+		if (timeDiff !== 0) {
+			return timeDiff;
+		}
+
+		return (b.id || 0) - (a.id || 0);
+	});
+
+const formatRequestTime = (time: string) => {
+	const requestTime = dayjs(time);
+	return requestTime.isSame(dayjs(), "day") ? requestTime.format("HH:mm:ss") : requestTime.format("DD.MM. HH:mm:ss");
+};
+
 // Pulse animation
 const pulseStyle = `
 @keyframes pulse {
@@ -61,6 +77,7 @@ const Analytics = () => {
 	const [dbStats, setDbStats] = useState<DbStats | null>(null);
 	const health = useHealth();
 	const isDemo = health.data?.demo;
+	const recentRequests = sortRecentRequests(summary?.recentRequests);
 
 	// Select first host by default
 	useEffect(() => {
@@ -598,7 +615,7 @@ const Analytics = () => {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					{summary?.recentRequests && summary.recentRequests.length > 0 ? (
+					{recentRequests.length > 0 ? (
 						<div className="relative w-full overflow-auto">
 							<table className="w-full caption-bottom text-sm text-left">
 								<thead className="[&_tr]:border-b">
@@ -628,12 +645,17 @@ const Analytics = () => {
 									</tr>
 								</thead>
 								<tbody className="[&_tr:last-child]:border-0">
-									{summary.recentRequests.map((req) => (
+									{recentRequests.map((req) => (
 										<tr
-											key={`${req.time}-${req.ip}-${req.path}`}
+											key={req.id || `${req.time}-${req.ip}-${req.path}-${req.duration}`}
 											className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
 										>
-											<td className="p-4 align-middle">{dayjs(req.time).format("HH:mm:ss")}</td>
+											<td
+												className="p-4 align-middle"
+												title={dayjs(req.time).format("YYYY-MM-DD HH:mm:ss")}
+											>
+												{formatRequestTime(req.time)}
+											</td>
 											<td className="p-4 align-middle font-mono">{req.method}</td>
 											<td className="p-4 align-middle">
 												<span
