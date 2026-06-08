@@ -14,6 +14,9 @@
 
 - TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen — der Auth-Typ ist parallel zu oauth2-proxy verfügbar, ein konkretes Setup-Beispiel fehlt aber noch.
 - TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
+- TODO: Prüfen, ob für den neuen Asset-Cache UI-Optionen für TTL, Cache-Größe oder Purge-Aktionen benötigt werden ([Nginx Config Templates](./module/nginx-templates.md)).
+- TODO: Prüfen, ob `backend/internal/nginx.js` den `path === "/"`-Check für Custom-Locations nach dem Rendern noch korrekt ausführen kann oder ob der Check vor `host.locations = renderedLocations` erfolgen muss ([Proxy-Host](./module/proxy-host.md)).
+- TODO: Prüfen, ob Custom-Locations eigene Multi-Upstream-Pools benötigen oder ob hostweite Upstreams für die Default-Location ausreichen ([Proxy-Host](./module/proxy-host.md)).
 
 ## Gelöste Fragen
 
@@ -23,8 +26,10 @@
 - ~~ML-KEM-Modi je `shieldpm-nginx`-Build~~ → Dieses Repo setzt für Hosts mit interner CA nur das Flag `host.use_ml_kem` in `nginx.js`. Die tatsächliche Hybrid-Kex-Liste (X25519MLKEM768 etc.) liegt im separaten `shieldpm-nginx`-Repository. Dokumentiert in [pki.md](./module/pki.md).
 - ~~Update-Intervall der Cloudflare-IP-Ranges~~ → `interval_timeout = 6h × IPRT` (Umgebungsvariable, Standard-Multiplikator 1). Manueller Trigger über AI-Tool `renew_ip_ranges`. Dokumentiert in [ip-ranges.md](./module/ip-ranges.md).
 - ~~Webhooks für Git-Deploy~~ → Nicht implementiert; Aktualisierung läuft ausschließlich über Polling-Timer pro Host (`git_poll_interval` × `git_poll_unit`, eigener `setInterval` pro Host in `pollingTimers`). Dokumentiert in [git-deploy.md](./module/git-deploy.md).
-- ~~Mechanismus der Custom-Locations auf Proxy-Hosts~~ → `nginx.js → renderLocations()` iteriert über `host.locations`, mischt Host-Eigenschaften (Access-List, Zertifikat, SSL/HSTS-Flags), rendert pro Eintrag das Liquid-Template `_proxy_host_custom_location.conf` und konkateniert die Strings. Bei `path === "/"` wird die Default-Location ausgeschaltet. Dokumentiert in [proxy-host.md](./module/proxy-host.md).
+- ~~Mechanismus der Custom-Locations auf Proxy-Hosts~~ → `nginx.js → renderLocations()` iteriert über `host.locations`, mischt Host-Eigenschaften (Access-List, Zertifikat, SSL/HSTS-Flags), rendert pro Eintrag das Liquid-Template `_proxy_host_custom_location.conf` und konkateniert die Strings. Der beabsichtigte `path === "/"`-Check ist dokumentiert, aber als offener Prüfpunkt markiert. Dokumentiert in [proxy-host.md](./module/proxy-host.md).
 - ~~Genauer Mechanismus des Docker Auto-Discovery Label-Formats~~ → Sucht nach `shieldpm.hostname`-Label. Unterstützt Ports, Access-Lists, Booleans und Zertifikats-Provider (`shieldpm.ssl_provider`). Dokumentiert in [docker.md](./module/docker.md).
+- ~~Bedeutung von `caching_enabled`~~ → `caching_enabled` ist jetzt als Asset-only Proxy-Cache verdrahtet (`shieldpm_asset_cache`) und gilt für HTTP/HTTPS-Proxy-Locations sowie Custom-Locations. Dokumentiert in [Nginx Config Templates](./module/nginx-templates.md).
+- ~~HTTP/2-Upstream, 0-RTT und Multi-Upstream/Load-Balancing~~ → Proxy-Hosts haben neue Felder für `upstream_servers`, `load_balancing_method`, `upstream_http_version` und `ssl_early_data`; Templates und UI sind verdrahtet. Dokumentiert in [Proxy-Host](./module/proxy-host.md) und [Nginx Config Templates](./module/nginx-templates.md).
 
 ### Frühere Sessions
 
@@ -35,7 +40,7 @@
 - ~~`frontend/src/context/`~~ → AuthContext, LocaleContext, ThemeContext → [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`frontend/src/types/`~~ → `enums.ts` (8 KB) → [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`rootfs/usr/local/bin/`~~ → 9 Scripts dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).
-- ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` importiert, EJS ist der Standard für Nginx-Templates.
+- ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Die Nginx-Templates werden aktuell mit Liquid über `backend/lib/utils.js` gerendert; EJS ist nicht der Standard. Dokumentiert in [Nginx Config Templates](./module/nginx-templates.md).
 - ~~Backend-`dev`-Script~~ → Es gibt kein dediziertes `yarn dev` im `package.json`, `node index-dev.js` wird direkt gestartet.
 - ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
 - ~~Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?~~ → `rootfs/usr/local/bin/entrypoint.sh` prüft, ob `/data/npmplus` existiert und `/data/shieldpm` fehlt, und führt dann ein `mv` aus.

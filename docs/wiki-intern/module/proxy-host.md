@@ -14,7 +14,11 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 - `backend/models/proxy_host.js` (7 KB) — Objection.js-Modell
 - `backend/templates/proxy_host.conf` (16 KB) — Nginx-Template
 - `backend/templates/_proxy_logic.conf` (17 KB) — Gemeinsame Proxy-Logik
+- `backend/templates/_common.conf` — Gemeinsame TLS-/Listener-Konfiguration inkl. 0-RTT-Opt-in
 - `backend/routes/nginx/proxy_hosts.js` (6 KB) — API-Routen
+- `backend/schema/components/proxy-host-object.json` — API-Objektschema
+- `backend/migrations/20260608000000_add_proxy_upstream_features.js` — Upstream-/0-RTT-Felder
+- `frontend/src/modals/ProxyHostModal.tsx` — Proxy-Host-Dialog inkl. Upstream-/Load-Balancing-UI
 
 ## Verhalten
 
@@ -35,7 +39,29 @@ Mechanik in `nginx.js` → `renderLocations(host)`:
 3. Enthält `forward_host` einen Slash und beginnt nicht mit `/` oder `unix`, wird nach dem ersten Segment getrennt: erster Teil → `forward_host`, Rest → `forward_path`.
 4. Das Liquid-Template `backend/templates/_proxy_host_custom_location.conf` wird pro Location gerendert.
 5. Alle gerenderten Strings werden konkateniert und als String an das Haupt-Template `proxy_host.conf` übergeben.
-6. Existiert eine Custom-Location mit `path === "/"`, wird die Standard-`/`-Location automatisch deaktiviert (`use_default_location = false`).
+6. Unklar: Der Code soll bei einer Custom-Location mit `path === "/"` die Standard-`/`-Location deaktivieren (`use_default_location = false`). In `backend/internal/nginx.js` wird `host.locations` jedoch vor dieser Prüfung in einen gerenderten String ersetzt; der Check wirkt dadurch wahrscheinlich nicht wie beabsichtigt.
+
+## Upstreams und Load-Balancing
+
+Proxy-Hosts unterstützen zusätzlich zum klassischen Einzelziel (`forward_scheme`, `forward_host`, `forward_port`) ein optionales JSON-Feld `upstream_servers`.
+
+- Leere `upstream_servers` bedeuten: Die bestehende Einzelziel-Konfiguration bleibt aktiv.
+- Enthält `upstream_servers` mindestens einen Eintrag, erzeugt `backend/templates/proxy_host.conf` einen hostweiten `upstream shieldpm_proxy_host_<id>`-Block.
+- `_proxy_logic.conf` nutzt diesen Upstream-Namen für die Default-Location bei `http`, `https`, `grpc` und `grpcs`.
+- Unterstützte Methoden in `load_balancing_method`: `round_robin`, `least_conn`, `ip_hash`, `least_time_header`, `least_time_last_byte`, `random`, `random_two_least_conn`.
+- `upstream_http_version` kann für HTTP/HTTPS-Upstreams von `1.1` auf `2` gestellt werden. Bei `2` setzt das Template `proxy_http_version 2` und leert Upgrade-/Connection-Hop-by-Hop-Header.
+- Custom-Locations behalten vorerst ihre eigene Einzelziel-Konfiguration und werden nicht automatisch in hostweite Upstream-Gruppen aufgenommen.
+
+Ein Upstream-Server-Eintrag enthält mindestens `host` und `port`. Optional sind `weight`, `max_fails`, `fail_timeout`, `backup` und `down`.
+
+## TLS 1.3 0-RTT
+
+Das Feld `ssl_early_data` aktiviert pro Proxy-Host `ssl_early_data on` in `_common.conf`.
+
+- 0-RTT ist explizit opt-in, weil Early Data replay-anfällig sein kann.
+- Die Root-`nginx.conf` aus dem separaten `shieldpm-nginx`-Repository stellt Maps bereit, die Early Data für replay-riskante Methoden erkennen.
+- Aktivierte Hosts geben für solche Early-Data-Anfragen HTTP `425` zurück.
+- Sichere Methoden wie `GET`, `HEAD` und `OPTIONS` werden nicht blockiert.
 
 ## Abhängigkeiten
 
@@ -45,6 +71,7 @@ Mechanik in `nginx.js` → `renderLocations(host)`:
 - `internal/audit-log.js` — Protokollierung
 - `models/proxy_host.js` — Datenbank-Modell
 - `models/host_domain.js` — Domain-Zuordnung
+- `shieldpm-nginx/rootfs/usr/local/nginx/conf/nginx.conf` — Root-Maps für 0-RTT-Replay-Schutz
 
 ## Offene Fragen
 

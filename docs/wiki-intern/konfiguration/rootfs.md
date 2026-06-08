@@ -22,6 +22,12 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 | `npm-reset-password` | 45 B   | Passwort-Reset-Wrapper                                                                   |
 | `migration.sh`       | 34 B   | Migrations-Wrapper                                                                       |
 
+### `start.sh` Nginx-Initialisierung
+
+- Erstellt persistente Nginx-Datenordner unter `/data/nginx/`, inklusive `/data/nginx/cache`.
+- Generiert bei Bedarf `/data/nginx/quic_host.key` und aktiviert damit `quic_host_key` in der Root-`nginx.conf`. Dadurch bleiben QUIC Address-Validation-/Stateless-Reset-Tokens über Reloads hinweg stabil.
+- Aktiviert die im `shieldpm-nginx`-Image vorbereitete `proxy_cache_path`-Direktive für die Asset-Cache-Zone `shieldpm_asset_cache`.
+
 ## Konfigurationsdateien (`rootfs/etc/`)
 
 | Datei                           | Zweck                             |
@@ -66,3 +72,4 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Build](../entwicklung/build.md)
 - [Deployment](../entwicklung/deployment.md)
 - [Umgebungsvariablen](./umgebungsvariablen.md)
+- [Nginx Config Templates](../module/nginx-templates.md)

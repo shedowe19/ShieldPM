@@ -25,6 +25,7 @@ const boolFields = [
 	"hsts_subdomains",
 	"maintenance_on_failure",
 	"disable_buffering",
+	"ssl_early_data",
 	"security_crowdsec",
 	"maintenance_active",
 	"php_enabled",
@@ -42,6 +43,12 @@ class ProxyHost extends Model {
 	forward_host;
 	/** @type {number} */
 	forward_port;
+	/** @type {Object[]} */
+	upstream_servers;
+	/** @type {string} */
+	load_balancing_method;
+	/** @type {string} */
+	upstream_http_version;
 	/** @type {string[]} */
 	domain_names;
 	/** @type {Object[]} */
@@ -76,6 +83,8 @@ class ProxyHost extends Model {
 	hsts_subdomains;
 	/** @type {number} */
 	disable_buffering;
+	/** @type {number} */
+	ssl_early_data;
 	/** @type {number} */
 	anubis_enabled;
 	/** @type {Object[]|null} */
@@ -161,6 +170,10 @@ class ProxyHost extends Model {
 			this.meta = {};
 		}
 
+		if (!Array.isArray(this.upstream_servers)) {
+			this.upstream_servers = [];
+		}
+
 		if (this.maintenance_start) {
 			this.maintenance_start = dayjs(this.maintenance_start).format("YYYY-MM-DD HH:mm:ss");
 		} else {
@@ -200,6 +213,10 @@ class ProxyHost extends Model {
 		} else if (!this.domain_names) {
 			this.domain_names = [];
 		}
+
+		if (!Array.isArray(this.upstream_servers)) {
+			this.upstream_servers = [];
+		}
 	}
 
 	$parseDatabaseJson(json) {
@@ -221,7 +238,7 @@ class ProxyHost extends Model {
 	}
 
 	static get jsonAttributes() {
-		return ["domain_names", "meta", "locations", "anubis_rules"];
+		return ["domain_names", "meta", "locations", "anubis_rules", "upstream_servers"];
 	}
 
 	static get relationMappings() {

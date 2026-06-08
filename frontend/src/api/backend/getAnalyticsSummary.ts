@@ -22,6 +22,10 @@ export interface AnalyticsRequestLog {
 	ip: string;
 	countryCode?: string;
 	duration: number;
+	http3?: string | null;
+	sslEarlyData?: string | null;
+	sslSigalg?: string | null;
+	sslClientSigalg?: string | null;
 }
 
 export const getAnalyticsSummary = (hostId?: number, range = "24h"): Promise<AnalyticsSummary> => {

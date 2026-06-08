@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProxyHost, getProxyHost, type ProxyHost, updateProxyHost } from "src/api/backend";
-import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, LOAD_BALANCING_METHOD, UPSTREAM_HTTP_VERSION } from "src/types/enums";
 
 const fetchProxyHost = (id: number | "new") => {
 	if (id === "new") {
@@ -12,9 +12,13 @@ const fetchProxyHost = (id: number | "new") => {
 			domainNames: [],
 			forwardHost: "",
 			forwardPort: 0,
+			upstreamServers: [],
+			loadBalancingMethod: LOAD_BALANCING_METHOD.ROUND_ROBIN,
+			upstreamHttpVersion: UPSTREAM_HTTP_VERSION.HTTP_1_1,
 			accessListId: 0,
 			certificateId: 0,
 			sslForced: false,
+			sslEarlyData: false,
 			cachingEnabled: false,
 			blockExploits: false,
 			securityCrowdsec: false,

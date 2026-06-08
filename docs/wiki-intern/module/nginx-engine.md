@@ -6,7 +6,7 @@ Dokumentation der zentralen Nginx-Konfigurationsengine.
 
 ## Kontext
 
-Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, rendert EJS-Templates und schreibt `.conf`-Dateien.
+Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, rendert Liquid-Templates und schreibt `.conf`-Dateien.
 
 ## Wichtige Dateien
 
@@ -24,16 +24,18 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 ## Verhalten
 
 1. `nginx.js` wird getriggert bei CRUD-Operationen auf Hosts
-2. Liest aktuelle Daten aus der Datenbank
-3. Rendert EJS-Templates mit Host-Daten
+2. Liest aktuelle Host-Daten aus der Datenbank
+3. Rendert Liquid-Templates mit Host-Daten und Umgebungsvariablen
 4. Schreibt `.conf`-Dateien nach `/data/nginx/`
-5. Führt `nginx -s reload` aus (Debouncing passiert in `docker.js`, nicht hier)
+5. Legt bei vorhandenen Host-Konfigurationen eine `.bak`-Sicherung an
+6. Ruft nach der Generierung `test()` und anschließend, sofern `skip_reload` nicht gesetzt ist, `reload()` auf
 
 ## Wichtige Hinweise
 
-- `nginx -t` wird **aktiv** vor dem Reload ausgeführt via `test()` Methode (`nginx -tq`)
-- Reload ist **nicht** debounced in `nginx.js` — Debouncing passiert in `docker.js`
-- Templates verwenden EJS-Syntax mit Liquid-Fallback
+- `nginx -t` wird aktuell **nicht** ausgeführt. Die Methode `test()` ist ein No-op und gibt `true` zurück.
+- Dadurch werden Template- oder Laufzeitfehler nicht vor dem Reload abgefangen. Das Backup/Restore-Verhalten hilft bei Generierungsfehlern, ersetzt aber keine echte Nginx-Validierung.
+- `reload()` führt direkt `nginx -s reload` aus. Nur Docker Auto-Discovery bündelt Reloads über `docker.js` mit einem 2-Sekunden-Debounce.
+- Templates verwenden Liquid-Syntax über `liquidjs`; ein EJS-Fallback ist im aktuellen Code nicht erkennbar.
 
 ## Erweiterte Methoden
 
@@ -75,6 +77,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 ## Verwandte Seiten
 
 - [Datenfluss](../architektur/datenfluss.md)
+- [Nginx-Templates](./nginx-templates.md)
 - [Proxy-Host](./proxy-host.md)
 - [Redirection-Host](./redirection-host.md)
 - [Dead-Host](./dead-host.md)

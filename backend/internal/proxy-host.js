@@ -62,9 +62,13 @@ const internalProxyHost = {
 	 * @param   {string}  data.forward_scheme
 	 * @param   {string}  data.forward_host
 	 * @param   {number}  data.forward_port
+	 * @param   {Array<Object>} [data.upstream_servers]
+	 * @param   {string}  [data.load_balancing_method]
+	 * @param   {string}  [data.upstream_http_version]
 	 * @param   {number}  [data.access_list_id]
 	 * @param   {number|string}  [data.certificate_id]
 	 * @param   {boolean} [data.ssl_forced]
+	 * @param   {boolean} [data.ssl_early_data]
 	 * @param   {boolean} [data.hsts_enabled]
 	 * @param   {boolean} [data.hsts_subdomains]
 	 * @param   {boolean} [data.http2_support]
@@ -192,9 +196,13 @@ const internalProxyHost = {
 	 * @param  {string}  [data.forward_scheme]
 	 * @param  {string}  [data.forward_host]
 	 * @param  {number}  [data.forward_port]
+	 * @param  {Array<Object>} [data.upstream_servers]
+	 * @param  {string}  [data.load_balancing_method]
+	 * @param  {string}  [data.upstream_http_version]
 	 * @param  {number}  [data.access_list_id]
 	 * @param  {number|string}  [data.certificate_id]
 	 * @param  {boolean} [data.ssl_forced]
+	 * @param  {boolean} [data.ssl_early_data]
 	 * @param  {boolean} [data.hsts_enabled]
 	 * @param  {boolean} [data.hsts_subdomains]
 	 * @param  {boolean} [data.http2_support]

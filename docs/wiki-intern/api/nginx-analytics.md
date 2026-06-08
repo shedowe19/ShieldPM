@@ -11,9 +11,12 @@ API-Routen für detaillierte Nginx-Analytics-Daten.
 
 ## Endpunkte
 
-| Methode | Pfad                   | Beschreibung            |
-| ------- | ---------------------- | ----------------------- |
-| GET     | `/api/nginx/analytics` | Analytics-Daten abrufen |
+| Methode | Pfad                                   | Beschreibung                                     |
+| ------- | -------------------------------------- | ------------------------------------------------ |
+| GET     | `/api/nginx/analytics/:hostId`         | Detaillierte Host-Analytics abrufen              |
+| GET     | `/api/nginx/analytics/:hostId/summary` | Aggregierte Host-Zusammenfassung und Recent Logs |
+
+Die Recent-Logs enthalten zusätzlich HTTP/3- und TLS-Felder (`http3`, `ssl_early_data`, `ssl_sigalg`, `ssl_client_sigalg`), sofern sie im Nginx-JSON-Log vorhanden waren.
 
 ## Abhängigkeiten
 

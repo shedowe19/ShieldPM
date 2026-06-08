@@ -25,6 +25,10 @@ class AnalyticsLogs extends Model {
 				referer: { type: ["string", "null"] },
 				user_agent: { type: ["string", "null"] },
 				duration: { type: "integer" },
+				http3: { type: ["string", "null"] },
+				ssl_early_data: { type: ["string", "null"] },
+				ssl_sigalg: { type: ["string", "null"] },
+				ssl_client_sigalg: { type: ["string", "null"] },
 				created_at: { type: "integer" },
 			},
 		};

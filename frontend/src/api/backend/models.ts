@@ -10,11 +10,13 @@ import type {
 	GitPollUnit,
 	IconType,
 	IpVersion,
+	LoadBalancingMethod,
 	PhpVersion,
 	TerminalAuthType,
 	TimeUnit,
 	TorOnionStatus,
 	UiColor,
+	UpstreamHttpVersion,
 } from "src/types/enums";
 
 export interface UserPermissions {
@@ -142,6 +144,16 @@ export interface ProxyLocation {
 	forwardQuery?: string;
 }
 
+export interface ProxyUpstreamServer {
+	host: string;
+	port: number;
+	weight?: number | null;
+	maxFails?: number | null;
+	failTimeout?: string | null;
+	backup?: boolean;
+	down?: boolean;
+}
+
 export interface ProxyHost {
 	id: number;
 	createdOn: string;
@@ -151,10 +163,14 @@ export interface ProxyHost {
 	forwardScheme: ForwardScheme;
 	forwardHost: string;
 	forwardPort: number;
+	upstreamServers: ProxyUpstreamServer[];
+	loadBalancingMethod: LoadBalancingMethod;
+	upstreamHttpVersion: UpstreamHttpVersion;
 	forwardQuery?: string;
 	accessListId: number;
 	certificateId: number;
 	sslForced: boolean;
+	sslEarlyData: boolean;
 	cachingEnabled: boolean;
 	disableBuffering: boolean;
 	blockExploits: boolean;

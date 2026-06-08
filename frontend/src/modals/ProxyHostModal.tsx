@@ -8,10 +8,18 @@ import {
 	IconTool,
 } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
+import {
+	Field,
+	FieldArray,
+	type FieldArrayRenderProps,
+	type FieldProps,
+	Form,
+	Formik,
+	type FormikHelpers,
+} from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import type { ProxyHost } from "src/api/backend";
+import type { ProxyHost, ProxyUpstreamServer } from "src/api/backend";
 import {
 	AccessField,
 	AnubisRulesField,
@@ -45,10 +53,12 @@ import {
 	AUDIT_LOG_OBJECT_TYPE,
 	FORWARD_SCHEME,
 	ICON_TYPE,
+	LOAD_BALANCING_METHOD,
 	PHP_VERSION,
 	PROXY_HOST_TAB,
 	TERMINAL_AUTH_TYPE,
 	TIME_UNIT,
+	UPSTREAM_HTTP_VERSION,
 } from "src/types/enums";
 
 const DEFAULT_ANUBIS_RULES = [
@@ -77,15 +87,67 @@ interface Props extends InnerModalProps {
 	remove: () => void;
 }
 
-interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate" | "advLimitReqBurst"> {
+interface ProxyHostFormValues
+	extends Omit<Partial<ProxyHost>, "advLimitReqRate" | "advLimitReqBurst" | "upstreamServers"> {
 	advLimitReqRate?: number | string;
 	advLimitReqBurst?: number | string;
+	upstreamServers?: ProxyUpstreamServerFormValues[];
 	crowdsecEnabled?: boolean;
 	anubisEnabled?: boolean;
 	anubisRules?: ProxyHost["anubisRules"];
 	gitCredentials?: string;
 	php_override_ini?: string;
 }
+
+interface ProxyUpstreamServerFormValues extends Omit<ProxyUpstreamServer, "port" | "weight" | "maxFails"> {
+	port?: number | string;
+	weight?: number | string | null;
+	maxFails?: number | string | null;
+}
+
+const DEFAULT_UPSTREAM_SERVER: ProxyUpstreamServerFormValues = {
+	host: "",
+	port: 80,
+	weight: "",
+	maxFails: "",
+	failTimeout: "10s",
+	backup: false,
+	down: false,
+};
+
+const PROXY_UPSTREAM_SCHEMES = [FORWARD_SCHEME.HTTP, FORWARD_SCHEME.HTTPS, FORWARD_SCHEME.GRPC, FORWARD_SCHEME.GRPCS];
+
+const HTTP_UPSTREAM_SCHEMES = [FORWARD_SCHEME.HTTP, FORWARD_SCHEME.HTTPS];
+
+const sanitizeOptionalNumber = (value: number | string | null | undefined) => {
+	if (value === "" || value === null || typeof value === "undefined" || Number.isNaN(Number(value))) {
+		return undefined;
+	}
+
+	return Number(value);
+};
+
+const sanitizeUpstreamServers = (servers: ProxyUpstreamServerFormValues[] | undefined): ProxyUpstreamServer[] => {
+	if (!Array.isArray(servers)) {
+		return [];
+	}
+
+	return servers
+		.map((server) => {
+			const port = sanitizeOptionalNumber(server.port);
+
+			return {
+				host: server.host.trim(),
+				port: port || 0,
+				weight: sanitizeOptionalNumber(server.weight),
+				maxFails: sanitizeOptionalNumber(server.maxFails),
+				failTimeout: server.failTimeout?.trim() || undefined,
+				backup: Boolean(server.backup),
+				down: Boolean(server.down),
+			};
+		})
+		.filter((server) => server.host && server.port > 0 && server.port <= 65535);
+};
 
 const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data: currentUser, isLoading: userIsLoading, error: userError } = useUser("me");
@@ -107,6 +169,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		if (sanitizedValues.advLimitReqBurst === "" || Number.isNaN(Number(sanitizedValues.advLimitReqBurst))) {
 			sanitizedValues.advLimitReqBurst = undefined;
 		}
+		sanitizedValues.upstreamServers = sanitizeUpstreamServers(sanitizedValues.upstreamServers);
 
 		// Map frontend field to backend schema
 		if (typeof sanitizedValues.crowdsecEnabled !== "undefined") {
@@ -162,6 +225,9 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								forwardScheme: data?.forwardScheme || FORWARD_SCHEME.HTTP,
 								forwardHost: data?.forwardHost || "",
 								forwardPort: data?.forwardPort || undefined,
+								upstreamServers: data?.upstreamServers || [],
+								loadBalancingMethod: data?.loadBalancingMethod || LOAD_BALANCING_METHOD.ROUND_ROBIN,
+								upstreamHttpVersion: data?.upstreamHttpVersion || UPSTREAM_HTTP_VERSION.HTTP_1_1,
 								indexFile: data?.indexFile || "", // Add indexFile to initialValues
 								// Terminal Fields
 								terminalHost: data?.terminalHost || "",
@@ -185,6 +251,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								// SSL tab
 								certificateId: data?.certificateId || 0,
 								sslForced: data?.sslForced || false,
+								sslEarlyData: data?.sslEarlyData || false,
 								http2Support: data?.http2Support || false,
 								hstsEnabled: data?.hstsEnabled || false,
 								hstsSubdomains: data?.hstsSubdomains || false,
@@ -411,6 +478,389 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														</Field>
 													</div>
 												</div>
+
+												<Field name="forwardScheme">
+													{({ field: schemeField }: FieldProps) =>
+														PROXY_UPSTREAM_SCHEMES.includes(schemeField.value) && (
+															<Card className="my-3 border-dashed border-cyan-500/50">
+																<CardContent className="p-4 space-y-4">
+																	<div>
+																		<h4 className="pb-1 text-lg font-semibold text-cyan-500">
+																			<T id="proxy-host.upstreams.title" />
+																		</h4>
+																		<p className="text-sm text-muted-foreground">
+																			<T id="proxy-host.upstreams.description" />
+																		</p>
+																	</div>
+
+																	<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+																		<Field name="loadBalancingMethod">
+																			{({ field, form }: FieldProps) => (
+																				<div className="space-y-2">
+																					<Label htmlFor="loadBalancingMethod">
+																						<T id="proxy-host.load-balancing-method" />
+																					</Label>
+																					<Select
+																						onValueChange={(val: string) =>
+																							form.setFieldValue(
+																								field.name,
+																								val,
+																							)
+																						}
+																						value={field.value}
+																					>
+																						<SelectTrigger id="loadBalancingMethod">
+																							<SelectValue />
+																						</SelectTrigger>
+																						<SelectContent>
+																							<SelectItem
+																								value={
+																									LOAD_BALANCING_METHOD.ROUND_ROBIN
+																								}
+																							>
+																								<T id="proxy-host.load-balancing.round-robin" />
+																							</SelectItem>
+																							<SelectItem
+																								value={
+																									LOAD_BALANCING_METHOD.LEAST_CONN
+																								}
+																							>
+																								<T id="proxy-host.load-balancing.least-conn" />
+																							</SelectItem>
+																							<SelectItem
+																								value={
+																									LOAD_BALANCING_METHOD.IP_HASH
+																								}
+																							>
+																								<T id="proxy-host.load-balancing.ip-hash" />
+																							</SelectItem>
+																							<SelectItem
+																								value={
+																									LOAD_BALANCING_METHOD.LEAST_TIME_HEADER
+																								}
+																							>
+																								<T id="proxy-host.load-balancing.least-time-header" />
+																							</SelectItem>
+																							<SelectItem
+																								value={
+																									LOAD_BALANCING_METHOD.LEAST_TIME_LAST_BYTE
+																								}
+																							>
+																								<T id="proxy-host.load-balancing.least-time-last-byte" />
+																							</SelectItem>
+																							<SelectItem
+																								value={
+																									LOAD_BALANCING_METHOD.RANDOM
+																								}
+																							>
+																								<T id="proxy-host.load-balancing.random" />
+																							</SelectItem>
+																							<SelectItem
+																								value={
+																									LOAD_BALANCING_METHOD.RANDOM_TWO_LEAST_CONN
+																								}
+																							>
+																								<T id="proxy-host.load-balancing.random-two-least-conn" />
+																							</SelectItem>
+																						</SelectContent>
+																					</Select>
+																				</div>
+																			)}
+																		</Field>
+
+																		{HTTP_UPSTREAM_SCHEMES.includes(
+																			schemeField.value,
+																		) && (
+																			<Field name="upstreamHttpVersion">
+																				{({ field, form }: FieldProps) => (
+																					<div className="space-y-2">
+																						<Label htmlFor="upstreamHttpVersion">
+																							<T id="proxy-host.upstream-http-version" />
+																						</Label>
+																						<Select
+																							onValueChange={(
+																								val: string,
+																							) =>
+																								form.setFieldValue(
+																									field.name,
+																									val,
+																								)
+																							}
+																							value={field.value}
+																						>
+																							<SelectTrigger id="upstreamHttpVersion">
+																								<SelectValue />
+																							</SelectTrigger>
+																							<SelectContent>
+																								<SelectItem
+																									value={
+																										UPSTREAM_HTTP_VERSION.HTTP_1_1
+																									}
+																								>
+																									HTTP/1.1
+																								</SelectItem>
+																								<SelectItem
+																									value={
+																										UPSTREAM_HTTP_VERSION.HTTP_2
+																									}
+																								>
+																									HTTP/2
+																								</SelectItem>
+																							</SelectContent>
+																						</Select>
+																					</div>
+																				)}
+																			</Field>
+																		)}
+																	</div>
+
+																	<FieldArray name="upstreamServers">
+																		{({
+																			push,
+																			remove,
+																			form,
+																		}: FieldArrayRenderProps) => {
+																			const upstreamServers =
+																				(form.values as ProxyHostFormValues)
+																					.upstreamServers || [];
+
+																			return (
+																				<div className="space-y-3">
+																					{upstreamServers.map(
+																						(_server, idx) => (
+																							<div
+																								key={`upstream-${idx}`}
+																								className="rounded-lg border bg-card/50 p-3 space-y-3"
+																							>
+																								<div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+																									<div className="md:col-span-5">
+																										<Field
+																											name={`upstreamServers.${idx}.host`}
+																										>
+																											{({
+																												field,
+																											}: FieldProps) => (
+																												<div className="space-y-2">
+																													<Label
+																														htmlFor={`upstream-host-${idx}`}
+																													>
+																														<T id="proxy-host.upstream.host" />
+																													</Label>
+																													<Input
+																														id={`upstream-host-${idx}`}
+																														placeholder="10.0.0.10"
+																														autoComplete="off"
+																														{...field}
+																													/>
+																												</div>
+																											)}
+																										</Field>
+																									</div>
+																									<div className="md:col-span-2">
+																										<Field
+																											name={`upstreamServers.${idx}.port`}
+																										>
+																											{({
+																												field,
+																											}: FieldProps) => (
+																												<div className="space-y-2">
+																													<Label
+																														htmlFor={`upstream-port-${idx}`}
+																													>
+																														<T id="host.forward-port" />
+																													</Label>
+																													<Input
+																														id={`upstream-port-${idx}`}
+																														type="number"
+																														min={
+																															1
+																														}
+																														max={
+																															65535
+																														}
+																														{...field}
+																													/>
+																												</div>
+																											)}
+																										</Field>
+																									</div>
+																									<div className="md:col-span-2">
+																										<Field
+																											name={`upstreamServers.${idx}.weight`}
+																										>
+																											{({
+																												field,
+																											}: FieldProps) => (
+																												<div className="space-y-2">
+																													<Label
+																														htmlFor={`upstream-weight-${idx}`}
+																													>
+																														<T id="proxy-host.upstream.weight" />
+																													</Label>
+																													<Input
+																														id={`upstream-weight-${idx}`}
+																														type="number"
+																														min={
+																															1
+																														}
+																														placeholder="1"
+																														{...field}
+																													/>
+																												</div>
+																											)}
+																										</Field>
+																									</div>
+																									<div className="md:col-span-2">
+																										<Field
+																											name={`upstreamServers.${idx}.maxFails`}
+																										>
+																											{({
+																												field,
+																											}: FieldProps) => (
+																												<div className="space-y-2">
+																													<Label
+																														htmlFor={`upstream-max-fails-${idx}`}
+																													>
+																														<T id="proxy-host.upstream.max-fails" />
+																													</Label>
+																													<Input
+																														id={`upstream-max-fails-${idx}`}
+																														type="number"
+																														min={
+																															0
+																														}
+																														placeholder="1"
+																														{...field}
+																													/>
+																												</div>
+																											)}
+																										</Field>
+																									</div>
+																									<div className="md:col-span-1 flex items-end justify-end">
+																										<Button
+																											type="button"
+																											variant="destructive"
+																											size="sm"
+																											onClick={() =>
+																												remove(
+																													idx,
+																												)
+																											}
+																										>
+																											<T id="action.delete" />
+																										</Button>
+																									</div>
+																								</div>
+
+																								<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+																									<Field
+																										name={`upstreamServers.${idx}.failTimeout`}
+																									>
+																										{({
+																											field,
+																										}: FieldProps) => (
+																											<div className="space-y-2">
+																												<Label
+																													htmlFor={`upstream-fail-timeout-${idx}`}
+																												>
+																													<T id="proxy-host.upstream.fail-timeout" />
+																												</Label>
+																												<Input
+																													id={`upstream-fail-timeout-${idx}`}
+																													placeholder="10s"
+																													{...field}
+																												/>
+																											</div>
+																										)}
+																									</Field>
+
+																									<div className="flex items-end justify-between gap-3 rounded-md border px-3 py-2">
+																										<Label
+																											htmlFor={`upstream-backup-${idx}`}
+																										>
+																											<T id="proxy-host.upstream.backup" />
+																										</Label>
+																										<Field
+																											name={`upstreamServers.${idx}.backup`}
+																											type="checkbox"
+																										>
+																											{({
+																												field,
+																												form,
+																											}: FieldProps) => (
+																												<Switch
+																													id={`upstream-backup-${idx}`}
+																													checked={Boolean(
+																														field.value,
+																													)}
+																													onCheckedChange={(
+																														checked: boolean,
+																													) =>
+																														form.setFieldValue(
+																															field.name,
+																															checked,
+																														)
+																													}
+																												/>
+																											)}
+																										</Field>
+																									</div>
+
+																									<div className="flex items-end justify-between gap-3 rounded-md border px-3 py-2">
+																										<Label
+																											htmlFor={`upstream-down-${idx}`}
+																										>
+																											<T id="proxy-host.upstream.down" />
+																										</Label>
+																										<Field
+																											name={`upstreamServers.${idx}.down`}
+																											type="checkbox"
+																										>
+																											{({
+																												field,
+																												form,
+																											}: FieldProps) => (
+																												<Switch
+																													id={`upstream-down-${idx}`}
+																													checked={Boolean(
+																														field.value,
+																													)}
+																													onCheckedChange={(
+																														checked: boolean,
+																													) =>
+																														form.setFieldValue(
+																															field.name,
+																															checked,
+																														)
+																													}
+																												/>
+																											)}
+																										</Field>
+																									</div>
+																								</div>
+																							</div>
+																						),
+																					)}
+																					<Button
+																						type="button"
+																						variant="secondary"
+																						onClick={() =>
+																							push({
+																								...DEFAULT_UPSTREAM_SERVER,
+																							})
+																						}
+																					>
+																						<T id="proxy-host.upstream.add" />
+																					</Button>
+																				</div>
+																			);
+																		}}
+																	</FieldArray>
+																</CardContent>
+															</Card>
+														)
+													}
+												</Field>
 
 												{/* Index File Field - visible when scheme is 'path' */}
 												<Field name="forwardScheme">
@@ -1049,6 +1499,34 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													allowNew
 												/>
 												<SSLOptionsFields color="bg-lime" />
+												<Card className="my-3 border-dashed border-amber-500/50">
+													<CardContent className="p-4">
+														<div className="flex items-center justify-between gap-4">
+															<div className="space-y-1">
+																<Label
+																	htmlFor="sslEarlyData"
+																	className="text-base cursor-pointer"
+																>
+																	<T id="proxy-host.ssl-early-data" />
+																</Label>
+																<p className="text-sm text-muted-foreground">
+																	<T id="proxy-host.ssl-early-data.description" />
+																</p>
+															</div>
+															<Field name="sslEarlyData" type="checkbox">
+																{({ field, form }: FieldProps) => (
+																	<Switch
+																		id="sslEarlyData"
+																		checked={field.checked}
+																		onCheckedChange={(checked: boolean) =>
+																			form.setFieldValue("sslEarlyData", checked)
+																		}
+																	/>
+																)}
+															</Field>
+														</div>
+													</CardContent>
+												</Card>
 											</TabsContent>
 											<TabsContent value={PROXY_HOST_TAB.SECURITY} className="mt-0 space-y-4">
 												<Alert variant="default" className="bg-muted/50">

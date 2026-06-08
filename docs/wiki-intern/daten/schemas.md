@@ -37,6 +37,34 @@ Die Objection.js-Modelle verwenden folgende Lifecycle-Hooks:
 - Alle Migrationen sind abwärtskompatibel (`up` + `down`)
 - Migrationen verwenden ESM (`export { up, down }`)
 
+## Proxy-Host-Upstream-Felder
+
+`proxy_host` enthält zusätzlich zur klassischen Einzelziel-Konfiguration neue Felder für Upstream-Pools:
+
+| Feld                    | Typ     | Zweck                                                                 |
+| ----------------------- | ------- | --------------------------------------------------------------------- |
+| `upstream_servers`      | JSON    | Optionales Array aus Upstream-Servern für die Default-Proxy-Location  |
+| `load_balancing_method` | String  | Nginx-Upstream-Methode, Standard `round_robin`                        |
+| `upstream_http_version` | String  | HTTP-Upstream-Version für HTTP/HTTPS-Proxying, Standard `1.1`         |
+| `ssl_early_data`        | Integer | Boolean-Flag für TLS 1.3 0-RTT pro Proxy-Host (`0`/`1` in SQLite/DBs) |
+
+`upstream_servers` wird im Objection-Modell als JSON-Attribut behandelt. API-Requests/Responses werden im Frontend automatisch zwischen camelCase (`upstreamServers`) und snake_case (`upstream_servers`) gewandelt.
+
+Die API-Schemas begrenzen `upstream_servers.host` und `fail_timeout`, weil diese Werte direkt in Nginx-Direktiven gerendert werden. Es dürfen keine freien Nginx-Fragmente oder Secrets im JSON gespeichert werden.
+
+## Analytics-Detailfelder
+
+`analytics_logs` speichert pro Request zusätzliche Protokoll-/TLS-Metadaten aus dem Nginx-JSON-Log:
+
+| Feld                | Typ    | Zweck                                       |
+| ------------------- | ------ | ------------------------------------------- |
+| `http3`             | String | HTTP/3-/QUIC-Indikator aus `$http3`         |
+| `ssl_early_data`    | String | TLS-1.3-0-RTT-Indikator                     |
+| `ssl_sigalg`        | String | TLS-Signaturalgorithmus                     |
+| `ssl_client_sigalg` | String | Client-Signaturalgorithmus, falls vorhanden |
+
+Diese Felder gehören zur Detailtabelle, nicht zur aggregierten Tabelle `analytic_count`, weil sie einzelne Requests beschreiben.
+
 ## Abhängigkeiten
 
 - Knex.js für Schema-Definition

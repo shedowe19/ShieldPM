@@ -127,12 +127,20 @@ mkdir -vp /data/tls/certbot/renewal \
           /data/crowdsec \
           /data/modsecurity \
           /data/modsecurity/crs-plugins \
+          /data/nginx/cache \
           /data/nginx/redirection_host \
           /data/nginx/proxy_host \
           /data/nginx/dead_host \
           /data/nginx/stream \
           /data/custom_nginx \
           /data/tor
+
+if [ ! -s /data/nginx/quic_host.key ]; then
+    openssl rand 32 > /data/nginx/quic_host.key
+    chmod 600 /data/nginx/quic_host.key
+fi
+sed -i "s|#\?quic_host_key .*|quic_host_key /data/nginx/quic_host.key;|g" /usr/local/nginx/conf/nginx.conf
+sed -i "s|#\?proxy_cache_path /data/nginx/cache|proxy_cache_path /data/nginx/cache|g" /usr/local/nginx/conf/nginx.conf
 
 
 # Tor Hidden Service Setup

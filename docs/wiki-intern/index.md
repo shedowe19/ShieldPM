@@ -205,7 +205,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 
 ---
 
-_Zuletzt aktualisiert: 2026-05-04_
+_Zuletzt aktualisiert: 2026-06-08_
 
 ## Verwandte Seiten
 

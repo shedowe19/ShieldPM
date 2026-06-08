@@ -22,9 +22,9 @@ Entwicklung verwendet SQLite (`better-sqlite3`). Produktion unterstützt MySQL u
 
 **Gotcha**: Boolean-Felder in SQLite werden als `0`/`1` gespeichert. Das Objection.js-Modell konvertiert im `$afterGet()`.
 
-### E4: Nginx-Validierung aktiviert
+### E4: Nginx-Validierung aktuell deaktiviert
 
-`nginx -t` wird vor dem Reload **aktiv** ausgeführt (via `test()`-Methode = `nginx -tq`). Das schützt vor trivialen Config-Fehlern. Template-Fehler können Nginx dennoch brechen.
+`nginx -t` wird in `backend/internal/nginx.js` aktuell **nicht** ausgeführt. Die `test()`-Methode ist ein No-op und gibt `true` zurück. Dadurch sind Template- und Laufzeitfehler schneller, aber riskanter: Fehlerhafte generierte Konfigurationen werden nicht vor dem Reload durch Nginx validiert.
 
 ### E5: Kein Debouncing in der Nginx-Engine
 
@@ -58,8 +58,35 @@ Der Dockerfile verwendet drei Stages:
 
 Code-Qualität wird durch Biome (`@biomejs/biome`) sichergestellt, nicht durch ESLint + Prettier.
 
+### E12: NGINX-1.31.x Vorteile als Basis-/Startskript-Kombination
+
+Root-Features wie `quic_host_key`, `proxy_cache_path`, HTTP/3/TLS-Logfelder und globale Maps liegen im externen `shieldpm-nginx`-Repository. ShieldPM aktiviert zustandsabhängige Teile beim Start über `rootfs/usr/local/bin/start.sh`, nachdem die persistenten `/data/nginx`-Dateien und Ordner existieren.
+
+### E13: Proxy-Host-Upstreams als JSON-Feld statt eigener Relation
+
+Mehrere Upstream-Ziele für Proxy-Hosts werden über `proxy_host.upstream_servers` als JSON-Array gespeichert. Die bestehenden Einzelziel-Felder `forward_scheme`, `forward_host` und `forward_port` bleiben Quelle der Wahrheit, solange das Array leer ist.
+
+Begründung:
+
+- Die bestehende Proxy-Host-API und UI können ohne zusätzliche CRUD-Routen erweitert werden.
+- Bestehende Hosts bleiben ohne Datenmigration ihrer Zielwerte kompatibel.
+- Nginx benötigt für die Generierung nur den Host-Datensatz; eine zusätzliche Relation würde die Config-Generierung und API-Expansion komplexer machen.
+
+Einschränkung: Custom-Locations behalten ihre eigene Einzelziel-Konfiguration und nutzen den hostweiten Upstream-Pool aktuell nicht automatisch.
+
+### E14: 0-RTT nur explizit pro Proxy-Host
+
+TLS 1.3 0-RTT wird nicht global aktiviert. Das Feld `ssl_early_data` aktiviert `ssl_early_data on` nur für den jeweiligen Proxy-Host. Die Root-`nginx.conf` im separaten `shieldpm-nginx`-Repository definiert Maps, die replay-riskante Early-Data-Methoden mit HTTP `425` abweisen.
+
+Begründung:
+
+- 0-RTT kann Requests replaybar machen und ist daher sicherheitsrelevant.
+- Der Nutzer muss das Risiko pro Host bewusst aktivieren.
+- Safe Methods (`GET`, `HEAD`, `OPTIONS`) bleiben möglich, während schreibende Methoden in Early Data blockiert werden.
+
 ## Verwandte Seiten
 
 - [Architektur-Überblick](./ueberblick.md)
 - [Datenbank](../daten/datenbank.md)
+- [Nginx Config Templates](../module/nginx-templates.md)
 - [ADR-Übersicht](../entscheidungen/README.md)

@@ -110,6 +110,23 @@ export const FORWARD_SCHEME = {
 } as const;
 export type ForwardScheme = (typeof FORWARD_SCHEME)[keyof typeof FORWARD_SCHEME];
 
+export const LOAD_BALANCING_METHOD = {
+	ROUND_ROBIN: "round_robin",
+	LEAST_CONN: "least_conn",
+	IP_HASH: "ip_hash",
+	LEAST_TIME_HEADER: "least_time_header",
+	LEAST_TIME_LAST_BYTE: "least_time_last_byte",
+	RANDOM: "random",
+	RANDOM_TWO_LEAST_CONN: "random_two_least_conn",
+} as const;
+export type LoadBalancingMethod = (typeof LOAD_BALANCING_METHOD)[keyof typeof LOAD_BALANCING_METHOD];
+
+export const UPSTREAM_HTTP_VERSION = {
+	HTTP_1_1: "1.1",
+	HTTP_2: "2",
+} as const;
+export type UpstreamHttpVersion = (typeof UPSTREAM_HTTP_VERSION)[keyof typeof UPSTREAM_HTTP_VERSION];
+
 export const PHP_VERSION = {
 	PHP81: "81",
 	PHP82: "82",

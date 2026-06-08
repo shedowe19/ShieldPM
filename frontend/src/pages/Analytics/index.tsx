@@ -34,6 +34,13 @@ const formatBytes = (bytes: number, decimals = 2) => {
 	return `${Number.parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
 };
 
+const hasEarlyData = (value?: string | null) => value === "1" || value === "true";
+
+const formatProtocol = (http3?: string | null) => (http3 ? "HTTP/3" : "-");
+
+const formatTlsSignal = (sslSigalg?: string | null, sslClientSigalg?: string | null) =>
+	sslSigalg || sslClientSigalg || "-";
+
 // Pulse animation
 const pulseStyle = `
 @keyframes pulse {
@@ -606,6 +613,12 @@ const Analytics = () => {
 											Status
 										</th>
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+											<T id="analytics.protocol" />
+										</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+											<T id="analytics.tls" />
+										</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
 											Path
 										</th>
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">IP</th>
@@ -637,6 +650,24 @@ const Analytics = () => {
 												>
 													{req.status}
 												</span>
+											</td>
+											<td className="p-4 align-middle font-mono text-xs">
+												{formatProtocol(req.http3)}
+											</td>
+											<td className="p-4 align-middle max-w-[180px]">
+												<div className="flex flex-col gap-1 text-xs">
+													{hasEarlyData(req.sslEarlyData) && (
+														<span className="w-fit rounded-full bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-500">
+															0-RTT
+														</span>
+													)}
+													<span
+														className="truncate font-mono"
+														title={formatTlsSignal(req.sslSigalg, req.sslClientSigalg)}
+													>
+														{formatTlsSignal(req.sslSigalg, req.sslClientSigalg)}
+													</span>
+												</div>
 											</td>
 											<td className="p-4 align-middle break-all max-w-[300px]">{req.path}</td>
 											<td className="p-4 align-middle font-mono">

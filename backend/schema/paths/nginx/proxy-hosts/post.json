@@ -38,11 +38,23 @@
 						"forward_port": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/forward_port"
 						},
+						"upstream_servers": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upstream_servers"
+						},
+						"load_balancing_method": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/load_balancing_method"
+						},
+						"upstream_http_version": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upstream_http_version"
+						},
 						"certificate_id": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/certificate_id"
 						},
 						"ssl_forced": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/ssl_forced"
+						},
+						"ssl_early_data": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/ssl_early_data"
 						},
 						"hsts_enabled": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/hsts_enabled"
