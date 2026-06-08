@@ -462,6 +462,7 @@ class AnalyticsService {
 				.select("*")
 				.where("host_id", hostId)
 				.andWhere("time", ">=", sinceIso)
+				.orderBy("id", "desc")
 				.orderBy("time", "desc")
 				.limit(20),
 
