@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useHealth, useProxyHosts } from "src/hooks";
 import { T } from "src/locale";
+import { formatRecentRequestTime, sortRecentRequests } from "./utils";
 
 countries.registerLocale(enLocale);
 
@@ -70,7 +71,10 @@ const Analytics = () => {
 				const hostId = Number.parseInt(selectedHostId, 10);
 				// Fetch Summary
 				const summaryData = await getAnalyticsSummary(hostId, range);
-				setSummary(summaryData);
+				setSummary({
+					...summaryData,
+					recentRequests: sortRecentRequests(summaryData.recentRequests),
+				});
 
 				// Fetch Series
 				const seriesData = await getAnalyticsSeries(hostId, range);
@@ -620,7 +624,7 @@ const Analytics = () => {
 											key={`${req.time}-${req.ip}-${req.path}`}
 											className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
 										>
-											<td className="p-4 align-middle">{dayjs(req.time).format("HH:mm:ss")}</td>
+											<td className="p-4 align-middle whitespace-nowrap">{formatRecentRequestTime(req.time)}</td>
 											<td className="p-4 align-middle font-mono">{req.method}</td>
 											<td className="p-4 align-middle">
 												<span
