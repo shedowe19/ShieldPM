@@ -587,7 +587,7 @@ const internalUser = {
 	getAvatarImage: async (_access, data) => {
 		// Public access allowed for avatars, but we check existence
 		const user = await userModel.query().findById(data.id);
-		if (!user || user.avatar_type !== "upload" || !user.avatar_value) {
+		if (user?.avatar_type !== "upload" || !user.avatar_value) {
 			throw new errs.ItemNotFoundError("Avatar not found");
 		}
 

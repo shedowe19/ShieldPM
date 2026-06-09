@@ -972,7 +972,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															</div>
 															<div className="flex items-center justify-between">
 																<div className="flex-1 pr-4">
-																	<Label htmlFor="zstdEnabled" className="cursor-pointer">
+																	<Label
+																		htmlFor="zstdEnabled"
+																		className="cursor-pointer"
+																	>
 																		<T id="host.flags.zstd-compression" />
 																	</Label>
 																	<p className="text-xs text-muted-foreground">
@@ -985,7 +988,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																			id="zstdEnabled"
 																			checked={field.checked}
 																			onCheckedChange={(checked: boolean) =>
-																				form.setFieldValue("zstdEnabled", checked)
+																				form.setFieldValue(
+																					"zstdEnabled",
+																					checked,
+																				)
 																			}
 																		/>
 																	)}
