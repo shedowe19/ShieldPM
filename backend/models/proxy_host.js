@@ -31,6 +31,7 @@ const boolFields = [
 	"git_sync_enabled",
 	"anubis_enabled",
 	"turbo_loader",
+	"zstd_enabled",
 ];
 
 class ProxyHost extends Model {
@@ -92,6 +93,8 @@ class ProxyHost extends Model {
 	bandwidth_limit;
 	/** @type {number} */
 	turbo_loader;
+	/** @type {number} */
+	zstd_enabled;
 	/** @type {number|null} */
 	adv_limit_req_rate;
 	/** @type {string|null} */

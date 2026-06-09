@@ -37,6 +37,25 @@ Mechanik in `nginx.js` → `renderLocations(host)`:
 5. Alle gerenderten Strings werden konkateniert und als String an das Haupt-Template `proxy_host.conf` übergeben.
 6. Existiert eine Custom-Location mit `path === "/"`, wird die Standard-`/`-Location automatisch deaktiviert (`use_default_location = false`).
 
+## IPv6-Upstreams
+
+Für Proxy-Hosts mit IPv6-Literal als Upstream muss die Adresse im Feld `forward_host` in eckigen Klammern stehen, z. B. `[2a12:de40:39:1::142]`. Der Port bleibt separat in `forward_port`, also nicht in das Host-Feld schreiben.
+
+Grund: Die Templates bauen `proxy_pass` als `{{ forward_scheme }}://{{ forward_host }}:{{ forward_port }}`. Eine rohe IPv6-Adresse wie `2a12:de40:39:1::142` würde dadurch zu `http://2a12:de40:39:1::142:8080...` und Nginx interpretiert Teile der Adresse als Port (`invalid port in upstream`). Mit `[2a12:de40:39:1::142]` entsteht korrekt `http://[2a12:de40:39:1::142]:8080...`.
+
+Das gilt auch für Custom Locations, weil deren Template denselben `forward_host`/`forward_port`-Aufbau verwendet.
+
+## Per-Host zstd-Kompression
+
+Proxy-Hosts haben ein Feld `zstd_enabled`/`zstdEnabled`. Standard ist `true`, damit bestehende Hosts ihr bisheriges Verhalten behalten. Wird die Option für einen Host deaktiviert, rendert ShieldPM im betroffenen Serverblock:
+
+```nginx
+zstd off;
+zstd_static off;
+```
+
+Das ist hilfreich, wenn Browser mit `Accept-Encoding: gzip, deflate, br, zstd` Nginx-Worker hängen lassen. Brotli/Gzip bleiben davon unberührt und können weiterhin verwendet werden.
+
 ## Abhängigkeiten
 
 - `internal/nginx.js` — Config-Generierung und Reload

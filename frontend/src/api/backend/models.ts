@@ -157,6 +157,7 @@ export interface ProxyHost {
 	sslForced: boolean;
 	cachingEnabled: boolean;
 	disableBuffering: boolean;
+	zstdEnabled: boolean;
 	blockExploits: boolean;
 	securityCrowdsec: boolean;
 	anubisEnabled: boolean;

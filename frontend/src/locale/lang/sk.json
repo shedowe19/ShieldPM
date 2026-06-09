@@ -328,6 +328,8 @@
 	"host.flags.preserve-path": "Zachovať cestu",
 	"host.flags.protocols": "Protokoly",
 	"host.flags.websockets-upgrade": "Podpora WebSockets",
+	"host.flags.zstd-compression": "Zstd Compression",
+	"host.flags.zstd-compression.hint": "Disable this if browsers hang when advertising zstd compression.",
 	"host.forward-port": "Port presmerovania",
 	"host.forward-scheme": "Schéma",
 	"host.note": "Poznámky",

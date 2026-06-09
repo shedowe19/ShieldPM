@@ -174,6 +174,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								accessListId: data?.accessListId || 0,
 								cachingEnabled: data?.cachingEnabled || false,
 								disableBuffering: data?.disableBuffering || false,
+								zstdEnabled: data?.zstdEnabled ?? true,
 								blockExploits: data?.blockExploits || false,
 								allowWebsocketUpgrade: data?.allowWebsocketUpgrade || false,
 								maintenanceOnFailure: data?.maintenanceOnFailure || false,
@@ -964,6 +965,27 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 																					"disableBuffering",
 																					checked,
 																				)
+																			}
+																		/>
+																	)}
+																</Field>
+															</div>
+															<div className="flex items-center justify-between">
+																<div className="flex-1 pr-4">
+																	<Label htmlFor="zstdEnabled" className="cursor-pointer">
+																		<T id="host.flags.zstd-compression" />
+																	</Label>
+																	<p className="text-xs text-muted-foreground">
+																		<T id="host.flags.zstd-compression.hint" />
+																	</p>
+																</div>
+																<Field name="zstdEnabled" type="checkbox">
+																	{({ field, form }: FieldProps) => (
+																		<Switch
+																			id="zstdEnabled"
+																			checked={field.checked}
+																			onCheckedChange={(checked: boolean) =>
+																				form.setFieldValue("zstdEnabled", checked)
 																			}
 																		/>
 																	)}

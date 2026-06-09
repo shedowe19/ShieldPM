@@ -29,7 +29,8 @@
 		"adv_limit_req_rate",
 		"adv_limit_req_unit",
 		"adv_limit_req_burst",
-		"disable_buffering"
+		"disable_buffering",
+		"zstd_enabled"
 	],
 	"properties": {
 		"id": {
@@ -241,6 +242,12 @@
 		"disable_buffering": {
 			"type": "boolean",
 			"example": false
+		},
+		"zstd_enabled": {
+			"type": "boolean",
+			"description": "Enable zstd compression for this proxy host",
+			"default": true,
+			"example": true
 		},
 		"maintenance_active": {
 			"type": "boolean",

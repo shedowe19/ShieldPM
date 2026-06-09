@@ -115,6 +115,9 @@
 						"disable_buffering": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/disable_buffering"
 						},
+						"zstd_enabled": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/zstd_enabled"
+						},
 						"maintenance_active": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/maintenance_active"
 						},

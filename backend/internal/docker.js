@@ -267,6 +267,7 @@ class DockerService {
 			"shieldpm.block_exploits": "block_exploits",
 			"shieldpm.allow_websocket_upgrade": "allow_websocket_upgrade",
 			"shieldpm.http2_support": "http2_support",
+			"shieldpm.zstd_enabled": "zstd_enabled",
 			"shieldpm.hsts_enabled": "hsts_enabled",
 			"shieldpm.hsts_subdomains": "hsts_subdomains",
 			"shieldpm.disable_buffering": "disable_buffering",

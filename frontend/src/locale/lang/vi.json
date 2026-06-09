@@ -328,6 +328,8 @@
 	"host.flags.preserve-path": "Bảo toàn đường dẫn",
 	"host.flags.protocols": "Giao thức",
 	"host.flags.websockets-upgrade": "Hỗ trợ Websockets",
+	"host.flags.zstd-compression": "Zstd Compression",
+	"host.flags.zstd-compression.hint": "Disable this if browsers hang when advertising zstd compression.",
 	"host.forward-port": "Chuyển tiếp cổng",
 	"host.forward-scheme": "Scheme",
 	"host.note": "Ghi chú",
