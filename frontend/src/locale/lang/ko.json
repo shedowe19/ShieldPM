@@ -328,6 +328,8 @@
 	"host.flags.preserve-path": "요청 경로 유지",
 	"host.flags.protocols": "프로토콜",
 	"host.flags.websockets-upgrade": "웹소켓 지원",
+	"host.flags.zstd-compression": "Zstd Compression",
+	"host.flags.zstd-compression.hint": "Disable this if browsers hang when advertising zstd compression.",
 	"host.forward-port": "전달할 포트",
 	"host.forward-scheme": "프로토콜",
 	"host.note": "비고",

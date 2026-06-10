@@ -328,6 +328,8 @@
 	"host.flags.preserve-path": "保留路径",
 	"host.flags.protocols": "协议",
 	"host.flags.websockets-upgrade": "Websockets 支持",
+	"host.flags.zstd-compression": "Zstd Compression",
+	"host.flags.zstd-compression.hint": "Disable this if browsers hang when advertising zstd compression.",
 	"host.forward-port": "转发端口",
 	"host.forward-scheme": "协议",
 	"host.note": "备注",

@@ -328,6 +328,8 @@
 	"host.flags.preserve-path": "Preserva Percorso",
 	"host.flags.protocols": "Protocolli",
 	"host.flags.websockets-upgrade": "Supporto WebSockets",
+	"host.flags.zstd-compression": "Zstd Compression",
+	"host.flags.zstd-compression.hint": "Disable this if browsers hang when advertising zstd compression.",
 	"host.forward-port": "Porta di Destinazione",
 	"host.forward-scheme": "Schema",
 	"host.note": "Note",
