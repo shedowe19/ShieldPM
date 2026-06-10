@@ -35,17 +35,20 @@ jobs:
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
         run: |
+          set -euo pipefail
+
           echo "Installing current frontend dependencies..."
           yarn install
 
           echo "Checking for minor/patch updates..."
           echo "### Frontend Updates" > /tmp/frontend-updates.txt
           echo '```text' >> /tmp/frontend-updates.txt
-          # Run npm-check-updates, update package.json, and capture the output
+          # Run npm-check-updates via Yarn, not npx/npm. npm validates "overrides"
+          # differently from Yarn and can fail with EOVERRIDE for direct deps.
           # -u: upgrade package.json
           # --target minor: only upgrade to minor/patch versions, ignoring major
           # --reject vite: vite is pinned in resolutions and must be updated together with vitest manually
-          npx npm-check-updates -u --target minor --reject vite >> /tmp/frontend-updates.txt || true
+          yarn dlx npm-check-updates -u --target minor --reject vite | tee -a /tmp/frontend-updates.txt
           echo '```' >> /tmp/frontend-updates.txt
 
           echo "Installing updated frontend dependencies to update yarn.lock..."
@@ -56,16 +59,19 @@ jobs:
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
         run: |
+          set -euo pipefail
+
           echo "Installing current backend dependencies..."
           yarn install
 
           echo "Checking for minor/patch updates..."
           echo "### Backend Updates" > /tmp/backend-updates.txt
           echo '```text' >> /tmp/backend-updates.txt
-          # Run npm-check-updates, update package.json, and capture the output
+          # Run npm-check-updates via Yarn, not npx/npm, so package-manager
+          # semantics stay consistent with the Yarn 4 project.
           # -u: upgrade package.json
           # --target minor: only upgrade to minor/patch versions, ignoring major
-          npx npm-check-updates -u --target minor >> /tmp/backend-updates.txt || true
+          yarn dlx npm-check-updates -u --target minor | tee -a /tmp/backend-updates.txt
           echo '```' >> /tmp/backend-updates.txt
 
           echo "Installing updated backend dependencies to update yarn.lock..."
@@ -74,6 +80,9 @@ jobs:
       - name: Check for Changes
         id: check_changes
         run: |
+          # Yarn install-state files are local install metadata, not dependency updates.
+          git restore --worktree frontend/.yarn/install-state.gz backend/.yarn/install-state.gz 2>/dev/null || true
+
           # Check if any package.json or yarn.lock was changed
           if git diff --quiet frontend/package.json frontend/yarn.lock backend/package.json backend/yarn.lock; then
             echo "No dependencies were updated."
@@ -114,3 +123,9 @@ jobs:
           branch: "update-all-deps"
           title: "chore(deps): update npm dependencies (minor/patch)"
           body-path: /tmp/pr_body.txt
+          add-paths: |
+            THIRD-PARTY-NOTICES.md
+            frontend/package.json
+            frontend/yarn.lock
+            backend/package.json
+            backend/yarn.lock

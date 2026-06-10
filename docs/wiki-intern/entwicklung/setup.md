@@ -74,6 +74,7 @@ Konfiguration: `biome.json` (Root-Ebene, vereinheitlicht für Backend und Fronte
 ## Verwandte Seiten
 
 - [Build](./build.md)
+- [CI-Workflows](./ci-workflows.md)
 - [Tests](./tests.md)
 - [Lokale Entwicklung](./lokale-entwicklung.md)
 - [Yarn v4 Migration](../entscheidungen/2026-05-20-yarn-v4-migration.md)
