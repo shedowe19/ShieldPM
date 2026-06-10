@@ -1152,7 +1152,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</Field>
 												</div>
 
-												{/* Anubis Rules Editor */}
+												{/* Rule editor */}
 												<Field name="anubisEnabled">
 													{({ field }: FieldProps) =>
 														field.value && (
