@@ -1094,12 +1094,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<div className="flex items-center gap-2">
 															<IconShieldLock className="h-4 w-4 text-orange-500" />
 															<Label htmlFor="crowdsecEnabled" className="text-base">
-																CrowdSec IPS
+																<T id="proxy-host.security.crowdsec" />
 															</Label>
 														</div>
 														<p className="text-sm text-muted-foreground">
-															Enable CrowdSec Bouncer for this host (Blocks known
-															attackers)
+															<T id="proxy-host.security.crowdsec.description" />
 														</p>
 													</div>
 													<Field name="crowdsecEnabled" type="checkbox">
@@ -1120,12 +1119,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														<div className="flex items-center gap-2">
 															<IconGhost className="h-4 w-4 text-purple-500" />
 															<Label htmlFor="anubisEnabled" className="text-base">
-																Anubis AI Firewall
+																<T id="proxy-host.security.anubis" />
 															</Label>
 														</div>
 														<p className="text-sm text-muted-foreground">
-															Weighs the soul of incoming HTTP requests to stop AI
-															crawlers
+															<T id="proxy-host.security.anubis.description" />
 														</p>
 													</div>
 													<Field name="anubisEnabled" type="checkbox">
@@ -1253,10 +1251,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<TabsContent value={PROXY_HOST_TAB.ADVANCED} className="mt-0 space-y-4">
 												<Alert variant="default" className="bg-muted/50 mt-4">
 													<IconBolt className="h-4 w-4 text-emerald-500" />
-													<AlertTitle>Turbo-Loader</AlertTitle>
+													<AlertTitle>
+														<T id="proxy-host.turbo-loader.title" />
+													</AlertTitle>
 													<AlertDescription>
-														Intercept large static files and deliver a specialized HTML
-														interface for maximum parallel download speeds in the browser.
+														<T id="proxy-host.turbo-loader.description" />
 													</AlertDescription>
 												</Alert>
 
@@ -1266,11 +1265,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 															htmlFor="turboLoader"
 															className="text-base cursor-pointer"
 														>
-															Enable Multi-Part Injection
+															<T id="proxy-host.turbo-loader.multi-part" />
 														</Label>
 														<p className="text-sm text-muted-foreground">
-															Converts specific files (.mp4, .zip, etc) into an
-															accelerated HTML download page.
+															<T id="proxy-host.turbo-loader.multi-part.description" />
 														</p>
 													</div>
 													<Field name="turboLoader" type="checkbox">
