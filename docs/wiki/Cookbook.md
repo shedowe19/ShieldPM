@@ -7,7 +7,9 @@ Configuration examples for popular self-hosted applications.
 Nextcloud often requires specific headers and upload limit adjustments.
 
 ### 1. Upload Limits
+
 To allow large file uploads (e.g., 10GB):
+
 1.  Open your Proxy Host.
 2.  Go to the **Advanced** tab.
 3.  Add:
@@ -17,7 +19,9 @@ To allow large file uploads (e.g., 10GB):
     ```
 
 ### 2. Service Discovery (caldav/carddav)
+
 To suppress the "Your web server is not properly set up to resolve .well-known..." warnings:
+
 1.  Go to the **Advanced** tab.
 2.  Add:
     ```nginx
@@ -37,8 +41,8 @@ Home Assistant relies heavily on Websockets for real-time updates.
 
 1.  **Websockets:** Ensure **Websockets Support** is checked in the Details tab.
 2.  **Configuration:**
-    *   Scheme: `http`
-    *   Forward Port: `8123`
+    - Scheme: `http`
+    - Forward Port: `8123`
 3.  **trusted_proxies:**
     In your `configuration.yaml` of Home Assistant, you must add the IP of the ShieldPM container (or the docker gateway IP) to `http.trusted_proxies` and `use_x_forwarded_for: true`.
 
@@ -61,4 +65,5 @@ Securing the AdGuard Home web interface.
 3.  **Location:** If you want to host it under a subpath (e.g., `/adguard`), note that AdGuard Home does not natively support base URLs easily. It is **highly recommended** to use a subdomain (e.g., `dns.example.com`).
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

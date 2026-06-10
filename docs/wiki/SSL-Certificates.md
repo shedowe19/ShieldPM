@@ -6,12 +6,12 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 
 ## 🏗️ Certificate Types
 
-| Type | Automation | Best For | Wildcard |
-| :--- | :--- | :--- | :---: |
-| **Let's Encrypt (HTTP-01)** | ✅ Auto-renew | Public services, port 80 open | ❌ |
-| **Let's Encrypt (DNS-01)** | ✅ Auto-renew | Wildcards, port 80 blocked | ✅ |
-| **Custom Certificate** | ❌ Manual | Corporate CAs, purchased certs | ✅ |
-| **Internal CA (ECDSA)** | ✅ Auto-issue | Private/internal services | ✅ |
+| Type                        | Automation    | Best For                       | Wildcard |
+| :-------------------------- | :------------ | :----------------------------- | :------: |
+| **Let's Encrypt (HTTP-01)** | ✅ Auto-renew | Public services, port 80 open  |    ❌    |
+| **Let's Encrypt (DNS-01)**  | ✅ Auto-renew | Wildcards, port 80 blocked     |    ✅    |
+| **Custom Certificate**      | ❌ Manual     | Corporate CAs, purchased certs |    ✅    |
+| **Internal CA (ECDSA)**     | ✅ Auto-issue | Private/internal services      |    ✅    |
 
 ---
 
@@ -53,18 +53,18 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 
 ### Supported DNS Providers
 
-| Provider | Credential Format |
-| :--- | :--- |
-| **Cloudflare** | API Token or Global API Key |
-| **DigitalOcean** | API Token |
-| **Route53 (AWS)** | Access Key + Secret Key |
-| **Google Cloud DNS** | Service Account JSON |
-| **Hetzner** | API Token |
-| **OVH** | Application Key + Secret + Consumer Key |
-| **Namecheap** | API Key + Username |
-| **DuckDNS** | Token |
-| **Name.com** | API Token + Username |
-| **Linode** | API Token |
+| Provider             | Credential Format                       |
+| :------------------- | :-------------------------------------- |
+| **Cloudflare**       | API Token or Global API Key             |
+| **DigitalOcean**     | API Token                               |
+| **Route53 (AWS)**    | Access Key + Secret Key                 |
+| **Google Cloud DNS** | Service Account JSON                    |
+| **Hetzner**          | API Token                               |
+| **OVH**              | Application Key + Secret + Consumer Key |
+| **Namecheap**        | API Key + Username                      |
+| **DuckDNS**          | Token                                   |
+| **Name.com**         | API Token + Username                    |
+| **Linode**           | API Token                               |
 
 > [!TIP]
 > For Cloudflare, use an **API Token** (not Global API Key) with only the `Zone:DNS:Edit` permission for better security.
@@ -90,12 +90,12 @@ Upload your own certificates from a corporate CA or a purchased provider:
 
 ## 🔒 SSL Options (Per Host)
 
-| Option | Description | Recommended |
-| :--- | :--- | :---: |
-| **Force SSL** | Redirect all HTTP → HTTPS (301) | ✅ |
-| **HTTP/2** | Enable HTTP/2 protocol | ✅ |
-| **HSTS** | Send `Strict-Transport-Security` header | ✅ Production |
-| **HSTS Subdomains** | Include subdomains in HSTS | ⚠️ Only if all subdomains use HTTPS |
+| Option              | Description                             |             Recommended             |
+| :------------------ | :-------------------------------------- | :---------------------------------: |
+| **Force SSL**       | Redirect all HTTP → HTTPS (301)         |                 ✅                  |
+| **HTTP/2**          | Enable HTTP/2 protocol                  |                 ✅                  |
+| **HSTS**            | Send `Strict-Transport-Security` header |            ✅ Production            |
+| **HSTS Subdomains** | Include subdomains in HSTS              | ⚠️ Only if all subdomains use HTTPS |
 
 ---
 
@@ -103,27 +103,27 @@ Upload your own certificates from a corporate CA or a purchased provider:
 
 Fine-tune certificate behavior via environment variables:
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `ACME_EMAIL` | Registration email (required) | — |
-| `ACME_SERVER` | Custom ACME server URL | Let's Encrypt Production |
-| `ACME_KEY_TYPE` | `ec` (ECDSA) or `rsa` | `ec` |
-| `ACME_MUST_STAPLE` | Request OCSP Must-Staple extension | `false` |
-| `ACME_OCSP_STAPLING` | Enable OCSP Stapling | `true` |
-| `CRT` | Renewal threshold in hours | `72` |
-| `DEFAULT_CERT_ID` | Default cert ID for unconfigured hosts | — |
+| Variable             | Description                            | Default                  |
+| :------------------- | :------------------------------------- | :----------------------- |
+| `ACME_EMAIL`         | Registration email (required)          | —                        |
+| `ACME_SERVER`        | Custom ACME server URL                 | Let's Encrypt Production |
+| `ACME_KEY_TYPE`      | `ec` (ECDSA) or `rsa`                  | `ec`                     |
+| `ACME_MUST_STAPLE`   | Request OCSP Must-Staple extension     | `false`                  |
+| `ACME_OCSP_STAPLING` | Enable OCSP Stapling                   | `true`                   |
+| `CRT`                | Renewal threshold in hours             | `72`                     |
+| `DEFAULT_CERT_ID`    | Default cert ID for unconfigured hosts | —                        |
 
 ### Alternative ACME Providers
 
 You can use any ACME-compatible provider by setting `ACME_SERVER`:
 
-| Provider | Server URL |
-| :--- | :--- |
-| **Let's Encrypt** (default) | `https://acme-v02.api.letsencrypt.org/directory` |
-| **Let's Encrypt Staging** | `https://acme-staging-v02.api.letsencrypt.org/directory` |
-| **ZeroSSL** | `https://acme.zerossl.com/v2/DV90` |
-| **Buypass** | `https://api.buypass.com/acme/directory` |
-| **Google Trust Services** | `https://dv.acme-v02.api.pki.goog/directory` |
+| Provider                    | Server URL                                               |
+| :-------------------------- | :------------------------------------------------------- |
+| **Let's Encrypt** (default) | `https://acme-v02.api.letsencrypt.org/directory`         |
+| **Let's Encrypt Staging**   | `https://acme-staging-v02.api.letsencrypt.org/directory` |
+| **ZeroSSL**                 | `https://acme.zerossl.com/v2/DV90`                       |
+| **Buypass**                 | `https://api.buypass.com/acme/directory`                 |
+| **Google Trust Services**   | `https://dv.acme-v02.api.pki.goog/directory`             |
 
 > [!TIP]
 > Use **Let's Encrypt Staging** for testing to avoid hitting rate limits during development.
@@ -134,12 +134,12 @@ You can use any ACME-compatible provider by setting `ACME_SERVER`:
 
 ### "Failed to obtain certificate"
 
-| Cause | Fix |
-| :--- | :--- |
-| Port 80 not reachable | Check firewall, router port forwarding |
-| Domain not pointing to server | Verify DNS A/AAAA records |
-| `ACME_EMAIL` not set | Set it in environment |
-| Rate limit exceeded | Wait 1 hour or use Staging |
+| Cause                         | Fix                                    |
+| :---------------------------- | :------------------------------------- |
+| Port 80 not reachable         | Check firewall, router port forwarding |
+| Domain not pointing to server | Verify DNS A/AAAA records              |
+| `ACME_EMAIL` not set          | Set it in environment                  |
+| Rate limit exceeded           | Wait 1 hour or use Staging             |
 
 ### "Certificate not renewing"
 

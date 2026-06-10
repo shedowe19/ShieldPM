@@ -10,12 +10,12 @@ Redirection Hosts forward visitors from one domain to another URL using an HTTP 
 
 ### When to Use
 
-| Scenario | Status Code | Example |
-| :--- | :--- | :--- |
-| Domain moved permanently | **301** (Permanent) | `old-site.com` → `new-site.com` |
-| Temporary redirect | **302** (Temporary) | Maintenance pages, short links |
-| Brand consolidation | **301** (Permanent) | `brand-old.com` → `brand-new.com` |
-| Non-www to www | **301** (Permanent) | `example.com` → `www.example.com` |
+| Scenario                 | Status Code         | Example                           |
+| :----------------------- | :------------------ | :-------------------------------- |
+| Domain moved permanently | **301** (Permanent) | `old-site.com` → `new-site.com`   |
+| Temporary redirect       | **302** (Temporary) | Maintenance pages, short links    |
+| Brand consolidation      | **301** (Permanent) | `brand-old.com` → `brand-new.com` |
+| Non-www to www           | **301** (Permanent) | `example.com` → `www.example.com` |
 
 ### Configuration
 
@@ -23,19 +23,19 @@ Redirection Hosts forward visitors from one domain to another URL using an HTTP 
 2. Click **Add Redirection Host**
 3. Fill in:
 
-| Field | Description | Example |
-| :--- | :--- | :--- |
-| **Domain Names** | The source domain(s) to redirect from | `old-site.com` |
-| **Forward HTTP Code** | `301` (Permanent) or `302` (Temporary) | `301` |
-| **Forward Domain Name** | The destination URL | `https://new-site.com` |
-| **Preserve Path** | Append the original path to the destination | ✅ |
+| Field                   | Description                                 | Example                |
+| :---------------------- | :------------------------------------------ | :--------------------- |
+| **Domain Names**        | The source domain(s) to redirect from       | `old-site.com`         |
+| **Forward HTTP Code**   | `301` (Permanent) or `302` (Temporary)      | `301`                  |
+| **Forward Domain Name** | The destination URL                         | `https://new-site.com` |
+| **Preserve Path**       | Append the original path to the destination | ✅                     |
 
 ### How "Preserve Path" Works
 
-| Preserve Path | User visits | Redirected to |
-| :--- | :--- | :--- |
-| ❌ Off | `old.com/blog/post-1` | `https://new.com` |
-| ✅ On | `old.com/blog/post-1` | `https://new.com/blog/post-1` |
+| Preserve Path | User visits           | Redirected to                 |
+| :------------ | :-------------------- | :---------------------------- |
+| ❌ Off        | `old.com/blog/post-1` | `https://new.com`             |
+| ✅ On         | `old.com/blog/post-1` | `https://new.com/blog/post-1` |
 
 > [!TIP]
 > Use **Preserve Path** when both the old and new sites have the same URL structure. This ensures bookmarks and search engine links continue to work.
@@ -65,11 +65,11 @@ Dead Hosts explicitly **block** traffic to a domain, returning an error page ins
 
 ### Behavior
 
-| Scenario | Result |
-| :--- | :--- |
-| Request to blocked domain | `404 Not Found` error page |
+| Scenario                         | Result                                           |
+| :------------------------------- | :----------------------------------------------- |
+| Request to blocked domain        | `404 Not Found` error page                       |
 | Using `INITIAL_DEFAULT_PAGE=444` | Connection immediately closed (no response body) |
-| Wildcard `*.example.com` | All undefined subdomains return 404 |
+| Wildcard `*.example.com`         | All undefined subdomains return 404              |
 
 > [!TIP]
 > **Security Best Practice:** Create a Dead Host with `*.yourdomain.com` to block all subdomains you haven't explicitly configured. This prevents attackers from discovering services through subdomain enumeration.

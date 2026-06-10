@@ -40,10 +40,10 @@ The concept is simple: ShieldPM acts as a WireGuard server on your cloud VPS (wi
 
 **Key Benefits:**
 
-* **No port forwarding required** — Your home server connects *outbound* to the VPS.
-* **Works behind CGNAT/DS-Lite** — No public IP needed at home.
-* **Full Nginx features** — WAF, Access Lists, SSL, Caching still work.
-* **Self-hosted** — No dependency on Cloudflare, Tailscale, or third parties.
+- **No port forwarding required** — Your home server connects _outbound_ to the VPS.
+- **Works behind CGNAT/DS-Lite** — No public IP needed at home.
+- **Full Nginx features** — WAF, Access Lists, SSL, Caching still work.
+- **Self-hosted** — No dependency on Cloudflare, Tailscale, or third parties.
 
 ## 📋 Prerequisites
 
@@ -97,7 +97,7 @@ WireGuard settings are configured **directly in the ShieldPM UI** — no environ
 1. Click **Add Peer**.
 2. Fill in:
    - **Peer Name**: A friendly identifier (e.g., `Home Raspberry Pi`)
-   - **Description** *(optional)*: What services run on this peer
+   - **Description** _(optional)_: What services run on this peer
    - **Allowed IPs**: Default `10.8.0.0/24` (tunnel-only traffic). Use `0.0.0.0/0, ::/0` for full VPN mode.
    - **Keepalive**: `25` seconds (recommended for NAT traversal)
    - **DNS**: `1.1.1.1` or your preferred DNS
@@ -137,11 +137,11 @@ Your home service is now securely accessible via `https://nextcloud.example.com`
 
 ## 🔧 Settings Reference
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| **Server Endpoint** | *(empty)* | Domain or IP clients connect to. **Required.** |
-| **Listen Port** | `51820` | UDP port for WireGuard traffic |
-| **VPN Subnet** | `10.8.0.0/24` | Internal tunnel network. Server gets `.1`. |
+| Setting             | Default       | Description                                    |
+| ------------------- | ------------- | ---------------------------------------------- |
+| **Server Endpoint** | _(empty)_     | Domain or IP clients connect to. **Required.** |
+| **Listen Port**     | `51820`       | UDP port for WireGuard traffic                 |
+| **VPN Subnet**      | `10.8.0.0/24` | Internal tunnel network. Server gets `.1`.     |
 
 ## 🔐 Security
 
@@ -161,12 +161,12 @@ WireGuard Tunnels are **completely disabled** in Demo Mode. All write API endpoi
 
 ## 📂 File Locations
 
-| Path | Description |
-|------|-------------|
-| `/data/wireguard/` | WireGuard data directory |
-| `/data/wireguard/server_private.key` | Server private key |
-| `/data/wireguard/server_public.key` | Server public key |
-| `/data/wireguard/wg0.conf` | Generated WireGuard config |
+| Path                                 | Description                |
+| ------------------------------------ | -------------------------- |
+| `/data/wireguard/`                   | WireGuard data directory   |
+| `/data/wireguard/server_private.key` | Server private key         |
+| `/data/wireguard/server_public.key`  | Server public key          |
+| `/data/wireguard/wg0.conf`           | Generated WireGuard config |
 
 ## 🔄 Peer Lifecycle
 
@@ -227,16 +227,17 @@ If you're migrating from a different WireGuard setup, ensure the subnet doesn't 
 
 ## ⚖️ Comparison with Other Tunnel Solutions
 
-| Feature | ShieldTunnel (WireGuard) | Cloudflare Tunnels | Tor Onion Services |
-|---------|:------------------------:|:------------------:|:------------------:|
-| Self-hosted | ✅ | ❌ (Cloudflare) | ✅ |
-| Speed | ⚡ Very fast | 🔵 Fast | 🐢 Slow |
-| Latency | ~1ms overhead | ~10-50ms overhead | ~200-500ms |
-| CGNAT bypass | ✅ | ✅ | ✅ |
-| Open ports needed | UDP (VPS) | None | None |
-| DDoS protection | ❌ (manual) | ✅ (built-in) | ✅ (Tor) |
-| Privacy | 🟡 VPS IP visible | 🟡 CF sees traffic | ✅ Full anonymity |
-| Protocol | UDP (WireGuard) | QUIC (HTTP/2) | TCP (Tor circuits) |
+| Feature           | ShieldTunnel (WireGuard) | Cloudflare Tunnels | Tor Onion Services |
+| ----------------- | :----------------------: | :----------------: | :----------------: |
+| Self-hosted       |            ✅            |  ❌ (Cloudflare)   |         ✅         |
+| Speed             |       ⚡ Very fast       |      🔵 Fast       |      🐢 Slow       |
+| Latency           |      ~1ms overhead       | ~10-50ms overhead  |     ~200-500ms     |
+| CGNAT bypass      |            ✅            |         ✅         |         ✅         |
+| Open ports needed |        UDP (VPS)         |        None        |        None        |
+| DDoS protection   |       ❌ (manual)        |   ✅ (built-in)    |      ✅ (Tor)      |
+| Privacy           |    🟡 VPS IP visible     | 🟡 CF sees traffic | ✅ Full anonymity  |
+| Protocol          |     UDP (WireGuard)      |   QUIC (HTTP/2)    | TCP (Tor circuits) |
 
 ---
+
 [🏠 Home](Home) | [☁️ Cloudflare Tunnels](Cloudflared-Tunnels) | [🧅 Tor Onion Services](Tor-Onion-Services) | [🔒 Security](Security)

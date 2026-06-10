@@ -51,19 +51,19 @@ Navigate to **Settings → GitOps** to configure the feature.
 
 ### Repository Settings
 
-| Setting | Description |
-|---------|-------------|
-| **Repository URL** | HTTPS URL of your Git repository (e.g., `https://github.com/user/shieldpm-backup.git`) |
-| **Branch** | Target branch (default: `main`) |
-| **Authentication Type** | `HTTPS` (Personal Access Token) or `SSH` (not recommended, use PAT instead) |
-| **Credentials** | Your Personal Access Token (PAT) for GitHub/GitLab/etc. |
+| Setting                 | Description                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| **Repository URL**      | HTTPS URL of your Git repository (e.g., `https://github.com/user/shieldpm-backup.git`) |
+| **Branch**              | Target branch (default: `main`)                                                        |
+| **Authentication Type** | `HTTPS` (Personal Access Token) or `SSH` (not recommended, use PAT instead)            |
+| **Credentials**         | Your Personal Access Token (PAT) for GitHub/GitLab/etc.                                |
 
 ### Automation Options
 
-| Option | Description |
-|--------|-------------|
+| Option                   | Description                                                             |
+| ------------------------ | ----------------------------------------------------------------------- |
 | **Auto-Push on Changes** | Automatically export and push when configuration changes (debounced 5s) |
-| **Auto-Pull on Startup** | Automatically pull from remote when ShieldPM starts |
+| **Auto-Pull on Startup** | Automatically pull from remote when ShieldPM starts                     |
 
 ## Usage
 
@@ -143,18 +143,18 @@ shieldpm-config/
 
 ### What is Exported
 
-| Data Type | Includes |
-|-----------|----------|
-| **Proxy Hosts** | All fields including owner, timestamps, meta |
-| **Redirection Hosts** | All fields |
-| **Dead Hosts** | All fields |
-| **Streams** | All fields |
-| **Access Lists** | Items (with hashed passwords), clients, mTLS config |
-| **Certificates** | Database entries with meta, provider, domain names |
-| **Certificate Files** | Let's Encrypt certs, custom certificates (PEM files) |
-| **Cloudflared Tunnels** | Tunnel name, token, status, meta |
-| **Users** | User data with permissions (no auth credentials) |
-| **Settings** | All settings except GitOps config |
+| Data Type               | Includes                                             |
+| ----------------------- | ---------------------------------------------------- |
+| **Proxy Hosts**         | All fields including owner, timestamps, meta         |
+| **Redirection Hosts**   | All fields                                           |
+| **Dead Hosts**          | All fields                                           |
+| **Streams**             | All fields                                           |
+| **Access Lists**        | Items (with hashed passwords), clients, mTLS config  |
+| **Certificates**        | Database entries with meta, provider, domain names   |
+| **Certificate Files**   | Let's Encrypt certs, custom certificates (PEM files) |
+| **Cloudflared Tunnels** | Tunnel name, token, status, meta                     |
+| **Users**               | User data with permissions (no auth credentials)     |
+| **Settings**            | All settings except GitOps config                    |
 
 > [!WARNING]
 > The export includes sensitive data like hashed passwords, private keys, and Cloudflare tokens. **Always use a private repository!**

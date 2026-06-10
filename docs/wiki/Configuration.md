@@ -1,189 +1,204 @@
 # Configuration
 
-ShieldPM is configured via **Environment Variables**. No config file editing is required for basic setup — just set the variables and restart.
+ShieldPM is configured primarily through environment variables. This page is generated from the current `compose.yaml`, `compose.easy.yaml`, and `rootfs/.env.example` in ShieldPM **4.3.2**.
 
-- **Docker:** Set them in `compose.yaml` under `services: app: environment:`.
-- **Native / LXC:** Edit the file `/data/.env`.
-
----
-
-## 🌍 General Settings
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `TZ` | Timezone ([List](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)) | `UTC` |
-| `PUID` | User ID for file ownership | `0` |
-| `PGID` | Group ID for file ownership | `0` |
-| `CSRF_SECRET` | Secret for CSRF token generation. Set a random string for extra security. | Auto-generated |
-
-## 🌐 Network & Ports
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `NPM_PORT` | Port for the Admin Web UI | `81` |
-| `HTTP_PORT` | Port for HTTP traffic (public) | `80` |
-| `HTTPS_PORT` | Port for HTTPS traffic (public) | `443` |
-| `GOA_PORT` | Port for GoAccess Analytics Dashboard | `91` |
-| `DISABLE_HTTP` | Disable HTTP listener entirely (HTTPS only) | `false` |
-| `DISABLE_H3_QUIC` | Disable HTTP/3 (QUIC) support | `false` |
-| `HTTP3_ALT_SVC_PORT` | Port advertised in the `Alt-Svc` header for HTTP/3 | `443` |
-| `LISTEN_PROXY_PROTOCOL` | Enable HAProxy PROXY protocol support on port 80/443 | `false` |
-
-### IP Binding
-
-Use these to restrict which IP addresses ShieldPM listens on:
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `IPV4_BINDING` | Bind HTTP/HTTPS to a specific IPv4 address | `0.0.0.0` (all) |
-| `IPV6_BINDING` | Bind HTTP/HTTPS to a specific IPv6 address | `[::]` (all) |
-| `DISABLE_IPV6` | Completely disable IPv6 listeners | `false` |
-| `NPM_LISTEN_LOCALHOST` | Bind Admin UI to localhost only (127.0.0.1) | `false` |
-| `GOA_LISTEN_LOCALHOST` | Bind Analytics to localhost only (127.0.0.1) | `false` |
-
-> [!TIP]
-> Set `NPM_LISTEN_LOCALHOST=true` if you access the Admin UI through a reverse proxy or tunnel. This prevents direct access via port 81 from the network.
+- **Docker:** set variables under `services.shieldpm.environment` in `compose.yaml`.
+- **Native / LXC:** set variables in `/data/.env`.
+- Secrets are described by name only. Do **not** publish real values.
 
 ---
 
-## 💾 Database Configuration
+## System
 
-ShieldPM supports **three database backends**. SQLite is the default and works out of the box.
+| Variable      | Example / Default | Description                                                                                 | Source         |
+| :------------ | :---------------- | :------------------------------------------------------------------------------------------ | :------------- |
+| `CSRF_SECRET` | `<secret>`        | Min 32 chars. Generate: openssl rand -hex 32                                                | `compose.yaml` |
+| `PGID`        | `0`               | Group ID (≥99 or 0), default: 0                                                             | `compose.yaml` |
+| `PUID`        | `0`               | User ID (≥99 or 0), default: 0                                                              | `compose.yaml` |
+| `TZ`          | `Europe/Berlin`   | Timezone for ShieldPM and optional sidecar services. Set to a valid tz database identifier. | `compose.yaml` |
 
-### SQLite (Default — No Configuration Required)
+## Ports & Network
 
-Data is stored in `/data/database.sqlite`. Best for small to medium installations.
+| Variable                | Example / Default | Description                           | Source         |
+| :---------------------- | :---------------- | :------------------------------------ | :------------- |
+| `DISABLE_H3_QUIC`       | `false`           | Fully disable HTTP/3 + QUIC           | `compose.yaml` |
+| `DISABLE_HTTP`          | `false`           | Stop listening on port 80             | `compose.yaml` |
+| `GOA_PORT`              | `91`              | GoAccess port, default: 91            | `compose.yaml` |
+| `HTTP3_ALT_SVC_PORT`    | `443`             | Alt-Svc port for HTTP/3, default: 443 | `compose.yaml` |
+| `HTTPS_PORT`            | `443`             | HTTPS port (TCP+UDP), default: 443    | `compose.yaml` |
+| `HTTP_PORT`             | `80`              | HTTP port, default: 80                | `compose.yaml` |
+| `LISTEN_PROXY_PROTOCOL` | `false`           | Use PROXY protocol (disables H3)      | `compose.yaml` |
+| `NPM_PORT`              | `81`              | UI port, default: 81                  | `compose.yaml` |
 
-### MySQL / MariaDB
+## Bind Addresses
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `DB_MYSQL_HOST` | Database hostname or IP | — |
-| `DB_MYSQL_PORT` | Database port | `3306` |
-| `DB_MYSQL_USER` | Database username | — |
-| `DB_MYSQL_PASSWORD` | Database password | — |
-| `DB_MYSQL_NAME` | Database name | — |
-| `DB_MYSQL_SSL` | Use SSL for the connection | `false` |
+| Variable               | Example / Default | Description                     | Source         |
+| :--------------------- | :---------------- | :------------------------------ | :------------- |
+| `DISABLE_IPV6`         | `true`            | Fully disable IPv6              | `compose.yaml` |
+| `GOA_IPV4_BINDING`     | `127.0.0.1`       | IPv4 bind for GoAccess only     | `compose.yaml` |
+| `GOA_IPV6_BINDING`     | `[::1]`           | IPv6 bind for GoAccess only     | `compose.yaml` |
+| `GOA_LISTEN_LOCALHOST` | `true`            | Bind GoAccess to localhost only | `compose.yaml` |
+| `IPV4_BINDING`         | `127.0.0.1`       | IPv4 bind for all hosts         | `compose.yaml` |
+| `IPV6_BINDING`         | `[::1]`           | IPv6 bind for all hosts         | `compose.yaml` |
+| `NPM_IPV4_BINDING`     | `127.0.0.1`       | IPv4 bind for UI only           | `compose.yaml` |
+| `NPM_IPV6_BINDING`     | `[::1]`           | IPv6 bind for UI only           | `compose.yaml` |
+| `NPM_LISTEN_LOCALHOST` | `true`            | Bind UI to localhost only       | `compose.yaml` |
 
-### PostgreSQL
+## Database
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `DB_POSTGRES_HOST` | Database hostname or IP | — |
-| `DB_POSTGRES_PORT` | Database port | `5432` |
-| `DB_POSTGRES_USER` | Database username | — |
-| `DB_POSTGRES_PASSWORD` | Database password | — |
-| `DB_POSTGRES_NAME` | Database name | — |
+| Variable                           | Example / Default | Description                                                                  | Source         |
+| :--------------------------------- | :---------------- | :--------------------------------------------------------------------------- | :------------- |
+| `DB_MYSQL_HOST`                    | `127.0.0.1`       | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_MYSQL_NAME`                    | `npm`             | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_MYSQL_PASSWORD`                | `<secret>`        | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_MYSQL_PORT`                    | `3306`            | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_MYSQL_SSL`                     | `false`           | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_MYSQL_SSL_REJECT_UNAUTHORIZED` | `true`            | Reject unauthorized MySQL/MariaDB TLS certificates.                          | `compose.yaml` |
+| `DB_MYSQL_SSL_VERIFY_IDENTITY`     | `true`            | Verify MySQL/MariaDB certificate identity/hostname.                          | `compose.yaml` |
+| `DB_MYSQL_USER`                    | `npm`             | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_POSTGRES_HOST`                 | `127.0.0.1`       | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_POSTGRES_NAME`                 | `npm`             | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_POSTGRES_PASSWORD`             | `<secret>`        | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_POSTGRES_PORT`                 | `5432`            | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `DB_POSTGRES_USER`                 | `npm`             | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
 
-### 🔄 Automatic Database Migration
+## Database service
 
-If you switch from SQLite to MySQL/PostgreSQL:
+| Variable              | Example / Default | Description                                                                                                                 | Source         |
+| :-------------------- | :---------------- | :-------------------------------------------------------------------------------------------------------------------------- | :------------- |
+| `MYSQL_DATABASE`      | `npm`             | Configured by this deployment option. See the compose reference for context.                                                | `compose.yaml` |
+| `MYSQL_PASSWORD`      | `<secret>`        | Configured by this deployment option. See the compose reference for context.                                                | `compose.yaml` |
+| `MYSQL_ROOT_PASSWORD` | `<secret>`        | Configured by this deployment option. See the compose reference for context.                                                | `compose.yaml` |
+| `MYSQL_USER`          | `npm`             | Configured by this deployment option. See the compose reference for context.                                                | `compose.yaml` |
+| `POSTGRES_DB`         | `npm`             | PostgreSQL database name for the optional ShieldPM database service. OpenAppSec's optional DB uses its own service context. | `compose.yaml` |
+| `POSTGRES_PASSWORD`   | `<secret>`        | PostgreSQL password for optional Postgres services. Keep secret and match the consuming service.                            | `compose.yaml` |
+| `POSTGRES_USER`       | `npm` / `appsec`  | PostgreSQL user. ShieldPM DB examples use `npm`; OpenAppSec DB examples use `appsec`.                                       | `compose.yaml` |
 
-1. ShieldPM detects the empty target database on startup
-2. It finds the existing `database.sqlite` in `/data`
-3. All data is automatically migrated to the new database
-4. The old file is renamed to `database.sqlite.migrated`
+## SSL & ACME
 
-> [!IMPORTANT]
-> This only works for migrating **from SQLite to an external DB**. Migrating between MySQL and PostgreSQL is not supported automatically.
+| Variable                 | Example / Default                                | Description                                                                  | Source         |
+| :----------------------- | :----------------------------------------------- | :--------------------------------------------------------------------------- | :------------- |
+| `ACME_EAB_HMAC_KEY`      | `<secret>`                                       | External Account Binding HMAC                                                | `compose.yaml` |
+| `ACME_EAB_KID`           | `123456789abcdef`                                | External Account Binding key                                                 | `compose.yaml` |
+| `ACME_EMAIL`             | `your-email`                                     | Recommended (required for ZeroSSL/Google)                                    | `compose.yaml` |
+| `ACME_KEY_TYPE`          | `rsa`                                            | Key type: ecdsa (default) or rsa                                             | `compose.yaml` |
+| `ACME_MUST_STAPLE`       | `true`                                           | Enable must-staple extension                                                 | `compose.yaml` |
+| `ACME_OCSP_STAPLING`     | `true`                                           | Enable OCSP stapling                                                         | `compose.yaml` |
+| `ACME_PROFILE`           | `shortlived`                                     | ACME profile, default: none                                                  | `compose.yaml` |
+| `ACME_SERVER`            | `https://acme-v02.api.letsencrypt.org/directory` | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `ACME_SERVER_TLS_VERIFY` | `false`                                          | Verify ACME server TLS cert                                                  | `compose.yaml` |
+| `CRT`                    | `72`                                             | Hours between cert renewal checks, default: 23                               | `compose.yaml` |
+| `CUSTOM_OCSP_STAPLING`   | `true`                                           | OCSP stapling for custom certs                                               | `compose.yaml` |
+| `DEFAULT_CERT_ID`        | `1`                                              | Use cert ID instead of dummy certs                                           | `compose.yaml` |
+
+## Logging & Analytics
+
+| Variable              | Example / Default                                                                                                                  | Description                                                                  | Source         |
+| :-------------------- | :--------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------- | :------------- |
+| `GOA`                 | `true`                                                                                                                             | Enable GoAccess (implies LOGROTATE=true)                                     | `compose.yaml` |
+| `GOACLA`              | `--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=2 --keep-last=7 --with-output-resolver --no-query-string` | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `LOGROTATE`           | `true`                                                                                                                             | Enable access logs + daily rotation                                          | `compose.yaml` |
+| `LOGROTATIONS`        | `7`                                                                                                                                | Keep N rotated logs, default: 3                                              | `compose.yaml` |
+| `NGINX_LOG_NOT_FOUND` | `true`                                                                                                                             | Log 404s to docker logs                                                      | `compose.yaml` |
+
+## GeoIP service
+
+| Variable                  | Example / Default                             | Description                             | Source         |
+| :------------------------ | :-------------------------------------------- | :-------------------------------------- | :------------- |
+| `GEOIPUPDATE_ACCOUNT_ID`  | `<your-account-id>`                           | MaxMind GeoIP account ID.               | `compose.yaml` |
+| `GEOIPUPDATE_EDITION_IDS` | `GeoLite2-Country GeoLite2-City GeoLite2-ASN` | GeoIP databases to download.            | `compose.yaml` |
+| `GEOIPUPDATE_FREQUENCY`   | `24`                                          | GeoIP update interval in hours.         | `compose.yaml` |
+| `GEOIPUPDATE_LICENSE_KEY` | `<secret>`                                    | MaxMind GeoIP license key. Keep secret. | `compose.yaml` |
+
+## PHP
+
+| Variable     | Example / Default            | Description                                                                  | Source         |
+| :----------- | :--------------------------- | :--------------------------------------------------------------------------- | :------------- |
+| `PHP82`      | `true`                       | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `PHP82_APKS` | `php8.2-curl php8.2-openssl` | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `PHP83`      | `true`                       | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `PHP83_APKS` | `php8.3-curl php8.3-openssl` | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `PHP84`      | `true`                       | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `PHP84_APKS` | `php8.4-curl php8.4-openssl` | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+
+## Advanced Nginx
+
+| Variable                        | Example / Default | Description                                   | Source         |
+| :------------------------------ | :---------------- | :-------------------------------------------- | :------------- |
+| `DISABLE_NGINX_BEAUTIFIER`      | `true`            | Skip config beautification                    | `compose.yaml` |
+| `FULLCLEAN`                     | `true`            | Remove unused config folders                  | `compose.yaml` |
+| `IPRT`                          | `3`               | Hours between IP range updates, default: 1    | `compose.yaml` |
+| `NGINX_404_REDIRECT`            | `true`            | Redirect 404 → /                              | `compose.yaml` |
+| `NGINX_DISABLE_PROXY_BUFFERING` | `true`            | Disable proxy buffering globally              | `compose.yaml` |
+| `NGINX_HSTS_SUBDOMAINS`         | `false`           | HSTS for subdomains, default: true            | `compose.yaml` |
+| `NGINX_QUIC_BPF`                | `true`            | Requires cap_add: BPF, PERFMON, NET_ADMIN     | `compose.yaml` |
+| `NGINX_WORKER_CONNECTIONS`      | `1024`            | default: 512                                  | `compose.yaml` |
+| `NGINX_WORKER_PROCESSES`        | `8`               | default: auto                                 | `compose.yaml` |
+| `SKIP_IP_RANGES`                | `false`           | Skip Cloudflare IP range fetch, default: true | `compose.yaml` |
+| `X_FRAME_OPTIONS`               | `deny`            | deny \| sameorigin \| none                    | `compose.yaml` |
+
+## Nginx Modules
+
+| Variable                                  | Example / Default | Description                                      | Source         |
+| :---------------------------------------- | :---------------- | :----------------------------------------------- | :------------- |
+| `NGINX_LOAD_GEOIP2_MODULE`                | `true`            | GeoIP2 module                                    | `compose.yaml` |
+| `NGINX_LOAD_NJS_MODULE`                   | `true`            | njs (JavaScript) module                          | `compose.yaml` |
+| `NGINX_LOAD_NTLM_MODULE`                  | `true`            | NTLM auth module                                 | `compose.yaml` |
+| `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE` | `true`            | OpenAppSec WAF (requires ipc: host + shm-volume) | `compose.yaml` |
+| `NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE`  | `true`            | VHost traffic stats                              | `compose.yaml` |
+
+## Docker Discovery
+
+| Variable       | Example / Default                             | Description                    | Source         |
+| :------------- | :-------------------------------------------- | :----------------------------- | :------------- |
+| `DOCKER_HOSTS` | `tcp://10.10.10.1:2375,tcp://10.10.10.2:2375` | Additional remote Docker hosts | `compose.yaml` |
+
+## Initialization
+
+| Variable                 | Example / Default     | Description                                                                  | Source         |
+| :----------------------- | :-------------------- | :--------------------------------------------------------------------------- | :------------- |
+| `ENABLE_PRERUN`          | `true`                | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `INITIAL_ADMIN_EMAIL`    | `<initial@email.tld>` | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `INITIAL_ADMIN_PASSWORD` | `<secret>`            | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+| `INITIAL_DEFAULT_PAGE`   | `444`                 | Configured by this deployment option. See the compose reference for context. | `compose.yaml` |
+
+## Feature Toggles
+
+| Variable         | Example / Default | Description                                                | Source         |
+| :--------------- | :---------------- | :--------------------------------------------------------- | :------------- |
+| `ANUBIS_ENABLED` | `true`            | Enable or disable the embedded Anubis AI firewall process. | `code`         |
+| `TOR_ENABLED`    | `true`            | default: true                                              | `compose.yaml` |
+
+## CrowdSec service
+
+| Variable      | Example / Default                                                                                                                                                                 | Description                          | Source         |
+| :------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------- | :------------- |
+| `COLLECTIONS` | `crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve crowdsecurity/modsecurity crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules` | CrowdSec collections to install/use. | `compose.yaml` |
+| `USE_WAL`     | `true`                                                                                                                                                                            | Enable SQLite WAL mode for CrowdSec. | `compose.yaml` |
+
+## OpenAppSec service
+
+| Variable              | Example / Default           | Description                                                              | Source         |
+| :-------------------- | :-------------------------- | :----------------------------------------------------------------------- | :------------- |
+| `AGENT_TOKEN`         | —                           | OpenAppSec deployment profile token. Keep secret.                        | `compose.yaml` |
+| `LEARNING_HOST`       | `openappsec-smartsync`      | OpenAppSec learning service hostname for local policy deployments.       | `compose.yaml` |
+| `QUERY_DB_HOST`       | `openappsec-db`             | OpenAppSec tuning database host.                                         | `compose.yaml` |
+| `QUERY_DB_PASSWORD`   | `<secret>`                  | OpenAppSec tuning database password. Keep secret.                        | `compose.yaml` |
+| `QUERY_DB_USER`       | `appsec`                    | OpenAppSec tuning database user.                                         | `compose.yaml` |
+| `SHARED_STORAGE_HOST` | `openappsec-shared-storage` | OpenAppSec shared-storage service hostname for local policy deployments. | `compose.yaml` |
+| `TUNING_HOST`         | `openappsec-tuning-svc`     | OpenAppSec tuning service hostname for local policy deployments.         | `compose.yaml` |
 
 ---
 
-## 🔐 SSL & ACME (Let's Encrypt)
+## Related Pages
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `ACME_EMAIL` | Email for Let's Encrypt registration | — |
-| `ACME_SERVER` | Custom ACME server URL | Let's Encrypt Production |
-| `ACME_EAB_KID` | External Account Binding Key ID | — |
-| `ACME_EAB_HMAC_KEY` | External Account Binding HMAC Key | — |
-| `ACME_MUST_STAPLE` | Enable OCSP Must-Staple extension | `false` |
-| `ACME_OCSP_STAPLING` | Enable OCSP Stapling | `true` |
-| `ACME_KEY_TYPE` | Key type: `rsa` or `ec` | `ec` |
-| `DEFAULT_CERT_ID` | ID of the default SSL certificate for all hosts | — |
-| `CRT` | Certificate renewal threshold in hours | `72` |
-
-> [!WARNING]
-> You **must** set `ACME_EMAIL` to use Let's Encrypt certificates. Without it, certificate requests will fail.
-
----
-
-## 📊 Analytics & Logging
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `GOA` | Enable GoAccess Analytics dashboard (port `GOA_PORT`) | `false` |
-| `GOACLA` | Custom GoAccess command-line arguments | See `.env` example |
-| `LOGROTATE` | Enable log rotation (rotates daily) | `false` |
-| `LOGROTATIONS` | Number of rotated log files to keep | `7` |
-| `NGINX_LOG_NOT_FOUND` | Log 404 errors in the access log | `true` |
-
----
-
-## ⚙️ Advanced Nginx
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `NGINX_WORKER_PROCESSES` | Number of Nginx worker processes | `auto` (= CPU cores) |
-| `NGINX_WORKER_CONNECTIONS` | Max connections per worker | `1024` |
-| `NGINX_QUIC_BPF` | Enable BPF for QUIC (requires privileged) | `false` |
-| `NGINX_DISABLE_PROXY_BUFFERING` | Disable proxy buffering globally | `false` |
-| `NGINX_404_REDIRECT` | Redirect 404 hosts to the default site | `false` |
-| `NGINX_HSTS_SUBDOMAINS` | Include subdomains in HSTS header | `false` |
-| `X_FRAME_OPTIONS` | X-Frame-Options header value | `sameorigin` |
-| `DISABLE_NGINX_BEAUTIFIER` | Disable automatic formatting of Nginx configs | `false` |
-| `FULLCLEAN` | Run a full config cleanup on startup | `false` |
-| `SKIP_IP_RANGES` | Skip setting real IP ranges (Cloudflare, etc.) | `false` |
-| `IPRT` | IP Ranges refresh interval in hours | `3` |
-
----
-
-## 🐘 PHP
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `PHP82` | Enable PHP 8.2 FPM | `false` |
-| `PHP82_APKS` | Additional PHP 8.2 packages | — |
-| `PHP83` | Enable PHP 8.3 FPM | `false` |
-| `PHP83_APKS` | Additional PHP 8.3 packages | — |
-| `PHP84` | Enable PHP 8.4 FPM | `false` |
-| `PHP84_APKS` | Additional PHP 8.4 packages | — |
-
-> [!TIP]
-> See the [PHP Hosting](PHP-Hosting) wiki page for a complete guide on hosting PHP applications.
-
----
-
-## 🧩 Module Loading
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE` | Load OpenAppSec WAF module | `false` |
-| `NGINX_LOAD_GEOIP2_MODULE` | Load GeoIP2 module | `false` |
-| `NGINX_LOAD_NJS_MODULE` | Load Nginx JavaScript (njs) module | `false` |
-| `NGINX_LOAD_NTLM_MODULE` | Load NTLM authentication module | `false` |
-| `NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE` | Load virtual host traffic status module | `false` |
-
----
-
-## 🚀 Initialization
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `INITIAL_ADMIN_EMAIL` | Skip the Setup Wizard and auto-create an admin with this email | — |
-| `INITIAL_ADMIN_PASSWORD` | Password for the auto-created admin (requires `INITIAL_ADMIN_EMAIL`) | — |
-| `INITIAL_DEFAULT_PAGE` | Default page for undefined hostnames (`444` = close connection) | `congratulations` |
-| `ENABLE_PRERUN` | Execute `/data/prerun.sh` before startup | `false` |
-
----
-
-## 🐳 Docker-Specific
-
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `DOCKER_HOSTS` | Additional Docker hosts for Auto-Discovery (comma-separated) | — |
-| `TOR_ENABLED` | Enable the Tor daemon for Onion Services | `true` |
-| `ANUBIS_ENABLED` | Enable the Anubis AI Firewall | `true` |
+- [Docker Compose Reference](Docker-Compose-Reference)
+- [Installation](Installation)
+- [IPv6 Configuration](IPv6)
+- [SSL Certificates](SSL-Certificates)
+- [Docker Auto-Discovery](Docker-Auto-Discovery)
+- [OpenAppSec](OpenAppSec)
+- [CrowdSec](CrowdSec)
 
 ---
 

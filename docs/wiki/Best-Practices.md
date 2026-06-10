@@ -17,10 +17,10 @@ When you access ShieldPM for the first time, a **Setup Wizard** guides you throu
 
 Security headers add an extra layer of protection for visitors:
 
-| Header | Variable | Recommended Value | Description |
-| :--- | :--- | :--- | :--- |
-| **HSTS** | `NGINX_HSTS_SUBDOMAINS` | `true` | Forces HTTPS on all subdomains |
-| **X-Frame-Options** | `X_FRAME_OPTIONS` | `sameorigin` | Prevents clickjacking attacks |
+| Header              | Variable                | Recommended Value | Description                    |
+| :------------------ | :---------------------- | :---------------- | :----------------------------- |
+| **HSTS**            | `NGINX_HSTS_SUBDOMAINS` | `true`            | Forces HTTPS on all subdomains |
+| **X-Frame-Options** | `X_FRAME_OPTIONS`       | `sameorigin`      | Prevents clickjacking attacks  |
 
 ### Block Common Exploits
 
@@ -33,10 +33,10 @@ Enable **Block Exploits** on every Proxy Host. This activates built-in Nginx rul
 
 ### Network Isolation (Docker)
 
-| Mode | Security | Performance | When to Use |
-| :--- | :--- | :--- | :--- |
-| **Bridge** (default) | ✅ Isolated | Good | Most setups |
-| **Host** | ⚠️ Shared stack | Best | When you need real client IPs or IPv6 |
+| Mode                 | Security        | Performance | When to Use                           |
+| :------------------- | :-------------- | :---------- | :------------------------------------ |
+| **Bridge** (default) | ✅ Isolated     | Good        | Most setups                           |
+| **Host**             | ⚠️ Shared stack | Best        | When you need real client IPs or IPv6 |
 
 > [!TIP]
 > If using Bridge mode, ShieldPM automatically fetches and applies Cloudflare/CDN IP ranges so that the real client IP is preserved in logs and Access Lists.
@@ -55,14 +55,14 @@ Restrict access to the Admin UI (port 81) from the public internet:
 
 ### What to Backup
 
-| Data | Location | Critical |
-| :--- | :--- | :---: |
-| Database | `/data/database.sqlite` | ✅ |
-| SSL Certificates | `/data/tls/` | ✅ |
-| Configuration | `/data/nginx/` | ⚠️ (regenerated) |
-| Keys | `/data/shieldpm/keys.json` | ✅ |
-| Access Lists | `/data/access/` | ✅ |
-| Tor Keys | `/data/tor/` | ⚠️ (if using Onion Services) |
+| Data             | Location                   |           Critical           |
+| :--------------- | :------------------------- | :--------------------------: |
+| Database         | `/data/database.sqlite`    |              ✅              |
+| SSL Certificates | `/data/tls/`               |              ✅              |
+| Configuration    | `/data/nginx/`             |       ⚠️ (regenerated)       |
+| Keys             | `/data/shieldpm/keys.json` |              ✅              |
+| Access Lists     | `/data/access/`            |              ✅              |
+| Tor Keys         | `/data/tor/`               | ⚠️ (if using Onion Services) |
 
 > [!TIP]
 > Use [GitOps](GitOps) to automatically back up your configuration to a Git repository after every change. This gives you versioned, off-site backups with zero effort.
@@ -125,11 +125,11 @@ NGINX_WORKER_CONNECTIONS=4096
 
 ### Database Choice
 
-| Database | Best For | Concurrent Users |
-| :--- | :--- | :--- |
-| **SQLite** | Home/Small setups | 1-5 admins |
-| **MySQL/MariaDB** | Medium/Production | 5-50 admins |
-| **PostgreSQL** | Enterprise/Large | 50+ admins |
+| Database          | Best For          | Concurrent Users |
+| :---------------- | :---------------- | :--------------- |
+| **SQLite**        | Home/Small setups | 1-5 admins       |
+| **MySQL/MariaDB** | Medium/Production | 5-50 admins      |
+| **PostgreSQL**    | Enterprise/Large  | 50+ admins       |
 
 > [!NOTE]
 > SQLite works perfectly fine for most home and small business setups. Only switch to an external database if you experience performance issues or need multi-node deployments.

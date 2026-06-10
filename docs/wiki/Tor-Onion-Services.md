@@ -63,25 +63,25 @@ ShieldPM will:
 
 ## 🔧 Configuration Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| **Name** | - | A friendly identifier for the service |
-| **Virtual Port** | 80 | Port exposed on the `.onion` address |
-| **Target Port** | 80 | Local port traffic is forwarded to |
+| Option           | Default | Description                           |
+| ---------------- | ------- | ------------------------------------- |
+| **Name**         | -       | A friendly identifier for the service |
+| **Virtual Port** | 80      | Port exposed on the `.onion` address  |
+| **Target Port**  | 80      | Local port traffic is forwarded to    |
 
 ### Example Configuration
 
-| Use Case | Virtual Port | Target Port |
-|----------|--------------|-------------|
-| HTTP website | 80 | 80 |
-| HTTPS website | 443 | 443 |
-| Custom app | 8080 | 3000 |
+| Use Case      | Virtual Port | Target Port |
+| ------------- | ------------ | ----------- |
+| HTTP website  | 80           | 80          |
+| HTTPS website | 443          | 443         |
+| Custom app    | 8080         | 3000        |
 
 ## ⚙️ Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TOR_ENABLED` | `true` | Enable/disable the Tor daemon |
+| Variable      | Default | Description                   |
+| ------------- | ------- | ----------------------------- |
+| `TOR_ENABLED` | `true`  | Enable/disable the Tor daemon |
 
 ## 🔐 Security
 
@@ -103,12 +103,12 @@ Tor Onion Services are **completely disabled** in Demo Mode for security reasons
 
 ## 📂 File Locations
 
-| Path | Description |
-|------|-------------|
-| `/data/tor/` | Tor data directory |
-| `/data/shieldpm/tor-control-password` | Control Port password |
-| `/data/tor/tor.log` | Tor daemon logs |
-| `/etc/tor/torrc` | Tor configuration file |
+| Path                                  | Description            |
+| ------------------------------------- | ---------------------- |
+| `/data/tor/`                          | Tor data directory     |
+| `/data/shieldpm/tor-control-password` | Control Port password  |
+| `/data/tor/tor.log`                   | Tor daemon logs        |
+| `/etc/tor/torrc`                      | Tor configuration file |
 
 ## 🔄 Service Lifecycle
 
@@ -148,7 +148,7 @@ Because of this, **Port 80 (HTTP) is completely safe** for sensitive content ove
 
 You should only use HTTPS over Tor if:
 
-1. **Frontend Requirements**: Your backend application *enforces* HTTPS and won't work without it.
+1. **Frontend Requirements**: Your backend application _enforces_ HTTPS and won't work without it.
 2. **Double Encryption**: You want an extra layer of security (e.g., from the browser process to the app container).
 3. **EV Certificates**: You have an expensive Extended Validation certificate for your onion address (rare).
 
@@ -224,4 +224,5 @@ If you see "Tor daemon is not available":
 - [Security Best Practices](Security)
 
 ---
+
 [🏠 Home](Home) | [🔒 Security](Security) | [☁️ Cloudflare Tunnels](Cloudflared-Tunnels)

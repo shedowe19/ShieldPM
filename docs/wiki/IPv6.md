@@ -31,15 +31,15 @@ If you use `network_mode: host`, ShieldPM shares the host's network stack:
 ```yaml
 services:
   app:
-    image: 'ghcr.io/shedowe19/shieldpm:latest'
+    image: "ghcr.io/shedowe19/shieldpm:latest"
     network_mode: host
 ```
 
-| Pros | Cons |
-| :--- | :--- |
-| ✅ IPv6 works immediately | ⚠️ No network isolation |
-| ✅ Real client IPs visible | ⚠️ No port mapping (use env vars to change ports) |
-| ✅ No extra configuration needed | |
+| Pros                             | Cons                                              |
+| :------------------------------- | :------------------------------------------------ |
+| ✅ IPv6 works immediately        | ⚠️ No network isolation                           |
+| ✅ Real client IPs visible       | ⚠️ No port mapping (use env vars to change ports) |
+| ✅ No extra configuration needed |                                                   |
 
 ### Option 2: Bridge Network with IPv6 (Recommended for Security)
 
@@ -67,12 +67,12 @@ sudo systemctl restart docker
 ```yaml
 services:
   app:
-    image: 'ghcr.io/shedowe19/shieldpm:latest'
+    image: "ghcr.io/shedowe19/shieldpm:latest"
     ports:
-      - '80:80'
-      - '81:81'
-      - '443:443'
-      - '443:443/udp'
+      - "80:80"
+      - "81:81"
+      - "443:443"
+      - "443:443/udp"
     networks:
       - shieldpm
 
@@ -101,12 +101,12 @@ Native and LXC installations use the host's network stack directly. If your serv
 
 Control how ShieldPM listens on IPv6 via `compose.yaml` or `/data/.env`:
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `IPV6_BINDING` | Bind to a specific IPv6 address | `[::]` (all) |
-| `NPM_IPV6_BINDING` | Bind Admin UI to specific IPv6 address | `[::]` (all) |
+| Variable           | Description                             | Default      |
+| :----------------- | :-------------------------------------- | :----------- |
+| `IPV6_BINDING`     | Bind to a specific IPv6 address         | `[::]` (all) |
+| `NPM_IPV6_BINDING` | Bind Admin UI to specific IPv6 address  | `[::]` (all) |
 | `GOA_IPV6_BINDING` | Bind Analytics to specific IPv6 address | `[::]` (all) |
-| `DISABLE_IPV6` | Completely disable all IPv6 listeners | `false` |
+| `DISABLE_IPV6`     | Completely disable all IPv6 listeners   | `false`      |
 
 > [!TIP]
 > Set `DISABLE_IPV6=true` if your environment does not support IPv6. This prevents "Address family not supported by protocol" errors in the logs.

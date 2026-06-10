@@ -6,10 +6,10 @@
 
 OpenAppSec has two components:
 
-| Component | Description | Status in ShieldPM |
-|:---|:---|:---:|
-| **Nginx Attachment Module** | Plugin loaded by Nginx to intercept traffic | ✅ Already compiled in |
-| **Agent** (`cp-nano-agent`) | ML engine that analyzes traffic and makes decisions | ❌ Needs installation |
+| Component                   | Description                                         |   Status in ShieldPM   |
+| :-------------------------- | :-------------------------------------------------- | :--------------------: |
+| **Nginx Attachment Module** | Plugin loaded by Nginx to intercept traffic         | ✅ Already compiled in |
+| **Agent** (`cp-nano-agent`) | ML engine that analyzes traffic and makes decisions | ❌ Needs installation  |
 
 ```
   ┌──────────┐       ┌──────────────────────────────────────────────┐
@@ -77,10 +77,10 @@ Uncomment the `openappsec-agent` service in your `compose.yaml` (see [Docker Com
 
 OpenAppSec can run in two management modes:
 
-| Mode | Description |
-|:---|:---|
+| Mode             | Description                                                                          |
+| :--------------- | :----------------------------------------------------------------------------------- |
 | **Cloud Portal** | Managed via [my.openappsec.io](https://my.openappsec.io). Requires an `AGENT_TOKEN`. |
-| **Local-only** | Managed via `local_policy.yaml` file. No cloud account needed. |
+| **Local-only**   | Managed via `local_policy.yaml` file. No cloud account needed.                       |
 
 ### Option A: During Installation (Recommended)
 
@@ -126,10 +126,10 @@ systemctl restart shieldpm
 
 OpenAppSec uses machine learning models for threat detection. Two models are available:
 
-| Model | Detection Quality | Access |
-|:---|:---|:---|
-| **Basic** | Standard detection, included by default | ✅ Free |
-| **Advanced** | Higher accuracy, fewer false positives | 🔑 Download from [my.openappsec.io](https://my.openappsec.io) |
+| Model        | Detection Quality                       | Access                                                        |
+| :----------- | :-------------------------------------- | :------------------------------------------------------------ |
+| **Basic**    | Standard detection, included by default | ✅ Free                                                       |
+| **Advanced** | Higher accuracy, fewer false positives  | 🔑 Download from [my.openappsec.io](https://my.openappsec.io) |
 
 ### Installation
 
@@ -161,12 +161,12 @@ The policy file is located at `/etc/cp/conf/local_policy.yaml`. It controls what
 
 ### Modes
 
-| Mode | Behavior |
-|:---|:---|
-| `detect-learn` | **Default.** Logs threats but does **not** block. Use for initial tuning. |
-| `prevent-learn` | Blocks threats **and** continues learning. Recommended for production. |
-| `prevent` | Blocks threats, no learning. |
-| `inactive` | Disabled. |
+| Mode            | Behavior                                                                  |
+| :-------------- | :------------------------------------------------------------------------ |
+| `detect-learn`  | **Default.** Logs threats but does **not** block. Use for initial tuning. |
+| `prevent-learn` | Blocks threats **and** continues learning. Recommended for production.    |
+| `prevent`       | Blocks threats, no learning.                                              |
+| `inactive`      | Disabled.                                                                 |
 
 ### Example Policy
 
@@ -223,10 +223,10 @@ open-appsec-ctl --list-policies       # Show active policies
 
 ## 📊 Logs
 
-| Deployment | Log Location |
-|:---|:---|
-| **Docker** | `/opt/openappsec/logs/` |
-| **Native/LXC** | `/var/log/nano_agent/` |
+| Deployment     | Log Location            |
+| :------------- | :---------------------- |
+| **Docker**     | `/opt/openappsec/logs/` |
+| **Native/LXC** | `/var/log/nano_agent/`  |
 
 ---
 
@@ -237,4 +237,5 @@ open-appsec-ctl --list-policies       # Show active policies
 - [GitHub Repository](https://github.com/openappsec/openappsec)
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

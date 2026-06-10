@@ -1,155 +1,139 @@
 # Installation
 
-ShieldPM offers three deployment methods to suit your environment:
+ShieldPM supports Docker, Native Debian 13 (Trixie), and Proxmox LXC deployments.
 
-| Method | Best For | Update Method |
-| :--- | :--- | :--- |
-| 🐳 **Docker** (Recommended) | Most users — easy updates, isolated environment | `docker compose pull` |
-| 📦 **Native Installer** | Bare-metal Debian 13 (Trixie) servers | `update-shieldpm` |
-| 🖥️ **Proxmox LXC** | Proxmox users — pre-configured container template | `update` |
+The current repository `develop` branch uses:
+
+- Image: `ghcr.io/shedowe19/shieldpm:develop`
+- Default runtime mode: `network_mode: host`
+- Data directory: `/opt/shieldpm` on the host mounted to `/data` in the container
+- UI port: `81` by default (`NPM_PORT`)
+
+For release deployments you may choose a tagged image or `ghcr.io/shedowe19/shieldpm:latest`, but the examples below match the current repository files.
+
+| Method                  | Best For                                | Update Method                                 |
+| :---------------------- | :-------------------------------------- | :-------------------------------------------- |
+| 🐳 **Docker**           | Most users; isolated and easy to update | `docker compose pull && docker compose up -d` |
+| 📦 **Native Installer** | Fresh Debian 13 / Trixie servers        | `update-shieldpm` or `update`                 |
+| 🖥️ **Proxmox LXC**      | Proxmox containers with systemd         | `update` inside the container                 |
 
 ---
 
-## 1. 🐳 Docker (Recommended)
+## 1. 🐳 Docker Quick Start
 
-Requires Docker Engine and Docker Compose.
+### Easy compose file
 
-### Quick Start
+Download the current easy compose file from the `develop` branch:
 
-1. **Create a `compose.yaml` file:**
+```bash
+curl -fsSL -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.easy.yaml
+```
 
-    ```yaml
-    services:
-      app:
-        image: 'ghcr.io/shedowe19/shieldpm:latest'
-        restart: unless-stopped
-        ports:
-          - '80:80'
-          - '81:81'
-          - '443:443'
-        volumes:
-          - ./data:/data
-          - ./letsencrypt:/etc/letsencrypt
-    ```
+Review at least:
 
-2. **Start ShieldPM:**
+- `TZ`
+- exposed host ports (`NPM_PORT`, `HTTP_PORT`, `HTTPS_PORT`)
+- data path (`/opt/shieldpm:/data`)
+- optional `CSRF_SECRET`
 
-    ```bash
-    docker compose up -d
-    ```
+Start ShieldPM:
 
-3. **Access the Admin Panel:**
-    Open `http://<your-ip>:81` in your browser.
-    The **Setup Wizard** will guide you through creating your admin account.
+```bash
+docker compose up -d
+```
 
-> [!TIP]
-> There are no default credentials — you create your own admin user during the initial setup.
+Open the UI:
 
-### Updating (Docker)
+```text
+http://<your-ip>:81
+```
 
-Simply pull the latest image and recreate the container:
+The setup wizard creates the first admin user unless you explicitly set `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD`.
+
+### Full compose file
+
+For all optional services and feature toggles:
+
+```bash
+curl -fsSL -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
+```
+
+See [Docker Compose Reference](Docker-Compose-Reference) for the exact current file.
+
+### Docker update
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-> [!TIP]
-> Your data is stored in the mounted `/data` volume. Pulling a new image and recreating the container does **not** delete your configuration, certificates, or database.
+Data in `/data` is persistent and is not deleted by recreating the container.
 
 ---
 
 ## 2. 📦 Native Installer (Debian 13 / Trixie)
 
-This method installs ShieldPM directly onto a fresh Debian 13 system. It includes pre-compiled Nginx binaries with all modules (HTTP/3, ModSecurity, etc.), so **no compilation is required**.
+Native installation targets fresh Debian 13 systems and installs ShieldPM directly on the host, including service files and required runtime dependencies.
 
-### Prerequisites
+### Requirements
 
-- **OS:** Debian 13 (Trixie) - Fresh Install recommended.
-- **Root Access**
+- Debian 13 (Trixie), fresh install recommended
+- Root access
+- Internet access for package and release downloads
 
-### Installation
+### Install
 
-1. **Download the Installer:**
-    Get the latest `shieldpm-install-linux-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
+Download the latest installer archive from GitHub Releases:
 
-    *Example (for AMD64):*
+```bash
+wget https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz
+tar -xzf shieldpm-install-linux-amd64.tar.gz
+sudo ./install.sh
+```
 
-    ```bash
-    wget https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz
-    ```
+Then open:
 
-2. **Extract and Run:**
+```text
+http://<your-ip>:81
+```
 
-    ```bash
-    tar -xzf shieldpm-install-linux-amd64.tar.gz
-    sudo ./install.sh
-    ```
-
-3. **Access:**
-    Open `http://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
-
-### Updating (Native)
-
-ShieldPM includes a self-updating utility. Run:
+### Native update
 
 ```bash
 update-shieldpm
-# OR simply
+# or
 update
 ```
 
-This command will:
-
-1. Check GitHub for updates.
-2. Upgrade system packages (`apt upgrade`).
-3. Update ShieldPM code.
-4. (Optional) Update Nginx binaries.
+The updater refreshes system packages, ShieldPM files, and optional Nginx/runtime components according to the installed deployment mode.
 
 ---
 
 ## 3. 🖥️ Proxmox LXC
 
-For Proxmox users, we provide a pre-built LXC template based on Debian 13.
+For Proxmox, use the latest ShieldPM LXC template from GitHub Releases or create a fresh Debian 13 container and run the native installer.
 
-### Installation
+Important LXC settings:
 
-1. **Download Template:**
-    Get `shieldpm-lxc-template-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
-2. **Upload to Proxmox:**
-    Go to `local (pve) > CT Templates > Upload`.
-3. **Create CT:**
-    Create a new container using this template.
-4. **Important Setting:**
-    In the container **Options**, enable **Nesting**.
-5. **Start:**
-    Boot the container. Access `http://<IP>:81` — the Setup Wizard will create your admin account.
+- Enable **Nesting**.
+- For WireGuard, `/dev/net/tun` and `NET_ADMIN`/routing support may be required.
+- For QUIC BPF (`NGINX_QUIC_BPF=true`), privileged/container capability support is required.
 
-### Updating (LXC)
-
-Open the container console and run:
+Update inside the container:
 
 ```bash
 update
 ```
 
-> [!WARNING]
-> The **HTTP/3 BPF** feature (`NGINX_QUIC_BPF=true`) requires a **Privileged Container**. It is disabled by default and not available in unprivileged containers.
-
-> [!TIP]
-> LXC containers use the same update mechanism as Native installations. Run `update` inside the container console to upgrade.
-
 ---
 
-## ⚙️ Next Steps
+## Next Steps
 
-After installation, you may want to:
-
-1. **[Configure Environment Variables](Configuration)** — Customize ports, database, SSL, and more
-2. **[Create Your First Proxy Host](Proxy-Hosts)** — Set up a reverse proxy for your first service
-3. **[Enable Let's Encrypt](SSL-Certificates)** — Set `ACME_EMAIL` to enable automatic SSL
-4. **[Enable CrowdSec](CrowdSec)** — Protect against brute force and malicious bots
-5. **[Review Best Practices](Best-Practices)** — Security hardening and performance tips
+1. [Configuration](Configuration) — Review all current environment variables.
+2. [Docker Compose Reference](Docker-Compose-Reference) — Use the full compose reference for optional services.
+3. [Proxy Hosts](Proxy-Hosts) — Create your first proxy host.
+4. [SSL Certificates](SSL-Certificates) — Configure ACME/Let's Encrypt or custom certs.
+5. [Best Practices](Best-Practices) — Harden access and backups.
 
 ---
 

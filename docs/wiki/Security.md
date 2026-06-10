@@ -46,18 +46,18 @@ ShieldPM provides a **layered security architecture** that protects your service
 
 ## 🛡️ Feature Comparison
 
-| Feature | Type | Protection Against | Configuration |
-| :--- | :--- | :--- | :--- |
-| **[CrowdSec](CrowdSec)** | IPS | Brute force, botnets, known malicious IPs | Sidecar / System service |
-| **[ModSecurity](ModSecurity)** | WAF | SQL injection, XSS, path traversal | Per-host toggle |
-| **[OpenAppSec](OpenAppSec)** | AI WAF | Zero-day attacks, unknown patterns | Module + Agent |
-| **[Anubis](Anubis)** | AI Firewall | AI crawlers, automated bots, scrapers | Environment variable |
-| **[Access Lists](Access-Lists)** | ACL | Unauthorized access | Per-host assignment |
-| **[OAuth2-Proxy](OAuth2-Proxy)** | SSO | Unauthorized access via Identity Provider | Per-host assignment |
-| **[Rate Limiting](Request-Rate-Limiting)** | DDoS | Abuse, scraping, brute force | Per-host config |
-| **[mTLS](Internal-PKI)** | Zero Trust | All unauthorized clients | Access List + Internal CA |
-| **Block Exploits** | Basic Rules | Common attack patterns | Per-host toggle |
-| **HSTS** | Header | Protocol downgrade attacks | Per-host / global |
+| Feature                                    | Type        | Protection Against                        | Configuration             |
+| :----------------------------------------- | :---------- | :---------------------------------------- | :------------------------ |
+| **[CrowdSec](CrowdSec)**                   | IPS         | Brute force, botnets, known malicious IPs | Sidecar / System service  |
+| **[ModSecurity](ModSecurity)**             | WAF         | SQL injection, XSS, path traversal        | Per-host toggle           |
+| **[OpenAppSec](OpenAppSec)**               | AI WAF      | Zero-day attacks, unknown patterns        | Module + Agent            |
+| **[Anubis](Anubis)**                       | AI Firewall | AI crawlers, automated bots, scrapers     | Environment variable      |
+| **[Access Lists](Access-Lists)**           | ACL         | Unauthorized access                       | Per-host assignment       |
+| **[OAuth2-Proxy](OAuth2-Proxy)**           | SSO         | Unauthorized access via Identity Provider | Per-host assignment       |
+| **[Rate Limiting](Request-Rate-Limiting)** | DDoS        | Abuse, scraping, brute force              | Per-host config           |
+| **[mTLS](Internal-PKI)**                   | Zero Trust  | All unauthorized clients                  | Access List + Internal CA |
+| **Block Exploits**                         | Basic Rules | Common attack patterns                    | Per-host toggle           |
+| **HSTS**                                   | Header      | Protocol downgrade attacks                | Per-host / global         |
 
 ---
 
@@ -67,21 +67,21 @@ ShieldPM provides a **layered security architecture** that protects your service
 
 ShieldPM supports modern TLS protocols out of the box:
 
-| Protocol | Status | Notes |
-| :--- | :--- | :--- |
-| **TLS 1.3** | ✅ Default | Fastest, most secure |
-| **TLS 1.2** | ✅ Supported | For older client compatibility |
-| **HTTP/3 (QUIC)** | ✅ Enabled | UDP-based, improved mobile performance |
-| **ML-KEM-768** | ✅ Available | Post-quantum key exchange (via Internal PKI) |
+| Protocol          | Status       | Notes                                        |
+| :---------------- | :----------- | :------------------------------------------- |
+| **TLS 1.3**       | ✅ Default   | Fastest, most secure                         |
+| **TLS 1.2**       | ✅ Supported | For older client compatibility               |
+| **HTTP/3 (QUIC)** | ✅ Enabled   | UDP-based, improved mobile performance       |
+| **ML-KEM-768**    | ✅ Available | Post-quantum key exchange (via Internal PKI) |
 
 ### Certificate Management
 
-| Method | Best For | Automation |
-| :--- | :--- | :--- |
-| **Let's Encrypt** | Public-facing services | ✅ Auto-renew |
-| **DNS Challenge** | Wildcards, blocked port 80 | ✅ Auto-renew |
-| **Custom Cert** | Corporate CAs, bought certs | ❌ Manual |
-| **Internal CA** | Private/internal services | ✅ Auto-issue |
+| Method            | Best For                    | Automation    |
+| :---------------- | :-------------------------- | :------------ |
+| **Let's Encrypt** | Public-facing services      | ✅ Auto-renew |
+| **DNS Challenge** | Wildcards, blocked port 80  | ✅ Auto-renew |
+| **Custom Cert**   | Corporate CAs, bought certs | ❌ Manual     |
+| **Internal CA**   | Private/internal services   | ✅ Auto-issue |
 
 👉 **[SSL Certificates Guide](SSL-Certificates)** | **[Internal PKI Guide](Internal-PKI)**
 

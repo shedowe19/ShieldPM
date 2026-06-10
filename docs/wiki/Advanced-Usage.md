@@ -6,13 +6,13 @@ Unlock the full potential of ShieldPM with these advanced configurations and fea
 
 ## 📋 Quick Navigation
 
-| Feature | Description | Link |
-| :--- | :--- | :--- |
-| **GoAccess Analytics** | Real-time web log analyzer | [Below](#-goaccess-analytics) |
-| **PHP-FPM** | Serve PHP apps directly | [PHP Hosting Guide](PHP-Hosting) |
-| **Custom Nginx Config** | Load Balancing, Upstreams | [Below](#️-custom-nginx-configurations) |
-| **Dashboard Notes** | Sticky notes widget | [Below](#-dashboard-notes) |
-| **Streams (TCP/UDP)** | Forward non-HTTP traffic | [Streams Guide](Streams) |
+| Feature                 | Description                | Link                                   |
+| :---------------------- | :------------------------- | :------------------------------------- |
+| **GoAccess Analytics**  | Real-time web log analyzer | [Below](#-goaccess-analytics)          |
+| **PHP-FPM**             | Serve PHP apps directly    | [PHP Hosting Guide](PHP-Hosting)       |
+| **Custom Nginx Config** | Load Balancing, Upstreams  | [Below](#️-custom-nginx-configurations) |
+| **Dashboard Notes**     | Sticky notes widget        | [Below](#-dashboard-notes)             |
+| **Streams (TCP/UDP)**   | Forward non-HTTP traffic   | [Streams Guide](Streams)               |
 
 ---
 
@@ -20,9 +20,9 @@ Unlock the full potential of ShieldPM with these advanced configurations and fea
 
 ShieldPM includes **GoAccess**, a real-time web log analyzer.
 
-* **Enable:** Set `GOA=true` in `compose.yaml` (Docker) or `/data/.env` (Native/LXC).
-* **Access:** Open `http://<your-server-ip>:91` (Port 91 by default).
-* **GeoIP:** To enable GeoIP stats, download the MaxMind GeoLite2 databases (Country, City, ASN) into the `goaccess/geoip` folder inside your data directory.
+- **Enable:** Set `GOA=true` in `compose.yaml` (Docker) or `/data/.env` (Native/LXC).
+- **Access:** Open `http://<your-server-ip>:91` (Port 91 by default).
+- **GeoIP:** To enable GeoIP stats, download the MaxMind GeoLite2 databases (Country, City, ASN) into the `goaccess/geoip` folder inside your data directory.
 
 ## 🐘 PHP-FPM Integration
 
@@ -35,23 +35,23 @@ This approach keeps your containers clean and separated.
 1. Run a separate PHP-FPM container (e.g., `php:8.2-fpm`).
 2. In your Proxy Host's **Advanced Configuration**:
 
-    ```nginx
-    location / {
-        alias /var/www/html/;
-        location ~* \.php(?:$|/) {
-          try_files $fastcgi_script_name =404;
-          fastcgi_pass <php-container-ip>:9000;
-          fastcgi_split_path_info ^(.*\.php)(/.*)$;
-          include fastcgi_params;
-          fastcgi_param SCRIPT_FILENAME $request_filename;
-        }
-    }
-    ```
+   ```nginx
+   location / {
+       alias /var/www/html/;
+       location ~* \.php(?:$|/) {
+         try_files $fastcgi_script_name =404;
+         fastcgi_pass <php-container-ip>:9000;
+         fastcgi_split_path_info ^(.*\.php)(/.*)$;
+         include fastcgi_params;
+         fastcgi_param SCRIPT_FILENAME $request_filename;
+       }
+   }
+   ```
 
 ### Internal PHP (Not Recommended)
 
-* Enable `PHP82=true` (or 83/84) in `compose.yaml`.
-* In the UI, set the "Forward Host" to `127.0.0.1` and Port to `82` (or 83/84).
+- Enable `PHP82=true` (or 83/84) in `compose.yaml`.
+- In the UI, set the "Forward Host" to `127.0.0.1` and Port to `82` (or 83/84).
 
 ## 🛠️ Custom Nginx Configurations
 
@@ -69,18 +69,18 @@ You can add custom Nginx directives to specific locations in the **Locations** t
 > ```
 
 1. Create a `http_top.conf` file in your custom Nginx config directory:
-    * **Docker:** `/opt/shieldpm/custom_nginx/http_top.conf` (maps to `/data/custom_nginx/`)
-    * **Native / LXC:** `/data/custom_nginx/http_top.conf`
+   - **Docker:** `/opt/shieldpm/custom_nginx/http_top.conf` (maps to `/data/custom_nginx/`)
+   - **Native / LXC:** `/data/custom_nginx/http_top.conf`
 2. Define your upstream block:
 
-    ```nginx
-    upstream my_backend {
-        least_conn;               # Load balancing strategy
-        server 10.0.0.1:80;
-        server 10.0.0.2:80;
-        server 10.0.0.3:80 down;  # Mark server as down
-    }
-    ```
+   ```nginx
+   upstream my_backend {
+       least_conn;               # Load balancing strategy
+       server 10.0.0.1:80;
+       server 10.0.0.2:80;
+       server 10.0.0.3:80 down;  # Mark server as down
+   }
+   ```
 
 3. In the UI, point your Proxy Host scheme to `http` and Forward Host to `my_backend`.
 
@@ -97,9 +97,9 @@ The Dashboard includes a **Sticky Notes** widget where you can create colored no
 
 ### Features
 
-* **Create / Edit / Delete** notes directly on the Dashboard.
-* **Color Options:** Yellow, Blue, Green, Red, Purple, and Gray.
-* **Shared:** Notes are visible to all users who can access the Dashboard.
+- **Create / Edit / Delete** notes directly on the Dashboard.
+- **Color Options:** Yellow, Blue, Green, Red, Purple, and Gray.
+- **Shared:** Notes are visible to all users who can access the Dashboard.
 
 ### Usage
 
@@ -109,4 +109,5 @@ The Dashboard includes a **Sticky Notes** widget where you can create colored no
 4. Enter your text, choose a color, and save.
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

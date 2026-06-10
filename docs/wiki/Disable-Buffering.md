@@ -25,14 +25,14 @@ The **Disable Buffering** feature allows you to selectively disable Nginx's prox
 
 ### When to Enable
 
-| Application | Buffering | Why |
-| :--- | :--- | :--- |
-| Static websites | ✅ On (default) | Nginx handles slow clients efficiently |
-| APIs | ✅ On (default) | Small responses benefit from buffering |
-| **Jellyfin / Plex** | ❌ **Off** | Large media streams cause disk I/O |
-| **Emby / Tautulli** | ❌ **Off** | Video streaming needs direct passthrough |
-| **WebSocket apps** | ❌ **Off** | Real-time data needs low latency |
-| **Large file downloads** | ❌ **Off** | Prevents temp file bloat |
+| Application              | Buffering       | Why                                      |
+| :----------------------- | :-------------- | :--------------------------------------- |
+| Static websites          | ✅ On (default) | Nginx handles slow clients efficiently   |
+| APIs                     | ✅ On (default) | Small responses benefit from buffering   |
+| **Jellyfin / Plex**      | ❌ **Off**      | Large media streams cause disk I/O       |
+| **Emby / Tautulli**      | ❌ **Off**      | Video streaming needs direct passthrough |
+| **WebSocket apps**       | ❌ **Off**      | Real-time data needs low latency         |
+| **Large file downloads** | ❌ **Off**      | Prevents temp file bloat                 |
 
 ## Use Cases
 
@@ -43,7 +43,7 @@ Applications like **Jellyfin**, **Plex**, **Emby**, or **Tautulli** often stream
 1. **Disk I/O**: It writes the stream to a temporary file on disk (`/var/lib/nginx/body` or similar).
 2. **Latency**: It may wait for a buffer to fill before sending data.
 3. **Warnings**: You might see warnings in your logs like:
-    > *an upstream response is buffered to a temporary file /var/cache/nginx/...*
+   > _an upstream response is buffered to a temporary file /var/cache/nginx/..._
 
 Enabling "Disable Buffering" resolves these issues by allowing the stream to pass through directly.
 

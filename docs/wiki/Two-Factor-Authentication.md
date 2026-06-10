@@ -32,13 +32,13 @@ Protect your ShieldPM account with an additional verification step. When enabled
 
 ShieldPM supports **four** 2FA methods plus backup codes as a fallback:
 
-| Method | Type | Description |
-|--------|------|-------------|
-| **Authenticator App (TOTP)** | Software | Google Authenticator, Authy, or any TOTP-compatible app |
-| **YubiKey** | Hardware | Hardware security key from Yubico (OTP mode) |
-| **Passkey (FIDO2/WebAuthn)** | Hardware/Biometric | Fingerprint, Face ID, or FIDO2 hardware key |
-| **Duo Security** | Enterprise | Duo Universal Prompt for enterprise environments |
-| **Backup Codes** | Fallback | 8 one-time-use codes generated during setup |
+| Method                       | Type               | Description                                             |
+| ---------------------------- | ------------------ | ------------------------------------------------------- |
+| **Authenticator App (TOTP)** | Software           | Google Authenticator, Authy, or any TOTP-compatible app |
+| **YubiKey**                  | Hardware           | Hardware security key from Yubico (OTP mode)            |
+| **Passkey (FIDO2/WebAuthn)** | Hardware/Biometric | Fingerprint, Face ID, or FIDO2 hardware key             |
+| **Duo Security**             | Enterprise         | Duo Universal Prompt for enterprise environments        |
+| **Backup Codes**             | Fallback           | 8 one-time-use codes generated during setup             |
 
 > **Tip:** You can enable multiple methods simultaneously. For maximum security, combine a hardware key (YubiKey/Passkey) with an authenticator app as fallback.
 
@@ -179,23 +179,28 @@ Change your language in the ShieldPM settings — the 2FA pages will automatical
 ## 🔧 Troubleshooting
 
 ### "Invalid TOTP code"
+
 - Ensure your device's clock is synchronized (TOTP is time-based)
 - Check that you're using the correct account in your authenticator app
 
 ### "rp.id cannot be used with the current origin"
+
 - Your Passkey RP ID doesn't match the domain you're accessing ShieldPM from
 - Either access from the correct domain or set `PASSKEY_RP_ID` and `PASSKEY_ORIGIN` environment variables
 
 ### "Credential ID was not base64url-encoded"
+
 - Ensure both frontend and backend are on the same version
 - This can happen with version mismatches in `@simplewebauthn`
 
 ### YubiKey OTP not accepted
+
 - Make sure you're touching the correct YubiKey (each has a unique device ID)
 - Verify network connectivity to `api.yubico.com` (or your custom validation server)
 - Check that `YUBICO_CLIENT_ID` is configured if using a self-hosted validator
 
 ### Locked out of account
+
 - Use a backup code to sign in
 - If no backup codes remain, an admin can remove 2FA from your account via the database
 - As a last resort, use the ShieldPM CLI to reset user credentials
@@ -204,22 +209,22 @@ Change your language in the ShieldPM settings — the 2FA pages will automatical
 
 ## 📡 API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/users/:id/2fa` | GET | List active 2FA methods |
-| `/api/users/:id/2fa/totp/setup` | POST | Generate TOTP secret + QR |
-| `/api/users/:id/2fa/totp/enable` | POST | Verify code and enable TOTP |
-| `/api/users/:id/2fa/yubikey/add` | POST | Register a YubiKey |
-| `/api/users/:id/2fa/passkey/register/begin` | POST | Start passkey registration |
-| `/api/users/:id/2fa/passkey/register/complete` | POST | Complete passkey registration |
-| `/api/users/:id/2fa/duo/setup` | POST | Configure Duo Security |
-| `/api/users/:id/2fa/:methodId` | DELETE | Remove a 2FA method |
-| `/api/users/:id/2fa/backup-codes/regenerate` | POST | Regenerate backup codes |
-| `/api/tokens/2fa/verify` | POST | Verify 2FA during login |
-| `/api/tokens/2fa/passkey/begin` | POST | Start passkey authentication |
-| `/api/tokens/2fa/passkey/complete` | POST | Complete passkey authentication |
-| `/api/tokens/2fa/duo/begin` | POST | Start Duo authentication |
-| `/api/tokens/2fa/duo/complete` | POST | Complete Duo authentication |
+| Endpoint                                       | Method | Description                     |
+| ---------------------------------------------- | ------ | ------------------------------- |
+| `/api/users/:id/2fa`                           | GET    | List active 2FA methods         |
+| `/api/users/:id/2fa/totp/setup`                | POST   | Generate TOTP secret + QR       |
+| `/api/users/:id/2fa/totp/enable`               | POST   | Verify code and enable TOTP     |
+| `/api/users/:id/2fa/yubikey/add`               | POST   | Register a YubiKey              |
+| `/api/users/:id/2fa/passkey/register/begin`    | POST   | Start passkey registration      |
+| `/api/users/:id/2fa/passkey/register/complete` | POST   | Complete passkey registration   |
+| `/api/users/:id/2fa/duo/setup`                 | POST   | Configure Duo Security          |
+| `/api/users/:id/2fa/:methodId`                 | DELETE | Remove a 2FA method             |
+| `/api/users/:id/2fa/backup-codes/regenerate`   | POST   | Regenerate backup codes         |
+| `/api/tokens/2fa/verify`                       | POST   | Verify 2FA during login         |
+| `/api/tokens/2fa/passkey/begin`                | POST   | Start passkey authentication    |
+| `/api/tokens/2fa/passkey/complete`             | POST   | Complete passkey authentication |
+| `/api/tokens/2fa/duo/begin`                    | POST   | Start Duo authentication        |
+| `/api/tokens/2fa/duo/complete`                 | POST   | Complete Duo authentication     |
 
 > Use `:id` = `me` to reference the currently authenticated user.
 

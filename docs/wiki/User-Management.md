@@ -29,14 +29,14 @@ Manage who can access your ShieldPM instance and define their permissions.
 2. Click **Add User**
 3. Fill in:
 
-| Field | Description | Required |
-| :--- | :--- | :---: |
-| **Full Name** | Display name | ✅ |
-| **Email** | Login email (unique) | ✅ |
-| **Password** | Minimum 8 characters | ✅ |
-| **Nickname** | Short name for display | ❌ |
-| **Avatar** | Gravatar-based (uses email) | Auto |
-| **Disabled** | Block login without deleting | ❌ |
+| Field         | Description                  | Required |
+| :------------ | :--------------------------- | :------: |
+| **Full Name** | Display name                 |    ✅    |
+| **Email**     | Login email (unique)         |    ✅    |
+| **Password**  | Minimum 8 characters         |    ✅    |
+| **Nickname**  | Short name for display       |    ❌    |
+| **Avatar**    | Gravatar-based (uses email)  |   Auto   |
+| **Disabled**  | Block login without deleting |    ❌    |
 
 > [!IMPORTANT]
 > The first admin user is created during the **Setup Wizard** on initial launch. There are no default credentials — you create them yourself.
@@ -47,16 +47,16 @@ Manage who can access your ShieldPM instance and define their permissions.
 
 Permissions control what each user can do. Admins can set permissions per user:
 
-| Permission | Description |
-| :--- | :--- |
-| **Administrator** | Full access to everything (users, settings, all hosts) |
-| **Manage Proxy Hosts** | Create, edit, delete proxy hosts |
-| **Manage Redirection Hosts** | Create, edit, delete redirection hosts |
-| **Manage Dead Hosts** | Create, edit, delete 404 hosts |
-| **Manage Streams** | Create, edit, delete TCP/UDP streams |
-| **Manage Access Lists** | Create, edit, delete access lists |
-| **Manage SSL Certificates** | Create, manage SSL certificates |
-| **Only See Own Hosts** | User can only see and manage hosts they created |
+| Permission                   | Description                                            |
+| :--------------------------- | :----------------------------------------------------- |
+| **Administrator**            | Full access to everything (users, settings, all hosts) |
+| **Manage Proxy Hosts**       | Create, edit, delete proxy hosts                       |
+| **Manage Redirection Hosts** | Create, edit, delete redirection hosts                 |
+| **Manage Dead Hosts**        | Create, edit, delete 404 hosts                         |
+| **Manage Streams**           | Create, edit, delete TCP/UDP streams                   |
+| **Manage Access Lists**      | Create, edit, delete access lists                      |
+| **Manage SSL Certificates**  | Create, manage SSL certificates                        |
+| **Only See Own Hosts**       | User can only see and manage hosts they created        |
 
 > [!TIP]
 > For a **read-only user** that can view the dashboard but not modify anything, disable all management permissions.
@@ -69,14 +69,14 @@ The Audit Log tracks all changes made within ShieldPM.
 
 ### What is Logged
 
-| Event | Details Tracked |
-| :--- | :--- |
-| **Host Changes** | Create, update, delete (proxy, stream, redirect, dead) |
-| **User Actions** | Login, logout, password change, permission changes |
-| **Certificate Actions** | Request, renew, delete |
-| **Settings Changes** | Any settings update |
-| **AI Agent Actions** | All actions performed via AI (marked as AI-initiated) |
-| **Access List Changes** | Create, update, delete |
+| Event                   | Details Tracked                                        |
+| :---------------------- | :----------------------------------------------------- |
+| **Host Changes**        | Create, update, delete (proxy, stream, redirect, dead) |
+| **User Actions**        | Login, logout, password change, permission changes     |
+| **Certificate Actions** | Request, renew, delete                                 |
+| **Settings Changes**    | Any settings update                                    |
+| **AI Agent Actions**    | All actions performed via AI (marked as AI-initiated)  |
+| **Access List Changes** | Create, update, delete                                 |
 
 ### Accessing the Audit Log
 

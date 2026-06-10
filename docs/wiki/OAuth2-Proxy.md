@@ -6,16 +6,16 @@ ShieldPM natively integrates with [OAuth2-Proxy](https://github.com/oauth2-proxy
 
 ## Supported Providers
 
-| Provider | Config Value | OIDC Issuer URL Required |
-|:---|:---|:---|
-| Google | `google` | No (built-in) |
-| GitHub | `github` | No (built-in) |
-| GitLab | `gitlab` | No (built-in) |
-| Azure AD | `azure` | No (built-in) |
-| Keycloak | `keycloak-oidc` | Yes |
-| Authentik | `oidc` | Yes |
-| Authelia | `oidc` | Yes |
-| Any OIDC Provider | `oidc` | Yes |
+| Provider          | Config Value    | OIDC Issuer URL Required |
+| :---------------- | :-------------- | :----------------------- |
+| Google            | `google`        | No (built-in)            |
+| GitHub            | `github`        | No (built-in)            |
+| GitLab            | `gitlab`        | No (built-in)            |
+| Azure AD          | `azure`         | No (built-in)            |
+| Keycloak          | `keycloak-oidc` | Yes                      |
+| Authentik         | `oidc`          | Yes                      |
+| Authelia          | `oidc`          | Yes                      |
+| Any OIDC Provider | `oidc`          | Yes                      |
 
 > **Tip:** If your identity provider supports OpenID Connect, you can use it with the generic `oidc` provider type by supplying the Issuer URL.
 
@@ -34,7 +34,7 @@ ShieldPM natively integrates with [OAuth2-Proxy](https://github.com/oauth2-proxy
    - **Client ID**: From your identity provider.
    - **Client Secret**: From your identity provider.
    - **Cookie Secret**: A secret to encrypt session cookies (see below).
-   - **OIDC Issuer URL**: *(Only for OIDC/Keycloak)* The discovery endpoint base URL.
+   - **OIDC Issuer URL**: _(Only for OIDC/Keycloak)_ The discovery endpoint base URL.
 6. Click **Save**.
 
 ### 2. Generate a Cookie Secret
@@ -88,14 +88,14 @@ ShieldPM will automatically:
 
 #### Step 3: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `oidc` |
-| Client ID | *(from Authentik provider)* |
-| Client Secret | *(from Authentik provider)* |
-| Cookie Secret | *(generated with openssl)* |
-| OIDC Issuer URL | `https://auth.example.com/application/o/your-provider-slug/` |
-| Allowed Email Domains | `example.com` *(or `*` for all)* |
+| Field                 | Value                                                        |
+| :-------------------- | :----------------------------------------------------------- |
+| Provider              | `oidc`                                                       |
+| Client ID             | _(from Authentik provider)_                                  |
+| Client Secret         | _(from Authentik provider)_                                  |
+| Cookie Secret         | _(generated with openssl)_                                   |
+| OIDC Issuer URL       | `https://auth.example.com/application/o/your-provider-slug/` |
+| Allowed Email Domains | `example.com` _(or `_` for all)\*                            |
 
 > **⚠️ Important:** The OIDC Issuer URL must match the `issuer` field in the `.well-known/openid-configuration` response. For Authentik, this is `https://auth.example.com/application/o/<slug>/` — note the **trailing slash**.
 
@@ -120,14 +120,14 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `oidc` |
-| Client ID | `shieldpm-oauth2` |
-| Client Secret | *(from Keycloak Credentials tab)* |
-| Cookie Secret | *(generated with openssl)* |
-| OIDC Issuer URL | `https://keycloak.example.com/realms/your-realm` |
-| Allowed Email Domains | `*` |
+| Field                 | Value                                            |
+| :-------------------- | :----------------------------------------------- |
+| Provider              | `oidc`                                           |
+| Client ID             | `shieldpm-oauth2`                                |
+| Client Secret         | _(from Keycloak Credentials tab)_                |
+| Cookie Secret         | _(generated with openssl)_                       |
+| OIDC Issuer URL       | `https://keycloak.example.com/realms/your-realm` |
+| Allowed Email Domains | `*`                                              |
 
 ---
 
@@ -143,13 +143,13 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `google` |
-| Client ID | *(from Google Console)* |
-| Client Secret | *(from Google Console)* |
-| Cookie Secret | *(generated with openssl)* |
-| Allowed Email Domains | `example.com` *(or `*` for all Google accounts)* |
+| Field                 | Value                                             |
+| :-------------------- | :------------------------------------------------ |
+| Provider              | `google`                                          |
+| Client ID             | _(from Google Console)_                           |
+| Client Secret         | _(from Google Console)_                           |
+| Cookie Secret         | _(generated with openssl)_                        |
+| Allowed Email Domains | `example.com` _(or `_` for all Google accounts)\* |
 
 > **Note:** No OIDC Issuer URL required — Google's endpoints are built into OAuth2-Proxy.
 
@@ -168,13 +168,13 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `github` |
-| Client ID | *(from GitHub)* |
-| Client Secret | *(from GitHub)* |
-| Cookie Secret | *(generated with openssl)* |
-| Allowed Emails | `user@example.com` *(specific users)* |
+| Field          | Value                                 |
+| :------------- | :------------------------------------ |
+| Provider       | `github`                              |
+| Client ID      | _(from GitHub)_                       |
+| Client Secret  | _(from GitHub)_                       |
+| Cookie Secret  | _(generated with openssl)_            |
+| Allowed Emails | `user@example.com` _(specific users)_ |
 
 > **Note:** GitHub uses usernames, not email domains, for access control. Use **Allowed Emails** to restrict access to specific GitHub accounts, or **Allowed Groups** for GitHub organizations/teams.
 
@@ -193,13 +193,13 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `gitlab` |
-| Client ID | *(Application ID)* |
-| Client Secret | *(Secret)* |
-| Cookie Secret | *(generated with openssl)* |
-| Allowed Email Domains | `*` |
+| Field                 | Value                      |
+| :-------------------- | :------------------------- |
+| Provider              | `gitlab`                   |
+| Client ID             | _(Application ID)_         |
+| Client Secret         | _(Secret)_                 |
+| Cookie Secret         | _(generated with openssl)_ |
+| Allowed Email Domains | `*`                        |
 
 > **Note:** For self-hosted GitLab, you may need to set the OIDC Issuer URL to `https://gitlab.example.com`.
 
@@ -219,7 +219,7 @@ identity_providers:
     clients:
       - client_id: shieldpm-oauth2
         client_name: ShieldPM
-        client_secret: '$pbkdf2-sha512$...'  # hashed secret
+        client_secret: "$pbkdf2-sha512$..." # hashed secret
         redirect_uris:
           - https://your-domain.example.com/oauth2/callback
         scopes:
@@ -232,12 +232,12 @@ identity_providers:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `oidc` |
-| Client ID | `shieldpm-oauth2` |
-| Client Secret | *(unhashed secret)* |
-| Cookie Secret | *(generated with openssl)* |
+| Field           | Value                      |
+| :-------------- | :------------------------- |
+| Provider        | `oidc`                     |
+| Client ID       | `shieldpm-oauth2`          |
+| Client Secret   | _(unhashed secret)_        |
+| Cookie Secret   | _(generated with openssl)_ |
 | OIDC Issuer URL | `https://auth.example.com` |
 
 ---
@@ -246,11 +246,11 @@ identity_providers:
 
 You can restrict who can access a protected host by configuring:
 
-| Field | Description | Example |
-|:---|:---|:---|
-| **Allowed Emails** | Comma-separated email addresses | `admin@example.com,user@example.com` |
-| **Allowed Email Domains** | Comma-separated domains | `example.com,corp.com` |
-| **Allowed Groups** | Comma-separated groups (provider-specific) | `admins,devops` |
+| Field                     | Description                                | Example                              |
+| :------------------------ | :----------------------------------------- | :----------------------------------- |
+| **Allowed Emails**        | Comma-separated email addresses            | `admin@example.com,user@example.com` |
+| **Allowed Email Domains** | Comma-separated domains                    | `example.com,corp.com`               |
+| **Allowed Groups**        | Comma-separated groups (provider-specific) | `admins,devops`                      |
 
 - **All three are optional.** If none are set, `email_domains = ["*"]` is used (any authenticated user).
 - **Groups** are provider-dependant. Authentik exposes groups via the `groups` claim. Keycloak requires a mapper.

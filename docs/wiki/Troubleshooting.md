@@ -24,12 +24,12 @@ Connect to the database and update the password manually, or use the reset utili
 
 ### "Invalid Login Credentials"
 
-| Cause | Fix |
-| :--- | :--- |
-| Wrong email | Check for typos; email is case-sensitive |
-| Account disabled | Ask an admin to re-enable your account |
-| Old browser cache | Clear cookies and try again |
-| CAPS LOCK | Passwords are case-sensitive |
+| Cause             | Fix                                      |
+| :---------------- | :--------------------------------------- |
+| Wrong email       | Check for typos; email is case-sensitive |
+| Account disabled  | Ask an admin to re-enable your account   |
+| Old browser cache | Clear cookies and try again              |
+| CAPS LOCK         | Passwords are case-sensitive             |
 
 ---
 
@@ -39,12 +39,12 @@ Connect to the database and update the password manually, or use the reset utili
 
 The most common error — Nginx cannot reach the upstream service.
 
-| Cause | Fix |
-| :--- | :--- |
-| Backend service is down | Start the service and verify it's running |
-| Wrong Forward Host | Check the IP/hostname in the Proxy Host config |
-| Docker network isolation | Use container name (bridge) or `127.0.0.1` (host mode) |
-| Container not on same network | Run `docker network connect <network> shieldpm` |
+| Cause                         | Fix                                                    |
+| :---------------------------- | :----------------------------------------------------- |
+| Backend service is down       | Start the service and verify it's running              |
+| Wrong Forward Host            | Check the IP/hostname in the Proxy Host config         |
+| Docker network isolation      | Use container name (bridge) or `127.0.0.1` (host mode) |
+| Container not on same network | Run `docker network connect <network> shieldpm`        |
 
 > [!TIP]
 > Quick test: `docker exec shieldpm curl -s http://<forward_host>:<forward_port>` — if this fails, the problem is networking, not ShieldPM.
@@ -73,12 +73,12 @@ client_max_body_size 10G; # 10 GB limit
 
 ### 403 Forbidden
 
-| Cause | Fix |
-| :--- | :--- |
-| Access List blocking | Check the assigned Access List |
-| ModSecurity rule | Check error log for rule ID, exclude it |
-| CrowdSec ban | Run `cscli decisions list` to check |
-| IP not in allow list | Add your IP to the Access List |
+| Cause                | Fix                                     |
+| :------------------- | :-------------------------------------- |
+| Access List blocking | Check the assigned Access List          |
+| ModSecurity rule     | Check error log for rule ID, exclude it |
+| CrowdSec ban         | Run `cscli decisions list` to check     |
+| IP not in allow list | Add your IP to the Access List          |
 
 ### 429 Too Many Requests
 
@@ -90,12 +90,12 @@ Rate limiting is rejecting your requests. Lower the limits or increase the burst
 
 ### Let's Encrypt Errors
 
-| Error | Fix |
-| :--- | :--- |
+| Error                           | Fix                                         |
+| :------------------------------ | :------------------------------------------ |
 | "Connection refused on port 80" | Check firewall/router, port 80 must be open |
-| "DNS problem: NXDOMAIN" | Domain doesn't point to your server |
-| "Too many requests" | Wait 1 hour, or use Staging server |
-| "ACME email not set" | Set `ACME_EMAIL` in environment |
+| "DNS problem: NXDOMAIN"         | Domain doesn't point to your server         |
+| "Too many requests"             | Wait 1 hour, or use Staging server          |
+| "ACME email not set"            | Set `ACME_EMAIL` in environment             |
 
 ### Self-Signed Certificate Warning
 
@@ -109,12 +109,12 @@ If you're seeing "Your connection is not private" on internal services:
 
 ## 📜 Where to Find Logs
 
-| Log Type | Docker | Native / LXC |
-| :--- | :--- | :--- |
-| **Application** | `docker logs -f shieldpm` | `journalctl -u shieldpm -f` |
+| Log Type         | Docker                       | Native / LXC                 |
+| :--------------- | :--------------------------- | :--------------------------- |
+| **Application**  | `docker logs -f shieldpm`    | `journalctl -u shieldpm -f`  |
 | **Nginx Access** | `/data/logs/json_access.log` | `/data/logs/json_access.log` |
-| **Nginx Error** | `/data/logs/error.log` | `/data/logs/error.log` |
-| **CrowdSec** | `docker logs crowdsec` | `journalctl -u crowdsec -f` |
+| **Nginx Error**  | `/data/logs/error.log`       | `/data/logs/error.log`       |
+| **CrowdSec**     | `docker logs crowdsec`       | `journalctl -u crowdsec -f`  |
 
 > [!TIP]
 > Enable `LOGROTATE=true` to auto-rotate and compress logs daily.
@@ -152,10 +152,10 @@ systemctl disable apache2
 
 ### Slow Dashboard / High CPU
 
-| Cause | Fix |
-| :--- | :--- |
-| Too many log entries | Enable `LOGROTATE=true` |
-| SQLite on large deployment | Migrate to MySQL/PostgreSQL |
+| Cause                        | Fix                              |
+| :--------------------------- | :------------------------------- |
+| Too many log entries         | Enable `LOGROTATE=true`          |
+| SQLite on large deployment   | Migrate to MySQL/PostgreSQL      |
 | Many concurrent SSL renewals | Stagger certificate expiry dates |
 
 ### Nginx Not Reloading

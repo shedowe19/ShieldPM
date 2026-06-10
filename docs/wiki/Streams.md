@@ -18,11 +18,11 @@ Stream Hosts allow you to forward raw **TCP** and **UDP** traffic through Shield
 
 ## Use Cases
 
-* **Game Servers:** Minecraft (`25565`), Valheim (`2456-2457`), Factorio (`34197`).
-* **Database Access:** PostgreSQL (`5432`), MySQL (`3306`), Redis (`6379`).
-* **VPN / WireGuard:** Forward WireGuard UDP (`51820`).
-* **Mail Servers:** SMTP (`25`, `587`), IMAP (`993`).
-* **Custom Protocols:** Any service that doesn't use HTTP.
+- **Game Servers:** Minecraft (`25565`), Valheim (`2456-2457`), Factorio (`34197`).
+- **Database Access:** PostgreSQL (`5432`), MySQL (`3306`), Redis (`6379`).
+- **VPN / WireGuard:** Forward WireGuard UDP (`51820`).
+- **Mail Servers:** SMTP (`25`, `587`), IMAP (`993`).
+- **Custom Protocols:** Any service that doesn't use HTTP.
 
 ## Configuration
 
@@ -31,20 +31,20 @@ Stream Hosts allow you to forward raw **TCP** and **UDP** traffic through Shield
 
 ### Details Tab
 
-| Field | Description |
-| :--- | :--- |
-| **Incoming Port** | The port ShieldPM listens on for this stream. Must be unique and not conflict with other hosts. |
-| **Forwarding Host** | The IP or hostname of the backend service (e.g., `192.168.1.50`, `my-server`). |
-| **Forwarding Port** | The port on the backend service. |
-| **TCP** | Enable TCP forwarding (toggle). |
-| **UDP** | Enable UDP forwarding (toggle). |
+| Field               | Description                                                                                     |
+| :------------------ | :---------------------------------------------------------------------------------------------- |
+| **Incoming Port**   | The port ShieldPM listens on for this stream. Must be unique and not conflict with other hosts. |
+| **Forwarding Host** | The IP or hostname of the backend service (e.g., `192.168.1.50`, `my-server`).                  |
+| **Forwarding Port** | The port on the backend service.                                                                |
+| **TCP**             | Enable TCP forwarding (toggle).                                                                 |
+| **UDP**             | Enable UDP forwarding (toggle).                                                                 |
 
 > [!IMPORTANT]
 > **Port Mapping Required (Docker):** If using Docker, you must also expose the incoming port in your `compose.yaml`:
 >
 > ```yaml
 > ports:
->   - "25565:25565"     # TCP
+>   - "25565:25565" # TCP
 >   - "25565:25565/udp" # UDP
 > ```
 >
@@ -73,10 +73,10 @@ Use the Notes field to add internal documentation for this stream (e.g., "Minecr
 5. **UDP:** ❌ Off (Minecraft uses TCP)
 6. **Docker `compose.yaml`:**
 
-    ```yaml
-    ports:
-      - "25565:25565"
-    ```
+   ```yaml
+   ports:
+     - "25565:25565"
+   ```
 
 ## Example: WireGuard VPN
 
@@ -87,10 +87,11 @@ Use the Notes field to add internal documentation for this stream (e.g., "Minecr
 5. **UDP:** ✅ On (WireGuard uses UDP only)
 6. **Docker `compose.yaml`:**
 
-    ```yaml
-    ports:
-      - "51820:51820/udp"
-    ```
+   ```yaml
+   ports:
+     - "51820:51820/udp"
+   ```
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

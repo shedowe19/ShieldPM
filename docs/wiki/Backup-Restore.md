@@ -8,15 +8,15 @@ It is critical to maintain backups of your ShieldPM instance to recover from fai
 
 All persistent data is stored in the `/data` directory. This is the **only directory** you need to backup.
 
-| Content | Path | Description |
-| :--- | :--- | :--- |
-| **Database** | `/data/database.sqlite` | All hosts, users, settings, certificates (SQLite) |
-| **SSL Certificates** | `/data/tls/` | Let's Encrypt keys and custom certs |
-| **Access Lists** | `/data/access/` | htpasswd files for Basic Auth |
-| **Nginx Configs** | `/data/nginx/` | Generated configs (auto-regenerated on restart) |
-| **Encryption Keys** | `/data/shieldpm/keys.json` | AES-256 keys for token encryption |
-| **Tor Keys** | `/data/tor/` | Onion Service private keys (if using Tor) |
-| **Environment** | `/data/.env` | Configuration variables (Native/LXC only) |
+| Content              | Path                       | Description                                       |
+| :------------------- | :------------------------- | :------------------------------------------------ |
+| **Database**         | `/data/database.sqlite`    | All hosts, users, settings, certificates (SQLite) |
+| **SSL Certificates** | `/data/tls/`               | Let's Encrypt keys and custom certs               |
+| **Access Lists**     | `/data/access/`            | htpasswd files for Basic Auth                     |
+| **Nginx Configs**    | `/data/nginx/`             | Generated configs (auto-regenerated on restart)   |
+| **Encryption Keys**  | `/data/shieldpm/keys.json` | AES-256 keys for token encryption                 |
+| **Tor Keys**         | `/data/tor/`               | Onion Service private keys (if using Tor)         |
+| **Environment**      | `/data/.env`               | Configuration variables (Native/LXC only)         |
 
 > [!IMPORTANT]
 > If using an **external database** (MySQL/PostgreSQL), you must back up that database separately — it is NOT inside `/data`.

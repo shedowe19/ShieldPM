@@ -69,20 +69,21 @@ You can choose between two backend providers:
 
 #### 1. Google Gemini (Cloud)
 
-* **API Key**: Requires a valid API Key from [Google AI Studio](https://aistudio.google.com/).
-- **Model**: Defaults to `gemini-1.5-flash`. Supports `gemini-1.5-pro` and other variants.
-- **Note**: Very fast and reliable for general administration tasks.
+- **API Key**: Requires a valid API Key from [Google AI Studio](https://aistudio.google.com/).
+
+* **Model**: Defaults to `gemini-1.5-flash`. Supports `gemini-1.5-pro` and other variants.
+* **Note**: Very fast and reliable for general administration tasks.
 
 #### 2. Local LLM / OpenAI Compatible (Self-Hosted)
 
 Connects to any OpenAI-compatible API (e.g., Ollama, LocalAI, LM Studio) or your own OpenAI endpoints.
 
 - **Base URL**: The URL of your LLM server.
-  - *Examples*: `http://localhost:11434` (Ollama), `http://proserver:8080/v1` (LocalAI).
+  - _Examples_: `http://localhost:11434` (Ollama), `http://proserver:8080/v1` (LocalAI).
   - **Smart Ollama Support**: If you provide an Ollama URL (port 11434) without `/v1` suffix, ShieldPM automatically uses the **Ollama Native API** (`/api/chat`). This enables advanced features like precise context window control.
 - **API Key**: Optional. Required if your local server enables auth, or if using real OpenAI APIs (`sk-...`).
 - **Model**: The name of the model to use (e.g., `llama3`, `mistral`, `deepseek-coder`).
-  - *Tip*: Use the **"Fetch Models"** button to list available models from your server.
+  - _Tip_: Use the **"Fetch Models"** button to list available models from your server.
 
 ### Advanced Settings (Local LLM)
 
