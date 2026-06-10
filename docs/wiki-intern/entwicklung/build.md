@@ -67,5 +67,6 @@ Die aktuelle Version wird in `.version` gespeichert (Plain Text, z.B. `v4.3.2`).
 ## Verwandte Seiten
 
 - [Deployment](./deployment.md)
+- [CI-Workflows](./ci-workflows.md)
 - [Setup](./setup.md)
 - [Yarn v4 Migration](../entscheidungen/2026-05-20-yarn-v4-migration.md)

@@ -34,6 +34,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Lokale Entwicklung](./entwicklung/lokale-entwicklung.md)
 - [Tests](./entwicklung/tests.md)
 - [Build](./entwicklung/build.md)
+- [CI-Workflows](./entwicklung/ci-workflows.md)
 - [Deployment](./entwicklung/deployment.md)
 
 ### Module (Backend)
