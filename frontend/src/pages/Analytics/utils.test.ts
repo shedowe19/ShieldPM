@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import { describe, expect, it } from "vitest";
 import type { AnalyticsRequestLog } from "src/api/backend";
+import { describe, expect, it } from "vitest";
 import { formatRecentRequestTime, sortRecentRequests } from "./utils";
 
 const makeRequest = (time: string): AnalyticsRequestLog => ({

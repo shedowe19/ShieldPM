@@ -624,7 +624,9 @@ const Analytics = () => {
 											key={`${req.time}-${req.ip}-${req.path}`}
 											className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
 										>
-											<td className="p-4 align-middle whitespace-nowrap">{formatRecentRequestTime(req.time)}</td>
+											<td className="p-4 align-middle whitespace-nowrap">
+												{formatRecentRequestTime(req.time)}
+											</td>
 											<td className="p-4 align-middle font-mono">{req.method}</td>
 											<td className="p-4 align-middle">
 												<span
