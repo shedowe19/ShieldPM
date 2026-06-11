@@ -1,0 +1,23 @@
+{
+    "tags": [
+        "monitoring"
+    ],
+    "summary": "Delete a monitor",
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "Deleted",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "boolean"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,23 @@
+{
+    "tags": [
+        "monitoring"
+    ],
+    "summary": "Run a monitor check now",
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/monitor-check-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

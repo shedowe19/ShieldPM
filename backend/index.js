@@ -19,6 +19,7 @@ import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
 import internalIpRanges from "./internal/ip_ranges.js";
 import internalMaintenance from "./internal/maintenance.js";
+import internalMonitoring from "./internal/monitoring.js";
 import internalNginx from "./internal/nginx.js";
 import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
 import internalTerminal from "./internal/terminal.js";
@@ -61,6 +62,7 @@ async function appStart() {
 		internalDocker.init();
 		internalGitOps.init();
 		internalDdns.initTimer();
+		internalMonitoring.initTimer();
 		await internalChat.init();
 		internalGitDeploy.init();
 

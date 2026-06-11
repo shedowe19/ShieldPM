@@ -17,6 +17,7 @@
 | `pages/Users/`        | Benutzerverwaltung                             |
 | `pages/Settings/`     | Systemeinstellungen                            |
 | `pages/Analytics/`    | Traffic-Analyse mit Weltkarte                  |
+| `pages/Monitoring/`   | Uptime-Monitoring mit Status-Tabelle           |
 | `pages/AuditLog/`     | Protokoll-Ansicht                              |
 | `pages/Profile/`      | Benutzerprofil, Sessions, 2FA                  |
 | `pages/ChatOps.tsx`   | Telegram-Verwaltung                            |

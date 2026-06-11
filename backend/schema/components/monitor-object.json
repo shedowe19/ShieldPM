@@ -1,0 +1,118 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "created_on": {
+            "type": "string"
+        },
+        "modified_on": {
+            "type": "string"
+        },
+        "owner_user_id": {
+            "type": "integer"
+        },
+        "proxy_host_id": {
+            "type": [
+                "integer",
+                "null"
+            ]
+        },
+        "name": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string",
+            "enum": [
+                "http"
+            ]
+        },
+        "url": {
+            "type": "string"
+        },
+        "method": {
+            "type": "string",
+            "enum": [
+                "GET",
+                "HEAD"
+            ]
+        },
+        "interval_seconds": {
+            "type": "integer"
+        },
+        "timeout_seconds": {
+            "type": "integer"
+        },
+        "expected_status": {
+            "type": "integer"
+        },
+        "expected_body": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "failure_threshold": {
+            "type": "integer"
+        },
+        "consecutive_failures": {
+            "type": "integer"
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "up",
+                "degraded",
+                "down",
+                "paused"
+            ]
+        },
+        "last_checked_on": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "last_success_on": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "last_failure_on": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "last_latency_ms": {
+            "type": [
+                "integer",
+                "null"
+            ]
+        },
+        "last_http_status": {
+            "type": [
+                "integer",
+                "null"
+            ]
+        },
+        "last_error": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "enabled": {
+            "type": "boolean"
+        },
+        "notification_enabled": {
+            "type": "boolean"
+        },
+        "meta": {
+            "type": "object"
+        }
+    }
+}

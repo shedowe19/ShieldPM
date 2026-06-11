@@ -63,16 +63,25 @@
 			"description": "Avatar Type",
 			"example": "gravatar",
 			"default": "gravatar",
-			"enum": ["gravatar", "url", "upload"]
+			"enum": [
+				"gravatar",
+				"url",
+				"upload"
+			]
 		},
 		"avatar_value": {
-			"type": ["string", "null"],
+			"type": [
+				"string",
+				"null"
+			],
 			"description": "Avatar Value (URL or filename)",
 			"example": "https://example.com/avatar.png"
 		},
 		"roles": {
 			"description": "Roles applied",
-			"example": ["admin"],
+			"example": [
+				"admin"
+			],
 			"type": "array",
 			"items": {
 				"type": "string"
@@ -91,6 +100,7 @@
 				"certificates",
 				"cloudflared_tunnels",
 				"analytics",
+				"monitoring",
 				"ddns_providers",
 				"tor_onions",
 				"dashboard_notes"
@@ -166,6 +176,12 @@
 					"type": "string",
 					"description": "Dashboard Notes access level",
 					"example": "manage",
+					"pattern": "^(manage|view|hidden)$"
+				},
+				"monitoring": {
+					"type": "string",
+					"description": "Monitoring access level",
+					"example": "view",
 					"pattern": "^(manage|view|hidden)$"
 				}
 			}

@@ -225,6 +225,7 @@ export const AUDIT_LOG_OBJECT_TYPE = {
 	STREAM: "stream",
 	CERTIFICATE: "certificate",
 	DDNS_PROVIDER: "ddns-provider",
+	MONITOR: "monitor",
 	TERMINAL_HOST: "terminal-host",
 	CLOUDFLARED_TUNNEL: "cloudflared-tunnel",
 	SETTING: "setting",

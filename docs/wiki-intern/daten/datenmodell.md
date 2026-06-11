@@ -38,6 +38,8 @@ Die Datenbankstruktur wird durch Knex.js-Migrationen definiert. Objection.js-Mod
 | DDNSProvider       | `ddns_provider.js`         | `ddns_provider`         | DDNS-Anbieter              |
 | AnalyticCount      | `analytic_count.js`        | `analytic_count`        | Traffic-Zähler             |
 | AnalyticsLogs      | `analytics_logs.js`        | `analytics_logs`        | Analytics-Logs             |
+| Monitor            | `monitor.js`               | `monitor`               | Uptime-Monitor-Konfig      |
+| MonitorCheck       | `monitor_check.js`         | `monitor_check`         | Uptime-Check-Historie      |
 | NowHelper          | `now_helper.js`            | —                       | Hilfsklasse für Timestamps |
 
 ## Wichtige Relationen
@@ -50,6 +52,8 @@ Die Datenbankstruktur wird durch Knex.js-Migrationen definiert. Objection.js-Mod
 - `User` → `UserPermission` (1:n)
 - `User` → `User2FA` (1:n)
 - `User` → `AuthSession` (1:n)
+- `Monitor` → `MonitorCheck` (1:n)
+- `Monitor` → `ProxyHost` (optional n:1 über `proxy_host_id`)
 
 ## Gotchas
 

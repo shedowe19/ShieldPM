@@ -26,6 +26,7 @@ Express-Routen definieren die REST-API-Endpunkte. Sie validieren Eingaben gegen 
 | `nginx/wireguard.js`         | `/api/nginx/wireguard`           |
 | `nginx/ddns_providers.js`    | `/api/nginx/ddns-providers`      |
 | `nginx/analytics.js`         | `/api/nginx/analytics`           |
+| `monitoring.js`              | `/api/monitoring`                |
 | `users.js`                   | `/api/users`                     |
 | `tokens.js`                  | `/api/tokens`                    |
 | `settings.js`                | `/api/settings`                  |
@@ -83,6 +84,7 @@ EJS-Templates für Nginx-Konfigurationsdateien.
 | `Users/`        | Benutzerverwaltung                             |
 | `Settings/`     | Systemeinstellungen                            |
 | `Analytics/`    | Traffic-Analyse                                |
+| `Monitoring/`   | Uptime-Monitoring und Check-Historie           |
 | `AuditLog/`     | Protokolle                                     |
 | `Login/`        | Anmeldung                                      |
 | `Setup/`        | Ersteinrichtung                                |

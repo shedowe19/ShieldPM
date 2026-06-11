@@ -1,0 +1,23 @@
+{
+    "tags": [
+        "monitoring"
+    ],
+    "summary": "Create a monitor from a proxy host",
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "responses": {
+        "201": {
+            "description": "Monitor created",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../../components/monitor-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

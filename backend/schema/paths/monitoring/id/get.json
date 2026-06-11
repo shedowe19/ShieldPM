@@ -1,0 +1,23 @@
+{
+    "tags": [
+        "monitoring"
+    ],
+    "summary": "Get a monitor",
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "responses": {
+        "200": {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../components/monitor-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -91,6 +91,19 @@ frontend/src/api/backend/
 | `checkVersion.ts`  | Versionsprüfung           |
 | `getDbStats.ts`    | Datenbank-Statistiken     |
 
+### Monitoring
+
+| Datei                           | Beschreibung                    |
+| ------------------------------- | ------------------------------- |
+| `getMonitors.ts`                | Monitore listen                 |
+| `getMonitor.ts`                 | einzelnen Monitor abrufen       |
+| `createMonitor.ts`              | Monitor erstellen               |
+| `updateMonitor.ts`              | Monitor aktualisieren           |
+| `deleteMonitor.ts`              | Monitor löschen                 |
+| `getMonitorChecks.ts`           | Check-Historie abrufen          |
+| `testMonitor.ts`                | manuellen Check auslösen        |
+| `createMonitorFromProxyHost.ts` | Monitor aus Proxy Host erzeugen |
+
 ### GitOps & Docker
 
 | Datei        | Beschreibung                |

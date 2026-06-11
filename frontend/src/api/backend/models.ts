@@ -31,6 +31,7 @@ export interface UserPermissions {
 	certificates: string;
 	cloudflaredTunnels: string;
 	analytics: string;
+	monitoring: string;
 	ddnsProviders: string;
 	torOnions: string;
 	dashboardNotes: string;
@@ -341,6 +342,45 @@ export interface DdnsProvider {
 	lastError?: string;
 	enabled: boolean;
 	meta: Record<string, unknown>;
+}
+
+export interface Monitor {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	ownerUserId: number;
+	proxyHostId?: number | null;
+	name: string;
+	type: "http";
+	url: string;
+	method: "GET" | "HEAD";
+	intervalSeconds: number;
+	timeoutSeconds: number;
+	expectedStatus: number;
+	expectedBody?: string | null;
+	failureThreshold: number;
+	consecutiveFailures: number;
+	status: "pending" | "up" | "degraded" | "down" | "paused";
+	lastCheckedOn?: string | null;
+	lastSuccessOn?: string | null;
+	lastFailureOn?: string | null;
+	lastLatencyMs?: number | null;
+	lastHttpStatus?: number | null;
+	lastError?: string | null;
+	enabled: boolean;
+	notificationEnabled: boolean;
+	meta: Record<string, unknown>;
+}
+
+export interface MonitorCheck {
+	id: number;
+	monitorId: number;
+	checkedOn: string;
+	status: "up" | "degraded" | "down";
+	latencyMs?: number | null;
+	httpStatus?: number | null;
+	error?: string | null;
+	responseExcerpt?: string | null;
 }
 
 export interface TorOnion {

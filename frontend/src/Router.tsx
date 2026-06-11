@@ -19,6 +19,7 @@ const Setup = lazy(() => import("src/pages/Setup"));
 const Login = lazy(() => import("src/pages/Login"));
 const Dashboard = lazy(() => import("src/pages/Dashboard"));
 const Analytics = lazy(() => import("src/pages/Analytics"));
+const Monitoring = lazy(() => import("src/pages/Monitoring"));
 const Settings = lazy(() => import("src/pages/Settings"));
 const Certificates = lazy(() => import("src/pages/Certificates"));
 const Access = lazy(() => import("src/pages/Access"));
@@ -166,6 +167,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<Analytics />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/monitoring"
+					element={
+						<AnimatedPage>
+							<Monitoring />
 						</AnimatedPage>
 					}
 				/>

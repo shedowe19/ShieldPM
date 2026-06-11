@@ -7,6 +7,7 @@ import {
 	IconDisc,
 	IconEye,
 	IconFileText,
+	IconHeartbeat,
 	IconLock,
 	IconMessageCircle,
 	IconNetwork,
@@ -49,6 +50,7 @@ interface PermissionsValues {
 	streams: string;
 	cloudflaredTunnels: string;
 	analytics: string;
+	monitoring: string;
 	ddnsProviders: string;
 	torOnions: string;
 	dashboardNotes: string;
@@ -200,6 +202,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							streams: data.permissions?.streams || PERMISSION_SCOPE.ALL,
 							cloudflaredTunnels: data.permissions?.cloudflaredTunnels || PERMISSION_SCOPE.ALL,
 							analytics: data.permissions?.analytics || PERMISSION_SCOPE.ALL,
+							monitoring: data.permissions?.monitoring || PERMISSION_SCOPE.ALL,
 							ddnsProviders: data.permissions?.ddnsProviders || PERMISSION_SCOPE.ALL,
 							torOnions: data.permissions?.torOnions || PERMISSION_SCOPE.ALL,
 							dashboardNotes: data.permissions?.dashboardNotes || PERMISSION_SCOPE.ALL,
@@ -327,9 +330,20 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<div className="space-y-2">
 													<Label className="flex items-center gap-2">
 														<IconChartBar className="h-4 w-4 text-muted-foreground" />
-														Analytics
+														<T id="analytics.title" />
 													</Label>
 													<Field name="analytics">
+														{({ field, form }: FieldProps<string, PermissionsValues>) =>
+															getPermissionButtons(field, form)
+														}
+													</Field>
+												</div>
+												<div className="space-y-2">
+													<Label className="flex items-center gap-2">
+														<IconHeartbeat className="h-4 w-4 text-muted-foreground" />
+														<T id="monitoring.title" />
+													</Label>
+													<Field name="monitoring">
 														{({ field, form }: FieldProps<string, PermissionsValues>) =>
 															getPermissionButtons(field, form)
 														}

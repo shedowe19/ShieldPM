@@ -9,6 +9,7 @@ export function SiteContainer({ children }: Props) {
 	const location = useLocation();
 	const isFullWidth =
 		location.pathname === "/analytics" ||
+		location.pathname === "/monitoring" ||
 		location.pathname === "/" ||
 		location.pathname === "/access" ||
 		location.pathname === "/certificates" ||

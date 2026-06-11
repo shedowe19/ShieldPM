@@ -59,6 +59,7 @@ Jedes Modul folgt dem gleichen Pattern: Es exportiert ein Objekt mit `create`, `
 | [Git-Deploy](./git-deploy.md)   | `git-deploy.js` (11 KB) | Auto-Deploy von Git-Repos          |
 | [Terminal](./terminal.md)       | `terminal.js` (4 KB)    | Web-SSH-Terminal                   |
 | [Analytics](./analytics.md)     | `analytics.js` (14 KB)  | Traffic-Analyse                    |
+| [Monitoring](./monitoring.md)   | `monitoring.js`         | Aktive Uptime-Checks               |
 
 ### Verwaltung
 

@@ -17,6 +17,7 @@ const ipRanges = new signale.Signale({ scope: "IP Ranges", ...opts });
 const remoteVersion = new signale.Signale({ scope: "Remote Version", ...opts });
 const oidc = new signale.Signale({ scope: "OIDC", ...opts });
 const analytics = new signale.Signale({ scope: "Analytics", ...opts });
+const monitoring = new signale.Signale({ scope: "Monitoring", ...opts });
 const internal = new signale.Signale({ scope: "Internal ", ...opts });
 
 const debug = (logger, ...args) => {
@@ -34,6 +35,7 @@ export {
 	internal,
 	ipRanges,
 	migrate,
+	monitoring,
 	nginx,
 	oidc,
 	remoteVersion,

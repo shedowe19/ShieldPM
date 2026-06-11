@@ -1,0 +1,13 @@
+{
+    "anyOf": [
+        { "$ref": "roles#/definitions/admin" },
+        {
+            "type": "object",
+            "required": ["roles", "permission_monitoring"],
+            "properties": {
+                "roles": { "type": "array", "contains": { "const": "user" } },
+                "permission_monitoring": { "enum": ["manage", "view"] }
+            }
+        }
+    ]
+}

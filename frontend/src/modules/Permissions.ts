@@ -10,6 +10,7 @@ export const CERTIFICATES = "certificates";
 export const ACCESS_LISTS = "accessLists";
 export const CLOUDFLARED_TUNNELS = "cloudflaredTunnels";
 export const ANALYTICS = "analytics";
+export const MONITORING = "monitoring";
 export const DDNS_PROVIDERS = "ddnsProviders";
 export const TOR_ONIONS = "torOnions";
 export const WIREGUARD_PEERS = "wireguardPeers";
@@ -33,6 +34,7 @@ export type Section =
 	| typeof ACCESS_LISTS
 	| typeof CLOUDFLARED_TUNNELS
 	| typeof ANALYTICS
+	| typeof MONITORING
 	| typeof DDNS_PROVIDERS
 	| typeof TOR_ONIONS
 	| typeof WIREGUARD_PEERS

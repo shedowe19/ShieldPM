@@ -68,6 +68,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [2FA-Service](./module/2fa-service.md)
 - [Auth-Session-Service](./module/auth-session-service.md)
 - [Analytics](./module/analytics.md)
+- [Monitoring](./module/monitoring.md)
 - [Maintenance](./module/maintenance.md)
 - [Dashboard-Notizen](./module/dashboard-notes.md)
 - [Terminal (SSH)](./module/terminal.md)
@@ -99,6 +100,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [API-Überblick](./api/ueberblick.md)
 - [Routen](./api/routen.md)
 - [Nginx-Analytics Routes](./api/nginx-analytics.md)
+- [Monitoring Routes](./api/monitoring.md)
 - [DDNS-Provider Routes](./api/nginx-ddns-providers.md)
 - [Schemas](./api/schemas.md)
 
@@ -163,6 +165,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 - **anubis.js** → externer Anubis-Service (PoW-Gate)
 
 - **analytics.js** → nutzt recharts, react-simple-maps, GoAccess
+- **monitoring.js** → aktives HTTP/HTTPS-Uptime-Monitoring; nutzt monitor, monitor_check, audit-log, proxy-host
 
 ### API-Routen (Überblick)
 
@@ -178,6 +181,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 | `version.js`                 | `/api/version`                   | Versionsabfrage                         |
 | `dashboard.js`               | `/api/dashboard`                 | Dashboard-Stats                         |
 | `analytics.js`               | `/api/analytics`                 | Frontend-Analytics                      |
+| `monitoring.js`              | `/api/monitoring`                | Uptime-Monitoring                       |
 | `reports.js`                 | `/api/reports`                   | System-Reports                          |
 | `audit-log.js`               | `/api/audit-log`                 | Audit-Log                               |
 | `oidc.js`                    | `/api/oidc`                      | OpenID Connect                          |

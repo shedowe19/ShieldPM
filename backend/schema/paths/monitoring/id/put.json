@@ -1,0 +1,112 @@
+{
+    "tags": [
+        "monitoring"
+    ],
+    "summary": "Update a monitor",
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "requestBody": {
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "required": [],
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": [
+                                "http"
+                            ],
+                            "default": "http"
+                        },
+                        "url": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "method": {
+                            "type": "string",
+                            "enum": [
+                                "GET",
+                                "HEAD"
+                            ],
+                            "default": "GET"
+                        },
+                        "interval_seconds": {
+                            "type": "integer",
+                            "minimum": 10,
+                            "default": 60
+                        },
+                        "timeout_seconds": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 120,
+                            "default": 5
+                        },
+                        "expected_status": {
+                            "type": "integer",
+                            "minimum": 100,
+                            "maximum": 599,
+                            "default": 200
+                        },
+                        "expected_body": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "failure_threshold": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 10,
+                            "default": 3
+                        },
+                        "proxy_host_id": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        },
+                        "enabled": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        },
+                        "notification_enabled": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        },
+                        "meta": {
+                            "type": "object"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "OK",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "../../../components/monitor-object.json"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -38,4 +38,4 @@ Das Backend wurde refactored, um nativ MySQL/MariaDB als Datenbank-Backend zu un
 ## Verwandte Seiten
 
 - [ADR-Übersicht](./README.md)
-- [Datenbank](../konfiguration/datenbank.md)
+- [Datenbank](../daten/datenbank.md)

@@ -1,0 +1,46 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        },
+        "monitor_id": {
+            "type": "integer"
+        },
+        "checked_on": {
+            "type": "string"
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "up",
+                "degraded",
+                "down"
+            ]
+        },
+        "latency_ms": {
+            "type": [
+                "integer",
+                "null"
+            ]
+        },
+        "http_status": {
+            "type": [
+                "integer",
+                "null"
+            ]
+        },
+        "error": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "response_excerpt": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    }
+}

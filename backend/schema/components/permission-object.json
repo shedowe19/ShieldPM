@@ -70,6 +70,16 @@
 				"manage"
 			],
 			"example": "hidden"
+		},
+		"monitoring": {
+			"type": "string",
+			"description": "Monitoring Permissions",
+			"enum": [
+				"hidden",
+				"view",
+				"manage"
+			],
+			"example": "view"
 		}
 	}
 }

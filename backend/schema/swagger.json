@@ -67,6 +67,10 @@
 		{
 			"name": "chat",
 			"description": "Endpoints for managing Chat Integrations"
+		},
+		{
+			"name": "monitoring",
+			"description": "Endpoints for uptime monitoring"
 		}
 	],
 	"paths": {
@@ -526,6 +530,40 @@
 			},
 			"delete": {
 				"$ref": "./paths/chat/integrationID/delete.json"
+			}
+		},
+		"/monitoring": {
+			"get": {
+				"$ref": "./paths/monitoring/get.json"
+			},
+			"post": {
+				"$ref": "./paths/monitoring/post.json"
+			}
+		},
+		"/monitoring/from-proxy-host/{proxyHostID}": {
+			"post": {
+				"$ref": "./paths/monitoring/from-proxy-host/proxyHostID/post.json"
+			}
+		},
+		"/monitoring/{id}": {
+			"get": {
+				"$ref": "./paths/monitoring/id/get.json"
+			},
+			"put": {
+				"$ref": "./paths/monitoring/id/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/monitoring/id/delete.json"
+			}
+		},
+		"/monitoring/{id}/checks": {
+			"get": {
+				"$ref": "./paths/monitoring/id/checks/get.json"
+			}
+		},
+		"/monitoring/{id}/test": {
+			"post": {
+				"$ref": "./paths/monitoring/id/test/post.json"
 			}
 		}
 	}
