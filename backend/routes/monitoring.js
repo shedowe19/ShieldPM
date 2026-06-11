@@ -46,12 +46,12 @@ router
 	.all(jwtdecode())
 	.get(async (_req, res) => {
 		const result = await notifications.getSmtpConfig(res.locals.access);
-		res.status(200).send(result);
+		res.status(200).json(result);
 	})
 	.put(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/monitoring/notifications/smtp", "put"), req.body);
 		const result = await notifications.setSmtpConfig(res.locals.access, payload);
-		res.status(200).send(result);
+		res.status(200).json(result);
 	});
 
 router
@@ -64,7 +64,7 @@ router
 			req.body || {},
 		);
 		const result = await notifications.sendSmtpTest(res.locals.access, payload);
-		res.status(200).send(result);
+		res.status(200).json(result);
 	});
 
 router
