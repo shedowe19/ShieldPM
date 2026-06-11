@@ -545,6 +545,19 @@
 				"$ref": "./paths/monitoring/from-proxy-host/proxyHostID/post.json"
 			}
 		},
+		"/monitoring/notifications/smtp": {
+			"get": {
+				"$ref": "./paths/monitoring/notifications/smtp/get.json"
+			},
+			"put": {
+				"$ref": "./paths/monitoring/notifications/smtp/put.json"
+			}
+		},
+		"/monitoring/notifications/smtp/test": {
+			"post": {
+				"$ref": "./paths/monitoring/notifications/smtp/test/post.json"
+			}
+		},
 		"/monitoring/{id}": {
 			"get": {
 				"$ref": "./paths/monitoring/id/get.json"

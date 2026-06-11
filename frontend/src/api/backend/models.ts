@@ -383,6 +383,18 @@ export interface MonitorCheck {
 	responseExcerpt?: string | null;
 }
 
+export interface SmtpNotificationConfig {
+	enabled: boolean;
+	host: string;
+	port: number;
+	secure: boolean;
+	username: string;
+	passwordSet: boolean;
+	from: string;
+	to: string[];
+	subjectPrefix: string;
+}
+
 export interface TorOnion {
 	id: number;
 	createdOn: string;

@@ -5,6 +5,7 @@ import Monitor from "../models/monitor.js";
 import MonitorCheck from "../models/monitor_check.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
+import notifications from "./notifications.js";
 
 const DEFAULT_INTERVAL_MS = 30 * 1000;
 const HISTORY_LIMIT = 250;
@@ -36,6 +37,13 @@ const shouldRunMonitor = (monitor) => {
 	if (!monitor.last_checked_on) return true;
 	const intervalMs = Math.max(10, Number(monitor.interval_seconds || 60)) * 1000;
 	return Date.now() - new Date(monitor.last_checked_on).getTime() >= intervalMs;
+};
+
+const shouldNotifyStatusChange = (monitor, previousStatus, currentStatus) => {
+	if (monitor.notification_enabled === false || monitor.notification_enabled === 0) return false;
+	if (!previousStatus || previousStatus === currentStatus) return false;
+	if (["degraded", "down"].includes(currentStatus)) return true;
+	return currentStatus === "up" && ["degraded", "down"].includes(previousStatus);
 };
 
 const buildProxyHostMonitor = async (access, proxyHostId) => {
@@ -163,6 +171,7 @@ const internalMonitoring = {
 			throw new errs.ValidationError(`Unsupported monitor type: ${monitor.type}`);
 		}
 
+		const previousStatus = monitor.status || "pending";
 		const checkedOn = nowIso();
 		const started = Date.now();
 		let httpStatus = null;
@@ -228,6 +237,19 @@ const internalMonitoring = {
 		}
 
 		await Monitor.query().patchAndFetchById(monitor.id, patch);
+
+		if (shouldNotifyStatusChange(monitor, previousStatus, status)) {
+			try {
+				await notifications.sendMonitoringAlert({
+					monitor,
+					check: checkRow,
+					previousStatus,
+					currentStatus: status,
+				});
+			} catch (err) {
+				logger.warn(`Monitor #${monitor.id} notification failed: ${err.message}`);
+			}
+		}
 		return checkRow;
 	},
 

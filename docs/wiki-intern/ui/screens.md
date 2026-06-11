@@ -6,22 +6,22 @@
 
 ## Seiten
 
-| Pfad                  | Beschreibung                                   |
-| --------------------- | ---------------------------------------------- |
-| `pages/Dashboard/`    | Hauptansicht mit Statistiken, Notizen          |
-| `pages/Login/`        | Anmeldeseite (inkl. 2FA-Step)                  |
-| `pages/Setup/`        | Ersteinrichtungsassistent                      |
-| `pages/Nginx/`        | Proxy-Hosts, Redirections, Streams, Dead-Hosts |
-| `pages/Certificates/` | SSL-Zertifikatsverwaltung                      |
-| `pages/Access/`       | Access-Listen                                  |
-| `pages/Users/`        | Benutzerverwaltung                             |
-| `pages/Settings/`     | Systemeinstellungen                            |
-| `pages/Analytics/`    | Traffic-Analyse mit Weltkarte                  |
-| `pages/Monitoring/`   | Uptime-Monitoring mit Status-Tabelle           |
-| `pages/AuditLog/`     | Protokoll-Ansicht                              |
-| `pages/Profile/`      | Benutzerprofil, Sessions, 2FA                  |
-| `pages/ChatOps.tsx`   | Telegram-Verwaltung                            |
-| `pages/DuoCallback/`  | Duo 2FA Callback-Handler                       |
+| Pfad                  | Beschreibung                                          |
+| --------------------- | ----------------------------------------------------- |
+| `pages/Dashboard/`    | Hauptansicht mit Statistiken, Notizen                 |
+| `pages/Login/`        | Anmeldeseite (inkl. 2FA-Step)                         |
+| `pages/Setup/`        | Ersteinrichtungsassistent                             |
+| `pages/Nginx/`        | Proxy-Hosts, Redirections, Streams, Dead-Hosts        |
+| `pages/Certificates/` | SSL-Zertifikatsverwaltung                             |
+| `pages/Access/`       | Access-Listen                                         |
+| `pages/Users/`        | Benutzerverwaltung                                    |
+| `pages/Settings/`     | Systemeinstellungen                                   |
+| `pages/Analytics/`    | Traffic-Analyse mit Weltkarte                         |
+| `pages/Monitoring/`   | Uptime-Monitoring mit Status-Tabelle und SMTP-Alarmen |
+| `pages/AuditLog/`     | Protokoll-Ansicht                                     |
+| `pages/Profile/`      | Benutzerprofil, Sessions, 2FA                         |
+| `pages/ChatOps.tsx`   | Telegram-Verwaltung                                   |
+| `pages/DuoCallback/`  | Duo 2FA Callback-Handler                              |
 
 ## Detail: Nginx-Unterseiten
 
@@ -51,6 +51,15 @@
 | --------------------------------------- | -------------------------- |
 | `Dashboard/CertificateExpiryWidget.tsx` | Zertifikats-Ablauf-Anzeige |
 | `Dashboard/DashboardNotesWidget.tsx`    | Notizen-Widget             |
+
+## Detail: Monitoring
+
+| Datei                               | Zweck                                            |
+| ----------------------------------- | ------------------------------------------------ |
+| `pages/Monitoring/Table.tsx`        | Monitor-Tabelle mit Status- und Testaktion       |
+| `pages/Monitoring/TableWrapper.tsx` | Datenladung, Suche, Create- und SMTP-Modal       |
+| `modals/MonitorModal.tsx`           | Monitor erstellen, bearbeiten und testen         |
+| `modals/SmtpNotificationModal.tsx`  | SMTP-Konfiguration speichern und Testmail senden |
 
 ## Tabellen-Pattern
 

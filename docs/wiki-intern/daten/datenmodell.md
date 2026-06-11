@@ -40,6 +40,7 @@ Die Datenbankstruktur wird durch Knex.js-Migrationen definiert. Objection.js-Mod
 | AnalyticsLogs      | `analytics_logs.js`        | `analytics_logs`        | Analytics-Logs             |
 | Monitor            | `monitor.js`               | `monitor`               | Uptime-Monitor-Konfig      |
 | MonitorCheck       | `monitor_check.js`         | `monitor_check`         | Uptime-Check-Historie      |
+| SMTP Notifications | `setting.js`               | `setting`               | SMTP-Konfiguration         |
 | NowHelper          | `now_helper.js`            | —                       | Hilfsklasse für Timestamps |
 
 ## Wichtige Relationen
@@ -54,6 +55,7 @@ Die Datenbankstruktur wird durch Knex.js-Migrationen definiert. Objection.js-Mod
 - `User` → `AuthSession` (1:n)
 - `Monitor` → `MonitorCheck` (1:n)
 - `Monitor` → `ProxyHost` (optional n:1 über `proxy_host_id`)
+- `setting.id = smtp-notification-config` speichert globale SMTP-Alarmierung; `meta.password` ist verschlüsselt.
 
 ## Gotchas
 

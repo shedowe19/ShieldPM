@@ -1,5 +1,6 @@
 import express from "express";
 import internalMonitoring from "../internal/monitoring.js";
+import notifications from "../internal/notifications.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
 import { getValidationSchema } from "../schema/index.js";
@@ -37,6 +38,33 @@ router
 			Number.parseInt(req.params.proxy_host_id, 10),
 		);
 		res.status(201).send(row);
+	});
+
+router
+	.route("/notifications/smtp")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.get(async (_req, res) => {
+		const result = await notifications.getSmtpConfig(res.locals.access);
+		res.status(200).send(result);
+	})
+	.put(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/monitoring/notifications/smtp", "put"), req.body);
+		const result = await notifications.setSmtpConfig(res.locals.access, payload);
+		res.status(200).send(result);
+	});
+
+router
+	.route("/notifications/smtp/test")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.post(async (req, res) => {
+		const payload = await apiValidator(
+			getValidationSchema("/monitoring/notifications/smtp/test", "post"),
+			req.body || {},
+		);
+		const result = await notifications.sendSmtpTest(res.locals.access, payload);
+		res.status(200).send(result);
 	});
 
 router

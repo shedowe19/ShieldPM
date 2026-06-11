@@ -1,0 +1,21 @@
+{
+  "tags": ["monitoring"],
+  "summary": "Get SMTP notification settings",
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "responses": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "../../../../components/smtp-notification-config-object.json"
+          }
+        }
+      }
+    }
+  }
+}

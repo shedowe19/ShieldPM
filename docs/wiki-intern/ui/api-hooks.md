@@ -93,16 +93,19 @@ frontend/src/api/backend/
 
 ### Monitoring
 
-| Datei                           | Beschreibung                    |
-| ------------------------------- | ------------------------------- |
-| `getMonitors.ts`                | Monitore listen                 |
-| `getMonitor.ts`                 | einzelnen Monitor abrufen       |
-| `createMonitor.ts`              | Monitor erstellen               |
-| `updateMonitor.ts`              | Monitor aktualisieren           |
-| `deleteMonitor.ts`              | Monitor löschen                 |
-| `getMonitorChecks.ts`           | Check-Historie abrufen          |
-| `testMonitor.ts`                | manuellen Check auslösen        |
-| `createMonitorFromProxyHost.ts` | Monitor aus Proxy Host erzeugen |
+| Datei                             | Beschreibung                      |
+| --------------------------------- | --------------------------------- |
+| `getMonitors.ts`                  | Monitore listen                   |
+| `getMonitor.ts`                   | einzelnen Monitor abrufen         |
+| `createMonitor.ts`                | Monitor erstellen                 |
+| `updateMonitor.ts`                | Monitor aktualisieren             |
+| `deleteMonitor.ts`                | Monitor löschen                   |
+| `getMonitorChecks.ts`             | Check-Historie abrufen            |
+| `testMonitor.ts`                  | manuellen Check auslösen          |
+| `createMonitorFromProxyHost.ts`   | Monitor aus Proxy Host erzeugen   |
+| `getSmtpNotificationConfig.ts`    | SMTP-Benachrichtigungen abrufen   |
+| `updateSmtpNotificationConfig.ts` | SMTP-Benachrichtigungen speichern |
+| `testSmtpNotificationConfig.ts`   | SMTP-Testmail senden              |
 
 ### GitOps & Docker
 

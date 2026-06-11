@@ -1,4 +1,4 @@
-import { IconHeartbeat, IconHelp, IconPlus, IconSearch } from "@tabler/icons-react";
+import { IconHeartbeat, IconHelp, IconMail, IconPlus, IconSearch } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -10,7 +10,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal, showHelpModal, showMonitorModal } from "src/modals";
+import { showDeleteConfirmModal, showHelpModal, showMonitorModal, showSmtpNotificationModal } from "src/modals";
 import { MANAGE, MONITORING } from "src/modules/Permissions";
 import { showObjectSuccess, showSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
@@ -60,6 +60,7 @@ export default function TableWrapper() {
 
 	const handleEdit = useCallback((id: number) => showMonitorModal(id), []);
 	const handleNew = useCallback(() => showMonitorModal(), []);
+	const handleSmtpSettings = useCallback(() => showSmtpNotificationModal(), []);
 	const handleDeleteConfirm = useCallback(
 		(id: number) => {
 			showDeleteConfirmModal({
@@ -108,6 +109,12 @@ export default function TableWrapper() {
 					<Button variant="outline" size="icon" onClick={() => showHelpModal("Monitoring", "green")}>
 						<IconHelp className="h-4 w-4" />
 					</Button>
+					<HasPermission section={MONITORING} permission={MANAGE} hideError>
+						<Button variant="outline" size="sm" onClick={handleSmtpSettings}>
+							<IconMail className="mr-2 h-4 w-4" />
+							<T id="monitoring.smtp.settings" />
+						</Button>
+					</HasPermission>
 					<HasPermission section={MONITORING} permission={MANAGE} hideError>
 						<Button
 							size="sm"
