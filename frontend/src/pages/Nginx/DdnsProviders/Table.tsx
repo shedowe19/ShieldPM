@@ -17,7 +17,6 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { DDNS_PROVIDERS, MANAGE } from "src/modules/Permissions";
-import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: DdnsProvider[];
@@ -169,7 +168,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, isFil
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object={intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER })}
+					object={intl.formatMessage({ id: "ddns-provider" })}
 					objects="ddns-providers"
 					onNew={onNew}
 					isFiltered={isFiltered}

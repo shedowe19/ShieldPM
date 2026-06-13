@@ -130,7 +130,17 @@ try {
 const tmpobj = tmp.fileSync({ postfix: ".json" });
 const extractResult = spawnSync(
   "yarn",
-  ["exec", "formatjs", "extract", "src/**/*.tsx", "--out-file", tmpobj.name],
+  [
+    "exec",
+    "formatjs",
+    "extract",
+    "src/**/*.tsx",
+    "--ignore",
+    "src/locale/IntlProvider.tsx",
+    "src/notifications/helpers.tsx",
+    "--out-file",
+    tmpobj.name,
+  ],
   { stdio: "inherit" },
 );
 if (extractResult.status !== 0) {

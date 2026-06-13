@@ -27,6 +27,9 @@ export default defineConfig({
 		},
 	},
 	build: {
+		// The ShieldPM app shell intentionally carries the routing/layout and locale bootstrap.
+		// Vendor chunks are split below; keep the warning threshold explicit so builds only warn on real growth.
+		chunkSizeWarningLimit: 2400,
 		rollupOptions: {
 			output: {
 				manualChunks(id) {

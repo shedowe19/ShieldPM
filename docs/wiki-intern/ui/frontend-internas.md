@@ -51,6 +51,12 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 | `LocaleContext` | `LocaleContext.tsx` (1 KB) | Sprachwahl-Zustand (i18n)                             |
 | `ThemeContext`  | `ThemeContext.tsx` (2 KB)  | Dark/Light-Mode Zustand                               |
 
+`AuthContext` registriert beim API-Client einen zentralen Unauthorized-Handler. Jeder 401 leert den echten React-Query-Cache und setzt den Auth-State auf unauthenticated — auch bei `silentAuth` Refresh-Requests, damit abgelaufene Refresh-Cookies keine stale eingeloggte UI stehen lassen.
+
+`App.tsx` rendert React Query Devtools nur in `import.meta.env.DEV`. Der Devtools-Import ist hinter diese DEV-Prüfung gelegt, damit das Paket nicht in den Production-Build gezogen wird.
+
+`vite.config.ts` trennt Vendor-Chunks manuell und setzt `chunkSizeWarningLimit` explizit auf 2400 kB. Damit bleibt die bekannte App-Shell-Größe dokumentiert und Builds warnen erst bei echter Größenregression statt bei der Vite-Default-Grenze von 500 kB.
+
 ## Frontend-Module (`frontend/src/modules/`)
 
 | Modul         | Datei                      | Zweck                            |
@@ -85,6 +91,8 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 | RenewCertificateModal    | `RenewCertificateModal.tsx`    | 3 KB   | Zertifikat erneuern                            |
 | HelpModal                | `HelpModal.tsx`                | 2.4 KB | Hilfe-Dialog                                   |
 
+Hinweis zu `UserModal`: Der Avatar-Upload nutzt einen echten Datei-Input mit `peer sr-only` und ein sichtbares `label` als Button-Pattern. Das Label reagiert über `peer-focus-visible` mit Fokus-Ring, dadurch bleibt der Upload für Tastatur- und Screenreader-Nutzer erreichbar.
+
 ## Types (`frontend/src/types/`)
 
 | Datei             | Zweck                                               |
@@ -108,6 +116,7 @@ Beinhaltet Hilfsfunktionen für Toast-Benachrichtigungen.
 
 - `frontend/src/components/Nginx/`: Modale Komponenten für Nginx-Erweiterungen — `CloudflaredTunnelModal.tsx`, `TorOnionModal.tsx`, `WireguardConfigModal.tsx`, `WireguardPeerModal.tsx`.
 - `frontend/src/components/Form/`: Wiederverwendbare Formularfelder — `AccessClientFields.tsx`, `AccessField.tsx`, `BasicAuthFields.tsx`, `DNSProviderFields.tsx`, `DomainNamesField.tsx`, `LocationsFields.tsx`, `NginxConfigField.tsx`, `SSLCertificateField.tsx`, `SSLOptionsFields.tsx`.
+- `frontend/src/components/AiChat/`: Sidebar-Trigger ist ein nativer Button; Sheet-Icon-Buttons haben lokalisierte `aria-label`s und das Sheet besitzt eine Screenreader-Beschreibung.
 
 ## Offene Fragen
 

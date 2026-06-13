@@ -71,6 +71,13 @@ Pfad: `frontend/src/components/ui/`
 | `Nginx/`     | Nginx-spezifische UI       |
 | `Table/`     | Tabellen-Komponenten       |
 
+## Accessibility-Regeln für Komponenten
+
+- Klickbare Navigationselemente und Trigger müssen native interaktive Elemente verwenden (`button`, `a`) statt klickbarer `div`/`span`.
+- Icon-only Buttons brauchen lokalisierte zugängliche Namen über `aria-label={intl.formatMessage(...)}`; ein hartcodiertes `title` reicht nicht.
+- Radix `Sheet`/`Dialog` Inhalte brauchen neben dem sichtbaren Titel eine `Description` oder explizit `aria-describedby={undefined}`. Für rein erklärende Texte kann `SheetDescription`/`DialogDescription` mit `sr-only` genutzt werden.
+- Datei-Inputs dürfen nicht mit `display:none`/`hidden` unbedienbar gemacht werden. Für custom Upload-Buttons wird der echte Input `sr-only` gehalten und über ein sichtbares `label htmlFor=...` ausgelöst. Wenn Input und Label Geschwister sind, nutzt das Pattern `peer sr-only` am Input und `peer-focus-visible:*` am Label für sichtbare Tastatur-Fokuszustände.
+
 ## Verwandte Seiten
 
 - [Screens & Pages](./screens.md)

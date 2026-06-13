@@ -6,7 +6,7 @@ import { sendAiChat } from "src/api/backend/ai";
 import type { AiChatMessage } from "src/api/backend/models";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
 import { AI_ROLE } from "src/types/enums";
@@ -72,7 +72,8 @@ export function AiChat() {
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetTrigger asChild>
-				<div
+				<button
+					type="button"
 					className={cn(
 						"group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-purple-500/10 hover:text-purple-400 cursor-pointer text-purple-400 transition-colors duration-200",
 						open ? "bg-purple-500/10 text-purple-400" : "transparent",
@@ -82,7 +83,7 @@ export function AiChat() {
 					<span>
 						<T id="ai.title" />
 					</span>
-				</div>
+				</button>
 			</SheetTrigger>
 			<SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full" side="right">
 				<SheetHeader className="flex flex-row justify-between items-center sm:text-left text-left">
@@ -90,10 +91,19 @@ export function AiChat() {
 						<IconRobot className="h-5 w-5" />
 						<T id="ai.title" />
 					</SheetTitle>
-					<Button variant="ghost" size="icon" onClick={() => setMessages([])} title="Clear Chat">
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => setMessages([])}
+						aria-label={intl.formatMessage({ id: "ai.chat.clear" })}
+						title={intl.formatMessage({ id: "ai.chat.clear" })}
+					>
 						<Trash2 className="h-4 w-4" />
 					</Button>
 				</SheetHeader>
+				<SheetDescription className="sr-only">
+					<T id="ai.chat.description" />
+				</SheetDescription>
 
 				<div
 					className="flex-1 overflow-y-auto my-4 p-2 space-y-4 border rounded-md bg-slate-50 dark:bg-slate-900/50"
@@ -128,7 +138,12 @@ export function AiChat() {
 						disabled={loading}
 						autoFocus
 					/>
-					<Button onClick={handleSend} disabled={loading || !input.trim()} size="icon">
+					<Button
+						onClick={handleSend}
+						disabled={loading || !input.trim()}
+						size="icon"
+						aria-label={intl.formatMessage({ id: "ai.chat.send" })}
+					>
 						<Send className="h-4 w-4" />
 					</Button>
 				</div>

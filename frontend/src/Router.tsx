@@ -1,6 +1,6 @@
 import { AnimatePresence } from "framer-motion";
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import {
 	AnimatedPage,
 	ErrorNotFound,
@@ -194,22 +194,54 @@ function Content() {
 						</AnimatedPage>
 					}
 				/>
-				<Route
-					path="/duo-callback"
-					element={
-						<AnimatedPage>
-							<DuoCallback />
-						</AnimatedPage>
-					}
-				/>
 			</Routes>
 		</AnimatePresence>
 	);
 }
 
+function ProtectedApp() {
+	const { authenticated, loading } = useAuthState();
+
+	if (loading) {
+		return <LoadingPage />;
+	}
+
+	if (!authenticated) {
+		return <Login />;
+	}
+
+	return (
+		<Page>
+			<Sidebar />
+			<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
+				<SiteHeader />
+				<SiteContainer>
+					<Suspense fallback={<LoadingPage noLogo />}>
+						<Content />
+					</Suspense>
+				</SiteContainer>
+				<SiteFooter />
+			</div>
+		</Page>
+	);
+}
+
+function LoginRoute() {
+	const { authenticated, loading } = useAuthState();
+
+	if (loading) {
+		return <LoadingPage />;
+	}
+
+	if (authenticated) {
+		return <Navigate to="/" replace />;
+	}
+
+	return <Login />;
+}
+
 function Router() {
 	const health = useHealth();
-	const { authenticated } = useAuthState();
 
 	if (health.isLoading) {
 		return <LoadingPage />;
@@ -220,31 +252,22 @@ function Router() {
 	}
 
 	if (!health.data?.setup) {
-		return <Setup />;
-	}
-
-	if (!authenticated) {
 		return (
 			<Suspense fallback={<LoadingPage />}>
-				<Login />
+				<Setup />
 			</Suspense>
 		);
 	}
 
 	return (
 		<BrowserRouter>
-			<Page>
-				<Sidebar />
-				<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
-					<SiteHeader />
-					<SiteContainer>
-						<Suspense fallback={<LoadingPage noLogo />}>
-							<Content />
-						</Suspense>
-					</SiteContainer>
-					<SiteFooter />
-				</div>
-			</Page>
+			<Suspense fallback={<LoadingPage />}>
+				<Routes>
+					<Route path="/login" element={<LoginRoute />} />
+					<Route path="/duo-callback" element={<DuoCallback />} />
+					<Route path="/*" element={<ProtectedApp />} />
+				</Routes>
+			</Suspense>
 		</BrowserRouter>
 	);
 }

@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { complete2faDuoAuth } from "src/api/backend";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { intl, T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 
 export default function DuoCallback() {
@@ -26,7 +27,7 @@ export default function DuoCallback() {
 		const pendingToken = sessionStorage.getItem("duo_pending_token");
 
 		if (!duoCode || !pendingToken) {
-			setError("Missing Duo authorization code or session token. Please try signing in again.");
+			setError(intl.formatMessage({ id: "duo-callback.error.missing" }));
 			return;
 		}
 
@@ -38,7 +39,7 @@ export default function DuoCallback() {
 				window.location.replace("/");
 			})
 			.catch((err: Error) => {
-				setError(err.message || "Duo authentication failed. Please try again.");
+				setError(err.message || intl.formatMessage({ id: "duo-callback.error.failed" }));
 			});
 	}, [searchParams]);
 
@@ -48,14 +49,16 @@ export default function DuoCallback() {
 				<div className="w-full max-w-md">
 					<Alert variant="destructive">
 						<AlertCircle className="h-4 w-4" />
-						<AlertTitle>Authentication Failed</AlertTitle>
+						<AlertTitle>
+							<T id="duo-callback.authentication-failed" />
+						</AlertTitle>
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 					<a
 						href="/login"
 						className="mt-4 block text-center text-sm text-primary underline-offset-4 hover:underline"
 					>
-						Return to sign in
+						<T id="duo-callback.return-to-sign-in" />
 					</a>
 				</div>
 			</div>
@@ -66,7 +69,9 @@ export default function DuoCallback() {
 		<div className="flex min-h-screen items-center justify-center">
 			<div className="flex flex-col items-center gap-4">
 				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm text-muted-foreground">Completing Duo authentication…</p>
+				<p className="text-sm text-muted-foreground">
+					<T id="duo-callback.completing" />
+				</p>
 			</div>
 		</div>
 	);

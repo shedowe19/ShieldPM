@@ -17,7 +17,6 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
 import { MANAGE, MONITORING } from "src/modules/Permissions";
-import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 
 interface Props {
 	data: Monitor[];
@@ -34,6 +33,14 @@ const statusVariant = (status: Monitor["status"]) => {
 	if (status === "degraded") return "warning";
 	if (status === "down") return "destructive";
 	return "secondary";
+};
+
+const formatMonitorStatus = (status: Monitor["status"]) => {
+	if (status === "up") return intl.formatMessage({ id: "monitoring.status.up" });
+	if (status === "degraded") return intl.formatMessage({ id: "monitoring.status.degraded" });
+	if (status === "down") return intl.formatMessage({ id: "monitoring.status.down" });
+	if (status === "paused") return intl.formatMessage({ id: "monitoring.status.paused" });
+	return intl.formatMessage({ id: "monitoring.status.pending" });
 };
 
 export default function Table({ data, isFetching, onEdit, onDelete, onNew, onTest, isFiltered }: Props) {
@@ -59,9 +66,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, onTes
 				id: "status",
 				header: intl.formatMessage({ id: "monitoring.status" }),
 				cell: (info) => (
-					<Badge variant={statusVariant(info.getValue())}>
-						{intl.formatMessage({ id: `monitoring.status.${info.getValue()}` })}
-					</Badge>
+					<Badge variant={statusVariant(info.getValue())}>{formatMonitorStatus(info.getValue())}</Badge>
 				),
 			}),
 			columnHelper.accessor("lastLatencyMs", {
@@ -150,7 +155,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, onTes
 			tableInstance={tableInstance}
 			emptyState={
 				<EmptyData
-					object={intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.MONITOR })}
+					object={intl.formatMessage({ id: "monitor" })}
 					objects="monitors"
 					onNew={onNew}
 					isFiltered={isFiltered}

@@ -1,11 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import EasyModal from "ez-modal-react";
+import { lazy, Suspense } from "react";
 import { RawIntlProvider } from "react-intl";
 import { AuthProvider, LocaleProvider, ThemeProvider } from "src/context";
 import { intl } from "src/locale";
 import Router from "src/Router.tsx";
 import { Toaster } from "@/components/ui/toaster";
+
+const ReactQueryDevtools = import.meta.env.DEV
+	? lazy(() => import("@tanstack/react-query-devtools").then((module) => ({ default: module.ReactQueryDevtools })))
+	: null;
 
 // Create a client
 const queryClient = new QueryClient({
@@ -29,7 +33,11 @@ function App() {
 							</EasyModal.Provider>
 							<Toaster />
 						</AuthProvider>
-						<ReactQueryDevtools buttonPosition="bottom-right" position="right" />
+						{ReactQueryDevtools && (
+							<Suspense fallback={null}>
+								<ReactQueryDevtools buttonPosition="bottom-right" position="right" />
+							</Suspense>
+						)}
 					</QueryClientProvider>
 				</ThemeProvider>
 			</LocaleProvider>

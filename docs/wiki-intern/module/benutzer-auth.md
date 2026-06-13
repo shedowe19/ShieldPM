@@ -31,6 +31,8 @@ ShieldPM verwendet JWT-basierte Authentifizierung mit optionalem 2FA und OIDC.
 - Berechtigungssystem (Permissions pro Benutzer)
 - Passwort-Hashing mit `bcryptjs`
 - JWT-Signierung mit `/data/keys.json`
+- Im Frontend wartet `ProtectedApp` auf `AuthContext.loading`, bevor unauthentifizierte Nutzer zur Login-Ansicht gelangen. Dadurch wird ein Login-Flicker während des Session-Restore vermieden.
+- Der zentrale Frontend-API-Client meldet `401` über `setUnauthorizedHandler()` an den `AuthProvider`, damit Auth-Status und React-Query-Cache im echten Provider-Kontext geleert werden.
 
 ## Abhängigkeiten
 

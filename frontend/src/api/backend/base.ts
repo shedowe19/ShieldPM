@@ -1,10 +1,20 @@
-import { QueryClient } from "@tanstack/react-query";
 import { camelizeKeys, decamelize, decamelizeKeys } from "humps";
 import queryString, { type StringifiableRecord } from "query-string";
 import AuthStore from "src/modules/AuthStore";
 
-const queryClient = new QueryClient();
 const contentTypeHeader = "Content-Type";
+
+interface UnauthorizedHandlerOptions {
+	silentAuth: boolean;
+}
+
+type UnauthorizedHandler = (options: UnauthorizedHandlerOptions) => void;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+	unauthorizedHandler = handler;
+}
 
 type DynamicResponse = unknown;
 
@@ -60,10 +70,10 @@ async function processResponse<T = DynamicResponse>(response: Response, silentAu
 
 	if (!response.ok) {
 		if (response.status === 401) {
-			// Force logout user and reload the page if Unauthorized
+			// Force logout user and let the mounted AuthProvider clear the real app query cache.
 			AuthStore.clear();
-			queryClient.clear();
-			if (!silentAuth) {
+			unauthorizedHandler?.({ silentAuth });
+			if (!unauthorizedHandler && !silentAuth) {
 				window.location.reload();
 			}
 		}
@@ -125,7 +135,7 @@ export async function download({ url, params }: GetArgs, filename = "download.fi
 	a.href = u;
 	a.download = filename;
 	a.click();
-	window.URL.revokeObjectURL(url);
+	window.URL.revokeObjectURL(u);
 }
 
 export async function downloadPost({ url, params, data, noAuth }: PostArgs, filename = "download.file") {

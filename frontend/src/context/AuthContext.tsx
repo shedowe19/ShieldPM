@@ -32,6 +32,17 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		setAuthenticated(true);
 	}, []);
 
+	useEffect(() => {
+		api.setUnauthorizedHandler(() => {
+			queryClient.clear();
+			setAuthenticated(false);
+		});
+
+		return () => {
+			api.setUnauthorizedHandler(null);
+		};
+	}, [queryClient]);
+
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
 		refreshToken()
@@ -54,6 +65,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			// Throw the challenge payload — Login/index.tsx catches it
 			throw response;
 		}
+		queryClient.clear();
 		handleTokenUpdate(response);
 	};
 

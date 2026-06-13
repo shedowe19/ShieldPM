@@ -13,6 +13,8 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 - Jede Datei exportiert eine Funktion, die einen HTTP-Aufruf an die Backend-API macht
 - Gruppiert nach CRUD-Operationen (create, get, getAll, update, delete, toggle)
 - Verwendet einen zentralen API-Client (Basis-URL, Auth-Header, etc.)
+- `base.ts` stellt `setUnauthorizedHandler()` bereit. Der `AuthProvider` registriert darüber den echten App-`QueryClient`, damit ein `401` den Auth-Zustand und den Provider-Cache leert, ohne einen separaten `QueryClient` im API-Client zu erzeugen.
+- Download-Helfer erzeugen Blob-Object-URLs und müssen genau diese erzeugte URL nach dem Klick wieder per `URL.revokeObjectURL()` freigeben.
 
 ## API-Dateien nach Entität
 

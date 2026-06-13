@@ -108,10 +108,7 @@ export default function TableWrapper() {
 							onClick={() => showDdnsProviderModal()}
 						>
 							<IconPlus className="mr-2 h-4 w-4" />
-							<T
-								id="object.add"
-								tData={{ object: intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER }) }}
-							/>
+							<T id="object.add" tData={{ object: "ddns-provider" }} />
 						</Button>
 					</HasPermission>
 				</div>

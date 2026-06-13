@@ -21,6 +21,7 @@ Bietet zusätzliche Sicherheitsebene für Benutzerkonten mit drei verschiedenen 
 - **WebAuthn/Passkeys**: Hardwaregeräte (YubiKey, FIDO2) via `@simplewebauthn/server`
 - **Duo Security**: Cloud-basierte 2FA via `@duosecurity/duo_universal`
 - Backup-Codes als Fallback
+- Der Frontend-Callback `frontend/src/pages/DuoCallback/` ist eine öffentliche Route (`/duo-callback`) und darf nicht hinter dem Auth-Gate liegen. Duo Hosted 2FA leitet mit `duo_code` zurück, während noch keine normale SPA-Session als authentifiziert gilt.
 
 ## Abhängigkeiten
 

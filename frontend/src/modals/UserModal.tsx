@@ -407,7 +407,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 										{values.avatar_type === "url" && (
 											<div className="space-y-2">
-												<Label htmlFor="avatar_value">Image URL</Label>
+												<Label htmlFor="avatar_value">
+													<T id="user.avatar.image-url" />
+												</Label>
 												<Field name="avatar_value">
 													{({ field }: FieldProps) => (
 														<Input
@@ -419,19 +421,21 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													)}
 												</Field>
 												<p className="text-xs text-muted-foreground">
-													Enter a direct link to an image file (PNG, JPG, GIF).
+													<T id="user.avatar.image-url-help" />
 												</p>
 											</div>
 										)}
 
 										{values.avatar_type === "upload" && (
 											<div className="space-y-2">
-												<Label htmlFor="file_upload">Upload Image</Label>
+												<Label htmlFor="file_upload">
+													<T id="user.avatar.upload-image" />
+												</Label>
 												<div className="relative">
 													<Input
 														id="file_upload"
 														type="file"
-														className="hidden"
+														className="peer sr-only"
 														accept="image/png, image/jpeg, image/gif, image/webp"
 														onChange={(event) => {
 															const file = event.currentTarget.files?.[0];
@@ -440,13 +444,13 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													/>
 													<label
 														htmlFor="file_upload"
-														className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+														className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
 													>
-														Datei auswählen
+														<T id="user.avatar.choose-file" />
 													</label>
 												</div>
 												<p className="text-xs text-muted-foreground">
-													Max size: 2MB. Supported formats: PNG, JPG, GIF, WebP.
+													<T id="user.avatar.upload-help" />
 												</p>
 											</div>
 										)}

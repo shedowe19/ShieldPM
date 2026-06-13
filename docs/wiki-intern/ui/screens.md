@@ -75,6 +75,13 @@ Datei: `frontend/src/Router.tsx`
 
 Alle Seiten verwenden Lazy-Loading (`React.lazy`).
 
+Der Router rendert Health- und Setup-Zustände vor dem eigentlichen App-Router. Sobald das System eingerichtet ist, wird der `BrowserRouter` immer gemountet und trennt öffentliche von geschützten Routen:
+
+- Öffentlich: `/login` und `/duo-callback`.
+- Geschützt: alle App-Seiten über `ProtectedApp`/`Content`.
+- Während `AuthContext.loading` noch läuft, zeigt `ProtectedApp` eine Ladeansicht statt sofort die Login-Seite zu rendern.
+- Der Duo-Callback muss öffentlich bleiben, weil Duo Hosted 2FA den Browser ohne bestehende SPA-Authentifizierung auf `/duo-callback` zurückleitet.
+
 ## Verwandte Seiten
 
 - [Komponenten](./komponenten.md)
