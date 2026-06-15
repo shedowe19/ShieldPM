@@ -7,7 +7,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 ## Backend Dependencies (from backend/package.json)
 
 ### Production Dependencies
-- @apidevtools/json-schema-ref-parser@15.3.5 - MIT[](https://www.npmjs.com/package/@apidevtools/json-schema-ref-parser/v/15.3.5)
+- @apidevtools/json-schema-ref-parser@15.3.6 - MIT[](https://www.npmjs.com/package/@apidevtools/json-schema-ref-parser/v/15.3.6)
 - @balena/dockerignore@1.0.2 - Apache-2.0[](https://www.npmjs.com/package/@balena/dockerignore/v/1.0.2)
 - @duosecurity/duo_universal@3.0.1 - MIT[](https://www.npmjs.com/package/@duosecurity/duo_universal/v/3.0.1)
 - @google/generative-ai@0.24.1 - Apache-2.0[](https://www.npmjs.com/package/@google/generative-ai/v/0.24.1)
@@ -41,7 +41,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - @simplewebauthn/server@13.3.1 - MIT[](https://www.npmjs.com/package/@simplewebauthn/server/v/13.3.1)
 - @telegraf/types@7.1.0 - MIT[](https://www.npmjs.com/package/@telegraf/types/v/7.1.0)
 - @types/json-schema@7.0.15 - MIT[](https://www.npmjs.com/package/@types/json-schema/v/7.0.15)
-- @types/node@22.19.20 - MIT[](https://www.npmjs.com/package/@types/node/v/22.19.20)
+- @types/node@22.19.21 - MIT[](https://www.npmjs.com/package/@types/node/v/22.19.21)
 - abort-controller@3.0.0 - MIT[](https://www.npmjs.com/package/abort-controller/v/3.0.0)
 - accepts@2.0.0 - MIT[](https://www.npmjs.com/package/accepts/v/2.0.0)
 - agent-base@8.0.0 - MIT[](https://www.npmjs.com/package/agent-base/v/8.0.0)
@@ -76,7 +76,7 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - batchflow@0.4.0 - MIT[](https://www.npmjs.com/package/batchflow/v/0.4.0)
 - bcrypt-pbkdf@1.0.2 - BSD-3-Clause[](https://www.npmjs.com/package/bcrypt-pbkdf/v/1.0.2)
 - bcryptjs@3.0.3 - BSD-3-Clause[](https://www.npmjs.com/package/bcryptjs/v/3.0.3)
-- better-sqlite3@12.10.0 - MIT[](https://www.npmjs.com/package/better-sqlite3/v/12.10.0)
+- better-sqlite3@12.10.1 - MIT[](https://www.npmjs.com/package/better-sqlite3/v/12.10.1)
 - bindings@1.5.0 - MIT[](https://www.npmjs.com/package/bindings/v/1.5.0)
 - body-parser@2.2.2 - MIT[](https://www.npmjs.com/package/body-parser/v/2.2.2)
 - brace-expansion@5.0.6 - MIT[](https://www.npmjs.com/package/brace-expansion/v/5.0.6)
@@ -395,8 +395,8 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 - @apidevtools/openapi-schemas@2.1.0 - MIT[](https://www.npmjs.com/package/@apidevtools/openapi-schemas/v/2.1.0)
 - @apidevtools/swagger-methods@3.0.2 - MIT[](https://www.npmjs.com/package/@apidevtools/swagger-methods/v/3.0.2)
 - @apidevtools/swagger-parser@12.1.0 - MIT[](https://www.npmjs.com/package/@apidevtools/swagger-parser/v/12.1.0)
-- @biomejs/biome@2.4.16 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.4.16)
-- @biomejs/cli-linux-x64@2.4.16 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.4.16)
+- @biomejs/biome@2.5.0 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/biome/v/2.5.0)
+- @biomejs/cli-linux-x64@2.5.0 - MIT OR Apache-2.0[](https://www.npmjs.com/package/@biomejs/cli-linux-x64/v/2.5.0)
 - @isaacs/fs-minipass@4.0.1 - ISC[](https://www.npmjs.com/package/@isaacs/fs-minipass/v/4.0.1)
 - @jridgewell/sourcemap-codec@1.5.5 - MIT[](https://www.npmjs.com/package/@jridgewell/sourcemap-codec/v/1.5.5)
 - @oxc-project/types@0.130.0 - MIT[](https://www.npmjs.com/package/@oxc-project/types/v/0.130.0)
@@ -477,4 +477,4 @@ For verification, each entry links to the NPM package page (e.g., https://www.np
 ### Development Dependencies
 
 
-The above information is based solely on the NPM Registry data as of June 10, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information is based solely on the NPM Registry data as of June 15, 2026. For full license texts, refer to the respective package repositories or the NPM links provided.
