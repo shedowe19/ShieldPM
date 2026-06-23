@@ -13,6 +13,11 @@ permissions:
 jobs:
   update-dependencies:
     runs-on: ubuntu-latest
+    env:
+      # The scheduled dependency updater intentionally tracks fresh minor/patch
+      # releases. Disable Yarn's 24h npm age gate here so npm-check-updates
+      # cannot select a version that the following yarn install then quarantines.
+      YARN_NPM_MINIMAL_AGE_GATE: "0"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
