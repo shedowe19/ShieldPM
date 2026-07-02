@@ -63,18 +63,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@biomejs/biome@npm:^2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/biome@npm:2.5.1"
+"@biomejs/biome@npm:^2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/biome@npm:2.5.2"
   dependencies:
-    "@biomejs/cli-darwin-arm64": "npm:2.5.1"
-    "@biomejs/cli-darwin-x64": "npm:2.5.1"
-    "@biomejs/cli-linux-arm64": "npm:2.5.1"
-    "@biomejs/cli-linux-arm64-musl": "npm:2.5.1"
-    "@biomejs/cli-linux-x64": "npm:2.5.1"
-    "@biomejs/cli-linux-x64-musl": "npm:2.5.1"
-    "@biomejs/cli-win32-arm64": "npm:2.5.1"
-    "@biomejs/cli-win32-x64": "npm:2.5.1"
+    "@biomejs/cli-darwin-arm64": "npm:2.5.2"
+    "@biomejs/cli-darwin-x64": "npm:2.5.2"
+    "@biomejs/cli-linux-arm64": "npm:2.5.2"
+    "@biomejs/cli-linux-arm64-musl": "npm:2.5.2"
+    "@biomejs/cli-linux-x64": "npm:2.5.2"
+    "@biomejs/cli-linux-x64-musl": "npm:2.5.2"
+    "@biomejs/cli-win32-arm64": "npm:2.5.2"
+    "@biomejs/cli-win32-x64": "npm:2.5.2"
   dependenciesMeta:
     "@biomejs/cli-darwin-arm64":
       optional: true
@@ -94,62 +94,62 @@ __metadata:
       optional: true
   bin:
     biome: bin/biome
-  checksum: 10c0/3b2ec858e28d2a7e203609151fe670427150b4c8abda2292e22357facc5955a246e7338e9d6df3d9a76da6a2cf2069483f4b3abadf17680aec5c740653fe09a5
+  checksum: 10c0/1362fd44f64a43a72c098f2b14b0b1c435a79174c9eb89bd81b0e47433e8c7325ae7426d471bef7d37ac37c0778d25bf75544621cd6b58477ff084de5f48768e
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-arm64@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-darwin-arm64@npm:2.5.1"
+"@biomejs/cli-darwin-arm64@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-darwin-arm64@npm:2.5.2"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-darwin-x64@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-darwin-x64@npm:2.5.1"
+"@biomejs/cli-darwin-x64@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-darwin-x64@npm:2.5.2"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64-musl@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.5.1"
+"@biomejs/cli-linux-arm64-musl@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-linux-arm64-musl@npm:2.5.2"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-arm64@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-linux-arm64@npm:2.5.1"
+"@biomejs/cli-linux-arm64@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-linux-arm64@npm:2.5.2"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64-musl@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-linux-x64-musl@npm:2.5.1"
+"@biomejs/cli-linux-x64-musl@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-linux-x64-musl@npm:2.5.2"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@biomejs/cli-linux-x64@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-linux-x64@npm:2.5.1"
+"@biomejs/cli-linux-x64@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-linux-x64@npm:2.5.2"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-arm64@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-win32-arm64@npm:2.5.1"
+"@biomejs/cli-win32-arm64@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-win32-arm64@npm:2.5.2"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@biomejs/cli-win32-x64@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@biomejs/cli-win32-x64@npm:2.5.1"
+"@biomejs/cli-win32-x64@npm:2.5.2":
+  version: 2.5.2
+  resolution: "@biomejs/cli-win32-x64@npm:2.5.2"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -652,9 +652,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@simplewebauthn/server@npm:^13.3.1":
-  version: 13.3.1
-  resolution: "@simplewebauthn/server@npm:13.3.1"
+"@simplewebauthn/server@npm:^13.3.2":
+  version: 13.3.2
+  resolution: "@simplewebauthn/server@npm:13.3.2"
   dependencies:
     "@hexagon/base64": "npm:^1.1.27"
     "@levischuck/tiny-cbor": "npm:^0.2.2"
@@ -664,7 +664,7 @@ __metadata:
     "@peculiar/asn1-schema": "npm:^2.6.0"
     "@peculiar/asn1-x509": "npm:^2.6.1"
     "@peculiar/x509": "npm:^1.14.3"
-  checksum: 10c0/843f9f4e80bfcf389acb3ba6af48f87937e1de1d87c975a77d92ab1309c4619f3cd8eecaf50499d5355c05476506c35aaf3c7a76a4c4e662a1e3721b06656239
+  checksum: 10c0/0be07c60235b9e605ed28c8262ccf6a9698044b0b9d28cbe407d8c72bcc9bf0f9ef6b75b46ee02a7ec534365e3428d5018be8e0e56233df91d74f87d721fe99b
   languageName: node
   linkType: hard
 
@@ -1785,9 +1785,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dockerode@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "dockerode@npm:5.0.0"
+"dockerode@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "dockerode@npm:5.0.1"
   dependencies:
     "@balena/dockerignore": "npm:^1.0.2"
     "@grpc/grpc-js": "npm:^1.11.1"
@@ -1795,7 +1795,7 @@ __metadata:
     docker-modem: "npm:^5.0.7"
     protobufjs: "npm:^7.3.2"
     tar-fs: "npm:^2.1.4"
-  checksum: 10c0/1982a681ac37c9de0638f4725678b9e0efb793b429374bcd1ab7185d46e40de7cdfd09c5a0048f21cff5a626a800505e25f0f0bbbc54c50f4283fb5e0eceb8fe
+  checksum: 10c0/d48c456adeb85e61c14a3d8e545688c06ca9f2c84ebf30130b331af0ec759e5dac4d3c38ce0d20868748403cfcb2b666a9412ad6eb839e1bf3d3aadcbd529976
   languageName: node
   linkType: hard
 
@@ -2616,9 +2616,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isomorphic-git@npm:^1.38.5":
-  version: 1.38.5
-  resolution: "isomorphic-git@npm:1.38.5"
+"isomorphic-git@npm:^1.38.6":
+  version: 1.38.6
+  resolution: "isomorphic-git@npm:1.38.6"
   dependencies:
     async-lock: "npm:^1.4.1"
     clean-git-ref: "npm:^2.0.1"
@@ -2633,7 +2633,7 @@ __metadata:
     simple-get: "npm:^4.0.1"
   bin:
     isogit: cli.cjs
-  checksum: 10c0/a6c597fcffe35086f053f71625c4e42ba2e6de845c8646fe066408deaedc964e2130a88df8492911585dfc3493e49614b14e2bceffb8e7a3b452098f70222066
+  checksum: 10c0/1ddc344bcf135ecf642672b17a18baaeac28a6d5fd51a758bccd6b97b36794ef7ae7fffeaeab4de36cac90ac4ad73c66ccbbcb31c2950aae2c5a9967f01a8584
   languageName: node
   linkType: hard
 
@@ -2663,6 +2663,17 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10c0/1916456c118746603b067d74bbcbb0445d9a1d5e474ad4ae775e7b20525bed902e01d9d97dd0c81fcd8d4f596162309d0eb057f4aa38f3e9647f14075e9dea45
+  languageName: node
+  linkType: hard
+
+"js-yaml@npm:^4.3.0":
+  version: 4.3.0
+  resolution: "js-yaml@npm:4.3.0"
+  dependencies:
+    argparse: "npm:^2.0.1"
+  bin:
+    js-yaml: bin/js-yaml.js
+  checksum: 10c0/058b30473d6915ca5b4feb11e2f7d4d97242f98d00a798ed48dd90b46b7c640398afe9128c5db22c5300f8c6528fe2a174b9a93f351a70ebc28c6203938d8bff
   languageName: node
   linkType: hard
 
@@ -2719,9 +2730,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knex@npm:3.2.10":
-  version: 3.2.10
-  resolution: "knex@npm:3.2.10"
+"knex@npm:3.3.0":
+  version: 3.3.0
+  resolution: "knex@npm:3.3.0"
   dependencies:
     colorette: "npm:2.0.19"
     commander: "npm:^10.0.0"
@@ -2735,12 +2746,14 @@ __metadata:
     pg-connection-string: "npm:2.6.2"
     rechoir: "npm:^0.8.0"
     resolve-from: "npm:^5.0.0"
-    tarn: "npm:^3.0.2"
+    tarn: "npm:^3.1.0"
     tildify: "npm:2.0.0"
   peerDependencies:
     pg-query-stream: ^4.14.0
   peerDependenciesMeta:
     better-sqlite3:
+      optional: true
+    mariadb:
       optional: true
     mysql:
       optional: true
@@ -2758,7 +2771,7 @@ __metadata:
       optional: true
   bin:
     knex: bin/cli.js
-  checksum: 10c0/b2dbb6a01f520a5775e6885ae09d9e35f998e1d0eea9aa283e5125d563ebade39b69d9e362368384415195f3db9cb3ac415b97875532e2ad3099d0f9685a6a37
+  checksum: 10c0/946fb4d0a55894075fbdd45d8bcd8d14a358f1a89f413e205ee7867b8b3c58eb897b49facd3062f2be2abedaeb6ae98b5a593e6247848830088ceb55af2b4e8a
   languageName: node
   linkType: hard
 
@@ -4241,10 +4254,10 @@ __metadata:
   dependencies:
     "@apidevtools/json-schema-ref-parser": "npm:^15.4.0"
     "@apidevtools/swagger-parser": "npm:12.1.0"
-    "@biomejs/biome": "npm:^2.5.1"
+    "@biomejs/biome": "npm:^2.5.2"
     "@duosecurity/duo_universal": "npm:^3.0.1"
     "@google/generative-ai": "npm:^0.24.1"
-    "@simplewebauthn/server": "npm:^13.3.1"
+    "@simplewebauthn/server": "npm:^13.3.2"
     "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^22.20.0"
     ajv: "npm:^8.20.0"
@@ -4256,16 +4269,16 @@ __metadata:
     cookie-parser: "npm:^1.4.7"
     csrf-csrf: "npm:^4.0.3"
     dayjs: "npm:1.11.21"
-    dockerode: "npm:^5.0.0"
+    dockerode: "npm:^5.0.1"
     express: "npm:5.2.1"
     express-fileupload: "npm:1.5.2"
     express-rate-limit: "npm:8.5.2"
     helmet: "npm:8.2.0"
     ipaddr.js: "npm:^2.4.0"
-    isomorphic-git: "npm:^1.38.5"
-    js-yaml: "npm:^4.2.0"
+    isomorphic-git: "npm:^1.38.6"
+    js-yaml: "npm:^4.3.0"
     jsonwebtoken: "npm:9.0.3"
-    knex: "npm:3.2.10"
+    knex: "npm:3.3.0"
     liquidjs: "npm:10.27.1"
     lodash: "npm:^4.18.1"
     mysql2: "npm:^3.22.5"
@@ -4281,7 +4294,7 @@ __metadata:
     signale: "npm:1.4.0"
     ssh2: "npm:^1.17.0"
     swagger-ui-express: "npm:^5.0.1"
-    systeminformation: "npm:^5.31.9"
+    systeminformation: "npm:^5.31.11"
     tail: "npm:^2.2.6"
     telegraf: "npm:^4.16.3"
     temp-write: "npm:^6.0.1"
@@ -4582,12 +4595,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"systeminformation@npm:^5.31.9":
-  version: 5.31.9
-  resolution: "systeminformation@npm:5.31.9"
+"systeminformation@npm:^5.31.11":
+  version: 5.31.11
+  resolution: "systeminformation@npm:5.31.11"
   bin:
     systeminformation: lib/cli.js
-  checksum: 10c0/d8580ca591f70aeb5d732cd9a6ed7c6283dc1a8df3857e6405bbec2a7eeedab4db5179c7b6df4fdedcc1018946ac5643d2f37cb5dc3dfab8627178e63cb82705
+  checksum: 10c0/36f35364cdd60704d2f2f95c0da953f1d26b65feeb6806f8e8472c52525d685389a1423e6e803c94b7556b90ce2a04b86ffb9e64ce7cf3f6496e54e26983a64d
   conditions: (os=darwin | os=linux | os=win32 | os=freebsd | os=openbsd | os=netbsd | os=sunos | os=android)
   languageName: node
   linkType: hard
@@ -4649,10 +4662,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tarn@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "tarn@npm:3.0.2"
-  checksum: 10c0/ea2344e3d21936111176375bd6f34eba69a38ef1bc59434d523fd313166f8a28a47b0a847846c119f72dcf2c1e1231596d74ac3fcfc3cc73966b3d293a327269
+"tarn@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "tarn@npm:3.1.0"
+  checksum: 10c0/5ac9ce5dd94283262bc9c72ddbc0ed81de1dda69ecd30c0dd26286355b0a73fd472b0ab5c2d4167e58cbb0528ec1cfa08689e5c09923e13fe78b6f26f296d8a1
   languageName: node
   linkType: hard
 
