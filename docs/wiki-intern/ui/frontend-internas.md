@@ -8,6 +8,11 @@ Dokumentation der internen Frontend-Architektur: Hooks, Contexts, Modules, Modal
 
 Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt dem Prinzip der Trennung von Zustand (Contexts/Modules), Datenzugriff (Hooks), UI-Logik (Modals) und Hilfsmodulen (Lib).
 
+## Lokalisierung und Entwicklungswerkzeuge
+
+- `locale/IntlProvider.tsx` behält Englisch und die Sprachbezeichnungen im Start-Bundle; die übrigen Sprachdateien werden erst für die ausgewählte Sprache geladen. `main.tsx` wartet vor dem ersten Render auf `initializeLocale()`, damit keine englische Zwischenansicht erscheint.
+- `components/QueryDevtools.tsx` lädt die React-Query-Devtools nur im Entwicklungsmodus dynamisch. Der Produktions-Build enthält keinen Devtools-Import.
+
 ## Custom Hooks (`frontend/src/hooks/`)
 
 32 Hooks für Server-State-Management (React Query):

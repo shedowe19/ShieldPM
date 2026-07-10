@@ -1,11 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "src/App.tsx";
+import { initializeLocale } from "src/locale";
 
 import "./index.css";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-	<React.StrictMode>
-		<App />
-	</React.StrictMode>,
-);
+void initializeLocale().finally(() => {
+	ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+		<React.StrictMode>
+			<App />
+		</React.StrictMode>,
+	);
+});

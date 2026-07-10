@@ -16,8 +16,8 @@ interface Props {
 function LocalePicker(_props: Props) {
 	const { locale, setLocale } = useLocaleState();
 
-	const changeTo = (lang: string) => {
-		changeLocale(lang);
+	const changeTo = async (lang: string) => {
+		await changeLocale(lang);
 		setLocale(lang);
 		location.reload();
 	};
