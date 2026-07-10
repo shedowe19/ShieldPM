@@ -13,6 +13,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 - Jede Datei exportiert eine Funktion, die einen HTTP-Aufruf an die Backend-API macht
 - Gruppiert nach CRUD-Operationen (create, get, getAll, update, delete, toggle)
 - Verwendet einen zentralen API-Client (Basis-URL, Auth-Header, etc.)
+- `api/backend/base.ts` lädt GET- und POST-Downloads als `Blob`, startet sie über einen temporären Link und gibt jeweils genau die erzeugte Blob-URL wieder frei, damit wiederholte Exporte keinen Browser-Speicher belegen.
 
 ## API-Dateien nach Entität
 

@@ -125,7 +125,7 @@ export async function download({ url, params }: GetArgs, filename = "download.fi
 	a.href = u;
 	a.download = filename;
 	a.click();
-	window.URL.revokeObjectURL(url);
+	window.URL.revokeObjectURL(u);
 }
 
 export async function downloadPost({ url, params, data, noAuth }: PostArgs, filename = "download.file") {
