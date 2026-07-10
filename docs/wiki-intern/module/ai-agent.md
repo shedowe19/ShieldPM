@@ -10,13 +10,14 @@ Der AI-Agent ermöglicht natürlichsprachliche Interaktion mit ShieldPM — sowo
 
 ## Wichtige Dateien
 
-| Datei                                     | Beschreibung                                   |
-| ----------------------------------------- | ---------------------------------------------- |
-| `backend/internal/ai.js` (14 KB)          | AI-Verwaltung (Einstellungen, Provider-Config) |
-| `backend/internal/ai/executor.js` (33 KB) | Chat-Loop-Orchestrator                         |
-| `backend/internal/ai/providers.js` (9 KB) | Provider-Abstraktion (Gemini, Ollama, OpenAI)  |
-| `backend/internal/ai/tools.js` (27 KB)    | Ausführbare Funktionen für den AI-Agent        |
-| `backend/internal/ai/prompt.js` (10 KB)   | System-Prompt                                  |
+| Datei                                       | Beschreibung                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `frontend/src/components/AiChat/AiChat.tsx` | Seitlicher KI-Chat mit nativem Button-Trigger und lokalisierten Screenreader-Labels |
+| `backend/internal/ai.js` (14 KB)            | AI-Verwaltung (Einstellungen, Provider-Config)                                      |
+| `backend/internal/ai/executor.js` (33 KB)   | Chat-Loop-Orchestrator                                                              |
+| `backend/internal/ai/providers.js` (9 KB)   | Provider-Abstraktion (Gemini, Ollama, OpenAI)                                       |
+| `backend/internal/ai/tools.js` (27 KB)      | Ausführbare Funktionen für den AI-Agent                                             |
+| `backend/internal/ai/prompt.js` (10 KB)     | System-Prompt                                                                       |
 
 ## Provider
 

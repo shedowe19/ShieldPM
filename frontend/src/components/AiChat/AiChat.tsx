@@ -6,7 +6,7 @@ import { sendAiChat } from "src/api/backend/ai";
 import type { AiChatMessage } from "src/api/backend/models";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
 import { AI_ROLE } from "src/types/enums";
@@ -20,6 +20,8 @@ export function AiChat() {
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const clearChatLabel = intl.formatMessage({ id: "ai.chat.clear" });
+	const sendMessageLabel = intl.formatMessage({ id: "ai.chat.send" });
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Scroll should trigger on new messages
 	useEffect(() => {
@@ -72,9 +74,10 @@ export function AiChat() {
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetTrigger asChild>
-				<div
+				<button
+					type="button"
 					className={cn(
-						"group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-purple-500/10 hover:text-purple-400 cursor-pointer text-purple-400 transition-colors duration-200",
+						"group flex w-full items-center rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm font-medium text-purple-400 transition-colors duration-200 hover:bg-purple-500/10 hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 						open ? "bg-purple-500/10 text-purple-400" : "transparent",
 					)}
 				>
@@ -82,7 +85,7 @@ export function AiChat() {
 					<span>
 						<T id="ai.title" />
 					</span>
-				</div>
+				</button>
 			</SheetTrigger>
 			<SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full" side="right">
 				<SheetHeader className="flex flex-row justify-between items-center sm:text-left text-left">
@@ -90,10 +93,19 @@ export function AiChat() {
 						<IconRobot className="h-5 w-5" />
 						<T id="ai.title" />
 					</SheetTitle>
-					<Button variant="ghost" size="icon" onClick={() => setMessages([])} title="Clear Chat">
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => setMessages([])}
+						aria-label={clearChatLabel}
+						title={clearChatLabel}
+					>
 						<Trash2 className="h-4 w-4" />
 					</Button>
 				</SheetHeader>
+				<SheetDescription className="sr-only">
+					<T id="ai.chat.description" />
+				</SheetDescription>
 
 				<div
 					className="flex-1 overflow-y-auto my-4 p-2 space-y-4 border rounded-md bg-slate-50 dark:bg-slate-900/50"
@@ -128,7 +140,12 @@ export function AiChat() {
 						disabled={loading}
 						autoFocus
 					/>
-					<Button onClick={handleSend} disabled={loading || !input.trim()} size="icon">
+					<Button
+						onClick={handleSend}
+						disabled={loading || !input.trim()}
+						size="icon"
+						aria-label={sendMessageLabel}
+					>
 						<Send className="h-4 w-4" />
 					</Button>
 				</div>
