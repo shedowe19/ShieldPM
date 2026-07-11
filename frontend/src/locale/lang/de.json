@@ -543,6 +543,8 @@
 	"setup.preamble": "Beginnen Sie mit der Erstellung Ihres Administratorkontos.",
 	"setup.title": "Willkommen!",
 	"sign-in": "Login",
+	"service-icon.custom": "Eigenes Symbol",
+	"service-icon.fallback": "Dienstsymbol",
 	"sr.switch-language": "Sprache wechseln",
 	"sr.toggle-navigation": "Navigation umschalten",
 	"sr.toggle-theme": "Theme umschalten",

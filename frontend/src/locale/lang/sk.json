@@ -533,6 +533,8 @@
 	"setup.preamble": "Začnite vytvorením administrátorského účtu.",
 	"setup.title": "Vitajte!",
 	"sign-in": "Prihlásiť sa",
+	"service-icon.custom": "Vlastná ikona",
+	"service-icon.fallback": "Ikona služby",
 	"sr.switch-language": "Prepnúť jazyk",
 	"sr.toggle-navigation": "Prepnúť navigáciu",
 	"sr.toggle-theme": "Prepnúť tému",

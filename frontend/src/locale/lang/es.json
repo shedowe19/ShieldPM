@@ -533,6 +533,8 @@
 	"setup.preamble": "Comienza creando tu cuenta de administrador.",
 	"setup.title": "¡Bienvenido!",
 	"sign-in": "Iniciar Sesión",
+	"service-icon.custom": "Icono personalizado",
+	"service-icon.fallback": "Icono de servicio",
 	"sr.switch-language": "Cambiar idioma",
 	"sr.toggle-navigation": "Alternar navegación",
 	"sr.toggle-theme": "Alternar tema",

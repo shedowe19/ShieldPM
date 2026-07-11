@@ -533,6 +533,8 @@
 	"setup.preamble": "Zacznij od utworzenia konta administratora.",
 	"setup.title": "Witaj!",
 	"sign-in": "Zaloguj się",
+	"service-icon.custom": "Niestandardowa ikona",
+	"service-icon.fallback": "Ikona usługi",
 	"sr.switch-language": "Zmień język",
 	"sr.toggle-navigation": "Przełącz nawigację",
 	"sr.toggle-theme": "Przełącz motyw",

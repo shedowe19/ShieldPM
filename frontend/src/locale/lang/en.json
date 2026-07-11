@@ -543,6 +543,8 @@
 	"setup.preamble": "Get started by creating your admin account.",
 	"setup.title": "Welcome!",
 	"sign-in": "Sign in",
+	"service-icon.custom": "Custom icon",
+	"service-icon.fallback": "Service icon",
 	"sr.switch-language": "Switch Language",
 	"sr.toggle-navigation": "Toggle Navigation",
 	"sr.toggle-theme": "Toggle Theme",

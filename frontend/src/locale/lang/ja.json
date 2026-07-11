@@ -533,6 +533,8 @@
 	"setup.preamble": "管理者アカウントを作成して始めましょう",
 	"setup.title": "ようこそ!",
 	"sign-in": "サインイン",
+	"service-icon.custom": "カスタムアイコン",
+	"service-icon.fallback": "サービスアイコン",
 	"sr.switch-language": "言語を切り替え",
 	"sr.toggle-navigation": "ナビゲーションを切り替え",
 	"sr.toggle-theme": "テーマを切り替え",

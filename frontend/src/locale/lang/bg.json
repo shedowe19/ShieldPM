@@ -533,6 +533,8 @@
 	"setup.preamble": "Започнете, като създадете администраторски акаунт.",
 	"setup.title": "Добре дошли!",
 	"sign-in": "Вход",
+	"service-icon.custom": "Персонализирана икона",
+	"service-icon.fallback": "Икона на услуга",
 	"sr.switch-language": "Смени език",
 	"sr.toggle-navigation": "Превключи навигация",
 	"sr.toggle-theme": "Превключи тема",

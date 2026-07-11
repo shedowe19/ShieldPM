@@ -533,6 +533,8 @@
 	"setup.preamble": "Begin met het aanmaken van je beheerder account.",
 	"setup.title": "Welkom!",
 	"sign-in": "Inloggen",
+	"service-icon.custom": "Aangepast pictogram",
+	"service-icon.fallback": "Servicepictogram",
 	"sr.switch-language": "Taal Wisselen",
 	"sr.toggle-navigation": "Navigatie Wisselen",
 	"sr.toggle-theme": "Thema Wisselen",

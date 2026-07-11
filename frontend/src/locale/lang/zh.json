@@ -533,6 +533,8 @@
 	"setup.preamble": "通过创建您的管理员账户开始使用。",
 	"setup.title": "欢迎！",
 	"sign-in": "登录",
+	"service-icon.custom": "自定义图标",
+	"service-icon.fallback": "服务图标",
 	"sr.switch-language": "切换语言",
 	"sr.toggle-navigation": "切换导航",
 	"sr.toggle-theme": "切换主题",

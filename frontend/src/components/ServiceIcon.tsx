@@ -2,6 +2,7 @@ import { IconServer } from "@tabler/icons-react";
 import { useState } from "react";
 import { detectService, getIconUrl } from "src/lib/serviceIcons";
 import { cn } from "src/lib/utils";
+import { intl } from "src/locale";
 import { ICON_TYPE, type IconType } from "src/types/enums";
 
 interface ServiceIconProps {
@@ -51,7 +52,7 @@ export function ServiceIcon({
 
 	if (iconType === ICON_TYPE.CUSTOM && customIconUrl) {
 		iconUrl = customIconUrl;
-		serviceName = "Custom Icon";
+		serviceName = intl.formatMessage({ id: "service-icon.custom" });
 	} else if (iconType === ICON_TYPE.AUTO && port) {
 		const service = detectService(port, hostname);
 		if (service) {
@@ -63,14 +64,18 @@ export function ServiceIcon({
 	// Handle image load error or no icon found - show fallback
 	if (!iconUrl || hasError) {
 		return (
-			<IconServer size={size} className={cn("text-muted-foreground shrink-0", className)} aria-label="Service" />
+			<IconServer
+				size={size}
+				className={cn("text-muted-foreground shrink-0", className)}
+				aria-label={intl.formatMessage({ id: "service-icon.fallback" })}
+			/>
 		);
 	}
 
 	return (
 		<img
 			src={iconUrl}
-			alt={serviceName || "Service Icon"}
+			alt={serviceName || intl.formatMessage({ id: "service-icon.fallback" })}
 			title={showTooltip ? serviceName || undefined : undefined}
 			width={size}
 			height={size}

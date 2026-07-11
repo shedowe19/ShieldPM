@@ -533,6 +533,8 @@
 	"setup.preamble": "Начните с создания учётной записи администратора.",
 	"setup.title": "Добро пожаловать!",
 	"sign-in": "Войти",
+	"service-icon.custom": "Пользовательский значок",
+	"service-icon.fallback": "Значок сервиса",
 	"sr.switch-language": "Переключить язык",
 	"sr.toggle-navigation": "Переключить навигацию",
 	"sr.toggle-theme": "Переключить тему",

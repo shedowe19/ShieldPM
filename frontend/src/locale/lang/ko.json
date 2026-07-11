@@ -533,6 +533,8 @@
 	"setup.preamble": "관리자 계정을 만들어 시작하세요.",
 	"setup.title": "환영합니다!",
 	"sign-in": "로그인",
+	"service-icon.custom": "사용자 지정 아이콘",
+	"service-icon.fallback": "서비스 아이콘",
 	"sr.switch-language": "언어 변경",
 	"sr.toggle-navigation": "내비게이션 토글",
 	"sr.toggle-theme": "테마 토글",
