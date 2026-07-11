@@ -5,6 +5,7 @@ import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
+import { intl } from "src/locale";
 
 interface AnubisRule {
 	name?: string;
@@ -123,6 +124,8 @@ const AnubisRulesField = () => {
 										variant="ghost"
 										size="icon"
 										className="h-8 w-8 text-muted-foreground hover:text-foreground"
+										aria-label={intl.formatMessage({ id: "action.advanced-settings" })}
+										aria-expanded={Boolean(expandedRules[index])}
 										onClick={() => toggleExpand(index)}
 									>
 										{expandedRules[index] ? (
@@ -136,6 +139,7 @@ const AnubisRulesField = () => {
 										variant="ghost"
 										size="icon"
 										className="h-8 w-8 text-destructive hover:text-destructive/90"
+										aria-label={intl.formatMessage({ id: "action.delete" })}
 										onClick={() => arrayHelpers.remove(index)}
 									>
 										<IconTrash className="h-4 w-4" />
