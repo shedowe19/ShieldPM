@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { useProxyHosts } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "src/modals";
+import { showDeleteConfirmModal, showHelpModal } from "src/modals";
+import { showProxyHostModal } from "src/modals/lazy";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
@@ -91,7 +92,7 @@ export default function TableWrapper() {
 							<Button
 								size="sm"
 								className="bg-lime-600/90 hover:bg-lime-600 text-white shadow-sm"
-								onClick={() => showProxyHostModal("new")}
+								onClick={() => void showProxyHostModal("new")}
 							>
 								<IconPlus className="mr-2 h-4 w-4" />
 								<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
@@ -105,7 +106,7 @@ export default function TableWrapper() {
 					data={filtered ?? data ?? []}
 					isFiltered={!!search}
 					isFetching={isFetching}
-					onEdit={(id: number) => showProxyHostModal(id)}
+					onEdit={(id: number) => void showProxyHostModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
 							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />,
@@ -117,7 +118,7 @@ export default function TableWrapper() {
 						})
 					}
 					onDisableToggle={handleDisableToggle}
-					onNew={() => showProxyHostModal("new")}
+					onNew={() => void showProxyHostModal("new")}
 				/>
 			</CardContent>
 		</Card>

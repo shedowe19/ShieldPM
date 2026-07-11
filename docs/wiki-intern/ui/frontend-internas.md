@@ -12,6 +12,7 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 
 - `locale/IntlProvider.tsx` behält Englisch und die Sprachbezeichnungen im Start-Bundle; die übrigen Sprachdateien werden erst für die ausgewählte Sprache geladen. `main.tsx` wartet vor dem ersten Render auf `initializeLocale()`, damit keine englische Zwischenansicht erscheint.
 - `components/QueryDevtools.tsx` lädt die React-Query-Devtools nur im Entwicklungsmodus dynamisch. Der Produktions-Build enthält keinen Devtools-Import.
+- `modals/lazy.ts` lädt `ProxyHostModal.tsx` erst bei einer Anforderung und speichert das Import-Promise. Bei Ladefehlern verwirft der Wrapper das gespeicherte Promise und nutzt die vorhandene Fehler-Toast-Schicht. `ProxyHosts/TableWrapper.tsx` verwendet diesen Wrapper statt des `modals`-Barrels, damit der Dialog nicht wegen einer gemeinsamen Barrel-Abhängigkeit im Start-Chunk landet.
 
 ## Custom Hooks (`frontend/src/hooks/`)
 
