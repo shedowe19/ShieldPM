@@ -133,6 +133,10 @@ Formik-Kind und verwaltet die vorhandenen `crowdsecEnabled`-, `anubisEnabled`- s
 Beim erstmaligen Aktivieren von Anubis werden die empfohlenen Regeln nur in ein noch leeres Regelset übernommen;
 bereits konfigurierte Regeln bleiben erhalten.
 
+Die Terminal-Verbindungsfelder des `ProxyHostModal` liegen in `ProxyHostTerminalFields.tsx`. Die Komponente bleibt ein
+Formik-Kind, erscheint nur für das Forwarding-Schema `terminal` und zeigt abhängig von `terminalAuthType` unverändert
+das Passwort- oder Private-Key-Feld. `ProxyHostTerminalFields.test.tsx` sichert diese drei Zustände ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 
