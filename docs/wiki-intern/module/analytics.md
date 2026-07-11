@@ -16,6 +16,8 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - `backend/routes/analytics.js` (8 KB) — API-Routen
 - `backend/routes/nginx/analytics.js` (3 KB) — Nginx-Analytics-Routen
 - `frontend/src/pages/Analytics/` — UI-Seite
+- `frontend/src/pages/Analytics/AnalyticsMap.tsx` — viewport-gesteuerter Lazy-Loader für die Weltkarte
+- `frontend/src/pages/Analytics/AnalyticsMapContent.tsx` — ausgelagerte Kartenvisualisierung
 - `frontend/src/components/Analytics/` — Analytics-Visualisierungen
 
 ## Verhalten
@@ -30,6 +32,9 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Datenbank-Statistiken werden über `getDbStats` und damit den zentralen API-Client geladen. Sie folgen dadurch der gemeinsamen Cookie-/CSRF-Übergabe und der einheitlichen 401-Behandlung.
 - Der Live-Netzwerkstatus wird ebenfalls über `getAnalyticsStatus` im zentralen API-Client geladen. Damit erhält auch die zweisekündliche Statusabfrage die gemeinsame Cookie-/CSRF-Übergabe sowie die einheitliche 401-Behandlung.
 - Eine laufende Live-Aktualisierung sperrt weitere zweisekündliche Statusabfragen bis Status und Datenbankstatistik abgeschlossen sind. Beim Ausblenden wird die Sperre zusammen mit der veralteten Antwort aufgehoben, damit das erneute Sichtbarwerden weiterhin sofort aktuelle Werte anfordert.
+- Die Weltkarte bleibt beim Aufruf der Analytics-Route zunächst als lokalisierter Ladezustand sichtbar und lädt ihre
+  Visualisierungsabhängigkeiten erst, wenn ihr Bereich bis auf 200 Pixel an den Viewport heranreicht. Damit bleibt die
+  Kartenfunktion beim Scrollen verfügbar, ohne den anfänglichen Analytics-Chunk zu belasten.
 
 ## Abhängigkeiten
 

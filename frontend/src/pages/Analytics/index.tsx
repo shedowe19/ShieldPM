@@ -1,10 +1,6 @@
 import { IconActivity, IconChartBar, IconDatabase, IconServer } from "@tabler/icons-react";
-import { geoCentroid } from "d3-geo";
 import dayjs from "dayjs";
-import countries from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
 import { useEffect, useState } from "react";
-import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
 	type AnalyticsSummary,
@@ -21,11 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useHealth, useProxyHosts } from "src/hooks";
 import { intl, T } from "src/locale";
-
-countries.registerLocale(enLocale);
-
-// GeoJSON url
-const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+import { AnalyticsMap } from "./AnalyticsMap";
 
 const isDocumentVisible = () => document.visibilityState === "visible";
 
@@ -37,15 +29,6 @@ const formatBytes = (bytes: number, decimals = 2) => {
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 	return `${Number.parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
 };
-
-// Pulse animation
-const pulseStyle = `
-@keyframes pulse {
-	0% { transform: scale(1); opacity: 1; }
-	50% { transform: scale(1.5); opacity: 0.5; }
-	100% { transform: scale(1); opacity: 1; }
-}
-`;
 
 const Analytics = () => {
 	const { data: hosts, isLoading: hostsLoading } = useProxyHosts();
@@ -423,80 +406,13 @@ const Analytics = () => {
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 				{/* World Map */}
 				<Card className="overflow-hidden">
-					<style>{pulseStyle}</style>
 					<CardHeader>
 						<CardTitle>
 							<T id="analytics.requests-by-country" />
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="p-0">
-						<div className="h-[400px] w-full bg-[#020817]">
-							<ComposableMap projectionConfig={{ scale: 160, rotate: [-10, 0, 0] }}>
-								<ZoomableGroup>
-									<Geographies geography={GEO_URL}>
-										{({ geographies }) =>
-											geographies.map((geo) => {
-												const code = countries.numericToAlpha2(geo.id);
-												const cur = summary?.topCountries?.find((s) => s.countryCode === code);
-												const centroid = geoCentroid(geo);
-												const maxCount = summary?.topCountries?.[0]?.count || 1;
-												const intensity = cur
-													? Math.max(0.2, Math.log(cur.count + 1) / Math.log(maxCount + 1))
-													: 0;
-												const fillColor = cur
-													? `rgba(6, 182, 212, ${intensity * 0.8 + 0.2})`
-													: "#1e293b";
-
-												return (
-													<g key={geo.rsmKey}>
-														<Geography
-															geography={geo}
-															fill={fillColor}
-															stroke="#0f172a"
-															strokeWidth={0.5}
-															style={{
-																default: { outline: "none", transition: "all 250ms" },
-																hover: {
-																	outline: "none",
-																	fill: "#0891b2",
-																	cursor: "pointer",
-																},
-																pressed: { outline: "none" },
-															}}
-														/>
-														{cur && (
-															<Marker coordinates={centroid}>
-																<circle
-																	r={Math.max(
-																		2,
-																		Math.min(4, Math.log(cur.count) * 1.5),
-																	)}
-																	fill="#ffffff"
-																	fillOpacity={0.9}
-																	stroke="#06b6d4"
-																	strokeWidth={1}
-																	style={{
-																		animation: "pulse 2s infinite ease-in-out",
-																		transformBox: "fill-box",
-																		transformOrigin: "center",
-																		pointerEvents: "none",
-																	}}
-																>
-																	<title>
-																		{geo.properties.NAME}:{" "}
-																		{cur.count.toLocaleString()}
-																	</title>
-																</circle>
-															</Marker>
-														)}
-													</g>
-												);
-											})
-										}
-									</Geographies>
-								</ZoomableGroup>
-							</ComposableMap>
-						</div>
+						<AnalyticsMap summary={summary} />
 					</CardContent>
 				</Card>
 
