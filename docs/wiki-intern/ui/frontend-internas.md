@@ -128,6 +128,11 @@ Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pre
 wiederholten Passworts sowie für den Generator. Alle drei Umschalter veröffentlichen ihren Zustand mit `aria-pressed`
 und sind nicht mehr aus der Tab-Reihenfolge ausgeschlossen.
 
+Der Sicherheits-Tab des `ProxyHostModal` liegt als `ProxyHostSecurityTab.tsx` separat neben dem Dialog. Er bleibt ein
+Formik-Kind und verwaltet die vorhandenen `crowdsecEnabled`-, `anubisEnabled`- sowie Rate-Limit-Felder unverändert.
+Beim erstmaligen Aktivieren von Anubis werden die empfohlenen Regeln nur in ein noch leeres Regelset übernommen;
+bereits konfigurierte Regeln bleiben erhalten.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 
