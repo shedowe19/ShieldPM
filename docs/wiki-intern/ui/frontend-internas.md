@@ -79,6 +79,10 @@ Zusammenfassung und den Demo-Status unver채ndert, beh채lt lokalisierte Tabellen�
 Request-Details bei und maskiert Client-IP-Adressen im Demo-Modus. `AnalyticsRecentRequests.test.tsx` sichert diese
 Maskierung bei weiterhin sichtbaren Request-Details ab.
 
+`pages/Analytics/AnalyticsKpis.tsx` kapselt die vier Kennzahlen f체r Anfragen, Erfolgsquote, Live-Bandbreite und
+Datenbankstatus. Die Komponente 체bernimmt die bestehende Zahlenformatierung sowie alle lokalisierten Titel und
+Beschreibungen unver채ndert; `AnalyticsKpis.test.tsx` sichert Werte und Kennzeichnungen der Karten ab.
+
 ## React-Kontexte (`frontend/src/context/`)
 
 | Context         | Datei                      | Zweck                                                 |
