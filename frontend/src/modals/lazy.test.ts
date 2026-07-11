@@ -1,15 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	accessListModalModuleLoaded: vi.fn(),
 	changePasswordModalModuleLoaded: vi.fn(),
 	modalModuleError: undefined as Error | undefined,
 	modalModuleLoaded: vi.fn(),
+	showAccessListModal: vi.fn(),
 	showError: vi.fn(),
 	showChangePasswordModal: vi.fn(),
 	showProxyHostModal: vi.fn(),
 	showUserModal: vi.fn(),
 	userModalModuleLoaded: vi.fn(),
 }));
+
+vi.mock("./AccessListModal", () => {
+	mocks.accessListModalModuleLoaded();
+	return { showAccessListModal: mocks.showAccessListModal };
+});
 
 vi.mock("./ProxyHostModal", () => {
 	mocks.modalModuleLoaded();
@@ -31,11 +38,22 @@ vi.mock("./UserModal", () => {
 
 vi.mock("src/notifications", () => ({ showError: mocks.showError }));
 
-describe("showProxyHostModal", () => {
+describe("lazy modal wrappers", () => {
 	afterEach(() => {
 		vi.clearAllMocks();
 		vi.resetModules();
 		mocks.modalModuleError = undefined;
+	});
+
+	it("loads the Access List modal only when access list editing is requested", async () => {
+		const { showAccessListModal } = await import("./lazy");
+
+		expect(mocks.accessListModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showAccessListModal("new");
+
+		expect(mocks.accessListModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showAccessListModal).toHaveBeenCalledWith("new");
 	});
 
 	it("shows an error notification when the deferred modal cannot load", async () => {

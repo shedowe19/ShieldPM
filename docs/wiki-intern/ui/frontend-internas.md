@@ -12,7 +12,7 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 
 - `locale/IntlProvider.tsx` behält Englisch und die Sprachbezeichnungen im Start-Bundle; die übrigen Sprachdateien werden erst für die ausgewählte Sprache geladen. `main.tsx` wartet vor dem ersten Render auf `initializeLocale()`, damit keine englische Zwischenansicht erscheint.
 - `components/QueryDevtools.tsx` lädt die React-Query-Devtools nur im Entwicklungsmodus dynamisch. Der Produktions-Build enthält keinen Devtools-Import.
-- `modals/lazy.ts` lädt `ProxyHostModal.tsx` sowie `UserModal.tsx` und `ChangePasswordModal.tsx` für konto-bezogene Aktionen erst bei einer Anforderung. Die Wrapper speichern je Import-Promise; bei Ladefehlern verwerfen sie es und nutzen die vorhandene Fehler-Toast-Schicht. `ProxyHosts/TableWrapper.tsx`, `Users/TableWrapper.tsx` und `SiteHeader.tsx` verwenden diese Wrapper statt des `modals`-Barrels, damit die Dialoge nicht wegen gemeinsamer Barrel-Abhängigkeiten im Start-Chunk landen.
+- `modals/lazy.ts` lädt `ProxyHostModal.tsx`, `AccessListModal.tsx` sowie `UserModal.tsx` und `ChangePasswordModal.tsx` erst bei einer Anforderung. Die Wrapper speichern je Import-Promise; bei Ladefehlern verwerfen sie es und nutzen die vorhandene Fehler-Toast-Schicht. `ProxyHosts/TableWrapper.tsx`, `Access/TableWrapper.tsx`, `AccessListformatter.tsx`, `Users/TableWrapper.tsx` und `SiteHeader.tsx` verwenden diese Wrapper statt des `modals`-Barrels, damit die Dialoge nicht wegen gemeinsamer Barrel-Abhängigkeiten im Start-Chunk landen.
 
 ## Custom Hooks (`frontend/src/hooks/`)
 
