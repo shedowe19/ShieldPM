@@ -72,6 +72,11 @@ Die Komponente übernimmt die vorhandene Zusammenfassung sowie den Demo-Status u
 maskiert und leere Listen lokalisiert dargestellt werden. `AnalyticsTopLists.test.tsx` sichert diese Datenweitergabe und
 die IP-Maskierung ab.
 
+`pages/Analytics/AnalyticsRecentRequests.tsx` kapselt die Tabelle der letzten Requests. Die Komponente übernimmt die
+Zusammenfassung und den Demo-Status unverändert, behält lokalisierte Tabellenüberschriften, Statusfarben und
+Request-Details bei und maskiert Client-IP-Adressen im Demo-Modus. `AnalyticsRecentRequests.test.tsx` sichert diese
+Maskierung bei weiterhin sichtbaren Request-Details ab.
+
 ## React-Kontexte (`frontend/src/context/`)
 
 | Context         | Datei                      | Zweck                                                 |
