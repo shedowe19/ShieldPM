@@ -45,10 +45,7 @@ describe("DuoCallback", () => {
 		);
 
 		await waitFor(() => {
-			expect(mocks.complete2faDuoAuth).toHaveBeenCalledWith(
-				"pending-token",
-				"duo-code",
-			);
+			expect(mocks.complete2faDuoAuth).toHaveBeenCalledWith("pending-token", "duo-code");
 			expect(mocks.completeLogin).toHaveBeenCalledWith(response);
 			expect(mocks.navigate).toHaveBeenCalledWith("/", { replace: true });
 		});

@@ -28,9 +28,7 @@ export default function DuoCallback() {
 		const pendingToken = sessionStorage.getItem("duo_pending_token");
 
 		if (!duoCode || !pendingToken) {
-			setError(
-				"Missing Duo authorization code or session token. Please try signing in again.",
-			);
+			setError("Missing Duo authorization code or session token. Please try signing in again.");
 			return;
 		}
 
@@ -70,9 +68,7 @@ export default function DuoCallback() {
 		<div className="flex min-h-screen items-center justify-center">
 			<div className="flex flex-col items-center gap-4">
 				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm text-muted-foreground">
-					Completing Duo authentication…
-				</p>
+				<p className="text-sm text-muted-foreground">Completing Duo authentication…</p>
 			</div>
 		</div>
 	);
