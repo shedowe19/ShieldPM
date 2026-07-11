@@ -6,6 +6,7 @@ let dashboardNoteModalModule: Promise<typeof import("./DashboardNoteModal")> | u
 let deadHostModalModule: Promise<typeof import("./DeadHostModal")> | undefined;
 let ddnsProviderModalModule: Promise<typeof import("./DdnsProviderModal")> | undefined;
 let deleteConfirmModalModule: Promise<typeof import("./DeleteConfirmModal")> | undefined;
+let eventDetailsModalModule: Promise<typeof import("./EventDetailsModal")> | undefined;
 let helpModalModule: Promise<typeof import("./HelpModal")> | undefined;
 let permissionsModalModule: Promise<typeof import("./PermissionsModal")> | undefined;
 let proxyHostModalModule: Promise<typeof import("./ProxyHostModal")> | undefined;
@@ -42,6 +43,11 @@ const loadDdnsProviderModal = () => {
 const loadDeleteConfirmModal = () => {
 	deleteConfirmModalModule ??= import("./DeleteConfirmModal");
 	return deleteConfirmModalModule;
+};
+
+const loadEventDetailsModal = () => {
+	eventDetailsModalModule ??= import("./EventDetailsModal");
+	return eventDetailsModalModule;
 };
 
 const loadHelpModal = () => {
@@ -143,6 +149,16 @@ const showDeleteConfirmModal = async (
 	}
 };
 
+const showEventDetailsModal = async (id: number) => {
+	try {
+		const { showEventDetailsModal: showModal } = await loadEventDetailsModal();
+		showModal(id);
+	} catch (error) {
+		eventDetailsModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
 const showHelpModal = async (section: string, color?: string) => {
 	try {
 		const { showHelpModal: showModal } = await loadHelpModal();
@@ -220,6 +236,7 @@ export {
 	showDdnsProviderModal,
 	showDeadHostModal,
 	showDeleteConfirmModal,
+	showEventDetailsModal,
 	showHelpModal,
 	showPermissionsModal,
 	showProxyHostModal,

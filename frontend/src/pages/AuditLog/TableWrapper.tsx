@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { useAuditLogs } from "src/hooks";
 import { T } from "src/locale";
-import { showEventDetailsModal } from "src/modals";
+import { showEventDetailsModal } from "src/modals/lazy";
 import Table from "./Table";
 
 export default function TableWrapper() {
