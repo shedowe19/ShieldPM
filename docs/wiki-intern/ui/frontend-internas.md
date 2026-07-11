@@ -150,6 +150,10 @@ Sichtbarkeits- und Zustandsübergänge ab.
 Wartung bei Fehlern als Formik-Kind. `ProxyHostOptions.test.tsx` sichert die unveränderte Bindung aller Schalter an ihre
 jeweiligen Formularfelder ab.
 
+`ProxyHostMaintenanceTab.tsx` kapselt den Wartungs-Tab des `ProxyHostModal` als Formik-Kind. Aktivierung, Start- und
+Endzeit sowie Begründung bleiben an dieselben Formularfelder gebunden; `ProxyHostMaintenanceTab.test.tsx` sichert die
+Werte und den Umschalter gegen Regressionsfehler ab.
+
 `ProxyHostForwardingFields.tsx` kapselt Schema, Zielhost, Zielport und das `path`-spezifische Index-Dateifeld als
 Formik-Kind. Die Validierung für Host und Port sowie die Sichtbarkeit von `indexFile` bleiben aus dem Dialog erhalten;
 `ProxyHostForwardingFields.test.tsx` sichert Wertebindung und die schemaabhängige Sichtbarkeit ab.
