@@ -129,25 +129,34 @@ const Analytics = () => {
 	useEffect(() => {
 		let cancelled = false;
 		let latestRequestId = 0;
+		let liveRequestInFlight: number | undefined;
 		const fetchLiveParams = async () => {
+			if (liveRequestInFlight !== undefined) return;
 			const requestId = ++latestRequestId;
+			liveRequestInFlight = requestId;
 			try {
-				const data = await getAnalyticsStatus();
-				if (cancelled || requestId !== latestRequestId) return;
-				setNetworkSpeed(data.totalSec || 0);
-			} catch (_err) {
-				// quiet failure
-			}
+				try {
+					const data = await getAnalyticsStatus();
+					if (cancelled || requestId !== latestRequestId) return;
+					setNetworkSpeed(data.totalSec || 0);
+				} catch (_err) {
+					// quiet failure
+				}
 
-			if (cancelled || requestId !== latestRequestId) return;
-
-			// Fetch DB stats
-			try {
-				const data = await getDbStats();
 				if (cancelled || requestId !== latestRequestId) return;
-				setDbStats(data);
-			} catch (_err) {
-				// quiet failure
+
+				// Fetch DB stats
+				try {
+					const data = await getDbStats();
+					if (cancelled || requestId !== latestRequestId) return;
+					setDbStats(data);
+				} catch (_err) {
+					// quiet failure
+				}
+			} finally {
+				if (liveRequestInFlight === requestId) {
+					liveRequestInFlight = undefined;
+				}
 			}
 		};
 
@@ -162,6 +171,7 @@ const Analytics = () => {
 				fetchLiveParams();
 			} else {
 				latestRequestId += 1;
+				liveRequestInFlight = undefined;
 			}
 		};
 
@@ -170,6 +180,7 @@ const Analytics = () => {
 		document.addEventListener("visibilitychange", handleVisibilityChange);
 		return () => {
 			cancelled = true;
+			liveRequestInFlight = undefined;
 			clearInterval(liveInterval);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};

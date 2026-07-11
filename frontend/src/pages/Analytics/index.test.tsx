@@ -174,6 +174,65 @@ describe("Analytics", () => {
 		expect(getAnalyticsStatus).not.toHaveBeenCalled();
 	});
 
+	it("does not overlap live status refreshes while a previous refresh is pending", async () => {
+		vi.useFakeTimers();
+		let resolveDbStats: ((value: Awaited<ReturnType<typeof getDbStats>>) => void) | undefined;
+		let resolveLiveStatus: ((value: Awaited<ReturnType<typeof getAnalyticsStatus>>) => void) | undefined;
+		const pendingDbStats = new Promise<Awaited<ReturnType<typeof getDbStats>>>((resolve) => {
+			resolveDbStats = resolve;
+		});
+		const pendingLiveStatus = new Promise<Awaited<ReturnType<typeof getAnalyticsStatus>>>((resolve) => {
+			resolveLiveStatus = resolve;
+		});
+		vi.mocked(getDbStats).mockReturnValue(pendingDbStats);
+		vi.mocked(getAnalyticsStatus).mockReturnValue(pendingLiveStatus);
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(6000);
+		});
+
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+
+		if (!resolveLiveStatus) {
+			throw new Error("Deferred live-status resolver is unavailable");
+		}
+		const resolveStatus = resolveLiveStatus;
+		await act(async () => {
+			resolveStatus({ rxSec: 512, totalSec: 1024, txSec: 512 });
+			await pendingLiveStatus;
+			await Promise.resolve();
+		});
+		expect(getDbStats).toHaveBeenCalledOnce();
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(6000);
+		});
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+
+		if (!resolveDbStats) {
+			throw new Error("Deferred database statistics resolver is unavailable");
+		}
+		const resolveStats = resolveDbStats;
+		await act(async () => {
+			resolveStats({
+				connections: { max: 1, open: 1, used: 1 },
+				engine: "sqlite",
+				io: { reads: 0, writes: 0 },
+				size: 0,
+			});
+			await pendingDbStats;
+			await Promise.resolve();
+		});
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(2000);
+		});
+
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(2);
+	});
+
 	it("refreshes analytics after the document becomes visible", async () => {
 		vi.useFakeTimers();
 		Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
