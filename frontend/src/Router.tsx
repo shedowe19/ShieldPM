@@ -28,7 +28,9 @@ const ProxyHosts = lazy(() => import("src/pages/Nginx/ProxyHosts"));
 const RedirectionHosts = lazy(() => import("src/pages/Nginx/RedirectionHosts"));
 const DeadHosts = lazy(() => import("src/pages/Nginx/DeadHosts"));
 const Streams = lazy(() => import("src/pages/Nginx/Streams"));
-const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
+const CloudflaredTunnels = lazy(
+	() => import("src/pages/Nginx/CloudflaredTunnels"),
+);
 const DdnsProviders = lazy(() => import("src/pages/Nginx/DdnsProviders"));
 const TorOnionServices = lazy(() => import("src/pages/Nginx/TorOnionServices"));
 const WireguardTunnels = lazy(() => import("src/pages/Nginx/WireguardTunnels"));
@@ -216,9 +218,14 @@ function Router() {
 
 	if (!authenticated) {
 		return (
-			<Suspense fallback={<LoadingPage />}>
-				<Login />
-			</Suspense>
+			<BrowserRouter>
+				<Suspense fallback={<LoadingPage />}>
+					<Routes>
+						<Route path="/duo-callback" element={<DuoCallback />} />
+						<Route path="*" element={<Login />} />
+					</Routes>
+				</Suspense>
+			</BrowserRouter>
 		);
 	}
 
