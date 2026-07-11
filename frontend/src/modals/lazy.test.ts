@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
 	accessListModalModuleLoaded: vi.fn(),
 	changePasswordModalModuleLoaded: vi.fn(),
 	dashboardNoteModalModuleLoaded: vi.fn(),
+	ddnsProviderModalModuleLoaded: vi.fn(),
 	deleteConfirmModalModuleLoaded: vi.fn(),
 	helpModalModuleLoaded: vi.fn(),
 	modalModuleError: undefined as Error | undefined,
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 	redirectionHostModalModuleLoaded: vi.fn(),
 	setPasswordModalModuleLoaded: vi.fn(),
 	showAccessListModal: vi.fn(),
+	showDdnsProviderModal: vi.fn(),
 	showStreamModal: vi.fn(),
 	streamModalModuleLoaded: vi.fn(),
 	showChangePasswordModal: vi.fn(),
@@ -30,6 +32,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./AccessListModal", () => {
 	mocks.accessListModalModuleLoaded();
 	return { showAccessListModal: mocks.showAccessListModal };
+});
+
+vi.mock("./DdnsProviderModal", () => {
+	mocks.ddnsProviderModalModuleLoaded();
+	return { showDdnsProviderModal: mocks.showDdnsProviderModal };
 });
 
 vi.mock("./ProxyHostModal", () => {
@@ -103,6 +110,17 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.accessListModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showAccessListModal).toHaveBeenCalledWith("new");
+	});
+
+	it("loads the DDNS provider modal only when provider editing is requested", async () => {
+		const { showDdnsProviderModal } = await import("./lazy");
+
+		expect(mocks.ddnsProviderModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showDdnsProviderModal(73);
+
+		expect(mocks.ddnsProviderModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showDdnsProviderModal).toHaveBeenCalledWith(73);
 	});
 
 	it("shows an error notification when the deferred modal cannot load", async () => {
