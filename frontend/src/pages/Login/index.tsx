@@ -91,7 +91,7 @@ export default function Login() {
 							<T id="login.title" />
 						</CardTitle>
 						<CardDescription className="text-center">
-							{pending2FA ? "Complete two-factor verification" : "Enter your credentials to continue"}
+							{pending2FA ? <T id="login.two-factor.description" /> : <T id="login.description" />}
 						</CardDescription>
 					</CardHeader>
 					<CardContent>

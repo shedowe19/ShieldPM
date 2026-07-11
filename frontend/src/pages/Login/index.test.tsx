@@ -69,6 +69,24 @@ describe("Login", () => {
 		expect(mocks.authStoreAdd).not.toHaveBeenCalled();
 	});
 
+	it("uses localized descriptions for password and two-factor login", async () => {
+		mocks.login.mockRejectedValue({
+			methods: ["totp"],
+			pendingToken: "pending-token",
+			requires2fa: true,
+		});
+
+		render(<Login />);
+
+		expect(screen.getByText("login.description")).toBeInTheDocument();
+
+		fireEvent.change(screen.getByLabelText("email-address"), { target: { value: "admin@example.test" } });
+		fireEvent.change(screen.getByLabelText("password"), { target: { value: "correct horse battery staple" } });
+		fireEvent.click(screen.getByRole("button", { name: "sign-in" }));
+
+		expect(await screen.findByText("login.two-factor.description")).toBeInTheDocument();
+	});
+
 	it("adopts a verified two-factor token through AuthContext without reloading the document", async () => {
 		mocks.login.mockRejectedValue({
 			csrfToken: "csrf-token",
