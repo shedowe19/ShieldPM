@@ -41,6 +41,9 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
   die Chart-Funktion beim Scrollen vollständig erhalten, ohne den anfänglichen Analytics-Chunk mit Recharts zu belasten.
   Schlägt der Lazy-Import fehl, begrenzt eine lokale `RouteErrorBoundary` den Fehler auf den Chart-Bereich und bietet
   einen lokalisierten Seiten-Reload als Wiederherstellungsaktion an.
+- `AnalyticsTopCountries.tsx` kapselt die zuvor in `index.tsx` eingebettete Länderliste. Die Liste behält ihre auf zehn
+  Einträge begrenzte Reihenfolge, die relative Balkenbreite und den lokalisierten Leerzustand bei; der Seitencontainer
+  behält Auswahl, Datenabruf und Formularzustand.
 
 ## Abhängigkeiten
 

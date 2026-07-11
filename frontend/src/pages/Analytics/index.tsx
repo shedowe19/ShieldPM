@@ -21,6 +21,7 @@ import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsKpis } from "./AnalyticsKpis";
 import { AnalyticsMap } from "./AnalyticsMap";
 import { AnalyticsRecentRequests } from "./AnalyticsRecentRequests";
+import { AnalyticsTopCountries } from "./AnalyticsTopCountries";
 import { AnalyticsTopLists } from "./AnalyticsTopLists";
 
 const canPoll = () =>
@@ -324,44 +325,7 @@ const Analytics = () => {
 					</CardContent>
 				</Card>
 
-				{/* Top Countries List */}
-				<Card>
-					<CardHeader>
-						<CardTitle>
-							<T id="analytics.top-countries" />
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-4">
-							{summary?.topCountries && summary.topCountries.length > 0 ? (
-								summary.topCountries.slice(0, 10).map((c) => (
-									<div key={c.countryCode} className="flex justify-between text-sm items-center">
-										<div className="flex items-center gap-2">
-											<span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">
-												{c.countryCode || "??"}
-											</span>
-										</div>
-										<div className="flex items-center gap-4">
-											<div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-												<div
-													className="h-full bg-cyan-500"
-													style={{
-														width: `${(c.count / (summary?.topCountries?.[0]?.count || 1)) * 100}%`,
-													}}
-												/>
-											</div>
-											<span className="w-12 text-right">{c.count.toLocaleString()}</span>
-										</div>
-									</div>
-								))
-							) : (
-								<div className="text-sm text-muted-foreground text-center p-4">
-									<T id="analytics.no-data-list" />
-								</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
+				<AnalyticsTopCountries summary={summary} />
 			</div>
 
 			{/* Top Lists */}
