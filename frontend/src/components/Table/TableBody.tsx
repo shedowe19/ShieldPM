@@ -11,7 +11,7 @@ const TableRowWithRef = React.forwardRef<HTMLTableRowElement, React.HTMLAttribut
 );
 TableRowWithRef.displayName = "TableRowWithRef";
 
-const MotionTableRow = motion(TableRowWithRef);
+const MotionTableRow = motion.create(TableRowWithRef);
 
 function TableBody<T>(props: TableLayoutProps<T>) {
 	const { tableInstance, extraStyles, emptyState } = props;
@@ -69,4 +69,5 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 }
 
 const MemoizedTableBody = React.memo(TableBody) as typeof TableBody;
+
 export { MemoizedTableBody as TableBody };
