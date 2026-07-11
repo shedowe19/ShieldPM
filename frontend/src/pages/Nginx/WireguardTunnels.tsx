@@ -9,13 +9,14 @@ import {
 	IconRefresh,
 	IconTrash,
 } from "@tabler/icons-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { Lock, Network, RefreshCcw, Settings, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { WireguardPeer } from "@/api/backend";
-import { getWireguardSettings, updateWireguardSettings } from "@/api/backend/wireguardSettings";
 import type { WireguardSettings } from "@/api/backend/wireguardSettings";
+import { getWireguardSettings, updateWireguardSettings } from "@/api/backend/wireguardSettings";
 import { HasPermission } from "@/components/HasPermission";
 import { WireguardConfigModal } from "@/components/Nginx/WireguardConfigModal";
 import { WireguardPeerModal } from "@/components/Nginx/WireguardPeerModal";
@@ -24,12 +25,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useWireguardPeer, useWireguardPeers } from "@/hooks/useWireguardPeer";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHealth } from "@/hooks/useHealth";
+import { useWireguardPeer, useWireguardPeers } from "@/hooks/useWireguardPeer";
 import { T } from "@/locale";
-import { showHelpModal } from "@/modals";
-import { WIREGUARD_PEERS, MANAGE } from "@/modules/Permissions";
+import { showHelpModal } from "@/modals/lazy";
+import { MANAGE, WIREGUARD_PEERS } from "@/modules/Permissions";
 
 dayjs.extend(relativeTime);
 
