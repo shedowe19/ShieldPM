@@ -18,6 +18,9 @@ import {
 import { Input } from "src/components/ui/input";
 import { useCertificates } from "src/hooks";
 import { intl, T } from "src/locale";
+import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
+import { showError, showObjectSuccess } from "src/notifications";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import {
 	showCustomCertificateModal,
 	showDeleteConfirmModal,
@@ -26,10 +29,7 @@ import {
 	showHTTPCertificateModal,
 	showInternalCertificateModal,
 	showRenewCertificateModal,
-} from "src/modals/lazy";
-import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
-import { showError, showObjectSuccess } from "src/notifications";
-import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+} from "./lazy";
 import Table from "./Table";
 
 export default function TableWrapper() {

@@ -2,31 +2,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	accessListModalModuleLoaded: vi.fn(),
-	customCertificateModalModuleLoaded: vi.fn(),
 	deadHostModalModuleLoaded: vi.fn(),
 	dashboardNoteModalModuleLoaded: vi.fn(),
 	ddnsProviderModalModuleLoaded: vi.fn(),
 	deleteConfirmModalModuleLoaded: vi.fn(),
-	dnsCertificateModalModuleLoaded: vi.fn(),
 	eventDetailsModalModuleLoaded: vi.fn(),
-	httpCertificateModalModuleLoaded: vi.fn(),
 	helpModalModuleLoaded: vi.fn(),
-	internalCertificateModalModuleLoaded: vi.fn(),
 	modalModuleError: undefined as Error | undefined,
 	modalModuleLoaded: vi.fn(),
 	permissionsModalModuleLoaded: vi.fn(),
 	redirectionHostModalModuleLoaded: vi.fn(),
-	renewCertificateModalModuleLoaded: vi.fn(),
 	setPasswordModalModuleLoaded: vi.fn(),
 	showAccessListModal: vi.fn(),
-	showCustomCertificateModal: vi.fn(),
 	showDeadHostModal: vi.fn(),
 	showDdnsProviderModal: vi.fn(),
-	showDNSCertificateModal: vi.fn(),
 	showEventDetailsModal: vi.fn(),
-	showHTTPCertificateModal: vi.fn(),
-	showInternalCertificateModal: vi.fn(),
-	showRenewCertificateModal: vi.fn(),
 	showStreamModal: vi.fn(),
 	streamModalModuleLoaded: vi.fn(),
 	showDashboardNoteModal: vi.fn(),
@@ -87,11 +77,6 @@ vi.mock("./StreamModal", () => {
 	return { showStreamModal: mocks.showStreamModal };
 });
 
-vi.mock("./CustomCertificateModal", () => {
-	mocks.customCertificateModalModuleLoaded();
-	return { showCustomCertificateModal: mocks.showCustomCertificateModal };
-});
-
 vi.mock("./DashboardNoteModal", () => {
 	mocks.dashboardNoteModalModuleLoaded();
 	return { showDashboardNoteModal: mocks.showDashboardNoteModal };
@@ -102,29 +87,9 @@ vi.mock("./DeleteConfirmModal", () => {
 	return { showDeleteConfirmModal: mocks.showDeleteConfirmModal };
 });
 
-vi.mock("./DNSCertificateModal", () => {
-	mocks.dnsCertificateModalModuleLoaded();
-	return { showDNSCertificateModal: mocks.showDNSCertificateModal };
-});
-
 vi.mock("./HelpModal", () => {
 	mocks.helpModalModuleLoaded();
 	return { showHelpModal: mocks.showHelpModal };
-});
-
-vi.mock("./HTTPCertificateModal", () => {
-	mocks.httpCertificateModalModuleLoaded();
-	return { showHTTPCertificateModal: mocks.showHTTPCertificateModal };
-});
-
-vi.mock("./InternalCertificateModal", () => {
-	mocks.internalCertificateModalModuleLoaded();
-	return { showInternalCertificateModal: mocks.showInternalCertificateModal };
-});
-
-vi.mock("./RenewCertificateModal", () => {
-	mocks.renewCertificateModalModuleLoaded();
-	return { showRenewCertificateModal: mocks.showRenewCertificateModal };
 });
 
 vi.mock("src/notifications", () => ({ showError: mocks.showError }));
@@ -145,39 +110,6 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.accessListModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showAccessListModal).toHaveBeenCalledWith("new");
-	});
-
-	it("loads certificate modals only when their actions are requested", async () => {
-		const {
-			showCustomCertificateModal,
-			showDNSCertificateModal,
-			showHTTPCertificateModal,
-			showInternalCertificateModal,
-			showRenewCertificateModal,
-		} = await import("./lazy");
-
-		expect(mocks.customCertificateModalModuleLoaded).not.toHaveBeenCalled();
-		expect(mocks.dnsCertificateModalModuleLoaded).not.toHaveBeenCalled();
-		expect(mocks.httpCertificateModalModuleLoaded).not.toHaveBeenCalled();
-		expect(mocks.internalCertificateModalModuleLoaded).not.toHaveBeenCalled();
-		expect(mocks.renewCertificateModalModuleLoaded).not.toHaveBeenCalled();
-
-		await showCustomCertificateModal();
-		await showDNSCertificateModal();
-		await showHTTPCertificateModal();
-		await showInternalCertificateModal();
-		await showRenewCertificateModal(73);
-
-		expect(mocks.customCertificateModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.dnsCertificateModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.httpCertificateModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.internalCertificateModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.renewCertificateModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.showCustomCertificateModal).toHaveBeenCalledOnce();
-		expect(mocks.showDNSCertificateModal).toHaveBeenCalledOnce();
-		expect(mocks.showHTTPCertificateModal).toHaveBeenCalledOnce();
-		expect(mocks.showInternalCertificateModal).toHaveBeenCalledOnce();
-		expect(mocks.showRenewCertificateModal).toHaveBeenCalledWith(73);
 	});
 
 	it("loads the DDNS provider modal only when provider editing is requested", async () => {

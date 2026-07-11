@@ -21,14 +21,14 @@ import {
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
 import { intl, T } from "src/locale";
+import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
+import { AUDIT_LOG_OBJECT_TYPE, CERTIFICATE_PROVIDER } from "src/types/enums";
 import {
 	showCustomCertificateModal,
 	showDNSCertificateModal,
 	showHTTPCertificateModal,
 	showInternalCertificateModal,
-} from "src/modals/lazy";
-import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
-import { AUDIT_LOG_OBJECT_TYPE, CERTIFICATE_PROVIDER } from "src/types/enums";
+} from "./lazy";
 
 interface Props {
 	data: Certificate[];
