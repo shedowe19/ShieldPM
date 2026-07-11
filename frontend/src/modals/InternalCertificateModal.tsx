@@ -70,6 +70,7 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 				a.download = `${values.domain_names}.p12`;
 				document.body.appendChild(a);
 				a.click();
+				a.remove();
 				window.URL.revokeObjectURL(url);
 
 				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "downloaded"); // Custom message?
