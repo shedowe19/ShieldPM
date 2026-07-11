@@ -1,17 +1,16 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import EasyModal from "ez-modal-react";
-import { RawIntlProvider } from "react-intl";
 import { queryClient } from "src/api/queryClient";
+import { LocaleRefreshBoundary } from "src/components/LocaleRefreshBoundary";
 import { AuthProvider, LocaleProvider, ThemeProvider } from "src/context";
-import { intl } from "src/locale";
 import Router from "src/Router.tsx";
 import { QueryDevtools } from "@/components/QueryDevtools";
 import { Toaster } from "@/components/ui/toaster";
 
 function App() {
 	return (
-		<RawIntlProvider value={intl}>
-			<LocaleProvider>
+		<LocaleProvider>
+			<LocaleRefreshBoundary>
 				<ThemeProvider>
 					<QueryClientProvider client={queryClient}>
 						<AuthProvider>
@@ -23,8 +22,8 @@ function App() {
 						<QueryDevtools />
 					</QueryClientProvider>
 				</ThemeProvider>
-			</LocaleProvider>
-		</RawIntlProvider>
+			</LocaleRefreshBoundary>
+		</LocaleProvider>
 	);
 }
 

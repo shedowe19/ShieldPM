@@ -19,7 +19,6 @@ function LocalePicker(_props: Props) {
 	const changeTo = async (lang: string) => {
 		await changeLocale(lang);
 		setLocale(lang);
-		location.reload();
 	};
 
 	return (
