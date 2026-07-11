@@ -4,15 +4,7 @@ import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { ProxyHost } from "src/api/backend";
-import {
-	GitSyncTab,
-	HasPermission,
-	Loading,
-	LocationsFields,
-	NoteWarning,
-	SSLCertificateField,
-	SSLOptionsFields,
-} from "src/components";
+import { GitSyncTab, HasPermission, Loading, LocationsFields, NoteWarning } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
@@ -28,6 +20,7 @@ import ProxyHostMaintenanceTab from "./ProxyHostMaintenanceTab";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import ProxyHostNotesTab from "./ProxyHostNotesTab";
 import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
+import ProxyHostSslTab from "./ProxyHostSslTab";
 
 const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
@@ -175,14 +168,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<TabsContent value={PROXY_HOST_TAB.LOCATIONS} className="mt-0">
 												<LocationsFields initialValues={data?.locations || []} />
 											</TabsContent>
-											<TabsContent value={PROXY_HOST_TAB.SSL} className="mt-0">
-												<SSLCertificateField
-													name="certificateId"
-													label="ssl-certificate"
-													allowNew
-												/>
-												<SSLOptionsFields color="bg-lime" />
-											</TabsContent>
+											<ProxyHostSslTab />
 											<ProxyHostSecurityTab />
 
 											<ProxyHostAdvancedTab />

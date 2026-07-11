@@ -151,6 +151,10 @@ bleibt an `turboLoader` gebunden; Titel und Erläuterungen verwenden `proxy-host
 allen 13 Locales. `NginxConfigField` bleibt unverändert Bestandteil desselben Tabs;
 `ProxyHostAdvancedTab.test.tsx` sichert Texte, Schalterbindung und Konfigurationsfeld.
 
+`ProxyHostSslTab.tsx` kapselt die SSL-Registerkarte des `ProxyHostModal` als eigenes Formik-Kind. Die bestehende
+Zertifikatsauswahl bleibt an `certificateId` gebunden, erlaubt weiterhin das Anlegen neuer Zertifikate und verwendet
+unverändert die limettengrüne SSL-Optionsdarstellung. `ProxyHostSslTab.test.tsx` sichert diese Zusammensetzung ab.
+
 `ProxyHostOptions.tsx` kapselt die fünf Detail-Optionen für Caching, Pufferung, Exploit-Schutz, WebSocket-Upgrades und
 Wartung bei Fehlern als Formik-Kind. `ProxyHostOptions.test.tsx` sichert die unveränderte Bindung aller Schalter an ihre
 jeweiligen Formularfelder ab.
