@@ -28,6 +28,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Jede neuere Analytics-Aktualisierung verdrängt noch laufende Abfragen, sodass Wechsel von Host, Zeitraum oder Sichtbarkeit keine aktuellen Kennzahlen oder Zeitreihen mit langsamen Altantworten überschreiben können.
 - Bei ausgeblendeter Browser-Registerkarte pausiert die Seite ihre Analytics- und Live-Statusabfragen; beim erneuten Sichtbarwerden werden beide Datensätze sofort aktualisiert.
 - Datenbank-Statistiken werden über `getDbStats` und damit den zentralen API-Client geladen. Sie folgen dadurch der gemeinsamen Cookie-/CSRF-Übergabe und der einheitlichen 401-Behandlung.
+- Der Live-Netzwerkstatus wird ebenfalls über `getAnalyticsStatus` im zentralen API-Client geladen. Damit erhält auch die zweisekündliche Statusabfrage die gemeinsame Cookie-/CSRF-Übergabe sowie die einheitliche 401-Behandlung.
 
 ## Abhängigkeiten
 

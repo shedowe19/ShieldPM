@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { getAnalyticsSeries, getAnalyticsSummary, getDbStats } from "src/api/backend";
+import { getAnalyticsStatus } from "src/api/backend/getAnalyticsStatus";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,6 +8,10 @@ vi.mock("src/api/backend", () => ({
 	getAnalyticsSeries: vi.fn().mockResolvedValue([]),
 	getAnalyticsSummary: vi.fn().mockResolvedValue({}),
 	getDbStats: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock("src/api/backend/getAnalyticsStatus", () => ({
+	getAnalyticsStatus: vi.fn().mockResolvedValue({ rxSec: 0, totalSec: 0, txSec: 0 }),
 }));
 
 vi.mock("src/components", () => ({
@@ -54,6 +59,8 @@ beforeEach(() => {
 	visibilityStateDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
 	vi.mocked(getAnalyticsSeries).mockReset();
 	vi.mocked(getAnalyticsSeries).mockResolvedValue([]);
+	vi.mocked(getAnalyticsStatus).mockReset();
+	vi.mocked(getAnalyticsStatus).mockResolvedValue({ rxSec: 0, totalSec: 0, txSec: 0 });
 	vi.mocked(getAnalyticsSummary).mockReset();
 	vi.mocked(getAnalyticsSummary).mockResolvedValue({});
 	vi.mocked(getDbStats).mockReset();
@@ -63,13 +70,6 @@ beforeEach(() => {
 		io: { reads: 0, writes: 0 },
 		size: 0,
 	});
-	vi.stubGlobal(
-		"fetch",
-		vi.fn().mockResolvedValue({
-			ok: true,
-			json: vi.fn().mockResolvedValue({ connections: { open: 1 }, io: {}, size: 0 }),
-		}),
-	);
 });
 
 afterEach(async () => {
@@ -85,20 +85,22 @@ afterEach(async () => {
 });
 
 describe("Analytics", () => {
-	it("loads database stats through the shared API client", async () => {
+	it("loads live and database stats through the shared API client", async () => {
 		vi.mocked(getDbStats).mockResolvedValue({
 			connections: { max: 10, open: 2, used: 2 },
 			engine: "sqlite",
 			io: { reads: 3, writes: 4 },
 			size: 2048,
 		});
+		vi.mocked(getAnalyticsStatus).mockResolvedValue({ rxSec: 1024, totalSec: 3072, txSec: 2048 });
 		const { default: Analytics } = await import("./index");
 
 		render(<Analytics />);
 
 		await screen.findByText("2 KB");
+		await screen.findByText("3 KB/s");
 		expect(getDbStats).toHaveBeenCalledTimes(1);
-		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(1);
 	});
 
 	it("renders the host selector placeholder in the active locale", async () => {
@@ -169,7 +171,7 @@ describe("Analytics", () => {
 
 		expect(getAnalyticsSummary).not.toHaveBeenCalled();
 		expect(getAnalyticsSeries).not.toHaveBeenCalled();
-		expect(fetch).not.toHaveBeenCalled();
+		expect(getAnalyticsStatus).not.toHaveBeenCalled();
 	});
 
 	it("refreshes analytics after the document becomes visible", async () => {
@@ -192,7 +194,7 @@ describe("Analytics", () => {
 		expect(getAnalyticsSummary).toHaveBeenCalledTimes(1);
 		expect(getAnalyticsSeries).toHaveBeenCalledTimes(1);
 		expect(getDbStats).toHaveBeenCalledTimes(1);
-		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(1);
 	});
 
 	it("keeps the latest analytics data after a tab visibility refresh", async () => {
@@ -227,22 +229,17 @@ describe("Analytics", () => {
 	});
 
 	it("keeps the latest live status after a tab visibility refresh", async () => {
-		const createResponse = (data: unknown) => ({ ok: true, json: vi.fn().mockResolvedValue(data) });
-		let resolveFirstLiveStatus: ((value: ReturnType<typeof createResponse>) => void) | undefined;
-		const firstLiveStatus = new Promise<ReturnType<typeof createResponse>>((resolve) => {
+		let resolveFirstLiveStatus: ((value: Awaited<ReturnType<typeof getAnalyticsStatus>>) => void) | undefined;
+		const firstLiveStatus = new Promise<Awaited<ReturnType<typeof getAnalyticsStatus>>>((resolve) => {
 			resolveFirstLiveStatus = resolve;
 		});
-		const fetchMock = vi
-			.fn()
+		vi.mocked(getAnalyticsStatus)
 			.mockReturnValueOnce(firstLiveStatus)
-			.mockResolvedValueOnce(createResponse({ total_sec: 4096 }))
-			.mockResolvedValueOnce(createResponse({ connections: { open: 1 }, io: {}, size: 0 }))
-			.mockResolvedValueOnce(createResponse({ connections: { open: 1 }, io: {}, size: 0 }));
-		vi.stubGlobal("fetch", fetchMock);
+			.mockResolvedValueOnce({ rxSec: 2048, totalSec: 4096, txSec: 2048 });
 		const { default: Analytics } = await import("./index");
 
 		render(<Analytics />);
-		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(getAnalyticsStatus).toHaveBeenCalledTimes(1));
 
 		Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
 		document.dispatchEvent(new Event("visibilitychange"));
@@ -255,7 +252,7 @@ describe("Analytics", () => {
 		}
 		const resolveLiveStatus = resolveFirstLiveStatus;
 		await act(async () => {
-			resolveLiveStatus(createResponse({ total_sec: 1024 }));
+			resolveLiveStatus({ rxSec: 512, totalSec: 1024, txSec: 512 });
 			await firstLiveStatus;
 			await Promise.resolve();
 		});

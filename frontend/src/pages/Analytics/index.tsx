@@ -14,6 +14,7 @@ import {
 	getDbStats,
 	type TimeSeriesPoint,
 } from "src/api/backend";
+import { getAnalyticsStatus } from "src/api/backend/getAnalyticsStatus";
 import { Loading } from "src/components";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
@@ -131,13 +132,9 @@ const Analytics = () => {
 		const fetchLiveParams = async () => {
 			const requestId = ++latestRequestId;
 			try {
-				const res = await fetch("/api/analytics/status");
+				const data = await getAnalyticsStatus();
 				if (cancelled || requestId !== latestRequestId) return;
-				if (res.ok) {
-					const data = await res.json();
-					if (cancelled || requestId !== latestRequestId) return;
-					setNetworkSpeed(data.total_sec || 0);
-				}
+				setNetworkSpeed(data.totalSec || 0);
 			} catch (_err) {
 				// quiet failure
 			}
