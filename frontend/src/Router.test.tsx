@@ -2,16 +2,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("src/components", () => ({
-	AnimatedPage: ({ children }: { children: React.ReactNode }) => (
-		<>{children}</>
-	),
+	AnimatedPage: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 	ErrorNotFound: () => <div>Not found</div>,
 	LoadingPage: () => <div>Loading</div>,
 	Page: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 	Sidebar: () => <div>Sidebar</div>,
-	SiteContainer: ({ children }: { children: React.ReactNode }) => (
-		<>{children}</>
-	),
+	SiteContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 	SiteFooter: () => <div>Footer</div>,
 	SiteHeader: () => <div>Header</div>,
 	Unhealthy: () => <div>Unhealthy</div>,
