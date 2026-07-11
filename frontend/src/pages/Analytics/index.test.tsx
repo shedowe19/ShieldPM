@@ -1,11 +1,12 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { getAnalyticsSeries, getAnalyticsSummary } from "src/api/backend";
+import { getAnalyticsSeries, getAnalyticsSummary, getDbStats } from "src/api/backend";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("src/api/backend", () => ({
 	getAnalyticsSeries: vi.fn().mockResolvedValue([]),
 	getAnalyticsSummary: vi.fn().mockResolvedValue({}),
+	getDbStats: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("src/components", () => ({
@@ -55,6 +56,13 @@ beforeEach(() => {
 	vi.mocked(getAnalyticsSeries).mockResolvedValue([]);
 	vi.mocked(getAnalyticsSummary).mockReset();
 	vi.mocked(getAnalyticsSummary).mockResolvedValue({});
+	vi.mocked(getDbStats).mockReset();
+	vi.mocked(getDbStats).mockResolvedValue({
+		connections: { max: 1, open: 1, used: 1 },
+		engine: "sqlite",
+		io: { reads: 0, writes: 0 },
+		size: 0,
+	});
 	vi.stubGlobal(
 		"fetch",
 		vi.fn().mockResolvedValue({
@@ -77,6 +85,22 @@ afterEach(async () => {
 });
 
 describe("Analytics", () => {
+	it("loads database stats through the shared API client", async () => {
+		vi.mocked(getDbStats).mockResolvedValue({
+			connections: { max: 10, open: 2, used: 2 },
+			engine: "sqlite",
+			io: { reads: 3, writes: 4 },
+			size: 2048,
+		});
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+
+		await screen.findByText("2 KB");
+		expect(getDbStats).toHaveBeenCalledTimes(1);
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
 	it("renders the host selector placeholder in the active locale", async () => {
 		await changeLocale("de-DE");
 		const { default: Analytics } = await import("./index");
@@ -167,7 +191,8 @@ describe("Analytics", () => {
 
 		expect(getAnalyticsSummary).toHaveBeenCalledTimes(1);
 		expect(getAnalyticsSeries).toHaveBeenCalledTimes(1);
-		expect(fetch).toHaveBeenCalledTimes(2);
+		expect(getDbStats).toHaveBeenCalledTimes(1);
+		expect(fetch).toHaveBeenCalledTimes(1);
 	});
 
 	it("keeps the latest analytics data after a tab visibility refresh", async () => {

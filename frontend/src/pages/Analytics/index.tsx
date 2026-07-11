@@ -11,6 +11,7 @@ import {
 	type DbStats,
 	getAnalyticsSeries,
 	getAnalyticsSummary,
+	getDbStats,
 	type TimeSeriesPoint,
 } from "src/api/backend";
 import { Loading } from "src/components";
@@ -145,13 +146,9 @@ const Analytics = () => {
 
 			// Fetch DB stats
 			try {
-				const dbRes = await fetch("/api/analytics/db-stats");
+				const data = await getDbStats();
 				if (cancelled || requestId !== latestRequestId) return;
-				if (dbRes.ok) {
-					const data = await dbRes.json();
-					if (cancelled || requestId !== latestRequestId) return;
-					setDbStats(data);
-				}
+				setDbStats(data);
 			} catch (_err) {
 				// quiet failure
 			}

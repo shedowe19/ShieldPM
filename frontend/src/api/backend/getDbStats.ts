@@ -1,4 +1,5 @@
 import type { DbEngine } from "src/types/enums";
+import * as api from "./base";
 
 export interface DbStats {
 	engine: DbEngine;
@@ -15,7 +16,5 @@ export interface DbStats {
 }
 
 export async function getDbStats(): Promise<DbStats> {
-	const response = await fetch("/api/analytics/db-stats");
-	if (!response.ok) throw new Error("Failed to fetch DB stats");
-	return response.json();
+	return await api.get({ url: "/analytics/db-stats" });
 }
