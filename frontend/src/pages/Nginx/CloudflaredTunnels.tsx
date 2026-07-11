@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
 import { intl, T } from "@/locale";
-import { showHelpModal } from "@/modals";
+import { showHelpModal } from "@/modals/lazy";
 import { CLOUDFLARED_TUNNELS, MANAGE } from "@/modules/Permissions";
 
 export function CloudflaredTunnels() {
