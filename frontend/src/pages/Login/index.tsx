@@ -2,8 +2,8 @@ import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { claimOidcToken } from "src/api/backend";
-import type { TwoFaChallengeResponse } from "src/api/backend/verify2fa";
 import type { TokenResponse } from "src/api/backend/responseTypes";
+import type { TwoFaChallengeResponse } from "src/api/backend/verify2fa";
 import { LocalePicker, ThemeSwitcher } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -26,7 +26,7 @@ export default function Login() {
 	const emailRef = useRef<HTMLInputElement>(null);
 	const [formErr, setFormErr] = useState("");
 	const [pending2FA, setPending2FA] = useState<{ token: string; methods: string[] } | null>(null);
-	const { login } = useAuthState();
+	const { completeLogin, login } = useAuthState();
 
 	const onSubmit = async (values: LoginValues, { setSubmitting }: FormikHelpers<LoginValues>) => {
 		setFormErr("");
@@ -58,13 +58,12 @@ export default function Login() {
 		// Try to claim OIDC token if available
 		claimOidcToken()
 			.then((response) => {
-				AuthStore.add(response);
-				window.location.reload();
+				completeLogin(response);
 			})
 			.catch(() => {
 				// Ignore errors, no pending OIDC login
 			});
-	}, []);
+	}, [completeLogin]);
 
 	const health = useHealth();
 

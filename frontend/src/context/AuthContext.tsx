@@ -8,6 +8,7 @@ import AuthStore from "src/modules/AuthStore";
 // Context
 export interface AuthContextType {
 	authenticated: boolean;
+	completeLogin: (response: TokenResponse) => void;
 	login: (username: string, password: string) => Promise<void>;
 	loginAs: (id: number) => Promise<void>;
 	logout: () => void;
@@ -32,6 +33,14 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		setAuthenticated(true);
 	}, []);
 
+	const completeLogin = useCallback(
+		(response: TokenResponse) => {
+			queryClient.clear();
+			handleTokenUpdate(response);
+		},
+		[handleTokenUpdate, queryClient],
+	);
+
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
 		refreshToken()
@@ -54,7 +63,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			// Throw the challenge payload — Login/index.tsx catches it
 			throw response;
 		}
-		handleTokenUpdate(response);
+		completeLogin(response);
 	};
 
 	const loginAs = async (id: number) => {
@@ -96,7 +105,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		true,
 	);
 
-	const value = { authenticated, login, logout, loginAs, loading };
+	const value = { authenticated, completeLogin, login, logout, loginAs, loading };
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
