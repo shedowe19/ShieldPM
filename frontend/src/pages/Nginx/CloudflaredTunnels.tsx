@@ -144,7 +144,12 @@ export function CloudflaredTunnels() {
 					>
 						<IconRefresh className="h-4 w-4" />
 					</Button>
-					<Button variant="outline" size="icon" onClick={showCloudflaredHelpModal}>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "action.help" })}
+						onClick={showCloudflaredHelpModal}
+					>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={CLOUDFLARED_TUNNELS} permission={MANAGE} hideError>
@@ -200,13 +205,19 @@ export function CloudflaredTunnels() {
 										<TableCell>{dayjs(tunnel.createdOn).format("YYYY-MM-DD HH:mm:ss")}</TableCell>
 										<TableCell className="text-right space-x-2">
 											<HasPermission section={CLOUDFLARED_TUNNELS} permission={MANAGE} hideError>
-												<Button variant="ghost" size="icon" onClick={() => handleEdit(tunnel)}>
+												<Button
+													variant="ghost"
+													size="icon"
+													aria-label={intl.formatMessage({ id: "cloudflared.edit" })}
+													onClick={() => handleEdit(tunnel)}
+												>
 													<IconEdit className="h-4 w-4" />
 												</Button>
 												<Button
 													variant="ghost"
 													size="icon"
 													className="text-destructive"
+													aria-label={intl.formatMessage({ id: "action.delete" })}
 													onClick={() => handleDelete(tunnel)}
 												>
 													<IconTrash className="h-4 w-4" />
