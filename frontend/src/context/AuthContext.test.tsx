@@ -38,7 +38,7 @@ import { AuthProvider, useAuthState } from "./AuthContext";
 let nextSessionProbeInstance = 0;
 
 function AuthProbe() {
-	const { authenticated, loading, login, loginAs } = useAuthState();
+	const { authenticated, loading, login, loginAs, logout } = useAuthState();
 
 	return (
 		<>
@@ -48,6 +48,9 @@ function AuthProbe() {
 			</button>
 			<button type="button" onClick={() => void loginAs(2)}>
 				Impersonate user
+			</button>
+			<button type="button" onClick={() => void logout()}>
+				Return to administrator
 			</button>
 		</>
 	);
@@ -119,6 +122,32 @@ describe("AuthProvider", () => {
 			await waitFor(() => expect(screen.getByTestId("session-instance")).toHaveTextContent("2"));
 			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
 			expect(mocks.authStoreAdd).toHaveBeenCalledWith(impersonatedToken);
+			expect(queryClient.getQueryData(["profile"])).toBeUndefined();
+			expect(reload).not.toHaveBeenCalled();
+		} finally {
+			Object.defineProperty(window, "location", { value: originalLocation });
+		}
+	});
+
+	it("remounts session-dependent UI after restoring an administrator session without a document reload", async () => {
+		const impersonatedToken = { expires: Date.now() + 60 * 60 * 1000, user: { id: 2 } };
+		const adminToken = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };
+		mocks.refreshToken.mockResolvedValue(impersonatedToken);
+		mocks.restoreSession.mockResolvedValue(adminToken);
+		const queryClient = renderAuthProvider();
+		const originalLocation = window.location;
+		const reload = vi.fn();
+		Object.defineProperty(window, "location", { writable: true, value: { reload } });
+
+		try {
+			await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+			queryClient.setQueryData(["profile"], { email: "impersonated@example.test" });
+
+			fireEvent.click(screen.getByRole("button", { name: "Return to administrator" }));
+
+			await waitFor(() => expect(screen.getByTestId("session-instance")).toHaveTextContent("2"));
+			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
+			expect(mocks.authStoreAdd).toHaveBeenCalledWith(adminToken);
 			expect(queryClient.getQueryData(["profile"])).toBeUndefined();
 			expect(reload).not.toHaveBeenCalled();
 		} finally {

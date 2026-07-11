@@ -80,7 +80,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			const response = await restoreSession();
 			AuthStore.add(response);
 			queryClient.clear();
-			window.location.reload();
+			setSessionVersion((version) => version + 1);
 		} catch (_err) {
 			// No backup session found or failed to restore, do a full logout
 			AuthStore.clear();
