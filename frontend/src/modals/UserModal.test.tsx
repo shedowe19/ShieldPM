@@ -3,12 +3,14 @@ import type { ComponentProps, PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	avatarType: "upload",
 	health: vi.fn(),
 	remove: vi.fn(),
 	setUser: vi.fn(),
 	show: vi.fn(),
 	showObjectSuccess: vi.fn(),
 	uploadUserAvatar: vi.fn(),
+	useUser: vi.fn(),
 }));
 
 vi.mock("@tabler/icons-react", () => ({
@@ -38,7 +40,7 @@ vi.mock("src/api/backend", () => ({ uploadUserAvatar: mocks.uploadUserAvatar }))
 
 vi.mock("src/components", () => ({
 	Loading: () => null,
-	UserAvatar: () => null,
+	UserAvatar: ({ name }: { name: string }) => <span data-testid="avatar-name">{name}</span>,
 }));
 
 vi.mock("src/components/ui/alert", () => ({
@@ -95,29 +97,17 @@ vi.mock("src/components/ui/tabs", () => ({
 
 vi.mock("src/components/ui/toggle-group", () => ({
 	ToggleGroup: ({ children }: PropsWithChildren) => <div>{children}</div>,
-	ToggleGroupItem: ({ children }: PropsWithChildren) => <button type="button">{children}</button>,
+	ToggleGroupItem: ({ children, ...props }: PropsWithChildren<ComponentProps<"button">>) => (
+		<button type="button" {...props}>
+			{children}
+		</button>
+	),
 }));
 
 vi.mock("src/hooks", () => ({
 	useHealth: mocks.health,
 	useSetUser: () => ({ mutate: mocks.setUser }),
-	useUser: (id: number | "me") => ({
-		data:
-			id === "me"
-				? { id: 1 }
-				: {
-						avatar_type: "upload",
-						avatar_value: "",
-						email: "avatar@example.test",
-						id: 73,
-						isDisabled: false,
-						name: "Avatar User",
-						nickname: "avatar-user",
-						roles: [],
-					},
-		error: null,
-		isLoading: false,
-	}),
+	useUser: mocks.useUser,
 }));
 
 vi.mock("src/hooks/useObjectUrl", () => ({ useObjectUrl: () => "blob:avatar-preview" }));
@@ -145,6 +135,24 @@ describe("UserModal", () => {
 		mocks.show.mockClear();
 		mocks.showObjectSuccess.mockClear();
 		mocks.uploadUserAvatar.mockRejectedValue(new Error("Avatar upload failed"));
+		mocks.avatarType = "upload";
+		mocks.useUser.mockImplementation((id: number | "me" | "new") => ({
+			data:
+				id === "me"
+					? { id: 1 }
+					: {
+							avatar_type: mocks.avatarType,
+							avatar_value: "",
+							email: "avatar@example.test",
+							id: id === "new" ? 0 : 73,
+							isDisabled: false,
+							name: id === "new" ? "" : "Avatar User",
+							nickname: "avatar-user",
+							roles: [],
+						},
+			error: null,
+			isLoading: false,
+		}));
 		mocks.setUser.mockImplementation(
 			(_user: unknown, options: { onSuccess?: (user: { id: number }) => Promise<void> | void }) => {
 				void options.onSuccess?.({ id: 73 });
@@ -165,6 +173,93 @@ describe("UserModal", () => {
 
 		expect(screen.getByRole("button", { name: "user.avatar" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "user.security" })).toBeInTheDocument();
+	});
+
+	it("renders localized avatar picker and upload controls", async () => {
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+
+		expect(screen.getByText("user.avatar.profile-preview")).toBeInTheDocument();
+		expect(screen.getByText("user.avatar.source")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "user.avatar.gravatar" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "user.avatar.url" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "user.avatar.upload" })).toBeInTheDocument();
+		expect(screen.getByLabelText("user.avatar.upload-image")).toBeInTheDocument();
+		expect(screen.getByText("user.avatar.choose-file")).toBeInTheDocument();
+		expect(screen.getByText("user.avatar.upload-requirements")).toBeInTheDocument();
+	});
+
+	it("renders the localized Gravatar description", async () => {
+		mocks.avatarType = "gravatar";
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+
+		expect(screen.getByText("user.avatar.gravatar-description")).toBeInTheDocument();
+	});
+
+	it("renders localized custom avatar URL controls", async () => {
+		mocks.avatarType = "url";
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+
+		expect(screen.getByLabelText("user.avatar.image-url")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("user.avatar.image-url-placeholder")).toBeInTheDocument();
+		expect(screen.getByText("user.avatar.image-url-help")).toBeInTheDocument();
+	});
+
+	it("uses localized error titles and fallback messages", async () => {
+		mocks.useUser.mockImplementation((id: number | "me") => ({
+			data: id === "me" ? { id: 1 } : undefined,
+			error: id === "me" ? null : new Error(),
+			isLoading: false,
+		}));
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+
+		expect(screen.getByText("error.title")).toBeInTheDocument();
+		expect(screen.getByText("error.unknown")).toBeInTheDocument();
+	});
+
+	it("uses the localized user label for a blank avatar name", async () => {
+		const { showUserModal } = await import("./UserModal");
+		showUserModal("new");
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id="new" remove={mocks.remove} visible />);
+
+		expect(screen.getByTestId("avatar-name")).toHaveTextContent("user");
 	});
 
 	it("renders the demo restriction through localized messages", async () => {
@@ -193,7 +288,7 @@ describe("UserModal", () => {
 		}
 
 		render(<ModalComponent remove={mocks.remove} visible />);
-		fireEvent.change(screen.getByLabelText("Upload Image"), {
+		fireEvent.change(screen.getByLabelText("user.avatar.upload-image"), {
 			target: { files: [new File(["avatar"], "avatar.png", { type: "image/png" })] },
 		});
 		fireEvent.click(screen.getByRole("button", { name: "save" }));

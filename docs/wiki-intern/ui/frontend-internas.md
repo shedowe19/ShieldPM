@@ -109,6 +109,10 @@ sodass der Upload direkt erneut versucht werden kann.
 Die Demo-Sperre sowie die Avatar- und Sicherheits-Tabs des `UserModal` verwenden ausschließlich lokalisierte
 Nachrichten; `user.security` ist in allen 13 unterstützten Locale-Dateien hinterlegt.
 
+Der Avatar-Bereich des `UserModal` lokalisiert Vorschau, Quelle, Gravatar-Hinweis, URL- und Upload-Felder über
+`user.avatar.*`. Die 13 Locale-Dateien enthalten auch lokalisierte Platzhalter und Upload-Hinweise; bei einem
+unbekannten Ladefehler nutzt der Dialog `error.unknown` statt eines fest codierten englischen Texts.
+
 `SetPasswordModal.tsx` beschriftet die Icon-Aktionen zum Anzeigen/Verstecken und Generieren eines Passworts über die
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.

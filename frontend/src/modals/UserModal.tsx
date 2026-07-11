@@ -155,8 +155,10 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				{!isLoading && error && (
 					<Alert variant="destructive" className="mb-4">
 						<AlertCircle className="h-4 w-4" />
-						<AlertTitle>Error</AlertTitle>
-						<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+						<AlertTitle>
+							<T id="error.title" />
+						</AlertTitle>
+						<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 					</Alert>
 				)}
 
@@ -184,7 +186,9 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								{errorMsg && (
 									<Alert variant="destructive" className="mb-4">
 										<AlertCircle className="h-4 w-4" />
-										<AlertTitle>Error</AlertTitle>
+										<AlertTitle>
+											<T id="error.title" />
+										</AlertTitle>
 										<AlertDescription>{errorMsg}</AlertDescription>
 									</Alert>
 								)}
@@ -357,7 +361,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												{/* Preview Logic */}
 												<UserAvatar
 													className="h-24 w-24"
-													name={values.name || "User"}
+													name={values.name || intl.formatMessage({ id: "user" })}
 													url={
 														values.avatar_type === "upload" && selectedFile
 															? selectedFileUrl
@@ -370,12 +374,14 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												/>
 											</div>
 											<p className="text-sm text-muted-foreground text-center max-w-xs">
-												This is how your profile picture will appear across the dashboard.
+												<T id="user.avatar.profile-preview" />
 											</p>
 										</div>
 
 										<div className="space-y-4">
-											<Label>Source</Label>
+											<Label>
+												<T id="user.avatar.source" />
+											</Label>
 											<ToggleGroup
 												type="single"
 												value={values.avatar_type}
@@ -386,16 +392,24 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											>
 												<ToggleGroupItem
 													value="gravatar"
-													aria-label="Gravatar"
+													aria-label={intl.formatMessage({ id: "user.avatar.gravatar" })}
 													className="gap-2"
 												>
-													Gravatar
+													<T id="user.avatar.gravatar" />
 												</ToggleGroupItem>
-												<ToggleGroupItem value="url" aria-label="Custom URL" className="gap-2">
-													Custom URL
+												<ToggleGroupItem
+													value="url"
+													aria-label={intl.formatMessage({ id: "user.avatar.url" })}
+													className="gap-2"
+												>
+													<T id="user.avatar.url" />
 												</ToggleGroupItem>
-												<ToggleGroupItem value="upload" aria-label="Upload" className="gap-2">
-													Upload
+												<ToggleGroupItem
+													value="upload"
+													aria-label={intl.formatMessage({ id: "user.avatar.upload" })}
+													className="gap-2"
+												>
+													<T id="user.avatar.upload" />
 												</ToggleGroupItem>
 											</ToggleGroup>
 										</div>
@@ -404,8 +418,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											<div className="text-sm text-muted-foreground bg-blue-500/10 text-blue-600 p-3 rounded-md flex items-start gap-2">
 												<IconMail className="h-5 w-5 shrink-0" />
 												<span>
-													Avatar will be automatically fetched from Gravatar using your email
-													address:
+													<T id="user.avatar.gravatar-description" />
 													<br />
 													<strong>{values.email}</strong>
 												</span>
@@ -414,26 +427,32 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 										{values.avatar_type === "url" && (
 											<div className="space-y-2">
-												<Label htmlFor="avatar_value">Image URL</Label>
+												<Label htmlFor="avatar_value">
+													<T id="user.avatar.image-url" />
+												</Label>
 												<Field name="avatar_value">
 													{({ field }: FieldProps) => (
 														<Input
 															{...field}
 															id="avatar_value"
-															placeholder="https://example.com/me.png"
+															placeholder={intl.formatMessage({
+																id: "user.avatar.image-url-placeholder",
+															})}
 															className={errors.avatar_value ? "border-destructive" : ""}
 														/>
 													)}
 												</Field>
 												<p className="text-xs text-muted-foreground">
-													Enter a direct link to an image file (PNG, JPG, GIF).
+													<T id="user.avatar.image-url-help" />
 												</p>
 											</div>
 										)}
 
 										{values.avatar_type === "upload" && (
 											<div className="space-y-2">
-												<Label htmlFor="file_upload">Upload Image</Label>
+												<Label htmlFor="file_upload">
+													<T id="user.avatar.upload-image" />
+												</Label>
 												<div className="relative">
 													<Input
 														id="file_upload"
@@ -449,11 +468,11 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														htmlFor="file_upload"
 														className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
 													>
-														Datei auswählen
+														<T id="user.avatar.choose-file" />
 													</label>
 												</div>
 												<p className="text-xs text-muted-foreground">
-													Max size: 2MB. Supported formats: PNG, JPG, GIF, WebP.
+													<T id="user.avatar.upload-requirements" />
 												</p>
 											</div>
 										)}
