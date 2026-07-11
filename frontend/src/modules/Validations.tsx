@@ -43,6 +43,18 @@ const validateNumber = (min = -1, max = -1) => {
 	};
 };
 
+const validateOptionalNumber = (min: number, max: number) => {
+	const validate = validateNumber(min, max);
+
+	return (value: string | null | undefined): string | undefined => {
+		if (typeof value === "undefined" || value === "" || value === null) {
+			return;
+		}
+
+		return validate(value);
+	};
+};
+
 const validateEmail = () => {
 	return (value: string): string | undefined => {
 		if (!value.length) {
@@ -90,4 +102,4 @@ const validateDomains = (allowWildcards = false, maxDomains?: number) => {
 	};
 };
 
-export { validateEmail, validateNumber, validateString, validateDomains, validateDomain };
+export { validateDomain, validateDomains, validateEmail, validateNumber, validateOptionalNumber, validateString };
