@@ -159,6 +159,10 @@ jeweiligen Formularfelder ab.
 Endzeit sowie Begründung bleiben an dieselben Formularfelder gebunden; `ProxyHostMaintenanceTab.test.tsx` sichert die
 Werte und den Umschalter gegen Regressionsfehler ab.
 
+`ProxyHostNotesTab.tsx` kapselt den Notiz-Tab des `ProxyHostModal` als Formik-Kind. Der editierbare Host-Hinweis bleibt
+an das gemeinsame Feld `note` gebunden; `ProxyHostNotesTab.test.tsx` sichert Initialwert, lokalisierten Platzhalter und
+Werteänderung gegen Regressionsfehler ab.
+
 `ProxyHostForwardingFields.tsx` kapselt Schema, Zielhost, Zielport und das `path`-spezifische Index-Dateifeld als
 Formik-Kind. Die Validierung für Host und Port sowie die Sichtbarkeit von `indexFile` bleiben aus dem Dialog erhalten;
 `ProxyHostForwardingFields.test.tsx` sichert Wertebindung und die schemaabhängige Sichtbarkeit ab.
