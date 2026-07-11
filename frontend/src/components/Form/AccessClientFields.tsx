@@ -107,6 +107,7 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 						variant="destructive"
 						size="icon"
 						onClick={() => handleRemove(idx)}
+						aria-label={intl.formatMessage({ id: "action.delete" })}
 						title={intl.formatMessage({ id: "action.delete" })}
 					>
 						<IconX size={16} />
