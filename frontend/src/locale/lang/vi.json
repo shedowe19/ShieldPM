@@ -207,6 +207,7 @@
 	"cloudflared.demo.access-denied": "Truy cập bị từ chối",
 	"cloudflared.demo.disabled": "Tính năng này bị tắt trong chế độ dùng thử.",
 	"cloudflared.demo.restricted": "Đường hầm Cloudflare bị hạn chế vì lý do bảo mật.",
+	"cloudflared.refresh": "Làm mới đường hầm Cloudflare",
 	"cloudflared.title": "Đường Hầm Cloudflare",
 	"cloudflared.token": "Token Đường Hầm",
 	"column.access": "Truy cập",

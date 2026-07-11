@@ -207,6 +207,7 @@
 	"cloudflared.demo.access-denied": "Accesso negato",
 	"cloudflared.demo.disabled": "Questa funzionalità è disabilitata nella modalità demo.",
 	"cloudflared.demo.restricted": "I tunnel Cloudflare sono limitati per motivi di sicurezza.",
+	"cloudflared.refresh": "Aggiorna i tunnel Cloudflare",
 	"cloudflared.title": "Tunnel Cloudflare",
 	"cloudflared.token": "Token del Tunnel",
 	"column.access": "Accesso",

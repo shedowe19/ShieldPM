@@ -207,6 +207,7 @@
 	"cloudflared.demo.access-denied": "アクセスが拒否されました",
 	"cloudflared.demo.disabled": "この機能はデモモードでは無効です。",
 	"cloudflared.demo.restricted": "Cloudflare トンネルはセキュリティ上の理由で制限されています。",
+	"cloudflared.refresh": "Cloudflare トンネルを更新",
 	"cloudflared.title": "Cloudflare トンネル",
 	"cloudflared.token": "トンネルトークン",
 	"column.access": "アクセス",

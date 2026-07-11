@@ -207,6 +207,7 @@
 	"cloudflared.demo.access-denied": "Toegang geweigerd",
 	"cloudflared.demo.disabled": "Deze functie is uitgeschakeld in de demomodus.",
 	"cloudflared.demo.restricted": "Cloudflare-tunnels zijn om veiligheidsredenen beperkt.",
+	"cloudflared.refresh": "Cloudflare-tunnels vernieuwen",
 	"cloudflared.title": "Cloudflare Tunnels",
 	"cloudflared.token": "Tunnel Token",
 	"column.access": "Toegang",

@@ -207,6 +207,7 @@
 	"cloudflared.demo.access-denied": "Odmowa dostępu",
 	"cloudflared.demo.disabled": "Ta funkcja jest wyłączona w trybie demonstracyjnym.",
 	"cloudflared.demo.restricted": "Tunele Cloudflare są ograniczone ze względów bezpieczeństwa.",
+	"cloudflared.refresh": "Odśwież tunele Cloudflare",
 	"cloudflared.title": "Tunele Cloudflare",
 	"cloudflared.token": "Token Tunelu",
 	"column.access": "Dostęp",

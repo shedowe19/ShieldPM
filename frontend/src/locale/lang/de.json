@@ -217,6 +217,7 @@
 	"cloudflared.demo.access-denied": "Zugriff verweigert",
 	"cloudflared.demo.disabled": "Diese Funktion ist im Demo-Modus deaktiviert.",
 	"cloudflared.demo.restricted": "Cloudflare-Tunnel sind aus Sicherheitsgründen eingeschränkt.",
+	"cloudflared.refresh": "Cloudflare-Tunnel aktualisieren",
 	"cloudflared.title": "Cloudflare Tunnel",
 	"cloudflared.token": "Tunnel Token",
 	"column.access": "Zugriff",

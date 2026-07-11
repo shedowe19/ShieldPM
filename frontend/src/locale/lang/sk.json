@@ -207,6 +207,7 @@
 	"cloudflared.demo.access-denied": "Prístup zamietnutý",
 	"cloudflared.demo.disabled": "Táto funkcia je v ukážkovom režime vypnutá.",
 	"cloudflared.demo.restricted": "Tunely Cloudflare sú z bezpečnostných dôvodov obmedzené.",
+	"cloudflared.refresh": "Obnoviť tunely Cloudflare",
 	"cloudflared.title": "Cloudflare Tunely",
 	"cloudflared.token": "Token Tunelu",
 	"column.access": "Prístup",

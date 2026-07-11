@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
-import { T } from "@/locale";
+import { intl, T } from "@/locale";
 import { showHelpModal } from "@/modals";
 import { CLOUDFLARED_TUNNELS, MANAGE } from "@/modules/Permissions";
 
@@ -136,7 +136,12 @@ export function CloudflaredTunnels() {
 					<T id="cloudflared.title" />
 				</CardTitle>
 				<div className="flex items-center space-x-2">
-					<Button variant="outline" size="icon" onClick={() => refetch()}>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "cloudflared.refresh" })}
+						onClick={() => refetch()}
+					>
 						<IconRefresh className="h-4 w-4" />
 					</Button>
 					<Button variant="outline" size="icon" onClick={() => showHelpModal("CloudflaredTunnels", "orange")}>
