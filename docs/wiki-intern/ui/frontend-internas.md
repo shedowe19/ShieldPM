@@ -146,6 +146,10 @@ das Forwarding-Schema `path` begrenzt; nach dem Aktivieren von PHP bleiben Versi
 `php_override_ini` aus dem gemeinsamen Formularzustand verfügbar. `ProxyHostPhpSettings.test.tsx` sichert diese
 Sichtbarkeits- und Zustandsübergänge ab.
 
+`ProxyHostForwardingFields.tsx` kapselt Schema, Zielhost, Zielport und das `path`-spezifische Index-Dateifeld als
+Formik-Kind. Die Validierung für Host und Port sowie die Sichtbarkeit von `indexFile` bleiben aus dem Dialog erhalten;
+`ProxyHostForwardingFields.test.tsx` sichert Wertebindung und die schemaabhängige Sichtbarkeit ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 

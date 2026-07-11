@@ -22,16 +22,15 @@ import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
-import { validateOptionalNumber, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, PROXY_HOST_TAB } from "src/types/enums";
+import ProxyHostForwardingFields from "./ProxyHostForwardingFields";
 import ProxyHostIconSettings from "./ProxyHostIconSettings";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import ProxyHostPhpSettings from "./ProxyHostPhpSettings";
@@ -182,156 +181,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											)}
 											<TabsContent value={PROXY_HOST_TAB.DETAILS} className="mt-0 space-y-4">
 												<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
-												<div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
-													<div className="md:col-span-3">
-														<Field name="forwardScheme">
-															{({ field, form }: FieldProps) => (
-																<div className="space-y-2">
-																	<Label htmlFor="forwardScheme">
-																		<T id="host.forward-scheme" />
-																	</Label>
-																	<Select
-																		onValueChange={(val: string) =>
-																			form.setFieldValue(field.name, val)
-																		}
-																		value={field.value}
-																	>
-																		<SelectTrigger
-																			id="forwardScheme"
-																			className={
-																				form.errors.forwardScheme &&
-																				form.touched.forwardScheme
-																					? "border-destructive"
-																					: ""
-																			}
-																		>
-																			<SelectValue placeholder="http" />
-																		</SelectTrigger>
-																		<SelectContent>
-																			<SelectItem value={FORWARD_SCHEME.HTTP}>
-																				http
-																			</SelectItem>
-																			<SelectItem value={FORWARD_SCHEME.HTTPS}>
-																				https
-																			</SelectItem>
-																			<SelectItem value={FORWARD_SCHEME.PATH}>
-																				path
-																			</SelectItem>
-																			<SelectItem value={FORWARD_SCHEME.GRPC}>
-																				grpc
-																			</SelectItem>
-																			<SelectItem value={FORWARD_SCHEME.GRPCS}>
-																				grpcs
-																			</SelectItem>
-																			<SelectItem value={FORWARD_SCHEME.TERMINAL}>
-																				terminal
-																			</SelectItem>
-																		</SelectContent>
-																	</Select>
-																	{form.errors.forwardScheme &&
-																		form.touched.forwardScheme && (
-																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardScheme as string}
-																			</p>
-																		)}
-																</div>
-															)}
-														</Field>
-													</div>
-													<div className="md:col-span-6">
-														<Field name="forwardHost" validate={validateString(1, 255)}>
-															{({ field, form }: FieldProps) => (
-																<div className="space-y-2">
-																	<Label htmlFor="forwardHost">
-																		<T id="proxy-host.forward-host" />
-																	</Label>
-																	<Input
-																		id="forwardHost"
-																		placeholder="example.com"
-																		autoComplete="off"
-																		className={
-																			form.errors.forwardHost &&
-																			form.touched.forwardHost
-																				? "border-destructive"
-																				: ""
-																		}
-																		{...field}
-																	/>
-																	{form.errors.forwardHost &&
-																		form.touched.forwardHost && (
-																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardHost as string}
-																			</p>
-																		)}
-																</div>
-															)}
-														</Field>
-													</div>
-													<div className="md:col-span-3">
-														<Field
-															name="forwardPort"
-															validate={validateOptionalNumber(1, 65535)}
-														>
-															{({ field, form }: FieldProps) => (
-																<div className="space-y-2">
-																	<Label htmlFor="forwardPort">
-																		<T id="host.forward-port" />
-																	</Label>
-																	<Input
-																		id="forwardPort"
-																		type="number"
-																		min={1}
-																		max={65535}
-																		placeholder="eg: 8081"
-																		className={
-																			form.errors.forwardPort &&
-																			form.touched.forwardPort
-																				? "border-destructive"
-																				: ""
-																		}
-																		{...field}
-																	/>
-																	{form.errors.forwardPort &&
-																		form.touched.forwardPort && (
-																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardPort as string}
-																			</p>
-																		)}
-																</div>
-															)}
-														</Field>
-													</div>
-												</div>
-
-												{/* Index File Field - visible when scheme is 'path' */}
-												<Field name="forwardScheme">
-													{({ field: schemeField }: FieldProps) =>
-														schemeField.value === FORWARD_SCHEME.PATH && (
-															<div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
-																<div className="md:col-span-12">
-																	<Field name="indexFile">
-																		{({ field }: FieldProps) => (
-																			<div className="space-y-2">
-																				<Label htmlFor="indexFile">
-																					<T id="proxy-host.index-file" />
-																				</Label>
-																				<Input
-																					id="indexFile"
-																					placeholder="index.php"
-																					autoComplete="off"
-																					{...field}
-																				/>
-																				<p className="text-xs text-muted-foreground">
-																					<T id="proxy-host.index-file.hint" />
-																				</p>
-																			</div>
-																		)}
-																	</Field>
-																</div>
-															</div>
-														)
-													}
-												</Field>
+												<ProxyHostForwardingFields />
 
 												<ProxyHostTerminalFields />
 
