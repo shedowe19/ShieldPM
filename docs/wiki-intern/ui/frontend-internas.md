@@ -19,6 +19,7 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 - `Nginx/ProxyHosts/lazy.ts` kapselt die Proxy-Host-, Access-List-, Lösch- und Hilfe-Aktionen. Der wiederverwendbare `AccessListFormatter` delegiert seine Aktion an die Routen-Tabelle, sodass auch dessen statische Abhängigkeit den allgemeinen `modals/lazy.ts`-Loader nicht mehr in die Proxy-Host-Route zieht.
 - `Nginx/RedirectionHosts/lazy.ts` kapselt die Redirect-Host-, Lösch- und Hilfe-Aktionen. `Nginx/RedirectionHosts/TableWrapper.tsx` referenziert dadurch den allgemeinen `modals/lazy.ts`-Chunk nicht mehr statisch; die Dialogimporte bleiben an die jeweiligen Nutzeraktionen gebunden.
 - `Nginx/DdnsProviders/lazy.ts` kapselt die DDNS-Provider-, Lösch- und Hilfe-Aktionen. `Nginx/DdnsProviders/TableWrapper.tsx` referenziert dadurch den allgemeinen `modals/lazy.ts`-Chunk nicht mehr statisch; die Dialogimporte bleiben an die jeweiligen Nutzeraktionen gebunden.
+- `Dashboard/lazy.ts` kapselt den Dashboard-Notiz-Dialog. `DashboardNotesWidget.tsx` referenziert dadurch den allgemeinen `modals/lazy.ts`-Loader nicht mehr statisch; der Notiz-Dialog wird weiterhin erst bei einer Nutzeraktion importiert.
 
 ## Custom Hooks (`frontend/src/hooks/`)
 

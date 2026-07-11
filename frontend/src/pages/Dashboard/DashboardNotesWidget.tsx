@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { useDashboardNotes } from "src/hooks";
 import { cn } from "src/lib/utils";
 import { T } from "src/locale";
-import { showDashboardNoteModal } from "src/modals/lazy";
 import { showObjectSuccess } from "src/notifications";
+import { showDashboardNoteModal } from "./lazy";
 
 const COLOR_MAP: Record<string, string> = {
 	yellow: "bg-yellow-200/50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900/50",
