@@ -94,7 +94,8 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 									type="button"
 									variant="ghost"
 									size="icon"
-									title="Advanced"
+									title={intl.formatMessage({ id: "action.advanced-settings" })}
+									aria-label={intl.formatMessage({ id: "action.advanced-settings" })}
 									onClick={() => toggleAdvVisible(idx)}
 									className={advVisible.includes(idx) ? "bg-muted" : ""}
 								>
