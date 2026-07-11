@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Любое совпадение",
 	"access-list.satisfy.none": "Нет",
 	"access-list.sso": "Единый вход (SSO)",
+	"access-list.sso.authentication-handled": "Аутентификацией управляет поставщик SSO.",
+	"access-list.sso.rules-handled": "Правилами доступа управляет поставщик SSO.",
 	"access-list.subtitle": "{users} {users, plural, one {пользователь} few {пользователя} many {пользователей} other {пользователя}}, {rules} {rules, plural, one {правило} few {правила} many {правил} other {правила}} - создан: {date}",
 	"access-lists": "Списки доступа",
 	"accessList": "Список доступа",

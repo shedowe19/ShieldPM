@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "いずれかを満たす",
 	"access-list.satisfy.none": "なし",
 	"access-list.sso": "シングルサインオン",
+	"access-list.sso.authentication-handled": "認証はSSOプロバイダーによって処理されます。",
+	"access-list.sso.rules-handled": "アクセスルールはSSOプロバイダーによって処理されます。",
 	"access-list.subtitle": "{users} ユーザー, {rules} ルール - 作成日時: {date}",
 	"access-lists": "アクセスリスト",
 	"accessList": "アクセスリスト",

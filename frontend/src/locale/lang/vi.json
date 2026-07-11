@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Thỏa mãn điều kiện bất kỳ",
 	"access-list.satisfy.none": "Không có",
 	"access-list.sso": "Đăng nhập một lần (SSO)",
+	"access-list.sso.authentication-handled": "Xác thực do nhà cung cấp SSO xử lý.",
+	"access-list.sso.rules-handled": "Quy tắc truy cập do nhà cung cấp SSO xử lý.",
 	"access-list.subtitle": "{users} người dùng, {rules} quy tắc - Tạo lúc: {date}",
 	"access-lists": "Danh sách truy cập",
 	"accessList": "Danh sách truy cập",

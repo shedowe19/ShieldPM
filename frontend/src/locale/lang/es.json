@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Satisfacer Cualquiera",
 	"access-list.satisfy.none": "Ninguno",
 	"access-list.sso": "Inicio de sesión único",
+	"access-list.sso.authentication-handled": "La autenticación la gestiona el proveedor de SSO.",
+	"access-list.sso.rules-handled": "Las reglas de acceso las gestiona el proveedor de SSO.",
 	"access-list.subtitle": "{users} {users, plural, one {Usuario} other {Usuarios}}, {rules} {rules, plural, one {Regla} other {Reglas}} - Creado: {date}",
 	"access-lists": "Listas de Acceso",
 	"accessList": "Lista de acceso",

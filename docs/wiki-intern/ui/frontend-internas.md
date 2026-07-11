@@ -175,6 +175,11 @@ Formularzustands gebunden; `AccessListMtlsTab.test.tsx` sichert Sichtbarkeit und
 providerabhängige Felder verwenden unverändert denselben Formularzustand; `AccessListSsoTab.test.tsx` sichert die
 Wertebindung von Provider und Authentik-Host ab.
 
+`AccessListAuthorizationTabs.tsx` kapselt die Basic-Auth- und Zugriffsregel-Tabs des `AccessListModal`. Der Dialog
+übergibt nur den unveränderten SSO-Status sowie die initialen Einträge; bei aktivem SSO bleiben beide Fieldsets gesperrt.
+Die Hinweise verwenden `access-list.sso.authentication-handled` und `access-list.sso.rules-handled` mit nativen Texten
+in allen 13 Locale-Dateien. `AccessListAuthorizationTabs.test.tsx` sichert die Sperre beider Tabs ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 

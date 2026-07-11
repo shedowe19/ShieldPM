@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Satisfy Any",
 	"access-list.satisfy.none": "Keine",
 	"access-list.sso": "Single Sign-On",
+	"access-list.sso.authentication-handled": "Die Authentifizierung wird vom SSO-Anbieter übernommen.",
+	"access-list.sso.rules-handled": "Die Zugriffsregeln werden vom SSO-Anbieter übernommen.",
 	"access-list.subtitle": "{users} {users, plural, one {User} other {Users}}, {rules} {rules, plural, one {Regel} other {Regeln}} - Erstellt: {date}",
 	"access-lists": "Zugrifflisten",
 	"accessList": "Zugriffsliste",

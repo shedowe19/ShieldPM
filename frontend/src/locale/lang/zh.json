@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "满足任意条件",
 	"access-list.satisfy.none": "无",
 	"access-list.sso": "单点登录 (SSO)",
+	"access-list.sso.authentication-handled": "身份验证由 SSO 提供商处理。",
+	"access-list.sso.rules-handled": "访问规则由 SSO 提供商处理。",
 	"access-list.subtitle": "{users} 个用户, {rules} 条规则 - 创建时间: {date}",
 	"access-lists": "通信规则",
 	"accessList": "访问列表",

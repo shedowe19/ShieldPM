@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Spełnij dowolny warunek",
 	"access-list.satisfy.none": "Brak",
 	"access-list.sso": "Pojedyncze logowanie (SSO)",
+	"access-list.sso.authentication-handled": "Uwierzytelnianiem zarządza dostawca SSO.",
+	"access-list.sso.rules-handled": "Regułami dostępu zarządza dostawca SSO.",
 	"access-list.subtitle": "{users} {users, plural, one {Użytkownik} few {Użytkowników} other {Użytkowników}}, {rules} {rules, plural, one {Reguła} few {Reguły} other {Reguł}} - Utworzono: {date}",
 	"access-lists": "Listy dostępu",
 	"accessList": "Lista dostępu",

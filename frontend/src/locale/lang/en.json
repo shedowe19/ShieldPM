@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Satisfy Any",
 	"access-list.satisfy.none": "None",
 	"access-list.sso": "Single Sign-On",
+	"access-list.sso.authentication-handled": "Authentication is handled by the SSO provider.",
+	"access-list.sso.rules-handled": "Access rules are handled by the SSO provider.",
 	"access-list.subtitle": "{users} {users, plural, one {User} other {Users}}, {rules} {rules, plural, one {Rule} other {Rules}} - Created: {date}",
 	"access-lists": "Access Lists",
 	"accessList": "Access List",

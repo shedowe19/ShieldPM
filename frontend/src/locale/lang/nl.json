@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Voldoe aan elke",
 	"access-list.satisfy.none": "Geen",
 	"access-list.sso": "Single Sign-On",
+	"access-list.sso.authentication-handled": "De authenticatie wordt afgehandeld door de SSO-provider.",
+	"access-list.sso.rules-handled": "De toegangsregels worden afgehandeld door de SSO-provider.",
 	"access-list.subtitle": "{users} {users, plural, one {Gebruiker} other {Gebruikers}}, {rules} {rules, plural, one {Regel} other {Regels}} - Aangemaakt: {date}",
 	"access-lists": "Toegangslijsten",
 	"accessList": "Toegangslijst",

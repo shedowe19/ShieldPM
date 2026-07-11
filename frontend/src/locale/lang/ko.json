@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "조건 중 하나라도 충족",
 	"access-list.satisfy.none": "없음",
 	"access-list.sso": "SSO (Single Sign-On)",
+	"access-list.sso.authentication-handled": "인증은 SSO 제공업체에서 처리합니다.",
+	"access-list.sso.rules-handled": "액세스 규칙은 SSO 제공업체에서 처리합니다.",
 	"access-list.subtitle": "{users}명 {users, plural, one {사용자} other {사용자}}, {rules}개 {rules, plural, one {규칙} other {규칙}} - 생성일: {date}",
 	"access-lists": "접근 정책",
 	"accessList": "액세스 목록",

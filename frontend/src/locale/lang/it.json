@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Soddisfa Qualsiasi",
 	"access-list.satisfy.none": "Nessuno",
 	"access-list.sso": "Single Sign-On",
+	"access-list.sso.authentication-handled": "L'autenticazione è gestita dal provider SSO.",
+	"access-list.sso.rules-handled": "Le regole di accesso sono gestite dal provider SSO.",
 	"access-list.subtitle": "{users} {users, plural, one {Utente} other {Utenti}}, {rules} {rules, plural, one {Regola} other {Regole}} - Creato: {date}",
 	"access-lists": "Liste di Accesso",
 	"accessList": "Lista di accesso",

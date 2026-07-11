@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Splniť ktorékoľvek",
 	"access-list.satisfy.none": "Žiadne",
 	"access-list.sso": "Jednotné prihlásenie (SSO)",
+	"access-list.sso.authentication-handled": "Overovanie spravuje poskytovateľ SSO.",
+	"access-list.sso.rules-handled": "Pravidlá prístupu spravuje poskytovateľ SSO.",
 	"access-list.subtitle": "{users} {users, plural, one {používateľ} few {používatelia} other {používateľov}}, {rules} {rules, plural, one {pravidlo} few {pravidlá} other {pravidiel}} - Vytvorené: {date}",
 	"access-lists": "Zoznamy prístupov",
 	"accessList": "Prístupový zoznam",

@@ -1,18 +1,19 @@
 import { IconShieldLock } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Form, Formik, type FormikHelpers, type FormikProps } from "formik";
-import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { AccessList, AccessListClient, AccessListItem } from "src/api/backend";
-import { AccessClientFields, BasicAuthFields, Loading } from "src/components";
+import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useAccessList, useSetAccessList } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 import { ACCESS_LIST_AUTH_TYPE, ACCESS_LIST_TAB, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
+import AccessListAuthorizationTabs from "./AccessListAuthorizationTabs";
 import AccessListDetailsTab from "./AccessListDetailsTab";
 import AccessListMtlsTab from "./AccessListMtlsTab";
 import AccessListSsoTab from "./AccessListSsoTab";
@@ -295,39 +296,11 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 										<AccessListDetailsTab />
 
-										<TabsContent value={ACCESS_LIST_TAB.AUTH} className="pt-4">
-											{isSsoEnabled && (
-												<Alert variant="default" className="mb-4 bg-muted border-primary/20">
-													<AlertTriangle className="h-4 w-4 text-primary" />
-													<AlertDescription>
-														Authentication handled by SSO Provider.
-													</AlertDescription>
-												</Alert>
-											)}
-											<fieldset
-												disabled={isSsoEnabled}
-												className={isSsoEnabled ? "opacity-50" : ""}
-											>
-												<BasicAuthFields initialValues={data?.items || []} />
-											</fieldset>
-										</TabsContent>
-
-										<TabsContent value={ACCESS_LIST_TAB.RULES} className="pt-4">
-											{isSsoEnabled && (
-												<Alert variant="default" className="mb-4 bg-muted border-primary/20">
-													<AlertTriangle className="h-4 w-4 text-primary" />
-													<AlertDescription>
-														Access Rules handled by SSO Provider.
-													</AlertDescription>
-												</Alert>
-											)}
-											<fieldset
-												disabled={isSsoEnabled}
-												className={isSsoEnabled ? "opacity-50" : ""}
-											>
-												<AccessClientFields initialValues={data?.clients || []} />
-											</fieldset>
-										</TabsContent>
+										<AccessListAuthorizationTabs
+											clients={data?.clients || []}
+											isSsoEnabled={isSsoEnabled}
+											items={data?.items || []}
+										/>
 										<AccessListSsoTab />
 
 										<AccessListMtlsTab />

@@ -68,6 +68,8 @@
 	"access-list.satisfy-any": "Удовлетворяване на което и да е",
 	"access-list.satisfy.none": "Няма",
 	"access-list.sso": "Единичен вход",
+	"access-list.sso.authentication-handled": "Удостоверяването се обработва от доставчика на SSO.",
+	"access-list.sso.rules-handled": "Правилата за достъп се обработват от доставчика на SSO.",
 	"access-list.subtitle": "{users} {users, plural, one {потребител} other {потребители}}, {rules} {rules, plural, one {правило} other {правила}} - Създадено: {date}",
 	"access-lists": "Списъци за достъп",
 	"accessList": "Списък за достъп",
