@@ -87,6 +87,18 @@ describe("Login", () => {
 		expect(await screen.findByText("login.two-factor.description")).toBeInTheDocument();
 	});
 
+	it("uses a localized title for rejected password logins", async () => {
+		mocks.login.mockRejectedValue(new Error("Invalid email or password"));
+
+		render(<Login />);
+
+		fireEvent.change(screen.getByLabelText("email-address"), { target: { value: "admin@example.test" } });
+		fireEvent.change(screen.getByLabelText("password"), { target: { value: "incorrect password" } });
+		fireEvent.click(screen.getByRole("button", { name: "sign-in" }));
+
+		expect(await screen.findByText("error.title")).toBeInTheDocument();
+	});
+
 	it("adopts a verified two-factor token through AuthContext without reloading the document", async () => {
 		mocks.login.mockRejectedValue({
 			csrfToken: "csrf-token",

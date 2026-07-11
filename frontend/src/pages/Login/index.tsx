@@ -106,7 +106,9 @@ export default function Login() {
 								{formErr !== "" && (
 									<Alert variant="destructive" className="mb-6">
 										<AlertCircle className="h-4 w-4" />
-										<AlertTitle>Error</AlertTitle>
+										<AlertTitle>
+											<T id="error.title" />
+										</AlertTitle>
 										<AlertDescription>{formErr}</AlertDescription>
 									</Alert>
 								)}
