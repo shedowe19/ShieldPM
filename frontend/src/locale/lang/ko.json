@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "국가별 요청",
 	"analytics.requests-over-time": "시간대별 요청",
 	"analytics.responses": "{count} 응답",
+	"analytics.select-host": "호스트 선택",
 	"analytics.since-service-start": "서비스 시작 이후 +100%",
 	"analytics.status-codes": "상태 코드",
 	"analytics.success-rate": "성공률",

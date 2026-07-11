@@ -23,6 +23,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Sammelt Traffic-Daten pro Host (Requests, Status-Codes)
 - Speichert aggregierte Zähler in `analytic_count`-Tabelle
 - GoAccess für erweiterte Analyse auf Port `:91`
+- Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
 
 ## Abhängigkeiten
 

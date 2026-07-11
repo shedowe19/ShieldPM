@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "Запросы по странам",
 	"analytics.requests-over-time": "Запросы по времени",
 	"analytics.responses": "{count} Ответов",
+	"analytics.select-host": "Выберите хост",
 	"analytics.since-service-start": "+100% с начала работы сервиса",
 	"analytics.status-codes": "Коды состояния",
 	"analytics.success-rate": "Успешность",

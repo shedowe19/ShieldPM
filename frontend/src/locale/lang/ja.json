@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "国別リクエスト",
 	"analytics.requests-over-time": "時間経過に伴うリクエスト",
 	"analytics.responses": "{count} 件の応答",
+	"analytics.select-host": "ホストを選択",
 	"analytics.since-service-start": "サービス開始から +100%",
 	"analytics.status-codes": "ステータスコード",
 	"analytics.success-rate": "成功率",

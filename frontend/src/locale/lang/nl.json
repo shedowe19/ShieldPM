@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "Verzoeken per land",
 	"analytics.requests-over-time": "Verzoeken in de tijd",
 	"analytics.responses": "{count} Antwoorden",
+	"analytics.select-host": "Host selecteren",
 	"analytics.since-service-start": "+100% sinds start van de dienst",
 	"analytics.status-codes": "Statuscodes",
 	"analytics.success-rate": "Slagingspercentage",

@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "按国家/地区请求",
 	"analytics.requests-over-time": "随时间变化的请求",
 	"analytics.responses": "{count} 个响应",
+	"analytics.select-host": "选择主机",
 	"analytics.since-service-start": "自服务启动以来 +100%",
 	"analytics.status-codes": "状态码",
 	"analytics.success-rate": "成功率",

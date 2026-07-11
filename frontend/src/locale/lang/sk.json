@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "Žiadosti podľa krajiny",
 	"analytics.requests-over-time": "Žiadosti v čase",
 	"analytics.responses": "{count} odpovedí",
+	"analytics.select-host": "Vyberte hostiteľa",
 	"analytics.since-service-start": "+100% od spustenia služby",
 	"analytics.status-codes": "Stavové kódy",
 	"analytics.success-rate": "Miera úspešnosti",

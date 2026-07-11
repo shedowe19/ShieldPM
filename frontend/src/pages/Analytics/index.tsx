@@ -18,7 +18,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useHealth, useProxyHosts } from "src/hooks";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 
 countries.registerLocale(enLocale);
 
@@ -152,7 +152,7 @@ const Analytics = () => {
 					<Select value={selectedHostId} onValueChange={setSelectedHostId}>
 						<SelectTrigger className="w-[200px]">
 							<IconServer className="mr-2 h-4 w-4 text-muted-foreground" />
-							<SelectValue placeholder="Select Host" />
+							<SelectValue placeholder={intl.formatMessage({ id: "analytics.select-host" })} />
 						</SelectTrigger>
 						<SelectContent>
 							{hosts?.map((host) => (

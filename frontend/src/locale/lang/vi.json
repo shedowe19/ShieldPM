@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "Yêu cầu theo quốc gia",
 	"analytics.requests-over-time": "Yêu cầu theo thời gian",
 	"analytics.responses": "{count} phản hồi",
+	"analytics.select-host": "Chọn máy chủ",
 	"analytics.since-service-start": "+100% kể từ khi bắt đầu dịch vụ",
 	"analytics.status-codes": "Mã trạng thái",
 	"analytics.success-rate": "Tỷ lệ thành công",

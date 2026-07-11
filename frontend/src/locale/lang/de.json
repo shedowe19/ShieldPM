@@ -124,6 +124,7 @@
 	"analytics.requests-by-country": "Anfragen nach Land",
 	"analytics.requests-over-time": "Anfragen über Zeit",
 	"analytics.responses": "{count} Antworten",
+	"analytics.select-host": "Host auswählen",
 	"analytics.since-service-start": "+100% seit Serverstart",
 	"analytics.status-codes": "Status Codes",
 	"analytics.success-rate": "Erfolgsrate",
