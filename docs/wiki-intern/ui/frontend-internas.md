@@ -37,16 +37,17 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 
 ### Utility Hooks
 
-| Hook              | Datei                | Zweck                         |
-| ----------------- | -------------------- | ----------------------------- |
-| `useSetting`      | `useSetting.ts`      | Einstellungen laden/speichern |
-| `useGitOps`       | `useGitOps.ts`       | GitOps-Operationen            |
-| `useGitSync`      | `useGitSync.ts`      | Git-Sync für einzelne Hosts   |
-| `useHealth`       | `useHealth.ts`       | Health-Check                  |
-| `useHostReport`   | `useHostReport.ts`   | Host-Reports                  |
-| `useCheckVersion` | `useCheckVersion.ts` | Versionsprüfung               |
-| `useTheme`        | `useTheme.ts`        | Theme-Zugriff                 |
-| `use-toast`       | `use-toast.ts`       | Toast-Benachrichtigungen      |
+| Hook              | Datei                | Zweck                                                   |
+| ----------------- | -------------------- | ------------------------------------------------------- |
+| `useSetting`      | `useSetting.ts`      | Einstellungen laden/speichern                           |
+| `useGitOps`       | `useGitOps.ts`       | GitOps-Operationen                                      |
+| `useGitSync`      | `useGitSync.ts`      | Git-Sync für einzelne Hosts                             |
+| `useHealth`       | `useHealth.ts`       | Health-Check                                            |
+| `useHostReport`   | `useHostReport.ts`   | Host-Reports                                            |
+| `useCheckVersion` | `useCheckVersion.ts` | Versionsprüfung                                         |
+| `useTheme`        | `useTheme.ts`        | Theme-Zugriff                                           |
+| `useObjectUrl`    | `useObjectUrl.ts`    | Verwaltet und bereinigt Blob-URLs für lokale Vorschauen |
+| `use-toast`       | `use-toast.ts`       | Toast-Benachrichtigungen                                |
 
 ## React-Kontexte (`frontend/src/context/`)
 

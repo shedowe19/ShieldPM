@@ -24,10 +24,11 @@ import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "src/components/ui/toggle-group";
 import { useHealth, useSetUser, useUser } from "src/hooks";
-import SecuritySettings from "src/pages/Profile/Security";
+import { useObjectUrl } from "src/hooks/useObjectUrl";
 import { intl, T } from "src/locale";
 import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
+import SecuritySettings from "src/pages/Profile/Security";
 import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, type AvatarType, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
 
 const showUserModal = (id: number | "me" | "new") => {
@@ -54,6 +55,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const selectedFileUrl = useObjectUrl(selectedFile);
 
 	const onSubmit = async (values: UserValues, { setSubmitting }: FormikHelpers<UserValues>) => {
 		if (isSubmitting) return;
@@ -353,7 +355,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													name={values.name || "User"}
 													url={
 														values.avatar_type === "upload" && selectedFile
-															? URL.createObjectURL(selectedFile)
+															? selectedFileUrl
 															: values.avatar_type === "url"
 																? values.avatar_value
 																: values.avatar_type === "upload" && !selectedFile
