@@ -1,11 +1,25 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import dayjs from "dayjs";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
 
-// Mock dependencies
-const mockCertificates = [
+interface MockCertificate {
+	domainNames: string[];
+	expiresOn: string;
+	id: number;
+	niceName: string;
+}
+
+const mocks = vi.hoisted(() => ({
+	certificates: [] as MockCertificate[],
+}));
+
+vi.mock("src/hooks", () => ({
+	useCertificates: () => ({ data: mocks.certificates }),
+}));
+
+const mockCertificates: MockCertificate[] = [
 	{
 		id: 1,
 		niceName: "Expiring Soon",
@@ -42,18 +56,15 @@ vi.mock("src/components", () => ({
 }));
 
 describe("CertificateExpiryWidget", () => {
+	beforeEach(() => {
+		mocks.certificates = mockCertificates;
+	});
+
 	afterEach(() => {
 		cleanup();
-		vi.resetModules();
 	});
 
 	it("renders expiring and expired certificates", () => {
-		vi.mock("src/hooks", () => ({
-			useCertificates: () => ({
-				data: mockCertificates,
-			}),
-		}));
-
 		render(
 			<MemoryRouter>
 				<CertificateExpiryWidget />
@@ -80,32 +91,22 @@ describe("CertificateExpiryWidget", () => {
 		expect(links[0]).toHaveAttribute("href", "/certificates");
 	});
 
-	it("renders empty state when no certificates are expiring", async () => {
-		// Re-mock hook for this test
-		vi.doMock("src/hooks", () => ({
-			useCertificates: () => ({
-				data: [
-					{
-						id: 3,
-						niceName: "Valid Long Term",
-						domainNames: ["valid.com"],
-						expiresOn: dayjs().add(60, "day").toISOString(),
-					},
-				],
-			}),
-		}));
-
-		// We need to re-import the component to pick up the new mock because of how ESM modules work in Vite/Vitest
-		const { CertificateExpiryWidget: Widget } = await import("./CertificateExpiryWidget");
+	it("renders empty state when no certificates are expiring", () => {
+		mocks.certificates = [
+			{
+				id: 3,
+				niceName: "Valid Long Term",
+				domainNames: ["valid.com"],
+				expiresOn: dayjs().add(60, "day").toISOString(),
+			},
+		];
 
 		render(
 			<MemoryRouter>
-				<Widget />
+				<CertificateExpiryWidget />
 			</MemoryRouter>,
 		);
 
-		// screen should be clean now, but if previous test failed to cleanup, getByText might find multiple.
-		// cleanup() in afterEach should handle this.
 		expect(screen.getByText("Certificates Expiring Soon")).toBeInTheDocument();
 		expect(screen.getByText("No certificates expiring soon")).toBeInTheDocument();
 		expect(screen.queryByText("Valid Long Term")).not.toBeInTheDocument();

@@ -31,6 +31,14 @@ yarn test
 - `frontend/src/components/SiteFooter.test.tsx` — SiteFooter-Komponente
 - `frontend/src/locale/Utils.test.tsx` — Locale-Utilities
 
+### Mocking-Hygiene
+
+- Modul-Mocks in Frontend-Tests stehen auf Top-Level; verschachtelte `vi.mock()`-Aufrufe werden von Vitest zwar
+  hochgezogen, erzeugen aber Warnungen und werden künftig Fehler.
+- Tests mit unterschiedlichen Mock-Daten verwenden ein mit `vi.hoisted()` angelegtes veränderbares Mock-Objekt und
+  setzen dessen Ausgangszustand in `beforeEach`. Das vermeidet `vi.doMock()`, `vi.resetModules()` und dynamische
+  Re-Imports innerhalb einzelner Tests.
+
 ## Backend-Tests
 
 - Pfad: `backend/test/`
