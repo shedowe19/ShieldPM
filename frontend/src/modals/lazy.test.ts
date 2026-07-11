@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
 	changePasswordModalModuleLoaded: vi.fn(),
 	dashboardNoteModalModuleLoaded: vi.fn(),
 	deleteConfirmModalModuleLoaded: vi.fn(),
+	helpModalModuleLoaded: vi.fn(),
 	modalModuleError: undefined as Error | undefined,
 	modalModuleLoaded: vi.fn(),
 	permissionsModalModuleLoaded: vi.fn(),
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 	showDashboardNoteModal: vi.fn(),
 	showDeleteConfirmModal: vi.fn(),
 	showError: vi.fn(),
+	showHelpModal: vi.fn(),
 	showPermissionsModal: vi.fn(),
 	showProxyHostModal: vi.fn(),
 	showSetPasswordModal: vi.fn(),
@@ -57,6 +59,11 @@ vi.mock("./DashboardNoteModal", () => {
 vi.mock("./DeleteConfirmModal", () => {
 	mocks.deleteConfirmModalModuleLoaded();
 	return { showDeleteConfirmModal: mocks.showDeleteConfirmModal };
+});
+
+vi.mock("./HelpModal", () => {
+	mocks.helpModalModuleLoaded();
+	return { showHelpModal: mocks.showHelpModal };
 });
 
 vi.mock("./UserModal", () => {
@@ -150,6 +157,17 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.deleteConfirmModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showDeleteConfirmModal).toHaveBeenCalledWith(props);
+	});
+
+	it("loads the help modal only when help is requested", async () => {
+		const { showHelpModal } = await import("./lazy");
+
+		expect(mocks.helpModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showHelpModal("ProxyHosts", "lime");
+
+		expect(mocks.helpModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showHelpModal).toHaveBeenCalledWith("ProxyHosts", "lime");
 	});
 
 	it("loads the password modal only when a password change is requested", async () => {
