@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	createClientCertificate: vi.fn(),
 	fetchIpRanges: vi.fn(),
 	getNetworkStats: vi.fn(),
 	reloadNginx: vi.fn(),
@@ -30,7 +31,7 @@ vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/ddns-provider.js", () => ({ default: {} }));
 vi.mock("../../internal/dead-host.js", () => ({ default: {} }));
 vi.mock("../../internal/maintenance.js", () => ({ default: {} }));
-vi.mock("../../internal/pki.js", () => ({ default: {} }));
+vi.mock("../../internal/pki.js", () => ({ default: { createClientCert: mocks.createClientCertificate } }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: {} }));
 vi.mock("../../internal/redirection-host.js", () => ({ default: {} }));
 vi.mock("../../internal/report.js", () => ({ default: {} }));
@@ -45,6 +46,7 @@ import { getToolDefinitions } from "../../internal/ai/tools.js";
 
 const systemToolNames = ["test_nginx_config", "force_nginx_reload", "renew_ip_ranges"];
 const systemStatusToolName = "get_system_status";
+const clientCertificateToolName = "create_client_certificate";
 
 const namesOf = (tools) => tools.map((tool) => tool.function.name);
 
@@ -63,6 +65,7 @@ describe("AI system tool permissions", () => {
 		mocks.getNetworkStats.mockResolvedValue([]);
 		mocks.reloadNginx.mockResolvedValue();
 		mocks.testNginx.mockResolvedValue();
+		mocks.createClientCertificate.mockResolvedValue("/tmp/client.p12");
 	});
 
 	it("does not advertise global Nginx or IP-range tools to users without settings:update", async () => {
@@ -115,6 +118,38 @@ describe("AI system tool permissions", () => {
 		]);
 		expect(access.can).toHaveBeenCalledWith("analytics:list");
 		expect(mocks.getNetworkStats).toHaveBeenCalledOnce();
+	});
+
+	it("does not advertise or execute client certificate generation without certificates:create", async () => {
+		const access = { can: vi.fn().mockRejectedValue(new Error("Not allowed")) };
+
+		const toolNames = namesOf(await getToolDefinitions(access));
+		const results = await executeTools(access, [
+			{ name: clientCertificateToolName, args: { common_name: "agent", password: "x" } },
+		]);
+
+		expect(toolNames).not.toContain(clientCertificateToolName);
+		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+		expect(mocks.createClientCertificate).not.toHaveBeenCalled();
+	});
+
+	it("advertises and executes client certificate generation with certificates:create", async () => {
+		const access = { can: vi.fn().mockResolvedValue(true) };
+
+		const toolNames = namesOf(await getToolDefinitions(access));
+		const results = await executeTools(access, [
+			{ name: clientCertificateToolName, args: { common_name: "agent", password: "x", years: 2 } },
+		]);
+
+		expect(toolNames).toContain(clientCertificateToolName);
+		expect(results.map((result) => result.result)).toEqual([
+			"Client Certificate Created at: /tmp/client.p12. You can retrieve it from the server filesystem.",
+		]);
+		expect(access.can).toHaveBeenCalledWith("certificates:create");
+		expect(mocks.createClientCertificate).toHaveBeenCalledWith(
+			{ common_name: "agent", password: "x", years: 2 },
+			expect.stringMatching(/^\/tmp\/client-cert-\d+$/),
+		);
 	});
 
 	it("does not execute global Nginx or IP-range tools without settings:update", async () => {

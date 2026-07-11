@@ -1013,6 +1013,7 @@ const getAllToolDefinitions = () => [
 
 const restrictedToolPermissions = new Map([
 	["get_system_status", "analytics:list"],
+	["create_client_certificate", "certificates:create"],
 	["test_nginx_config", "settings:update"],
 	["force_nginx_reload", "settings:update"],
 	["renew_ip_ranges", "settings:update"],
