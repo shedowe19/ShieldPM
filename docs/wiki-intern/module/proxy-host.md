@@ -15,6 +15,7 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 - `backend/templates/proxy_host.conf` (16 KB) — Nginx-Template
 - `backend/templates/_proxy_logic.conf` (17 KB) — Gemeinsame Proxy-Logik
 - `backend/routes/nginx/proxy_hosts.js` (6 KB) — API-Routen
+- `frontend/src/modals/ProxyHostPhpSettings.tsx` — Formularbereich für PHP-Hosting bei `path`-Forwarding
 
 ## Verhalten
 

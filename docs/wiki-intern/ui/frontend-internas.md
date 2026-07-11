@@ -141,6 +141,11 @@ das Passwort- oder Private-Key-Feld. `ProxyHostTerminalFields.test.tsx` sichert 
 `custom` bleibt das URL-Feld sichtbar; die Vorschau erhält weiterhin Host, Port, Symboltyp und URL aus dem gemeinsamen
 Formularzustand. `ProxyHostIconSettings.test.tsx` sichert beide Zustände ab.
 
+`ProxyHostPhpSettings.tsx` kapselt die PHP-Hosting-Felder des `ProxyHostModal` als Formik-Kind. Der Bereich bleibt auf
+das Forwarding-Schema `path` begrenzt; nach dem Aktivieren von PHP bleiben Versionswahl und benutzerdefinierte
+`php_override_ini` aus dem gemeinsamen Formularzustand verfügbar. `ProxyHostPhpSettings.test.tsx` sichert diese
+Sichtbarkeits- und Zustandsübergänge ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 

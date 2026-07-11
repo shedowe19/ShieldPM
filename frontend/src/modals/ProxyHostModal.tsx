@@ -31,9 +31,10 @@ import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { validateOptionalNumber, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, PHP_VERSION, PROXY_HOST_TAB } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, PROXY_HOST_TAB } from "src/types/enums";
 import ProxyHostIconSettings from "./ProxyHostIconSettings";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
+import ProxyHostPhpSettings from "./ProxyHostPhpSettings";
 import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
 import ProxyHostTerminalFields from "./ProxyHostTerminalFields";
 
@@ -335,139 +336,8 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<ProxyHostTerminalFields />
 
 												<ProxyHostIconSettings />
-												{/* PHP Settings - Only show when scheme is 'path' */}
-												<Field name="forwardScheme">
-													{({ field: schemeField }: FieldProps) =>
-														schemeField.value === FORWARD_SCHEME.PATH && (
-															<Card className="my-3 border-dashed border-purple-500/50">
-																<CardContent className="p-4">
-																	<h4 className="pb-2 text-lg font-semibold text-purple-400">
-																		<T id="proxy-host.php-settings" />
-																	</h4>
-																	<p className="text-sm text-muted-foreground mb-4">
-																		<T id="proxy-host.php-settings.hint" />
-																	</p>
-																	<div className="space-y-4">
-																		<div className="flex items-center justify-between">
-																			<Label
-																				htmlFor="phpEnabled"
-																				className="flex-1 cursor-pointer"
-																			>
-																				<T id="proxy-host.php-enabled" />
-																			</Label>
-																			<Field name="phpEnabled" type="checkbox">
-																				{({ field, form }: FieldProps) => (
-																					<Switch
-																						id="phpEnabled"
-																						checked={field.checked}
-																						onCheckedChange={(
-																							checked: boolean,
-																						) =>
-																							form.setFieldValue(
-																								"phpEnabled",
-																								checked,
-																							)
-																						}
-																					/>
-																				)}
-																			</Field>
-																		</div>
+												<ProxyHostPhpSettings />
 
-																		<Field name="phpEnabled" type="checkbox">
-																			{({ field: phpField }: FieldProps) =>
-																				phpField.checked && (
-																					<>
-																						<Field name="phpVersion">
-																							{({
-																								field,
-																								form,
-																							}: FieldProps) => (
-																								<div className="space-y-2">
-																									<Label htmlFor="phpVersion">
-																										<T id="proxy-host.php-version" />
-																									</Label>
-																									<Select
-																										onValueChange={(
-																											val: string,
-																										) =>
-																											form.setFieldValue(
-																												field.name,
-																												val,
-																											)
-																										}
-																										value={
-																											field.value
-																										}
-																									>
-																										<SelectTrigger id="phpVersion">
-																											<SelectValue placeholder="PHP 8.3" />
-																										</SelectTrigger>
-																										<SelectContent>
-																											<SelectItem
-																												value={
-																													PHP_VERSION.PHP82
-																												}
-																											>
-																												PHP 8.2
-																											</SelectItem>
-																											<SelectItem
-																												value={
-																													PHP_VERSION.PHP83
-																												}
-																											>
-																												PHP 8.3
-																											</SelectItem>
-																											<SelectItem
-																												value={
-																													PHP_VERSION.PHP84
-																												}
-																											>
-																												PHP 8.4
-																											</SelectItem>
-																										</SelectContent>
-																									</Select>
-																								</div>
-																							)}
-																						</Field>
-
-																						<Field name="php_override_ini">
-																							{({
-																								field,
-																							}: FieldProps) => (
-																								<div className="space-y-2 pt-2">
-																									<Label htmlFor="php_override_ini">
-																										<T id="proxy-host.php.custom-ini" />
-																									</Label>
-																									<Textarea
-																										id="php_override_ini"
-																										placeholder={intl.formatMessage(
-																											{
-																												id: "proxy-host.php.custom-ini.placeholder",
-																											},
-																										)}
-																										className="font-mono text-xs min-h-[100px]"
-																										{...field}
-																										value={
-																											field.value ||
-																											""
-																										}
-																									/>
-																									<p className="text-xs text-muted-foreground">
-																										<T id="proxy-host.php.custom-ini.hint" />
-																									</p>
-																								</div>
-																							)}
-																						</Field>
-																					</>
-																				)
-																			}
-																		</Field>
-																	</div>
-																</CardContent>
-															</Card>
-														)
-													}
-												</Field>
 												<div className="row">
 													<div className="col-md-12">
 														<Field name="bandwidthLimit">
