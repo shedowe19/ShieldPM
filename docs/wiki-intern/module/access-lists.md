@@ -17,6 +17,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - `backend/models/access_list_client.js` (1 KB) — IP-Client-Modell
 - `backend/routes/nginx/access_lists.js` (3 KB) — API-Routen
 - `frontend/src/modals/AccessListModal.tsx` — Dialog für Erstellung und Bearbeitung
+- `frontend/src/modals/AccessListFormTabs.tsx` — gemeinsame Tab-Navigation mit Formik-gebundenem SSO-Status
 - `frontend/src/modals/AccessListDetailsTab.tsx` — Formik-gebundener Details- und Optionen-Tab
 - `frontend/src/modals/AccessListSsoTab.tsx` — Formik-gebundene Authentik-, OAuth2-Proxy- und OIDC-Felder
 
@@ -30,6 +31,8 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
   Formik-Formularzustand des Dialogs. `AccessListDetailsTab.test.tsx` sichert diese Wertebindung.
 - Der SSO-Tab bindet Provider und dessen Authentik-, OAuth2-Proxy- oder OIDC-Felder direkt an denselben
   Formik-Formularzustand. `AccessListSsoTab.test.tsx` sichert Provider- und Authentik-Host-Wertebindung.
+- Die gemeinsame Tab-Navigation leitet die unveränderten Basic-Auth- und Client-Regeln an die jeweiligen Untertabs
+  weiter und sperrt sie bei aktivem SSO weiterhin über den aus demselben Formik-Status abgeleiteten Wert.
 
 ## Abhängigkeiten
 

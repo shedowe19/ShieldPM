@@ -1,6 +1,6 @@
 import { IconShieldLock } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Form, Formik, type FormikHelpers, type FormikProps } from "formik";
+import { Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { AccessList, AccessListClient, AccessListItem } from "src/api/backend";
@@ -8,16 +8,12 @@ import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useAccessList, useSetAccessList } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
-import { ACCESS_LIST_AUTH_TYPE, ACCESS_LIST_TAB, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
-import AccessListAuthorizationTabs from "./AccessListAuthorizationTabs";
-import AccessListDetailsTab from "./AccessListDetailsTab";
+import { ACCESS_LIST_AUTH_TYPE, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
+import AccessListFormTabs from "./AccessListFormTabs";
 import { type AccessListFormValues, createAccessListInitialValues } from "./AccessListModalFormValues";
-import AccessListMtlsTab from "./AccessListMtlsTab";
-import AccessListSsoTab from "./AccessListSsoTab";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -183,65 +179,31 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						initialValues={createAccessListInitialValues(data)}
 						onSubmit={onSubmit}
 					>
-						{({ values }: FormikProps<AccessListFormValues>) => {
-							const isSsoEnabled = !!(values.authType && values.authType !== ACCESS_LIST_AUTH_TYPE.NONE);
-							return (
-								<Form className="space-y-4">
-									{errorMsg && (
-										<Alert variant="destructive">
-											<AlertCircle className="h-4 w-4" />
-											<AlertTitle>Error</AlertTitle>
-											<AlertDescription>{errorMsg}</AlertDescription>
-										</Alert>
-									)}
+						<Form className="space-y-4">
+							{errorMsg && (
+								<Alert variant="destructive">
+									<AlertCircle className="h-4 w-4" />
+									<AlertTitle>Error</AlertTitle>
+									<AlertDescription>{errorMsg}</AlertDescription>
+								</Alert>
+							)}
 
-									<Tabs defaultValue={ACCESS_LIST_TAB.DETAILS} className="w-full">
-										<TabsList className="grid w-full grid-cols-5">
-											<TabsTrigger value={ACCESS_LIST_TAB.DETAILS}>
-												<T id="column.details" />
-											</TabsTrigger>
-											<TabsTrigger value={ACCESS_LIST_TAB.AUTH}>
-												<T id="column.authorizations" />
-											</TabsTrigger>
-											<TabsTrigger value={ACCESS_LIST_TAB.RULES}>
-												<T id="column.rules" />
-											</TabsTrigger>
-											<TabsTrigger value={ACCESS_LIST_TAB.SSO}>
-												<T id="access-list.sso" />
-											</TabsTrigger>
-											<TabsTrigger value={ACCESS_LIST_TAB.MTLS}>
-												<T id="access-list.mtls.tab" />
-											</TabsTrigger>
-										</TabsList>
+							<AccessListFormTabs clients={data?.clients || []} items={data?.items || []} />
 
-										<AccessListDetailsTab />
-
-										<AccessListAuthorizationTabs
-											clients={data?.clients || []}
-											isSsoEnabled={isSsoEnabled}
-											items={data?.items || []}
-										/>
-										<AccessListSsoTab />
-
-										<AccessListMtlsTab />
-									</Tabs>
-
-									<DialogFooter>
-										<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
-											<T id="cancel" />
-										</Button>
-										<Button
-											type="submit"
-											disabled={isSubmitting}
-											className={`bg-${UI_COLOR.CYAN}-600/90 hover:bg-${UI_COLOR.CYAN}-600 text-white shadow-sm`}
-										>
-											{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-											<T id="save" />
-										</Button>
-									</DialogFooter>
-								</Form>
-							);
-						}}
+							<DialogFooter>
+								<Button type="button" variant="ghost" onClick={remove} disabled={isSubmitting}>
+									<T id="cancel" />
+								</Button>
+								<Button
+									type="submit"
+									disabled={isSubmitting}
+									className={`bg-${UI_COLOR.CYAN}-600/90 hover:bg-${UI_COLOR.CYAN}-600 text-white shadow-sm`}
+								>
+									{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+									<T id="save" />
+								</Button>
+							</DialogFooter>
+						</Form>
 					</Formik>
 				)}
 			</DialogContent>

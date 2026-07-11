@@ -218,6 +218,10 @@ serialisierte `meta`-Werte sicher und übernimmt weiterhin die vorhandenen OAuth
 behält damit Form-State und Submission unverändert; `AccessListModalFormValues.test.ts` sichert Legacy-Metadaten und
 die sicheren Standardwerte.
 
+`AccessListFormTabs.tsx` kapselt Tab-Navigation und -Inhalte des `AccessListModal`. Die Komponente leitet die
+unveränderten Anfangswerte für Basic Auth und Client-Regeln weiter und berechnet die SSO-Sperre weiterhin aus dem
+gemeinsamen Formik-Status. `AccessListFormTabs.test.tsx` sichert die Übergabe für Basic Auth und OIDC ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 
