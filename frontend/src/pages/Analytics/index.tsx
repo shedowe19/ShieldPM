@@ -15,11 +15,13 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useHealth, useProxyHosts } from "src/hooks";
+import { isPollingAllowed } from "src/hooks/pollingPolicy";
 import { intl, T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsMap } from "./AnalyticsMap";
 
-const canPoll = () => document.visibilityState === "visible" && navigator.onLine;
+const canPoll = () =>
+	isPollingAllowed({ isDocumentVisible: document.visibilityState === "visible", isOnline: navigator.onLine });
 
 const formatBytes = (bytes: number, decimals = 2) => {
 	if (!bytes) return "0 B";

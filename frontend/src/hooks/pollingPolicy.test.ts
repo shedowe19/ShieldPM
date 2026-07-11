@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { getPollingInterval } from "./pollingPolicy";
+import { getPollingInterval, isPollingAllowed } from "./pollingPolicy";
 
 describe("getPollingInterval", () => {
+	it("allows polling only while the document is visible and the browser is online", () => {
+		expect(isPollingAllowed({ isDocumentVisible: true, isOnline: true })).toBe(true);
+		expect(isPollingAllowed({ isDocumentVisible: false, isOnline: true })).toBe(false);
+		expect(isPollingAllowed({ isDocumentVisible: true, isOnline: false })).toBe(false);
+	});
+
 	it("returns the base interval while the document is visible and online", () => {
 		expect(
 			getPollingInterval({ baseIntervalMs: 15_000, failureCount: 0, isDocumentVisible: true, isOnline: true }),

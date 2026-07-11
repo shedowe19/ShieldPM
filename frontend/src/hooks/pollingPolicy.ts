@@ -1,10 +1,16 @@
-interface PollingIntervalOptions {
-	baseIntervalMs: number;
-	failureCount: number;
+interface PollingEnvironment {
 	isDocumentVisible: boolean;
 	isOnline: boolean;
+}
+
+interface PollingIntervalOptions extends PollingEnvironment {
+	baseIntervalMs: number;
+	failureCount: number;
 	maxIntervalMs?: number;
 }
+
+export const isPollingAllowed = ({ isDocumentVisible, isOnline }: PollingEnvironment): boolean =>
+	isDocumentVisible && isOnline;
 
 export const getPollingInterval = ({
 	baseIntervalMs,
@@ -13,7 +19,7 @@ export const getPollingInterval = ({
 	isOnline,
 	maxIntervalMs = baseIntervalMs * 8,
 }: PollingIntervalOptions): number | false => {
-	if (!isDocumentVisible || !isOnline) {
+	if (!isPollingAllowed({ isDocumentVisible, isOnline })) {
 		return false;
 	}
 
