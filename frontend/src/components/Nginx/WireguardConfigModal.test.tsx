@@ -38,4 +38,14 @@ describe("WireguardConfigModal", () => {
 		expect(screen.getByRole("img", { name: "WireGuard-QR-Code" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Schließen" })).toBeInTheDocument();
 	});
+
+	it("labels the configuration copy control for screen readers", async () => {
+		await changeLocale("en-US");
+
+		render(<WireguardConfigModal open onOpenChange={vi.fn()} peerId={1} peerName="Phone" />);
+
+		await screen.findByText(/PrivateKey = example/);
+
+		expect(await screen.findByRole("button", { name: "Copy configuration" })).toBeInTheDocument();
+	});
 });

@@ -617,6 +617,7 @@
 	"username": "Username",
 	"users": "Users",
 	"wireguard.add": "Add Peer",
+	"wireguard.config.copy": "Copy configuration",
 	"wireguard.config.description": "Download the WireGuard peer configuration or display it as a QR code.",
 	"wireguard.config.download": "Download Config",
 	"wireguard.config.qrcode": "QR Code",

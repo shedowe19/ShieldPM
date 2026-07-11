@@ -606,6 +606,7 @@
 	"user.switch-light": "Przełącz na tryb jasny",
 	"username": "Nazwa użytkownika",
 	"users": "Użytkownicy",
+	"wireguard.config.copy": "Kopiuj konfigurację",
 	"wireguard.config.description": "Pobierz konfigurację peera WireGuard lub wyświetl ją jako kod QR.",
 	"wireguard.config.qrcode.alt": "Kod QR WireGuard",
 	"wireguard.config.qrcode.hint": "Zeskanuj w aplikacji mobilnej WireGuard"

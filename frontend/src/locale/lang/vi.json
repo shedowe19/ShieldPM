@@ -606,6 +606,7 @@
 	"user.switch-light": "Chuyển sang chế độ sáng",
 	"username": "Tên người dùng",
 	"users": "Danh sách người dùng",
+	"wireguard.config.copy": "Sao chép cấu hình",
 	"wireguard.config.description": "Tải cấu hình peer WireGuard xuống hoặc hiển thị dưới dạng mã QR.",
 	"wireguard.config.qrcode.alt": "Mã QR WireGuard",
 	"wireguard.config.qrcode.hint": "Quét bằng ứng dụng di động WireGuard"

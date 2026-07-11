@@ -606,6 +606,7 @@
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
 	"users": "ユーザー",
+	"wireguard.config.copy": "設定をコピー",
 	"wireguard.config.description": "WireGuardピア設定をダウンロードするか、QRコードとして表示します。",
 	"wireguard.config.qrcode.alt": "WireGuardのQRコード",
 	"wireguard.config.qrcode.hint": "WireGuardモバイルアプリでスキャン"

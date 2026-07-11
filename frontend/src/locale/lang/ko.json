@@ -606,6 +606,7 @@
 	"user.switch-light": "라이트 모드로 전환",
 	"username": "사용자 이름",
 	"users": "사용자",
+	"wireguard.config.copy": "구성 복사",
 	"wireguard.config.description": "WireGuard 피어 구성을 다운로드하거나 QR 코드로 표시합니다.",
 	"wireguard.config.qrcode.alt": "WireGuard QR 코드",
 	"wireguard.config.qrcode.hint": "WireGuard 모바일 앱으로 스캔하세요"

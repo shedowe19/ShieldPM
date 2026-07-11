@@ -106,6 +106,7 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 									variant="ghost"
 									size="icon"
 									className="absolute top-2 right-2"
+									aria-label={intl.formatMessage({ id: "wireguard.config.copy" })}
 									onClick={handleCopy}
 								>
 									{copied ? (
