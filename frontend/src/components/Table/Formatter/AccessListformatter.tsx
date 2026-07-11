@@ -1,12 +1,12 @@
 import type { AccessList } from "src/api/backend";
 import { Button } from "src/components/ui/button";
 import { T } from "src/locale";
-import { showAccessListModal } from "src/modals/lazy";
 
 interface Props {
 	access?: AccessList;
+	onEdit: (id: number) => void;
 }
-export function AccessListFormatter({ access }: Props) {
+export function AccessListFormatter({ access, onEdit }: Props) {
 	if (!access) {
 		return <T id="public" />;
 	}
@@ -18,7 +18,7 @@ export function AccessListFormatter({ access }: Props) {
 			className="h-auto p-0 px-2 font-normal hover:bg-muted"
 			onClick={(e) => {
 				e.preventDefault();
-				showAccessListModal(access?.id || 0);
+				onEdit(access.id || 0);
 			}}
 		>
 			{access.name}

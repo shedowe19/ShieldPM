@@ -30,12 +30,22 @@ interface Props {
 	data: ProxyHost[];
 	isFiltered?: boolean;
 	isFetching?: boolean;
+	onEditAccessList: (id: number) => void;
 	onEdit?: (id: number) => void;
 	onDelete?: (id: number) => void;
 	onDisableToggle?: (id: number, enabled: boolean) => void;
 	onNew?: () => void;
 }
-export default function Table({ data, isFetching, onEdit, onDelete, onDisableToggle, onNew, isFiltered }: Props) {
+export default function Table({
+	data,
+	isFetching,
+	onEditAccessList,
+	onEdit,
+	onDelete,
+	onDisableToggle,
+	onNew,
+	isFiltered,
+}: Props) {
 	const columnHelper = createColumnHelper<ProxyHost>();
 	const columns = useMemo(
 		() => [
@@ -95,7 +105,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 				id: "accessList",
 				header: intl.formatMessage({ id: "column.access" }),
 				cell: (info) => {
-					return <AccessListFormatter access={info.getValue()} />;
+					return <AccessListFormatter access={info.getValue()} onEdit={onEditAccessList} />;
 				},
 			}),
 			columnHelper.accessor("enabled", {
@@ -156,7 +166,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 				},
 			}),
 		],
-		[columnHelper, onEdit, onDisableToggle, onDelete],
+		[columnHelper, onEditAccessList, onEdit, onDisableToggle, onDelete],
 	);
 
 	const tableInstance = useReactTable<ProxyHost>({

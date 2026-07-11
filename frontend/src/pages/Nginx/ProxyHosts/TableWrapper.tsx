@@ -10,10 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { useProxyHosts } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "src/modals/lazy";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { showAccessListModal, showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "./lazy";
 import Table from "./Table";
 
 export default function TableWrapper() {
@@ -105,6 +105,7 @@ export default function TableWrapper() {
 					data={filtered ?? data ?? []}
 					isFiltered={!!search}
 					isFetching={isFetching}
+					onEditAccessList={(id: number) => void showAccessListModal(id)}
 					onEdit={(id: number) => void showProxyHostModal(id)}
 					onDelete={(id: number) =>
 						showDeleteConfirmModal({
