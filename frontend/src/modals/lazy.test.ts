@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
 	dashboardNoteModalModuleLoaded: vi.fn(),
 	ddnsProviderModalModuleLoaded: vi.fn(),
 	deleteConfirmModalModuleLoaded: vi.fn(),
-	eventDetailsModalModuleLoaded: vi.fn(),
 	helpModalModuleLoaded: vi.fn(),
 	modalModuleError: undefined as Error | undefined,
 	modalModuleLoaded: vi.fn(),
@@ -16,7 +15,6 @@ const mocks = vi.hoisted(() => ({
 	showAccessListModal: vi.fn(),
 	showDeadHostModal: vi.fn(),
 	showDdnsProviderModal: vi.fn(),
-	showEventDetailsModal: vi.fn(),
 	showStreamModal: vi.fn(),
 	streamModalModuleLoaded: vi.fn(),
 	showDashboardNoteModal: vi.fn(),
@@ -42,11 +40,6 @@ vi.mock("./DdnsProviderModal", () => {
 vi.mock("./DeadHostModal", () => {
 	mocks.deadHostModalModuleLoaded();
 	return { showDeadHostModal: mocks.showDeadHostModal };
-});
-
-vi.mock("./EventDetailsModal", () => {
-	mocks.eventDetailsModalModuleLoaded();
-	return { showEventDetailsModal: mocks.showEventDetailsModal };
 });
 
 vi.mock("./ProxyHostModal", () => {
@@ -132,17 +125,6 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.deadHostModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showDeadHostModal).toHaveBeenCalledWith("new");
-	});
-
-	it("loads event details only when an audit entry is selected", async () => {
-		const { showEventDetailsModal } = await import("./lazy");
-
-		expect(mocks.eventDetailsModalModuleLoaded).not.toHaveBeenCalled();
-
-		await showEventDetailsModal(73);
-
-		expect(mocks.eventDetailsModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.showEventDetailsModal).toHaveBeenCalledWith(73);
 	});
 
 	it("shows an error notification when the deferred modal cannot load", async () => {
