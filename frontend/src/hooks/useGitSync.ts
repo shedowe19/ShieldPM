@@ -7,16 +7,25 @@ import {
 	triggerGitSync,
 	updateGitSyncConfig,
 } from "src/api/backend/gitSync";
+import { getPollingInterval } from "./pollingPolicy";
+import { usePollingEnvironment } from "./usePollingEnvironment";
 
 /**
  * Hook to get Git sync status for a proxy host
  */
 export function useGitSyncStatus(hostId: number | null) {
+	const pollingEnvironment = usePollingEnvironment();
+
 	return useQuery<GitSyncStatus, Error>({
 		queryKey: ["git-sync-status", hostId],
 		queryFn: () => (hostId ? getGitSyncStatus(hostId) : Promise.reject("No host ID")),
 		enabled: !!hostId,
-		refetchInterval: 30000, // Refresh every 30 seconds
+		refetchInterval: (query) =>
+			getPollingInterval({
+				baseIntervalMs: 30_000,
+				failureCount: query.state.fetchFailureCount,
+				...pollingEnvironment,
+			}),
 	});
 }
 

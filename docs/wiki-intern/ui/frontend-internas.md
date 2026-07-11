@@ -63,9 +63,9 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 `hooks/pollingPolicy.ts` bündelt die Intervallentscheidung für wiederkehrende React-Query-Abfragen. Sie pausiert bei
 ausgeblendeter Seite oder Offline-Status und verdoppelt das Intervall nach Fehlern bis zum jeweiligen Maximum.
 `hooks/usePollingEnvironment.ts` aktualisiert diesen Browser-Zustand bei Sichtbarkeits- sowie Online-/Offline-Ereignissen,
-damit ein pausiertes Intervall beim Wiederherstellen der Verbindung erneut geplant wird. `useHealth` und `useHostReport`
-nutzen die Policy bereits; die reine Intervallfunktion bleibt unabhängig vom Browser-Zustand testbar, damit weitere
-Polling-Hooks dieselbe Entscheidung übernehmen können.
+damit ein pausiertes Intervall beim Wiederherstellen der Verbindung erneut geplant wird. `useHealth`, `useHostReport`
+und `useGitSyncStatus` nutzen die Policy bereits; die reine Intervallfunktion bleibt unabhängig vom Browser-Zustand
+testbar, damit weitere Polling-Hooks dieselbe Entscheidung übernehmen können.
 
 ## React-Kontexte (`frontend/src/context/`)
 
