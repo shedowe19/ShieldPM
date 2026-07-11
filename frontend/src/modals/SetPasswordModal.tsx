@@ -95,9 +95,12 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 														type="button"
 														variant="ghost"
 														size="icon"
+														aria-label={intl.formatMessage({
+															id: showPassword ? "password.hide" : "password.show",
+														})}
+														aria-pressed={showPassword}
 														className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
 														onClick={() => setShowPassword(!showPassword)}
-														tabIndex={-1}
 													>
 														{showPassword ? (
 															<IconEyeOff size={16} />
@@ -111,6 +114,7 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													variant="outline"
 													size="icon"
 													title={intl.formatMessage({ id: "password.generate" })}
+													aria-label={intl.formatMessage({ id: "password.generate" })}
 													onClick={() => {
 														setFieldValue(
 															field.name,
