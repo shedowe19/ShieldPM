@@ -111,13 +111,17 @@ export function CloudflaredTunnels() {
 				<CardHeader>
 					<CardTitle className="text-2xl font-bold flex items-center gap-2 text-red-500">
 						<Lock className="h-6 w-6" />
-						Access Denied
+						<T id="cloudflared.demo.access-denied" />
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div className="p-8 text-center text-muted-foreground">
-						<p className="text-lg font-semibold">This feature is disabled in Demo Mode.</p>
-						<p className="mt-2">Cloudflare Tunnels are restricted for security reasons.</p>
+						<p className="text-lg font-semibold">
+							<T id="cloudflared.demo.disabled" />
+						</p>
+						<p className="mt-2">
+							<T id="cloudflared.demo.restricted" />
+						</p>
 					</div>
 				</CardContent>
 			</Card>
