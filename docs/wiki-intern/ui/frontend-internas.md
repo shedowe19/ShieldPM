@@ -163,6 +163,10 @@ Werte und den Umschalter gegen Regressionsfehler ab.
 Formik-Kind. Die Validierung für Host und Port sowie die Sichtbarkeit von `indexFile` bleiben aus dem Dialog erhalten;
 `ProxyHostForwardingFields.test.tsx` sichert Wertebindung und die schemaabhängige Sichtbarkeit ab.
 
+`AccessListDetailsTab.tsx` kapselt den Details-Tab des `AccessListModal` als Formik-Kind. Name sowie die Optionen
+`satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die
+Wertebindung gegen Regressionsfehler ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 

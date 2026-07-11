@@ -16,6 +16,8 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - `backend/models/access_list_auth.js` (1 KB) — Basic-Auth-Modell
 - `backend/models/access_list_client.js` (1 KB) — IP-Client-Modell
 - `backend/routes/nginx/access_lists.js` (3 KB) — API-Routen
+- `frontend/src/modals/AccessListModal.tsx` — Dialog für Erstellung und Bearbeitung
+- `frontend/src/modals/AccessListDetailsTab.tsx` — Formik-gebundener Details- und Optionen-Tab
 
 ## Verhalten
 
@@ -23,6 +25,8 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - IP-Ranges: Allow/Deny basierend auf Client-IP
 - mTLS: Client-Zertifikat-Authentifizierung
 - Access-Lists werden in htpasswd-Dateien unter `/data/access/` geschrieben
+- Der Details-Tab bindet Name sowie die Optionen „Satisfy Any“ und „Pass Auth“ weiter direkt an denselben
+  Formik-Formularzustand des Dialogs. `AccessListDetailsTab.test.tsx` sichert diese Wertebindung.
 
 ## Abhängigkeiten
 

@@ -7,7 +7,6 @@ import type { AccessList, AccessListClient, AccessListItem } from "src/api/backe
 import { AccessClientFields, BasicAuthFields, Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
-import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -17,9 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs
 import { Textarea } from "src/components/ui/textarea";
 import { useAccessList, useSetAccessList } from "src/hooks";
 import { intl, T } from "src/locale";
-import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 import { ACCESS_LIST_AUTH_TYPE, ACCESS_LIST_TAB, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
+import AccessListDetailsTab from "./AccessListDetailsTab";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -266,7 +265,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						}
 						onSubmit={onSubmit}
 					>
-						{({ values, setFieldValue, errors, touched }: FormikProps<AccessListFormValues>) => {
+						{({ values, setFieldValue }: FormikProps<AccessListFormValues>) => {
 							const isSsoEnabled = !!(values.authType && values.authType !== ACCESS_LIST_AUTH_TYPE.NONE);
 							return (
 								<Form className="space-y-4">
@@ -297,68 +296,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											</TabsTrigger>
 										</TabsList>
 
-										<TabsContent value={ACCESS_LIST_TAB.DETAILS} className="space-y-4 pt-4">
-											<div className="space-y-2">
-												<Label htmlFor="name">
-													<T id="column.name" />
-												</Label>
-												<Field name="name" validate={validateString(1, 255)}>
-													{({ field }: FieldProps) => (
-														<Input
-															{...field}
-															id="name"
-															autoComplete="off"
-															className={
-																errors.name && touched.name ? "border-destructive" : ""
-															}
-														/>
-													)}
-												</Field>
-												{errors.name && touched.name && (
-													<div className="text-sm text-destructive">{errors.name}</div>
-												)}
-											</div>
-
-											<Card className="border-dashed">
-												<CardContent className="p-4 space-y-4">
-													<h3 className="font-medium">
-														<T id="options" />
-													</h3>
-													<div className="flex items-center justify-between">
-														<Label htmlFor="satisfyAny" className="cursor-pointer">
-															<T id="access-list.satisfy-any" />
-														</Label>
-														<Field name="satisfyAny">
-															{({ field }: FieldProps) => (
-																<Switch
-																	id="satisfyAny"
-																	checked={field.value}
-																	onCheckedChange={(checked) =>
-																		setFieldValue("satisfyAny", checked)
-																	}
-																/>
-															)}
-														</Field>
-													</div>
-													<div className="flex items-center justify-between">
-														<Label htmlFor="passAuth" className="cursor-pointer">
-															<T id="access-list.pass-auth" />
-														</Label>
-														<Field name="passAuth">
-															{({ field }: FieldProps) => (
-																<Switch
-																	id="passAuth"
-																	checked={field.value}
-																	onCheckedChange={(checked) =>
-																		setFieldValue("passAuth", checked)
-																	}
-																/>
-															)}
-														</Field>
-													</div>
-												</CardContent>
-											</Card>
-										</TabsContent>
+										<AccessListDetailsTab />
 
 										<TabsContent value={ACCESS_LIST_TAB.AUTH} className="pt-4">
 											{isSsoEnabled && (
