@@ -45,6 +45,12 @@ yarn tsc          # TypeScript-Prüfung
 yarn vite build   # Produktions-Build
 ```
 
+### Modulpfade
+
+`frontend/vite.config.ts` aktiviert Vites nativen Resolver mit `resolve.tsconfigPaths: true`. Damit gelten die
+Alias-Pfade aus `frontend/tsconfig.json` (`src/*`, `@/*` und `test/*`) im Entwicklungsserver, in Vitest und im
+Produktions-Build ohne das zusätzliche Plugin `vite-tsconfig-paths`.
+
 ## Native / LXC Build
 
 Kein Build nötig — der `install.sh`-Installer clont das Repository und installiert direkt.
