@@ -1,13 +1,13 @@
 import { startAuthentication } from "@simplewebauthn/browser";
-import { AlertCircle, Key, Loader2, ShieldCheck, Smartphone, Lock } from "lucide-react";
+import { AlertCircle, Key, Loader2, Lock, ShieldCheck, Smartphone } from "lucide-react";
 import { useState } from "react";
-import { intl, T } from "src/locale";
+import { begin2faDuoAuth, begin2faPasskeyAuth, complete2faPasskeyAuth, verify2faCode } from "src/api/backend";
+import type { TokenResponse } from "src/api/backend/responseTypes";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import { begin2faPasskeyAuth, begin2faDuoAuth, complete2faPasskeyAuth, verify2faCode } from "src/api/backend";
-import type { TokenResponse } from "src/api/backend/responseTypes";
+import { intl, T } from "src/locale";
 import AuthStore from "src/modules/AuthStore";
 
 interface TwoFAStepProps {
