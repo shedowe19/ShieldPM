@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -34,8 +35,10 @@ vi.mock("src/modules/AuthStore", () => ({
 
 import { AuthProvider, useAuthState } from "./AuthContext";
 
+let nextSessionProbeInstance = 0;
+
 function AuthProbe() {
-	const { authenticated, loading, login } = useAuthState();
+	const { authenticated, loading, login, loginAs } = useAuthState();
 
 	return (
 		<>
@@ -43,8 +46,17 @@ function AuthProbe() {
 			<button type="button" onClick={() => void login("admin@example.test", "correct horse battery staple")}>
 				Sign in
 			</button>
+			<button type="button" onClick={() => void loginAs(2)}>
+				Impersonate user
+			</button>
 		</>
 	);
+}
+
+function SessionProbe() {
+	const [instance] = useState(() => ++nextSessionProbeInstance);
+
+	return <div data-testid="session-instance">{instance}</div>;
 }
 
 function renderAuthProvider() {
@@ -54,6 +66,7 @@ function renderAuthProvider() {
 		<QueryClientProvider client={queryClient}>
 			<AuthProvider>
 				<AuthProbe />
+				<SessionProbe />
 			</AuthProvider>
 		</QueryClientProvider>,
 	);
@@ -64,6 +77,7 @@ function renderAuthProvider() {
 describe("AuthProvider", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		nextSessionProbeInstance = 0;
 		mocks.refreshToken.mockRejectedValue(new Error("No existing session"));
 	});
 
@@ -84,5 +98,31 @@ describe("AuthProvider", () => {
 		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
 		expect(mocks.authStoreSet).toHaveBeenCalledWith(token);
 		expect(queryClient.getQueryData(["profile"])).toBeUndefined();
+	});
+
+	it("remounts session-dependent UI after impersonating without a document reload", async () => {
+		const adminToken = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };
+		const impersonatedToken = { expires: Date.now() + 60 * 60 * 1000, user: { id: 2 } };
+		mocks.refreshToken.mockResolvedValue(adminToken);
+		mocks.loginAsUser.mockResolvedValue(impersonatedToken);
+		const queryClient = renderAuthProvider();
+		const originalLocation = window.location;
+		const reload = vi.fn();
+		Object.defineProperty(window, "location", { writable: true, value: { reload } });
+
+		try {
+			await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+			queryClient.setQueryData(["profile"], { email: "admin@example.test" });
+
+			fireEvent.click(screen.getByRole("button", { name: "Impersonate user" }));
+
+			await waitFor(() => expect(screen.getByTestId("session-instance")).toHaveTextContent("2"));
+			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
+			expect(mocks.authStoreAdd).toHaveBeenCalledWith(impersonatedToken);
+			expect(queryClient.getQueryData(["profile"])).toBeUndefined();
+			expect(reload).not.toHaveBeenCalled();
+		} finally {
+			Object.defineProperty(window, "location", { value: originalLocation });
+		}
 	});
 });

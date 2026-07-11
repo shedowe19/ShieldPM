@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, Fragment, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import * as api from "src/api/backend/base";
@@ -27,6 +27,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const queryClient = useQueryClient();
 	const [authenticated, setAuthenticated] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [sessionVersion, setSessionVersion] = useState(0);
 
 	const handleTokenUpdate = useCallback((response: TokenResponse) => {
 		AuthStore.set(response);
@@ -70,7 +71,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		const response = await loginAsUser(id);
 		AuthStore.add(response);
 		queryClient.clear();
-		window.location.reload();
+		setSessionVersion((version) => version + 1);
 	};
 
 	const logout = async () => {
@@ -107,7 +108,11 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	const value = { authenticated, completeLogin, login, logout, loginAs, loading };
 
-	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+	return (
+		<AuthContext.Provider value={value}>
+			<Fragment key={sessionVersion}>{children}</Fragment>
+		</AuthContext.Provider>
+	);
 }
 
 function useAuthState() {
