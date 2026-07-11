@@ -12,9 +12,9 @@ import { useAuthState } from "src/context";
 import { useHealth, useUser, useUsers } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showUserModal } from "src/modals/account-lazy";
-import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal } from "src/modals/lazy";
 import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal } from "./lazy";
 import Table from "./Table";
 
 export default function TableWrapper() {
