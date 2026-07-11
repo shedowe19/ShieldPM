@@ -13,11 +13,13 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 - `backend/internal/wireguard.js` (19 KB) — Business-Logik
 - `backend/models/wireguard_peer.js` (4 KB) — Peer-Modell
 - `backend/routes/nginx/wireguard.js` (9 KB) — API-Routen
+- `frontend/src/components/Nginx/WireguardConfigModal.tsx` — Dialog für Peer-Konfiguration und QR-Code
 
 ## Verhalten
 
 - Verwaltet WireGuard-Interface und Peers
 - Generiert Konfigurationen für Server und Clients
+- Der Konfigurationsdialog beschreibt seinen Zweck für Screenreader und lokalisiert QR-Code-Hinweis, Alternativtext und Schließen-Aktion in allen 13 Sprachen.
 - Benötigt `NET_ADMIN` und `NET_RAW` Capabilities
 - Benötigt `/dev/net/tun` Device-Mount
 - IP-Forwarding muss aktiviert sein (`net.ipv4.ip_forward=1`)

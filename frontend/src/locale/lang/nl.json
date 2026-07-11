@@ -596,5 +596,8 @@
 	"user.switch-dark": "Verander naar donkere modus",
 	"user.switch-light": "Verander naar lichte modus",
 	"username": "Gebruikersnaam",
-	"users": "Gebruikers"
+	"users": "Gebruikers",
+	"wireguard.config.description": "Download de WireGuard-peerconfiguratie of toon deze als QR-code.",
+	"wireguard.config.qrcode.alt": "WireGuard-QR-code",
+	"wireguard.config.qrcode.hint": "Scan met de mobiele WireGuard-app"
 }

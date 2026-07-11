@@ -596,5 +596,8 @@
 	"user.switch-dark": "切换到深色模式",
 	"user.switch-light": "切换到浅色模式",
 	"username": "用户名",
-	"users": "用户列表"
+	"users": "用户列表",
+	"wireguard.config.description": "下载 WireGuard 对等节点配置，或将其显示为二维码。",
+	"wireguard.config.qrcode.alt": "WireGuard 二维码",
+	"wireguard.config.qrcode.hint": "使用 WireGuard 移动应用扫描"
 }

@@ -596,5 +596,8 @@
 	"user.switch-dark": "Prepnúť na tmavý režim",
 	"user.switch-light": "Prepnúť na svetlý režim",
 	"username": "Používateľské meno",
-	"users": "Používatelia"
+	"users": "Používatelia",
+	"wireguard.config.description": "Stiahnite konfiguráciu peeru WireGuard alebo ju zobrazte ako QR kód.",
+	"wireguard.config.qrcode.alt": "QR kód WireGuard",
+	"wireguard.config.qrcode.hint": "Naskenujte v mobilnej aplikácii WireGuard"
 }

@@ -596,5 +596,8 @@
 	"user.switch-dark": "Включить тёмную тему",
 	"user.switch-light": "Включить светлую тему",
 	"username": "Имя пользователя",
-	"users": "Пользователи"
+	"users": "Пользователи",
+	"wireguard.config.description": "Скачайте конфигурацию пира WireGuard или покажите её в виде QR-кода.",
+	"wireguard.config.qrcode.alt": "QR-код WireGuard",
+	"wireguard.config.qrcode.hint": "Отсканируйте в мобильном приложении WireGuard"
 }

@@ -596,5 +596,8 @@
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",
-	"users": "ユーザー"
+	"users": "ユーザー",
+	"wireguard.config.description": "WireGuardピア設定をダウンロードするか、QRコードとして表示します。",
+	"wireguard.config.qrcode.alt": "WireGuardのQRコード",
+	"wireguard.config.qrcode.hint": "WireGuardモバイルアプリでスキャン"
 }

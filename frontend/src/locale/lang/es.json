@@ -596,5 +596,8 @@
 	"user.switch-dark": "Cambiar a modo Oscuro",
 	"user.switch-light": "Cambiar a modo Claro",
 	"username": "Nombre de Usuario",
-	"users": "Usuarios"
+	"users": "Usuarios",
+	"wireguard.config.description": "Descarga la configuración del par de WireGuard o muéstrala como código QR.",
+	"wireguard.config.qrcode.alt": "Código QR de WireGuard",
+	"wireguard.config.qrcode.hint": "Escanea con la aplicación móvil de WireGuard"
 }

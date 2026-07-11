@@ -3,9 +3,16 @@ import { QrCode, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getWireguardPeerConfig, getWireguardPeerQRCode } from "@/api/backend";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { T } from "@/locale";
+import { intl, T } from "@/locale";
 
 interface WireguardConfigModalProps {
 	open: boolean;
@@ -62,6 +69,9 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 						<Shield className="h-5 w-5" />
 						<T id="wireguard.config.title" /> — {peerName}
 					</DialogTitle>
+					<DialogDescription className="sr-only">
+						<T id="wireguard.config.description" />
+					</DialogDescription>
 				</DialogHeader>
 
 				<div className="px-6 py-2">
@@ -111,10 +121,14 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 							{qrcode && (
 								<div className="flex flex-col items-center gap-4">
 									<div className="bg-white rounded-lg p-4">
-										<img src={qrcode} alt="WireGuard QR Code" className="w-64 h-64" />
+										<img
+											src={qrcode}
+											alt={intl.formatMessage({ id: "wireguard.config.qrcode.alt" })}
+											className="w-64 h-64"
+										/>
 									</div>
 									<p className="text-xs text-muted-foreground text-center">
-										Scan with the WireGuard mobile app
+										<T id="wireguard.config.qrcode.hint" />
 									</p>
 								</div>
 							)}
@@ -124,7 +138,7 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 
 				<DialogFooter className="px-6 py-4 border-t bg-muted/10">
 					<Button variant="outline" onClick={() => onOpenChange(false)}>
-						<T id="close" />
+						<T id="action.close" />
 					</Button>
 					<Button
 						onClick={handleDownload}
