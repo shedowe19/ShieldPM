@@ -1,15 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/modals/lazy", () => {
-	throw new Error("Tor Onion Services must not load the shared modal loader");
-});
-
-vi.mock("@/components/Nginx/TorOnionModal", () => ({
-	TorOnionModal: () => null,
-}));
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 
 describe("TorOnionServices", () => {
-	it("loads without the shared modal loader", async () => {
-		await expect(import("./TorOnionServices")).resolves.toHaveProperty("default");
+	it("does not statically depend on the shared modal loader", () => {
+		const pageSource = readFileSync(resolve(process.cwd(), "src/pages/Nginx/TorOnionServices.tsx"), "utf8");
+
+		expect(pageSource).not.toContain("modals/lazy");
 	});
 });

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -49,7 +51,9 @@ describe("CloudflaredTunnels", () => {
 		expect(mocks.showError).toHaveBeenCalledWith("Help modal chunk is unavailable");
 	});
 
-	it("loads without the shared modal loader", async () => {
-		await expect(import("./CloudflaredTunnels")).resolves.toHaveProperty("default");
+	it("does not statically depend on the shared modal loader", () => {
+		const pageSource = readFileSync(resolve(process.cwd(), "src/pages/Nginx/CloudflaredTunnels.tsx"), "utf8");
+
+		expect(pageSource).not.toContain("modals/lazy");
 	});
 });
