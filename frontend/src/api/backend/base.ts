@@ -116,9 +116,16 @@ export async function get<T = DynamicResponse>(args: GetArgs, abortController?: 
 	return processResponse<T>(await baseGet(args, abortController), args.silentAuth);
 }
 
-export async function download({ url, params }: GetArgs, filename = "download.file") {
+async function throwDownloadError(response: Response, silentAuth = false): Promise<void> {
+	if (!response.ok) {
+		await processResponse(response, silentAuth);
+	}
+}
+
+export async function download({ url, params, silentAuth }: GetArgs, filename = "download.file") {
 	const headers = buildAuthHeader();
 	const res = await fetch(buildUrl({ url, params }), { headers, credentials: "include" });
+	await throwDownloadError(res, silentAuth);
 	const bl = await res.blob();
 	const u = window.URL.createObjectURL(bl);
 	const a = document.createElement("a");
@@ -128,7 +135,7 @@ export async function download({ url, params }: GetArgs, filename = "download.fi
 	window.URL.revokeObjectURL(u);
 }
 
-export async function downloadPost({ url, params, data, noAuth }: PostArgs, filename = "download.file") {
+export async function downloadPost({ url, params, data, noAuth, silentAuth }: PostArgs, filename = "download.file") {
 	const apiUrl = buildUrl({ url, params });
 	const method = "POST";
 
@@ -154,6 +161,7 @@ export async function downloadPost({ url, params, data, noAuth }: PostArgs, file
 	}
 
 	const res = await fetch(apiUrl, { method, headers, body, credentials: "include" });
+	await throwDownloadError(res, silentAuth);
 	const bl = await res.blob();
 	const u = window.URL.createObjectURL(bl);
 	const a = document.createElement("a");

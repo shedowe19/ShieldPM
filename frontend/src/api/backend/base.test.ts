@@ -8,7 +8,8 @@ vi.mock("src/modules/AuthStore", () => ({
 	},
 }));
 
-import { download } from "./base";
+import AuthStore from "src/modules/AuthStore";
+import { download, downloadPost } from "./base";
 
 describe("download", () => {
 	const objectUrl = "blob:shieldpm-export";
@@ -16,10 +17,12 @@ describe("download", () => {
 	const revokeObjectURL = vi.fn();
 
 	beforeEach(() => {
+		vi.clearAllMocks();
 		vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
 		vi.stubGlobal(
 			"fetch",
 			vi.fn().mockResolvedValue({
+				ok: true,
 				blob: vi.fn().mockResolvedValue(new Blob(["certificate export"])),
 			}),
 		);
@@ -39,5 +42,41 @@ describe("download", () => {
 		expect(createObjectURL).toHaveBeenCalledOnce();
 		expect(revokeObjectURL).toHaveBeenCalledOnce();
 		expect(revokeObjectURL).toHaveBeenCalledWith(objectUrl);
+	});
+
+	it("rejects unauthorized downloads before creating a Blob URL", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: false,
+				status: 401,
+				json: vi.fn().mockResolvedValue({ error: { message: "Unauthorized" } }),
+			}),
+		);
+
+		await expect(download({ url: "nginx/certificates/1/download", silentAuth: true })).rejects.toThrow(
+			"Unauthorized",
+		);
+
+		expect(AuthStore.clear).toHaveBeenCalledOnce();
+		expect(createObjectURL).not.toHaveBeenCalled();
+	});
+
+	it("rejects unauthorized POST downloads before creating a Blob URL", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: false,
+				status: 401,
+				json: vi.fn().mockResolvedValue({ error: { message: "Unauthorized" } }),
+			}),
+		);
+
+		await expect(
+			downloadPost({ url: "nginx/certificates/1/download", data: {}, silentAuth: true }),
+		).rejects.toThrow("Unauthorized");
+
+		expect(AuthStore.clear).toHaveBeenCalledOnce();
+		expect(createObjectURL).not.toHaveBeenCalled();
 	});
 });
