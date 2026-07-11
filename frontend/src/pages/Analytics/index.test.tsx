@@ -230,6 +230,31 @@ describe("Analytics", () => {
 		consoleErrorSpy.mockRestore();
 	});
 
+	it("backs off failed live-status refreshes before retrying", async () => {
+		vi.useFakeTimers();
+		vi.mocked(getAnalyticsStatus)
+			.mockRejectedValueOnce(new Error("temporarily unavailable"))
+			.mockResolvedValueOnce({ rxSec: 1024, totalSec: 2048, txSec: 1024 });
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+		await act(async () => {
+			await Promise.resolve();
+			await Promise.resolve();
+		});
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(2_000);
+		});
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(2_000);
+		});
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(2);
+	});
+
 	it("does not poll analytics while the document is hidden", async () => {
 		vi.useFakeTimers();
 		Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
