@@ -48,6 +48,18 @@ describe("DateFormatter", () => {
 		expect(text).toBe("Friday, 07/11/2025, 00:41:52");
 	});
 
+	it("formats an eleven-digit unix timestamp as seconds through the supported date range", () => {
+		const value = 10000000000;
+		const text = formatDateTime(value);
+		expect(text).toBe("Saturday, 20/11/2286, 17:46:40");
+	});
+
+	it("format date from unix timestamp milliseconds", () => {
+		const value = 1762476112000;
+		const text = formatDateTime(value);
+		expect(text).toBe("Friday, 07/11/2025, 00:41:52");
+	});
+
 	it("format date from unix timestamp string", () => {
 		const value = "1762476112";
 		const text = formatDateTime(value);
