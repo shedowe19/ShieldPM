@@ -1,7 +1,6 @@
 import { showError } from "src/notifications";
 
 let accessListModalModule: Promise<typeof import("./AccessListModal")> | undefined;
-let changePasswordModalModule: Promise<typeof import("./ChangePasswordModal")> | undefined;
 let customCertificateModalModule: Promise<typeof import("./CustomCertificateModal")> | undefined;
 let dashboardNoteModalModule: Promise<typeof import("./DashboardNoteModal")> | undefined;
 let deadHostModalModule: Promise<typeof import("./DeadHostModal")> | undefined;
@@ -18,16 +17,10 @@ let redirectionHostModalModule: Promise<typeof import("./RedirectionHostModal")>
 let renewCertificateModalModule: Promise<typeof import("./RenewCertificateModal")> | undefined;
 let setPasswordModalModule: Promise<typeof import("./SetPasswordModal")> | undefined;
 let streamModalModule: Promise<typeof import("./StreamModal")> | undefined;
-let userModalModule: Promise<typeof import("./UserModal")> | undefined;
 
 const loadAccessListModal = () => {
 	accessListModalModule ??= import("./AccessListModal");
 	return accessListModalModule;
-};
-
-const loadChangePasswordModal = () => {
-	changePasswordModalModule ??= import("./ChangePasswordModal");
-	return changePasswordModalModule;
 };
 
 const loadCustomCertificateModal = () => {
@@ -110,27 +103,12 @@ const loadStreamModal = () => {
 	return streamModalModule;
 };
 
-const loadUserModal = () => {
-	userModalModule ??= import("./UserModal");
-	return userModalModule;
-};
-
 const showAccessListModal = async (id: number | "new") => {
 	try {
 		const { showAccessListModal: showModal } = await loadAccessListModal();
 		showModal(id);
 	} catch (error) {
 		accessListModalModule = undefined;
-		showError(error instanceof Error ? error.message : String(error));
-	}
-};
-
-const showChangePasswordModal = async (id: number | "me") => {
-	try {
-		const { showChangePasswordModal: showModal } = await loadChangePasswordModal();
-		showModal(id);
-	} catch (error) {
-		changePasswordModalModule = undefined;
 		showError(error instanceof Error ? error.message : String(error));
 	}
 };
@@ -299,19 +277,8 @@ const showStreamModal = async (id: number | "new") => {
 	}
 };
 
-const showUserModal = async (id: number | "me" | "new") => {
-	try {
-		const { showUserModal: showModal } = await loadUserModal();
-		showModal(id);
-	} catch (error) {
-		userModalModule = undefined;
-		showError(error instanceof Error ? error.message : String(error));
-	}
-};
-
 export {
 	showAccessListModal,
-	showChangePasswordModal,
 	showCustomCertificateModal,
 	showDashboardNoteModal,
 	showDdnsProviderModal,
@@ -328,5 +295,4 @@ export {
 	showRenewCertificateModal,
 	showSetPasswordModal,
 	showStreamModal,
-	showUserModal,
 };

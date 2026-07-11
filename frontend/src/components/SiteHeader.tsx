@@ -13,7 +13,7 @@ import {
 import { useAuthState } from "src/context";
 import { useUser } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showChangePasswordModal, showUserModal } from "src/modals/lazy";
+import { showChangePasswordModal, showUserModal } from "src/modals/account-lazy";
 
 export function SiteHeader() {
 	const { data: currentUser } = useUser("me");

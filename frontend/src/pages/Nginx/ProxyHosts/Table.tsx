@@ -3,7 +3,6 @@ import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/re
 import { useMemo } from "react";
 import type { ProxyHost } from "src/api/backend";
 import {
-	AccessListFormatter,
 	CertificateFormatter,
 	DomainsFormatter,
 	EmptyData,
@@ -12,6 +11,7 @@ import {
 	TrueFalseFormatter,
 	UserAvatar,
 } from "src/components";
+import { AccessListFormatter } from "src/components/Table/Formatter/AccessListformatter";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Button } from "src/components/ui/button";
 import {

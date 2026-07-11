@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	accessListModalModuleLoaded: vi.fn(),
-	changePasswordModalModuleLoaded: vi.fn(),
 	customCertificateModalModuleLoaded: vi.fn(),
 	deadHostModalModuleLoaded: vi.fn(),
 	dashboardNoteModalModuleLoaded: vi.fn(),
@@ -30,7 +29,6 @@ const mocks = vi.hoisted(() => ({
 	showRenewCertificateModal: vi.fn(),
 	showStreamModal: vi.fn(),
 	streamModalModuleLoaded: vi.fn(),
-	showChangePasswordModal: vi.fn(),
 	showDashboardNoteModal: vi.fn(),
 	showDeleteConfirmModal: vi.fn(),
 	showError: vi.fn(),
@@ -39,8 +37,6 @@ const mocks = vi.hoisted(() => ({
 	showProxyHostModal: vi.fn(),
 	showRedirectionHostModal: vi.fn(),
 	showSetPasswordModal: vi.fn(),
-	showUserModal: vi.fn(),
-	userModalModuleLoaded: vi.fn(),
 }));
 
 vi.mock("./AccessListModal", () => {
@@ -91,11 +87,6 @@ vi.mock("./StreamModal", () => {
 	return { showStreamModal: mocks.showStreamModal };
 });
 
-vi.mock("./ChangePasswordModal", () => {
-	mocks.changePasswordModalModuleLoaded();
-	return { showChangePasswordModal: mocks.showChangePasswordModal };
-});
-
 vi.mock("./CustomCertificateModal", () => {
 	mocks.customCertificateModalModuleLoaded();
 	return { showCustomCertificateModal: mocks.showCustomCertificateModal };
@@ -134,11 +125,6 @@ vi.mock("./InternalCertificateModal", () => {
 vi.mock("./RenewCertificateModal", () => {
 	mocks.renewCertificateModalModuleLoaded();
 	return { showRenewCertificateModal: mocks.showRenewCertificateModal };
-});
-
-vi.mock("./UserModal", () => {
-	mocks.userModalModuleLoaded();
-	return { showUserModal: mocks.showUserModal };
 });
 
 vi.mock("src/notifications", () => ({ showError: mocks.showError }));
@@ -261,17 +247,6 @@ describe("lazy modal wrappers", () => {
 		expect(mocks.showRedirectionHostModal).toHaveBeenCalledWith("new");
 	});
 
-	it("loads the User modal only when profile editing is requested", async () => {
-		const { showUserModal } = await import("./lazy");
-
-		expect(mocks.userModalModuleLoaded).not.toHaveBeenCalled();
-
-		await showUserModal("me");
-
-		expect(mocks.userModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.showUserModal).toHaveBeenCalledWith("me");
-	});
-
 	it("loads the Stream modal only when stream editing is requested", async () => {
 		const { showStreamModal } = await import("./lazy");
 
@@ -326,17 +301,6 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.helpModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showHelpModal).toHaveBeenCalledWith("ProxyHosts", "lime");
-	});
-
-	it("loads the password modal only when a password change is requested", async () => {
-		const { showChangePasswordModal } = await import("./lazy");
-
-		expect(mocks.changePasswordModalModuleLoaded).not.toHaveBeenCalled();
-
-		await showChangePasswordModal("me");
-
-		expect(mocks.changePasswordModalModuleLoaded).toHaveBeenCalledOnce();
-		expect(mocks.showChangePasswordModal).toHaveBeenCalledWith("me");
 	});
 
 	it("loads the dashboard note modal only when note editing is requested", async () => {

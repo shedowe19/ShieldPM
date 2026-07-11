@@ -6,10 +6,10 @@ import { SiteHeader } from "./SiteHeader";
 
 const mocks = vi.hoisted(() => ({
 	logout: vi.fn(),
-	showChangePasswordModal: vi.fn(),
-	showLazyChangePasswordModal: vi.fn(),
-	showLazyUserModal: vi.fn(),
-	showUserModal: vi.fn(),
+	showAccountChangePasswordModal: vi.fn(),
+	showAccountUserModal: vi.fn(),
+	showGeneralChangePasswordModal: vi.fn(),
+	showGeneralUserModal: vi.fn(),
 	useUser: vi.fn(),
 }));
 
@@ -45,14 +45,14 @@ vi.mock("src/hooks", () => ({
 	useUser: mocks.useUser,
 }));
 
-vi.mock("src/modals", () => ({
-	showChangePasswordModal: mocks.showChangePasswordModal,
-	showUserModal: mocks.showUserModal,
+vi.mock("src/modals/lazy", () => ({
+	showChangePasswordModal: mocks.showGeneralChangePasswordModal,
+	showUserModal: mocks.showGeneralUserModal,
 }));
 
-vi.mock("src/modals/lazy", () => ({
-	showChangePasswordModal: mocks.showLazyChangePasswordModal,
-	showUserModal: mocks.showLazyUserModal,
+vi.mock("src/modals/account-lazy", () => ({
+	showChangePasswordModal: mocks.showAccountChangePasswordModal,
+	showUserModal: mocks.showAccountUserModal,
 }));
 
 describe("SiteHeader", () => {
@@ -76,13 +76,15 @@ describe("SiteHeader", () => {
 		expect(screen.queryByRole("button", { name: "Toggle user menu" })).not.toBeInTheDocument();
 	});
 
-	it("defers profile and password modal loading until their menu actions are selected", () => {
+	it("defers profile and password modal loading through the account-only loader", () => {
 		render(<SiteHeader />);
 
 		fireEvent.click(screen.getByRole("button", { name: "Profil bearbeiten" }));
 		fireEvent.click(screen.getByRole("button", { name: "Passwort ändern" }));
 
-		expect(mocks.showLazyUserModal).toHaveBeenCalledWith("me");
-		expect(mocks.showLazyChangePasswordModal).toHaveBeenCalledWith("me");
+		expect(mocks.showAccountUserModal).toHaveBeenCalledWith("me");
+		expect(mocks.showAccountChangePasswordModal).toHaveBeenCalledWith("me");
+		expect(mocks.showGeneralUserModal).not.toHaveBeenCalled();
+		expect(mocks.showGeneralChangePasswordModal).not.toHaveBeenCalled();
 	});
 });
