@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/modals", () => {
-	throw new Error("Tor Onion Services must not eagerly import the modal barrel");
+vi.mock("@/modals/lazy", () => {
+	throw new Error("Tor Onion Services must not load the shared modal loader");
 });
 
 vi.mock("@/components/Nginx/TorOnionModal", () => ({
@@ -9,7 +9,7 @@ vi.mock("@/components/Nginx/TorOnionModal", () => ({
 }));
 
 describe("TorOnionServices", () => {
-	it("loads without eagerly importing the modal barrel", async () => {
+	it("loads without the shared modal loader", async () => {
 		await expect(import("./TorOnionServices")).resolves.toHaveProperty("default");
 	});
 });

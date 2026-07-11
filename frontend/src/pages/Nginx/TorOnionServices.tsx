@@ -11,6 +11,7 @@ import {
 import { AlertCircle, Lock } from "lucide-react";
 import { useState } from "react";
 import { BADGE_VARIANT, type BadgeVariant, TOR_ONION_STATUS, type TorOnionStatus } from "src/types/enums";
+import { showTorOnionServicesHelpModal } from "./TorOnionServices.lazy";
 import type { TorOnion } from "@/api/backend";
 import { HasPermission } from "@/components/HasPermission";
 import { TorOnionModal } from "@/components/Nginx/TorOnionModal";
@@ -23,7 +24,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
-import { showHelpModal } from "@/modals/lazy";
 import { MANAGE, TOR_ONIONS } from "@/modules/Permissions";
 
 export function TorOnionServices() {
@@ -133,7 +133,7 @@ export function TorOnionServices() {
 					<Button variant="outline" size="icon" onClick={() => refetch()}>
 						<IconRefresh className="h-4 w-4" />
 					</Button>
-					<Button variant="outline" size="icon" onClick={() => showHelpModal("TorOnionServices", "purple")}>
+					<Button variant="outline" size="icon" onClick={showTorOnionServicesHelpModal}>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={TOR_ONIONS} permission={MANAGE} hideError>
