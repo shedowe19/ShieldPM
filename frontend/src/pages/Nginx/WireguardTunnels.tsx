@@ -28,7 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useHealth } from "@/hooks/useHealth";
 import { useWireguardPeer, useWireguardPeers } from "@/hooks/useWireguardPeer";
-import { T } from "@/locale";
+import { intl, T } from "@/locale";
 import { MANAGE, WIREGUARD_PEERS } from "@/modules/Permissions";
 
 dayjs.extend(relativeTime);
@@ -391,10 +391,20 @@ export function WireguardTunnels() {
 						<T id="wireguard.title" />
 					</CardTitle>
 					<div className="flex items-center space-x-2">
-						<Button variant="outline" size="icon" onClick={() => refetch()}>
+						<Button
+							variant="outline"
+							size="icon"
+							aria-label={intl.formatMessage({ id: "wireguard.refresh" })}
+							onClick={() => refetch()}
+						>
 							<IconRefresh className="h-4 w-4" />
 						</Button>
-						<Button variant="outline" size="icon" onClick={showWireguardTunnelsHelpModal}>
+						<Button
+							variant="outline"
+							size="icon"
+							aria-label={intl.formatMessage({ id: "action.help" })}
+							onClick={showWireguardTunnelsHelpModal}
+						>
 							<IconHelp className="h-4 w-4" />
 						</Button>
 						<HasPermission section={WIREGUARD_PEERS} permission={MANAGE} hideError>
@@ -493,6 +503,9 @@ export function WireguardTunnels() {
 																<Button
 																	variant="ghost"
 																	size="icon"
+																	aria-label={intl.formatMessage({
+																		id: "wireguard.config.view",
+																	})}
 																	onClick={() => handleShowConfig(peer)}
 																>
 																	<IconEye className="h-4 w-4" />
@@ -506,6 +519,9 @@ export function WireguardTunnels() {
 													<Button
 														variant="ghost"
 														size="icon"
+														aria-label={intl.formatMessage({
+															id: peer.status === 0 ? "action.enable" : "action.disable",
+														})}
 														onClick={() => handleToggle(peer)}
 													>
 														{peer.status === 0 ? (
@@ -517,6 +533,7 @@ export function WireguardTunnels() {
 													<Button
 														variant="ghost"
 														size="icon"
+														aria-label={intl.formatMessage({ id: "wireguard.edit" })}
 														onClick={() => handleEdit(peer)}
 													>
 														<IconEdit className="h-4 w-4" />
@@ -525,6 +542,7 @@ export function WireguardTunnels() {
 														variant="ghost"
 														size="icon"
 														className="text-destructive"
+														aria-label={intl.formatMessage({ id: "action.delete" })}
 														onClick={() => handleDelete(peer)}
 													>
 														<IconTrash className="h-4 w-4" />
