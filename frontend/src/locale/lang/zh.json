@@ -431,6 +431,8 @@
 	"preservePath": "保留路径",
 	"propagationSeconds": "传播秒数",
 	"provider": "提供商",
+	"redirection-hosts.add": "添加重定向主机",
+	"redirection-hosts.edit": "编辑重定向主机",
 	"proxy-host": "代理服务",
 	"proxy-host.bandwidth-limit": "带宽限制（例如 100k, 1m）",
 	"proxy-host.forward-host": "转发主机名 / IP",

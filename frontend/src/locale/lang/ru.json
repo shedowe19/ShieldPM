@@ -431,6 +431,8 @@
 	"preservePath": "Сохранить путь",
 	"propagationSeconds": "Секунды распространения",
 	"provider": "Провайдер",
+	"redirection-hosts.add": "Добавить хост перенаправления",
+	"redirection-hosts.edit": "Редактировать хост перенаправления",
 	"proxy-host": "Прокси-хост",
 	"proxy-host.bandwidth-limit": "Ограничение пропускной способности (например, 100k, 1m)",
 	"proxy-host.forward-host": "Хост / IP перенаправления",

@@ -431,6 +431,8 @@
 	"preservePath": "Giữ nguyên đường dẫn",
 	"propagationSeconds": "Giây lan truyền",
 	"provider": "Nhà cung cấp",
+	"redirection-hosts.add": "Thêm máy chủ chuyển hướng",
+	"redirection-hosts.edit": "Chỉnh sửa máy chủ chuyển hướng",
 	"proxy-host": "Máy chủ proxy",
 	"proxy-host.bandwidth-limit": "Giới hạn băng thông (ví dụ: 100k, 1m)",
 	"proxy-host.forward-host": "Chuyển tiếp Hostname / IP",

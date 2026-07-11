@@ -431,6 +431,8 @@
 	"preservePath": "Preservar ruta",
 	"propagationSeconds": "Segundos de propagación",
 	"provider": "Proveedor",
+	"redirection-hosts.add": "Añadir host de redirección",
+	"redirection-hosts.edit": "Editar host de redirección",
 	"proxy-host": "Host Proxy",
 	"proxy-host.bandwidth-limit": "Límite de ancho de banda (ej. 100k, 1m)",
 	"proxy-host.forward-host": "Nombre de Host / IP de Reenvío",

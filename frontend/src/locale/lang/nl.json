@@ -431,6 +431,8 @@
 	"preservePath": "Pad Behouden",
 	"propagationSeconds": "Propagatie Seconden",
 	"provider": "Provider",
+	"redirection-hosts.add": "Omleidingshost toevoegen",
+	"redirection-hosts.edit": "Omleidingshost bewerken",
 	"proxy-host": "Proxy Host",
 	"proxy-host.bandwidth-limit": "Bandbreedte limiet (bijv. 100k, 1m)",
 	"proxy-host.forward-host": "Hostname / IP Doorsturen",

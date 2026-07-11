@@ -431,6 +431,8 @@
 	"preservePath": "Zachovať cestu",
 	"propagationSeconds": "Sekundy šírenia",
 	"provider": "Poskytovateľ",
+	"redirection-hosts.add": "Pridať hostiteľa presmerovania",
+	"redirection-hosts.edit": "Upraviť hostiteľa presmerovania",
 	"proxy-host": "Proxy hostiteľa",
 	"proxy-host.bandwidth-limit": "Limit šírky pásma (napr. 100k, 1m)",
 	"proxy-host.forward-host": "Cieľový názov hostiteľa / IP",

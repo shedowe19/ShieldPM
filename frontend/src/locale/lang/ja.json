@@ -431,6 +431,8 @@
 	"preservePath": "パスを保持",
 	"propagationSeconds": "伝播秒",
 	"provider": "プロバイダー",
+	"redirection-hosts.add": "リダイレクトホストを追加",
+	"redirection-hosts.edit": "リダイレクトホストを編集",
 	"proxy-host": "プロキシホスト",
 	"proxy-host.bandwidth-limit": "帯域幅制限（例：100k、1m）",
 	"proxy-host.forward-host": "転送ホスト名/IP",

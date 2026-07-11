@@ -431,6 +431,8 @@
 	"preservePath": "경로 유지",
 	"propagationSeconds": "전파 시간(초)",
 	"provider": "공급자",
+	"redirection-hosts.add": "리디렉션 호스트 추가",
+	"redirection-hosts.edit": "리디렉션 호스트 편집",
 	"proxy-host": "프록시 호스트",
 	"proxy-host.bandwidth-limit": "대역폭 제한 (예: 100k, 1m)",
 	"proxy-host.forward-host": "전달할 호스트명 / IP",

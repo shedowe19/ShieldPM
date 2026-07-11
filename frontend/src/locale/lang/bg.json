@@ -431,6 +431,8 @@
 	"preservePath": "Запази път",
 	"propagationSeconds": "Секунди за разпространение",
 	"provider": "Доставчик",
+	"redirection-hosts.add": "Добавяне на хост за пренасочване",
+	"redirection-hosts.edit": "Редактиране на хост за пренасочване",
 	"proxy-host": "Прокси хост",
 	"proxy-host.bandwidth-limit": "Лимит на честотната лента (напр. 100k, 1m)",
 	"proxy-host.forward-host": "Хост/IP за препращане",
