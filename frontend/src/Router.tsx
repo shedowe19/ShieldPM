@@ -1,17 +1,15 @@
 import { AnimatePresence } from "framer-motion";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
-import {
-	AnimatedPage,
-	ErrorNotFound,
-	LoadingPage,
-	Page,
-	Sidebar,
-	SiteContainer,
-	SiteFooter,
-	SiteHeader,
-	Unhealthy,
-} from "src/components";
+import { AnimatedPage } from "src/components/AnimatedPage";
+import { ErrorNotFound } from "src/components/ErrorNotFound";
+import { LoadingPage } from "src/components/LoadingPage";
+import { Page } from "src/components/Page";
+import { Sidebar } from "src/components/Sidebar";
+import { SiteContainer } from "src/components/SiteContainer";
+import { SiteFooter } from "src/components/SiteFooter";
+import { SiteHeader } from "src/components/SiteHeader";
+import { Unhealthy } from "src/components/Unhealthy";
 import { useAuthState } from "src/context";
 import { useHealth } from "src/hooks";
 

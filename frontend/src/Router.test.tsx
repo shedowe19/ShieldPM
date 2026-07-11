@@ -1,15 +1,31 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("src/components", () => ({
+vi.mock("src/components/AnimatedPage", () => ({
 	AnimatedPage: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("src/components/ErrorNotFound", () => ({
 	ErrorNotFound: () => <div>Not found</div>,
+}));
+vi.mock("src/components/LoadingPage", () => ({
 	LoadingPage: () => <div>Loading</div>,
+}));
+vi.mock("src/components/Page", () => ({
 	Page: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("src/components/Sidebar", () => ({
 	Sidebar: () => <div>Sidebar</div>,
+}));
+vi.mock("src/components/SiteContainer", () => ({
 	SiteContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("src/components/SiteFooter", () => ({
 	SiteFooter: () => <div>Footer</div>,
+}));
+vi.mock("src/components/SiteHeader", () => ({
 	SiteHeader: () => <div>Header</div>,
+}));
+vi.mock("src/components/Unhealthy", () => ({
 	Unhealthy: () => <div>Unhealthy</div>,
 }));
 
