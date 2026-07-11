@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
 import { T } from "@/locale";
-import { showHelpModal } from "@/modals";
+import { showHelpModal } from "@/modals/lazy";
 import { MANAGE, TOR_ONIONS } from "@/modules/Permissions";
 
 export function TorOnionServices() {
