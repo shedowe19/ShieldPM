@@ -25,6 +25,8 @@ countries.registerLocale(enLocale);
 // GeoJSON url
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
+const isDocumentVisible = () => document.visibilityState === "visible";
+
 const formatBytes = (bytes: number, decimals = 2) => {
 	if (!bytes) return "0 B";
 	const k = 1024;
@@ -64,19 +66,21 @@ const Analytics = () => {
 
 	useEffect(() => {
 		let cancelled = false;
+		let latestRequestId = 0;
 		const fetchData = async () => {
 			if (!selectedHostId) return;
+			const requestId = ++latestRequestId;
 			setLoading(true);
 			try {
 				const hostId = Number.parseInt(selectedHostId, 10);
 				// Fetch Summary
 				const summaryData = await getAnalyticsSummary(hostId, range);
-				if (cancelled) return;
+				if (cancelled || requestId !== latestRequestId) return;
 				setSummary(summaryData);
 
 				// Fetch Series
 				const seriesData = await getAnalyticsSeries(hostId, range);
-				if (cancelled) return;
+				if (cancelled || requestId !== latestRequestId) return;
 				// Format timestamp for chart
 				const formattedSeries = seriesData.map((d) => ({
 					...d,
@@ -84,52 +88,97 @@ const Analytics = () => {
 				}));
 				setSeries(formattedSeries);
 			} catch (error) {
-				if (!cancelled) {
+				if (!cancelled && requestId === latestRequestId) {
 					console.error("Failed to fetch analytics:", error);
 				}
 			} finally {
-				if (!cancelled) {
+				if (!cancelled && requestId === latestRequestId) {
 					setLoading(false);
 				}
 			}
 		};
 
-		fetchData();
+		const fetchIfVisible = () => {
+			if (isDocumentVisible()) {
+				fetchData();
+			}
+		};
 
-		// Refresh main data every 10 seconds
-		const interval = setInterval(fetchData, 10000);
+		const handleVisibilityChange = () => {
+			if (isDocumentVisible()) {
+				fetchData();
+			} else {
+				latestRequestId += 1;
+			}
+		};
+
+		fetchIfVisible();
+
+		// Refresh main data every 10 seconds while the tab is visible
+		const interval = setInterval(fetchIfVisible, 10000);
+		document.addEventListener("visibilitychange", handleVisibilityChange);
 		return () => {
 			cancelled = true;
 			clearInterval(interval);
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
 	}, [selectedHostId, range]);
 
 	useEffect(() => {
+		let cancelled = false;
+		let latestRequestId = 0;
 		const fetchLiveParams = async () => {
+			const requestId = ++latestRequestId;
 			try {
 				const res = await fetch("/api/analytics/status");
+				if (cancelled || requestId !== latestRequestId) return;
 				if (res.ok) {
 					const data = await res.json();
+					if (cancelled || requestId !== latestRequestId) return;
 					setNetworkSpeed(data.total_sec || 0);
 				}
 			} catch (_err) {
 				// quiet failure
 			}
 
+			if (cancelled || requestId !== latestRequestId) return;
+
 			// Fetch DB stats
 			try {
 				const dbRes = await fetch("/api/analytics/db-stats");
+				if (cancelled || requestId !== latestRequestId) return;
 				if (dbRes.ok) {
-					setDbStats(await dbRes.json());
+					const data = await dbRes.json();
+					if (cancelled || requestId !== latestRequestId) return;
+					setDbStats(data);
 				}
 			} catch (_err) {
 				// quiet failure
 			}
 		};
 
-		fetchLiveParams();
-		const liveInterval = setInterval(fetchLiveParams, 2000);
-		return () => clearInterval(liveInterval);
+		const fetchIfVisible = () => {
+			if (isDocumentVisible()) {
+				fetchLiveParams();
+			}
+		};
+
+		const handleVisibilityChange = () => {
+			if (isDocumentVisible()) {
+				fetchLiveParams();
+			} else {
+				latestRequestId += 1;
+			}
+		};
+
+		fetchIfVisible();
+		const liveInterval = setInterval(fetchIfVisible, 2000);
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+		return () => {
+			cancelled = true;
+			clearInterval(liveInterval);
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		};
 	}, []);
 
 	if ((loading && !summary) || hostsLoading) {
