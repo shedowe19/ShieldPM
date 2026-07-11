@@ -18,6 +18,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - `backend/routes/nginx/access_lists.js` (3 KB) — API-Routen
 - `frontend/src/modals/AccessListModal.tsx` — Dialog für Erstellung und Bearbeitung
 - `frontend/src/modals/AccessListDetailsTab.tsx` — Formik-gebundener Details- und Optionen-Tab
+- `frontend/src/modals/AccessListSsoTab.tsx` — Formik-gebundene Authentik-, OAuth2-Proxy- und OIDC-Felder
 
 ## Verhalten
 
@@ -27,6 +28,8 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - Access-Lists werden in htpasswd-Dateien unter `/data/access/` geschrieben
 - Der Details-Tab bindet Name sowie die Optionen „Satisfy Any“ und „Pass Auth“ weiter direkt an denselben
   Formik-Formularzustand des Dialogs. `AccessListDetailsTab.test.tsx` sichert diese Wertebindung.
+- Der SSO-Tab bindet Provider und dessen Authentik-, OAuth2-Proxy- oder OIDC-Felder direkt an denselben
+  Formik-Formularzustand. `AccessListSsoTab.test.tsx` sichert Provider- und Authentik-Host-Wertebindung.
 
 ## Abhängigkeiten
 

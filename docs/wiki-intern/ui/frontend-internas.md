@@ -90,7 +90,7 @@ bleibt unabhängig vom Browser-Zustand testbar, damit weitere Polling-Hooks dies
 | Modal                    | Datei                          | Größe  | Zweck                                           |
 | ------------------------ | ------------------------------ | ------ | ----------------------------------------------- |
 | ProxyHostModal           | `ProxyHostModal.tsx`           | 17 KB  | Proxy-Host erstellen/bearbeiten (größte Datei)  |
-| AccessListModal          | `AccessListModal.tsx`          | 30 KB  | Access-List Verwaltung                          |
+| AccessListModal          | `AccessListModal.tsx`          | 14 KB  | Access-List Verwaltung                          |
 | UserModal                | `UserModal.tsx`                | 17 KB  | Benutzer erstellen/bearbeiten und Avatar-Upload |
 | PermissionsModal         | `PermissionsModal.tsx`         | 14 KB  | Berechtigungen setzen                           |
 | RedirectionHostModal     | `RedirectionHostModal.tsx`     | 13 KB  | Redirect erstellen/bearbeiten                   |
@@ -170,6 +170,10 @@ Wertebindung gegen Regressionsfehler ab.
 `AccessListMtlsTab.tsx` kapselt den mTLS-Tab als weiteres Formik-Kind. Die Aktivierung, die Auswahl der internen CA und
 der externe Zertifikatstext bleiben an `mtlsEnabled`, `mtlsUseInternal` und `mtlsContent` des unveränderten
 Formularzustands gebunden; `AccessListMtlsTab.test.tsx` sichert Sichtbarkeit und Wertebindung des Zertifikatsfelds ab.
+
+`AccessListSsoTab.tsx` kapselt die Authentik-, OAuth2-Proxy- und OIDC-Felder als Formik-Kind. Provider-Auswahl und
+providerabhängige Felder verwenden unverändert denselben Formularzustand; `AccessListSsoTab.test.tsx` sichert die
+Wertebindung von Provider und Authentik-Host ab.
 
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.

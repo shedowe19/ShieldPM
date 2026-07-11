@@ -1,6 +1,6 @@
 import { IconShieldLock } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, type FieldProps, Form, Formik, type FormikHelpers, type FormikProps } from "formik";
+import { Form, Formik, type FormikHelpers, type FormikProps } from "formik";
 import { AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { AccessList, AccessListClient, AccessListItem } from "src/api/backend";
@@ -8,10 +8,6 @@ import { AccessClientFields, BasicAuthFields, Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Input } from "src/components/ui/input";
-import { Label } from "src/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useAccessList, useSetAccessList } from "src/hooks";
 import { intl, T } from "src/locale";
@@ -19,6 +15,7 @@ import { showObjectSuccess } from "src/notifications";
 import { ACCESS_LIST_AUTH_TYPE, ACCESS_LIST_TAB, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
 import AccessListDetailsTab from "./AccessListDetailsTab";
 import AccessListMtlsTab from "./AccessListMtlsTab";
+import AccessListSsoTab from "./AccessListSsoTab";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -265,7 +262,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						}
 						onSubmit={onSubmit}
 					>
-						{({ values, setFieldValue }: FormikProps<AccessListFormValues>) => {
+						{({ values }: FormikProps<AccessListFormValues>) => {
 							const isSsoEnabled = !!(values.authType && values.authType !== ACCESS_LIST_AUTH_TYPE.NONE);
 							return (
 								<Form className="space-y-4">
@@ -331,308 +328,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 												<AccessClientFields initialValues={data?.clients || []} />
 											</fieldset>
 										</TabsContent>
-
-										<TabsContent value={ACCESS_LIST_TAB.SSO} className="pt-4 space-y-4">
-											<div className="space-y-2">
-												<Label htmlFor="authType">Provider Type</Label>
-												<Field name="authType">
-													{({ field }: FieldProps) => (
-														<Select
-															value={field.value || ACCESS_LIST_AUTH_TYPE.NONE}
-															onValueChange={(val) => setFieldValue("authType", val)}
-														>
-															<SelectTrigger id="authType">
-																<SelectValue
-																	placeholder={intl.formatMessage({
-																		id: "access-list.satisfy.none",
-																	})}
-																/>
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value={ACCESS_LIST_AUTH_TYPE.NONE}>
-																	None / Basic Auth
-																</SelectItem>
-																<SelectItem
-																	value={ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY}
-																>
-																	Authentik Proxy (Forward Auth)
-																</SelectItem>
-																<SelectItem value={ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY}>
-																	OAuth2 Proxy
-																</SelectItem>
-																<SelectItem value={ACCESS_LIST_AUTH_TYPE.OIDC}>
-																	OIDC (OpenID Connect)
-																</SelectItem>
-															</SelectContent>
-														</Select>
-													)}
-												</Field>
-											</div>
-
-											{values.authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY && (
-												<div className="space-y-2">
-													<Label htmlFor="authentikHost">Authentik Host URL</Label>
-													<Field name="authentikHost">
-														{({ field }: FieldProps) => (
-															<Input
-																{...field}
-																id="authentikHost"
-																placeholder={intl.formatMessage({
-																	id: "form.placeholder.auth-host",
-																})}
-															/>
-														)}
-													</Field>
-													<div className="text-sm text-muted-foreground">
-														Full URL to your Authentik instance. Uses Nginx `auth_request`
-														to the Outpost.
-													</div>
-												</div>
-											)}
-
-											{values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY && (
-												<>
-													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-														<div className="space-y-2">
-															<Label htmlFor="oauth2Provider">Provider</Label>
-															<Field name="oauth2Provider">
-																{({ field }: FieldProps) => (
-																	<Select
-																		value={field.value || "google"}
-																		onValueChange={(val) =>
-																			setFieldValue("oauth2Provider", val)
-																		}
-																	>
-																		<SelectTrigger id="oauth2Provider">
-																			<SelectValue placeholder="Select Provider" />
-																		</SelectTrigger>
-																		<SelectContent>
-																			<SelectItem value="google">
-																				Google
-																			</SelectItem>
-																			<SelectItem value="github">
-																				GitHub
-																			</SelectItem>
-																			<SelectItem value="oidc">
-																				OpenID Connect
-																			</SelectItem>
-																			<SelectItem value="azure">Azure</SelectItem>
-																			<SelectItem value="gitlab">
-																				GitLab
-																			</SelectItem>
-																			<SelectItem value="keycloak-oidc">
-																				Keycloak
-																			</SelectItem>
-																		</SelectContent>
-																	</Select>
-																)}
-															</Field>
-														</div>
-														<div className="space-y-2">
-															<Label htmlFor="oauth2ProxyPrefix">Proxy Prefix</Label>
-															<Field name="oauth2ProxyPrefix">
-																{({ field }: FieldProps) => (
-																	<Input
-																		{...field}
-																		id="oauth2ProxyPrefix"
-																		placeholder="/oauth2/"
-																	/>
-																)}
-															</Field>
-														</div>
-													</div>
-
-													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-														<div className="space-y-2">
-															<Label htmlFor="oauth2ClientId">Client ID</Label>
-															<Field name="oauth2ClientId">
-																{({ field }: FieldProps) => (
-																	<Input {...field} id="oauth2ClientId" />
-																)}
-															</Field>
-														</div>
-														<div className="space-y-2">
-															<Label htmlFor="oauth2ClientSecret">Client Secret</Label>
-															<Field name="oauth2ClientSecret">
-																{({ field }: FieldProps) => (
-																	<Input
-																		{...field}
-																		type="password"
-																		id="oauth2ClientSecret"
-																	/>
-																)}
-															</Field>
-														</div>
-													</div>
-
-													<div className="space-y-2">
-														<Label htmlFor="oauth2CookieSecret">Cookie Secret</Label>
-														<div className="flex gap-2">
-															<Field name="oauth2CookieSecret">
-																{({ field }: FieldProps) => (
-																	<Input
-																		{...field}
-																		type="password"
-																		id="oauth2CookieSecret"
-																		placeholder="16, 24, or 32 bytes"
-																	/>
-																)}
-															</Field>
-															{/* Ideally we'd have a generate button here */}
-														</div>
-														<div className="text-xs text-muted-foreground">
-															Must be 16, 24, or 32 bytes.
-														</div>
-													</div>
-
-													{values.oauth2Provider === "oidc" && (
-														<div className="space-y-2">
-															<Label htmlFor="oauth2OidcIssuerUrl">OIDC Issuer URL</Label>
-															<Field name="oauth2OidcIssuerUrl">
-																{({ field }: FieldProps) => (
-																	<Input
-																		{...field}
-																		id="oauth2OidcIssuerUrl"
-																		placeholder="https://accounts.google.com"
-																	/>
-																)}
-															</Field>
-														</div>
-													)}
-
-													<div className="space-y-2">
-														<Label htmlFor="oauth2Scope">Scope</Label>
-														<Field name="oauth2Scope">
-															{({ field }: FieldProps) => (
-																<Input
-																	{...field}
-																	id="oauth2Scope"
-																	placeholder="openid profile email"
-																/>
-															)}
-														</Field>
-														<div className="text-sm text-muted-foreground">
-															OAuth scopes (space separated). Leave empty for defaults.
-														</div>
-													</div>
-
-													<div className="space-y-2">
-														<div className="flex items-center justify-between">
-															<Label
-																htmlFor="oauth2InsecureOidcAllowUnverifiedEmail"
-																className="cursor-pointer"
-															>
-																Allow Unverified Email
-															</Label>
-															<Field name="oauth2InsecureOidcAllowUnverifiedEmail">
-																{({ field }: FieldProps) => (
-																	<Switch
-																		id="oauth2InsecureOidcAllowUnverifiedEmail"
-																		checked={field.value}
-																		onCheckedChange={(checked) =>
-																			setFieldValue(
-																				"oauth2InsecureOidcAllowUnverifiedEmail",
-																				checked,
-																			)
-																		}
-																	/>
-																)}
-															</Field>
-														</div>
-														<div className="text-xs text-muted-foreground">
-															Don't fail if an email address in an id_token is not
-															verified.
-														</div>
-													</div>
-													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-														<div className="space-y-2">
-															<Label htmlFor="oauth2AllowedGroups">Allowed Groups</Label>
-															<Field name="oauth2AllowedGroups">
-																{({ field }: FieldProps) => (
-																	<Input
-																		{...field}
-																		id="oauth2AllowedGroups"
-																		placeholder="admin,dev"
-																	/>
-																)}
-															</Field>
-															<div className="text-xs text-muted-foreground">
-																Comma-separated list of allowed groups.
-															</div>
-														</div>
-														<div className="space-y-2">
-															<Label htmlFor="oauth2AllowedEmails">Allowed Emails</Label>
-															<Field name="oauth2AllowedEmails">
-																{({ field }: FieldProps) => (
-																	<Input
-																		{...field}
-																		id="oauth2AllowedEmails"
-																		placeholder="user@example.com,user2@example.com"
-																	/>
-																)}
-															</Field>
-															<div className="text-xs text-muted-foreground">
-																Comma-separated list of allowed emails.
-															</div>
-														</div>
-														<div className="space-y-2">
-															<Label htmlFor="oauth2AllowedEmailDomains">
-																Allowed Domains
-															</Label>
-															<Field name="oauth2AllowedEmailDomains">
-																{({ field }: FieldProps) => (
-																	<Input
-																		{...field}
-																		id="oauth2AllowedEmailDomains"
-																		placeholder="example.com"
-																	/>
-																)}
-															</Field>
-															<div className="text-xs text-muted-foreground">
-																Comma-separated list of allowed email domains.
-															</div>
-														</div>
-													</div>
-												</>
-											)}
-
-											{values.authType === ACCESS_LIST_AUTH_TYPE.OIDC && (
-												<>
-													<div className="space-y-2">
-														<Label htmlFor="oidcDiscoveryUrl">Discovery URL</Label>
-														<Field name="oidcDiscoveryUrl">
-															{({ field }: FieldProps) => (
-																<Input
-																	{...field}
-																	id="oidcDiscoveryUrl"
-																	placeholder="https://authentik.company/.well-known/openid-configuration"
-																/>
-															)}
-														</Field>
-													</div>
-													<div className="space-y-2">
-														<Label htmlFor="oidcClientId">Client ID</Label>
-														<Field name="oidcClientId">
-															{({ field }: FieldProps) => (
-																<Input {...field} id="oidcClientId" />
-															)}
-														</Field>
-													</div>
-													<div className="space-y-2">
-														<Label htmlFor="oidcClientSecret">Client Secret</Label>
-														<Field name="oidcClientSecret">
-															{({ field }: FieldProps) => (
-																<Input
-																	{...field}
-																	type="password"
-																	id="oidcClientSecret"
-																/>
-															)}
-														</Field>
-													</div>
-												</>
-											)}
-										</TabsContent>
+										<AccessListSsoTab />
 
 										<AccessListMtlsTab />
 									</Tabs>
