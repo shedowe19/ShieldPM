@@ -2,6 +2,7 @@ import { IconEdit, IconHelp, IconPlus, IconRefresh, IconTrash } from "@tabler/ic
 import dayjs from "dayjs";
 import { Cloud, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
+import { showCloudflaredHelpModal } from "./CloudflaredTunnels.lazy";
 import type { CloudflaredTunnel } from "@/api/backend";
 import { HasPermission } from "@/components/HasPermission";
 import { CloudflaredTunnelModal } from "@/components/Nginx/CloudflaredTunnelModal";
@@ -13,7 +14,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCloudflaredTunnel, useCloudflaredTunnels } from "@/hooks/useCloudflaredTunnel";
 import { useHealth } from "@/hooks/useHealth";
 import { intl, T } from "@/locale";
-import { showHelpModal } from "@/modals/lazy";
 import { CLOUDFLARED_TUNNELS, MANAGE } from "@/modules/Permissions";
 
 export function CloudflaredTunnels() {
@@ -144,7 +144,7 @@ export function CloudflaredTunnels() {
 					>
 						<IconRefresh className="h-4 w-4" />
 					</Button>
-					<Button variant="outline" size="icon" onClick={() => showHelpModal("CloudflaredTunnels", "orange")}>
+					<Button variant="outline" size="icon" onClick={showCloudflaredHelpModal}>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={CLOUDFLARED_TUNNELS} permission={MANAGE} hideError>
