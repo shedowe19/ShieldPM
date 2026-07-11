@@ -18,6 +18,7 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 - `Nginx/DeadHosts/lazy.ts` kapselt die Dead-Host-, Lösch- und Hilfe-Aktionen. `Nginx/DeadHosts/TableWrapper.tsx` referenziert dadurch den allgemeinen `modals/lazy.ts`-Chunk nicht mehr statisch; die dynamischen Dialogimporte bleiben an die jeweiligen Nutzeraktionen gebunden.
 - `Nginx/ProxyHosts/lazy.ts` kapselt die Proxy-Host-, Access-List-, Lösch- und Hilfe-Aktionen. Der wiederverwendbare `AccessListFormatter` delegiert seine Aktion an die Routen-Tabelle, sodass auch dessen statische Abhängigkeit den allgemeinen `modals/lazy.ts`-Loader nicht mehr in die Proxy-Host-Route zieht.
 - `Nginx/RedirectionHosts/lazy.ts` kapselt die Redirect-Host-, Lösch- und Hilfe-Aktionen. `Nginx/RedirectionHosts/TableWrapper.tsx` referenziert dadurch den allgemeinen `modals/lazy.ts`-Chunk nicht mehr statisch; die Dialogimporte bleiben an die jeweiligen Nutzeraktionen gebunden.
+- `Nginx/DdnsProviders/lazy.ts` kapselt die DDNS-Provider-, Lösch- und Hilfe-Aktionen. `Nginx/DdnsProviders/TableWrapper.tsx` referenziert dadurch den allgemeinen `modals/lazy.ts`-Chunk nicht mehr statisch; die Dialogimporte bleiben an die jeweiligen Nutzeraktionen gebunden.
 
 ## Custom Hooks (`frontend/src/hooks/`)
 

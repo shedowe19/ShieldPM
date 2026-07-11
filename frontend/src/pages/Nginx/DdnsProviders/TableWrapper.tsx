@@ -10,10 +10,10 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { intl, T } from "src/locale";
-import { showDdnsProviderModal, showDeleteConfirmModal, showHelpModal } from "src/modals/lazy";
 import { DDNS_PROVIDERS, MANAGE } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { showDdnsProviderModal, showDeleteConfirmModal, showHelpModal } from "./lazy";
 import Table from "./Table";
 
 export default function TableWrapper() {
