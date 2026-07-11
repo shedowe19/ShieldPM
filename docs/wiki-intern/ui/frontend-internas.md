@@ -60,6 +60,13 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 | `useObjectUrl`    | `useObjectUrl.ts`    | Verwaltet und bereinigt Blob-URLs für lokale Vorschauen |
 | `use-toast`       | `use-toast.ts`       | Toast-Benachrichtigungen                                |
 
+`hooks/pollingPolicy.ts` bündelt die Intervallentscheidung für wiederkehrende React-Query-Abfragen. Sie pausiert bei
+ausgeblendeter Seite oder Offline-Status und verdoppelt das Intervall nach Fehlern bis zum jeweiligen Maximum.
+`hooks/usePollingEnvironment.ts` aktualisiert diesen Browser-Zustand bei Sichtbarkeits- sowie Online-/Offline-Ereignissen,
+damit ein pausiertes Intervall beim Wiederherstellen der Verbindung erneut geplant wird. `useHealth` nutzt die Policy
+bereits; die reine Intervallfunktion bleibt unabhängig vom Browser-Zustand testbar, damit weitere Polling-Hooks dieselbe
+Entscheidung übernehmen können.
+
 ## React-Kontexte (`frontend/src/context/`)
 
 | Context         | Datei                      | Zweck                                                 |
