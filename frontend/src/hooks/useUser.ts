@@ -54,4 +54,4 @@ const useSetUser = () => {
 	});
 };
 
-export { useUser, useSetUser };
+export { useSetUser, useUser };
