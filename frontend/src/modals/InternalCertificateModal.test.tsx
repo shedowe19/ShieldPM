@@ -3,6 +3,7 @@ import type { PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	downloadPost: vi.fn(),
 	invalidateQueries: vi.fn(),
 	remove: vi.fn(),
 	show: vi.fn(),
@@ -21,6 +22,10 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("src/api/backend", () => ({
 	createCertificate: vi.fn(),
+}));
+
+vi.mock("src/api/backend/base", () => ({
+	downloadPost: mocks.downloadPost,
 }));
 
 vi.mock("src/components/ui/dialog", () => ({
@@ -74,6 +79,7 @@ describe("InternalCertificateModal", () => {
 		mocks.invalidateQueries.mockClear();
 		mocks.remove.mockClear();
 		mocks.show.mockClear();
+		mocks.downloadPost.mockResolvedValue(undefined);
 		vi.stubGlobal(
 			"fetch",
 			vi.fn().mockResolvedValue({
@@ -90,7 +96,7 @@ describe("InternalCertificateModal", () => {
 		vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
 	});
 
-	it("removes the temporary download link after saving a client certificate", async () => {
+	it("uses the shared POST download client after saving a client certificate", async () => {
 		const { showInternalCertificateModal } = await import("./InternalCertificateModal");
 		showInternalCertificateModal();
 		const ModalComponent = mocks.show.mock.calls[0]?.[0];
@@ -109,8 +115,20 @@ describe("InternalCertificateModal", () => {
 		});
 		fireEvent.click(screen.getByRole("button", { name: "save" }));
 
-		await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+		await waitFor(() =>
+			expect(mocks.downloadPost).toHaveBeenCalledWith(
+				{
+					data: {
+						common_name: "operator-laptop",
+						password: "test-password",
+						years: 10,
+					},
+					url: "nginx/certificates/internal/client",
+				},
+				"operator-laptop.p12",
+			),
+		);
 
-		expect(document.querySelector('a[download="operator-laptop.p12"]')).not.toBeInTheDocument();
+		expect(fetch).not.toHaveBeenCalled();
 	});
 });

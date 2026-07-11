@@ -5,6 +5,7 @@ import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { type Certificate, createCertificate } from "src/api/backend";
+import { downloadPost } from "src/api/backend/base";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -43,35 +44,17 @@ const InternalCertificateModal = EasyModal.create(({ visible, remove }: InnerMod
 
 		try {
 			if (values.type === INTERNAL_CERT_TYPE.CLIENT) {
-				// Client Certificate Download
-				// Use AuthStore to get the current token
-				const response = await fetch("/api/nginx/certificates/internal/client", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
+				await downloadPost(
+					{
+						url: "nginx/certificates/internal/client",
+						data: {
+							common_name: values.domain_names, // Reusing field
+							password: values.password,
+							years: Number.parseInt(values.years, 10),
+						},
 					},
-					body: JSON.stringify({
-						common_name: values.domain_names, // Reusing field
-						password: values.password,
-						years: Number.parseInt(values.years, 10),
-					}),
-				});
-
-				if (!response.ok) {
-					const err = await response.json();
-					throw new Error(err.error?.message || "Failed to generate certificate");
-				}
-
-				// Trigger Download
-				const blob = await response.blob();
-				const url = window.URL.createObjectURL(blob);
-				const a = document.createElement("a");
-				a.href = url;
-				a.download = `${values.domain_names}.p12`;
-				document.body.appendChild(a);
-				a.click();
-				a.remove();
-				window.URL.revokeObjectURL(url);
+					`${values.domain_names}.p12`,
+				);
 
 				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "downloaded"); // Custom message?
 				remove();
