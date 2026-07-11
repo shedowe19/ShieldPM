@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "HSTS 활성화",
 	"domains.hsts-subdomains": "HSTS 서브도메인 포함",
 	"domains.http2-support": "HTTP/2 지원",
+	"domains.unknown": "알 수 없음",
 	"domains.use-dns": "DNS 챌린지 사용",
 	"email": "이메일",
 	"email-address": "이메일 주소",

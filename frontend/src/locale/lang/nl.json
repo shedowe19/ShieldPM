@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "HSTS Aangezet",
 	"domains.hsts-subdomains": "HSTS Subdomein",
 	"domains.http2-support": "HTTP/2 Ondersteuning",
+	"domains.unknown": "Onbekend",
 	"domains.use-dns": "Gebruik DNS Challenge",
 	"email": "E-mail",
 	"email-address": "E-mailadres",

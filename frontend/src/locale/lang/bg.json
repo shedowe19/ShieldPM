@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "HSTS активирано",
 	"domains.hsts-subdomains": "HSTS за поддомейни",
 	"domains.http2-support": "Поддръжка на HTTP/2",
+	"domains.unknown": "Неизвестно",
 	"domains.use-dns": "Използване на DNS Challenge",
 	"email": "Имейл",
 	"email-address": "Имейл адрес",

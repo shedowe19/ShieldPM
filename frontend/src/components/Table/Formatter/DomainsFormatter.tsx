@@ -47,7 +47,7 @@ export function DomainsFormatter({ domains, createdOn, niceName, provider, color
 	if ((!domains || domains.length === 0) && !niceName) {
 		elms.push(
 			<Badge key="nice-name" variant="destructive" className="mr-2">
-				Unknown
+				<T id="domains.unknown" />
 			</Badge>,
 		);
 	}

@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "HSTS 已启用",
 	"domains.hsts-subdomains": "HSTS 子域名",
 	"domains.http2-support": "HTTP/2 支持",
+	"domains.unknown": "未知",
 	"domains.use-dns": "使用DNS验证",
 	"email": "电子邮件",
 	"email-address": "邮箱地址",

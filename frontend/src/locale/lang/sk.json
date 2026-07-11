@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "HSTS povolené",
 	"domains.hsts-subdomains": "HSTS pre subdomény",
 	"domains.http2-support": "Podpora HTTP/2",
+	"domains.unknown": "Neznáme",
 	"domains.use-dns": "Použiť DNS výzvu",
 	"email": "E-mail",
 	"email-address": "Emailová adresa",

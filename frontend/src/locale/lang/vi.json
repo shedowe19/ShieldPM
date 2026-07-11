@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "Bật HSTS",
 	"domains.hsts-subdomains": "Tên miền phụ HSTS",
 	"domains.http2-support": "Hỗ trợ HTTP/2",
+	"domains.unknown": "Không xác định",
 	"domains.use-dns": "Dùng thử thách DNS",
 	"email": "Email",
 	"email-address": "Địa chỉ email",

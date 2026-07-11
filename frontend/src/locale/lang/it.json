@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "HSTS Abilitato",
 	"domains.hsts-subdomains": "Sottodomini HSTS",
 	"domains.http2-support": "Supporto HTTP/2",
+	"domains.unknown": "Sconosciuto",
 	"domains.use-dns": "Usa Challenge DNS",
 	"email": "Email",
 	"email-address": "Indirizzo Email",

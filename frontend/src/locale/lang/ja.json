@@ -297,6 +297,7 @@
 	"domains.hsts-enabled": "HSTSを有効化",
 	"domains.hsts-subdomains": "HSTSサブドメイン",
 	"domains.http2-support": "HTTP/2サポート",
+	"domains.unknown": "不明",
 	"domains.use-dns": "DNSチャレンジを使用",
 	"email": "メール",
 	"email-address": "Emailアドレス",
