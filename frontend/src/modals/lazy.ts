@@ -2,15 +2,20 @@ import { showError } from "src/notifications";
 
 let accessListModalModule: Promise<typeof import("./AccessListModal")> | undefined;
 let changePasswordModalModule: Promise<typeof import("./ChangePasswordModal")> | undefined;
+let customCertificateModalModule: Promise<typeof import("./CustomCertificateModal")> | undefined;
 let dashboardNoteModalModule: Promise<typeof import("./DashboardNoteModal")> | undefined;
 let deadHostModalModule: Promise<typeof import("./DeadHostModal")> | undefined;
 let ddnsProviderModalModule: Promise<typeof import("./DdnsProviderModal")> | undefined;
 let deleteConfirmModalModule: Promise<typeof import("./DeleteConfirmModal")> | undefined;
+let dnsCertificateModalModule: Promise<typeof import("./DNSCertificateModal")> | undefined;
 let eventDetailsModalModule: Promise<typeof import("./EventDetailsModal")> | undefined;
+let httpCertificateModalModule: Promise<typeof import("./HTTPCertificateModal")> | undefined;
 let helpModalModule: Promise<typeof import("./HelpModal")> | undefined;
+let internalCertificateModalModule: Promise<typeof import("./InternalCertificateModal")> | undefined;
 let permissionsModalModule: Promise<typeof import("./PermissionsModal")> | undefined;
 let proxyHostModalModule: Promise<typeof import("./ProxyHostModal")> | undefined;
 let redirectionHostModalModule: Promise<typeof import("./RedirectionHostModal")> | undefined;
+let renewCertificateModalModule: Promise<typeof import("./RenewCertificateModal")> | undefined;
 let setPasswordModalModule: Promise<typeof import("./SetPasswordModal")> | undefined;
 let streamModalModule: Promise<typeof import("./StreamModal")> | undefined;
 let userModalModule: Promise<typeof import("./UserModal")> | undefined;
@@ -23,6 +28,11 @@ const loadAccessListModal = () => {
 const loadChangePasswordModal = () => {
 	changePasswordModalModule ??= import("./ChangePasswordModal");
 	return changePasswordModalModule;
+};
+
+const loadCustomCertificateModal = () => {
+	customCertificateModalModule ??= import("./CustomCertificateModal");
+	return customCertificateModalModule;
 };
 
 const loadDashboardNoteModal = () => {
@@ -45,14 +55,29 @@ const loadDeleteConfirmModal = () => {
 	return deleteConfirmModalModule;
 };
 
+const loadDNSCertificateModal = () => {
+	dnsCertificateModalModule ??= import("./DNSCertificateModal");
+	return dnsCertificateModalModule;
+};
+
 const loadEventDetailsModal = () => {
 	eventDetailsModalModule ??= import("./EventDetailsModal");
 	return eventDetailsModalModule;
 };
 
+const loadHTTPCertificateModal = () => {
+	httpCertificateModalModule ??= import("./HTTPCertificateModal");
+	return httpCertificateModalModule;
+};
+
 const loadHelpModal = () => {
 	helpModalModule ??= import("./HelpModal");
 	return helpModalModule;
+};
+
+const loadInternalCertificateModal = () => {
+	internalCertificateModalModule ??= import("./InternalCertificateModal");
+	return internalCertificateModalModule;
 };
 
 const loadPermissionsModal = () => {
@@ -68,6 +93,11 @@ const loadProxyHostModal = () => {
 const loadRedirectionHostModal = () => {
 	redirectionHostModalModule ??= import("./RedirectionHostModal");
 	return redirectionHostModalModule;
+};
+
+const loadRenewCertificateModal = () => {
+	renewCertificateModalModule ??= import("./RenewCertificateModal");
+	return renewCertificateModalModule;
 };
 
 const loadSetPasswordModal = () => {
@@ -101,6 +131,16 @@ const showChangePasswordModal = async (id: number | "me") => {
 		showModal(id);
 	} catch (error) {
 		changePasswordModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
+const showCustomCertificateModal = async () => {
+	try {
+		const { showCustomCertificateModal: showModal } = await loadCustomCertificateModal();
+		showModal();
+	} catch (error) {
+		customCertificateModalModule = undefined;
 		showError(error instanceof Error ? error.message : String(error));
 	}
 };
@@ -149,6 +189,16 @@ const showDeleteConfirmModal = async (
 	}
 };
 
+const showDNSCertificateModal = async () => {
+	try {
+		const { showDNSCertificateModal: showModal } = await loadDNSCertificateModal();
+		showModal();
+	} catch (error) {
+		dnsCertificateModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
 const showEventDetailsModal = async (id: number) => {
 	try {
 		const { showEventDetailsModal: showModal } = await loadEventDetailsModal();
@@ -159,12 +209,32 @@ const showEventDetailsModal = async (id: number) => {
 	}
 };
 
+const showHTTPCertificateModal = async () => {
+	try {
+		const { showHTTPCertificateModal: showModal } = await loadHTTPCertificateModal();
+		showModal();
+	} catch (error) {
+		httpCertificateModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
 const showHelpModal = async (section: string, color?: string) => {
 	try {
 		const { showHelpModal: showModal } = await loadHelpModal();
 		showModal(section, color);
 	} catch (error) {
 		helpModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
+const showInternalCertificateModal = async () => {
+	try {
+		const { showInternalCertificateModal: showModal } = await loadInternalCertificateModal();
+		showModal();
+	} catch (error) {
+		internalCertificateModalModule = undefined;
 		showError(error instanceof Error ? error.message : String(error));
 	}
 };
@@ -195,6 +265,16 @@ const showRedirectionHostModal = async (id: number | "new") => {
 		showModal(id);
 	} catch (error) {
 		redirectionHostModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
+const showRenewCertificateModal = async (id: number) => {
+	try {
+		const { showRenewCertificateModal: showModal } = await loadRenewCertificateModal();
+		showModal(id);
+	} catch (error) {
+		renewCertificateModalModule = undefined;
 		showError(error instanceof Error ? error.message : String(error));
 	}
 };
@@ -232,15 +312,20 @@ const showUserModal = async (id: number | "me" | "new") => {
 export {
 	showAccessListModal,
 	showChangePasswordModal,
+	showCustomCertificateModal,
 	showDashboardNoteModal,
 	showDdnsProviderModal,
 	showDeadHostModal,
 	showDeleteConfirmModal,
+	showDNSCertificateModal,
 	showEventDetailsModal,
 	showHelpModal,
+	showHTTPCertificateModal,
+	showInternalCertificateModal,
 	showPermissionsModal,
 	showProxyHostModal,
 	showRedirectionHostModal,
+	showRenewCertificateModal,
 	showSetPasswordModal,
 	showStreamModal,
 	showUserModal,

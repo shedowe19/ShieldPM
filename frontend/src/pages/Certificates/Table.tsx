@@ -26,7 +26,7 @@ import {
 	showDNSCertificateModal,
 	showHTTPCertificateModal,
 	showInternalCertificateModal,
-} from "src/modals";
+} from "src/modals/lazy";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
 import { AUDIT_LOG_OBJECT_TYPE, CERTIFICATE_PROVIDER } from "src/types/enums";
 
