@@ -317,6 +317,7 @@
 	"error.minimum": "Minimale is {min}",
 	"error.passwords-must-match": "Wachtwoorden moeten overeenkomen",
 	"error.required": "Dit is verplicht",
+	"error.title": "Fout",
 	"error.unknown": "Onbekende fout",
 	"expires.on": "Verloopt: {date}",
 	"expiresOn": "Verloopt Op",

@@ -317,6 +317,7 @@
 	"error.minimum": "Minimo {min}",
 	"error.passwords-must-match": "Le password devono coincidere",
 	"error.required": "Campo obbligatorio",
+	"error.title": "Errore",
 	"error.unknown": "Errore sconosciuto",
 	"expires.on": "Scade: {date}",
 	"expiresOn": "Scade il",

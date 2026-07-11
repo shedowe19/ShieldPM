@@ -317,6 +317,7 @@
 	"error.minimum": "Tối thiểu là {min}",
 	"error.passwords-must-match": "Mật khẩu phải khớp",
 	"error.required": "Điều này là bắt buộc",
+	"error.title": "Lỗi",
 	"error.unknown": "Lỗi không xác định",
 	"expires.on": "Hết hạn: {date}",
 	"expiresOn": "Hết hạn vào",

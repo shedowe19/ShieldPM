@@ -317,6 +317,7 @@
 	"error.minimum": "最小值为 {min}",
 	"error.passwords-must-match": "密码必须匹配",
 	"error.required": "此项为必填项",
+	"error.title": "错误",
 	"error.unknown": "未知错误",
 	"expires.on": "过期时间: {date}",
 	"expiresOn": "过期时间",

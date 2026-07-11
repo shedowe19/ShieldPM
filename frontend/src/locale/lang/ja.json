@@ -317,6 +317,7 @@
 	"error.minimum": "最小値は{min}です",
 	"error.passwords-must-match": "パスワードは一致する必要があります",
 	"error.required": "必須項目です",
+	"error.title": "エラー",
 	"error.unknown": "不明なエラー",
 	"expires.on": "有効期限: {date}",
 	"expiresOn": "期限切れ",

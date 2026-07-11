@@ -71,4 +71,22 @@ describe("RenewCertificateModal", () => {
 		expect(await screen.findByText("Bitte warten …")).toBeInTheDocument();
 		expect(screen.queryByText("Please wait…")).not.toBeInTheDocument();
 	});
+
+	it("shows a localized fallback when renewal rejects with a non-Error value", async () => {
+		mocks.renewCertificate.mockRejectedValue("Request failed");
+		const { showRenewCertificateModal } = await import("./RenewCertificateModal");
+		showRenewCertificateModal(42);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("Renew certificate modal was not registered");
+		}
+
+		render(<ModalComponent remove={mocks.remove} visible />);
+
+		expect(await screen.findByText("Fehler")).toBeInTheDocument();
+		expect(await screen.findByText("Unbekannter Fehler")).toBeInTheDocument();
+		expect(screen.queryByText("Error")).not.toBeInTheDocument();
+		expect(screen.queryByText("Unknown error")).not.toBeInTheDocument();
+	});
 });

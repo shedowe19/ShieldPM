@@ -317,6 +317,7 @@
 	"error.minimum": "Minimum to {min}",
 	"error.passwords-must-match": "Hasła muszą się zgadzać",
 	"error.required": "To pole jest wymagane",
+	"error.title": "Błąd",
 	"error.unknown": "Nieznany błąd",
 	"expires.on": "Wygasa: {date}",
 	"expiresOn": "Wygasa",

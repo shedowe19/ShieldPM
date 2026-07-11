@@ -38,8 +38,8 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 				queryClient.invalidateQueries({ queryKey: ["certificates"] });
 				remove();
 			})
-			.catch((err) => {
-				if (err instanceof Error) setErrorMsg(<T id={err.message} />);
+			.catch((err: unknown) => {
+				setErrorMsg(<T id={err instanceof Error ? err.message : "error.unknown"} />);
 			})
 			.finally(() => {
 				setIsSubmitting(false);
@@ -58,7 +58,9 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 				<div className="py-4 space-y-4">
 					{errorMsg && (
 						<Alert variant="destructive">
-							<AlertTitle>Error</AlertTitle>
+							<AlertTitle>
+								<T id="error.title" />
+							</AlertTitle>
 							<AlertDescription>{errorMsg}</AlertDescription>
 						</Alert>
 					)}

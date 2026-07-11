@@ -317,6 +317,7 @@
 	"error.minimum": "Minimum je {min}",
 	"error.passwords-must-match": "Heslá sa musia zhodovať",
 	"error.required": "Toto pole je povinné",
+	"error.title": "Chyba",
 	"error.unknown": "Neznáma chyba",
 	"expires.on": "Platnosť do: {date}",
 	"expiresOn": "Platnosť končí",

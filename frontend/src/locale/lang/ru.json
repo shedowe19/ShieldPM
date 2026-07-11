@@ -317,6 +317,7 @@
 	"error.minimum": "Минимум {min}",
 	"error.passwords-must-match": "Пароли должны совпадать",
 	"error.required": "Обязательное поле",
+	"error.title": "Ошибка",
 	"error.unknown": "Неизвестная ошибка",
 	"expires.on": "Истекает: {date}",
 	"expiresOn": "Истекает",

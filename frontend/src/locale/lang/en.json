@@ -327,6 +327,7 @@
 	"error.minimum": "Minimum is {min}",
 	"error.passwords-must-match": "Passwords must match",
 	"error.required": "This is required",
+	"error.title": "Error",
 	"error.unknown": "Unknown error",
 	"expires.on": "Expires: {date}",
 	"expiresOn": "Expires On",
