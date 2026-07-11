@@ -116,6 +116,9 @@ Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pre
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 
+`Certificates/TableWrapper.tsx` beschriftet seine Icon-Aktion für die Hilfe mit dem in allen 13 Locales vorhandenen
+Schlüssel `action.help` als zugänglichen Namen.
+
 ## Types (`frontend/src/types/`)
 
 | Datei             | Zweck                                               |

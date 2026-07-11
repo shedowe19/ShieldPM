@@ -102,7 +102,12 @@ export default function TableWrapper() {
 							/>
 						</div>
 					) : null}
-					<ShadcnButton variant="outline" size="icon" onClick={() => showHelpModal("Certificates", "pink")}>
+					<ShadcnButton
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "action.help" })}
+						onClick={() => showHelpModal("Certificates", "pink")}
+					>
 						<IconHelp className="h-4 w-4" />
 					</ShadcnButton>
 					<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>
