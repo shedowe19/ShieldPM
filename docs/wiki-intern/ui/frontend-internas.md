@@ -113,6 +113,10 @@ Nachrichten; `user.security` ist in allen 13 unterstützten Locale-Dateien hinte
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.
 
+`ChangePasswordModal.tsx` verwendet dieselben lokalisierten Schlüssel für die Umschalter des aktuellen, neuen und
+wiederholten Passworts sowie für den Generator. Alle drei Umschalter veröffentlichen ihren Zustand mit `aria-pressed`
+und sind nicht mehr aus der Tab-Reihenfolge ausgeschlossen.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 

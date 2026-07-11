@@ -134,9 +134,12 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 												type="button"
 												variant="ghost"
 												size="icon"
+												aria-label={intl.formatMessage({
+													id: showCurrent ? "password.hide" : "password.show",
+												})}
+												aria-pressed={showCurrent}
 												className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
 												onClick={() => setShowCurrent(!showCurrent)}
-												tabIndex={-1}
 											>
 												{showCurrent ? <IconEyeOff size={16} /> : <IconEye size={16} />}
 											</Button>
@@ -171,9 +174,12 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 													type="button"
 													variant="ghost"
 													size="icon"
+													aria-label={intl.formatMessage({
+														id: showNew ? "password.hide" : "password.show",
+													})}
+													aria-pressed={showNew}
 													className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
 													onClick={() => setShowNew(!showNew)}
-													tabIndex={-1}
 												>
 													{showNew ? <IconEyeOff size={16} /> : <IconEye size={16} />}
 												</Button>
@@ -183,6 +189,7 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 												variant="outline"
 												size="icon"
 												title={intl.formatMessage({ id: "password.generate" })}
+												aria-label={intl.formatMessage({ id: "password.generate" })}
 												onClick={() => {
 													const newPass = generate({
 														length: 16,
@@ -230,9 +237,12 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 												type="button"
 												variant="ghost"
 												size="icon"
+												aria-label={intl.formatMessage({
+													id: showConfirm ? "password.hide" : "password.show",
+												})}
+												aria-pressed={showConfirm}
 												className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:text-foreground"
 												onClick={() => setShowConfirm(!showConfirm)}
-												tabIndex={-1}
 											>
 												{showConfirm ? <IconEyeOff size={16} /> : <IconEye size={16} />}
 											</Button>
