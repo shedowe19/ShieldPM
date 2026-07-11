@@ -21,6 +21,7 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 - Generiert Konfigurationen für Server und Clients
 - Der Konfigurationsdialog beschreibt seinen Zweck für Screenreader und lokalisiert QR-Code-Hinweis, Alternativtext und Schließen-Aktion in allen 13 Sprachen.
 - Die ausschließlich symbolische Kopier-Schaltfläche hat einen lokalisierten zugänglichen Namen in allen 13 Sprachen und bleibt damit für Screenreader eindeutig bedienbar.
+- Schlägt der Abruf einer Peer-Konfiguration fehl, beendet der Dialog den Ladezustand ohne unbehandelte Promise-Rejection; der Download bleibt deaktiviert.
 - Benötigt `NET_ADMIN` und `NET_RAW` Capabilities
 - Benötigt `/dev/net/tun` Device-Mount
 - IP-Forwarding muss aktiviert sein (`net.ipv4.ip_forward=1`)

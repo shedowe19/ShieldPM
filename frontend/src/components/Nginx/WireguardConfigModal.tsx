@@ -37,7 +37,9 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 				getWireguardPeerQRCode(peerId)
 					.then((r) => setQrcode(r.qrcode))
 					.catch(() => setQrcode(null)),
-			]).finally(() => setLoading(false));
+			])
+				.catch(() => setConfig(null))
+				.finally(() => setLoading(false));
 		}
 	}, [open, peerId]);
 

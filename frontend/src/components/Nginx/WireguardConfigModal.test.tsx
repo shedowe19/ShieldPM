@@ -47,4 +47,14 @@ describe("WireguardConfigModal", () => {
 
 		expect(await screen.findByRole("button", { name: "Copy configuration" })).toBeInTheDocument();
 	});
+
+	it("settles without an unhandled rejection when the configuration request fails", async () => {
+		await changeLocale("en-US");
+		vi.mocked(getWireguardPeerConfig).mockRejectedValue(new Error("Configuration unavailable"));
+
+		render(<WireguardConfigModal open onOpenChange={vi.fn()} peerId={1} peerName="Phone" />);
+
+		await waitFor(() => expect(screen.queryByText("Loading")).not.toBeInTheDocument());
+		expect(screen.getByRole("button", { name: "Download Config" })).toBeDisabled();
+	});
 });
