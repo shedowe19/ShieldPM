@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("src/modules/AuthStore", () => ({
+	AUTHENTICATION_EXPIRED_EVENT: "shieldpm:authentication-expired",
 	default: {
 		clear: vi.fn(),
 		csrfToken: null,
@@ -10,7 +11,36 @@ vi.mock("src/modules/AuthStore", () => ({
 
 import { queryClient } from "src/api/queryClient";
 import AuthStore from "src/modules/AuthStore";
-import { download, downloadPost } from "./base";
+import { download, downloadPost, get } from "./base";
+
+describe("authenticated request failures", () => {
+	const authenticationExpired = vi.fn();
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		window.addEventListener("shieldpm:authentication-expired", authenticationExpired);
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				json: vi.fn().mockResolvedValue({ error: { message: "Unauthorized" } }),
+				ok: false,
+				status: 401,
+			}),
+		);
+	});
+
+	afterEach(() => {
+		window.removeEventListener("shieldpm:authentication-expired", authenticationExpired);
+		vi.unstubAllGlobals();
+	});
+
+	it("notifies the application after an unauthorized response without relying on a document reload", async () => {
+		await expect(get({ url: "nginx/proxy-hosts" })).rejects.toThrow("Unauthorized");
+
+		expect(AuthStore.clear).toHaveBeenCalledOnce();
+		expect(authenticationExpired).toHaveBeenCalledOnce();
+	});
+});
 
 describe("download", () => {
 	const objectUrl = "blob:shieldpm-export";

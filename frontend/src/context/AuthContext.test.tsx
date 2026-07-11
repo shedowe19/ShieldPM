@@ -26,6 +26,7 @@ vi.mock("src/api/backend", () => ({
 vi.mock("src/api/backend/base", () => ({ post: mocks.post }));
 
 vi.mock("src/modules/AuthStore", () => ({
+	AUTHENTICATION_EXPIRED_EVENT: "shieldpm:authentication-expired",
 	default: {
 		add: mocks.authStoreAdd,
 		clear: mocks.authStoreClear,
@@ -101,6 +102,18 @@ describe("AuthProvider", () => {
 		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
 		expect(mocks.authStoreSet).toHaveBeenCalledWith(token);
 		expect(queryClient.getQueryData(["profile"])).toBeUndefined();
+	});
+
+	it("switches to the login state after the API signals that authentication expired", async () => {
+		const token = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };
+		mocks.refreshToken.mockResolvedValue(token);
+		renderAuthProvider();
+
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+
+		window.dispatchEvent(new Event("shieldpm:authentication-expired"));
+
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false"));
 	});
 
 	it("remounts session-dependent UI after impersonating without a document reload", async () => {

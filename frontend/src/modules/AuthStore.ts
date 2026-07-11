@@ -1,4 +1,5 @@
 export const TOKEN_KEY = "authentications";
+export const AUTHENTICATION_EXPIRED_EVENT = "shieldpm:authentication-expired";
 
 // Model for memory store
 interface AuthState {

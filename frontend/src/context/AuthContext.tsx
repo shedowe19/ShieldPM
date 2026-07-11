@@ -3,7 +3,7 @@ import { createContext, Fragment, type ReactNode, useCallback, useContext, useEf
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import * as api from "src/api/backend/base";
-import AuthStore from "src/modules/AuthStore";
+import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
 
 // Context
 export interface AuthContextType {
@@ -54,6 +54,13 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 				setLoading(false);
 			});
 	}, [handleTokenUpdate]);
+
+	useEffect(() => {
+		const handleAuthenticationExpired = () => setAuthenticated(false);
+
+		window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+		return () => window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+	}, []);
 
 	const login = async (identity: string, secret: string) => {
 		const response = await getToken(identity, secret);

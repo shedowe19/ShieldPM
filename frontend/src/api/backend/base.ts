@@ -1,7 +1,7 @@
 import { camelizeKeys, decamelize, decamelizeKeys } from "humps";
 import queryString, { type StringifiableRecord } from "query-string";
 import { queryClient } from "src/api/queryClient";
-import AuthStore from "src/modules/AuthStore";
+import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
 
 const contentTypeHeader = "Content-Type";
 
@@ -59,11 +59,11 @@ async function processResponse<T = DynamicResponse>(response: Response, silentAu
 
 	if (!response.ok) {
 		if (response.status === 401) {
-			// Force logout user and reload the page if Unauthorized
+			// Clear stale client state and let AuthProvider render the login screen.
 			AuthStore.clear();
 			queryClient.clear();
 			if (!silentAuth) {
-				window.location.reload();
+				window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
 			}
 		}
 		throw new Error(
