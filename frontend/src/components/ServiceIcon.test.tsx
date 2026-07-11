@@ -21,12 +21,7 @@ describe("ServiceIcon", () => {
 	});
 
 	it("localizes the custom icon alternative text", () => {
-		render(
-			<ServiceIcon
-				iconType={ICON_TYPE.CUSTOM}
-				customIconUrl="https://example.invalid/custom-icon.svg"
-			/>,
-		);
+		render(<ServiceIcon iconType={ICON_TYPE.CUSTOM} customIconUrl="https://example.invalid/custom-icon.svg" />);
 
 		expect(screen.getByAltText("Eigenes Symbol")).toBeInTheDocument();
 	});
