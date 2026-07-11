@@ -10,10 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { useRedirectionHosts } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal, showHelpModal, showRedirectionHostModal } from "src/modals/lazy";
 import { MANAGE, REDIRECTION_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { showDeleteConfirmModal, showHelpModal, showRedirectionHostModal } from "./lazy";
 import Table from "./Table";
 
 export default function TableWrapper() {
