@@ -12,7 +12,7 @@ import {
 } from "src/components/ui/dropdown-menu";
 import { useAuthState } from "src/context";
 import { useUser } from "src/hooks";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 import { showChangePasswordModal, showUserModal } from "src/modals";
 
 export function SiteHeader() {
@@ -29,7 +29,12 @@ export function SiteHeader() {
 				</div>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" size="icon" className="rounded-full">
+						<Button
+							variant="ghost"
+							size="icon"
+							className="rounded-full"
+							aria-label={intl.formatMessage({ id: "sr.toggle-user-menu" })}
+						>
 							<Avatar className="h-8 w-8">
 								<AvatarImage
 									src={currentUser?.avatar || "/images/default-avatar.jpg"}
@@ -37,7 +42,6 @@ export function SiteHeader() {
 								/>
 								<AvatarFallback>{currentUser?.nickname?.substring(0, 2).toUpperCase()}</AvatarFallback>
 							</Avatar>
-							<span className="sr-only">Toggle user menu</span>
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">

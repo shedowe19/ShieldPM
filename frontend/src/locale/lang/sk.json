@@ -534,6 +534,7 @@
 	"sr.switch-language": "Prepnúť jazyk",
 	"sr.toggle-navigation": "Prepnúť navigáciu",
 	"sr.toggle-theme": "Prepnúť tému",
+	"sr.toggle-user-menu": "Prepnúť používateľské menu",
 	"ssl-certificate": "SSL certifikát",
 	"sslForced": "Vynútené SSL",
 	"str.years": "{count} {count, plural, one {Rok} few {Roky} other {Rokov}}",

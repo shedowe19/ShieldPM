@@ -534,6 +534,7 @@
 	"sr.switch-language": "Chuyển ngôn ngữ",
 	"sr.toggle-navigation": "Chuyển đổi điều hướng",
 	"sr.toggle-theme": "Chuyển đổi giao diện",
+	"sr.toggle-user-menu": "Chuyển đổi menu người dùng",
 	"ssl-certificate": "Chứng chỉ SSL",
 	"sslForced": "Buộc SSL",
 	"str.years": "{count} {count, plural, other {Năm}}",

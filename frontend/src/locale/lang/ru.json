@@ -534,6 +534,7 @@
 	"sr.switch-language": "Переключить язык",
 	"sr.toggle-navigation": "Переключить навигацию",
 	"sr.toggle-theme": "Переключить тему",
+	"sr.toggle-user-menu": "Переключить меню пользователя",
 	"ssl-certificate": "SSL-сертификат",
 	"sslForced": "SSL принудительно",
 	"str.years": "{count} {count, plural, one {год} few {года} many {лет} other {лет}}",

@@ -534,6 +534,7 @@
 	"sr.switch-language": "언어 변경",
 	"sr.toggle-navigation": "내비게이션 토글",
 	"sr.toggle-theme": "테마 토글",
+	"sr.toggle-user-menu": "사용자 메뉴 전환",
 	"ssl-certificate": "SSL 인증서",
 	"sslForced": "SSL 강제",
 	"str.years": "{count} {count, plural, other {년}}",

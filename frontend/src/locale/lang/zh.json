@@ -534,6 +534,7 @@
 	"sr.switch-language": "切换语言",
 	"sr.toggle-navigation": "切换导航",
 	"sr.toggle-theme": "切换主题",
+	"sr.toggle-user-menu": "切换用户菜单",
 	"ssl-certificate": "SSL 证书",
 	"sslForced": "强制 SSL",
 	"str.years": "{count} {count, plural, other {年}}",

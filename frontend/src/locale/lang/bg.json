@@ -534,6 +534,7 @@
 	"sr.switch-language": "Смени език",
 	"sr.toggle-navigation": "Превключи навигация",
 	"sr.toggle-theme": "Превключи тема",
+	"sr.toggle-user-menu": "Превключи потребителското меню",
 	"ssl-certificate": "SSL сертификат",
 	"sslForced": "SSL принудително",
 	"str.years": "{count} {count, plural, one {Година} other {Години}}",

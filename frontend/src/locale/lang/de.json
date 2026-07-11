@@ -544,6 +544,7 @@
 	"sr.switch-language": "Sprache wechseln",
 	"sr.toggle-navigation": "Navigation umschalten",
 	"sr.toggle-theme": "Theme umschalten",
+	"sr.toggle-user-menu": "Benutzermenü umschalten",
 	"ssl-certificate": "SSL Zertifikate",
 	"sslForced": "SSL erzwungen",
 	"str.years": "{count} {count, plural, one {Jahr} other {Jahre}}",

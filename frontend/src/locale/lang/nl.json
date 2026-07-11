@@ -534,6 +534,7 @@
 	"sr.switch-language": "Taal Wisselen",
 	"sr.toggle-navigation": "Navigatie Wisselen",
 	"sr.toggle-theme": "Thema Wisselen",
+	"sr.toggle-user-menu": "Gebruikersmenu wisselen",
 	"ssl-certificate": "SSL Certificaten",
 	"sslForced": "SSL Geforceerd",
 	"str.years": "{count} {count, plural, one {Jaar} other {Jaren}}",

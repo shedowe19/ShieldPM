@@ -534,6 +534,7 @@
 	"sr.switch-language": "Cambia lingua",
 	"sr.toggle-navigation": "Attiva/disattiva navigazione",
 	"sr.toggle-theme": "Attiva/disattiva tema",
+	"sr.toggle-user-menu": "Attiva/disattiva il menu utente",
 	"ssl-certificate": "Certificato SSL",
 	"sslForced": "SSL forzato",
 	"str.years": "{count} {count, plural, one {Anno} other {Anni}}",
