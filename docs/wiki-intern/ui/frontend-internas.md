@@ -125,6 +125,10 @@ Der Avatar-Bereich des `UserModal` lokalisiert Vorschau, Quelle, Gravatar-Hinwei
 `user.avatar.*`. Die 13 Locale-Dateien enthalten auch lokalisierte Platzhalter und Upload-Hinweise; bei einem
 unbekannten Ladefehler nutzt der Dialog `error.unknown` statt eines fest codierten englischen Texts.
 
+`UserAvatarTab.tsx` kapselt diesen Avatar-Tab als Formik-Kind. Die Auswahl einer lokalen Datei und ihre Blob-URL bleiben
+im übergeordneten `UserModal`, damit die Vorschau sowie der Upload nach dem Speichern unverändert funktionieren.
+`UserAvatarTab.test.tsx` sichert die temporäre Upload-Vorschau und die Rückgabe einer Ersatzdatei an den Dialog ab.
+
 `SetPasswordModal.tsx` beschriftet die Icon-Aktionen zum Anzeigen/Verstecken und Generieren eines Passworts über die
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.
