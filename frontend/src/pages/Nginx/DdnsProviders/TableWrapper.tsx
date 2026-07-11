@@ -73,7 +73,12 @@ export default function TableWrapper() {
 							/>
 						</div>
 					) : null}
-					<Button variant="outline" size="icon" onClick={() => showHelpModal("DdnsProviders", "cyan")}>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "action.help" })}
+						onClick={() => showHelpModal("DdnsProviders", "cyan")}
+					>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={DDNS_PROVIDERS} permission={MANAGE} hideError>

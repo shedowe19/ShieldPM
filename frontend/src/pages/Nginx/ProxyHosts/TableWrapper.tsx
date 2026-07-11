@@ -83,7 +83,12 @@ export default function TableWrapper() {
 							/>
 						</div>
 					) : null}
-					<Button variant="outline" size="icon" onClick={() => showHelpModal("ProxyHosts", "lime")}>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "action.help" })}
+						onClick={() => showHelpModal("ProxyHosts", "lime")}
+					>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>

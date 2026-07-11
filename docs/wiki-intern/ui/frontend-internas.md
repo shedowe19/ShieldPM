@@ -130,6 +130,10 @@ Schlüssel `action.help` als zugänglichen Namen.
 `Access/TableWrapper.tsx` verwendet für seine gleichartige Hilfe-Icon-Aktion ebenfalls den vorhandenen lokalisierten
 Schlüssel `action.help` als zugänglichen Namen.
 
+Die Nginx-Tabellen für DDNS-Anbieter, Dead Hosts, Proxy Hosts, Redirection Hosts und Streams verwenden für ihre
+Hilfe-Icon-Aktionen ebenfalls `action.help`. Dadurch haben die fünf gleichartigen Controls in allen 13 Locales einen
+zugänglichen Namen; `table-help-controls.test.tsx` sichert die deutsche Screenreader-Ausgabe als Regressionstest ab.
+
 ## Types (`frontend/src/types/`)
 
 | Datei             | Zweck                                               |
