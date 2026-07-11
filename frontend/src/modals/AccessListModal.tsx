@@ -15,6 +15,7 @@ import { showObjectSuccess } from "src/notifications";
 import { ACCESS_LIST_AUTH_TYPE, ACCESS_LIST_TAB, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
 import AccessListAuthorizationTabs from "./AccessListAuthorizationTabs";
 import AccessListDetailsTab from "./AccessListDetailsTab";
+import { type AccessListFormValues, createAccessListInitialValues } from "./AccessListModalFormValues";
 import AccessListMtlsTab from "./AccessListMtlsTab";
 import AccessListSsoTab from "./AccessListSsoTab";
 
@@ -24,29 +25,6 @@ const showAccessListModal = (id: number | "new") => {
 
 interface Props extends InnerModalProps {
 	id: number | "new";
-}
-
-interface AccessListFormValues extends Partial<AccessList> {
-	authType?: string;
-	authentikHost?: string;
-	oauth2ProxyHost?: string; // Still used? Removed in favor of managed process
-	oauth2Provider?: string;
-	oauth2ClientId?: string;
-	oauth2ClientSecret?: string;
-	oauth2CookieSecret?: string;
-	oauth2OidcIssuerUrl?: string;
-	oauth2ProxyPrefix?: string;
-	oauth2Scope?: string;
-	oauth2AllowedGroups?: string;
-	oauth2AllowedEmails?: string;
-	oauth2AllowedEmailDomains?: string;
-	oauth2InsecureOidcAllowUnverifiedEmail?: boolean;
-	oidcDiscoveryUrl?: string;
-	oidcClientId?: string;
-	oidcClientSecret?: string;
-	mtlsEnabled?: boolean;
-	mtlsContent?: string;
-	mtlsUseInternal?: boolean;
 }
 
 const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
@@ -176,31 +154,6 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		});
 	};
 
-	// Robustly parse meta (handle stringified JSON if necessary)
-	const meta = (() => {
-		if (!data?.meta) return {};
-		const m = data.meta;
-		if (typeof m === "string") {
-			try {
-				return JSON.parse(m) || {};
-			} catch (e) {
-				console.error("Failed to parse access list meta:", e);
-				return {};
-			}
-		}
-		return m;
-	})();
-
-	let initialAuthType =
-		meta.auth_type ||
-		meta.authType ||
-		(meta.authentik_host || meta.authentikHost
-			? ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY
-			: meta.oauth2_proxy_host || meta.oauth2ProxyHost
-				? ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY
-				: "");
-	if (!initialAuthType) initialAuthType = ACCESS_LIST_AUTH_TYPE.NONE;
-
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && remove()}>
 			<DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -227,40 +180,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				{!isLoading && data && (
 					<Formik<AccessListFormValues>
 						enableReinitialize
-						initialValues={
-							{
-								name: data?.name,
-								satisfyAny: data?.satisfyAny,
-								passAuth: data?.passAuth,
-								items: data?.items || [],
-								clients: data?.clients || [],
-								// Determine initial authType
-								authType: initialAuthType,
-								authentikHost: meta.authentik_host || meta.authentikHost || "",
-								oauth2Provider: meta.oauth2_provider || meta.oauth2Provider || "google",
-								oauth2ClientId: meta.oauth2_client_id || meta.oauth2ClientId || "",
-								oauth2ClientSecret: meta.oauth2_client_secret || meta.oauth2ClientSecret || "",
-								oauth2CookieSecret: meta.oauth2_cookie_secret || meta.oauth2CookieSecret || "",
-								oauth2OidcIssuerUrl: meta.oauth2_oidc_issuer_url || meta.oauth2OidcIssuerUrl || "",
-								oauth2ProxyPrefix: meta.oauth2_proxy_prefix || meta.oauth2ProxyPrefix || "/oauth2/",
-								oauth2Scope: meta.oauth2_scope || meta.oauth2Scope || "",
-								oauth2AllowedGroups: meta.oauth2_allowed_groups || meta.oauth2AllowedGroups || "",
-								oauth2AllowedEmails: meta.oauth2_allowed_emails || meta.oauth2AllowedEmails || "",
-								oauth2AllowedEmailDomains:
-									meta.oauth2_allowed_email_domains || meta.oauth2AllowedEmailDomains || "",
-								oauth2InsecureOidcAllowUnverifiedEmail: !!(
-									meta.oauth2_insecure_oidc_allow_unverified_email ||
-									meta.oauth2InsecureOidcAllowUnverifiedEmail
-								),
-								oidcDiscoveryUrl: meta.oidc_discovery_url || meta.oidcDiscoveryUrl || "",
-								oidcClientId: meta.oidc_client_id || meta.oidcClientId || "",
-								oidcClientSecret: meta.oidc_client_secret || meta.oidcClientSecret || "",
-								// mTLS
-								mtlsEnabled: !!data.mtlsEnabled,
-								mtlsContent: data.mtlsCertificate || "",
-								mtlsUseInternal: !!data.mtlsUseInternal,
-							} as AccessListFormValues
-						}
+						initialValues={createAccessListInitialValues(data)}
 						onSubmit={onSubmit}
 					>
 						{({ values }: FormikProps<AccessListFormValues>) => {

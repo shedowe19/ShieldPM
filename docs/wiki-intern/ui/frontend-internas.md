@@ -193,6 +193,11 @@ Wertebindung von Provider und Authentik-Host ab.
 Die Hinweise verwenden `access-list.sso.authentication-handled` und `access-list.sso.rules-handled` mit nativen Texten
 in allen 13 Locale-Dateien. `AccessListAuthorizationTabs.test.tsx` sichert die Sperre beider Tabs ab.
 
+`AccessListModalFormValues.ts` kapselt das Initialisieren des Access-List-Formularzustands. Es normalisiert auch alte
+serialisierte `meta`-Werte sicher und übernimmt weiterhin die vorhandenen OAuth2-, OIDC- und mTLS-Werte. Der Dialog
+behält damit Form-State und Submission unverändert; `AccessListModalFormValues.test.ts` sichert Legacy-Metadaten und
+die sicheren Standardwerte.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 
