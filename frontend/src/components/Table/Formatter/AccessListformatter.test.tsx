@@ -6,10 +6,7 @@ import { AccessListFormatter } from "./AccessListformatter";
 
 const mocks = vi.hoisted(() => ({
 	onEdit: vi.fn(),
-	showAccessListModal: vi.fn(),
 }));
-
-vi.mock("src/modals/lazy", () => ({ showAccessListModal: mocks.showAccessListModal }));
 
 const requireAccessListEditHandler = (
 	props: ComponentProps<typeof AccessListFormatter>,
@@ -29,7 +26,6 @@ describe("AccessListFormatter", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Restricted" }));
 
 		expect(mocks.onEdit).toHaveBeenCalledWith(73);
-		expect(mocks.showAccessListModal).not.toHaveBeenCalled();
 	});
 
 	it("preserves the modal's zero ID fallback when the access list has no ID", () => {

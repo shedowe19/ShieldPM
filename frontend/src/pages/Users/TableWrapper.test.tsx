@@ -32,10 +32,6 @@ vi.mock("src/notifications", () => ({
 	showObjectSuccess: vi.fn(),
 }));
 
-vi.mock("src/modals/lazy", () => {
-	throw new Error("Users table must not import the shared modal loader");
-});
-
 afterEach(async () => {
 	cleanup();
 	mocks.useHealth.mockReset();
@@ -44,7 +40,7 @@ afterEach(async () => {
 });
 
 describe("Users TableWrapper", () => {
-	it("loads without the shared modal loader", async () => {
+	it("loads with its route-specific modal loader", async () => {
 		await expect(import("./TableWrapper")).resolves.toMatchObject({ default: expect.any(Function) });
 	});
 

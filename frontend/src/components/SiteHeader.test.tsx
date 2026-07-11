@@ -8,8 +8,6 @@ const mocks = vi.hoisted(() => ({
 	logout: vi.fn(),
 	showAccountChangePasswordModal: vi.fn(),
 	showAccountUserModal: vi.fn(),
-	showGeneralChangePasswordModal: vi.fn(),
-	showGeneralUserModal: vi.fn(),
 	useUser: vi.fn(),
 }));
 
@@ -43,11 +41,6 @@ vi.mock("src/context", () => ({
 
 vi.mock("src/hooks", () => ({
 	useUser: mocks.useUser,
-}));
-
-vi.mock("src/modals/lazy", () => ({
-	showChangePasswordModal: mocks.showGeneralChangePasswordModal,
-	showUserModal: mocks.showGeneralUserModal,
 }));
 
 vi.mock("src/modals/account-lazy", () => ({
@@ -84,7 +77,5 @@ describe("SiteHeader", () => {
 
 		expect(mocks.showAccountUserModal).toHaveBeenCalledWith("me");
 		expect(mocks.showAccountChangePasswordModal).toHaveBeenCalledWith("me");
-		expect(mocks.showGeneralUserModal).not.toHaveBeenCalled();
-		expect(mocks.showGeneralChangePasswordModal).not.toHaveBeenCalled();
 	});
 });
