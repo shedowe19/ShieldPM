@@ -79,4 +79,4 @@ const tableEventReducer = (state: TableState, action: TableAction): TableState =
 	}
 };
 
-export { tableEvents, tableEventReducer };
+export { tableEventReducer, tableEvents };
