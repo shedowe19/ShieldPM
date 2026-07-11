@@ -49,8 +49,7 @@ export default function Login() {
 	};
 
 	const handle2FASuccess = (response: TokenResponse) => {
-		AuthStore.set(response);
-		window.location.reload();
+		completeLogin(response);
 	};
 
 	useEffect(() => {
