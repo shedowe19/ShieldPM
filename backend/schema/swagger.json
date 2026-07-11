@@ -184,6 +184,11 @@
 				"$ref": "./paths/nginx/wireguard/post.json"
 			}
 		},
+		"/nginx/wireguard/settings": {
+			"put": {
+				"$ref": "./paths/nginx/wireguard/settings/put.json"
+			}
+		},
 		"/nginx/wireguard/{id}": {
 			"get": {
 				"$ref": "./paths/nginx/wireguard/id/get.json"

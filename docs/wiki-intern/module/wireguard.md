@@ -35,6 +35,19 @@ Direkte Regeln älterer Versionen bleiben bei einem Update bewusst unangetastet:
 nicht sicher von gleichartigen Regeln anderer Firewall-Verwaltungen zu unterscheiden. Built-in-Chains wie `FORWARD`
 oder `POSTROUTING` und darin enthaltene fremde Regeln werden weder geleert noch gelöscht.
 
+### Härtung der Servereinstellungen
+
+`PUT /api/nginx/wireguard/settings` akzeptiert ausschließlich `endpoint`, `listen_port`, `subnet` und
+`server_address`. Das OpenAPI-Schema begrenzt Port, IPv4-CIDR-Formate, Endpunktform und Zusatzfelder; ungültige
+Payloads wie Zeilenumbrüche oder eingeschleuste `PostUp`-Direktiven werden mit HTTP 400 abgewiesen. Die interne
+`updateSettings()`-Prüfung wiederholt diese Validierung vor dem Speichern und vor der Generierung von `wg0.conf`.
+Sie akzeptiert nur Ports von 1 bis 65535, IPv4-`/24`-CIDRs und Serveradressen im konfigurierten Subnetz. Die
+Beschränkung entspricht der aktuellen Peer-Adressvergabe, die die ersten drei IPv4-Oktette als Netzbasis verwendet.
+Persistierte, ungültige Einstellungen fallen beim Einlesen sicher auf die Standardwerte zurück.
+
+Beim Start wartet `init()` vor `syncConfig()` auf die Erzeugung der Server-Schlüssel. IPv6-Endpunkte werden bei der
+Client-Konfiguration mit eckigen Klammern formatiert, damit der Port eindeutig bleibt.
+
 ## Abhängigkeiten
 
 - `wireguard-tools` — WireGuard-CLI

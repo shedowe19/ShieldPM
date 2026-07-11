@@ -1,5 +1,7 @@
 import { execSync, spawn } from "node:child_process";
 import fs from "node:fs";
+import ipaddr from "ipaddr.js";
+import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import settingModel from "../models/setting.js";
 import WireguardPeer from "../models/wireguard_peer.js";
@@ -65,6 +67,90 @@ const DEFAULTS = {
 	server_address: "10.8.0.1/24",
 };
 
+const WIREGUARD_SETTING_KEYS = new Set(["endpoint", "listen_port", "subnet", "server_address"]);
+const hostnamePattern =
+	/^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$/;
+
+const hasControlCharacters = (value) => {
+	for (const character of value) {
+		const codePoint = character.codePointAt(0);
+		if (codePoint <= 0x1f || codePoint === 0x7f) return true;
+	}
+	return false;
+};
+
+const validateIpv4Cidr = (value, field) => {
+	if (typeof value !== "string" || value.trim() !== value || hasControlCharacters(value)) {
+		throw new errs.ValidationError(`WireGuard ${field} must be an IPv4 CIDR.`);
+	}
+
+	try {
+		const [address, prefix] = ipaddr.IPv4.parseCIDR(value);
+		if (prefix !== 24) {
+			throw new errs.ValidationError(`WireGuard ${field} must be an IPv4 /24 CIDR.`);
+		}
+		return [address, prefix];
+	} catch (err) {
+		if (err instanceof errs.ValidationError) throw err;
+		throw new errs.ValidationError(`WireGuard ${field} must be an IPv4 CIDR.`);
+	}
+};
+
+/**
+ * Validate server settings before they are stored or rendered into wg0.conf.
+ * @param {Object} data
+ * @param {{ requireValues?: boolean }} options
+ * @returns {Object}
+ */
+const validateWireguardSettings = (data, { requireValues = false } = {}) => {
+	if (!data || typeof data !== "object" || Array.isArray(data)) {
+		throw new errs.ValidationError("WireGuard settings must be an object.");
+	}
+
+	const keys = Object.keys(data);
+	if (requireValues && keys.length === 0) {
+		throw new errs.ValidationError("At least one WireGuard setting is required.");
+	}
+
+	for (const key of keys) {
+		if (!WIREGUARD_SETTING_KEYS.has(key)) {
+			throw new errs.ValidationError(`Unsupported WireGuard setting: ${key}`);
+		}
+	}
+
+	if (data.endpoint !== undefined) {
+		if (
+			typeof data.endpoint !== "string" ||
+			data.endpoint.trim() !== data.endpoint ||
+			hasControlCharacters(data.endpoint) ||
+			(data.endpoint !== "" && !ipaddr.isValid(data.endpoint) && !hostnamePattern.test(data.endpoint))
+		) {
+			throw new errs.ValidationError("WireGuard endpoint must be an IP address, hostname, or empty.");
+		}
+	}
+
+	if (
+		data.listen_port !== undefined &&
+		(!Number.isInteger(data.listen_port) || data.listen_port < 1 || data.listen_port > 65535)
+	) {
+		throw new errs.ValidationError("WireGuard listen_port must be an integer from 1 to 65535.");
+	}
+
+	const subnet = data.subnet === undefined ? null : validateIpv4Cidr(data.subnet, "subnet");
+	const serverAddress =
+		data.server_address === undefined ? null : validateIpv4Cidr(data.server_address, "server_address");
+	if (subnet && serverAddress && (subnet[1] !== serverAddress[1] || !serverAddress[0].match(subnet))) {
+		throw new errs.ValidationError("WireGuard server_address must belong to the configured subnet.");
+	}
+
+	return data;
+};
+
+const formatEndpoint = (endpoint, port) => {
+	if (!endpoint) return null;
+	return `${ipaddr.isValid(endpoint) && ipaddr.parse(endpoint).kind() === "ipv6" ? `[${endpoint}]` : endpoint}:${port}`;
+};
+
 /**
  * Read WireGuard config from the `setting` table
  * @returns {Promise<{endpoint: string, listen_port: number, subnet: string, server_address: string}>}
@@ -74,12 +160,13 @@ const getWgSettings = async () => {
 		const row = await settingModel.query().where("id", "wireguard-config").first();
 		if (row?.meta) {
 			const meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
-			return {
+			const settings = {
 				endpoint: meta.endpoint || DEFAULTS.endpoint,
 				listen_port: meta.listen_port || DEFAULTS.listen_port,
 				subnet: meta.subnet || DEFAULTS.subnet,
 				server_address: meta.server_address || DEFAULTS.server_address,
 			};
+			return validateWireguardSettings(settings);
 		}
 	} catch (err) {
 		logger.warn("WireGuard: Could not read settings, using defaults:", err.message);
@@ -382,7 +469,7 @@ const internalWireguard = {
 		}
 
 		try {
-			ensureServerKeys();
+			await ensureServerKeys();
 
 			// Reset all peer statuses on boot
 			const peers = await WireguardPeer.query().where("is_deleted", 0);
@@ -418,6 +505,7 @@ const internalWireguard = {
 	 * @returns {Promise<Object>}
 	 */
 	updateSettings: async (data) => {
+		validateWireguardSettings(data, { requireValues: true });
 		const current = await getWgSettings();
 		const newMeta = {
 			endpoint: data.endpoint !== undefined ? data.endpoint : current.endpoint,
@@ -425,6 +513,7 @@ const internalWireguard = {
 			subnet: data.subnet !== undefined ? data.subnet : current.subnet,
 			server_address: data.server_address !== undefined ? data.server_address : current.server_address,
 		};
+		validateWireguardSettings(newMeta);
 
 		await settingModel
 			.query()
@@ -436,7 +525,7 @@ const internalWireguard = {
 		// If endpoint or port changed, update all existing peers' endpoint field to stay in sync
 		if (data.endpoint !== undefined || data.listen_port !== undefined) {
 			const peers = await WireguardPeer.query().where("is_deleted", 0);
-			const newEndpoint = newMeta.endpoint ? `${newMeta.endpoint}:${newMeta.listen_port}` : null;
+			const newEndpoint = formatEndpoint(newMeta.endpoint, newMeta.listen_port);
 
 			for (const peer of peers) {
 				await WireguardPeer.query().findById(peer.id).patch({
@@ -477,7 +566,7 @@ const internalWireguard = {
 		try {
 			await ensureServerKeys();
 			const publicKey = await getServerPublicKey();
-			const endpointDisplay = settings.endpoint ? `${settings.endpoint}:${settings.listen_port}` : null;
+			const endpointDisplay = formatEndpoint(settings.endpoint, settings.listen_port);
 
 			return {
 				available: true,
@@ -519,7 +608,7 @@ const internalWireguard = {
 		const presharedKey = generatePresharedKey();
 		const serverPublicKey = await getServerPublicKey();
 		const clientAddress = await getNextAvailableIP(settings.subnet);
-		const endpoint = settings.endpoint ? `${settings.endpoint}:${settings.listen_port}` : null;
+		const endpoint = formatEndpoint(settings.endpoint, settings.listen_port);
 
 		// Insert peer into DB
 		const peerData = {

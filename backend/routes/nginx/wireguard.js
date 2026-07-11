@@ -107,7 +107,8 @@ router.put("/settings", async (req, res) => {
 	await res.locals.access.can("settings:update", "wireguard-config");
 
 	try {
-		const updated = await internalWireguard.updateSettings(req.body);
+		const payload = await apiValidator(getValidationSchema("/nginx/wireguard/settings", "put"), req.body);
+		const updated = await internalWireguard.updateSettings(payload);
 
 		await internalAuditLog.add(res.locals.access, {
 			action: "updated",
@@ -118,7 +119,7 @@ router.put("/settings", async (req, res) => {
 
 		res.status(200).send(updated);
 	} catch (err) {
-		res.status(500).send({ error: err.message });
+		res.status(err.status || 500).send({ error: err.message });
 	}
 });
 
