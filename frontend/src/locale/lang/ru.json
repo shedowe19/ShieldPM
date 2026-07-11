@@ -16,6 +16,7 @@
 	"2fa.duo.description": "Корпоративная 2FA через Duo Security Universal Prompt",
 	"2fa.duo.instruction": "Введите учётные данные Duo Security Universal Prompt из панели администратора Duo.",
 	"2fa.duo.redirect-url": "URL перенаправления",
+	"2fa.duo.redirect-url-placeholder": "https://vashe-prilozhenie.example/duo-callback",
 	"2fa.duo.save-verify": "Сохранить и проверить конфигурацию Duo",
 	"2fa.error": "Ошибка",
 	"2fa.label-optional": "Метка (необязательно)",

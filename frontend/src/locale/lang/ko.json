@@ -16,6 +16,7 @@
 	"2fa.duo.description": "Duo Security Universal Prompt를 통한 기업용 2FA",
 	"2fa.duo.instruction": "Duo 관리 패널에서 Duo Security Universal Prompt 자격 증명을 입력하세요.",
 	"2fa.duo.redirect-url": "리디렉트 URL",
+	"2fa.duo.redirect-url-placeholder": "https://dangsin-ui-eungyong.example/duo-callback",
 	"2fa.duo.save-verify": "Duo 구성 저장 및 확인",
 	"2fa.error": "오류",
 	"2fa.label-optional": "라벨 (선택사항)",

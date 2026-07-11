@@ -16,6 +16,7 @@
 	"2fa.duo.description": "2FA doanh nghiệp qua Duo Security Universal Prompt",
 	"2fa.duo.instruction": "Nhập thông tin xác thực Duo Security Universal Prompt từ bảng quản trị Duo.",
 	"2fa.duo.redirect-url": "URL chuyển hướng",
+	"2fa.duo.redirect-url-placeholder": "https://ung-dung-cua-ban.example/duo-callback",
 	"2fa.duo.save-verify": "Lưu và xác minh cấu hình Duo",
 	"2fa.error": "Lỗi",
 	"2fa.label-optional": "Nhãn (tùy chọn)",

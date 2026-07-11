@@ -16,6 +16,7 @@
 	"2fa.duo.description": "Enterprise 2FA via Duo Security Universal Prompt",
 	"2fa.duo.instruction": "Enter your Duo Security Universal Prompt credentials from the Duo Admin Panel.",
 	"2fa.duo.redirect-url": "Redirect URL",
+	"2fa.duo.redirect-url-placeholder": "https://your-application.example/duo-callback",
 	"2fa.duo.save-verify": "Save & Verify Duo Configuration",
 	"2fa.error": "Error",
 	"2fa.label-optional": "Label (optional)",

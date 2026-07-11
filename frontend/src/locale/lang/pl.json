@@ -16,6 +16,7 @@
 	"2fa.duo.description": "Firmowe 2FA przez Duo Security Universal Prompt",
 	"2fa.duo.instruction": "Wprowadź dane uwierzytelniające Duo Security Universal Prompt z panelu administracyjnego Duo.",
 	"2fa.duo.redirect-url": "URL przekierowania",
+	"2fa.duo.redirect-url-placeholder": "https://twoja-aplikacja.example/duo-callback",
 	"2fa.duo.save-verify": "Zapisz i zweryfikuj konfigurację Duo",
 	"2fa.error": "Błąd",
 	"2fa.label-optional": "Etykieta (opcjonalnie)",

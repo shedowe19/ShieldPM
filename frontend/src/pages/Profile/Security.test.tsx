@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SecuritySettings from "./Security";
 
@@ -111,6 +111,7 @@ describe("SecuritySettings", () => {
 			expect(screen.getByText("Client Secret")).toBeInTheDocument();
 			expect(screen.getByText("API Hostname")).toBeInTheDocument();
 			expect(screen.getByText("Redirect URL")).toBeInTheDocument();
+			expect(screen.getByPlaceholderText("https://your-application.example/duo-callback")).toBeInTheDocument();
 		});
 	});
 

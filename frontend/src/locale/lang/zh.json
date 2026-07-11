@@ -16,6 +16,7 @@
 	"2fa.duo.description": "通过 Duo Security Universal Prompt 的企业级双因素认证",
 	"2fa.duo.instruction": "请输入您从 Duo 管理面板获取的 Duo Security Universal Prompt 凭据。",
 	"2fa.duo.redirect-url": "重定向 URL",
+	"2fa.duo.redirect-url-placeholder": "https://nin-de-yingyong.example/duo-callback",
 	"2fa.duo.save-verify": "保存并验证 Duo 配置",
 	"2fa.error": "错误",
 	"2fa.label-optional": "标签（可选）",

@@ -16,6 +16,7 @@
 	"2fa.duo.description": "Firemné 2FA cez Duo Security Universal Prompt",
 	"2fa.duo.instruction": "Zadajte prihlasovacie údaje Duo Security Universal Prompt z administračného panela Duo.",
 	"2fa.duo.redirect-url": "URL presmerovania",
+	"2fa.duo.redirect-url-placeholder": "https://vasa-aplikacia.example/duo-callback",
 	"2fa.duo.save-verify": "Uložiť a overiť konfiguráciu Duo",
 	"2fa.error": "Chyba",
 	"2fa.label-optional": "Označenie (voliteľné)",

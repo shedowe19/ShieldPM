@@ -6,31 +6,30 @@
  */
 
 import { startRegistration } from "@simplewebauthn/browser";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	AlertCircle,
 	CheckCircle2,
 	Key,
 	Loader2,
+	Lock,
 	RefreshCw,
 	Shield,
 	ShieldCheck,
 	Smartphone,
-	Lock,
 	Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { intl, T } from "src/locale";
 import {
-	get2fa,
-	setup2faTotp,
-	enable2faTotp,
 	add2faYubikey,
 	beginPasskeyRegistration,
 	completePasskeyRegistration,
-	setup2faDuo,
-	remove2faMethod,
+	enable2faTotp,
+	get2fa,
 	regenerate2faBackupCodes,
+	remove2faMethod,
+	setup2faDuo,
+	setup2faTotp,
 	type TwoFaMethod,
 } from "src/api/backend";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -38,6 +37,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
+import { intl, T } from "src/locale";
 
 const QUERY_KEY = ["2fa", "me"] as const;
 
@@ -336,7 +336,11 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 		{ key: "clientId", labelId: "2fa.duo.client-id", placeholder: "DI..." },
 		{ key: "clientSecret", labelId: "2fa.duo.client-secret", placeholder: "•••••••••••••••••••••" },
 		{ key: "apiHost", labelId: "2fa.duo.api-hostname", placeholder: "api-XXXXXXXX.duosecurity.com" },
-		{ key: "redirectUrl", labelId: "2fa.duo.redirect-url", placeholder: "https://your-app.com/duo-callback" },
+		{
+			key: "redirectUrl",
+			labelId: "2fa.duo.redirect-url",
+			placeholder: intl.formatMessage({ id: "2fa.duo.redirect-url-placeholder" }),
+		},
 	];
 
 	return (

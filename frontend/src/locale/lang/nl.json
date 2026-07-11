@@ -16,6 +16,7 @@
 	"2fa.duo.description": "Zakelijke 2FA via Duo Security Universal Prompt",
 	"2fa.duo.instruction": "Voer je Duo Security Universal Prompt inloggegevens in vanuit het Duo-beheerpaneel.",
 	"2fa.duo.redirect-url": "Omleidings-URL",
+	"2fa.duo.redirect-url-placeholder": "https://uw-applicatie.example/duo-callback",
 	"2fa.duo.save-verify": "Duo-configuratie opslaan en verifiëren",
 	"2fa.error": "Fout",
 	"2fa.label-optional": "Label (optioneel)",

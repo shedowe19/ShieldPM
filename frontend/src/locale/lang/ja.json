@@ -16,6 +16,7 @@
 	"2fa.duo.description": "Duo Security Universal Promptによるエンタープライズ2FA",
 	"2fa.duo.instruction": "Duo管理パネルからDuo Security Universal Promptの認証情報を入力してください。",
 	"2fa.duo.redirect-url": "リダイレクトURL",
+	"2fa.duo.redirect-url-placeholder": "https://anata-no-apuri.example/duo-callback",
 	"2fa.duo.save-verify": "Duo設定を保存して検証",
 	"2fa.error": "エラー",
 	"2fa.label-optional": "ラベル（任意）",
