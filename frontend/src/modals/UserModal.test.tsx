@@ -196,6 +196,22 @@ describe("UserModal", () => {
 		expect(screen.getByText("user.avatar.upload-requirements")).toBeInTheDocument();
 	});
 
+	it("keeps the avatar file input reachable for assistive technology", async () => {
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+
+		const fileInput = screen.getByLabelText("user.avatar.upload-image");
+		expect(fileInput).toHaveClass("sr-only");
+		expect(fileInput).not.toHaveClass("hidden");
+	});
+
 	it("renders the localized Gravatar description", async () => {
 		mocks.avatarType = "gravatar";
 		const { showUserModal } = await import("./UserModal");

@@ -457,7 +457,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<Input
 														id="file_upload"
 														type="file"
-														className="hidden"
+														className="sr-only"
 														accept="image/png, image/jpeg, image/gif, image/webp"
 														onChange={(event) => {
 															const file = event.currentTarget.files?.[0];
