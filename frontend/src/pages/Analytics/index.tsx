@@ -19,6 +19,7 @@ import { isPollingAllowed } from "src/hooks/pollingPolicy";
 import { intl, T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsMap } from "./AnalyticsMap";
+import { AnalyticsTopLists } from "./AnalyticsTopLists";
 
 const canPoll = () =>
 	isPollingAllowed({ isDocumentVisible: document.visibilityState === "visible", isOnline: navigator.onLine });
@@ -368,112 +369,8 @@ const Analytics = () => {
 				</Card>
 			</div>
 
-			{/* Top Lists Row 1 */}
-			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-				<Card>
-					<CardHeader>
-						<CardTitle>
-							<T id="analytics.top-ips" />
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topIps && summary.topIps.length > 0 ? (
-								summary.topIps.map((i, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
-										<span
-											className="truncate flex-1 min-w-0 mr-2 font-mono"
-											title={isDemo ? "Hidden IP" : i.ip}
-										>
-											{isDemo ? "Hidden IP" : i.ip}
-										</span>
-										<span className="text-muted-foreground whitespace-nowrap">{i.count}</span>
-									</div>
-								))
-							) : (
-								<div className="text-sm text-muted-foreground text-center p-4">
-									<T id="analytics.no-data-list" />
-								</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>
-							<T id="analytics.top-referrers" />
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topReferers && summary.topReferers.length > 0 ? (
-								summary.topReferers.map((r, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2" title={r.referer}>
-											{r.referer}
-										</span>
-										<span className="text-muted-foreground whitespace-nowrap">{r.count}</span>
-									</div>
-								))
-							) : (
-								<div className="text-sm text-muted-foreground text-center p-4">
-									<T id="analytics.no-data-list" />
-								</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>
-							<T id="analytics.top-paths" />
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topPaths && summary.topPaths.length > 0 ? (
-								summary.topPaths.map((p, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2" title={p.path}>
-											{p.path}
-										</span>
-										<span className="text-muted-foreground whitespace-nowrap">{p.count}</span>
-									</div>
-								))
-							) : (
-								<div className="text-sm text-muted-foreground text-center p-4">
-									<T id="analytics.no-data-list" />
-								</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader>
-						<CardTitle>
-							<T id="analytics.top-user-agents" />
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-3">
-							{summary?.topUserAgents && summary.topUserAgents.length > 0 ? (
-								summary.topUserAgents.map((u, idx) => (
-									<div key={idx} className="flex justify-between text-xs items-center">
-										<span className="truncate flex-1 min-w-0 mr-2" title={u.userAgent}>
-											{u.userAgent}
-										</span>
-										<span className="text-muted-foreground whitespace-nowrap">{u.count}</span>
-									</div>
-								))
-							) : (
-								<div className="text-sm text-muted-foreground text-center p-4">
-									<T id="analytics.no-data-list" />
-								</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
-			</div>
+			{/* Top Lists */}
+			<AnalyticsTopLists summary={summary} isDemo={isDemo} />
 
 			{/* Recent Requests */}
 			<Card>

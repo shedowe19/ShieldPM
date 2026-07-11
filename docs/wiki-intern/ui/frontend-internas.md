@@ -67,6 +67,11 @@ damit ein pausiertes Intervall beim Wiederherstellen der Verbindung erneut gepla
 `useGitSyncStatus`, `useCheckVersion` und `useWireguardPeers` nutzen die Policy bereits; die reine Intervallfunktion
 bleibt unabhängig vom Browser-Zustand testbar, damit weitere Polling-Hooks dieselbe Entscheidung übernehmen können.
 
+`pages/Analytics/AnalyticsTopLists.tsx` kapselt die vier Karten für Top-IP-Adressen, Referrer, Pfade und User-Agents.
+Die Komponente übernimmt die vorhandene Zusammenfassung sowie den Demo-Status unverändert, damit IP-Adressen weiterhin
+maskiert und leere Listen lokalisiert dargestellt werden. `AnalyticsTopLists.test.tsx` sichert diese Datenweitergabe und
+die IP-Maskierung ab.
+
 ## React-Kontexte (`frontend/src/context/`)
 
 | Context         | Datei                      | Zweck                                                 |
