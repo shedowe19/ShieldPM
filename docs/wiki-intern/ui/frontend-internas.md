@@ -146,6 +146,11 @@ das Forwarding-Schema `path` begrenzt; nach dem Aktivieren von PHP bleiben Versi
 `php_override_ini` aus dem gemeinsamen Formularzustand verfügbar. `ProxyHostPhpSettings.test.tsx` sichert diese
 Sichtbarkeits- und Zustandsübergänge ab.
 
+`ProxyHostAdvancedTab.tsx` kapselt den erweiterten Tab des `ProxyHostModal` als Formik-Kind. Der Turbo-Loader-Schalter
+bleibt an `turboLoader` gebunden; Titel und Erläuterungen verwenden `proxy-host.turbo-loader.*` mit nativen Texten in
+allen 13 Locales. `NginxConfigField` bleibt unverändert Bestandteil desselben Tabs;
+`ProxyHostAdvancedTab.test.tsx` sichert Texte, Schalterbindung und Konfigurationsfeld.
+
 `ProxyHostOptions.tsx` kapselt die fünf Detail-Optionen für Caching, Pufferung, Exploit-Schutz, WebSocket-Upgrades und
 Wartung bei Fehlern als Formik-Kind. `ProxyHostOptions.test.tsx` sichert die unveränderte Bindung aller Schalter an ihre
 jeweiligen Formularfelder ab.
