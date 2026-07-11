@@ -26,6 +26,7 @@ describe("DomainsFormatter", () => {
 		const link = screen.getByRole("link", { name: "example.com" });
 		expect(link).toBeInTheDocument();
 		expect(link).toHaveAttribute("href", "http://example.com");
+		expect(link).toHaveAttribute("rel", "noopener noreferrer");
 	});
 
 	it("renders multiple domains", () => {

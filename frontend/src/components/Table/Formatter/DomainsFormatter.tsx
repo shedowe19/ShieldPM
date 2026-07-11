@@ -31,7 +31,7 @@ const DomainLink = ({ domain }: { domain?: string; color?: string }) => {
 			key={domain}
 			href={`http://${domain}`}
 			target="_blank"
-			rel="noreferrer"
+			rel="noopener noreferrer"
 			onClick={onClickLink}
 			className="no-underline"
 		>

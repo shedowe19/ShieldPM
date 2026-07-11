@@ -56,6 +56,11 @@ describe("SiteFooter", () => {
 		// Check "ShieldPM" link
 		const shieldPmLink = screen.getByText("ShieldPM").closest("a");
 		expect(shieldPmLink).toHaveAttribute("href", "https://github.com/shedowe19/ShieldPM");
+		const externalLinks = screen.getAllByRole("link").filter((link) => link.getAttribute("target") === "_blank");
+		expect(externalLinks).toHaveLength(3);
+		for (const externalLink of externalLinks) {
+			expect(externalLink).toHaveAttribute("rel", "noopener noreferrer");
+		}
 
 		// Check Version link
 		const versionLink = screen.getByText("1.2.3").closest("a");

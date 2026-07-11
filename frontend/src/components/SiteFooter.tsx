@@ -22,7 +22,7 @@ export function SiteFooter() {
 							<a
 								href="https://github.com/shedowe19/ShieldPM"
 								target="_blank"
-								rel="noreferrer"
+								rel="noopener noreferrer"
 								className="font-medium underline underline-offset-4 hover:text-primary"
 							>
 								ShieldPM
@@ -36,7 +36,7 @@ export function SiteFooter() {
 							<a
 								href="https://ui.shadcn.com"
 								target="_blank"
-								rel="noreferrer"
+								rel="noopener noreferrer"
 								className="font-medium underline underline-offset-4 hover:text-primary"
 							>
 								shadcn/ui
