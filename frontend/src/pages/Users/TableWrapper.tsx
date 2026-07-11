@@ -31,13 +31,17 @@ export default function TableWrapper() {
 				<CardHeader>
 					<CardTitle className="text-2xl font-bold flex items-center gap-2 text-red-500">
 						<Lock className="h-6 w-6" />
-						Access Denied
+						<T id="users.demo.access-denied" />
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div className="p-8 text-center text-muted-foreground">
-						<p className="text-lg font-semibold">User Management is disabled in Demo Mode.</p>
-						<p className="mt-2">For security reasons, managing users is not permitted.</p>
+						<p className="text-lg font-semibold">
+							<T id="users.demo.disabled" />
+						</p>
+						<p className="mt-2">
+							<T id="users.demo.restricted" />
+						</p>
 					</div>
 				</CardContent>
 			</Card>
@@ -52,7 +56,9 @@ export default function TableWrapper() {
 		return (
 			<Alert variant="destructive">
 				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
+				<AlertTitle>
+					<T id="error.title" />
+				</AlertTitle>
 				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 			</Alert>
 		);
