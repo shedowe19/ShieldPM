@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { useDeadHosts } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showDeadHostModal, showDeleteConfirmModal, showHelpModal } from "src/modals";
+import { showDeadHostModal, showDeleteConfirmModal, showHelpModal } from "src/modals/lazy";
 import { DEAD_HOSTS, MANAGE } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";

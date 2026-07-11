@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	accessListModalModuleLoaded: vi.fn(),
 	changePasswordModalModuleLoaded: vi.fn(),
+	deadHostModalModuleLoaded: vi.fn(),
 	dashboardNoteModalModuleLoaded: vi.fn(),
 	ddnsProviderModalModuleLoaded: vi.fn(),
 	deleteConfirmModalModuleLoaded: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 	redirectionHostModalModuleLoaded: vi.fn(),
 	setPasswordModalModuleLoaded: vi.fn(),
 	showAccessListModal: vi.fn(),
+	showDeadHostModal: vi.fn(),
 	showDdnsProviderModal: vi.fn(),
 	showStreamModal: vi.fn(),
 	streamModalModuleLoaded: vi.fn(),
@@ -37,6 +39,11 @@ vi.mock("./AccessListModal", () => {
 vi.mock("./DdnsProviderModal", () => {
 	mocks.ddnsProviderModalModuleLoaded();
 	return { showDdnsProviderModal: mocks.showDdnsProviderModal };
+});
+
+vi.mock("./DeadHostModal", () => {
+	mocks.deadHostModalModuleLoaded();
+	return { showDeadHostModal: mocks.showDeadHostModal };
 });
 
 vi.mock("./ProxyHostModal", () => {
@@ -121,6 +128,17 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.ddnsProviderModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showDdnsProviderModal).toHaveBeenCalledWith(73);
+	});
+
+	it("loads the Dead Host modal only when dead host editing is requested", async () => {
+		const { showDeadHostModal } = await import("./lazy");
+
+		expect(mocks.deadHostModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showDeadHostModal("new");
+
+		expect(mocks.deadHostModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showDeadHostModal).toHaveBeenCalledWith("new");
 	});
 
 	it("shows an error notification when the deferred modal cannot load", async () => {
