@@ -163,6 +163,11 @@ Werte und den Umschalter gegen Regressionsfehler ab.
 Formik-Kind. Die Validierung für Host und Port sowie die Sichtbarkeit von `indexFile` bleiben aus dem Dialog erhalten;
 `ProxyHostForwardingFields.test.tsx` sichert Wertebindung und die schemaabhängige Sichtbarkeit ab.
 
+`ProxyHostDetailsTab.tsx` kapselt den Details-Tab des `ProxyHostModal` als Formik-Kind. Domain-, Weiterleitungs-,
+Terminal-, Symbol-, PHP-, Zugriffs- und Optionsfelder bleiben im gemeinsamen Formularzustand; die Felder
+`bandwidthLimit` und `forwardQuery` behalten ihre bisherige Wertebindung. `ProxyHostDetailsTab.test.tsx` sichert diese
+Zusammensetzung und beide Werte gegen Regressionsfehler ab.
+
 `AccessListDetailsTab.tsx` kapselt den Details-Tab des `AccessListModal` als Formik-Kind. Name sowie die Optionen
 `satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die
 Wertebindung gegen Regressionsfehler ab.

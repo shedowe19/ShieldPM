@@ -5,8 +5,6 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { ProxyHost } from "src/api/backend";
 import {
-	AccessField,
-	DomainNamesField,
 	GitSyncTab,
 	HasPermission,
 	Loading,
@@ -18,7 +16,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { Textarea } from "src/components/ui/textarea";
@@ -28,14 +25,10 @@ import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, PROXY_HOST_TAB } from "src/types/enums";
 import ProxyHostAdvancedTab from "./ProxyHostAdvancedTab";
-import ProxyHostForwardingFields from "./ProxyHostForwardingFields";
-import ProxyHostIconSettings from "./ProxyHostIconSettings";
+import ProxyHostDetailsTab from "./ProxyHostDetailsTab";
 import ProxyHostMaintenanceTab from "./ProxyHostMaintenanceTab";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
-import ProxyHostOptions from "./ProxyHostOptions";
-import ProxyHostPhpSettings from "./ProxyHostPhpSettings";
 import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
-import ProxyHostTerminalFields from "./ProxyHostTerminalFields";
 
 const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
@@ -179,78 +172,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													<AlertDescription>{errorMsg}</AlertDescription>
 												</Alert>
 											)}
-											<TabsContent value={PROXY_HOST_TAB.DETAILS} className="mt-0 space-y-4">
-												<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
-												<ProxyHostForwardingFields />
-
-												<ProxyHostTerminalFields />
-
-												<ProxyHostIconSettings />
-												<ProxyHostPhpSettings />
-
-												<div className="row">
-													<div className="col-md-12">
-														<Field name="bandwidthLimit">
-															{({ field, form }: FieldProps) => (
-																<div className="mb-3 space-y-2">
-																	<Label htmlFor="bandwidthLimit">
-																		<T id="proxy-host.bandwidth-limit" />
-																	</Label>
-																	<Input
-																		id="bandwidthLimit"
-																		placeholder={intl.formatMessage({
-																			id: "form.placeholder.unlimited",
-																		})}
-																		className={
-																			form.errors.bandwidthLimit &&
-																			form.touched.bandwidthLimit
-																				? "border-destructive"
-																				: ""
-																		}
-																		{...field}
-																	/>
-																	{form.errors.bandwidthLimit &&
-																		form.touched.bandwidthLimit && (
-																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.bandwidthLimit as string}
-																			</p>
-																		)}
-																</div>
-															)}
-														</Field>
-													</div>
-													<div className="col-md-12">
-														<Field name="forwardQuery">
-															{({ field, form }: FieldProps) => (
-																<div className="mb-3 space-y-2">
-																	<Label htmlFor="forwardQuery">
-																		<T id="proxy-host.forward-query" />
-																	</Label>
-																	<Input
-																		id="forwardQuery"
-																		placeholder="e.g. api_key=123"
-																		className={
-																			form.errors.forwardQuery &&
-																			form.touched.forwardQuery
-																				? "border-destructive"
-																				: ""
-																		}
-																		{...field}
-																	/>
-																	{form.errors.forwardQuery &&
-																		form.touched.forwardQuery && (
-																			<p className="text-sm font-medium text-destructive">
-																				{form.errors.forwardQuery as string}
-																			</p>
-																		)}
-																</div>
-															)}
-														</Field>
-													</div>
-												</div>
-												<AccessField />
-												<ProxyHostOptions />
-											</TabsContent>
+											<ProxyHostDetailsTab />
 											<TabsContent value={PROXY_HOST_TAB.LOCATIONS} className="mt-0">
 												<LocationsFields initialValues={data?.locations || []} />
 											</TabsContent>
