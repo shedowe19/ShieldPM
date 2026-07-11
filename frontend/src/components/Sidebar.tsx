@@ -33,8 +33,8 @@ import {
 	type Section,
 	STREAMS,
 	TOR_ONIONS,
-	WIREGUARD_PEERS,
 	VIEW,
+	WIREGUARD_PEERS,
 } from "src/modules/Permissions";
 
 interface MenuItem {
