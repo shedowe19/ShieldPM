@@ -80,27 +80,31 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 
 21 Dialog-Komponenten für CRUD-Operationen:
 
-| Modal                    | Datei                          | Größe  | Zweck                                          |
-| ------------------------ | ------------------------------ | ------ | ---------------------------------------------- |
-| ProxyHostModal           | `ProxyHostModal.tsx`           | 53 KB  | Proxy-Host erstellen/bearbeiten (größte Datei) |
-| AccessListModal          | `AccessListModal.tsx`          | 30 KB  | Access-List Verwaltung                         |
-| UserModal                | `UserModal.tsx`                | 17 KB  | Benutzer erstellen/bearbeiten                  |
-| PermissionsModal         | `PermissionsModal.tsx`         | 14 KB  | Berechtigungen setzen                          |
-| RedirectionHostModal     | `RedirectionHostModal.tsx`     | 13 KB  | Redirect erstellen/bearbeiten                  |
-| CustomCertificateModal   | `CustomCertificateModal.tsx`   | 12 KB  | Custom-Zertifikat hochladen                    |
-| DdnsProviderModal        | `DdnsProviderModal.tsx`        | 12 KB  | DDNS-Provider konfigurieren                    |
-| StreamModal              | `StreamModal.tsx`              | 9 KB   | Stream erstellen/bearbeiten                    |
-| InternalCertificateModal | `InternalCertificateModal.tsx` | 9 KB   | Internes Zertifikat                            |
-| ChangePasswordModal      | `ChangePasswordModal.tsx`      | 9 KB   | Passwort ändern                                |
-| DeadHostModal            | `DeadHostModal.tsx`            | 7 KB   | Dead-Host erstellen/bearbeiten                 |
-| HTTPCertificateModal     | `HTTPCertificateModal.tsx`     | 6 KB   | HTTP-Challenge-Zertifikat                      |
-| DashboardNoteModal       | `DashboardNoteModal.tsx`       | 6 KB   | Dashboard-Notiz bearbeiten                     |
-| SetPasswordModal         | `SetPasswordModal.tsx`         | 5 KB   | Passwort setzen                                |
-| DNSCertificateModal      | `DNSCertificateModal.tsx`      | 4 KB   | DNS-Challenge-Zertifikat                       |
-| EventDetailsModal        | `EventDetailsModal.tsx`        | 3.5 KB | Audit-Event-Details                            |
-| DeleteConfirmModal       | `DeleteConfirmModal.tsx`       | 3 KB   | Lösch-Bestätigung                              |
-| RenewCertificateModal    | `RenewCertificateModal.tsx`    | 3 KB   | Zertifikat erneuern                            |
-| HelpModal                | `HelpModal.tsx`                | 2.4 KB | Hilfe-Dialog                                   |
+| Modal                    | Datei                          | Größe  | Zweck                                           |
+| ------------------------ | ------------------------------ | ------ | ----------------------------------------------- |
+| ProxyHostModal           | `ProxyHostModal.tsx`           | 53 KB  | Proxy-Host erstellen/bearbeiten (größte Datei)  |
+| AccessListModal          | `AccessListModal.tsx`          | 30 KB  | Access-List Verwaltung                          |
+| UserModal                | `UserModal.tsx`                | 17 KB  | Benutzer erstellen/bearbeiten und Avatar-Upload |
+| PermissionsModal         | `PermissionsModal.tsx`         | 14 KB  | Berechtigungen setzen                           |
+| RedirectionHostModal     | `RedirectionHostModal.tsx`     | 13 KB  | Redirect erstellen/bearbeiten                   |
+| CustomCertificateModal   | `CustomCertificateModal.tsx`   | 12 KB  | Custom-Zertifikat hochladen                     |
+| DdnsProviderModal        | `DdnsProviderModal.tsx`        | 12 KB  | DDNS-Provider konfigurieren                     |
+| StreamModal              | `StreamModal.tsx`              | 9 KB   | Stream erstellen/bearbeiten                     |
+| InternalCertificateModal | `InternalCertificateModal.tsx` | 9 KB   | Internes Zertifikat                             |
+| ChangePasswordModal      | `ChangePasswordModal.tsx`      | 9 KB   | Passwort ändern                                 |
+| DeadHostModal            | `DeadHostModal.tsx`            | 7 KB   | Dead-Host erstellen/bearbeiten                  |
+| HTTPCertificateModal     | `HTTPCertificateModal.tsx`     | 6 KB   | HTTP-Challenge-Zertifikat                       |
+| DashboardNoteModal       | `DashboardNoteModal.tsx`       | 6 KB   | Dashboard-Notiz bearbeiten                      |
+| SetPasswordModal         | `SetPasswordModal.tsx`         | 5 KB   | Passwort setzen                                 |
+| DNSCertificateModal      | `DNSCertificateModal.tsx`      | 4 KB   | DNS-Challenge-Zertifikat                        |
+| EventDetailsModal        | `EventDetailsModal.tsx`        | 3.5 KB | Audit-Event-Details                             |
+| DeleteConfirmModal       | `DeleteConfirmModal.tsx`       | 3 KB   | Lösch-Bestätigung                               |
+| RenewCertificateModal    | `RenewCertificateModal.tsx`    | 3 KB   | Zertifikat erneuern                             |
+| HelpModal                | `HelpModal.tsx`                | 2.4 KB | Hilfe-Dialog                                    |
+
+Schlägt der Avatar-Upload nach dem Speichern eines Benutzers fehl, bleibt der Dialog geöffnet und zeigt die
+Fehlermeldung an. Erfolgsmeldung und Schließen des Dialogs erfolgen erst nach einem erfolgreichen Avatar-Upload,
+sodass der Upload direkt erneut versucht werden kann.
 
 ## Types (`frontend/src/types/`)
 

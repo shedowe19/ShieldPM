@@ -95,11 +95,10 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					try {
 						await uploadUserAvatar({ id: newUser.id, file: selectedFile });
 					} catch (err) {
-						// Setup fallback error message but don't fail the whole user save?
-						// Or just show error and keep modal open?
-						// But onSuccess implies success of user save.
-						console.error("Failed to upload avatar", err);
-						// We could show a toast warning?
+						setErrorMsg(err instanceof Error ? err.message : intl.formatMessage({ id: "error.unknown" }));
+						setIsSubmitting(false);
+						setSubmitting(false);
+						return;
 					}
 				}
 
