@@ -13,6 +13,7 @@ Ermöglicht Zugriff auf Proxy-Hosts über `.onion`-Adressen. Nützlich für Priv
 - `backend/internal/tor.js` (11 KB) — Business-Logik
 - `backend/models/tor_onion.js` (3 KB) — Objection.js-Modell
 - `backend/routes/nginx/tor_onion.js` (8 KB) — API-Routen
+- `frontend/src/pages/Nginx/TorOnionServices.tsx` — Verwaltungsansicht für Onion-Dienste
 
 ## Verhalten
 
@@ -20,6 +21,8 @@ Ermöglicht Zugriff auf Proxy-Hosts über `.onion`-Adressen. Nützlich für Priv
 - Schreibt Hidden-Service-Konfiguration nach `/data/tor/`
 - Liest `hostname`-Datei, um die Onion-Adresse anzuzeigen
 - Aktivierung über Umgebungsvariable `TOR_ENABLED`
+- Die Icon-Aktionen für Aktualisieren, Hilfe, Adresse kopieren, Starten/Stoppen, Bearbeiten und Löschen haben
+  lokalisierte zugängliche Namen. `TorOnionServices.test.tsx` prüft diese Namen mit der deutschen Locale.
 
 ## Abhängigkeiten
 

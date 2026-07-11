@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useHealth } from "@/hooks/useHealth";
 import { useTorOnion, useTorOnions } from "@/hooks/useTorOnion";
-import { T } from "@/locale";
+import { intl, T } from "@/locale";
 import { MANAGE, TOR_ONIONS } from "@/modules/Permissions";
 
 export function TorOnionServices() {
@@ -130,10 +130,20 @@ export function TorOnionServices() {
 					</CardDescription>
 				</div>
 				<div className="flex items-center space-x-2">
-					<Button variant="outline" size="icon" onClick={() => refetch()}>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "tor.refresh" })}
+						onClick={() => refetch()}
+					>
 						<IconRefresh className="h-4 w-4" />
 					</Button>
-					<Button variant="outline" size="icon" onClick={showTorOnionServicesHelpModal}>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "action.help" })}
+						onClick={showTorOnionServicesHelpModal}
+					>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={TOR_ONIONS} permission={MANAGE} hideError>
@@ -219,6 +229,7 @@ export function TorOnionServices() {
 														variant="ghost"
 														size="icon"
 														className="h-6 w-6"
+														aria-label={intl.formatMessage({ id: "tor.copy_address" })}
 														onClick={() => handleCopy(service.onionAddress || "")}
 													>
 														<IconCopy className="h-3 w-3" />
@@ -237,6 +248,7 @@ export function TorOnionServices() {
 													<Button
 														variant="ghost"
 														size="icon"
+														aria-label={intl.formatMessage({ id: "tor.stop" })}
 														onClick={() => stop.mutate(service.id)}
 														disabled={stop.isPending}
 													>
@@ -246,19 +258,26 @@ export function TorOnionServices() {
 													<Button
 														variant="ghost"
 														size="icon"
+														aria-label={intl.formatMessage({ id: "tor.start" })}
 														onClick={() => start.mutate(service.id)}
 														disabled={start.isPending}
 													>
 														<IconPlayerPlay className="h-4 w-4" />
 													</Button>
 												)}
-												<Button variant="ghost" size="icon" onClick={() => handleEdit(service)}>
+												<Button
+													variant="ghost"
+													size="icon"
+													aria-label={intl.formatMessage({ id: "tor.edit" })}
+													onClick={() => handleEdit(service)}
+												>
 													<IconEdit className="h-4 w-4" />
 												</Button>
 												<Button
 													variant="ghost"
 													size="icon"
 													className="text-destructive"
+													aria-label={intl.formatMessage({ id: "action.delete" })}
 													onClick={() => handleDelete(service)}
 												>
 													<IconTrash className="h-4 w-4" />
