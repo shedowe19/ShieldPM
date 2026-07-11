@@ -231,7 +231,7 @@ const ai = {
 
 		// 2. Prepare System Prompt & Tools (from modular components)
 		const systemPrompt = getSystemPrompt(config);
-		const tools = getToolDefinitions();
+		const tools = await getToolDefinitions(access);
 
 		logger.info("[AI Chat] Calling LLM:", {
 			provider: config.provider,
@@ -304,7 +304,7 @@ const ai = {
 
 								// Normalization: Fix hallucinated names (e.g. gethostanalytics -> get_host_analytics)
 								// We try updates if direct match fails.
-								const definedTools = getToolDefinitions();
+								const definedTools = tools;
 								const exactMatch = definedTools.find((t) => t.function.name === toolName);
 								if (!exactMatch) {
 									// Try to find by removing underscores from defined tools

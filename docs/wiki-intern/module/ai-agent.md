@@ -31,6 +31,13 @@ Der AI-Agent ermöglicht natürlichsprachliche Interaktion mit ShieldPM — sowo
 
 Der AI-Agent kann Aktionen im System ausführen (Tool-Calling). Die verfügbaren Tools sind in `tools.js` definiert (z. B. Hosts erstellen, Zertifikate erneuern, IP-Ranges aktualisieren, Status abfragen).
 
+### Globale Systemaktionen
+
+Die globalen Tools `test_nginx_config`, `force_nginx_reload` und `renew_ip_ranges` werden nur bei erfolgreicher
+Prüfung von `settings:update` an das Modell übergeben. Der Executor prüft dieselbe Berechtigung unmittelbar vor der
+Ausführung erneut. Damit können eingebettete oder halluzinierte Tool-Calls weder einen Nginx-Test/-Reload noch eine
+Aktualisierung der IP-Ranges ohne Berechtigung auslösen.
+
 ## Verhalten
 
 1. UI oder ChatOps schickt eine Nachricht an `routes/ai.js`.

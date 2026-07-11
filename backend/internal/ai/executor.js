@@ -436,9 +436,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// IP Ranges
 				case "renew_ip_ranges": {
-					// internalIpRanges.fetch() is usually internal, but safe to trigger manually for update.
-					// It doesn't take access param but needs system perm effectively.
-					// Assuming running as system if triggered by AI admin.
+					await access.can("settings:update");
 					await internalIpRanges.fetch();
 					result = "IP Ranges renewal triggered.";
 					break;
@@ -569,6 +567,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "test_nginx_config": {
+					await access.can("settings:update");
 					try {
 						await internalNginx.test();
 						result = "Nginx configuration is valid.";
@@ -578,6 +577,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "force_nginx_reload": {
+					await access.can("settings:update");
 					await internalNginx.reload();
 					result = "Nginx Reloaded";
 					break;

@@ -4,10 +4,10 @@
  */
 
 /**
- * Returns the array of tool definitions for the AI chat
+ * Returns the full array of tool definitions for the AI chat.
  * @returns {Array} Tool definitions in OpenAI/Gemini function format
  */
-export const getToolDefinitions = () => [
+const getAllToolDefinitions = () => [
 	{
 		function: {
 			name: "get_system_status",
@@ -1010,3 +1010,28 @@ export const getToolDefinitions = () => [
 		},
 	},
 ];
+
+const restrictedSystemTools = new Set(["test_nginx_config", "force_nginx_reload", "renew_ip_ranges"]);
+
+/**
+ * Returns the AI tool definitions the caller is authorized to receive.
+ * Global Nginx and IP-range operations require settings:update and are hidden
+ * when that capability cannot be verified.
+ *
+ * @param {import("../../lib/types.js").Access} access
+ * @returns {Promise<Array>} Authorized tool definitions in OpenAI/Gemini function format
+ */
+export const getToolDefinitions = async (access) => {
+	let canUpdateSettings = false;
+
+	try {
+		await access.can("settings:update");
+		canUpdateSettings = true;
+	} catch (_err) {
+		// Fail closed: do not reveal or offer privileged system operations.
+	}
+
+	return getAllToolDefinitions().filter(
+		(tool) => canUpdateSettings || !restrictedSystemTools.has(tool.function.name),
+	);
+};
