@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "Impedir inicio de sesión",
 	"user.set-password": "Establecer Contraseña",
 	"user.set-permissions": "Establecer Permisos para {name}",
+	"user.security": "Seguridad",
 	"user.switch-dark": "Cambiar a modo Oscuro",
 	"user.switch-light": "Cambiar a modo Claro",
 	"username": "Nombre de Usuario",

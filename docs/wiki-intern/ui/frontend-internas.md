@@ -106,6 +106,9 @@ Schlägt der Avatar-Upload nach dem Speichern eines Benutzers fehl, bleibt der D
 Fehlermeldung an. Erfolgsmeldung und Schließen des Dialogs erfolgen erst nach einem erfolgreichen Avatar-Upload,
 sodass der Upload direkt erneut versucht werden kann.
 
+Die Demo-Sperre sowie die Avatar- und Sicherheits-Tabs des `UserModal` verwenden ausschließlich lokalisierte
+Nachrichten; `user.security` ist in allen 13 unterstützten Locale-Dateien hinterlegt.
+
 `SetPasswordModal.tsx` beschriftet die Icon-Aktionen zum Anzeigen/Verstecken und Generieren eines Passworts über die
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.

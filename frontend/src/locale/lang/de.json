@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "Login verhindern",
 	"user.set-password": "Passwort setzen",
 	"user.set-permissions": "Berechtigungen für {name} setzen",
+	"user.security": "Sicherheit",
 	"user.switch-dark": "Zum Dark Mode wechseln",
 	"user.switch-light": "Zum Light Mode wechslen",
 	"username": "Benutzername",

@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "ログインを防止",
 	"user.set-password": "パスワードを設定",
 	"user.set-permissions": "{name}に権限を設定",
+	"user.security": "セキュリティ",
 	"user.switch-dark": "ダークモードに変更",
 	"user.switch-light": "ライトモードに変更",
 	"username": "ユーザー名",

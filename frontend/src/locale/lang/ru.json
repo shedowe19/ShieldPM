@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "Запретить вход",
 	"user.set-password": "Задать пароль",
 	"user.set-permissions": "Задать разрешения для {name}",
+	"user.security": "Безопасность",
 	"user.switch-dark": "Включить тёмную тему",
 	"user.switch-light": "Включить светлую тему",
 	"username": "Имя пользователя",

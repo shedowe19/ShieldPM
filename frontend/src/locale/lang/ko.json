@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "로그인 방지",
 	"user.set-password": "비밀번호 설정",
 	"user.set-permissions": "{name}의 권한 설정",
+	"user.security": "보안",
 	"user.switch-dark": "다크 모드로 전환",
 	"user.switch-light": "라이트 모드로 전환",
 	"username": "사용자 이름",

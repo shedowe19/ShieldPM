@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "Ngăn chặn đăng nhập",
 	"user.set-password": "Đặt Mật khẩu",
 	"user.set-permissions": "Đặt quyền cho {name}",
+	"user.security": "Bảo mật",
 	"user.switch-dark": "Chuyển sang chế độ tối",
 	"user.switch-light": "Chuyển sang chế độ sáng",
 	"username": "Tên người dùng",

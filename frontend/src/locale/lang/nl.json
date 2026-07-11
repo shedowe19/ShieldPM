@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "Inloggen Voorkomen",
 	"user.set-password": "Zet Wachtwoord",
 	"user.set-permissions": "Zet machtigingen voor {name}",
+	"user.security": "Beveiliging",
 	"user.switch-dark": "Verander naar donkere modus",
 	"user.switch-light": "Verander naar lichte modus",
 	"username": "Gebruikersnaam",

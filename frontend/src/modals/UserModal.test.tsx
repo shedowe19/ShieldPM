@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps, PropsWithChildren } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	health: vi.fn(),
 	remove: vi.fn(),
 	setUser: vi.fn(),
 	show: vi.fn(),
@@ -98,7 +99,7 @@ vi.mock("src/components/ui/toggle-group", () => ({
 }));
 
 vi.mock("src/hooks", () => ({
-	useHealth: () => ({ data: { demo: false } }),
+	useHealth: mocks.health,
 	useSetUser: () => ({ mutate: mocks.setUser }),
 	useUser: (id: number | "me") => ({
 		data:
@@ -135,7 +136,10 @@ vi.mock("src/notifications", () => ({ showObjectSuccess: mocks.showObjectSuccess
 vi.mock("src/pages/Profile/Security", () => ({ default: () => null }));
 
 describe("UserModal", () => {
+	afterEach(cleanup);
+
 	beforeEach(() => {
+		mocks.health.mockReturnValue({ data: { demo: false } });
 		mocks.remove.mockClear();
 		mocks.setUser.mockClear();
 		mocks.show.mockClear();
@@ -146,6 +150,37 @@ describe("UserModal", () => {
 				void options.onSuccess?.({ id: 73 });
 			},
 		);
+	});
+
+	it("renders localized profile navigation labels", async () => {
+		const { showUserModal } = await import("./UserModal");
+		showUserModal("me");
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id="me" remove={mocks.remove} visible />);
+
+		expect(screen.getByRole("button", { name: "user.avatar" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "user.security" })).toBeInTheDocument();
+	});
+
+	it("renders the demo restriction through localized messages", async () => {
+		mocks.health.mockReturnValue({ data: { demo: true } });
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+
+		expect(screen.getByText("users.demo.access-denied")).toBeInTheDocument();
+		expect(screen.getByText("users.demo.disabled")).toBeInTheDocument();
 	});
 
 	it("keeps the form open and reports an avatar upload failure after saving the user", async () => {

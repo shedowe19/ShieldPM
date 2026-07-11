@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "禁止登录",
 	"user.set-password": "设置密码",
 	"user.set-permissions": "为用户 {name} 设置权限",
+	"user.security": "安全",
 	"user.switch-dark": "切换到深色模式",
 	"user.switch-light": "切换到浅色模式",
 	"username": "用户名",

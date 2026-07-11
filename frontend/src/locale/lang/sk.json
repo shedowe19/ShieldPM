@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "Zabrániť prihláseniu",
 	"user.set-password": "Nastaviť heslo",
 	"user.set-permissions": "Nastaviť oprávnenia pre {name}",
+	"user.security": "Bezpečnosť",
 	"user.switch-dark": "Prepnúť na tmavý režim",
 	"user.switch-light": "Prepnúť na svetlý režim",
 	"username": "Používateľské meno",

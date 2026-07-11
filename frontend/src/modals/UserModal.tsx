@@ -121,11 +121,13 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2 text-red-500">
 							<IconShield className="h-5 w-5" />
-							Access Denied
+							<T id="users.demo.access-denied" />
 						</DialogTitle>
 					</DialogHeader>
 					<div className="p-8 text-center text-muted-foreground">
-						<p className="text-lg font-semibold">User modification is disabled in Demo Mode.</p>
+						<p className="text-lg font-semibold">
+							<T id="users.demo.disabled" />
+						</p>
 					</div>
 					<DialogFooter>
 						<Button variant={SHADCN_VARIANT.OUTLINE} onClick={remove}>
@@ -197,12 +199,16 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										</TabsTrigger>
 										<TabsTrigger value="avatar" className="flex items-center gap-2">
 											<IconPhoto className="h-4 w-4" />
-											<span className="hidden sm:inline">Profile Picture</span>
+											<span className="hidden sm:inline">
+												<T id="user.avatar" />
+											</span>
 										</TabsTrigger>
 										{isSelf && (
 											<TabsTrigger value="security" className="flex items-center gap-2">
 												<IconLock className="h-4 w-4" />
-												<span className="hidden sm:inline">Security</span>
+												<span className="hidden sm:inline">
+													<T id="user.security" />
+												</span>
 											</TabsTrigger>
 										)}
 									</TabsList>

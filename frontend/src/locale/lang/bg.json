@@ -623,6 +623,7 @@
 	"user.permissions.prevent-login": "Предотврати вход",
 	"user.set-password": "Задаване на парола",
 	"user.set-permissions": "Настройка на права за {name}",
+	"user.security": "Сигурност",
 	"user.switch-dark": "Тъмна тема",
 	"user.switch-light": "Светла тема",
 	"username": "Потребителско име",
