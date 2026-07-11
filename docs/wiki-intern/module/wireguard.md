@@ -26,6 +26,15 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 - Benötigt `/dev/net/tun` Device-Mount
 - IP-Forwarding muss aktiviert sein (`net.ipv4.ip_forward=1`)
 
+### Firewall-Isolation
+
+Die generierte `wg0.conf` kapselt WireGuard-Regeln in eigene `SHIELDPM_WG_*`-Chains für die Tabellen `filter`,
+`nat` und `mangle`. Beim Start prüft sie Sprungregeln idempotent und leert ausschließlich diese eigenen Chains vor
+dem erneuten Anlegen der benötigten Regeln. `PostDown` entfernt nur die zugehörigen Sprünge und eigenen Chains.
+Direkte Regeln älterer Versionen bleiben bei einem Update bewusst unangetastet: Ohne eindeutige Markierung sind sie
+nicht sicher von gleichartigen Regeln anderer Firewall-Verwaltungen zu unterscheiden. Built-in-Chains wie `FORWARD`
+oder `POSTROUTING` und darin enthaltene fremde Regeln werden weder geleert noch gelöscht.
+
 ## Abhängigkeiten
 
 - `wireguard-tools` — WireGuard-CLI

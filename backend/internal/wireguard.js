@@ -12,6 +12,51 @@ const serverPubKeyFile = `${wgDataDir}/server_public.key`;
 
 const WG_INTERFACE = "wg0";
 
+const firewallCommands = {
+	postUp: [
+		"sysctl -w net.ipv4.conf.all.rp_filter=0",
+		`sysctl -w net.ipv4.conf.${WG_INTERFACE}.rp_filter=0`,
+		"iptables -N SHIELDPM_WG_INPUT 2>/dev/null || true",
+		"iptables -N SHIELDPM_WG_FORWARD 2>/dev/null || true",
+		"iptables -t nat -N SHIELDPM_WG_NAT 2>/dev/null || true",
+		"iptables -t mangle -N SHIELDPM_WG_MANGLE_POST 2>/dev/null || true",
+		"iptables -t mangle -N SHIELDPM_WG_MANGLE_FORWARD 2>/dev/null || true",
+		"iptables -F SHIELDPM_WG_INPUT",
+		"iptables -F SHIELDPM_WG_FORWARD",
+		"iptables -t nat -F SHIELDPM_WG_NAT",
+		"iptables -t mangle -F SHIELDPM_WG_MANGLE_POST",
+		"iptables -t mangle -F SHIELDPM_WG_MANGLE_FORWARD",
+		"iptables -C INPUT -j SHIELDPM_WG_INPUT 2>/dev/null || iptables -I INPUT -j SHIELDPM_WG_INPUT",
+		"iptables -C FORWARD -j SHIELDPM_WG_FORWARD 2>/dev/null || iptables -I FORWARD -j SHIELDPM_WG_FORWARD",
+		"iptables -t nat -C POSTROUTING -j SHIELDPM_WG_NAT 2>/dev/null || iptables -t nat -I POSTROUTING -j SHIELDPM_WG_NAT",
+		"iptables -t mangle -C POSTROUTING -j SHIELDPM_WG_MANGLE_POST 2>/dev/null || iptables -t mangle -I POSTROUTING -j SHIELDPM_WG_MANGLE_POST",
+		"iptables -t mangle -C FORWARD -j SHIELDPM_WG_MANGLE_FORWARD 2>/dev/null || iptables -t mangle -I FORWARD -j SHIELDPM_WG_MANGLE_FORWARD",
+		`iptables -A SHIELDPM_WG_INPUT -i ${WG_INTERFACE} -j ACCEPT`,
+		`iptables -A SHIELDPM_WG_FORWARD -i ${WG_INTERFACE} -j ACCEPT`,
+		"iptables -t nat -A SHIELDPM_WG_NAT -o eth0 -j MASQUERADE",
+		`iptables -t mangle -A SHIELDPM_WG_MANGLE_POST -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu`,
+		`iptables -t mangle -A SHIELDPM_WG_MANGLE_FORWARD -i ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu`,
+	].join("; "),
+	postDown: [
+		// Legacy direct rules have no provenance, so only named ShieldPM chains are removed.
+		"iptables -D INPUT -j SHIELDPM_WG_INPUT 2>/dev/null || true",
+		"iptables -D FORWARD -j SHIELDPM_WG_FORWARD 2>/dev/null || true",
+		"iptables -t nat -D POSTROUTING -j SHIELDPM_WG_NAT 2>/dev/null || true",
+		"iptables -t mangle -D POSTROUTING -j SHIELDPM_WG_MANGLE_POST 2>/dev/null || true",
+		"iptables -t mangle -D FORWARD -j SHIELDPM_WG_MANGLE_FORWARD 2>/dev/null || true",
+		"iptables -F SHIELDPM_WG_INPUT 2>/dev/null || true",
+		"iptables -F SHIELDPM_WG_FORWARD 2>/dev/null || true",
+		"iptables -t nat -F SHIELDPM_WG_NAT 2>/dev/null || true",
+		"iptables -t mangle -F SHIELDPM_WG_MANGLE_POST 2>/dev/null || true",
+		"iptables -t mangle -F SHIELDPM_WG_MANGLE_FORWARD 2>/dev/null || true",
+		"iptables -X SHIELDPM_WG_INPUT 2>/dev/null || true",
+		"iptables -X SHIELDPM_WG_FORWARD 2>/dev/null || true",
+		"iptables -t nat -X SHIELDPM_WG_NAT 2>/dev/null || true",
+		"iptables -t mangle -X SHIELDPM_WG_MANGLE_POST 2>/dev/null || true",
+		"iptables -t mangle -X SHIELDPM_WG_MANGLE_FORWARD 2>/dev/null || true",
+	].join("; "),
+};
+
 // Defaults — overridden by settings from DB
 const DEFAULTS = {
 	endpoint: "",
@@ -221,9 +266,9 @@ MTU = 1300
 SaveConfig = false
 `;
 
-	// Add PostUp/PostDown for NAT masquerading and MTU clamping
-	config += `PostUp = sysctl -w net.ipv4.conf.all.rp_filter=0; sysctl -w net.ipv4.conf.${WG_INTERFACE}.rp_filter=0; iptables -I INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -I FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -A POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu; iptables -t mangle -A FORWARD -i ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-PostDown = iptables -D INPUT -i ${WG_INTERFACE} -j ACCEPT; iptables -D FORWARD -i ${WG_INTERFACE} -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; iptables -t mangle -D POSTROUTING -o ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu; iptables -t mangle -D FORWARD -i ${WG_INTERFACE} -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+	// Isolate all WireGuard rules in dedicated chains so foreign firewall rules are never flushed or removed.
+	config += `PostUp = ${firewallCommands.postUp}
+PostDown = ${firewallCommands.postDown}
 `;
 
 	for (const peer of peers) {
@@ -330,16 +375,6 @@ const internalWireguard = {
 	 */
 	init: async () => {
 		logger.info("Initializing WireGuard Tunnels...");
-
-		// Global iptables clear as requested by user
-		try {
-			logger.info("WireGuard: Resetting iptables chains...");
-			exec("iptables -F FORWARD", true);
-			exec("iptables -t nat -F POSTROUTING", true);
-			exec("iptables -t mangle -F POSTROUTING", true);
-		} catch (_e) {
-			// Might fail if not installed or restricted, continue anyway
-		}
 
 		if (!isWgAvailable()) {
 			logger.warn("WireGuard (wg) CLI not found, skipping initialization");
