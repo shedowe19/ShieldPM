@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	fetchIpRanges: vi.fn(),
+	getNetworkStats: vi.fn(),
 	reloadNginx: vi.fn(),
 	testNginx: vi.fn(),
 }));
@@ -15,6 +16,7 @@ vi.mock("../../internal/nginx.js", () => ({
 		test: mocks.testNginx,
 	},
 }));
+vi.mock("systeminformation", () => ({ default: { networkStats: mocks.getNetworkStats } }));
 vi.mock("../../lib/config.js", () => ({
 	getEncryptionKey: vi.fn().mockReturnValue("0".repeat(64)),
 	isDemoMode: vi.fn().mockReturnValue(false),
@@ -42,6 +44,7 @@ import { executeTools } from "../../internal/ai/executor.js";
 import { getToolDefinitions } from "../../internal/ai/tools.js";
 
 const systemToolNames = ["test_nginx_config", "force_nginx_reload", "renew_ip_ranges"];
+const systemStatusToolName = "get_system_status";
 
 const namesOf = (tools) => tools.map((tool) => tool.function.name);
 
@@ -57,6 +60,7 @@ describe("AI system tool permissions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.fetchIpRanges.mockResolvedValue();
+		mocks.getNetworkStats.mockResolvedValue([]);
 		mocks.reloadNginx.mockResolvedValue();
 		mocks.testNginx.mockResolvedValue();
 	});
@@ -77,6 +81,40 @@ describe("AI system tool permissions", () => {
 
 		expect(toolNames).toEqual(expect.arrayContaining(systemToolNames));
 		expect(access.can).toHaveBeenCalledWith("settings:update");
+	});
+
+	it("does not advertise the system-status tool without analytics:list", async () => {
+		const access = {
+			can: vi.fn().mockImplementation((permission) => {
+				if (permission === "analytics:list") return Promise.reject(new Error("Not allowed"));
+				return Promise.resolve(true);
+			}),
+		};
+
+		const toolNames = namesOf(await getToolDefinitions(access));
+
+		expect(toolNames).not.toContain(systemStatusToolName);
+	});
+
+	it("does not execute system-status requests without analytics:list", async () => {
+		const access = { can: vi.fn().mockRejectedValue(new Error("Not allowed")) };
+
+		const results = await executeTools(access, [{ name: systemStatusToolName, args: {} }]);
+
+		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+	});
+
+	it("returns system status to users with analytics:list", async () => {
+		const access = { can: vi.fn().mockResolvedValue(true) };
+		mocks.getNetworkStats.mockResolvedValue([{ rx_sec: 12, tx_sec: 8 }]);
+
+		const results = await executeTools(access, [{ name: systemStatusToolName, args: {} }]);
+
+		expect(results.map((result) => result.result)).toEqual([
+			JSON.stringify({ rx_sec: 12, tx_sec: 8, total_sec: 20 }),
+		]);
+		expect(access.can).toHaveBeenCalledWith("analytics:list");
+		expect(mocks.getNetworkStats).toHaveBeenCalledOnce();
 	});
 
 	it("does not execute global Nginx or IP-range tools without settings:update", async () => {

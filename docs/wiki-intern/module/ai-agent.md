@@ -38,6 +38,10 @@ Prüfung von `settings:update` an das Modell übergeben. Der Executor prüft die
 Ausführung erneut. Damit können eingebettete oder halluzinierte Tool-Calls weder einen Nginx-Test/-Reload noch eine
 Aktualisierung der IP-Ranges ohne Berechtigung auslösen.
 
+Das lesende Tool `get_system_status` folgt der Zugriffsgrenze von `/api/analytics/status`: Es benötigt
+`analytics:list`, wird ohne diese Capability nicht angeboten und prüft die Berechtigung vor dem Auslesen der
+Netzwerkmetriken erneut.
+
 ### Cloudflared- und Tor-Aktionen
 
 Die Cloudflared- und Tor-Tools werden vor dem Modellaufruf anhand ihrer jeweiligen Capability ausgefiltert. Der

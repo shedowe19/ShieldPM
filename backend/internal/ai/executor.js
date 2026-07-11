@@ -642,6 +642,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "get_system_status": {
+					await access.can("analytics:list");
 					const net = await si.networkStats();
 					const rx = net.reduce((acc, iface) => acc + (iface.rx_sec || 0), 0);
 					const tx = net.reduce((acc, iface) => acc + (iface.tx_sec || 0), 0);
