@@ -24,6 +24,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Speichert aggregierte Zähler in `analytic_count`-Tabelle
 - GoAccess für erweiterte Analyse auf Port `:91`
 - Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
+- Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.
 - Beim Wechsel von Host oder Zeitraum verwirft die UI Ergebnisse bereits abgelöster Analyseabfragen, damit langsame Antworten keine aktuellen Kennzahlen oder Zeitreihen überschreiben.
 
 ## Abhängigkeiten

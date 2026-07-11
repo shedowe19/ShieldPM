@@ -77,6 +77,23 @@ describe("Analytics", () => {
 		expect(await screen.findByTestId("host-select-placeholder")).toHaveTextContent("Host auswählen");
 	});
 
+	it("renders recent request table headers in the active locale", async () => {
+		await changeLocale("de-DE");
+		vi.mocked(getAnalyticsSummary).mockResolvedValue({
+			recentRequests: [
+				{ duration: 42, ip: "192.0.2.1", method: "GET", path: "/", status: 200, time: "2026-01-01T12:00:00Z" },
+			],
+		});
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+
+		await screen.findAllByText("Keine Daten zum Anzeigen");
+		for (const header of ["Zeit", "Methode", "Status", "Pfad", "IP-Adresse", "Dauer"]) {
+			expect(screen.getByRole("columnheader", { name: header })).toBeInTheDocument();
+		}
+	});
+
 	it("keeps the latest range data when an older request completes last", async () => {
 		let resolveFirstSummary: ((value: Awaited<ReturnType<typeof getAnalyticsSummary>>) => void) | undefined;
 		const firstSummary = new Promise<Awaited<ReturnType<typeof getAnalyticsSummary>>>((resolve) => {

@@ -607,20 +607,22 @@ const Analytics = () => {
 								<thead className="[&_tr]:border-b">
 									<tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
-											Time
+											<T id="analytics.table.time" />
 										</th>
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
-											Method
+											<T id="analytics.table.method" />
 										</th>
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
-											Status
+											<T id="analytics.table.status" />
 										</th>
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
-											Path
+											<T id="analytics.table.path" />
 										</th>
-										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">IP</th>
+										<th className="h-12 px-4 align-middle font-medium text-muted-foreground">
+											<T id="analytics.table.ip-address" />
+										</th>
 										<th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">
-											Duration
+											<T id="analytics.table.duration" />
 										</th>
 									</tr>
 								</thead>
