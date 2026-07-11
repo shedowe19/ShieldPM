@@ -9,6 +9,7 @@ let permissionsModalModule: Promise<typeof import("./PermissionsModal")> | undef
 let proxyHostModalModule: Promise<typeof import("./ProxyHostModal")> | undefined;
 let redirectionHostModalModule: Promise<typeof import("./RedirectionHostModal")> | undefined;
 let setPasswordModalModule: Promise<typeof import("./SetPasswordModal")> | undefined;
+let streamModalModule: Promise<typeof import("./StreamModal")> | undefined;
 let userModalModule: Promise<typeof import("./UserModal")> | undefined;
 
 const loadAccessListModal = () => {
@@ -54,6 +55,11 @@ const loadRedirectionHostModal = () => {
 const loadSetPasswordModal = () => {
 	setPasswordModalModule ??= import("./SetPasswordModal");
 	return setPasswordModalModule;
+};
+
+const loadStreamModal = () => {
+	streamModalModule ??= import("./StreamModal");
+	return streamModalModule;
 };
 
 const loadUserModal = () => {
@@ -155,6 +161,16 @@ const showSetPasswordModal = async (id: number) => {
 	}
 };
 
+const showStreamModal = async (id: number | "new") => {
+	try {
+		const { showStreamModal: showModal } = await loadStreamModal();
+		showModal(id);
+	} catch (error) {
+		streamModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
 const showUserModal = async (id: number | "me" | "new") => {
 	try {
 		const { showUserModal: showModal } = await loadUserModal();
@@ -175,5 +191,6 @@ export {
 	showProxyHostModal,
 	showRedirectionHostModal,
 	showSetPasswordModal,
+	showStreamModal,
 	showUserModal,
 };

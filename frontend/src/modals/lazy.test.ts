@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
 	redirectionHostModalModuleLoaded: vi.fn(),
 	setPasswordModalModuleLoaded: vi.fn(),
 	showAccessListModal: vi.fn(),
+	showStreamModal: vi.fn(),
+	streamModalModuleLoaded: vi.fn(),
 	showChangePasswordModal: vi.fn(),
 	showDashboardNoteModal: vi.fn(),
 	showDeleteConfirmModal: vi.fn(),
@@ -51,6 +53,11 @@ vi.mock("./RedirectionHostModal", () => {
 vi.mock("./SetPasswordModal", () => {
 	mocks.setPasswordModalModuleLoaded();
 	return { showSetPasswordModal: mocks.showSetPasswordModal };
+});
+
+vi.mock("./StreamModal", () => {
+	mocks.streamModalModuleLoaded();
+	return { showStreamModal: mocks.showStreamModal };
 });
 
 vi.mock("./ChangePasswordModal", () => {
@@ -141,6 +148,17 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.userModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showUserModal).toHaveBeenCalledWith("me");
+	});
+
+	it("loads the Stream modal only when stream editing is requested", async () => {
+		const { showStreamModal } = await import("./lazy");
+
+		expect(mocks.streamModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showStreamModal(73);
+
+		expect(mocks.streamModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showStreamModal).toHaveBeenCalledWith(73);
 	});
 
 	it("loads the permissions modal only when permission editing is requested", async () => {

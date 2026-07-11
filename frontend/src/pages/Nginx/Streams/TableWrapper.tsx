@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { useStreams } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal, showHelpModal, showStreamModal } from "src/modals";
+import { showDeleteConfirmModal, showHelpModal, showStreamModal } from "src/modals/lazy";
 import { MANAGE, STREAMS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
