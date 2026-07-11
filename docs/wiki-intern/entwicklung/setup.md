@@ -64,7 +64,8 @@ npx biome check .
 npx biome check --write .
 ```
 
-Konfiguration: `backend/biome.json` und `frontend/biome.json`.
+Konfiguration: `backend/biome.json` und `frontend/biome.json`. Die jeweilige `$schema`-URL muss zur per Lockdatei
+installierten Biome-Version passen, damit der Linter keine Schema-Diagnose ausgibt.
 
 ## Verwandte Seiten
 
