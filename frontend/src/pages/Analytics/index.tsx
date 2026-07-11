@@ -19,7 +19,7 @@ import { intl, T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsMap } from "./AnalyticsMap";
 
-const isDocumentVisible = () => document.visibilityState === "visible";
+const canPoll = () => document.visibilityState === "visible" && navigator.onLine;
 
 const formatBytes = (bytes: number, decimals = 2) => {
 	if (!bytes) return "0 B";
@@ -83,29 +83,38 @@ const Analytics = () => {
 			}
 		};
 
-		const fetchIfVisible = () => {
-			if (isDocumentVisible()) {
+		const fetchIfEligible = () => {
+			if (canPoll()) {
 				fetchData();
 			}
+		};
+		const cancelPendingRequest = () => {
+			latestRequestId += 1;
 		};
 
 		const handleVisibilityChange = () => {
-			if (isDocumentVisible()) {
+			if (canPoll()) {
 				fetchData();
 			} else {
-				latestRequestId += 1;
+				cancelPendingRequest();
 			}
 		};
+		const handleOnline = () => fetchIfEligible();
+		const handleOffline = () => cancelPendingRequest();
 
-		fetchIfVisible();
+		fetchIfEligible();
 
-		// Refresh main data every 10 seconds while the tab is visible
-		const interval = setInterval(fetchIfVisible, 10000);
+		// Refresh main data every 10 seconds while the tab is visible and online
+		const interval = setInterval(fetchIfEligible, 10000);
 		document.addEventListener("visibilitychange", handleVisibilityChange);
+		window.addEventListener("online", handleOnline);
+		window.addEventListener("offline", handleOffline);
 		return () => {
 			cancelled = true;
 			clearInterval(interval);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
+			window.removeEventListener("online", handleOnline);
+			window.removeEventListener("offline", handleOffline);
 		};
 	}, [selectedHostId, range]);
 
@@ -143,29 +152,38 @@ const Analytics = () => {
 			}
 		};
 
-		const fetchIfVisible = () => {
-			if (isDocumentVisible()) {
+		const fetchIfEligible = () => {
+			if (canPoll()) {
 				fetchLiveParams();
 			}
+		};
+		const cancelPendingRequest = () => {
+			latestRequestId += 1;
+			liveRequestInFlight = undefined;
 		};
 
 		const handleVisibilityChange = () => {
-			if (isDocumentVisible()) {
+			if (canPoll()) {
 				fetchLiveParams();
 			} else {
-				latestRequestId += 1;
-				liveRequestInFlight = undefined;
+				cancelPendingRequest();
 			}
 		};
+		const handleOnline = () => fetchIfEligible();
+		const handleOffline = () => cancelPendingRequest();
 
-		fetchIfVisible();
-		const liveInterval = setInterval(fetchIfVisible, 2000);
+		fetchIfEligible();
+		const liveInterval = setInterval(fetchIfEligible, 2000);
 		document.addEventListener("visibilitychange", handleVisibilityChange);
+		window.addEventListener("online", handleOnline);
+		window.addEventListener("offline", handleOffline);
 		return () => {
 			cancelled = true;
 			liveRequestInFlight = undefined;
 			clearInterval(liveInterval);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
+			window.removeEventListener("online", handleOnline);
+			window.removeEventListener("offline", handleOffline);
 		};
 	}, []);
 

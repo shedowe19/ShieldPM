@@ -53,10 +53,13 @@ vi.mock("recharts", () => ({
 	YAxis: () => null,
 }));
 
+let onLineDescriptor: PropertyDescriptor | undefined;
 let visibilityStateDescriptor: PropertyDescriptor | undefined;
 
 beforeEach(() => {
+	onLineDescriptor = Object.getOwnPropertyDescriptor(navigator, "onLine");
 	visibilityStateDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
+	Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
 	vi.mocked(getAnalyticsSeries).mockReset();
 	vi.mocked(getAnalyticsSeries).mockResolvedValue([]);
 	vi.mocked(getAnalyticsStatus).mockReset();
@@ -74,6 +77,11 @@ beforeEach(() => {
 
 afterEach(async () => {
 	cleanup();
+	if (onLineDescriptor) {
+		Object.defineProperty(navigator, "onLine", onLineDescriptor);
+	} else {
+		Reflect.deleteProperty(navigator, "onLine");
+	}
 	if (visibilityStateDescriptor) {
 		Object.defineProperty(document, "visibilityState", visibilityStateDescriptor);
 	} else {
@@ -208,6 +216,58 @@ describe("Analytics", () => {
 		expect(getAnalyticsSummary).not.toHaveBeenCalled();
 		expect(getAnalyticsSeries).not.toHaveBeenCalled();
 		expect(getAnalyticsStatus).not.toHaveBeenCalled();
+	});
+
+	it("pauses analytics polling offline and refreshes after reconnecting", async () => {
+		vi.useFakeTimers();
+		Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(10_000);
+		});
+
+		expect(getAnalyticsSummary).not.toHaveBeenCalled();
+		expect(getAnalyticsSeries).not.toHaveBeenCalled();
+		expect(getDbStats).not.toHaveBeenCalled();
+		expect(getAnalyticsStatus).not.toHaveBeenCalled();
+
+		Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+		await act(async () => {
+			window.dispatchEvent(new Event("online"));
+			await Promise.resolve();
+			await Promise.resolve();
+		});
+
+		expect(getAnalyticsSummary).toHaveBeenCalledOnce();
+		expect(getAnalyticsSeries).toHaveBeenCalledOnce();
+		expect(getDbStats).toHaveBeenCalledOnce();
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+	});
+
+	it("refreshes live analytics after reconnecting while an offline request is still pending", async () => {
+		let resolveFirstLiveStatus: ((value: Awaited<ReturnType<typeof getAnalyticsStatus>>) => void) | undefined;
+		const firstLiveStatus = new Promise<Awaited<ReturnType<typeof getAnalyticsStatus>>>((resolve) => {
+			resolveFirstLiveStatus = resolve;
+		});
+		vi.mocked(getAnalyticsStatus)
+			.mockReturnValueOnce(firstLiveStatus)
+			.mockResolvedValueOnce({ rxSec: 1024, totalSec: 2048, txSec: 1024 });
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+		await waitFor(() => expect(getAnalyticsStatus).toHaveBeenCalledOnce());
+
+		Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+		window.dispatchEvent(new Event("offline"));
+		Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+		window.dispatchEvent(new Event("online"));
+
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(2);
+		if (!resolveFirstLiveStatus) {
+			throw new Error("Deferred live-status resolver is unavailable");
+		}
 	});
 
 	it("does not overlap live status refreshes while a previous refresh is pending", async () => {
