@@ -167,6 +167,10 @@ Formik-Kind. Die Validierung für Host und Port sowie die Sichtbarkeit von `inde
 `satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die
 Wertebindung gegen Regressionsfehler ab.
 
+`AccessListMtlsTab.tsx` kapselt den mTLS-Tab als weiteres Formik-Kind. Die Aktivierung, die Auswahl der internen CA und
+der externe Zertifikatstext bleiben an `mtlsEnabled`, `mtlsUseInternal` und `mtlsContent` des unveränderten
+Formularzustands gebunden; `AccessListMtlsTab.test.tsx` sichert Sichtbarkeit und Wertebindung des Zertifikatsfelds ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 

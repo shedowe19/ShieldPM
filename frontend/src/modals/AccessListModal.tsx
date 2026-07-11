@@ -13,12 +13,12 @@ import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
-import { Textarea } from "src/components/ui/textarea";
 import { useAccessList, useSetAccessList } from "src/hooks";
 import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 import { ACCESS_LIST_AUTH_TYPE, ACCESS_LIST_TAB, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
 import AccessListDetailsTab from "./AccessListDetailsTab";
+import AccessListMtlsTab from "./AccessListMtlsTab";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -634,75 +634,7 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											)}
 										</TabsContent>
 
-										{/* mTLS Tab */}
-										<TabsContent value={ACCESS_LIST_TAB.MTLS} className="pt-4 space-y-4">
-											<div className="flex items-center justify-between">
-												<div className="space-y-0.5">
-													<Label htmlFor="mtlsEnabled" className="text-base">
-														<T id="access-list.mtls.enable" />
-													</Label>
-													<p className="text-sm text-muted-foreground">
-														<T id="access-list.mtls.enable_desc" />
-													</p>
-												</div>
-												<Field name="mtlsEnabled">
-													{({ field }: FieldProps) => (
-														<Switch
-															id="mtlsEnabled"
-															checked={field.value}
-															onCheckedChange={(checked) =>
-																setFieldValue("mtlsEnabled", checked)
-															}
-														/>
-													)}
-												</Field>
-											</div>
-
-											<div className="flex items-center justify-between mt-4">
-												<div className="space-y-0.5">
-													<Label htmlFor="mtlsUseInternal" className="text-base">
-														<T id="access-list.mtls.use_internal" />
-													</Label>
-													<p className="text-sm text-muted-foreground">
-														<T id="access-list.mtls.use_internal_desc" />
-													</p>
-												</div>
-												<Field name="mtlsUseInternal">
-													{({ field }: FieldProps) => (
-														<Switch
-															id="mtlsUseInternal"
-															checked={field.value}
-															onCheckedChange={(checked) =>
-																setFieldValue("mtlsUseInternal", checked)
-															}
-														/>
-													)}
-												</Field>
-											</div>
-
-											{values.mtlsEnabled && !values.mtlsUseInternal && (
-												<div className="space-y-2">
-													<Label htmlFor="mtlsContent">
-														<T id="access-list.mtls.certificate" />
-													</Label>
-													<Field name="mtlsContent">
-														{({ field }: FieldProps) => (
-															<Textarea
-																{...field}
-																id="mtlsContent"
-																placeholder={intl.formatMessage({
-																	id: "access-list.mtls.certificate.placeholder",
-																})}
-																className="font-mono text-xs h-64"
-															/>
-														)}
-													</Field>
-													<div className="text-sm text-muted-foreground">
-														<T id="access-list.mtls.certificate_desc" />
-													</div>
-												</div>
-											)}
-										</TabsContent>
+										<AccessListMtlsTab />
 									</Tabs>
 
 									<DialogFooter>
