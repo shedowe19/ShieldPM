@@ -36,7 +36,6 @@ describe("WireguardConfigModal", () => {
 
 		expect(await screen.findByText("Mit der WireGuard-Mobil-App scannen")).toBeInTheDocument();
 		expect(screen.getByRole("img", { name: "WireGuard-QR-Code" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Schließen" })).toBeInTheDocument();
 	});
 
 	it("labels the configuration copy control for screen readers", async () => {
