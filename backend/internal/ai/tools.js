@@ -1011,27 +1011,45 @@ const getAllToolDefinitions = () => [
 	},
 ];
 
-const restrictedSystemTools = new Set(["test_nginx_config", "force_nginx_reload", "renew_ip_ranges"]);
+const restrictedToolPermissions = new Map([
+	["test_nginx_config", "settings:update"],
+	["force_nginx_reload", "settings:update"],
+	["renew_ip_ranges", "settings:update"],
+	["get_cloudflared_tunnels", "cloudflared_tunnels:list"],
+	["create_cloudflared_tunnel", "cloudflared_tunnels:create"],
+	["update_cloudflared_tunnel", "cloudflared_tunnels:update"],
+	["delete_cloudflared_tunnel", "cloudflared_tunnels:delete"],
+	["get_tor_onion_services", "tor_onions:list"],
+	["create_tor_onion_service", "tor_onions:create"],
+	["update_tor_onion_service", "tor_onions:update"],
+	["delete_tor_onion_service", "tor_onions:delete"],
+	["start_tor_onion_service", "tor_onions:update"],
+	["stop_tor_onion_service", "tor_onions:update"],
+]);
 
 /**
  * Returns the AI tool definitions the caller is authorized to receive.
- * Global Nginx and IP-range operations require settings:update and are hidden
- * when that capability cannot be verified.
+ * Privileged system, Cloudflared, and Tor operations are hidden when their
+ * corresponding capability cannot be verified.
  *
  * @param {import("../../lib/types.js").Access} access
  * @returns {Promise<Array>} Authorized tool definitions in OpenAI/Gemini function format
  */
 export const getToolDefinitions = async (access) => {
-	let canUpdateSettings = false;
+	const authorization = new Map();
 
-	try {
-		await access.can("settings:update");
-		canUpdateSettings = true;
-	} catch (_err) {
-		// Fail closed: do not reveal or offer privileged system operations.
+	for (const permission of new Set(restrictedToolPermissions.values())) {
+		try {
+			await access.can(permission);
+			authorization.set(permission, true);
+		} catch (_err) {
+			// Fail closed: do not reveal or offer privileged operations.
+			authorization.set(permission, false);
+		}
 	}
 
-	return getAllToolDefinitions().filter(
-		(tool) => canUpdateSettings || !restrictedSystemTools.has(tool.function.name),
-	);
+	return getAllToolDefinitions().filter((tool) => {
+		const permission = restrictedToolPermissions.get(tool.function.name);
+		return !permission || authorization.get(permission);
+	});
 };

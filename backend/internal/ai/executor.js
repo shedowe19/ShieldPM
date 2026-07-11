@@ -7,12 +7,14 @@ import ipaddr from "ipaddr.js";
 import si from "systeminformation";
 import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
+import errs from "../../lib/error.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
 import ProxyHost from "../../models/proxy_host.js";
 import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
 import internalCertificate from "../certificate.js";
+import internalCloudflared from "../cloudflared.js";
 import internalDdnsProvider from "../ddns-provider.js";
 import internalDeadHost from "../dead-host.js";
 import internalIpRanges from "../ip_ranges.js";
@@ -95,6 +97,43 @@ const validateDemoModeHost = (data) => {
 			validateDemoModeHost(loc);
 		}
 	}
+};
+
+const applyOwnerScope = (access, accessData, query) => {
+	if (accessData !== true && accessData?.permission_visibility !== "all") {
+		query.andWhere("owner_user_id", access.token.getUserId(1));
+	}
+
+	return query;
+};
+
+const getCloudflaredTunnel = async (access, permission, id) => {
+	const accessData = await access.can(permission, id);
+	const query = CloudflaredTunnel.query().where("id", id).andWhere("is_deleted", 0);
+	const tunnel = await applyOwnerScope(access, accessData, query).first();
+
+	if (!tunnel) {
+		throw new errs.ItemNotFoundError(id);
+	}
+
+	return tunnel;
+};
+
+const getTorOnionService = async (access, permission, id) => {
+	const accessData = await access.can(permission, id);
+	const query = TorOnion.query().where("id", id).andWhere("is_deleted", 0);
+	const service = await applyOwnerScope(access, accessData, query).first();
+
+	if (!service) {
+		throw new errs.ItemNotFoundError(id);
+	}
+
+	return service;
+};
+
+const verifyProxyHostUpdateAccess = async (access, id) => {
+	await access.can("proxy_hosts:update", id);
+	await internalProxyHost.get(access, { id });
 };
 
 /**
@@ -490,12 +529,22 @@ export const executeTools = async (access, toolCalls) => {
 					if (isDemoMode()) {
 						throw new Error("Cloudflare Tunnel management is disabled in Demo Mode.");
 					}
-					await CloudflaredTunnel.query().deleteById(call.args.id);
-					result = `Deleted Tunnel ID: ${call.args.id}`;
+					const tunnel = await getCloudflaredTunnel(access, "cloudflared_tunnels:delete", call.args.id);
+					await internalCloudflared.stop(tunnel.id);
+					await tunnel.$query().delete();
+					await internalAuditLog.add(access, {
+						action: "deleted",
+						object_type: "cloudflared-tunnel",
+						object_id: tunnel.id,
+						meta: { name: tunnel.name },
+					});
+					result = `Deleted Tunnel ID: ${tunnel.id}`;
 					break;
 				}
 				case "get_cloudflared_tunnels": {
-					const tunnels = await CloudflaredTunnel.query();
+					const accessData = await access.can("cloudflared_tunnels:list");
+					const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).orderBy("name", "ASC");
+					const tunnels = await applyOwnerScope(access, accessData, query);
 					result = JSON.stringify(
 						tunnels.map((t) => ({
 							id: t.id,
@@ -507,10 +556,20 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_cloudflared_tunnel": {
-					const newTunnel = await CloudflaredTunnel.query().insert({
+					const payload = {
 						name: call.args.name,
 						token: call.args.token,
 						status: 0, // Stopped by default
+						owner_user_id: access.token.getUserId(1),
+					};
+					await access.can("cloudflared_tunnels:create", payload);
+					const newTunnel = await CloudflaredTunnel.query().insert(payload);
+					await internalCloudflared.start(newTunnel);
+					await internalAuditLog.add(access, {
+						action: "created",
+						object_type: "cloudflared-tunnel",
+						object_id: newTunnel.id,
+						meta: { name: newTunnel.name },
 					});
 					result = `Created Cloudflare Tunnel ID: ${newTunnel.id}`;
 					break;
@@ -821,11 +880,19 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Tunnels
 				case "update_cloudflared_tunnel": {
-					await CloudflaredTunnel.query().patchAndFetchById(call.args.id, {
-						name: call.args.name,
-						token: call.args.token,
+					const tunnel = await getCloudflaredTunnel(access, "cloudflared_tunnels:update", call.args.id);
+					const updatedTunnel = await tunnel.$query().patchAndFetch({
+						...(typeof call.args.name === "undefined" ? {} : { name: call.args.name }),
+						...(typeof call.args.token === "undefined" ? {} : { token: call.args.token }),
 					});
-					result = `Updated Tunnel ID: ${call.args.id}`;
+					await internalCloudflared.restart(updatedTunnel);
+					await internalAuditLog.add(access, {
+						action: "updated",
+						object_type: "cloudflared-tunnel",
+						object_id: updatedTunnel.id,
+						meta: { name: updatedTunnel.name },
+					});
+					result = `Updated Tunnel ID: ${updatedTunnel.id}`;
 					break;
 				}
 				// Certificates
@@ -868,7 +935,9 @@ export const executeTools = async (access, toolCalls) => {
 
 				// Tor Onion Services
 				case "get_tor_onion_services": {
-					const services = await TorOnion.query().where("is_deleted", 0);
+					const accessData = await access.can("tor_onions:list");
+					const query = TorOnion.query().where("is_deleted", 0).orderBy("name", "ASC");
+					const services = await applyOwnerScope(access, accessData, query);
 					result = JSON.stringify(
 						services.map((s) => ({
 							id: s.id,
@@ -883,10 +952,17 @@ export const executeTools = async (access, toolCalls) => {
 					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
 
 					const payload = {
-						...call.args,
+						name: call.args.name,
+						proxy_host_id: call.args.proxy_host_id,
+						virtual_port: call.args.virtual_port,
+						target_port: call.args.target_port,
 						owner_user_id: access.token.getUserId(1),
 						status: 0,
 					};
+					await access.can("tor_onions:create", payload);
+					if (payload.proxy_host_id) {
+						await verifyProxyHostUpdateAccess(access, payload.proxy_host_id);
+					}
 
 					const service = await TorOnion.query().insert(payload);
 					// Create in Tor
@@ -894,47 +970,82 @@ export const executeTools = async (access, toolCalls) => {
 
 					// Refetch for address
 					const finalService = await TorOnion.query().findById(service.id);
+					await internalAuditLog.add(access, {
+						action: "created",
+						object_type: "tor-onion",
+						object_id: finalService.id,
+						meta: { name: finalService.name, onion_address: finalService.onion_address },
+					});
 					result = `Created Tor Onion Service ID: ${service.id} (Address: ${finalService.onion_address})`;
 					break;
 				}
 				case "update_tor_onion_service": {
 					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
 
-					const service = await TorOnion.query().findById(call.args.id);
-					if (!service) throw new Error("Service not found");
-
-					const updated = await service.$query().patchAndFetch(call.args);
+					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
+					if (call.args.proxy_host_id) {
+						await verifyProxyHostUpdateAccess(access, call.args.proxy_host_id);
+					}
+					const updated = await service.$query().patchAndFetch({
+						...(typeof call.args.name === "undefined" ? {} : { name: call.args.name }),
+						...(typeof call.args.proxy_host_id === "undefined"
+							? {}
+							: { proxy_host_id: call.args.proxy_host_id }),
+						...(typeof call.args.virtual_port === "undefined"
+							? {}
+							: { virtual_port: call.args.virtual_port }),
+						...(typeof call.args.target_port === "undefined" ? {} : { target_port: call.args.target_port }),
+					});
 
 					if (call.args.virtual_port || call.args.target_port) {
 						await internalTor.restart(updated);
 					}
 
-					result = `Updated Tor Onion Service ID: ${call.args.id}`;
+					await internalAuditLog.add(access, {
+						action: "updated",
+						object_type: "tor-onion",
+						object_id: updated.id,
+						meta: { name: updated.name, onion_address: updated.onion_address },
+					});
+					result = `Updated Tor Onion Service ID: ${updated.id}`;
 					break;
 				}
 				case "delete_tor_onion_service": {
-					// Stop first
-					const service = await TorOnion.query().findById(call.args.id);
-					if (service) {
-						await internalTor.stop(service);
-						await service.$query().patch({ is_deleted: 1 });
-					}
-					result = `Deleted Tor Onion Service ID: ${call.args.id}`;
+					const service = await getTorOnionService(access, "tor_onions:delete", call.args.id);
+					await internalTor.stop(service);
+					await service.$query().patch({ is_deleted: 1 });
+					await internalAuditLog.add(access, {
+						action: "deleted",
+						object_type: "tor-onion",
+						object_id: service.id,
+						meta: { name: service.name, onion_address: service.onion_address },
+					});
+					result = `Deleted Tor Onion Service ID: ${service.id}`;
 					break;
 				}
 				case "start_tor_onion_service": {
-					const service = await TorOnion.query().findById(call.args.id);
-					if (service) {
-						if (!service.private_key) await internalTor.create(service);
-						else await internalTor.start(service);
-					}
-					result = `Started Tor Onion Service ID: ${call.args.id}`;
+					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
+					if (!service.private_key) await internalTor.create(service);
+					else await internalTor.start(service);
+					await internalAuditLog.add(access, {
+						action: "updated",
+						object_type: "tor-onion",
+						object_id: service.id,
+						meta: { name: service.name, onion_address: service.onion_address, status: "started" },
+					});
+					result = `Started Tor Onion Service ID: ${service.id}`;
 					break;
 				}
 				case "stop_tor_onion_service": {
-					const service = await TorOnion.query().findById(call.args.id);
-					if (service) await internalTor.stop(service);
-					result = `Stopped Tor Onion Service ID: ${call.args.id}`;
+					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
+					await internalTor.stop(service);
+					await internalAuditLog.add(access, {
+						action: "updated",
+						object_type: "tor-onion",
+						object_id: service.id,
+						meta: { name: service.name, onion_address: service.onion_address, status: "stopped" },
+					});
+					result = `Stopped Tor Onion Service ID: ${service.id}`;
 					break;
 				}
 				// Duplicate cases removed. get_users, read_nginx_logs, get_analytics_summary are handled earlier.

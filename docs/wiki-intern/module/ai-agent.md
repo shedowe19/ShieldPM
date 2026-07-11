@@ -38,6 +38,14 @@ Prüfung von `settings:update` an das Modell übergeben. Der Executor prüft die
 Ausführung erneut. Damit können eingebettete oder halluzinierte Tool-Calls weder einen Nginx-Test/-Reload noch eine
 Aktualisierung der IP-Ranges ohne Berechtigung auslösen.
 
+### Cloudflared- und Tor-Aktionen
+
+Die Cloudflared- und Tor-Tools werden vor dem Modellaufruf anhand ihrer jeweiligen Capability ausgefiltert. Der
+Executor prüft bei jeder Ausführung erneut `cloudflared_tunnels:*` beziehungsweise `tor_onions:*`. Abfragen und
+Mutationen werden für eingeschränkte Berechtigungen zusätzlich auf `owner_user_id` begrenzt; nur Sichtbarkeit `all`
+erlaubt den Zugriff auf fremde Objekte. Erfolgreiche Erstellungen, Änderungen, Löschungen sowie Start-/Stopp-Aktionen
+werden über `internal/audit-log.js` protokolliert.
+
 ## Verhalten
 
 1. UI oder ChatOps schickt eine Nachricht an `routes/ai.js`.
