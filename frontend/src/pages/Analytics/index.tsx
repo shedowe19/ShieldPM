@@ -15,7 +15,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useHealth, useProxyHosts } from "src/hooks";
-import { isPollingAllowed } from "src/hooks/pollingPolicy";
+import { getPollingInterval, isPollingAllowed } from "src/hooks/pollingPolicy";
 import { intl, T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsMap } from "./AnalyticsMap";
@@ -56,30 +56,41 @@ const Analytics = () => {
 	useEffect(() => {
 		let cancelled = false;
 		let latestRequestId = 0;
-		const fetchData = async () => {
-			if (!selectedHostId) return;
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+
+		const clearScheduledFetch = () => {
+			if (timeout !== undefined) {
+				clearTimeout(timeout);
+				timeout = undefined;
+			}
+		};
+
+		const fetchData = async (): Promise<boolean | undefined> => {
+			if (!selectedHostId) return undefined;
 			const requestId = ++latestRequestId;
 			setLoading(true);
 			try {
 				const hostId = Number.parseInt(selectedHostId, 10);
 				// Fetch Summary
 				const summaryData = await getAnalyticsSummary(hostId, range);
-				if (cancelled || requestId !== latestRequestId) return;
+				if (cancelled || requestId !== latestRequestId) return undefined;
 				setSummary(summaryData);
 
 				// Fetch Series
 				const seriesData = await getAnalyticsSeries(hostId, range);
-				if (cancelled || requestId !== latestRequestId) return;
+				if (cancelled || requestId !== latestRequestId) return undefined;
 				// Format timestamp for chart
 				const formattedSeries = seriesData.map((d) => ({
 					...d,
 					timeDisplay: dayjs(d.timestamp).format("HH:mm"),
 				}));
 				setSeries(formattedSeries);
+				return true;
 			} catch (error) {
 				if (!cancelled && requestId === latestRequestId) {
 					console.error("Failed to fetch analytics:", error);
 				}
+				return false;
 			} finally {
 				if (!cancelled && requestId === latestRequestId) {
 					setLoading(false);
@@ -87,18 +98,41 @@ const Analytics = () => {
 			}
 		};
 
-		const fetchIfEligible = () => {
-			if (canPoll()) {
-				fetchData();
+		const scheduleNextFetch = (failureCount: number) => {
+			clearScheduledFetch();
+			const interval = getPollingInterval({
+				baseIntervalMs: 10_000,
+				failureCount,
+				isDocumentVisible: document.visibilityState === "visible",
+				isOnline: navigator.onLine,
+			});
+			if (interval !== false) {
+				timeout = setTimeout(() => {
+					void fetchAndSchedule(failureCount);
+				}, interval);
 			}
+		};
+
+		const fetchAndSchedule = async (failureCount: number) => {
+			if (!canPoll()) return;
+			const succeeded = await fetchData();
+			if (!cancelled && succeeded !== undefined) {
+				scheduleNextFetch(succeeded ? 0 : failureCount + 1);
+			}
+		};
+
+		const fetchIfEligible = () => {
+			clearScheduledFetch();
+			if (canPoll()) void fetchAndSchedule(0);
 		};
 		const cancelPendingRequest = () => {
 			latestRequestId += 1;
+			clearScheduledFetch();
 		};
 
 		const handleVisibilityChange = () => {
 			if (canPoll()) {
-				fetchData();
+				fetchIfEligible();
 			} else {
 				cancelPendingRequest();
 			}
@@ -108,14 +142,12 @@ const Analytics = () => {
 
 		fetchIfEligible();
 
-		// Refresh main data every 10 seconds while the tab is visible and online
-		const interval = setInterval(fetchIfEligible, 10000);
 		document.addEventListener("visibilitychange", handleVisibilityChange);
 		window.addEventListener("online", handleOnline);
 		window.addEventListener("offline", handleOffline);
 		return () => {
 			cancelled = true;
-			clearInterval(interval);
+			clearScheduledFetch();
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 			window.removeEventListener("online", handleOnline);
 			window.removeEventListener("offline", handleOffline);
