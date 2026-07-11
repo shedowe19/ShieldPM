@@ -64,6 +64,31 @@ describe("DDNS Service", () => {
 	});
 
 	describe("updateProvider", () => {
+		it("does not request custom URLs targeting the IPv6 loopback address", async () => {
+			const patchAndFetchById = vi.fn().mockResolvedValue({});
+			DdnsProvider.query.mockReturnValue({
+				patchAndFetchById,
+			});
+
+			await ddnsService.updateProvider(
+				{
+					id: 1,
+					name: "IPv6 loopback",
+					provider: "custom",
+					domains: [],
+					config: { url: "http://[::1]/update" },
+					ip_ver: "dual",
+				},
+				{ ipv4: "203.0.113.10", ipv6: null },
+			);
+
+			expect(fetchMock).not.toHaveBeenCalled();
+			expect(patchAndFetchById).toHaveBeenCalledWith(
+				1,
+				expect.objectContaining({ last_error: "SSRF: Localhost URLs are not allowed" }),
+			);
+		});
+
 		it("should update Cloudflare", async () => {
 			const provider = {
 				id: 1,

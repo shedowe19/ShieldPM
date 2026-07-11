@@ -12,7 +12,7 @@ const INTERVAL = 1000 * 60; // 60 seconds
  */
 const validatePublicUrl = (urlStr) => {
 	const parsed = new URL(urlStr);
-	const hostname = parsed.hostname;
+	const hostname = parsed.hostname.startsWith("[") ? parsed.hostname.slice(1, -1) : parsed.hostname;
 
 	// Only allow HTTP(S)
 	if (!["http:", "https:"].includes(parsed.protocol)) {

@@ -20,6 +20,7 @@ Unterstützt Cloudflare, DuckDNS und benutzerdefinierte URLs als DDNS-Provider.
 - Periodische Prüfung der öffentlichen IP
 - Aktualisiert DNS-Einträge bei Änderung
 - Unterstützt IPv4 und IPv6
+- Benutzerdefinierte Update-URLs werden vor dem Abruf gegen SSRF geprüft; IPv6-Literale werden dabei ohne URL-Klammern geprüft, damit die Loopback-Adresse `::1` zuverlässig blockiert wird.
 
 ## Abhängigkeiten
 
