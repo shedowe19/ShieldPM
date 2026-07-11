@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,6 +7,8 @@ import { SiteHeader } from "./SiteHeader";
 const mocks = vi.hoisted(() => ({
 	logout: vi.fn(),
 	showChangePasswordModal: vi.fn(),
+	showLazyChangePasswordModal: vi.fn(),
+	showLazyUserModal: vi.fn(),
 	showUserModal: vi.fn(),
 	useUser: vi.fn(),
 }));
@@ -25,7 +27,11 @@ vi.mock("src/components/ui/avatar", () => ({
 vi.mock("src/components/ui/dropdown-menu", () => ({
 	DropdownMenu: ({ children }: PropsWithChildren) => <div>{children}</div>,
 	DropdownMenuContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
-	DropdownMenuItem: ({ children }: PropsWithChildren) => <button type="button">{children}</button>,
+	DropdownMenuItem: ({ children, onClick }: PropsWithChildren<{ onClick?: () => void }>) => (
+		<button type="button" onClick={onClick}>
+			{children}
+		</button>
+	),
 	DropdownMenuLabel: ({ children }: PropsWithChildren) => <div>{children}</div>,
 	DropdownMenuSeparator: () => <hr />,
 	DropdownMenuTrigger: ({ children }: PropsWithChildren) => <>{children}</>,
@@ -42,6 +48,11 @@ vi.mock("src/hooks", () => ({
 vi.mock("src/modals", () => ({
 	showChangePasswordModal: mocks.showChangePasswordModal,
 	showUserModal: mocks.showUserModal,
+}));
+
+vi.mock("src/modals/lazy", () => ({
+	showChangePasswordModal: mocks.showLazyChangePasswordModal,
+	showUserModal: mocks.showLazyUserModal,
 }));
 
 describe("SiteHeader", () => {
@@ -63,5 +74,15 @@ describe("SiteHeader", () => {
 
 		expect(screen.getByRole("button", { name: "Benutzermenü umschalten" })).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Toggle user menu" })).not.toBeInTheDocument();
+	});
+
+	it("defers profile and password modal loading until their menu actions are selected", () => {
+		render(<SiteHeader />);
+
+		fireEvent.click(screen.getByRole("button", { name: "Profil bearbeiten" }));
+		fireEvent.click(screen.getByRole("button", { name: "Passwort ändern" }));
+
+		expect(mocks.showLazyUserModal).toHaveBeenCalledWith("me");
+		expect(mocks.showLazyChangePasswordModal).toHaveBeenCalledWith("me");
 	});
 });

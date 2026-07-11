@@ -1,5 +1,4 @@
 export * from "./AccessListModal";
-export * from "./ChangePasswordModal";
 export * from "./CustomCertificateModal";
 export * from "./DashboardNoteModal";
 export * from "./DdnsProviderModal";
@@ -15,4 +14,3 @@ export * from "./RedirectionHostModal";
 export * from "./RenewCertificateModal";
 export * from "./SetPasswordModal";
 export * from "./StreamModal";
-export * from "./UserModal";

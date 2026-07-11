@@ -11,7 +11,8 @@ import { Input } from "src/components/ui/input";
 import { useAuthState } from "src/context";
 import { useHealth, useUser, useUsers } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal, showUserModal } from "src/modals";
+import { showDeleteConfirmModal, showPermissionsModal, showSetPasswordModal } from "src/modals";
+import { showUserModal } from "src/modals/lazy";
 import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import Table from "./Table";
@@ -115,7 +116,7 @@ export default function TableWrapper() {
 						<Button
 							size="sm"
 							className="bg-orange-600/90 hover:bg-orange-600 text-white shadow-sm"
-							onClick={() => showUserModal("new")}
+							onClick={() => void showUserModal("new")}
 						>
 							<IconPlus className="mr-2 h-4 w-4" />
 							<T id="object.add" tData={{ object: AUDIT_LOG_OBJECT_TYPE.USER }} />
@@ -129,7 +130,7 @@ export default function TableWrapper() {
 					isFiltered={!!search}
 					isFetching={isFetching}
 					currentUserId={currentUser?.id}
-					onEditUser={(id: number) => showUserModal(id)}
+					onEditUser={(id: number) => void showUserModal(id)}
 					onEditPermissions={(id: number) => showPermissionsModal(id)}
 					onSetPassword={(id: number) => showSetPasswordModal(id)}
 					onDeleteUser={(id: number) =>
@@ -141,7 +142,7 @@ export default function TableWrapper() {
 						})
 					}
 					onDisableToggle={handleDisableToggle}
-					onNewUser={() => showUserModal("new")}
+					onNewUser={() => void showUserModal("new")}
 					onLoginAs={handleLoginAs}
 				/>
 			</CardContent>

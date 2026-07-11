@@ -13,7 +13,7 @@ import {
 import { useAuthState } from "src/context";
 import { useUser } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showChangePasswordModal, showUserModal } from "src/modals";
+import { showChangePasswordModal, showUserModal } from "src/modals/lazy";
 
 export function SiteHeader() {
 	const { data: currentUser } = useUser("me");
@@ -61,11 +61,11 @@ export function SiteHeader() {
 							</div>
 							<DropdownMenuSeparator />
 						</div>
-						<DropdownMenuItem onClick={() => showUserModal("me")}>
+						<DropdownMenuItem onClick={() => void showUserModal("me")}>
 							<IconUser className="mr-2 h-4 w-4" />
 							<T id="user.edit-profile" />
 						</DropdownMenuItem>
-						<DropdownMenuItem onClick={() => showChangePasswordModal("me")}>
+						<DropdownMenuItem onClick={() => void showChangePasswordModal("me")}>
 							<IconLock className="mr-2 h-4 w-4" />
 							<T id="user.change-password" />
 						</DropdownMenuItem>

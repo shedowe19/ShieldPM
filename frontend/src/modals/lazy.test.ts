@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	changePasswordModalModuleLoaded: vi.fn(),
 	modalModuleError: undefined as Error | undefined,
 	modalModuleLoaded: vi.fn(),
 	showError: vi.fn(),
+	showChangePasswordModal: vi.fn(),
 	showProxyHostModal: vi.fn(),
+	showUserModal: vi.fn(),
+	userModalModuleLoaded: vi.fn(),
 }));
 
 vi.mock("./ProxyHostModal", () => {
@@ -13,6 +17,16 @@ vi.mock("./ProxyHostModal", () => {
 		throw mocks.modalModuleError;
 	}
 	return { showProxyHostModal: mocks.showProxyHostModal };
+});
+
+vi.mock("./ChangePasswordModal", () => {
+	mocks.changePasswordModalModuleLoaded();
+	return { showChangePasswordModal: mocks.showChangePasswordModal };
+});
+
+vi.mock("./UserModal", () => {
+	mocks.userModalModuleLoaded();
+	return { showUserModal: mocks.showUserModal };
 });
 
 vi.mock("src/notifications", () => ({ showError: mocks.showError }));
@@ -45,5 +59,27 @@ describe("showProxyHostModal", () => {
 
 		expect(mocks.modalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showProxyHostModal).toHaveBeenCalledWith(73);
+	});
+
+	it("loads the User modal only when profile editing is requested", async () => {
+		const { showUserModal } = await import("./lazy");
+
+		expect(mocks.userModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showUserModal("me");
+
+		expect(mocks.userModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showUserModal).toHaveBeenCalledWith("me");
+	});
+
+	it("loads the password modal only when a password change is requested", async () => {
+		const { showChangePasswordModal } = await import("./lazy");
+
+		expect(mocks.changePasswordModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showChangePasswordModal("me");
+
+		expect(mocks.changePasswordModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showChangePasswordModal).toHaveBeenCalledWith("me");
 	});
 });
