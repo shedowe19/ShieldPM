@@ -9,10 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { useAccessLists } from "src/hooks";
 import { intl, T } from "src/locale";
-import { showAccessListModal, showDeleteConfirmModal, showHelpModal } from "src/modals/lazy";
 import { ACCESS_LISTS, MANAGE } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { showAccessListModal, showDeleteConfirmModal, showHelpModal } from "./lazy";
 import Table from "./Table";
 
 export default function TableWrapper() {
