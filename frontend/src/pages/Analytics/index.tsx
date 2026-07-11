@@ -63,6 +63,7 @@ const Analytics = () => {
 	}, [hosts, selectedHostId]);
 
 	useEffect(() => {
+		let cancelled = false;
 		const fetchData = async () => {
 			if (!selectedHostId) return;
 			setLoading(true);
@@ -70,10 +71,12 @@ const Analytics = () => {
 				const hostId = Number.parseInt(selectedHostId, 10);
 				// Fetch Summary
 				const summaryData = await getAnalyticsSummary(hostId, range);
+				if (cancelled) return;
 				setSummary(summaryData);
 
 				// Fetch Series
 				const seriesData = await getAnalyticsSeries(hostId, range);
+				if (cancelled) return;
 				// Format timestamp for chart
 				const formattedSeries = seriesData.map((d) => ({
 					...d,
@@ -81,9 +84,13 @@ const Analytics = () => {
 				}));
 				setSeries(formattedSeries);
 			} catch (error) {
-				console.error("Failed to fetch analytics:", error);
+				if (!cancelled) {
+					console.error("Failed to fetch analytics:", error);
+				}
 			} finally {
-				setLoading(false);
+				if (!cancelled) {
+					setLoading(false);
+				}
 			}
 		};
 
@@ -91,7 +98,10 @@ const Analytics = () => {
 
 		// Refresh main data every 10 seconds
 		const interval = setInterval(fetchData, 10000);
-		return () => clearInterval(interval);
+		return () => {
+			cancelled = true;
+			clearInterval(interval);
+		};
 	}, [selectedHostId, range]);
 
 	useEffect(() => {
