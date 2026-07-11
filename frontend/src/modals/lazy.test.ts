@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	modalModuleError: undefined as Error | undefined,
 	modalModuleLoaded: vi.fn(),
 	permissionsModalModuleLoaded: vi.fn(),
+	redirectionHostModalModuleLoaded: vi.fn(),
 	setPasswordModalModuleLoaded: vi.fn(),
 	showAccessListModal: vi.fn(),
 	showChangePasswordModal: vi.fn(),
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 	showHelpModal: vi.fn(),
 	showPermissionsModal: vi.fn(),
 	showProxyHostModal: vi.fn(),
+	showRedirectionHostModal: vi.fn(),
 	showSetPasswordModal: vi.fn(),
 	showUserModal: vi.fn(),
 	userModalModuleLoaded: vi.fn(),
@@ -39,6 +41,11 @@ vi.mock("./ProxyHostModal", () => {
 vi.mock("./PermissionsModal", () => {
 	mocks.permissionsModalModuleLoaded();
 	return { showPermissionsModal: mocks.showPermissionsModal };
+});
+
+vi.mock("./RedirectionHostModal", () => {
+	mocks.redirectionHostModalModuleLoaded();
+	return { showRedirectionHostModal: mocks.showRedirectionHostModal };
 });
 
 vi.mock("./SetPasswordModal", () => {
@@ -112,6 +119,17 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.modalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showProxyHostModal).toHaveBeenCalledWith(73);
+	});
+
+	it("loads the Redirection Host modal only when editing is requested", async () => {
+		const { showRedirectionHostModal } = await import("./lazy");
+
+		expect(mocks.redirectionHostModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showRedirectionHostModal("new");
+
+		expect(mocks.redirectionHostModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showRedirectionHostModal).toHaveBeenCalledWith("new");
 	});
 
 	it("loads the User modal only when profile editing is requested", async () => {

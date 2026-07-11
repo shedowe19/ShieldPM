@@ -7,6 +7,7 @@ let deleteConfirmModalModule: Promise<typeof import("./DeleteConfirmModal")> | u
 let helpModalModule: Promise<typeof import("./HelpModal")> | undefined;
 let permissionsModalModule: Promise<typeof import("./PermissionsModal")> | undefined;
 let proxyHostModalModule: Promise<typeof import("./ProxyHostModal")> | undefined;
+let redirectionHostModalModule: Promise<typeof import("./RedirectionHostModal")> | undefined;
 let setPasswordModalModule: Promise<typeof import("./SetPasswordModal")> | undefined;
 let userModalModule: Promise<typeof import("./UserModal")> | undefined;
 
@@ -43,6 +44,11 @@ const loadPermissionsModal = () => {
 const loadProxyHostModal = () => {
 	proxyHostModalModule ??= import("./ProxyHostModal");
 	return proxyHostModalModule;
+};
+
+const loadRedirectionHostModal = () => {
+	redirectionHostModalModule ??= import("./RedirectionHostModal");
+	return redirectionHostModalModule;
 };
 
 const loadSetPasswordModal = () => {
@@ -129,6 +135,16 @@ const showProxyHostModal = async (id: number | "new") => {
 	}
 };
 
+const showRedirectionHostModal = async (id: number | "new") => {
+	try {
+		const { showRedirectionHostModal: showModal } = await loadRedirectionHostModal();
+		showModal(id);
+	} catch (error) {
+		redirectionHostModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
 const showSetPasswordModal = async (id: number) => {
 	try {
 		const { showSetPasswordModal: showModal } = await loadSetPasswordModal();
@@ -157,6 +173,7 @@ export {
 	showHelpModal,
 	showPermissionsModal,
 	showProxyHostModal,
+	showRedirectionHostModal,
 	showSetPasswordModal,
 	showUserModal,
 };
