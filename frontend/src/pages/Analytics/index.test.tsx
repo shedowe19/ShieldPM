@@ -43,11 +43,11 @@ vi.mock("react-simple-maps", () => ({
 
 vi.mock("recharts", () => ({
 	Area: () => null,
-	AreaChart: () => null,
+	AreaChart: () => <div data-testid="analytics-area-chart" />,
 	Bar: () => null,
-	BarChart: () => null,
+	BarChart: () => <div data-testid="analytics-bar-chart" />,
 	CartesianGrid: () => null,
-	ResponsiveContainer: () => null,
+	ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 	Tooltip: () => null,
 	XAxis: () => null,
 	YAxis: () => null,
@@ -101,6 +101,42 @@ describe("Analytics", () => {
 		await screen.findByText("3 KB/s");
 		expect(getDbStats).toHaveBeenCalledTimes(1);
 		expect(getAnalyticsStatus).toHaveBeenCalledTimes(1);
+	});
+
+	it("defers chart rendering until its section is near the viewport", async () => {
+		const observers: Array<{ callback: IntersectionObserverCallback; observe: ReturnType<typeof vi.fn> }> = [];
+		class IntersectionObserverMock {
+			callback: IntersectionObserverCallback;
+			observe = vi.fn();
+
+			constructor(callback: IntersectionObserverCallback) {
+				this.callback = callback;
+				observers.push(this);
+			}
+
+			disconnect = vi.fn();
+			unobserve = vi.fn();
+		}
+		vi.stubGlobal("IntersectionObserver", IntersectionObserverMock);
+		vi.mocked(getAnalyticsSeries).mockResolvedValue([
+			{ bytes: 0, count: 1, s2xx: 1, s3xx: 0, s4xx: 0, s5xx: 0, timestamp: "2026-01-01T12:00:00Z" },
+		]);
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+
+		await waitFor(() => expect(getAnalyticsSeries).toHaveBeenCalledOnce());
+		expect(observers.length).toBeGreaterThanOrEqual(2);
+		expect(screen.queryByTestId("analytics-area-chart")).not.toBeInTheDocument();
+
+		await act(async () => {
+			for (const observer of observers) {
+				observer.callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+			}
+		});
+
+		expect(await screen.findByTestId("analytics-area-chart")).toBeInTheDocument();
+		expect(screen.getByTestId("analytics-bar-chart")).toBeInTheDocument();
 	});
 
 	it("renders the host selector placeholder in the active locale", async () => {
