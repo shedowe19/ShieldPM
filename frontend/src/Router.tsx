@@ -5,6 +5,7 @@ import { AnimatedPage } from "src/components/AnimatedPage";
 import { ErrorNotFound } from "src/components/ErrorNotFound";
 import { LoadingPage } from "src/components/LoadingPage";
 import { Page } from "src/components/Page";
+import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 import { Sidebar } from "src/components/Sidebar";
 import { SiteContainer } from "src/components/SiteContainer";
 import { SiteFooter } from "src/components/SiteFooter";
@@ -36,7 +37,7 @@ const DuoCallback = lazy(() => import("src/pages/DuoCallback"));
 
 function Content() {
 	const location = useLocation();
-	return (
+	const routes = (
 		<AnimatePresence mode="wait">
 			<Routes location={location} key={location.pathname}>
 				<Route
@@ -194,6 +195,8 @@ function Content() {
 			</Routes>
 		</AnimatePresence>
 	);
+
+	return <RouteErrorBoundary resetKey={location.pathname}>{routes}</RouteErrorBoundary>;
 }
 
 function Router() {
@@ -215,12 +218,14 @@ function Router() {
 	if (!authenticated) {
 		return (
 			<BrowserRouter>
-				<Suspense fallback={<LoadingPage />}>
-					<Routes>
-						<Route path="/duo-callback" element={<DuoCallback />} />
-						<Route path="*" element={<Login />} />
-					</Routes>
-				</Suspense>
+				<RouteErrorBoundary>
+					<Suspense fallback={<LoadingPage />}>
+						<Routes>
+							<Route path="/duo-callback" element={<DuoCallback />} />
+							<Route path="*" element={<Login />} />
+						</Routes>
+					</Suspense>
+				</RouteErrorBoundary>
 			</BrowserRouter>
 		);
 	}
