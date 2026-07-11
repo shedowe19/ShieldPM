@@ -137,6 +137,10 @@ Die Terminal-Verbindungsfelder des `ProxyHostModal` liegen in `ProxyHostTerminal
 Formik-Kind, erscheint nur für das Forwarding-Schema `terminal` und zeigt abhängig von `terminalAuthType` unverändert
 das Passwort- oder Private-Key-Feld. `ProxyHostTerminalFields.test.tsx` sichert diese drei Zustände ab.
 
+`ProxyHostIconSettings.tsx` kapselt die Symbolauswahl des `ProxyHostModal` als weiteres Formik-Kind. Bei `iconType`
+`custom` bleibt das URL-Feld sichtbar; die Vorschau erhält weiterhin Host, Port, Symboltyp und URL aus dem gemeinsamen
+Formularzustand. `ProxyHostIconSettings.test.tsx` sichert beide Zustände ab.
+
 `Form/LocationsFields.tsx` verwendet für die Icon-Aktion zum Ein- und Ausblenden der erweiterten Standortoptionen den
 in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtbaren Tooltip und zugänglichen Namen.
 
