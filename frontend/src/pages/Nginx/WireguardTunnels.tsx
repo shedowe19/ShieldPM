@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { Lock, Network, RefreshCcw, Settings, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
+import { showWireguardTunnelsHelpModal } from "./WireguardTunnels.lazy";
 import type { WireguardPeer } from "@/api/backend";
 import type { WireguardSettings } from "@/api/backend/wireguardSettings";
 import { getWireguardSettings, updateWireguardSettings } from "@/api/backend/wireguardSettings";
@@ -28,7 +29,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useHealth } from "@/hooks/useHealth";
 import { useWireguardPeer, useWireguardPeers } from "@/hooks/useWireguardPeer";
 import { T } from "@/locale";
-import { showHelpModal } from "@/modals/lazy";
 import { MANAGE, WIREGUARD_PEERS } from "@/modules/Permissions";
 
 dayjs.extend(relativeTime);
@@ -394,11 +394,7 @@ export function WireguardTunnels() {
 						<Button variant="outline" size="icon" onClick={() => refetch()}>
 							<IconRefresh className="h-4 w-4" />
 						</Button>
-						<Button
-							variant="outline"
-							size="icon"
-							onClick={() => showHelpModal("WireguardTunnels", "purple")}
-						>
+						<Button variant="outline" size="icon" onClick={showWireguardTunnelsHelpModal}>
 							<IconHelp className="h-4 w-4" />
 						</Button>
 						<HasPermission section={WIREGUARD_PEERS} permission={MANAGE} hideError>
