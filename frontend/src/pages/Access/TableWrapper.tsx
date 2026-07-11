@@ -67,7 +67,12 @@ export default function TableWrapper() {
 							/>
 						</div>
 					) : null}
-					<Button variant="outline" size="icon" onClick={() => showHelpModal("AccessLists", "cyan")}>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={intl.formatMessage({ id: "action.help" })}
+						onClick={() => showHelpModal("AccessLists", "cyan")}
+					>
 						<IconHelp className="h-4 w-4" />
 					</Button>
 					<HasPermission section={ACCESS_LISTS} permission={MANAGE} hideError>

@@ -123,6 +123,9 @@ in allen 13 Locales vorhandenen Schlüssel `action.advanced-settings` als sichtb
 `Certificates/TableWrapper.tsx` beschriftet seine Icon-Aktion für die Hilfe mit dem in allen 13 Locales vorhandenen
 Schlüssel `action.help` als zugänglichen Namen.
 
+`Access/TableWrapper.tsx` verwendet für seine gleichartige Hilfe-Icon-Aktion ebenfalls den vorhandenen lokalisierten
+Schlüssel `action.help` als zugänglichen Namen.
+
 ## Types (`frontend/src/types/`)
 
 | Datei             | Zweck                                               |
