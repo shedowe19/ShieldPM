@@ -5,7 +5,7 @@ import type { AccessListItem } from "src/api/backend";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 
 interface Props {
 	initialValues: AccessListItem[];
@@ -83,7 +83,13 @@ export function BasicAuthFields({ initialValues, name = "items" }: Props) {
 						/>
 					</div>
 					<div className="col-span-1 text-right">
-						<Button type="button" variant="destructive" size="icon" onClick={() => handleRemove(idx)}>
+						<Button
+							type="button"
+							variant="destructive"
+							size="icon"
+							onClick={() => handleRemove(idx)}
+							aria-label={intl.formatMessage({ id: "action.delete" })}
+						>
 							<IconX size={16} />
 						</Button>
 					</div>
