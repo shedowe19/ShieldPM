@@ -18,7 +18,6 @@ import {
 } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
-import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -33,6 +32,7 @@ import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, PROXY_HOST_TAB } from "src/types
 import ProxyHostForwardingFields from "./ProxyHostForwardingFields";
 import ProxyHostIconSettings from "./ProxyHostIconSettings";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
+import ProxyHostOptions from "./ProxyHostOptions";
 import ProxyHostPhpSettings from "./ProxyHostPhpSettings";
 import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
 import ProxyHostTerminalFields from "./ProxyHostTerminalFields";
@@ -249,125 +249,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 													</div>
 												</div>
 												<AccessField />
-												<Card className="my-3 border-dashed">
-													<CardContent className="p-4">
-														<h4 className="pb-2 text-lg font-semibold">
-															<T id="options" />
-														</h4>
-														<div className="space-y-4">
-															<div className="flex items-center justify-between">
-																<Label
-																	htmlFor="cachingEnabled"
-																	className="flex-1 cursor-pointer"
-																>
-																	<T id="host.flags.cache-assets" />
-																</Label>
-																<Field name="cachingEnabled" type="checkbox">
-																	{({ field, form }: FieldProps) => (
-																		<Switch
-																			id="cachingEnabled"
-																			checked={field.checked}
-																			onCheckedChange={(checked: boolean) =>
-																				form.setFieldValue(
-																					"cachingEnabled",
-																					checked,
-																				)
-																			}
-																		/>
-																	)}
-																</Field>
-															</div>
-															<div className="flex items-center justify-between">
-																<Label
-																	htmlFor="disableBuffering"
-																	className="flex-1 cursor-pointer"
-																>
-																	<T id="disableBuffering" />
-																</Label>
-																<Field name="disableBuffering" type="checkbox">
-																	{({ field, form }: FieldProps) => (
-																		<Switch
-																			id="disableBuffering"
-																			checked={field.checked}
-																			onCheckedChange={(checked: boolean) =>
-																				form.setFieldValue(
-																					"disableBuffering",
-																					checked,
-																				)
-																			}
-																		/>
-																	)}
-																</Field>
-															</div>
-															<div className="flex items-center justify-between">
-																<Label
-																	htmlFor="blockExploits"
-																	className="flex-1 cursor-pointer"
-																>
-																	<T id="host.flags.block-exploits" />
-																</Label>
-																<Field name="blockExploits" type="checkbox">
-																	{({ field, form }: FieldProps) => (
-																		<Switch
-																			id="blockExploits"
-																			checked={field.checked}
-																			onCheckedChange={(checked: boolean) =>
-																				form.setFieldValue(
-																					"blockExploits",
-																					checked,
-																				)
-																			}
-																		/>
-																	)}
-																</Field>
-															</div>
-															<div className="flex items-center justify-between">
-																<Label
-																	htmlFor="allowWebsocketUpgrade"
-																	className="flex-1 cursor-pointer"
-																>
-																	<T id="host.flags.websockets-upgrade" />
-																</Label>
-																<Field name="allowWebsocketUpgrade" type="checkbox">
-																	{({ field, form }: FieldProps) => (
-																		<Switch
-																			id="allowWebsocketUpgrade"
-																			checked={field.checked}
-																			onCheckedChange={(checked: boolean) =>
-																				form.setFieldValue(
-																					"allowWebsocketUpgrade",
-																					checked,
-																				)
-																			}
-																		/>
-																	)}
-																</Field>
-															</div>
-															<div className="flex items-center justify-between">
-																<Label
-																	htmlFor="maintenanceOnFailure"
-																	className="flex-1 cursor-pointer"
-																>
-																	<T id="host.flags.maintenance-on-failure" />
-																</Label>
-																<Field name="maintenanceOnFailure" type="checkbox">
-																	{({ field, form }: FieldProps) => (
-																		<Switch
-																			id="maintenanceOnFailure"
-																			checked={field.checked}
-																			onCheckedChange={(checked: boolean) =>
-																				form.setFieldValue(
-																					"maintenanceOnFailure",
-																					checked,
-																				)
-																			}
-																		/>
-																	)}
-																</Field>
-															</div>
-														</div>
-													</CardContent>
-												</Card>
+												<ProxyHostOptions />
 											</TabsContent>
 											<TabsContent value={PROXY_HOST_TAB.LOCATIONS} className="mt-0">
 												<LocationsFields initialValues={data?.locations || []} />

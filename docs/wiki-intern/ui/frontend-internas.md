@@ -89,7 +89,7 @@ bleibt unabhängig vom Browser-Zustand testbar, damit weitere Polling-Hooks dies
 
 | Modal                    | Datei                          | Größe  | Zweck                                           |
 | ------------------------ | ------------------------------ | ------ | ----------------------------------------------- |
-| ProxyHostModal           | `ProxyHostModal.tsx`           | 53 KB  | Proxy-Host erstellen/bearbeiten (größte Datei)  |
+| ProxyHostModal           | `ProxyHostModal.tsx`           | 17 KB  | Proxy-Host erstellen/bearbeiten (größte Datei)  |
 | AccessListModal          | `AccessListModal.tsx`          | 30 KB  | Access-List Verwaltung                          |
 | UserModal                | `UserModal.tsx`                | 17 KB  | Benutzer erstellen/bearbeiten und Avatar-Upload |
 | PermissionsModal         | `PermissionsModal.tsx`         | 14 KB  | Berechtigungen setzen                           |
@@ -145,6 +145,10 @@ Formularzustand. `ProxyHostIconSettings.test.tsx` sichert beide Zustände ab.
 das Forwarding-Schema `path` begrenzt; nach dem Aktivieren von PHP bleiben Versionswahl und benutzerdefinierte
 `php_override_ini` aus dem gemeinsamen Formularzustand verfügbar. `ProxyHostPhpSettings.test.tsx` sichert diese
 Sichtbarkeits- und Zustandsübergänge ab.
+
+`ProxyHostOptions.tsx` kapselt die fünf Detail-Optionen für Caching, Pufferung, Exploit-Schutz, WebSocket-Upgrades und
+Wartung bei Fehlern als Formik-Kind. `ProxyHostOptions.test.tsx` sichert die unveränderte Bindung aller Schalter an ihre
+jeweiligen Formularfelder ab.
 
 `ProxyHostForwardingFields.tsx` kapselt Schema, Zielhost, Zielport und das `path`-spezifische Index-Dateifeld als
 Formik-Kind. Die Validierung für Host und Port sowie die Sichtbarkeit von `indexFile` bleiben aus dem Dialog erhalten;
