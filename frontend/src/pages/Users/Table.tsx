@@ -116,8 +116,8 @@ export default function Table({
 									variant="ghost"
 									size="icon"
 									className="h-8 w-8 text-muted-foreground hover:text-foreground"
+									aria-label={intl.formatMessage({ id: "sr.open-menu" })}
 								>
-									<span className="sr-only">Open menu</span>
 									<IconDotsVertical className="h-4 w-4" />
 								</Button>
 							</DropdownMenuTrigger>
