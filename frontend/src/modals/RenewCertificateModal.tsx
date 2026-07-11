@@ -75,7 +75,9 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 					{data && isSubmitting && !errorMsg ? (
 						<div className="flex flex-col items-center justify-center py-4 space-y-2">
 							<Loader2 className="h-8 w-8 animate-spin text-primary" />
-							<p className="text-sm text-muted-foreground">Please wait ...</p>
+							<p className="text-sm text-muted-foreground">
+								<T id="certificate.renew.waiting" />
+							</p>
 						</div>
 					) : null}
 				</div>

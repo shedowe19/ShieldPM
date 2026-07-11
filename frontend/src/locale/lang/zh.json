@@ -162,6 +162,7 @@
 	"certificate.none.title": "无",
 	"certificate.not-in-use": "未使用",
 	"certificate.renew": "续期证书",
+	"certificate.renew.waiting": "请稍候…",
 	"certificateKey": "证书密钥",
 	"certificates": "证书列表",
 	"certificates.custom": "自定义证书",

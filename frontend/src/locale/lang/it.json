@@ -162,6 +162,7 @@
 	"certificate.none.title": "Nessuno",
 	"certificate.not-in-use": "Non in Uso",
 	"certificate.renew": "Rinnova Certificato",
+	"certificate.renew.waiting": "Attendi…",
 	"certificateKey": "Chiave del certificato",
 	"certificates": "Certificati",
 	"certificates.custom": "Certificato Personalizzato",

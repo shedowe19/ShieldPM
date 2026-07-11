@@ -162,6 +162,7 @@
 	"certificate.none.title": "Нет",
 	"certificate.not-in-use": "Не используется",
 	"certificate.renew": "Продлить сертификат",
+	"certificate.renew.waiting": "Пожалуйста, подождите…",
 	"certificateKey": "Ключ сертификата",
 	"certificates": "Сертификаты",
 	"certificates.custom": "Свой сертификат",

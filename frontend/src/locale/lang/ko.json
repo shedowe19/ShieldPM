@@ -162,6 +162,7 @@
 	"certificate.none.title": "없음",
 	"certificate.not-in-use": "사용 안 함",
 	"certificate.renew": "인증서 갱신",
+	"certificate.renew.waiting": "잠시만 기다려 주세요…",
 	"certificateKey": "인증서 키",
 	"certificates": "인증서",
 	"certificates.custom": "사용자 지정 인증서",

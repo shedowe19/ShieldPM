@@ -162,6 +162,7 @@
 	"certificate.none.title": "Không có",
 	"certificate.not-in-use": "Không được dùng",
 	"certificate.renew": "Gia hạn Chứng chỉ",
+	"certificate.renew.waiting": "Vui lòng chờ…",
 	"certificateKey": "Khóa chứng chỉ",
 	"certificates": "Danh sách chứng chỉ",
 	"certificates.custom": "Chứng chỉ tùy chỉnh",

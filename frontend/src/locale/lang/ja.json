@@ -162,6 +162,7 @@
 	"certificate.none.title": "無し",
 	"certificate.not-in-use": "未使用",
 	"certificate.renew": "証明書を更新",
+	"certificate.renew.waiting": "お待ちください…",
 	"certificateKey": "証明書キー",
 	"certificates": "証明書",
 	"certificates.custom": "カスタム証明書",

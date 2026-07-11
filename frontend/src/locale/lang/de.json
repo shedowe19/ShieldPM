@@ -162,6 +162,7 @@
 	"certificate.none.title": "Kein",
 	"certificate.not-in-use": "Nicht in Benutzung",
 	"certificate.renew": "Zertifikat erneuern",
+	"certificate.renew.waiting": "Bitte warten …",
 	"certificateKey": "Zertifikatsschlüssel",
 	"certificates": "Zertifikate",
 	"certificates.custom": "Benutzerdefiniertes Zertifikat",

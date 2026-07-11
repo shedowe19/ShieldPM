@@ -162,6 +162,7 @@
 	"certificate.none.title": "Brak",
 	"certificate.not-in-use": "Nie używany",
 	"certificate.renew": "Odnów certyfikat",
+	"certificate.renew.waiting": "Proszę czekać…",
 	"certificateKey": "Klucz certyfikatu",
 	"certificates": "Certyfikaty",
 	"certificates.custom": "Certyfikat własny",

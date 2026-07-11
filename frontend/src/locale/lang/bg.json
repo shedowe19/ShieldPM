@@ -162,6 +162,7 @@
 	"certificate.none.title": "Без сертификат",
 	"certificate.not-in-use": "Не се използва",
 	"certificate.renew": "Подновяване на сертификат",
+	"certificate.renew.waiting": "Моля, изчакайте …",
 	"certificateKey": "Ключ на сертификата",
 	"certificates": "Сертификати",
 	"certificates.custom": "Потребителски сертификат",

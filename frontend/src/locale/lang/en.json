@@ -162,6 +162,7 @@
 	"certificate.none.title": "None",
 	"certificate.not-in-use": "Not Used",
 	"certificate.renew": "Renew Certificate",
+	"certificate.renew.waiting": "Please wait…",
 	"certificateKey": "Certificate Key",
 	"certificates": "Certificates",
 	"certificates.custom": "Custom Certificate",

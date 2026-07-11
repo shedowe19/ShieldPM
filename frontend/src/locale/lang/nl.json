@@ -162,6 +162,7 @@
 	"certificate.none.title": "Geen",
 	"certificate.not-in-use": "Niet Gebruikt",
 	"certificate.renew": "Certificaat Vernieuwen",
+	"certificate.renew.waiting": "Even geduld…",
 	"certificateKey": "Certificaatsleutel",
 	"certificates": "Certificaten",
 	"certificates.custom": "Aangepast Certificaat",

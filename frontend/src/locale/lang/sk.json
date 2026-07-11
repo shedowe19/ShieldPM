@@ -162,6 +162,7 @@
 	"certificate.none.title": "Žiadny",
 	"certificate.not-in-use": "Nepoužíva sa",
 	"certificate.renew": "Obnoviť certifikát",
+	"certificate.renew.waiting": "Prosím, čakajte…",
 	"certificateKey": "Kľúč certifikátu",
 	"certificates": "Certifikáty",
 	"certificates.custom": "Vlastný certifikát",
