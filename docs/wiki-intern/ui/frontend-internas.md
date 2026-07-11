@@ -64,8 +64,8 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 ausgeblendeter Seite oder Offline-Status und verdoppelt das Intervall nach Fehlern bis zum jeweiligen Maximum.
 `hooks/usePollingEnvironment.ts` aktualisiert diesen Browser-Zustand bei Sichtbarkeits- sowie Online-/Offline-Ereignissen,
 damit ein pausiertes Intervall beim Wiederherstellen der Verbindung erneut geplant wird. `useHealth`, `useHostReport`,
-`useGitSyncStatus` und `useCheckVersion` nutzen die Policy bereits; die reine Intervallfunktion bleibt unabhängig vom
-Browser-Zustand testbar, damit weitere Polling-Hooks dieselbe Entscheidung übernehmen können.
+`useGitSyncStatus`, `useCheckVersion` und `useWireguardPeers` nutzen die Policy bereits; die reine Intervallfunktion
+bleibt unabhängig vom Browser-Zustand testbar, damit weitere Polling-Hooks dieselbe Entscheidung übernehmen können.
 
 ## React-Kontexte (`frontend/src/context/`)
 

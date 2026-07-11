@@ -1,13 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "../api/backend";
+import { getPollingInterval } from "./pollingPolicy";
 import { useToast } from "./use-toast";
+import { usePollingEnvironment } from "./usePollingEnvironment";
 
 export const useWireguardPeers = () => {
+	const pollingEnvironment = usePollingEnvironment();
+
 	return useQuery({
 		queryKey: ["wireguard-peers"],
 		queryFn: () => api.getWireguardPeers(),
 		retry: false,
-		refetchInterval: 30000, // Refresh every 30s for live status
+		refetchInterval: (query) =>
+			getPollingInterval({
+				baseIntervalMs: 30_000,
+				failureCount: query.state.fetchFailureCount,
+				...pollingEnvironment,
+			}),
 	});
 };
 
