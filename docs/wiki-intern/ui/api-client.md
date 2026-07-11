@@ -13,6 +13,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 - Jede Datei exportiert eine Funktion, die einen HTTP-Aufruf an die Backend-API macht
 - Gruppiert nach CRUD-Operationen (create, get, getAll, update, delete, toggle)
 - Verwendet einen zentralen API-Client (Basis-URL, Auth-Header, etc.)
+- `api/queryClient.ts` erzeugt genau einen React-Query-Client. Sowohl der Provider in `App.tsx` als auch die zentrale Antwortverarbeitung nutzen diese Instanz; ein 401 leert damit den tatsächlich sichtbaren Cache vor einer möglichen neuen Anmeldung.
 - `api/backend/base.ts` lädt GET- und POST-Downloads als `Blob`, startet sie über einen temporären Link und gibt jeweils genau die erzeugte Blob-URL wieder frei, damit wiederholte Exporte keinen Browser-Speicher belegen.
 - Beide Download-Helfer prüfen HTTP-Fehler vor der Blob-Erzeugung über die zentrale Antwortverarbeitung. Dadurch wird bei einer abgelehnten oder abgelaufenen Sitzung kein Fehler-Response als Datei gespeichert; das 401-Verhalten einschließlich `silentAuth` bleibt mit den übrigen API-Aufrufen konsistent.
 

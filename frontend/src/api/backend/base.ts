@@ -1,9 +1,8 @@
-import { QueryClient } from "@tanstack/react-query";
 import { camelizeKeys, decamelize, decamelizeKeys } from "humps";
 import queryString, { type StringifiableRecord } from "query-string";
+import { queryClient } from "src/api/queryClient";
 import AuthStore from "src/modules/AuthStore";
 
-const queryClient = new QueryClient();
 const contentTypeHeader = "Content-Type";
 
 type DynamicResponse = unknown;

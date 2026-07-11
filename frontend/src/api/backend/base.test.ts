@@ -8,6 +8,7 @@ vi.mock("src/modules/AuthStore", () => ({
 	},
 }));
 
+import { queryClient } from "src/api/queryClient";
 import AuthStore from "src/modules/AuthStore";
 import { download, downloadPost } from "./base";
 
@@ -60,6 +61,24 @@ describe("download", () => {
 
 		expect(AuthStore.clear).toHaveBeenCalledOnce();
 		expect(createObjectURL).not.toHaveBeenCalled();
+	});
+
+	it("clears cached application data after an unauthorized download response", async () => {
+		queryClient.setQueryData(["profile"], { email: "admin@example.test" });
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: false,
+				status: 401,
+				json: vi.fn().mockResolvedValue({ error: { message: "Unauthorized" } }),
+			}),
+		);
+
+		await expect(download({ url: "nginx/certificates/1/download", silentAuth: true })).rejects.toThrow(
+			"Unauthorized",
+		);
+
+		expect(queryClient.getQueryData(["profile"])).toBeUndefined();
 	});
 
 	it("rejects unauthorized POST downloads before creating a Blob URL", async () => {
