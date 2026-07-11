@@ -2,6 +2,7 @@ import { showError } from "src/notifications";
 
 let accessListModalModule: Promise<typeof import("./AccessListModal")> | undefined;
 let changePasswordModalModule: Promise<typeof import("./ChangePasswordModal")> | undefined;
+let dashboardNoteModalModule: Promise<typeof import("./DashboardNoteModal")> | undefined;
 let deleteConfirmModalModule: Promise<typeof import("./DeleteConfirmModal")> | undefined;
 let permissionsModalModule: Promise<typeof import("./PermissionsModal")> | undefined;
 let proxyHostModalModule: Promise<typeof import("./ProxyHostModal")> | undefined;
@@ -16,6 +17,11 @@ const loadAccessListModal = () => {
 const loadChangePasswordModal = () => {
 	changePasswordModalModule ??= import("./ChangePasswordModal");
 	return changePasswordModalModule;
+};
+
+const loadDashboardNoteModal = () => {
+	dashboardNoteModalModule ??= import("./DashboardNoteModal");
+	return dashboardNoteModalModule;
 };
 
 const loadDeleteConfirmModal = () => {
@@ -59,6 +65,18 @@ const showChangePasswordModal = async (id: number | "me") => {
 		showModal(id);
 	} catch (error) {
 		changePasswordModalModule = undefined;
+		showError(error instanceof Error ? error.message : String(error));
+	}
+};
+
+const showDashboardNoteModal = async (
+	note?: Parameters<typeof import("./DashboardNoteModal").showDashboardNoteModal>[0],
+) => {
+	try {
+		const { showDashboardNoteModal: showModal } = await loadDashboardNoteModal();
+		showModal(note);
+	} catch (error) {
+		dashboardNoteModalModule = undefined;
 		showError(error instanceof Error ? error.message : String(error));
 	}
 };
@@ -118,6 +136,7 @@ const showUserModal = async (id: number | "me" | "new") => {
 export {
 	showAccessListModal,
 	showChangePasswordModal,
+	showDashboardNoteModal,
 	showDeleteConfirmModal,
 	showPermissionsModal,
 	showProxyHostModal,

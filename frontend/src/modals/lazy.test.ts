@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	accessListModalModuleLoaded: vi.fn(),
 	changePasswordModalModuleLoaded: vi.fn(),
+	dashboardNoteModalModuleLoaded: vi.fn(),
 	deleteConfirmModalModuleLoaded: vi.fn(),
 	modalModuleError: undefined as Error | undefined,
 	modalModuleLoaded: vi.fn(),
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 	setPasswordModalModuleLoaded: vi.fn(),
 	showAccessListModal: vi.fn(),
 	showChangePasswordModal: vi.fn(),
+	showDashboardNoteModal: vi.fn(),
 	showDeleteConfirmModal: vi.fn(),
 	showError: vi.fn(),
 	showPermissionsModal: vi.fn(),
@@ -45,6 +47,11 @@ vi.mock("./SetPasswordModal", () => {
 vi.mock("./ChangePasswordModal", () => {
 	mocks.changePasswordModalModuleLoaded();
 	return { showChangePasswordModal: mocks.showChangePasswordModal };
+});
+
+vi.mock("./DashboardNoteModal", () => {
+	mocks.dashboardNoteModalModuleLoaded();
+	return { showDashboardNoteModal: mocks.showDashboardNoteModal };
 });
 
 vi.mock("./DeleteConfirmModal", () => {
@@ -154,5 +161,17 @@ describe("lazy modal wrappers", () => {
 
 		expect(mocks.changePasswordModalModuleLoaded).toHaveBeenCalledOnce();
 		expect(mocks.showChangePasswordModal).toHaveBeenCalledWith("me");
+	});
+
+	it("loads the dashboard note modal only when note editing is requested", async () => {
+		const { showDashboardNoteModal } = await import("./lazy");
+		const note = { content: "Rotate certificates", id: 73 };
+
+		expect(mocks.dashboardNoteModalModuleLoaded).not.toHaveBeenCalled();
+
+		await showDashboardNoteModal(note);
+
+		expect(mocks.dashboardNoteModalModuleLoaded).toHaveBeenCalledOnce();
+		expect(mocks.showDashboardNoteModal).toHaveBeenCalledWith(note);
 	});
 });

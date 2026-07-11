@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { useDashboardNotes } from "src/hooks";
 import { cn } from "src/lib/utils";
 import { T } from "src/locale";
-import { showDashboardNoteModal } from "src/modals";
+import { showDashboardNoteModal } from "src/modals/lazy";
 import { showObjectSuccess } from "src/notifications";
 
 const COLOR_MAP: Record<string, string> = {
