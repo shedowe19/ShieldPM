@@ -311,6 +311,20 @@ describe("Audit log table loading", () => {
 		});
 	});
 
+	it("clears every audit investigation filter and returns to the first page", async () => {
+		mockAuditLogPage([{ id: 73 }]);
+
+		renderAuditTable(
+			"/audit-log?query=proxy-host&action=deleted&object_type=proxy-host&user_id=7&object_id=42&created_after=2026-07-12T08:00:00.000Z&created_before=2026-07-12T10:00:00.000Z&page=2",
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("audit-log-location")).toHaveTextContent("");
+		});
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1 });
+	});
+
 	it("updates the shareable audit investigation URL when filters change", async () => {
 		mockAuditLogPage([{ id: 73 }]);
 

@@ -1,4 +1,11 @@
-import { IconChevronLeft, IconChevronRight, IconDownload, IconHistory, IconSearch } from "@tabler/icons-react";
+import {
+	IconChevronLeft,
+	IconChevronRight,
+	IconDownload,
+	IconFilterX,
+	IconHistory,
+	IconSearch,
+} from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { LoadingPage } from "src/components";
@@ -79,6 +86,7 @@ export default function TableWrapper() {
 		...(createdAfter ? { created_after: createdAfter } : {}),
 		...(createdBefore ? { created_before: createdBefore } : {}),
 	};
+	const hasActiveFilters = Object.keys(filters).length > 0;
 	const updateSearchParams = (nextFilters: {
 		action?: string;
 		createdAfter?: string;
@@ -176,7 +184,7 @@ export default function TableWrapper() {
 					<IconHistory className="h-6 w-6" />
 					<T id="auditlogs" />
 				</CardTitle>
-				{rows.length || Object.keys(filters).length > 0 ? (
+				{rows.length || hasActiveFilters ? (
 					<div className="flex w-full flex-wrap items-end gap-2 xl:w-auto xl:flex-nowrap">
 						<Button
 							className="h-9"
@@ -188,6 +196,19 @@ export default function TableWrapper() {
 							<IconDownload className="h-4 w-4" />
 							<T id="audit-log.export.csv" />
 						</Button>
+						{hasActiveFilters ? (
+							<Button
+								className="h-9"
+								onClick={() => {
+									setSearchParams(new URLSearchParams(), { replace: true });
+								}}
+								type="button"
+								variant="outline"
+							>
+								<IconFilterX className="h-4 w-4" />
+								<T id="audit-log.filter.reset" />
+							</Button>
+						) : null}
 						<div className="relative min-w-52 flex-1 xl:w-56">
 							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
