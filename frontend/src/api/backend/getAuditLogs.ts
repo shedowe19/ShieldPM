@@ -4,6 +4,7 @@ import type { AuditLog } from "./models";
 
 export interface AuditLogListParams {
 	action?: string;
+	object_type?: string;
 	created_after?: string;
 	created_before?: string;
 	query?: string;

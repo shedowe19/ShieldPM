@@ -41,6 +41,14 @@
 		},
 		{
 			"in": "query",
+			"name": "object_type",
+			"description": "Exact audit object type filter",
+			"schema": {
+				"$ref": "../../common.json#/properties/query"
+			}
+		},
+		{
+			"in": "query",
 			"name": "created_after",
 			"description": "Inclusive UTC creation timestamp in ISO 8601 format",
 			"schema": {

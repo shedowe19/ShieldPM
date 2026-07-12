@@ -11,6 +11,7 @@ const internalAuditLog = {
 	 * @param   {String}  [searchQuery]
 	 * @param   {Object}  [filters]
 	 * @param   {String}  [filters.action]
+	 * @param   {String}  [filters.object_type]
 	 * @param   {String}  [filters.created_after]
 	 * @param   {String}  [filters.created_before]
 	 * @returns {Promise}
@@ -37,6 +38,10 @@ const internalAuditLog = {
 
 		if (filters.action) {
 			query.where("action", filters.action);
+		}
+
+		if (filters.object_type) {
+			query.where("object_type", filters.object_type);
 		}
 
 		if (filters.created_after) {

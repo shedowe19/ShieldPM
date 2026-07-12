@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TableWrapper from "./TableWrapper";
 
 const mocks = vi.hoisted(() => ({
-	selectOnValueChange: undefined as ((value: string) => void) | undefined,
+	selectOnValueChange: new Map<string, (value: string) => void>(),
 	useAuditLogs: vi.fn(),
 }));
 
@@ -34,13 +34,27 @@ vi.mock("src/components/ui/label", () => ({
 	),
 }));
 vi.mock("src/components/ui/select", () => ({
-	Select: ({ children, onValueChange }: PropsWithChildren<{ onValueChange: (value: string) => void }>) => {
-		mocks.selectOnValueChange = onValueChange;
-		return <div>{children}</div>;
+	Select: ({
+		children,
+		name,
+		onValueChange,
+	}: PropsWithChildren<{ name?: string; onValueChange: (value: string) => void }>) => {
+		const selectName = name ?? "audit-log-action";
+		mocks.selectOnValueChange.set(selectName, onValueChange);
+		return <div data-select-name={selectName}>{children}</div>;
 	},
 	SelectContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
 	SelectItem: ({ children, value }: PropsWithChildren<{ value: string }>) => (
-		<button onClick={() => mocks.selectOnValueChange?.(value)} type="button" value={value}>
+		<button
+			onClick={(event) => {
+				const name = event.currentTarget.closest("[data-select-name]")?.getAttribute("data-select-name");
+				if (name) {
+					mocks.selectOnValueChange.get(name)?.(value);
+				}
+			}}
+			type="button"
+			value={value}
+		>
 			{children}
 		</button>
 	),
@@ -73,7 +87,7 @@ describe("Audit log table loading", () => {
 		vi.restoreAllMocks();
 		vi.clearAllMocks();
 		vi.unstubAllGlobals();
-		mocks.selectOnValueChange = undefined;
+		mocks.selectOnValueChange.clear();
 	});
 
 	it("shows a localized generic error when loading audit logs fails without a server message", () => {
@@ -177,6 +191,21 @@ describe("Audit log table loading", () => {
 		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
 		fireEvent.click(screen.getByRole("button", { name: "Alle Aktionen" }));
 		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, {});
+	});
+
+	it("filters audit events by the selected object type", () => {
+		mocks.useAuditLogs.mockReturnValue({
+			data: [{ id: 73 }],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+
+		fireEvent.click(screen.getByRole("button", { name: "Proxy Host" }));
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { object_type: "proxy-host" });
 	});
 
 	it("downloads the currently displayed audit events as a CSV", () => {

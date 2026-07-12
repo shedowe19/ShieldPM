@@ -10,6 +10,7 @@ import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useAuditLogs } from "src/hooks";
 import { intl, T } from "src/locale";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { createAuditLogCsv } from "./audit-log-csv";
 import { showEventDetailsModal } from "./lazy";
 import Table from "./Table";
@@ -24,14 +25,27 @@ const toUtcDateTime = (value: string) => {
 };
 
 const allAuditLogActions = "__all_audit_log_actions__";
+const allAuditLogObjectTypes = "__all_audit_log_object_types__";
 const auditLogActions = ["created", "updated", "deleted", "enabled", "disabled", "renewed"] as const;
+const auditLogObjectTypes = [...Object.values(AUDIT_LOG_OBJECT_TYPE), "wireguard-peer", "wireguard-settings"] as const;
+const auditLogObjectTypeMessageIds: Record<string, string> = {
+	[AUDIT_LOG_OBJECT_TYPE.CLOUDFLARED_TUNNEL]: "cloudflared.title",
+	[AUDIT_LOG_OBJECT_TYPE.TERMINAL_HOST]: "terminal.host",
+	"wireguard-peer": "audit-log.filter.wireguard-peer",
+	"wireguard-settings": "audit-log.filter.wireguard-settings",
+};
 
 const formatAuditLogAction = (action: (typeof auditLogActions)[number]) => {
 	return intl.formatMessage({ id: `object.event.${action}` }, { object: "" }).trim();
 };
 
+const formatAuditLogObjectType = (objectType: (typeof auditLogObjectTypes)[number]) => {
+	return intl.formatMessage({ id: auditLogObjectTypeMessageIds[objectType] ?? objectType });
+};
+
 export default function TableWrapper() {
 	const [action, setAction] = useState("");
+	const [objectType, setObjectType] = useState("");
 	const [createdAfter, setCreatedAfter] = useState("");
 	const [createdBefore, setCreatedBefore] = useState("");
 	const [search, setSearch] = useState("");
@@ -40,6 +54,7 @@ export default function TableWrapper() {
 	const query = search.trim();
 	const filters = {
 		...(action ? { action } : {}),
+		...(objectType ? { object_type: objectType } : {}),
 		...(query ? { query } : {}),
 		...(createdAfterUtc ? { created_after: createdAfterUtc } : {}),
 		...(createdBeforeUtc ? { created_before: createdBeforeUtc } : {}),
@@ -113,6 +128,7 @@ export default function TableWrapper() {
 								<T id="audit-log.csv.action" />
 							</Label>
 							<Select
+								name="audit-log-action"
 								value={action || allAuditLogActions}
 								onValueChange={(value) => setAction(value === allAuditLogActions ? "" : value)}
 							>
@@ -128,6 +144,32 @@ export default function TableWrapper() {
 									{auditLogActions.map((auditLogAction) => (
 										<SelectItem key={auditLogAction} value={auditLogAction}>
 											{formatAuditLogAction(auditLogAction)}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-xs text-muted-foreground" htmlFor="audit-log-object-type">
+								<T id="audit-log.csv.object-type" />
+							</Label>
+							<Select
+								name="audit-log-object-type"
+								value={objectType || allAuditLogObjectTypes}
+								onValueChange={(value) => setObjectType(value === allAuditLogObjectTypes ? "" : value)}
+							>
+								<SelectTrigger className="h-9 min-w-36" id="audit-log-object-type">
+									<SelectValue
+										placeholder={intl.formatMessage({ id: "audit-log.filter.all-object-types" })}
+									/>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={allAuditLogObjectTypes}>
+										<T id="audit-log.filter.all-object-types" />
+									</SelectItem>
+									{auditLogObjectTypes.map((auditLogObjectType) => (
+										<SelectItem key={auditLogObjectType} value={auditLogObjectType}>
+											{formatAuditLogObjectType(auditLogObjectType)}
 										</SelectItem>
 									))}
 								</SelectContent>
