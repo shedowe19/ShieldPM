@@ -2,10 +2,9 @@ import { IconCertificate, IconChevronDown, IconHelp, IconPlus, IconSearch, IconS
 import { AlertCircle } from "lucide-react";
 import { type ChangeEvent, useState } from "react";
 import { type Certificate, deleteCertificate, downloadCertificate, downloadRootCa } from "src/api/backend";
-import { HasPermission, LoadingPage } from "src/components";
+import { HasPermission } from "src/components/HasPermission";
+import { LoadingPage } from "src/components/LoadingPage";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-// import { Button } from "src/components/ui/button"; // Using src/components which might conflict, let's use shadcn button aliased if needed or rely on src/components Button if it is shadcn now?
-// Actually src/components index likely exports a Button. Previous migrations imported Button from src/components/ui/button. I will do the same here.
 import { Button as ShadcnButton } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import {
@@ -16,7 +15,7 @@ import {
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
 import { Input } from "src/components/ui/input";
-import { useCertificates } from "src/hooks";
+import { useCertificates } from "src/hooks/useCertificates";
 import { intl, T } from "src/locale";
 import { CERTIFICATES, MANAGE } from "src/modules/Permissions";
 import { showError, showObjectSuccess } from "src/notifications";

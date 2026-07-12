@@ -13,12 +13,15 @@ vi.mock("src/api/backend", () => ({
 	downloadRootCa: vi.fn(),
 }));
 
-vi.mock("src/components", () => ({
+vi.mock("src/components/HasPermission", () => ({
 	HasPermission: ({ children }: { children?: ReactNode }) => children,
+}));
+
+vi.mock("src/components/LoadingPage", () => ({
 	LoadingPage: () => null,
 }));
 
-vi.mock("src/hooks", () => ({
+vi.mock("src/hooks/useCertificates", () => ({
 	useCertificates: mocks.useCertificates,
 }));
 

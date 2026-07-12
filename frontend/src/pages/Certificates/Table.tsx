@@ -2,14 +2,12 @@ import { IconDotsVertical, IconDownload, IconRefresh, IconTrash } from "@tabler/
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { Certificate } from "src/api/backend";
-import {
-	CertificateInUseFormatter,
-	DateFormatter,
-	DomainsFormatter,
-	EmptyData,
-	HasPermission,
-	UserAvatar,
-} from "src/components";
+import { EmptyData } from "src/components/EmptyData";
+import { HasPermission } from "src/components/HasPermission";
+import { CertificateInUseFormatter } from "src/components/Table/Formatter/CertificateInUseFormatter";
+import { DateFormatter } from "src/components/Table/Formatter/DateFormatter";
+import { DomainsFormatter } from "src/components/Table/Formatter/DomainsFormatter";
+import { UserAvatar } from "src/components/Table/Formatter/UserAvatar";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Button } from "src/components/ui/button";
 import {
