@@ -1,6 +1,6 @@
 import { IconChevronLeft, IconChevronRight, IconDownload, IconHistory, IconSearch } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
@@ -22,6 +22,15 @@ const toUtcDateTime = (value: string) => {
 
 	const date = new Date(value);
 	return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+};
+
+const toLocalDateTime = (value: string) => {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return "";
+	}
+
+	return new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000).toISOString().slice(0, 16);
 };
 
 const toPositiveId = (value: string) => {
@@ -49,16 +58,15 @@ const formatAuditLogObjectType = (objectType: (typeof auditLogObjectTypes)[numbe
 };
 
 export default function TableWrapper() {
-	const [action, setAction] = useState("");
-	const [objectType, setObjectType] = useState("");
-	const [createdAfter, setCreatedAfter] = useState("");
-	const [createdBefore, setCreatedBefore] = useState("");
-	const [search, setSearch] = useState("");
-	const [userId, setUserId] = useState("");
-	const [objectId, setObjectId] = useState("");
-	const [page, setPage] = useState(1);
-	const createdAfterUtc = toUtcDateTime(createdAfter);
-	const createdBeforeUtc = toUtcDateTime(createdBefore);
+	const [searchParams, setSearchParams] = useSearchParams();
+	const action = searchParams.get("action") ?? "";
+	const objectType = searchParams.get("object_type") ?? "";
+	const createdAfter = toUtcDateTime(searchParams.get("created_after") ?? "") ?? "";
+	const createdBefore = toUtcDateTime(searchParams.get("created_before") ?? "") ?? "";
+	const search = searchParams.get("query") ?? "";
+	const userId = searchParams.get("user_id") ?? "";
+	const objectId = searchParams.get("object_id") ?? "";
+	const page = toPositiveId(searchParams.get("page") ?? "") ?? 1;
 	const userIdFilter = toPositiveId(userId);
 	const objectIdFilter = toPositiveId(objectId);
 	const query = search.trim();
@@ -68,8 +76,58 @@ export default function TableWrapper() {
 		...(userIdFilter ? { user_id: userIdFilter } : {}),
 		...(objectIdFilter ? { object_id: objectIdFilter } : {}),
 		...(query ? { query } : {}),
-		...(createdAfterUtc ? { created_after: createdAfterUtc } : {}),
-		...(createdBeforeUtc ? { created_before: createdBeforeUtc } : {}),
+		...(createdAfter ? { created_after: createdAfter } : {}),
+		...(createdBefore ? { created_before: createdBefore } : {}),
+	};
+	const updateSearchParams = (nextFilters: {
+		action?: string;
+		createdAfter?: string;
+		createdBefore?: string;
+		objectId?: string;
+		objectType?: string;
+		page?: number;
+		search?: string;
+		userId?: string;
+	}) => {
+		const nextAction = nextFilters.action ?? action;
+		const nextObjectType = nextFilters.objectType ?? objectType;
+		const nextCreatedAfter = nextFilters.createdAfter ?? createdAfter;
+		const nextCreatedBefore = nextFilters.createdBefore ?? createdBefore;
+		const nextSearch = nextFilters.search ?? search;
+		const nextUserId = nextFilters.userId ?? userId;
+		const nextObjectId = nextFilters.objectId ?? objectId;
+		const nextPage = nextFilters.page ?? page;
+		const params = new URLSearchParams();
+		const nextUserIdFilter = toPositiveId(nextUserId);
+		const nextObjectIdFilter = toPositiveId(nextObjectId);
+		const nextQuery = nextSearch.trim();
+
+		if (nextAction) {
+			params.set("action", nextAction);
+		}
+		if (nextObjectType) {
+			params.set("object_type", nextObjectType);
+		}
+		if (nextUserIdFilter) {
+			params.set("user_id", nextUserIdFilter.toString());
+		}
+		if (nextObjectIdFilter) {
+			params.set("object_id", nextObjectIdFilter.toString());
+		}
+		if (nextQuery) {
+			params.set("query", nextSearch);
+		}
+		if (nextCreatedAfter) {
+			params.set("created_after", nextCreatedAfter);
+		}
+		if (nextCreatedBefore) {
+			params.set("created_before", nextCreatedBefore);
+		}
+		if (nextPage > 1) {
+			params.set("page", nextPage.toString());
+		}
+
+		setSearchParams(params, { replace: true });
 	};
 	const { isFetching, isLoading, isError, error, data } = useAuditLogsPage(["user"], {
 		...filters,
@@ -139,8 +197,7 @@ export default function TableWrapper() {
 								className="h-9 pl-8"
 								value={search}
 								onChange={(event) => {
-									setPage(1);
-									setSearch(event.target.value);
+									updateSearchParams({ page: 1, search: event.target.value });
 								}}
 							/>
 						</div>
@@ -152,8 +209,8 @@ export default function TableWrapper() {
 								name="audit-log-action"
 								value={action || allAuditLogActions}
 								onValueChange={(value) => {
-									setPage(1);
-									setAction(value === allAuditLogActions ? "" : value);
+									const nextAction = value === allAuditLogActions ? "" : value;
+									updateSearchParams({ action: nextAction, page: 1 });
 								}}
 							>
 								<SelectTrigger className="h-9 min-w-36" id="audit-log-action">
@@ -181,8 +238,8 @@ export default function TableWrapper() {
 								name="audit-log-object-type"
 								value={objectType || allAuditLogObjectTypes}
 								onValueChange={(value) => {
-									setPage(1);
-									setObjectType(value === allAuditLogObjectTypes ? "" : value);
+									const nextObjectType = value === allAuditLogObjectTypes ? "" : value;
+									updateSearchParams({ objectType: nextObjectType, page: 1 });
 								}}
 							>
 								<SelectTrigger className="h-9 min-w-36" id="audit-log-object-type">
@@ -210,8 +267,7 @@ export default function TableWrapper() {
 								id="audit-log-user-id"
 								min="1"
 								onChange={(event) => {
-									setPage(1);
-									setUserId(event.target.value);
+									updateSearchParams({ page: 1, userId: event.target.value });
 								}}
 								step="1"
 								type="number"
@@ -226,8 +282,7 @@ export default function TableWrapper() {
 								id="audit-log-object-id"
 								min="1"
 								onChange={(event) => {
-									setPage(1);
-									setObjectId(event.target.value);
+									updateSearchParams({ objectId: event.target.value, page: 1 });
 								}}
 								step="1"
 								type="number"
@@ -242,10 +297,10 @@ export default function TableWrapper() {
 								id="audit-log-created-after"
 								type="datetime-local"
 								step="60"
-								value={createdAfter}
+								value={toLocalDateTime(createdAfter)}
 								onChange={(event) => {
-									setPage(1);
-									setCreatedAfter(event.target.value);
+									const nextCreatedAfter = toUtcDateTime(event.target.value) ?? "";
+									updateSearchParams({ createdAfter: nextCreatedAfter, page: 1 });
 								}}
 							/>
 						</div>
@@ -257,10 +312,10 @@ export default function TableWrapper() {
 								id="audit-log-created-before"
 								type="datetime-local"
 								step="60"
-								value={createdBefore}
+								value={toLocalDateTime(createdBefore)}
 								onChange={(event) => {
-									setPage(1);
-									setCreatedBefore(event.target.value);
+									const nextCreatedBefore = toUtcDateTime(event.target.value) ?? "";
+									updateSearchParams({ createdBefore: nextCreatedBefore, page: 1 });
 								}}
 							/>
 						</div>
@@ -274,7 +329,10 @@ export default function TableWrapper() {
 						<Button
 							aria-label={intl.formatMessage({ id: "pagination.previous" })}
 							disabled={page === 1}
-							onClick={() => setPage(page - 1)}
+							onClick={() => {
+								const nextPage = page - 1;
+								updateSearchParams({ page: nextPage });
+							}}
 							size="icon"
 							type="button"
 							variant="outline"
@@ -287,7 +345,10 @@ export default function TableWrapper() {
 						<Button
 							aria-label={intl.formatMessage({ id: "pagination.next" })}
 							disabled={page === pagination.totalPages}
-							onClick={() => setPage(page + 1)}
+							onClick={() => {
+								const nextPage = page + 1;
+								updateSearchParams({ page: nextPage });
+							}}
 							size="icon"
 							type="button"
 							variant="outline"

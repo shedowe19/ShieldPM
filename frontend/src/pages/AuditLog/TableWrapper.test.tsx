@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TableWrapper from "./TableWrapper";
@@ -88,6 +89,29 @@ const mockAuditLogPage = (items: unknown[]) => {
 	});
 };
 
+const Location = () => {
+	const location = useLocation();
+	const navigate = useNavigate();
+	return (
+		<>
+			<output data-testid="audit-log-location">{location.search}</output>
+			<button onClick={() => navigate(-1)} type="button">
+				Back
+			</button>
+		</>
+	);
+};
+
+const renderAuditTable = (initialEntry: string | string[] = "/audit-log") => {
+	const initialEntries = Array.isArray(initialEntry) ? initialEntry : [initialEntry];
+	return render(
+		<MemoryRouter initialEntries={initialEntries} initialIndex={initialEntries.length - 1}>
+			<TableWrapper />
+			<Location />
+		</MemoryRouter>,
+	);
+};
+
 describe("Audit log table loading", () => {
 	beforeEach(async () => {
 		mocks.tableProps = null;
@@ -111,7 +135,7 @@ describe("Audit log table loading", () => {
 	});
 
 	it("shows a localized generic error when loading audit logs fails without a server message", () => {
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		expect(screen.getByText("Fehler")).toBeInTheDocument();
 		expect(screen.getByText("Unbekannter Fehler")).toBeInTheDocument();
@@ -121,7 +145,7 @@ describe("Audit log table loading", () => {
 	it("searches audit events by forwarding the entered query with the first result page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		fireEvent.change(screen.getByPlaceholderText("Suchen..."), { target: { value: "proxy-host" } });
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
@@ -134,7 +158,7 @@ describe("Audit log table loading", () => {
 	it("keeps spaces in the search field so multi-word audit queries remain searchable", () => {
 		mockAuditLogPage([{ id: 73 }]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		const search = screen.getByPlaceholderText("Suchen...");
 		fireEvent.change(search, { target: { value: "proxy " } });
@@ -150,7 +174,7 @@ describe("Audit log table loading", () => {
 	it("filters audit events by their selected creation window from the first page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		fireEvent.change(screen.getByLabelText("Von"), { target: { value: "2026-07-12T08:00" } });
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
@@ -171,7 +195,7 @@ describe("Audit log table loading", () => {
 	it("filters audit events by the selected action from the first page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
@@ -184,7 +208,7 @@ describe("Audit log table loading", () => {
 	it("removes the action filter while preserving the first result page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
 		fireEvent.click(screen.getByRole("button", { name: "Alle Aktionen" }));
@@ -194,7 +218,7 @@ describe("Audit log table loading", () => {
 	it("filters audit events by the selected object type from the first page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		fireEvent.click(screen.getByRole("button", { name: "Proxy Host" }));
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
@@ -207,7 +231,7 @@ describe("Audit log table loading", () => {
 	it("filters audit events by the entered user and object identifiers from the first page", () => {
 		mockAuditLogPage([{ id: 73 }]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		fireEvent.change(screen.getByLabelText("Benutzer-ID"), { target: { value: "7" } });
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1, user_id: 7 });
@@ -233,7 +257,7 @@ describe("Audit log table loading", () => {
 			isLoading: false,
 		});
 
-		render(<TableWrapper />);
+		renderAuditTable();
 
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1 });
 		expect((mocks.tableProps as { data: { id: number }[] }).data).toHaveLength(100);
@@ -259,11 +283,53 @@ describe("Audit log table loading", () => {
 			},
 		]);
 
-		render(<TableWrapper />);
+		renderAuditTable();
 		fireEvent.click(screen.getByRole("button", { name: "CSV exportieren" }));
 
 		expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
 		expect(createObjectURL.mock.calls[0][0].type).toBe("text/csv;charset=utf-8");
 		expect(revokeObjectURL).toHaveBeenCalledWith("blob:audit-log-export");
+	});
+
+	it("restores a shareable audit investigation URL including filters and pagination", () => {
+		mockAuditLogPage([{ id: 73 }]);
+
+		renderAuditTable(
+			"/audit-log?query=proxy-host&action=deleted&object_type=proxy-host&user_id=7&object_id=42&created_after=2026-07-12T08:00:00.000Z&created_before=2026-07-12T10:00:00.000Z&page=2",
+		);
+
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			action: "deleted",
+			created_after: "2026-07-12T08:00:00.000Z",
+			created_before: "2026-07-12T10:00:00.000Z",
+			limit: 100,
+			object_id: 42,
+			object_type: "proxy-host",
+			page: 2,
+			query: "proxy-host",
+			user_id: 7,
+		});
+	});
+
+	it("updates the shareable audit investigation URL when filters change", async () => {
+		mockAuditLogPage([{ id: 73 }]);
+
+		renderAuditTable();
+		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("audit-log-location")).toHaveTextContent("?action=deleted");
+		});
+	});
+
+	it("restores the audit investigation state when browser history changes", () => {
+		mockAuditLogPage([{ id: 73 }]);
+
+		renderAuditTable(["/audit-log?query=first", "/audit-log?query=second"]);
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1, query: "second" });
+
+		fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1, query: "first" });
 	});
 });
