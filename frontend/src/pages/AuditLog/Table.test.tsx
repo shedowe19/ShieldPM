@@ -44,4 +44,33 @@ describe("Audit log table", () => {
 		fireEvent.click(detailsButton);
 		expect(onSelectItem).toHaveBeenCalledWith(73);
 	});
+
+	it("exposes localized controls that narrow an investigation to the event actor or object", () => {
+		const onFilterByObject = vi.fn();
+		const onFilterByUser = vi.fn();
+		render(
+			<Table
+				data={[
+					{
+						action: "updated",
+						createdOn: "2026-07-12T00:00:00Z",
+						id: 73,
+						meta: {},
+						modifiedOn: "2026-07-12T00:00:00Z",
+						objectId: 11,
+						objectType: "proxy-host",
+						userId: 1,
+					},
+				]}
+				onFilterByObject={onFilterByObject}
+				onFilterByUser={onFilterByUser}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Nach Benutzer-ID 1 filtern" }));
+		expect(onFilterByUser).toHaveBeenCalledWith(1);
+
+		fireEvent.click(screen.getByRole("button", { name: "Nach Objekt-ID 11 filtern" }));
+		expect(onFilterByObject).toHaveBeenCalledWith({ objectId: 11, objectType: "proxy-host" });
+	});
 });

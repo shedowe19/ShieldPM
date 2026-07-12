@@ -1,4 +1,4 @@
-import { IconListDetails } from "@tabler/icons-react";
+import { IconFilter, IconListDetails, IconUserSearch } from "@tabler/icons-react";
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { AuditLog } from "src/api/backend";
@@ -10,9 +10,11 @@ import { intl, T } from "src/locale";
 interface Props {
 	data: AuditLog[];
 	isFetching?: boolean;
+	onFilterByObject?: (auditLog: Pick<AuditLog, "objectId" | "objectType">) => void;
+	onFilterByUser?: (userId: number) => void;
 	onSelectItem?: (id: number) => void;
 }
-export default function Table({ data, isFetching, onSelectItem }: Props) {
+export default function Table({ data, isFetching, onFilterByObject, onFilterByUser, onSelectItem }: Props) {
 	const columnHelper = createColumnHelper<AuditLog>();
 	const columns = useMemo(
 		() => [
@@ -37,15 +39,58 @@ export default function Table({ data, isFetching, onSelectItem }: Props) {
 				id: "id",
 				header: "",
 				cell: (info) => {
+					const auditLog = info.row.original;
+					const filterByUserLabel = intl.formatMessage(
+						{ id: "audit-log.filter.by-user" },
+						{ id: auditLog.userId },
+					);
+					const filterByObjectLabel = intl.formatMessage(
+						{ id: "audit-log.filter.by-object" },
+						{ id: auditLog.objectId },
+					);
+
 					return (
-						<div className="text-right">
+						<div className="flex justify-end gap-1">
+							{onFilterByUser ? (
+								<Button
+									aria-label={filterByUserLabel}
+									className="h-8 w-8 text-muted-foreground hover:text-foreground"
+									onClick={(event) => {
+										event.preventDefault();
+										onFilterByUser(auditLog.userId);
+									}}
+									title={filterByUserLabel}
+									type="button"
+									variant="ghost"
+								>
+									<IconUserSearch className="h-4 w-4" />
+								</Button>
+							) : null}
+							{onFilterByObject ? (
+								<Button
+									aria-label={filterByObjectLabel}
+									className="h-8 w-8 text-muted-foreground hover:text-foreground"
+									onClick={(event) => {
+										event.preventDefault();
+										onFilterByObject({
+											objectId: auditLog.objectId,
+											objectType: auditLog.objectType,
+										});
+									}}
+									title={filterByObjectLabel}
+									type="button"
+									variant="ghost"
+								>
+									<IconFilter className="h-4 w-4" />
+								</Button>
+							) : null}
 							<Button
 								variant="ghost"
 								size="icon"
 								aria-label={intl.formatMessage({ id: "action.view-details" })}
 								onClick={(e) => {
 									e.preventDefault();
-									onSelectItem?.(info.row.original.id);
+									onSelectItem?.(auditLog.id);
 								}}
 								className="h-8 w-8 text-muted-foreground hover:text-foreground"
 							>
@@ -58,11 +103,11 @@ export default function Table({ data, isFetching, onSelectItem }: Props) {
 					);
 				},
 				meta: {
-					className: "w-[50px]",
+					className: "w-[130px]",
 				},
 			}),
 		],
-		[columnHelper, onSelectItem],
+		[columnHelper, onFilterByObject, onFilterByUser, onSelectItem],
 	);
 
 	const tableInstance = useReactTable<AuditLog>({

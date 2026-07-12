@@ -137,6 +137,16 @@ export default function TableWrapper() {
 
 		setSearchParams(params, { replace: true });
 	};
+	const filterByObject = (auditLog: { objectId: number; objectType: string }) => {
+		updateSearchParams({
+			objectId: auditLog.objectId.toString(),
+			objectType: auditLog.objectType,
+			page: 1,
+		});
+	};
+	const filterByUser = (filterUserId: number) => {
+		updateSearchParams({ page: 1, userId: filterUserId.toString() });
+	};
 	const { isFetching, isLoading, isError, error, data } = useAuditLogsPage(["user"], {
 		...filters,
 		limit: 100,
@@ -344,7 +354,13 @@ export default function TableWrapper() {
 				) : null}
 			</CardHeader>
 			<CardContent>
-				<Table data={rows} isFetching={isFetching} onSelectItem={showEventDetailsModal} />
+				<Table
+					data={rows}
+					isFetching={isFetching}
+					onFilterByObject={filterByObject}
+					onFilterByUser={filterByUser}
+					onSelectItem={showEventDetailsModal}
+				/>
 				{pagination && pagination.totalPages > 1 ? (
 					<div className="mt-4 flex items-center justify-end gap-2" aria-live="polite">
 						<Button

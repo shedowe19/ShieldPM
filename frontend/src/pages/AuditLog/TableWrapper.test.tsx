@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { changeLocale } from "src/locale";
@@ -241,6 +241,41 @@ describe("Audit log table loading", () => {
 			limit: 100,
 			object_id: 42,
 			page: 1,
+			user_id: 7,
+		});
+	});
+
+	it("preserves active filters while narrowing an investigation to an event actor and object", () => {
+		mockAuditLogPage([{ id: 73 }]);
+
+		renderAuditTable("/audit-log?query=proxy-host&action=deleted&page=2");
+
+		const getTableProps = () =>
+			mocks.tableProps as {
+				onFilterByObject: (auditLog: { objectId: number; objectType: string }) => void;
+				onFilterByUser: (userId: number) => void;
+			};
+		act(() => {
+			getTableProps().onFilterByUser(7);
+		});
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			action: "deleted",
+			limit: 100,
+			page: 1,
+			query: "proxy-host",
+			user_id: 7,
+		});
+
+		act(() => {
+			getTableProps().onFilterByObject({ objectId: 42, objectType: "proxy-host" });
+		});
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			action: "deleted",
+			limit: 100,
+			object_id: 42,
+			object_type: "proxy-host",
+			page: 1,
+			query: "proxy-host",
 			user_id: 7,
 		});
 	});
