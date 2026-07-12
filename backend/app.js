@@ -4,15 +4,13 @@ import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
-import analyticsService from "./internal/analytics.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
 import { getCompiledSchema } from "./schema/index.js";
 import { isSetup } from "./setup.js";
 
-// Initialize Analytics Service (starts tailing logs)
-analyticsService.init();
+// Analytics is initialized by the startup entry points after database migrations complete.
 
 // Global API Rate Limiter
 import rateLimit from "express-rate-limit";

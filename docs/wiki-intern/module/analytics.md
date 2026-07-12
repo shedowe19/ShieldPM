@@ -27,7 +27,9 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 ## Verhalten
 
 - Sammelt Traffic-Daten pro Host (Requests, Status-Codes)
-- Speichert aggregierte Zähler in `analytic_count`-Tabelle
+- Speichert aggregierte Zähler in `analytic_count`-Tabelle. Die Live-Upserts verwenden den nicht-nullbaren, versionierten Konfliktschlüssel aus `aggregation_key`, `aggregation_timestamp` und `aggregation_generation`; globale Zähler behalten dabei `proxy_host_id = NULL`, erhalten aber den Schlüssel `global`.
+- Bestehende Analytics-Zeilen bleiben bei der Migration in einer eigenen `legacy:<id>`-Generation erhalten. Dadurch kollidieren sie nicht mit den fortlaufenden Live-Upserts und ihre Zähler werden nicht bei der Schemaumstellung verändert.
+- `app.js` bleibt für Analytics nebenwirkungsfrei. Beide Backend-Einstiegspunkte führen zuerst die Datenbankmigrationen aus und initialisieren den Analytics-Tailer erst danach, damit Live-Flushing niemals auf ein vor-migriertes `analytic_count`-Schema schreibt.
 - GoAccess für erweiterte Analyse auf Port `:91`
 - Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
 - Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.

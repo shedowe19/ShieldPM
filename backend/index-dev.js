@@ -6,6 +6,7 @@ process.env.INITIAL_ADMIN_PASSWORD = "changeme";
 process.env.INITIAL_DEFAULT_PAGE = "congratulations";
 
 import app from "./app.js";
+import analyticsService from "./internal/analytics.js";
 import internalCertificate from "./internal/certificate.js";
 import internalIpRanges from "./internal/ip_ranges.js";
 import internalNginx from "./internal/nginx.js";
@@ -62,6 +63,7 @@ async function start() {
 	try {
 		logger.info("Starting DB Migration...");
 		await migrateUp();
+		await analyticsService.init();
 		logger.info("Starting Setup...");
 		await setup();
 		logger.info("Compiling Schema...");

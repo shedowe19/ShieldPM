@@ -6,11 +6,11 @@ Tipps und Hinweise für die tägliche Entwicklungsarbeit.
 
 ## Backend-Einstiegspunkte
 
-| Datei          | Zweck                                          |
-| -------------- | ---------------------------------------------- |
-| `index.js`     | Produktion: HTTPS-Server mit Zertifikaten      |
-| `index-dev.js` | Entwicklung: HTTP-Server ohne TLS              |
-| `app.js`       | Express-App-Konfiguration (Middleware, Routen) |
+| Datei          | Zweck                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| `index.js`     | Produktion: führt Migrationen aus, initialisiert danach Analytics und startet den HTTPS-Server |
+| `index-dev.js` | Entwicklung: führt Migrationen aus, initialisiert danach Analytics und startet den HTTP-Server |
+| `app.js`       | Express-App-Konfiguration (Middleware, Routen)                                                 |
 
 ## Entwicklungs-Workflow
 

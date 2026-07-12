@@ -47,7 +47,7 @@ const down = (knex) => {
 export { up, down };
 ```
 
-## Migrations-Chronologie (74 Dateien)
+## Migrations-Chronologie (76 Dateien)
 
 ### Basis (2018-2021)
 
@@ -86,6 +86,7 @@ export { up, down };
 - `20260319000001_add_user_2fa` — Zwei-Faktor-Authentifizierung
 - `20260407000000_add_wireguard_tunnel` — WireGuard Tunnels
 - `20260409000000_add_turbo_loader` — Turbo-Loader
+- `20260712000000_fix_analytic_count_aggregation_key` — versionierter, nicht-nullbarer Aggregationsschlüssel für robuste Analytics-Upserts auf SQLite, MySQL und PostgreSQL
 
 ## Verwandte Seiten
 
