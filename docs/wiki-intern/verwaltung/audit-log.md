@@ -11,11 +11,16 @@ Um Änderungen im System nachvollziehbar zu machen (z.B. Erstellung eines Proxy-
 ## Wichtige Dateien
 
 - `backend/internal/audit-log.js` (3 KB) — Business-Logik
+- `backend/routes/audit-log.js` — geschützte REST-Abfrage unter `/api/audit-log`
+- `frontend/src/hooks/useAuditLogs.ts` — React-Query-Zugriff mit suchspezifischem Cache-Key
+- `frontend/src/pages/AuditLog/TableWrapper.tsx` — Audit-Tabelle und Suchfeld
 
 ## Verhalten
 
 - Erfasst die Felder `id`, `action`, `user_id`, `object_id`, `object_type`, `meta`, `created_on` und `modified_on`. (Die IP-Adresse wird nicht erfasst).
-- Bietet Methoden zum Abfragen der Logs für Administratoren.
+- Die Listen- und Detailabfrage verlangen serverseitig `auditlog:list`.
+- Die Liste ist absteigend nach Erstellungszeit und ID sortiert und auf 100 Treffer begrenzt.
+- Das Suchfeld der Audit-Seite sendet `query` an `/api/audit-log`. Der Server sucht vor dieser Begrenzung als Teilzeichenkette in `meta`, `action` und `object_type`; die React-Query-Keys halten Treffer unterschiedlicher Suchbegriffe getrennt.
 
 ## Abhängigkeiten
 

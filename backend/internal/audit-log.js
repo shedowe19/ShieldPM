@@ -21,10 +21,13 @@ const internalAuditLog = {
 			.limit(100)
 			.allowGraph("[user]");
 
-		// Query is used for searching
+		// Search the complete audit context so administrators can locate an event by its action, resource type, or metadata.
 		if (typeof searchQuery === "string" && searchQuery.length > 0) {
+			const searchPattern = `%${searchQuery}%`;
 			query.where(function () {
-				this.where(castJsonIfNeed("meta"), "like", `%${searchQuery}`);
+				this.where(castJsonIfNeed("meta"), "like", searchPattern)
+					.orWhere("action", "like", searchPattern)
+					.orWhere("object_type", "like", searchPattern);
 			});
 		}
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,6 +24,7 @@ vi.mock("src/components/ui/card", () => ({
 	CardHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
 	CardTitle: ({ children }: PropsWithChildren) => <h1>{children}</h1>,
 }));
+vi.mock("src/components/ui/input", () => ({ Input: (props: React.ComponentProps<"input">) => <input {...props} /> }));
 
 vi.mock("src/hooks", () => ({
 	useAuditLogs: mocks.useAuditLogs,
@@ -56,5 +57,38 @@ describe("Audit log table loading", () => {
 		expect(screen.getByText("Fehler")).toBeInTheDocument();
 		expect(screen.getByText("Unbekannter Fehler")).toBeInTheDocument();
 		expect(screen.queryByText("Error")).not.toBeInTheDocument();
+	});
+
+	it("searches audit events by forwarding the entered query to the audit-log hook", () => {
+		mocks.useAuditLogs.mockReturnValue({
+			data: [{ id: 73 }],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+
+		fireEvent.change(screen.getByPlaceholderText("Suchen..."), { target: { value: "proxy-host" } });
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, "proxy-host");
+	});
+
+	it("keeps spaces in the search field so multi-word audit queries remain searchable", () => {
+		mocks.useAuditLogs.mockReturnValue({
+			data: [{ id: 73 }],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+
+		const search = screen.getByPlaceholderText("Suchen...");
+		fireEvent.change(search, { target: { value: "proxy " } });
+		expect(search).toHaveValue("proxy ");
+		fireEvent.change(search, { target: { value: "proxy host" } });
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, "proxy host");
 	});
 });

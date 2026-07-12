@@ -11,6 +11,27 @@
 			]
 		}
 	],
+	"parameters": [
+		{
+			"in": "query",
+			"name": "expand",
+			"description": "Expansions",
+			"schema": {
+				"type": "string",
+				"enum": [
+					"user"
+				]
+			}
+		},
+		{
+			"in": "query",
+			"name": "query",
+			"description": "Substring search across audit metadata, actions, and object types",
+			"schema": {
+				"$ref": "../../common.json#/properties/query"
+			}
+		}
+	],
 	"responses": {
 		"200": {
 			"description": "200 response",

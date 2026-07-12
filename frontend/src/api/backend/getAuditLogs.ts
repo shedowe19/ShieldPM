@@ -2,7 +2,11 @@ import * as api from "./base";
 import type { AuditLogExpansion } from "./expansions";
 import type { AuditLog } from "./models";
 
-export async function getAuditLogs(expand?: AuditLogExpansion[], params = {}): Promise<AuditLog[]> {
+export interface AuditLogListParams {
+	query?: string;
+}
+
+export async function getAuditLogs(expand?: AuditLogExpansion[], params: AuditLogListParams = {}): Promise<AuditLog[]> {
 	return await api.get({
 		url: "/audit-log",
 		params: {
