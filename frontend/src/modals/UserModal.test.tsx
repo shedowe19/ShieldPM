@@ -264,6 +264,25 @@ describe("UserModal", () => {
 		expect(screen.getByText("error.unknown")).toBeInTheDocument();
 	});
 
+	it("reports a localized fallback when saving a user fails without an Error object", async () => {
+		mocks.setUser.mockImplementation((_user: unknown, options: { onError?: (error: unknown) => void }) =>
+			options.onError?.("Save failed"),
+		);
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("User modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+		fireEvent.click(screen.getByRole("button", { name: "save" }));
+
+		expect(await screen.findByText("error.unknown")).toBeInTheDocument();
+		expect(mocks.remove).not.toHaveBeenCalled();
+	});
+
 	it("uses the localized user label for a blank avatar name", async () => {
 		const { showUserModal } = await import("./UserModal");
 		showUserModal("new");

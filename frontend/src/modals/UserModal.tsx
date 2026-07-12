@@ -62,7 +62,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 		setUser(payload as unknown as User, {
 			onError: (err) => {
-				if (err instanceof Error) setErrorMsg(err.message);
+				setErrorMsg(err instanceof Error ? err.message : intl.formatMessage({ id: "error.unknown" }));
 				setIsSubmitting(false);
 				setSubmitting(false);
 			},

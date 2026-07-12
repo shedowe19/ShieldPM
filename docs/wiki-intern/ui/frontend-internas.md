@@ -139,7 +139,7 @@ Nachrichten; `user.security` ist in allen 13 unterstützten Locale-Dateien hinte
 
 Der Avatar-Bereich des `UserModal` lokalisiert Vorschau, Quelle, Gravatar-Hinweis, URL- und Upload-Felder über
 `user.avatar.*`. Die 13 Locale-Dateien enthalten auch lokalisierte Platzhalter und Upload-Hinweise; bei einem
-unbekannten Ladefehler nutzt der Dialog `error.unknown` statt eines fest codierten englischen Texts.
+unbekannten Lade- oder Speicherkonflikt nutzt der Dialog `error.unknown` statt eines fest codierten englischen Texts.
 
 `UserAvatarTab.tsx` kapselt diesen Avatar-Tab als Formik-Kind. Die Auswahl einer lokalen Datei und ihre Blob-URL bleiben
 im übergeordneten `UserModal`, damit die Vorschau sowie der Upload nach dem Speichern unverändert funktionieren.
