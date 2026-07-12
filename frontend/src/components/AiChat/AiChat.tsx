@@ -6,16 +6,19 @@ import { sendAiChat } from "src/api/backend/ai";
 import type { AiChatMessage } from "src/api/backend/models";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "src/components/ui/sheet";
-import { cn } from "src/lib/utils";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "src/components/ui/sheet";
 import { intl, T } from "src/locale";
 import { AI_ROLE } from "src/types/enums";
 import { AiMessage } from "./AiMessage";
 
 type ChatMessage = AiChatMessage & { id: string };
 
-export function AiChat() {
-	const [open, setOpen] = useState(false);
+interface AiChatProps {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}
+
+export function AiChat({ open, onOpenChange }: AiChatProps) {
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -72,21 +75,7 @@ export function AiChat() {
 	};
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<button
-					type="button"
-					className={cn(
-						"group flex w-full items-center rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm font-medium text-purple-400 transition-colors duration-200 hover:bg-purple-500/10 hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-						open ? "bg-purple-500/10 text-purple-400" : "transparent",
-					)}
-				>
-					<IconRobot className="mr-2 h-4 w-4" />
-					<span>
-						<T id="ai.title" />
-					</span>
-				</button>
-			</SheetTrigger>
+		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full" side="right">
 				<SheetHeader className="flex flex-row justify-between items-center sm:text-left text-left">
 					<SheetTitle className="flex items-center gap-2">

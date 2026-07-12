@@ -13,7 +13,7 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AiChat } from "src/components/AiChat/AiChat";
+import { AiChatLauncher, AiChatLauncherTrigger } from "src/components/AiChat/AiChatLauncher";
 import { HasPermission } from "src/components/HasPermission";
 import { Button } from "src/components/ui/button";
 import { ScrollArea } from "src/components/ui/scroll-area";
@@ -204,7 +204,7 @@ const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }
 
 export function Sidebar() {
 	return (
-		<>
+		<AiChatLauncher>
 			{/* Mobile Trigger */}
 			<div className="lg:hidden p-4 border-b flex items-center gap-4 bg-background">
 				<Sheet>
@@ -230,7 +230,7 @@ export function Sidebar() {
 										<SidebarItem key={item.to || item.label} item={item} />
 									))}
 									<div className="pt-4 border-t border-slate-800 mt-2">
-										<AiChat />
+										<AiChatLauncherTrigger />
 									</div>
 								</nav>
 							</ScrollArea>
@@ -259,11 +259,11 @@ export function Sidebar() {
 							<SidebarItem key={item.to || item.label} item={item} />
 						))}
 						<div className="pt-4 border-t border-slate-800 mt-2">
-							<AiChat />
+							<AiChatLauncherTrigger />
 						</div>
 					</nav>
 				</ScrollArea>
 			</div>
-		</>
+		</AiChatLauncher>
 	);
 }

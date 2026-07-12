@@ -10,14 +10,15 @@ Der AI-Agent ermöglicht natürlichsprachliche Interaktion mit ShieldPM — sowo
 
 ## Wichtige Dateien
 
-| Datei                                       | Beschreibung                                                                        |
-| ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `frontend/src/components/AiChat/AiChat.tsx` | Seitlicher KI-Chat mit nativem Button-Trigger und lokalisierten Screenreader-Labels |
-| `backend/internal/ai.js` (14 KB)            | AI-Verwaltung (Einstellungen, Provider-Config)                                      |
-| `backend/internal/ai/executor.js` (33 KB)   | Chat-Loop-Orchestrator                                                              |
-| `backend/internal/ai/providers.js` (9 KB)   | Provider-Abstraktion (Gemini, Ollama, OpenAI)                                       |
-| `backend/internal/ai/tools.js` (27 KB)      | Ausführbare Funktionen für den AI-Agent                                             |
-| `backend/internal/ai/prompt.js` (10 KB)     | System-Prompt                                                                       |
+| Datei                                               | Beschreibung                                                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `frontend/src/components/AiChat/AiChatLauncher.tsx` | Gemeinsamer Sidebar-Trigger und bedarfsorientierter Loader für genau eine Chat-Instanz                       |
+| `frontend/src/components/AiChat/AiChat.tsx`         | Seitlicher KI-Chat-Dialog mit lokalisierten Screenreader-Labels; wird erst nach einer Trigger-Aktion geladen |
+| `backend/internal/ai.js` (14 KB)                    | AI-Verwaltung (Einstellungen, Provider-Config)                                                               |
+| `backend/internal/ai/executor.js` (33 KB)           | Chat-Loop-Orchestrator                                                                                       |
+| `backend/internal/ai/providers.js` (9 KB)           | Provider-Abstraktion (Gemini, Ollama, OpenAI)                                                                |
+| `backend/internal/ai/tools.js` (27 KB)              | Ausführbare Funktionen für den AI-Agent                                                                      |
+| `backend/internal/ai/prompt.js` (10 KB)             | System-Prompt                                                                                                |
 
 ## Provider
 
@@ -77,6 +78,13 @@ protokolliert. Administratoren mit Sichtbarkeit `all` behalten die Möglichkeit,
 3. Der Provider (`providers.js`) ruft das LLM (Gemini, Ollama oder OpenAI-kompatibel) und liefert ggf. Tool-Calls zurück.
 4. Tool-Calls werden in `tools.js` gegen die internen ShieldPM-Module ausgeführt; das Ergebnis wandert zurück in den Loop.
 5. Final-Antwort wird zurück an Frontend/Telegram geschickt.
+
+### Seitlicher Web-Chat
+
+`Sidebar.tsx` rendert für die mobile und Desktop-Navigation nur die leichten, gemeinsamen Trigger aus
+`AiChatLauncher.tsx`. Erst eine Aktivierung lädt den Dialog `AiChat.tsx` dynamisch; damit bleiben auch `AiMessage.tsx`,
+`react-markdown` und `remark-gfm` aus der initialen Anwendungshülle. Der Loader bleibt nach dem Schließen gemountet,
+sodass es bei responsiven Wechseln nur eine Dialoginstanz gibt und der lokale Nachrichtenverlauf erhalten bleibt.
 
 ## Integration mit ChatOps
 
