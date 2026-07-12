@@ -28,6 +28,7 @@ const ignoreUnused = [
 
 const { spawnSync } = require("child_process");
 const fs = require("fs");
+const path = require("path");
 
 const tmp = require("tmp");
 
@@ -52,7 +53,8 @@ try {
 
 // get all translations used in frontend code
 const tmpobj = tmp.fileSync({ postfix: ".json" });
-const extraction = spawnSync("yarn", ["formatjs", "extract", "src/**/*.tsx", "--out-file", tmpobj.name], {
+const formatJs = path.join(__dirname, "node_modules", ".bin", "formatjs");
+const extraction = spawnSync(formatJs, ["extract", "src/**/*.tsx", "--out-file", tmpobj.name], {
 	encoding: "utf8",
 });
 if (extraction.error || extraction.status !== 0) {
