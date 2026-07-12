@@ -67,9 +67,10 @@ Alle Seiten verwenden Lazy-Loading (`React.lazy`).
 
 `components/RouteErrorBoundary.tsx` fängt Render- und fehlgeschlagene Lazy-Importe sowohl für öffentliche als auch
 authentifizierte Routen ab. Die zugängliche, in allen 13 Locales übersetzte Fehleransicht bietet ausschließlich einen
-Seiten-Reload an; damit werden abgelehnte Lazy-Promises nicht fälschlich nur erneut gerendert. Bei der Navigation auf
-eine andere authentifizierte Route setzt `resetKey` den Boundary-Zustand zurück. `Router.test.tsx` deckt einen
-Renderfehler, einen abgelehnten Route-Chunk und die Reload-Aktion ab.
+Seiten-Reload an; damit werden abgelehnte Lazy-Promises nicht fälschlich nur erneut gerendert. Nach einem Fehler setzt
+sie den Tastaturfokus auf ihre Überschrift. Bei der Navigation auf eine andere authentifizierte Route setzt `resetKey`
+den Boundary-Zustand zurück. `RouteErrorBoundary.test.tsx` deckt Renderfehler, abgelehnte Route-Chunks und den Fokus
+der Fehleransicht ab.
 
 ## Verwandte Seiten
 
