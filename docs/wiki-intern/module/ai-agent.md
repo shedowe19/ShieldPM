@@ -42,6 +42,10 @@ Das lesende Tool `get_system_status` folgt der Zugriffsgrenze von `/api/analytic
 `analytics:list`, wird ohne diese Capability nicht angeboten und prüft die Berechtigung vor dem Auslesen der
 Netzwerkmetriken erneut.
 
+Das Audit-Log-Tool `get_audit_log` benötigt `auditlog:list`. Ohne diese Capability wird es nicht an das Modell
+übergeben; der Executor prüft sie nochmals vor dem delegierten Abruf über `internal/audit-log.js`. Damit können
+eingebettete oder halluzinierte Tool-Calls keine administrativen Aktionsprotokolle auslesen.
+
 Das Erzeugen eines internen Client-Zertifikats (`create_client_certificate`) benötigt `certificates:create`. Ohne diese
 Capability wird das Tool nicht an das Modell übergeben; der Executor prüft sie vor dem Zugriff auf die interne PKI noch
 einmal. Dadurch können nicht berechtigte AI-Aufrufe weder eine Root-CA anstoßen noch PKCS#12-Dateien erzeugen.

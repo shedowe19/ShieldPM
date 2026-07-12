@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	getAuditLog: vi.fn(),
 	createClientCertificate: vi.fn(),
 	fetchIpRanges: vi.fn(),
 	getCertificate: vi.fn(),
@@ -29,7 +30,7 @@ vi.mock("../../models/cloudflared_tunnel.js", () => ({ default: {} }));
 vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 vi.mock("../../models/tor_onion.js", () => ({ default: {} }));
 vi.mock("../../internal/access-list.js", () => ({ default: {} }));
-vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { getAll: mocks.getAuditLog } }));
 vi.mock("../../internal/certificate.js", () => ({
 	default: {
 		get: mocks.getCertificate,
@@ -55,6 +56,7 @@ import { getToolDefinitions } from "../../internal/ai/tools.js";
 
 const systemToolNames = ["test_nginx_config", "force_nginx_reload", "renew_ip_ranges"];
 const systemStatusToolName = "get_system_status";
+const auditLogToolName = "get_audit_log";
 const clientCertificateToolName = "create_client_certificate";
 const certificateRenewalToolName = "renew_certificate";
 
@@ -72,6 +74,7 @@ describe("AI system tool permissions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.fetchIpRanges.mockResolvedValue();
+		mocks.getAuditLog.mockResolvedValue([]);
 		mocks.getNetworkStats.mockResolvedValue([]);
 		mocks.getCertificate.mockResolvedValue({ provider: "letsencrypt" });
 		mocks.reloadNginx.mockResolvedValue();
@@ -121,6 +124,22 @@ describe("AI system tool permissions", () => {
 		const results = await executeTools(access, [{ name: systemStatusToolName, args: {} }]);
 
 		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+	});
+
+	it("does not advertise or read audit logs without auditlog:list", async () => {
+		const access = {
+			can: vi.fn().mockImplementation((permission) => {
+				if (permission === "auditlog:list") return Promise.reject(new Error("Not allowed"));
+				return Promise.resolve(true);
+			}),
+		};
+
+		const toolNames = namesOf(await getToolDefinitions(access));
+		const results = await executeTools(access, [{ name: auditLogToolName, args: {} }]);
+
+		expect(toolNames).not.toContain(auditLogToolName);
+		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+		expect(mocks.getAuditLog).not.toHaveBeenCalled();
 	});
 
 	it("returns system status to users with analytics:list", async () => {

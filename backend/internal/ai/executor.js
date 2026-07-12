@@ -1052,6 +1052,7 @@ export const executeTools = async (access, toolCalls) => {
 				// Grep output 1683: get_audit_log only at 909. So I must KEEP it.
 				case "get_audit_log": {
 					if (isDemoMode()) throw new Error("Audit Log is disabled in Demo Mode.");
+					await access.can("auditlog:list");
 					const logs = await internalAuditLog.getAll(access, ["user"]);
 					result = JSON.stringify(
 						logs.map((/** @type {any} */ l) => ({
