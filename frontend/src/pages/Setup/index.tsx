@@ -11,7 +11,8 @@ import {
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { createUser } from "src/api/backend";
-import { LocalePicker, ThemeSwitcher } from "src/components";
+import { LocalePicker } from "src/components/LocalePicker";
+import { ThemeSwitcher } from "src/components/ThemeSwitcher";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";

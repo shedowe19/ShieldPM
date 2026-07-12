@@ -13,10 +13,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("src/api/backend", () => ({ claimOidcToken: mocks.claimOidcToken }));
 
-vi.mock("src/components", () => ({
-	LocalePicker: () => <div>locale picker</div>,
-	ThemeSwitcher: () => <div>theme switcher</div>,
-}));
+vi.mock("src/components/LocalePicker", () => ({ LocalePicker: () => <div>locale picker</div> }));
+vi.mock("src/components/ThemeSwitcher", () => ({ ThemeSwitcher: () => <div>theme switcher</div> }));
 
 vi.mock("src/context", () => ({
 	useAuthState: () => ({ completeLogin: mocks.completeLogin, login: mocks.login }),
