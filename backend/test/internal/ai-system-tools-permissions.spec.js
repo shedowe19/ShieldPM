@@ -3,8 +3,11 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	createClientCertificate: vi.fn(),
 	fetchIpRanges: vi.fn(),
+	getCertificate: vi.fn(),
 	getNetworkStats: vi.fn(),
+	renewCertificate: vi.fn(),
 	reloadNginx: vi.fn(),
+	requestCertbot: vi.fn(),
 	testNginx: vi.fn(),
 }));
 
@@ -27,7 +30,13 @@ vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 vi.mock("../../models/tor_onion.js", () => ({ default: {} }));
 vi.mock("../../internal/access-list.js", () => ({ default: {} }));
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
-vi.mock("../../internal/certificate.js", () => ({ default: {} }));
+vi.mock("../../internal/certificate.js", () => ({
+	default: {
+		get: mocks.getCertificate,
+		renew: mocks.renewCertificate,
+		requestCertbot: mocks.requestCertbot,
+	},
+}));
 vi.mock("../../internal/ddns-provider.js", () => ({ default: {} }));
 vi.mock("../../internal/dead-host.js", () => ({ default: {} }));
 vi.mock("../../internal/maintenance.js", () => ({ default: {} }));
@@ -47,6 +56,7 @@ import { getToolDefinitions } from "../../internal/ai/tools.js";
 const systemToolNames = ["test_nginx_config", "force_nginx_reload", "renew_ip_ranges"];
 const systemStatusToolName = "get_system_status";
 const clientCertificateToolName = "create_client_certificate";
+const certificateRenewalToolName = "renew_certificate";
 
 const namesOf = (tools) => tools.map((tool) => tool.function.name);
 
@@ -63,7 +73,13 @@ describe("AI system tool permissions", () => {
 		vi.clearAllMocks();
 		mocks.fetchIpRanges.mockResolvedValue();
 		mocks.getNetworkStats.mockResolvedValue([]);
+		mocks.getCertificate.mockResolvedValue({ provider: "letsencrypt" });
 		mocks.reloadNginx.mockResolvedValue();
+		mocks.renewCertificate.mockImplementation(async (access, data) => {
+			await access.can("certificates:update", data);
+			return { id: data.id };
+		});
+		mocks.requestCertbot.mockResolvedValue();
 		mocks.testNginx.mockResolvedValue();
 		mocks.createClientCertificate.mockResolvedValue("/tmp/client.p12");
 	});
@@ -150,6 +166,35 @@ describe("AI system tool permissions", () => {
 			{ common_name: "agent", password: "x", years: 2 },
 			expect.stringMatching(/^\/tmp\/client-cert-\d+$/),
 		);
+	});
+
+	it("does not advertise or start certificate renewal without certificates:update", async () => {
+		const access = {
+			can: vi.fn().mockImplementation((permission) => {
+				if (permission === "certificates:update") return Promise.reject(new Error("Not allowed"));
+				return Promise.resolve(true);
+			}),
+		};
+
+		const toolNames = namesOf(await getToolDefinitions(access));
+		const results = await executeTools(access, [{ name: certificateRenewalToolName, args: { id: 42 } }]);
+
+		expect(toolNames).not.toContain(certificateRenewalToolName);
+		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+		expect(mocks.renewCertificate).toHaveBeenCalledWith(access, { id: 42 });
+		expect(mocks.requestCertbot).not.toHaveBeenCalled();
+	});
+
+	it("advertises and delegates certificate renewal to the authorized certificate service", async () => {
+		const access = { can: vi.fn().mockResolvedValue(true) };
+
+		const toolNames = namesOf(await getToolDefinitions(access));
+		const results = await executeTools(access, [{ name: certificateRenewalToolName, args: { id: 42 } }]);
+
+		expect(toolNames).toContain(certificateRenewalToolName);
+		expect(results.map((result) => result.result)).toEqual(["Renewed Certificate ID: 42"]);
+		expect(mocks.renewCertificate).toHaveBeenCalledWith(access, { id: 42 });
+		expect(mocks.requestCertbot).not.toHaveBeenCalled();
 	});
 
 	it("does not execute global Nginx or IP-range tools without settings:update", async () => {

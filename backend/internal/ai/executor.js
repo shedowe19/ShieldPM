@@ -678,13 +678,8 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "renew_certificate": {
-					const cert = await internalCertificate.get(access, { id: call.args.id });
-					if (cert.provider === "letsencrypt") {
-						await internalCertificate.requestCertbot(cert);
-						result = `Renewed Certificate ID: ${call.args.id}`;
-					} else {
-						result = "Error: Only LetsEncrypt certificates can be renewed.";
-					}
+					await internalCertificate.renew(access, { id: call.args.id });
+					result = `Renewed Certificate ID: ${call.args.id}`;
 					break;
 				}
 				case "get_certificate_details": {

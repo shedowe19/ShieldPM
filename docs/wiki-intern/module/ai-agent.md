@@ -46,6 +46,11 @@ Das Erzeugen eines internen Client-Zertifikats (`create_client_certificate`) ben
 Capability wird das Tool nicht an das Modell übergeben; der Executor prüft sie vor dem Zugriff auf die interne PKI noch
 einmal. Dadurch können nicht berechtigte AI-Aufrufe weder eine Root-CA anstoßen noch PKCS#12-Dateien erzeugen.
 
+Die Erneuerung von Let's-Encrypt-Zertifikaten (`renew_certificate`) benötigt `certificates:update` und wird ohne diese
+Capability ebenfalls nicht an das Modell übergeben. Der Executor delegiert an `internalCertificate.renew()`, das die
+Berechtigung, den Owner-Scope und das Audit-Logging selbst durchsetzt. Damit kann ein eingebetteter Tool-Call keine
+Certbot-Erneuerung mit reinen Leserechten auslösen.
+
 ### Cloudflared- und Tor-Aktionen
 
 Die Cloudflared- und Tor-Tools werden vor dem Modellaufruf anhand ihrer jeweiligen Capability ausgefiltert. Der
