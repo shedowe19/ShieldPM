@@ -1,35 +1,22 @@
-import {
-	IconId,
-	IconLock,
-	IconMail,
-	IconPhoto,
-	IconPower,
-	IconSettings,
-	IconShield,
-	IconUser,
-} from "@tabler/icons-react";
+import { IconLock, IconPhoto, IconShield, IconUser } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
+import { Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { type User, uploadUserAvatar } from "src/api/backend";
 import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
-import { Card, CardContent } from "src/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Input } from "src/components/ui/input";
-import { Label } from "src/components/ui/label";
-import { Switch } from "src/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useHealth, useSetUser, useUser } from "src/hooks";
 import { useObjectUrl } from "src/hooks/useObjectUrl";
 import { intl, T } from "src/locale";
-import { validateEmail, validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
 import SecuritySettings from "src/pages/Profile/Security";
-import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, type AvatarType, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
 import UserAvatarTab from "./UserAvatarTab";
+import UserDetailsTab, { type UserDetailsFormValues } from "./UserDetailsTab";
 
 const showUserModal = (id: number | "me" | "new") => {
 	EasyModal.show(UserModal, { id });
@@ -38,16 +25,6 @@ const showUserModal = (id: number | "me" | "new") => {
 interface Props extends InnerModalProps {
 	id: number | "me" | "new";
 }
-interface UserValues {
-	name: string;
-	nickname: string;
-	email: string;
-	isAdmin: boolean;
-	isDisabled: boolean;
-	avatar_type: AvatarType;
-	avatar_value: string;
-}
-
 const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useUser(id);
 	const { data: currentUser, isLoading: currentIsLoading } = useUser("me");
@@ -57,7 +34,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const selectedFileUrl = useObjectUrl(selectedFile);
 
-	const onSubmit = async (values: UserValues, { setSubmitting }: FormikHelpers<UserValues>) => {
+	const onSubmit = async (values: UserDetailsFormValues, { setSubmitting }: FormikHelpers<UserDetailsFormValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
@@ -169,7 +146,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				)}
 
 				{!isLoading && !currentIsLoading && data && currentUser && (
-					<Formik<UserValues>
+					<Formik<UserDetailsFormValues>
 						initialValues={{
 							name: data?.name || "",
 							nickname: data?.nickname || "",
@@ -181,7 +158,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						}}
 						onSubmit={onSubmit}
 					>
-						{({ errors, touched, setFieldValue, values }) => (
+						{() => (
 							<Form className="space-y-4">
 								{errorMsg && (
 									<Alert variant="destructive" className="mb-4">
@@ -217,140 +194,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										)}
 									</TabsList>
 
-									<TabsContent value="details" className="space-y-4">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div className="space-y-2">
-												<Label htmlFor="name" className="flex items-center gap-2">
-													<IconUser className="h-4 w-4 text-muted-foreground" />
-													<T id="user.full-name" />
-												</Label>
-												<Field name="name" validate={validateString(1, 50)}>
-													{({ field }: FieldProps) => (
-														<Input
-															id="name"
-															placeholder={intl.formatMessage({ id: "user.full-name" })}
-															className={
-																errors.name && touched.name ? "border-destructive" : ""
-															}
-															{...field}
-														/>
-													)}
-												</Field>
-												{errors.name && touched.name && (
-													<p className="text-sm font-medium text-destructive">
-														{errors.name as string}
-													</p>
-												)}
-											</div>
-											<div className="space-y-2">
-												<Label htmlFor="nickname" className="flex items-center gap-2">
-													<IconId className="h-4 w-4 text-muted-foreground" />
-													<T id="user.nickname" />
-												</Label>
-												<Field name="nickname" validate={validateString(1, 30)}>
-													{({ field }: FieldProps) => (
-														<Input
-															id="nickname"
-															placeholder={intl.formatMessage({ id: "user.nickname" })}
-															className={
-																errors.nickname && touched.nickname
-																	? "border-destructive"
-																	: ""
-															}
-															{...field}
-														/>
-													)}
-												</Field>
-												{errors.nickname && touched.nickname && (
-													<p className="text-sm font-medium text-destructive">
-														{errors.nickname as string}
-													</p>
-												)}
-											</div>
-										</div>
-
-										<div className="space-y-2">
-											<Label htmlFor="email" className="flex items-center gap-2">
-												<IconMail className="h-4 w-4 text-muted-foreground" />
-												<T id="email-address" />
-											</Label>
-											<Field name="email" validate={validateEmail()}>
-												{({ field }: FieldProps) => (
-													<Input
-														id="email"
-														type="email"
-														placeholder={intl.formatMessage({ id: "email-address" })}
-														className={
-															errors.email && touched.email ? "border-destructive" : ""
-														}
-														{...field}
-													/>
-												)}
-											</Field>
-											{errors.email && touched.email && (
-												<p className="text-sm font-medium text-destructive">
-													{errors.email as string}
-												</p>
-											)}
-										</div>
-
-										{currentUser && data && currentUser?.id !== data?.id && (
-											<Card className="mt-6 border-dashed">
-												<CardContent className="p-4 space-y-4">
-													<h4 className="text-sm font-medium flex items-center gap-2">
-														<IconSettings className="h-4 w-4" />
-														<T id="options" />
-													</h4>
-													<div className="flex items-center justify-between">
-														<Label
-															htmlFor="isAdmin"
-															className="flex-1 cursor-pointer flex items-center gap-2"
-														>
-															<IconShield className="h-4 w-4 text-orange-500" />
-															<div className="flex flex-col">
-																<span>
-																	<T id="role.admin" />
-																</span>
-																<span className="text-xs text-muted-foreground font-normal">
-																	<T id="user.permissions.full-system-access" />
-																</span>
-															</div>
-														</Label>
-														<Switch
-															id="isAdmin"
-															checked={values.isAdmin}
-															onCheckedChange={(checked) =>
-																setFieldValue("isAdmin", checked)
-															}
-														/>
-													</div>
-													<div className="flex items-center justify-between">
-														<Label
-															htmlFor="isDisabled"
-															className="flex-1 cursor-pointer flex items-center gap-2"
-														>
-															<IconPower className="h-4 w-4 text-red-500" />
-															<div className="flex flex-col">
-																<span>
-																	<T id="disabled" />
-																</span>
-																<span className="text-xs text-muted-foreground font-normal">
-																	<T id="user.permissions.prevent-login" />
-																</span>
-															</div>
-														</Label>
-														<Switch
-															id="isDisabled"
-															checked={values.isDisabled}
-															onCheckedChange={(checked) =>
-																setFieldValue("isDisabled", checked)
-															}
-														/>
-													</div>
-												</CardContent>
-											</Card>
-										)}
-									</TabsContent>
+									<UserDetailsTab canManageUser={currentUser.id !== data.id} />
 
 									<UserAvatarTab
 										avatar={data?.avatar}

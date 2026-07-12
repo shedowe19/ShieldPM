@@ -145,6 +145,11 @@ unbekannten Ladefehler nutzt der Dialog `error.unknown` statt eines fest codiert
 im übergeordneten `UserModal`, damit die Vorschau sowie der Upload nach dem Speichern unverändert funktionieren.
 `UserAvatarTab.test.tsx` sichert die temporäre Upload-Vorschau und die Rückgabe einer Ersatzdatei an den Dialog ab.
 
+`UserDetailsTab.tsx` kapselt die Profilfelder und die Verwaltungsoptionen des `UserModal` als Formik-Kind. Name,
+Nickname, E-Mail sowie die Admin- und Deaktivierungsschalter bleiben im gemeinsamen Formularzustand; die beiden
+Verwaltungsoptionen erscheinen weiterhin nur beim Bearbeiten eines anderen Benutzers. `UserDetailsTab.test.tsx`
+sichert Wertebindung und diese Sichtbarkeitsgrenze ab.
+
 `SetPasswordModal.tsx` beschriftet die Icon-Aktionen zum Anzeigen/Verstecken und Generieren eines Passworts über die
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.
