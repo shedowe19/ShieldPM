@@ -54,6 +54,8 @@ yarn test
   bricht bei nicht explizit hinterlegten Endpunkten ab; WebSocket-Verbindungen werden unmittelbar geschlossen. Die
   zustandsbehafteten Fixture-Daten sind synthetisch (`*.e2e.test`) und sichern Anmeldung mit Fokus, den Not-Found-Fallback,
   Skip-Link und Hauptinhalt-Fokus, den Dashboard-Notiz-Speichervertrag sowie einen Axe-Scan ohne Farbkontrastregel ab.
+- Die bei einem Playwright-Lauf erzeugten Artefakte unter `frontend/test-results/` sind lokal und werden nicht versioniert;
+  damit bleibt der Worktree auch nach einem fehlgeschlagenen Browser-Smoke frei von Testausgaben.
 
 ## Backend-Tests
 

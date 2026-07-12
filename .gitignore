@@ -8,3 +8,4 @@ certbot-help.txt
 package-lock.json
 .tmp_pr_body.md
 backend/analyze.js
+frontend/test-results/
