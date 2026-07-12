@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 	remove: vi.fn(),
 	renewCertificate: vi.fn(),
 	show: vi.fn(),
+	useCertificate: vi.fn(),
 }));
 
 vi.mock("ez-modal-react", () => ({
@@ -38,7 +39,7 @@ vi.mock("src/components/ui/dialog", () => ({
 }));
 
 vi.mock("src/hooks", () => ({
-	useCertificate: () => ({ data: { id: 42 }, error: null, isLoading: false }),
+	useCertificate: mocks.useCertificate,
 }));
 
 vi.mock("src/notifications", () => ({
@@ -54,6 +55,7 @@ afterEach(async () => {
 describe("RenewCertificateModal", () => {
 	beforeEach(async () => {
 		mocks.renewCertificate.mockReturnValue(new Promise(() => undefined));
+		mocks.useCertificate.mockReturnValue({ data: { id: 42 }, error: null, isLoading: false });
 		await changeLocale("de");
 	});
 
@@ -74,6 +76,24 @@ describe("RenewCertificateModal", () => {
 
 	it("shows a localized fallback when renewal rejects with a non-Error value", async () => {
 		mocks.renewCertificate.mockRejectedValue("Request failed");
+		const { showRenewCertificateModal } = await import("./RenewCertificateModal");
+		showRenewCertificateModal(42);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("Renew certificate modal was not registered");
+		}
+
+		render(<ModalComponent remove={mocks.remove} visible />);
+
+		expect(await screen.findByText("Fehler")).toBeInTheDocument();
+		expect(await screen.findByText("Unbekannter Fehler")).toBeInTheDocument();
+		expect(screen.queryByText("Error")).not.toBeInTheDocument();
+		expect(screen.queryByText("Unknown error")).not.toBeInTheDocument();
+	});
+
+	it("shows localized generic errors when loading a certificate fails without a server message", async () => {
+		mocks.useCertificate.mockReturnValue({ data: undefined, error: { message: "" }, isLoading: false });
 		const { showRenewCertificateModal } = await import("./RenewCertificateModal");
 		showRenewCertificateModal(42);
 		const ModalComponent = mocks.show.mock.calls[0]?.[0];
