@@ -11,7 +11,7 @@ import {
 	TestTube,
 } from "lucide-react";
 import { useState } from "react";
-import { Loading } from "src/components";
+import { Loading } from "src/components/Loading";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";

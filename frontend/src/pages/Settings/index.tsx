@@ -1,4 +1,4 @@
-import { HasPermission } from "src/components";
+import { HasPermission } from "src/components/HasPermission";
 import { ADMIN, VIEW } from "src/modules/Permissions";
 import Layout from "./Layout";
 

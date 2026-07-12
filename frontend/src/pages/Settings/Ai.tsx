@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 import { getAiConfig, updateAiConfig } from "src/api/backend/ai";
 import type { AiConfig } from "src/api/backend/models";
-import { Loading } from "src/components";
+import { Loading } from "src/components/Loading";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
