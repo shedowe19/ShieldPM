@@ -42,6 +42,7 @@ export default function Table({ data, isFetching, onSelectItem }: Props) {
 							<Button
 								variant="ghost"
 								size="icon"
+								aria-label={intl.formatMessage({ id: "action.view-details" })}
 								onClick={(e) => {
 									e.preventDefault();
 									onSelectItem?.(info.row.original.id);
