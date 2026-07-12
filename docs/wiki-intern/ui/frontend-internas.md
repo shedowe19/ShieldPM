@@ -218,6 +218,10 @@ serialisierte `meta`-Werte sicher und übernimmt weiterhin die vorhandenen OAuth
 behält damit Form-State und Submission unverändert; `AccessListModalFormValues.test.ts` sichert Legacy-Metadaten und
 die sicheren Standardwerte.
 
+`AccessListModalSubmission.ts` kapselt die Serialisierung des Access-List-Formularzustands für die API. Aktive OIDC-
+oder OAuth2-Proxy-Felder bleiben erhalten, ungenutzte Metadaten werden geleert und Clients sowie Credentials enthalten
+nur editierbare Felder. `AccessListModalSubmission.test.ts` sichert diese Payload-Grenzen und die mTLS-Behandlung.
+
 `AccessListFormTabs.tsx` kapselt Tab-Navigation und -Inhalte des `AccessListModal`. Die Komponente leitet die
 unveränderten Anfangswerte für Basic Auth und Client-Regeln weiter und berechnet die SSO-Sperre weiterhin aus dem
 gemeinsamen Formik-Status. `AccessListFormTabs.test.tsx` sichert die Übergabe für Basic Auth und OIDC ab.
