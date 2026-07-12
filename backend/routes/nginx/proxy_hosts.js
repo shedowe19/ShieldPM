@@ -25,7 +25,7 @@ router
 	/**
 	 * GET /api/nginx/proxy-hosts
 	 *
-	 * Retrieve all proxy-hosts
+	 * Retrieve all proxy-hosts, optionally paginated
 	 */
 	.get(async (req, res) => {
 		const data = await validator(
@@ -38,14 +38,29 @@ router
 					query: {
 						$ref: "common#/properties/query",
 					},
+					page: {
+						anyOf: [{ type: "null" }, { type: "integer", minimum: 1 }],
+					},
+					limit: {
+						anyOf: [{ type: "null" }, { type: "integer", minimum: 1, maximum: 100 }],
+					},
 				},
 			},
 			{
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				limit: req.query.limit ?? null,
+				page: req.query.page ?? null,
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
-		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query);
+		const pagination =
+			data.page === null && data.limit === null
+				? undefined
+				: {
+						limit: data.limit ?? 100,
+						page: data.page ?? 1,
+					};
+		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query, pagination);
 		res.status(200).send(rows);
 	})
 

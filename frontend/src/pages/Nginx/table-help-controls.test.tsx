@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 	useDdnsProviders: vi.fn(),
 	useDeadHosts: vi.fn(),
 	useProxyHosts: vi.fn(),
+	useProxyHostsPage: vi.fn(),
 	useQueryClient: vi.fn(),
 	useRedirectionHosts: vi.fn(),
 	useStreams: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock("src/components/HasPermission", () => ({
 vi.mock("src/hooks", () => ({
 	useDeadHosts: mocks.useDeadHosts,
 	useProxyHosts: mocks.useProxyHosts,
+	useProxyHostsPage: mocks.useProxyHostsPage,
 	useRedirectionHosts: mocks.useRedirectionHosts,
 	useStreams: mocks.useStreams,
 }));
@@ -97,6 +99,10 @@ describe("Nginx table help controls", () => {
 		mocks.useDdnsProviders.mockReturnValue(queryResult);
 		mocks.useDeadHosts.mockReturnValue(queryResult);
 		mocks.useProxyHosts.mockReturnValue(queryResult);
+		mocks.useProxyHostsPage.mockReturnValue({
+			...queryResult,
+			data: { items: [], pagination: { limit: 100, page: 1, totalItems: 0, totalPages: 0 } },
+		});
 		mocks.useRedirectionHosts.mockReturnValue(queryResult);
 		mocks.useStreams.mockReturnValue(queryResult);
 		mocks.useQueryClient.mockReturnValue({ invalidateQueries: vi.fn() });

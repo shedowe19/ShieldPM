@@ -16,6 +16,8 @@ const omissions = () => {
 	return ["is_deleted", "owner.is_deleted"];
 };
 
+const escapeLike = (value) => value.replaceAll("!", "!!").replaceAll("%", "!%").replaceAll("_", "!_");
+
 /**
  * Ensure OAuth2 Proxy is running for the given access_list_id (if it's an OAuth2-type list).
  * @param {number} accessListId
@@ -385,7 +387,7 @@ const internalProxyHost = {
 		}
 		const thisRow = internalHost.cleanRowCertificateMeta(row);
 		// SECURITY: Mask internal paths in forward_host from API responses
-		if (thisRow.forward_host && thisRow.forward_host.startsWith("/data/websites/")) {
+		if (thisRow.forward_host?.startsWith("/data/websites/")) {
 			thisRow.forward_host = "(managed)";
 		}
 		// Custom omissions — must use thisRow (cleaned) not raw row to avoid leaking certificate private keys
@@ -537,11 +539,12 @@ const internalProxyHost = {
 	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [search_query]
-	 * @param   {Number}  [page]
-	 * @param   {Number}  [limit]
+	 * @param   {Object}  [pagination]
+	 * @param   {Number}  pagination.page
+	 * @param   {Number}  pagination.limit
 	 * @returns {Promise}
 	 */
-	getAll: async (access, expand, search_query) => {
+	getAll: async (access, expand, search_query, pagination) => {
 		const accessData = await access.can("proxy_hosts:list");
 		const query = proxyHostModel
 			.query()
@@ -555,18 +558,30 @@ const internalProxyHost = {
 			query.andWhere("owner_user_id", access.token.getUserId(1));
 		}
 
-		// Query is used for searching
+		// Keep the server-side search semantics aligned with the table's domain and upstream-host filters.
 		if (typeof search_query === "string") {
-			query.whereExists(
-				proxyHostModel.relatedQuery("host_domains").where("domain_name", "like", `%${search_query}%`),
-			);
+			const searchPattern = `%${escapeLike(search_query)}%`;
+			query.where((searchConditions) => {
+				searchConditions
+					.whereExists(
+						proxyHostModel
+							.relatedQuery("host_domains")
+							.whereRaw("?? LIKE ? ESCAPE '!'", ["domain_name", searchPattern]),
+					)
+					.orWhereRaw("?? LIKE ? ESCAPE '!'", ["forward_host", searchPattern]);
+
+				if (/^\d+$/.test(search_query)) {
+					searchConditions.orWhere("forward_port", Number(search_query));
+				}
+			});
 		}
 
 		if (typeof expand !== "undefined" && expand !== null) {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		const rows = await query;
+		const pageResult = pagination ? await query.page(pagination.page - 1, pagination.limit) : null;
+		const rows = pageResult ? pageResult.results : await query;
 
 		// return rows with count
 		if (rows) {
@@ -578,11 +593,23 @@ const internalProxyHost = {
 				delete row.count;
 				// SECURITY: Mask internal paths in forward_host from API responses
 				// /data/websites/host-N paths expose server filesystem layout to users
-				if (row.forward_host && row.forward_host.startsWith("/data/websites/")) {
+				if (row.forward_host?.startsWith("/data/websites/")) {
 					row.forward_host = "(managed)";
 				}
 				return row;
 			});
+		}
+
+		if (pageResult) {
+			return {
+				items: rows,
+				pagination: {
+					limit: pagination.limit,
+					page: pagination.page,
+					totalItems: pageResult.total,
+					totalPages: Math.ceil(pageResult.total / pagination.limit),
+				},
+			};
 		}
 
 		return rows;

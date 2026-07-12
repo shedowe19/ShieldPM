@@ -26,6 +26,22 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+## Listen-Paginierung
+
+`GET /api/nginx/proxy-hosts` bleibt ohne Paginierungsparameter abwärtskompatibel und liefert weiterhin das bestehende
+Array, etwa für die Analytics-Hostauswahl. Die Proxy-Host-Tabelle verwendet dagegen `page` (einsbasiert) und `limit`;
+`limit` ist auf 1 bis 100 begrenzt und hat im paginierten Vertrag den Standard 100. Die Antwort lautet dann:
+
+- `items`: höchstens `limit` Proxy-Hosts
+- `pagination.page`, `pagination.limit`, `pagination.totalItems`, `pagination.totalPages`
+
+Die Berechtigungs- und Owner-Einschränkung sowie die Suche werden vor Count und Seitenauswahl angewandt. `query` sucht
+teilweise und mit literaler Behandlung von `%`, `_` und `!` in Domainnamen und Upstream-Host; bei einer ausschließlich
+numerischen Suche wird der Upstream-Port exakt berücksichtigt. Die Tabelle verwendet `getProxyHostsPage()` und
+`useProxyHostsPage()` mit einer React-Query-Cache-ID, die
+Seite, Limit, Suche und Expansions enthält. Nach dem Löschen invalidiert der bestehende Präfix `proxy-hosts` alle Seiten;
+ist dadurch eine spätere Seite leer, wechselt die Oberfläche zur vorherigen gültigen Seite zurück.
+
 ## Custom Locations
 
 Das Feld `locations` (DB-Feld `custom_locations`, JSON-Array) erlaubt zusätzliche Nginx-`location`-Blöcke pro Host. Jeder Eintrag enthält `path`, `forward_scheme`, `forward_host`, `forward_port`, optional `forward_path` und `advanced_config`.
