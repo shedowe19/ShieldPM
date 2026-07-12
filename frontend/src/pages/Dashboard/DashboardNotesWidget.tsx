@@ -4,27 +4,19 @@ import { Loader2 } from "lucide-react";
 import type React from "react";
 import { deleteDashboardNote } from "src/api/backend";
 import { Button } from "src/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "src/components/ui/card";
-import { useDashboardNotes } from "src/hooks";
+import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
+import { useDashboardNotes } from "src/hooks/useDashboardNotes";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
 import { showDashboardNoteModal } from "./lazy";
 
 const COLOR_MAP: Record<string, string> = {
-	yellow:
-		"bg-yellow-200/50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900/50",
+	yellow: "bg-yellow-200/50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900/50",
 	blue: "bg-blue-200/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-900/50",
-	green:
-		"bg-green-200/50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50",
+	green: "bg-green-200/50 dark:bg-green-900/20 border-green-200 dark:border-green-900/50",
 	red: "bg-red-200/50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50",
-	purple:
-		"bg-purple-200/50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-900/50",
+	purple: "bg-purple-200/50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-900/50",
 	gray: "bg-gray-200/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-800",
 };
 
@@ -119,11 +111,7 @@ export const DashboardNotesWidget = () => {
 						<p className="text-sm">
 							<T id="dashboard.notes.empty" />
 						</p>
-						<Button
-							variant="link"
-							className="mt-2"
-							onClick={() => showDashboardNoteModal()}
-						>
+						<Button variant="link" className="mt-2" onClick={() => showDashboardNoteModal()}>
 							<T id="dashboard.notes.add" />
 						</Button>
 					</div>

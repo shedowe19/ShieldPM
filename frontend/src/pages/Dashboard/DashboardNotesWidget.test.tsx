@@ -20,7 +20,7 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("lucide-react", () => ({ Loader2: () => null }));
 vi.mock("src/api/backend", () => ({ deleteDashboardNote: vi.fn() }));
-vi.mock("src/hooks", () => ({ useDashboardNotes: mocks.useDashboardNotes }));
+vi.mock("src/hooks/useDashboardNotes", () => ({ useDashboardNotes: mocks.useDashboardNotes }));
 vi.mock("src/locale", () => ({
 	intl: { formatMessage: ({ id }: { id: string }) => id },
 	T: ({ id }: { id: string }) => <>{id}</>,
@@ -29,12 +29,9 @@ vi.mock("src/notifications", () => ({ showObjectSuccess: vi.fn() }));
 vi.mock("./lazy", () => ({ showDashboardNoteModal: vi.fn() }));
 
 vi.mock("src/components/ui/button", () => ({
-	Button: ({
-		children,
-		size: _size,
-		variant: _variant,
-		...props
-	}: ButtonProps) => <button {...props}>{children}</button>,
+	Button: ({ children, size: _size, variant: _variant, ...props }: ButtonProps) => (
+		<button {...props}>{children}</button>
+	),
 }));
 
 vi.mock("src/components/ui/card", () => ({
@@ -63,21 +60,11 @@ describe("DashboardNotesWidget", () => {
 
 		render(<DashboardNotesWidget />);
 
-		expect(
-			screen.getByRole("button", { name: "dashboard.notes.add" }),
-		).toBeInTheDocument();
-		expect(
-			screen.getByRole("button", { name: "action.edit Keep this note" }),
-		).toBeInTheDocument();
-		expect(
-			screen.getByRole("button", { name: "action.delete Keep this note" }),
-		).toBeInTheDocument();
-		expect(
-			screen.getByRole("button", { name: "action.edit Release checklist" }),
-		).toBeInTheDocument();
-		expect(
-			screen.getByRole("button", { name: "action.delete Release checklist" }),
-		).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "dashboard.notes.add" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "action.edit Keep this note" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "action.delete Keep this note" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "action.edit Release checklist" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "action.delete Release checklist" })).toBeInTheDocument();
 	});
 
 	it("keeps delete controls visible while note actions have keyboard focus", async () => {
@@ -97,10 +84,9 @@ describe("DashboardNotesWidget", () => {
 			throw new Error("Dashboard note delete action is missing its container");
 		}
 
-		expect(
-			editButton.compareDocumentPosition(deleteButton) &
-				Node.DOCUMENT_POSITION_FOLLOWING,
-		).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+		expect(editButton.compareDocumentPosition(deleteButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+			Node.DOCUMENT_POSITION_FOLLOWING,
+		);
 
 		editButton.focus();
 		expect(editButton).toHaveFocus();

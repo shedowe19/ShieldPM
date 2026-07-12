@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 	certificates: [] as MockCertificate[],
 }));
 
-vi.mock("src/hooks", () => ({
+vi.mock("src/hooks/useCertificates", () => ({
 	useCertificates: () => ({ data: mocks.certificates }),
 }));
 
@@ -51,7 +51,7 @@ vi.mock("src/locale", () => ({
 	},
 }));
 
-vi.mock("src/components", () => ({
+vi.mock("src/components/HasPermission", () => ({
 	HasPermission: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
