@@ -96,8 +96,11 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 					return (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" className="h-8 w-8 p-0">
-									<span className="sr-only">Open menu</span>
+								<Button
+									variant="ghost"
+									className="h-8 w-8 p-0"
+									aria-label={intl.formatMessage({ id: "sr.open-menu" })}
+								>
 									<IconDotsVertical className="h-4 w-4" />
 								</Button>
 							</DropdownMenuTrigger>
