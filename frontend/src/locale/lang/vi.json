@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "Loại đối tượng",
 	"audit-log.csv.user": "Người dùng",
 	"audit-log.export.csv": "Xuất CSV",
+	"audit-log.filter.all-actions": "Tất cả thao tác",
 	"audit-log.filter.created-after": "Từ",
 	"audit-log.filter.created-before": "Đến",
 	"audit-log.hidden-demo": "Đã ẩn (bản demo)",

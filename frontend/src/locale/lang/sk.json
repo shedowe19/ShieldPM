@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "Typ objektu",
 	"audit-log.csv.user": "Používateľ",
 	"audit-log.export.csv": "Exportovať CSV",
+	"audit-log.filter.all-actions": "Všetky akcie",
 	"audit-log.filter.created-after": "Od",
 	"audit-log.filter.created-before": "Do",
 	"audit-log.hidden-demo": "Skryté (ukážka)",

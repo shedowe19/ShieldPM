@@ -25,18 +25,20 @@ describe("useAuditLogs", () => {
 
 	it("keeps an audit search and creation range isolated in React Query without replacing existing query options", async () => {
 		mocks.getAuditLogs.mockResolvedValue([]);
+		const action = "deleted";
 		const created_after = "2026-07-12T08:00:00.000Z";
 		const created_before = "2026-07-12T10:00:00.000Z";
 
-		useAuditLogs(["user"], { enabled: false }, { created_after, created_before, query: "proxy-host" });
+		useAuditLogs(["user"], { enabled: false }, { action, created_after, created_before, query: "proxy-host" });
 
 		expect(getQueryOptions().queryKey).toEqual([
 			"audit-logs",
-			{ created_after, created_before, expand: ["user"], query: "proxy-host" },
+			{ action, created_after, created_before, expand: ["user"], query: "proxy-host" },
 		]);
 		expect(getQueryOptions().enabled).toBe(false);
 		await getQueryOptions().queryFn();
 		expect(mocks.getAuditLogs).toHaveBeenCalledWith(["user"], {
+			action,
 			created_after,
 			created_before,
 			query: "proxy-host",

@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "Тип объекта",
 	"audit-log.csv.user": "Пользователь",
 	"audit-log.export.csv": "Экспорт CSV",
+	"audit-log.filter.all-actions": "Все действия",
 	"audit-log.filter.created-after": "С",
 	"audit-log.filter.created-before": "По",
 	"audit-log.hidden-demo": "Скрыто (демонстрация)",

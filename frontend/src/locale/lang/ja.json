@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "オブジェクトの種類",
 	"audit-log.csv.user": "ユーザー",
 	"audit-log.export.csv": "CSVをエクスポート",
+	"audit-log.filter.all-actions": "すべての操作",
 	"audit-log.filter.created-after": "開始",
 	"audit-log.filter.created-before": "終了",
 	"audit-log.hidden-demo": "非表示（デモ）",

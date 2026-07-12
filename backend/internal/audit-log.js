@@ -9,12 +9,13 @@ const internalAuditLog = {
 	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [searchQuery]
-	 * @param   {Object}  [dateRange]
-	 * @param   {String}  [dateRange.created_after]
-	 * @param   {String}  [dateRange.created_before]
+	 * @param   {Object}  [filters]
+	 * @param   {String}  [filters.action]
+	 * @param   {String}  [filters.created_after]
+	 * @param   {String}  [filters.created_before]
 	 * @returns {Promise}
 	 */
-	getAll: async (access, expand, searchQuery, dateRange = {}) => {
+	getAll: async (access, expand, searchQuery, filters = {}) => {
 		await access.can("auditlog:list");
 
 		const query = auditLogModel
@@ -34,12 +35,16 @@ const internalAuditLog = {
 			});
 		}
 
-		if (dateRange.created_after) {
-			query.where("created_on", ">=", dateRange.created_after);
+		if (filters.action) {
+			query.where("action", filters.action);
 		}
 
-		if (dateRange.created_before) {
-			query.where("created_on", "<=", dateRange.created_before);
+		if (filters.created_after) {
+			query.where("created_on", ">=", filters.created_after);
+		}
+
+		if (filters.created_before) {
+			query.where("created_on", "<=", filters.created_before);
 		}
 
 		if (typeof expand !== "undefined" && expand !== null) {

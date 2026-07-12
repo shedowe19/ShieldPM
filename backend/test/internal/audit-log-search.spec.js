@@ -66,4 +66,14 @@ describe("audit log search", () => {
 		expect(query.where).toHaveBeenCalledWith("created_on", ">=", "2026-07-12T08:00:00.000Z");
 		expect(query.where).toHaveBeenCalledWith("created_on", "<=", "2026-07-12T10:00:00.000Z");
 	});
+
+	it("filters audit events by an exact action before applying the result limit", async () => {
+		const query = createQuery();
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		mocks.query.mockReturnValue(query);
+
+		await internalAuditLog.getAll(access, undefined, undefined, { action: "deleted" });
+
+		expect(query.where).toHaveBeenCalledWith("action", "deleted");
+	});
 });

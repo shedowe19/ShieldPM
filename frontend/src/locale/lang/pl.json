@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "Typ obiektu",
 	"audit-log.csv.user": "Użytkownik",
 	"audit-log.export.csv": "Eksportuj CSV",
+	"audit-log.filter.all-actions": "Wszystkie działania",
 	"audit-log.filter.created-after": "Od",
 	"audit-log.filter.created-before": "Do",
 	"audit-log.hidden-demo": "Ukryte (wersja demonstracyjna)",

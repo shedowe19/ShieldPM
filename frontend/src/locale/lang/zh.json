@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "对象类型",
 	"audit-log.csv.user": "用户",
 	"audit-log.export.csv": "导出 CSV",
+	"audit-log.filter.all-actions": "所有操作",
 	"audit-log.filter.created-after": "开始时间",
 	"audit-log.filter.created-before": "结束时间",
 	"audit-log.hidden-demo": "已隐藏（演示）",

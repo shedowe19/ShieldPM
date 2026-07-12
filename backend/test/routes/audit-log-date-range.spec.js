@@ -65,6 +65,21 @@ describe("audit log date range route", () => {
 		expect(res.status).toHaveBeenCalledWith(200);
 	});
 
+	it("forwards a selected action to the audit-log service", async () => {
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		const res = createResponse(access);
+		mocks.getAll.mockResolvedValue([]);
+
+		await mocks.listHandler({ query: { action: "deleted" } }, res);
+
+		expect(mocks.getAll).toHaveBeenCalledWith(access, null, "", {
+			action: "deleted",
+			created_after: null,
+			created_before: null,
+		});
+		expect(res.status).toHaveBeenCalledWith(200);
+	});
+
 	it("rejects a creation range whose end precedes its start", async () => {
 		const res = createResponse({ can: vi.fn().mockResolvedValue(undefined) });
 

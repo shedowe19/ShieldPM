@@ -61,12 +61,16 @@ router
 					query: {
 						$ref: "common#/properties/query",
 					},
+					action: {
+						$ref: "common#/properties/query",
+					},
 					created_after: utcDateTimeSchema,
 					created_before: utcDateTimeSchema,
 				},
 			},
 			{
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
+				action: typeof req.query.action === "string" ? req.query.action : null,
 				query: typeof req.query.query === "string" ? req.query.query : null,
 				created_after: typeof req.query.created_after === "string" ? req.query.created_after : null,
 				created_before: typeof req.query.created_before === "string" ? req.query.created_before : null,
@@ -80,6 +84,7 @@ router
 		}
 
 		const rows = await internalAuditLog.getAll(res.locals.access, data.expand, data.query, {
+			...(data.action ? { action: data.action } : {}),
 			created_after: createdAfter,
 			created_before: createdBefore,
 		});

@@ -7,6 +7,7 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useAuditLogs } from "src/hooks";
 import { intl, T } from "src/locale";
 import { createAuditLogCsv } from "./audit-log-csv";
@@ -22,7 +23,15 @@ const toUtcDateTime = (value: string) => {
 	return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
+const allAuditLogActions = "__all_audit_log_actions__";
+const auditLogActions = ["created", "updated", "deleted", "enabled", "disabled", "renewed"] as const;
+
+const formatAuditLogAction = (action: (typeof auditLogActions)[number]) => {
+	return intl.formatMessage({ id: `object.event.${action}` }, { object: "" }).trim();
+};
+
 export default function TableWrapper() {
+	const [action, setAction] = useState("");
 	const [createdAfter, setCreatedAfter] = useState("");
 	const [createdBefore, setCreatedBefore] = useState("");
 	const [search, setSearch] = useState("");
@@ -30,6 +39,7 @@ export default function TableWrapper() {
 	const createdBeforeUtc = toUtcDateTime(createdBefore);
 	const query = search.trim();
 	const filters = {
+		...(action ? { action } : {}),
 		...(query ? { query } : {}),
 		...(createdAfterUtc ? { created_after: createdAfterUtc } : {}),
 		...(createdBeforeUtc ? { created_before: createdBeforeUtc } : {}),
@@ -97,6 +107,31 @@ export default function TableWrapper() {
 								value={search}
 								onChange={(event) => setSearch(event.target.value)}
 							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-xs text-muted-foreground" htmlFor="audit-log-action">
+								<T id="audit-log.csv.action" />
+							</Label>
+							<Select
+								value={action || allAuditLogActions}
+								onValueChange={(value) => setAction(value === allAuditLogActions ? "" : value)}
+							>
+								<SelectTrigger className="h-9 min-w-36" id="audit-log-action">
+									<SelectValue
+										placeholder={intl.formatMessage({ id: "audit-log.filter.all-actions" })}
+									/>
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={allAuditLogActions}>
+										<T id="audit-log.filter.all-actions" />
+									</SelectItem>
+									{auditLogActions.map((auditLogAction) => (
+										<SelectItem key={auditLogAction} value={auditLogAction}>
+											{formatAuditLogAction(auditLogAction)}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-xs text-muted-foreground" htmlFor="audit-log-created-after">

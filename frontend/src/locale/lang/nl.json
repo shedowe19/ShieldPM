@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "Objecttype",
 	"audit-log.csv.user": "Gebruiker",
 	"audit-log.export.csv": "CSV exporteren",
+	"audit-log.filter.all-actions": "Alle acties",
 	"audit-log.filter.created-after": "Vanaf",
 	"audit-log.filter.created-before": "Tot",
 	"audit-log.hidden-demo": "Verborgen (demo)",

@@ -172,6 +172,7 @@
 	"audit-log.csv.object-type": "객체 유형",
 	"audit-log.csv.user": "사용자",
 	"audit-log.export.csv": "CSV 내보내기",
+	"audit-log.filter.all-actions": "모든 작업",
 	"audit-log.filter.created-after": "시작",
 	"audit-log.filter.created-before": "종료",
 	"audit-log.hidden-demo": "숨김 (데모)",

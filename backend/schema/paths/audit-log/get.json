@@ -33,6 +33,14 @@
 		},
 		{
 			"in": "query",
+			"name": "action",
+			"description": "Exact audit action filter",
+			"schema": {
+				"$ref": "../../common.json#/properties/query"
+			}
+		},
+		{
+			"in": "query",
 			"name": "created_after",
 			"description": "Inclusive UTC creation timestamp in ISO 8601 format",
 			"schema": {

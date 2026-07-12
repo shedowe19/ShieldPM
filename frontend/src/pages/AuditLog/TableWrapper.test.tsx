@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TableWrapper from "./TableWrapper";
 
 const mocks = vi.hoisted(() => ({
+	selectOnValueChange: undefined as ((value: string) => void) | undefined,
 	useAuditLogs: vi.fn(),
 }));
 
@@ -32,6 +33,20 @@ vi.mock("src/components/ui/label", () => ({
 		</label>
 	),
 }));
+vi.mock("src/components/ui/select", () => ({
+	Select: ({ children, onValueChange }: PropsWithChildren<{ onValueChange: (value: string) => void }>) => {
+		mocks.selectOnValueChange = onValueChange;
+		return <div>{children}</div>;
+	},
+	SelectContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+	SelectItem: ({ children, value }: PropsWithChildren<{ value: string }>) => (
+		<button onClick={() => mocks.selectOnValueChange?.(value)} type="button" value={value}>
+			{children}
+		</button>
+	),
+	SelectTrigger: ({ children }: PropsWithChildren) => <div>{children}</div>,
+	SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
+}));
 
 vi.mock("src/hooks", () => ({
 	useAuditLogs: mocks.useAuditLogs,
@@ -58,6 +73,7 @@ describe("Audit log table loading", () => {
 		vi.restoreAllMocks();
 		vi.clearAllMocks();
 		vi.unstubAllGlobals();
+		mocks.selectOnValueChange = undefined;
 	});
 
 	it("shows a localized generic error when loading audit logs fails without a server message", () => {
@@ -130,6 +146,37 @@ describe("Audit log table loading", () => {
 				created_before: new Date("2026-07-12T10:00").toISOString(),
 			},
 		);
+	});
+
+	it("filters audit events by the selected action", () => {
+		mocks.useAuditLogs.mockReturnValue({
+			data: [{ id: 73 }],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+
+		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { action: "deleted" });
+	});
+
+	it("removes the action filter when all actions are selected again", () => {
+		mocks.useAuditLogs.mockReturnValue({
+			data: [{ id: 73 }],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+
+		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
+		fireEvent.click(screen.getByRole("button", { name: "Alle Aktionen" }));
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, {});
 	});
 
 	it("downloads the currently displayed audit events as a CSV", () => {
