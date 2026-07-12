@@ -38,17 +38,7 @@ export default defineConfig({
 						) {
 							return "vendor-react";
 						}
-						if (
-							[
-								"@radix-ui/",
-								"lucide-react/",
-								"@tabler/icons-react/",
-								"framer-motion/",
-								"motion-dom/",
-							].some((pkg) => id.includes(`node_modules/${pkg}`))
-						) {
-							return "vendor-ui";
-						}
+
 						if (
 							["@tanstack/", "zod/", "react-hook-form/", "@hookform/"].some((pkg) =>
 								id.includes(`node_modules/${pkg}`),
