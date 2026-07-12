@@ -118,7 +118,7 @@ const Analytics = () => {
 
 		const handleVisibilityChange = () => {
 			if (canPoll()) {
-				fetchLiveParams();
+				fetchIfEligible();
 			} else {
 				cancelPendingRequest();
 			}

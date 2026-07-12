@@ -404,6 +404,31 @@ describe("Analytics", () => {
 		expect(getAnalyticsStatus).toHaveBeenCalledTimes(1);
 	});
 
+	it("resumes recurring live-status polling after the document becomes visible", async () => {
+		vi.useFakeTimers();
+		Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+		Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+		await act(async () => {
+			document.dispatchEvent(new Event("visibilitychange"));
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+		});
+
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+		expect(getDbStats).toHaveBeenCalledOnce();
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(2_000);
+		});
+
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(2);
+		expect(getDbStats).toHaveBeenCalledTimes(2);
+	});
+
 	it("keeps the latest analytics data after a tab visibility refresh", async () => {
 		let resolveFirstSummary: ((value: Awaited<ReturnType<typeof getAnalyticsSummary>>) => void) | undefined;
 		const firstSummary = new Promise<Awaited<ReturnType<typeof getAnalyticsSummary>>>((resolve) => {
