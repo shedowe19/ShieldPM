@@ -92,12 +92,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 						<AlertDescription>{error?.message || userError?.message || "Unknown error"}</AlertDescription>
 					</Alert>
 				)}
-				{isLoading ||
-					(userIsLoading && (
-						<div className="p-8">
-							<Loading noLogo />
-						</div>
-					))}
+				{(isLoading || userIsLoading) && (
+					<div className="p-8">
+						<Loading noLogo />
+					</div>
+				)}
 				{!isLoading && !userIsLoading && data && currentUser && (
 					<Formik initialValues={createProxyHostInitialValues(data)} enableReinitialize onSubmit={onSubmit}>
 						{() => (
