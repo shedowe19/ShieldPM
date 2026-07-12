@@ -63,6 +63,13 @@ Mutationen werden für eingeschränkte Berechtigungen zusätzlich auf `owner_use
 erlaubt den Zugriff auf fremde Objekte. Erfolgreiche Erstellungen, Änderungen, Löschungen sowie Start-/Stopp-Aktionen
 werden über `internal/audit-log.js` protokolliert.
 
+### DDNS-Löschung
+
+Das Tool `delete_ddns_provider` delegiert ausschließlich an `internal/ddns-provider.js`. Der Service prüft
+`ddns_providers:delete` und löst den Provider anschließend über seinen autorisierten Leseweg auf. Dadurch greift bei
+eingeschränkter Sichtbarkeit derselbe `owner_user_id`-Scope wie bei Abfragen; fremde Provider werden weder gelöscht noch
+protokolliert. Administratoren mit Sichtbarkeit `all` behalten die Möglichkeit, fremde Provider zu verwalten.
+
 ## Verhalten
 
 1. UI oder ChatOps schickt eine Nachricht an `routes/ai.js`.

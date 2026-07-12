@@ -776,7 +776,7 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "delete_ddns_provider": {
-					await internalDdnsProvider.delete(call.args.id, access.token.getUserId(1));
+					await internalDdnsProvider.delete(access, { id: call.args.id });
 					result = `Deleted DDNS Provider ID: ${call.args.id}`;
 					break;
 				}

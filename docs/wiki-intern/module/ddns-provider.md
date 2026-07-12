@@ -18,6 +18,13 @@ Das DDNS-Modul nutzt Provider-spezifische Logik, um IP-Adressen zu aktualisieren
 - Enthält Logik für Anbieter wie Cloudflare, DuckDNS, Namecheap etc.
 - Standardisiert die Aktualisierungsanfragen für das Haupt-DDNS-Modul.
 
+## Berechtigungen und Ownership
+
+Die CRUD-Methoden in `backend/internal/ddns-provider.js` prüfen ihre jeweiligen Capabilities. Beim Löschen wird der
+Provider nach `ddns_providers:delete` über den autorisierten Leseweg aufgelöst. Damit begrenzt die
+`permission_visibility` bei eingeschränkten Rollen die Löschung auf `owner_user_id`; nur Sichtbarkeit `all` erlaubt das
+Löschen fremder Provider. Erst nach erfolgreicher autorisierter Löschung werden Audit-Log und GitOps-Auto-Push ausgelöst.
+
 ## Abhängigkeiten
 
 - Keine direkten (nutzt Node.js interne Module für Requests)

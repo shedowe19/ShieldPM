@@ -111,11 +111,7 @@ const internalDdnsProvider = {
 	delete: async (access, data) => {
 		await access.can("ddns_providers:delete", { id: data.id });
 
-		const provider = await /** @type {any} */ (DdnsProvider).query().findById(data.id);
-
-		if (!provider) {
-			throw new errs.NotFoundError("DDNS Provider not found");
-		}
+		const provider = await internalDdnsProvider.get(access, { id: data.id });
 
 		await /** @type {any} */ (DdnsProvider).query().deleteById(data.id);
 
