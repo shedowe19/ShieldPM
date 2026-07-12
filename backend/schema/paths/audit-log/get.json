@@ -82,6 +82,25 @@
 				"pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
 				"type": "string"
 			}
+		},
+		{
+			"in": "query",
+			"name": "page",
+			"description": "One-based page number; requesting page or limit returns items with pagination metadata",
+			"schema": {
+				"minimum": 1,
+				"type": "integer"
+			}
+		},
+		{
+			"in": "query",
+			"name": "limit",
+			"description": "Maximum items per requested page",
+			"schema": {
+				"maximum": 100,
+				"minimum": 1,
+				"type": "integer"
+			}
 		}
 	],
 	"responses": {
@@ -121,7 +140,38 @@
 						}
 					},
 					"schema": {
-						"$ref": "../../components/audit-log-list.json"
+						"oneOf": [
+							{
+								"$ref": "../../components/audit-log-list.json"
+							},
+							{
+								"properties": {
+									"items": {
+										"$ref": "../../components/audit-log-list.json"
+									},
+									"pagination": {
+										"properties": {
+											"limit": { "type": "integer" },
+											"page": { "type": "integer" },
+											"totalItems": { "type": "integer" },
+											"totalPages": { "type": "integer" }
+										},
+										"required": [
+											"limit",
+											"page",
+											"totalItems",
+											"totalPages"
+										],
+										"type": "object"
+									}
+								},
+								"required": [
+									"items",
+									"pagination"
+								],
+								"type": "object"
+							}
+						]
 					}
 				}
 			}

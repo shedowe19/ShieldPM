@@ -75,6 +75,12 @@ router
 					},
 					created_after: utcDateTimeSchema,
 					created_before: utcDateTimeSchema,
+					page: {
+						anyOf: [{ type: "null" }, { type: "integer", minimum: 1 }],
+					},
+					limit: {
+						anyOf: [{ type: "null" }, { type: "integer", minimum: 1, maximum: 100 }],
+					},
 				},
 			},
 			{
@@ -86,6 +92,8 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 				created_after: typeof req.query.created_after === "string" ? req.query.created_after : null,
 				created_before: typeof req.query.created_before === "string" ? req.query.created_before : null,
+				page: req.query.page ?? null,
+				limit: req.query.limit ?? null,
 			},
 		);
 		const createdAfter = validateUtcDateTime(data.created_after, "created_after");
@@ -94,15 +102,31 @@ router
 		if (createdAfter && createdBefore && createdBefore < createdAfter) {
 			throw new errs.ValidationError("created_before must not be earlier than created_after");
 		}
+		const hasPageParam = typeof req.query.page === "string";
+		const hasLimitParam = typeof req.query.limit === "string";
+		const pagination =
+			!hasPageParam && !hasLimitParam
+				? undefined
+				: {
+						limit: hasLimitParam ? data.limit : 100,
+						page: hasPageParam ? data.page : 1,
+					};
 
-		const rows = await internalAuditLog.getAll(res.locals.access, data.expand, data.query, {
+		const filters = {
 			...(data.action ? { action: data.action } : {}),
 			...(data.object_type ? { object_type: data.object_type } : {}),
 			...(data.user_id ? { user_id: data.user_id } : {}),
 			...(data.object_id ? { object_id: data.object_id } : {}),
 			created_after: createdAfter,
 			created_before: createdBefore,
-		});
+		};
+		const rows = await internalAuditLog.getAll(
+			res.locals.access,
+			data.expand,
+			data.query,
+			filters,
+			...(pagination ? [pagination] : []),
+		);
 		res.status(200).send(rows);
 	});
 

@@ -1,4 +1,4 @@
-import { IconDownload, IconHistory, IconSearch } from "@tabler/icons-react";
+import { IconChevronLeft, IconChevronRight, IconDownload, IconHistory, IconSearch } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { LoadingPage } from "src/components";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { useAuditLogs } from "src/hooks";
+import { useAuditLogsPage } from "src/hooks";
 import { intl, T } from "src/locale";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { createAuditLogCsv } from "./audit-log-csv";
@@ -56,6 +56,7 @@ export default function TableWrapper() {
 	const [search, setSearch] = useState("");
 	const [userId, setUserId] = useState("");
 	const [objectId, setObjectId] = useState("");
+	const [page, setPage] = useState(1);
 	const createdAfterUtc = toUtcDateTime(createdAfter);
 	const createdBeforeUtc = toUtcDateTime(createdBefore);
 	const userIdFilter = toPositiveId(userId);
@@ -70,9 +71,15 @@ export default function TableWrapper() {
 		...(createdAfterUtc ? { created_after: createdAfterUtc } : {}),
 		...(createdBeforeUtc ? { created_before: createdBeforeUtc } : {}),
 	};
-	const { isFetching, isLoading, isError, error, data } = useAuditLogs(["user"], {}, filters);
+	const { isFetching, isLoading, isError, error, data } = useAuditLogsPage(["user"], {
+		...filters,
+		limit: 100,
+		page,
+	});
+	const rows = data?.items ?? [];
+	const pagination = data?.pagination;
 	const downloadCsv = () => {
-		const csv = createAuditLogCsv(data ?? [], {
+		const csv = createAuditLogCsv(rows, {
 			action: intl.formatMessage({ id: "audit-log.csv.action" }),
 			createdOn: intl.formatMessage({ id: "audit-log.csv.created-on" }),
 			metadata: intl.formatMessage({ id: "audit-log.csv.metadata" }),
@@ -111,11 +118,11 @@ export default function TableWrapper() {
 					<IconHistory className="h-6 w-6" />
 					<T id="auditlogs" />
 				</CardTitle>
-				{data?.length || Object.keys(filters).length > 0 ? (
+				{rows.length || Object.keys(filters).length > 0 ? (
 					<div className="flex w-full flex-wrap items-end gap-2 xl:w-auto xl:flex-nowrap">
 						<Button
 							className="h-9"
-							disabled={!data?.length}
+							disabled={!rows.length}
 							onClick={downloadCsv}
 							type="button"
 							variant="outline"
@@ -131,7 +138,10 @@ export default function TableWrapper() {
 								placeholder={intl.formatMessage({ id: "search.placeholder" })}
 								className="h-9 pl-8"
 								value={search}
-								onChange={(event) => setSearch(event.target.value)}
+								onChange={(event) => {
+									setPage(1);
+									setSearch(event.target.value);
+								}}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -141,7 +151,10 @@ export default function TableWrapper() {
 							<Select
 								name="audit-log-action"
 								value={action || allAuditLogActions}
-								onValueChange={(value) => setAction(value === allAuditLogActions ? "" : value)}
+								onValueChange={(value) => {
+									setPage(1);
+									setAction(value === allAuditLogActions ? "" : value);
+								}}
 							>
 								<SelectTrigger className="h-9 min-w-36" id="audit-log-action">
 									<SelectValue
@@ -167,7 +180,10 @@ export default function TableWrapper() {
 							<Select
 								name="audit-log-object-type"
 								value={objectType || allAuditLogObjectTypes}
-								onValueChange={(value) => setObjectType(value === allAuditLogObjectTypes ? "" : value)}
+								onValueChange={(value) => {
+									setPage(1);
+									setObjectType(value === allAuditLogObjectTypes ? "" : value);
+								}}
 							>
 								<SelectTrigger className="h-9 min-w-36" id="audit-log-object-type">
 									<SelectValue
@@ -193,7 +209,10 @@ export default function TableWrapper() {
 							<Input
 								id="audit-log-user-id"
 								min="1"
-								onChange={(event) => setUserId(event.target.value)}
+								onChange={(event) => {
+									setPage(1);
+									setUserId(event.target.value);
+								}}
 								step="1"
 								type="number"
 								value={userId}
@@ -206,7 +225,10 @@ export default function TableWrapper() {
 							<Input
 								id="audit-log-object-id"
 								min="1"
-								onChange={(event) => setObjectId(event.target.value)}
+								onChange={(event) => {
+									setPage(1);
+									setObjectId(event.target.value);
+								}}
 								step="1"
 								type="number"
 								value={objectId}
@@ -221,7 +243,10 @@ export default function TableWrapper() {
 								type="datetime-local"
 								step="60"
 								value={createdAfter}
-								onChange={(event) => setCreatedAfter(event.target.value)}
+								onChange={(event) => {
+									setPage(1);
+									setCreatedAfter(event.target.value);
+								}}
 							/>
 						</div>
 						<div className="space-y-1">
@@ -233,14 +258,44 @@ export default function TableWrapper() {
 								type="datetime-local"
 								step="60"
 								value={createdBefore}
-								onChange={(event) => setCreatedBefore(event.target.value)}
+								onChange={(event) => {
+									setPage(1);
+									setCreatedBefore(event.target.value);
+								}}
 							/>
 						</div>
 					</div>
 				) : null}
 			</CardHeader>
 			<CardContent>
-				<Table data={data ?? []} isFetching={isFetching} onSelectItem={showEventDetailsModal} />
+				<Table data={rows} isFetching={isFetching} onSelectItem={showEventDetailsModal} />
+				{pagination && pagination.totalPages > 1 ? (
+					<div className="mt-4 flex items-center justify-end gap-2" aria-live="polite">
+						<Button
+							aria-label={intl.formatMessage({ id: "pagination.previous" })}
+							disabled={page === 1}
+							onClick={() => setPage(page - 1)}
+							size="icon"
+							type="button"
+							variant="outline"
+						>
+							<IconChevronLeft className="h-4 w-4" />
+						</Button>
+						<span className="text-sm text-muted-foreground">
+							<T id="pagination.page-info" data={{ current: page, total: pagination.totalPages }} />
+						</span>
+						<Button
+							aria-label={intl.formatMessage({ id: "pagination.next" })}
+							disabled={page === pagination.totalPages}
+							onClick={() => setPage(page + 1)}
+							size="icon"
+							type="button"
+							variant="outline"
+						>
+							<IconChevronRight className="h-4 w-4" />
+						</Button>
+					</div>
+				) : null}
 			</CardContent>
 		</Card>
 	);

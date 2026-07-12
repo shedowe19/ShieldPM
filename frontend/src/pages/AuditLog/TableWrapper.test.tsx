@@ -6,7 +6,8 @@ import TableWrapper from "./TableWrapper";
 
 const mocks = vi.hoisted(() => ({
 	selectOnValueChange: new Map<string, (value: string) => void>(),
-	useAuditLogs: vi.fn(),
+	tableProps: null as unknown,
+	useAuditLogsPage: vi.fn(),
 }));
 
 vi.mock("src/components", () => ({
@@ -63,15 +64,34 @@ vi.mock("src/components/ui/select", () => ({
 }));
 
 vi.mock("src/hooks", () => ({
-	useAuditLogs: mocks.useAuditLogs,
+	useAuditLogsPage: mocks.useAuditLogsPage,
 }));
 
 vi.mock("./lazy", () => ({ showEventDetailsModal: vi.fn() }));
-vi.mock("./Table", () => ({ default: () => <div /> }));
+vi.mock("./Table", () => ({
+	default: (props: unknown) => {
+		mocks.tableProps = props;
+		return <div />;
+	},
+}));
+
+const mockAuditLogPage = (items: unknown[]) => {
+	mocks.useAuditLogsPage.mockReturnValue({
+		data: {
+			items,
+			pagination: { limit: 100, page: 1, totalItems: items.length, totalPages: 1 },
+		},
+		error: null,
+		isError: false,
+		isFetching: false,
+		isLoading: false,
+	});
+};
 
 describe("Audit log table loading", () => {
 	beforeEach(async () => {
-		mocks.useAuditLogs.mockReturnValue({
+		mocks.tableProps = null;
+		mocks.useAuditLogsPage.mockReturnValue({
 			data: undefined,
 			error: { message: "" },
 			isError: true,
@@ -98,29 +118,21 @@ describe("Audit log table loading", () => {
 		expect(screen.queryByText("Error")).not.toBeInTheDocument();
 	});
 
-	it("searches audit events by forwarding the entered query to the audit-log hook", () => {
-		mocks.useAuditLogs.mockReturnValue({
-			data: [{ id: 73 }],
-			error: null,
-			isError: false,
-			isFetching: false,
-			isLoading: false,
-		});
+	it("searches audit events by forwarding the entered query with the first result page", () => {
+		mockAuditLogPage([{ id: 73 }]);
 
 		render(<TableWrapper />);
 
 		fireEvent.change(screen.getByPlaceholderText("Suchen..."), { target: { value: "proxy-host" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { query: "proxy-host" });
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			limit: 100,
+			page: 1,
+			query: "proxy-host",
+		});
 	});
 
 	it("keeps spaces in the search field so multi-word audit queries remain searchable", () => {
-		mocks.useAuditLogs.mockReturnValue({
-			data: [{ id: 73 }],
-			error: null,
-			isError: false,
-			isFetching: false,
-			isLoading: false,
-		});
+		mockAuditLogPage([{ id: 73 }]);
 
 		render(<TableWrapper />);
 
@@ -128,89 +140,93 @@ describe("Audit log table loading", () => {
 		fireEvent.change(search, { target: { value: "proxy " } });
 		expect(search).toHaveValue("proxy ");
 		fireEvent.change(search, { target: { value: "proxy host" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { query: "proxy host" });
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			limit: 100,
+			page: 1,
+			query: "proxy host",
+		});
 	});
 
-	it("filters audit events by their selected creation window", () => {
-		mocks.useAuditLogs.mockReturnValue({
-			data: [{ id: 73 }],
-			error: null,
-			isError: false,
-			isFetching: false,
-			isLoading: false,
-		});
+	it("filters audit events by their selected creation window from the first page", () => {
+		mockAuditLogPage([{ id: 73 }]);
 
 		render(<TableWrapper />);
 
 		fireEvent.change(screen.getByLabelText("Von"), { target: { value: "2026-07-12T08:00" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(
-			["user"],
-			{},
-			{
-				created_after: new Date("2026-07-12T08:00").toISOString(),
-			},
-		);
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			created_after: new Date("2026-07-12T08:00").toISOString(),
+			limit: 100,
+			page: 1,
+		});
 
 		fireEvent.change(screen.getByLabelText("Bis"), { target: { value: "2026-07-12T10:00" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(
-			["user"],
-			{},
-			{
-				created_after: new Date("2026-07-12T08:00").toISOString(),
-				created_before: new Date("2026-07-12T10:00").toISOString(),
-			},
-		);
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			created_after: new Date("2026-07-12T08:00").toISOString(),
+			created_before: new Date("2026-07-12T10:00").toISOString(),
+			limit: 100,
+			page: 1,
+		});
 	});
 
-	it("filters audit events by the selected action", () => {
-		mocks.useAuditLogs.mockReturnValue({
-			data: [{ id: 73 }],
-			error: null,
-			isError: false,
-			isFetching: false,
-			isLoading: false,
-		});
+	it("filters audit events by the selected action from the first page", () => {
+		mockAuditLogPage([{ id: 73 }]);
 
 		render(<TableWrapper />);
 
 		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { action: "deleted" });
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			action: "deleted",
+			limit: 100,
+			page: 1,
+		});
 	});
 
-	it("removes the action filter when all actions are selected again", () => {
-		mocks.useAuditLogs.mockReturnValue({
-			data: [{ id: 73 }],
-			error: null,
-			isError: false,
-			isFetching: false,
-			isLoading: false,
-		});
+	it("removes the action filter while preserving the first result page", () => {
+		mockAuditLogPage([{ id: 73 }]);
 
 		render(<TableWrapper />);
 
 		fireEvent.click(screen.getByRole("button", { name: "gelöscht" }));
 		fireEvent.click(screen.getByRole("button", { name: "Alle Aktionen" }));
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, {});
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1 });
 	});
 
-	it("filters audit events by the selected object type", () => {
-		mocks.useAuditLogs.mockReturnValue({
-			data: [{ id: 73 }],
-			error: null,
-			isError: false,
-			isFetching: false,
-			isLoading: false,
-		});
+	it("filters audit events by the selected object type from the first page", () => {
+		mockAuditLogPage([{ id: 73 }]);
 
 		render(<TableWrapper />);
 
 		fireEvent.click(screen.getByRole("button", { name: "Proxy Host" }));
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { object_type: "proxy-host" });
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			limit: 100,
+			object_type: "proxy-host",
+			page: 1,
+		});
 	});
 
-	it("filters audit events by the entered user and object identifiers", () => {
-		mocks.useAuditLogs.mockReturnValue({
-			data: [{ id: 73 }],
+	it("filters audit events by the entered user and object identifiers from the first page", () => {
+		mockAuditLogPage([{ id: 73 }]);
+
+		render(<TableWrapper />);
+
+		fireEvent.change(screen.getByLabelText("Benutzer-ID"), { target: { value: "7" } });
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1, user_id: 7 });
+
+		fireEvent.change(screen.getByLabelText("Objekt-ID"), { target: { value: "42" } });
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], {
+			limit: 100,
+			object_id: 42,
+			page: 1,
+			user_id: 7,
+		});
+	});
+
+	it("renders one audit-log page at a time and lets administrators request the next page", () => {
+		mocks.useAuditLogsPage.mockReturnValue({
+			data: {
+				items: Array.from({ length: 100 }, (_, index) => ({ id: index + 1 })),
+				pagination: { limit: 100, page: 1, totalItems: 101, totalPages: 2 },
+			},
 			error: null,
 			isError: false,
 			isFetching: false,
@@ -219,11 +235,10 @@ describe("Audit log table loading", () => {
 
 		render(<TableWrapper />);
 
-		fireEvent.change(screen.getByLabelText("Benutzer-ID"), { target: { value: "7" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { user_id: 7 });
-
-		fireEvent.change(screen.getByLabelText("Objekt-ID"), { target: { value: "42" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { object_id: 42, user_id: 7 });
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1 });
+		expect((mocks.tableProps as { data: { id: number }[] }).data).toHaveLength(100);
+		fireEvent.click(screen.getByRole("button", { name: "Nächste Seite" }));
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 2 });
 	});
 
 	it("downloads the currently displayed audit events as a CSV", () => {
@@ -231,24 +246,18 @@ describe("Audit log table loading", () => {
 		const revokeObjectURL = vi.fn();
 		vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
 		vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-		mocks.useAuditLogs.mockReturnValue({
-			data: [
-				{
-					action: "updated",
-					createdOn: "2026-07-12T08:00:00.000Z",
-					id: 73,
-					meta: {},
-					modifiedOn: "2026-07-12T08:00:00.000Z",
-					objectId: 42,
-					objectType: "proxy_host",
-					userId: 5,
-				},
-			],
-			error: null,
-			isError: false,
-			isFetching: false,
-			isLoading: false,
-		});
+		mockAuditLogPage([
+			{
+				action: "updated",
+				createdOn: "2026-07-12T08:00:00.000Z",
+				id: 73,
+				meta: {},
+				modifiedOn: "2026-07-12T08:00:00.000Z",
+				objectId: 42,
+				objectType: "proxy_host",
+				userId: 5,
+			},
+		]);
 
 		render(<TableWrapper />);
 		fireEvent.click(screen.getByRole("button", { name: "CSV exportieren" }));

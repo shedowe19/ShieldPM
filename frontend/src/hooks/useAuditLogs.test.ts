@@ -2,13 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	getAuditLogs: vi.fn(),
+	getAuditLogsPage: vi.fn(),
 	useQuery: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({ useQuery: mocks.useQuery }));
-vi.mock("src/api/backend", () => ({ getAuditLogs: mocks.getAuditLogs }));
+vi.mock("src/api/backend", () => ({ getAuditLogs: mocks.getAuditLogs, getAuditLogsPage: mocks.getAuditLogsPage }));
 
-import { useAuditLogs } from "./useAuditLogs";
+import { useAuditLogs, useAuditLogsPage } from "./useAuditLogs";
 
 type AuditLogsQueryOptions = {
 	enabled?: boolean;
@@ -43,5 +44,22 @@ describe("useAuditLogs", () => {
 			created_before,
 			query: "proxy-host",
 		});
+	});
+
+	it("keeps each audit-log page and its filters in a separate React Query cache entry", async () => {
+		mocks.getAuditLogsPage.mockResolvedValue({
+			items: [],
+			pagination: { limit: 100, page: 2, totalItems: 101, totalPages: 2 },
+		});
+
+		useAuditLogsPage(["user"], { action: "deleted", limit: 100, page: 2 }, { enabled: false });
+
+		expect(getQueryOptions().queryKey).toEqual([
+			"audit-logs",
+			{ action: "deleted", expand: ["user"], limit: 100, page: 2 },
+		]);
+		expect(getQueryOptions().enabled).toBe(false);
+		await getQueryOptions().queryFn();
+		expect(mocks.getAuditLogsPage).toHaveBeenCalledWith(["user"], { action: "deleted", limit: 100, page: 2 });
 	});
 });

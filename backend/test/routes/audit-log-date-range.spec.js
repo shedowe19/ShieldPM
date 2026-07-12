@@ -111,6 +111,44 @@ describe("audit log date range route", () => {
 		expect(res.status).toHaveBeenCalledWith(200);
 	});
 
+	it("forwards requested audit-log pagination after validating its bounds", async () => {
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		const res = createResponse(access);
+		const pagedRows = {
+			items: [{ id: 101 }],
+			pagination: { limit: 100, page: 2, totalItems: 101, totalPages: 2 },
+		};
+		mocks.getAll.mockResolvedValue(pagedRows);
+
+		await mocks.listHandler({ query: { limit: "100", page: "2" } }, res);
+
+		expect(mocks.getAll).toHaveBeenCalledWith(
+			access,
+			null,
+			"",
+			{ created_after: null, created_before: null },
+			{ limit: 100, page: 2 },
+		);
+		expect(res.status).toHaveBeenCalledWith(200);
+		expect(res.send).toHaveBeenCalledWith(pagedRows);
+	});
+
+	it("uses the default page size when only an audit-log page is requested", async () => {
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		const res = createResponse(access);
+		mocks.getAll.mockResolvedValue([]);
+
+		await mocks.listHandler({ query: { page: "2" } }, res);
+
+		expect(mocks.getAll).toHaveBeenCalledWith(
+			access,
+			null,
+			"",
+			{ created_after: null, created_before: null },
+			{ limit: 100, page: 2 },
+		);
+	});
+
 	it("rejects a creation range whose end precedes its start", async () => {
 		const res = createResponse({ can: vi.fn().mockResolvedValue(undefined) });
 

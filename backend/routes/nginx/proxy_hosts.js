@@ -53,12 +53,14 @@ router
 				query: typeof req.query.query === "string" ? req.query.query : null,
 			},
 		);
+		const hasPageParam = typeof req.query.page === "string";
+		const hasLimitParam = typeof req.query.limit === "string";
 		const pagination =
-			data.page === null && data.limit === null
+			!hasPageParam && !hasLimitParam
 				? undefined
 				: {
-						limit: data.limit ?? 100,
-						page: data.page ?? 1,
+						limit: hasLimitParam ? data.limit : 100,
+						page: hasPageParam ? data.page : 1,
 					};
 		const rows = await internalProxyHost.getAll(res.locals.access, data.expand, data.query, pagination);
 		res.status(200).send(rows);

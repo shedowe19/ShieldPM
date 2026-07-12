@@ -16,17 +16,15 @@ const internalAuditLog = {
 	 * @param   {number}  [filters.object_id]
 	 * @param   {String}  [filters.created_after]
 	 * @param   {String}  [filters.created_before]
+	 * @param   {Object}  [pagination]
+	 * @param   {number}  pagination.limit
+	 * @param   {number}  pagination.page
 	 * @returns {Promise}
 	 */
-	getAll: async (access, expand, searchQuery, filters = {}) => {
+	getAll: async (access, expand, searchQuery, filters = {}, pagination = undefined) => {
 		await access.can("auditlog:list");
 
-		const query = auditLogModel
-			.query()
-			.orderBy("created_on", "DESC")
-			.orderBy("id", "DESC")
-			.limit(100)
-			.allowGraph("[user]");
+		const query = auditLogModel.query().orderBy("created_on", "DESC").orderBy("id", "DESC").allowGraph("[user]");
 
 		// Search the complete audit context so administrators can locate an event by its action, resource type, or metadata.
 		if (typeof searchQuery === "string" && searchQuery.length > 0) {
@@ -66,7 +64,21 @@ const internalAuditLog = {
 			query.withGraphFetched(`[${expand.join(", ")}]`);
 		}
 
-		return await query;
+		if (pagination) {
+			const pageResult = await query.page(pagination.page - 1, pagination.limit);
+
+			return {
+				items: pageResult.results,
+				pagination: {
+					limit: pagination.limit,
+					page: pagination.page,
+					totalItems: pageResult.total,
+					totalPages: Math.ceil(pageResult.total / pagination.limit),
+				},
+			};
+		}
+
+		return await query.limit(100);
 	},
 
 	/**

@@ -11,11 +11,12 @@ vi.mock("../../models/audit-log.js", () => ({ default: { query: mocks.query } })
 
 import internalAuditLog from "../../internal/audit-log.js";
 
-const createQuery = () => {
+const createQuery = (pageResult = { results: [], total: 0 }) => {
 	const query = Object.assign(Promise.resolve([]), {
 		allowGraph: vi.fn(),
 		limit: vi.fn(),
 		orderBy: vi.fn(),
+		page: vi.fn(),
 		where: vi.fn(),
 		withGraphFetched: vi.fn(),
 	});
@@ -23,6 +24,7 @@ const createQuery = () => {
 	for (const method of ["allowGraph", "limit", "orderBy", "where", "withGraphFetched"]) {
 		query[method].mockReturnValue(query);
 	}
+	query.page.mockResolvedValue(pageResult);
 
 	return query;
 };
@@ -96,5 +98,27 @@ describe("audit log search", () => {
 
 		expect(query.where).toHaveBeenCalledWith("user_id", 7);
 		expect(query.where).toHaveBeenCalledWith("object_id", 42);
+	});
+
+	it("returns a filtered audit-log page with the total result count", async () => {
+		const pageRows = [{ id: 101 }];
+		const query = createQuery({ results: pageRows, total: 101 });
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		mocks.query.mockReturnValue(query);
+
+		const result = await internalAuditLog.getAll(
+			access,
+			undefined,
+			"proxy-host",
+			{ action: "deleted" },
+			{ limit: 100, page: 2 },
+		);
+
+		expect(query.where).toHaveBeenCalledWith("action", "deleted");
+		expect(query.page).toHaveBeenCalledWith(1, 100);
+		expect(result).toEqual({
+			items: pageRows,
+			pagination: { limit: 100, page: 2, totalItems: 101, totalPages: 2 },
+		});
 	});
 });

@@ -68,6 +68,19 @@ describe("proxy host list route pagination contract", () => {
 		});
 	});
 
+	it("does not enable pagination when absent query parameters are coerced to zero", async () => {
+		const legacyRows = [{ id: 99 }];
+		mocks.validator.mockResolvedValue({ expand: null, limit: 0, page: 0, query: null });
+		mocks.getAll.mockResolvedValue(legacyRows);
+		const access = {};
+		const res = createResponse(access);
+
+		await mocks.listHandler({ query: {} }, res);
+
+		expect(mocks.getAll).toHaveBeenCalledWith(access, null, null, undefined);
+		expect(res.send).toHaveBeenCalledWith(legacyRows);
+	});
+
 	it("preserves the array response for callers that do not request pagination", async () => {
 		const legacyRows = [{ id: 99 }];
 		mocks.validator.mockResolvedValue({ expand: null, limit: null, page: null, query: null });
