@@ -176,6 +176,7 @@
 	"audit-log.filter.all-object-types": "Все типы объектов",
 	"audit-log.filter.created-after": "С",
 	"audit-log.filter.created-before": "По",
+	"audit-log.filter.user-id": "Идентификатор пользователя",
 	"audit-log.filter.wireguard-peer": "Пир WireGuard",
 	"audit-log.filter.wireguard-settings": "Настройки WireGuard",
 	"audit-log.hidden-demo": "Скрыто (демонстрация)",

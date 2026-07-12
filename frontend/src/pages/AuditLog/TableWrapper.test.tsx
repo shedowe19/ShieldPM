@@ -208,6 +208,24 @@ describe("Audit log table loading", () => {
 		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { object_type: "proxy-host" });
 	});
 
+	it("filters audit events by the entered user and object identifiers", () => {
+		mocks.useAuditLogs.mockReturnValue({
+			data: [{ id: 73 }],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+
+		fireEvent.change(screen.getByLabelText("Benutzer-ID"), { target: { value: "7" } });
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { user_id: 7 });
+
+		fireEvent.change(screen.getByLabelText("Objekt-ID"), { target: { value: "42" } });
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { object_id: 42, user_id: 7 });
+	});
+
 	it("downloads the currently displayed audit events as a CSV", () => {
 		const createObjectURL = vi.fn((_blob: Blob) => "blob:audit-log-export");
 		const revokeObjectURL = vi.fn();

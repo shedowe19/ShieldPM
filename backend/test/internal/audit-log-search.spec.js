@@ -86,4 +86,15 @@ describe("audit log search", () => {
 
 		expect(query.where).toHaveBeenCalledWith("object_type", "proxy-host");
 	});
+
+	it("filters audit events by exact user and object identifiers before applying the result limit", async () => {
+		const query = createQuery();
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		mocks.query.mockReturnValue(query);
+
+		await internalAuditLog.getAll(access, undefined, undefined, { object_id: 42, user_id: 7 });
+
+		expect(query.where).toHaveBeenCalledWith("user_id", 7);
+		expect(query.where).toHaveBeenCalledWith("object_id", 42);
+	});
 });

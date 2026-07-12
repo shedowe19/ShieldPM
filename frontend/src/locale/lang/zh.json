@@ -176,6 +176,7 @@
 	"audit-log.filter.all-object-types": "所有对象类型",
 	"audit-log.filter.created-after": "开始时间",
 	"audit-log.filter.created-before": "结束时间",
+	"audit-log.filter.user-id": "用户 ID",
 	"audit-log.filter.wireguard-peer": "WireGuard 对等端",
 	"audit-log.filter.wireguard-settings": "WireGuard 设置",
 	"audit-log.hidden-demo": "已隐藏（演示）",

@@ -67,6 +67,12 @@ router
 					object_type: {
 						$ref: "common#/properties/query",
 					},
+					user_id: {
+						$ref: "common#/properties/user_id",
+					},
+					object_id: {
+						$ref: "common#/properties/id",
+					},
 					created_after: utcDateTimeSchema,
 					created_before: utcDateTimeSchema,
 				},
@@ -75,6 +81,8 @@ router
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 				action: typeof req.query.action === "string" ? req.query.action : null,
 				object_type: typeof req.query.object_type === "string" ? req.query.object_type : null,
+				...(typeof req.query.user_id === "string" ? { user_id: req.query.user_id } : {}),
+				...(typeof req.query.object_id === "string" ? { object_id: req.query.object_id } : {}),
 				query: typeof req.query.query === "string" ? req.query.query : null,
 				created_after: typeof req.query.created_after === "string" ? req.query.created_after : null,
 				created_before: typeof req.query.created_before === "string" ? req.query.created_before : null,
@@ -90,6 +98,8 @@ router
 		const rows = await internalAuditLog.getAll(res.locals.access, data.expand, data.query, {
 			...(data.action ? { action: data.action } : {}),
 			...(data.object_type ? { object_type: data.object_type } : {}),
+			...(data.user_id ? { user_id: data.user_id } : {}),
+			...(data.object_id ? { object_id: data.object_id } : {}),
 			created_after: createdAfter,
 			created_before: createdBefore,
 		});

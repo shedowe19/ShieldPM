@@ -49,6 +49,22 @@
 		},
 		{
 			"in": "query",
+			"name": "user_id",
+			"description": "Exact audit actor user identifier filter",
+			"schema": {
+				"$ref": "../../common.json#/properties/user_id"
+			}
+		},
+		{
+			"in": "query",
+			"name": "object_id",
+			"description": "Exact audit object identifier filter",
+			"schema": {
+				"$ref": "../../common.json#/properties/id"
+			}
+		},
+		{
+			"in": "query",
 			"name": "created_after",
 			"description": "Inclusive UTC creation timestamp in ISO 8601 format",
 			"schema": {

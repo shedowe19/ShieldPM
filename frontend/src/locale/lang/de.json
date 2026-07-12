@@ -176,6 +176,7 @@
 	"audit-log.filter.all-object-types": "Alle Objekttypen",
 	"audit-log.filter.created-after": "Von",
 	"audit-log.filter.created-before": "Bis",
+	"audit-log.filter.user-id": "Benutzer-ID",
 	"audit-log.filter.wireguard-peer": "WireGuard-Peer",
 	"audit-log.filter.wireguard-settings": "WireGuard-Einstellungen",
 	"audit-log.hidden-demo": "Ausgeblendet (Demo)",

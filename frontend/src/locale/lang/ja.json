@@ -176,6 +176,7 @@
 	"audit-log.filter.all-object-types": "すべてのオブジェクトタイプ",
 	"audit-log.filter.created-after": "開始",
 	"audit-log.filter.created-before": "終了",
+	"audit-log.filter.user-id": "ユーザー ID",
 	"audit-log.filter.wireguard-peer": "WireGuard ピア",
 	"audit-log.filter.wireguard-settings": "WireGuard 設定",
 	"audit-log.hidden-demo": "非表示（デモ）",

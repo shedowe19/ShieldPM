@@ -176,6 +176,7 @@
 	"audit-log.filter.all-object-types": "Alle objecttypen",
 	"audit-log.filter.created-after": "Vanaf",
 	"audit-log.filter.created-before": "Tot",
+	"audit-log.filter.user-id": "Gebruikers-ID",
 	"audit-log.filter.wireguard-peer": "WireGuard-peer",
 	"audit-log.filter.wireguard-settings": "WireGuard-instellingen",
 	"audit-log.hidden-demo": "Verborgen (demo)",

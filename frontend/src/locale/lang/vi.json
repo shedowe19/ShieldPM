@@ -176,6 +176,7 @@
 	"audit-log.filter.all-object-types": "Tất cả loại đối tượng",
 	"audit-log.filter.created-after": "Từ",
 	"audit-log.filter.created-before": "Đến",
+	"audit-log.filter.user-id": "Mã người dùng",
 	"audit-log.filter.wireguard-peer": "Ngang hàng WireGuard",
 	"audit-log.filter.wireguard-settings": "Cài đặt WireGuard",
 	"audit-log.hidden-demo": "Đã ẩn (bản demo)",

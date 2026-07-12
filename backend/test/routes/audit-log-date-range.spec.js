@@ -95,6 +95,22 @@ describe("audit log date range route", () => {
 		expect(res.status).toHaveBeenCalledWith(200);
 	});
 
+	it("forwards validated user and object identifiers to the audit-log service", async () => {
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		const res = createResponse(access);
+		mocks.getAll.mockResolvedValue([]);
+
+		await mocks.listHandler({ query: { object_id: "42", user_id: "7" } }, res);
+
+		expect(mocks.getAll).toHaveBeenCalledWith(access, null, "", {
+			created_after: null,
+			created_before: null,
+			object_id: 42,
+			user_id: 7,
+		});
+		expect(res.status).toHaveBeenCalledWith(200);
+	});
+
 	it("rejects a creation range whose end precedes its start", async () => {
 		const res = createResponse({ can: vi.fn().mockResolvedValue(undefined) });
 

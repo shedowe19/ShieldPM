@@ -24,6 +24,11 @@ const toUtcDateTime = (value: string) => {
 	return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
+const toPositiveId = (value: string) => {
+	const id = Number(value);
+	return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+};
+
 const allAuditLogActions = "__all_audit_log_actions__";
 const allAuditLogObjectTypes = "__all_audit_log_object_types__";
 const auditLogActions = ["created", "updated", "deleted", "enabled", "disabled", "renewed"] as const;
@@ -49,12 +54,18 @@ export default function TableWrapper() {
 	const [createdAfter, setCreatedAfter] = useState("");
 	const [createdBefore, setCreatedBefore] = useState("");
 	const [search, setSearch] = useState("");
+	const [userId, setUserId] = useState("");
+	const [objectId, setObjectId] = useState("");
 	const createdAfterUtc = toUtcDateTime(createdAfter);
 	const createdBeforeUtc = toUtcDateTime(createdBefore);
+	const userIdFilter = toPositiveId(userId);
+	const objectIdFilter = toPositiveId(objectId);
 	const query = search.trim();
 	const filters = {
 		...(action ? { action } : {}),
 		...(objectType ? { object_type: objectType } : {}),
+		...(userIdFilter ? { user_id: userIdFilter } : {}),
+		...(objectIdFilter ? { object_id: objectIdFilter } : {}),
 		...(query ? { query } : {}),
 		...(createdAfterUtc ? { created_after: createdAfterUtc } : {}),
 		...(createdBeforeUtc ? { created_before: createdBeforeUtc } : {}),
@@ -174,6 +185,32 @@ export default function TableWrapper() {
 									))}
 								</SelectContent>
 							</Select>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-xs text-muted-foreground" htmlFor="audit-log-user-id">
+								<T id="audit-log.filter.user-id" />
+							</Label>
+							<Input
+								id="audit-log-user-id"
+								min="1"
+								onChange={(event) => setUserId(event.target.value)}
+								step="1"
+								type="number"
+								value={userId}
+							/>
+						</div>
+						<div className="space-y-1">
+							<Label className="text-xs text-muted-foreground" htmlFor="audit-log-object-id">
+								<T id="audit-log.csv.object-id" />
+							</Label>
+							<Input
+								id="audit-log-object-id"
+								min="1"
+								onChange={(event) => setObjectId(event.target.value)}
+								step="1"
+								type="number"
+								value={objectId}
+							/>
 						</div>
 						<div className="space-y-1">
 							<Label className="text-xs text-muted-foreground" htmlFor="audit-log-created-after">

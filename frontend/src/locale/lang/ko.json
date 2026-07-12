@@ -176,6 +176,7 @@
 	"audit-log.filter.all-object-types": "모든 객체 유형",
 	"audit-log.filter.created-after": "시작",
 	"audit-log.filter.created-before": "종료",
+	"audit-log.filter.user-id": "사용자 ID",
 	"audit-log.filter.wireguard-peer": "WireGuard 피어",
 	"audit-log.filter.wireguard-settings": "WireGuard 설정",
 	"audit-log.hidden-demo": "숨김 (데모)",
