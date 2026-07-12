@@ -52,7 +52,14 @@ try {
 
 // get all translations used in frontend code
 const tmpobj = tmp.fileSync({ postfix: ".json" });
-spawnSync("yarn", ["formatjs", "extract", "'src/**/*.tsx'", "--out-file", tmpobj.name]);
+const extraction = spawnSync("yarn", ["formatjs", "extract", "src/**/*.tsx", "--out-file", tmpobj.name], {
+	encoding: "utf8",
+});
+if (extraction.error || extraction.status !== 0) {
+	const detail = extraction.error?.message || extraction.stderr?.trim() || `exit code ${extraction.status ?? "unknown"}`;
+	console.error(`Locale extraction failed: ${detail}`);
+	process.exit(1);
+}
 
 const allLocalesInProject = require(tmpobj.name);
 
