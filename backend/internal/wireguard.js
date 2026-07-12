@@ -788,12 +788,17 @@ PersistentKeepalive = ${peer.persistent_keepalive}
 
 	/**
 	 * Refresh peer statuses from live WireGuard data
+	 * @param {number} [ownerUserId] Restrict refreshes to one owner's peers
 	 */
-	refreshStatuses: async () => {
+	refreshStatuses: async (ownerUserId) => {
 		if (!isInterfaceUp()) return;
 
 		const statuses = parsePeerStatuses();
-		const peers = await WireguardPeer.query().where("is_deleted", 0).andWhere("status", "!=", 0);
+		const query = WireguardPeer.query().where("is_deleted", 0).andWhere("status", "!=", 0);
+		if (ownerUserId !== undefined) {
+			query.where("owner_user_id", ownerUserId);
+		}
+		const peers = await query;
 
 		for (const peer of peers) {
 			const status = statuses.get(peer.client_public_key);

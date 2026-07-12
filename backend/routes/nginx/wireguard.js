@@ -67,11 +67,22 @@ router.get("/", async (_req, res) => {
  * Returns live status of all peers
  */
 router.get("/status", async (_req, res) => {
-	await res.locals.access.can("wireguard_peers:list");
+	const accessData = await res.locals.access.can("wireguard_peers:list");
+	const ownerUserId = accessData.permission_visibility === "all" ? null : res.locals.access.token.getUserId(1);
 
 	try {
-		await internalWireguard.refreshStatuses();
-		const peers = await WireguardPeer.query().where("is_deleted", 0).orderBy("name", "ASC");
+		if (ownerUserId === null) {
+			await internalWireguard.refreshStatuses();
+		} else {
+			await internalWireguard.refreshStatuses(ownerUserId);
+		}
+		const query = WireguardPeer.query().where("is_deleted", 0).orderBy("name", "ASC");
+
+		if (ownerUserId !== null) {
+			query.where("owner_user_id", ownerUserId);
+		}
+
+		const peers = await query;
 
 		const sanitizedPeers = peers.map((p) => {
 			const { client_private_key, preshared_key, ...rest } = p;

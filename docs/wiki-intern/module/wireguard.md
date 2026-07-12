@@ -20,6 +20,9 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 
 - Verwaltet WireGuard-Interface und Peers
 - Generiert Konfigurationen für Server und Clients
+- Der Status-Endpunkt begrenzt Live-Daten bei eingeschränkter `wireguard_peers:list`-Sichtbarkeit auf eigene Peers.
+  Die vor dem Abruf ausgeführte Statusaktualisierung erhält denselben Owner-Scope und verändert damit keine fremden
+  Peer-Metadaten. Nur Berechtigungen mit Sichtbarkeit `all` erhalten und aktualisieren Statusdaten fremder Peers.
 - Die Servereinstellungen sind in `WireguardSettingsCard` gekapselt. Nach erfolgreichem Speichern invalidiert sie sowohl
   Einstellungen als auch Peer-Daten; die Listenansicht behält damit ihren Peer- und Dialogzustand unabhängig.
 - Der Konfigurationsdialog beschreibt seinen Zweck für Screenreader und lokalisiert QR-Code-Hinweis, Alternativtext und Schließen-Aktion in allen 13 Sprachen.
