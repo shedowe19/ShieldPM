@@ -165,6 +165,8 @@
 	"analytics.total-requests": "総リクエスト数",
 	"analytics.traffic-overview": "{range} のトラフィック概要。",
 	"auditlogs": "監査ログ",
+	"audit-log.hidden-demo": "非表示（デモ）",
+	"audit-log.metadata": "メタデータ",
 	"authType": "認証タイプ",
 	"authentikHost": "Authentikホスト",
 	"auto": "自動",

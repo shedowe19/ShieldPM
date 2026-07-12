@@ -165,6 +165,8 @@
 	"analytics.total-requests": "总请求数",
 	"analytics.traffic-overview": "{range} 的流量概览。",
 	"auditlogs": "审计日志",
+	"audit-log.hidden-demo": "已隐藏（演示）",
+	"audit-log.metadata": "元数据",
 	"authType": "认证类型",
 	"authentikHost": "Authentik 主机",
 	"auto": "自动",

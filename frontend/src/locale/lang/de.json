@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Gesamtanfragen",
 	"analytics.traffic-overview": "Verkehrsübersicht für {range}.",
 	"auditlogs": "Protokoll",
+	"audit-log.hidden-demo": "Ausgeblendet (Demo)",
+	"audit-log.metadata": "Metadaten",
 	"authType": "Authentifizierungstyp",
 	"authentikHost": "Authentik-Host",
 	"auto": "Automatisch",

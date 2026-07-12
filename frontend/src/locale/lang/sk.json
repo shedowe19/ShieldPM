@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Celkový počet požiadaviek",
 	"analytics.traffic-overview": "Prehľad prevádzky za {range}.",
 	"auditlogs": "Záznamy auditu",
+	"audit-log.hidden-demo": "Skryté (ukážka)",
+	"audit-log.metadata": "Metaúdaje",
 	"authType": "Typ overenia",
 	"authentikHost": "Hostiteľ Authentik",
 	"auto": "Auto",

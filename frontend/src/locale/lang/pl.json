@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Wszystkie żądania",
 	"analytics.traffic-overview": "Przegląd ruchu dla {range}.",
 	"auditlogs": "Logi audytu",
+	"audit-log.hidden-demo": "Ukryte (wersja demonstracyjna)",
+	"audit-log.metadata": "Metadane",
 	"authType": "Typ uwierzytelniania",
 	"authentikHost": "Host Authentik",
 	"auto": "Auto",

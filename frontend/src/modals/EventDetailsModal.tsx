@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { useAuditLog, useHealth } from "src/hooks";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 
 const showEventDetailsModal = (id: number) => {
 	EasyModal.show(EventDetailsModal, { id });
@@ -32,7 +32,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 		for (const key in masked) {
 			if (sensitiveKeys.includes(key.toLowerCase())) {
-				masked[key] = "Hidden (Demo)";
+				masked[key] = intl.formatMessage({ id: "audit-log.hidden-demo" });
 			} else {
 				masked[key] = maskSensitiveData(masked[key]);
 			}
@@ -45,8 +45,10 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
 				{!isLoading && error && (
 					<Alert variant="destructive" className="mb-4">
-						<AlertTitle>Error</AlertTitle>
-						<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+						<AlertTitle>
+							<T id="error.title" />
+						</AlertTitle>
+						<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 					</Alert>
 				)}
 				{isLoading && <Loading noLogo />}
@@ -70,7 +72,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 								<div className="flex items-center justify-between">
 									<h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
 										<IconCode className="h-4 w-4" />
-										Metadata
+										<T id="audit-log.metadata" />
 									</h4>
 								</div>
 								<div className="rounded-lg border bg-muted/50 overflow-hidden shadow-inner">

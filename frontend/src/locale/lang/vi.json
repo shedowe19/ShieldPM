@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Tổng yêu cầu",
 	"analytics.traffic-overview": "Tổng quan lưu lượng truy cập trong {range}.",
 	"auditlogs": "Nhật ký kiểm tra",
+	"audit-log.hidden-demo": "Đã ẩn (bản demo)",
+	"audit-log.metadata": "Siêu dữ liệu",
 	"authType": "Loại xác thực",
 	"authentikHost": "Máy chủ Authentik",
 	"auto": "Tự động",
