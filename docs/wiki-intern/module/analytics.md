@@ -17,6 +17,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - `backend/routes/nginx/analytics.js` (3 KB) — Nginx-Analytics-Routen
 - `frontend/src/pages/Analytics/` — UI-Seite
 - `frontend/src/pages/Analytics/AnalyticsFilters.tsx` — Host- und Zeitraumfilter der Seitenkopfzeile
+- `frontend/src/pages/Analytics/useAnalyticsData.ts` — Summary-/Zeitreihenabfrage mit Sichtbarkeits-, Online- und Backoff-Policy
 - `frontend/src/pages/Analytics/AnalyticsMap.tsx` — viewport-gesteuerter Lazy-Loader für die Weltkarte
 - `frontend/src/pages/Analytics/AnalyticsMapContent.tsx` — ausgelagerte Kartenvisualisierung
 - `frontend/src/components/Analytics/` — Analytics-Visualisierungen
@@ -29,6 +30,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
 - Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.
 - Jede neuere Analytics-Aktualisierung verdrängt noch laufende Abfragen, sodass Wechsel von Host, Zeitraum oder Sichtbarkeit keine aktuellen Kennzahlen oder Zeitreihen mit langsamen Altantworten überschreiben können.
+- `useAnalyticsData` kapselt diese Summary-/Zeitreihenabfrage einschließlich der Zeitformatierung für Charts; die Seite behält nur Auswahl, Layout und Live-Status-Abfrage.
 - Bei ausgeblendeter Browser-Registerkarte oder Offline-Status pausiert die Seite ihre Analytics- und Live-Statusabfragen. Laufende Abfragen werden dabei für veraltet erklärt, damit sie den unmittelbaren Refresh beim erneuten Sichtbarwerden oder nach einer Wiederverbindung nicht blockieren oder überschreiben können.
 - Die manuelle Analytics-Abfrage nutzt dafür dieselbe zentrale Sichtbarkeits- und Online-Prüfung wie die TanStack-Query-Polling-Hooks. Dadurch bleibt die Berechtigung zum nächsten Poll in allen Pfaden konsistent. Nach einem Fehler plant die Summary-/Zeitreihenabfrage ihren nächsten Lauf mit exponentiellem Backoff über `getPollingInterval`; ein erfolgreicher Lauf setzt das Grundintervall zurück.
 - Datenbank-Statistiken werden über `getDbStats` und damit den zentralen API-Client geladen. Sie folgen dadurch der gemeinsamen Cookie-/CSRF-Übergabe und der einheitlichen 401-Behandlung.
