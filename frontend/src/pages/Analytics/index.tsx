@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Loading } from "src/components";
 import { useHealth, useProxyHosts } from "src/hooks";
 import { T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
-import { AnalyticsFilters } from "./AnalyticsFilters";
+import { AnalyticsFilters, analyticsRanges } from "./AnalyticsFilters";
 import { AnalyticsGeography } from "./AnalyticsGeography";
 import { AnalyticsKpis } from "./AnalyticsKpis";
 import { AnalyticsRecentRequests } from "./AnalyticsRecentRequests";
@@ -13,19 +14,40 @@ import { useAnalyticsLiveMetrics } from "./useAnalyticsLiveMetrics";
 
 const Analytics = () => {
 	const { data: hosts, isLoading: hostsLoading } = useProxyHosts();
-	const [selectedHostId, setSelectedHostId] = useState<string>("");
-	const [range, setRange] = useState("24h");
+	const [searchParams, setSearchParams] = useSearchParams();
+	const requestedHostId = searchParams.get("host") ?? "";
+	const requestedRange = searchParams.get("range") ?? "";
+	const selectedHostId = hosts?.some((host) => String(host.id) === requestedHostId) ? requestedHostId : "";
+	const range = analyticsRanges.includes(requestedRange) ? requestedRange : "24h";
 	const health = useHealth();
 	const isDemo = health.data?.demo;
 	const { loading, series, summary } = useAnalyticsData(selectedHostId, range);
 	const { dbStats, networkSpeed } = useAnalyticsLiveMetrics();
 
-	// Select first host by default
 	useEffect(() => {
-		if (hosts?.length && !selectedHostId) {
-			setSelectedHostId(String(hosts[0].id));
+		if (!hosts?.length) {
+			return;
 		}
-	}, [hosts, selectedHostId]);
+
+		const nextHostId = selectedHostId || String(hosts[0].id);
+		if (nextHostId === requestedHostId && range === requestedRange) {
+			return;
+		}
+
+		setSearchParams(new URLSearchParams({ host: nextHostId, range }), { replace: true });
+	}, [hosts, range, requestedHostId, requestedRange, selectedHostId, setSearchParams]);
+
+	const updateSearchParams = (nextFilters: { hostId?: string; range?: string }) => {
+		const hostId = nextFilters.hostId ?? selectedHostId;
+		const nextRange = nextFilters.range ?? range;
+		const params = new URLSearchParams();
+
+		if (hostId) {
+			params.set("host", hostId);
+		}
+		params.set("range", nextRange);
+		setSearchParams(params, { replace: true });
+	};
 
 	if ((loading && !summary) || hostsLoading) {
 		return (
@@ -49,8 +71,8 @@ const Analytics = () => {
 				</div>
 				<AnalyticsFilters
 					hosts={hosts}
-					onRangeChange={setRange}
-					onSelectedHostIdChange={setSelectedHostId}
+					onRangeChange={(nextRange) => updateSearchParams({ range: nextRange })}
+					onSelectedHostIdChange={(hostId) => updateSearchParams({ hostId })}
 					range={range}
 					selectedHostId={selectedHostId}
 				/>

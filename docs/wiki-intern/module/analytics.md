@@ -16,6 +16,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - `backend/routes/analytics.js` (8 KB) — API-Routen
 - `backend/routes/nginx/analytics.js` (3 KB) — Nginx-Analytics-Routen
 - `frontend/src/pages/Analytics/` — UI-Seite
+- `frontend/src/pages/Analytics/index.tsx` — URL-gesteuerte Auswahl von Host und Zeitraum
 - `frontend/src/pages/Analytics/AnalyticsFilters.tsx` — Host- und Zeitraumfilter der Seitenkopfzeile
 - `frontend/src/pages/Analytics/useAnalyticsData.ts` — Summary-/Zeitreihenabfrage mit Sichtbarkeits-, Online- und Backoff-Policy
 - `frontend/src/pages/Analytics/useAnalyticsLiveMetrics.ts` — Live-Netzwerk- und Datenbankstatus mit Sichtbarkeits-, Online- und Backoff-Policy
@@ -30,6 +31,11 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - GoAccess für erweiterte Analyse auf Port `:91`
 - Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
 - Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.
+- Die aktuelle Host- und Zeitraum-Auswahl steht als `host` und `range` in der Analytics-URL. Aufgerufene Links stellen damit
+  denselben Untersuchungszeitraum wieder her; Änderungen der vorhandenen Filter ersetzen den URL-Eintrag, statt bei jeder
+  Auswahl einen neuen Browserverlaufseintrag zu erzeugen. Nur die vier unterstützten Zeiträume (`1h`, `24h`, `7d`, `30d`)
+  und in der Hostliste sichtbare Hosts werden übernommen. Fehlende oder ungültige Werte werden auf den ersten sichtbaren Host
+  und 24 Stunden vereinheitlicht; die vorhandenen serverseitigen Zugriffsprüfungen der Analytics-Endpunkte bleiben maßgeblich.
 - Jede neuere Analytics-Aktualisierung verdrängt noch laufende Abfragen, sodass Wechsel von Host, Zeitraum oder Sichtbarkeit keine aktuellen Kennzahlen oder Zeitreihen mit langsamen Altantworten überschreiben können.
 - `useAnalyticsData` kapselt diese Summary-/Zeitreihenabfrage einschließlich der Zeitformatierung für Charts. `useAnalyticsLiveMetrics` kapselt die unabhängigen Live-Abfragen für Netzwerkdurchsatz und Datenbankkennzahlen; die Seite behält nur Auswahl und Layout.
 - Bei ausgeblendeter Browser-Registerkarte oder Offline-Status pausiert die Seite ihre Analytics- und Live-Statusabfragen. Laufende Abfragen werden dabei für veraltet erklärt, damit sie den unmittelbaren Refresh beim erneuten Sichtbarwerden oder nach einer Wiederverbindung nicht blockieren oder überschreiben können.

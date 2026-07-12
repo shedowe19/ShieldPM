@@ -14,7 +14,7 @@ interface Props {
 	selectedHostId: string;
 }
 
-const ranges = ["1h", "24h", "7d", "30d"];
+export const analyticsRanges = ["1h", "24h", "7d", "30d"];
 
 export const AnalyticsFilters = ({ hosts, onRangeChange, onSelectedHostIdChange, range, selectedHostId }: Props) => (
 	<div className="flex items-center space-x-2">
@@ -33,7 +33,7 @@ export const AnalyticsFilters = ({ hosts, onRangeChange, onSelectedHostIdChange,
 		</Select>
 
 		<div className="flex bg-muted rounded-md p-1">
-			{ranges.map((currentRange) => (
+			{analyticsRanges.map((currentRange) => (
 				<Button
 					key={currentRange}
 					variant={range === currentRange ? "default" : "ghost"}

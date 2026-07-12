@@ -1,4 +1,6 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, render as testingLibraryRender, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { getAnalyticsSeries, getAnalyticsSummary, getDbStats } from "src/api/backend";
 import { getAnalyticsStatus } from "src/api/backend/getAnalyticsStatus";
 import { changeLocale } from "src/locale";
@@ -53,6 +55,19 @@ vi.mock("recharts", () => ({
 	YAxis: () => null,
 }));
 
+const LocationProbe = () => {
+	const location = useLocation();
+	return <output data-testid="analytics-location">{location.search}</output>;
+};
+
+const render = (ui: ReactElement, initialEntry = "/analytics") =>
+	testingLibraryRender(
+		<MemoryRouter initialEntries={[initialEntry]}>
+			{ui}
+			<LocationProbe />
+		</MemoryRouter>,
+	);
+
 let onLineDescriptor: PropertyDescriptor | undefined;
 let visibilityStateDescriptor: PropertyDescriptor | undefined;
 
@@ -93,6 +108,16 @@ afterEach(async () => {
 });
 
 describe("Analytics", () => {
+	it("restores and shares the selected host and range in the URL", async () => {
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />, "/analytics?host=1&range=7d");
+
+		await waitFor(() => expect(getAnalyticsSummary).toHaveBeenCalledWith(1, "7d"));
+		fireEvent.click(screen.getByRole("button", { name: "30d" }));
+		await waitFor(() => expect(screen.getByTestId("analytics-location")).toHaveTextContent("?host=1&range=30d"));
+	});
+
 	it("loads live and database stats through the shared API client", async () => {
 		vi.mocked(getDbStats).mockResolvedValue({
 			connections: { max: 10, open: 2, used: 2 },
