@@ -19,6 +19,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - `frontend/src/modals/AccessListModal.tsx` — Dialog für Erstellung und Bearbeitung
 - `frontend/src/modals/AccessListFormTabs.tsx` — gemeinsame Tab-Navigation mit Formik-gebundenem SSO-Status
 - `frontend/src/modals/AccessListModalSubmission.ts` — serialisiert den Formularzustand zum API-Payload
+- `frontend/src/modals/AccessListModalValidation.ts` — prüft den Formularzustand vor der Übermittlung
 - `frontend/src/modals/AccessListDetailsTab.tsx` — Formik-gebundener Details- und Optionen-Tab
 - `frontend/src/modals/AccessListSsoTab.tsx` — Formik-gebundene Authentik-, OAuth2-Proxy- und OIDC-Felder
 
@@ -37,6 +38,8 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - Die Submission-Serialisierung übernimmt die aktive Authentifizierungsart in `meta`, entfernt ungenutzte OAuth2- bzw.
   OIDC-Felder und sendet bei deaktiviertem externen mTLS keinen Zertifikatstext. Sie reduziert Clients und Credentials
   auf die editierbaren API-Felder.
+- Die ausgelagerte Formularvalidierung behält die bisherige Prüfungsreihenfolge und die bestehenden Fehlermeldungen für
+  leere Listen, unvollständige SSO- und mTLS-Konfigurationen sowie doppelte Benutzernamen bei.
 
 ## Abhängigkeiten
 

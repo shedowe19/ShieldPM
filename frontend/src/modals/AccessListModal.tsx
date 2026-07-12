@@ -3,18 +3,19 @@ import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import type { AccessList, AccessListItem } from "src/api/backend";
+import type { AccessList } from "src/api/backend";
 import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { useAccessList, useSetAccessList } from "src/hooks";
-import { intl, T } from "src/locale";
+import { T } from "src/locale";
 import { showObjectSuccess } from "src/notifications";
-import { ACCESS_LIST_AUTH_TYPE, AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, UI_COLOR } from "src/types/enums";
 import AccessListFormTabs from "./AccessListFormTabs";
 import { type AccessListFormValues, createAccessListInitialValues } from "./AccessListModalFormValues";
 import { createAccessListPayload } from "./AccessListModalSubmission";
+import { validateAccessListForm } from "./AccessListModalValidation";
 
 const showAccessListModal = (id: number | "new") => {
 	EasyModal.show(AccessListModal, { id });
@@ -30,51 +31,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const validate = (values: AccessListFormValues): string | null => {
-		// either Auths or Clients or SSO must be defined
-		if (
-			values.items?.length === 0 &&
-			values.clients?.length === 0 &&
-			!values.authentikHost &&
-			values.authType !== ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY &&
-			values.authType !== ACCESS_LIST_AUTH_TYPE.OIDC &&
-			!values.mtlsEnabled
-		) {
-			return intl.formatMessage({ id: "error.access.at-least-one" });
-		}
-
-		if (values.authType === ACCESS_LIST_AUTH_TYPE.OIDC) {
-			if (!values.oidcClientId) return "Client ID is required";
-			if (!values.oidcClientSecret) return "Client Secret is required";
-			if (!values.oidcDiscoveryUrl) return "Discovery URL is required";
-		}
-
-		if (values.authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY) {
-			if (!values.oauth2ClientId) return "Client ID is required";
-			if (!values.oauth2ClientSecret) return "Client Secret is required";
-			if (!values.oauth2CookieSecret) return "Cookie Secret is required";
-			if (values.oauth2Provider === "oidc" && !values.oauth2OidcIssuerUrl)
-				return "OIDC Issuer URL is required for OIDC provider";
-		}
-
-		if (values.mtlsEnabled && !values.mtlsUseInternal && !values.mtlsContent) {
-			return intl.formatMessage({ id: "error.access.mtls_content_required" });
-		}
-
-		// ensure the items don't contain the same username twice
-		const usernames = (values.items || []).map((i: AccessListItem) => i.username);
-		const uniqueUsernames = Array.from(new Set(usernames));
-		if (usernames.length !== uniqueUsernames.length) {
-			return intl.formatMessage({ id: "error.access.duplicate-usernames" });
-		}
-
-		return null;
-	};
-
 	const onSubmit = async (values: AccessListFormValues, { setSubmitting }: FormikHelpers<AccessListFormValues>) => {
 		if (isSubmitting) return;
 
-		const vErr = validate(values);
+		const vErr = validateAccessListForm(values);
 		if (vErr) {
 			setErrorMsg(vErr);
 			return;
