@@ -322,7 +322,7 @@ describe("Analytics", () => {
 		}
 	});
 
-	it("does not overlap live status refreshes while a previous refresh is pending", async () => {
+	it("keeps live status polling while a database statistics refresh is pending", async () => {
 		vi.useFakeTimers();
 		let resolveDbStats: ((value: Awaited<ReturnType<typeof getDbStats>>) => void) | undefined;
 		let resolveLiveStatus: ((value: Awaited<ReturnType<typeof getAnalyticsStatus>>) => void) | undefined;
@@ -358,7 +358,8 @@ describe("Analytics", () => {
 		await act(async () => {
 			await vi.advanceTimersByTimeAsync(6000);
 		});
-		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(4);
+		expect(getDbStats).toHaveBeenCalledOnce();
 
 		if (!resolveDbStats) {
 			throw new Error("Deferred database statistics resolver is unavailable");
@@ -378,7 +379,7 @@ describe("Analytics", () => {
 			await vi.advanceTimersByTimeAsync(2000);
 		});
 
-		expect(getAnalyticsStatus).toHaveBeenCalledTimes(2);
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(5);
 	});
 
 	it("refreshes analytics after the document becomes visible", async () => {
@@ -426,7 +427,7 @@ describe("Analytics", () => {
 		});
 
 		expect(getAnalyticsStatus).toHaveBeenCalledTimes(2);
-		expect(getDbStats).toHaveBeenCalledTimes(2);
+		expect(getDbStats).toHaveBeenCalledOnce();
 	});
 
 	it("keeps the latest analytics data after a tab visibility refresh", async () => {

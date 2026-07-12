@@ -6,51 +6,48 @@ import { getPollingInterval, isPollingAllowed } from "src/hooks/pollingPolicy";
 const canPoll = () =>
 	isPollingAllowed({ isDocumentVisible: document.visibilityState === "visible", isOnline: navigator.onLine });
 
+const LIVE_STATUS_INTERVAL_MS = 2_000;
+const DB_STATS_INTERVAL_MS = 30_000;
+
 export const useAnalyticsLiveMetrics = () => {
 	const [networkSpeed, setNetworkSpeed] = useState(0);
 	const [dbStats, setDbStats] = useState<DbStats | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
-		let latestRequestId = 0;
+		let latestLiveRequestId = 0;
+		let latestDbStatsRequestId = 0;
 		let liveRequestInFlight: number | undefined;
-		let timeout: ReturnType<typeof setTimeout> | undefined;
+		let dbStatsRequestInFlight: number | undefined;
+		let liveTimeout: ReturnType<typeof setTimeout> | undefined;
+		let dbStatsTimeout: ReturnType<typeof setTimeout> | undefined;
 
-		const clearScheduledFetch = () => {
-			if (timeout !== undefined) {
-				clearTimeout(timeout);
-				timeout = undefined;
+		const clearScheduledLiveFetch = () => {
+			if (liveTimeout !== undefined) {
+				clearTimeout(liveTimeout);
+				liveTimeout = undefined;
+			}
+		};
+		const clearScheduledDbStatsFetch = () => {
+			if (dbStatsTimeout !== undefined) {
+				clearTimeout(dbStatsTimeout);
+				dbStatsTimeout = undefined;
 			}
 		};
 
-		const fetchLiveParams = async (): Promise<boolean | undefined> => {
+		const fetchNetworkSpeed = async (): Promise<boolean | undefined> => {
 			if (liveRequestInFlight !== undefined) return;
-			const requestId = ++latestRequestId;
+			const requestId = ++latestLiveRequestId;
 			liveRequestInFlight = requestId;
-			let succeeded = true;
 			try {
-				try {
-					const data = await getAnalyticsStatus();
-					if (cancelled || requestId !== latestRequestId) return;
-					setNetworkSpeed(data.totalSec || 0);
-				} catch (_err) {
-					// quiet failure
-					succeeded = false;
-				}
-
-				if (cancelled || requestId !== latestRequestId) return;
-
-				try {
-					const data = await getDbStats();
-					if (cancelled || requestId !== latestRequestId) return;
-					setDbStats(data);
-				} catch (_err) {
-					// quiet failure
-					succeeded = false;
-				}
-
-				if (cancelled || requestId !== latestRequestId) return;
-				return succeeded;
+				const data = await getAnalyticsStatus();
+				if (cancelled || requestId !== latestLiveRequestId) return;
+				setNetworkSpeed(data.totalSec || 0);
+				return true;
+			} catch (_err) {
+				// quiet failure
+				if (cancelled || requestId !== latestLiveRequestId) return;
+				return false;
 			} finally {
 				if (liveRequestInFlight === requestId) {
 					liveRequestInFlight = undefined;
@@ -58,39 +55,88 @@ export const useAnalyticsLiveMetrics = () => {
 			}
 		};
 
-		const scheduleNextFetch = (failureCount: number) => {
-			clearScheduledFetch();
+		const fetchDbStatistics = async (): Promise<boolean | undefined> => {
+			if (dbStatsRequestInFlight !== undefined) return;
+			const requestId = ++latestDbStatsRequestId;
+			dbStatsRequestInFlight = requestId;
+			try {
+				const data = await getDbStats();
+				if (cancelled || requestId !== latestDbStatsRequestId) return;
+				setDbStats(data);
+				return true;
+			} catch (_err) {
+				// quiet failure
+				if (cancelled || requestId !== latestDbStatsRequestId) return;
+				return false;
+			} finally {
+				if (dbStatsRequestInFlight === requestId) {
+					dbStatsRequestInFlight = undefined;
+				}
+			}
+		};
+
+		const scheduleNextLiveFetch = (failureCount: number) => {
+			clearScheduledLiveFetch();
 			const interval = getPollingInterval({
-				baseIntervalMs: 2_000,
+				baseIntervalMs: LIVE_STATUS_INTERVAL_MS,
 				failureCount,
 				isDocumentVisible: document.visibilityState === "visible",
 				isOnline: navigator.onLine,
 			});
 			if (interval !== false) {
-				timeout = setTimeout(() => {
-					void fetchAndSchedule(failureCount);
+				liveTimeout = setTimeout(() => {
+					void fetchNetworkSpeedAndSchedule(failureCount);
 				}, interval);
 			}
 		};
 
-		const fetchAndSchedule = async (failureCount: number) => {
+		const scheduleNextDbStatsFetch = (failureCount: number) => {
+			clearScheduledDbStatsFetch();
+			const interval = getPollingInterval({
+				baseIntervalMs: DB_STATS_INTERVAL_MS,
+				failureCount,
+				isDocumentVisible: document.visibilityState === "visible",
+				isOnline: navigator.onLine,
+				maxIntervalMs: DB_STATS_INTERVAL_MS * 8,
+			});
+			if (interval !== false) {
+				dbStatsTimeout = setTimeout(() => {
+					void fetchDbStatisticsAndSchedule(failureCount);
+				}, interval);
+			}
+		};
+
+		const fetchNetworkSpeedAndSchedule = async (failureCount: number) => {
 			if (!canPoll()) return;
-			const succeeded = await fetchLiveParams();
+			const succeeded = await fetchNetworkSpeed();
 			if (!cancelled && succeeded !== undefined) {
-				scheduleNextFetch(succeeded ? 0 : failureCount + 1);
+				scheduleNextLiveFetch(succeeded ? 0 : failureCount + 1);
+			}
+		};
+
+		const fetchDbStatisticsAndSchedule = async (failureCount: number) => {
+			if (!canPoll()) return;
+			const succeeded = await fetchDbStatistics();
+			if (!cancelled && succeeded !== undefined) {
+				scheduleNextDbStatsFetch(succeeded ? 0 : failureCount + 1);
 			}
 		};
 
 		const fetchIfEligible = () => {
-			clearScheduledFetch();
+			clearScheduledLiveFetch();
+			clearScheduledDbStatsFetch();
 			if (canPoll()) {
-				void fetchAndSchedule(0);
+				void fetchNetworkSpeedAndSchedule(0);
+				void fetchDbStatisticsAndSchedule(0);
 			}
 		};
 		const cancelPendingRequest = () => {
-			latestRequestId += 1;
+			latestLiveRequestId += 1;
+			latestDbStatsRequestId += 1;
 			liveRequestInFlight = undefined;
-			clearScheduledFetch();
+			dbStatsRequestInFlight = undefined;
+			clearScheduledLiveFetch();
+			clearScheduledDbStatsFetch();
 		};
 
 		const handleVisibilityChange = () => {
@@ -110,7 +156,9 @@ export const useAnalyticsLiveMetrics = () => {
 		return () => {
 			cancelled = true;
 			liveRequestInFlight = undefined;
-			clearScheduledFetch();
+			dbStatsRequestInFlight = undefined;
+			clearScheduledLiveFetch();
+			clearScheduledDbStatsFetch();
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 			window.removeEventListener("online", handleOnline);
 			window.removeEventListener("offline", handleOffline);

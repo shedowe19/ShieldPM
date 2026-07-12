@@ -48,7 +48,7 @@ describe("useAnalyticsLiveMetrics", () => {
 		vi.useRealTimers();
 	});
 
-	it("refreshes both metrics when visible again and resumes the two-second live interval", async () => {
+	it("keeps network throughput on a two-second interval while refreshing database stats every 30 seconds", async () => {
 		const { result } = renderHook(() => useAnalyticsLiveMetrics());
 
 		expect(getAnalyticsStatus).not.toHaveBeenCalled();
@@ -67,10 +67,75 @@ describe("useAnalyticsLiveMetrics", () => {
 		expect(getDbStats).toHaveBeenCalledOnce();
 
 		await act(async () => {
-			await vi.advanceTimersByTimeAsync(2_000);
+			await vi.advanceTimersByTimeAsync(29_999);
+		});
+		expect(getDbStats).toHaveBeenCalledOnce();
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(1);
+		});
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(16);
+		expect(getDbStats).toHaveBeenCalledTimes(2);
+	});
+
+	it("keeps reactivated polling schedules when stale requests fail after reconnecting", async () => {
+		let rejectInitialLiveStatus: ((reason?: unknown) => void) | undefined;
+		let rejectInitialDbStats: ((reason?: unknown) => void) | undefined;
+		const initialLiveStatus = new Promise<Awaited<ReturnType<typeof getAnalyticsStatus>>>((_, reject) => {
+			rejectInitialLiveStatus = reject;
+		});
+		const initialDbStats = new Promise<Awaited<ReturnType<typeof getDbStats>>>((_, reject) => {
+			rejectInitialDbStats = reject;
+		});
+		Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+		vi.mocked(getAnalyticsStatus)
+			.mockReturnValueOnce(initialLiveStatus)
+			.mockResolvedValue({ rxSec: 1024, totalSec: 2048, txSec: 1024 });
+		vi.mocked(getDbStats)
+			.mockReturnValueOnce(initialDbStats)
+			.mockResolvedValue({
+				connections: { max: 10, open: 2, used: 2 },
+				engine: "sqlite",
+				io: { reads: 3, writes: 4 },
+				size: 2048,
+			});
+
+		renderHook(() => useAnalyticsLiveMetrics());
+		expect(getAnalyticsStatus).toHaveBeenCalledOnce();
+		expect(getDbStats).toHaveBeenCalledOnce();
+
+		Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+		window.dispatchEvent(new Event("offline"));
+		Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+		await act(async () => {
+			window.dispatchEvent(new Event("online"));
+			await Promise.resolve();
+			await Promise.resolve();
 		});
 
 		expect(getAnalyticsStatus).toHaveBeenCalledTimes(2);
 		expect(getDbStats).toHaveBeenCalledTimes(2);
+		const rejectLiveStatus = rejectInitialLiveStatus;
+		const rejectDbStats = rejectInitialDbStats;
+		if (!rejectLiveStatus || !rejectDbStats) {
+			throw new Error("Stale request rejecter is unavailable");
+		}
+
+		await act(async () => {
+			rejectLiveStatus(new Error("offline"));
+			rejectDbStats(new Error("offline"));
+			await Promise.resolve();
+			await Promise.resolve();
+		});
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(2_000);
+		});
+		expect(getAnalyticsStatus).toHaveBeenCalledTimes(3);
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(28_000);
+		});
+		expect(getDbStats).toHaveBeenCalledTimes(3);
 	});
 });

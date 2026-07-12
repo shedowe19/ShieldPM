@@ -69,6 +69,11 @@ damit ein pausiertes Intervall beim Wiederherstellen der Verbindung erneut gepla
 Intervallfunktion bleibt unabhängig vom Browser-Zustand testbar, damit weitere Polling-Pfade dieselbe Entscheidung
 übernehmen können.
 
+`pages/Analytics/useAnalyticsLiveMetrics.ts` verwendet für Netzwerkdurchsatz und Datenbankstatistiken getrennte
+Polling-Zyklen. Der Netzwerkstatus bleibt bei zwei Sekunden, während Datenbankstatistiken nur beim Start,
+bei Sichtbarkeits-/Online-Reaktivierung und danach alle 30 Sekunden geladen werden. Eigene In-Flight-Sperren verhindern,
+dass ein langsamer Datenbankabruf den Durchsatz-Takt verzögert.
+
 `pages/Analytics/AnalyticsTopLists.tsx` kapselt die vier Karten für Top-IP-Adressen, Referrer, Pfade und User-Agents.
 Die Komponente übernimmt die vorhandene Zusammenfassung sowie den Demo-Status unverändert, damit IP-Adressen weiterhin
 maskiert und leere Listen lokalisiert dargestellt werden. `AnalyticsTopLists.test.tsx` sichert diese Datenweitergabe und
