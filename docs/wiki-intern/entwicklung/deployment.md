@@ -55,23 +55,23 @@ Der Installer:
 
 Workflows unter `.github/workflows/`:
 
-| Datei                                     | Zweck                                                      |
-| ----------------------------------------- | ---------------------------------------------------------- |
-| `docker.yml`                              | Multi-Plattform-Docker-Image-Build und Push nach `ghcr.io` |
-| `docker-latest.yml`                       | Latest-Tag-Update                                          |
-| `dockerlint.yml`                          | Hadolint-Check für Dockerfile                              |
-| `caddy.yml`                               | Build des Caddy-Sidecar-Image (`shieldpm:caddy`)           |
-| `caddy-fmt.yml`                           | Formatierungs-Check für `caddy/Caddyfile`                  |
-| `codeql.yml`                              | Statische Sicherheitsanalyse (GitHub CodeQL)               |
-| `lint-and-format.yml`                     | Biome-Linter und Prettier-Check                            |
-| `shellcheck.yml`                          | Lint für `scripts/install.sh` und Rootfs-Shell-Scripts     |
-| `json.yml`                                | JSON-Lint (Schema-Files, RBAC-Rules)                       |
-| `spellcheck.yml`                          | codespell mit Skip-Liste (siehe Konfig im Workflow)        |
-| `dependency-updates.yml`                  | Renovate-Trigger / Updater                                 |
-| `npm-updates.yml`                         | NPM-Update-Helper                                          |
-| `wiki-sync.yml`                           | Synchronisiert `docs/wiki/` mit dem GitHub-Wiki-Repo       |
-| `.github/codeql/codeql-config.yml`        | CodeQL-Analyse-Konfiguration                               |
-| `.github/delete-merged-branch-config.yml` | GitHub Auto-Delete Merged Branch Konfiguration             |
+| Datei                                     | Zweck                                                                                                                                                                                                                                                                                                 |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docker.yml`                              | Multi-Plattform-Docker-Image-Build und Push nach `ghcr.io`                                                                                                                                                                                                                                            |
+| `docker-latest.yml`                       | Latest-Tag-Update                                                                                                                                                                                                                                                                                     |
+| `dockerlint.yml`                          | Hadolint-Check für Dockerfile                                                                                                                                                                                                                                                                         |
+| `caddy.yml`                               | Build des Caddy-Sidecar-Image (`shieldpm:caddy`)                                                                                                                                                                                                                                                      |
+| `caddy-fmt.yml`                           | Formatierungs-Check für `caddy/Caddyfile`                                                                                                                                                                                                                                                             |
+| `codeql.yml`                              | Statische Sicherheitsanalyse (GitHub CodeQL)                                                                                                                                                                                                                                                          |
+| `lint-and-format.yml`                     | Nicht-mutierende Quality-Gates: hunkbasierter Diff-/Token-Schutz mit Empty-Tree-Fallback bei fehlender Vergleichsrevision, diff-basierter Biome-Check, Backend-/Frontend-Tests, Locale-/Build-Check und Audit ab Schweregrad High (bis zur Bereinigung der bestehenden Lockfile-Funde nur berichtend) |
+| `shellcheck.yml`                          | Lint für `scripts/install.sh` und Rootfs-Shell-Scripts                                                                                                                                                                                                                                                |
+| `json.yml`                                | JSON-Lint (Schema-Files, RBAC-Rules)                                                                                                                                                                                                                                                                  |
+| `spellcheck.yml`                          | codespell mit Skip-Liste (siehe Konfig im Workflow)                                                                                                                                                                                                                                                   |
+| `dependency-updates.yml`                  | Renovate-Trigger / Updater                                                                                                                                                                                                                                                                            |
+| `npm-updates.yml`                         | NPM-Update-Helper                                                                                                                                                                                                                                                                                     |
+| `wiki-sync.yml`                           | Synchronisiert `docs/wiki/` mit dem GitHub-Wiki-Repo                                                                                                                                                                                                                                                  |
+| `.github/codeql/codeql-config.yml`        | CodeQL-Analyse-Konfiguration                                                                                                                                                                                                                                                                          |
+| `.github/delete-merged-branch-config.yml` | GitHub Auto-Delete Merged Branch Konfiguration                                                                                                                                                                                                                                                        |
 
 ## Hilfs-Skripte
 
