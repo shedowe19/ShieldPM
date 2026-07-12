@@ -1,4 +1,3 @@
-import { IconServer } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import {
@@ -11,13 +10,12 @@ import {
 } from "src/api/backend";
 import { getAnalyticsStatus } from "src/api/backend/getAnalyticsStatus";
 import { Loading } from "src/components";
-import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { useHealth, useProxyHosts } from "src/hooks";
 import { getPollingInterval, isPollingAllowed } from "src/hooks/pollingPolicy";
-import { intl, T } from "src/locale";
+import { T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
+import { AnalyticsFilters } from "./AnalyticsFilters";
 import { AnalyticsKpis } from "./AnalyticsKpis";
 import { AnalyticsMap } from "./AnalyticsMap";
 import { AnalyticsRecentRequests } from "./AnalyticsRecentRequests";
@@ -275,35 +273,13 @@ const Analytics = () => {
 						<T id="analytics.traffic-overview" tData={{ range: `analytics.range.${range}` }} />
 					</p>
 				</div>
-				<div className="flex items-center space-x-2">
-					<Select value={selectedHostId} onValueChange={setSelectedHostId}>
-						<SelectTrigger className="w-[200px]">
-							<IconServer className="mr-2 h-4 w-4 text-muted-foreground" />
-							<SelectValue placeholder={intl.formatMessage({ id: "analytics.select-host" })} />
-						</SelectTrigger>
-						<SelectContent>
-							{hosts?.map((host) => (
-								<SelectItem key={host.id} value={String(host.id)}>
-									{host.domainNames[0]}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					<div className="flex bg-muted rounded-md p-1">
-						{["1h", "24h", "7d", "30d"].map((r) => (
-							<Button
-								key={r}
-								variant={range === r ? "default" : "ghost"}
-								onClick={() => setRange(r)}
-								size="sm"
-								className="h-8"
-							>
-								<T id={`analytics.range.${r}`} />
-							</Button>
-						))}
-					</div>
-				</div>
+				<AnalyticsFilters
+					hosts={hosts}
+					onRangeChange={setRange}
+					onSelectedHostIdChange={setSelectedHostId}
+					range={range}
+					selectedHostId={selectedHostId}
+				/>
 			</div>
 
 			<AnalyticsKpis dbStats={dbStats} networkSpeed={networkSpeed} summary={summary} />

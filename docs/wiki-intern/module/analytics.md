@@ -16,6 +16,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - `backend/routes/analytics.js` (8 KB) — API-Routen
 - `backend/routes/nginx/analytics.js` (3 KB) — Nginx-Analytics-Routen
 - `frontend/src/pages/Analytics/` — UI-Seite
+- `frontend/src/pages/Analytics/AnalyticsFilters.tsx` — Host- und Zeitraumfilter der Seitenkopfzeile
 - `frontend/src/pages/Analytics/AnalyticsMap.tsx` — viewport-gesteuerter Lazy-Loader für die Weltkarte
 - `frontend/src/pages/Analytics/AnalyticsMapContent.tsx` — ausgelagerte Kartenvisualisierung
 - `frontend/src/components/Analytics/` — Analytics-Visualisierungen
