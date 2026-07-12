@@ -12,7 +12,7 @@ import {
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
 import { useAuthState } from "src/context";
-import { useUser } from "src/hooks";
+import { useUser } from "src/hooks/useUser";
 import { intl, T } from "src/locale";
 import { showChangePasswordModal, showUserModal } from "src/modals/account-lazy";
 

@@ -12,7 +12,7 @@ import { SiteFooter } from "src/components/SiteFooter";
 import { SiteHeader } from "src/components/SiteHeader";
 import { Unhealthy } from "src/components/Unhealthy";
 import { useAuthState } from "src/context";
-import { useHealth } from "src/hooks";
+import { useHealth } from "src/hooks/useHealth";
 import { T } from "src/locale";
 
 const Setup = lazy(() => import("src/pages/Setup"));

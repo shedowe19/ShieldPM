@@ -37,7 +37,7 @@ vi.mock("src/context", () => ({
 	useAuthState: () => ({ logout: mocks.logout }),
 }));
 
-vi.mock("src/hooks", () => ({
+vi.mock("src/hooks/useUser", () => ({
 	useUser: mocks.useUser,
 }));
 

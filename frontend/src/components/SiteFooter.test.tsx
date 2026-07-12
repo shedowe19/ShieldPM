@@ -8,8 +8,10 @@ const hooks = vi.hoisted(() => ({
 	useHealth: vi.fn(),
 }));
 
-vi.mock("src/hooks", () => ({
+vi.mock("src/hooks/useCheckVersion", () => ({
 	useCheckVersion: hooks.useCheckVersion,
+}));
+vi.mock("src/hooks/useHealth", () => ({
 	useHealth: hooks.useHealth,
 }));
 

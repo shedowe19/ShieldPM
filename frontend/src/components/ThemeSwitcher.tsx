@@ -7,7 +7,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
-import { useTheme } from "src/hooks";
+import { useTheme } from "src/hooks/useTheme";
 import { T } from "src/locale";
 import { APP_THEME } from "src/types/enums";
 

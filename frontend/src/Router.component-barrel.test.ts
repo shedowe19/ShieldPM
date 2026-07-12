@@ -14,7 +14,7 @@ vi.mock("src/components/SiteFooter", () => ({ SiteFooter: () => null }));
 vi.mock("src/components/SiteHeader", () => ({ SiteHeader: () => null }));
 vi.mock("src/components/Unhealthy", () => ({ Unhealthy: () => null }));
 vi.mock("src/context", () => ({ useAuthState: () => ({ authenticated: false }) }));
-vi.mock("src/hooks", () => ({ useHealth: () => ({ isLoading: true }) }));
+vi.mock("src/hooks/useHealth", () => ({ useHealth: () => ({ isLoading: true }) }));
 
 describe("Router component dependencies", () => {
 	it("loads without importing the shared component barrel", async () => {

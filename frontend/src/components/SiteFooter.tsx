@@ -1,4 +1,5 @@
-import { useCheckVersion, useHealth } from "src/hooks";
+import { useCheckVersion } from "src/hooks/useCheckVersion";
+import { useHealth } from "src/hooks/useHealth";
 import { intl, T } from "src/locale";
 
 export function SiteFooter() {

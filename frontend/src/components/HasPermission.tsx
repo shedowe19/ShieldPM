@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Loading } from "src/components/Loading";
 import { LoadingPage } from "src/components/LoadingPage";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
-import { useUser } from "src/hooks";
+import { useUser } from "src/hooks/useUser";
 import { T } from "src/locale";
 import { type ADMIN, hasPermission, type Permission, type Section } from "src/modules/Permissions";
 

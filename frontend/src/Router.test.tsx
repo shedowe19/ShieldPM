@@ -40,7 +40,7 @@ vi.mock("src/components/Unhealthy", () => ({
 vi.mock("src/context", () => ({
 	useAuthState: () => ({ authenticated: mocks.authenticated }),
 }));
-vi.mock("src/hooks", () => ({
+vi.mock("src/hooks/useHealth", () => ({
 	useHealth: () => ({
 		data: { setup: true, status: "OK" },
 		isError: false,
