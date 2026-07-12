@@ -60,7 +60,7 @@ jobs:
       - name: Check changed backend JavaScript and TypeScript files
         shell: bash
         run: |
-          mapfile -d '' files < <(git diff --name-only --diff-filter=ACMR -z "${{ steps.base.outputs.sha }}" HEAD -- backend | grep -z -E '\.(cjs|js|ts|tsx|json)$')
+          mapfile -d '' files < <(git diff --name-only --diff-filter=ACMR -z "${{ steps.base.outputs.sha }}" HEAD -- backend | grep -z -E '\.(cjs|js|ts|tsx)$')
           if ((${#files[@]})); then
             cd "$GITHUB_WORKSPACE/backend"
             ./node_modules/.bin/biome check "${files[@]#backend/}"
@@ -69,7 +69,7 @@ jobs:
       - name: Check changed frontend JavaScript and TypeScript files
         shell: bash
         run: |
-          mapfile -d '' files < <(git diff --name-only --diff-filter=ACMR -z "${{ steps.base.outputs.sha }}" HEAD -- frontend | grep -z -E '\.(cjs|js|ts|tsx|json)$')
+          mapfile -d '' files < <(git diff --name-only --diff-filter=ACMR -z "${{ steps.base.outputs.sha }}" HEAD -- frontend | grep -z -E '\.(cjs|js|ts|tsx)$')
           if ((${#files[@]})); then
             cd "$GITHUB_WORKSPACE/frontend"
             ./node_modules/.bin/biome check "${files[@]#frontend/}"

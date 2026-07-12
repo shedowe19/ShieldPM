@@ -96,6 +96,11 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).not.toContain("./backend/node_modules/.bin/biome check");
 	});
 
+	it("does not send ignored package manifests to Biome", () => {
+		expect(workflow).toContain("\\.(cjs|js|ts|tsx)$");
+		expect(workflow).not.toContain("\\.(cjs|js|ts|tsx|json)$");
+	});
+
 	it("delegates added-line token scanning to its tested script", () => {
 		expect(workflow).toContain("node backend/scripts/ci/scan-added-diff-secrets.js");
 		expect(workflow).not.toContain("node --input-type=module <<'NODE'");
