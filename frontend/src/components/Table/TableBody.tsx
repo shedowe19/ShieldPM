@@ -1,5 +1,5 @@
 import { flexRender, type Table } from "@tanstack/react-table";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import React from "react";
 import type { TableLayoutProps } from "src/components";
 import { TableBody as ShadcnTableBody, TableCell, TableRow } from "src/components/ui/table";
@@ -11,7 +11,7 @@ const TableRowWithRef = React.forwardRef<HTMLTableRowElement, React.HTMLAttribut
 );
 TableRowWithRef.displayName = "TableRowWithRef";
 
-const MotionTableRow = motion.create(TableRowWithRef);
+const MotionTableRow = m.create(TableRowWithRef);
 
 function TableBody<T>(props: TableLayoutProps<T>) {
 	const { tableInstance, extraStyles, emptyState } = props;
@@ -40,30 +40,31 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 
 	return (
 		<ShadcnTableBody>
-			<AnimatePresence mode="popLayout" initial={false}>
-				{rows.map((row) => {
-					return (
-						<MotionTableRow
-							key={row.id}
-							{...(extraStyles?.row(row.original) as Record<string, unknown>)}
-							initial={{ opacity: 0, x: -20 }}
-							animate={{ opacity: 1, x: 0 }}
-							exit={{ opacity: 0, x: 20 }}
-							transition={{ duration: 0.2 }}
-							layout
-						>
-							{row.getVisibleCells().map((cell) => {
-								const { className } = (cell.column.columnDef.meta as { className?: string }) ?? {};
-								return (
-									<TableCell key={cell.id} className={className}>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</TableCell>
-								);
-							})}
-						</MotionTableRow>
-					);
-				})}
-			</AnimatePresence>
+			<LazyMotion features={domAnimation}>
+				<AnimatePresence initial={false}>
+					{rows.map((row) => {
+						return (
+							<MotionTableRow
+								key={row.id}
+								{...(extraStyles?.row(row.original) as Record<string, unknown>)}
+								initial={{ opacity: 0, x: -20 }}
+								animate={{ opacity: 1, x: 0 }}
+								exit={{ opacity: 0, x: 20 }}
+								transition={{ duration: 0.2 }}
+							>
+								{row.getVisibleCells().map((cell) => {
+									const { className } = (cell.column.columnDef.meta as { className?: string }) ?? {};
+									return (
+										<TableCell key={cell.id} className={className}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</TableCell>
+									);
+								})}
+							</MotionTableRow>
+						);
+					})}
+				</AnimatePresence>
+			</LazyMotion>
 		</ShadcnTableBody>
 	);
 }

@@ -1,5 +1,5 @@
 import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FormattedNumber } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +13,7 @@ import { DEAD_HOSTS, PROXY_HOSTS, REDIRECTION_HOSTS, STREAMS, VIEW } from "src/m
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
 import { DashboardNotesWidget } from "./DashboardNotesWidget";
 
-const MotionCard = motion(Card);
+const MotionCard = m(Card);
 const container = {
 	hidden: { opacity: 0 },
 	show: {
@@ -49,7 +49,7 @@ const Dashboard = () => {
 	else if (hours < 18) greeting = "dashboard.greeting.afternoon";
 
 	return (
-		<motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+		<m.div variants={container} initial="hidden" animate="show" className="space-y-8">
 			<div className="flex flex-col space-y-2">
 				<h2 className="text-3xl font-bold tracking-tight">
 					<T id={greeting} />, {userData?.nickname || userData?.name || "User"}
@@ -171,7 +171,7 @@ const Dashboard = () => {
 				<CertificateExpiryWidget />
 				<DashboardNotesWidget />
 			</div>
-		</motion.div>
+		</m.div>
 	);
 };
 

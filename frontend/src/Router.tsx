@@ -1,4 +1,4 @@
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, domAnimation, LazyMotion } from "framer-motion";
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatedPage } from "src/components/AnimatedPage";
@@ -232,26 +232,28 @@ function Router() {
 	}
 
 	return (
-		<BrowserRouter>
-			<Page>
-				<a
-					href="#app-content"
-					className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-foreground focus:shadow-lg"
-				>
-					<T id="sr.skip-to-content" />
-				</a>
-				<Sidebar />
-				<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
-					<SiteHeader />
-					<SiteContainer>
-						<Suspense fallback={<LoadingPage noLogo />}>
-							<Content />
-						</Suspense>
-					</SiteContainer>
-					<SiteFooter />
-				</div>
-			</Page>
-		</BrowserRouter>
+		<LazyMotion features={domAnimation}>
+			<BrowserRouter>
+				<Page>
+					<a
+						href="#app-content"
+						className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-foreground focus:shadow-lg"
+					>
+						<T id="sr.skip-to-content" />
+					</a>
+					<Sidebar />
+					<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
+						<SiteHeader />
+						<SiteContainer>
+							<Suspense fallback={<LoadingPage noLogo />}>
+								<Content />
+							</Suspense>
+						</SiteContainer>
+						<SiteFooter />
+					</div>
+				</Page>
+			</BrowserRouter>
+		</LazyMotion>
 	);
 }
 

@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -13,14 +13,8 @@ const animations = {
 
 export const AnimatedPage = ({ children }: Props) => {
 	return (
-		<motion.div
-			variants={animations}
-			initial="initial"
-			animate="animate"
-			exit="exit"
-			transition={{ duration: 0.3 }}
-		>
+		<m.div variants={animations} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }}>
 			{children}
-		</motion.div>
+		</m.div>
 	);
 };

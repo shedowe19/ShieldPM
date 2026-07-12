@@ -1,5 +1,5 @@
 import cn from "classnames";
-import { type HTMLMotionProps, motion } from "framer-motion";
+import { type HTMLMotionProps, m } from "framer-motion";
 import type { ReactNode } from "react";
 import type { ButtonActionType, ButtonSize, ButtonVariant, UiColor } from "src/types/enums";
 
@@ -49,7 +49,7 @@ function Button({
 	);
 
 	return (
-		<motion.button
+		<m.button
 			type={type || "button"}
 			className={cns}
 			onClick={myOnClick}
@@ -60,7 +60,7 @@ function Button({
 			{...rest}
 		>
 			{children}
-		</motion.button>
+		</m.button>
 	);
 }
 
