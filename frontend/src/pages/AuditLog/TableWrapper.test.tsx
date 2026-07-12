@@ -55,7 +55,9 @@ describe("Audit log table loading", () => {
 	afterEach(async () => {
 		cleanup();
 		await changeLocale("en");
+		vi.restoreAllMocks();
 		vi.clearAllMocks();
+		vi.unstubAllGlobals();
 	});
 
 	it("shows a localized generic error when loading audit logs fails without a server message", () => {
@@ -128,5 +130,37 @@ describe("Audit log table loading", () => {
 				created_before: new Date("2026-07-12T10:00").toISOString(),
 			},
 		);
+	});
+
+	it("downloads the currently displayed audit events as a CSV", () => {
+		const createObjectURL = vi.fn((_blob: Blob) => "blob:audit-log-export");
+		const revokeObjectURL = vi.fn();
+		vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+		vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+		mocks.useAuditLogs.mockReturnValue({
+			data: [
+				{
+					action: "updated",
+					createdOn: "2026-07-12T08:00:00.000Z",
+					id: 73,
+					meta: {},
+					modifiedOn: "2026-07-12T08:00:00.000Z",
+					objectId: 42,
+					objectType: "proxy_host",
+					userId: 5,
+				},
+			],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+		fireEvent.click(screen.getByRole("button", { name: "CSV exportieren" }));
+
+		expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+		expect(createObjectURL.mock.calls[0][0].type).toBe("text/csv;charset=utf-8");
+		expect(revokeObjectURL).toHaveBeenCalledWith("blob:audit-log-export");
 	});
 });

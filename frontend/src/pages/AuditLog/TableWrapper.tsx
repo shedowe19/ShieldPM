@@ -1,13 +1,15 @@
-import { IconHistory, IconSearch } from "@tabler/icons-react";
+import { IconDownload, IconHistory, IconSearch } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
+import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { useAuditLogs } from "src/hooks";
 import { intl, T } from "src/locale";
+import { createAuditLogCsv } from "./audit-log-csv";
 import { showEventDetailsModal } from "./lazy";
 import Table from "./Table";
 
@@ -33,6 +35,22 @@ export default function TableWrapper() {
 		...(createdBeforeUtc ? { created_before: createdBeforeUtc } : {}),
 	};
 	const { isFetching, isLoading, isError, error, data } = useAuditLogs(["user"], {}, filters);
+	const downloadCsv = () => {
+		const csv = createAuditLogCsv(data ?? [], {
+			action: intl.formatMessage({ id: "audit-log.csv.action" }),
+			createdOn: intl.formatMessage({ id: "audit-log.csv.created-on" }),
+			metadata: intl.formatMessage({ id: "audit-log.csv.metadata" }),
+			objectId: intl.formatMessage({ id: "audit-log.csv.object-id" }),
+			objectType: intl.formatMessage({ id: "audit-log.csv.object-type" }),
+			user: intl.formatMessage({ id: "audit-log.csv.user" }),
+		});
+		const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = "audit-log.csv";
+		anchor.click();
+		URL.revokeObjectURL(url);
+	};
 
 	if (isLoading) {
 		return <LoadingPage />;
@@ -59,6 +77,16 @@ export default function TableWrapper() {
 				</CardTitle>
 				{data?.length || Object.keys(filters).length > 0 ? (
 					<div className="flex w-full flex-wrap items-end gap-2 xl:w-auto xl:flex-nowrap">
+						<Button
+							className="h-9"
+							disabled={!data?.length}
+							onClick={downloadCsv}
+							type="button"
+							variant="outline"
+						>
+							<IconDownload className="h-4 w-4" />
+							<T id="audit-log.export.csv" />
+						</Button>
 						<div className="relative min-w-52 flex-1 xl:w-56">
 							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
