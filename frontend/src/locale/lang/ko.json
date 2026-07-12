@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "구성되지 않음",
 	"wireguard.settings.port": "수신 포트",
 	"wireguard.settings.subnet": "VPN 서브넷",
+	"wireguard.settings.serverAddress": "서버 주소",
 	"wireguard.settings.title": "WireGuard 설정",
 	"wireguard.title": "WireGuard 터널"
 }

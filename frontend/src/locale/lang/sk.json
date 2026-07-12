@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "Nenakonfigurované",
 	"wireguard.settings.port": "Port počúvania",
 	"wireguard.settings.subnet": "Sieť VPN",
+	"wireguard.settings.serverAddress": "Adresa servera",
 	"wireguard.settings.title": "Nastavenia WireGuard",
 	"wireguard.title": "Tunely WireGuard"
 }

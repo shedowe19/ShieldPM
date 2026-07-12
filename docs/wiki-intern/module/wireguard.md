@@ -14,11 +14,14 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 - `backend/models/wireguard_peer.js` (4 KB) — Peer-Modell
 - `backend/routes/nginx/wireguard.js` (9 KB) — API-Routen
 - `frontend/src/components/Nginx/WireguardConfigModal.tsx` — Dialog für Peer-Konfiguration und QR-Code
+- `frontend/src/pages/Nginx/WireguardSettingsCard.tsx` — gekapselte Servereinstellungen mit Query-Invalidierung
 
 ## Verhalten
 
 - Verwaltet WireGuard-Interface und Peers
 - Generiert Konfigurationen für Server und Clients
+- Die Servereinstellungen sind in `WireguardSettingsCard` gekapselt. Nach erfolgreichem Speichern invalidiert sie sowohl
+  Einstellungen als auch Peer-Daten; die Listenansicht behält damit ihren Peer- und Dialogzustand unabhängig.
 - Der Konfigurationsdialog beschreibt seinen Zweck für Screenreader und lokalisiert QR-Code-Hinweis, Alternativtext und Schließen-Aktion in allen 13 Sprachen.
 - Die ausschließlich symbolische Kopier-Schaltfläche hat einen lokalisierten zugänglichen Namen in allen 13 Sprachen und bleibt damit für Screenreader eindeutig bedienbar.
 - Die Icon-Aktionen der Peer-Tabelle sowie Aktualisieren und Hilfe verwenden lokalisierte zugängliche Namen. Der Start-/Stopp-Umschalter beschreibt dabei abhängig vom Peer-Status die tatsächlich ausgeführte Aktion.

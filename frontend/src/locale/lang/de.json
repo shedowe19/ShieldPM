@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "Nicht konfiguriert",
 	"wireguard.settings.port": "Listen-Port",
 	"wireguard.settings.subnet": "VPN-Subnetz",
+	"wireguard.settings.serverAddress": "Serveradresse",
 	"wireguard.settings.title": "WireGuard-Einstellungen",
 	"wireguard.title": "WireGuard Tunnel"
 }

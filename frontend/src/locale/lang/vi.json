@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "Chưa cấu hình",
 	"wireguard.settings.port": "Cổng lắng nghe",
 	"wireguard.settings.subnet": "Mạng con VPN",
+	"wireguard.settings.serverAddress": "Địa chỉ máy chủ",
 	"wireguard.settings.title": "Cài đặt WireGuard",
 	"wireguard.title": "Đường hầm WireGuard"
 }

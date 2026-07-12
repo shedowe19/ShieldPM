@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "未設定",
 	"wireguard.settings.port": "待受ポート",
 	"wireguard.settings.subnet": "VPN サブネット",
+	"wireguard.settings.serverAddress": "サーバーアドレス",
 	"wireguard.settings.title": "WireGuard 設定",
 	"wireguard.title": "WireGuard トンネル"
 }

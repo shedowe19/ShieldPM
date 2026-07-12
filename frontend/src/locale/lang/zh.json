@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "未配置",
 	"wireguard.settings.port": "监听端口",
 	"wireguard.settings.subnet": "VPN 子网",
+	"wireguard.settings.serverAddress": "服务器地址",
 	"wireguard.settings.title": "WireGuard 设置",
 	"wireguard.title": "WireGuard 隧道"
 }

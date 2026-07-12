@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "Не е конфигурирано",
 	"wireguard.settings.port": "Порт за слушане",
 	"wireguard.settings.subnet": "VPN подмрежа",
+	"wireguard.settings.serverAddress": "Адрес на сървъра",
 	"wireguard.settings.title": "Настройки на WireGuard",
 	"wireguard.title": "WireGuard тунели"
 }

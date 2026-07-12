@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "Не настроено",
 	"wireguard.settings.port": "Порт прослушивания",
 	"wireguard.settings.subnet": "Подсеть VPN",
+	"wireguard.settings.serverAddress": "Адрес сервера",
 	"wireguard.settings.title": "Настройки WireGuard",
 	"wireguard.title": "Туннели WireGuard"
 }

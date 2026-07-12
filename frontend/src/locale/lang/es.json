@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "Sin configurar",
 	"wireguard.settings.port": "Puerto de escucha",
 	"wireguard.settings.subnet": "Subred VPN",
+	"wireguard.settings.serverAddress": "Dirección del servidor",
 	"wireguard.settings.title": "Ajustes de WireGuard",
 	"wireguard.title": "Túneles WireGuard"
 }

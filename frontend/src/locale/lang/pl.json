@@ -707,6 +707,7 @@
 	"wireguard.settings.endpoint.placeholder": "Nie skonfigurowano",
 	"wireguard.settings.port": "Port nasłuchiwania",
 	"wireguard.settings.subnet": "Podsieć VPN",
+	"wireguard.settings.serverAddress": "Adres serwera",
 	"wireguard.settings.title": "Ustawienia WireGuard",
 	"wireguard.title": "Tunele WireGuard"
 }
