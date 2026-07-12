@@ -28,11 +28,12 @@ vi.mock("src/api/backend", () => ({
 
 vi.mock("src/components", () => ({
 	DomainNamesField: () => null,
-	NginxConfigField: () => null,
 	NoteWarning: () => null,
 	SSLCertificateField: () => null,
 	SSLOptionsFields: () => null,
 }));
+
+vi.mock("src/components/Form/NginxConfigField", () => ({ NginxConfigField: () => null }));
 
 vi.mock("src/components/ui/alert", () => ({
 	Alert: ({ children }: PropsWithChildren) => <div>{children}</div>,

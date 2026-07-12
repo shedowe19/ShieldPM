@@ -4,14 +4,8 @@ import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik
 import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { DeadHost } from "src/api/backend";
-import {
-	DomainNamesField,
-	Loading,
-	NginxConfigField,
-	NoteWarning,
-	SSLCertificateField,
-	SSLOptionsFields,
-} from "src/components";
+import { DomainNamesField, Loading, NoteWarning, SSLCertificateField, SSLOptionsFields } from "src/components";
+import { NginxConfigField } from "src/components/Form/NginxConfigField";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";

@@ -16,6 +16,9 @@ vi.mock("src/components", () => ({
 		mocks.gitSyncTab(props);
 		return <div data-testid="git-sync-tab" />;
 	},
+}));
+
+vi.mock("src/components/Form/LocationsFields", () => ({
 	LocationsFields: (props: unknown) => {
 		mocks.locationsFields(props);
 		return <div data-testid="locations-fields" />;

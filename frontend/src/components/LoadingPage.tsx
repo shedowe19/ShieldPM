@@ -1,4 +1,5 @@
-import { Loading, Page } from "src/components";
+import { Loading } from "src/components/Loading";
+import { Page } from "src/components/Page";
 
 interface Props {
 	label?: string;

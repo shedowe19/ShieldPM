@@ -23,6 +23,7 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 - `Dashboard/lazy.ts` kapselt den Dashboard-Notiz-Dialog. `DashboardNotesWidget.tsx` bindet nur diesen Routen-Loader ein; der Notiz-Dialog wird weiterhin erst bei einer Nutzeraktion importiert.
 - `Nginx/Streams/lazy.ts` kapselt die Stream-, Lösch- und Hilfe-Aktionen. `Nginx/Streams/TableWrapper.tsx` bindet nur diesen Routen-Loader ein; die drei Dialogimporte bleiben an Nutzeraktionen gebunden.
 - `Router.tsx` importiert die Komponenten der dauerhaft gerenderten Anwendungshülle direkt statt über `components/index.ts`; ein Regressionstest verhindert die erneute statische Abhängigkeit vom Komponenten-Barrel.
+- Die dauerhaft sichtbaren Header-, Berechtigungs-, Sprach- und Ladecontrols verwenden ebenfalls direkte Dateipfade statt des Komponenten-Barrels. `components/Form/index.ts` exportiert die Code-Editor-Felder `LocationsFields` und `NginxConfigField` bewusst nicht: Proxy-, Redirect- und Dead-Host-Formulare importieren sie direkt. Dadurch bleiben `@uiw/react-textarea-code-editor` und seine `refractor`-Abhängigkeiten in den jeweiligen On-Demand-Formular-Chunks statt im initialen Anwendungseinstieg; `app-shell-component-imports.test.ts` und `Form/code-editor-imports.test.ts` sichern diese Importgrenzen.
 
 ## Custom Hooks (`frontend/src/hooks/`)
 

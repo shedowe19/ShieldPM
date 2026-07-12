@@ -11,10 +11,8 @@ const mocks = vi.hoisted(() => ({
 	useUser: vi.fn(),
 }));
 
-vi.mock("src/components", () => ({
-	LocalePicker: () => null,
-	ThemeSwitcher: () => null,
-}));
+vi.mock("src/components/LocalePicker", () => ({ LocalePicker: () => null }));
+vi.mock("src/components/ThemeSwitcher", () => ({ ThemeSwitcher: () => null }));
 
 vi.mock("src/components/ui/avatar", () => ({
 	Avatar: ({ children }: PropsWithChildren) => <div>{children}</div>,

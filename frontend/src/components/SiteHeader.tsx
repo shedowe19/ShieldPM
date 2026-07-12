@@ -1,5 +1,6 @@
 import { IconLock, IconLogout, IconUser } from "@tabler/icons-react";
-import { LocalePicker, ThemeSwitcher } from "src/components";
+import { LocalePicker } from "src/components/LocalePicker";
+import { ThemeSwitcher } from "src/components/ThemeSwitcher";
 import { Avatar, AvatarFallback, AvatarImage } from "src/components/ui/avatar";
 import { Button } from "src/components/ui/button";
 import {

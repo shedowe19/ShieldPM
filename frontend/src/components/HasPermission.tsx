@@ -1,6 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import type { ReactNode } from "react";
-import { Loading, LoadingPage } from "src/components";
+import { Loading } from "src/components/Loading";
+import { LoadingPage } from "src/components/LoadingPage";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useUser } from "src/hooks";
 import { T } from "src/locale";

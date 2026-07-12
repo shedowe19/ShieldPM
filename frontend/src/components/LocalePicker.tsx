@@ -1,4 +1,4 @@
-import { Flag } from "src/components";
+import { Flag } from "src/components/Flag";
 import { Button } from "src/components/ui/button";
 import {
 	DropdownMenu,
