@@ -34,10 +34,28 @@ export class AnalyticsService {
 		this.flushTimer = null;
 		this.retentionTimer = null;
 		this.flushPromise = null;
+		this.initializationPromise = null;
+		this.isInitialized = false;
 		this.lastDropLogAt = 0;
 	}
 
 	async init() {
+		if (this.isInitialized) {
+			return;
+		}
+		if (this.initializationPromise) {
+			return this.initializationPromise;
+		}
+
+		this.initializationPromise = this.initialize();
+		try {
+			this.isInitialized = await this.initializationPromise;
+		} finally {
+			this.initializationPromise = null;
+		}
+	}
+
+	async initialize() {
 		try {
 			// Using 'wx' flag (write, exclusive) to create file atomically.
 			// If file exists, it fails with EEXIST, which we ignore.
@@ -45,7 +63,7 @@ export class AnalyticsService {
 		} catch (err) {
 			if (err.code !== "EEXIST") {
 				logger.error(`Could not create log file: ${err.message}`);
-				return;
+				return false;
 			}
 		}
 
@@ -76,6 +94,7 @@ export class AnalyticsService {
 
 		// Run retention once on startup
 		this.runRetention();
+		return true;
 	}
 
 	async loadDomains() {
