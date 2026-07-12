@@ -21,5 +21,9 @@ export function SiteContainer({ children }: Props) {
 		? "p-4 min-w-0 overflow-x-auto flex-1 w-full"
 		: "container mx-auto max-w-7xl p-4 min-w-0 overflow-x-auto flex-1";
 
-	return <div className={className}>{children}</div>;
+	return (
+		<main id="app-content" data-testid="app-content" tabIndex={-1} className={className}>
+			{children}
+		</main>
+	);
 }

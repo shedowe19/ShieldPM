@@ -38,7 +38,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --reporter=list"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -109,6 +111,7 @@
     "@babel/runtime": "^7.29.2",
     "@biomejs/biome": "^2.4.13",
     "@formatjs/cli": "^6.14.4",
+    "@playwright/test": "^1.61.1",
     "@tanstack/react-query-devtools": "^5.100.6",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.9.1",
@@ -120,6 +123,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
+    "axe-core": "^4.12.1",
     "happy-dom": "^20.9.0",
     "postcss": "^8.5.12",
     "postcss-simple-vars": "7.0.1",

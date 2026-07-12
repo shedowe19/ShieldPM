@@ -13,6 +13,7 @@ import { SiteHeader } from "src/components/SiteHeader";
 import { Unhealthy } from "src/components/Unhealthy";
 import { useAuthState } from "src/context";
 import { useHealth } from "src/hooks";
+import { T } from "src/locale";
 
 const Setup = lazy(() => import("src/pages/Setup"));
 const Login = lazy(() => import("src/pages/Login"));
@@ -233,6 +234,12 @@ function Router() {
 	return (
 		<BrowserRouter>
 			<Page>
+				<a
+					href="#app-content"
+					className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-foreground focus:shadow-lg"
+				>
+					<T id="sr.skip-to-content" />
+				</a>
 				<Sidebar />
 				<div className="page-wrapper lg:pl-[240px] flex flex-col min-h-screen">
 					<SiteHeader />
