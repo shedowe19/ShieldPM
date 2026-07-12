@@ -16,6 +16,9 @@ class AnalyticCount extends Model {
 			properties: {
 				id: { type: "integer" },
 				proxy_host_id: { type: ["integer", "null"] },
+				aggregation_key: { type: "string" },
+				aggregation_timestamp: { type: "string" },
+				aggregation_generation: { type: "string" },
 				timestamp: { type: "string" },
 				status_code_2xx: { type: "integer" },
 				status_code_3xx: { type: "integer" },

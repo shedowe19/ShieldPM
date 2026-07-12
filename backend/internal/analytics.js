@@ -16,7 +16,9 @@ const AGGREGATION_BUFFER_LIMIT = 500;
 const INSERT_CHUNK_SIZE = 250;
 const DROP_LOG_INTERVAL_MS = 60 * 1000;
 
-class AnalyticsService {
+const aggregationKeyFor = (hostId) => (hostId === 0 ? "global" : `host:${hostId}`);
+
+export class AnalyticsService {
 	constructor(logFile) {
 		this.logFile = logFile || LOG_FILE;
 		this.tail = null;
@@ -223,6 +225,9 @@ class AnalyticsService {
 		}
 
 		const rows = entries.map((entry) => ({
+			aggregation_key: aggregationKeyFor(entry.host_id),
+			aggregation_timestamp: entry.timestamp,
+			aggregation_generation: "live",
 			proxy_host_id: entry.host_id === 0 ? null : entry.host_id,
 			timestamp: entry.timestamp,
 			status_code_2xx: entry.status_2xx,
@@ -240,7 +245,7 @@ class AnalyticsService {
 				for (const row of chunk) {
 					await AnalyticCount.query(trx)
 						.insert(row)
-						.onConflict(["proxy_host_id", "timestamp"])
+						.onConflict(["aggregation_key", "aggregation_timestamp", "aggregation_generation"])
 						.merge({
 							status_code_2xx: AnalyticCount.knex().raw(
 								"coalesce(analytic_count.status_code_2xx, 0) + ?",
