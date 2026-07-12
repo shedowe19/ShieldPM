@@ -1,5 +1,5 @@
-import CodeEditor from "@uiw/react-textarea-code-editor";
 import { Field, type FieldProps } from "formik";
+import { LazyCodeEditor } from "src/components/LazyCodeEditor";
 import { Label } from "src/components/ui/label";
 import { intl, T } from "src/locale";
 
@@ -21,7 +21,7 @@ export function NginxConfigField({
 						<T id={label} />
 					</Label>
 					<div className="rounded-md border overflow-hidden">
-						<CodeEditor
+						<LazyCodeEditor
 							language="nginx"
 							placeholder={intl.formatMessage({ id: "nginx-config.placeholder" })}
 							padding={15}

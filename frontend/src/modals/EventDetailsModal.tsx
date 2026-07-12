@@ -1,7 +1,7 @@
 import { IconCode, IconListDetails } from "@tabler/icons-react";
-import CodeEditor from "@uiw/react-textarea-code-editor";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { EventFormatter, Loading, UserAvatar } from "src/components";
+import { LazyCodeEditor } from "src/components/LazyCodeEditor";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
@@ -74,7 +74,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									</h4>
 								</div>
 								<div className="rounded-lg border bg-muted/50 overflow-hidden shadow-inner">
-									<CodeEditor
+									<LazyCodeEditor
 										language="json"
 										padding={20}
 										data-color-mode="dark"

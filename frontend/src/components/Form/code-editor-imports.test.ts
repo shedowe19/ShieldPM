@@ -34,7 +34,12 @@ describe("code editor form dependencies", () => {
 			'lazy(() => import("@uiw/react-textarea-code-editor"))',
 		);
 
-		for (const file of ["src/components/Form/LocationsFields.tsx", "src/pages/Settings/DefaultSite.tsx"]) {
+		for (const file of [
+			"src/components/Form/LocationsFields.tsx",
+			"src/components/Form/NginxConfigField.tsx",
+			"src/modals/EventDetailsModal.tsx",
+			"src/pages/Settings/DefaultSite.tsx",
+		]) {
 			const source = readSource(file);
 			expect(source).toContain('import { LazyCodeEditor } from "src/components/LazyCodeEditor"');
 			expect(source).not.toContain('import CodeEditor from "@uiw/react-textarea-code-editor"');
