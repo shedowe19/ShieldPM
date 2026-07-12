@@ -165,6 +165,8 @@
 	"analytics.total-requests": "総リクエスト数",
 	"analytics.traffic-overview": "{range} のトラフィック概要。",
 	"auditlogs": "監査ログ",
+	"audit-log.filter.created-after": "開始",
+	"audit-log.filter.created-before": "終了",
 	"audit-log.hidden-demo": "非表示（デモ）",
 	"audit-log.metadata": "メタデータ",
 	"authType": "認証タイプ",

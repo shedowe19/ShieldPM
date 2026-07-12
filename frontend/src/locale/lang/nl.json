@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Totaal verzoeken",
 	"analytics.traffic-overview": "Verkeersoverzicht voor {range}.",
 	"auditlogs": "Logboeken",
+	"audit-log.filter.created-after": "Vanaf",
+	"audit-log.filter.created-before": "Tot",
 	"audit-log.hidden-demo": "Verborgen (demo)",
 	"audit-log.metadata": "Metagegevens",
 	"authType": "Authenticatietype",

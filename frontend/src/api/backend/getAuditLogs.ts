@@ -3,6 +3,8 @@ import type { AuditLogExpansion } from "./expansions";
 import type { AuditLog } from "./models";
 
 export interface AuditLogListParams {
+	created_after?: string;
+	created_before?: string;
 	query?: string;
 }
 

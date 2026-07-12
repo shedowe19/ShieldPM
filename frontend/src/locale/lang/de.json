@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Gesamtanfragen",
 	"analytics.traffic-overview": "Verkehrsübersicht für {range}.",
 	"auditlogs": "Protokoll",
+	"audit-log.filter.created-after": "Von",
+	"audit-log.filter.created-before": "Bis",
 	"audit-log.hidden-demo": "Ausgeblendet (Demo)",
 	"audit-log.metadata": "Metadaten",
 	"authType": "Authentifizierungstyp",

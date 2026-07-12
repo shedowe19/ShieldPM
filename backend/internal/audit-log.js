@@ -9,9 +9,12 @@ const internalAuditLog = {
 	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Array}   [expand]
 	 * @param   {String}  [searchQuery]
+	 * @param   {Object}  [dateRange]
+	 * @param   {String}  [dateRange.created_after]
+	 * @param   {String}  [dateRange.created_before]
 	 * @returns {Promise}
 	 */
-	getAll: async (access, expand, searchQuery) => {
+	getAll: async (access, expand, searchQuery, dateRange = {}) => {
 		await access.can("auditlog:list");
 
 		const query = auditLogModel
@@ -29,6 +32,14 @@ const internalAuditLog = {
 					.orWhere("action", "like", searchPattern)
 					.orWhere("object_type", "like", searchPattern);
 			});
+		}
+
+		if (dateRange.created_after) {
+			query.where("created_on", ">=", dateRange.created_after);
+		}
+
+		if (dateRange.created_before) {
+			query.where("created_on", "<=", dateRange.created_before);
 		}
 
 		if (typeof expand !== "undefined" && expand !== null) {

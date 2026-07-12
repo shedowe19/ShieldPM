@@ -52,4 +52,18 @@ describe("audit log search", () => {
 		expect(searchConditions.orWhere).toHaveBeenNthCalledWith(1, "action", "like", "%proxy-host%");
 		expect(searchConditions.orWhere).toHaveBeenNthCalledWith(2, "object_type", "like", "%proxy-host%");
 	});
+
+	it("limits audit events to an inclusive creation timestamp range", async () => {
+		const query = createQuery();
+		const access = { can: vi.fn().mockResolvedValue(undefined) };
+		mocks.query.mockReturnValue(query);
+
+		await internalAuditLog.getAll(access, undefined, undefined, {
+			created_after: "2026-07-12T08:00:00.000Z",
+			created_before: "2026-07-12T10:00:00.000Z",
+		});
+
+		expect(query.where).toHaveBeenCalledWith("created_on", ">=", "2026-07-12T08:00:00.000Z");
+		expect(query.where).toHaveBeenCalledWith("created_on", "<=", "2026-07-12T10:00:00.000Z");
+	});
 });

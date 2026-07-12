@@ -1,7 +1,33 @@
 import express from "express";
 import internalAuditLog from "../internal/audit-log.js";
+import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import validator from "../lib/validator/index.js";
+
+const utcDateTimeSchema = {
+	anyOf: [
+		{
+			type: "null",
+		},
+		{
+			pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+			type: "string",
+		},
+	],
+};
+
+const validateUtcDateTime = (value, field) => {
+	if (value === null || value === "") {
+		return null;
+	}
+
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime()) || date.toISOString() !== value) {
+		throw new errs.ValidationError(`${field} must be a valid UTC timestamp`);
+	}
+
+	return value;
+};
 
 const router = express.Router({
 	caseSensitive: true,
@@ -35,14 +61,28 @@ router
 					query: {
 						$ref: "common#/properties/query",
 					},
+					created_after: utcDateTimeSchema,
+					created_before: utcDateTimeSchema,
 				},
 			},
 			{
 				expand: typeof req.query.expand === "string" ? req.query.expand.split(",") : null,
 				query: typeof req.query.query === "string" ? req.query.query : null,
+				created_after: typeof req.query.created_after === "string" ? req.query.created_after : null,
+				created_before: typeof req.query.created_before === "string" ? req.query.created_before : null,
 			},
 		);
-		const rows = await internalAuditLog.getAll(res.locals.access, data.expand, data.query);
+		const createdAfter = validateUtcDateTime(data.created_after, "created_after");
+		const createdBefore = validateUtcDateTime(data.created_before, "created_before");
+
+		if (createdAfter && createdBefore && createdBefore < createdAfter) {
+			throw new errs.ValidationError("created_before must not be earlier than created_after");
+		}
+
+		const rows = await internalAuditLog.getAll(res.locals.access, data.expand, data.query, {
+			created_after: createdAfter,
+			created_before: createdBefore,
+		});
 		res.status(200).send(rows);
 	});
 

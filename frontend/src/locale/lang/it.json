@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Totale Richieste",
 	"analytics.traffic-overview": "Panoramica traffico per {range}.",
 	"auditlogs": "Log di Audit",
+	"audit-log.filter.created-after": "Da",
+	"audit-log.filter.created-before": "A",
 	"audit-log.hidden-demo": "Nascosto (demo)",
 	"audit-log.metadata": "Metadati",
 	"authType": "Tipo di autenticazione",

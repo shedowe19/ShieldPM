@@ -165,6 +165,8 @@
 	"analytics.total-requests": "총 요청",
 	"analytics.traffic-overview": "{range} 동안의 트래픽 개요.",
 	"auditlogs": "감사 로그",
+	"audit-log.filter.created-after": "시작",
+	"audit-log.filter.created-before": "종료",
 	"audit-log.hidden-demo": "숨김 (데모)",
 	"audit-log.metadata": "메타데이터",
 	"authType": "인증 유형",

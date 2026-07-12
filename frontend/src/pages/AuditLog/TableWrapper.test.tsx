@@ -25,6 +25,13 @@ vi.mock("src/components/ui/card", () => ({
 	CardTitle: ({ children }: PropsWithChildren) => <h1>{children}</h1>,
 }));
 vi.mock("src/components/ui/input", () => ({ Input: (props: React.ComponentProps<"input">) => <input {...props} /> }));
+vi.mock("src/components/ui/label", () => ({
+	Label: ({ children, htmlFor, ...props }: React.ComponentProps<"label">) => (
+		<label {...props} htmlFor={htmlFor}>
+			{children}
+		</label>
+	),
+}));
 
 vi.mock("src/hooks", () => ({
 	useAuditLogs: mocks.useAuditLogs,
@@ -71,7 +78,7 @@ describe("Audit log table loading", () => {
 		render(<TableWrapper />);
 
 		fireEvent.change(screen.getByPlaceholderText("Suchen..."), { target: { value: "proxy-host" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, "proxy-host");
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { query: "proxy-host" });
 	});
 
 	it("keeps spaces in the search field so multi-word audit queries remain searchable", () => {
@@ -89,6 +96,37 @@ describe("Audit log table loading", () => {
 		fireEvent.change(search, { target: { value: "proxy " } });
 		expect(search).toHaveValue("proxy ");
 		fireEvent.change(search, { target: { value: "proxy host" } });
-		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, "proxy host");
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(["user"], {}, { query: "proxy host" });
+	});
+
+	it("filters audit events by their selected creation window", () => {
+		mocks.useAuditLogs.mockReturnValue({
+			data: [{ id: 73 }],
+			error: null,
+			isError: false,
+			isFetching: false,
+			isLoading: false,
+		});
+
+		render(<TableWrapper />);
+
+		fireEvent.change(screen.getByLabelText("Von"), { target: { value: "2026-07-12T08:00" } });
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(
+			["user"],
+			{},
+			{
+				created_after: new Date("2026-07-12T08:00").toISOString(),
+			},
+		);
+
+		fireEvent.change(screen.getByLabelText("Bis"), { target: { value: "2026-07-12T10:00" } });
+		expect(mocks.useAuditLogs).toHaveBeenLastCalledWith(
+			["user"],
+			{},
+			{
+				created_after: new Date("2026-07-12T08:00").toISOString(),
+				created_before: new Date("2026-07-12T10:00").toISOString(),
+			},
+		);
 	});
 });

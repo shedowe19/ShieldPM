@@ -30,6 +30,26 @@
 			"schema": {
 				"$ref": "../../common.json#/properties/query"
 			}
+		},
+		{
+			"in": "query",
+			"name": "created_after",
+			"description": "Inclusive UTC creation timestamp in ISO 8601 format",
+			"schema": {
+				"format": "date-time",
+				"pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+				"type": "string"
+			}
+		},
+		{
+			"in": "query",
+			"name": "created_before",
+			"description": "Inclusive UTC creation timestamp in ISO 8601 format",
+			"schema": {
+				"format": "date-time",
+				"pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+				"type": "string"
+			}
 		}
 	],
 	"responses": {

@@ -165,6 +165,8 @@
 	"analytics.total-requests": "Общо заявки",
 	"analytics.traffic-overview": "Преглед на трафика за {range}.",
 	"auditlogs": "Журнали за одит",
+	"audit-log.filter.created-after": "От",
+	"audit-log.filter.created-before": "До",
 	"audit-log.hidden-demo": "Скрито (демонстрация)",
 	"audit-log.metadata": "Метаданни",
 	"authType": "Тип удостоверяване",
