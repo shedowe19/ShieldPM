@@ -1,9 +1,9 @@
 import { IconSettings } from "@tabler/icons-react";
-import CodeEditor from "@uiw/react-textarea-code-editor";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Loading } from "src/components";
+import { LazyCodeEditor } from "src/components/LazyCodeEditor";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
@@ -180,7 +180,7 @@ export default function DefaultSite() {
 									<Field name="html" validate={validateString(1)}>
 										{({ field }: FieldProps) => (
 											<div className="rounded-md border overflow-hidden">
-												<CodeEditor
+												<LazyCodeEditor
 													language="php"
 													placeholder={intl.formatMessage({
 														id: "settings.default-site.html.placeholder",

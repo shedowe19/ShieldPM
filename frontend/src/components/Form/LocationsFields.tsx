@@ -1,8 +1,8 @@
 import { IconPlus, IconSettings, IconTrash } from "@tabler/icons-react";
-import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useFormikContext } from "formik";
 import { useState } from "react";
 import type { ProxyLocation } from "src/api/backend";
+import { LazyCodeEditor } from "src/components/LazyCodeEditor";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
 import { Input } from "src/components/ui/input";
@@ -171,7 +171,7 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 										<T id="advanced-config" />
 									</Label>
 									<div className="rounded-md border overflow-hidden">
-										<CodeEditor
+										<LazyCodeEditor
 											language="nginx"
 											placeholder={intl.formatMessage({ id: "nginx-config.placeholder" })}
 											padding={15}
