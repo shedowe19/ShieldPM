@@ -10,14 +10,12 @@ import {
 import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { User } from "src/api/backend";
-import {
-	EmailFormatter,
-	EmptyData,
-	RolesFormatter,
-	TrueFalseFormatter,
-	UserAvatar,
-	ValueWithDateFormatter,
-} from "src/components";
+import { EmptyData } from "src/components/EmptyData";
+import { EmailFormatter } from "src/components/Table/Formatter/EmailFormatter";
+import { RolesFormatter } from "src/components/Table/Formatter/RolesFormatter";
+import { TrueFalseFormatter } from "src/components/Table/Formatter/TrueFalseFormatter";
+import { UserAvatar } from "src/components/Table/Formatter/UserAvatar";
+import { ValueWithDateFormatter } from "src/components/Table/Formatter/ValueWithDateFormatter";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { Button } from "src/components/ui/button";
 import {

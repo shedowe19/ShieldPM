@@ -17,9 +17,15 @@ vi.mock("src/context", () => ({
 	useAuthState: () => ({ loginAs: vi.fn() }),
 }));
 
-vi.mock("src/hooks", () => ({
+vi.mock("src/hooks/useHealth", () => ({
 	useHealth: mocks.useHealth,
+}));
+
+vi.mock("src/hooks/useUser", () => ({
 	useUser: () => ({ data: undefined }),
+}));
+
+vi.mock("src/hooks/useUsers", () => ({
 	useUsers: mocks.useUsers,
 }));
 

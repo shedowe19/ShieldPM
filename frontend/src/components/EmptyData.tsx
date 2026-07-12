@@ -1,6 +1,6 @@
 import { FolderOpen } from "lucide-react";
 import type { ReactNode } from "react";
-import { HasPermission } from "src/components";
+import { HasPermission } from "src/components/HasPermission";
 import { Button } from "src/components/ui/button";
 import { T } from "src/locale";
 import { type ADMIN, MANAGE, type Permission, type Section } from "src/modules/Permissions";
