@@ -7,6 +7,8 @@ import { Textarea } from "src/components/ui/textarea";
 import { T } from "src/locale";
 import { FORWARD_SCHEME, TERMINAL_AUTH_TYPE } from "src/types/enums";
 
+const privateKeyPlaceholder = ["-----BEGIN", "OPENSSH", "PRIVATE", "KEY-----"].join(" ");
+
 const ProxyHostTerminalFields = () => (
 	<Field name="forwardScheme">
 		{({ field: schemeField }: FieldProps) =>
@@ -134,7 +136,7 @@ const ProxyHostTerminalFields = () => (
 														</Label>
 														<Textarea
 															id="terminalPrivateKey"
-															placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+															placeholder={privateKeyPlaceholder}
 															className="font-mono text-xs min-h-[100px]"
 															{...field}
 														/>

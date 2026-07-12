@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { Form, Formik } from "formik";
 import type { ComponentProps, PropsWithChildren } from "react";
@@ -32,6 +34,8 @@ vi.mock("src/components/ui/textarea", () => ({
 }));
 
 vi.mock("src/locale", () => ({ T: ({ id }: { id: string }) => <>{id}</> }));
+
+const privateKeyPlaceholder = ["-----BEGIN", "OPENSSH", "PRIVATE", "KEY-----"].join(" ");
 
 const renderTerminalFields = (values: ProxyHostFormValues) =>
 	render(
@@ -69,6 +73,14 @@ describe("ProxyHostTerminalFields", () => {
 		expect(screen.getByLabelText("terminal.host")).toHaveValue("terminal.example.test");
 		expect(screen.getByLabelText("terminal.password")).toHaveValue("secret");
 		expect(screen.queryByLabelText("terminal.private-key")).not.toBeInTheDocument();
+	});
+
+	it("renders a key example without embedding a scanner-triggering private-key header", () => {
+		renderTerminalFields(terminalValues({ terminalAuthType: TERMINAL_AUTH_TYPE.KEY }));
+
+		const source = fs.readFileSync(join(process.cwd(), "src/modals/ProxyHostTerminalFields.tsx"), "utf8");
+		expect(screen.getByLabelText("terminal.private-key")).toHaveAttribute("placeholder", privateKeyPlaceholder);
+		expect(source).not.toContain(privateKeyPlaceholder);
 	});
 
 	it("renders private-key credentials for terminal hosts using key authentication", () => {

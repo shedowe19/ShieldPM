@@ -16,13 +16,14 @@ const comparisonBaseScript = workflow
 
 const githubExpression = (expression) => ["$", "{", "{ ", expression, " }}"].join("");
 
-const resolveComparisonBase = (eventName, before) => {
+const resolveComparisonBase = (eventName, before, defaultBranch = "develop") => {
 	const outputDirectory = fs.mkdtempSync(join(tmpdir(), "shieldpm-workflow-"));
 	const outputPath = join(outputDirectory, "github-output");
 	const script = comparisonBaseScript
 		.replaceAll(githubExpression("github.event_name"), eventName)
 		.replaceAll(githubExpression("github.event.before"), before)
-		.replaceAll(githubExpression("github.event.pull_request.base.sha"), before);
+		.replaceAll(githubExpression("github.event.pull_request.base.sha"), before)
+		.replaceAll(githubExpression("github.event.repository.default_branch"), defaultBranch);
 
 	try {
 		const result = spawnSync("bash", ["-e", "-c", script], {
@@ -41,7 +42,7 @@ const resolveComparisonBase = (eventName, before) => {
 	}
 };
 
-const emptyTreeSha = spawnSync("git", ["hash-object", "-t", "tree", "/dev/null"], {
+const defaultBranchMergeBase = spawnSync("git", ["merge-base", "HEAD", "origin/develop"], {
 	cwd: repoRoot,
 	encoding: "utf8",
 }).stdout.trim();
@@ -52,16 +53,17 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).toMatch(/persist-credentials: false/);
 	});
 
-	it("uses the empty tree when an event has no comparison commit", () => {
-		expect(workflow).toContain("git hash-object -t tree /dev/null");
+	it("uses the default-branch merge base when an event has no comparison commit", () => {
+		expect(workflow).toContain("github.event.repository.default_branch");
+		expect(workflow).toContain("git merge-base HEAD");
 	});
 
-	it("uses the empty tree for a new branch push", () => {
-		expect(resolveComparisonBase("push", "0".repeat(40))).toBe(emptyTreeSha);
+	it("uses the default-branch merge base for a new branch push", () => {
+		expect(resolveComparisonBase("push", "0".repeat(40))).toBe(defaultBranchMergeBase);
 	});
 
-	it("uses the empty tree when a push comparison commit is unavailable", () => {
-		expect(resolveComparisonBase("push", "a".repeat(40))).toBe(emptyTreeSha);
+	it("uses the default-branch merge base when a push comparison commit is unavailable", () => {
+		expect(resolveComparisonBase("push", "a".repeat(40))).toBe(defaultBranchMergeBase);
 	});
 
 	it("does not mutate checked-out files or push commits", () => {
