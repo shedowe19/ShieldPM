@@ -30,4 +30,16 @@ describe("Vite chunking", () => {
 		expect(getManualChunk("/workspace/node_modules/framer-motion/dist/es/index.mjs")).toBeUndefined();
 		expect(getManualChunk("/workspace/node_modules/motion-dom/dist/es/index.mjs")).toBeUndefined();
 	});
+
+	it("keeps route-only form dependencies out of an explicit app-shell vendor chunk", () => {
+		expect(getManualChunk("/workspace/node_modules/@tanstack/react-query/build/modern/index.js")).toBe(
+			"vendor-query",
+		);
+		expect(getManualChunk("/workspace/node_modules/@tanstack/react-table/build/lib/index.mjs")).toBe(
+			"vendor-table",
+		);
+		expect(getManualChunk("/workspace/node_modules/react-hook-form/dist/index.esm.mjs")).toBeUndefined();
+		expect(getManualChunk("/workspace/node_modules/@hookform/resolvers/zod/dist/zod.mjs")).toBeUndefined();
+		expect(getManualChunk("/workspace/node_modules/zod/v4/core/index.js")).toBeUndefined();
+	});
 });

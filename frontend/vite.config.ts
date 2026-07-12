@@ -40,12 +40,17 @@ export default defineConfig({
 						}
 
 						if (
-							["@tanstack/", "zod/", "react-hook-form/", "@hookform/"].some((pkg) =>
+							["@tanstack/react-query/", "@tanstack/query-core/"].some((pkg) =>
 								id.includes(`node_modules/${pkg}`),
 							)
 						) {
-							return "vendor-data";
+							return "vendor-query";
 						}
+
+						if (id.includes("node_modules/@tanstack/react-table/")) {
+							return "vendor-table";
+						}
+
 						if (
 							["date-fns/", "dayjs/", "jwt-decode/", "i18next/", "react-i18next/", "react-intl/"].some(
 								(pkg) => id.includes(`node_modules/${pkg}`),
