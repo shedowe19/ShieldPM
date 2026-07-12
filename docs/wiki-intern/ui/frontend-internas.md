@@ -201,6 +201,10 @@ Terminal-, Symbol-, PHP-, Zugriffs- und Optionsfelder bleiben im gemeinsamen For
 `bandwidthLimit` und `forwardQuery` behalten ihre bisherige Wertebindung. `ProxyHostDetailsTab.test.tsx` sichert diese
 Zusammensetzung und beide Werte gegen Regressionsfehler ab.
 
+`ProxyHostFormTabs.tsx` kapselt die Register-Navigation und ihre Inhalte. Die bestehenden Standort-Anfangswerte und die
+Host-ID werden unverändert an ihre Kinder weitergereicht; Git-Sync bleibt ausschließlich für das Weiterleitungsschema
+`path` sichtbar. `ProxyHostFormTabs.test.tsx` sichert beide Zustände.
+
 `ProxyHostModalSubmission.ts` kapselt die Serialisierung vor dem Speichern eines Proxy-Hosts. Leere Git-Zugangsdaten
 werden weiterhin nicht überschrieben, die UI-Option `crowdsecEnabled` wird in `securityCrowdsec` für die API überführt
 und ungültige Rate-Limit-Werte werden wie zuvor entfernt. `ProxyHostModalSubmission.test.ts` sichert diese

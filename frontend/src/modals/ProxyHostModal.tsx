@@ -1,27 +1,21 @@
-import { IconBolt, IconGitBranch, IconNote, IconSettings, IconShieldLock, IconTool } from "@tabler/icons-react";
+import { IconBolt } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
-import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
+import { Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { ProxyHost } from "src/api/backend";
-import { GitSyncTab, HasPermission, Loading, LocationsFields, NoteWarning } from "src/components";
+import { HasPermission, Loading, NoteWarning } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
 import { T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
-import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, PROXY_HOST_TAB } from "src/types/enums";
-import ProxyHostAdvancedTab from "./ProxyHostAdvancedTab";
-import ProxyHostDetailsTab from "./ProxyHostDetailsTab";
-import ProxyHostMaintenanceTab from "./ProxyHostMaintenanceTab";
+import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import ProxyHostFormTabs from "./ProxyHostFormTabs";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import { createProxyHostPayload } from "./ProxyHostModalSubmission";
-import ProxyHostNotesTab from "./ProxyHostNotesTab";
-import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
-import ProxyHostSslTab from "./ProxyHostSslTab";
 
 const showProxyHostModal = (id: number | "new") => {
 	EasyModal.show(ProxyHostModal, { id });
@@ -93,82 +87,11 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									<NoteWarning content={data?.note} />
 								</div>
 
-								<Tabs defaultValue={PROXY_HOST_TAB.DETAILS} className="flex-1 flex flex-col min-h-0">
-									<div className="px-6 pt-4">
-										<TabsList className="w-full justify-start">
-											<TabsTrigger value={PROXY_HOST_TAB.DETAILS}>
-												<T id="column.details" />
-											</TabsTrigger>
-											<TabsTrigger value={PROXY_HOST_TAB.LOCATIONS}>
-												<T id="column.custom-locations" />
-											</TabsTrigger>
-											<TabsTrigger value={PROXY_HOST_TAB.SSL}>
-												<T id="column.ssl" />
-											</TabsTrigger>
-											<TabsTrigger value={PROXY_HOST_TAB.SECURITY}>
-												<IconShieldLock size={20} />
-											</TabsTrigger>
-											<TabsTrigger value={PROXY_HOST_TAB.ADVANCED} className="ml-auto">
-												<IconSettings size={20} />
-											</TabsTrigger>
-											<TabsTrigger value={PROXY_HOST_TAB.MAINTENANCE}>
-												<IconTool size={20} />
-											</TabsTrigger>
-											<TabsTrigger value={PROXY_HOST_TAB.NOTES}>
-												<IconNote size={20} />
-											</TabsTrigger>
-											<Field name="forwardScheme">
-												{({ field: schemeField }: FieldProps) =>
-													schemeField.value === FORWARD_SCHEME.PATH && (
-														<TabsTrigger
-															value={PROXY_HOST_TAB.GIT_SYNC}
-															className="text-emerald-500"
-														>
-															<IconGitBranch size={20} />
-														</TabsTrigger>
-													)
-												}
-											</Field>
-										</TabsList>
-									</div>
-
-									<div className="flex-1 overflow-y-auto">
-										<div className="px-6 py-4">
-											{errorMsg && (
-												<Alert variant="destructive" className="mb-4">
-													<AlertCircle className="h-4 w-4" />
-													<AlertTitle>Error</AlertTitle>
-													<AlertDescription>{errorMsg}</AlertDescription>
-												</Alert>
-											)}
-											<ProxyHostDetailsTab />
-											<TabsContent value={PROXY_HOST_TAB.LOCATIONS} className="mt-0">
-												<LocationsFields initialValues={data?.locations || []} />
-											</TabsContent>
-											<ProxyHostSslTab />
-											<ProxyHostSecurityTab />
-
-											<ProxyHostAdvancedTab />
-
-											<ProxyHostMaintenanceTab />
-
-											<ProxyHostNotesTab />
-
-											<Field name="forwardScheme">
-												{({ field: schemeField }: FieldProps) =>
-													schemeField.value === FORWARD_SCHEME.PATH && (
-														<TabsContent
-															value={PROXY_HOST_TAB.GIT_SYNC}
-															className="mt-0 space-y-4"
-														>
-															<GitSyncTab hostId={typeof id === "number" ? id : null} />
-														</TabsContent>
-													)
-												}
-											</Field>
-										</div>
-									</div>
-								</Tabs>
+								<ProxyHostFormTabs
+									errorMessage={errorMsg}
+									hostId={typeof id === "number" ? id : null}
+									locations={data?.locations || []}
+								/>
 
 								<DialogFooter className="px-6 py-4 border-t">
 									<Button variant="outline" onClick={() => remove()} type="button">
