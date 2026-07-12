@@ -171,6 +171,8 @@
 	"audit-log.csv.object-id": "ID đối tượng",
 	"audit-log.csv.object-type": "Loại đối tượng",
 	"audit-log.csv.user": "Người dùng",
+	"audit-log.copy-metadata": "Sao chép siêu dữ liệu",
+	"audit-log.copy-metadata.failed": "Không thể sao chép siêu dữ liệu.",
 	"audit-log.export.csv": "Xuất CSV",
 	"audit-log.filter.all-actions": "Tất cả thao tác",
 	"audit-log.filter.all-object-types": "Tất cả loại đối tượng",

@@ -1,4 +1,4 @@
-import { IconCode, IconListDetails } from "@tabler/icons-react";
+import { IconCode, IconCopy, IconListDetails } from "@tabler/icons-react";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { EventFormatter, Loading, UserAvatar } from "src/components";
 import { LazyCodeEditor } from "src/components/LazyCodeEditor";
@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { useAuditLog, useHealth } from "src/hooks";
+import { toast } from "src/hooks/use-toast";
 import { intl, T } from "src/locale";
 
 const showEventDetailsModal = (id: number) => {
@@ -38,6 +39,21 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			}
 		}
 		return masked;
+	};
+	const metadata = data ? JSON.stringify(maskSensitiveData(data.meta), null, 2) : "";
+	const showCopyError = () => {
+		toast({
+			description: intl.formatMessage({ id: "audit-log.copy-metadata.failed" }),
+			variant: "destructive",
+		});
+	};
+	const copyMetadata = () => {
+		if (!navigator.clipboard) {
+			showCopyError();
+			return;
+		}
+
+		void navigator.clipboard.writeText(metadata).catch(showCopyError);
 	};
 
 	return (
@@ -74,6 +90,19 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 										<IconCode className="h-4 w-4" />
 										<T id="audit-log.metadata" />
 									</h4>
+									<Button
+										aria-label={intl.formatMessage({ id: "audit-log.copy-metadata" })}
+										onClick={copyMetadata}
+										size="icon"
+										title={intl.formatMessage({ id: "audit-log.copy-metadata" })}
+										type="button"
+										variant="ghost"
+									>
+										<IconCopy className="h-4 w-4" />
+										<span className="sr-only">
+											<T id="audit-log.copy-metadata" />
+										</span>
+									</Button>
 								</div>
 								<div className="rounded-lg border bg-muted/50 overflow-hidden shadow-inner">
 									<LazyCodeEditor
@@ -88,7 +117,7 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 											lineHeight: 1.5,
 										}}
 										readOnly
-										value={JSON.stringify(maskSensitiveData(data.meta), null, 2)}
+										value={metadata}
 									/>
 								</div>
 							</div>

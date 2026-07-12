@@ -171,6 +171,8 @@
 	"audit-log.csv.object-id": "객체 ID",
 	"audit-log.csv.object-type": "객체 유형",
 	"audit-log.csv.user": "사용자",
+	"audit-log.copy-metadata": "메타데이터 복사",
+	"audit-log.copy-metadata.failed": "메타데이터를 복사하지 못했습니다.",
 	"audit-log.export.csv": "CSV 내보내기",
 	"audit-log.filter.all-actions": "모든 작업",
 	"audit-log.filter.all-object-types": "모든 객체 유형",

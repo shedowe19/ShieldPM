@@ -171,6 +171,8 @@
 	"audit-log.csv.object-id": "对象 ID",
 	"audit-log.csv.object-type": "对象类型",
 	"audit-log.csv.user": "用户",
+	"audit-log.copy-metadata": "复制元数据",
+	"audit-log.copy-metadata.failed": "无法复制元数据。",
 	"audit-log.export.csv": "导出 CSV",
 	"audit-log.filter.all-actions": "所有操作",
 	"audit-log.filter.all-object-types": "所有对象类型",

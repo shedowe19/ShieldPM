@@ -171,6 +171,8 @@
 	"audit-log.csv.object-id": "オブジェクトID",
 	"audit-log.csv.object-type": "オブジェクトの種類",
 	"audit-log.csv.user": "ユーザー",
+	"audit-log.copy-metadata": "メタデータをコピー",
+	"audit-log.copy-metadata.failed": "メタデータをコピーできませんでした。",
 	"audit-log.export.csv": "CSVをエクスポート",
 	"audit-log.filter.all-actions": "すべての操作",
 	"audit-log.filter.all-object-types": "すべてのオブジェクトタイプ",

@@ -171,6 +171,8 @@
 	"audit-log.csv.object-id": "ID objektu",
 	"audit-log.csv.object-type": "Typ objektu",
 	"audit-log.csv.user": "Používateľ",
+	"audit-log.copy-metadata": "Kopírovať metaúdaje",
+	"audit-log.copy-metadata.failed": "Metaúdaje sa nepodarilo skopírovať.",
 	"audit-log.export.csv": "Exportovať CSV",
 	"audit-log.filter.all-actions": "Všetky akcie",
 	"audit-log.filter.all-object-types": "Všetky typy objektov",

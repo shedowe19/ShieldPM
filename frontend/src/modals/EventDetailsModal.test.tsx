@@ -1,16 +1,18 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps, PropsWithChildren } from "react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	show: vi.fn(),
+	toast: vi.fn(),
 	useAuditLog: vi.fn(),
 	useHealth: vi.fn(),
 }));
 
 vi.mock("@tabler/icons-react", () => ({
 	IconCode: () => null,
+	IconCopy: () => null,
 	IconListDetails: () => null,
 }));
 
@@ -38,7 +40,11 @@ vi.mock("src/components/ui/alert", () => ({
 }));
 
 vi.mock("src/components/ui/button", () => ({
-	Button: ({ children }: PropsWithChildren) => <button type="button">{children}</button>,
+	Button: ({ children, ...props }: PropsWithChildren<ComponentProps<"button">>) => (
+		<button type="button" {...props}>
+			{children}
+		</button>
+	),
 }));
 
 vi.mock("src/components/ui/dialog", () => ({
@@ -53,6 +59,8 @@ vi.mock("src/hooks", () => ({
 	useAuditLog: mocks.useAuditLog,
 	useHealth: mocks.useHealth,
 }));
+
+vi.mock("src/hooks/use-toast", () => ({ toast: mocks.toast }));
 
 const renderModal = async () => {
 	const { showEventDetailsModal } = await import("./EventDetailsModal");
@@ -114,5 +122,65 @@ describe("EventDetailsModal", () => {
 		expect(screen.getByTestId("metadata")).toHaveTextContent("Ausgeblendet (Demo)");
 		expect(screen.queryByText("Metadata")).not.toBeInTheDocument();
 		expect(screen.getByTestId("metadata")).not.toHaveTextContent("Hidden (Demo)");
+	});
+
+	it("copies demo-masked metadata instead of the original sensitive value", async () => {
+		const writeText = vi.fn().mockResolvedValue(undefined);
+		Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+		mocks.useAuditLog.mockReturnValue({
+			data: {
+				action: "updated",
+				createdOn: "2026-07-12T00:00:00Z",
+				id: 73,
+				meta: { client_ip: "192.0.2.10" },
+				modifiedOn: "2026-07-12T00:00:00Z",
+				objectId: 11,
+				objectType: "proxy-host",
+				userId: 1,
+			},
+			error: null,
+			isLoading: false,
+		});
+		mocks.useHealth.mockReturnValue({ data: { demo: true } });
+
+		await renderModal();
+
+		fireEvent.click(screen.getByRole("button", { name: "Metadaten kopieren" }));
+
+		expect(writeText).toHaveBeenCalledWith('{\n  "client_ip": "Ausgeblendet (Demo)"\n}');
+		expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining("192.0.2.10"));
+	});
+
+	it("reports denied clipboard access without leaking the metadata", async () => {
+		const writeText = vi.fn().mockRejectedValue(new Error("Clipboard access denied"));
+		Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+		mocks.useAuditLog.mockReturnValue({
+			data: {
+				action: "updated",
+				createdOn: "2026-07-12T00:00:00Z",
+				id: 73,
+				meta: { client_ip: "192.0.2.10" },
+				modifiedOn: "2026-07-12T00:00:00Z",
+				objectId: 11,
+				objectType: "proxy-host",
+				userId: 1,
+			},
+			error: null,
+			isLoading: false,
+		});
+		mocks.useHealth.mockReturnValue({ data: { demo: true } });
+
+		await renderModal();
+
+		fireEvent.click(screen.getByRole("button", { name: "Metadaten kopieren" }));
+
+		await waitFor(() => {
+			expect(mocks.toast).toHaveBeenCalledWith({
+				description: "Metadaten konnten nicht kopiert werden.",
+				variant: "destructive",
+			});
+		});
+		expect(writeText).toHaveBeenCalledWith('{\n  "client_ip": "Ausgeblendet (Demo)"\n}');
+		expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining("192.0.2.10"));
 	});
 });

@@ -171,6 +171,8 @@
 	"audit-log.csv.object-id": "Идентификатор объекта",
 	"audit-log.csv.object-type": "Тип объекта",
 	"audit-log.csv.user": "Пользователь",
+	"audit-log.copy-metadata": "Копировать метаданные",
+	"audit-log.copy-metadata.failed": "Не удалось скопировать метаданные.",
 	"audit-log.export.csv": "Экспорт CSV",
 	"audit-log.filter.all-actions": "Все действия",
 	"audit-log.filter.all-object-types": "Все типы объектов",
