@@ -10,16 +10,14 @@ import {
 } from "src/api/backend";
 import { getAnalyticsStatus } from "src/api/backend/getAnalyticsStatus";
 import { Loading } from "src/components";
-import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { useHealth, useProxyHosts } from "src/hooks";
 import { getPollingInterval, isPollingAllowed } from "src/hooks/pollingPolicy";
 import { T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsFilters } from "./AnalyticsFilters";
+import { AnalyticsGeography } from "./AnalyticsGeography";
 import { AnalyticsKpis } from "./AnalyticsKpis";
-import { AnalyticsMap } from "./AnalyticsMap";
 import { AnalyticsRecentRequests } from "./AnalyticsRecentRequests";
-import { AnalyticsTopCountries } from "./AnalyticsTopCountries";
 import { AnalyticsTopLists } from "./AnalyticsTopLists";
 
 const canPoll = () =>
@@ -287,22 +285,7 @@ const Analytics = () => {
 			{/* Charts */}
 			<AnalyticsCharts series={series} />
 
-			{/* Map & Tables */}
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-				{/* World Map */}
-				<Card className="overflow-hidden">
-					<CardHeader>
-						<CardTitle>
-							<T id="analytics.requests-by-country" />
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="p-0">
-						<AnalyticsMap summary={summary} />
-					</CardContent>
-				</Card>
-
-				<AnalyticsTopCountries summary={summary} />
-			</div>
+			<AnalyticsGeography summary={summary} />
 
 			{/* Top Lists */}
 			<AnalyticsTopLists summary={summary} isDemo={isDemo} />

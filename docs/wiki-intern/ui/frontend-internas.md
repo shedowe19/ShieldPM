@@ -83,6 +83,11 @@ Maskierung bei weiterhin sichtbaren Request-Details ab.
 Datenbankstatus. Die Komponente übernimmt die bestehende Zahlenformatierung sowie alle lokalisierten Titel und
 Beschreibungen unverändert; `AnalyticsKpis.test.tsx` sichert Werte und Kennzeichnungen der Karten ab.
 
+`pages/Analytics/AnalyticsGeography.tsx` fasst die Länderübersicht aus Kartenrahmen, verzögert geladener Weltkarte und
+Top-Länderliste zusammen. Beide Kindkomponenten erhalten dieselbe Analytics-Zusammenfassung; damit bleibt die Route
+für Polling und Datenabruf zuständig, während die geografische Darstellung zusammenhängend bleibt.
+`AnalyticsGeography.test.tsx` sichert Titel und Datenweitergabe an Karte und Länderliste ab.
+
 ## React-Kontexte (`frontend/src/context/`)
 
 | Context         | Datei                      | Zweck                                                 |
