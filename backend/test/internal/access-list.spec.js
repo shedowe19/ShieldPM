@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
+import { backendSourcePath } from "../helpers/source-path.js";
 
 /**
  * Fix #68: Race condition in access-list.js — insert was happening BEFORE delete.
@@ -12,7 +13,7 @@ describe("Fix #68: Delete before insert prevents race condition", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/access-list.js", "utf8");
+		source = fs.readFileSync(backendSourcePath("internal", "access-list.js"), "utf8");
 	});
 
 	it("delete query appears before insert in the items section", () => {

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
+import { backendSourcePath } from "../helpers/source-path.js";
 
 /**
  * Fix #72: SSRF protection in ddns.js custom provider
@@ -9,7 +10,7 @@ describe("Fix #72: SSRF protection", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/ddns.js", "utf8");
+		source = fs.readFileSync(backendSourcePath("internal", "ddns.js"), "utf8");
 	});
 
 	it("has validatePublicUrl helper function", () => {

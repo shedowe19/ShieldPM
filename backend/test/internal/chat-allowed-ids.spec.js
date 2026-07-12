@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
+import { backendSourcePath } from "../helpers/source-path.js";
 
 /**
  * Fix #70: chat.js — warn when allowed_ids is not configured
@@ -10,7 +11,7 @@ describe("Fix #70: allowed_ids configuration warning", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/chat.js", "utf8");
+		source = fs.readFileSync(backendSourcePath("internal", "chat.js"), "utf8");
 	});
 
 	it("warns when allowed_ids is not configured", () => {

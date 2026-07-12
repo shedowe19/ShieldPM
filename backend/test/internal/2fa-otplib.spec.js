@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
+import { backendSourcePath } from "../helpers/source-path.js";
 
 /**
  * Fix #69: Verify otplib v13 uses standalone exports correctly.
@@ -10,7 +11,7 @@ describe("Fix #69: otplib v13 uses standalone exports", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/2fa-service.js", "utf8");
+		source = fs.readFileSync(backendSourcePath("internal", "2fa-service.js"), "utf8");
 	});
 
 	it("imports otplib standalone functions (generateSecret, generateURI, verifySync)", () => {

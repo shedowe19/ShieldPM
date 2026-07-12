@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
+import { backendSourcePath } from "../helpers/source-path.js";
 
 /**
  * Fix #73: setting.js — only allow value and meta fields in patch
@@ -9,7 +10,7 @@ describe("Fix #73: setting.js field whitelist", () => {
 	let source;
 
 	beforeEach(() => {
-		source = fs.readFileSync("/Projekte/ShieldPM/backend/internal/setting.js", "utf8");
+		source = fs.readFileSync(backendSourcePath("internal", "setting.js"), "utf8");
 	});
 
 	it("patches only value and meta fields (not full data object)", () => {
