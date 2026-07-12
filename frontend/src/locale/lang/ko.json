@@ -444,6 +444,8 @@
 	"passAuth": "인증 전달",
 	"password": "비밀번호",
 	"password.generate": "무작위 비밀번호 생성",
+	"password.demo.access-denied": "접근이 거부되었습니다",
+	"password.demo.disabled": "데모 모드에서는 비밀번호 변경이 비활성화되어 있습니다.",
 	"password.hide": "비밀번호 숨기기",
 	"password.show": "비밀번호 표시",
 	"permissions.hidden": "숨김",

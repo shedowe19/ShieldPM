@@ -444,6 +444,8 @@
 	"passAuth": "Prejsť autentizáciou",
 	"password": "Heslo",
 	"password.generate": "Vygenerovať náhodné heslo",
+	"password.demo.access-denied": "Prístup zamietnutý",
+	"password.demo.disabled": "Zmena hesla je v ukážkovom režime vypnutá.",
 	"password.hide": "Skryť heslo",
 	"password.show": "Zobraziť heslo",
 	"permissions.hidden": "Skryté",

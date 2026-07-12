@@ -444,6 +444,8 @@
 	"passAuth": "Authentifizierung weitergeben",
 	"password": "Passwort",
 	"password.generate": "Zufälliges Passwort generieren",
+	"password.demo.access-denied": "Zugriff verweigert",
+	"password.demo.disabled": "Passwortänderungen sind im Demo-Modus deaktiviert.",
 	"password.hide": "Passwort verstecken",
 	"password.show": "Passwort anzeigen",
 	"permissions.hidden": "Versteckt",

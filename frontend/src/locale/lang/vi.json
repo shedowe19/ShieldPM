@@ -444,6 +444,8 @@
 	"passAuth": "Chuyển xác thực",
 	"password": "Mật khẩu",
 	"password.generate": "Tạo mật khẩu ngẫu nhiên",
+	"password.demo.access-denied": "Truy cập bị từ chối",
+	"password.demo.disabled": "Không thể thay đổi mật khẩu trong chế độ dùng thử.",
 	"password.hide": "Ẩn Mật khẩu",
 	"password.show": "Hiện Mật khẩu",
 	"permissions.hidden": "Ẩn",

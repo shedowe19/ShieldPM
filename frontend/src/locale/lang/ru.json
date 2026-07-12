@@ -444,6 +444,8 @@
 	"passAuth": "Передать аутентификацию",
 	"password": "Пароль",
 	"password.generate": "Сгенерировать случайный пароль",
+	"password.demo.access-denied": "Доступ запрещён",
+	"password.demo.disabled": "Изменение пароля отключено в демонстрационном режиме.",
 	"password.hide": "Скрыть пароль",
 	"password.show": "Показать пароль",
 	"permissions.hidden": "Скрыто",

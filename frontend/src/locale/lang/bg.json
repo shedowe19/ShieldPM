@@ -444,6 +444,8 @@
 	"passAuth": "Препрати удостоверяване",
 	"password": "Парола",
 	"password.generate": "Генериране на случайна парола",
+	"password.demo.access-denied": "Достъпът е отказан",
+	"password.demo.disabled": "Промените на паролата са деактивирани в демонстрационен режим.",
 	"password.hide": "Скриване на паролата",
 	"password.show": "Показване на паролата",
 	"permissions.hidden": "Скрито",

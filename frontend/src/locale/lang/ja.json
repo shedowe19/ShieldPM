@@ -444,6 +444,8 @@
 	"passAuth": "認証を渡す",
 	"password": "パスワード",
 	"password.generate": "ランダムなパスワードを生成",
+	"password.demo.access-denied": "アクセスが拒否されました",
+	"password.demo.disabled": "デモモードではパスワードの変更は無効です。",
 	"password.hide": "パスワードを隠す",
 	"password.show": "パスワードを表示する",
 	"permissions.hidden": "非公開",

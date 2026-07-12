@@ -64,15 +64,17 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 					<DialogHeader>
 						<DialogTitle className="flex items-center text-red-500">
 							<IconLock className="mr-2 h-5 w-5" />
-							Access Denied
+							<T id="password.demo.access-denied" />
 						</DialogTitle>
 					</DialogHeader>
 					<div className="p-4 text-center text-muted-foreground">
-						<p className="font-semibold">Password changes are disabled in Demo Mode.</p>
+						<p className="font-semibold">
+							<T id="password.demo.disabled" />
+						</p>
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={remove}>
-							<T id="close" />
+							<T id="action.close" />
 						</Button>
 					</DialogFooter>
 				</DialogContent>

@@ -4,6 +4,7 @@ import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	health: { data: {} },
 	remove: vi.fn(),
 	show: vi.fn(),
 }));
@@ -27,7 +28,7 @@ vi.mock("ez-modal-react", () => ({
 vi.mock("generate-password-browser", () => ({ generate: vi.fn() }));
 vi.mock("lucide-react", () => ({ AlertCircle: () => null, Loader2: () => null }));
 vi.mock("src/api/backend", () => ({ updateAuth: vi.fn() }));
-vi.mock("src/hooks", () => ({ useHealth: () => ({ data: {} }) }));
+vi.mock("src/hooks", () => ({ useHealth: () => mocks.health }));
 
 vi.mock("src/components/ui/alert", () => ({
 	Alert: ({ children }: PropsWithChildren) => <div>{children}</div>,
@@ -63,6 +64,7 @@ vi.mock("src/modules/Validations", () => ({ validateString: () => undefined }));
 
 describe("ChangePasswordModal", () => {
 	beforeEach(async () => {
+		mocks.health = { data: {} };
 		mocks.remove.mockClear();
 		mocks.show.mockClear();
 		await changeLocale("de");
@@ -104,5 +106,21 @@ describe("ChangePasswordModal", () => {
 		expect(screen.getByLabelText(/Aktuelles Passw/)).toHaveAttribute("type", "text");
 		expect(screen.getByLabelText(/Neues Passw/)).toHaveAttribute("type", "text");
 		expect(screen.getByLabelText(/Passwort wiederholen/)).toHaveAttribute("type", "text");
+	});
+
+	it("renders the demo restriction in the active locale", async () => {
+		mocks.health = { data: { demo: true } };
+		const { showChangePasswordModal } = await import("./ChangePasswordModal");
+		showChangePasswordModal("me");
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("Change password modal was not registered");
+		}
+
+		render(<ModalComponent id="me" remove={mocks.remove} visible />);
+
+		expect(screen.getByText("Zugriff verweigert")).toBeInTheDocument();
+		expect(screen.getByText("Passwortänderungen sind im Demo-Modus deaktiviert.")).toBeInTheDocument();
 	});
 });

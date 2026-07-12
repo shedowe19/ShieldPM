@@ -444,6 +444,8 @@
 	"passAuth": "Przekaż uwierzytelnianie",
 	"password": "Hasło",
 	"password.generate": "Wygeneruj losowe hasło",
+	"password.demo.access-denied": "Odmowa dostępu",
+	"password.demo.disabled": "Zmiana hasła jest wyłączona w trybie demonstracyjnym.",
 	"password.hide": "Ukryj hasło",
 	"password.show": "Pokaż hasło",
 	"permissions.hidden": "Ukryte",

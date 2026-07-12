@@ -444,6 +444,8 @@
 	"passAuth": "传递认证",
 	"password": "密码",
 	"password.generate": "生成随机密码",
+	"password.demo.access-denied": "访问被拒绝",
+	"password.demo.disabled": "演示模式下已禁用密码更改。",
 	"password.hide": "隐藏密码",
 	"password.show": "显示密码",
 	"permissions.hidden": "隐藏",

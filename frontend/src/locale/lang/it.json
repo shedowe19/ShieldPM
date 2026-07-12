@@ -444,6 +444,8 @@
 	"passAuth": "Passa autenticazione",
 	"password": "Password",
 	"password.generate": "Genera password casuale",
+	"password.demo.access-denied": "Accesso negato",
+	"password.demo.disabled": "Le modifiche della password sono disabilitate nella modalità demo.",
 	"password.hide": "Nascondi Password",
 	"password.show": "Mostra Password",
 	"permissions.hidden": "Nascosto",
