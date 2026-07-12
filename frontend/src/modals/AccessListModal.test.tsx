@@ -1,10 +1,12 @@
-import { render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import type { ComponentProps, PropsWithChildren } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { changeLocale } from "src/locale";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	remove: vi.fn(),
 	show: vi.fn(),
+	useAccessList: vi.fn(),
 }));
 
 vi.mock("@tabler/icons-react", () => ({ IconShieldLock: () => null }));
@@ -81,21 +83,27 @@ vi.mock("src/components/ui/textarea", () => ({
 }));
 
 vi.mock("src/hooks", () => ({
-	useAccessList: () => ({
-		data: { clients: [], id: 73, items: [], meta: "null", name: "Legacy access list" },
-		error: null,
-		isLoading: false,
-	}),
+	useAccessList: mocks.useAccessList,
 	useSetAccessList: () => ({ mutate: vi.fn() }),
-}));
-
-vi.mock("src/locale", () => ({
-	intl: { formatMessage: ({ id }: { id: string }) => id },
-	T: () => null,
 }));
 
 vi.mock("src/modules/Validations", () => ({ validateString: vi.fn() }));
 vi.mock("src/notifications", () => ({ showObjectSuccess: vi.fn() }));
+
+beforeEach(async () => {
+	mocks.show.mockClear();
+	mocks.useAccessList.mockReturnValue({
+		data: { clients: [], id: 73, items: [], meta: "null", name: "Legacy access list" },
+		error: null,
+		isLoading: false,
+	});
+	await changeLocale("de");
+});
+
+afterEach(async () => {
+	cleanup();
+	await changeLocale("en");
+});
 
 describe("AccessListModal", () => {
 	it("renders an access list whose legacy JSON meta is null", async () => {
@@ -108,5 +116,23 @@ describe("AccessListModal", () => {
 		}
 
 		expect(() => render(<ModalComponent remove={mocks.remove} visible />)).not.toThrow();
+	});
+
+	it("shows localized generic errors when loading an access list fails without a server message", async () => {
+		mocks.useAccessList.mockReturnValue({ data: undefined, error: { message: "" }, isLoading: false });
+		const { showAccessListModal } = await import("./AccessListModal");
+		showAccessListModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("Access list modal was not registered");
+		}
+
+		render(<ModalComponent remove={mocks.remove} visible />);
+
+		expect(await screen.findByText("Fehler")).toBeInTheDocument();
+		expect(await screen.findByText("Unbekannter Fehler")).toBeInTheDocument();
+		expect(screen.queryByText("Error")).not.toBeInTheDocument();
+		expect(screen.queryByText("Unknown error")).not.toBeInTheDocument();
 	});
 });

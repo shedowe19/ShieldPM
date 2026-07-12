@@ -74,8 +74,10 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				{!isLoading && error && (
 					<Alert variant="destructive" className="mb-4">
 						<AlertCircle className="h-4 w-4" />
-						<AlertTitle>Error</AlertTitle>
-						<AlertDescription>{error?.message || "Unknown error"}</AlertDescription>
+						<AlertTitle>
+							<T id="error.title" />
+						</AlertTitle>
+						<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
 					</Alert>
 				)}
 
@@ -91,7 +93,9 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							{errorMsg && (
 								<Alert variant="destructive">
 									<AlertCircle className="h-4 w-4" />
-									<AlertTitle>Error</AlertTitle>
+									<AlertTitle>
+										<T id="error.title" />
+									</AlertTitle>
 									<AlertDescription>{errorMsg}</AlertDescription>
 								</Alert>
 							)}
