@@ -9,11 +9,11 @@ afterEach(() => {
 });
 
 describe("loadMessages", () => {
-	it("loads the selected locale together with shared locale names", async () => {
+	it("loads language options with their native names", async () => {
 		const messages = await loadMessages("de-DE");
 
 		expect(messages["action.add"]).toBe("Hinzufügen");
-		expect(messages["locale-de-DE"]).toBe("German");
+		expect(messages["locale-de-DE"]).toBe("Deutsch");
 	});
 
 	it("falls back to English for unsupported locales", async () => {

@@ -44,7 +44,7 @@ describe("LocaleRefreshBoundary", () => {
 		expect(screen.getByTestId("translated-content")).toHaveTextContent("Add");
 
 		fireEvent.click(screen.getByRole("button", { name: /Switch Language/ }));
-		fireEvent.click(screen.getByText("German"));
+		fireEvent.click(screen.getByText("Deutsch"));
 
 		await waitFor(() => {
 			expect(screen.getByTestId("translated-content")).toHaveTextContent("Hinzufügen");
