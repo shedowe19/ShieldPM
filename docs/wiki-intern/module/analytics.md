@@ -40,7 +40,9 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Beim erneuten Sichtbarwerden startet die Live-Status-Abfrage nicht nur sofort, sondern plant nach ihrem Abschluss auch wieder die nächste zweisekündliche Aktualisierung. Dadurch bleibt der Live-Status nach einem Tab-Wechsel dauerhaft aktuell.
 - Die Weltkarte bleibt beim Aufruf der Analytics-Route zunächst als lokalisierter Ladezustand sichtbar und lädt ihre
   Visualisierungsabhängigkeiten erst, wenn ihr Bereich bis auf 200 Pixel an den Viewport heranreicht. Damit bleibt die
-  Kartenfunktion beim Scrollen verfügbar, ohne den anfänglichen Analytics-Chunk zu belasten.
+  Kartenfunktion beim Scrollen verfügbar, ohne den anfänglichen Analytics-Chunk zu belasten. Schlägt ihre Visualisierung
+  fehl, begrenzt eine lokale `RouteErrorBoundary` den Fehler auf den reservierten Kartenbereich; die übrige
+  Analytics-Seite bleibt bedienbar.
 - Die Recharts-Zeit- und Statuscode-Charts folgen demselben viewport-gesteuerten Muster: `AnalyticsCharts.tsx` hält
   zunächst einen Ladezustand vor und lädt `AnalyticsChartContent.tsx` erst kurz vor dem Sichtbarwerden. Dadurch bleibt
   die Chart-Funktion beim Scrollen vollständig erhalten, ohne den anfänglichen Analytics-Chunk mit Recharts zu belasten.

@@ -1,7 +1,10 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalyticsMap } from "./AnalyticsMap";
+
+const mocks = vi.hoisted(() => ({
+	failMapContent: false,
+}));
 
 const observer = {
 	callback: undefined as IntersectionObserverCallback | undefined,
@@ -19,16 +22,21 @@ class IntersectionObserverMock {
 	unobserve = vi.fn();
 }
 
-vi.mock("react-simple-maps", () => ({
-	ComposableMap: ({ children }: PropsWithChildren) => <div data-testid="analytics-map">{children}</div>,
-	Geographies: () => null,
-	Geography: () => null,
-	Marker: () => null,
-	ZoomableGroup: ({ children }: PropsWithChildren) => <>{children}</>,
+vi.mock("./AnalyticsMapContent", () => ({
+	default: () => {
+		if (mocks.failMapContent) {
+			throw new Error("Analytics map chunk failed");
+		}
+
+		return <div data-testid="analytics-map" />;
+	},
 }));
+
+const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("AnalyticsMap", () => {
 	beforeEach(() => {
+		mocks.failMapContent = false;
 		observer.callback = undefined;
 		observer.disconnect.mockClear();
 		observer.observe.mockClear();
@@ -38,6 +46,10 @@ describe("AnalyticsMap", () => {
 	afterEach(() => {
 		cleanup();
 		vi.unstubAllGlobals();
+	});
+
+	afterAll(() => {
+		consoleErrorSpy.mockRestore();
 	});
 
 	it("defers the map until its section is near the viewport while keeping a loading fallback", async () => {
@@ -56,5 +68,25 @@ describe("AnalyticsMap", () => {
 
 		expect(await screen.findByTestId("analytics-map")).toBeInTheDocument();
 		expect(observer.disconnect).toHaveBeenCalledOnce();
+	});
+
+	it("contains a failed map chunk without replacing the surrounding analytics content", async () => {
+		mocks.failMapContent = true;
+		render(
+			<>
+				<p>Analytics content remains available</p>
+				<AnalyticsMap summary={{ topCountries: [] }} />
+			</>,
+		);
+
+		if (!observer.callback) {
+			throw new Error("Intersection observer callback was not registered");
+		}
+		await act(async () => {
+			observer.callback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+		});
+
+		expect(await screen.findByRole("alert")).toBeInTheDocument();
+		expect(screen.getByText("Analytics content remains available")).toBeInTheDocument();
 	});
 });

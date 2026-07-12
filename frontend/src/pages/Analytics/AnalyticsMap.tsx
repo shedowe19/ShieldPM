@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { AnalyticsSummary } from "src/api/backend";
 import { Loading } from "src/components/Loading";
+import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 
 const AnalyticsMapContent = lazy(() => import("./AnalyticsMapContent"));
 
@@ -36,9 +37,11 @@ export const AnalyticsMap = ({ summary }: Props) => {
 	return (
 		<div ref={containerRef} className="h-[400px] w-full bg-[#020817]">
 			{shouldLoad ? (
-				<Suspense fallback={<Loading noLogo />}>
-					<AnalyticsMapContent summary={summary} />
-				</Suspense>
+				<RouteErrorBoundary>
+					<Suspense fallback={<Loading noLogo />}>
+						<AnalyticsMapContent summary={summary} />
+					</Suspense>
+				</RouteErrorBoundary>
 			) : (
 				<Loading noLogo />
 			)}
