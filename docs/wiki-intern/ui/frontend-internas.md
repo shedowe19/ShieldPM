@@ -150,6 +150,11 @@ Nickname, E-Mail sowie die Admin- und Deaktivierungsschalter bleiben im gemeinsa
 Verwaltungsoptionen erscheinen weiterhin nur beim Bearbeiten eines anderen Benutzers. `UserDetailsTab.test.tsx`
 sichert Wertebindung und diese Sichtbarkeitsgrenze ab.
 
+`UserModalSubmission.ts` serialisiert die bearbeitbaren Profildaten vor dem Speichern. Beim Bearbeiten des eigenen
+Kontos lässt es Rollen und Deaktivierungsstatus weiterhin aus, damit sich Benutzer nicht selbst sperren oder ihre
+Rolle ändern können. `UserModalSubmission.test.ts` sichert diese Payload-Grenze sowie die Kennzeichnung neuer
+Benutzer.
+
 `SetPasswordModal.tsx` beschriftet die Icon-Aktionen zum Anzeigen/Verstecken und Generieren eines Passworts über die
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.

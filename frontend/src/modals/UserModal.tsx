@@ -17,6 +17,7 @@ import SecuritySettings from "src/pages/Profile/Security";
 import { AUDIT_LOG_OBJECT_TYPE, AVATAR_TYPE, SHADCN_VARIANT, USER_ROLE } from "src/types/enums";
 import UserAvatarTab from "./UserAvatarTab";
 import UserDetailsTab, { type UserDetailsFormValues } from "./UserDetailsTab";
+import { createUserPayload } from "./UserModalSubmission";
 
 const showUserModal = (id: number | "me" | "new") => {
 	EasyModal.show(UserModal, { id });
@@ -39,26 +40,11 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
-		const payload: Record<string, unknown> = {
-			id: id === "new" ? undefined : (id as number),
-			roles: [],
-			...values,
-			is_disabled: values.isDisabled,
-		};
-
-		if (data?.id === currentUser?.id) {
-			// Prevent user from locking themselves out
-			delete payload.is_disabled;
-			delete payload.roles;
-		} else if (payload.isAdmin) {
-			payload.roles = [USER_ROLE.ADMIN];
-		}
-
-		// these aren't real fields, just for the form
-		delete payload.isAdmin;
-		delete payload.isDisabled;
-		delete payload.avatar_type;
-		delete payload.avatar_value;
+		const payload = createUserPayload({
+			id,
+			isCurrentUser: data?.id === currentUser?.id,
+			values,
+		});
 
 		setUser(payload as unknown as User, {
 			onError: (err) => {
