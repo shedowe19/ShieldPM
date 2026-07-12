@@ -18,6 +18,7 @@ import ProxyHostAdvancedTab from "./ProxyHostAdvancedTab";
 import ProxyHostDetailsTab from "./ProxyHostDetailsTab";
 import ProxyHostMaintenanceTab from "./ProxyHostMaintenanceTab";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
+import { createProxyHostPayload } from "./ProxyHostModalSubmission";
 import ProxyHostNotesTab from "./ProxyHostNotesTab";
 import ProxyHostSecurityTab from "./ProxyHostSecurityTab";
 import ProxyHostSslTab from "./ProxyHostSslTab";
@@ -44,30 +45,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
-		// Sanitize numeric fields that can be null
-		const sanitizedValues = { ...values };
-		if (sanitizedValues.advLimitReqRate === "" || Number.isNaN(Number(sanitizedValues.advLimitReqRate))) {
-			sanitizedValues.advLimitReqRate = undefined;
-		}
-		if (sanitizedValues.advLimitReqBurst === "" || Number.isNaN(Number(sanitizedValues.advLimitReqBurst))) {
-			sanitizedValues.advLimitReqBurst = undefined;
-		}
-
-		// Map frontend field to backend schema
-		if (typeof sanitizedValues.crowdsecEnabled !== "undefined") {
-			sanitizedValues.securityCrowdsec = sanitizedValues.crowdsecEnabled;
-			delete sanitizedValues.crowdsecEnabled;
-		}
-
-		// Don't overwrite git credentials with empty string (user didn't change them)
-		if (sanitizedValues.gitCredentials === "") {
-			delete sanitizedValues.gitCredentials;
-		}
-
-		const { ...payload } = {
-			id: id === "new" ? undefined : id,
-			...sanitizedValues,
-		};
+		const payload = createProxyHostPayload({ id, values });
 
 		setProxyHost(payload as unknown as ProxyHost, {
 			onError: (err: Error) => setErrorMsg(err.message ? <T id={err.message} /> : "Unknown error"),

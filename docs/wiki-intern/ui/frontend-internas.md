@@ -201,6 +201,11 @@ Terminal-, Symbol-, PHP-, Zugriffs- und Optionsfelder bleiben im gemeinsamen For
 `bandwidthLimit` und `forwardQuery` behalten ihre bisherige Wertebindung. `ProxyHostDetailsTab.test.tsx` sichert diese
 Zusammensetzung und beide Werte gegen Regressionsfehler ab.
 
+`ProxyHostModalSubmission.ts` kapselt die Serialisierung vor dem Speichern eines Proxy-Hosts. Leere Git-Zugangsdaten
+werden weiterhin nicht überschrieben, die UI-Option `crowdsecEnabled` wird in `securityCrowdsec` für die API überführt
+und ungültige Rate-Limit-Werte werden wie zuvor entfernt. `ProxyHostModalSubmission.test.ts` sichert diese
+Payload-Grenzen unabhängig vom Dialog ab.
+
 `AccessListDetailsTab.tsx` kapselt den Details-Tab des `AccessListModal` als Formik-Kind. Name sowie die Optionen
 `satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die
 Wertebindung gegen Regressionsfehler ab.
