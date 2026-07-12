@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { changeLocale } from "src/locale";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	show: vi.fn(),
@@ -56,11 +57,17 @@ vi.mock("./ProxyHostNotesTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostSecurityTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostSslTab", () => ({ default: () => null }));
 
-beforeEach(() => {
+beforeEach(async () => {
 	mocks.show.mockClear();
 	mocks.useProxyHost.mockReturnValue({ data: undefined, error: null, isLoading: true });
 	mocks.useSetProxyHost.mockReturnValue({ mutate: vi.fn() });
 	mocks.useUser.mockReturnValue({ data: undefined, error: null, isLoading: false });
+	await changeLocale("de");
+});
+
+afterEach(async () => {
+	cleanup();
+	await changeLocale("en");
 });
 
 describe("ProxyHostModal", () => {
@@ -76,5 +83,23 @@ describe("ProxyHostModal", () => {
 		render(<ModalComponent id={73} remove={vi.fn()} visible />);
 
 		expect(screen.getByText("loading")).toBeInTheDocument();
+	});
+
+	it("shows localized generic errors when loading a proxy host fails without a server message", async () => {
+		mocks.useProxyHost.mockReturnValue({ data: undefined, error: { message: "" }, isLoading: false });
+		const { showProxyHostModal } = await import("./ProxyHostModal");
+		showProxyHostModal(73);
+		const ModalComponent = mocks.show.mock.calls[0]?.[0];
+
+		if (!ModalComponent) {
+			throw new Error("Proxy host modal was not registered");
+		}
+
+		render(<ModalComponent id={73} remove={vi.fn()} visible />);
+
+		expect(await screen.findByText("Fehler")).toBeInTheDocument();
+		expect(await screen.findByText("Unbekannter Fehler")).toBeInTheDocument();
+		expect(screen.queryByText("Error")).not.toBeInTheDocument();
+		expect(screen.queryByText("Unknown error")).not.toBeInTheDocument();
 	});
 });

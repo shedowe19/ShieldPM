@@ -42,7 +42,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		const payload = createProxyHostPayload({ id, values });
 
 		setProxyHost(payload as unknown as ProxyHost, {
-			onError: (err: Error) => setErrorMsg(err.message ? <T id={err.message} /> : "Unknown error"),
+			onError: (err: Error) => setErrorMsg(<T id={err.message || "error.unknown"} />),
 			onSuccess: () => {
 				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, "saved");
 				remove();
@@ -60,8 +60,12 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				{!isLoading && (error || userError) && (
 					<Alert variant="destructive" className="m-3">
 						<AlertCircle className="h-4 w-4" />
-						<AlertTitle>Error</AlertTitle>
-						<AlertDescription>{error?.message || userError?.message || "Unknown error"}</AlertDescription>
+						<AlertTitle>
+							<T id="error.title" />
+						</AlertTitle>
+						<AlertDescription>
+							{error?.message || userError?.message || <T id="error.unknown" />}
+						</AlertDescription>
 					</Alert>
 				)}
 				{(isLoading || userIsLoading) && (
