@@ -42,4 +42,38 @@ describe("AnubisRulesField", () => {
 
 		expect(advancedSettingsButton).toHaveAttribute("aria-expanded", "true");
 	});
+
+	it("uses localized German text for rule fields and challenge settings", () => {
+		render(
+			<Formik
+				initialValues={{
+					anubisRules: [
+						{
+							action: "CHALLENGE" as const,
+							name: "Challenge bots",
+							path: ".*",
+						},
+					],
+				}}
+				onSubmit={() => {}}
+			>
+				<Form>
+					<AnubisRulesField />
+				</Form>
+			</Formik>,
+		);
+
+		expect(screen.getByRole("heading", { name: "Anubis-Regeln" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Regel hinzufügen" })).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Regelname (optional)")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Pfad-Regex (z. B. .*)")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("User-Agent-Regex (optional)")).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole("button", { name: "Erweiterte Einstellungen" }));
+
+		expect(screen.getByText("Remote-Adressen (CIDR, kommagetrennt)")).toBeInTheDocument();
+		expect(screen.getByText("Prüfschwierigkeit (1–16)")).toBeInTheDocument();
+		expect(screen.getByText("Prüfalgorithmus")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Standard: 4")).toBeInTheDocument();
+	});
 });

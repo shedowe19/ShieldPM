@@ -5,7 +5,7 @@ import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { intl } from "src/locale";
+import { intl, T } from "src/locale";
 
 interface AnubisRule {
 	name?: string;
@@ -29,7 +29,9 @@ const AnubisRulesField = () => {
 	return (
 		<div className="mt-4 border rounded-md p-4 bg-card">
 			<div className="flex items-center justify-between mb-4">
-				<h4 className="text-sm font-medium">Anubis Rules</h4>
+				<h4 className="text-sm font-medium">
+					<T id="anubis.rules.title" />
+				</h4>
 				<Button
 					type="button"
 					variant="outline"
@@ -50,7 +52,7 @@ const AnubisRulesField = () => {
 					}}
 				>
 					<IconPlus className="h-4 w-4 mr-2" />
-					Add Rule
+					<T id="anubis.rules.add" />
 				</Button>
 			</div>
 
@@ -60,7 +62,7 @@ const AnubisRulesField = () => {
 					<div className="space-y-3">
 						{rules.length === 0 && (
 							<p className="text-sm text-muted-foreground text-center py-4">
-								No custom rules defined. Anubis will only use its baseline protection.
+								<T id="anubis.rules.empty" />
 							</p>
 						)}
 						{rules.map((rule, index) => (
@@ -73,7 +75,9 @@ const AnubisRulesField = () => {
 									<div className="grid grid-cols-12 gap-2 flex-1">
 										<div className="col-span-3">
 											<Input
-												placeholder="Rule Name (optional)"
+												placeholder={intl.formatMessage({
+													id: "anubis.rules.name.placeholder",
+												})}
 												value={rule.name || ""}
 												onChange={(e) =>
 													setFieldValue(`anubisRules.${index}.name`, e.target.value)
@@ -83,7 +87,9 @@ const AnubisRulesField = () => {
 										</div>
 										<div className="col-span-3">
 											<Input
-												placeholder="Path Regex (e.g. .*)"
+												placeholder={intl.formatMessage({
+													id: "anubis.rules.path.placeholder",
+												})}
 												value={rule.path || ""}
 												onChange={(e) =>
 													setFieldValue(`anubisRules.${index}.path`, e.target.value)
@@ -102,15 +108,23 @@ const AnubisRulesField = () => {
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="ALLOW">ALLOW</SelectItem>
-													<SelectItem value="DENY">DENY</SelectItem>
-													<SelectItem value="CHALLENGE">CHALLENGE</SelectItem>
+													<SelectItem value="ALLOW">
+														<T id="action.allow" />
+													</SelectItem>
+													<SelectItem value="DENY">
+														<T id="action.deny" />
+													</SelectItem>
+													<SelectItem value="CHALLENGE">
+														<T id="anubis.rules.action.challenge" />
+													</SelectItem>
 												</SelectContent>
 											</Select>
 										</div>
 										<div className="col-span-4">
 											<Input
-												placeholder="User Agent Regex (Optional)"
+												placeholder={intl.formatMessage({
+													id: "anubis.rules.user-agent.placeholder",
+												})}
 												value={rule.userAgent || ""}
 												onChange={(e) =>
 													setFieldValue(`anubisRules.${index}.userAgent`, e.target.value)
@@ -152,10 +166,12 @@ const AnubisRulesField = () => {
 										{/* Remote Addresses */}
 										<div className="space-y-1">
 											<Label className="text-xs text-muted-foreground">
-												Remote Addresses (CIDR, comma-separated)
+												<T id="anubis.rules.remote-addresses" />
 											</Label>
 											<Input
-												placeholder="e.g. 192.168.1.0/24, 10.0.0.0/8"
+												placeholder={intl.formatMessage({
+													id: "anubis.rules.remote-addresses.placeholder",
+												})}
 												value={(rule.remoteAddresses || []).join(", ")}
 												onChange={(e) => {
 													const addresses = e.target.value
@@ -173,13 +189,15 @@ const AnubisRulesField = () => {
 											<div className="grid grid-cols-2 gap-3">
 												<div className="space-y-1">
 													<Label className="text-xs text-muted-foreground">
-														Challenge Difficulty (1-16)
+														<T id="anubis.rules.challenge-difficulty" />
 													</Label>
 													<Input
 														type="number"
 														min={1}
 														max={16}
-														placeholder="Default: 4"
+														placeholder={intl.formatMessage({
+															id: "anubis.rules.challenge-difficulty.placeholder",
+														})}
 														value={rule.challengeDifficulty ?? ""}
 														onChange={(e) =>
 															setFieldValue(
@@ -194,7 +212,7 @@ const AnubisRulesField = () => {
 												</div>
 												<div className="space-y-1">
 													<Label className="text-xs text-muted-foreground">
-														Challenge Algorithm
+														<T id="anubis.rules.challenge-algorithm" />
 													</Label>
 													<Select
 														value={rule.challengeAlgorithm || ""}
@@ -206,13 +224,25 @@ const AnubisRulesField = () => {
 														}
 													>
 														<SelectTrigger className="h-8 text-xs">
-															<SelectValue placeholder="Default (fast)" />
+															<SelectValue
+																placeholder={intl.formatMessage({
+																	id: "anubis.rules.algorithm.placeholder",
+																})}
+															/>
 														</SelectTrigger>
 														<SelectContent>
-															<SelectItem value="fast">Fast (PoW)</SelectItem>
-															<SelectItem value="slow">Slow (Waste CPU)</SelectItem>
-															<SelectItem value="metarefresh">Meta Refresh</SelectItem>
-															<SelectItem value="preact">Preact (JS)</SelectItem>
+															<SelectItem value="fast">
+																<T id="anubis.rules.algorithm.fast" />
+															</SelectItem>
+															<SelectItem value="slow">
+																<T id="anubis.rules.algorithm.slow" />
+															</SelectItem>
+															<SelectItem value="metarefresh">
+																<T id="anubis.rules.algorithm.meta-refresh" />
+															</SelectItem>
+															<SelectItem value="preact">
+																<T id="anubis.rules.algorithm.preact" />
+															</SelectItem>
 														</SelectContent>
 													</Select>
 												</div>
