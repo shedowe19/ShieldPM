@@ -71,8 +71,6 @@ export class AnalyticsService {
 
 		// Load initial domains
 		await this.loadDomains();
-		// Refresh domains every 10 min
-		setInterval(() => this.loadDomains(), 10 * 60 * 1000);
 
 		// Tail the log file
 		try {
@@ -84,7 +82,11 @@ export class AnalyticsService {
 			this.tail.on("error", (error) => logger.error(`Tail error: ${error}`));
 		} catch (err) {
 			logger.error(`Failed to initialize tail: ${err.message}`);
+			return false;
 		}
+
+		// Refresh domains every 10 min only after the tail is active.
+		setInterval(() => this.loadDomains(), 10 * 60 * 1000);
 
 		// Start timers
 		this.flushTimer = setInterval(() => {

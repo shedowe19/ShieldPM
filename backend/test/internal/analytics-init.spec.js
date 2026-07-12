@@ -85,6 +85,20 @@ describe("AnalyticsService initialization", () => {
 		expect(mocks.tailConstructor).toHaveBeenCalledTimes(1);
 	});
 
+	it("allows a later retry when tail construction fails without leaving timers behind", async () => {
+		const service = new AnalyticsService("/tmp/shieldpm-analytics-init.log");
+		mocks.tailConstructor.mockImplementationOnce(() => {
+			throw new Error("tail initialization failed");
+		});
+
+		await service.init();
+		expect(setIntervalSpy).not.toHaveBeenCalled();
+
+		await service.init();
+		expect(mocks.tailConstructor).toHaveBeenCalledTimes(2);
+		expect(setIntervalSpy).toHaveBeenCalledTimes(3);
+	});
+
 	it("creates one tail and one timer set when startup retries initialization", async () => {
 		const service = new AnalyticsService("/tmp/shieldpm-analytics-init.log");
 
