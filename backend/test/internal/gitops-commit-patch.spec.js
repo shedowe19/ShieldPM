@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Fix #66: commitAndPush and pull must not spread the full config object
@@ -68,9 +68,20 @@ const mockAccess = {
 };
 
 describe("Fix #66: No credential overwrite via config spread in patch calls", () => {
+	let initRepo;
+
+	beforeEach(() => {
+		initRepo = vi.spyOn(internalGitOps, "initRepo").mockResolvedValue(undefined);
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
 	it("encrypted_credentials must never appear as a key in any patch call", async () => {
 		patches.length = 0;
 		await internalGitOps.commitAndPush(mockAccess, "test commit");
+		expect(initRepo).toHaveBeenCalledOnce();
 		for (const patch of patches) {
 			expect(Object.keys(patch)).not.toContain("encrypted_credentials");
 		}
