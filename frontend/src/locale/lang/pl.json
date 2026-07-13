@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "Zapisz",
 	"dashboard.notes.title": "Notatki",
 	"dashboard.status_ok": "Wszystko wygląda dobrze!",
+	"dashboard.top-hosts": "Najpopularniejsze hosty proxy",
 	"dashboard_note": "Notatka Pulpitu",
 	"ddns-provider": "Dostawca DDNS",
 	"ddns-providers": "Dostawcy DDNS",

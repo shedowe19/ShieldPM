@@ -79,6 +79,10 @@ async function installMockApi(page: Page) {
 			return fulfill(route, { dead: 0, proxy: 0, redirection: 0, stream: 0 });
 		}
 
+		if (method === "GET" && path === "/api/analytics/top-hosts") {
+			return fulfill(route, [{ domain_name: "api.e2e.test", id: 7, requests: 42 }]);
+		}
+
 		if (method === "GET" && path === "/api/nginx/certificates") {
 			return fulfill(route, []);
 		}
@@ -114,12 +118,17 @@ async function signIn(page: Page) {
 	await expect(page.getByTestId("app-content")).toBeVisible();
 }
 
-test("keeps login, route fallback, a11y, keyboard focus, and dashboard-note saves inside a mocked browser", async ({
+test("keeps login, top-host analytics, route fallback, a11y, keyboard focus, and dashboard-note saves inside a mocked browser", async ({
 	page,
 }) => {
 	const api = await installMockApi(page);
 
 	await signIn(page);
+	await expect(page.getByRole("heading", { name: "Top Proxy Hosts" })).toBeVisible();
+	await expect(page.getByRole("link", { name: "api.e2e.test" })).toHaveAttribute(
+		"href",
+		"/analytics?host=7&range=24h",
+	);
 
 	const skipLink = page.getByRole("link", { name: "Skip to main content" });
 	await page.keyboard.press("Tab");

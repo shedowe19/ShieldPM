@@ -46,10 +46,11 @@
 
 ## Detail: Dashboard-Widgets
 
-| Datei                                   | Zweck                      |
-| --------------------------------------- | -------------------------- |
-| `Dashboard/CertificateExpiryWidget.tsx` | Zertifikats-Ablauf-Anzeige |
-| `Dashboard/DashboardNotesWidget.tsx`    | Notizen-Widget             |
+| Datei                                   | Zweck                                                      |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `Dashboard/CertificateExpiryWidget.tsx` | Zertifikats-Ablauf-Anzeige                                 |
+| `Dashboard/DashboardNotesWidget.tsx`    | Notizen-Widget                                             |
+| `Dashboard/TopHostsWidget.tsx`          | Top-Proxy-Hosts der letzten 24 Stunden mit Analytics-Links |
 
 ## Tabellen-Pattern
 

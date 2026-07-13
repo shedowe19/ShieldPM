@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import express from "express";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
+import ProxyHost from "../models/proxy_host.js";
 
 const router = express.Router();
 
@@ -117,19 +118,44 @@ router.get("/series", async (req, res) => {
  */
 router.get("/top-hosts", async (req, res) => {
 	try {
-		const _start = req.query.start || dayjs().subtract(24, "hour").toISOString();
-		const _end = req.query.end || dayjs().toISOString();
+		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
+		const end = req.query.end || dayjs().toISOString();
+		const hostsWithDomains = ProxyHost.query()
+			.alias("proxy_host")
+			.join("host_domain", "host_domain.proxy_host_id", "proxy_host.id")
+			.select("proxy_host.id")
+			.where("proxy_host.is_deleted", 0)
+			.groupBy("proxy_host.id");
+		const counts = await AnalyticCount.query()
+			.alias("analytic_count")
+			.whereNotNull("analytic_count.proxy_host_id")
+			.whereIn("analytic_count.proxy_host_id", hostsWithDomains)
+			.where("analytic_count.timestamp", ">=", start)
+			.andWhere("analytic_count.timestamp", "<=", end)
+			.select("analytic_count.proxy_host_id as id")
+			.sum("analytic_count.request_count as requests")
+			.groupBy("analytic_count.proxy_host_id")
+			.orderBy("requests", "desc")
+			.limit(5);
 
-		// We need raw KNEX for group by query usually, but let's try with Model if we can join ProxyHost
-		// Since we didn't resolve IDs yet (set to NULL), this will be empty for now.
-		// BUT, our service buffers by hostname.
-		// If we want this to work, we MUST fix the ID resolution in internal/analytics.js
-		// OR store the hostname in the analytics table (which is what I should have done for simplicity).
+		const hostIds = counts.map((count) => Number(count.id));
+		if (hostIds.length === 0) {
+			return res.json([]);
+		}
 
-		// For now, return empty or implement a fix step next?
-		// Let's implement the endpoint assuming we WILL fix the data source.
+		const hosts = await ProxyHost.query()
+			.whereIn("id", hostIds)
+			.where("is_deleted", 0)
+			.withGraphFetched("host_domains");
+		const domainsByHostId = new Map(hosts.map((host) => [host.id, host.domain_names[0]]));
 
-		res.json([]);
+		res.json(
+			counts.flatMap((count) => {
+				const id = Number(count.id);
+				const domainName = domainsByHostId.get(id);
+				return domainName ? [{ domain_name: domainName, id, requests: Number(count.requests) }] : [];
+			}),
+		);
 	} catch (err) {
 		res.status(500).json({
 			error: err.message,

@@ -12,6 +12,7 @@ import AuthStore from "src/modules/AuthStore";
 import { DEAD_HOSTS, PROXY_HOSTS, REDIRECTION_HOSTS, STREAMS, VIEW } from "src/modules/Permissions";
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
 import { DashboardNotesWidget } from "./DashboardNotesWidget";
+import { TopHostsWidget } from "./TopHostsWidget";
 
 const MotionCard = m(Card);
 const container = {
@@ -167,9 +168,10 @@ const Dashboard = () => {
 				</HasPermission>
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+			<div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
 				<CertificateExpiryWidget />
 				<DashboardNotesWidget />
+				<TopHostsWidget />
 			</div>
 		</m.div>
 	);
