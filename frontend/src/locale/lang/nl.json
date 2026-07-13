@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "Bandbreedte (Live)",
 	"analytics.connections": "Verbindingen",
 	"analytics.current-throughput": "Huidige doorvoer",
+	"analytics.csv.bytes": "Overgedragen bytes",
 	"analytics.database": "Database",
 	"analytics.io-reads": "IO-lezingen",
 	"analytics.io-writes": "IO-schrijven",

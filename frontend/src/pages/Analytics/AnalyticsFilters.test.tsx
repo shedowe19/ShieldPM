@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
+import { changeLocale } from "src/locale";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AnalyticsFilters } from "./AnalyticsFilters";
 
@@ -23,10 +24,11 @@ vi.mock("src/components/ui/select", () => ({
 	SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
 }));
 
-afterEach(() => {
+afterEach(async () => {
 	cleanup();
 	vi.clearAllMocks();
 	mocks.selectOnValueChange = undefined;
+	await changeLocale("en-US");
 });
 
 describe("AnalyticsFilters", () => {
@@ -37,6 +39,7 @@ describe("AnalyticsFilters", () => {
 					{ domainNames: ["one.example"], id: 1 },
 					{ domainNames: ["two.example"], id: 2 },
 				]}
+				onDownload={vi.fn()}
 				onRangeChange={vi.fn()}
 				onSelectedHostIdChange={mocks.selectHost}
 				range="24h"
@@ -57,6 +60,7 @@ describe("AnalyticsFilters", () => {
 					{ domainNames: ["one.example"], id: 1 },
 					{ domainNames: ["two.example"], id: 2 },
 				]}
+				onDownload={vi.fn()}
 				onRangeChange={onRangeChange}
 				onSelectedHostIdChange={mocks.selectHost}
 				range="24h"
@@ -69,5 +73,24 @@ describe("AnalyticsFilters", () => {
 
 		expect(mocks.selectHost).toHaveBeenCalledWith("2");
 		expect(onRangeChange).toHaveBeenCalledWith("7d");
+	});
+
+	it("offers a localized download control for the selected traffic series", async () => {
+		const onDownload = vi.fn();
+		await changeLocale("de-DE");
+		render(
+			<AnalyticsFilters
+				hosts={[{ domainNames: ["one.example"], id: 1 }]}
+				onDownload={onDownload}
+				onRangeChange={vi.fn()}
+				onSelectedHostIdChange={mocks.selectHost}
+				range="24h"
+				selectedHostId="1"
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Herunterladen" }));
+
+		expect(onDownload).toHaveBeenCalledOnce();
 	});
 });

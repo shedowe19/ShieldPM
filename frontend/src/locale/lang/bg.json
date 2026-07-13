@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "Капацитет (На живо)",
 	"analytics.connections": "Връзки",
 	"analytics.current-throughput": "Текуща производителност",
+	"analytics.csv.bytes": "Прехвърлени байтове",
 	"analytics.database": "База данни",
 	"analytics.io-reads": "IO четения",
 	"analytics.io-writes": "IO записи",

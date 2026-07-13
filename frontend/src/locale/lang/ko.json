@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "대역폭 (라이브)",
 	"analytics.connections": "연결",
 	"analytics.current-throughput": "현재 처리량",
+	"analytics.csv.bytes": "전송된 바이트",
 	"analytics.database": "데이터베이스",
 	"analytics.io-reads": "IO 읽기",
 	"analytics.io-writes": "IO 쓰기",

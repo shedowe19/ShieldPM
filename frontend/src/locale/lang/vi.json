@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "Băng thông (Trực tiếp)",
 	"analytics.connections": "Kết nối",
 	"analytics.current-throughput": "Lưu lượng hiện tại",
+	"analytics.csv.bytes": "Số byte đã truyền",
 	"analytics.database": "Cơ sở dữ liệu",
 	"analytics.io-reads": "Đọc IO",
 	"analytics.io-writes": "Ghi IO",

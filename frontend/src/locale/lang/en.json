@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "Bandwidth (Live)",
 	"analytics.connections": "Connections",
 	"analytics.current-throughput": "Current Throughput",
+	"analytics.csv.bytes": "Transferred bytes",
 	"analytics.database": "Database",
 	"analytics.io-reads": "Reads",
 	"analytics.io-writes": "Writes",

@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "Šírka pásma (Naživo)",
 	"analytics.connections": "Pripojenia",
 	"analytics.current-throughput": "Aktuálna priepustnosť",
+	"analytics.csv.bytes": "Prenesené bajty",
 	"analytics.database": "Databáza",
 	"analytics.io-reads": "IO čítania",
 	"analytics.io-writes": "IO zápisy",

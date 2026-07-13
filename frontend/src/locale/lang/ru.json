@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "Ширина канала (Live)",
 	"analytics.connections": "Соединения",
 	"analytics.current-throughput": "Текущая пропускная способность",
+	"analytics.csv.bytes": "Переданные байты",
 	"analytics.database": "База данных",
 	"analytics.io-reads": "IO Чтение",
 	"analytics.io-writes": "IO Запись",

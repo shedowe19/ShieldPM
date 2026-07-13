@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Loading } from "src/components";
 import { useHealth, useProxyHosts } from "src/hooks";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { AnalyticsFilters, analyticsRanges } from "./AnalyticsFilters";
 import { AnalyticsGeography } from "./AnalyticsGeography";
 import { AnalyticsKpis } from "./AnalyticsKpis";
 import { AnalyticsRecentRequests } from "./AnalyticsRecentRequests";
 import { AnalyticsTopLists } from "./AnalyticsTopLists";
+import { createAnalyticsCsv } from "./analytics-csv";
 import { useAnalyticsData } from "./useAnalyticsData";
 import { useAnalyticsLiveMetrics } from "./useAnalyticsLiveMetrics";
 
@@ -48,6 +49,19 @@ const Analytics = () => {
 		params.set("range", nextRange);
 		setSearchParams(params, { replace: true });
 	};
+	const downloadSeries = () => {
+		const csv = createAnalyticsCsv(series, {
+			bytes: intl.formatMessage({ id: "analytics.csv.bytes" }),
+			requests: intl.formatMessage({ id: "analytics.total-requests" }),
+			time: intl.formatMessage({ id: "analytics.table.time" }),
+		});
+		const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = "analytics.csv";
+		anchor.click();
+		URL.revokeObjectURL(url);
+	};
 
 	if ((loading && !summary) || hostsLoading) {
 		return (
@@ -71,6 +85,7 @@ const Analytics = () => {
 				</div>
 				<AnalyticsFilters
 					hosts={hosts}
+					onDownload={downloadSeries}
 					onRangeChange={(nextRange) => updateSearchParams({ range: nextRange })}
 					onSelectedHostIdChange={(hostId) => updateSearchParams({ hostId })}
 					range={range}

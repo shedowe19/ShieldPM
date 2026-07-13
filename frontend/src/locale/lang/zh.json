@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "带宽 (实时)",
 	"analytics.connections": "连接数",
 	"analytics.current-throughput": "当前吞吐量",
+	"analytics.csv.bytes": "传输字节",
 	"analytics.database": "数据库",
 	"analytics.io-reads": "IO 读取",
 	"analytics.io-writes": "IO 写入",

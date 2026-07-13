@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "帯域幅 (ライブ)",
 	"analytics.connections": "接続数",
 	"analytics.current-throughput": "現在のスループット",
+	"analytics.csv.bytes": "転送バイト数",
 	"analytics.database": "データベース",
 	"analytics.io-reads": "IO 読み取り",
 	"analytics.io-writes": "IO 書き込み",

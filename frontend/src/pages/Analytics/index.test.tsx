@@ -118,6 +118,28 @@ describe("Analytics", () => {
 		await waitFor(() => expect(screen.getByTestId("analytics-location")).toHaveTextContent("?host=1&range=30d"));
 	});
 
+	it("downloads the selected traffic series as a CSV", async () => {
+		const createObjectURL = vi.fn((_blob: Blob) => "blob:analytics-export");
+		const revokeObjectURL = vi.fn();
+		const TestURL = class extends URL {};
+		Object.assign(TestURL, { createObjectURL, revokeObjectURL });
+		vi.stubGlobal("URL", TestURL);
+		vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+		vi.mocked(getAnalyticsSeries).mockResolvedValue([
+			{ bytes: 2048, count: 42, s2xx: 37, s3xx: 2, s4xx: 2, s5xx: 1, timestamp: "2026-07-13T12:00:00Z" },
+		]);
+		const { default: Analytics } = await import("./index");
+
+		render(<Analytics />);
+
+		await waitFor(() => expect(getAnalyticsSeries).toHaveBeenCalledWith(1, "24h"));
+		fireEvent.click(screen.getByRole("button", { name: "Download" }));
+
+		expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+		expect(createObjectURL.mock.calls[0][0].type).toBe("text/csv;charset=utf-8");
+		expect(revokeObjectURL).toHaveBeenCalledWith("blob:analytics-export");
+	});
+
 	it("loads live and database stats through the shared API client", async () => {
 		vi.mocked(getDbStats).mockResolvedValue({
 			connections: { max: 10, open: 2, used: 2 },

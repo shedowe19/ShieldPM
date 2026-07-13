@@ -133,6 +133,7 @@
 	"analytics.bandwidth-live": "Przepustowość (Live)",
 	"analytics.connections": "Połączenia",
 	"analytics.current-throughput": "Obecna przepustowość",
+	"analytics.csv.bytes": "Przesłane bajty",
 	"analytics.database": "Baza danych",
 	"analytics.io-reads": "Odczyty IO",
 	"analytics.io-writes": "Zapisy IO",
