@@ -20,9 +20,10 @@ describe("dashboard route dependencies", () => {
 		}
 	});
 
-	it("includes the client-error investigation control on the landing route", () => {
+	it("includes the investigation and bandwidth controls on the landing route", () => {
 		const source = readFileSync(resolve(process.cwd(), "src/pages/Dashboard/index.tsx"), "utf8");
 
+		expect(source).toContain('<TopHostsWidget sort="bytes" />');
 		expect(source).toContain('<TopHostsWidget sort="client_errors" />');
 	});
 });

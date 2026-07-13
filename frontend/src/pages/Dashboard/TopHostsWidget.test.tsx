@@ -9,7 +9,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@tabler/icons-react", () => ({ IconAlertTriangle: () => null, IconChartBar: () => null }));
-vi.mock("react-intl", () => ({ FormattedNumber: ({ value }: { value: number }) => <>{value}</> }));
+vi.mock("react-intl", () => ({
+	FormattedNumber: ({ style, unit, value }: { style?: string; unit?: string; value: number }) => (
+		<output data-style={style} data-testid={`formatted-number-${value}`} data-unit={unit}>
+			{value}
+		</output>
+	),
+}));
 vi.mock("src/components/HasPermission", () => ({
 	HasPermission: ({ children }: PropsWithChildren) => <>{children}</>,
 }));
@@ -24,6 +30,7 @@ vi.mock("src/locale", () => ({
 	T: ({ id }: { id: string }) => {
 		if (id === "analytics.no-data-list") return "No data to display";
 		if (id === "dashboard.top-hosts") return "Top Proxy Hosts";
+		if (id === "dashboard.top-bandwidth") return "Top Bandwidth Consumers";
 		if (id === "dashboard.top-client-errors") return "Top Client Errors";
 		if (id === "dashboard.top-server-errors") return "Top Server Errors";
 		return id;
@@ -35,8 +42,8 @@ describe("TopHostsWidget", () => {
 		vi.clearAllMocks();
 		mocks.useAnalyticsTopHosts.mockReturnValue({
 			data: [
-				{ clientErrors: 4, domainName: "api.example", id: 7, requests: 42, serverErrors: 2 },
-				{ clientErrors: 12, domainName: "app.example", id: 3, requests: 8, serverErrors: 1 },
+				{ bytes: 1536, clientErrors: 4, domainName: "api.example", id: 7, requests: 42, serverErrors: 2 },
+				{ bytes: 1024, clientErrors: 12, domainName: "app.example", id: 3, requests: 8, serverErrors: 1 },
 			],
 			isLoading: false,
 		});
@@ -62,6 +69,19 @@ describe("TopHostsWidget", () => {
 		);
 		expect(screen.getByText("42")).toBeInTheDocument();
 		expect(screen.getByText("8")).toBeInTheDocument();
+	});
+
+	it("shows the bandwidth ranking with byte units so administrators can investigate traffic-heavy proxy hosts", () => {
+		render(
+			<MemoryRouter>
+				<TopHostsWidget sort="bytes" />
+			</MemoryRouter>,
+		);
+
+		expect(mocks.useAnalyticsTopHosts).toHaveBeenCalledWith("bytes");
+		expect(screen.getByRole("heading", { name: "Top Bandwidth Consumers" })).toBeInTheDocument();
+		expect(screen.getByTestId("formatted-number-1.536")).toHaveAttribute("data-unit", "kilobyte");
+		expect(screen.getByTestId("formatted-number-1.024")).toHaveAttribute("data-unit", "kilobyte");
 	});
 
 	it("shows the server-error ranking so administrators can investigate failing proxy hosts", () => {

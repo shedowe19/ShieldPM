@@ -14,7 +14,7 @@ describe("getAnalyticsTopHosts", () => {
 		api.get.mockResolvedValue([{ domain_name: "api.example", id: 7, requests: 42, server_errors: 3 }]);
 
 		await expect(getAnalyticsTopHosts()).resolves.toEqual([
-			{ clientErrors: 0, domainName: "api.example", id: 7, requests: 42, serverErrors: 3 },
+			{ bytes: 0, clientErrors: 0, domainName: "api.example", id: 7, requests: 42, serverErrors: 3 },
 		]);
 		expect(api.get).toHaveBeenCalledWith({ url: "/analytics/top-hosts" });
 	});
@@ -23,7 +23,7 @@ describe("getAnalyticsTopHosts", () => {
 		api.get.mockResolvedValue([{ domain_name: "api.example", id: 7, requests: 42, server_errors: 3 }]);
 
 		await expect(getAnalyticsTopHosts("server_errors")).resolves.toEqual([
-			{ clientErrors: 0, domainName: "api.example", id: 7, requests: 42, serverErrors: 3 },
+			{ bytes: 0, clientErrors: 0, domainName: "api.example", id: 7, requests: 42, serverErrors: 3 },
 		]);
 		expect(api.get).toHaveBeenLastCalledWith({ url: "/analytics/top-hosts", params: { sort: "server_errors" } });
 	});
@@ -34,8 +34,19 @@ describe("getAnalyticsTopHosts", () => {
 		]);
 
 		await expect(getAnalyticsTopHosts("client_errors")).resolves.toEqual([
-			{ clientErrors: 12, domainName: "api.example", id: 7, requests: 42, serverErrors: 3 },
+			{ bytes: 0, clientErrors: 12, domainName: "api.example", id: 7, requests: 42, serverErrors: 3 },
 		]);
 		expect(api.get).toHaveBeenLastCalledWith({ url: "/analytics/top-hosts", params: { sort: "client_errors" } });
+	});
+
+	it("requests bandwidth rankings and normalizes transferred bytes", async () => {
+		api.get.mockResolvedValue([
+			{ bytes: "1536", domain_name: "downloads.example", id: 9, requests: 12, server_errors: 0 },
+		]);
+
+		await expect(getAnalyticsTopHosts("bytes")).resolves.toEqual([
+			{ bytes: 1536, clientErrors: 0, domainName: "downloads.example", id: 9, requests: 12, serverErrors: 0 },
+		]);
+		expect(api.get).toHaveBeenLastCalledWith({ url: "/analytics/top-hosts", params: { sort: "bytes" } });
 	});
 });

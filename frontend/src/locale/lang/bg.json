@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "Запис",
 	"dashboard.notes.title": "Бележки",
 	"dashboard.status_ok": "Всичко изглежда наред!",
+	"dashboard.top-bandwidth": "Най-големи потребители на трафик",
 	"dashboard.top-client-errors": "Водещи клиентски грешки",
 	"dashboard.top-hosts": "Водещи прокси хостове",
 	"dashboard.top-server-errors": "Водещи сървърни грешки",

@@ -12,7 +12,17 @@ type TopHostsWidgetProps = {
 	sort?: AnalyticsTopHostsSort;
 };
 
+const byteUnits = ["byte", "kilobyte", "megabyte", "gigabyte", "terabyte"] as const;
+const bytesPerUnit = 1000;
+
+const getByteDisplay = (bytes: number) => {
+	const unitIndex =
+		bytes < bytesPerUnit ? 0 : Math.min(Math.floor(Math.log(bytes) / Math.log(bytesPerUnit)), byteUnits.length - 1);
+	return { unit: byteUnits[unitIndex], value: bytes / bytesPerUnit ** unitIndex };
+};
+
 const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) => {
+	const isBandwidthRanking = sort === "bytes";
 	const isClientErrorRanking = sort === "client_errors";
 	const isServerErrorRanking = sort === "server_errors";
 	const isErrorRanking = isClientErrorRanking || isServerErrorRanking;
@@ -29,14 +39,18 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 					? "h-full border-red-500/50"
 					: isClientErrorRanking
 						? "h-full border-amber-500/50"
-						: "h-full border-blue-500/50"
+						: isBandwidthRanking
+							? "h-full border-cyan-500/50"
+							: "h-full border-blue-500/50"
 			}
 			data-testid={
 				isServerErrorRanking
 					? "dashboard-top-server-errors"
 					: isClientErrorRanking
 						? "dashboard-top-client-errors"
-						: "dashboard-top-hosts"
+						: isBandwidthRanking
+							? "dashboard-top-bandwidth"
+							: "dashboard-top-hosts"
 			}
 		>
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -44,7 +58,9 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 					{isErrorRanking ? (
 						<IconAlertTriangle className="h-5 w-5 text-red-500" />
 					) : (
-						<IconChartBar className="h-5 w-5 text-blue-500" />
+						<IconChartBar
+							className={isBandwidthRanking ? "h-5 w-5 text-cyan-500" : "h-5 w-5 text-blue-500"}
+						/>
 					)}
 					<T
 						id={
@@ -52,7 +68,9 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 								? "dashboard.top-server-errors"
 								: isClientErrorRanking
 									? "dashboard.top-client-errors"
-									: "dashboard.top-hosts"
+									: isBandwidthRanking
+										? "dashboard.top-bandwidth"
+										: "dashboard.top-hosts"
 						}
 					/>
 				</CardTitle>
@@ -60,35 +78,51 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 			<CardContent className="pt-4">
 				{hosts && hosts.length > 0 ? (
 					<ol className="space-y-3">
-						{hosts.map((host) => (
-							<li key={host.id} className="flex items-center justify-between gap-4">
-								<Link
-									className="min-w-0 truncate text-sm font-medium hover:underline"
-									to={`/analytics?host=${host.id}&range=24h`}
-								>
-									{host.domainName}
-								</Link>
-								<span
-									className={
-										isServerErrorRanking
-											? "shrink-0 text-sm font-medium text-red-500"
-											: isClientErrorRanking
-												? "shrink-0 text-sm font-medium text-amber-500"
-												: "shrink-0 text-sm text-muted-foreground"
-									}
-								>
-									<FormattedNumber
-										value={
+						{hosts.map((host) => {
+							const byteDisplay = isBandwidthRanking ? getByteDisplay(host.bytes) : null;
+
+							return (
+								<li key={host.id} className="flex items-center justify-between gap-4">
+									<Link
+										className="min-w-0 truncate text-sm font-medium hover:underline"
+										to={`/analytics?host=${host.id}&range=24h`}
+									>
+										{host.domainName}
+									</Link>
+									<span
+										className={
 											isServerErrorRanking
-												? host.serverErrors
+												? "shrink-0 text-sm font-medium text-red-500"
 												: isClientErrorRanking
-													? host.clientErrors
-													: host.requests
+													? "shrink-0 text-sm font-medium text-amber-500"
+													: isBandwidthRanking
+														? "shrink-0 text-sm font-medium text-cyan-500"
+														: "shrink-0 text-sm text-muted-foreground"
 										}
-									/>
-								</span>
-							</li>
-						))}
+									>
+										{byteDisplay ? (
+											<FormattedNumber
+												maximumFractionDigits={1}
+												style="unit"
+												unit={byteDisplay.unit}
+												unitDisplay="short"
+												value={byteDisplay.value}
+											/>
+										) : (
+											<FormattedNumber
+												value={
+													isServerErrorRanking
+														? host.serverErrors
+														: isClientErrorRanking
+															? host.clientErrors
+															: host.requests
+												}
+											/>
+										)}
+									</span>
+								</li>
+							);
+						})}
 					</ol>
 				) : (
 					<div className="text-sm text-muted-foreground text-center p-4">

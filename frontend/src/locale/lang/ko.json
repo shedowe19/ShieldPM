@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "저장",
 	"dashboard.notes.title": "스티커 메모",
 	"dashboard.status_ok": "모든 것이 좋아 보입니다!",
+	"dashboard.top-bandwidth": "대역폭 사용량 상위",
 	"dashboard.top-client-errors": "상위 클라이언트 오류",
 	"dashboard.top-hosts": "상위 프록시 호스트",
 	"dashboard.top-server-errors": "상위 서버 오류",

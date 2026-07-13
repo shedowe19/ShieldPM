@@ -84,7 +84,13 @@ async function installMockApi(page: Page) {
 			const sort = url.searchParams.get("sort") ?? "requests";
 			topHostSorts.push(sort);
 			return fulfill(route, [
-				{ domain_name: "api.e2e.test", id: 7, requests: 42, server_errors: sort === "server_errors" ? 3 : 0 },
+				{
+					bytes: sort === "bytes" ? 1536 : 0,
+					domain_name: "api.e2e.test",
+					id: 7,
+					requests: 42,
+					server_errors: sort === "server_errors" ? 3 : 0,
+				},
 			]);
 		}
 
@@ -130,8 +136,10 @@ test("keeps login, top-host analytics, route fallback, a11y, keyboard focus, and
 
 	await signIn(page);
 	await expect(page.getByRole("heading", { name: "Top Proxy Hosts" })).toBeVisible();
+	await expect(page.getByRole("heading", { name: "Top Bandwidth Consumers" })).toBeVisible();
 	await expect(page.getByRole("heading", { name: "Top Server Errors" })).toBeVisible();
-	await expect.poll(() => api.topHostSorts).toEqual(expect.arrayContaining(["requests", "server_errors"]));
+	await expect.poll(() => api.topHostSorts).toEqual(expect.arrayContaining(["requests", "bytes", "server_errors"]));
+	await expect(page.getByTestId("dashboard-top-bandwidth")).toContainText(/1\.5\s?kB/);
 	await expect(page.getByTestId("dashboard-top-hosts").getByRole("link", { name: "api.e2e.test" })).toHaveAttribute(
 		"href",
 		"/analytics?host=7&range=24h",

@@ -168,10 +168,11 @@ const Dashboard = () => {
 				</HasPermission>
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+			<div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
 				<CertificateExpiryWidget />
 				<DashboardNotesWidget />
 				<TopHostsWidget />
+				<TopHostsWidget sort="bytes" />
 				<TopHostsWidget sort="client_errors" />
 				<TopHostsWidget sort="server_errors" />
 			</div>

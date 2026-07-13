@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "保存",
 	"dashboard.notes.title": "付箋メモ",
 	"dashboard.status_ok": "すべて順調です！",
+	"dashboard.top-bandwidth": "上位帯域幅利用者",
 	"dashboard.top-client-errors": "上位クライアントエラー",
 	"dashboard.top-hosts": "上位プロキシホスト",
 	"dashboard.top-server-errors": "上位サーバーエラー",

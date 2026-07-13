@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "Speichern",
 	"dashboard.notes.title": "Haftnotizen",
 	"dashboard.status_ok": "Alles sieht gut aus!",
+	"dashboard.top-bandwidth": "Top-Bandbreitenverbraucher",
 	"dashboard.top-client-errors": "Top-Clientfehler",
 	"dashboard.top-hosts": "Top-Proxy-Hosts",
 	"dashboard.top-server-errors": "Top-Serverfehler",
