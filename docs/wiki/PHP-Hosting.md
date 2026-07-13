@@ -67,7 +67,7 @@ Add these extensions to your `compose.yaml`. This covers almost all Nextcloud ap
       - "PHP84_APKS=php8.4-simplexml php8.4-xml php8.4-dom php8.4-curl php8.4-mbstring php8.4-gd php8.4-zip php8.4-mysql php8.4-sqlite3 php8.4-intl php8.4-imagick php8.4-opcache php8.4-gmp php8.4-bcmath php8.4-apcu imagemagick"
       # Fix for self-checks
       extra_hosts:
-        - "your-domain.com:127.0.0.1" 
+        - "your-domain.com:127.0.0.1"
 ```
 
 ### 2. Configuration (GUI)
@@ -87,7 +87,7 @@ docker exec shieldpm chown -R nobody:nobody /var/www/test/nextcloud
 ```
 
 ### 3. Maintenance Commands
-You can run `occ` commands directly via `docker exec`. 
+You can run `occ` commands directly via `docker exec`.
 
 **Note:** Since ShieldPM v3.2.0, the `php8X` CLI tools are installed automatically.
 

@@ -3,7 +3,7 @@
 The **Turbo-Loader** is a built-in feature of ShieldPM designed to dramatically accelerate the downloading of large files (like movies, server backups, or game files) over slow or high-latency internet connections by breaking the download into multiple parallel chunks.
 
 ## How it works
-Normally, web browsers download files using a single TCP connection. If you have packet loss or high latency on the route from your server to your home, that single connection cannot max out your bandwidth. 
+Normally, web browsers download files using a single TCP connection. If you have packet loss or high latency on the route from your server to your home, that single connection cannot max out your bandwidth.
 
 The Turbo-Loader intercepts file downloads at the Nginx level and serves a specialized, lightweight HTML app instead. This app uses Javascript to request up to **8 parallel chunks** at the same time using HTTP `Range` requests, saturating your downstream bandwidth.
 
@@ -35,7 +35,7 @@ If your browser blocks the Direct-To-Disk API (e.g., due to Brave's Aggressive S
 > [!WARNING]
 > **The 1.2 GB RAM Crash Limit**
 > Chromium browsers have an internal memory limit for Blobs (files assembled in RAM). If you attempt to save a file larger than ~1.5 GB from RAM, the browser's download manager will silently crash and display a vague **"Network Error"** (Netzwerkfehler).
-> 
+>
 > To prevent this, the Turbo-Loader enforces a **strict 1.2 GB limit** when running in RAM Fallback mode. If your file is larger and the Direct-To-Disk API is blocked, the download will not start. Instead, you will be presented with a large **Standard Download** fallback button.
 
 #### How to fix the "Direct-To-Disk Blocked" error in Brave:
