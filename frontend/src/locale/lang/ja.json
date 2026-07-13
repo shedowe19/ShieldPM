@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "付箋メモ",
 	"dashboard.status_ok": "すべて順調です！",
 	"dashboard.top-hosts": "上位プロキシホスト",
+	"dashboard.top-server-errors": "上位サーバーエラー",
 	"dashboard_note": "ダッシュボードメモ",
 	"ddns-provider": "DDNS プロバイダー",
 	"ddns-providers": "DDNS プロバイダー",

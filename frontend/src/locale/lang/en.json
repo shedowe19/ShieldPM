@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "Sticky Notes",
 	"dashboard.status_ok": "Everything looks good!",
 	"dashboard.top-hosts": "Top Proxy Hosts",
+	"dashboard.top-server-errors": "Top Server Errors",
 	"dashboard_note": "Dashboard Note",
 	"ddns-provider": "DDNS Provider",
 	"ddns-providers": "DDNS Providers",

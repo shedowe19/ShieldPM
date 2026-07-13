@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "스티커 메모",
 	"dashboard.status_ok": "모든 것이 좋아 보입니다!",
 	"dashboard.top-hosts": "상위 프록시 호스트",
+	"dashboard.top-server-errors": "상위 서버 오류",
 	"dashboard_note": "대시보드 메모",
 	"ddns-provider": "DDNS 제공자",
 	"ddns-providers": "DDNS 제공자",

@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "Notatki",
 	"dashboard.status_ok": "Wszystko wygląda dobrze!",
 	"dashboard.top-hosts": "Najpopularniejsze hosty proxy",
+	"dashboard.top-server-errors": "Najczęstsze błędy serwera",
 	"dashboard_note": "Notatka Pulpitu",
 	"ddns-provider": "Dostawca DDNS",
 	"ddns-providers": "Dostawcy DDNS",

@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "Ghi chú Dán",
 	"dashboard.status_ok": "Mọi thứ đều ổn!",
 	"dashboard.top-hosts": "Máy chủ proxy hàng đầu",
+	"dashboard.top-server-errors": "Lỗi máy chủ hàng đầu",
 	"dashboard_note": "Ghi Chú Bảng Điều Khiển",
 	"ddns-provider": "Nhà cung cấp DDNS",
 	"ddns-providers": "Nhà cung cấp DDNS",

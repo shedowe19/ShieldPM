@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 	useAnalyticsTopHosts: vi.fn(),
 }));
 
-vi.mock("@tabler/icons-react", () => ({ IconChartBar: () => null }));
+vi.mock("@tabler/icons-react", () => ({ IconAlertTriangle: () => null, IconChartBar: () => null }));
 vi.mock("react-intl", () => ({ FormattedNumber: ({ value }: { value: number }) => <>{value}</> }));
 vi.mock("src/components/HasPermission", () => ({
 	HasPermission: ({ children }: PropsWithChildren) => <>{children}</>,
@@ -24,16 +24,18 @@ vi.mock("src/locale", () => ({
 	T: ({ id }: { id: string }) => {
 		if (id === "analytics.no-data-list") return "No data to display";
 		if (id === "dashboard.top-hosts") return "Top Proxy Hosts";
+		if (id === "dashboard.top-server-errors") return "Top Server Errors";
 		return id;
 	},
 }));
 
 describe("TopHostsWidget", () => {
 	beforeEach(() => {
+		vi.clearAllMocks();
 		mocks.useAnalyticsTopHosts.mockReturnValue({
 			data: [
-				{ domainName: "api.example", id: 7, requests: 42 },
-				{ domainName: "app.example", id: 3, requests: 8 },
+				{ domainName: "api.example", id: 7, requests: 42, serverErrors: 2 },
+				{ domainName: "app.example", id: 3, requests: 8, serverErrors: 1 },
 			],
 			isLoading: false,
 		});
@@ -59,5 +61,18 @@ describe("TopHostsWidget", () => {
 		);
 		expect(screen.getByText("42")).toBeInTheDocument();
 		expect(screen.getByText("8")).toBeInTheDocument();
+	});
+
+	it("shows the server-error ranking so administrators can investigate failing proxy hosts", () => {
+		render(
+			<MemoryRouter>
+				<TopHostsWidget sort="server_errors" />
+			</MemoryRouter>,
+		);
+
+		expect(mocks.useAnalyticsTopHosts).toHaveBeenCalledWith("server_errors");
+		expect(screen.getByRole("heading", { name: "Top Server Errors" })).toBeInTheDocument();
+		expect(screen.getByText("2")).toBeInTheDocument();
+		expect(screen.getByText("1")).toBeInTheDocument();
 	});
 });

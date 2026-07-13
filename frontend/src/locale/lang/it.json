@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "Note Adesive",
 	"dashboard.status_ok": "Tutto sembra a posto!",
 	"dashboard.top-hosts": "Host proxy principali",
+	"dashboard.top-server-errors": "Principali errori del server",
 	"dashboard_note": "Nota della Dashboard",
 	"ddns-provider": "Provider DDNS",
 	"ddns-providers": "Provider DDNS",

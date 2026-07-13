@@ -20,6 +20,7 @@ async function installMockApi(page: Page) {
 	let authenticated = false;
 	const notes: DashboardNote[] = [];
 	const requests: ApiRequest[] = [];
+	const topHostSorts: string[] = [];
 
 	const fulfill = async (route: Route, body: unknown, status = 200) => {
 		await route.fulfill({
@@ -80,7 +81,11 @@ async function installMockApi(page: Page) {
 		}
 
 		if (method === "GET" && path === "/api/analytics/top-hosts") {
-			return fulfill(route, [{ domain_name: "api.e2e.test", id: 7, requests: 42 }]);
+			const sort = url.searchParams.get("sort") ?? "requests";
+			topHostSorts.push(sort);
+			return fulfill(route, [
+				{ domain_name: "api.e2e.test", id: 7, requests: 42, server_errors: sort === "server_errors" ? 3 : 0 },
+			]);
 		}
 
 		if (method === "GET" && path === "/api/nginx/certificates") {
@@ -105,7 +110,7 @@ async function installMockApi(page: Page) {
 		throw new Error(`Unexpected API request in browser smoke test: ${method} ${path}`);
 	});
 
-	return { requests };
+	return { requests, topHostSorts };
 }
 
 async function signIn(page: Page) {
@@ -125,7 +130,9 @@ test("keeps login, top-host analytics, route fallback, a11y, keyboard focus, and
 
 	await signIn(page);
 	await expect(page.getByRole("heading", { name: "Top Proxy Hosts" })).toBeVisible();
-	await expect(page.getByRole("link", { name: "api.e2e.test" })).toHaveAttribute(
+	await expect(page.getByRole("heading", { name: "Top Server Errors" })).toBeVisible();
+	await expect.poll(() => api.topHostSorts).toEqual(expect.arrayContaining(["requests", "server_errors"]));
+	await expect(page.getByTestId("dashboard-top-hosts").getByRole("link", { name: "api.e2e.test" })).toHaveAttribute(
 		"href",
 		"/analytics?host=7&range=24h",
 	);

@@ -114,12 +114,13 @@ router.get("/series", async (req, res) => {
 
 /**
  * GET /api/analytics/top-hosts
- * Returns top hosts by request count
+ * Returns top hosts by request count or server errors
  */
 router.get("/top-hosts", async (req, res) => {
 	try {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
+		const sort = req.query.sort === "server_errors" ? "server_errors" : "requests";
 		const hostsWithDomains = ProxyHost.query()
 			.alias("proxy_host")
 			.join("host_domain", "host_domain.proxy_host_id", "proxy_host.id")
@@ -134,8 +135,9 @@ router.get("/top-hosts", async (req, res) => {
 			.andWhere("analytic_count.timestamp", "<=", end)
 			.select("analytic_count.proxy_host_id as id")
 			.sum("analytic_count.request_count as requests")
+			.sum("analytic_count.status_code_5xx as server_errors")
 			.groupBy("analytic_count.proxy_host_id")
-			.orderBy("requests", "desc")
+			.orderBy(sort, "desc")
 			.limit(5);
 
 		const hostIds = counts.map((count) => Number(count.id));
@@ -153,7 +155,16 @@ router.get("/top-hosts", async (req, res) => {
 			counts.flatMap((count) => {
 				const id = Number(count.id);
 				const domainName = domainsByHostId.get(id);
-				return domainName ? [{ domain_name: domainName, id, requests: Number(count.requests) }] : [];
+				return domainName
+					? [
+							{
+								domain_name: domainName,
+								id,
+								requests: Number(count.requests),
+								server_errors: Number(count.server_errors),
+							},
+						]
+					: [];
 			}),
 		);
 	} catch (err) {

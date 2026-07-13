@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "Poznámky",
 	"dashboard.status_ok": "Všetko vyzerá dobre!",
 	"dashboard.top-hosts": "Najlepšie proxy hosty",
+	"dashboard.top-server-errors": "Najčastejšie chyby servera",
 	"dashboard_note": "Poznámka Nástenky",
 	"ddns-provider": "Poskytovateľ DDNS",
 	"ddns-providers": "Poskytovatelia DDNS",

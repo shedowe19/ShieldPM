@@ -310,6 +310,7 @@
 	"dashboard.notes.title": "Бележки",
 	"dashboard.status_ok": "Всичко изглежда наред!",
 	"dashboard.top-hosts": "Водещи прокси хостове",
+	"dashboard.top-server-errors": "Водещи сървърни грешки",
 	"dashboard_note": "Бележка на таблото",
 	"ddns-provider": "DDNS доставчик",
 	"ddns-providers": "DDNS доставчици",

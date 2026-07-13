@@ -107,8 +107,8 @@ describe("analytics top-hosts route", () => {
 
 	it("returns the five most requested active proxy hosts with domains for the default 24-hour window", async () => {
 		const query = createTopHostsQuery([
-			{ id: "7", requests: "42" },
-			{ id: "3", requests: "8" },
+			{ id: "7", requests: "42", server_errors: "2" },
+			{ id: "3", requests: "8", server_errors: "1" },
 		]);
 		const hostRows = [
 			{ domain_names: ["api.example"], id: 7 },
@@ -123,14 +123,15 @@ describe("analytics top-hosts route", () => {
 		await mocks.routes.get("/top-hosts")({ query: {} }, response);
 
 		expect(response.json).toHaveBeenCalledWith([
-			{ domain_name: "api.example", id: 7, requests: 42 },
-			{ domain_name: "app.example", id: 3, requests: 8 },
+			{ domain_name: "api.example", id: 7, requests: 42, server_errors: 2 },
+			{ domain_name: "app.example", id: 3, requests: 8, server_errors: 1 },
 		]);
 		expect(query.alias).toHaveBeenCalledWith("analytic_count");
 		expect(query.whereNotNull).toHaveBeenCalledWith("analytic_count.proxy_host_id");
 		expect(query.whereIn).toHaveBeenCalledWith("analytic_count.proxy_host_id", hostsWithDomainsQuery);
 		expect(query.groupBy).toHaveBeenCalledWith("analytic_count.proxy_host_id");
 		expect(query.orderBy).toHaveBeenCalledWith("requests", "desc");
+		expect(query.sum).toHaveBeenCalledWith("analytic_count.status_code_5xx as server_errors");
 		expect(query.limit).toHaveBeenCalledWith(5);
 		expect(hostsWithDomainsQuery.alias).toHaveBeenCalledWith("proxy_host");
 		expect(hostsWithDomainsQuery.join).toHaveBeenCalledWith(
@@ -143,5 +144,30 @@ describe("analytics top-hosts route", () => {
 		expect(proxyHostQuery.whereIn).toHaveBeenCalledWith("id", [7, 3]);
 		expect(proxyHostQuery.where).toHaveBeenCalledWith("is_deleted", 0);
 		expect(proxyHostQuery.withGraphFetched).toHaveBeenCalledWith("host_domains");
+	});
+
+	it("returns the five active proxy hosts with the most server errors when sort=server_errors", async () => {
+		const query = createTopHostsQuery([
+			{ id: "3", requests: "8", server_errors: "6" },
+			{ id: "7", requests: "42", server_errors: "2" },
+		]);
+		const hostRows = [
+			{ domain_names: ["api.example"], id: 7 },
+			{ domain_names: ["app.example"], id: 3 },
+		];
+		const proxyHostQuery = createProxyHostQuery(hostRows);
+		const hostsWithDomainsQuery = createProxyHostQuery(hostRows);
+		const response = createResponse();
+		mocks.analyticCountQuery.mockReturnValue(query);
+		mocks.proxyHostQuery.mockReturnValueOnce(hostsWithDomainsQuery).mockReturnValueOnce(proxyHostQuery);
+
+		await mocks.routes.get("/top-hosts")({ query: { sort: "server_errors" } }, response);
+
+		expect(response.json).toHaveBeenCalledWith([
+			{ domain_name: "app.example", id: 3, requests: 8, server_errors: 6 },
+			{ domain_name: "api.example", id: 7, requests: 42, server_errors: 2 },
+		]);
+		expect(query.orderBy).toHaveBeenCalledWith("server_errors", "desc");
+		expect(query.sum).toHaveBeenCalledWith("analytic_count.status_code_5xx as server_errors");
 	});
 });
