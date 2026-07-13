@@ -107,8 +107,8 @@ describe("analytics top-hosts route", () => {
 
 	it("returns the five most requested active proxy hosts with domains for the default 24-hour window", async () => {
 		const query = createTopHostsQuery([
-			{ id: "7", requests: "42", server_errors: "2" },
-			{ id: "3", requests: "8", server_errors: "1" },
+			{ client_errors: "5", id: "7", requests: "42", server_errors: "2" },
+			{ client_errors: "4", id: "3", requests: "8", server_errors: "1" },
 		]);
 		const hostRows = [
 			{ domain_names: ["api.example"], id: 7 },
@@ -123,8 +123,8 @@ describe("analytics top-hosts route", () => {
 		await mocks.routes.get("/top-hosts")({ query: {} }, response);
 
 		expect(response.json).toHaveBeenCalledWith([
-			{ domain_name: "api.example", id: 7, requests: 42, server_errors: 2 },
-			{ domain_name: "app.example", id: 3, requests: 8, server_errors: 1 },
+			{ client_errors: 5, domain_name: "api.example", id: 7, requests: 42, server_errors: 2 },
+			{ client_errors: 4, domain_name: "app.example", id: 3, requests: 8, server_errors: 1 },
 		]);
 		expect(query.alias).toHaveBeenCalledWith("analytic_count");
 		expect(query.whereNotNull).toHaveBeenCalledWith("analytic_count.proxy_host_id");
@@ -148,8 +148,8 @@ describe("analytics top-hosts route", () => {
 
 	it("returns the five active proxy hosts with the most server errors when sort=server_errors", async () => {
 		const query = createTopHostsQuery([
-			{ id: "3", requests: "8", server_errors: "6" },
-			{ id: "7", requests: "42", server_errors: "2" },
+			{ client_errors: "4", id: "3", requests: "8", server_errors: "6" },
+			{ client_errors: "5", id: "7", requests: "42", server_errors: "2" },
 		]);
 		const hostRows = [
 			{ domain_names: ["api.example"], id: 7 },
@@ -164,10 +164,35 @@ describe("analytics top-hosts route", () => {
 		await mocks.routes.get("/top-hosts")({ query: { sort: "server_errors" } }, response);
 
 		expect(response.json).toHaveBeenCalledWith([
-			{ domain_name: "app.example", id: 3, requests: 8, server_errors: 6 },
-			{ domain_name: "api.example", id: 7, requests: 42, server_errors: 2 },
+			{ client_errors: 4, domain_name: "app.example", id: 3, requests: 8, server_errors: 6 },
+			{ client_errors: 5, domain_name: "api.example", id: 7, requests: 42, server_errors: 2 },
 		]);
 		expect(query.orderBy).toHaveBeenCalledWith("server_errors", "desc");
 		expect(query.sum).toHaveBeenCalledWith("analytic_count.status_code_5xx as server_errors");
+	});
+
+	it("returns the five active proxy hosts with the most client errors when sort=client_errors", async () => {
+		const query = createTopHostsQuery([
+			{ client_errors: "12", id: "3", requests: "8", server_errors: "6" },
+			{ client_errors: "4", id: "7", requests: "42", server_errors: "2" },
+		]);
+		const hostRows = [
+			{ domain_names: ["api.example"], id: 7 },
+			{ domain_names: ["app.example"], id: 3 },
+		];
+		const proxyHostQuery = createProxyHostQuery(hostRows);
+		const hostsWithDomainsQuery = createProxyHostQuery(hostRows);
+		const response = createResponse();
+		mocks.analyticCountQuery.mockReturnValue(query);
+		mocks.proxyHostQuery.mockReturnValueOnce(hostsWithDomainsQuery).mockReturnValueOnce(proxyHostQuery);
+
+		await mocks.routes.get("/top-hosts")({ query: { sort: "client_errors" } }, response);
+
+		expect(response.json).toHaveBeenCalledWith([
+			{ client_errors: 12, domain_name: "app.example", id: 3, requests: 8, server_errors: 6 },
+			{ client_errors: 4, domain_name: "api.example", id: 7, requests: 42, server_errors: 2 },
+		]);
+		expect(query.orderBy).toHaveBeenCalledWith("client_errors", "desc");
+		expect(query.sum).toHaveBeenCalledWith("analytic_count.status_code_4xx as client_errors");
 	});
 });

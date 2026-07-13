@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "Сохранить",
 	"dashboard.notes.title": "Заметки",
 	"dashboard.status_ok": "Все выглядит хорошо!",
+	"dashboard.top-client-errors": "Основные ошибки клиента",
 	"dashboard.top-hosts": "Популярные прокси-хосты",
 	"dashboard.top-server-errors": "Основные ошибки сервера",
 	"dashboard_note": "Заметка Панели",

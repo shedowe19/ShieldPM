@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "Lưu",
 	"dashboard.notes.title": "Ghi chú Dán",
 	"dashboard.status_ok": "Mọi thứ đều ổn!",
+	"dashboard.top-client-errors": "Lỗi máy khách hàng đầu",
 	"dashboard.top-hosts": "Máy chủ proxy hàng đầu",
 	"dashboard.top-server-errors": "Lỗi máy chủ hàng đầu",
 	"dashboard_note": "Ghi Chú Bảng Điều Khiển",

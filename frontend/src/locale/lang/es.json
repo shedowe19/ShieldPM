@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "Guardar",
 	"dashboard.notes.title": "Notas Adhesivas",
 	"dashboard.status_ok": "¡Todo se ve bien!",
+	"dashboard.top-client-errors": "Principales errores de cliente",
 	"dashboard.top-hosts": "Hosts proxy principales",
 	"dashboard.top-server-errors": "Errores de servidor principales",
 	"dashboard_note": "Nota del Panel",

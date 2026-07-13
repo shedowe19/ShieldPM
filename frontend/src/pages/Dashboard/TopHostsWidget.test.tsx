@@ -24,6 +24,7 @@ vi.mock("src/locale", () => ({
 	T: ({ id }: { id: string }) => {
 		if (id === "analytics.no-data-list") return "No data to display";
 		if (id === "dashboard.top-hosts") return "Top Proxy Hosts";
+		if (id === "dashboard.top-client-errors") return "Top Client Errors";
 		if (id === "dashboard.top-server-errors") return "Top Server Errors";
 		return id;
 	},
@@ -34,8 +35,8 @@ describe("TopHostsWidget", () => {
 		vi.clearAllMocks();
 		mocks.useAnalyticsTopHosts.mockReturnValue({
 			data: [
-				{ domainName: "api.example", id: 7, requests: 42, serverErrors: 2 },
-				{ domainName: "app.example", id: 3, requests: 8, serverErrors: 1 },
+				{ clientErrors: 4, domainName: "api.example", id: 7, requests: 42, serverErrors: 2 },
+				{ clientErrors: 12, domainName: "app.example", id: 3, requests: 8, serverErrors: 1 },
 			],
 			isLoading: false,
 		});
@@ -74,5 +75,18 @@ describe("TopHostsWidget", () => {
 		expect(screen.getByRole("heading", { name: "Top Server Errors" })).toBeInTheDocument();
 		expect(screen.getByText("2")).toBeInTheDocument();
 		expect(screen.getByText("1")).toBeInTheDocument();
+	});
+
+	it("shows the client-error ranking so administrators can investigate failed client requests", () => {
+		render(
+			<MemoryRouter>
+				<TopHostsWidget sort="client_errors" />
+			</MemoryRouter>,
+		);
+
+		expect(mocks.useAnalyticsTopHosts).toHaveBeenCalledWith("client_errors");
+		expect(screen.getByRole("heading", { name: "Top Client Errors" })).toBeInTheDocument();
+		expect(screen.getByText("12")).toBeInTheDocument();
+		expect(screen.getByText("4")).toBeInTheDocument();
 	});
 });

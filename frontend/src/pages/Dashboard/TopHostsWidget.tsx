@@ -13,7 +13,9 @@ type TopHostsWidgetProps = {
 };
 
 const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) => {
+	const isClientErrorRanking = sort === "client_errors";
 	const isServerErrorRanking = sort === "server_errors";
+	const isErrorRanking = isClientErrorRanking || isServerErrorRanking;
 	const { data: hosts, isLoading } = useAnalyticsTopHosts(sort);
 
 	if (isLoading) {
@@ -22,17 +24,37 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 
 	return (
 		<Card
-			className={isServerErrorRanking ? "h-full border-red-500/50" : "h-full border-blue-500/50"}
-			data-testid={isServerErrorRanking ? "dashboard-top-server-errors" : "dashboard-top-hosts"}
+			className={
+				isServerErrorRanking
+					? "h-full border-red-500/50"
+					: isClientErrorRanking
+						? "h-full border-amber-500/50"
+						: "h-full border-blue-500/50"
+			}
+			data-testid={
+				isServerErrorRanking
+					? "dashboard-top-server-errors"
+					: isClientErrorRanking
+						? "dashboard-top-client-errors"
+						: "dashboard-top-hosts"
+			}
 		>
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 				<CardTitle className="text-xl font-bold flex items-center gap-2">
-					{isServerErrorRanking ? (
+					{isErrorRanking ? (
 						<IconAlertTriangle className="h-5 w-5 text-red-500" />
 					) : (
 						<IconChartBar className="h-5 w-5 text-blue-500" />
 					)}
-					<T id={isServerErrorRanking ? "dashboard.top-server-errors" : "dashboard.top-hosts"} />
+					<T
+						id={
+							isServerErrorRanking
+								? "dashboard.top-server-errors"
+								: isClientErrorRanking
+									? "dashboard.top-client-errors"
+									: "dashboard.top-hosts"
+						}
+					/>
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="pt-4">
@@ -50,10 +72,20 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 									className={
 										isServerErrorRanking
 											? "shrink-0 text-sm font-medium text-red-500"
-											: "shrink-0 text-sm text-muted-foreground"
+											: isClientErrorRanking
+												? "shrink-0 text-sm font-medium text-amber-500"
+												: "shrink-0 text-sm text-muted-foreground"
 									}
 								>
-									<FormattedNumber value={isServerErrorRanking ? host.serverErrors : host.requests} />
+									<FormattedNumber
+										value={
+											isServerErrorRanking
+												? host.serverErrors
+												: isClientErrorRanking
+													? host.clientErrors
+													: host.requests
+										}
+									/>
 								</span>
 							</li>
 						))}

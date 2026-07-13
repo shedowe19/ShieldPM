@@ -309,6 +309,7 @@
 	"dashboard.notes.save": "Opslaan",
 	"dashboard.notes.title": "Notities",
 	"dashboard.status_ok": "Alles ziet er goed uit!",
+	"dashboard.top-client-errors": "Belangrijkste clientfouten",
 	"dashboard.top-hosts": "Belangrijkste proxyhosts",
 	"dashboard.top-server-errors": "Belangrijkste serverfouten",
 	"dashboard_note": "Dashboard Notitie",
