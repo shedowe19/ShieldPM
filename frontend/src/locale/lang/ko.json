@@ -312,6 +312,7 @@
 	"dashboard.top-bandwidth": "대역폭 사용량 상위",
 	"dashboard.top-client-errors": "상위 클라이언트 오류",
 	"dashboard.top-hosts": "상위 프록시 호스트",
+	"dashboard.top-response-time": "가장 느린 프록시 호스트",
 	"dashboard.top-server-errors": "상위 서버 오류",
 	"dashboard_note": "대시보드 메모",
 	"ddns-provider": "DDNS 제공자",

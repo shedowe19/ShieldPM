@@ -312,6 +312,7 @@
 	"dashboard.top-bandwidth": "Najväčší spotrebitelia šírky pásma",
 	"dashboard.top-client-errors": "Najčastejšie chyby klienta",
 	"dashboard.top-hosts": "Najlepšie proxy hosty",
+	"dashboard.top-response-time": "Najpomalšie proxy hosty",
 	"dashboard.top-server-errors": "Najčastejšie chyby servera",
 	"dashboard_note": "Poznámka Nástenky",
 	"ddns-provider": "Poskytovateľ DDNS",

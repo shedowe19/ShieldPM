@@ -46,11 +46,11 @@
 
 ## Detail: Dashboard-Widgets
 
-| Datei                                   | Zweck                                                                                                                                       |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Dashboard/CertificateExpiryWidget.tsx` | Zertifikats-Ablauf-Anzeige                                                                                                                  |
-| `Dashboard/DashboardNotesWidget.tsx`    | Notizen-Widget                                                                                                                              |
-| `Dashboard/TopHostsWidget.tsx`          | Top-Proxy-Hosts sowie Hosts mit den meisten übertragenen Bytes, 4xx- oder 5xx-Antworten der letzten 24 Stunden, jeweils mit Analytics-Links |
+| Datei                                   | Zweck                                                                                                                                                                                   |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Dashboard/CertificateExpiryWidget.tsx` | Zertifikats-Ablauf-Anzeige                                                                                                                                                              |
+| `Dashboard/DashboardNotesWidget.tsx`    | Notizen-Widget                                                                                                                                                                          |
+| `Dashboard/TopHostsWidget.tsx`          | Top-Proxy-Hosts sowie Hosts mit den meisten übertragenen Bytes, 4xx-/5xx-Antworten oder der höchsten durchschnittlichen Antwortzeit der letzten 24 Stunden, jeweils mit Analytics-Links |
 
 ## Tabellen-Pattern
 

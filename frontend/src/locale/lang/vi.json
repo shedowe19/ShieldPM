@@ -312,6 +312,7 @@
 	"dashboard.top-bandwidth": "Máy chủ dùng băng thông nhiều nhất",
 	"dashboard.top-client-errors": "Lỗi máy khách hàng đầu",
 	"dashboard.top-hosts": "Máy chủ proxy hàng đầu",
+	"dashboard.top-response-time": "Máy chủ proxy chậm nhất",
 	"dashboard.top-server-errors": "Lỗi máy chủ hàng đầu",
 	"dashboard_note": "Ghi Chú Bảng Điều Khiển",
 	"ddns-provider": "Nhà cung cấp DDNS",

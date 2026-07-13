@@ -312,6 +312,7 @@
 	"dashboard.top-bandwidth": "Top Bandwidth Consumers",
 	"dashboard.top-client-errors": "Top Client Errors",
 	"dashboard.top-hosts": "Top Proxy Hosts",
+	"dashboard.top-response-time": "Slowest Proxy Hosts",
 	"dashboard.top-server-errors": "Top Server Errors",
 	"dashboard_note": "Dashboard Note",
 	"ddns-provider": "DDNS Provider",

@@ -312,6 +312,7 @@
 	"dashboard.top-bandwidth": "带宽使用量最高的主机",
 	"dashboard.top-client-errors": "热门客户端错误",
 	"dashboard.top-hosts": "热门代理主机",
+	"dashboard.top-response-time": "最慢的代理主机",
 	"dashboard.top-server-errors": "热门服务器错误",
 	"dashboard_note": "仪表板便签",
 	"ddns-provider": "DDNS 提供商",

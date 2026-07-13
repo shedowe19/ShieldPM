@@ -174,6 +174,7 @@ const Dashboard = () => {
 				<TopHostsWidget />
 				<TopHostsWidget sort="bytes" />
 				<TopHostsWidget sort="client_errors" />
+				<TopHostsWidget sort="response_time" />
 				<TopHostsWidget sort="server_errors" />
 			</div>
 		</m.div>

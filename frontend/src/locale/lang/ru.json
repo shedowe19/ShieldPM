@@ -312,6 +312,7 @@
 	"dashboard.top-bandwidth": "Основные потребители трафика",
 	"dashboard.top-client-errors": "Основные ошибки клиента",
 	"dashboard.top-hosts": "Популярные прокси-хосты",
+	"dashboard.top-response-time": "Самые медленные прокси-хосты",
 	"dashboard.top-server-errors": "Основные ошибки сервера",
 	"dashboard_note": "Заметка Панели",
 	"ddns-provider": "DDNS-провайдер",

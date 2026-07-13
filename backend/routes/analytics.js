@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import express from "express";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
+import AnalyticsLogs from "../models/analytics_logs.js";
 import ProxyHost from "../models/proxy_host.js";
 
 const router = express.Router();
@@ -114,38 +115,68 @@ router.get("/series", async (req, res) => {
 
 /**
  * GET /api/analytics/top-hosts
- * Returns top hosts by request count, transferred bytes, client errors, or server errors
+ * Returns top hosts by request count, transferred bytes, errors, or average response time
  */
 router.get("/top-hosts", async (req, res) => {
 	try {
 		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
 		const end = req.query.end || dayjs().toISOString();
-		const sort = ["bytes", "client_errors", "server_errors"].includes(req.query.sort) ? req.query.sort : "requests";
+		const sort = ["bytes", "client_errors", "response_time", "server_errors"].includes(req.query.sort)
+			? req.query.sort
+			: "requests";
 		const hostsWithDomains = ProxyHost.query()
 			.alias("proxy_host")
 			.join("host_domain", "host_domain.proxy_host_id", "proxy_host.id")
 			.select("proxy_host.id")
 			.where("proxy_host.is_deleted", 0)
 			.groupBy("proxy_host.id");
-		const counts = await AnalyticCount.query()
-			.alias("analytic_count")
-			.whereNotNull("analytic_count.proxy_host_id")
-			.whereIn("analytic_count.proxy_host_id", hostsWithDomains)
-			.where("analytic_count.timestamp", ">=", start)
-			.andWhere("analytic_count.timestamp", "<=", end)
-			.select("analytic_count.proxy_host_id as id")
-			.sum("analytic_count.request_count as requests")
-			.sum("analytic_count.bytes_sent as bytes")
-			.sum("analytic_count.status_code_4xx as client_errors")
-			.sum("analytic_count.status_code_5xx as server_errors")
-			.groupBy("analytic_count.proxy_host_id")
-			.orderBy(sort, "desc")
-			.limit(5);
+		const rankings =
+			sort === "response_time"
+				? await AnalyticsLogs.query()
+						.alias("analytics_logs")
+						.whereIn("analytics_logs.host_id", hostsWithDomains)
+						.where("analytics_logs.time", ">=", start)
+						.andWhere("analytics_logs.time", "<=", end)
+						.where("analytics_logs.duration", ">", 0)
+						.select("analytics_logs.host_id as id")
+						.avg("analytics_logs.duration as average_duration")
+						.groupBy("analytics_logs.host_id")
+						.orderBy("average_duration", "desc")
+						.limit(5)
+				: await AnalyticCount.query()
+						.alias("analytic_count")
+						.whereNotNull("analytic_count.proxy_host_id")
+						.whereIn("analytic_count.proxy_host_id", hostsWithDomains)
+						.where("analytic_count.timestamp", ">=", start)
+						.andWhere("analytic_count.timestamp", "<=", end)
+						.select("analytic_count.proxy_host_id as id")
+						.sum("analytic_count.request_count as requests")
+						.sum("analytic_count.bytes_sent as bytes")
+						.sum("analytic_count.status_code_4xx as client_errors")
+						.sum("analytic_count.status_code_5xx as server_errors")
+						.groupBy("analytic_count.proxy_host_id")
+						.orderBy(sort, "desc")
+						.limit(5);
 
-		const hostIds = counts.map((count) => Number(count.id));
+		const hostIds = rankings.map((ranking) => Number(ranking.id));
 		if (hostIds.length === 0) {
 			return res.json([]);
 		}
+		const metrics =
+			sort === "response_time"
+				? await AnalyticCount.query()
+						.alias("analytic_count")
+						.whereIn("analytic_count.proxy_host_id", hostIds)
+						.where("analytic_count.timestamp", ">=", start)
+						.andWhere("analytic_count.timestamp", "<=", end)
+						.select("analytic_count.proxy_host_id as id")
+						.sum("analytic_count.request_count as requests")
+						.sum("analytic_count.bytes_sent as bytes")
+						.sum("analytic_count.status_code_4xx as client_errors")
+						.sum("analytic_count.status_code_5xx as server_errors")
+						.groupBy("analytic_count.proxy_host_id")
+				: rankings;
+		const metricsByHostId = new Map(metrics.map((metric) => [Number(metric.id), metric]));
 
 		const hosts = await ProxyHost.query()
 			.whereIn("id", hostIds)
@@ -154,18 +185,22 @@ router.get("/top-hosts", async (req, res) => {
 		const domainsByHostId = new Map(hosts.map((host) => [host.id, host.domain_names[0]]));
 
 		res.json(
-			counts.flatMap((count) => {
-				const id = Number(count.id);
+			rankings.flatMap((ranking) => {
+				const id = Number(ranking.id);
 				const domainName = domainsByHostId.get(id);
+				const metric = metricsByHostId.get(id) || {};
 				return domainName
 					? [
 							{
-								bytes: Number(count.bytes) || 0,
+								...(sort === "response_time"
+									? { average_duration: Number(ranking.average_duration) || 0 }
+									: {}),
+								bytes: Number(metric.bytes) || 0,
 								domain_name: domainName,
 								id,
-								requests: Number(count.requests),
-								client_errors: Number(count.client_errors),
-								server_errors: Number(count.server_errors),
+								requests: Number(metric.requests) || 0,
+								client_errors: Number(metric.client_errors) || 0,
+								server_errors: Number(metric.server_errors) || 0,
 							},
 						]
 					: [];

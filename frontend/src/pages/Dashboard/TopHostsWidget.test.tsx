@@ -8,7 +8,11 @@ const mocks = vi.hoisted(() => ({
 	useAnalyticsTopHosts: vi.fn(),
 }));
 
-vi.mock("@tabler/icons-react", () => ({ IconAlertTriangle: () => null, IconChartBar: () => null }));
+vi.mock("@tabler/icons-react", () => ({
+	IconAlertTriangle: () => null,
+	IconChartBar: () => null,
+	IconClock: () => null,
+}));
 vi.mock("react-intl", () => ({
 	FormattedNumber: ({ style, unit, value }: { style?: string; unit?: string; value: number }) => (
 		<output data-style={style} data-testid={`formatted-number-${value}`} data-unit={unit}>
@@ -33,6 +37,7 @@ vi.mock("src/locale", () => ({
 		if (id === "dashboard.top-bandwidth") return "Top Bandwidth Consumers";
 		if (id === "dashboard.top-client-errors") return "Top Client Errors";
 		if (id === "dashboard.top-server-errors") return "Top Server Errors";
+		if (id === "dashboard.top-response-time") return "Slowest Proxy Hosts";
 		return id;
 	},
 }));
@@ -108,5 +113,32 @@ describe("TopHostsWidget", () => {
 		expect(screen.getByRole("heading", { name: "Top Client Errors" })).toBeInTheDocument();
 		expect(screen.getByText("12")).toBeInTheDocument();
 		expect(screen.getByText("4")).toBeInTheDocument();
+	});
+
+	it("shows the slowest proxy hosts with average response times so administrators can investigate latency", () => {
+		mocks.useAnalyticsTopHosts.mockReturnValue({
+			data: [
+				{
+					averageDuration: 1825,
+					bytes: 1536,
+					clientErrors: 4,
+					domainName: "api.example",
+					id: 7,
+					requests: 42,
+					serverErrors: 2,
+				},
+			],
+			isLoading: false,
+		});
+
+		render(
+			<MemoryRouter>
+				<TopHostsWidget sort="response_time" />
+			</MemoryRouter>,
+		);
+
+		expect(mocks.useAnalyticsTopHosts).toHaveBeenCalledWith("response_time");
+		expect(screen.getByRole("heading", { name: "Slowest Proxy Hosts" })).toBeInTheDocument();
+		expect(screen.getByTestId("formatted-number-1825")).toHaveAttribute("data-unit", "millisecond");
 	});
 });

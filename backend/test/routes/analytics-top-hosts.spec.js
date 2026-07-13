@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	analyticCountQuery: vi.fn(),
+	analyticsLogsQuery: vi.fn(),
 	middlewares: [],
 	proxyHostQuery: vi.fn(),
 	routes: new Map(),
@@ -29,6 +30,7 @@ vi.mock("systeminformation", () => ({ default: { networkStats: vi.fn() } }));
 vi.mock("../../lib/config.js", () => ({ isMysql: vi.fn(), isPostgres: vi.fn(), isSqlite: vi.fn() }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => () => undefined }));
 vi.mock("../../models/analytic_count.js", () => ({ default: { query: mocks.analyticCountQuery } }));
+vi.mock("../../models/analytics_logs.js", () => ({ default: { query: mocks.analyticsLogsQuery } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyHostQuery } }));
 
 import "../../routes/analytics.js";
@@ -42,6 +44,7 @@ const createTopHostsQuery = (rows) => {
 	const query = {
 		alias: vi.fn(),
 		andWhere: vi.fn(),
+		avg: vi.fn(),
 		groupBy: vi.fn(),
 		join: vi.fn(),
 		limit: vi.fn().mockResolvedValue(rows),
@@ -56,6 +59,7 @@ const createTopHostsQuery = (rows) => {
 	for (const method of [
 		"alias",
 		"andWhere",
+		"avg",
 		"groupBy",
 		"join",
 		"min",
@@ -220,5 +224,41 @@ describe("analytics top-hosts route", () => {
 		]);
 		expect(query.orderBy).toHaveBeenCalledWith("client_errors", "desc");
 		expect(query.sum).toHaveBeenCalledWith("analytic_count.status_code_4xx as client_errors");
+	});
+
+	it("returns the five active proxy hosts with the slowest average response time when sort=response_time", async () => {
+		const slowestQuery = createTopHostsQuery([{ average_duration: "1825", id: "3" }]);
+		const metricsRows = [{ bytes: "1024", client_errors: "2", id: "3", requests: "42", server_errors: "1" }];
+		const metricsQuery = createTopHostsQuery(metricsRows);
+		metricsQuery.groupBy.mockResolvedValue(metricsRows);
+		const hostRows = [{ domain_names: ["app.example"], id: 3 }];
+		const proxyHostQuery = createProxyHostQuery(hostRows);
+		const hostsWithDomainsQuery = createProxyHostQuery(hostRows);
+		const response = createResponse();
+		mocks.analyticCountQuery.mockReturnValue(metricsQuery);
+		mocks.analyticsLogsQuery.mockReturnValue(slowestQuery);
+		mocks.proxyHostQuery.mockReturnValueOnce(hostsWithDomainsQuery).mockReturnValueOnce(proxyHostQuery);
+
+		await mocks.routes.get("/top-hosts")({ query: { sort: "response_time" } }, response);
+
+		expect(mocks.analyticsLogsQuery).toHaveBeenCalledOnce();
+		expect(slowestQuery.alias).toHaveBeenCalledWith("analytics_logs");
+		expect(slowestQuery.where).toHaveBeenCalledWith("analytics_logs.duration", ">", 0);
+		expect(slowestQuery.avg).toHaveBeenCalledWith("analytics_logs.duration as average_duration");
+		expect(slowestQuery.groupBy).toHaveBeenCalledWith("analytics_logs.host_id");
+		expect(slowestQuery.orderBy).toHaveBeenCalledWith("average_duration", "desc");
+		expect(slowestQuery.limit).toHaveBeenCalledWith(5);
+		expect(metricsQuery.whereIn).toHaveBeenCalledWith("analytic_count.proxy_host_id", [3]);
+		expect(response.json).toHaveBeenCalledWith([
+			{
+				average_duration: 1825,
+				bytes: 1024,
+				client_errors: 2,
+				domain_name: "app.example",
+				id: 3,
+				requests: 42,
+				server_errors: 1,
+			},
+		]);
 	});
 });

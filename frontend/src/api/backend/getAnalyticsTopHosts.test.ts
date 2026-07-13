@@ -49,4 +49,23 @@ describe("getAnalyticsTopHosts", () => {
 		]);
 		expect(api.get).toHaveBeenLastCalledWith({ url: "/analytics/top-hosts", params: { sort: "bytes" } });
 	});
+
+	it("requests slowest proxy hosts and normalizes their average response time", async () => {
+		api.get.mockResolvedValue([
+			{ average_duration: "1825", domain_name: "app.example", id: 3, requests: 42, server_errors: 1 },
+		]);
+
+		await expect(getAnalyticsTopHosts("response_time")).resolves.toEqual([
+			{
+				averageDuration: 1825,
+				bytes: 0,
+				clientErrors: 0,
+				domainName: "app.example",
+				id: 3,
+				requests: 42,
+				serverErrors: 1,
+			},
+		]);
+		expect(api.get).toHaveBeenLastCalledWith({ url: "/analytics/top-hosts", params: { sort: "response_time" } });
+	});
 });

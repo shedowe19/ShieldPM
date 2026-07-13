@@ -25,5 +25,6 @@ describe("dashboard route dependencies", () => {
 
 		expect(source).toContain('<TopHostsWidget sort="bytes" />');
 		expect(source).toContain('<TopHostsWidget sort="client_errors" />');
+		expect(source).toContain('<TopHostsWidget sort="response_time" />');
 	});
 });

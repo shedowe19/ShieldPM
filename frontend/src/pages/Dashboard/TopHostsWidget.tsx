@@ -1,4 +1,4 @@
-import { IconAlertTriangle, IconChartBar } from "@tabler/icons-react";
+import { IconAlertTriangle, IconChartBar, IconClock } from "@tabler/icons-react";
 import { FormattedNumber } from "react-intl";
 import { Link } from "react-router-dom";
 import type { AnalyticsTopHostsSort } from "src/api/backend";
@@ -24,6 +24,7 @@ const getByteDisplay = (bytes: number) => {
 const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) => {
 	const isBandwidthRanking = sort === "bytes";
 	const isClientErrorRanking = sort === "client_errors";
+	const isResponseTimeRanking = sort === "response_time";
 	const isServerErrorRanking = sort === "server_errors";
 	const isErrorRanking = isClientErrorRanking || isServerErrorRanking;
 	const { data: hosts, isLoading } = useAnalyticsTopHosts(sort);
@@ -39,24 +40,30 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 					? "h-full border-red-500/50"
 					: isClientErrorRanking
 						? "h-full border-amber-500/50"
-						: isBandwidthRanking
-							? "h-full border-cyan-500/50"
-							: "h-full border-blue-500/50"
+						: isResponseTimeRanking
+							? "h-full border-violet-500/50"
+							: isBandwidthRanking
+								? "h-full border-cyan-500/50"
+								: "h-full border-blue-500/50"
 			}
 			data-testid={
 				isServerErrorRanking
 					? "dashboard-top-server-errors"
 					: isClientErrorRanking
 						? "dashboard-top-client-errors"
-						: isBandwidthRanking
-							? "dashboard-top-bandwidth"
-							: "dashboard-top-hosts"
+						: isResponseTimeRanking
+							? "dashboard-top-response-time"
+							: isBandwidthRanking
+								? "dashboard-top-bandwidth"
+								: "dashboard-top-hosts"
 			}
 		>
 			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 				<CardTitle className="text-xl font-bold flex items-center gap-2">
 					{isErrorRanking ? (
 						<IconAlertTriangle className="h-5 w-5 text-red-500" />
+					) : isResponseTimeRanking ? (
+						<IconClock className="h-5 w-5 text-violet-500" />
 					) : (
 						<IconChartBar
 							className={isBandwidthRanking ? "h-5 w-5 text-cyan-500" : "h-5 w-5 text-blue-500"}
@@ -68,9 +75,11 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 								? "dashboard.top-server-errors"
 								: isClientErrorRanking
 									? "dashboard.top-client-errors"
-									: isBandwidthRanking
-										? "dashboard.top-bandwidth"
-										: "dashboard.top-hosts"
+									: isResponseTimeRanking
+										? "dashboard.top-response-time"
+										: isBandwidthRanking
+											? "dashboard.top-bandwidth"
+											: "dashboard.top-hosts"
 						}
 					/>
 				</CardTitle>
@@ -80,6 +89,7 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 					<ol className="space-y-3">
 						{hosts.map((host) => {
 							const byteDisplay = isBandwidthRanking ? getByteDisplay(host.bytes) : null;
+							const averageDuration = host.averageDuration ?? 0;
 
 							return (
 								<li key={host.id} className="flex items-center justify-between gap-4">
@@ -95,9 +105,11 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 												? "shrink-0 text-sm font-medium text-red-500"
 												: isClientErrorRanking
 													? "shrink-0 text-sm font-medium text-amber-500"
-													: isBandwidthRanking
-														? "shrink-0 text-sm font-medium text-cyan-500"
-														: "shrink-0 text-sm text-muted-foreground"
+													: isResponseTimeRanking
+														? "shrink-0 text-sm font-medium text-violet-500"
+														: isBandwidthRanking
+															? "shrink-0 text-sm font-medium text-cyan-500"
+															: "shrink-0 text-sm text-muted-foreground"
 										}
 									>
 										{byteDisplay ? (
@@ -107,6 +119,14 @@ const TopHostsContent = ({ sort = "requests" }: Required<TopHostsWidgetProps>) =
 												unit={byteDisplay.unit}
 												unitDisplay="short"
 												value={byteDisplay.value}
+											/>
+										) : isResponseTimeRanking ? (
+											<FormattedNumber
+												maximumFractionDigits={1}
+												style="unit"
+												unit="millisecond"
+												unitDisplay="short"
+												value={averageDuration}
 											/>
 										) : (
 											<FormattedNumber

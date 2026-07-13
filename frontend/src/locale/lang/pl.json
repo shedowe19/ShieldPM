@@ -312,6 +312,7 @@
 	"dashboard.top-bandwidth": "Najwięksi użytkownicy przepustowości",
 	"dashboard.top-client-errors": "Najczęstsze błędy klienta",
 	"dashboard.top-hosts": "Najpopularniejsze hosty proxy",
+	"dashboard.top-response-time": "Najwolniejsze hosty proxy",
 	"dashboard.top-server-errors": "Najczęstsze błędy serwera",
 	"dashboard_note": "Notatka Pulpitu",
 	"ddns-provider": "Dostawca DDNS",
