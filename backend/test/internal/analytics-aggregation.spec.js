@@ -16,6 +16,11 @@ vi.mock("../../models/analytic_count.js", () => ({
 	},
 }));
 
+// flushAggregations only touches AnalyticCount. Mock the other analytics models so this
+// focused unit test never initializes the production DB/key configuration on CI.
+vi.mock("../../models/analytics_logs.js", () => ({ default: {} }));
+vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
+
 import { AnalyticsService } from "../../internal/analytics.js";
 
 describe("AnalyticsService aggregation upserts", () => {
