@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	getListHandler: null,
+	getServerInfo: vi.fn(),
 	getStatusHandler: null,
 	peerQuery: vi.fn(),
 	refreshStatuses: vi.fn(),
@@ -12,6 +14,7 @@ vi.mock("express", () => ({
 			const router = {
 				delete: () => router,
 				get: (path, handler) => {
+					if (path === "/") mocks.getListHandler = handler;
 					if (path === "/status") mocks.getStatusHandler = handler;
 					return router;
 				},
@@ -24,7 +27,9 @@ vi.mock("express", () => ({
 	},
 }));
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
-vi.mock("../../internal/wireguard.js", () => ({ default: { refreshStatuses: mocks.refreshStatuses } }));
+vi.mock("../../internal/wireguard.js", () => ({
+	default: { getServerInfo: mocks.getServerInfo, refreshStatuses: mocks.refreshStatuses },
+}));
 vi.mock("../../lib/config.js", () => ({ isDemoMode: vi.fn().mockReturnValue(false) }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => (_req, _res, next) => next() }));
 vi.mock("../../lib/validator/api.js", () => ({ default: vi.fn() }));
@@ -40,6 +45,10 @@ const createPeerQuery = (peers) => {
 		peers.filter((peer) => filters.every(([field, value]) => peer[field] === value)),
 	);
 	Object.assign(query, {
+		andWhere: (field, value) => {
+			filters.push([field, value]);
+			return query;
+		},
 		orderBy: () => query,
 		where: (field, value) => {
 			filters.push([field, value]);
@@ -80,7 +89,31 @@ describe("WireGuard status ownership", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.peerQuery.mockImplementation(() => createPeerQuery(peers));
+		mocks.getServerInfo.mockResolvedValue({ available: true });
 		mocks.refreshStatuses.mockResolvedValue();
+	});
+
+	it("refreshes only the restricted caller's peer status before returning the list", async () => {
+		let livePeers = peers.map((peer) => ({ ...peer }));
+		mocks.peerQuery.mockImplementation(() => createPeerQuery(livePeers));
+		mocks.refreshStatuses.mockImplementation(async (ownerUserId) => {
+			if (ownerUserId === 7) {
+				livePeers = livePeers.map((peer) => (peer.id === 1 ? { ...peer, status: 3 } : peer));
+			}
+		});
+		const access = {
+			can: vi.fn().mockResolvedValue({ permission_visibility: "user" }),
+			token: { getUserId: vi.fn().mockReturnValue(7) },
+		};
+		const res = makeResponse(access);
+
+		await mocks.getListHandler({}, res);
+
+		expect(mocks.refreshStatuses).toHaveBeenCalledWith(7);
+		expect(res.send).toHaveBeenCalledWith({
+			peers: [{ id: 1, is_deleted: 0, name: "owned peer", owner_user_id: 7, status: 3 }],
+			server: { available: true },
+		});
 	});
 
 	it("returns live status only for peers owned by a restricted caller", async () => {

@@ -34,21 +34,25 @@ router.use((req, res, next) => {
  */
 router.get("/", async (_req, res) => {
 	const accessData = await res.locals.access.can("wireguard_peers:list");
-	const query = WireguardPeer.query().andWhere("is_deleted", 0).orderBy("name", "ASC");
+	const ownerUserId = accessData.permission_visibility === "all" ? null : res.locals.access.token.getUserId(1);
 
-	if (accessData.permission_visibility !== "all") {
-		query.where("owner_user_id", res.locals.access.token.getUserId(1));
-	}
-
-	const peers = await query;
-	const server = await internalWireguard.getServerInfo();
-
-	// Refresh live statuses
 	try {
-		await internalWireguard.refreshStatuses();
+		if (ownerUserId === null) {
+			await internalWireguard.refreshStatuses();
+		} else {
+			await internalWireguard.refreshStatuses(ownerUserId);
+		}
 	} catch (err) {
 		logger.debug("WireGuard: Could not refresh live statuses:", err.message);
 	}
+
+	const query = WireguardPeer.query().andWhere("is_deleted", 0).orderBy("name", "ASC");
+
+	if (ownerUserId !== null) {
+		query.where("owner_user_id", ownerUserId);
+	}
+
+	const [peers, server] = await Promise.all([query, internalWireguard.getServerInfo()]);
 
 	// Strip private keys from response
 	const sanitizedPeers = peers.map((p) => {
