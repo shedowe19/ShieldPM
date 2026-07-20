@@ -5,6 +5,7 @@
  * Duo Security, backup codes, and the unified verifyLoginChallenge dispatcher.
  */
 
+import crypto from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Shared state ───────────────────────────────────────────────────────────
@@ -264,13 +265,25 @@ describe("2fa-service", () => {
 	// ── Backup Codes ────────────────────────────────────────────────────────
 
 	describe("regenerateBackupCodes", () => {
-		it("returns 8 unique alphanumeric codes", async () => {
+		it("returns 8 unique fixed-length alphanumeric codes", async () => {
 			const codes = await twoFaService.regenerateBackupCodes(1);
 			expect(codes).toHaveLength(8);
 			expect(new Set(codes).size).toBe(8);
 			for (const code of codes) {
-				expect(typeof code).toBe("string");
-				expect(code.length).toBeGreaterThanOrEqual(8);
+				expect(code).toMatch(/^[A-Z0-9]{10}$/);
+			}
+		});
+
+		it("keeps the required length when Base64URL output would include stripped characters", async () => {
+			const randomBytes = vi.spyOn(crypto, "randomBytes").mockReturnValue(Buffer.alloc(8, 0xff));
+
+			try {
+				const codes = await twoFaService.regenerateBackupCodes(1);
+				for (const code of codes) {
+					expect(code).toMatch(/^[A-Z0-9]{10}$/);
+				}
+			} finally {
+				randomBytes.mockRestore();
 			}
 		});
 	});
