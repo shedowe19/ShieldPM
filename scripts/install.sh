@@ -14,6 +14,12 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+enable_node_system_ca() {
+    if [[ " ${NODE_OPTIONS:-} " != *" --use-system-ca "* ]]; then
+        export NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--use-system-ca"
+    fi
+}
+
 install_node_26() {
     local NODE_MAJOR=26
     local NODESOURCE_KEYRING="/etc/apt/keyrings/nodesource.gpg"
@@ -45,6 +51,7 @@ install_node_26() {
 
     DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
         "nodejs=${NODE_PACKAGE_VERSION}"
+    enable_node_system_ca
     if command -v corepack >/dev/null 2>&1; then
         corepack enable
         corepack install --global yarn@1.22.22

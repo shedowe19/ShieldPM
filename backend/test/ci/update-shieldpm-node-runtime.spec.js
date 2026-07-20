@@ -27,6 +27,16 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(nativeInstaller).toContain(`"nodejs=${nodePackageVersionVariable}"`);
 	});
 
+	it("uses Node's system CA store for the Yarn bootstrap without weakening TLS", () => {
+		for (const script of [updater, nativeInstaller]) {
+			expect(script).toContain("enable_node_system_ca()");
+			expect(script).toMatch(/install_node_26\(\) \{[\s\S]*enable_node_system_ca/);
+			expect(script).toMatch(/export NODE_OPTIONS=.*--use-system-ca/);
+			expect(script).not.toContain("NODE_TLS_REJECT_UNAUTHORIZED=0");
+			expect(script).not.toContain("strict-ssl=false");
+		}
+	});
+
 	it("pins Yarn Classic through Corepack when available and npm otherwise", () => {
 		expect(updater).toContain("command -v corepack");
 		expect(updater).toContain("npm install --global yarn@1.22.22");
