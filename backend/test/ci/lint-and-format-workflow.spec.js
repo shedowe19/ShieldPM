@@ -58,6 +58,12 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).toContain("git merge-base HEAD");
 	});
 
+	it("fetches the default branch explicitly instead of a same-named tag", () => {
+		expect(workflow).toContain(
+			'git fetch --no-tags origin "refs/heads/$default_branch:refs/remotes/origin/$default_branch"',
+		);
+	});
+
 	it("uses the default-branch merge base for a new branch push", () => {
 		expect(resolveComparisonBase("push", "0".repeat(40))).toBe(defaultBranchMergeBase);
 	});

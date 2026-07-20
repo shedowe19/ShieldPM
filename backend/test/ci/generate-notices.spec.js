@@ -25,7 +25,7 @@ const createFixture = (licenseCheckFails) => {
 	fs.writeFileSync(
 		join(binDirectory, "license-checker"),
 		[
-			"#!/usr/bin/node",
+			`#!${process.execPath}`,
 			`if (${licenseCheckFails}) {`,
 			'	process.stderr.write("license-checker failed\\n");',
 			"	process.exit(17);",
