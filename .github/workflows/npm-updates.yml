@@ -2,9 +2,9 @@ name: NPM Dependency Updates
 
 on:
   schedule:
-    # Run everyday at midnight
+    # Run every day at midnight
     - cron: "0 0 * * *"
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -22,25 +22,25 @@ jobs:
         with:
           node-version: 22
           cache: "yarn"
-          # Cache both frontend and backend yarn.lock to speed up installs
           cache-dependency-path: |
             frontend/yarn.lock
             backend/yarn.lock
 
+      - name: Install dependency update tools
+        run: |
+          yarn global add npm-check-updates@22.2.9 license-checker@25.0.1
+          echo "$(yarn global bin)" >> "$GITHUB_PATH"
+
       - name: Update Frontend Dependencies
         working-directory: ./frontend
         run: |
-          echo "Installing current frontend dependencies..."
-          yarn install
+          echo "Installing the locked frontend dependency baseline..."
+          yarn install --frozen-lockfile
 
           echo "Checking for minor/patch updates..."
           echo "### Frontend Updates" > /tmp/frontend-updates.txt
           echo '```text' >> /tmp/frontend-updates.txt
-          # Run npm-check-updates, update package.json, and capture the output
-          # -u: upgrade package.json
-          # --target minor: only upgrade to minor/patch versions, ignoring major
-          # --reject vite: vite is pinned in resolutions and must be updated together with vitest manually
-          npx npm-check-updates -u --target minor --reject vite >> /tmp/frontend-updates.txt || true
+          ncu -u --target minor --reject vite >> /tmp/frontend-updates.txt
           echo '```' >> /tmp/frontend-updates.txt
 
           echo "Installing updated frontend dependencies to update yarn.lock..."
@@ -49,57 +49,69 @@ jobs:
       - name: Update Backend Dependencies
         working-directory: ./backend
         run: |
-          echo "Installing current backend dependencies..."
-          yarn install
+          echo "Installing the locked backend dependency baseline..."
+          yarn install --frozen-lockfile
 
           echo "Checking for minor/patch updates..."
           echo "### Backend Updates" > /tmp/backend-updates.txt
           echo '```text' >> /tmp/backend-updates.txt
-          # Run npm-check-updates, update package.json, and capture the output
-          # -u: upgrade package.json
-          # --target minor: only upgrade to minor/patch versions, ignoring major
-          npx npm-check-updates -u --target minor >> /tmp/backend-updates.txt || true
+          ncu -u --target minor >> /tmp/backend-updates.txt
           echo '```' >> /tmp/backend-updates.txt
 
           echo "Installing updated backend dependencies to update yarn.lock..."
           yarn install
 
-      - name: Check for Changes
+      - name: Check for Direct Dependency Updates
         id: check_changes
         run: |
-          # Check if any package.json or yarn.lock was changed
-          if git diff --quiet frontend/package.json frontend/yarn.lock backend/package.json backend/yarn.lock; then
-            echo "No dependencies were updated."
-            echo "updates_found=false" >> $GITHUB_OUTPUT
+          if git diff --quiet frontend/package.json backend/package.json; then
+            echo "No direct dependencies were updated."
+            echo "updates_found=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Dependencies were updated."
-            echo "updates_found=true" >> $GITHUB_OUTPUT
+            echo "Direct dependencies were updated."
+            echo "updates_found=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Generate Third-Party Notices
         if: steps.check_changes.outputs.updates_found == 'true'
+        run: node scripts/generate-notices.js
+
+      - name: Run dependency verification
+        if: steps.check_changes.outputs.updates_found == 'true'
         run: |
-          echo "Generating updated THIRD-PARTY-NOTICES.md..."
-          # Run the generate-notices.js script to update the license notices
-          node scripts/generate-notices.js
+          (cd backend && yarn test --run)
+          (cd frontend && yarn test --run)
+          (cd frontend && yarn build)
+
+      - name: Require dedicated pull request token
+        if: steps.check_changes.outputs.updates_found == 'true'
+        env:
+          DEPENDENCY_UPDATES_TOKEN: ${{ secrets.DEPENDENCY_UPDATES_TOKEN }}
+        run: |
+          if [ -z "$DEPENDENCY_UPDATES_TOKEN" ]; then
+            echo "::error::DEPENDENCY_UPDATES_TOKEN is required to create a PR that triggers normal workflow checks."
+            exit 1
+          fi
 
       - name: Prepare PR Body
         if: steps.check_changes.outputs.updates_found == 'true'
         run: |
           echo "## Automated Dependency Updates" > /tmp/pr_body.txt
-          echo "This PR updates both frontend and backend dependencies to their latest **minor** and **patch** versions." >> /tmp/pr_body.txt
+          echo "This PR updates direct frontend and backend dependencies to their latest **minor** and **patch** versions." >> /tmp/pr_body.txt
           echo "" >> /tmp/pr_body.txt
           cat /tmp/frontend-updates.txt >> /tmp/pr_body.txt
           echo "" >> /tmp/pr_body.txt
           cat /tmp/backend-updates.txt >> /tmp/pr_body.txt
           echo "" >> /tmp/pr_body.txt
-          echo "### Additional Actions" >> /tmp/pr_body.txt
-          echo "- Ran \`scripts/generate-notices.js\` to update \`THIRD-PARTY-NOTICES.md\` to reflect these changes." >> /tmp/pr_body.txt
+          echo "### Verification" >> /tmp/pr_body.txt
+          echo "- Regenerated \`THIRD-PARTY-NOTICES.md\` after all license scans succeeded." >> /tmp/pr_body.txt
+          echo "- Ran backend tests, frontend tests, and the frontend production build." >> /tmp/pr_body.txt
 
       - name: Create Pull Request
         if: steps.check_changes.outputs.updates_found == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
+          token: ${{ secrets.DEPENDENCY_UPDATES_TOKEN }}
           base: "develop"
           signoff: true
           delete-branch: true
