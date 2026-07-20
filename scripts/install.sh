@@ -14,6 +14,53 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+install_node_26() {
+    local NODE_MAJOR=26
+    local NODESOURCE_KEYRING="/etc/apt/keyrings/nodesource.gpg"
+    local NODESOURCE_LIST="/etc/apt/sources.list.d/nodesource.list"
+    local NODE_PACKAGE_VERSION
+    local NODE_VERSION
+    local source_file
+
+    echo ">>> Installing Node.js ${NODE_MAJOR}..."
+    install -d -m 0755 /etc/apt/keyrings
+    curl -fsSL "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key" | \
+        gpg --dearmor --yes --output "$NODESOURCE_KEYRING"
+    chmod a+r "$NODESOURCE_KEYRING"
+
+    while IFS= read -r -d '' source_file; do
+        if grep -qE 'deb[.]nodesource[.]com/node_[0-9]+[.]x' "$source_file"; then
+            rm -f "$source_file"
+        fi
+    done < <(find /etc/apt/sources.list.d -maxdepth 1 -type f \( -name '*.list' -o -name '*.sources' \) -print0)
+
+    printf 'deb [signed-by=%s] https://deb.nodesource.com/node_%s.x nodistro main\n' \
+        "$NODESOURCE_KEYRING" "$NODE_MAJOR" > "$NODESOURCE_LIST"
+    apt-get update
+    NODE_PACKAGE_VERSION="$(apt-cache madison nodejs | awk '$3 ~ /^26\./ { print $3; exit }')"
+    if [ -z "$NODE_PACKAGE_VERSION" ]; then
+        echo "ERROR: NodeSource does not provide Node.js ${NODE_MAJOR} for this architecture."
+        exit 1
+    fi
+
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
+        "nodejs=${NODE_PACKAGE_VERSION}"
+    if command -v corepack >/dev/null 2>&1; then
+        corepack enable
+        corepack install --global yarn@1.22.22
+    else
+        npm install --global yarn@1.22.22
+    fi
+
+    NODE_VERSION="$(node --version)"
+    if [[ ! "$NODE_VERSION" =~ ^v26\. ]]; then
+        echo "ERROR: Node.js ${NODE_MAJOR} installation failed; active version is $NODE_VERSION."
+        exit 1
+    fi
+
+    echo "    Node.js $NODE_VERSION, npm $(npm --version), Yarn $(yarn --version)"
+}
+
 # 1. User Creation (Skipped - Running as root)
 # echo ">>> Creating 'shieldpm' user..."
 # if ! id "shieldpm" &>/dev/null; then
@@ -43,6 +90,7 @@ apt-get install -y --no-install-recommends --fix-missing \
     geoip-bin \
     goaccess \
     grep \
+    gnupg \
     jq \
     libatomic1 \
     libssl3 \
@@ -56,7 +104,6 @@ apt-get install -y --no-install-recommends --fix-missing \
     lua-cjson \
     libluajit-5.1-2 \
     nano \
-    nodejs \
     openssl \
     libpcre2-8-0 \
     python3 \
@@ -69,6 +116,8 @@ apt-get install -y --no-install-recommends --fix-missing \
     zlib1g \
     zlib1g \
     zstd
+
+install_node_26
 
 # 2.1 Configure Locale (Interactive)
 echo ">>> Configuring locales..."

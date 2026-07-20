@@ -12,9 +12,10 @@ Updates ShieldPM to the latest version. Available on **Native** and **LXC** inst
     1.  Self-updates the script itself.
     2.  Checks GitHub for newer code.
     3.  Upgrades system packages (`apt upgrade`).
-    4.  Updates ShieldPM code and frontend/backend.
-    5.  (Optional) Downloads updated Nginx binaries from GitHub Releases.
-    6.  Restarts the service.
+    4.  Configures the signed NodeSource repository, installs and verifies Node.js 26 plus Yarn Classic 1.22.22; when NodeSource no longer ships Corepack, the updater deliberately falls back to npm for Yarn.
+    5.  Updates ShieldPM code and frontend/backend.
+    6.  (Optional) Downloads updated Nginx binaries from GitHub Releases.
+    7.  Restarts the service.
 
 ### `fullclean`
 Cleans up unused configuration folders. This checks the database for active hosts and removes any `data/nginx` config files that do not have a corresponding database entry.

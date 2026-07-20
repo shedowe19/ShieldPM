@@ -13,7 +13,7 @@ Want to contribute or build ShieldPM from source? This guide covers the developm
   │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
   │  │  /frontend   │  │  /backend    │  │  /rootfs      │   │
   │  │  React + TS  │  │  Express.js  │  │  Docker       │   │
-  │  │  Vite v7.3   │  │  Node v22+   │  │  Overlay      │   │
+  │  │  Vite v7.3   │  │  Node v26+   │  │  Overlay      │   │
   │  │  Tailwind    │  │  Objection   │  │  Scripts      │   │
   │  └──────┬───────┘  └──────┬───────┘  └──────┬────────┘   │
   │         │                 │                 │            │

@@ -1,17 +1,21 @@
 # ==========================================
 # Stage 1: Build Frontend
 # ==========================================
-ARG NODE_IMAGE=node:22-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3
+ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:020c0d20b9880058cbe785a9db107156c3c75c2ac944a6aa7ab59f2add76a7bd
+ARG SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx:master
 
-# NODE_IMAGE is an immutable manifest-digest pin.
-# hadolint ignore=DL3006
-FROM --platform="$BUILDPLATFORM" ${NODE_IMAGE} AS frontend
+FROM --platform="$BUILDPLATFORM" ${DEBIAN_IMAGE} AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
+COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
+RUN bash /usr/local/bin/setup-node-apt.sh && \
+    apt-get install -y --no-install-recommends nodejs && \
+    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global yarn@1.22.22; fi && \
+    node --version | grep -E '^v26\.' && \
+    rm -rf /var/lib/apt/lists/*
 COPY frontend /app
-WORKDIR /app/frontend
-RUN corepack install --global yarn@1.22.22 && \
-    yarn install --frozen-lockfile --production=false && \
+WORKDIR /app
+RUN yarn install --frozen-lockfile --production=false && \
     yarn tsc && \
     yarn vite build
 
@@ -19,12 +23,15 @@ RUN corepack install --global yarn@1.22.22 && \
 # ==========================================
 # Stage 2: Build Backend
 # ==========================================
-# NODE_IMAGE is an immutable manifest-digest pin.
-# hadolint ignore=DL3006
-FROM ${NODE_IMAGE} AS backend
+FROM ${DEBIAN_IMAGE} AS backend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 ARG TARGETARCH
+COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
+RUN bash /usr/local/bin/setup-node-apt.sh && \
+    apt-get install -y --no-install-recommends nodejs && \
+    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global yarn@1.22.22; fi && \
+    node --version | grep -E '^v26\.'
 COPY backend /app
 WORKDIR /app
 # hadolint ignore=DL3016
@@ -37,7 +44,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     tar -xzf "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.15.2.linux-${TARGETARCH}/oauth2-proxy" && \
     rm "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
-    corepack install --global yarn@1.22.22 && \
     yarn install --frozen-lockfile --production=false && \
     yarn cache clean && \
     find node_modules -name "*.map" -delete && \
@@ -50,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 # ==========================================
 # Final Stage
 # ==========================================
-FROM ghcr.io/shedowe19/shieldpm-nginx:master
+FROM ${SHIELDPM_NGINX_IMAGE}
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
 

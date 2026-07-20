@@ -33,7 +33,7 @@ The Agent must be aware of these specific versions and libraries:
 
 ### Backend (API & Logic)
 
-* **Runtime**: Node.js `v22+` (Alpine/Debian Trixie)
+* **Runtime**: Node.js `v26+` (Debian Trixie via NodeSource APT)
 - **Framework**: Express.js `v5.2`
 - **ORM**: Objection.js `v3.1` / Knex.js `v3.1`
 - **Database**:
@@ -45,7 +45,7 @@ The Agent must be aware of these specific versions and libraries:
 
 ### Frontend (UI)
 
-* **Runtime**: Node.js `v22+`
+* **Runtime**: Node.js `v26+`
 - **Build Tool**: Vite `v7.3`
 - **Framework**: React `v19.2` (TypeScript)
 - **State Management**: React Query `v5.90`

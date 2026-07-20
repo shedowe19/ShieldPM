@@ -12,13 +12,13 @@ Das `Dockerfile` verwendet drei Stages:
 
 #### Stage 1: Frontend
 
-- **Basis**: offizielles, per Multiarch-Manifest-Digest gepinntes `node:22-bookworm-slim`
+- **Basis**: Debian Trixie mit dem eingecheckten NodeSource-APT-Setup für Node.js 26
 - **Aktion**: installiert Yarn Classic `1.22.22` und baut die React-App aus dem eingefrorenen Lockfile mit TypeScript + Vite
 - **Ausgabe**: `/app/dist` (statische Dateien)
 
 #### Stage 2: Backend
 
-- **Basis**: dasselbe gepinnte `node:22-bookworm-slim`
+- **Basis**: dieselbe Debian-Trixie-NodeSource-APT-Runtime mit Node.js 26
 - **Aktion**: installiert Node-Dependencies aus dem eingefrorenen Lockfile und lädt Anubis + OAuth2-Proxy herunter
 - **Optimierungen**: Entfernt Source-Maps, strippt native Module
 - **Ausgabe**: `/app` (Backend-Anwendung)
