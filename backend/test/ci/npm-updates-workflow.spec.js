@@ -17,6 +17,12 @@ const updateSteps = (packageDirectory) => {
 };
 
 describe("npm dependency update workflow", () => {
+	it("requires full Git history before running the verification suite", () => {
+		const checkout = workflow.split("      - name: Checkout Repository\n")[1].split("      - name:")[0];
+
+		expect(checkout).toContain("fetch-depth: 0");
+	});
+
 	it("uses Yarn-based update tooling and fails when an update scan fails", () => {
 		expect(workflow).toContain("yarn global add npm-check-updates@22.2.9");
 		expect(workflow).not.toContain("npx npm-check-updates");

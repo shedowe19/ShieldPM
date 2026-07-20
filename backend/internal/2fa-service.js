@@ -32,9 +32,8 @@ const BACKUP_CODE_LENGTH = 10; // chars (alphanumeric)
 
 const generateBackupCode = () =>
 	crypto
-		.randomBytes(8)
-		.toString("base64url")
-		.replace(/[^a-zA-Z0-9]/g, "")
+		.randomBytes(Math.ceil(BACKUP_CODE_LENGTH / 2))
+		.toString("hex")
 		.slice(0, BACKUP_CODE_LENGTH)
 		.toUpperCase();
 
