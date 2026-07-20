@@ -103,8 +103,9 @@ This command will:
 
 1. Check GitHub for updates.
 2. Upgrade system packages (`apt upgrade`).
-3. Update ShieldPM code.
-4. (Optional) Update Nginx binaries.
+3. Install and verify signed Node.js 26 plus Yarn Classic 1.22.22; when NodeSource does not ship Corepack, npm installs Yarn as a controlled fallback.
+4. Update ShieldPM code.
+5. (Optional) Update Nginx binaries.
 
 ---
 

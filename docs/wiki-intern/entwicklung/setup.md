@@ -6,7 +6,7 @@ Anleitung zur Einrichtung der lokalen Entwicklungsumgebung.
 
 ## Voraussetzungen
 
-- Node.js v22+
+- Node.js v26+ (über das signierte NodeSource-APT-Repository)
 - npm / yarn
 - Git
 

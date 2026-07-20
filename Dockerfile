@@ -1,31 +1,41 @@
 # ==========================================
 # Stage 1: Build Frontend
 # ==========================================
-FROM --platform="$BUILDPLATFORM" debian:trixie-slim AS frontend
+ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:020c0d20b9880058cbe785a9db107156c3c75c2ac944a6aa7ab59f2add76a7bd
+ARG SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx:master
+
+FROM --platform="$BUILDPLATFORM" ${DEBIAN_IMAGE} AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
-COPY frontend /app
-WORKDIR /app/frontend
-# hadolint ignore=DL3016
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
-    npm install -g yarn && \
-    yarn install --production=false && \
-    yarn tsc && \
-    yarn vite build && \
+COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
+RUN bash /usr/local/bin/setup-node-apt.sh && \
+    apt-get install -y --no-install-recommends nodejs && \
+    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global yarn@1.22.22; fi && \
+    node --version | grep -E '^v26\.' && \
     rm -rf /var/lib/apt/lists/*
+COPY frontend /app
+WORKDIR /app
+RUN yarn install --frozen-lockfile --production=false && \
+    yarn tsc && \
+    yarn vite build
 
 
 # ==========================================
 # Stage 2: Build Backend
 # ==========================================
-FROM debian:trixie-slim AS backend
+FROM ${DEBIAN_IMAGE} AS backend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 ARG TARGETARCH
+COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
+RUN bash /usr/local/bin/setup-node-apt.sh && \
+    apt-get install -y --no-install-recommends nodejs && \
+    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global yarn@1.22.22; fi && \
+    node --version | grep -E '^v26\.'
 COPY backend /app
 WORKDIR /app
 # hadolint ignore=DL3016
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file curl make g++ && \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates binutils file curl make g++ python3 && \
     curl -L "https://github.com/TecharoHQ/anubis/releases/download/v1.25.0/anubis-1.25.0-linux-${TARGETARCH}.tar.gz" -o /tmp/anubis.tar.gz && \
     tar -xzf /tmp/anubis.tar.gz -C /app --strip-components=2 "anubis-1.25.0-linux-${TARGETARCH}/bin/anubis" && \
     rm /tmp/anubis.tar.gz && \
@@ -34,8 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     tar -xzf "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.15.2.linux-${TARGETARCH}/oauth2-proxy" && \
     rm "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
-    npm install -g yarn && \
-    yarn install --production=false && \
+    yarn install --frozen-lockfile --production=false && \
     yarn cache clean && \
     find node_modules -name "*.map" -delete && \
     rm -r node_modules/better-sqlite3/deps/sqlite3 && \
@@ -47,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
 # ==========================================
 # Final Stage
 # ==========================================
-FROM ghcr.io/shedowe19/shieldpm-nginx:master
+FROM ${SHIELDPM_NGINX_IMAGE}
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
 

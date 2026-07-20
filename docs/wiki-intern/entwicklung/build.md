@@ -12,14 +12,14 @@ Das `Dockerfile` verwendet drei Stages:
 
 #### Stage 1: Frontend
 
-- **Basis**: `debian:trixie-slim`
-- **Aktion**: Installiert Node.js/npm/yarn, baut React-App mit TypeScript + Vite
+- **Basis**: Debian Trixie mit dem eingecheckten NodeSource-APT-Setup für Node.js 26
+- **Aktion**: installiert Yarn Classic `1.22.22` und baut die React-App aus dem eingefrorenen Lockfile mit TypeScript + Vite
 - **Ausgabe**: `/app/dist` (statische Dateien)
 
 #### Stage 2: Backend
 
-- **Basis**: `debian:trixie-slim`
-- **Aktion**: Installiert Node.js-Dependencies, lädt Anubis + OAuth2-Proxy herunter
+- **Basis**: dieselbe Debian-Trixie-NodeSource-APT-Runtime mit Node.js 26
+- **Aktion**: installiert Node-Dependencies aus dem eingefrorenen Lockfile und lädt Anubis + OAuth2-Proxy herunter
 - **Optimierungen**: Entfernt Source-Maps, strippt native Module
 - **Ausgabe**: `/app` (Backend-Anwendung)
 

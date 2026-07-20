@@ -50,8 +50,8 @@ Keine zusätzlichen UI-Component-Libraries. Frontend verwendet ausschließlich s
 
 Der Dockerfile verwendet drei Stages:
 
-1. `frontend` — Baut React-App (Debian Trixie)
-2. `backend` — Installiert Node-Dependencies + Anubis + OAuth2-Proxy
+1. `frontend` — Baut die React-App mit Debian Trixie, dem eingecheckten NodeSource-APT-Setup und Node 26
+2. `backend` — Installiert Node‑26-Dependencies + Anubis + OAuth2-Proxy
 3. `final` — Basiert auf `shieldpm-nginx:master`, kopiert Artefakte
 
 ### E11: Biome statt ESLint/Prettier

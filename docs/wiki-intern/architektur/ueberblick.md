@@ -44,7 +44,7 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 
 | Technologie    | Version | Zweck                              |
 | -------------- | ------- | ---------------------------------- |
-| Node.js        | v22+    | Runtime                            |
+| Node.js        | v26+    | Runtime                            |
 | Express.js     | v5.2    | Web-Framework                      |
 | Objection.js   | v3.1    | ORM                                |
 | Knex.js        | v3.2    | Query-Builder / Migrationen        |

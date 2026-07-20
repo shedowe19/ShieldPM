@@ -12,7 +12,7 @@ modern protocols (HTTP/3, QUIC), and native performance.
 
 | Layer | Technology |
 |---|---|
-| **Backend Runtime** | Node.js `v22+` (ESM modules) |
+| **Backend Runtime** | Node.js `v26+` via signed NodeSource APT (ESM modules) |
 | **Backend Framework** | Express.js `v5.2` |
 | **ORM** | Objection.js `v3.1` / Knex.js `v3.1` |
 | **Database (Dev)** | SQLite (`better-sqlite3`) |
