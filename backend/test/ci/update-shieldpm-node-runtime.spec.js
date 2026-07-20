@@ -37,6 +37,16 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		}
 	});
 
+	it("removes only stale Corepack shims before the npm Yarn fallback", () => {
+		for (const script of [updater, nativeInstaller]) {
+			expect(script).toContain("remove_stale_corepack_shims()");
+			expect(script).toContain("*corepack/dist/*");
+			expect(script).toContain('rm -f "$shim"');
+			expect(script).toContain('[ -x "$COREPACK_BIN" ]');
+			expect(script).toMatch(/else[\s\S]*remove_stale_corepack_shims[\s\S]*npm install --global yarn@1\.22\.22/);
+		}
+	});
+
 	it("pins Yarn Classic through Corepack when available and npm otherwise", () => {
 		expect(updater).toContain("command -v corepack");
 		expect(updater).toContain("npm install --global yarn@1.22.22");

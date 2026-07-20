@@ -20,6 +20,21 @@ enable_node_system_ca() {
     fi
 }
 
+remove_stale_corepack_shims() {
+    local shim
+    local shim_target
+
+    for shim in /usr/bin/corepack /usr/bin/yarn /usr/bin/yarnpkg /usr/bin/pnpm /usr/bin/pnpx; do
+        [ -L "$shim" ] || continue
+        shim_target="$(readlink "$shim")"
+        case "$shim_target" in
+            *corepack/dist/*)
+                rm -f "$shim"
+                ;;
+        esac
+    done
+}
+
 install_node_26() {
     local NODE_MAJOR=26
     local NODESOURCE_KEYRING="/etc/apt/keyrings/nodesource.gpg"
@@ -52,10 +67,12 @@ install_node_26() {
     DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
         "nodejs=${NODE_PACKAGE_VERSION}"
     enable_node_system_ca
-    if command -v corepack >/dev/null 2>&1; then
+    COREPACK_BIN="$(command -v corepack || true)"
+    if [ -n "$COREPACK_BIN" ] && [ -x "$COREPACK_BIN" ]; then
         corepack enable
         corepack install --global yarn@1.22.22
     else
+        remove_stale_corepack_shims
         npm install --global yarn@1.22.22
     fi
 

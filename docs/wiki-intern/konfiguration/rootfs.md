@@ -18,7 +18,7 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 | `healthcheck.sh`     | 1 KB   | Docker-Healthcheck: Prüft API-Erreichbarkeit                                             |
 | `envs.sh`            | 2 KB   | Lädt und exportiert Umgebungsvariablen                                                   |
 | `aio.sh`             | 1.5 KB | All-in-One Script für Dienst-Verwaltung                                                  |
-| `update-shieldpm`    | 12 KB  | Update-Script für native Installationen; richtet NodeSource APT ein und installiert/verifiziert Node.js 26 sowie Yarn Classic 1.22.22 (Corepack, sonst npm-Fallback) |
+| `update-shieldpm`    | 12 KB  | Update-Script für native Installationen; richtet NodeSource APT ein, installiert/verifiziert Node.js 26 sowie Yarn Classic 1.22.22, aktiviert den System-CA-Store für Node-Netzwerkzugriffe und räumt beim Node-Majorwechsel ausschließlich verwaiste Corepack-Shims vor dem npm-Fallback auf |
 | `npm-reset-password` | 45 B   | Passwort-Reset-Wrapper                                                                   |
 | `migration.sh`       | 34 B   | Migrations-Wrapper                                                                       |
 
