@@ -6,6 +6,9 @@
   "license": "UNLICENSED",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "lint-staged": {
     "*.{js,ts,tsx}": [
       "biome check",

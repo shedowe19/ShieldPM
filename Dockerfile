@@ -1,31 +1,34 @@
 # ==========================================
 # Stage 1: Build Frontend
 # ==========================================
-FROM --platform="$BUILDPLATFORM" debian:trixie-slim AS frontend
+ARG NODE_IMAGE=node:22-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3
+
+# NODE_IMAGE is an immutable manifest-digest pin.
+# hadolint ignore=DL3006
+FROM --platform="$BUILDPLATFORM" ${NODE_IMAGE} AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 COPY frontend /app
 WORKDIR /app/frontend
-# hadolint ignore=DL3016
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm && \
-    npm install -g yarn && \
-    yarn install --production=false && \
+RUN corepack install --global yarn@1.22.22 && \
+    yarn install --frozen-lockfile --production=false && \
     yarn tsc && \
-    yarn vite build && \
-    rm -rf /var/lib/apt/lists/*
+    yarn vite build
 
 
 # ==========================================
 # Stage 2: Build Backend
 # ==========================================
-FROM debian:trixie-slim AS backend
+# NODE_IMAGE is an immutable manifest-digest pin.
+# hadolint ignore=DL3006
+FROM ${NODE_IMAGE} AS backend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
 ARG TARGETARCH
 COPY backend /app
 WORKDIR /app
 # hadolint ignore=DL3016
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binutils file curl make g++ && \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates binutils file curl make g++ python3 && \
     curl -L "https://github.com/TecharoHQ/anubis/releases/download/v1.25.0/anubis-1.25.0-linux-${TARGETARCH}.tar.gz" -o /tmp/anubis.tar.gz && \
     tar -xzf /tmp/anubis.tar.gz -C /app --strip-components=2 "anubis-1.25.0-linux-${TARGETARCH}/bin/anubis" && \
     rm /tmp/anubis.tar.gz && \
@@ -34,8 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm binu
     tar -xzf "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.15.2.linux-${TARGETARCH}/oauth2-proxy" && \
     rm "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
-    npm install -g yarn && \
-    yarn install --production=false && \
+    corepack install --global yarn@1.22.22 && \
+    yarn install --frozen-lockfile --production=false && \
     yarn cache clean && \
     find node_modules -name "*.map" -delete && \
     rm -r node_modules/better-sqlite3/deps/sqlite3 && \
