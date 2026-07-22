@@ -28,7 +28,7 @@ describe("npm dependency update workflow", () => {
 
 		expect(workflow).toContain("npm install --global npm-check-updates@22.2.9 license-checker@25.0.1");
 		expect(workflow).toContain('NPM_GLOBAL_BIN="$(npm prefix --global)/bin"');
-		expect(workflow).toContain("printf '%s\\n' \"$NPM_GLOBAL_BIN\" >> \"$GITHUB_PATH\"");
+		expect(workflow).toContain('printf \'%s\\n\' "$NPM_GLOBAL_BIN" >> "$GITHUB_PATH"');
 		expect(workflow).not.toContain("yarn global add");
 		expect(workflow).not.toMatch(/(?:^|[;&(]\s*)yarn\s/m);
 		expect(workflow).not.toContain("npx npm-check-updates");
