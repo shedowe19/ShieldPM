@@ -27,6 +27,17 @@ interface Props {
 	data: AnalyticsDataPoint[];
 }
 
+export const formatAnalyticsTooltipTimestamp = (label: unknown) => {
+	if (typeof label !== "number" && (typeof label !== "string" || label.trim() === "")) {
+		return "";
+	}
+
+	const timestamp = Number(label);
+	const date = new Date(timestamp * 1000);
+
+	return Number.isFinite(timestamp) && !Number.isNaN(date.getTime()) ? date.toLocaleString() : "";
+};
+
 export const AnalyticsChart = ({ data }: Props) => {
 	const { theme } = useTheme();
 	const isDark = theme === "dark";
@@ -53,7 +64,7 @@ export const AnalyticsChart = ({ data }: Props) => {
 								tickFormatter={(val) => `${(val / 1024 / 1024).toFixed(1)} MB`}
 							/>
 							<Tooltip
-								labelFormatter={(label) => new Date(label * 1000).toLocaleString()}
+								labelFormatter={formatAnalyticsTooltipTimestamp}
 								contentStyle={{
 									backgroundColor: isDark ? "#1f2937" : "#ffffff",
 									borderColor: isDark ? "#374151" : "#e5e7eb",
@@ -98,7 +109,7 @@ export const AnalyticsChart = ({ data }: Props) => {
 							/>
 							<YAxis />
 							<Tooltip
-								labelFormatter={(label) => new Date(label * 1000).toLocaleString()}
+								labelFormatter={formatAnalyticsTooltipTimestamp}
 								cursor={{ fill: "transparent" }}
 								contentStyle={{
 									backgroundColor: isDark ? "#1f2937" : "#ffffff",

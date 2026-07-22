@@ -30,6 +30,7 @@ yarn test
 
 - `frontend/src/components/SiteFooter.test.tsx` — SiteFooter-Komponente
 - `frontend/src/locale/Utils.test.tsx` — Locale-Utilities
+- `frontend/src/components/Analytics/AnalyticsChart.test.ts` — normalisiert Tooltip-Labels ausschließlich als numerische Unix-Sekunden und verwirft andere React-Labelwerte, damit Dependency-Updates mit strengeren Chart-Typen den Produktionsbuild nicht brechen.
 
 ### Mocking-Hygiene
 
