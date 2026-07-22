@@ -23,12 +23,18 @@ describe("npm dependency update workflow", () => {
 		expect(checkout).toContain("fetch-depth: 0");
 	});
 
-	it("uses Yarn-based update tooling and fails when an update scan fails", () => {
-		expect(workflow).toContain("yarn global add npm-check-updates@22.2.9");
+	it("runs Yarn and update tooling under the Node runtime configured by the workflow", () => {
+		const yarn = "npx --yes --package yarn@1.22.22 yarn";
+
+		expect(workflow).toContain("npm install --global npm-check-updates@22.2.9 license-checker@25.0.1");
+		expect(workflow).toContain('NPM_GLOBAL_BIN="$(npm prefix --global)/bin"');
+		expect(workflow).toContain("printf '%s\\n' \"$NPM_GLOBAL_BIN\" >> \"$GITHUB_PATH\"");
+		expect(workflow).not.toContain("yarn global add");
+		expect(workflow).not.toMatch(/(?:^|[;&(]\s*)yarn\s/m);
 		expect(workflow).not.toContain("npx npm-check-updates");
 		expect(workflow).not.toContain("|| true");
-		expect(updateSteps("Frontend")).toContain("yarn install --frozen-lockfile");
-		expect(updateSteps("Backend")).toContain("yarn install --frozen-lockfile");
+		expect(updateSteps("Frontend")).toContain(`${yarn} install --frozen-lockfile`);
+		expect(updateSteps("Backend")).toContain(`${yarn} install --frozen-lockfile`);
 	});
 
 	it("only creates a PR after a direct dependency manifest changed", () => {

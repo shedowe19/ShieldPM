@@ -30,14 +30,17 @@ jobs:
 
       - name: Install dependency update tools
         run: |
-          yarn global add npm-check-updates@22.2.9 license-checker@25.0.1
-          echo "$(yarn global bin)" >> "$GITHUB_PATH"
+          npm install --global npm-check-updates@22.2.9 license-checker@25.0.1
+          NPM_GLOBAL_BIN="$(npm prefix --global)/bin"
+          test -x "$NPM_GLOBAL_BIN/ncu"
+          test -x "$NPM_GLOBAL_BIN/license-checker"
+          printf '%s\n' "$NPM_GLOBAL_BIN" >> "$GITHUB_PATH"
 
       - name: Update Frontend Dependencies
         working-directory: ./frontend
         run: |
           echo "Installing the locked frontend dependency baseline..."
-          yarn install --frozen-lockfile
+          npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
 
           echo "Checking for minor/patch updates..."
           echo "### Frontend Updates" > /tmp/frontend-updates.txt
@@ -46,13 +49,13 @@ jobs:
           echo '```' >> /tmp/frontend-updates.txt
 
           echo "Installing updated frontend dependencies to update yarn.lock..."
-          yarn install
+          npx --yes --package yarn@1.22.22 yarn install
 
       - name: Update Backend Dependencies
         working-directory: ./backend
         run: |
           echo "Installing the locked backend dependency baseline..."
-          yarn install --frozen-lockfile
+          npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
 
           echo "Checking for minor/patch updates..."
           echo "### Backend Updates" > /tmp/backend-updates.txt
@@ -61,7 +64,7 @@ jobs:
           echo '```' >> /tmp/backend-updates.txt
 
           echo "Installing updated backend dependencies to update yarn.lock..."
-          yarn install
+          npx --yes --package yarn@1.22.22 yarn install
 
       - name: Check for Direct Dependency Updates
         id: check_changes
@@ -81,9 +84,9 @@ jobs:
       - name: Run dependency verification
         if: steps.check_changes.outputs.updates_found == 'true'
         run: |
-          (cd backend && yarn test --run)
-          (cd frontend && yarn test --run)
-          (cd frontend && yarn build)
+          (cd backend && npx --yes --package yarn@1.22.22 yarn test --run)
+          (cd frontend && npx --yes --package yarn@1.22.22 yarn test --run)
+          (cd frontend && npx --yes --package yarn@1.22.22 yarn build)
 
       - name: Require dedicated pull request token
         if: steps.check_changes.outputs.updates_found == 'true'
