@@ -1849,10 +1849,10 @@ isarray@~1.0.0:
   resolved "https://registry.yarnpkg.com/isarray/-/isarray-1.0.0.tgz#bb935d48582cba168c06834957a54a3e07124f11"
   integrity sha512-VLghIWNM6ELQzo7zwmcg0NmTVyWKYjvIeM83yjp0wRDTmUnrM678fQbcKBo6n2CJEF0szoG//ytg+TKla89ALQ==
 
-isomorphic-git@^1.38.10:
-  version "1.38.10"
-  resolved "https://registry.yarnpkg.com/isomorphic-git/-/isomorphic-git-1.38.10.tgz#7afb886a26aac5fb086bfe064d1eab2ee99c361b"
-  integrity sha512-nJSSq7ypu97vM33rSdxXyPzSWksCberjKspzXhFEcBHdVyxdNkWByAzJ/AURV1jIlfv8pLq37lGdIEt7ORj17Q==
+isomorphic-git@^1.40.0:
+  version "1.40.0"
+  resolved "https://registry.yarnpkg.com/isomorphic-git/-/isomorphic-git-1.40.0.tgz#50659827b6dc3d97ccd9d6b6a10cf91266dc3581"
+  integrity sha512-/CbnxwZqIm17y3c/z0INbkgEKSvFerXtO/NGgaRxZ8nvL3eoMtbjuAS7f4Pj7lZzj8HaultvDD1ClJTBVDl89g==
   dependencies:
     async-lock "^1.4.1"
     clean-git-ref "^2.0.1"
@@ -3163,10 +3163,10 @@ swagger-ui-express@^5.0.1:
   dependencies:
     swagger-ui-dist ">=5.0.0"
 
-systeminformation@^5.33.0:
-  version "5.33.0"
-  resolved "https://registry.yarnpkg.com/systeminformation/-/systeminformation-5.33.0.tgz#de5e58d0180ac2e5460fbce584307af98d59eb0f"
-  integrity sha512-0LYSL01CCbjVeJG7iXI8fUCFU76zMjzbHd/EU3or4QpSFYCLMgslR11prwHuA3siz5jmOkqoLhjgOyDRmXBKmA==
+systeminformation@^5.33.1:
+  version "5.33.1"
+  resolved "https://registry.yarnpkg.com/systeminformation/-/systeminformation-5.33.1.tgz#499f06a859d2abeafaae6d69f71dd3516919f0f4"
+  integrity sha512-DEN6ICHk3Tk0Uf/hrAHh7xlt7iL5CJFBtPZinA0H62DrGG/KPKqq/Nzj6lCXPS4Ay/sf/14zNnk9LpqKzBIc+w==
 
 tail@^2.2.6:
   version "2.2.6"
