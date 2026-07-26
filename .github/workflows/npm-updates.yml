@@ -42,10 +42,10 @@ jobs:
           echo "Installing the locked frontend dependency baseline..."
           npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
 
-          echo "Checking for minor/patch updates..."
+          echo "Checking for latest dependency updates..."
           echo "### Frontend Updates" > /tmp/frontend-updates.txt
           echo '```text' >> /tmp/frontend-updates.txt
-          ncu -u --target minor --reject vite >> /tmp/frontend-updates.txt
+          ncu -u --target latest >> /tmp/frontend-updates.txt
           echo '```' >> /tmp/frontend-updates.txt
 
           echo "Installing updated frontend dependencies to update yarn.lock..."
@@ -57,10 +57,10 @@ jobs:
           echo "Installing the locked backend dependency baseline..."
           npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
 
-          echo "Checking for minor/patch updates..."
+          echo "Checking for latest dependency updates..."
           echo "### Backend Updates" > /tmp/backend-updates.txt
           echo '```text' >> /tmp/backend-updates.txt
-          ncu -u --target minor >> /tmp/backend-updates.txt
+          ncu -u --target latest >> /tmp/backend-updates.txt
           echo '```' >> /tmp/backend-updates.txt
 
           echo "Installing updated backend dependencies to update yarn.lock..."
@@ -102,7 +102,7 @@ jobs:
         if: steps.check_changes.outputs.updates_found == 'true'
         run: |
           echo "## Automated Dependency Updates" > /tmp/pr_body.txt
-          echo "This PR updates direct frontend and backend dependencies to their latest **minor** and **patch** versions." >> /tmp/pr_body.txt
+          echo "This PR updates direct frontend and backend dependencies to their latest published versions." >> /tmp/pr_body.txt
           echo "" >> /tmp/pr_body.txt
           cat /tmp/frontend-updates.txt >> /tmp/pr_body.txt
           echo "" >> /tmp/pr_body.txt
@@ -120,7 +120,7 @@ jobs:
           base: "develop"
           signoff: true
           delete-branch: true
-          commit-message: "chore(deps): update frontend and backend dependencies (minor/patch)"
+          commit-message: "chore(deps): update frontend and backend dependencies"
           branch: "update-all-deps"
-          title: "chore(deps): update npm dependencies (minor/patch)"
+          title: "chore(deps): update npm dependencies"
           body-path: /tmp/pr_body.txt

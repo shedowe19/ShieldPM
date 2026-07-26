@@ -37,6 +37,13 @@ describe("npm dependency update workflow", () => {
 		expect(updateSteps("Backend")).toContain(`${yarn} install --frozen-lockfile`);
 	});
 
+	it("allows the full current dependency line during the unpinned compatibility test", () => {
+		expect(updateSteps("Frontend")).toContain("ncu -u --target latest");
+		expect(updateSteps("Backend")).toContain("ncu -u --target latest");
+		expect(workflow).not.toContain("--target minor");
+		expect(workflow).not.toContain("--reject");
+	});
+
 	it("only creates a PR after a direct dependency manifest changed", () => {
 		const changeCheck = workflow.split("        id: check_changes\n")[1].split("      - name:")[0];
 

@@ -8,21 +8,25 @@ const readFile = (path) => fs.readFileSync(join(repoRoot, path), "utf8");
 const readManifest = (directory) => JSON.parse(readFile(`${directory}/package.json`));
 
 const debianImageVariable = "$" + "{DEBIAN_IMAGE}";
+const shieldpmNginxImageVariable = "$" + "{SHIELDPM_NGINX_IMAGE}";
+const node26VersionAssertion = "node --version | grep -E '^v26\\.'";
 const dockerfile = readFile("Dockerfile");
 const qualityWorkflow = readFile(".github/workflows/lint-and-format.yml");
 const dependencyWorkflow = readFile(".github/workflows/npm-updates.yml");
 const nodeSetupScriptPath = join(repoRoot, "scripts", "setup-node-apt.sh");
 
 describe("Node 26 runtime contract", () => {
-	it("uses the embedded NodeSource APT setup instead of a Node builder image", () => {
+	it("uses the embedded NodeSource APT setup in every application container stage", () => {
 		expect(fs.existsSync(nodeSetupScriptPath)).toBe(true);
 		expect(dockerfile).toContain(`FROM --platform="$BUILDPLATFORM" ${debianImageVariable} AS frontend`);
 		expect(dockerfile).toContain(`FROM ${debianImageVariable} AS backend`);
+		expect(dockerfile).toContain(`FROM ${shieldpmNginxImageVariable}`);
 		expect(
 			dockerfile.match(/COPY scripts\/setup-node-apt\.sh \/usr\/local\/bin\/setup-node-apt\.sh/g),
-		).toHaveLength(2);
-		expect(dockerfile.match(/bash \/usr\/local\/bin\/setup-node-apt\.sh/g)).toHaveLength(2);
-		expect(dockerfile.match(/apt-get install -y --no-install-recommends nodejs/g)).toHaveLength(2);
+		).toHaveLength(3);
+		expect(dockerfile.match(/bash \/usr\/local\/bin\/setup-node-apt\.sh/g)).toHaveLength(3);
+		expect(dockerfile.match(/apt-get install -y --no-install-recommends nodejs/g)).toHaveLength(3);
+		expect(dockerfile.split(node26VersionAssertion)).toHaveLength(4);
 		expect(dockerfile).not.toContain("ARG NODE_IMAGE=");
 	});
 

@@ -59,6 +59,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 FROM ${SHIELDPM_NGINX_IMAGE}
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ENV NODE_ENV=production
+COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
+RUN bash /usr/local/bin/setup-node-apt.sh && \
+    apt-get install -y --no-install-recommends nodejs && \
+    node --version | grep -E '^v26\.' && \
+    rm -rf /var/lib/apt/lists/*
 
 
 # --- Copy Artifacts ---
