@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import git from "isomorphic-git";
 import http from "isomorphic-git/http/node";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import _ from "lodash";
 import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
