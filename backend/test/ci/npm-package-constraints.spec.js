@@ -6,28 +6,13 @@ import { describe, expect, it } from "vitest";
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const readManifest = (directory) => JSON.parse(fs.readFileSync(join(repoRoot, directory, "package.json"), "utf8"));
 
-const assertNoOpenMajorResolution = (manifest) => {
-	for (const [dependency, range] of Object.entries(manifest.resolutions || {})) {
-		expect(range, `${dependency} must not use an open >= resolution`).not.toMatch(/^>=/);
-	}
-	for (const [dependency, range] of Object.entries(manifest.overrides || {})) {
-		if (typeof range !== "string") continue;
-		expect(range, `${dependency} must not use an open >= override`).not.toMatch(/^>=/);
-	}
-};
-
 describe("npm and Yarn dependency constraints", () => {
-	it("pins security resolutions below their next major version", () => {
-		assertNoOpenMajorResolution(readManifest("backend"));
-		assertNoOpenMajorResolution(readManifest("frontend"));
-	});
+	it("leaves package manager constraint maps absent during the unpinned compatibility test", () => {
+		for (const directory of ["backend", "frontend"]) {
+			const manifest = readManifest(directory);
 
-	it("keeps npm overrides compatible with their direct dependencies", () => {
-		const backend = readManifest("backend");
-		const frontend = readManifest("frontend");
-
-		expect(backend.overrides["js-yaml"]).toBe("$js-yaml");
-		expect(frontend.overrides.vite).toBe("$vite");
-		expect(frontend.overrides.postcss).toBe("$postcss");
+			expect(manifest, `${directory} must not declare Yarn resolutions`).not.toHaveProperty("resolutions");
+			expect(manifest, `${directory} must not declare npm overrides`).not.toHaveProperty("overrides");
+		}
 	});
 });
