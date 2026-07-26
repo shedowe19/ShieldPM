@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "path";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import _ from "lodash";
@@ -508,7 +508,7 @@ const internalCertificate = {
 	 * @returns {Promise}
 	 */
 	zipFiles: async (source, out) => {
-		const archive = archiver("zip", { zlib: { level: 9 } });
+		const archive = new ZipArchive({ zlib: { level: 9 } });
 		const stream = fs.createWriteStream(out);
 
 		return new Promise((resolve, reject) => {

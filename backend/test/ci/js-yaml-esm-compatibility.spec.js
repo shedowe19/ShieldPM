@@ -1,13 +1,11 @@
 import fs from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import * as yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
+import { backendSourcePath } from "../helpers/source-path.js";
 
-const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
-const readSource = (path) => fs.readFileSync(join(repoRoot, path), "utf8");
+const readSource = (path) => fs.readFileSync(backendSourcePath(path), "utf8");
 
-const yamlConsumers = ["backend/internal/anubis.js", "backend/internal/gitops.js"];
+const yamlConsumers = ["internal/anubis.js", "internal/gitops.js"];
 
 describe("js-yaml ESM compatibility", () => {
 	it("uses the named exports exposed by js-yaml under Node 26", () => {
