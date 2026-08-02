@@ -27,8 +27,8 @@ Das `Dockerfile` verwendet drei Stages:
 
 - **Basis**: `ghcr.io/shedowe19/shieldpm-nginx:master`
 - **Aktion**: Kopiert Backend + Frontend + rootfs-Overlay + WireGuard-Tools
-- **Entrypoint**: `tini -- entrypoint.sh`
-- **Healthcheck**: `healthcheck.sh`
+- **Entrypoint**: `tini -- entrypoint.sh` (Exec-/JSON-Syntax)
+- **Healthcheck**: `healthcheck.sh` (Exec-/JSON-Syntax, ohne zusätzliche Shell-Hülle)
 
 ### Befehl
 

@@ -105,4 +105,4 @@ RUN echo "exit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d &&
     find /tmp -mindepth 1 -delete
 
 ENTRYPOINT ["tini", "--", "entrypoint.sh"]
-HEALTHCHECK CMD healthcheck.sh
+HEALTHCHECK CMD ["healthcheck.sh"]
