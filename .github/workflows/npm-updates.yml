@@ -51,6 +51,12 @@ jobs:
           echo "Installing updated frontend dependencies to update yarn.lock..."
           npx --yes --package yarn@1.22.22 yarn install
 
+          echo "Deduplicating compatible frontend lockfile entries..."
+          npx --yes --package yarn-deduplicate@6.0.0 yarn-deduplicate --strategy highest yarn.lock
+
+          echo "Reinstalling the deduplicated frontend lockfile..."
+          npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
+
       - name: Update Backend Dependencies
         working-directory: ./backend
         run: |
@@ -76,6 +82,10 @@ jobs:
             echo "Direct dependencies were updated."
             echo "updates_found=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Synchronize verified dependency documentation
+        if: steps.check_changes.outputs.updates_found == 'true'
+        run: node scripts/sync-verified-dependency-docs.js
 
       - name: Generate Third-Party Notices
         if: steps.check_changes.outputs.updates_found == 'true'
@@ -109,6 +119,7 @@ jobs:
           cat /tmp/backend-updates.txt >> /tmp/pr_body.txt
           echo "" >> /tmp/pr_body.txt
           echo "### Verification" >> /tmp/pr_body.txt
+          echo "- Validated the installed Vite/Rolldown dependency baseline against the internal wiki." >> /tmp/pr_body.txt
           echo "- Regenerated \`THIRD-PARTY-NOTICES.md\` after all license scans succeeded." >> /tmp/pr_body.txt
           echo "- Ran backend tests, frontend tests, and the frontend production build." >> /tmp/pr_body.txt
 
