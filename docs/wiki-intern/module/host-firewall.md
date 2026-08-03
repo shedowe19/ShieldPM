@@ -31,7 +31,7 @@ Für jede Anfrage gilt pro Policy diese feste Reihenfolge:
 4. Die GeoIP-Regel wird ausgewertet.
 5. Erst danach greifen vorhandene Schutzschichten wie CrowdSec, Anubis, mTLS, SSO und Access Lists.
 
-Bei **deny** liefert ShieldPM eine eigene, nicht zwischenspeicherbare Sperrseite mit HTTP-Status `403` statt der Standard-Nginx-Seite. Sie erläutert abhängig vom Treffer, ob die IP-Adresse oder das erkannte Land nicht zugelassen ist, und zeigt die vom Proxy erkannte IP sowie – sofern verfügbar – den ISO-Ländercode. Die Seite wird vor Authentifizierung und Upstream ausgegeben; der interne Seitenaufruf überspringt bewusst geerbte SSO-, CrowdSec- und Rate-Limit-Handler, damit kein Login-Dialog die Sperrursache verdeckt. Der Zugriff auf den Proxy-Host bleibt dabei blockiert.
+Bei **deny** liefert ShieldPM eine eigene, nicht zwischenspeicherbare Sperrseite mit HTTP-Status `403` statt der Standard-Nginx-Seite. Sie erläutert abhängig vom Treffer, ob die IP-Adresse oder das erkannte Land nicht zugelassen ist. Bei GeoIP-Treffern kennzeichnet ein sichtbarer `GEOIP-LÄNDERSPERRE`-Status die Ursache und zeigt den lokalisierten Ländernamen samt ISO-Code – zum Beispiel **„Vereinigtes Königreich (GB)“** – sowie die vom Proxy erkannte IP. Sie gibt weder den Namen der auslösenden Policy noch Feed-URLs oder CIDRs preis. Die Seite wird vor Authentifizierung und Upstream ausgegeben; der interne Seitenaufruf überspringt bewusst geerbte SSO-, CrowdSec- und Rate-Limit-Handler, damit kein Login-Dialog die Sperrursache verdeckt. Der Zugriff auf den Proxy-Host bleibt dabei blockiert.
 
 Bei **drop** bleibt es bewusst bei Nginx-`444` (Verbindung ohne HTTP-Antwort), damit keine Informationen an den Client preisgegeben werden.
 
@@ -68,6 +68,7 @@ Die kompilierten Daten liegen unter `/data/nginx/firewall/`; die globale Nginx-M
 - `backend/routes/nginx/firewall_policies.js` — `/api/nginx/firewall-policies`
 - `backend/templates/proxy_host.conf` und `_proxy_logic.conf` — Access-Phase für Anubis- und Standard-Proxy-Hosts
 - `rootfs/usr/local/bin/start.sh` — bindet `/data/nginx/firewall.conf` auf HTTP-Ebene ein
+- `rootfs/usr/local/share/shieldpm/firewall_blocked_page.lua` — gemeinsame, gestaltete deny-Seite für alle Host-Policies
 - `frontend/src/pages/Nginx/FirewallPolicies.tsx` — Verwaltung und Host-Auswahl
 
 Die globale Konfiguration verwendet Nginx-`geo` und `map`. Große Listen werden dadurch einmal je Policy geladen, statt tausende Direktiven in jede Host-Konfiguration zu kopieren.

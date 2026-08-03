@@ -21,6 +21,36 @@ const MAX_CIDRS = 10000;
 const MAX_FEED_BYTES = 5 * 1024 * 1024;
 const FEED_TIMEOUT_MS = 20000;
 
+// MaxMind Country records use ISO 3166-1 alpha-2 codes. Keep this list local so
+// the generated Nginx config has no runtime dependency beyond Node's built-in ICU.
+const ISO_REGION_CODES = `
+AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ
+BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ
+CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ
+DE DJ DK DM DO DZ
+EC EE EG EH ER ES ET
+FI FJ FK FM FO FR
+GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY
+HK HM HN HR HT HU
+ID IE IL IM IN IO IQ IR IS IT
+JE JM JO JP
+KE KG KH KI KM KN KP KR KW KY KZ
+LA LB LC LI LK LR LS LT LU LV LY
+MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ
+NA NC NE NF NG NI NL NO NP NR NU NZ
+OM
+PA PE PF PG PH PK PL PM PN PR PS PT PW PY
+QA
+RE RO RS RU RW
+SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ
+TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ
+UA UG UM US UY UZ
+VA VC VE VG VI VN VU
+WF WS
+YE YT
+ZA ZM ZW
+`.trim().split(/\s+/);
+
 let refreshTimer;
 
 const unique = (values) => [...new Set(values)];
@@ -195,12 +225,29 @@ const readPolicyFeedCidrs = async (policy) => {
 	return values;
 };
 
+const escapeNginxValue = (value) => String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\r\n]/g, " ");
+
+const countryNameMapEntries = (locale) => {
+	const displayNames = new Intl.DisplayNames([locale], { type: "region", fallback: "none" });
+	return ISO_REGION_CODES.map((code) => `    ${code} "${escapeNginxValue(displayNames.of(code) || code)}";`);
+};
+
 const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 	const lines = [
 		"# Managed by ShieldPM. Do not edit manually.",
 		"# Per-policy CIDR data lives in /data/nginx/firewall/.",
 		geoIpAvailable ? "map $geoip2_country_code $shieldpm_geoip_country_code {" : "map \"\" $shieldpm_geoip_country_code {",
 		geoIpAvailable ? "    default $geoip2_country_code;" : '    default "";',
+		"}",
+		"",
+		"map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_de {",
+		'    default "";',
+		...(geoIpAvailable ? countryNameMapEntries("de") : []),
+		"}",
+		"",
+		"map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_en {",
+		'    default "";',
+		...(geoIpAvailable ? countryNameMapEntries("en") : []),
 		"}",
 		"",
 	];

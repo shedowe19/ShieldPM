@@ -53,7 +53,11 @@ describe("host firewall policy helpers", () => {
 		);
 		expect(config).toContain('map "" $shieldpm_geoip_country_code');
 		expect(config).toContain('    default "";');
-		expect(renderNginxConfig([{ id: 8, allow_cidrs: [], block_cidrs: [], geo_mode: "block", geo_countries: ["GB"] }], true)).toContain("    default $geoip2_country_code;");
+		const geoConfig = renderNginxConfig([{ id: 8, allow_cidrs: [], block_cidrs: [], geo_mode: "block", geo_countries: ["GB"] }], true);
+		expect(geoConfig).toContain("    default $geoip2_country_code;");
+		expect(geoConfig).toContain("map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_de");
+		expect(geoConfig).toContain('GB "Vereinigtes Königreich";');
+		expect(geoConfig).toContain('GB "United Kingdom";');
 		expect(config).toContain("geo $shieldpm_firewall_7_allow");
 		expect(config).toContain("198.51.100.0/24 1;");
 		expect(config).toContain("include /data/nginx/firewall/policy-7.cidrs;");
@@ -82,8 +86,12 @@ describe("host firewall policy helpers", () => {
 		expect(rendered).toContain("ngx.exec(\"/_shieldpm_firewall_denied\")");
 		expect(rendered).toContain("if ngx.var.uri == \"/_shieldpm_firewall_denied\" then");
 		expect(rendered).toContain("location = /_shieldpm_firewall_denied");
-		expect(rendered).toContain("ngx.var.shieldpm_firewall_4_block_reason");
-		expect(rendered).toContain("Ihre IP-Adresse");
+		expect(rendered).toContain('set $shieldpm_firewall_policy_id "4";');
+		expect(rendered).toContain("content_by_lua_file /usr/local/share/shieldpm/firewall_blocked_page.lua;");
+		const denyPage = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../../../rootfs/usr/local/share/shieldpm/firewall_blocked_page.lua", import.meta.url), "utf8"));
+		expect(denyPage).toContain("GEOIP-LÄNDERSPERRE");
+		expect(denyPage).toContain("shieldpm_geoip_country_name_de");
+		expect(denyPage).toContain("GEOIP COUNTRY RULE");
 	});
 
 	it("keeps drop policies connectionless and omits the explanatory page", async () => {
