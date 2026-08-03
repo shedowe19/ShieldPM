@@ -200,7 +200,7 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 		"# Managed by ShieldPM. Do not edit manually.",
 		"# Per-policy CIDR data lives in /data/nginx/firewall/.",
 		geoIpAvailable ? "map $geoip2_country_code $shieldpm_geoip_country_code {" : "map \"\" $shieldpm_geoip_country_code {",
-		'    default "";',
+		geoIpAvailable ? "    default $geoip2_country_code;" : '    default "";',
 		"}",
 		"",
 	];
@@ -222,8 +222,12 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 			lines.push("    default 0;");
 			for (const country of policy.geo_countries || []) lines.push(`    ${country} 1;`);
 		}
-		lines.push("}", "", `map \"${prefix}_allow:${prefix}_cidr_block:${prefix}_geo_block\" ${prefix}_blocked {`);
+		lines.push("}", "");
+		const firewallState = `\"${prefix}_allow:${prefix}_cidr_block:${prefix}_geo_block\"`;
+		lines.push(`map ${firewallState} ${prefix}_blocked {`);
 		lines.push("    default 0;", '    "~^1:" 0;', '    "~^0:1:" 1;', '    "~^0:0:1$" 1;', "}", "");
+		lines.push(`map ${firewallState} ${prefix}_block_reason {`);
+		lines.push('    default "ip";', '    "~^1:" "none";', '    "~^0:1:" "ip";', '    "~^0:0:1$" "country";', "}", "");
 	}
 	return `${lines.join("\n")}\n`;
 };

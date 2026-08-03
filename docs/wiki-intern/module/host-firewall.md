@@ -31,7 +31,9 @@ Für jede Anfrage gilt pro Policy diese feste Reihenfolge:
 4. Die GeoIP-Regel wird ausgewertet.
 5. Erst danach greifen vorhandene Schutzschichten wie CrowdSec, Anubis, mTLS, SSO und Access Lists.
 
-Die Reaktion ist wahlweise `403` oder Nginx-`444` (Verbindung ohne HTTP-Antwort).
+Bei **deny** liefert ShieldPM eine eigene, nicht zwischenspeicherbare Sperrseite mit HTTP-Status `403` statt der Standard-Nginx-Seite. Sie erläutert abhängig vom Treffer, ob die IP-Adresse oder das erkannte Land nicht zugelassen ist, und zeigt die vom Proxy erkannte IP sowie – sofern verfügbar – den ISO-Ländercode. Die Seite wird vor Authentifizierung und Upstream ausgegeben; der interne Seitenaufruf überspringt bewusst geerbte SSO-, CrowdSec- und Rate-Limit-Handler, damit kein Login-Dialog die Sperrursache verdeckt. Der Zugriff auf den Proxy-Host bleibt dabei blockiert.
+
+Bei **drop** bleibt es bewusst bei Nginx-`444` (Verbindung ohne HTTP-Antwort), damit keine Informationen an den Client preisgegeben werden.
 
 ## GeoIP
 

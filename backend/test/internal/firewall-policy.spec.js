@@ -52,11 +52,15 @@ describe("host firewall policy helpers", () => {
 			false,
 		);
 		expect(config).toContain('map "" $shieldpm_geoip_country_code');
+		expect(config).toContain('    default "";');
+		expect(renderNginxConfig([{ id: 8, allow_cidrs: [], block_cidrs: [], geo_mode: "block", geo_countries: ["GB"] }], true)).toContain("    default $geoip2_country_code;");
 		expect(config).toContain("geo $shieldpm_firewall_7_allow");
 		expect(config).toContain("198.51.100.0/24 1;");
 		expect(config).toContain("include /data/nginx/firewall/policy-7.cidrs;");
 		expect(config).toContain('"~^1:" 0;');
 		expect(config).toContain('"~^0:1:" 1;');
+		expect(config).toContain('map "$shieldpm_firewall_7_allow:$shieldpm_firewall_7_cidr_block:$shieldpm_firewall_7_geo_block" $shieldpm_firewall_7_block_reason');
+		expect(config).toContain('"~^0:0:1$" "country";');
 	});
 
 	it("injects a host policy check before the existing access handlers", async () => {
@@ -74,7 +78,29 @@ describe("host firewall policy helpers", () => {
 			locations: [],
 		});
 		expect(rendered).toContain("ngx.var.shieldpm_firewall_4_blocked == \"1\"");
-		expect(rendered).toContain("/.well-known/acme-challenge/");
-		expect(rendered).toContain("ngx.exit(ngx.HTTP_FORBIDDEN)");
+		expect(rendered).toContain("isAcmeChallenge");
+		expect(rendered).toContain("ngx.exec(\"/_shieldpm_firewall_denied\")");
+		expect(rendered).toContain("if ngx.var.uri == \"/_shieldpm_firewall_denied\" then");
+		expect(rendered).toContain("location = /_shieldpm_firewall_denied");
+		expect(rendered).toContain("ngx.var.shieldpm_firewall_4_block_reason");
+		expect(rendered).toContain("Ihre IP-Adresse");
+	});
+
+	it("keeps drop policies connectionless and omits the explanatory page", async () => {
+		const rendered = await utils.getRenderEngine().renderFile("proxy_host.conf", {
+			id: 7,
+			domain_names: ["drop.example.test"],
+			enabled: true,
+			forward_scheme: "http",
+			forward_host: "127.0.0.1",
+			forward_port: 8080,
+			access_list_id: 0,
+			access_list: { meta: {}, items: [], clients: [] },
+			firewall_policy_id: 4,
+			firewall_policy: { enabled: true, action: "drop" },
+			locations: [],
+		});
+		expect(rendered).toContain("ngx.exit(444)");
+		expect(rendered).not.toContain("location = /_shieldpm_firewall_denied");
 	});
 });
