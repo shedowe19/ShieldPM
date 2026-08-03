@@ -1,0 +1,26 @@
+{
+	"type": "object",
+	"required": [
+		"id", "created_on", "modified_on", "name", "enabled", "action", "geo_mode",
+		"geo_countries", "allow_cidrs", "block_cidrs", "feed_urls", "refresh_interval_hours",
+		"feed_status", "total_cidrs"
+	],
+	"properties": {
+		"id": { "$ref": "../common.json#/properties/id" },
+		"created_on": { "$ref": "../common.json#/properties/created_on" },
+		"modified_on": { "$ref": "../common.json#/properties/modified_on" },
+		"name": { "type": "string", "minLength": 1, "maxLength": 255 },
+		"enabled": { "type": "boolean", "default": true },
+		"action": { "type": "string", "enum": ["deny", "drop"], "default": "deny" },
+		"geo_mode": { "type": "string", "enum": ["off", "allow", "block"], "default": "off" },
+		"geo_countries": { "type": "array", "maxItems": 250, "items": { "type": "string", "pattern": "^[A-Z]{2}$" } },
+		"allow_cidrs": { "type": "array", "maxItems": 10000, "items": { "type": "string", "minLength": 1, "maxLength": 64 } },
+		"block_cidrs": { "type": "array", "maxItems": 10000, "items": { "type": "string", "minLength": 1, "maxLength": 64 } },
+		"feed_urls": { "type": "array", "maxItems": 8, "items": { "type": "string", "format": "uri", "maxLength": 2048 } },
+		"refresh_interval_hours": { "type": "integer", "minimum": 1, "maximum": 168, "default": 24 },
+		"feed_status": { "type": "object" },
+		"total_cidrs": { "type": "integer", "minimum": 0 },
+		"last_updated_on": { "type": ["string", "null"], "format": "date-time" },
+		"last_error": { "type": ["string", "null"] }
+	}
+}

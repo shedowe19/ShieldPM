@@ -27,6 +27,7 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	terminalPrivateKey: data.terminalPrivateKey || "",
 
 	accessListId: data.accessListId || 0,
+	firewallPolicyId: data.firewallPolicyId ?? null,
 	cachingEnabled: data.cachingEnabled || false,
 	disableBuffering: data.disableBuffering || false,
 	blockExploits: data.blockExploits || false,

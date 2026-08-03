@@ -1,0 +1,8 @@
+{
+	"operationId": "refreshFirewallPolicy",
+	"summary": "Refresh Host Firewall Policy Feeds",
+	"tags": ["firewall-policies"],
+	"security": [{ "bearerAuth": ["settings.manage"] }],
+	"parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+	"responses": { "200": { "description": "Refreshed", "content": { "application/json": { "schema": { "$ref": "../../../../../components/firewall-policy-object.json" } } } } }
+}

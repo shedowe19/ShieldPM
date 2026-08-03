@@ -3,6 +3,7 @@ import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
+import FirewallPolicy from "../models/firewall_policy.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
@@ -56,6 +57,19 @@ const _cleanupOAuth2Proxy = async (accessListId) => {
 	}
 };
 
+const validateFirewallPolicyAssignment = async (access, value) => {
+	await access.can("settings:update", "firewall-policies");
+	if (value === null || value === 0 || value === "0") return null;
+	const policyId = Number(value);
+	if (!Number.isInteger(policyId) || policyId < 1) {
+		throw new errs.ValidationError("firewall_policy_id must be a valid policy ID or null.");
+	}
+	if (!(await FirewallPolicy.query().findById(policyId))) {
+		throw new errs.ItemNotFoundError(policyId);
+	}
+	return policyId;
+};
+
 const internalProxyHost = {
 	/**
 	 * @param   {import("../lib/types.js").Access}  access
@@ -97,6 +111,9 @@ const internalProxyHost = {
 		}
 
 		await access.can("proxy_hosts:create", thisData);
+		if (typeof thisData.firewall_policy_id !== "undefined") {
+			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(access, thisData.firewall_policy_id);
+		}
 
 		// Get a list of the domain names and check each of them against existing records
 		const domain_name_check_promises = [];
@@ -158,7 +175,7 @@ const internalProxyHost = {
 		// re-fetch with cert
 		row = await internalProxyHost.get(access, {
 			id: row.id,
-			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
+			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains", "firewall_policy"],
 		});
 
 		// Configure nginx
@@ -248,6 +265,9 @@ const internalProxyHost = {
 		}
 
 		let row = await internalProxyHost.get(access, { id: thisData.id });
+		if (typeof thisData.firewall_policy_id !== "undefined") {
+			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(access, thisData.firewall_policy_id);
+		}
 		const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
 
 		if (row.id !== thisData.id) {
@@ -324,7 +344,7 @@ const internalProxyHost = {
 
 		row = await internalProxyHost.get(access, {
 			id: thisData.id,
-			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
+			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains", "firewall_policy"],
 		});
 
 		if (!options.skip_configure) {
@@ -367,7 +387,7 @@ const internalProxyHost = {
 			.query()
 			.where("is_deleted", 0)
 			.andWhere("id", thisData.id)
-			.allowGraph("[owner,access_list.[clients,items],certificate,host_domains]")
+			.allowGraph("[owner,access_list.[clients,items],certificate,host_domains,firewall_policy]")
 			.withGraphFetched("host_domains")
 			.first();
 
@@ -456,7 +476,7 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:update", data.id);
 		const row = await internalProxyHost.get(access, {
 			id: data.id,
-			expand: ["certificate", "owner", "access_list", "host_domains"],
+			expand: ["certificate", "owner", "access_list", "host_domains", "firewall_policy"],
 		});
 
 		if (!row?.id) {

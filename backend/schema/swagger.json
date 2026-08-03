@@ -29,6 +29,10 @@
 			"description": "Endpoints related to Access Lists"
 		},
 		{
+			"name": "firewall-policies",
+			"description": "Endpoints related to per-host HTTP firewall policies"
+		},
+		{
 			"name": "certificates",
 			"description": "Endpoints related to Certificates"
 		},
@@ -118,6 +122,30 @@
 			},
 			"delete": {
 				"$ref": "./paths/nginx/access-lists/listID/delete.json"
+			}
+		},
+		"/nginx/firewall-policies": {
+			"get": {
+				"$ref": "./paths/nginx/firewall-policies/get.json"
+			},
+			"post": {
+				"$ref": "./paths/nginx/firewall-policies/post.json"
+			}
+		},
+		"/nginx/firewall-policies/{id}": {
+			"get": {
+				"$ref": "./paths/nginx/firewall-policies/id/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/firewall-policies/id/put.json"
+			},
+			"delete": {
+				"$ref": "./paths/nginx/firewall-policies/id/delete.json"
+			}
+		},
+		"/nginx/firewall-policies/{id}/refresh": {
+			"post": {
+				"$ref": "./paths/nginx/firewall-policies/id/refresh/post.json"
 			}
 		},
 		"/nginx/certificates": {

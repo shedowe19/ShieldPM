@@ -1,0 +1,7 @@
+{
+	"operationId": "listFirewallPolicies",
+	"summary": "List Host Firewall Policies",
+	"tags": ["firewall-policies"],
+	"security": [{ "bearerAuth": ["settings.manage"] }],
+	"responses": { "200": { "description": "Policies", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "../../../components/firewall-policy-object.json" } } } } } }
+}

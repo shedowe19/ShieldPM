@@ -1,0 +1,8 @@
+{
+	"operationId": "deleteFirewallPolicy",
+	"summary": "Delete a Host Firewall Policy",
+	"tags": ["firewall-policies"],
+	"security": [{ "bearerAuth": ["settings.manage"] }],
+	"parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+	"responses": { "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "boolean" } } } } }
+}

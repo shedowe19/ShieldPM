@@ -7,6 +7,7 @@ import db from "../db.js";
 import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
 import AccessList from "./access_list.js";
 import Certificate from "./certificate.js";
+import FirewallPolicy from "./firewall_policy.js";
 import now from "./now_helper.js";
 import TorOnion from "./tor_onion.js";
 import User from "./user.js";
@@ -56,6 +57,8 @@ class ProxyHost extends Model {
 	owner_user_id;
 	/** @type {number} */
 	access_list_id;
+	/** @type {number|null} */
+	firewall_policy_id;
 	/** @type {number} */
 	certificate_id;
 	/** @type {number} */
@@ -246,6 +249,14 @@ class ProxyHost extends Model {
 				},
 				modify: (qb) => {
 					qb.where("access_list.is_deleted", 0);
+				},
+			},
+			firewall_policy: {
+				relation: Model.HasOneRelation,
+				modelClass: FirewallPolicy,
+				join: {
+					from: "proxy_host.firewall_policy_id",
+					to: "firewall_policy.id",
 				},
 			},
 			certificate: {

@@ -1,0 +1,29 @@
+{
+	"operationId": "updateFirewallPolicy",
+	"summary": "Update a Host Firewall Policy",
+	"tags": ["firewall-policies"],
+	"security": [{ "bearerAuth": ["settings.manage"] }],
+	"parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object", "additionalProperties": false, "minProperties": 1,
+					"properties": {
+						"name": { "$ref": "../../../../components/firewall-policy-object.json#/properties/name" },
+						"enabled": { "$ref": "../../../../components/firewall-policy-object.json#/properties/enabled" },
+						"action": { "$ref": "../../../../components/firewall-policy-object.json#/properties/action" },
+						"geo_mode": { "$ref": "../../../../components/firewall-policy-object.json#/properties/geo_mode" },
+						"geo_countries": { "$ref": "../../../../components/firewall-policy-object.json#/properties/geo_countries" },
+						"allow_cidrs": { "$ref": "../../../../components/firewall-policy-object.json#/properties/allow_cidrs" },
+						"block_cidrs": { "$ref": "../../../../components/firewall-policy-object.json#/properties/block_cidrs" },
+						"feed_urls": { "$ref": "../../../../components/firewall-policy-object.json#/properties/feed_urls" },
+						"refresh_interval_hours": { "$ref": "../../../../components/firewall-policy-object.json#/properties/refresh_interval_hours" }
+					}
+				}
+			}
+		}
+	},
+	"responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "../../../../components/firewall-policy-object.json" } } } } }
+}

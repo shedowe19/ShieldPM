@@ -142,6 +142,25 @@ export interface ProxyLocation {
 	forwardQuery?: string;
 }
 
+export interface FirewallPolicy {
+	id: number;
+	createdOn: string;
+	modifiedOn: string;
+	name: string;
+	enabled: boolean;
+	action: "deny" | "drop";
+	geoMode: "off" | "allow" | "block";
+	geoCountries: string[];
+	allowCidrs: string[];
+	blockCidrs: string[];
+	feedUrls: string[];
+	refreshIntervalHours: number;
+	feedStatus: Record<string, { count?: number; error?: string; lastSuccess?: string }>;
+	totalCidrs: number;
+	lastUpdatedOn?: string | null;
+	lastError?: string | null;
+}
+
 export interface ProxyHost {
 	id: number;
 	createdOn: string;
@@ -153,6 +172,7 @@ export interface ProxyHost {
 	forwardPort: number;
 	forwardQuery?: string;
 	accessListId: number;
+	firewallPolicyId?: number | null;
 	certificateId: number;
 	sslForced: boolean;
 	cachingEnabled: boolean;

@@ -263,9 +263,11 @@ rm -vrf /data/letsencrypt-acme-challenge \
         /data/nginx/temp \
         /data/logs
 
+mkdir -p /data/nginx/firewall
 touch /data/modsecurity/modsecurity-extra.conf \
       /data/html/index.html \
       /data/nginx/ip_ranges.conf \
+      /data/nginx/firewall.conf \
       /data/custom_nginx/events.conf \
       /data/custom_nginx/http.conf \
       /data/custom_nginx/http_top.conf \
@@ -519,6 +521,12 @@ if [ "$NGINX_LOAD_GEOIP2_MODULE" = "true" ]; then
 
     sed -i "s|#\s*\(\$geoip2_country_code.\+country iso_code;\)|\1|g" /usr/local/nginx/conf/nginx.conf
 fi
+# The application writes global geo/map directives here for host firewall policies.
+# Keep this in the http context, before generated vhost configs.
+if ! grep -qF "include /data/nginx/firewall.conf;" /usr/local/nginx/conf/nginx.conf; then
+    sed -i '/include \/data\/nginx\/ip_ranges.conf;/a\    include /data/nginx/firewall.conf;' /usr/local/nginx/conf/nginx.conf
+fi
+
 if [ "$NGINX_LOAD_NJS_MODULE" = "true" ]; then
     sed -i "s|#\(load_module.\+js_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
 fi
@@ -531,7 +539,8 @@ fi
 
 if [ "$REGENERATE_ALL" = "true" ]; then
     find /data/nginx -name "*.conf" -delete
-    touch /data/nginx/ip_ranges.conf
+    mkdir -p /data/nginx/firewall
+    touch /data/nginx/ip_ranges.conf /data/nginx/firewall.conf
 fi
 
 if [ "$LOGROTATE" = "true" ]; then

@@ -28,6 +28,7 @@ export * from "./deleteUser";
 export * from "./deleteWireguardPeer";
 export * from "./downloadCertificate";
 export * from "./downloadRootCa";
+export * from "./firewallPolicies";
 export * from "./expansions";
 export * from "./get2fa";
 export * from "./getAccessList";

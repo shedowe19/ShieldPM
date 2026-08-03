@@ -30,6 +30,7 @@ const DeadHosts = lazy(() => import("src/pages/Nginx/DeadHosts"));
 const Streams = lazy(() => import("src/pages/Nginx/Streams"));
 const CloudflaredTunnels = lazy(() => import("src/pages/Nginx/CloudflaredTunnels"));
 const DdnsProviders = lazy(() => import("src/pages/Nginx/DdnsProviders"));
+const FirewallPolicies = lazy(() => import("src/pages/Nginx/FirewallPolicies"));
 const TorOnionServices = lazy(() => import("src/pages/Nginx/TorOnionServices"));
 const WireguardTunnels = lazy(() => import("src/pages/Nginx/WireguardTunnels"));
 const ChatOps = lazy(() => import("src/pages/ChatOps"));
@@ -134,6 +135,14 @@ function Content() {
 					element={
 						<AnimatedPage>
 							<DdnsProviders />
+						</AnimatedPage>
+					}
+				/>
+				<Route
+					path="/nginx/firewall"
+					element={
+						<AnimatedPage>
+							<FirewallPolicies />
 						</AnimatedPage>
 					}
 				/>

@@ -1,6 +1,8 @@
 import { IconGhost, IconShieldLock } from "@tabler/icons-react";
 import { Field, type FieldProps } from "formik";
 import AnubisRulesField from "src/components/AnubisRulesField";
+import { FirewallPolicyField } from "src/components/Form/FirewallPolicyField";
+import { HasPermission } from "src/components/HasPermission";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -8,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Switch } from "src/components/ui/switch";
 import { TabsContent } from "src/components/ui/tabs";
 import { intl, T } from "src/locale";
+import { ADMIN, MANAGE } from "src/modules/Permissions";
 import { PROXY_HOST_TAB, TIME_UNIT } from "src/types/enums";
 import type { ProxyHostFormValues } from "./ProxyHostModalFormValues";
 
@@ -38,6 +41,10 @@ const ProxyHostSecurityTab = () => (
 				<T id="proxy-host.rate-limiting.description" />
 			</AlertDescription>
 		</Alert>
+
+		<HasPermission section={ADMIN} permission={MANAGE} hideError>
+			<FirewallPolicyField />
+		</HasPermission>
 
 		<div className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
 			<div className="space-y-0.5">

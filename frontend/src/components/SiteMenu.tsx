@@ -50,6 +50,11 @@ const menuItems: MenuItem[] = [
 				permission: VIEW,
 			},
 			{
+				to: "/nginx/firewall",
+				label: "firewall-policies",
+				permissionSection: ADMIN,
+			},
+			{
 				to: "/nginx/redirection",
 				label: "redirection-hosts",
 				permissionSection: REDIRECTION_HOSTS,

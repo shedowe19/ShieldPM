@@ -26,6 +26,7 @@ Jedes Modul folgt dem gleichen Pattern: Es exportiert ein Objekt mit `create`, `
 
 | Modul                                | Datei                            | Beschreibung                  |
 | ------------------------------------ | -------------------------------- | ----------------------------- |
+| [Host-Firewall](./host-firewall.md)     | `firewall-policy.js` (neu)       | GeoIP- und CIDR-Policies je Proxy-Host |
 | [Access-List](./access-lists.md)     | `access-list.js` (17 KB)         | Basic Auth, IP-Filter, mTLS   |
 | [Zertifikate](./zertifikate.md)      | `certificate.js` (27 KB)         | SSL/TLS-Zertifikatsverwaltung |
 | Certbot                              | `certbot.js` (10 KB)             | Let's Encrypt Automatisierung |

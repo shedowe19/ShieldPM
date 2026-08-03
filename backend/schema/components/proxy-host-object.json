@@ -10,6 +10,7 @@
 		"forward_host",
 		"forward_port",
 		"access_list_id",
+		"firewall_policy_id",
 		"certificate_id",
 		"ssl_forced",
 		"caching_enabled",
@@ -60,6 +61,10 @@
 		},
 		"access_list_id": {
 			"$ref": "../common.json#/properties/access_list_id"
+		},
+		"firewall_policy_id": {
+			"type": ["integer", "null"],
+			"minimum": 1
 		},
 		"certificate_id": {
 			"$ref": "../common.json#/properties/certificate_id"

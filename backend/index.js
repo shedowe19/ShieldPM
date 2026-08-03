@@ -15,6 +15,7 @@ import internalCertificate from "./internal/certificate.js";
 import internalChat from "./internal/chat.js";
 import internalCloudflared from "./internal/cloudflared.js";
 import internalDdns from "./internal/ddns.js";
+import internalFirewallPolicy from "./internal/firewall-policy.js";
 import internalDocker from "./internal/docker.js";
 import internalGitDeploy from "./internal/git-deploy.js";
 import internalGitOps from "./internal/gitops.js";
@@ -39,6 +40,7 @@ async function appStart() {
 		await migrateUp();
 		await analyticsService.init();
 		await setup();
+		await internalFirewallPolicy.init();
 		await getCompiledSchema();
 
 		if (!IP_RANGES_FETCH_ENABLED) {

@@ -11,6 +11,7 @@ export * from "./useDashboardNotes";
 export * from "./useDeadHost";
 export * from "./useDeadHosts";
 export * from "./useDnsProviders";
+export * from "./useFirewallPolicies";
 export * from "./useGitOps";
 export * from "./useGitSync";
 export * from "./useHealth";

@@ -82,6 +82,9 @@
 						"access_list_id": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/access_list_id"
 						},
+						"firewall_policy_id": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/firewall_policy_id"
+						},
 						"advanced_config": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/advanced_config"
 						},
