@@ -13,6 +13,7 @@ import Certificate from "../models/certificate.js";
 import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 import DdnsProvider from "../models/ddns_provider.js";
 import DeadHost from "../models/dead_host.js";
+import FirewallPolicy from "../models/firewall_policy.js";
 import ProxyHost from "../models/proxy_host.js";
 import RedirectionHost from "../models/redirection_host.js";
 import settingModel from "../models/setting.js";
@@ -46,6 +47,18 @@ const ALLOWED_IMPORT_FIELDS = {
 	],
 	Certificate: ["id", "nice_name", "domain_names", "provider", "expires_on", "is_deleted", "owner_user_id"],
 	AccessList: ["id", "name", "items", "clients", "is_deleted", "owner_user_id"],
+	FirewallPolicy: [
+		"id",
+		"name",
+		"enabled",
+		"action",
+		"geo_mode",
+		"geo_countries",
+		"allow_cidrs",
+		"block_cidrs",
+		"feed_urls",
+		"refresh_interval_hours",
+	],
 	ProxyHost: [
 		"id",
 		"domain_names",
@@ -53,6 +66,7 @@ const ALLOWED_IMPORT_FIELDS = {
 		"forward_port",
 		"forward_scheme",
 		"access_list_id",
+		"firewall_policy_id",
 		"http_options",
 		"ssl_options",
 		"nginx_options",
@@ -338,12 +352,24 @@ const internalGitOps = {
 			"users",
 			"settings",
 			"ddns-providers",
+			"firewall-policies",
 		];
 		for (const dir of dirs) {
 			const dirPath = path.join(configDir, dir);
 			if (!fs.existsSync(dirPath)) {
 				await fs.promises.mkdir(dirPath, { recursive: true });
 			}
+		}
+
+		// Export firewall policies before hosts so a restore can retain host assignments.
+		// Feed status and timestamps are operational cache, not declarative configuration.
+		const firewallPolicies = await FirewallPolicy.query().orderBy("id", "ASC");
+		for (const policy of firewallPolicies) {
+			const filename = `${policy.id}-${policy.name.replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
+			const filePath = path.join(configDir, "firewall-policies", filename);
+			const exportData = _.pick(policy, ALLOWED_IMPORT_FIELDS.FirewallPolicy);
+			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			exportedFiles.push(filePath);
 		}
 
 		// Export Proxy Hosts
@@ -851,7 +877,7 @@ const internalGitOps = {
 		 * @param {string} [hostType] - Host type string for Nginx (e.g. 'proxy_host')
 		 * @param {string|null} [relationGraph] - Relation graph for insertGraph/upsertGraph
 		 */
-		const importModel = async (modelClass, dirName, hostType = null, relationGraph = null) => {
+		const importModel = async (modelClass, dirName, hostType = null, relationGraph = null, importOptions = {}) => {
 			const dirPath = path.join(configDir, dirName);
 			const importedIds = [];
 
@@ -866,17 +892,15 @@ const internalGitOps = {
 							const data = yaml.load(content);
 
 							if (data && typeof data === "object") {
-								const itemData = /** @type {any} */ (data);
-
-								// Apply field whitelist validation to prevent DB field injection
-								const sanitized = sanitizeImportData(modelClass.name, itemData);
-								if (!sanitized) {
+								// Use only the whitelist result. Merging it into raw YAML would retain
+								// injected properties and defeat the import boundary.
+								const itemData = sanitizeImportData(modelClass.name, data);
+								if (!itemData) {
 									errors.push(
 										`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
 									);
 									return;
 								}
-								Object.assign(itemData, sanitized);
 
 								const existingId = itemData.id;
 
@@ -889,8 +913,8 @@ const internalGitOps = {
 									}
 								}
 
-								// Ensure item is not marked as deleted upon restore
-								itemData.is_deleted = 0;
+								// Policy rows are hard-deleted; other imported models use soft deletion.
+								if (importOptions.supportsSoftDelete !== false) itemData.is_deleted = 0;
 
 								// Ensure owner_user_id is valid
 								if (itemData.owner_user_id) {
@@ -977,7 +1001,10 @@ const internalGitOps = {
 			// 3. Import Access Lists
 			await importModel(AccessList, "access-lists", null, "[items, clients]");
 
-			// 4. Import Hosts & Streams
+			// 4. Import policies before hosts so firewall_policy_id foreign keys remain valid.
+			await importModel(FirewallPolicy, "firewall-policies", null, null, { supportsSoftDelete: false });
+
+			// 5. Import Hosts & Streams
 			await importModel(ProxyHost, "proxy-hosts", "proxy_host");
 			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
 			await importModel(DeadHost, "dead-hosts", "dead_host");
@@ -985,7 +1012,7 @@ const internalGitOps = {
 			await importModel(CloudflaredTunnel, "cloudflared-tunnels");
 			await importModel(DdnsProvider, "ddns-providers");
 
-			// 5. Import Settings
+			// 6. Import Settings
 			const settingsDir = path.join(configDir, "settings");
 			if (fs.existsSync(settingsDir)) {
 				const files = await fs.promises.readdir(settingsDir);
@@ -1024,7 +1051,7 @@ const internalGitOps = {
 				);
 			}
 
-			// 6. Restore Certificate Files
+			// 7. Restore Certificate Files
 			const certFilesDir = path.join(configDir, "certificate-files");
 			if (fs.existsSync(certFilesDir)) {
 				const isBlockedPrivateKeyRestore = (filePath) => {
@@ -1188,7 +1215,12 @@ const internalGitOps = {
 				}
 			}
 
-			// 7. Regenerate Nginx Configs
+			// Render global policy maps before host configs that reference them. Dynamic import
+			// avoids a GitOps <-> firewall-policy module cycle during application startup.
+			const { writeFirewallConfig } = await import("./firewall-policy.js");
+			await writeFirewallConfig();
+
+			// 8. Regenerate Nginx Configs
 			await internalNginx.bulkGenerateConfigs(
 				ProxyHost,
 				"proxy_host",

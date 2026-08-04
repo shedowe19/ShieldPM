@@ -52,6 +52,7 @@ ZA ZM ZW
 `
 	.trim()
 	.split(/\s+/);
+const ISO_REGION_CODE_SET = new Set(ISO_REGION_CODES);
 
 // Keep the public deny page in lockstep with the locales exposed by the ShieldPM UI.
 // The map is also used to generate locale-specific MaxMind country labels in Nginx.
@@ -283,6 +284,11 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 	for (const policy of policies) {
 		const id = Number(policy.id);
 		const prefix = `$shieldpm_firewall_${id}`;
+		const enabled = policy.enabled ? "1" : "0";
+		const action = policy.action === "drop" ? "drop" : "deny";
+		// Host templates read these maps directly so enforcement survives every regeneration path.
+		lines.push(`map "" ${prefix}_enabled {`, `    default ${enabled};`, "}", "");
+		lines.push(`map "" ${prefix}_action {`, `    default "${action}";`, "}", "");
 		lines.push(`geo ${prefix}_allow {`, "    default 0;");
 		for (const cidr of policy.allow_cidrs || []) lines.push(`    ${cidr} 1;`);
 		lines.push("}", "", `geo ${prefix}_cidr_block {`, "    default 0;");
@@ -348,8 +354,8 @@ const mergePolicyPayload = (input, existing = null) => {
 			throw new errs.ValidationError("geo_countries must contain at most 250 country codes.");
 		}
 		data.geo_countries = unique(input.geo_countries.map((country) => String(country).trim().toUpperCase()));
-		if (data.geo_countries.some((country) => !/^[A-Z]{2}$/.test(country))) {
-			throw new errs.ValidationError("geo_countries must use ISO 3166-1 alpha-2 country codes.");
+		if (data.geo_countries.some((country) => !ISO_REGION_CODE_SET.has(country))) {
+			throw new errs.ValidationError("geo_countries must use a valid MaxMind ISO 3166-1 alpha-2 country code.");
 		}
 	}
 	if (typeof input.allow_cidrs !== "undefined")
@@ -385,7 +391,7 @@ const getLinkedHosts = async (policyId) =>
 	await ProxyHost.query()
 		.where("is_deleted", 0)
 		.where("firewall_policy_id", policyId)
-		.withGraphFetched("[certificate,access_list.[clients,items],host_domains,firewall_policy]");
+		.withGraphFetched("[certificate,access_list.[clients,items],host_domains]");
 
 const regenerateLinkedHosts = async (policyId) => {
 	const hosts = await getLinkedHosts(policyId);
@@ -396,7 +402,8 @@ const refreshPolicy = async (policy, { regenerate = true } = {}) => {
 	await ensurePolicyFiles(policy);
 	const status = { ...(policy.feed_status || {}) };
 	const errors = [];
-	for (const url of policy.feed_urls || []) {
+	const feedUrls = policy.feed_urls || [];
+	for (const url of feedUrls) {
 		try {
 			const result = await fetchFeed(url, status[url]);
 			if (!result.notModified) {
@@ -436,7 +443,11 @@ const refreshPolicy = async (policy, { regenerate = true } = {}) => {
 		feed_status: status,
 		total_cidrs: activeCidrs.size,
 		last_error: errors.length ? errors.join(" ") : null,
-		...(errors.length < (policy.feed_urls || []).length ? { last_updated_on: new Date().toISOString() } : {}),
+		// A manual-CIDR-only policy was refreshed successfully too; record it so it is not
+		// considered perpetually overdue by older installations or direct callers.
+		...(feedUrls.length === 0 || errors.length < feedUrls.length
+			? { last_updated_on: new Date().toISOString() }
+			: {}),
 	};
 	const result = await FirewallPolicy.query().patchAndFetchById(policy.id, update);
 	if (regenerate) {
@@ -453,6 +464,19 @@ const synchronizePolicy = async (policy, refresh = true) => {
 	await regenerateLinkedHosts(policy.id);
 	await internalNginx.reload();
 	return updated;
+};
+
+const isPolicyRefreshDue = (policy, now = Date.now()) => {
+	const feedUrls = policy.feed_urls || [];
+	if (feedUrls.length === 0) return false;
+	const last = policy.last_updated_on ? new Date(policy.last_updated_on).getTime() : 0;
+	return !last || now - last >= policy.refresh_interval_hours * REFRESH_CHECK_MS;
+};
+
+const runDueRefreshInBackground = (reload) => {
+	void internalFirewallPolicy.refreshDuePolicies(reload).catch((error) => {
+		logger.error("Firewall policy background refresh failed:", error);
+	});
 };
 
 const internalFirewallPolicy = {
@@ -519,7 +543,7 @@ const internalFirewallPolicy = {
 		const hosts = hostIds.length
 			? await ProxyHost.query()
 					.whereIn("id", hostIds)
-					.withGraphFetched("[certificate,access_list.[clients,items],host_domains,firewall_policy]")
+					.withGraphFetched("[certificate,access_list.[clients,items],host_domains]")
 			: [];
 		if (hosts.length) await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
 		await internalNginx.reload();
@@ -534,10 +558,12 @@ const internalFirewallPolicy = {
 	},
 
 	init: async () => {
+		// Local state is enough to start safely. Remote feeds are deliberately refreshed
+		// afterwards so an upstream outage cannot delay app.listen().
 		await writeFirewallConfig();
-		await internalFirewallPolicy.refreshDuePolicies(false);
+		runDueRefreshInBackground(true);
 		if (!refreshTimer) {
-			refreshTimer = setInterval(() => void internalFirewallPolicy.refreshDuePolicies(true), REFRESH_CHECK_MS);
+			refreshTimer = setInterval(() => runDueRefreshInBackground(true), REFRESH_CHECK_MS);
 			refreshTimer.unref?.();
 		}
 	},
@@ -546,8 +572,7 @@ const internalFirewallPolicy = {
 		const policies = await FirewallPolicy.query().where("enabled", 1);
 		let changed = false;
 		for (const policy of policies) {
-			const last = policy.last_updated_on ? new Date(policy.last_updated_on).getTime() : 0;
-			if (last && Date.now() - last < policy.refresh_interval_hours * REFRESH_CHECK_MS) continue;
+			if (!isPolicyRefreshDue(policy)) continue;
 			try {
 				await refreshPolicy(policy, { regenerate: false });
 				changed = true;
@@ -562,5 +587,15 @@ const internalFirewallPolicy = {
 	},
 };
 
-export { createPinnedLookup, fetchFeed, normaliseCidr, parseCidrList, renderNginxConfig, validateFeedUrl };
+export {
+	createPinnedLookup,
+	fetchFeed,
+	isPolicyRefreshDue,
+	mergePolicyPayload,
+	normaliseCidr,
+	parseCidrList,
+	renderNginxConfig,
+	validateFeedUrl,
+	writeFirewallConfig,
+};
 export default internalFirewallPolicy;

@@ -57,18 +57,33 @@ const _cleanupOAuth2Proxy = async (accessListId) => {
 	}
 };
 
-const validateFirewallPolicyAssignment = async (access, value) => {
-	await access.can("settings:update", "firewall-policies");
+const normaliseFirewallPolicyId = (value) => {
 	if (value === null || value === 0 || value === "0") return null;
 	const policyId = Number(value);
 	if (!Number.isInteger(policyId) || policyId < 1) {
 		throw new errs.ValidationError("firewall_policy_id must be a valid policy ID or null.");
 	}
+	return policyId;
+};
+
+const validateFirewallPolicyAssignment = async (access, value, currentValue = null) => {
+	const policyId = normaliseFirewallPolicyId(value);
+	const currentPolicyId = normaliseFirewallPolicyId(currentValue);
+	// Hidden fields in an ordinary user's proxy-host form still submit their current
+	// value. Requiring Settings access for a no-op would make every such save fail.
+	if (policyId === currentPolicyId) return policyId;
+
+	await access.can("settings:update", "firewall-policies");
+	if (policyId === null) return null;
 	if (!(await FirewallPolicy.query().findById(policyId))) {
 		throw new errs.ItemNotFoundError(policyId);
 	}
 	return policyId;
 };
+
+const requestsFirewallPolicy = (expand) =>
+	Array.isArray(expand) &&
+	expand.some((relation) => relation === "firewall_policy" || relation.startsWith("firewall_policy."));
 
 const internalProxyHost = {
 	/**
@@ -112,7 +127,11 @@ const internalProxyHost = {
 
 		await access.can("proxy_hosts:create", thisData);
 		if (typeof thisData.firewall_policy_id !== "undefined") {
-			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(access, thisData.firewall_policy_id);
+			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(
+				access,
+				thisData.firewall_policy_id,
+				null,
+			);
 		}
 
 		// Get a list of the domain names and check each of them against existing records
@@ -175,7 +194,7 @@ const internalProxyHost = {
 		// re-fetch with cert
 		row = await internalProxyHost.get(access, {
 			id: row.id,
-			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains", "firewall_policy"],
+			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
 		});
 
 		// Configure nginx
@@ -266,7 +285,11 @@ const internalProxyHost = {
 
 		let row = await internalProxyHost.get(access, { id: thisData.id });
 		if (typeof thisData.firewall_policy_id !== "undefined") {
-			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(access, thisData.firewall_policy_id);
+			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(
+				access,
+				thisData.firewall_policy_id,
+				row.firewall_policy_id,
+			);
 		}
 		const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
 
@@ -344,7 +367,7 @@ const internalProxyHost = {
 
 		row = await internalProxyHost.get(access, {
 			id: thisData.id,
-			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains", "firewall_policy"],
+			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
 		});
 
 		if (!options.skip_configure) {
@@ -382,6 +405,9 @@ const internalProxyHost = {
 		const thisData = /** @type {any} */ (data || {});
 
 		const access_data = await access.can("proxy_hosts:get", thisData.id);
+		if (requestsFirewallPolicy(thisData.expand)) {
+			await access.can("settings:update", "firewall-policies");
+		}
 
 		const query = proxyHostModel
 			.query()
@@ -476,7 +502,7 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:update", data.id);
 		const row = await internalProxyHost.get(access, {
 			id: data.id,
-			expand: ["certificate", "owner", "access_list", "host_domains", "firewall_policy"],
+			expand: ["certificate", "owner", "access_list", "host_domains"],
 		});
 
 		if (!row?.id) {
@@ -654,4 +680,5 @@ const internalProxyHost = {
 	},
 };
 
+export { normaliseFirewallPolicyId, requestsFirewallPolicy, validateFirewallPolicyAssignment };
 export default internalProxyHost;

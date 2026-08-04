@@ -8,6 +8,8 @@ vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 
 import {
 	createPinnedLookup,
+	isPolicyRefreshDue,
+	mergePolicyPayload,
 	parseCidrList,
 	renderNginxConfig,
 	validateFeedUrl,
@@ -28,6 +30,40 @@ describe("host firewall policy helpers", () => {
 		expect(() => validateFeedUrl("http://example.test/list.txt")).toThrow("HTTPS");
 		expect(() => validateFeedUrl("https://user:secret@example.test/list.txt")).toThrow("credentials");
 		expect(() => validateFeedUrl("https://example.test:8443/list.txt")).toThrow("custom port");
+	});
+
+	it("rejects country codes that MaxMind GeoIP can never emit", () => {
+		expect(mergePolicyPayload({ geo_countries: ["gb", "DE"], name: "Countries" }).geo_countries).toEqual([
+			"GB",
+			"DE",
+		]);
+		expect(() => mergePolicyPayload({ geo_countries: ["UK"], name: "Invalid code" })).toThrow("valid MaxMind");
+		expect(() => mergePolicyPayload({ geo_countries: ["ZZ"], name: "Invalid code" })).toThrow("valid MaxMind");
+	});
+
+	it("does not schedule remote refreshes for policies without feeds", () => {
+		const now = Date.parse("2026-08-04T00:00:00.000Z");
+		expect(isPolicyRefreshDue({ feed_urls: [], refresh_interval_hours: 1 }, now)).toBe(false);
+		expect(
+			isPolicyRefreshDue(
+				{
+					feed_urls: ["https://feeds.example.test/cidrs"],
+					last_updated_on: "2026-08-04T00:00:00.000Z",
+					refresh_interval_hours: 1,
+				},
+				now,
+			),
+		).toBe(false);
+		expect(
+			isPolicyRefreshDue(
+				{
+					feed_urls: ["https://feeds.example.test/cidrs"],
+					last_updated_on: "2026-08-03T22:00:00.000Z",
+					refresh_interval_hours: 1,
+				},
+				now,
+			),
+		).toBe(true);
 	});
 
 	it("pins both single-address and Happy-Eyeballs lookup callbacks", async () => {
@@ -64,6 +100,8 @@ describe("host firewall policy helpers", () => {
 					id: 7,
 					allow_cidrs: ["198.51.100.0/24"],
 					block_cidrs: ["203.0.113.0/24"],
+					action: "deny",
+					enabled: true,
 					geo_mode: "allow",
 					geo_countries: ["DE", "AT"],
 				},
@@ -85,6 +123,10 @@ describe("host firewall policy helpers", () => {
 		expect(geoConfig).toContain('GB "Vereinigtes Königreich";');
 		expect(geoConfig).toContain('GB "United Kingdom";');
 		expect(geoConfig).toContain('GB "英国";');
+		expect(config).toContain('map "" $shieldpm_firewall_7_enabled');
+		expect(config).toContain("    default 1;");
+		expect(config).toContain('map "" $shieldpm_firewall_7_action');
+		expect(config).toContain('    default "deny";');
 		expect(config).toContain("geo $shieldpm_firewall_7_allow");
 		expect(config).toContain("198.51.100.0/24 1;");
 		expect(config).toContain("include /data/nginx/firewall/policy-7.cidrs;");
@@ -107,10 +149,11 @@ describe("host firewall policy helpers", () => {
 			access_list_id: 0,
 			access_list: { meta: {}, items: [], clients: [] },
 			firewall_policy_id: 4,
-			firewall_policy: { enabled: true, action: "deny" },
 			locations: [],
 		});
+		expect(rendered).toContain('ngx.var.shieldpm_firewall_4_enabled == "1"');
 		expect(rendered).toContain('ngx.var.shieldpm_firewall_4_blocked == "1"');
+		expect(rendered).toContain('ngx.var.shieldpm_firewall_4_action == "drop"');
 		expect(rendered).toContain("isAcmeChallenge");
 		expect(rendered).toContain('ngx.exec("/_shieldpm_firewall_denied")');
 		expect(rendered).toContain('if ngx.var.uri == "/_shieldpm_firewall_denied" then');
@@ -127,14 +170,13 @@ describe("host firewall policy helpers", () => {
 		expect(denyPage).toContain("shieldpm_geoip_country_name_");
 		expect(denyPage).toContain("GEOIP COUNTRY RULE");
 		expect(denyPage).toContain("Warum wird diese Seite angezeigt?");
-		expect(denyPage).toContain("Was können Sie jetzt tun?");
 		expect(denyPage).toContain("nicht an die Anwendung weitergeleitet");
 		for (const language of ["bg", "de", "en", "es", "it", "ja", "ko", "nl", "pl", "ru", "sk", "vi", "zh"]) {
 			expect(denyPage).toContain(`${language} = {`);
 		}
 	});
 
-	it("keeps drop policies connectionless and omits the explanatory page", async () => {
+	it("keeps drop policies connectionless while retaining an internal deny endpoint for deny policies", async () => {
 		const rendered = await utils.getRenderEngine().renderFile("proxy_host.conf", {
 			id: 7,
 			domain_names: ["drop.example.test"],
@@ -145,10 +187,11 @@ describe("host firewall policy helpers", () => {
 			access_list_id: 0,
 			access_list: { meta: {}, items: [], clients: [] },
 			firewall_policy_id: 4,
-			firewall_policy: { enabled: true, action: "drop" },
 			locations: [],
 		});
+		expect(rendered).toContain('ngx.var.shieldpm_firewall_4_action == "drop"');
 		expect(rendered).toContain("ngx.exit(444)");
-		expect(rendered).not.toContain("location = /_shieldpm_firewall_denied");
+		expect(rendered).toContain("location = /_shieldpm_firewall_denied");
+		expect(rendered).toContain("internal;");
 	});
 });

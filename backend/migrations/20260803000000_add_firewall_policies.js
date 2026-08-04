@@ -42,6 +42,8 @@ const up = async (knex) => {
 const down = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 	await knex.schema.alterTable("proxy_host", (table) => {
+		// MySQL/MariaDB require the foreign key to be removed before its column.
+		table.dropForeign(["firewall_policy_id"]);
 		table.dropIndex(["firewall_policy_id"], "idx_proxy_host_firewall_policy_id");
 		table.dropColumn("firewall_policy_id");
 	});

@@ -61,6 +61,12 @@ Hinter Cloudflare müssen die Real-IP-Ranges aktiv sein (`SKIP_IP_RANGES=false`)
 
 Die kompilierten Daten liegen unter `/data/nginx/firewall/`; die globale Nginx-Map liegt unter `/data/nginx/firewall.conf`. Diese Dateien werden von ShieldPM verwaltet und nicht manuell bearbeitet.
 
+## GitOps
+
+Bei aktivem GitOps werden Policy-Definitionen unter `firewall-policies/` sowie die `firewall_policy_id`-Zuordnung der Proxy-Hosts exportiert und beim Restore **vor** den Proxy-Hosts importiert. Dadurch bleiben Regeln und Zuweisungen nach einem Restore erhalten. Laufzeitdaten wie Feed-Status, Fehlertexte, Zeitstempel und die kompilierten CIDR-Dateien werden bewusst nicht versioniert; sie werden lokal neu aufgebaut bzw. aktualisiert.
+
+Feed-URLs sind deklarative Policy-Konfiguration und liegen damit im GitOps-Repository. ShieldPM akzeptiert keine URL-Credentials; trotzdem sollten keine Zugangs-Tokens als Query-Parameter in Feed-URLs verwendet werden. Das GitOps-Repository ist als vertrauliche Konfiguration zu behandeln.
+
 ## Architektur
 
 - `backend/models/firewall_policy.js` — Policy-Datenmodell
@@ -75,7 +81,7 @@ Die globale Konfiguration verwendet Nginx-`geo` und `map`. Große Listen werden 
 
 ## Berechtigungen
 
-Das Erstellen, Ändern, Löschen, Aktualisieren und Zuweisen einer Policy erfordert `settings:update` für `firewall-policies`. Damit kann eine URL-Quelle nicht von Benutzern mit ausschließlich Host-Rechten zur Abfrage interner Netze missbraucht werden.
+Das Erstellen, Ändern, Löschen, Aktualisieren und Zuweisen einer Policy erfordert `settings:update` für `firewall-policies`. Damit kann eine URL-Quelle nicht von Benutzern mit ausschließlich Host-Rechten zur Abfrage interner Netze missbraucht werden. Das gilt ebenfalls für die vollständige `firewall_policy`-Relation eines Proxy-Hosts: Nutzer mit ausschließlich Host-Rechten können keine CIDRs, Feed-URLs oder Feed-Status über eine Relationserweiterung abrufen. Unveränderte bzw. leere Policy-Werte in regulären Proxy-Host-Formularen bleiben für diese Nutzer speicherbar.
 
 ## Verwandte Seiten
 

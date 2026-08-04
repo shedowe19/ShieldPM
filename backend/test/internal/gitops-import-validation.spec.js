@@ -84,6 +84,7 @@ describe("Fix #65: YAML import field whitelist validation", () => {
 		expect(allowed.User).toBeDefined();
 		expect(allowed.Certificate).toBeDefined();
 		expect(allowed.AccessList).toBeDefined();
+		expect(allowed.FirewallPolicy).toBeDefined();
 		expect(allowed.ProxyHost).toBeDefined();
 		expect(allowed.RedirectionHost).toBeDefined();
 		expect(allowed.DeadHost).toBeDefined();
@@ -166,6 +167,35 @@ describe("Fix #65: YAML import field whitelist validation", () => {
 		expect(result.raw_key).toBeUndefined();
 		expect(result.raw_chain).toBeUndefined();
 		expect(result.domain_names).toEqual(["test.example.com"]);
+		expect(result.injected_field).toBeUndefined();
+	});
+
+	it("FirewallPolicy whitelist preserves declarative rules but excludes volatile feed state", () => {
+		const result = internalGitOps.sanitizeImportData("FirewallPolicy", {
+			id: 7,
+			name: "Public deny list",
+			enabled: true,
+			action: "deny",
+			geo_mode: "block",
+			geo_countries: ["GB"],
+			allow_cidrs: ["198.51.100.0/24"],
+			block_cidrs: ["203.0.113.0/24"],
+			feed_urls: ["https://feeds.example.test/cidrs"],
+			refresh_interval_hours: 24,
+			feed_status: { stale: true },
+			last_error: "upstream timed out",
+			last_updated_on: "2026-08-04T00:00:00.000Z",
+			injected_field: "removed",
+		});
+		expect(result).toMatchObject({
+			id: 7,
+			name: "Public deny list",
+			geo_countries: ["GB"],
+			feed_urls: ["https://feeds.example.test/cidrs"],
+		});
+		expect(result.feed_status).toBeUndefined();
+		expect(result.last_error).toBeUndefined();
+		expect(result.last_updated_on).toBeUndefined();
 		expect(result.injected_field).toBeUndefined();
 	});
 
