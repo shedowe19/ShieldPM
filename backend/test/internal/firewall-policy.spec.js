@@ -97,6 +97,9 @@ describe("host firewall policy helpers", () => {
 		expect(denyPage).toContain("GEOIP-LÄNDERSPERRE");
 		expect(denyPage).toContain("shieldpm_geoip_country_name_");
 		expect(denyPage).toContain("GEOIP COUNTRY RULE");
+		expect(denyPage).toContain("Warum wird diese Seite angezeigt?");
+		expect(denyPage).toContain("Was können Sie jetzt tun?");
+		expect(denyPage).toContain("nicht an die Anwendung weitergeleitet");
 		for (const language of ["bg", "de", "en", "es", "it", "ja", "ko", "nl", "pl", "ru", "sk", "vi", "zh"]) {
 			expect(denyPage).toContain(`${language} = {`);
 		}
