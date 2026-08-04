@@ -63,14 +63,16 @@ Die kompilierten Daten liegen unter `/data/nginx/firewall/`; die globale Nginx-M
 
 ## GitOps
 
-Bei aktivem GitOps werden Policy-Definitionen unter `firewall-policies/` sowie die `firewall_policy_id`-Zuordnung der Proxy-Hosts exportiert und beim Restore **vor** den Proxy-Hosts importiert. Jede importierte Policy durchläuft dieselbe Typ-, CIDR-, Länder-, Feed- und Aktionsvalidierung wie die API. Laufzeitdaten wie Feed-Status, Fehlertexte, Zeitstempel und die kompilierten CIDR-Dateien werden bewusst nicht versioniert. ShieldPM aktualisiert die jeweils konfigurierten Quellen vor dem Rendern der Proxy-Hosts mit begrenzter Parallelität, bewahrt dabei jedoch einen vorhandenen letzten gültigen Cache bis zum vollständigen Ersatz. Fehlt für eine neue oder geänderte Quelle während des Restores ein gültiger Cache, wird kein Nginx-Reload mit einer leeren Feed-Sperre durchgeführt; die Policy bleibt bis zur erfolgreichen Aktualisierung inaktiv. Policy-Updates, manuelle Abrufe und der Scheduler sind pro Policy serialisiert, damit ein älterer Abruf keine neuere Feed-Konfiguration zurückschreiben kann.
+Bei aktivem GitOps werden Policy-Definitionen unter `firewall-policies/` sowie die `firewall_policy_id`-Zuordnung der Proxy-Hosts exportiert und beim Restore **vor** den Proxy-Hosts importiert. Jede importierte Policy durchläuft dieselbe Typ-, CIDR-, Länder-, Feed- und Aktionsvalidierung wie die API. Laufzeitdaten wie Feed-Status, Fehlertexte, Zeitstempel und die kompilierten CIDR-Dateien werden bewusst nicht versioniert. ShieldPM aktualisiert die jeweils konfigurierten Quellen vor dem Rendern der Proxy-Hosts mit begrenzter Parallelität, bewahrt dabei jedoch einen vorhandenen letzten gültigen Cache bis zum vollständigen Ersatz. Fehlt für eine neue oder geänderte Quelle während des Restores ein gültiger Cache, wird kein Nginx-Reload mit einer leeren Feed-Sperre durchgeführt; die Policy bleibt bis zur erfolgreichen Aktualisierung inaktiv. Policy-Updates, manuelle Abrufe und der Scheduler sind pro Policy serialisiert, damit ein älterer Abruf keine neuere Feed-Konfiguration zurückschreiben kann. Proxy-Host-Erstellungen und -Änderungen sperren sowohl die bisherige als auch die gewünschte Policy während Persistenz und Nginx-Rendern. Damit kann das Löschen einer Policy keine parallel neu erzeugte Host-Konfiguration mit bereits entfernten Nginx-Maps hinterlassen.
 
 Feed-URLs sind deklarative Policy-Konfiguration und liegen damit im GitOps-Repository. ShieldPM akzeptiert keine URL-Credentials; trotzdem sollten keine Zugangs-Tokens als Query-Parameter in Feed-URLs verwendet werden. Das GitOps-Repository ist als vertrauliche Konfiguration zu behandeln.
 
 ## Architektur
 
 - `backend/models/firewall_policy.js` — Policy-Datenmodell
-- `backend/internal/firewall-policy.js` — Validierung, Feed-Abruf, atomare Dateien, Nginx-Maps, Scheduler und Reload
+- `backend/internal/firewall-policy.js` — Validierung, Feed-Abruf, atomare Dateien, Nginx-Maps, Scheduler, gemeinsame Policy-Locks und Reload
+- `backend/internal/proxy-host.js` — sperrt Policy-Zuordnungen während Host-Persistenz und Nginx-Rendern gegen paralleles Policy-Löschen
+- `backend/index.js` — initialisiert globale Firewall-Maps vor einer `REGENERATE_ALL`-Host-Neuerzeugung; Remote-Feed-Refresh bleibt asynchron
 - `backend/routes/nginx/firewall_policies.js` — `/api/nginx/firewall-policies`
 - `backend/templates/proxy_host.conf` und `_proxy_logic.conf` — Access-Phase für Anubis- und Standard-Proxy-Hosts
 - `rootfs/usr/local/bin/start.sh` — bindet `/data/nginx/firewall.conf` auf HTTP-Ebene ein

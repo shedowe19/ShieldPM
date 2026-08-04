@@ -209,6 +209,17 @@ const withPolicyLock = async (policyId, operation) => {
 	}
 };
 
+const withPolicyLocks = async (policyIds, operation) => {
+	const ids = unique(policyIds.map(Number).filter((policyId) => Number.isInteger(policyId) && policyId > 0)).sort(
+		(left, right) => left - right,
+	);
+	const acquire = async (index) =>
+		index === ids.length
+			? await operation()
+			: await withPolicyLock(ids[index], async () => await acquire(index + 1));
+	return await acquire(0);
+};
+
 const fetchFeed = async (rawUrl, state = {}) => {
 	const url = new URL(validateFeedUrl(rawUrl));
 	const hostname = normaliseUrlHostname(url.hostname);
@@ -851,6 +862,7 @@ export {
 	resolveFeedEndpoint,
 	validateFeedUrl,
 	withPolicyLock,
+	withPolicyLocks,
 	writeFirewallConfig,
 };
 export default internalFirewallPolicy;

@@ -39,8 +39,10 @@ async function appStart() {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
 		await analyticsService.init();
-		await setup();
+		// Populate global firewall maps before REGENERATE_ALL renders proxy hosts.
+		// Feed refresh remains asynchronous inside init(), so startup is not network-bound.
 		await internalFirewallPolicy.init();
+		await setup();
 		await getCompiledSchema();
 
 		if (!IP_RANGES_FETCH_ENABLED) {

@@ -8,6 +8,7 @@ import FirewallPolicy from "../models/firewall_policy.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
+import { withPolicyLocks } from "./firewall-policy.js";
 import internalGitDeploy from "./git-deploy.js";
 import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
@@ -82,6 +83,9 @@ const validateFirewallPolicyAssignment = async (access, value, currentValue = nu
 	return policyId;
 };
 
+const withFirewallPolicyAssignmentLock = async (currentPolicyId, requestedPolicyId, operation) =>
+	await withPolicyLocks([currentPolicyId, requestedPolicyId], operation);
+
 const graphContainsRelation = (expression, relationName) => {
 	if (expression.$relation === relationName) return true;
 	return expression.$childNames.some((childName) => graphContainsRelation(expression[childName], relationName));
@@ -137,103 +141,110 @@ const internalProxyHost = {
 		}
 
 		await access.can("proxy_hosts:create", thisData);
-		if (typeof thisData.firewall_policy_id !== "undefined") {
-			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(
-				access,
-				thisData.firewall_policy_id,
-				null,
-			);
-		}
-
-		// Get a list of the domain names and check each of them against existing records
-		const domain_name_check_promises = [];
-
-		thisData.domain_names.map((domain_name) => {
-			domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name));
-			return true;
-		});
-
-		const check_results = await Promise.all(domain_name_check_promises);
-		check_results.map((result) => {
-			if (result.is_taken) {
-				throw new errs.ValidationError(`${result.hostname} is already in use`);
+		const requestedFirewallPolicyId =
+			typeof thisData.firewall_policy_id === "undefined"
+				? null
+				: normaliseFirewallPolicyId(thisData.firewall_policy_id);
+		const createProxyHost = async () => {
+			if (typeof thisData.firewall_policy_id !== "undefined") {
+				thisData.firewall_policy_id = await validateFirewallPolicyAssignment(
+					access,
+					thisData.firewall_policy_id,
+					null,
+				);
 			}
-			return true;
-		});
 
-		// At this point the domains should have been checked
-		thisData.owner_user_id = access.token.getUserId(1);
-		thisData = internalHost.cleanSslHstsData(createCertificate, thisData);
+			// Get a list of the domain names and check each of them against existing records
+			const domain_name_check_promises = [];
 
-		// Fix for db field not having a default value
-		// for this optional field.
-		if (typeof thisData.advanced_config === "undefined") {
-			thisData.advanced_config = "";
-		}
+			thisData.domain_names.map((domain_name) => {
+				domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name));
+				return true;
+			});
 
-		// Encrypt terminal credentials if present
-		if (thisData.forward_scheme === "terminal") {
-			if (thisData.terminal_password) {
-				thisData.terminal_password = encrypt(thisData.terminal_password);
+			const check_results = await Promise.all(domain_name_check_promises);
+			check_results.map((result) => {
+				if (result.is_taken) {
+					throw new errs.ValidationError(`${result.hostname} is already in use`);
+				}
+				return true;
+			});
+
+			// At this point the domains should have been checked
+			thisData.owner_user_id = access.token.getUserId(1);
+			thisData = internalHost.cleanSslHstsData(createCertificate, thisData);
+
+			// Fix for db field not having a default value
+			// for this optional field.
+			if (typeof thisData.advanced_config === "undefined") {
+				thisData.advanced_config = "";
 			}
-			if (thisData.terminal_private_key) {
-				thisData.terminal_private_key = encrypt(thisData.terminal_private_key);
+
+			// Encrypt terminal credentials if present
+			if (thisData.forward_scheme === "terminal") {
+				if (thisData.terminal_password) {
+					thisData.terminal_password = encrypt(thisData.terminal_password);
+				}
+				if (thisData.terminal_private_key) {
+					thisData.terminal_private_key = encrypt(thisData.terminal_private_key);
+				}
 			}
-		}
 
-		// Transform domain_names into host_domains relation objects for insertGraph
-		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
-			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
-		}
+			// Transform domain_names into host_domains relation objects for insertGraph
+			if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
+				thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
+			}
 
-		let row = await proxyHostModel.query().insertGraphAndFetch(/** @type {any} */ (thisData));
-		row = utils.omitRow(omissions())(row);
+			let row = await proxyHostModel.query().insertGraphAndFetch(/** @type {any} */ (thisData));
+			row = utils.omitRow(omissions())(row);
 
-		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, thisData);
-			// update host with cert id
-			await internalProxyHost.update(
-				access,
-				{
-					id: row.id,
-					certificate_id: cert.id,
-				},
-				{ skip_configure: true },
-			);
-		}
+			if (createCertificate) {
+				const cert = await internalCertificate.createQuickCertificate(access, thisData);
+				// update host with cert id
+				await internalProxyHost.update(
+					access,
+					{
+						id: row.id,
+						certificate_id: cert.id,
+					},
+					{ skip_configure: true, skip_firewall_policy_lock: true },
+				);
+			}
 
-		// re-fetch with cert
-		row = await internalProxyHost.get(access, {
-			id: row.id,
-			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
-		});
+			// re-fetch with cert
+			row = await internalProxyHost.get(access, {
+				id: row.id,
+				expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
+			});
 
-		// Configure nginx
-		await internalNginx.configure(proxyHostModel, "proxy_host", row);
+			// Configure nginx
+			await internalNginx.configure(proxyHostModel, "proxy_host", row);
 
-		// Audit log
-		thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
+			// Audit log
+			thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
 
-		// Add to audit log
-		await internalAuditLog.add(access, {
-			action: "created",
-			object_type: "proxy-host",
-			object_id: row.id,
-			meta: thisData,
-		});
+			// Add to audit log
+			await internalAuditLog.add(access, {
+				action: "created",
+				object_type: "proxy-host",
+				object_id: row.id,
+				meta: thisData,
+			});
 
-		// Trigger GitOps auto-push
-		internalGitOps.triggerAutoPush("proxy-host");
+			// Trigger GitOps auto-push
+			internalGitOps.triggerAutoPush("proxy-host");
 
-		// Start Git Deploy polling if enabled
-		if (row.git_sync_enabled && row.git_repo_url) {
-			internalGitDeploy.startPollingForHost(row);
-		}
+			// Start Git Deploy polling if enabled
+			if (row.git_sync_enabled && row.git_repo_url) {
+				internalGitDeploy.startPollingForHost(row);
+			}
 
-		// Start OAuth2 Proxy if needed
-		await _ensureOAuth2Proxy(row.access_list_id);
+			// Start OAuth2 Proxy if needed
+			await _ensureOAuth2Proxy(row.access_list_id);
 
-		return row;
+			return row;
+		};
+		return await withFirewallPolicyAssignmentLock(null, requestedFirewallPolicyId, createProxyHost);
 	},
 
 	/**
@@ -294,114 +305,129 @@ const internalProxyHost = {
 			});
 		}
 
-		let row = await internalProxyHost.get(access, { id: thisData.id });
-		if (typeof thisData.firewall_policy_id !== "undefined") {
-			thisData.firewall_policy_id = await validateFirewallPolicyAssignment(
-				access,
-				thisData.firewall_policy_id,
-				row.firewall_policy_id,
-			);
-		}
-		const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
+		const initialRow = await internalProxyHost.get(access, { id: thisData.id });
+		const currentFirewallPolicyId = initialRow.firewall_policy_id;
+		const requestedFirewallPolicyId =
+			typeof thisData.firewall_policy_id === "undefined"
+				? currentFirewallPolicyId
+				: normaliseFirewallPolicyId(thisData.firewall_policy_id);
+		const updateProxyHost = async () => {
+			let row = await internalProxyHost.get(access, { id: thisData.id });
+			if (typeof thisData.firewall_policy_id !== "undefined") {
+				thisData.firewall_policy_id = await validateFirewallPolicyAssignment(
+					access,
+					thisData.firewall_policy_id,
+					row.firewall_policy_id,
+				);
+			}
+			const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
 
-		if (row.id !== thisData.id) {
-			// Sanity check that something crazy hasn't happened
-			throw new errs.InternalValidationError(
-				`Proxy Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
-			);
-		}
+			if (row.id !== thisData.id) {
+				// Sanity check that something crazy hasn't happened
+				throw new errs.InternalValidationError(
+					`Proxy Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
+				);
+			}
 
-		if (create_certificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, {
-				domain_names: thisData.domain_names || row.domain_names,
-				meta: _.assign({}, row.meta, thisData.meta),
+			if (create_certificate) {
+				const cert = await internalCertificate.createQuickCertificate(access, {
+					domain_names: thisData.domain_names || row.domain_names,
+					meta: _.assign({}, row.meta, thisData.meta),
+				});
+				// update host with cert id
+				thisData.certificate_id = cert.id;
+			}
+
+			// Add domain_names to the data in case it isn't there, so that the audit log renders correctly. The order is important here.
+			thisData = _.assign(
+				{},
+				{
+					domain_names: row.domain_names,
+				},
+				data,
+			);
+
+			thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
+
+			if (data.git_credentials) {
+				thisData.git_credentials = encrypt(data.git_credentials);
+			} else if (typeof data.git_credentials !== "undefined" && data.git_credentials === "") {
+				// Empty string means preserve existing credentials (do not update)
+				delete thisData.git_credentials;
+			}
+
+			// Encrypt terminal credentials if present (on update)
+			if (data.terminal_password) {
+				thisData.terminal_password = encrypt(data.terminal_password);
+			}
+			if (data.terminal_private_key) {
+				thisData.terminal_private_key = encrypt(data.terminal_private_key);
+			}
+
+			// Let's double check `backend/internal/proxy-host.js` old content.
+			// `.patch(thisData).then(utils.omitRow(omissions())).then((saved_row) => { ... })`
+			// If `saved_row` was `{}`, then `return saved_row` at the end would return empty object.
+
+			// Actually, I should use `patchAndFetchById` if I want the row, or just `patch` and then `get`.
+			// But since we are updating by ID, `patchAndFetchById` is best.
+			// But wait, the original code used `proxyHostModel.query().where({ id: thisData.id }).patch(thisData)`.
+			// This is definitely returning a count in SQLite/MySQL.
+
+			// Let's assume I should fetch the row again or return `row` with merged data.
+			// But for safety, I will use `patchAndFetchById`.
+
+			// Transform domain_names into host_domains relation objects for upsertGraph
+			if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
+				thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
+			}
+
+			const new_saved_row = /** @type {any} */ (
+				await proxyHostModel.query().upsertGraphAndFetch(/** @type {any} */ (thisData))
+			);
+			const _saved_row = utils.omitRow(omissions())(new_saved_row);
+
+			// Add to audit log
+			await internalAuditLog.add(access, {
+				action: "updated",
+				object_type: "proxy-host",
+				object_id: row.id,
+				meta: thisData,
 			});
-			// update host with cert id
-			thisData.certificate_id = cert.id;
-		}
 
-		// Add domain_names to the data in case it isn't there, so that the audit log renders correctly. The order is important here.
-		thisData = _.assign(
-			{},
-			{
-				domain_names: row.domain_names,
-			},
-			data,
-		);
+			row = await internalProxyHost.get(access, {
+				id: thisData.id,
+				expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
+			});
 
-		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
+			if (!options.skip_configure) {
+				// Configure nginx
+				const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
+				row.meta = new_meta;
+			}
 
-		if (data.git_credentials) {
-			thisData.git_credentials = encrypt(data.git_credentials);
-		} else if (typeof data.git_credentials !== "undefined" && data.git_credentials === "") {
-			// Empty string means preserve existing credentials (do not update)
-			delete thisData.git_credentials;
-		}
+			// Trigger GitOps auto-push
+			internalGitOps.triggerAutoPush("proxy-host");
 
-		// Encrypt terminal credentials if present (on update)
-		if (data.terminal_password) {
-			thisData.terminal_password = encrypt(data.terminal_password);
-		}
-		if (data.terminal_private_key) {
-			thisData.terminal_private_key = encrypt(data.terminal_private_key);
-		}
+			// Restart Git Deploy polling
+			internalGitDeploy.startPollingForHost(row);
 
-		// Let's double check `backend/internal/proxy-host.js` old content.
-		// `.patch(thisData).then(utils.omitRow(omissions())).then((saved_row) => { ... })`
-		// If `saved_row` was `{}`, then `return saved_row` at the end would return empty object.
+			// Handle OAuth2 Proxy lifecycle on access_list_id change
+			if (row.access_list_id !== oldAccessListId) {
+				// Start new OAuth2 Proxy if needed
+				await _ensureOAuth2Proxy(row.access_list_id);
+				// Stop old one if no longer used
+				await _cleanupOAuth2Proxy(oldAccessListId);
+			}
 
-		// Actually, I should use `patchAndFetchById` if I want the row, or just `patch` and then `get`.
-		// But since we are updating by ID, `patchAndFetchById` is best.
-		// But wait, the original code used `proxyHostModel.query().where({ id: thisData.id }).patch(thisData)`.
-		// This is definitely returning a count in SQLite/MySQL.
-
-		// Let's assume I should fetch the row again or return `row` with merged data.
-		// But for safety, I will use `patchAndFetchById`.
-
-		// Transform domain_names into host_domains relation objects for upsertGraph
-		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
-			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
-		}
-
-		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().upsertGraphAndFetch(/** @type {any} */ (thisData))
-		);
-		const _saved_row = utils.omitRow(omissions())(new_saved_row);
-
-		// Add to audit log
-		await internalAuditLog.add(access, {
-			action: "updated",
-			object_type: "proxy-host",
-			object_id: row.id,
-			meta: thisData,
-		});
-
-		row = await internalProxyHost.get(access, {
-			id: thisData.id,
-			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
-		});
-
-		if (!options.skip_configure) {
-			// Configure nginx
-			const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
-			row.meta = new_meta;
-		}
-
-		// Trigger GitOps auto-push
-		internalGitOps.triggerAutoPush("proxy-host");
-
-		// Restart Git Deploy polling
-		internalGitDeploy.startPollingForHost(row);
-
-		// Handle OAuth2 Proxy lifecycle on access_list_id change
-		if (row.access_list_id !== oldAccessListId) {
-			// Start new OAuth2 Proxy if needed
-			await _ensureOAuth2Proxy(row.access_list_id);
-			// Stop old one if no longer used
-			await _cleanupOAuth2Proxy(oldAccessListId);
-		}
-
-		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
+			return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
+		};
+		return options.skip_firewall_policy_lock
+			? await updateProxyHost()
+			: await withFirewallPolicyAssignmentLock(
+					currentFirewallPolicyId,
+					requestedFirewallPolicyId,
+					updateProxyHost,
+				);
 	},
 
 	/**
@@ -694,5 +720,11 @@ const internalProxyHost = {
 	},
 };
 
-export { normaliseFirewallPolicyId, proxyHostAllowedGraph, requestsFirewallPolicy, validateFirewallPolicyAssignment };
+export {
+	normaliseFirewallPolicyId,
+	proxyHostAllowedGraph,
+	requestsFirewallPolicy,
+	validateFirewallPolicyAssignment,
+	withFirewallPolicyAssignmentLock,
+};
 export default internalProxyHost;

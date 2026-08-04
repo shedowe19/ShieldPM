@@ -5,6 +5,7 @@ import http from "isomorphic-git/http/node";
 import * as yaml from "js-yaml";
 import _ from "lodash";
 import { isDemoMode } from "../lib/config.js";
+import { resetPostgresSequence } from "../lib/db-sequence.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
@@ -1122,6 +1123,9 @@ const internalGitOps = {
 				collect: true,
 				normalise: (data) => normaliseImportedFirewallPolicy(data, mergePolicyPayload),
 			});
+			// GitOps preserves policy IDs so host references stay declarative. PostgreSQL
+			// must advance its serial sequence after explicit-ID inserts to keep later API creates valid.
+			await resetPostgresSequence(FirewallPolicy);
 
 			// 5. Import Hosts & Streams
 			await importModel(ProxyHost, "proxy-hosts", "proxy_host");

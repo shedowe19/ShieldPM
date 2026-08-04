@@ -13,6 +13,15 @@ describe("analytics startup order", () => {
 		expect(appSource).not.toMatch(/analyticsService\.init\(\)/);
 	});
 
+	it("initializes firewall maps before regenerating proxy hosts", () => {
+		const startupSource = readBackendSource("index.js");
+		const firewallInitIndex = startupSource.indexOf("await internalFirewallPolicy.init();");
+		const setupIndex = startupSource.indexOf("await setup();");
+
+		expect(firewallInitIndex).toBeGreaterThanOrEqual(0);
+		expect(setupIndex).toBeGreaterThan(firewallInitIndex);
+	});
+
 	for (const startupFile of startupFiles) {
 		it(`starts analytics after database migrations in ${startupFile}`, () => {
 			const startupSource = readBackendSource(startupFile);

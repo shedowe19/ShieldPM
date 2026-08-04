@@ -17,6 +17,7 @@ import {
 	resolveFeedEndpoint,
 	validateFeedUrl,
 	withPolicyLock,
+	withPolicyLocks,
 } from "../../internal/firewall-policy.js";
 import utils from "../../lib/utils.js";
 
@@ -237,6 +238,21 @@ describe("host firewall policy helpers", () => {
 					}),
 			),
 		);
+		expect(maximum).toBe(1);
+	});
+
+	it("serializes overlapping multi-policy operations in a stable ID order", async () => {
+		let active = 0;
+		let maximum = 0;
+		const work = async () => {
+			active += 1;
+			maximum = Math.max(maximum, active);
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			active -= 1;
+		};
+
+		await Promise.all([withPolicyLocks([9, 7, 9], work), withPolicyLock(7, work)]);
+
 		expect(maximum).toBe(1);
 	});
 

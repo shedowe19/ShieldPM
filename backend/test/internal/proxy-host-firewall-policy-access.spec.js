@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	findById: vi.fn(),
+	withPolicyLocks: vi.fn(async (_ids, operation) => await operation()),
 }));
 
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
+vi.mock("../../internal/firewall-policy.js", () => ({ withPolicyLocks: mocks.withPolicyLocks }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/host.js", () => ({ default: {} }));
@@ -26,6 +28,7 @@ import {
 	proxyHostAllowedGraph,
 	requestsFirewallPolicy,
 	validateFirewallPolicyAssignment,
+	withFirewallPolicyAssignmentLock,
 } from "../../internal/proxy-host.js";
 
 describe("proxy host firewall policy permissions", () => {
@@ -44,6 +47,13 @@ describe("proxy host firewall policy permissions", () => {
 		expect(await validateFirewallPolicyAssignment(access, 9, null)).toBe(9);
 		expect(access.can).toHaveBeenCalledWith("settings:update", "firewall-policies");
 		expect(mocks.findById).toHaveBeenCalledWith(9);
+	});
+
+	it("serializes a host's current and requested policy against policy deletion", async () => {
+		const operation = vi.fn().mockResolvedValue("updated");
+
+		expect(await withFirewallPolicyAssignmentLock(7, 9, operation)).toBe("updated");
+		expect(mocks.withPolicyLocks).toHaveBeenLastCalledWith([7, 9], operation);
 	});
 
 	it("parses every policy expansion form before applying the dedicated permission gate", () => {
