@@ -51,13 +51,18 @@ describe("host firewall policy helpers", () => {
 			],
 			false,
 		);
+		expect(config).toContain("variables_hash_max_size 2048;");
+		expect(config).toContain("variables_hash_bucket_size 128;");
 		expect(config).toContain('map "" $shieldpm_geoip_country_code');
 		expect(config).toContain('    default "";');
 		const geoConfig = renderNginxConfig([{ id: 8, allow_cidrs: [], block_cidrs: [], geo_mode: "block", geo_countries: ["GB"] }], true);
 		expect(geoConfig).toContain("    default $geoip2_country_code;");
-		expect(geoConfig).toContain("map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_de");
+		for (const language of ["bg", "de", "en", "es", "it", "ja", "ko", "nl", "pl", "ru", "sk", "vi", "zh"]) {
+			expect(geoConfig).toContain(`map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_${language}`);
+		}
 		expect(geoConfig).toContain('GB "Vereinigtes Königreich";');
 		expect(geoConfig).toContain('GB "United Kingdom";');
+		expect(geoConfig).toContain('GB "英国";');
 		expect(config).toContain("geo $shieldpm_firewall_7_allow");
 		expect(config).toContain("198.51.100.0/24 1;");
 		expect(config).toContain("include /data/nginx/firewall/policy-7.cidrs;");
@@ -90,8 +95,11 @@ describe("host firewall policy helpers", () => {
 		expect(rendered).toContain("content_by_lua_file /usr/local/share/shieldpm/firewall_blocked_page.lua;");
 		const denyPage = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../../../rootfs/usr/local/share/shieldpm/firewall_blocked_page.lua", import.meta.url), "utf8"));
 		expect(denyPage).toContain("GEOIP-LÄNDERSPERRE");
-		expect(denyPage).toContain("shieldpm_geoip_country_name_de");
+		expect(denyPage).toContain("shieldpm_geoip_country_name_");
 		expect(denyPage).toContain("GEOIP COUNTRY RULE");
+		for (const language of ["bg", "de", "en", "es", "it", "ja", "ko", "nl", "pl", "ru", "sk", "vi", "zh"]) {
+			expect(denyPage).toContain(`${language} = {`);
+		}
 	});
 
 	it("keeps drop policies connectionless and omits the explanatory page", async () => {

@@ -51,6 +51,24 @@ YE YT
 ZA ZM ZW
 `.trim().split(/\s+/);
 
+// Keep the public deny page in lockstep with the locales exposed by the ShieldPM UI.
+// The map is also used to generate locale-specific MaxMind country labels in Nginx.
+const BLOCK_PAGE_LOCALES = {
+	bg: "bg-BG",
+	de: "de-DE",
+	en: "en-US",
+	es: "es-ES",
+	it: "it-IT",
+	ja: "ja-JP",
+	ko: "ko-KR",
+	nl: "nl-NL",
+	pl: "pl-PL",
+	ru: "ru-RU",
+	sk: "sk-SK",
+	vi: "vi-VN",
+	zh: "zh-CN",
+};
+
 let refreshTimer;
 
 const unique = (values) => [...new Set(values)];
@@ -236,21 +254,23 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 	const lines = [
 		"# Managed by ShieldPM. Do not edit manually.",
 		"# Per-policy CIDR data lives in /data/nginx/firewall/.",
+		"# Localised deny-page country labels add Nginx variables for every ShieldPM UI locale.",
+		"variables_hash_max_size 2048;",
+		"variables_hash_bucket_size 128;",
 		geoIpAvailable ? "map $geoip2_country_code $shieldpm_geoip_country_code {" : "map \"\" $shieldpm_geoip_country_code {",
 		geoIpAvailable ? "    default $geoip2_country_code;" : '    default "";',
 		"}",
 		"",
-		"map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_de {",
-		'    default "";',
-		...(geoIpAvailable ? countryNameMapEntries("de") : []),
-		"}",
-		"",
-		"map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_en {",
-		'    default "";',
-		...(geoIpAvailable ? countryNameMapEntries("en") : []),
-		"}",
-		"",
 	];
+	for (const [language, locale] of Object.entries(BLOCK_PAGE_LOCALES)) {
+		lines.push(
+			`map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_${language} {`,
+			'    default "";',
+			...(geoIpAvailable ? countryNameMapEntries(locale) : []),
+			"}",
+			"",
+		);
+	}
 	for (const policy of policies) {
 		const id = Number(policy.id);
 		const prefix = `$shieldpm_firewall_${id}`;
