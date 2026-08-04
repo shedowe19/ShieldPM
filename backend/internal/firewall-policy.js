@@ -6,6 +6,7 @@ import path from "node:path";
 import { URL } from "node:url";
 import ipaddr from "ipaddr.js";
 import errs from "../lib/error.js";
+import { withFirewallConfigLock } from "../lib/firewall-config-lock.js";
 import { global as logger } from "../logger.js";
 import FirewallPolicy from "../models/firewall_policy.js";
 import ProxyHost from "../models/proxy_host.js";
@@ -433,7 +434,7 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 	return `${lines.join("\n")}\n`;
 };
 
-const writeFirewallConfig = async () => {
+const writeFirewallConfigUnlocked = async () => {
 	const policies = await FirewallPolicy.query().orderBy("id", "ASC");
 	const renderablePolicies = await Promise.all(
 		policies.map(async (policy) => await withCurrentFeedCacheState(policy)),
@@ -441,6 +442,15 @@ const writeFirewallConfig = async () => {
 	for (const policy of policies) await ensurePolicyFiles(policy);
 	await atomicWrite(FIREWALL_CONFIG_PATH, renderNginxConfig(renderablePolicies));
 	return policies;
+};
+
+// All policies share one firewall.conf. Holding this mutex across the database
+// snapshot and atomic replace prevents an older render from replacing a newer one.
+const writeFirewallConfig = async () => await withFirewallConfigLock(writeFirewallConfigUnlocked);
+
+const removePolicyCaches = async (policyId) => {
+	await fs.rm(path.join(FIREWALL_DIR, String(policyId)), { recursive: true, force: true });
+	await fs.rm(compiledCidrFile(policyId), { force: true });
 };
 
 const mergePolicyPayload = (input, existing = null) => {
@@ -527,7 +537,9 @@ const getLinkedHosts = async (policyId) =>
 
 const regenerateLinkedHosts = async (policyId) => {
 	const hosts = await getLinkedHosts(policyId);
-	if (hosts.length) await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
+	if (hosts.length) {
+		await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts, { skip_firewall_policy_lock: true });
+	}
 };
 
 const renderCidrCache = (cidrs) => `${[...cidrs].map((cidr) => `${cidr} 1;`).join("\n")}\n`;
@@ -784,8 +796,7 @@ const internalFirewallPolicy = {
 			}
 			if (hostIds.length) await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: null });
 			await FirewallPolicy.query().deleteById(id);
-			await fs.rm(path.join(FIREWALL_DIR, String(id)), { recursive: true, force: true });
-			await fs.rm(compiledCidrFile(id), { force: true });
+			await removePolicyCaches(id);
 			await writeFirewallConfig();
 			await internalNginx.reload();
 			await internalAuditLog.add(access, {
@@ -858,9 +869,11 @@ export {
 	readFeedCache,
 	refreshImportedPolicies,
 	refreshPolicy,
+	removePolicyCaches,
 	renderNginxConfig,
 	resolveFeedEndpoint,
 	validateFeedUrl,
+	withFirewallConfigLock,
 	withPolicyLock,
 	withPolicyLocks,
 	writeFirewallConfig,

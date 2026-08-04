@@ -286,8 +286,57 @@ describe("Fix #65: YAML import field whitelist validation", () => {
 			enabled: true,
 			block_cidrs: ["203.0.113.0/24"],
 		});
+		const missingId = () => internalGitOps.normaliseImportedFirewallPolicy({ name: "No ID" }, mergePolicyPayload);
+		expect(missingId).toThrow("positive integer");
 		expect(() => internalGitOps.normaliseImportedFirewallPolicy({ id: "7" }, mergePolicyPayload)).toThrow(
 			"positive integer",
+		);
+	});
+
+	it("requires matching declarations before a pre-existing policy ID can be reused", () => {
+		const mergePolicyPayload = (data) => ({
+			action: "deny",
+			allow_cidrs: [],
+			block_cidrs: [],
+			enabled: true,
+			feed_urls: [],
+			geo_countries: [],
+			geo_mode: "off",
+			name: data.name,
+			refresh_interval_hours: 24,
+			...data,
+		});
+		const imported = { id: 7, name: "Public deny list" };
+		const matching = { ...imported, feed_status: { transient: true }, last_error: "ignored" };
+
+		expect(internalGitOps.firewallPolicyDeclarationsMatch(matching, imported, mergePolicyPayload)).toBe(true);
+		expect(
+			internalGitOps.firewallPolicyDeclarationsMatch(
+				{ ...matching, action: "drop" },
+				imported,
+				mergePolicyPayload,
+			),
+		).toBe(false);
+	});
+
+	it("rejects host policy references without a matching policy declaration", () => {
+		expect(() =>
+			internalGitOps.validateImportedProxyHostFirewallPolicyReference({ firewall_policy_id: 7 }, new Set([7])),
+		).not.toThrow();
+		expect(() =>
+			internalGitOps.validateImportedProxyHostFirewallPolicyReference({ firewall_policy_id: 7 }, new Set()),
+		).toThrow("no matching firewall policy declaration");
+		expect(() =>
+			internalGitOps.validateImportedProxyHostFirewallPolicyReference({ firewall_policy_id: "7" }, new Set([7])),
+		).toThrow("positive integer");
+	});
+
+	it("defers firewall full-sync cleanup until policy and dependent host imports are clean", () => {
+		const state = { hadFileError: false };
+		expect(internalGitOps.canCleanupFirewallPolicies({ overwrite: true }, state, false)).toBe(true);
+		expect(internalGitOps.canCleanupFirewallPolicies({ overwrite: true }, state, true)).toBe(false);
+		expect(internalGitOps.canCleanupFirewallPolicies({ overwrite: true }, { hadFileError: true }, false)).toBe(
+			false,
 		);
 	});
 });

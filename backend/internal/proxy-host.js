@@ -218,7 +218,7 @@ const internalProxyHost = {
 			});
 
 			// Configure nginx
-			await internalNginx.configure(proxyHostModel, "proxy_host", row);
+			await internalNginx.configure(proxyHostModel, "proxy_host", row, { skip_firewall_policy_lock: true });
 
 			// Audit log
 			thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
@@ -401,7 +401,9 @@ const internalProxyHost = {
 
 			if (!options.skip_configure) {
 				// Configure nginx
-				const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
+				const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row, {
+					skip_firewall_policy_lock: true,
+				});
 				row.meta = new_meta;
 			}
 

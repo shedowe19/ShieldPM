@@ -4,6 +4,7 @@ import db from "../db.js";
 import { global as logger } from "../logger.js";
 import { migrateUp } from "../migrate.js"; // Adjust path as needed, index.js imports it from ./migrate.js
 import { isSqlite } from "./config.js";
+import { resetPostgresSequence } from "./db-sequence.js";
 
 const TABLES = [
 	"user",
@@ -20,6 +21,9 @@ const TABLES = [
 	"stream",
 	"audit_log",
 ];
+
+const resetCopiedFirewallPolicySequence = async () =>
+	await resetPostgresSequence({ knex: db, tableName: "firewall_policy" });
 
 const migrateFromSqliteToNewDb = async () => {
 	// 1. Check if we are NOT using sqlite
@@ -107,6 +111,10 @@ const migrateFromSqliteToNewDb = async () => {
 			}
 		}
 
+		// Explicit IDs copied from SQLite do not advance PostgreSQL serial sequences.
+		// firewall_policy is referenced by proxy_host and is created after this migration.
+		await resetCopiedFirewallPolicySequence();
+
 		// Re-enable Foreign Key checks
 		if (["mysql", "mysql2"].includes(client)) {
 			await db().raw("SET FOREIGN_KEY_CHECKS = 1;");
@@ -129,5 +137,5 @@ const migrateFromSqliteToNewDb = async () => {
 	}
 };
 
-export { TABLES };
+export { resetCopiedFirewallPolicySequence, TABLES };
 export default migrateFromSqliteToNewDb;

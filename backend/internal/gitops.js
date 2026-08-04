@@ -205,11 +205,36 @@ const prepareImportData = (data, options, importOptions, ownerUserId) => {
 // its full value validation aligned with the API before it reaches Nginx rendering.
 const normaliseImportedFirewallPolicy = (data, mergePolicyPayload) => {
 	const { id, ...policyData } = data;
-	if (typeof id !== "undefined" && (!Number.isInteger(id) || id < 1)) {
+	if (!Number.isInteger(id) || id < 1) {
 		throw new errs.ValidationError("Firewall policy id must be a positive integer.");
 	}
-	return { ...(typeof id === "undefined" ? {} : { id }), ...mergePolicyPayload(policyData) };
+	return { id, ...mergePolicyPayload(policyData) };
 };
+
+const firewallPolicyDeclaration = (data, mergePolicyPayload) =>
+	_.omit(normaliseImportedFirewallPolicy(sanitizeImportData("FirewallPolicy", data), mergePolicyPayload), "id");
+
+const firewallPolicyDeclarationsMatch = (existing, imported, mergePolicyPayload) =>
+	_.isEqual(
+		firewallPolicyDeclaration(existing, mergePolicyPayload),
+		firewallPolicyDeclaration(imported, mergePolicyPayload),
+	);
+
+const validateImportedProxyHostFirewallPolicyReference = (data, declaredPolicyIds) => {
+	const policyId = data.firewall_policy_id;
+	if (typeof policyId === "undefined" || policyId === null) return;
+	if (!Number.isInteger(policyId) || policyId < 1) {
+		throw new errs.ValidationError("Proxy host firewall_policy_id must be a positive integer or null.");
+	}
+	if (!declaredPolicyIds.has(policyId)) {
+		throw new errs.ValidationError(
+			`Proxy host firewall_policy_id ${policyId} has no matching firewall policy declaration.`,
+		);
+	}
+};
+
+const canCleanupFirewallPolicies = (options, importState, hasImportErrors) =>
+	canFullSyncCleanup(options, importState.hadFileError) && !hasImportErrors;
 
 /**
  * @typedef {Object} GitOpsConfig
@@ -1011,13 +1036,18 @@ const internalGitOps = {
 									return;
 								}
 								if (importOptions.normalise) itemData = importOptions.normalise(itemData);
+								if (importOptions.validate) await importOptions.validate(itemData);
 
 								const existingId = itemData.id;
 
 								if (existingId) {
 									const existing = await modelClass.query().findById(existingId);
 									if (existing && !options.overwrite) {
+										const resolvedRow = importOptions.onExistingNoOverwrite
+											? await importOptions.onExistingNoOverwrite(existing, itemData)
+											: existing;
 										importedIds.push(existingId);
+										if (importOptions.collect) importedRows.push(resolvedRow || existing);
 										skipped++;
 										return;
 									}
@@ -1070,7 +1100,7 @@ const internalGitOps = {
 			}
 
 			// FULL SYNC: Delete items not in importedIds only after every present file was processed safely.
-			if (canFullSyncCleanup(options, hadFileError)) {
+			if (canFullSyncCleanup(options, hadFileError) && !importOptions.skipFullSyncCleanup) {
 				const query = modelClass.query().whereNotIn("id", importedIds);
 
 				try {
@@ -1100,7 +1130,7 @@ const internalGitOps = {
 					`GitOps Full Sync: skipping cleanup for ${dirName} because at least one file failed to import.`,
 				);
 			}
-			return importedRows;
+			return importOptions.collectState ? { hadFileError, ids: importedIds, rows: importedRows } : importedRows;
 		};
 
 		try {
@@ -1116,19 +1146,42 @@ const internalGitOps = {
 			// 4. Import policies before hosts so firewall_policy_id foreign keys remain valid.
 			// The dynamic import avoids a startup-time GitOps <-> firewall-policy module cycle.
 			const { mergePolicyPayload } = await import("./firewall-policy.js");
-			const importedFirewallPolicies = await importModel(FirewallPolicy, "firewall-policies", null, null, {
+			const declaredFirewallPolicyIds = new Set();
+			const firewallPolicyImport = await importModel(FirewallPolicy, "firewall-policies", null, null, {
 				supportsOwner: false,
 				supportsSoftDelete: false,
 				preserveIdOnInsert: true,
 				collect: true,
-				normalise: (data) => normaliseImportedFirewallPolicy(data, mergePolicyPayload),
+				collectState: true,
+				skipFullSyncCleanup: true,
+				normalise: (data) => {
+					const policy = normaliseImportedFirewallPolicy(data, mergePolicyPayload);
+					if (declaredFirewallPolicyIds.has(policy.id)) {
+						throw new errs.ValidationError(`Firewall policy id ${policy.id} is declared more than once.`);
+					}
+					declaredFirewallPolicyIds.add(policy.id);
+					return policy;
+				},
+				onExistingNoOverwrite: (existing, imported) => {
+					if (!firewallPolicyDeclarationsMatch(existing, imported, mergePolicyPayload)) {
+						throw new errs.ValidationError(
+							`Firewall policy id ${imported.id} conflicts with a different local policy.`,
+						);
+					}
+					return existing;
+				},
 			});
+			const importedFirewallPolicies = firewallPolicyImport.rows;
+			const resolvedFirewallPolicyIds = new Set(firewallPolicyImport.ids);
 			// GitOps preserves policy IDs so host references stay declarative. PostgreSQL
 			// must advance its serial sequence after explicit-ID inserts to keep later API creates valid.
 			await resetPostgresSequence(FirewallPolicy);
 
-			// 5. Import Hosts & Streams
-			await importModel(ProxyHost, "proxy-hosts", "proxy_host");
+			// 5. Import Hosts & Streams. A policy assignment is accepted only when the
+			// same GitOps revision declared a matching policy with that stable ID.
+			await importModel(ProxyHost, "proxy-hosts", "proxy_host", null, {
+				validate: (data) => validateImportedProxyHostFirewallPolicyReference(data, resolvedFirewallPolicyIds),
+			});
 			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
 			await importModel(DeadHost, "dead-hosts", "dead_host");
 			await importModel(Stream, "streams", "stream");
@@ -1339,7 +1392,11 @@ const internalGitOps = {
 			}
 
 			// Rebuild volatile feed caches before policy maps and proxy-host configs are rendered.
-			const { refreshImportedPolicies, writeFirewallConfig } = await import("./firewall-policy.js");
+			// Keep stale full-sync policies in the transitional map until every active proxy
+			// host has been regenerated without them; otherwise Nginx would see undefined maps.
+			const { refreshImportedPolicies, removePolicyCaches, withPolicyLocks, writeFirewallConfig } = await import(
+				"./firewall-policy.js"
+			);
 			await refreshImportedPolicies(importedFirewallPolicies);
 			await writeFirewallConfig();
 
@@ -1360,6 +1417,38 @@ const internalGitOps = {
 				await DeadHost.query().where("is_deleted", 0),
 			);
 			await internalNginx.bulkGenerateConfigs(Stream, "stream", await Stream.query().where("is_deleted", 0));
+
+			if (canCleanupFirewallPolicies(options, firewallPolicyImport, errors.length > 0)) {
+				const stalePolicies = await FirewallPolicy.query().whereNotIn("id", firewallPolicyImport.ids);
+				const stalePolicyIds = stalePolicies.map((policy) => policy.id);
+				if (stalePolicyIds.length) {
+					await withPolicyLocks(stalePolicyIds, async () => {
+						const currentStalePolicies = await FirewallPolicy.query()
+							.whereIn("id", stalePolicyIds)
+							.whereNotIn("id", firewallPolicyImport.ids);
+						const currentStalePolicyIds = currentStalePolicies.map((policy) => policy.id);
+						if (!currentStalePolicyIds.length) return;
+						const linkedHosts = await ProxyHost.query()
+							.where("is_deleted", 0)
+							.whereIn("firewall_policy_id", currentStalePolicyIds);
+						if (linkedHosts.length) {
+							const message =
+								"GitOps Full Sync refused to remove firewall policies still assigned to active proxy hosts.";
+							errors.push(message);
+							logger.warn(message);
+							return;
+						}
+						await FirewallPolicy.query().whereIn("id", currentStalePolicyIds).delete();
+						await Promise.all(currentStalePolicyIds.map(async (id) => await removePolicyCaches(id)));
+						deleted += currentStalePolicyIds.length;
+						await writeFirewallConfig();
+					});
+				}
+			} else if (options.overwrite) {
+				logger.warn(
+					"GitOps Full Sync: retaining firewall policies because policy or dependent host import failed.",
+				);
+			}
 
 			await internalNginx.reload();
 
@@ -1438,6 +1527,9 @@ internalGitOps.normaliseImportedFirewallPolicy = normaliseImportedFirewallPolicy
 internalGitOps.sanitizeImportData = sanitizeImportData;
 internalGitOps.exportModelData = exportModelData;
 internalGitOps.prepareImportData = prepareImportData;
+internalGitOps.canCleanupFirewallPolicies = canCleanupFirewallPolicies;
 internalGitOps.canFullSyncCleanup = canFullSyncCleanup;
+internalGitOps.firewallPolicyDeclarationsMatch = firewallPolicyDeclarationsMatch;
+internalGitOps.validateImportedProxyHostFirewallPolicyReference = validateImportedProxyHostFirewallPolicyReference;
 
 export default internalGitOps;
