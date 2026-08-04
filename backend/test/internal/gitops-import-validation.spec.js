@@ -236,6 +236,36 @@ describe("Fix #65: YAML import field whitelist validation", () => {
 		expect(result.arbitrary_field).toBeUndefined();
 	});
 
+	it("uses the same safe field contract for every declarative export and import", () => {
+		for (const [modelName, fields] of Object.entries(internalGitOps.ALLOWED_IMPORT_FIELDS)) {
+			const raw = Object.fromEntries(fields.map((field) => [field, `${modelName}-${field}`]));
+			raw.is_deleted = 0;
+			raw.untrusted_runtime_field = "must not survive";
+			const exported = internalGitOps.exportModelData(modelName, raw);
+
+			expect(exported).not.toHaveProperty("is_deleted");
+			expect(exported).not.toHaveProperty("untrusted_runtime_field");
+			expect(internalGitOps.sanitizeImportData(modelName, exported)).toEqual(exported);
+		}
+	});
+
+	it("skips destructive Full Sync cleanup whenever a file in that model failed", () => {
+		expect(internalGitOps.canFullSyncCleanup({ overwrite: true }, false)).toBe(true);
+		expect(internalGitOps.canFullSyncCleanup({ overwrite: true }, true)).toBe(false);
+		expect(internalGitOps.canFullSyncCleanup({ overwrite: false }, false)).toBe(false);
+	});
+
+	it("preserves firewall-policy IDs without injecting ownership during non-overwrite imports", () => {
+		const prepared = internalGitOps.prepareImportData(
+			{ id: 42, name: "Imported firewall policy" },
+			{ overwrite: false },
+			{ supportsOwner: false, supportsSoftDelete: false, preserveIdOnInsert: true },
+			99,
+		);
+
+		expect(prepared).toEqual({ id: 42, name: "Imported firewall policy" });
+	});
+
 	it("normalises whitelisted firewall policy YAML through the policy validator before persistence", () => {
 		const mergePolicyPayload = vi.fn().mockReturnValue({
 			name: "Validated policy",

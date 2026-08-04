@@ -21,6 +21,7 @@ import { Switch } from "src/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
 import { Textarea } from "src/components/ui/textarea";
 import { useFirewallPolicies } from "src/hooks";
+import { useToast } from "src/hooks/use-toast";
 import { intl, T } from "src/locale";
 import { ADMIN, MANAGE } from "src/modules/Permissions";
 
@@ -80,11 +81,13 @@ export const newlineSeparatedLines = (value: string) =>
 function FirewallPoliciesContent() {
 	const queryClient = useQueryClient();
 	const { data = [], isLoading, error } = useFirewallPolicies();
+	const { toast } = useToast();
 	const [selected, setSelected] = useState<FirewallPolicy | null>(null);
 	const [draft, setDraft] = useState<PolicyDraft>(emptyDraft);
 	const [open, setOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
+	const [refreshError, setRefreshError] = useState<string | null>(null);
 	const [refreshingId, setRefreshingId] = useState<number | null>(null);
 
 	const invalidate = async () => queryClient.invalidateQueries({ queryKey: ["firewall-policies"] });
@@ -123,10 +126,19 @@ function FirewallPoliciesContent() {
 
 	const refresh = async (policy: FirewallPolicy) => {
 		setRefreshingId(policy.id);
+		setRefreshError(null);
 		try {
 			await refreshFirewallPolicy(policy.id);
-			await invalidate();
+		} catch (refreshError) {
+			const message = refreshError instanceof Error ? refreshError.message : String(refreshError);
+			setRefreshError(message);
+			toast({
+				title: intl.formatMessage({ id: "notification.error" }),
+				description: message,
+				variant: "destructive",
+			});
 		} finally {
+			await invalidate();
 			setRefreshingId(null);
 		}
 	};
@@ -164,6 +176,12 @@ function FirewallPoliciesContent() {
 					<Alert variant="destructive">
 						<AlertCircle className="h-4 w-4" />
 						<AlertDescription>{error.message}</AlertDescription>
+					</Alert>
+				) : null}
+				{refreshError ? (
+					<Alert className="mb-4" variant="destructive">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>{refreshError}</AlertDescription>
 					</Alert>
 				) : null}
 				<div className="overflow-x-auto rounded-md border">

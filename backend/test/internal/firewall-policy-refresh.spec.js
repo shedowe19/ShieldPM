@@ -145,4 +145,33 @@ describe("firewall feed cache refresh", () => {
 		);
 		expect(renderNginxConfig([state.policy])).toContain('map "" $shieldpm_firewall_7_enabled {\n    default 0;');
 	});
+
+	it("rejects an oversized feed before replacing the current cache", async () => {
+		const cidrs = Array.from(
+			{ length: 10_001 },
+			(_, index) => `10.${Math.floor(index / 65_536)}.${Math.floor((index % 65_536) / 256)}.${index % 256}/32`,
+		).join("\n");
+		state.responses.push({ body: cidrs, statusCode: 200 });
+
+		await expect(refreshPolicy(state.policy, { regenerate: false })).rejects.toThrow("CIDR limit");
+
+		expect(state.files.has(feedFile(7, url))).toBe(false);
+	});
+
+	it("rejects aggregate feed CIDRs above the policy limit before replacing any cache", async () => {
+		const secondUrl = "https://1.1.1.1/cidrs-2.txt";
+		const cidrs = (firstOctet) =>
+			Array.from(
+				{ length: 6_000 },
+				(_, index) =>
+					`${firstOctet}.${Math.floor(index / 65_536)}.${Math.floor((index % 65_536) / 256)}.${index % 256}/32`,
+			).join("\n");
+		state.policy = { ...policy(), feed_urls: [url, secondUrl] };
+		state.responses.push({ body: cidrs(10), statusCode: 200 }, { body: cidrs(11), statusCode: 200 });
+
+		await expect(refreshPolicy(state.policy, { regenerate: false })).rejects.toThrow("CIDR limit");
+
+		expect(state.files.has(feedFile(7, url))).toBe(false);
+		expect(state.files.has(feedFile(7, secondUrl))).toBe(false);
+	});
 });

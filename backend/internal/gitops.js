@@ -33,20 +33,20 @@ const ALLOWED_IMPORT_FIELDS = {
 	User: [
 		"id",
 		"email",
+		"name",
 		"nickname",
-		"password",
 		"role",
-		"otp_enabled",
-		"otp_secret",
-		"allowed_ids",
-		"last_login",
-		"last_failed_login",
-		"failed_login_count",
+		"roles",
+		"is_disabled",
+		"avatar",
+		"avatar_type",
+		"avatar_value",
+		"permissions",
 		"is_deleted",
 		"owner_user_id",
 	],
-	Certificate: ["id", "nice_name", "domain_names", "provider", "expires_on", "is_deleted", "owner_user_id"],
-	AccessList: ["id", "name", "items", "clients", "is_deleted", "owner_user_id"],
+	Certificate: ["id", "nice_name", "domain_names", "provider", "expires_on", "meta", "is_deleted", "owner_user_id"],
+	AccessList: ["id", "name", "meta", "items", "clients", "is_deleted", "owner_user_id"],
 	FirewallPolicy: [
 		"id",
 		"name",
@@ -62,32 +62,115 @@ const ALLOWED_IMPORT_FIELDS = {
 	ProxyHost: [
 		"id",
 		"domain_names",
+		"forward_scheme",
 		"forward_host",
 		"forward_port",
-		"forward_scheme",
-		"access_list_id",
-		"firewall_policy_id",
 		"http_options",
 		"ssl_options",
 		"nginx_options",
 		"nginx_settings",
+		"forward_query",
+		"access_list_id",
+		"firewall_policy_id",
+		"certificate_id",
+		"enabled",
+		"ssl_forced",
+		"caching_enabled",
+		"block_exploits",
+		"allow_websocket_upgrade",
+		"http2_support",
+		"hsts_enabled",
+		"hsts_subdomains",
+		"disable_buffering",
+		"security_crowdsec",
+		"maintenance_active",
+		"maintenance_on_failure",
+		"maintenance_start",
+		"maintenance_end",
+		"maintenance_reason",
+		"bandwidth_limit",
+		"turbo_loader",
+		"adv_limit_req_rate",
+		"adv_limit_req_unit",
+		"adv_limit_req_burst",
+		"php_enabled",
+		"php_override_ini",
+		"php_version",
+		"index_file",
+		"advanced_config",
+		"git_repo_url",
+		"git_branch",
+		"git_sync_enabled",
+		"git_poll_interval",
+		"git_poll_unit",
+		"anubis_enabled",
+		"anubis_rules",
+		"icon_url",
+		"icon_type",
+		"terminal_host",
+		"terminal_port",
+		"terminal_username",
+		"terminal_auth_type",
+		"meta",
+		"note",
+		"locations",
 		"is_deleted",
 		"owner_user_id",
 	],
 	RedirectionHost: [
 		"id",
 		"domain_names",
-		"target_url",
-		"redirect_code",
-		"access_list_id",
+		"forward_http_code",
+		"forward_scheme",
+		"forward_domain_name",
+		"preserve_path",
+		"certificate_id",
+		"enabled",
+		"ssl_forced",
+		"block_exploits",
+		"hsts_enabled",
+		"hsts_subdomains",
+		"http2_support",
+		"advanced_config",
+		"meta",
+		"note",
 		"is_deleted",
 		"owner_user_id",
 	],
-	DeadHost: ["id", "domain_names", "alternative_target_url", "mode", "is_deleted", "owner_user_id"],
-	Stream: ["id", "incoming_port", "target_url", "stream_type", "access_list_id", "is_deleted", "owner_user_id"],
-	CloudflaredTunnel: ["id", "name", "tunnel_id", "created_at", "is_deleted", "owner_user_id"],
-	DdnsProvider: ["id", "name", "provider", "config", "is_deleted", "owner_user_id"],
-	Setting: ["id", "value", "meta"],
+	DeadHost: [
+		"id",
+		"domain_names",
+		"certificate_id",
+		"enabled",
+		"ssl_forced",
+		"block_exploits",
+		"hsts_enabled",
+		"hsts_subdomains",
+		"http2_support",
+		"advanced_config",
+		"meta",
+		"note",
+		"is_deleted",
+		"owner_user_id",
+	],
+	Stream: [
+		"id",
+		"incoming_port",
+		"forwarding_host",
+		"forwarding_port",
+		"tcp_forwarding",
+		"udp_forwarding",
+		"proxy_protocol_forwarding",
+		"certificate_id",
+		"enabled",
+		"meta",
+		"note",
+		"is_deleted",
+		"owner_user_id",
+	],
+	CloudflaredTunnel: ["id", "name", "token", "status", "meta", "is_deleted", "owner_user_id"],
+	DdnsProvider: ["id", "name", "provider", "domains", "ip_ver", "config", "enabled", "meta", "owner_user_id"],
+	Setting: ["id", "name", "description", "value", "meta"],
 };
 
 /**
@@ -103,6 +186,18 @@ const sanitizeImportData = (modelName, data) => {
 		return null;
 	}
 	return _.pick(data, allowed);
+};
+
+const exportModelData = (modelName, data) => _.omit(_.pick(data, ALLOWED_IMPORT_FIELDS[modelName]), ["is_deleted"]);
+
+const canFullSyncCleanup = (options, hadFileError) => options.overwrite && !hadFileError;
+
+const prepareImportData = (data, options, importOptions, ownerUserId) => {
+	const itemData = { ...data };
+	if (importOptions.supportsSoftDelete !== false) itemData.is_deleted = 0;
+	if (!options.overwrite && importOptions.preserveIdOnInsert !== true) delete itemData.id;
+	if (importOptions.supportsOwner !== false && !itemData.owner_user_id) itemData.owner_user_id = ownerUserId;
+	return itemData;
 };
 
 // Firewall policy YAML is untrusted input even after field whitelisting. Keep
@@ -377,7 +472,7 @@ const internalGitOps = {
 		for (const policy of firewallPolicies) {
 			const filename = `${policy.id}-${policy.name.replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "firewall-policies", filename);
-			const exportData = _.pick(policy, ALLOWED_IMPORT_FIELDS.FirewallPolicy);
+			const exportData = exportModelData("FirewallPolicy", policy);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -387,7 +482,7 @@ const internalGitOps = {
 		for (const host of proxyHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "proxy-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
+			const exportData = exportModelData("ProxyHost", host);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -397,7 +492,7 @@ const internalGitOps = {
 		for (const host of redirectionHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "redirection-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
+			const exportData = exportModelData("RedirectionHost", host);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -407,7 +502,7 @@ const internalGitOps = {
 		for (const host of deadHosts) {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "dead-hosts", filename);
-			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
+			const exportData = exportModelData("DeadHost", host);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -417,7 +512,7 @@ const internalGitOps = {
 		for (const stream of streams) {
 			const filename = `${stream.id}-${stream.incoming_port || "unknown"}.yaml`;
 			const filePath = path.join(configDir, "streams", filename);
-			const exportData = internalGitOps.sanitizeForExport(stream, ["is_deleted"]);
+			const exportData = exportModelData("Stream", stream);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -427,7 +522,7 @@ const internalGitOps = {
 		for (const cert of certificates) {
 			const filename = `${cert.id}-${(cert.nice_name || cert.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "certificates", filename);
-			const exportData = internalGitOps.sanitizeForExport(cert, ["is_deleted"]);
+			const exportData = exportModelData("Certificate", cert);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -437,7 +532,7 @@ const internalGitOps = {
 		for (const user of users) {
 			const filename = `${user.id}-${(user.nickname || user.email || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "users", filename);
-			const exportData = internalGitOps.sanitizeForExport(user, ["is_deleted"]);
+			const exportData = exportModelData("User", user);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -447,7 +542,7 @@ const internalGitOps = {
 		for (const setting of settings) {
 			const filename = `${setting.id}.yaml`;
 			const filePath = path.join(configDir, "settings", filename);
-			const exportData = { ...setting };
+			const exportData = exportModelData("Setting", setting);
 			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
@@ -891,6 +986,7 @@ const internalGitOps = {
 			const dirPath = path.join(configDir, dirName);
 			const importedIds = [];
 			const importedRows = [];
+			let hadFileError = false;
 
 			if (fs.existsSync(dirPath)) {
 				const files = await fs.promises.readdir(dirPath);
@@ -907,6 +1003,7 @@ const internalGitOps = {
 								// injected properties and defeat the import boundary.
 								let itemData = sanitizeImportData(modelClass.name, data);
 								if (!itemData) {
+									hadFileError = true;
 									errors.push(
 										`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
 									);
@@ -925,13 +1022,12 @@ const internalGitOps = {
 									}
 								}
 
-								// Policy rows are hard-deleted; other imported models use soft deletion.
-								if (importOptions.supportsSoftDelete !== false) itemData.is_deleted = 0;
-
-								// Ensure owner_user_id is valid
-								if (itemData.owner_user_id) {
-									// Check if user exists, if not set to current user to avoid constraint error
-								}
+								itemData = prepareImportData(
+									itemData,
+									options,
+									importOptions,
+									access.token.getUserId(1),
+								);
 
 								let importedRow;
 								if (options.overwrite && existingId) {
@@ -950,8 +1046,6 @@ const internalGitOps = {
 											: await modelClass.query().insert(itemData);
 									}
 								} else {
-									if (!options.overwrite) delete itemData.id;
-									if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId(1);
 									importedRow = relationGraph
 										? await modelClass.query().insertGraph(itemData)
 										: await modelClass.query().insert(itemData);
@@ -961,8 +1055,12 @@ const internalGitOps = {
 									if (importOptions.collect) importedRows.push(importedRow);
 								}
 								imported++;
+							} else {
+								hadFileError = true;
+								errors.push(`${dirName}/${file}: YAML must contain an object.`);
 							}
 						} catch (err) {
+							hadFileError = true;
 							logger.error(`Import failed for ${dirName}/${file}:`, err);
 							errors.push(`${dirName}/${file}: ${err instanceof Error ? err.message : "Unknown error"}`);
 						}
@@ -970,8 +1068,8 @@ const internalGitOps = {
 				);
 			}
 
-			// FULL SYNC: Delete items not in importedIds
-			if (options.overwrite) {
+			// FULL SYNC: Delete items not in importedIds only after every present file was processed safely.
+			if (canFullSyncCleanup(options, hadFileError)) {
 				const query = modelClass.query().whereNotIn("id", importedIds);
 
 				try {
@@ -996,6 +1094,10 @@ const internalGitOps = {
 				} catch (err) {
 					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
 				}
+			} else if (options.overwrite && hadFileError) {
+				logger.warn(
+					`GitOps Full Sync: skipping cleanup for ${dirName} because at least one file failed to import.`,
+				);
 			}
 			return importedRows;
 		};
@@ -1014,7 +1116,9 @@ const internalGitOps = {
 			// The dynamic import avoids a startup-time GitOps <-> firewall-policy module cycle.
 			const { mergePolicyPayload } = await import("./firewall-policy.js");
 			const importedFirewallPolicies = await importModel(FirewallPolicy, "firewall-policies", null, null, {
+				supportsOwner: false,
 				supportsSoftDelete: false,
+				preserveIdOnInsert: true,
 				collect: true,
 				normalise: (data) => normaliseImportedFirewallPolicy(data, mergePolicyPayload),
 			});
@@ -1328,5 +1432,8 @@ const internalGitOps = {
 internalGitOps.ALLOWED_IMPORT_FIELDS = ALLOWED_IMPORT_FIELDS;
 internalGitOps.normaliseImportedFirewallPolicy = normaliseImportedFirewallPolicy;
 internalGitOps.sanitizeImportData = sanitizeImportData;
+internalGitOps.exportModelData = exportModelData;
+internalGitOps.prepareImportData = prepareImportData;
+internalGitOps.canFullSyncCleanup = canFullSyncCleanup;
 
 export default internalGitOps;

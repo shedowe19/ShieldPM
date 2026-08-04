@@ -55,9 +55,9 @@ Hinter Cloudflare müssen die Real-IP-Ranges aktiv sein (`SKIP_IP_RANGES=false`)
 - DNS-Auflösung vor dem Abruf; private, Loopback-, Link-local-, Multicast- und nicht-unicast Adressen werden abgelehnt;
 - die aufgelöste öffentliche Adresse wird für die Anfrage fest gebunden;
 - Redirects werden nicht gefolgt, Antwortgröße ist auf 5 MiB begrenzt, Timeout 20 Sekunden; pro Policy laufen höchstens drei Feed-Abrufe gleichzeitig;
-- CIDRs und Kommentare werden normalisiert; eine nicht-leere Antwort ohne gültigen CIDR ersetzt den letzten gültigen Feed nicht;
+- CIDRs und Kommentare werden normalisiert; eine nicht-leere Antwort ohne gültigen CIDR ersetzt den letzten gültigen Feed nicht. Pro Feed und pro vollständig kombinierter Policy sind höchstens 10.000 eindeutige CIDRs zulässig; ein Überschreiten deaktiviert die betroffene Feed-Policy sicher und bewahrt die bestehenden Cache-Dateien;
 - ETag und Last-Modified vermeiden unnötige Downloads; Conditional Requests werden nur mit einem gültigen lokalen Cache gesendet, ein unerwartetes `304` wird ohne Validator erneut abgerufen;
-- Feed-Dateien und die zentrale Nginx-Konfiguration werden atomar geschrieben. Ein vollständiger Satz neuer Cache-Dateien wird erst ersetzt, wenn jede konfigurierte Quelle entweder erfolgreich aktualisiert wurde oder weiterhin einen gültigen Cache besitzt. Bei Abruffehlern bleibt die letzte gültige Version wirksam; eine neue, cachelose Feed-Policy bleibt bis zum ersten erfolgreichen Abruf deaktiviert.
+- Feed-Dateien und die zentrale Nginx-Konfiguration werden atomar geschrieben. Ein vollständiger Satz neuer Cache-Dateien wird erst ersetzt, wenn jede konfigurierte Quelle entweder erfolgreich aktualisiert wurde oder weiterhin einen gültigen Cache besitzt. Bei Abruffehlern bleibt die letzte gültige Version wirksam; eine neu angelegte, cachelose Feed-Policy wird mit sichtbarem Feed-Fehlerstatus gespeichert und bis zum ersten erfolgreichen Abruf deaktiviert.
 
 Die kompilierten Daten liegen unter `/data/nginx/firewall/`; die globale Nginx-Map liegt unter `/data/nginx/firewall.conf`. Diese Dateien werden von ShieldPM verwaltet und nicht manuell bearbeitet.
 
