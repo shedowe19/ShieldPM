@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
 	audit: [],
 	autoPushes: [],
+	events: [],
 	files: new Map(),
+	hosts: [],
 	policy: null,
 	responses: [],
 }));
@@ -74,6 +76,10 @@ vi.mock("node:https", () => ({
 vi.mock("../../models/firewall_policy.js", () => ({
 	default: {
 		query: () => ({
+			deleteById: async (id) => {
+				state.events.push(`policy-delete:${id}`);
+				state.policy = null;
+			},
 			findById: async (id) => (state.policy?.id === id ? state.policy : undefined),
 			insertAndFetch: async (data) => {
 				state.policy = { id: 17, ...data };
@@ -93,8 +99,13 @@ vi.mock("../../models/proxy_host.js", () => ({
 	default: {
 		query: () => {
 			const query = {
+				patch: async (patch) => {
+					state.events.push(`host-patch:${patch.firewall_policy_id}`);
+					state.hosts = state.hosts.map((host) => ({ ...host, ...patch }));
+				},
 				where: () => query,
-				withGraphFetched: async () => [],
+				whereIn: () => query,
+				withGraphFetched: async () => state.hosts,
 			};
 			return query;
 		},
@@ -105,7 +116,13 @@ vi.mock("../../internal/gitops.js", () => ({
 	default: { triggerAutoPush: vi.fn((...args) => state.autoPushes.push(args)) },
 }));
 vi.mock("../../internal/nginx.js", () => ({
-	default: { bulkGenerateConfigs: vi.fn(async () => undefined), reload: vi.fn(async () => undefined) },
+	default: {
+		bulkGenerateConfigs: vi.fn(async (_model, _type, hosts) => {
+			state.events.push(`host-configs:${hosts.map((host) => host.firewall_policy_id).join(",")}`);
+			return hosts.map(() => ({ nginx_online: true }));
+		}),
+		reload: vi.fn(async () => state.events.push("nginx-reload")),
+	},
 }));
 
 import internalFirewallPolicy from "../../internal/firewall-policy.js";
@@ -115,6 +132,8 @@ describe("firewall policy creation with unavailable feeds", () => {
 		state.audit.length = 0;
 		state.autoPushes.length = 0;
 		state.files.clear();
+		state.hosts = [];
+		state.events.length = 0;
 		state.policy = null;
 		state.responses.length = 0;
 	});
@@ -136,5 +155,63 @@ describe("firewall policy creation with unavailable feeds", () => {
 		expect(state.files.get("/data/nginx/firewall.conf")).toContain(
 			'map "" $shieldpm_firewall_17_enabled {\n    default 0;',
 		);
+	});
+
+	it("rolls back an update when a replacement feed has no usable cache", async () => {
+		const feedUrl = "https://1.1.1.1/replacement.txt";
+		const original = {
+			action: "deny",
+			allow_cidrs: [],
+			block_cidrs: [],
+			enabled: true,
+			feed_status: {},
+			feed_urls: [],
+			geo_countries: [],
+			geo_mode: "off",
+			id: 17,
+			last_error: null,
+			last_updated_on: null,
+			name: "Original policy",
+			refresh_interval_hours: 24,
+			total_cidrs: 0,
+		};
+		state.policy = { ...original };
+		state.responses.push({ error: new Error("upstream unavailable") });
+		const access = { can: vi.fn(async () => true), token: { getUserId: () => 1 } };
+
+		await expect(
+			internalFirewallPolicy.update(access, 17, { feed_urls: [feedUrl], name: "Rejected edit" }),
+		).rejects.toThrow("cache incomplete");
+
+		expect(state.policy).toMatchObject(original);
+		expect(state.audit).toHaveLength(0);
+		expect(state.autoPushes).toHaveLength(0);
+	});
+
+	it("regenerates every linked host before deleting the policy maps", async () => {
+		state.policy = {
+			action: "deny",
+			allow_cidrs: [],
+			block_cidrs: [],
+			enabled: true,
+			feed_status: {},
+			feed_urls: [],
+			geo_countries: [],
+			geo_mode: "off",
+			id: 17,
+			name: "Attached policy",
+			refresh_interval_hours: 24,
+			total_cidrs: 0,
+		};
+		state.hosts = [
+			{ firewall_policy_id: 17, id: 41, meta: {} },
+			{ firewall_policy_id: 17, id: 42, meta: {} },
+		];
+		const access = { can: vi.fn(async () => true), token: { getUserId: () => 1 } };
+
+		await internalFirewallPolicy.delete(access, 17);
+
+		expect(state.events).toEqual(["host-configs:,", "host-patch:null", "policy-delete:17", "nginx-reload"]);
+		expect(state.hosts.every((host) => host.firewall_policy_id === null)).toBe(true);
 	});
 });

@@ -427,15 +427,10 @@ const internalNginx = {
 	 * @param   {Array}   hosts
 	 * @returns {Promise}
 	 */
-	bulkGenerateConfigs: async (model, hostType, hosts) => {
-		const promises = [];
-		hosts.map((host) => {
-			promises.push(internalNginx.configure(model, hostType, host, { skip_reload: true }));
-			return true;
-		});
-
-		await Promise.all(promises);
-	},
+	bulkGenerateConfigs: async (model, hostType, hosts) =>
+		await Promise.all(
+			hosts.map(async (host) => await internalNginx.configure(model, hostType, host, { skip_reload: true })),
+		),
 
 	/**
 	 * @param   {string}  cfg

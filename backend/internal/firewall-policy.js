@@ -290,6 +290,31 @@ const readFeedCache = async (policy, url) => {
 	}
 };
 
+const readCompiledCidrCache = async (policy) => {
+	try {
+		const content = await fs.readFile(compiledCidrFile(policy.id), "utf8");
+		const parsed = parseCidrList(content);
+		if (parsed.invalid.length || parsed.cidrs.length > MAX_CIDRS) return null;
+		return new Set(parsed.cidrs);
+	} catch (error) {
+		if (error.code === "ENOENT") return null;
+		throw error;
+	}
+};
+
+const sameCidrs = (left, right) => left.size === right.size && [...left].every((cidr) => right.has(cidr));
+
+const hasCurrentCompiledFeedCache = async (policy) => {
+	const feedUrls = policy.feed_urls || [];
+	if (!feedUrls.length) return true;
+	const feedCaches = await Promise.all(feedUrls.map(async (url) => await readFeedCache(policy, url)));
+	if (feedCaches.some((cache) => !cache)) return false;
+	const expected = new Set(feedCaches.flatMap((cache) => [...cache]));
+	if (expected.size > MAX_CIDRS) return false;
+	const compiled = await readCompiledCidrCache(policy);
+	return !!compiled && sameCidrs(compiled, expected);
+};
+
 const withCurrentFeedCacheState = async (policy) => {
 	const status = { ...(policy.feed_status || {}) };
 	const feedCidrs = new Set();
@@ -309,6 +334,11 @@ const withCurrentFeedCacheState = async (policy) => {
 		for (const url of policy.feed_urls || []) {
 			status[url] = { ...status[url], cache_ready: false, error };
 		}
+	}
+	if (!incomplete && policy.feed_urls?.length) {
+		// Rebuild from every validated per-feed cache. The aggregate is disposable and
+		// must never make an otherwise complete policy silently match an empty set.
+		await atomicWrite(compiledCidrFile(policy.id), renderCidrCache(feedCidrs));
 	}
 	return incomplete ? { ...policy, feed_status: status } : policy;
 };
@@ -461,6 +491,22 @@ const mergePolicyPayload = (input, existing = null) => {
 	}
 	return data;
 };
+
+const snapshotPolicy = (policy) => ({
+	action: policy.action,
+	allow_cidrs: policy.allow_cidrs,
+	block_cidrs: policy.block_cidrs,
+	enabled: policy.enabled,
+	feed_status: policy.feed_status,
+	feed_urls: policy.feed_urls,
+	geo_countries: policy.geo_countries,
+	geo_mode: policy.geo_mode,
+	last_error: policy.last_error,
+	last_updated_on: policy.last_updated_on,
+	name: policy.name,
+	refresh_interval_hours: policy.refresh_interval_hours,
+	total_cidrs: policy.total_cidrs,
+});
 
 const getLinkedHosts = async (policyId) =>
 	await ProxyHost.query()
@@ -669,8 +715,20 @@ const internalFirewallPolicy = {
 		return await withPolicyLock(id, async () => {
 			const existing = await FirewallPolicy.query().findById(id);
 			if (!existing) throw new errs.ItemNotFoundError(id);
+			const original = snapshotPolicy(existing);
 			const policy = await FirewallPolicy.query().patchAndFetchById(id, mergePolicyPayload(data, existing));
-			const result = await synchronizePolicyUnlocked(policy);
+			let result;
+			try {
+				result = await synchronizePolicyUnlocked(policy);
+			} catch (error) {
+				try {
+					const restored = await FirewallPolicy.query().patchAndFetchById(id, original);
+					await synchronizePolicyUnlocked(restored, false);
+				} catch (rollbackError) {
+					logger.error(`Firewall policy ${id} rollback failed:`, rollbackError);
+				}
+				throw error;
+			}
 			await internalAuditLog.add(access, {
 				action: "updated",
 				object_type: "firewall-policy",
@@ -699,18 +757,25 @@ const internalFirewallPolicy = {
 		return await withPolicyLock(id, async () => {
 			const policy = await FirewallPolicy.query().findById(id);
 			if (!policy) throw new errs.ItemNotFoundError(id);
-			const hostIds = (await getLinkedHosts(id)).map((host) => host.id);
-			await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: null });
+			const hosts = await getLinkedHosts(id);
+			const hostIds = hosts.map((host) => host.id);
+			if (hosts.length) {
+				// Keep this policy's maps available while every linked host is rendered without it.
+				// Otherwise a sibling's old config can reference maps already removed by the policy delete.
+				const detachedHosts = hosts.map((host) => ({ ...host, firewall_policy_id: null }));
+				const generated = await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", detachedHosts);
+				if (generated.some((meta) => meta?.nginx_online === false)) {
+					await regenerateLinkedHosts(id);
+					throw new errs.ConfigurationError(
+						"Could not regenerate every host linked to this firewall policy.",
+					);
+				}
+			}
+			if (hostIds.length) await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: null });
 			await FirewallPolicy.query().deleteById(id);
 			await fs.rm(path.join(FIREWALL_DIR, String(id)), { recursive: true, force: true });
 			await fs.rm(compiledCidrFile(id), { force: true });
 			await writeFirewallConfig();
-			const hosts = hostIds.length
-				? await ProxyHost.query()
-						.whereIn("id", hostIds)
-						.withGraphFetched("[certificate,access_list.[clients,items],host_domains]")
-				: [];
-			if (hosts.length) await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
 			await internalNginx.reload();
 			await internalAuditLog.add(access, {
 				action: "deleted",
@@ -747,7 +812,11 @@ const internalFirewallPolicy = {
 							(current.feed_urls || []).map(async (url) => await readFeedCache(current, url)),
 						)
 					).every(Boolean);
-					if (cacheComplete && !isPolicyRefreshDue(current)) return false;
+					if (cacheComplete && !isPolicyRefreshDue(current)) {
+						if (await hasCurrentCompiledFeedCache(current)) return false;
+						await withCurrentFeedCacheState(current);
+						return true;
+					}
 					await refreshPolicy(current, { regenerate: false });
 					return true;
 				});
@@ -767,12 +836,14 @@ export {
 	createPinnedLookup,
 	feedFile,
 	fetchFeed,
+	hasCurrentCompiledFeedCache,
 	isPolicyRefreshDue,
 	mapWithConcurrency,
 	mergePolicyPayload,
 	normaliseCidr,
 	normaliseUrlHostname,
 	parseCidrList,
+	readCompiledCidrCache,
 	readFeedCache,
 	refreshImportedPolicies,
 	refreshPolicy,

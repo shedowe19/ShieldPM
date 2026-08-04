@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({
 	files: new Map(),
 	patches: [],
 	policy: null,
+	reloads: 0,
 	requests: [],
 	responses: [],
 }));
@@ -74,22 +75,32 @@ vi.mock("node:https", () => ({
 
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({ default: { reload: vi.fn(async () => state.reloads++) } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 vi.mock("../../models/firewall_policy.js", () => ({
 	default: {
-		query: () => ({
-			orderBy: async () => [state.policy],
-			patchAndFetchById: async (id, patch) => {
-				state.patches.push({ id, patch });
-				state.policy = { ...state.policy, ...patch };
-				return state.policy;
-			},
-		}),
+		query: () => {
+			const query = {
+				findById: async (id) => (state.policy?.id === id ? state.policy : undefined),
+				orderBy: async () => [state.policy],
+				patchAndFetchById: async (id, patch) => {
+					state.patches.push({ id, patch });
+					state.policy = { ...state.policy, ...patch };
+					return state.policy;
+				},
+				where: async () => (state.policy ? [state.policy] : []),
+			};
+			return query;
+		},
 	},
 }));
 
-import { feedFile, refreshPolicy, renderNginxConfig, writeFirewallConfig } from "../../internal/firewall-policy.js";
+import internalFirewallPolicy, {
+	feedFile,
+	refreshPolicy,
+	renderNginxConfig,
+	writeFirewallConfig,
+} from "../../internal/firewall-policy.js";
 
 const url = "https://1.1.1.1/cidrs.txt";
 const policy = () => ({
@@ -104,6 +115,7 @@ describe("firewall feed cache refresh", () => {
 		state.files.clear();
 		state.patches.length = 0;
 		state.policy = policy();
+		state.reloads = 0;
 		state.requests.length = 0;
 		state.responses.length = 0;
 	});
@@ -173,5 +185,28 @@ describe("firewall feed cache refresh", () => {
 
 		expect(state.files.has(feedFile(7, url))).toBe(false);
 		expect(state.files.has(feedFile(7, secondUrl))).toBe(false);
+	});
+
+	it("rebuilds a missing aggregate cache from validated per-feed caches", async () => {
+		state.files.set(feedFile(7, url), "8.8.8.0/24 1;\n");
+
+		await writeFirewallConfig();
+
+		expect(state.files.get("/data/nginx/firewall/policy-7.cidrs")).toBe("8.8.8.0/24 1;\n");
+	});
+
+	it("reconstructs a missing aggregate cache before skipping a not-yet-due refresh", async () => {
+		state.policy = {
+			...policy(),
+			enabled: true,
+			last_updated_on: new Date().toISOString(),
+			refresh_interval_hours: 168,
+		};
+		state.files.set(feedFile(7, url), "8.8.8.0/24 1;\n");
+
+		await internalFirewallPolicy.refreshDuePolicies(true);
+
+		expect(state.files.get("/data/nginx/firewall/policy-7.cidrs")).toBe("8.8.8.0/24 1;\n");
+		expect(state.reloads).toBe(1);
 	});
 });

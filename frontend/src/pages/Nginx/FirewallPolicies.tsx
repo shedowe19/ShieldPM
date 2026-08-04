@@ -87,7 +87,7 @@ function FirewallPoliciesContent() {
 	const [open, setOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
-	const [refreshError, setRefreshError] = useState<string | null>(null);
+	const [actionError, setActionError] = useState<string | null>(null);
 	const [refreshingId, setRefreshingId] = useState<number | null>(null);
 
 	const invalidate = async () => queryClient.invalidateQueries({ queryKey: ["firewall-policies"] });
@@ -124,19 +124,23 @@ function FirewallPoliciesContent() {
 		}
 	};
 
+	const reportActionError = (error: unknown) => {
+		const message = error instanceof Error ? error.message : String(error);
+		setActionError(message);
+		toast({
+			title: intl.formatMessage({ id: "notification.error" }),
+			description: message,
+			variant: "destructive",
+		});
+	};
+
 	const refresh = async (policy: FirewallPolicy) => {
 		setRefreshingId(policy.id);
-		setRefreshError(null);
+		setActionError(null);
 		try {
 			await refreshFirewallPolicy(policy.id);
 		} catch (refreshError) {
-			const message = refreshError instanceof Error ? refreshError.message : String(refreshError);
-			setRefreshError(message);
-			toast({
-				title: intl.formatMessage({ id: "notification.error" }),
-				description: message,
-				variant: "destructive",
-			});
+			reportActionError(refreshError);
 		} finally {
 			await invalidate();
 			setRefreshingId(null);
@@ -145,8 +149,14 @@ function FirewallPoliciesContent() {
 
 	const remove = async (policy: FirewallPolicy) => {
 		if (!confirm(intl.formatMessage({ id: "firewall-policies.delete-confirm" }, { name: policy.name }))) return;
-		await deleteFirewallPolicy(policy.id);
-		await invalidate();
+		setActionError(null);
+		try {
+			await deleteFirewallPolicy(policy.id);
+		} catch (deleteError) {
+			reportActionError(deleteError);
+		} finally {
+			await invalidate();
+		}
 	};
 
 	return (
@@ -178,10 +188,10 @@ function FirewallPoliciesContent() {
 						<AlertDescription>{error.message}</AlertDescription>
 					</Alert>
 				) : null}
-				{refreshError ? (
+				{actionError ? (
 					<Alert className="mb-4" variant="destructive">
 						<AlertCircle className="h-4 w-4" />
-						<AlertDescription>{refreshError}</AlertDescription>
+						<AlertDescription>{actionError}</AlertDescription>
 					</Alert>
 				) : null}
 				<div className="overflow-x-auto rounded-md border">
