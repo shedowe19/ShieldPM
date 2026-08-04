@@ -86,6 +86,28 @@ const validateFirewallPolicyAssignment = async (access, value, currentValue = nu
 const withFirewallPolicyAssignmentLock = async (currentPolicyId, requestedPolicyId, operation) =>
 	await withPolicyLocks([currentPolicyId, requestedPolicyId], operation);
 
+const currentFirewallPolicyId = (row) =>
+	row?.firewall_policy_id === null || typeof row?.firewall_policy_id === "undefined"
+		? null
+		: normaliseFirewallPolicyId(row.firewall_policy_id);
+
+const withCurrentFirewallPolicyLock = async (hostId, operation) => {
+	for (;;) {
+		const snapshot = await proxyHostModel.query().findById(hostId);
+		if (!snapshot || snapshot.is_deleted) throw new errs.ItemNotFoundError(hostId);
+		const policyId = currentFirewallPolicyId(snapshot);
+		const result = await withPolicyLocks([policyId], async () => {
+			const current = await proxyHostModel.query().findById(hostId);
+			if (!current || current.is_deleted) return { missing: true };
+			if (currentFirewallPolicyId(current) !== policyId) return { retry: true };
+			return { value: await operation(current) };
+		});
+		if (result.retry) continue;
+		if (result.missing) throw new errs.ItemNotFoundError(hostId);
+		return result.value;
+	}
+};
+
 const graphContainsRelation = (expression, relationName) => {
 	if (expression.$relation === relationName) return true;
 	return expression.$childNames.some((childName) => graphContainsRelation(expression[childName], relationName));
@@ -218,7 +240,7 @@ const internalProxyHost = {
 			});
 
 			// Configure nginx
-			await internalNginx.configure(proxyHostModel, "proxy_host", row, { skip_firewall_policy_lock: true });
+			await internalNginx.configure(proxyHostModel, "proxy_host", row);
 
 			// Audit log
 			thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
@@ -401,9 +423,7 @@ const internalProxyHost = {
 
 			if (!options.skip_configure) {
 				// Configure nginx
-				const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row, {
-					skip_firewall_policy_lock: true,
-				});
+				const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
 				row.meta = new_meta;
 			}
 
@@ -497,18 +517,19 @@ const internalProxyHost = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await proxyHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					is_deleted: 1,
-				}),
-			);
+		await withCurrentFirewallPolicyLock(row.id, async () => {
+			const deleted = await proxyHostModel
+				.query()
+				.where("id", row.id)
+				.where("is_deleted", 0)
+				.patch({ is_deleted: 1 });
+			if (!deleted) throw new errs.ItemNotFoundError(row.id);
 
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
-		await internalNginx.reload();
+			// Deletion shares the proxy-host render lock, so a stale renderer cannot
+			// recreate this vhost after the logical delete has committed.
+			await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
+			await internalNginx.reload();
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -594,15 +615,14 @@ const internalProxyHost = {
 			throw new errs.ValidationError("Host is already disabled");
 		}
 
-		row.enabled = 0;
+		await withCurrentFirewallPolicyLock(row.id, async (current) => {
+			if (!current.enabled) throw new errs.ValidationError("Host is already disabled");
+			await proxyHostModel.query().where("id", row.id).patch({ enabled: 0 });
 
-		await proxyHostModel.query().where("id", row.id).patch({
-			enabled: 0,
+			// Config removal is serialized with every proxy-host renderer.
+			await internalNginx.deleteConfig("proxy_host", row);
+			await internalNginx.reload();
 		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", row);
-		await internalNginx.reload();
 
 		// Stop Git Deploy polling
 		internalGitDeploy.stopPolling(data.id);
@@ -727,6 +747,7 @@ export {
 	proxyHostAllowedGraph,
 	requestsFirewallPolicy,
 	validateFirewallPolicyAssignment,
+	withCurrentFirewallPolicyLock,
 	withFirewallPolicyAssignmentLock,
 };
 export default internalProxyHost;

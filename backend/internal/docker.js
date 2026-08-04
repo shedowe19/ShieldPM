@@ -223,8 +223,9 @@ class DockerService {
 				.where("is_deleted", 0);
 
 			if (host?.enabled) {
-				// This generates the config file on disk
-				await internalNginx.generateConfig("proxy_host", host);
+				// Use the normal guarded render path so Docker events cannot write a
+				// stale proxy-host configuration over a concurrent policy change.
+				await internalNginx.configure(ProxyHost, "proxy_host", host, { skip_reload: true });
 			} else if (host) {
 				// If disabled, delete config
 				await internalNginx.deleteConfig("proxy_host", host);

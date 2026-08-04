@@ -233,6 +233,14 @@ const validateImportedProxyHostFirewallPolicyReference = (data, declaredPolicyId
 	}
 };
 
+const normaliseImportedProxyHostFirewallPolicyReference = (data, overwrite) => {
+	if (!overwrite || Object.hasOwn(data, "firewall_policy_id")) return data;
+	// A legacy revision predates the optional relation. Overwrite imports are
+	// declarative, so absence must detach an existing assignment rather than
+	// preserving configuration that the revision did not declare.
+	return { ...data, firewall_policy_id: null };
+};
+
 const canCleanupFirewallPolicies = (options, importState, hasImportErrors) =>
 	canFullSyncCleanup(options, importState.hadFileError) && !hasImportErrors;
 
@@ -1106,15 +1114,13 @@ const internalGitOps = {
 				try {
 					const staleItems = await query;
 					const deletePromises = staleItems.map(async (item) => {
-						// Delete Nginx config if hostType is provided
-						if (hostType) {
-							await internalNginx.deleteConfig(hostType, item);
-						}
-
-						// Soft delete if supported, else hard delete
+						// Soft-delete first so concurrent proxy-host renderers observe that the
+						// vhost is gone before they can create another configuration file.
 						if (item.is_deleted !== undefined) {
 							await modelClass.query().patchAndFetchById(item.id, { is_deleted: 1 });
+							if (hostType) await internalNginx.deleteConfig(hostType, item);
 						} else {
+							if (hostType) await internalNginx.deleteConfig(hostType, item);
 							await modelClass.query().deleteById(item.id);
 						}
 						deleted++;
@@ -1180,6 +1186,7 @@ const internalGitOps = {
 			// 5. Import Hosts & Streams. A policy assignment is accepted only when the
 			// same GitOps revision declared a matching policy with that stable ID.
 			await importModel(ProxyHost, "proxy-hosts", "proxy_host", null, {
+				normalise: (data) => normaliseImportedProxyHostFirewallPolicyReference(data, options.overwrite),
 				validate: (data) => validateImportedProxyHostFirewallPolicyReference(data, resolvedFirewallPolicyIds),
 			});
 			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
@@ -1530,6 +1537,7 @@ internalGitOps.prepareImportData = prepareImportData;
 internalGitOps.canCleanupFirewallPolicies = canCleanupFirewallPolicies;
 internalGitOps.canFullSyncCleanup = canFullSyncCleanup;
 internalGitOps.firewallPolicyDeclarationsMatch = firewallPolicyDeclarationsMatch;
+internalGitOps.normaliseImportedProxyHostFirewallPolicyReference = normaliseImportedProxyHostFirewallPolicyReference;
 internalGitOps.validateImportedProxyHostFirewallPolicyReference = validateImportedProxyHostFirewallPolicyReference;
 
 export default internalGitOps;

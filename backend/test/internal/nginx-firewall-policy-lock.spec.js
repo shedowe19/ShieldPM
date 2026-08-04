@@ -3,14 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	findById: vi.fn(),
 	patch: vi.fn(),
-	withPolicyLock: vi.fn(async (_id, operation) => await operation()),
 }));
 
 vi.mock("../../internal/anubis.js", () => ({
 	default: { generatePolicy: vi.fn() },
-}));
-vi.mock("../../internal/firewall-policy.js", () => ({
-	withPolicyLock: mocks.withPolicyLock,
 }));
 
 import internalNginx from "../../internal/nginx.js";
@@ -23,17 +19,24 @@ const model = {
 };
 
 const host = {
+	enabled: 1,
 	firewall_policy_id: 7,
 	id: 41,
 	meta: {},
 };
 
-describe("proxy host firewall render locking", () => {
+const activeRow = (firewall_policy_id) => ({
+	enabled: 1,
+	firewall_policy_id,
+	id: host.id,
+	is_deleted: 0,
+});
+
+describe("proxy host firewall render consistency", () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
 		mocks.findById.mockReset();
 		mocks.patch.mockReset().mockResolvedValue(1);
-		mocks.withPolicyLock.mockClear().mockImplementation(async (_id, operation) => await operation());
 		vi.spyOn(internalNginx, "backupConfig").mockResolvedValue(undefined);
 		vi.spyOn(internalNginx, "deleteBackupConfig").mockResolvedValue(undefined);
 		vi.spyOn(internalNginx, "generateConfig").mockResolvedValue(true);
@@ -41,26 +44,60 @@ describe("proxy host firewall render locking", () => {
 		vi.spyOn(internalNginx, "test").mockResolvedValue(undefined);
 	});
 
-	it("rechecks a locked policy assignment before rendering a stale proxy host snapshot", async () => {
-		mocks.findById.mockResolvedValue({ firewall_policy_id: null, id: host.id });
+	it("rechecks an assigned policy before rendering a stale proxy host snapshot", async () => {
+		mocks.findById.mockResolvedValue(activeRow(null));
 
 		await internalNginx.configure(model, "proxy_host", host, { skip_reload: true });
 
-		expect(mocks.withPolicyLock).toHaveBeenCalledWith(7, expect.any(Function));
 		expect(internalNginx.generateConfig).toHaveBeenCalledWith(
 			"proxy_host",
 			expect.objectContaining({ firewall_policy_id: null }),
 		);
 	});
 
-	it("uses the existing policy lock without recursively acquiring it when the caller already owns it", async () => {
-		await internalNginx.configure(model, "proxy_host", host, {
-			skip_firewall_policy_lock: true,
-			skip_reload: true,
-		});
+	it("rechecks an unassigned snapshot so it cannot erase a newly assigned policy", async () => {
+		mocks.findById.mockResolvedValue(activeRow(7));
 
-		expect(mocks.withPolicyLock).not.toHaveBeenCalled();
-		expect(mocks.findById).not.toHaveBeenCalled();
-		expect(internalNginx.generateConfig).toHaveBeenCalledWith("proxy_host", host);
+		await internalNginx.configure(
+			model,
+			"proxy_host",
+			{ ...host, firewall_policy_id: null },
+			{ skip_reload: true },
+		);
+
+		expect(internalNginx.generateConfig).toHaveBeenCalledWith(
+			"proxy_host",
+			expect.objectContaining({ firewall_policy_id: 7 }),
+		);
+	});
+
+	it("does not recreate a configuration after the current host was deleted or disabled", async () => {
+		mocks.findById.mockResolvedValue({ ...activeRow(7), is_deleted: 1 });
+
+		await expect(internalNginx.configure(model, "proxy_host", host, { skip_reload: true })).resolves.toEqual({});
+		expect(internalNginx.generateConfig).not.toHaveBeenCalled();
+
+		mocks.findById.mockResolvedValue({ ...activeRow(7), enabled: 0 });
+		await expect(internalNginx.configure(model, "proxy_host", host, { skip_reload: true })).resolves.toEqual({});
+		expect(internalNginx.generateConfig).not.toHaveBeenCalled();
+	});
+
+	it("allows policy deletion to render its deliberate temporary detached snapshot", async () => {
+		mocks.findById.mockResolvedValue(activeRow(7));
+
+		await internalNginx.configure(
+			model,
+			"proxy_host",
+			{ ...host, firewall_policy_id: null },
+			{
+				preserve_firewall_policy_id: true,
+				skip_reload: true,
+			},
+		);
+
+		expect(internalNginx.generateConfig).toHaveBeenCalledWith(
+			"proxy_host",
+			expect.objectContaining({ firewall_policy_id: null }),
+		);
 	});
 });

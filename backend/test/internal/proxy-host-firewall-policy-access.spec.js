@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	findById: vi.fn(),
+	proxyHostFindById: vi.fn(),
 	withPolicyLocks: vi.fn(async (_ids, operation) => await operation()),
 }));
 
@@ -22,12 +23,17 @@ vi.mock("../../models/firewall_policy.js", () => ({
 		query: () => ({ findById: mocks.findById }),
 	},
 }));
-vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
+vi.mock("../../models/proxy_host.js", () => ({
+	default: {
+		query: () => ({ findById: mocks.proxyHostFindById }),
+	},
+}));
 
 import {
 	proxyHostAllowedGraph,
 	requestsFirewallPolicy,
 	validateFirewallPolicyAssignment,
+	withCurrentFirewallPolicyLock,
 	withFirewallPolicyAssignmentLock,
 } from "../../internal/proxy-host.js";
 
@@ -54,6 +60,22 @@ describe("proxy host firewall policy permissions", () => {
 
 		expect(await withFirewallPolicyAssignmentLock(7, 9, operation)).toBe("updated");
 		expect(mocks.withPolicyLocks).toHaveBeenLastCalledWith([7, 9], operation);
+	});
+
+	it("rechecks the current assignment before deleting a host", async () => {
+		const operation = vi.fn().mockResolvedValue("deleted");
+		mocks.withPolicyLocks.mockClear();
+		mocks.proxyHostFindById.mockReset();
+		mocks.proxyHostFindById
+			.mockResolvedValueOnce({ firewall_policy_id: 7, id: 41, is_deleted: 0 })
+			.mockResolvedValueOnce({ firewall_policy_id: 9, id: 41, is_deleted: 0 })
+			.mockResolvedValueOnce({ firewall_policy_id: 9, id: 41, is_deleted: 0 })
+			.mockResolvedValueOnce({ firewall_policy_id: 9, id: 41, is_deleted: 0 });
+
+		expect(await withCurrentFirewallPolicyLock(41, operation)).toBe("deleted");
+		expect(mocks.withPolicyLocks).toHaveBeenNthCalledWith(1, [7], expect.any(Function));
+		expect(mocks.withPolicyLocks).toHaveBeenNthCalledWith(2, [9], expect.any(Function));
+		expect(operation).toHaveBeenCalledWith(expect.objectContaining({ firewall_policy_id: 9 }));
 	});
 
 	it("parses every policy expansion form before applying the dedicated permission gate", () => {

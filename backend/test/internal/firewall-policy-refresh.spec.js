@@ -187,6 +187,19 @@ describe("firewall feed cache refresh", () => {
 		expect(state.files.has(feedFile(7, secondUrl))).toBe(false);
 	});
 
+	it("renders an inactive map immediately when a scheduled refresh loses its only usable cache", async () => {
+		state.policy = { ...policy(), enabled: true };
+		state.responses.push({ error: new Error("upstream unavailable") });
+
+		await internalFirewallPolicy.refreshDuePolicies(true);
+
+		expect(state.policy.feed_status[url]).toMatchObject({ cache_ready: false, error: "upstream unavailable" });
+		expect(state.files.get("/data/nginx/firewall.conf")).toContain(
+			'map "" $shieldpm_firewall_7_enabled {\n    default 0;',
+		);
+		expect(state.reloads).toBe(1);
+	});
+
 	it("rebuilds a missing aggregate cache from validated per-feed caches", async () => {
 		state.files.set(feedFile(7, url), "8.8.8.0/24 1;\n");
 

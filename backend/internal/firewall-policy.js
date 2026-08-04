@@ -537,9 +537,7 @@ const getLinkedHosts = async (policyId) =>
 
 const regenerateLinkedHosts = async (policyId) => {
 	const hosts = await getLinkedHosts(policyId);
-	if (hosts.length) {
-		await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts, { skip_firewall_policy_lock: true });
-	}
+	if (hosts.length) await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
 };
 
 const renderCidrCache = (cidrs) => `${[...cidrs].map((cidr) => `${cidr} 1;`).join("\n")}\n`;
@@ -786,7 +784,9 @@ const internalFirewallPolicy = {
 				// Keep this policy's maps available while every linked host is rendered without it.
 				// Otherwise a sibling's old config can reference maps already removed by the policy delete.
 				const detachedHosts = hosts.map((host) => ({ ...host, firewall_policy_id: null }));
-				const generated = await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", detachedHosts);
+				const generated = await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", detachedHosts, {
+					preserve_firewall_policy_id: true,
+				});
 				if (generated.some((meta) => meta?.nginx_online === false)) {
 					await regenerateLinkedHosts(id);
 					throw new errs.ConfigurationError(
@@ -844,6 +844,7 @@ const internalFirewallPolicy = {
 				});
 				changed ||= refreshed;
 			} catch (error) {
+				if (error instanceof FeedRefreshError) changed = true;
 				logger.error(`Firewall policy ${policy.id} refresh failed:`, error);
 			}
 		}

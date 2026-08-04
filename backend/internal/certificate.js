@@ -72,12 +72,7 @@ const internalCertificate = {
 						hsts_subdomains: 0,
 					});
 					const updatedHost = await proxyHostModel.query().findById(host.id);
-					await internalNginx.generateConfig("proxy_host", updatedHost);
-					if (updatedHost.meta) {
-						updatedHost.meta.nginx_online = true;
-						updatedHost.meta.nginx_err = null;
-						await proxyHostModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
-					}
+					await internalNginx.configure(proxyHostModel, "proxy_host", updatedHost, { skip_reload: true });
 					reloadRequired = true;
 				}
 			}

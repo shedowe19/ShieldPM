@@ -319,6 +319,22 @@ describe("Fix #65: YAML import field whitelist validation", () => {
 		).toBe(false);
 	});
 
+	it("clears an absent legacy policy reference during an overwrite import", () => {
+		const legacy = { id: 41, domain_names: ["example.test"] };
+
+		expect(internalGitOps.normaliseImportedProxyHostFirewallPolicyReference(legacy, true)).toEqual({
+			...legacy,
+			firewall_policy_id: null,
+		});
+		expect(internalGitOps.normaliseImportedProxyHostFirewallPolicyReference(legacy, false)).toBe(legacy);
+		expect(
+			internalGitOps.normaliseImportedProxyHostFirewallPolicyReference(
+				{ ...legacy, firewall_policy_id: 7 },
+				true,
+			),
+		).toEqual({ ...legacy, firewall_policy_id: 7 });
+	});
+
 	it("rejects host policy references without a matching policy declaration", () => {
 		expect(() =>
 			internalGitOps.validateImportedProxyHostFirewallPolicyReference({ firewall_policy_id: 7 }, new Set([7])),
