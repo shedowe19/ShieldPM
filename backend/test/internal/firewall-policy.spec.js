@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
+vi.mock("../../internal/gitops.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../models/firewall_policy.js", () => ({ default: {} }));
+vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
+
 import {
 	createPinnedLookup,
 	parseCidrList,

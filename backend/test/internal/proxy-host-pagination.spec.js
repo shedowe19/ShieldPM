@@ -16,6 +16,7 @@ vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../lib/error.js", () => ({ default: {} }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));
 vi.mock("../../models/access_list.js", () => ({ default: {} }));
+vi.mock("../../models/firewall_policy.js", () => ({ default: {} }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
 		query: mocks.query,
