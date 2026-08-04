@@ -21,6 +21,7 @@ describe("createProxyHostInitialValues", () => {
 			crowdsecEnabled: false,
 			disableBuffering: false,
 			domainNames: [],
+			firewallPolicyId: null,
 			forwardHost: "",
 			forwardPort: undefined,
 			forwardQuery: "",
@@ -61,6 +62,7 @@ describe("createProxyHostInitialValues", () => {
 		const host = {
 			accessListId: 4,
 			advancedConfig: "proxy_read_timeout 60s;",
+			firewallPolicyId: 7,
 			advLimitReqBurst: 15,
 			advLimitReqRate: 10,
 			advLimitReqUnit: TIME_UNIT.MINUTES,
@@ -119,6 +121,7 @@ describe("createProxyHostInitialValues", () => {
 		expect(createProxyHostInitialValues(host)).toMatchObject({
 			accessListId: 4,
 			advancedConfig: "proxy_read_timeout 60s;",
+			firewallPolicyId: 7,
 			advLimitReqBurst: 15,
 			advLimitReqRate: 10,
 			advLimitReqUnit: TIME_UNIT.MINUTES,

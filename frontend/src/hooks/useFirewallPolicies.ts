@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getFirewallPolicies, type FirewallPolicy } from "src/api/backend";
+import { type FirewallPolicy, getFirewallPolicies } from "src/api/backend";
 
 const fetchFirewallPolicies = () => getFirewallPolicies();
 

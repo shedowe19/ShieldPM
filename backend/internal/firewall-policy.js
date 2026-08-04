@@ -49,7 +49,9 @@ VA VC VE VG VI VN VU
 WF WS
 YE YT
 ZA ZM ZW
-`.trim().split(/\s+/);
+`
+	.trim()
+	.split(/\s+/);
 
 // Keep the public deny page in lockstep with the locales exposed by the ShieldPM UI.
 // The map is also used to generate locale-specific MaxMind country labels in Nginx.
@@ -143,7 +145,8 @@ const isPublicAddress = (address) => {
 
 const resolveFeedEndpoint = async (url) => {
 	if (ipaddr.isValid(url.hostname)) {
-		if (!isPublicAddress(url.hostname)) throw new errs.ValidationError("Feed URL must not target a private address.");
+		if (!isPublicAddress(url.hostname))
+			throw new errs.ValidationError("Feed URL must not target a private address.");
 		return [{ address: url.hostname, family: url.hostname.includes(":") ? 6 : 4 }];
 	}
 	const addresses = await dnsLookup(url.hostname, { all: true, verbatim: true });
@@ -206,7 +209,7 @@ const fetchFeed = async (rawUrl, state = {}) => {
 					chunks.push(chunk);
 				});
 				response.on("end", () => resolve({ body: Buffer.concat(chunks).toString("utf8"), etag, lastModified }));
-			}
+			},
 		);
 		request.setTimeout(FEED_TIMEOUT_MS, () => request.destroy(new Error("Feed request timed out.")));
 		request.on("error", reject);
@@ -243,7 +246,11 @@ const readPolicyFeedCidrs = async (policy) => {
 	return values;
 };
 
-const escapeNginxValue = (value) => String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\r\n]/g, " ");
+const escapeNginxValue = (value) =>
+	String(value)
+		.replace(/\\/g, "\\\\")
+		.replace(/"/g, '\\"')
+		.replace(/[\r\n]/g, " ");
 
 const countryNameMapEntries = (locale) => {
 	const displayNames = new Intl.DisplayNames([locale], { type: "region", fallback: "none" });
@@ -257,7 +264,9 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 		"# Localised deny-page country labels add Nginx variables for every ShieldPM UI locale.",
 		"variables_hash_max_size 2048;",
 		"variables_hash_bucket_size 128;",
-		geoIpAvailable ? "map $geoip2_country_code $shieldpm_geoip_country_code {" : "map \"\" $shieldpm_geoip_country_code {",
+		geoIpAvailable
+			? "map $geoip2_country_code $shieldpm_geoip_country_code {"
+			: 'map "" $shieldpm_geoip_country_code {',
 		geoIpAvailable ? "    default $geoip2_country_code;" : '    default "";',
 		"}",
 		"",
@@ -279,7 +288,9 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 		lines.push("}", "", `geo ${prefix}_cidr_block {`, "    default 0;");
 		for (const cidr of policy.block_cidrs || []) lines.push(`    ${cidr} 1;`);
 		lines.push(`    include ${compiledCidrFile(id)};`, "}", "");
-		lines.push(`map ${prefix === "$shieldpm_firewall_0" ? '""' : "$shieldpm_geoip_country_code"} ${prefix}_geo_block {`);
+		lines.push(
+			`map ${prefix === "$shieldpm_firewall_0" ? '""' : "$shieldpm_geoip_country_code"} ${prefix}_geo_block {`,
+		);
 		if (!geoIpAvailable || policy.geo_mode === "off") {
 			lines.push("    default 0;");
 		} else if (policy.geo_mode === "allow") {
@@ -290,11 +301,18 @@ const renderNginxConfig = (policies, geoIpAvailable = isGeoIpEnabled()) => {
 			for (const country of policy.geo_countries || []) lines.push(`    ${country} 1;`);
 		}
 		lines.push("}", "");
-		const firewallState = `\"${prefix}_allow:${prefix}_cidr_block:${prefix}_geo_block\"`;
+		const firewallState = `"${prefix}_allow:${prefix}_cidr_block:${prefix}_geo_block"`;
 		lines.push(`map ${firewallState} ${prefix}_blocked {`);
 		lines.push("    default 0;", '    "~^1:" 0;', '    "~^0:1:" 1;', '    "~^0:0:1$" 1;', "}", "");
 		lines.push(`map ${firewallState} ${prefix}_block_reason {`);
-		lines.push('    default "ip";', '    "~^1:" "none";', '    "~^0:1:" "ip";', '    "~^0:0:1$" "country";', "}", "");
+		lines.push(
+			'    default "ip";',
+			'    "~^1:" "none";',
+			'    "~^0:1:" "ip";',
+			'    "~^0:0:1$" "country";',
+			"}",
+			"",
+		);
 	}
 	return `${lines.join("\n")}\n`;
 };
@@ -321,7 +339,8 @@ const mergePolicyPayload = (input, existing = null) => {
 		data.action = input.action;
 	}
 	if (typeof input.geo_mode !== "undefined") {
-		if (!["off", "allow", "block"].includes(input.geo_mode)) throw new errs.ValidationError("geo_mode must be off, allow, or block.");
+		if (!["off", "allow", "block"].includes(input.geo_mode))
+			throw new errs.ValidationError("geo_mode must be off, allow, or block.");
 		data.geo_mode = input.geo_mode;
 	}
 	if (typeof input.geo_countries !== "undefined") {
@@ -333,8 +352,10 @@ const mergePolicyPayload = (input, existing = null) => {
 			throw new errs.ValidationError("geo_countries must use ISO 3166-1 alpha-2 country codes.");
 		}
 	}
-	if (typeof input.allow_cidrs !== "undefined") data.allow_cidrs = normaliseCidrValues(input.allow_cidrs, "allow_cidrs");
-	if (typeof input.block_cidrs !== "undefined") data.block_cidrs = normaliseCidrValues(input.block_cidrs, "block_cidrs");
+	if (typeof input.allow_cidrs !== "undefined")
+		data.allow_cidrs = normaliseCidrValues(input.allow_cidrs, "allow_cidrs");
+	if (typeof input.block_cidrs !== "undefined")
+		data.block_cidrs = normaliseCidrValues(input.block_cidrs, "block_cidrs");
 	if (typeof input.feed_urls !== "undefined") data.feed_urls = normaliseFeedUrls(input.feed_urls);
 	if (typeof input.refresh_interval_hours !== "undefined") {
 		const hours = Number(input.refresh_interval_hours);
@@ -380,14 +401,26 @@ const refreshPolicy = async (policy, { regenerate = true } = {}) => {
 			const result = await fetchFeed(url, status[url]);
 			if (!result.notModified) {
 				const parsed = parseCidrList(result.body);
-				if (parsed.invalid.length) logger.warn(`Firewall policy ${policy.id} ignored ${parsed.invalid.length} invalid CIDRs from ${url}`);
+				if (parsed.invalid.length)
+					logger.warn(
+						`Firewall policy ${policy.id} ignored ${parsed.invalid.length} invalid CIDRs from ${url}`,
+					);
 				if (result.body.trim() && !parsed.cidrs.length) {
 					throw new Error("Feed did not contain a valid IPv4 or IPv6 CIDR.");
 				}
 				await atomicWrite(feedFile(policy.id, url), `${parsed.cidrs.map((cidr) => `${cidr} 1;`).join("\n")}\n`);
-				status[url] = { count: parsed.cidrs.length, etag: result.etag, lastModified: result.lastModified, lastSuccess: new Date().toISOString() };
+				status[url] = {
+					count: parsed.cidrs.length,
+					etag: result.etag,
+					lastModified: result.lastModified,
+					lastSuccess: new Date().toISOString(),
+				};
 			} else {
-				status[url] = { ...status[url], etag: result.etag || status[url]?.etag, lastModified: result.lastModified || status[url]?.lastModified };
+				status[url] = {
+					...status[url],
+					etag: result.etag || status[url]?.etag,
+					lastModified: result.lastModified || status[url]?.lastModified,
+				};
 			}
 			delete status[url].error;
 		} catch (error) {
@@ -427,7 +460,12 @@ const internalFirewallPolicy = {
 		await access.can("settings:update", "firewall-policies");
 		const policy = await FirewallPolicy.query().insertAndFetch(mergePolicyPayload(data));
 		const result = await synchronizePolicy(policy);
-		await internalAuditLog.add(access, { action: "created", object_type: "firewall-policy", object_id: policy.id, meta: result });
+		await internalAuditLog.add(access, {
+			action: "created",
+			object_type: "firewall-policy",
+			object_id: policy.id,
+			meta: result,
+		});
 		internalGitOps.triggerAutoPush("firewall-policy");
 		return result;
 	},
@@ -448,7 +486,12 @@ const internalFirewallPolicy = {
 		const existing = await internalFirewallPolicy.get(access, id);
 		const policy = await FirewallPolicy.query().patchAndFetchById(id, mergePolicyPayload(data, existing));
 		const result = await synchronizePolicy(policy);
-		await internalAuditLog.add(access, { action: "updated", object_type: "firewall-policy", object_id: id, meta: result });
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "firewall-policy",
+			object_id: id,
+			meta: result,
+		});
 		internalGitOps.triggerAutoPush("firewall-policy");
 		return result;
 	},
@@ -456,7 +499,12 @@ const internalFirewallPolicy = {
 	refresh: async (access, id) => {
 		const policy = await internalFirewallPolicy.get(access, id);
 		const result = await synchronizePolicy(policy);
-		await internalAuditLog.add(access, { action: "updated", object_type: "firewall-policy", object_id: id, meta: { refresh: true } });
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "firewall-policy",
+			object_id: id,
+			meta: { refresh: true },
+		});
 		return result;
 	},
 
@@ -469,11 +517,18 @@ const internalFirewallPolicy = {
 		await fs.rm(compiledCidrFile(id), { force: true });
 		await writeFirewallConfig();
 		const hosts = hostIds.length
-			? await ProxyHost.query().whereIn("id", hostIds).withGraphFetched("[certificate,access_list.[clients,items],host_domains,firewall_policy]")
+			? await ProxyHost.query()
+					.whereIn("id", hostIds)
+					.withGraphFetched("[certificate,access_list.[clients,items],host_domains,firewall_policy]")
 			: [];
 		if (hosts.length) await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
 		await internalNginx.reload();
-		await internalAuditLog.add(access, { action: "deleted", object_type: "firewall-policy", object_id: id, meta: { name: policy.name } });
+		await internalAuditLog.add(access, {
+			action: "deleted",
+			object_type: "firewall-policy",
+			object_id: id,
+			meta: { name: policy.name },
+		});
 		internalGitOps.triggerAutoPush("firewall-policy");
 		return true;
 	},

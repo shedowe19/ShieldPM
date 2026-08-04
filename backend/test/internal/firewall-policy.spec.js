@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+	createPinnedLookup,
+	parseCidrList,
+	renderNginxConfig,
+	validateFeedUrl,
+} from "../../internal/firewall-policy.js";
 import utils from "../../lib/utils.js";
-import { createPinnedLookup, parseCidrList, renderNginxConfig, validateFeedUrl } from "../../internal/firewall-policy.js";
 
 describe("host firewall policy helpers", () => {
 	it("parses, normalises and de-duplicates IPv4 and IPv6 CIDRs", () => {
@@ -10,32 +15,39 @@ describe("host firewall policy helpers", () => {
 	});
 
 	it("accepts only credential-free HTTPS feed URLs on the default port", () => {
-		expect(validateFeedUrl("https://raw.githubusercontent.com/X4BNet/lists_vpn/main/output/vpn/ipv4.txt")).toContain(
-			"raw.githubusercontent.com",
-		);
+		expect(
+			validateFeedUrl("https://raw.githubusercontent.com/X4BNet/lists_vpn/main/output/vpn/ipv4.txt"),
+		).toContain("raw.githubusercontent.com");
 		expect(() => validateFeedUrl("http://example.test/list.txt")).toThrow("HTTPS");
 		expect(() => validateFeedUrl("https://user:secret@example.test/list.txt")).toThrow("credentials");
 		expect(() => validateFeedUrl("https://example.test:8443/list.txt")).toThrow("custom port");
 	});
 
 	it("pins both single-address and Happy-Eyeballs lookup callbacks", async () => {
-		const addresses = [{ address: "203.0.113.42", family: 4 }, { address: "2001:db8::42", family: 6 }];
+		const addresses = [
+			{ address: "203.0.113.42", family: 4 },
+			{ address: "2001:db8::42", family: 6 },
+		];
 		const lookup = createPinnedLookup(addresses);
-		await new Promise((resolve, reject) => lookup("example.test", {}, (error, address, family) => {
-			if (error) reject(error);
-			else {
-				expect(address).toBe("203.0.113.42");
-				expect(family).toBe(4);
-				resolve();
-			}
-		}));
-		await new Promise((resolve, reject) => lookup("example.test", { all: true }, (error, result) => {
-			if (error) reject(error);
-			else {
-				expect(result).toEqual(addresses);
-				resolve();
-			}
-		}));
+		await new Promise((resolve, reject) =>
+			lookup("example.test", {}, (error, address, family) => {
+				if (error) reject(error);
+				else {
+					expect(address).toBe("203.0.113.42");
+					expect(family).toBe(4);
+					resolve();
+				}
+			}),
+		);
+		await new Promise((resolve, reject) =>
+			lookup("example.test", { all: true }, (error, result) => {
+				if (error) reject(error);
+				else {
+					expect(result).toEqual(addresses);
+					resolve();
+				}
+			}),
+		);
 	});
 
 	it("renders global geo and map directives with trusted CIDR precedence", () => {
@@ -55,7 +67,10 @@ describe("host firewall policy helpers", () => {
 		expect(config).toContain("variables_hash_bucket_size 128;");
 		expect(config).toContain('map "" $shieldpm_geoip_country_code');
 		expect(config).toContain('    default "";');
-		const geoConfig = renderNginxConfig([{ id: 8, allow_cidrs: [], block_cidrs: [], geo_mode: "block", geo_countries: ["GB"] }], true);
+		const geoConfig = renderNginxConfig(
+			[{ id: 8, allow_cidrs: [], block_cidrs: [], geo_mode: "block", geo_countries: ["GB"] }],
+			true,
+		);
 		expect(geoConfig).toContain("    default $geoip2_country_code;");
 		for (const language of ["bg", "de", "en", "es", "it", "ja", "ko", "nl", "pl", "ru", "sk", "vi", "zh"]) {
 			expect(geoConfig).toContain(`map $shieldpm_geoip_country_code $shieldpm_geoip_country_name_${language}`);
@@ -68,7 +83,9 @@ describe("host firewall policy helpers", () => {
 		expect(config).toContain("include /data/nginx/firewall/policy-7.cidrs;");
 		expect(config).toContain('"~^1:" 0;');
 		expect(config).toContain('"~^0:1:" 1;');
-		expect(config).toContain('map "$shieldpm_firewall_7_allow:$shieldpm_firewall_7_cidr_block:$shieldpm_firewall_7_geo_block" $shieldpm_firewall_7_block_reason');
+		expect(config).toContain(
+			'map "$shieldpm_firewall_7_allow:$shieldpm_firewall_7_cidr_block:$shieldpm_firewall_7_geo_block" $shieldpm_firewall_7_block_reason',
+		);
 		expect(config).toContain('"~^0:0:1$" "country";');
 	});
 
@@ -86,14 +103,19 @@ describe("host firewall policy helpers", () => {
 			firewall_policy: { enabled: true, action: "deny" },
 			locations: [],
 		});
-		expect(rendered).toContain("ngx.var.shieldpm_firewall_4_blocked == \"1\"");
+		expect(rendered).toContain('ngx.var.shieldpm_firewall_4_blocked == "1"');
 		expect(rendered).toContain("isAcmeChallenge");
-		expect(rendered).toContain("ngx.exec(\"/_shieldpm_firewall_denied\")");
-		expect(rendered).toContain("if ngx.var.uri == \"/_shieldpm_firewall_denied\" then");
+		expect(rendered).toContain('ngx.exec("/_shieldpm_firewall_denied")');
+		expect(rendered).toContain('if ngx.var.uri == "/_shieldpm_firewall_denied" then');
 		expect(rendered).toContain("location = /_shieldpm_firewall_denied");
 		expect(rendered).toContain('set $shieldpm_firewall_policy_id "4";');
 		expect(rendered).toContain("content_by_lua_file /usr/local/share/shieldpm/firewall_blocked_page.lua;");
-		const denyPage = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../../../rootfs/usr/local/share/shieldpm/firewall_blocked_page.lua", import.meta.url), "utf8"));
+		const denyPage = await import("node:fs/promises").then(({ readFile }) =>
+			readFile(
+				new URL("../../../rootfs/usr/local/share/shieldpm/firewall_blocked_page.lua", import.meta.url),
+				"utf8",
+			),
+		);
 		expect(denyPage).toContain("GEOIP-LÄNDERSPERRE");
 		expect(denyPage).toContain("shieldpm_geoip_country_name_");
 		expect(denyPage).toContain("GEOIP COUNTRY RULE");

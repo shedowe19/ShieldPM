@@ -48,7 +48,9 @@ router
 	.put(async (req, res, next) => {
 		try {
 			const payload = await apiValidator(getValidationSchema("/nginx/firewall-policies/{id}", "put"), req.body);
-			res.status(200).send(await internalFirewallPolicy.update(res.locals.access, Number(req.params.id), payload));
+			res.status(200).send(
+				await internalFirewallPolicy.update(res.locals.access, Number(req.params.id), payload),
+			);
 		} catch (error) {
 			next(error);
 		}

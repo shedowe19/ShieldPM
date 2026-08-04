@@ -5,8 +5,8 @@ import { useState } from "react";
 import {
 	createFirewallPolicy,
 	deleteFirewallPolicy,
-	refreshFirewallPolicy,
 	type FirewallPolicy,
+	refreshFirewallPolicy,
 	updateFirewallPolicy,
 } from "src/api/backend";
 import { HasPermission } from "src/components/HasPermission";
@@ -65,7 +65,11 @@ const createDraft = (policy?: FirewallPolicy): PolicyDraft =>
 			}
 		: emptyDraft();
 
-const lines = (value: string) => value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+const lines = (value: string) =>
+	value
+		.split(/[\n,]/)
+		.map((item) => item.trim())
+		.filter(Boolean);
 
 function FirewallPoliciesContent() {
 	const queryClient = useQueryClient();
@@ -131,35 +135,118 @@ function FirewallPoliciesContent() {
 		<Card className="mt-4 border-t-4 border-orange-500/50">
 			<CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
 				<div>
-					<CardTitle className="flex items-center gap-2 text-2xl font-bold"><IconShieldLock className="h-6 w-6 text-orange-500" /><T id="firewall-policies" /></CardTitle>
-					<CardDescription className="mt-1"><T id="firewall-policies.description" /></CardDescription>
+					<CardTitle className="flex items-center gap-2 text-2xl font-bold">
+						<IconShieldLock className="h-6 w-6 text-orange-500" />
+						<T id="firewall-policies" />
+					</CardTitle>
+					<CardDescription className="mt-1">
+						<T id="firewall-policies.description" />
+					</CardDescription>
 				</div>
-				<Button onClick={() => startEdit()}><IconPlus className="mr-2 h-4 w-4" /><T id="firewall-policies.new" /></Button>
+				<Button onClick={() => startEdit()}>
+					<IconPlus className="mr-2 h-4 w-4" />
+					<T id="firewall-policies.new" />
+				</Button>
 			</CardHeader>
 			<CardContent>
-				<Alert className="mb-4"><AlertDescription><T id="firewall-policies.geoip.warning" /></AlertDescription></Alert>
-				{error ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error.message}</AlertDescription></Alert> : null}
+				<Alert className="mb-4">
+					<AlertDescription>
+						<T id="firewall-policies.geoip.warning" />
+					</AlertDescription>
+				</Alert>
+				{error ? (
+					<Alert variant="destructive">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>{error.message}</AlertDescription>
+					</Alert>
+				) : null}
 				<div className="overflow-x-auto rounded-md border">
 					<Table>
-						<TableHeader><TableRow>
-							<TableHead><T id="name" /></TableHead><TableHead><T id="firewall-policies.mode" /></TableHead>
-							<TableHead><T id="firewall-policies.active-cidrs" /></TableHead><TableHead><T id="firewall-policies.last-updated" /></TableHead>
-							<TableHead className="text-right"><T id="options" /></TableHead>
-						</TableRow></TableHeader>
+						<TableHeader>
+							<TableRow>
+								<TableHead>
+									<T id="name" />
+								</TableHead>
+								<TableHead>
+									<T id="firewall-policies.mode" />
+								</TableHead>
+								<TableHead>
+									<T id="firewall-policies.active-cidrs" />
+								</TableHead>
+								<TableHead>
+									<T id="firewall-policies.last-updated" />
+								</TableHead>
+								<TableHead className="text-right">
+									<T id="options" />
+								</TableHead>
+							</TableRow>
+						</TableHeader>
 						<TableBody>
-							{isLoading ? <TableRow><TableCell colSpan={5} className="py-8 text-center"><T id="loading" /></TableCell></TableRow> : null}
-							{!isLoading && !data.length ? <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground"><T id="firewall-policies.empty" /></TableCell></TableRow> : null}
-							{data.map((policy) => <TableRow key={policy.id}>
-								<TableCell className="font-medium">{policy.name}{!policy.enabled ? <span className="ml-2 text-muted-foreground">(<T id="disabled" />)</span> : null}</TableCell>
-								<TableCell><T id={`firewall-policies.geo-mode.${policy.geoMode}`} /></TableCell>
-								<TableCell>{policy.totalCidrs.toLocaleString()}</TableCell>
-								<TableCell className="max-w-64 truncate" title={policy.lastError || undefined}>{policy.lastError || policy.lastUpdatedOn || "—"}</TableCell>
-								<TableCell className="space-x-1 text-right">
-									<Button variant="ghost" size="icon" aria-label={intl.formatMessage({ id: "firewall-policies.refresh" })} disabled={refreshingId === policy.id} onClick={() => refresh(policy)}>{refreshingId === policy.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <IconRefresh className="h-4 w-4" />}</Button>
-									<Button variant="ghost" size="icon" aria-label={intl.formatMessage({ id: "firewall-policies.edit" })} onClick={() => startEdit(policy)}><IconEdit className="h-4 w-4" /></Button>
-									<Button variant="ghost" size="icon" className="text-destructive" aria-label={intl.formatMessage({ id: "action.delete" })} onClick={() => remove(policy)}><IconTrash className="h-4 w-4" /></Button>
-								</TableCell>
-							</TableRow>)}
+							{isLoading ? (
+								<TableRow>
+									<TableCell colSpan={5} className="py-8 text-center">
+										<T id="loading" />
+									</TableCell>
+								</TableRow>
+							) : null}
+							{!isLoading && !data.length ? (
+								<TableRow>
+									<TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+										<T id="firewall-policies.empty" />
+									</TableCell>
+								</TableRow>
+							) : null}
+							{data.map((policy) => (
+								<TableRow key={policy.id}>
+									<TableCell className="font-medium">
+										{policy.name}
+										{!policy.enabled ? (
+											<span className="ml-2 text-muted-foreground">
+												(<T id="disabled" />)
+											</span>
+										) : null}
+									</TableCell>
+									<TableCell>
+										<T id={`firewall-policies.geo-mode.${policy.geoMode}`} />
+									</TableCell>
+									<TableCell>{policy.totalCidrs.toLocaleString()}</TableCell>
+									<TableCell className="max-w-64 truncate" title={policy.lastError || undefined}>
+										{policy.lastError || policy.lastUpdatedOn || "—"}
+									</TableCell>
+									<TableCell className="space-x-1 text-right">
+										<Button
+											variant="ghost"
+											size="icon"
+											aria-label={intl.formatMessage({ id: "firewall-policies.refresh" })}
+											disabled={refreshingId === policy.id}
+											onClick={() => refresh(policy)}
+										>
+											{refreshingId === policy.id ? (
+												<Loader2 className="h-4 w-4 animate-spin" />
+											) : (
+												<IconRefresh className="h-4 w-4" />
+											)}
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
+											aria-label={intl.formatMessage({ id: "firewall-policies.edit" })}
+											onClick={() => startEdit(policy)}
+										>
+											<IconEdit className="h-4 w-4" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="text-destructive"
+											aria-label={intl.formatMessage({ id: "action.delete" })}
+											onClick={() => remove(policy)}
+										>
+											<IconTrash className="h-4 w-4" />
+										</Button>
+									</TableCell>
+								</TableRow>
+							))}
 						</TableBody>
 					</Table>
 				</div>
@@ -167,22 +254,170 @@ function FirewallPoliciesContent() {
 
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-					<DialogHeader><DialogTitle><T id={selected ? "firewall-policies.edit" : "firewall-policies.new"} /></DialogTitle></DialogHeader>
+					<DialogHeader>
+						<DialogTitle>
+							<T id={selected ? "firewall-policies.edit" : "firewall-policies.new"} />
+						</DialogTitle>
+					</DialogHeader>
 					<div className="space-y-4">
-						{formError ? <Alert variant="destructive"><AlertDescription>{formError}</AlertDescription></Alert> : null}
-						<div className="space-y-2"><Label htmlFor="firewall-name"><T id="name" /></Label><Input id="firewall-name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></div>
-						<div className="flex items-center justify-between rounded-md border p-3"><Label htmlFor="firewall-enabled"><T id="enabled" /></Label><Switch id="firewall-enabled" checked={draft.enabled} onCheckedChange={(enabled) => setDraft({ ...draft, enabled })} /></div>
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="space-y-2"><Label><T id="firewall-policies.geo-mode" /></Label><Select value={draft.geoMode} onValueChange={(geoMode: FirewallPolicy["geoMode"]) => setDraft({ ...draft, geoMode })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="off"><T id="firewall-policies.geo-mode.off" /></SelectItem><SelectItem value="allow"><T id="firewall-policies.geo-mode.allow" /></SelectItem><SelectItem value="block"><T id="firewall-policies.geo-mode.block" /></SelectItem></SelectContent></Select></div>
-							<div className="space-y-2"><Label><T id="firewall-policies.action" /></Label><Select value={draft.action} onValueChange={(action: FirewallPolicy["action"]) => setDraft({ ...draft, action })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="deny"><T id="firewall-policies.action.deny" /></SelectItem><SelectItem value="drop"><T id="firewall-policies.action.drop" /></SelectItem></SelectContent></Select></div>
+						{formError ? (
+							<Alert variant="destructive">
+								<AlertDescription>{formError}</AlertDescription>
+							</Alert>
+						) : null}
+						<div className="space-y-2">
+							<Label htmlFor="firewall-name">
+								<T id="name" />
+							</Label>
+							<Input
+								id="firewall-name"
+								value={draft.name}
+								onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+							/>
 						</div>
-						{draft.geoMode !== "off" ? <div className="space-y-2"><Label><T id="firewall-policies.countries" /></Label><Input value={draft.geoCountries} placeholder="DE, AT, CH" onChange={(event) => setDraft({ ...draft, geoCountries: event.target.value })} /></div> : null}
-						<div className="space-y-2"><Label><T id="firewall-policies.allow-cidrs" /></Label><Textarea rows={3} value={draft.allowCidrs} onChange={(event) => setDraft({ ...draft, allowCidrs: event.target.value })} /></div>
-						<div className="space-y-2"><Label><T id="firewall-policies.block-cidrs" /></Label><Textarea rows={3} value={draft.blockCidrs} onChange={(event) => setDraft({ ...draft, blockCidrs: event.target.value })} /></div>
-						<div className="space-y-2"><div className="flex items-center justify-between"><Label><T id="firewall-policies.feeds" /></Label><Button type="button" variant="outline" size="sm" onClick={() => setDraft({ ...draft, feedUrls: lines(`${draft.feedUrls}\n${X4B_VPN_FEED}`).join("\n") })}><T id="firewall-policies.x4b-vpn" /></Button></div><Textarea rows={3} value={draft.feedUrls} onChange={(event) => setDraft({ ...draft, feedUrls: event.target.value })} /><p className="text-sm text-muted-foreground"><T id="firewall-policies.feeds.help" /></p></div>
-						<div className="max-w-52 space-y-2"><Label><T id="firewall-policies.refresh-interval" /></Label><Input type="number" min={1} max={168} value={draft.refreshIntervalHours} onChange={(event) => setDraft({ ...draft, refreshIntervalHours: Number(event.target.value) })} /></div>
+						<div className="flex items-center justify-between rounded-md border p-3">
+							<Label htmlFor="firewall-enabled">
+								<T id="enabled" />
+							</Label>
+							<Switch
+								id="firewall-enabled"
+								checked={draft.enabled}
+								onCheckedChange={(enabled) => setDraft({ ...draft, enabled })}
+							/>
+						</div>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<div className="space-y-2">
+								<Label>
+									<T id="firewall-policies.geo-mode" />
+								</Label>
+								<Select
+									value={draft.geoMode}
+									onValueChange={(geoMode: FirewallPolicy["geoMode"]) =>
+										setDraft({ ...draft, geoMode })
+									}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="off">
+											<T id="firewall-policies.geo-mode.off" />
+										</SelectItem>
+										<SelectItem value="allow">
+											<T id="firewall-policies.geo-mode.allow" />
+										</SelectItem>
+										<SelectItem value="block">
+											<T id="firewall-policies.geo-mode.block" />
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="space-y-2">
+								<Label>
+									<T id="firewall-policies.action" />
+								</Label>
+								<Select
+									value={draft.action}
+									onValueChange={(action: FirewallPolicy["action"]) => setDraft({ ...draft, action })}
+								>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="deny">
+											<T id="firewall-policies.action.deny" />
+										</SelectItem>
+										<SelectItem value="drop">
+											<T id="firewall-policies.action.drop" />
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+						{draft.geoMode !== "off" ? (
+							<div className="space-y-2">
+								<Label>
+									<T id="firewall-policies.countries" />
+								</Label>
+								<Input
+									value={draft.geoCountries}
+									placeholder="DE, AT, CH"
+									onChange={(event) => setDraft({ ...draft, geoCountries: event.target.value })}
+								/>
+							</div>
+						) : null}
+						<div className="space-y-2">
+							<Label>
+								<T id="firewall-policies.allow-cidrs" />
+							</Label>
+							<Textarea
+								rows={3}
+								value={draft.allowCidrs}
+								onChange={(event) => setDraft({ ...draft, allowCidrs: event.target.value })}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>
+								<T id="firewall-policies.block-cidrs" />
+							</Label>
+							<Textarea
+								rows={3}
+								value={draft.blockCidrs}
+								onChange={(event) => setDraft({ ...draft, blockCidrs: event.target.value })}
+							/>
+						</div>
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<Label>
+									<T id="firewall-policies.feeds" />
+								</Label>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() =>
+										setDraft({
+											...draft,
+											feedUrls: lines(`${draft.feedUrls}\n${X4B_VPN_FEED}`).join("\n"),
+										})
+									}
+								>
+									<T id="firewall-policies.x4b-vpn" />
+								</Button>
+							</div>
+							<Textarea
+								rows={3}
+								value={draft.feedUrls}
+								onChange={(event) => setDraft({ ...draft, feedUrls: event.target.value })}
+							/>
+							<p className="text-sm text-muted-foreground">
+								<T id="firewall-policies.feeds.help" />
+							</p>
+						</div>
+						<div className="max-w-52 space-y-2">
+							<Label>
+								<T id="firewall-policies.refresh-interval" />
+							</Label>
+							<Input
+								type="number"
+								min={1}
+								max={168}
+								value={draft.refreshIntervalHours}
+								onChange={(event) =>
+									setDraft({ ...draft, refreshIntervalHours: Number(event.target.value) })
+								}
+							/>
+						</div>
 					</div>
-					<DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}><T id="cancel" /></Button><Button type="button" onClick={save} disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}<T id="save" /></Button></DialogFooter>
+					<DialogFooter>
+						<Button type="button" variant="outline" onClick={() => setOpen(false)}>
+							<T id="cancel" />
+						</Button>
+						<Button type="button" onClick={save} disabled={saving}>
+							{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+							<T id="save" />
+						</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</Card>
@@ -190,5 +425,9 @@ function FirewallPoliciesContent() {
 }
 
 export default function FirewallPolicies() {
-	return <HasPermission section={ADMIN} permission={MANAGE} pageLoading><FirewallPoliciesContent /></HasPermission>;
+	return (
+		<HasPermission section={ADMIN} permission={MANAGE} pageLoading>
+			<FirewallPoliciesContent />
+		</HasPermission>
+	);
 }

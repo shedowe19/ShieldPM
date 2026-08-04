@@ -20,5 +20,5 @@ jobs:
           check_filenames: true
           check_hidden: true
           skip: yarn.lock,package-lock.json,./frontend/src/locale/lang,./frontend/src/locale/HelpDoc,./.agent,REFACTOR_ROADMAP.md,./docs/wiki-intern,./agent.md,./scripts/lib,./scripts/wiki-graph.py
-          ignore_words_list: afterAll,alog,nd,devlop,trough,hastable,elease,eleases,ublish,Paket,paket,statics,ist,vor,unter,alle,Methode,Funktion,als,oder
+          ignore_words_list: afterAll,alog,nd,devlop,trough,hastable,elease,eleases,ublish,Paket,paket,statics,ist,vor,unter,alle,Methode,Funktion,als,oder,FO,Sie,utiliza,momento,doen,adres
 
