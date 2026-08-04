@@ -16,6 +16,7 @@ import {
 	renderNginxConfig,
 	resolveFeedEndpoint,
 	validateFeedUrl,
+	withPolicyLock,
 } from "../../internal/firewall-policy.js";
 import utils from "../../lib/utils.js";
 
@@ -220,5 +221,35 @@ describe("host firewall policy helpers", () => {
 
 	it("rejects untyped enabled values instead of coercing GitOps YAML", () => {
 		expect(() => mergePolicyPayload({ name: "Typed", enabled: "false" })).toThrow("enabled must be a boolean");
+	});
+
+	it("serializes refreshes and policy changes for the same policy", async () => {
+		let active = 0;
+		let maximum = 0;
+		await Promise.all(
+			[1, 2, 3].map(
+				async () =>
+					await withPolicyLock(42, async () => {
+						active += 1;
+						maximum = Math.max(maximum, active);
+						await new Promise((resolve) => setTimeout(resolve, 5));
+						active -= 1;
+					}),
+			),
+		);
+		expect(maximum).toBe(1);
+	});
+
+	it("fails closed when a feed policy is known to lack a valid cache", () => {
+		const url = "https://feeds.example.test/list";
+		const config = renderNginxConfig([
+			{
+				id: 11,
+				enabled: true,
+				feed_urls: [url],
+				feed_status: { [url]: { cache_ready: false } },
+			},
+		]);
+		expect(config).toContain('map "" $shieldpm_firewall_11_enabled {\n    default 0;');
 	});
 });

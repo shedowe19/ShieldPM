@@ -56,14 +56,14 @@ Hinter Cloudflare müssen die Real-IP-Ranges aktiv sein (`SKIP_IP_RANGES=false`)
 - die aufgelöste öffentliche Adresse wird für die Anfrage fest gebunden;
 - Redirects werden nicht gefolgt, Antwortgröße ist auf 5 MiB begrenzt, Timeout 20 Sekunden; pro Policy laufen höchstens drei Feed-Abrufe gleichzeitig;
 - CIDRs und Kommentare werden normalisiert; eine nicht-leere Antwort ohne gültigen CIDR ersetzt den letzten gültigen Feed nicht;
-- ETag und Last-Modified vermeiden unnötige Downloads;
-- Feed-Dateien und die zentrale Nginx-Konfiguration werden atomar geschrieben. Bei Abruffehlern bleibt die letzte gültige Version wirksam.
+- ETag und Last-Modified vermeiden unnötige Downloads; Conditional Requests werden nur mit einem gültigen lokalen Cache gesendet, ein unerwartetes `304` wird ohne Validator erneut abgerufen;
+- Feed-Dateien und die zentrale Nginx-Konfiguration werden atomar geschrieben. Ein vollständiger Satz neuer Cache-Dateien wird erst ersetzt, wenn jede konfigurierte Quelle entweder erfolgreich aktualisiert wurde oder weiterhin einen gültigen Cache besitzt. Bei Abruffehlern bleibt die letzte gültige Version wirksam; eine neue, cachelose Feed-Policy bleibt bis zum ersten erfolgreichen Abruf deaktiviert.
 
 Die kompilierten Daten liegen unter `/data/nginx/firewall/`; die globale Nginx-Map liegt unter `/data/nginx/firewall.conf`. Diese Dateien werden von ShieldPM verwaltet und nicht manuell bearbeitet.
 
 ## GitOps
 
-Bei aktivem GitOps werden Policy-Definitionen unter `firewall-policies/` sowie die `firewall_policy_id`-Zuordnung der Proxy-Hosts exportiert und beim Restore **vor** den Proxy-Hosts importiert. Jede importierte Policy durchläuft dieselbe Typ-, CIDR-, Länder-, Feed- und Aktionsvalidierung wie die API. Laufzeitdaten wie Feed-Status, Fehlertexte, Zeitstempel und die kompilierten CIDR-Dateien werden bewusst nicht versioniert: ShieldPM verwirft für importierte Policies alte lokale Feed-Caches und baut sie vor dem Rendern der Proxy-Hosts mit begrenzter Parallelität neu auf. Dadurch können geänderte Feed-URLs nicht bis zum nächsten Intervall alte Daten verwenden.
+Bei aktivem GitOps werden Policy-Definitionen unter `firewall-policies/` sowie die `firewall_policy_id`-Zuordnung der Proxy-Hosts exportiert und beim Restore **vor** den Proxy-Hosts importiert. Jede importierte Policy durchläuft dieselbe Typ-, CIDR-, Länder-, Feed- und Aktionsvalidierung wie die API. Laufzeitdaten wie Feed-Status, Fehlertexte, Zeitstempel und die kompilierten CIDR-Dateien werden bewusst nicht versioniert. ShieldPM aktualisiert die jeweils konfigurierten Quellen vor dem Rendern der Proxy-Hosts mit begrenzter Parallelität, bewahrt dabei jedoch einen vorhandenen letzten gültigen Cache bis zum vollständigen Ersatz. Fehlt für eine neue oder geänderte Quelle während des Restores ein gültiger Cache, wird kein Nginx-Reload mit einer leeren Feed-Sperre durchgeführt; die Policy bleibt bis zur erfolgreichen Aktualisierung inaktiv. Policy-Updates, manuelle Abrufe und der Scheduler sind pro Policy serialisiert, damit ein älterer Abruf keine neuere Feed-Konfiguration zurückschreiben kann.
 
 Feed-URLs sind deklarative Policy-Konfiguration und liegen damit im GitOps-Repository. ShieldPM akzeptiert keine URL-Credentials; trotzdem sollten keine Zugangs-Tokens als Query-Parameter in Feed-URLs verwendet werden. Das GitOps-Repository ist als vertrauliche Konfiguration zu behandeln.
 

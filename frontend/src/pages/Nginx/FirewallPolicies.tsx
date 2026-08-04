@@ -65,9 +65,15 @@ const createDraft = (policy?: FirewallPolicy): PolicyDraft =>
 			}
 		: emptyDraft();
 
-const lines = (value: string) =>
+export const commaSeparatedLines = (value: string) =>
 	value
 		.split(/[\n,]/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+
+export const newlineSeparatedLines = (value: string) =>
+	value
+		.split(/\r?\n/)
 		.map((item) => item.trim())
 		.filter(Boolean);
 
@@ -97,10 +103,10 @@ function FirewallPoliciesContent() {
 			enabled: draft.enabled,
 			action: draft.action,
 			geoMode: draft.geoMode,
-			geoCountries: lines(draft.geoCountries).map((country) => country.toUpperCase()),
-			allowCidrs: lines(draft.allowCidrs),
-			blockCidrs: lines(draft.blockCidrs),
-			feedUrls: lines(draft.feedUrls),
+			geoCountries: commaSeparatedLines(draft.geoCountries).map((country) => country.toUpperCase()),
+			allowCidrs: commaSeparatedLines(draft.allowCidrs),
+			blockCidrs: commaSeparatedLines(draft.blockCidrs),
+			feedUrls: newlineSeparatedLines(draft.feedUrls),
 			refreshIntervalHours: Number(draft.refreshIntervalHours),
 		};
 		try {
@@ -378,7 +384,9 @@ function FirewallPoliciesContent() {
 									onClick={() =>
 										setDraft({
 											...draft,
-											feedUrls: lines(`${draft.feedUrls}\n${X4B_VPN_FEED}`).join("\n"),
+											feedUrls: newlineSeparatedLines(`${draft.feedUrls}\n${X4B_VPN_FEED}`).join(
+												"\n",
+											),
 										})
 									}
 								>
