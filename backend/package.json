@@ -51,7 +51,7 @@
     "tail": "^2.2.6",
     "telegraf": "^4.16.3",
     "temp-write": "^6.0.1",
-    "ws": "^8.21.1"
+    "ws": "^8.21.2"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "12.1.0",
