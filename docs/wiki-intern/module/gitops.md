@@ -20,6 +20,7 @@ GitOps ermöglicht es, die gesamte ShieldPM-Konfiguration in einem Git-Repositor
 - Synchronisiert mit Remote-Git-Repository via `isomorphic-git`
 - Unterstützt SSH-Keys und HTTPS-Tokens für Authentifizierung
 - Git-Deploy: Automatisches Klonen und Deployen von statischen Sites
+- Host-Firewall-Policies werden vor zugehörigen Proxy-Hosts importiert. Ihre YAML-Daten werden vor dem Persistieren mit derselben Validierung wie die API normalisiert. Volatile Feed-Caches gehören nicht ins Repository; sie werden beim Restore vor Nginx-Render und Reload neu aufgebaut.
 
 ## Abhängigkeiten
 

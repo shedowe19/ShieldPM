@@ -20,6 +20,8 @@ const MAX_FEEDS = 8;
 const MAX_CIDRS = 10000;
 const MAX_FEED_BYTES = 5 * 1024 * 1024;
 const FEED_TIMEOUT_MS = 20000;
+const FEED_FETCH_CONCURRENCY = 3;
+const POLICY_REFRESH_CONCURRENCY = 2;
 
 // MaxMind Country records use ISO 3166-1 alpha-2 codes. Keep this list local so
 // the generated Nginx config has no runtime dependency beyond Node's built-in ICU.
@@ -144,13 +146,15 @@ const isPublicAddress = (address) => {
 	}
 };
 
+const normaliseUrlHostname = (hostname) => String(hostname).replace(/^\[|\]$/g, "");
+
 const resolveFeedEndpoint = async (url) => {
-	if (ipaddr.isValid(url.hostname)) {
-		if (!isPublicAddress(url.hostname))
-			throw new errs.ValidationError("Feed URL must not target a private address.");
-		return [{ address: url.hostname, family: url.hostname.includes(":") ? 6 : 4 }];
+	const hostname = normaliseUrlHostname(url.hostname);
+	if (ipaddr.isValid(hostname)) {
+		if (!isPublicAddress(hostname)) throw new errs.ValidationError("Feed URL must not target a private address.");
+		return [{ address: hostname, family: hostname.includes(":") ? 6 : 4 }];
 	}
-	const addresses = await dnsLookup(url.hostname, { all: true, verbatim: true });
+	const addresses = await dnsLookup(hostname, { all: true, verbatim: true });
 	if (!addresses.length || addresses.some(({ address }) => !isPublicAddress(address))) {
 		throw new errs.ValidationError("Feed URL must resolve exclusively to public addresses.");
 	}
@@ -166,18 +170,35 @@ const createPinnedLookup = (addresses) => (_hostname, options, callback) => {
 	callback(null, selected.address, selected.family);
 };
 
+const mapWithConcurrency = async (values, limit, mapper) => {
+	const results = [];
+	let nextIndex = 0;
+	const workerCount = Math.min(Math.max(1, limit), values.length);
+	await Promise.all(
+		Array.from({ length: workerCount }, async () => {
+			while (nextIndex < values.length) {
+				const index = nextIndex;
+				nextIndex += 1;
+				results[index] = await mapper(values[index], index);
+			}
+		}),
+	);
+	return results;
+};
+
 const fetchFeed = async (rawUrl, state = {}) => {
 	const url = new URL(validateFeedUrl(rawUrl));
+	const hostname = normaliseUrlHostname(url.hostname);
 	const addresses = await resolveFeedEndpoint(url);
 	return await new Promise((resolve, reject) => {
 		const request = https.request(
 			{
 				protocol: "https:",
-				host: url.hostname,
+				host: hostname,
 				port: url.port || 443,
 				path: `${url.pathname}${url.search}`,
 				method: "GET",
-				servername: url.hostname,
+				...(ipaddr.isValid(hostname) ? {} : { servername: hostname }),
 				headers: {
 					Accept: "text/plain, text/*;q=0.9, */*;q=0.1",
 					Host: url.host,
@@ -339,7 +360,10 @@ const mergePolicyPayload = (input, existing = null) => {
 		data.name = input.name.trim();
 	}
 	if (!existing && !data.name) throw new errs.ValidationError("Policy name is required.");
-	if (typeof input.enabled !== "undefined") data.enabled = Boolean(input.enabled);
+	if (typeof input.enabled !== "undefined") {
+		if (typeof input.enabled !== "boolean") throw new errs.ValidationError("enabled must be a boolean.");
+		data.enabled = input.enabled;
+	}
 	if (typeof input.action !== "undefined") {
 		if (!["deny", "drop"].includes(input.action)) throw new errs.ValidationError("action must be deny or drop.");
 		data.action = input.action;
@@ -401,41 +425,46 @@ const regenerateLinkedHosts = async (policyId) => {
 const refreshPolicy = async (policy, { regenerate = true } = {}) => {
 	await ensurePolicyFiles(policy);
 	const status = { ...(policy.feed_status || {}) };
-	const errors = [];
 	const feedUrls = policy.feed_urls || [];
-	for (const url of feedUrls) {
-		try {
-			const result = await fetchFeed(url, status[url]);
-			if (!result.notModified) {
-				const parsed = parseCidrList(result.body);
-				if (parsed.invalid.length)
-					logger.warn(
-						`Firewall policy ${policy.id} ignored ${parsed.invalid.length} invalid CIDRs from ${url}`,
+	const errors = (
+		await mapWithConcurrency(feedUrls, FEED_FETCH_CONCURRENCY, async (url) => {
+			try {
+				const result = await fetchFeed(url, status[url]);
+				if (!result.notModified) {
+					const parsed = parseCidrList(result.body);
+					if (parsed.invalid.length)
+						logger.warn(
+							`Firewall policy ${policy.id} ignored ${parsed.invalid.length} invalid CIDRs from ${url}`,
+						);
+					if (result.body.trim() && !parsed.cidrs.length) {
+						throw new Error("Feed did not contain a valid IPv4 or IPv6 CIDR.");
+					}
+					await atomicWrite(
+						feedFile(policy.id, url),
+						`${parsed.cidrs.map((cidr) => `${cidr} 1;`).join("\n")}\n`,
 					);
-				if (result.body.trim() && !parsed.cidrs.length) {
-					throw new Error("Feed did not contain a valid IPv4 or IPv6 CIDR.");
+					status[url] = {
+						count: parsed.cidrs.length,
+						etag: result.etag,
+						lastModified: result.lastModified,
+						lastSuccess: new Date().toISOString(),
+					};
+				} else {
+					status[url] = {
+						...status[url],
+						etag: result.etag || status[url]?.etag,
+						lastModified: result.lastModified || status[url]?.lastModified,
+					};
 				}
-				await atomicWrite(feedFile(policy.id, url), `${parsed.cidrs.map((cidr) => `${cidr} 1;`).join("\n")}\n`);
-				status[url] = {
-					count: parsed.cidrs.length,
-					etag: result.etag,
-					lastModified: result.lastModified,
-					lastSuccess: new Date().toISOString(),
-				};
-			} else {
-				status[url] = {
-					...status[url],
-					etag: result.etag || status[url]?.etag,
-					lastModified: result.lastModified || status[url]?.lastModified,
-				};
+				delete status[url].error;
+				return null;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				status[url] = { ...status[url], error: message };
+				return `${url}: ${message}`;
 			}
-			delete status[url].error;
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			status[url] = { ...status[url], error: message };
-			errors.push(`${url}: ${message}`);
-		}
-	}
+		})
+	).filter(Boolean);
 	const feedCidrs = await readPolicyFeedCidrs(policy);
 	await atomicWrite(compiledCidrFile(policy.id), `${[...feedCidrs].map((cidr) => `${cidr} 1;`).join("\n")}\n`);
 	const activeCidrs = new Set([...(policy.block_cidrs || []), ...feedCidrs]);
@@ -465,6 +494,27 @@ const synchronizePolicy = async (policy, refresh = true) => {
 	await internalNginx.reload();
 	return updated;
 };
+
+// GitOps exports declarative policy data only. Reset volatile cache state and
+// rebuild feeds before imported hosts are rendered and Nginx is reloaded.
+const resetImportedPolicyCache = async (policy) => {
+	await fs.rm(path.join(FIREWALL_DIR, String(policy.id)), { recursive: true, force: true });
+	await fs.rm(compiledCidrFile(policy.id), { force: true });
+	await ensurePolicyFiles(policy);
+	return await FirewallPolicy.query().patchAndFetchById(policy.id, {
+		feed_status: {},
+		total_cidrs: (policy.block_cidrs || []).length,
+		last_updated_on: null,
+		last_error: null,
+	});
+};
+
+const refreshImportedPolicies = async (policies) =>
+	await mapWithConcurrency(
+		policies,
+		POLICY_REFRESH_CONCURRENCY,
+		async (policy) => await refreshPolicy(await resetImportedPolicyCache(policy), { regenerate: false }),
+	);
 
 const isPolicyRefreshDue = (policy, now = Date.now()) => {
 	const feedUrls = policy.feed_urls || [];
@@ -591,10 +641,14 @@ export {
 	createPinnedLookup,
 	fetchFeed,
 	isPolicyRefreshDue,
+	mapWithConcurrency,
 	mergePolicyPayload,
 	normaliseCidr,
+	normaliseUrlHostname,
 	parseCidrList,
+	refreshImportedPolicies,
 	renderNginxConfig,
+	resolveFeedEndpoint,
 	validateFeedUrl,
 	writeFirewallConfig,
 };

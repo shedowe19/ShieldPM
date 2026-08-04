@@ -51,10 +51,10 @@ Hinter Cloudflare müssen die Real-IP-Ranges aktiv sein (`SKIP_IP_RANGES=false`)
 
 `backend/internal/firewall-policy.js` behandelt Feeds als nicht vertrauenswürdige Eingabe:
 
-- nur HTTPS, ohne URL-Credentials und ohne benutzerdefinierte Ports;
+- nur HTTPS, ohne URL-Credentials und ohne benutzerdefinierte Ports; öffentliche IPv4- und IPv6-Literal-Hosts werden unterstützt;
 - DNS-Auflösung vor dem Abruf; private, Loopback-, Link-local-, Multicast- und nicht-unicast Adressen werden abgelehnt;
 - die aufgelöste öffentliche Adresse wird für die Anfrage fest gebunden;
-- Redirects werden nicht gefolgt, Antwortgröße ist auf 5 MiB begrenzt, Timeout 20 Sekunden;
+- Redirects werden nicht gefolgt, Antwortgröße ist auf 5 MiB begrenzt, Timeout 20 Sekunden; pro Policy laufen höchstens drei Feed-Abrufe gleichzeitig;
 - CIDRs und Kommentare werden normalisiert; eine nicht-leere Antwort ohne gültigen CIDR ersetzt den letzten gültigen Feed nicht;
 - ETag und Last-Modified vermeiden unnötige Downloads;
 - Feed-Dateien und die zentrale Nginx-Konfiguration werden atomar geschrieben. Bei Abruffehlern bleibt die letzte gültige Version wirksam.
@@ -63,7 +63,7 @@ Die kompilierten Daten liegen unter `/data/nginx/firewall/`; die globale Nginx-M
 
 ## GitOps
 
-Bei aktivem GitOps werden Policy-Definitionen unter `firewall-policies/` sowie die `firewall_policy_id`-Zuordnung der Proxy-Hosts exportiert und beim Restore **vor** den Proxy-Hosts importiert. Dadurch bleiben Regeln und Zuweisungen nach einem Restore erhalten. Laufzeitdaten wie Feed-Status, Fehlertexte, Zeitstempel und die kompilierten CIDR-Dateien werden bewusst nicht versioniert; sie werden lokal neu aufgebaut bzw. aktualisiert.
+Bei aktivem GitOps werden Policy-Definitionen unter `firewall-policies/` sowie die `firewall_policy_id`-Zuordnung der Proxy-Hosts exportiert und beim Restore **vor** den Proxy-Hosts importiert. Jede importierte Policy durchläuft dieselbe Typ-, CIDR-, Länder-, Feed- und Aktionsvalidierung wie die API. Laufzeitdaten wie Feed-Status, Fehlertexte, Zeitstempel und die kompilierten CIDR-Dateien werden bewusst nicht versioniert: ShieldPM verwirft für importierte Policies alte lokale Feed-Caches und baut sie vor dem Rendern der Proxy-Hosts mit begrenzter Parallelität neu auf. Dadurch können geänderte Feed-URLs nicht bis zum nächsten Intervall alte Daten verwenden.
 
 Feed-URLs sind deklarative Policy-Konfiguration und liegen damit im GitOps-Repository. ShieldPM akzeptiert keine URL-Credentials; trotzdem sollten keine Zugangs-Tokens als Query-Parameter in Feed-URLs verwendet werden. Das GitOps-Repository ist als vertrauliche Konfiguration zu behandeln.
 
@@ -81,7 +81,7 @@ Die globale Konfiguration verwendet Nginx-`geo` und `map`. Große Listen werden 
 
 ## Berechtigungen
 
-Das Erstellen, Ändern, Löschen, Aktualisieren und Zuweisen einer Policy erfordert `settings:update` für `firewall-policies`. Damit kann eine URL-Quelle nicht von Benutzern mit ausschließlich Host-Rechten zur Abfrage interner Netze missbraucht werden. Das gilt ebenfalls für die vollständige `firewall_policy`-Relation eines Proxy-Hosts: Nutzer mit ausschließlich Host-Rechten können keine CIDRs, Feed-URLs oder Feed-Status über eine Relationserweiterung abrufen. Unveränderte bzw. leere Policy-Werte in regulären Proxy-Host-Formularen bleiben für diese Nutzer speicherbar.
+Das Erstellen, Ändern, Löschen, Aktualisieren und Zuweisen einer Policy erfordert `settings:update` für `firewall-policies`. Damit kann eine URL-Quelle nicht von Benutzern mit ausschließlich Host-Rechten zur Abfrage interner Netze missbraucht werden. Das gilt ebenfalls für die vollständige `firewall_policy`-Relation eines Proxy-Hosts: Nutzer mit ausschließlich Host-Rechten können keine CIDRs, Feed-URLs oder Feed-Status über eine Relationserweiterung abrufen. Die Prüfung wertet Objection-Relation-Ausdrücke semantisch aus und erfasst dadurch auch Aliasse und Modifier. Unveränderte bzw. leere Policy-Werte in regulären Proxy-Host-Formularen bleiben für diese Nutzer speicherbar.
 
 ## Verwandte Seiten
 

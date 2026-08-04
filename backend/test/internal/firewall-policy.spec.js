@@ -9,9 +9,12 @@ vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 import {
 	createPinnedLookup,
 	isPolicyRefreshDue,
+	mapWithConcurrency,
 	mergePolicyPayload,
+	normaliseUrlHostname,
 	parseCidrList,
 	renderNginxConfig,
+	resolveFeedEndpoint,
 	validateFeedUrl,
 } from "../../internal/firewall-policy.js";
 import utils from "../../lib/utils.js";
@@ -193,5 +196,29 @@ describe("host firewall policy helpers", () => {
 		expect(rendered).toContain("ngx.exit(444)");
 		expect(rendered).toContain("location = /_shieldpm_firewall_denied");
 		expect(rendered).toContain("internal;");
+	});
+
+	it("normalises bracketed public IPv6 feed literals without a DNS lookup", async () => {
+		const url = new URL("https://[2606:4700:4700::1111]/cidrs.txt");
+		expect(normaliseUrlHostname(url.hostname)).toBe("2606:4700:4700::1111");
+		expect(await resolveFeedEndpoint(url)).toEqual([{ address: "2606:4700:4700::1111", family: 6 }]);
+	});
+
+	it("limits simultaneous feed work and preserves input order", async () => {
+		let active = 0;
+		let maximum = 0;
+		const results = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (value) => {
+			active += 1;
+			maximum = Math.max(maximum, active);
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			active -= 1;
+			return value * 2;
+		});
+		expect(results).toEqual([2, 4, 6, 8, 10]);
+		expect(maximum).toBeLessThanOrEqual(2);
+	});
+
+	it("rejects untyped enabled values instead of coercing GitOps YAML", () => {
+		expect(() => mergePolicyPayload({ name: "Typed", enabled: "false" })).toThrow("enabled must be a boolean");
 	});
 });

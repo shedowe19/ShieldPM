@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { RelationExpression } from "objection";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
@@ -81,9 +82,19 @@ const validateFirewallPolicyAssignment = async (access, value, currentValue = nu
 	return policyId;
 };
 
+const graphContainsRelation = (expression, relationName) => {
+	if (expression.$relation === relationName) return true;
+	return expression.$childNames.some((childName) => graphContainsRelation(expression[childName], relationName));
+};
+
 const requestsFirewallPolicy = (expand) =>
 	Array.isArray(expand) &&
-	expand.some((relation) => relation === "firewall_policy" || relation.startsWith("firewall_policy."));
+	expand.some((relation) => graphContainsRelation(RelationExpression.create(relation).toPojo(), "firewall_policy"));
+
+const proxyHostAllowedGraph = (expand) =>
+	requestsFirewallPolicy(expand)
+		? "[owner,access_list.[clients,items],certificate,host_domains,firewall_policy]"
+		: "[owner,access_list.[clients,items],certificate,host_domains]";
 
 const internalProxyHost = {
 	/**
@@ -413,7 +424,7 @@ const internalProxyHost = {
 			.query()
 			.where("is_deleted", 0)
 			.andWhere("id", thisData.id)
-			.allowGraph("[owner,access_list.[clients,items],certificate,host_domains,firewall_policy]")
+			.allowGraph(proxyHostAllowedGraph(thisData.expand))
 			.withGraphFetched("host_domains")
 			.first();
 
@@ -592,11 +603,14 @@ const internalProxyHost = {
 	 */
 	getAll: async (access, expand, search_query, pagination) => {
 		const accessData = await access.can("proxy_hosts:list");
+		if (requestsFirewallPolicy(expand)) {
+			await access.can("settings:update", "firewall-policies");
+		}
 		const query = proxyHostModel
 			.query()
 			.where("is_deleted", 0)
 			.groupBy("id")
-			.allowGraph("[owner,access_list,certificate,host_domains]")
+			.allowGraph(proxyHostAllowedGraph(expand))
 			.withGraphFetched("[host_domains, certificate, access_list]")
 			.orderBy("id", "DESC"); // Order by id DESC since domain_names is no longer a simple column
 
@@ -680,5 +694,5 @@ const internalProxyHost = {
 	},
 };
 
-export { normaliseFirewallPolicyId, requestsFirewallPolicy, validateFirewallPolicyAssignment };
+export { normaliseFirewallPolicyId, proxyHostAllowedGraph, requestsFirewallPolicy, validateFirewallPolicyAssignment };
 export default internalProxyHost;

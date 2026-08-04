@@ -105,6 +105,16 @@ const sanitizeImportData = (modelName, data) => {
 	return _.pick(data, allowed);
 };
 
+// Firewall policy YAML is untrusted input even after field whitelisting. Keep
+// its full value validation aligned with the API before it reaches Nginx rendering.
+const normaliseImportedFirewallPolicy = (data, mergePolicyPayload) => {
+	const { id, ...policyData } = data;
+	if (typeof id !== "undefined" && (!Number.isInteger(id) || id < 1)) {
+		throw new errs.ValidationError("Firewall policy id must be a positive integer.");
+	}
+	return { ...(typeof id === "undefined" ? {} : { id }), ...mergePolicyPayload(policyData) };
+};
+
 /**
  * @typedef {Object} GitOpsConfig
  * @property {boolean} enabled
@@ -880,6 +890,7 @@ const internalGitOps = {
 		const importModel = async (modelClass, dirName, hostType = null, relationGraph = null, importOptions = {}) => {
 			const dirPath = path.join(configDir, dirName);
 			const importedIds = [];
+			const importedRows = [];
 
 			if (fs.existsSync(dirPath)) {
 				const files = await fs.promises.readdir(dirPath);
@@ -894,20 +905,21 @@ const internalGitOps = {
 							if (data && typeof data === "object") {
 								// Use only the whitelist result. Merging it into raw YAML would retain
 								// injected properties and defeat the import boundary.
-								const itemData = sanitizeImportData(modelClass.name, data);
+								let itemData = sanitizeImportData(modelClass.name, data);
 								if (!itemData) {
 									errors.push(
 										`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
 									);
 									return;
 								}
+								if (importOptions.normalise) itemData = importOptions.normalise(itemData);
 
 								const existingId = itemData.id;
 
 								if (existingId) {
-									importedIds.push(existingId);
 									const existing = await modelClass.query().findById(existingId);
 									if (existing && !options.overwrite) {
+										importedIds.push(existingId);
 										skipped++;
 										return;
 									}
@@ -921,10 +933,11 @@ const internalGitOps = {
 									// Check if user exists, if not set to current user to avoid constraint error
 								}
 
+								let importedRow;
 								if (options.overwrite && existingId) {
 									// Use upsertGraph for complex models
 									if (relationGraph) {
-										await modelClass.query().upsertGraph(itemData, {
+										importedRow = await modelClass.query().upsertGraph(itemData, {
 											insertMissing: true,
 											relate: true,
 											update: true,
@@ -932,25 +945,20 @@ const internalGitOps = {
 										});
 									} else {
 										const existing = await modelClass.query().findById(existingId);
-										if (existing) {
-											await modelClass.query().patchAndFetchById(existingId, itemData);
-										} else {
-											await modelClass.query().insert(itemData);
-										}
+										importedRow = existing
+											? await modelClass.query().patchAndFetchById(existingId, itemData)
+											: await modelClass.query().insert(itemData);
 									}
 								} else {
 									if (!options.overwrite) delete itemData.id;
 									if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId(1);
-
-									let newRow;
-									if (relationGraph) {
-										newRow = await modelClass.query().insertGraph(itemData);
-									} else {
-										newRow = await modelClass.query().insert(itemData);
-									}
-
-									if (itemData.id) importedIds.push(itemData.id);
-									else if (newRow?.id) importedIds.push(newRow.id);
+									importedRow = relationGraph
+										? await modelClass.query().insertGraph(itemData)
+										: await modelClass.query().insert(itemData);
+								}
+								if (importedRow?.id) {
+									importedIds.push(importedRow.id);
+									if (importOptions.collect) importedRows.push(importedRow);
 								}
 								imported++;
 							}
@@ -989,6 +997,7 @@ const internalGitOps = {
 					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
 				}
 			}
+			return importedRows;
 		};
 
 		try {
@@ -1002,7 +1011,13 @@ const internalGitOps = {
 			await importModel(AccessList, "access-lists", null, "[items, clients]");
 
 			// 4. Import policies before hosts so firewall_policy_id foreign keys remain valid.
-			await importModel(FirewallPolicy, "firewall-policies", null, null, { supportsSoftDelete: false });
+			// The dynamic import avoids a startup-time GitOps <-> firewall-policy module cycle.
+			const { mergePolicyPayload } = await import("./firewall-policy.js");
+			const importedFirewallPolicies = await importModel(FirewallPolicy, "firewall-policies", null, null, {
+				supportsSoftDelete: false,
+				collect: true,
+				normalise: (data) => normaliseImportedFirewallPolicy(data, mergePolicyPayload),
+			});
 
 			// 5. Import Hosts & Streams
 			await importModel(ProxyHost, "proxy-hosts", "proxy_host");
@@ -1215,9 +1230,9 @@ const internalGitOps = {
 				}
 			}
 
-			// Render global policy maps before host configs that reference them. Dynamic import
-			// avoids a GitOps <-> firewall-policy module cycle during application startup.
-			const { writeFirewallConfig } = await import("./firewall-policy.js");
+			// Rebuild volatile feed caches before policy maps and proxy-host configs are rendered.
+			const { refreshImportedPolicies, writeFirewallConfig } = await import("./firewall-policy.js");
+			await refreshImportedPolicies(importedFirewallPolicies);
 			await writeFirewallConfig();
 
 			// 8. Regenerate Nginx Configs
@@ -1311,6 +1326,7 @@ const internalGitOps = {
 
 // Attach sanitization helpers for testing
 internalGitOps.ALLOWED_IMPORT_FIELDS = ALLOWED_IMPORT_FIELDS;
+internalGitOps.normaliseImportedFirewallPolicy = normaliseImportedFirewallPolicy;
 internalGitOps.sanitizeImportData = sanitizeImportData;
 
 export default internalGitOps;

@@ -13,6 +13,7 @@ const TABLES = [
 	"certificate",
 	"access_list",
 	"access_list_client",
+	"firewall_policy",
 	"proxy_host",
 	"redirection_host",
 	"dead_host",
@@ -128,4 +129,5 @@ const migrateFromSqliteToNewDb = async () => {
 	}
 };
 
+export { TABLES };
 export default migrateFromSqliteToNewDb;

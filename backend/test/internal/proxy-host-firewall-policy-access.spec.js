@@ -22,7 +22,11 @@ vi.mock("../../models/firewall_policy.js", () => ({
 }));
 vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 
-import { requestsFirewallPolicy, validateFirewallPolicyAssignment } from "../../internal/proxy-host.js";
+import {
+	proxyHostAllowedGraph,
+	requestsFirewallPolicy,
+	validateFirewallPolicyAssignment,
+} from "../../internal/proxy-host.js";
 
 describe("proxy host firewall policy permissions", () => {
 	it("allows ordinary users to submit null or unchanged policy values without settings access", async () => {
@@ -42,9 +46,13 @@ describe("proxy host firewall policy permissions", () => {
 		expect(mocks.findById).toHaveBeenCalledWith(9);
 	});
 
-	it("recognizes direct and nested policy expansions for the dedicated permission gate", () => {
+	it("parses every policy expansion form before applying the dedicated permission gate", () => {
 		expect(requestsFirewallPolicy(["certificate", "firewall_policy"])).toBe(true);
 		expect(requestsFirewallPolicy(["firewall_policy.feed_status"])).toBe(true);
+		expect(requestsFirewallPolicy(["firewall_policy as policy"])).toBe(true);
+		expect(requestsFirewallPolicy(["firewall_policy()"])).toBe(true);
 		expect(requestsFirewallPolicy(["certificate", "access_list"])).toBe(false);
+		expect(proxyHostAllowedGraph(["certificate"])).not.toContain("firewall_policy");
+		expect(proxyHostAllowedGraph(["firewall_policy as policy"])).toContain("firewall_policy");
 	});
 });

@@ -235,4 +235,29 @@ describe("Fix #65: YAML import field whitelist validation", () => {
 		);
 		expect(result.arbitrary_field).toBeUndefined();
 	});
+
+	it("normalises whitelisted firewall policy YAML through the policy validator before persistence", () => {
+		const mergePolicyPayload = vi.fn().mockReturnValue({
+			name: "Validated policy",
+			enabled: true,
+			block_cidrs: ["203.0.113.0/24"],
+		});
+		const result = internalGitOps.normaliseImportedFirewallPolicy(
+			{ id: 7, name: "Validated policy", block_cidrs: ["203.0.113.0/24"] },
+			mergePolicyPayload,
+		);
+		expect(mergePolicyPayload).toHaveBeenCalledWith({
+			name: "Validated policy",
+			block_cidrs: ["203.0.113.0/24"],
+		});
+		expect(result).toEqual({
+			id: 7,
+			name: "Validated policy",
+			enabled: true,
+			block_cidrs: ["203.0.113.0/24"],
+		});
+		expect(() => internalGitOps.normaliseImportedFirewallPolicy({ id: "7" }, mergePolicyPayload)).toThrow(
+			"positive integer",
+		);
+	});
 });
