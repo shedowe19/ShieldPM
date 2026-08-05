@@ -11,8 +11,8 @@ jobs:
   test-json:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: json-syntax-check
-        uses: limitusus/json-syntax-check@v2
+        uses: limitusus/json-syntax-check@77d5756026b93886eaa3dc6ca1c4b17dd19dc703 # v2
         with:
           pattern: "^(?!.*/\\.agent/).*\\.json$"

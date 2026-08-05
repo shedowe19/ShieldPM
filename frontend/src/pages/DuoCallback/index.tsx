@@ -8,7 +8,7 @@
 
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { complete2faDuoAuth } from "src/api/backend";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useAuthState } from "src/context";

@@ -12,7 +12,7 @@ import {
 } from "@tabler/icons-react";
 import type React from "react";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { AiChatLauncher, AiChatLauncherTrigger } from "src/components/AiChat/AiChatLauncher";
 import { HasPermission } from "src/components/HasPermission";
 import { Button } from "src/components/ui/button";

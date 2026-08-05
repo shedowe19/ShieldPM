@@ -21,10 +21,10 @@ jobs:
       contents: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Sync docs to wiki
-        uses: newrelic/wiki-sync-action@main
+        uses: newrelic/wiki-sync-action@8fb7a9efe4e975bdb2977107fbed96fa0433db52 # main
         with:
           source: docs/wiki
           destination: wiki

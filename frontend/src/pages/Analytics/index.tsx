@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { Loading } from "src/components";
 import { useHealth, useProxyHosts } from "src/hooks";
 import { intl, T } from "src/locale";

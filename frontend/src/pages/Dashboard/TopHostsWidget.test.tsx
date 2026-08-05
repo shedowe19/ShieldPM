@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TopHostsWidget } from "./TopHostsWidget";
 

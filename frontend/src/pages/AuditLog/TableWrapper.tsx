@@ -7,7 +7,7 @@ import {
 	IconSearch,
 } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";

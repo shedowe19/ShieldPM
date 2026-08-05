@@ -46,9 +46,18 @@ install_pre_reqs() {
   install -d -m 0755 /usr/share/keyrings || handle_error "$?" "Failed to create /usr/share/keyrings"
   rm -f /usr/share/keyrings/nodesource.gpg /etc/apt/sources.list.d/nodesource.list /etc/apt/sources.list.d/nodesource.sources
 
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | \
+  local nodesource_key_fingerprint="6F71F525282841EEDAF851B42F59B5F99B1BE0B4"
+  local actual_fingerprint
+
+  curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+    https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | \
     gpg --dearmor --yes --output /usr/share/keyrings/nodesource.gpg || \
     handle_error "$?" "Failed to download and import the NodeSource signing key"
+  actual_fingerprint=$(gpg --show-keys --with-colons /usr/share/keyrings/nodesource.gpg | awk -F: '$1 == "fpr" { print $10; exit }') || \
+    handle_error "$?" "Failed to inspect the NodeSource signing key"
+  if [ "$actual_fingerprint" != "$nodesource_key_fingerprint" ]; then
+    handle_error 1 "NodeSource signing key fingerprint did not match the pinned value"
+  fi
   chmod 0644 /usr/share/keyrings/nodesource.gpg || handle_error "$?" "Failed to set NodeSource key permissions"
 }
 

@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, screen, render as testingLibraryRender, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router";
 import { getAnalyticsSeries, getAnalyticsSummary, getDbStats } from "src/api/backend";
 import { getAnalyticsStatus } from "src/api/backend/getAnalyticsStatus";
 import { changeLocale } from "src/locale";
@@ -35,12 +35,8 @@ vi.mock("src/components/ui/select", () => ({
 	),
 }));
 
-vi.mock("react-simple-maps", () => ({
-	ComposableMap: () => null,
-	Geographies: () => null,
-	Geography: () => null,
-	Marker: () => null,
-	ZoomableGroup: () => null,
+vi.mock("./AnalyticsMap", () => ({
+	AnalyticsMap: () => <div data-testid="analytics-map" />,
 }));
 
 vi.mock("recharts", () => ({

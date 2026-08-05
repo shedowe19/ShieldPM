@@ -1,6 +1,6 @@
 import { IconAlertTriangle, IconCertificate, IconCheck } from "@tabler/icons-react";
 import dayjs from "dayjs";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { HasPermission } from "src/components/HasPermission";
 import { Avatar, AvatarFallback } from "src/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";

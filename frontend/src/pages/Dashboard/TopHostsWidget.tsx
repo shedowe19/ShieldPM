@@ -1,6 +1,6 @@
 import { IconAlertTriangle, IconChartBar, IconClock } from "@tabler/icons-react";
 import { FormattedNumber } from "react-intl";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { AnalyticsTopHostsSort } from "src/api/backend";
 import { HasPermission } from "src/components/HasPermission";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";

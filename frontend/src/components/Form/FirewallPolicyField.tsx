@@ -1,6 +1,6 @@
 import { IconSettings, IconShield } from "@tabler/icons-react";
 import { Field, type FieldProps } from "formik";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useFirewallPolicies } from "src/hooks";
 import { T } from "src/locale";
 import { Alert, AlertDescription } from "../ui/alert";

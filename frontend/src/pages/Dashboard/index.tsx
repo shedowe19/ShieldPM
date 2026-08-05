@@ -2,7 +2,7 @@ import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-
 import { m } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FormattedNumber } from "react-intl";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { HasPermission } from "src/components/HasPermission";
 import { Card, CardContent } from "src/components/ui/card";
 import { useHostReport } from "src/hooks/useHostReport";

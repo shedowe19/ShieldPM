@@ -1,0 +1,14 @@
+title = "ShieldPM Gitleaks configuration"
+
+[allowlist]
+description = "Public, version-pinned release checksums and the NodeSource signing-key fingerprint."
+regexTarget = "line"
+regexes = [
+  '''8d1792d69c4a6e360fbfa0657ac252dcbce5639e6441b09252cd8ae1474ea306''',
+  '''6caed9d09729b0fa1b4d23a6e55b491d24c81901c105e10ccd95b7e8db3a4620''',
+  '''0ae5a43adde4d6c5081ba018e70a76041f496377b12a173da36b419082dd1ab6''',
+  '''62452322a71e958d4d6911f799bc07921212a5f3bc45e39b63746e422d52ea33''',
+  '''9d71c677db00134c1bd4144b7783486b654ad281b1ea62b4972098d19f770f17''',
+  '''65259e652a7bea08bf5df603233ab22b8bf3116af8df9f9206209af6a1b955c0''',
+  '''6F71F525282841EEDAF851B42F59B5F99B1BE0B4''',
+]

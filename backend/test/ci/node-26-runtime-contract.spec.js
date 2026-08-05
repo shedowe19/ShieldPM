@@ -56,6 +56,24 @@ describe("Node 26 runtime contract", () => {
 		);
 	});
 
+	it("pins the internal Nginx image and verifies downloaded runtime binaries", () => {
+		expect(dockerfile).toMatch(
+			/ARG SHIELDPM_NGINX_IMAGE=ghcr\.io\/shedowe19\/shieldpm-nginx:master@sha256:[0-9a-f]{64}/,
+		);
+		expect(dockerfile).toContain("ARG ANUBIS_VERSION=1.26.2");
+		expect(dockerfile).toContain("ARG OAUTH2_PROXY_VERSION=7.15.3");
+		expect(dockerfile).toContain("ARG CLOUDFLARED_VERSION=2026.7.3");
+		expect(dockerfile.match(/sha256sum --check --status/g)).toHaveLength(3);
+		expect(dockerfile).toMatch(/COPY --from=backend\s+\/app\/cloudflared \/usr\/local\/bin\/cloudflared/);
+	});
+
+	it("checks the pinned NodeSource signing-key fingerprint before trusting its APT repository", () => {
+		const setupScript = readFile("scripts/setup-node-apt.sh");
+
+		expect(setupScript).toContain('nodesource_key_fingerprint="6F71F525282841EEDAF851B42F59B5F99B1BE0B4"');
+		expect(setupScript).toContain("gpg --show-keys --with-colons");
+	});
+
 	it("uses Node 26 for every application GitHub Actions runtime", () => {
 		expect(qualityWorkflow).toMatch(/node-version:\s*26(?:\s|$)/);
 		expect(dependencyWorkflow).toMatch(/node-version:\s*26(?:\s|$)/);

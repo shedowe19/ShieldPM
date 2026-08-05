@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 
 interface Props {
 	children: React.ReactNode;

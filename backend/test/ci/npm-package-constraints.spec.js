@@ -7,12 +7,17 @@ const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const readManifest = (directory) => JSON.parse(fs.readFileSync(join(repoRoot, directory, "package.json"), "utf8"));
 
 describe("npm and Yarn dependency constraints", () => {
-	it("leaves package manager constraint maps absent during the unpinned compatibility test", () => {
-		for (const directory of ["backend", "frontend"]) {
-			const manifest = readManifest(directory);
+	it("pins only audited backend transitives and avoids unreviewed override maps", () => {
+		const backendManifest = readManifest("backend");
+		const frontendManifest = readManifest("frontend");
 
-			expect(manifest, `${directory} must not declare Yarn resolutions`).not.toHaveProperty("resolutions");
-			expect(manifest, `${directory} must not declare npm overrides`).not.toHaveProperty("overrides");
-		}
+		expect(backendManifest.resolutions).toEqual({
+			axios: "1.19.0",
+			"brace-expansion": "5.0.9",
+			"fast-uri": "3.1.5",
+		});
+		expect(backendManifest).not.toHaveProperty("overrides");
+		expect(frontendManifest).not.toHaveProperty("resolutions");
+		expect(frontendManifest).not.toHaveProperty("overrides");
 	});
 });

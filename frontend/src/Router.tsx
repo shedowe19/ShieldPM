@@ -1,6 +1,6 @@
 import { AnimatePresence, domAnimation, LazyMotion } from "framer-motion";
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import { AnimatedPage } from "src/components/AnimatedPage";
 import { ErrorNotFound } from "src/components/ErrorNotFound";
 import { LoadingPage } from "src/components/LoadingPage";

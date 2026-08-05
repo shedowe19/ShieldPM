@@ -13,7 +13,7 @@ jobs:
     name: docker-lint
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install hadolint
         run: |
           sudo wget https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64 -O /usr/bin/hadolint

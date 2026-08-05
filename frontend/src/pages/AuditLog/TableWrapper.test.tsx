@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
-import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import TableWrapper from "./TableWrapper";

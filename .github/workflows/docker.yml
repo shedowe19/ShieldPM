@@ -55,7 +55,7 @@ jobs:
       is_pr: ${{ steps.calc.outputs.is_pr }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: "Calculate Version & Tags"
         id: calc
@@ -96,15 +96,15 @@ jobs:
             flags: "FLAGS=-mbranch-protection=standard"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
         with:
           driver-opts: env.BUILDKIT_STEP_LOG_MAX_SIZE=-1
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -121,7 +121,7 @@ jobs:
       # --- Build Steps ---
 
       - name: "📦 Build Stage: Frontend"
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./Dockerfile
@@ -133,7 +133,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-frontend
 
       - name: "📦 Build Stage: Backend"
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./Dockerfile
@@ -145,7 +145,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
       - name: "🚀 Build Final & Push"
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./Dockerfile
@@ -218,7 +218,7 @@ jobs:
           rm -rf "$BUILD_DIR"
 
       - name: "📤 Upload Native Installer"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: shieldpm-install-linux-${{ matrix.arch }}
           path: ${{ env.INSTALLER_PKG }}
@@ -309,7 +309,7 @@ jobs:
           docker rm -f "$CONTAINER_NAME"
 
       - name: "📤 Upload LXC Template"
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           # ÄNDERUNG: ${{ matrix.arch }} zum Namen hinzufügen
           name: shieldpm-lxc-template-${{ matrix.arch }}
@@ -327,7 +327,7 @@ jobs:
     steps:
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -342,7 +342,7 @@ jobs:
             "${TAG_BASE}-aarch64"
 
       - name: "Add PR Comment"
-        uses: mshick/add-pr-comment@v3
+        uses: mshick/add-pr-comment@f4a1cfec85787e0670886207dab740578eb57597 # v3
         if: ${{ needs.prepare.outputs.is_pr == 'true' }}
         with:
           message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
@@ -364,25 +364,25 @@ jobs:
         run: mkdir -p release-assets
 
       - name: Download LXC Template (x86_64)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: shieldpm-lxc-template-x86_64
           path: release-assets
 
       - name: Download LXC Template (aarch64)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: shieldpm-lxc-template-aarch64
           path: release-assets
 
       - name: Download Native Installer (x86_64)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: shieldpm-install-linux-x86_64
           path: release-assets
 
       - name: Download Native Installer (aarch64)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: shieldpm-install-linux-aarch64
           path: release-assets
@@ -391,7 +391,7 @@ jobs:
         run: ls -la release-assets/
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@c12583777ecdfd3be55c69cf75464299dc01057e # v3
         with:
           tag_name: "v${{ needs.prepare.outputs.version }}"
           name: "ShieldPM v${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.docker_tag_base }}-${{ needs.prepare.outputs.version_hash }})"
