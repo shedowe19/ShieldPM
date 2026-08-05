@@ -526,6 +526,10 @@ fi
 if ! grep -qF "include /data/nginx/firewall.conf;" /usr/local/nginx/conf/nginx.conf; then
     sed -i '/include \/data\/nginx\/ip_ranges.conf;/a\    include /data/nginx/firewall.conf;' /usr/local/nginx/conf/nginx.conf
 fi
+# Run host-firewall Lua checks before regular Nginx access/auth handlers.
+if ! grep -qF "access_by_lua_no_postpone on;" /usr/local/nginx/conf/nginx.conf; then
+    sed -i '/include \/data\/nginx\/firewall.conf;/a\    access_by_lua_no_postpone on;' /usr/local/nginx/conf/nginx.conf
+fi
 
 if [ "$NGINX_LOAD_NJS_MODULE" = "true" ]; then
     sed -i "s|#\(load_module.\+js_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf

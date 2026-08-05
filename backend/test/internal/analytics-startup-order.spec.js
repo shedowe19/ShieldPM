@@ -22,6 +22,13 @@ describe("analytics startup order", () => {
 		expect(setupIndex).toBeGreaterThan(firewallInitIndex);
 	});
 
+	it("regenerates dead hosts through their dedicated renderer", () => {
+		const setupSource = readBackendSource("setup.js");
+
+		expect(setupSource).toContain('bulkGenerateConfigs(deadModel, "dead_host", dead_hosts)');
+		expect(setupSource).not.toContain('bulkGenerateConfigs(deadModel, "proxy_host", dead_hosts)');
+	});
+
 	for (const startupFile of startupFiles) {
 		it(`starts analytics after database migrations in ${startupFile}`, () => {
 			const startupSource = readBackendSource(startupFile);

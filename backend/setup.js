@@ -211,7 +211,7 @@ const regenerateAllHosts = async () => {
 			.withGraphFetched("[certificate]");
 
 		if (dead_hosts?.length) {
-			await internalNginx.bulkGenerateConfigs(deadModel, "proxy_host", dead_hosts);
+			await internalNginx.bulkGenerateConfigs(deadModel, "dead_host", dead_hosts);
 		}
 
 		const streams = await streamModel

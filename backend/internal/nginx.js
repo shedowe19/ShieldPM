@@ -41,6 +41,7 @@ const internalNginx = {
 			);
 		}
 
+		const skip_reload = options.skip_reload || false;
 		let host = hostSnapshot;
 		if (host_type === "proxy_host") {
 			// Renderers can receive stale snapshots from access lists, maintenance,
@@ -52,11 +53,17 @@ const internalNginx = {
 				typeof currentQuery.withGraphFetched === "function"
 					? await currentQuery.withGraphFetched("[certificate,access_list.[clients,items],host_domains]")
 					: await currentQuery;
-			if (!currentHost || currentHost.is_deleted || !currentHost.enabled) return {};
+			if (!currentHost || currentHost.is_deleted || !currentHost.enabled) {
+				// A direct update can disable or delete a host without going through its
+				// dedicated endpoint. Remove the previous vhost before returning so it
+				// cannot keep serving the old configuration.
+				await internalNginx.deleteConfig(host_type, hostSnapshot, { skip_proxy_host_config_lock: true });
+				if (!skip_reload) await internalNginx.reload();
+				return {};
+			}
 			host = { ...hostSnapshot, ...currentHost };
 		}
 
-		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
 
 		// 1. Backup existing config if it exists

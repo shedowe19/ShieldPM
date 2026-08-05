@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
@@ -141,6 +142,19 @@ describe("host firewall policy helpers", () => {
 			'map "$shieldpm_firewall_7_allow:$shieldpm_firewall_7_cidr_block:$shieldpm_firewall_7_geo_block" $shieldpm_firewall_7_block_reason',
 		);
 		expect(config).toContain('"~^0:0:1$" "country";');
+	});
+
+	it("configures OpenResty to run host-firewall Lua handlers before Nginx access handlers", () => {
+		const startupScript = fs.readFileSync(
+			new URL("../../../rootfs/usr/local/bin/start.sh", import.meta.url),
+			"utf8",
+		);
+
+		expect(startupScript).toContain('grep -qF "access_by_lua_no_postpone on;"');
+		expect(startupScript).toContain("access_by_lua_no_postpone on;");
+		expect(startupScript.indexOf("include /data/nginx/firewall.conf;")).toBeLessThan(
+			startupScript.indexOf("access_by_lua_no_postpone on;"),
+		);
 	});
 
 	it("injects a host policy check before the existing access handlers", async () => {

@@ -10,7 +10,7 @@ import { Button } from "src/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "src/components/ui/dialog";
 import { useProxyHost, useSetProxyHost, useUser } from "src/hooks";
 import { T } from "src/locale";
-import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
+import { ADMIN, hasPermission, MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import ProxyHostFormTabs from "./ProxyHostFormTabs";
@@ -33,13 +33,14 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { mutate: setProxyHost } = useSetProxyHost();
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const canManageFirewallPolicies = hasPermission(ADMIN, MANAGE, currentUser?.permissions, currentUser?.roles);
 
 	const onSubmit = async (values: ProxyHostFormValues, { setSubmitting }: FormikHelpers<ProxyHostFormValues>) => {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 		setErrorMsg(null);
 
-		const payload = createProxyHostPayload({ id, values });
+		const payload = createProxyHostPayload({ canManageFirewallPolicies, id, values });
 
 		setProxyHost(payload as unknown as ProxyHost, {
 			onError: (err: Error) => setErrorMsg(<T id={err.message || "error.unknown"} />),

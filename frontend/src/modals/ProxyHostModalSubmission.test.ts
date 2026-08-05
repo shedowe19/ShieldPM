@@ -10,6 +10,7 @@ const createValues = (overrides: Partial<ProxyHostFormValues> = {}): ProxyHostFo
 describe("createProxyHostPayload", () => {
 	it("maps the CrowdSec form field to the API field", () => {
 		const payload = createProxyHostPayload({
+			canManageFirewallPolicies: true,
 			id: 73,
 			values: createValues({ crowdsecEnabled: true }),
 		});
@@ -18,8 +19,21 @@ describe("createProxyHostPayload", () => {
 		expect(payload).not.toHaveProperty("crowdsecEnabled");
 	});
 
+	it("omits the hidden firewall policy selection for users without policy management access", () => {
+		const values = createValues({ firewallPolicyId: 17 });
+
+		expect(createProxyHostPayload({ canManageFirewallPolicies: false, id: 73, values })).not.toHaveProperty(
+			"firewallPolicyId",
+		);
+		expect(createProxyHostPayload({ canManageFirewallPolicies: true, id: 73, values })).toHaveProperty(
+			"firewallPolicyId",
+			17,
+		);
+	});
+
 	it("omits unchanged empty Git credentials", () => {
 		const payload = createProxyHostPayload({
+			canManageFirewallPolicies: true,
 			id: 73,
 			values: createValues({ gitCredentials: "" }),
 		});
@@ -29,6 +43,7 @@ describe("createProxyHostPayload", () => {
 
 	it("normalizes invalid rate-limit values before submission", () => {
 		const payload = createProxyHostPayload({
+			canManageFirewallPolicies: true,
 			id: 73,
 			values: createValues({ advLimitReqBurst: "not-a-number", advLimitReqRate: "" }),
 		});
@@ -38,6 +53,7 @@ describe("createProxyHostPayload", () => {
 
 	it("sets an identifier only when editing an existing host", () => {
 		const payload = createProxyHostPayload({
+			canManageFirewallPolicies: true,
 			id: "new",
 			values: createValues(),
 		});

@@ -39,6 +39,7 @@ describe("proxy host firewall render consistency", () => {
 		mocks.patch.mockReset().mockResolvedValue(1);
 		vi.spyOn(internalNginx, "backupConfig").mockResolvedValue(undefined);
 		vi.spyOn(internalNginx, "deleteBackupConfig").mockResolvedValue(undefined);
+		vi.spyOn(internalNginx, "deleteConfig").mockResolvedValue(undefined);
 		vi.spyOn(internalNginx, "generateConfig").mockResolvedValue(true);
 		vi.spyOn(internalNginx, "reload").mockResolvedValue(undefined);
 		vi.spyOn(internalNginx, "test").mockResolvedValue(undefined);
@@ -87,14 +88,33 @@ describe("proxy host firewall render consistency", () => {
 		);
 	});
 
-	it("does not recreate a configuration after the current host was deleted or disabled", async () => {
+	it("removes the previous configuration when the current host was deleted or disabled", async () => {
 		mocks.findById.mockResolvedValue({ ...activeRow(7), is_deleted: 1 });
 
 		await expect(internalNginx.configure(model, "proxy_host", host, { skip_reload: true })).resolves.toEqual({});
 		expect(internalNginx.generateConfig).not.toHaveBeenCalled();
+		expect(internalNginx.deleteConfig).toHaveBeenCalledWith(
+			"proxy_host",
+			host,
+			expect.objectContaining({ skip_proxy_host_config_lock: true }),
+		);
 
 		mocks.findById.mockResolvedValue({ ...activeRow(7), enabled: 0 });
 		await expect(internalNginx.configure(model, "proxy_host", host, { skip_reload: true })).resolves.toEqual({});
 		expect(internalNginx.generateConfig).not.toHaveBeenCalled();
+		expect(internalNginx.deleteConfig).toHaveBeenCalledTimes(2);
+	});
+
+	it("reloads after removing a disabled host when callers do not batch reloads", async () => {
+		mocks.findById.mockResolvedValue({ ...activeRow(7), enabled: 0 });
+
+		await internalNginx.configure(model, "proxy_host", host);
+
+		expect(internalNginx.deleteConfig).toHaveBeenCalledWith(
+			"proxy_host",
+			host,
+			expect.objectContaining({ skip_proxy_host_config_lock: true }),
+		);
+		expect(internalNginx.reload).toHaveBeenCalledTimes(1);
 	});
 });
