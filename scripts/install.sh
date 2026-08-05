@@ -14,6 +14,48 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+download_verified() {
+    local url="$1"
+    local expected_sha256="$2"
+    local destination="$3"
+
+    rm -f "$destination"
+    if ! curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 --output "$destination" "$url"; then
+        rm -f "$destination"
+        return 1
+    fi
+
+    if ! printf '%s  %s\n' "$expected_sha256" "$destination" | sha256sum --check --status; then
+        echo "    ! Checksum verification failed for $(basename "$destination")."
+        rm -f "$destination"
+        return 1
+    fi
+}
+
+install_nodesource_key() {
+    local keyring="$1"
+    local key_file
+    local key_fingerprint
+    local expected_fingerprint="6F71F525282841EEDAF851B42F59B5F99B1BE0B4"
+
+    key_file="$(mktemp)"
+    if ! curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 \
+        --output "$key_file" "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key"; then
+        rm -f "$key_file"
+        return 1
+    fi
+
+    key_fingerprint="$(gpg --show-keys --with-colons "$key_file" | awk -F: '$1 == "fpr" { print toupper($10); exit }')"
+    if [ "$key_fingerprint" != "$expected_fingerprint" ]; then
+        echo "    ! NodeSource signing key fingerprint mismatch."
+        rm -f "$key_file"
+        return 1
+    fi
+
+    gpg --dearmor --yes --output "$keyring" "$key_file"
+    rm -f "$key_file"
+}
+
 enable_node_system_ca() {
     if [[ " ${NODE_OPTIONS:-} " != *" --use-system-ca "* ]]; then
         export NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--use-system-ca"
@@ -45,8 +87,7 @@ install_node_26() {
 
     echo ">>> Installing Node.js ${NODE_MAJOR}..."
     install -d -m 0755 /etc/apt/keyrings
-    curl -fsSL "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key" | \
-        gpg --dearmor --yes --output "$NODESOURCE_KEYRING"
+    install_nodesource_key "$NODESOURCE_KEYRING"
     chmod a+r "$NODESOURCE_KEYRING"
 
     while IFS= read -r -d '' source_file; do
@@ -499,41 +540,43 @@ echo ""
 read -r -p "Install Anubis? [y/N] (Default: N): " anubis_choice
 
 if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Installing Anubis..."
-
-    # Detect Architecture
     ARCH=$(dpkg --print-architecture)
-    # Map Debian arch to Anubis binary naming (linux-amd64, linux-arm64)
-    if [ "$ARCH" = "amd64" ]; then
-        ANUBIS_ARCH="amd64"
-    elif [ "$ARCH" = "arm64" ]; then
-        ANUBIS_ARCH="arm64"
+    case "$ARCH" in
+        amd64)
+            ANUBIS_ARCH="amd64"
+            ANUBIS_SHA256="8d1792d69c4a6e360fbfa0657ac252dcbce5639e6441b09252cd8ae1474ea306"
+            ;;
+        arm64)
+            ANUBIS_ARCH="arm64"
+            ANUBIS_SHA256="6caed9d09729b0fa1b4d23a6e55b491d24c81901c105e10ccd95b7e8db3a4620"
+            ;;
+        *)
+            ANUBIS_ARCH=""
+            ;;
+    esac
+
+    if [ -z "$ANUBIS_ARCH" ]; then
+        echo "  > Unsupported architecture $ARCH for the verified Anubis release. Skipping Anubis."
     else
-        echo "  > Warning: Unsupported architecture $ARCH. Anubis might not work."
-        ANUBIS_ARCH="$ARCH"
-    fi
+        ANUBIS_VERSION="1.26.2"
+        ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
+        ANUBIS_TAR="$(mktemp)"
+        echo "  > Downloading and verifying Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
 
-    VERSION="1.25.0"
-    URL="https://github.com/TecharoHQ/anubis/releases/download/v${VERSION}/anubis-${VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
-
-    echo "  > Downloading from $URL..."
-    curl -L -o /tmp/anubis.tar.gz "$URL"
-
-    if [ -s /tmp/anubis.tar.gz ]; then
-        tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-        rm /tmp/anubis.tar.gz
-        chmod +x /usr/local/bin/anubis
-        echo "  > Anubis installed to /usr/local/bin/anubis"
-
-        # Enable in .env
-        if grep -q "ANUBIS_ENABLED" "$ENV_FILE" 2>/dev/null; then
-            sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
+        if download_verified "$ANUBIS_URL" "$ANUBIS_SHA256" "$ANUBIS_TAR" && \
+            tar -xzf "$ANUBIS_TAR" -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"; then
+            chmod +x /usr/local/bin/anubis
+            echo "  > Anubis installed to /usr/local/bin/anubis"
+            if grep -q "ANUBIS_ENABLED" "$ENV_FILE" 2>/dev/null; then
+                sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
+            else
+                echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
+            fi
+            echo "  > Enabled in $ENV_FILE"
         else
-            echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
+            echo "  > Anubis download, verification, or extraction failed."
         fi
-        echo "  > Enabled in $ENV_FILE"
-    else
-        echo "  > Download failed!"
+        rm -f "$ANUBIS_TAR"
     fi
 else
     echo "--> Skipping Anubis."
@@ -548,48 +591,41 @@ echo ""
 read -r -p "Install OAuth2 Proxy? [y/N] (Default: N): " oauth2_choice
 
 if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Installing OAuth2 Proxy..."
-
-    # Detect Architecture
     ARCH=$(dpkg --print-architecture)
-    # Map Debian arch to OAuth2 Proxy binary naming (linux-amd64, linux-arm64)
-    if [ "$ARCH" = "amd64" ]; then
-        OAUTH2_ARCH="amd64"
-    elif [ "$ARCH" = "arm64" ]; then
-        OAUTH2_ARCH="arm64"
-    else
-        echo "  > Warning: Unsupported architecture $ARCH. OAuth2 Proxy might not work."
-        OAUTH2_ARCH="$ARCH"
-    fi
+    case "$ARCH" in
+        amd64)
+            OAUTH2_ARCH="amd64"
+            OAUTH2_SHA256="0ae5a43adde4d6c5081ba018e70a76041f496377b12a173da36b419082dd1ab6"
+            ;;
+        arm64)
+            OAUTH2_ARCH="arm64"
+            OAUTH2_SHA256="62452322a71e958d4d6911f799bc07921212a5f3bc45e39b63746e422d52ea33"
+            ;;
+        *)
+            OAUTH2_ARCH=""
+            ;;
+    esac
 
-    if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
-        OAUTH2_VERSION="7.14.2"
+    if [ -z "$OAUTH2_ARCH" ]; then
+        echo "  > Unsupported architecture $ARCH for the verified OAuth2 Proxy release. Skipping OAuth2 Proxy."
+    else
+        OAUTH2_VERSION="7.15.3"
         OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
         OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
-        
-        OAUTH2_TMP_DIR=$(mktemp -d)
+        OAUTH2_TMP_DIR="$(mktemp -d)"
         OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
 
-        echo "  > Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
-
-        if [ -s "$OAUTH2_TAR" ]; then
-            cd "$OAUTH2_TMP_DIR"
-            if tar -xzf "$OAUTH2_TARBALL"; then
-                EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-                if [ -f "$EXTRACTED_BIN" ]; then
-                    mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                    chmod +x /usr/local/bin/oauth2-proxy
-                    echo "  > OAuth2 Proxy installed successfully."
-                else
-                    echo "  ! Failed to locate extracted OAuth2 Proxy binary."
-                fi
+        echo "  > Downloading and verifying OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
+        if download_verified "$OAUTH2_URL" "$OAUTH2_SHA256" "$OAUTH2_TAR" && tar -xzf "$OAUTH2_TAR" -C "$OAUTH2_TMP_DIR"; then
+            EXTRACTED_BIN="$OAUTH2_TMP_DIR/oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
+            if [ -f "$EXTRACTED_BIN" ]; then
+                install -m 0755 "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
+                echo "  > OAuth2 Proxy installed successfully."
             else
-                echo "  ! Failed to extract OAuth2 Proxy."
+                echo "  ! Failed to locate extracted OAuth2 Proxy binary."
             fi
-            cd - > /dev/null
         else
-            echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
+            echo "  > OAuth2 Proxy download, verification, or extraction failed."
         fi
         rm -rf "$OAUTH2_TMP_DIR"
     fi

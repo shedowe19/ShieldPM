@@ -174,13 +174,16 @@ jobs:
           CONTAINER_NAME="installer-extractor-${{ matrix.arch }}"
           docker create --name "$CONTAINER_NAME" "$TAG"
 
-          # 3. Determine Architecture Suffix
+          # 3. Determine architecture and the immutable checksum of its Nginx release asset
           if [ "${{ matrix.arch }}" == "x86_64" ]; then
             ARCH_SUFFIX="amd64"
+            NGINX_SHA256="5c9a4947026f83716100c782c8e18b48d24e47f0e758a706bbaa721d4a8bbf32"
           elif [ "${{ matrix.arch }}" == "aarch64" ]; then
             ARCH_SUFFIX="arm64"
+            NGINX_SHA256="d0d75e2842c03f4c2af6ff440a1365ecc5644662e6e235bb442e2fb919882ee8"
           else
-            ARCH_SUFFIX="${{ matrix.arch }}"
+            echo "Unsupported native-installer architecture: ${{ matrix.arch }}" >&2
+            exit 1
           fi
 
           # 4. Create Build Dir
@@ -192,13 +195,15 @@ jobs:
           docker cp "$CONTAINER_NAME":/html/. "$BUILD_DIR/html/"
           docker rm -f "$CONTAINER_NAME"
 
-          # 6. Download Pre-built Nginx Binaries from Release
-          echo "Downloading nginx-linux-${ARCH_SUFFIX}.tar.gz from GitHub Releases..."
+          # 6. Download and verify pre-built Nginx binaries from the release
+          echo "Downloading and verifying nginx-linux-${ARCH_SUFFIX}.tar.gz from GitHub Releases..."
           RELEASE_URL="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries/nginx-linux-${ARCH_SUFFIX}.tar.gz"
-          curl -L -f -o nginx-binaries.tar.gz "$RELEASE_URL"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 \
+            --output nginx-binaries.tar.gz "$RELEASE_URL"
+          printf '%s  %s\n' "$NGINX_SHA256" nginx-binaries.tar.gz | sha256sum --check --status
           
-          # 7. Extract Nginx Binaries
-          echo "Extracting nginx binaries..."
+          # 7. Extract verified Nginx binaries
+          echo "Extracting verified nginx binaries..."
           tar -xzf nginx-binaries.tar.gz -C "$BUILD_DIR"
           rm nginx-binaries.tar.gz
 

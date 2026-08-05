@@ -14,6 +14,48 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+download_verified() {
+    local url="$1"
+    local expected_sha256="$2"
+    local destination="$3"
+
+    rm -f "$destination"
+    if ! curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 --output "$destination" "$url"; then
+        rm -f "$destination"
+        return 1
+    fi
+
+    if ! printf '%s  %s\n' "$expected_sha256" "$destination" | sha256sum --check --status; then
+        echo "    ! Checksum verification failed for $(basename "$destination")."
+        rm -f "$destination"
+        return 1
+    fi
+}
+
+install_nodesource_key() {
+    local keyring="$1"
+    local key_file
+    local key_fingerprint
+    local expected_fingerprint="6F71F525282841EEDAF851B42F59B5F99B1BE0B4"
+
+    key_file="$(mktemp)"
+    if ! curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 \
+        --output "$key_file" "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key"; then
+        rm -f "$key_file"
+        return 1
+    fi
+
+    key_fingerprint="$(gpg --show-keys --with-colons "$key_file" | awk -F: '$1 == "fpr" { print toupper($10); exit }')"
+    if [ "$key_fingerprint" != "$expected_fingerprint" ]; then
+        echo "    ! NodeSource signing key fingerprint mismatch."
+        rm -f "$key_file"
+        return 1
+    fi
+
+    gpg --dearmor --yes --output "$keyring" "$key_file"
+    rm -f "$key_file"
+}
+
 REPO_URL="https://github.com/shedowe19/ShieldPM.git"
 
 BRANCH="develop" # Default branch for content
@@ -62,7 +104,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 echo "--> Checking for application updates..."
 # Fetch latest commit SHA for the target branch
-LATEST_SHA_FULL=$(curl -s "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH" | grep '"sha":' | head -n 1 | cut -d '"' -f 4)
+LATEST_SHA_FULL=$(curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH" | grep '"sha":' | head -n 1 | cut -d '"' -f 4)
 LATEST_SHORT=${LATEST_SHA_FULL:0:7}
 
 # Get local commit hash if available
@@ -102,7 +144,7 @@ SCRIPT_TMP="/tmp/update-shieldpm.new"
 SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
 
 # Allow curl to fail (e.g. if offline or github issues) without crashing the script (set -e)
-if curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL" && [ -f "$SCRIPT_TMP" ]; then
+if curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --retry 3 --output "$SCRIPT_TMP" "$SCRIPT_URL" && [ -f "$SCRIPT_TMP" ]; then
     # Compare with current script
     if ! cmp -s "$SCRIPT_TMP" "$SCRIPT_CURRENT"; then
         echo "    - New version found. Updating self and restarting..."
@@ -157,8 +199,7 @@ install_node_26() {
         gnupg
 
     install -d -m 0755 /etc/apt/keyrings
-    curl -fsSL "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key" | \
-        gpg --dearmor --yes --output "$NODESOURCE_KEYRING"
+    install_nodesource_key "$NODESOURCE_KEYRING"
     chmod a+r "$NODESOURCE_KEYRING"
 
     # An existing NodeSource major would otherwise win apt's version selection
@@ -254,118 +295,136 @@ echo "    - Updating System Configs (rootfs)..."
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
 
-echo "--> [6/7] Checking for Nginx Binary Updates..."
+echo "--> [6/9] Checking for Nginx Binary Updates..."
 RELEASE_BASE="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"
 ARCH=$(dpkg --print-architecture)
 
-if [[ "$ARCH" == "amd64" || "$ARCH" == "arm64" ]]; then
+case "$ARCH" in
+    amd64)
+        NGINX_SHA256="5c9a4947026f83716100c782c8e18b48d24e47f0e758a706bbaa721d4a8bbf32"
+        ;;
+    arm64)
+        NGINX_SHA256="d0d75e2842c03f4c2af6ff440a1365ecc5644662e6e235bb442e2fb919882ee8"
+        ;;
+    *)
+        NGINX_SHA256=""
+        ;;
+esac
+
+if [ -n "$NGINX_SHA256" ]; then
     # Simple prompt, defaulting to Yes for convenience
     read -p "    ? Update compiled Nginx binaries? (Recommended) [Y/n] " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Nn]$ ]]; then
          echo "    - Skipping binary update."
     else
-         echo "    - Downloading nginx-linux-$ARCH.tar.gz..."
-         curl -L -f -o "$TEMP_DIR/nginx.tar.gz" "$RELEASE_BASE/nginx-linux-$ARCH.tar.gz"
-         if [ -f "$TEMP_DIR/nginx.tar.gz" ]; then
-             echo "    - Extracting binaries..."
+         echo "    - Downloading and verifying nginx-linux-$ARCH.tar.gz..."
+         if download_verified "$RELEASE_BASE/nginx-linux-$ARCH.tar.gz" "$NGINX_SHA256" "$TEMP_DIR/nginx.tar.gz"; then
+             echo "    - Extracting verified binaries..."
              tar -xzf "$TEMP_DIR/nginx.tar.gz" -C /
+             rm -f "$TEMP_DIR/nginx.tar.gz"
              echo "    - Binaries updated successfully."
          else
-             echo "    ! Failed to download binaries. Please check internet connection or GitHub status."
+             echo "    ! Failed to download or verify binaries. Existing binaries were left untouched."
          fi
     fi
 else
     echo "    - Skipping Nginx update: Architecture $ARCH not supported for auto-update."
 fi
 
-echo "--> [7/7] Checking for Anubis AI Firewall Updates..."
-# Check if Anubis is installed or enabled
-ANUBIS_INSTALLED=false
+echo "--> [7/9] Checking for Anubis AI Firewall Updates..."
 if [ -f "/usr/local/bin/anubis" ]; then
     ANUBIS_INSTALLED=true
+else
+    ANUBIS_INSTALLED=false
 fi
 
-# Detect Arch for Anubis (reuse ARCH from nginx step if valid, else re-detect)
-# Anubis uses "amd64" / "arm64" suffix
-ANUBIS_ARCH=""
-if [[ "$ARCH" == "amd64" ]]; then
-    ANUBIS_ARCH="amd64"
-elif [[ "$ARCH" == "arm64" ]]; then
-    ANUBIS_ARCH="arm64"
-fi
+case "$ARCH" in
+    amd64)
+        ANUBIS_ARCH="amd64"
+        ANUBIS_SHA256="8d1792d69c4a6e360fbfa0657ac252dcbce5639e6441b09252cd8ae1474ea306"
+        ;;
+    arm64)
+        ANUBIS_ARCH="arm64"
+        ANUBIS_SHA256="6caed9d09729b0fa1b4d23a6e55b491d24c81901c105e10ccd95b7e8db3a4620"
+        ;;
+    *)
+        ANUBIS_ARCH=""
+        ;;
+esac
 
-if [[ -n "$ANUBIS_ARCH" ]]; then
-    SHOULD_UPDATE=false
-
+if [ -n "$ANUBIS_ARCH" ]; then
+    SHOULD_UPDATE_ANUBIS=false
     if [ "$ANUBIS_INSTALLED" = true ]; then
         echo "    - Anubis is installed."
         read -p "    ? Update Anubis binary? [Y/n] " -n 1 -r
         echo ""
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            SHOULD_UPDATE=true
+            SHOULD_UPDATE_ANUBIS=true
         fi
     else
         echo "    - Anubis is NOT installed."
         read -p "    ? Install Anubis AI Firewall? [y/N] " -n 1 -r
         echo ""
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            SHOULD_UPDATE=true
+            SHOULD_UPDATE_ANUBIS=true
         fi
     fi
 
-    if [ "$SHOULD_UPDATE" = true ]; then
-        ANUBIS_VERSION="1.25.0"
+    if [ "$SHOULD_UPDATE_ANUBIS" = true ]; then
+        ANUBIS_VERSION="1.26.2"
         ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
-        echo "    - Downloading Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
-        curl -L -f -o /tmp/anubis.tar.gz "$ANUBIS_URL"
-        if [ -s /tmp/anubis.tar.gz ]; then
-            tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-            rm /tmp/anubis.tar.gz
-            chmod +x /usr/local/bin/anubis
-            echo "    - Anubis installed successfully."
-
-            # Ensure enabled in env if installing fresh
-            if [ "$ANUBIS_INSTALLED" = false ]; then
-                ENV_FILE="/data/.env"
-                if [ -f "$ENV_FILE" ]; then
-                    if grep -q "ANUBIS_ENABLED" "$ENV_FILE"; then
-                        sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
+        ANUBIS_TAR="$TEMP_DIR/anubis.tar.gz"
+        echo "    - Downloading and verifying Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
+        if download_verified "$ANUBIS_URL" "$ANUBIS_SHA256" "$ANUBIS_TAR"; then
+            if tar -xzf "$ANUBIS_TAR" -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"; then
+                chmod +x /usr/local/bin/anubis
+                echo "    - Anubis installed successfully."
+                if [ "$ANUBIS_INSTALLED" = false ] && [ -f "/data/.env" ]; then
+                    if grep -q "ANUBIS_ENABLED" /data/.env; then
+                        sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" /data/.env
                     else
-                        echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
+                        echo "ANUBIS_ENABLED=true" >> /data/.env
                     fi
-                    echo "    - Enabled Anubis in $ENV_FILE"
+                    echo "    - Enabled Anubis in /data/.env"
                 fi
+            else
+                echo "    ! Verified Anubis archive could not be extracted."
             fi
+            rm -f "$ANUBIS_TAR"
         else
-            echo "    ! Failed to download Anubis. Check internet connection."
+            echo "    ! Failed to download or verify Anubis. Existing binary was left untouched."
         fi
     else
         echo "    - Skipping Anubis update/install."
     fi
 else
-    echo "    - Skipping Anubis: Architecture $ARCH not supported."
+    echo "    - Skipping Anubis: Architecture $ARCH is not supported by the verified updater."
 fi
 
-echo "--> [8/8] Checking for OAuth2 Proxy Updates..."
-# Check if OAuth2 Proxy is installed
-OAUTH2_INSTALLED=false
+echo "--> [8/9] Checking for OAuth2 Proxy Updates..."
 if [ -f "/usr/local/bin/oauth2-proxy" ]; then
     OAUTH2_INSTALLED=true
+else
+    OAUTH2_INSTALLED=false
 fi
 
-# Detect Arch for OAuth2 Proxy (reuse ARCH from nginx step if valid, else re-detect)
-# OAuth2 Proxy uses "amd64" / "arm64" suffix
-OAUTH2_ARCH=""
-if [[ "$ARCH" == "amd64" ]]; then
-    OAUTH2_ARCH="amd64"
-elif [[ "$ARCH" == "arm64" ]]; then
-    OAUTH2_ARCH="arm64"
-fi
+case "$ARCH" in
+    amd64)
+        OAUTH2_ARCH="amd64"
+        OAUTH2_SHA256="0ae5a43adde4d6c5081ba018e70a76041f496377b12a173da36b419082dd1ab6"
+        ;;
+    arm64)
+        OAUTH2_ARCH="arm64"
+        OAUTH2_SHA256="62452322a71e958d4d6911f799bc07921212a5f3bc45e39b63746e422d52ea33"
+        ;;
+    *)
+        OAUTH2_ARCH=""
+        ;;
+esac
 
-if [[ -n "$OAUTH2_ARCH" ]]; then
+if [ -n "$OAUTH2_ARCH" ]; then
     SHOULD_UPDATE_OAUTH2=false
-
     if [ "$OAUTH2_INSTALLED" = true ]; then
         echo "    - OAuth2 Proxy is installed."
         read -p "    ? Update OAuth2 Proxy binary? [Y/n] " -n 1 -r
@@ -383,41 +442,34 @@ if [[ -n "$OAUTH2_ARCH" ]]; then
     fi
 
     if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
-        OAUTH2_VERSION="7.15.2"
+        OAUTH2_VERSION="7.15.3"
         OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
         OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
-        
-        OAUTH2_TMP_DIR=$(mktemp -d)
+        OAUTH2_TMP_DIR="$(mktemp -d)"
         OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
 
-        echo "    - Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
-
-        if [ -s "$OAUTH2_TAR" ]; then
-            cd "$OAUTH2_TMP_DIR"
-            if tar -xzf "$OAUTH2_TARBALL"; then
-                # Check if extracted binary exists before moving
-                EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
+        echo "    - Downloading and verifying OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
+        if download_verified "$OAUTH2_URL" "$OAUTH2_SHA256" "$OAUTH2_TAR"; then
+            if tar -xzf "$OAUTH2_TAR" -C "$OAUTH2_TMP_DIR"; then
+                EXTRACTED_BIN="$OAUTH2_TMP_DIR/oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
                 if [ -f "$EXTRACTED_BIN" ]; then
-                    mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                    chmod +x /usr/local/bin/oauth2-proxy
+                    install -m 0755 "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
                     echo "    - OAuth2 Proxy installed successfully."
                 else
                     echo "    ! Failed to locate extracted OAuth2 Proxy binary."
                 fi
             else
-                echo "    ! Failed to extract OAuth2 Proxy."
+                echo "    ! Verified OAuth2 Proxy archive could not be extracted."
             fi
-            cd - > /dev/null
         else
-            echo "    ! Failed to download OAuth2 Proxy or checksum. Check internet connection."
+            echo "    ! Failed to download or verify OAuth2 Proxy. Existing binary was left untouched."
         fi
         rm -rf "$OAUTH2_TMP_DIR"
     else
         echo "    - Skipping OAuth2 Proxy update/install."
     fi
 else
-    echo "    - Skipping OAuth2 Proxy: Architecture $ARCH not supported."
+    echo "    - Skipping OAuth2 Proxy: Architecture $ARCH is not supported by the verified updater."
 fi
 
 echo "--> [9/9] Restarting ShieldPM..."
