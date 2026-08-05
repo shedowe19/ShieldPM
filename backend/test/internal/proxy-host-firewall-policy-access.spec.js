@@ -1,21 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	auditAdd: vi.fn(),
+	configure: vi.fn(),
 	findById: vi.fn(),
 	proxyHostFindById: vi.fn(),
+	proxyHostPatch: vi.fn(),
+	startPollingForHost: vi.fn(),
 	withPolicyLocks: vi.fn(async (_ids, operation) => await operation()),
 }));
 
-vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
+vi.mock("../../internal/audit-log.js", () => ({ default: { add: mocks.auditAdd } }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/firewall-policy.js", () => ({ withPolicyLocks: mocks.withPolicyLocks }));
-vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
+vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: mocks.startPollingForHost } }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/host.js", () => ({ default: {} }));
-vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/nginx.js", () => ({ default: { configure: mocks.configure } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
-vi.mock("../../lib/error.js", () => ({ default: {} }));
+vi.mock("../../lib/error.js", () => ({
+	default: {
+		ItemNotFoundError: class ItemNotFoundError extends Error {},
+		ValidationError: class ValidationError extends Error {},
+	},
+}));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));
 vi.mock("../../models/access_list.js", () => ({ default: {} }));
 vi.mock("../../models/firewall_policy.js", () => ({
@@ -25,11 +34,14 @@ vi.mock("../../models/firewall_policy.js", () => ({
 }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
-		query: () => ({ findById: mocks.proxyHostFindById }),
+		query: () => ({
+			findById: mocks.proxyHostFindById,
+			where: () => ({ patch: mocks.proxyHostPatch }),
+		}),
 	},
 }));
 
-import {
+import internalProxyHost, {
 	proxyHostAllowedGraph,
 	requestsFirewallPolicy,
 	validateFirewallPolicyAssignment,
@@ -93,6 +105,28 @@ describe("proxy host firewall policy permissions", () => {
 		expect(mocks.withPolicyLocks).toHaveBeenNthCalledWith(1, [7], expect.any(Function));
 		expect(mocks.withPolicyLocks).toHaveBeenNthCalledWith(2, [9], expect.any(Function));
 		expect(operation).toHaveBeenCalledWith(expect.objectContaining({ firewall_policy_id: 9 }));
+	});
+
+	it("serializes host enablement with the current firewall policy lifecycle", async () => {
+		mocks.withPolicyLocks.mockClear();
+		mocks.proxyHostFindById.mockReset();
+		mocks.proxyHostPatch.mockReset().mockResolvedValue(1);
+		mocks.configure.mockReset().mockResolvedValue({ nginx_online: true });
+		const row = { enabled: 0, firewall_policy_id: 7, id: 41, is_deleted: 0, meta: {} };
+		mocks.proxyHostFindById.mockResolvedValueOnce(row).mockResolvedValueOnce(row);
+		const get = vi.spyOn(internalProxyHost, "get").mockResolvedValue({ ...row });
+		const access = { can: vi.fn().mockResolvedValue(true) };
+
+		await expect(internalProxyHost.enable(access, { id: 41 })).resolves.toBe(true);
+
+		expect(mocks.withPolicyLocks).toHaveBeenLastCalledWith([7], expect.any(Function));
+		expect(mocks.proxyHostPatch).toHaveBeenCalledWith({ enabled: 1 });
+		expect(mocks.configure).toHaveBeenCalledWith(
+			expect.anything(),
+			"proxy_host",
+			expect.objectContaining({ enabled: 1, firewall_policy_id: 7, id: 41 }),
+		);
+		get.mockRestore();
 	});
 
 	it("parses every policy expansion form before applying the dedicated permission gate", () => {

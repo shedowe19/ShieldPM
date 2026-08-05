@@ -54,7 +54,6 @@ const internalNginx = {
 					: await currentQuery;
 			if (!currentHost || currentHost.is_deleted || !currentHost.enabled) return {};
 			host = { ...hostSnapshot, ...currentHost };
-			if (options.preserve_firewall_policy_id) host.firewall_policy_id = hostSnapshot.firewall_policy_id;
 		}
 
 		const skip_reload = options.skip_reload || false;

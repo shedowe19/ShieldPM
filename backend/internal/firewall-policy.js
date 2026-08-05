@@ -803,22 +803,25 @@ const internalFirewallPolicy = {
 			const hostIds = hosts.map((host) => host.id);
 			let assignmentsDetached = false;
 			try {
+				if (hostIds.length) {
+					// Persist the detachment before rendering. Concurrent renderers always
+					// re-read the row, so they can no longer recreate a vhost that points
+					// to maps this deletion is about to remove. The maps remain available
+					// until every replacement config has passed validation.
+					await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: null });
+					assignmentsDetached = true;
+				}
 				if (hosts.length) {
-					// Keep this policy's maps available while every linked host is rendered without it.
-					// Otherwise a sibling's old config can reference maps already removed by the policy delete.
-					const detachedHosts = hosts.map((host) => ({ ...host, firewall_policy_id: null }));
-					const generated = await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", detachedHosts, {
-						preserve_firewall_policy_id: true,
-					});
+					const generated = await internalNginx.bulkGenerateConfigs(
+						ProxyHost,
+						"proxy_host",
+						hosts.map((host) => ({ ...host, firewall_policy_id: null })),
+					);
 					if (generated.some((meta) => meta?.nginx_online === false)) {
 						throw new errs.ConfigurationError(
 							"Could not regenerate every host linked to this firewall policy.",
 						);
 					}
-				}
-				if (hostIds.length) {
-					await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: null });
-					assignmentsDetached = true;
 				}
 				const deleted = await FirewallPolicy.query().deleteById(id);
 				if (!deleted) throw new errs.ItemNotFoundError(id);

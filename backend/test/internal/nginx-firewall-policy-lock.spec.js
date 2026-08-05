@@ -97,23 +97,4 @@ describe("proxy host firewall render consistency", () => {
 		await expect(internalNginx.configure(model, "proxy_host", host, { skip_reload: true })).resolves.toEqual({});
 		expect(internalNginx.generateConfig).not.toHaveBeenCalled();
 	});
-
-	it("allows policy deletion to render its deliberate temporary detached snapshot", async () => {
-		mocks.findById.mockResolvedValue(activeRow(7));
-
-		await internalNginx.configure(
-			model,
-			"proxy_host",
-			{ ...host, firewall_policy_id: null },
-			{
-				preserve_firewall_policy_id: true,
-				skip_reload: true,
-			},
-		);
-
-		expect(internalNginx.generateConfig).toHaveBeenCalledWith(
-			"proxy_host",
-			expect.objectContaining({ firewall_policy_id: null }),
-		);
-	});
 });

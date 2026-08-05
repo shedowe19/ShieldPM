@@ -559,7 +559,7 @@ const internalProxyHost = {
 	 */
 	enable: async (access, data) => {
 		await access.can("proxy_hosts:update", data.id);
-		const row = await internalProxyHost.get(access, {
+		let row = await internalProxyHost.get(access, {
 			id: data.id,
 			expand: ["certificate", "owner", "access_list", "host_domains"],
 		});
@@ -571,14 +571,18 @@ const internalProxyHost = {
 			throw new errs.ValidationError("Host is already enabled");
 		}
 
-		row.enabled = 1;
+		await withCurrentFirewallPolicyLock(row.id, async (current) => {
+			if (current.enabled) throw new errs.ValidationError("Host is already enabled");
+			await proxyHostModel.query().where("id", row.id).patch({
+				enabled: 1,
+			});
 
-		await proxyHostModel.query().where("id", row.id).patch({
-			enabled: 1,
+			// Keep enable serialized with policy lifecycle operations. A policy delete
+			// must not detach a disabled host while a concurrent enable renders it with
+			// maps that are about to be removed.
+			row = { ...row, ...current, enabled: 1 };
+			await internalNginx.configure(proxyHostModel, "proxy_host", row);
 		});
-
-		// Configure nginx
-		await internalNginx.configure(proxyHostModel, "proxy_host", row);
 
 		// Start Git Deploy polling if enabled
 		if (row.git_sync_enabled && row.git_repo_url) {

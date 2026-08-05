@@ -65,7 +65,7 @@ Die kompilierten Daten liegen unter `/data/nginx/firewall/`; die globale Nginx-M
 
 - Eine Proxy-Host-Änderung sperrt sowohl die aktuell zugeordnete als auch eine neu angeforderte Policy. Die aktuelle Zuordnung wird **nach** Erwerb der Sperren erneut gelesen; hat sie sich inzwischen geändert, werden die passenden Sperren gewählt und der Vorgang wiederholt.
 - Jeder Proxy-Host-Renderer und jede Konfigurationsentfernung besitzt zusätzlich einen eigenen Host-Lock. Unter diesem Lock lädt der Renderer den vollständigen aktuellen Host mit Zertifikat, Access List und Domains neu. Lifecycle-Pfade können dadurch weder eine gerade geänderte Aktivierung noch andere aktuelle Host-Felder mit einem alten Snapshot überschreiben.
-- Beim Löschen einer Policy werden zunächst die verknüpften vHosts ohne Policy vorbereitet, während die Policy-Maps noch existieren. Schlägt die anschließende Datenbank-Entkopplung oder -Löschung fehl, stellt ShieldPM Zuordnungen, vHost-Dateien und Nginx-Reload wieder her, bevor der Fehler an die API zurückgeht.
+- Beim Löschen einer Policy wird die Zuordnung zunächst in der Datenbank aus den verknüpften Hosts entfernt; erst danach werden die vHosts ohne Policy gerendert, während die Policy-Maps noch existieren. Dadurch sehen konkurrierende Renderer ausschließlich den aktuellen, entkoppelten DB-Stand. Schlägt Rendering oder Policy-Löschung fehl, stellt ShieldPM Zuordnungen, vHost-Dateien und Nginx-Reload wieder her, bevor der Fehler an die API zurückgeht.
 
 ## GitOps
 

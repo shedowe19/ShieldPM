@@ -215,8 +215,8 @@ describe("firewall policy creation with unavailable feeds", () => {
 
 		expect(state.hosts).toEqual([expect.objectContaining({ firewall_policy_id: 17, id: 41 })]);
 		expect(state.events).toEqual([
-			"host-configs:",
 			"host-patch:null",
+			"host-configs:",
 			"policy-delete:17",
 			"host-patch:17",
 			"host-configs:17",
@@ -254,7 +254,7 @@ describe("firewall policy creation with unavailable feeds", () => {
 		expect(state.events).toContain("nginx-reload");
 	});
 
-	it("regenerates every linked host before deleting the policy maps", async () => {
+	it("detaches every host in the database before rendering replacement configs and deleting policy maps", async () => {
 		state.policy = {
 			action: "deny",
 			allow_cidrs: [],
@@ -277,7 +277,7 @@ describe("firewall policy creation with unavailable feeds", () => {
 
 		await internalFirewallPolicy.delete(access, 17);
 
-		expect(state.events).toEqual(["host-configs:,", "host-patch:null", "policy-delete:17", "nginx-reload"]);
+		expect(state.events).toEqual(["host-patch:null", "host-configs:,", "policy-delete:17", "nginx-reload"]);
 		expect(state.hosts.every((host) => host.firewall_policy_id === null)).toBe(true);
 	});
 });
