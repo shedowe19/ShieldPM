@@ -33,6 +33,7 @@ import {
 	proxyHostAllowedGraph,
 	requestsFirewallPolicy,
 	validateFirewallPolicyAssignment,
+	withCurrentFirewallPolicyAssignmentLock,
 	withCurrentFirewallPolicyLock,
 	withFirewallPolicyAssignmentLock,
 } from "../../internal/proxy-host.js";
@@ -60,6 +61,22 @@ describe("proxy host firewall policy permissions", () => {
 
 		expect(await withFirewallPolicyAssignmentLock(7, 9, operation)).toBe("updated");
 		expect(mocks.withPolicyLocks).toHaveBeenLastCalledWith([7, 9], operation);
+	});
+
+	it("retries with the policy assignment read after acquiring locks", async () => {
+		const operation = vi.fn().mockResolvedValue("updated");
+		mocks.withPolicyLocks.mockClear();
+		mocks.proxyHostFindById.mockReset();
+		mocks.proxyHostFindById
+			.mockResolvedValueOnce({ firewall_policy_id: 7, id: 41, is_deleted: 0 })
+			.mockResolvedValueOnce({ firewall_policy_id: 9, id: 41, is_deleted: 0 })
+			.mockResolvedValueOnce({ firewall_policy_id: 9, id: 41, is_deleted: 0 })
+			.mockResolvedValueOnce({ firewall_policy_id: 9, id: 41, is_deleted: 0 });
+
+		expect(await withCurrentFirewallPolicyAssignmentLock(41, 11, operation)).toBe("updated");
+		expect(mocks.withPolicyLocks).toHaveBeenNthCalledWith(1, [7, 11], expect.any(Function));
+		expect(mocks.withPolicyLocks).toHaveBeenNthCalledWith(2, [9, 11], expect.any(Function));
+		expect(operation).toHaveBeenCalledTimes(1);
 	});
 
 	it("rechecks the current assignment before deleting a host", async () => {

@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
 	autoPushes: [],
 	events: [],
 	files: new Map(),
+	failPolicyDelete: false,
 	hosts: [],
 	policy: null,
 	responses: [],
@@ -78,7 +79,9 @@ vi.mock("../../models/firewall_policy.js", () => ({
 		query: () => ({
 			deleteById: async (id) => {
 				state.events.push(`policy-delete:${id}`);
+				if (state.failPolicyDelete) throw new Error("database unavailable");
 				state.policy = null;
+				return 1;
 			},
 			findById: async (id) => (state.policy?.id === id ? state.policy : undefined),
 			insertAndFetch: async (data) => {
@@ -132,6 +135,7 @@ describe("firewall policy creation with unavailable feeds", () => {
 		state.audit.length = 0;
 		state.autoPushes.length = 0;
 		state.files.clear();
+		state.failPolicyDelete = false;
 		state.hosts = [];
 		state.events.length = 0;
 		state.policy = null;
@@ -186,6 +190,68 @@ describe("firewall policy creation with unavailable feeds", () => {
 		expect(state.policy).toMatchObject(original);
 		expect(state.audit).toHaveLength(0);
 		expect(state.autoPushes).toHaveLength(0);
+	});
+
+	it("restores detached assignments and configurations when policy persistence fails", async () => {
+		state.policy = {
+			action: "deny",
+			allow_cidrs: [],
+			block_cidrs: [],
+			enabled: true,
+			feed_status: {},
+			feed_urls: [],
+			geo_countries: [],
+			geo_mode: "off",
+			id: 17,
+			name: "Attached policy",
+			refresh_interval_hours: 24,
+			total_cidrs: 0,
+		};
+		state.hosts = [{ firewall_policy_id: 17, id: 41, meta: {} }];
+		state.failPolicyDelete = true;
+		const access = { can: vi.fn(async () => true), token: { getUserId: () => 1 } };
+
+		await expect(internalFirewallPolicy.delete(access, 17)).rejects.toThrow("database unavailable");
+
+		expect(state.hosts).toEqual([expect.objectContaining({ firewall_policy_id: 17, id: 41 })]);
+		expect(state.events).toEqual([
+			"host-configs:",
+			"host-patch:null",
+			"policy-delete:17",
+			"host-patch:17",
+			"host-configs:17",
+			"nginx-reload",
+		]);
+	});
+
+	it("publishes a disabled map before reporting a manual refresh failure", async () => {
+		const feedUrl = "https://1.1.1.1/manual-refresh.txt";
+		state.policy = {
+			...{
+				action: "deny",
+				allow_cidrs: [],
+				block_cidrs: [],
+				enabled: true,
+				feed_status: {},
+				geo_countries: [],
+				geo_mode: "off",
+				id: 17,
+				name: "Manual refresh",
+				refresh_interval_hours: 24,
+				total_cidrs: 0,
+			},
+			feed_urls: [feedUrl],
+		};
+		state.responses.push({ error: new Error("upstream unavailable") });
+		const access = { can: vi.fn(async () => true), token: { getUserId: () => 1 } };
+
+		await expect(internalFirewallPolicy.refresh(access, 17)).rejects.toThrow("cache incomplete");
+
+		expect(state.policy.feed_status[feedUrl]).toMatchObject({ cache_ready: false, error: "upstream unavailable" });
+		expect(state.files.get("/data/nginx/firewall.conf")).toContain(
+			'map "" $shieldpm_firewall_17_enabled {\n    default 0;',
+		);
+		expect(state.events).toContain("nginx-reload");
 	});
 
 	it("regenerates every linked host before deleting the policy maps", async () => {

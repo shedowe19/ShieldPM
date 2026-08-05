@@ -167,6 +167,12 @@ describe("firewall feed cache refresh", () => {
 
 		await expect(refreshPolicy(state.policy, { regenerate: false })).rejects.toThrow("CIDR limit");
 
+		expect(state.policy.feed_status[url]).toMatchObject({ cache_ready: false });
+		expect(state.policy.feed_status[url].error).toContain("CIDR limit");
+		await writeFirewallConfig();
+		expect(state.files.get("/data/nginx/firewall.conf")).toContain(
+			'map "" $shieldpm_firewall_7_enabled {\n    default 0;',
+		);
 		expect(state.files.has(feedFile(7, url))).toBe(false);
 	});
 
@@ -183,6 +189,14 @@ describe("firewall feed cache refresh", () => {
 
 		await expect(refreshPolicy(state.policy, { regenerate: false })).rejects.toThrow("CIDR limit");
 
+		expect(state.policy.feed_status[url]).toMatchObject({ cache_ready: false });
+		expect(state.policy.feed_status[secondUrl]).toMatchObject({ cache_ready: false });
+		expect(state.policy.feed_status[url].error).toContain("CIDR limit");
+		expect(state.policy.feed_status[secondUrl].error).toContain("CIDR limit");
+		await writeFirewallConfig();
+		expect(state.files.get("/data/nginx/firewall.conf")).toContain(
+			'map "" $shieldpm_firewall_7_enabled {\n    default 0;',
+		);
 		expect(state.files.has(feedFile(7, url))).toBe(false);
 		expect(state.files.has(feedFile(7, secondUrl))).toBe(false);
 	});

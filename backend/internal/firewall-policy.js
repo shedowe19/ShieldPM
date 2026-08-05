@@ -542,6 +542,9 @@ const regenerateLinkedHosts = async (policyId) => {
 
 const renderCidrCache = (cidrs) => `${[...cidrs].map((cidr) => `${cidr} 1;`).join("\n")}\n`;
 
+const markFeedCachesIncomplete = (status, feedUrls, error) =>
+	Object.fromEntries(feedUrls.map((url) => [url, { ...(status[url] || {}), cache_ready: false, error }]));
+
 const refreshPolicy = async (policy, { regenerate = true } = {}) => {
 	await ensurePolicyFiles(policy);
 	const feedUrls = policy.feed_urls || [];
@@ -609,8 +612,9 @@ const refreshPolicy = async (policy, { regenerate = true } = {}) => {
 	const status = Object.fromEntries(results.map((result) => [result.url, result.status]));
 	const errors = results.flatMap((result) => (result.error ? [result.error] : []));
 	const missing = results.filter((result) => !result.cidrs);
-	const failRefresh = async (message) => {
-		await FirewallPolicy.query().patchAndFetchById(policy.id, { feed_status: status, last_error: message });
+	const failRefresh = async (message, { markCachesIncomplete = false } = {}) => {
+		const failedStatus = markCachesIncomplete ? markFeedCachesIncomplete(status, feedUrls, message) : status;
+		await FirewallPolicy.query().patchAndFetchById(policy.id, { feed_status: failedStatus, last_error: message });
 		throw new FeedRefreshError(message);
 	};
 	if (missing.length) {
@@ -622,7 +626,9 @@ const refreshPolicy = async (policy, { regenerate = true } = {}) => {
 	const feedCidrs = new Set(results.flatMap((result) => [...result.cidrs]));
 	const activeCidrs = new Set([...(policy.block_cidrs || []), ...feedCidrs]);
 	if (feedCidrs.size > MAX_CIDRS || activeCidrs.size > MAX_CIDRS) {
-		await failRefresh(`Firewall policy exceeds the ${MAX_CIDRS} CIDR limit.`);
+		// Per-feed files may be individually valid while their combined policy is
+		// unsafe to publish. Mark the policy cache incomplete so its map is disabled.
+		await failRefresh(`Firewall policy exceeds the ${MAX_CIDRS} CIDR limit.`, { markCachesIncomplete: true });
 	}
 
 	// Do not replace any current cache until every configured feed has a valid replacement or cache.
@@ -653,21 +659,36 @@ const synchronizePolicyUnlocked = async (policy, refresh = true) => {
 	return updated;
 };
 
-const synchronizePolicy = async (policy, refresh = true) =>
+const publishInactivePolicyUnlocked = async (policyId) => {
+	await writeFirewallConfig();
+	await regenerateLinkedHosts(policyId);
+	await internalNginx.reload();
+	const current = await FirewallPolicy.query().findById(policyId);
+	if (!current) throw new errs.ItemNotFoundError(policyId);
+	return current;
+};
+
+const synchronizePolicy = async (policy, refresh = true, { publishInactiveOnFeedFailure = false } = {}) =>
 	await withPolicyLock(policy.id, async () => {
 		const current = await FirewallPolicy.query().findById(policy.id);
 		if (!current) throw new errs.ItemNotFoundError(policy.id);
-		return await synchronizePolicyUnlocked(current, refresh);
+		try {
+			return await synchronizePolicyUnlocked(current, refresh);
+		} catch (error) {
+			// A manual refresh must make an already-persisted cache failure effective
+			// immediately, even though its API request still reports the fetch error.
+			if (publishInactiveOnFeedFailure && error instanceof FeedRefreshError) {
+				await publishInactivePolicyUnlocked(current.id);
+			}
+			throw error;
+		}
 	});
 
 const publishInactivePolicy = async (policy) =>
 	await withPolicyLock(policy.id, async () => {
 		const current = await FirewallPolicy.query().findById(policy.id);
 		if (!current) throw new errs.ItemNotFoundError(policy.id);
-		await writeFirewallConfig();
-		await regenerateLinkedHosts(policy.id);
-		await internalNginx.reload();
-		return current;
+		return await publishInactivePolicyUnlocked(current.id);
 	});
 
 // GitOps exports declarative policy data only. Keep a last-known-good cache until
@@ -763,7 +784,7 @@ const internalFirewallPolicy = {
 
 	refresh: async (access, id) => {
 		const policy = await internalFirewallPolicy.get(access, id);
-		const result = await synchronizePolicy(policy);
+		const result = await synchronizePolicy(policy, true, { publishInactiveOnFeedFailure: true });
 		await internalAuditLog.add(access, {
 			action: "updated",
 			object_type: "firewall-policy",
@@ -780,22 +801,43 @@ const internalFirewallPolicy = {
 			if (!policy) throw new errs.ItemNotFoundError(id);
 			const hosts = await getLinkedHosts(id);
 			const hostIds = hosts.map((host) => host.id);
-			if (hosts.length) {
-				// Keep this policy's maps available while every linked host is rendered without it.
-				// Otherwise a sibling's old config can reference maps already removed by the policy delete.
-				const detachedHosts = hosts.map((host) => ({ ...host, firewall_policy_id: null }));
-				const generated = await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", detachedHosts, {
-					preserve_firewall_policy_id: true,
-				});
-				if (generated.some((meta) => meta?.nginx_online === false)) {
-					await regenerateLinkedHosts(id);
-					throw new errs.ConfigurationError(
-						"Could not regenerate every host linked to this firewall policy.",
-					);
+			let assignmentsDetached = false;
+			try {
+				if (hosts.length) {
+					// Keep this policy's maps available while every linked host is rendered without it.
+					// Otherwise a sibling's old config can reference maps already removed by the policy delete.
+					const detachedHosts = hosts.map((host) => ({ ...host, firewall_policy_id: null }));
+					const generated = await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", detachedHosts, {
+						preserve_firewall_policy_id: true,
+					});
+					if (generated.some((meta) => meta?.nginx_online === false)) {
+						throw new errs.ConfigurationError(
+							"Could not regenerate every host linked to this firewall policy.",
+						);
+					}
 				}
+				if (hostIds.length) {
+					await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: null });
+					assignmentsDetached = true;
+				}
+				const deleted = await FirewallPolicy.query().deleteById(id);
+				if (!deleted) throw new errs.ItemNotFoundError(id);
+			} catch (error) {
+				// The temporary detached configs must never outlive a rejected persistence
+				// step. Restore both assignments and vhosts while the policy maps still exist.
+				try {
+					if (assignmentsDetached) {
+						await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: id });
+					}
+					if (hosts.length) {
+						await regenerateLinkedHosts(id);
+						await internalNginx.reload();
+					}
+				} catch (rollbackError) {
+					logger.error(`Firewall policy ${id} delete rollback failed:`, rollbackError);
+				}
+				throw error;
 			}
-			if (hostIds.length) await ProxyHost.query().whereIn("id", hostIds).patch({ firewall_policy_id: null });
-			await FirewallPolicy.query().deleteById(id);
 			await removePolicyCaches(id);
 			await writeFirewallConfig();
 			await internalNginx.reload();

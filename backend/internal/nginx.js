@@ -44,13 +44,17 @@ const internalNginx = {
 		let host = hostSnapshot;
 		if (host_type === "proxy_host") {
 			// Renderers can receive stale snapshots from access lists, maintenance,
-			// Git deploy, GitOps, AI tools and policy refreshes. The host lock prevents
-			// a later delete/disable/update from being undone by such a stale write.
-			const currentHost = await model.query().findById(host.id);
+			// Git deploy, GitOps, AI tools and policy refreshes. Re-read the complete
+			// current render row while holding the host lock so a stale snapshot cannot
+			// undo an enable/disable, assignment, relation or host-field update.
+			const currentQuery = model.query().findById(host.id);
+			const currentHost =
+				typeof currentQuery.withGraphFetched === "function"
+					? await currentQuery.withGraphFetched("[certificate,access_list.[clients,items],host_domains]")
+					: await currentQuery;
 			if (!currentHost || currentHost.is_deleted || !currentHost.enabled) return {};
-			if (!options.preserve_firewall_policy_id) {
-				host = { ...host, firewall_policy_id: currentHost.firewall_policy_id ?? null };
-			}
+			host = { ...hostSnapshot, ...currentHost };
+			if (options.preserve_firewall_policy_id) host.firewall_policy_id = hostSnapshot.firewall_policy_id;
 		}
 
 		const skip_reload = options.skip_reload || false;

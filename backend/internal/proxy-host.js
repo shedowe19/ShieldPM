@@ -108,6 +108,23 @@ const withCurrentFirewallPolicyLock = async (hostId, operation) => {
 	}
 };
 
+const withCurrentFirewallPolicyAssignmentLock = async (hostId, requestedPolicyId, operation) => {
+	for (;;) {
+		const snapshot = await proxyHostModel.query().findById(hostId);
+		if (!snapshot || snapshot.is_deleted) throw new errs.ItemNotFoundError(hostId);
+		const currentPolicyId = currentFirewallPolicyId(snapshot);
+		const result = await withPolicyLocks([currentPolicyId, requestedPolicyId], async () => {
+			const current = await proxyHostModel.query().findById(hostId);
+			if (!current || current.is_deleted) return { missing: true };
+			if (currentFirewallPolicyId(current) !== currentPolicyId) return { retry: true };
+			return { value: await operation() };
+		});
+		if (result.retry) continue;
+		if (result.missing) throw new errs.ItemNotFoundError(hostId);
+		return result.value;
+	}
+};
+
 const graphContainsRelation = (expression, relationName) => {
 	if (expression.$relation === relationName) return true;
 	return expression.$childNames.some((childName) => graphContainsRelation(expression[childName], relationName));
@@ -327,11 +344,9 @@ const internalProxyHost = {
 			});
 		}
 
-		const initialRow = await internalProxyHost.get(access, { id: thisData.id });
-		const currentFirewallPolicyId = initialRow.firewall_policy_id;
 		const requestedFirewallPolicyId =
 			typeof thisData.firewall_policy_id === "undefined"
-				? currentFirewallPolicyId
+				? null
 				: normaliseFirewallPolicyId(thisData.firewall_policy_id);
 		const updateProxyHost = async () => {
 			let row = await internalProxyHost.get(access, { id: thisData.id });
@@ -386,18 +401,6 @@ const internalProxyHost = {
 				thisData.terminal_private_key = encrypt(data.terminal_private_key);
 			}
 
-			// Let's double check `backend/internal/proxy-host.js` old content.
-			// `.patch(thisData).then(utils.omitRow(omissions())).then((saved_row) => { ... })`
-			// If `saved_row` was `{}`, then `return saved_row` at the end would return empty object.
-
-			// Actually, I should use `patchAndFetchById` if I want the row, or just `patch` and then `get`.
-			// But since we are updating by ID, `patchAndFetchById` is best.
-			// But wait, the original code used `proxyHostModel.query().where({ id: thisData.id }).patch(thisData)`.
-			// This is definitely returning a count in SQLite/MySQL.
-
-			// Let's assume I should fetch the row again or return `row` with merged data.
-			// But for safety, I will use `patchAndFetchById`.
-
 			// Transform domain_names into host_domains relation objects for upsertGraph
 			if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
 				thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
@@ -445,11 +448,7 @@ const internalProxyHost = {
 		};
 		return options.skip_firewall_policy_lock
 			? await updateProxyHost()
-			: await withFirewallPolicyAssignmentLock(
-					currentFirewallPolicyId,
-					requestedFirewallPolicyId,
-					updateProxyHost,
-				);
+			: await withCurrentFirewallPolicyAssignmentLock(thisData.id, requestedFirewallPolicyId, updateProxyHost);
 	},
 
 	/**
@@ -747,6 +746,7 @@ export {
 	proxyHostAllowedGraph,
 	requestsFirewallPolicy,
 	validateFirewallPolicyAssignment,
+	withCurrentFirewallPolicyAssignmentLock,
 	withCurrentFirewallPolicyLock,
 	withFirewallPolicyAssignmentLock,
 };

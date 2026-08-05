@@ -71,6 +71,22 @@ describe("proxy host firewall render consistency", () => {
 		);
 	});
 
+	it("refreshes every current proxy-host field before rendering a stale snapshot", async () => {
+		mocks.findById.mockResolvedValue({ ...activeRow(7), enabled: 1, forward_host: "fresh.example.test" });
+
+		await internalNginx.configure(
+			model,
+			"proxy_host",
+			{ ...host, enabled: 0, forward_host: "stale.example.test" },
+			{ skip_reload: true },
+		);
+
+		expect(internalNginx.generateConfig).toHaveBeenCalledWith(
+			"proxy_host",
+			expect.objectContaining({ enabled: 1, forward_host: "fresh.example.test" }),
+		);
+	});
+
 	it("does not recreate a configuration after the current host was deleted or disabled", async () => {
 		mocks.findById.mockResolvedValue({ ...activeRow(7), is_deleted: 1 });
 
