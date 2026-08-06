@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+.DS_Store
+**/node_modules
+**/.yarn
+**/coverage
+**/test-results
+frontend/dist
+backend/data
+*.log
+.tmp*
+.tmp/
+docs/

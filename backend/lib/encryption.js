@@ -3,11 +3,12 @@ import { getEncryptionKey } from "./config.js";
 
 // Uses the persistent key from keys.json
 const algorithm = "aes-256-gcm";
+const authTagLength = 16;
 const key = Buffer.from(getEncryptionKey(), "hex");
 
 export const encrypt = (text) => {
 	const iv = crypto.randomBytes(12);
-	const cipher = crypto.createCipheriv(algorithm, key, iv);
+	const cipher = crypto.createCipheriv(algorithm, key, iv, { authTagLength });
 	let encrypted = cipher.update(text, "utf8", "hex");
 	encrypted += cipher.final("hex");
 	const authTag = cipher.getAuthTag().toString("hex");
@@ -23,7 +24,7 @@ export const decrypt = (text) => {
 	const encryptedText = parts[1];
 	const authTag = Buffer.from(parts[2], "hex");
 
-	const decipher = crypto.createDecipheriv(algorithm, key, iv);
+	const decipher = crypto.createDecipheriv(algorithm, key, iv, { authTagLength });
 	decipher.setAuthTag(authTag);
 	let decrypted = decipher.update(encryptedText, "hex", "utf8");
 	decrypted += decipher.final("utf8");

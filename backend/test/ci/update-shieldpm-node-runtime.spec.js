@@ -82,6 +82,20 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(dockerWorkflow).toContain("sha256sum --check --status");
 	});
 
+	it("pins and verifies runtime package remediation artifacts", () => {
+		const dockerfile = fs.readFileSync(backendSourcePath("..", "Dockerfile"), "utf8");
+		expect(dockerfile).toContain("ARG NPM_VERSION=12.0.2");
+		expect(dockerfile).toContain("ARG CRYPTOGRAPHY_VERSION=50.0.0");
+		expect(dockerfile).toContain("ARG NPM_BRACE_EXPANSION_VERSION=5.0.9");
+		expect(dockerfile).toContain("ARG NPM_IP_ADDRESS_VERSION=10.3.1");
+		expect(dockerfile).toContain("tar -xzf \"$brace_tarball\"");
+		expect(dockerfile).toContain("tar -xzf \"$ip_address_tarball\"");
+		expect(dockerfile).toContain("sha512sum -c -");
+		expect(dockerfile).toContain("sha256sum -c -");
+		expect(dockerfile).toContain("npm install --global --ignore-scripts");
+		expect(dockerfile).toContain("python3 -m pip install --no-cache-dir --no-deps");
+	});
+
 	it("pins Yarn Classic through Corepack when available and npm otherwise", () => {
 		expect(updater).toContain("command -v corepack");
 		expect(updater).toContain("npm install --global yarn@1.22.22");

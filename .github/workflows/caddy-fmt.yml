@@ -18,12 +18,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Read version
-        id: version
-        run: echo "version=$(cat caddy/Dockerfile | grep "^COPY --from=caddy:.*$" | head -1 | sed "s|COPY --from=caddy:\([0-9.]\+\).*|\1|g")" >> $GITHUB_OUTPUT
+      - name: Read pinned Caddy image
+        id: caddy
+        run: |
+          image="$(sed -n 's/^FROM \(caddy:.*\) AS caddy$/\1/p' caddy/Dockerfile)"
+          case "$image" in
+            caddy:2.11.4@sha256:[0-9a-f]*) ;;
+            *) echo "Caddy image must be an immutable 2.11.4 reference" >&2; exit 1 ;;
+          esac
+          echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: caddy-fmt
         run: |
-          docker run --rm -v ${{ github.workspace }}/caddy/Caddyfile:/etc/caddy/Caddyfile caddy:${{ steps.version.outputs.version }} caddy fmt --overwrite /etc/caddy/Caddyfile
+          docker run --rm -v ${{ github.workspace }}/caddy/Caddyfile:/etc/caddy/Caddyfile ${{ steps.caddy.outputs.image }} caddy fmt --overwrite /etc/caddy/Caddyfile
       - name: push changes
         run: |
           git add caddy/Caddyfile

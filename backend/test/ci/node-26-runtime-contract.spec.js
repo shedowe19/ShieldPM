@@ -64,7 +64,7 @@ describe("Node 26 runtime contract", () => {
 		expect(dockerfile).toContain("ARG OAUTH2_PROXY_VERSION=7.15.3");
 		expect(dockerfile).toContain("ARG CLOUDFLARED_VERSION=2026.7.3");
 		expect(dockerfile.match(/sha256sum --check --status/g)).toHaveLength(3);
-		expect(dockerfile).toMatch(/COPY --from=backend\s+\/app\/cloudflared \/usr\/local\/bin\/cloudflared/);
+		expect(dockerfile).toMatch(/COPY --from=backend-runtime\s+\/app\/cloudflared \/usr\/local\/bin\/cloudflared/);
 	});
 
 	it("checks the pinned NodeSource signing-key fingerprint before trusting its APT repository", () => {

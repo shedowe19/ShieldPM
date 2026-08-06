@@ -430,6 +430,12 @@ fi
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
 sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
+# The admin UI is served directly by Nginx, so it cannot rely on the backend's
+# Helmet middleware for browser security headers. Inject this server-scoped
+# include idempotently after the admin server name.
+if ! grep -Fq "include conf.d/include/shieldpm-admin-security.conf;" /usr/local/nginx/conf/conf.d/shieldpm.conf; then
+    sed -i '/^[[:space:]]*server_name _;[[:space:]]*$/a\    include conf.d/include/shieldpm-admin-security.conf;' /usr/local/nginx/conf/conf.d/shieldpm.conf
+fi
 if [ -s "$DEFAULT_STAPLING_FILE" ]; then
     sed -i "s|#\?ssl_stapling|ssl_stapling|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
     sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf

@@ -1,9 +1,11 @@
 # ==========================================
 # Stage 1: Build Frontend
 # ==========================================
-ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:020c0d20b9880058cbe785a9db107156c3c75c2ac944a6aa7ab59f2add76a7bd
-ARG SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx:master@sha256:86a3240d7648f873be17f74de1785822038edff6a02cfbebc27257ff8b2eb222
+ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:3a39a0592364683e6bab97937b72cad5a8fa6dcbbee90edb3bb48c7f8e94f258
+ARG SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx:master@sha256:3101e050806f21c3a527dbf548688f949d5fcf6af0a58affb2641b2605cae54a
 
+# Immutable image digest is supplied by the declared build argument.
+# hadolint ignore=DL3006
 FROM --platform="$BUILDPLATFORM" ${DEBIAN_IMAGE} AS frontend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
@@ -23,6 +25,8 @@ RUN yarn install --frozen-lockfile --production=false && \
 # ==========================================
 # Stage 2: Build Backend
 # ==========================================
+# Immutable image digest is supplied by the declared build argument.
+# hadolint ignore=DL3006
 FROM ${DEBIAN_IMAGE} AS backend
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 ARG NODE_ENV=production
@@ -87,25 +91,90 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 
 # ==========================================
+# Stage 3: Production Backend Runtime
+# ==========================================
+# Keep build tooling and test-only dependencies out of the final image. Native
+# modules were built in the preceding stage and are retained by Yarn's prune.
+FROM backend AS backend-runtime
+RUN yarn install --frozen-lockfile --production=true && \
+    yarn cache clean && \
+    find node_modules -name "*.map" -delete && \
+    rm -rf node_modules/better-sqlite3/deps/sqlite3 && \
+    mkdir -p /runtime-app && \
+    cp -a /app/. /runtime-app && \
+    rm -rf /runtime-app/node_modules
+
+
+# ==========================================
 # Final Stage
 # ==========================================
+# Immutable image digest is supplied by the declared build argument.
+# hadolint ignore=DL3006
 FROM ${SHIELDPM_NGINX_IMAGE}
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
+ARG TARGETARCH
+# npm 12.0.2: SHA-512 derived from the npm registry's published SRI metadata.
+ARG NPM_VERSION=12.0.2
+ARG NPM_TARBALL_SHA512=b885e890b9418fa1693544d05f53e64f9a73ec194837d4258b15fecdd692347b1dd2a517b1b0cbaf9d31cd8e92c3b70956bd2ecc72833a57b4b3098f5bfa7943
+# Current npm 12.0.2 bundles older semver-compatible internals; replace only the fixed,
+# verified package trees until npm ships the corresponding bundled revisions.
+ARG NPM_BRACE_EXPANSION_VERSION=5.0.9
+ARG NPM_BRACE_EXPANSION_SHA512=49c43822ebc8105d533253fb66dfaf8c9ffff7394f6f64837315b13376e4f2ceade8619d27b28ed5d09c4e274e3c929e3d6df42c4ff6713ef00b23e1a3dfd6c6
+ARG NPM_IP_ADDRESS_VERSION=10.3.1
+ARG NPM_IP_ADDRESS_SHA512=d5ef5dde46fdecd1c94c8243656f6b2aa5b687af9d15ae740f2d1fa4f48c429d800e37b982f2ac5e67622ba770639b7be93693b79f8fe4dd58fcba13a08c4fea
+# cryptography 50.0.0 CPython abi3 manylinux_2_34 wheels, verified against PyPI SHA-256 digests.
+ARG CRYPTOGRAPHY_VERSION=50.0.0
+ARG CRYPTOGRAPHY_AMD64_URL=https://files.pythonhosted.org/packages/da/3a/f05e32c99d440c9bb891ea0e36c9091891e36be5a9a87ab2ee6ea20729f6/cryptography-50.0.0-cp311-abi3-manylinux_2_34_x86_64.whl
+ARG CRYPTOGRAPHY_AMD64_SHA256=82148ec5bddac30b51a5b3c1945075f896fa022cb93f8e4a01e9f6ee95292c5f
+ARG CRYPTOGRAPHY_ARM64_URL=https://files.pythonhosted.org/packages/32/98/8a151d64367204cbc63ec65d37502f1d9c53cf4bfc6ec3c532614dbec60d/cryptography-50.0.0-cp311-abi3-manylinux_2_34_aarch64.whl
+ARG CRYPTOGRAPHY_ARM64_SHA256=07949c449a1abcf60d1ee6e88956d89404c7df3c8258f46589e912988e551987
 ENV NODE_ENV=production
 COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
+# A local tarball with an exact SHA-512 is installed below; Hadolint cannot infer that pin.
+# hadolint ignore=DL3016
 RUN bash /usr/local/bin/setup-node-apt.sh && \
+    apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends nodejs && \
     node --version | grep -E '^v26\.' && \
-    rm -rf /var/lib/apt/lists/*
+    npm_tarball="/tmp/npm-${NPM_VERSION}.tgz" && \
+    curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$npm_tarball" "https://registry.npmjs.org/npm/-/npm-${NPM_VERSION}.tgz" && \
+    printf '%s  %s\n' "$NPM_TARBALL_SHA512" "$npm_tarball" | sha512sum -c - && \
+    npm install --global --ignore-scripts "$npm_tarball" && \
+    test "$(npm --version)" = "$NPM_VERSION" && \
+    brace_tarball="/tmp/brace-expansion-${NPM_BRACE_EXPANSION_VERSION}.tgz" && \
+    ip_address_tarball="/tmp/ip-address-${NPM_IP_ADDRESS_VERSION}.tgz" && \
+    curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$brace_tarball" "https://registry.npmjs.org/brace-expansion/-/brace-expansion-${NPM_BRACE_EXPANSION_VERSION}.tgz" && \
+    curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$ip_address_tarball" "https://registry.npmjs.org/ip-address/-/ip-address-${NPM_IP_ADDRESS_VERSION}.tgz" && \
+    printf '%s  %s\n' "$NPM_BRACE_EXPANSION_SHA512" "$brace_tarball" | sha512sum -c - && \
+    printf '%s  %s\n' "$NPM_IP_ADDRESS_SHA512" "$ip_address_tarball" | sha512sum -c - && \
+    rm -rf /usr/lib/node_modules/npm/node_modules/brace-expansion /usr/lib/node_modules/npm/node_modules/ip-address && \
+    mkdir -p /usr/lib/node_modules/npm/node_modules/brace-expansion /usr/lib/node_modules/npm/node_modules/ip-address && \
+    tar -xzf "$brace_tarball" -C /usr/lib/node_modules/npm/node_modules/brace-expansion --strip-components=1 && \
+    tar -xzf "$ip_address_tarball" -C /usr/lib/node_modules/npm/node_modules/ip-address --strip-components=1 && \
+    test "$(node -p 'require("/usr/lib/node_modules/npm/node_modules/brace-expansion/package.json").version')" = "$NPM_BRACE_EXPANSION_VERSION" && \
+    test "$(node -p 'require("/usr/lib/node_modules/npm/node_modules/ip-address/package.json").version')" = "$NPM_IP_ADDRESS_VERSION" && \
+    case "$TARGETARCH" in \
+        amd64) cryptography_url="$CRYPTOGRAPHY_AMD64_URL"; cryptography_sha256="$CRYPTOGRAPHY_AMD64_SHA256" ;; \
+        arm64) cryptography_url="$CRYPTOGRAPHY_ARM64_URL"; cryptography_sha256="$CRYPTOGRAPHY_ARM64_SHA256" ;; \
+        *) echo "Unsupported target architecture for cryptography wheel: $TARGETARCH" >&2; exit 1 ;; \
+    esac && \
+    cryptography_wheel="/tmp/${cryptography_url##*/}" && \
+    curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$cryptography_wheel" "$cryptography_url" && \
+    printf '%s  %s\n' "$cryptography_sha256" "$cryptography_wheel" | sha256sum -c - && \
+    python3 -m pip install --no-cache-dir --no-deps "$cryptography_wheel" && \
+    python3 -c "import cryptography; assert cryptography.__version__ == '${CRYPTOGRAPHY_VERSION}'" && \
+    rm -rf /var/lib/apt/lists/* /tmp/nodejs.list /tmp/nodesource.gpg /tmp/nodesource.gpg.key "$npm_tarball" "$brace_tarball" "$ip_address_tarball" "$cryptography_wheel"
 
 
 # --- Copy Artifacts ---
 
-# From Backend & Frontend
-COPY --from=backend  /app      /app
-COPY --from=backend  /app/anubis /usr/local/bin/anubis
-COPY --from=backend  /app/oauth2-proxy /usr/local/bin/oauth2-proxy
-COPY --from=backend  /app/cloudflared /usr/local/bin/cloudflared
+# From Backend & Frontend. The runtime stage excludes development node_modules.
+COPY --from=backend-runtime /runtime-app /app
+COPY --from=backend-runtime /app/node_modules /app/node_modules
+COPY --from=backend-runtime /app/anubis /usr/local/bin/anubis
+COPY --from=backend-runtime /app/oauth2-proxy /usr/local/bin/oauth2-proxy
+COPY --from=backend-runtime /app/cloudflared /usr/local/bin/cloudflared
 COPY --from=frontend /app/dist /html/frontend
 
 # Static Files
