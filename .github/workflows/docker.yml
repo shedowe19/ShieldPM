@@ -62,16 +62,16 @@ jobs:
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION=$(cat .version)
-          echo "hash=${SHORT_SHA}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "hash=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             CLEAN_PR=$(echo pr-${{ github.ref_name }} | sed "s|refs/pull/:||g" | sed "s|/merge||g")
-            echo "tag_base=${CLEAN_PR}" >> $GITHUB_OUTPUT
-            echo "is_pr=true" >> $GITHUB_OUTPUT
+            echo "tag_base=${CLEAN_PR}" >> "$GITHUB_OUTPUT"
+            echo "is_pr=true" >> "$GITHUB_OUTPUT"
           else
-            echo "tag_base=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "is_pr=false" >> $GITHUB_OUTPUT
+            echo "tag_base=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
           fi
 
   # ---------------------------------------------------------
@@ -177,10 +177,10 @@ jobs:
           # 3. Determine architecture and the immutable checksum of its Nginx release asset
           if [ "${{ matrix.arch }}" == "x86_64" ]; then
             ARCH_SUFFIX="amd64"
-            NGINX_SHA256="5c9a4947026f83716100c782c8e18b48d24e47f0e758a706bbaa721d4a8bbf32"
+            NGINX_SHA256="1e2e78e7e2f0be8774e3ae89040cf4b3804f1500bba3eb99aa5e48f4d1b807c8"
           elif [ "${{ matrix.arch }}" == "aarch64" ]; then
             ARCH_SUFFIX="arm64"
-            NGINX_SHA256="d0d75e2842c03f4c2af6ff440a1365ecc5644662e6e235bb442e2fb919882ee8"
+            NGINX_SHA256="39956e68ea850bf46a95e03c6bcb1ffee5d20a679a71eae821fe3686fe65b376"
           else
             echo "Unsupported native-installer architecture: ${{ matrix.arch }}" >&2
             exit 1
@@ -217,7 +217,7 @@ jobs:
           # 10. Package
           TAR_NAME="shieldpm-install-linux-${ARCH_SUFFIX}.tar.gz"
           tar -czf "$TAR_NAME" -C "$BUILD_DIR" .
-          echo "INSTALLER_PKG=$TAR_NAME" >> $GITHUB_ENV
+          echo "INSTALLER_PKG=$TAR_NAME" >> "$GITHUB_ENV"
           
           # Cleanup
           rm -rf "$BUILD_DIR"
@@ -308,7 +308,7 @@ jobs:
           FILE_NAME="shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_${ARCH_SUFFIX}.tar.gz"
           mv rootfs.tar.gz "$FILE_NAME"
           
-          echo "LXC_TEMPLATE_NAME=$FILE_NAME" >> $GITHUB_ENV
+          echo "LXC_TEMPLATE_NAME=$FILE_NAME" >> "$GITHUB_ENV"
           
           # Cleanup
           docker rm -f "$CONTAINER_NAME"

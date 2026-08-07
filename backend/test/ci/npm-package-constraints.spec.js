@@ -15,6 +15,7 @@ describe("npm and Yarn dependency constraints", () => {
 			axios: "1.19.0",
 			"brace-expansion": "5.0.9",
 			"fast-uri": "3.1.5",
+			"@apidevtools/swagger-parser/**/js-yaml": "4.3.1",
 		});
 		expect(backendManifest).not.toHaveProperty("overrides");
 		expect(frontendManifest).not.toHaveProperty("resolutions");

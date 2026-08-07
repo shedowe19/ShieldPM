@@ -71,13 +71,13 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		}
 		expect(nativeInstaller).not.toContain('OAUTH2_VERSION="7.14.2"');
 		expect(nativeInstaller).toContain('if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then');
-		expect(updater).toContain("5c9a4947026f83716100c782c8e18b48d24e47f0e758a706bbaa721d4a8bbf32");
-		expect(updater).toContain("d0d75e2842c03f4c2af6ff440a1365ecc5644662e6e235bb442e2fb919882ee8");
+		expect(updater).toContain("1e2e78e7e2f0be8774e3ae89040cf4b3804f1500bba3eb99aa5e48f4d1b807c8");
+		expect(updater).toContain("39956e68ea850bf46a95e03c6bcb1ffee5d20a679a71eae821fe3686fe65b376");
 		expect(dockerWorkflow).toContain(
-			'NGINX_SHA256="5c9a4947026f83716100c782c8e18b48d24e47f0e758a706bbaa721d4a8bbf32"',
+			'NGINX_SHA256="1e2e78e7e2f0be8774e3ae89040cf4b3804f1500bba3eb99aa5e48f4d1b807c8"',
 		);
 		expect(dockerWorkflow).toContain(
-			'NGINX_SHA256="d0d75e2842c03f4c2af6ff440a1365ecc5644662e6e235bb442e2fb919882ee8"',
+			'NGINX_SHA256="39956e68ea850bf46a95e03c6bcb1ffee5d20a679a71eae821fe3686fe65b376"',
 		);
 		expect(dockerWorkflow).toContain("sha256sum --check --status");
 	});
@@ -88,8 +88,8 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(dockerfile).toContain("ARG CRYPTOGRAPHY_VERSION=50.0.0");
 		expect(dockerfile).toContain("ARG NPM_BRACE_EXPANSION_VERSION=5.0.9");
 		expect(dockerfile).toContain("ARG NPM_IP_ADDRESS_VERSION=10.3.1");
-		expect(dockerfile).toContain("tar -xzf \"$brace_tarball\"");
-		expect(dockerfile).toContain("tar -xzf \"$ip_address_tarball\"");
+		expect(dockerfile).toContain('tar -xzf "$brace_tarball"');
+		expect(dockerfile).toContain('tar -xzf "$ip_address_tarball"');
 		expect(dockerfile).toContain("sha512sum -c -");
 		expect(dockerfile).toContain("sha256sum -c -");
 		expect(dockerfile).toContain("npm install --global --ignore-scripts");
