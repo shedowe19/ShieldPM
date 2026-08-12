@@ -45,7 +45,8 @@ jobs:
           echo "Checking for latest dependency updates..."
           echo "### Frontend Updates" > /tmp/frontend-updates.txt
           echo '```text' >> /tmp/frontend-updates.txt
-          ncu -u --target latest >> /tmp/frontend-updates.txt
+          # @tanstack/react-table v9 requires a deliberate application migration; retain the tested v8 API.
+          ncu -u --target latest --reject @tanstack/react-table >> /tmp/frontend-updates.txt
           echo '```' >> /tmp/frontend-updates.txt
 
           echo "Installing updated frontend dependencies to update yarn.lock..."
