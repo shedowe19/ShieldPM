@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code.
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Check spelling
-        uses: codespell-project/actions-codespell@v2
+        uses: codespell-project/actions-codespell@v2.2
         with:
           check_filenames: true
           check_hidden: true

@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Build Frontend
 # ==========================================
-ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:020c0d20b9880058cbe785a9db107156c3c75c2ac944a6aa7ab59f2add76a7bd
+ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:3a39a0592364683e6bab97937b72cad5a8fa6dcbbee90edb3bb48c7f8e94f258
 ARG SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx:master
 
 FROM --platform="$BUILDPLATFORM" ${DEBIAN_IMAGE} AS frontend
@@ -36,13 +36,13 @@ COPY backend /app
 WORKDIR /app
 # hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates binutils file curl make g++ python3 && \
-    curl -L "https://github.com/TecharoHQ/anubis/releases/download/v1.25.0/anubis-1.25.0-linux-${TARGETARCH}.tar.gz" -o /tmp/anubis.tar.gz && \
-    tar -xzf /tmp/anubis.tar.gz -C /app --strip-components=2 "anubis-1.25.0-linux-${TARGETARCH}/bin/anubis" && \
+    curl -L "https://github.com/TecharoHQ/anubis/releases/download/v1.27.0/anubis-1.27.0-linux-${TARGETARCH}.tar.gz" -o /tmp/anubis.tar.gz && \
+    tar -xzf /tmp/anubis.tar.gz -C /app --strip-components=2 "anubis-1.27.0-linux-${TARGETARCH}/bin/anubis" && \
     rm /tmp/anubis.tar.gz && \
     chmod +x /app/anubis && \
-    curl -L "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.15.2/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" -o "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
-    tar -xzf "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.15.2.linux-${TARGETARCH}/oauth2-proxy" && \
-    rm "/tmp/oauth2-proxy-v7.15.2.linux-${TARGETARCH}.tar.gz" && \
+    curl -L "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.15.3/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" -o "/tmp/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" && \
+    tar -xzf "/tmp/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.15.3.linux-${TARGETARCH}/oauth2-proxy" && \
+    rm "/tmp/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
     yarn install --frozen-lockfile --production=false && \
     yarn cache clean && \

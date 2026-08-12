@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: "yarn"
@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependency update tools
         run: |
-          npm install --global npm-check-updates@22.2.9 license-checker@25.0.1
+          npm install --global npm-check-updates@23.0.2 license-checker@25.0.1
           NPM_GLOBAL_BIN="$(npm prefix --global)/bin"
           test -x "$NPM_GLOBAL_BIN/ncu"
           test -x "$NPM_GLOBAL_BIN/license-checker"
@@ -52,7 +52,7 @@ jobs:
           npx --yes --package yarn@1.22.22 yarn install
 
           echo "Deduplicating compatible frontend lockfile entries..."
-          npx --yes --package yarn-deduplicate@6.0.0 yarn-deduplicate --strategy highest yarn.lock
+          npx --yes --package yarn-deduplicate@6.0.2 yarn-deduplicate --strategy highest yarn.lock
 
           echo "Reinstalling the deduplicated frontend lockfile..."
           npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
@@ -125,7 +125,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check_changes.outputs.updates_found == 'true'
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@v8.1.1
         with:
           token: ${{ secrets.DEPENDENCY_UPDATES_TOKEN }}
           base: "develop"

@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: update cs-nginx-bouncer version
         id: update
         run: |
@@ -31,7 +31,7 @@ jobs:
           sed -i "s|ARG CSNB_VER=.*|ARG CSNB_VER=$CSNB_VER|" Dockerfile
           echo "version=$CSNB_VER" >> $GITHUB_OUTPUT
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@v8.1.1
         with:
           signoff: true
           delete-branch: true
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: update coreruleset version
         id: update
         run: |
@@ -58,7 +58,7 @@ jobs:
           sed -i "s|ARG CRS_VER=.*|ARG CRS_VER=$CRS_VER|" Dockerfile
           echo "version=$CRS_VER" >> $GITHUB_OUTPUT
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@v8.1.1
         with:
           signoff: true
           delete-branch: true

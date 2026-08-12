@@ -36,7 +36,7 @@ describe("npm dependency update workflow", () => {
 	it("runs Yarn and update tooling under the Node runtime configured by the workflow", () => {
 		const yarn = "npx --yes --package yarn@1.22.22 yarn";
 
-		expect(workflow).toContain("npm install --global npm-check-updates@22.2.9 license-checker@25.0.1");
+		expect(workflow).toContain("npm install --global npm-check-updates@23.0.2 license-checker@25.0.1");
 		expect(workflow).toContain('NPM_GLOBAL_BIN="$(npm prefix --global)/bin"');
 		expect(workflow).toContain('printf \'%s\\n\' "$NPM_GLOBAL_BIN" >> "$GITHUB_PATH"');
 		expect(workflow).not.toContain("yarn global add");
@@ -65,7 +65,7 @@ describe("npm dependency update workflow", () => {
 		const ncu = "ncu -u --target latest >> /tmp/frontend-updates.txt";
 		const updatedInstall = `${yarn} install`;
 		const deduplication =
-			"npx --yes --package yarn-deduplicate@6.0.0 yarn-deduplicate --strategy highest yarn.lock";
+			"npx --yes --package yarn-deduplicate@6.0.2 yarn-deduplicate --strategy highest yarn.lock";
 		const frozenReinstall = `${yarn} install --frozen-lockfile`;
 		const position = (line) => frontendUpdateLines.indexOf(line);
 		const finalPosition = (line) => frontendUpdateLines.lastIndexOf(line);
