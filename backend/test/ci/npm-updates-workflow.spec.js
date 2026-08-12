@@ -47,12 +47,11 @@ describe("npm dependency update workflow", () => {
 		expect(updateSteps("Backend")).toContain(`${yarn} install --frozen-lockfile`);
 	});
 
-	it("keeps React Table on its compatible v8 API while otherwise testing current dependency lines", () => {
-		expect(updateSteps("Frontend")).toContain("ncu -u --target latest --reject @tanstack/react-table");
+	it("allows the full current dependency line during the compatibility test", () => {
+		expect(updateSteps("Frontend")).toContain("ncu -u --target latest");
 		expect(updateSteps("Backend")).toContain("ncu -u --target latest");
-		expect(updateSteps("Backend")).not.toContain("--reject");
 		expect(workflow).not.toContain("--target minor");
-		expect(workflow.match(/--reject/g)).toHaveLength(1);
+		expect(workflow).not.toContain("--reject");
 	});
 
 	it("deduplicates the frontend lockfile, reinstalls it, and then runs the guarded dependency documentation synchronizer", () => {
@@ -63,7 +62,7 @@ describe("npm dependency update workflow", () => {
 			.split("\n")
 			.map((line) => line.trim())
 			.filter(Boolean);
-		const ncu = "ncu -u --target latest --reject @tanstack/react-table >> /tmp/frontend-updates.txt";
+		const ncu = "ncu -u --target latest >> /tmp/frontend-updates.txt";
 		const updatedInstall = `${yarn} install`;
 		const deduplication =
 			"npx --yes --package yarn-deduplicate@6.0.0 yarn-deduplicate --strategy highest yarn.lock";

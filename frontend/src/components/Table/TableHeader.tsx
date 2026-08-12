@@ -1,7 +1,8 @@
+import type { RowData } from "@tanstack/react-table";
 import type { TableLayoutProps } from "src/components";
 import { TableHeader as ShadcnTableHeader, TableHead, TableRow } from "src/components/ui/table";
 
-function TableHeader<T>(props: TableLayoutProps<T>) {
+function TableHeader<T extends RowData>(props: TableLayoutProps<T>) {
 	const { tableInstance } = props;
 	const headerGroups = tableInstance.getHeaderGroups();
 

@@ -1,4 +1,4 @@
-import { flexRender, type Table } from "@tanstack/react-table";
+import { flexRender, type RowData } from "@tanstack/react-table";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import React from "react";
 import type { TableLayoutProps } from "src/components";
@@ -13,7 +13,7 @@ TableRowWithRef.displayName = "TableRowWithRef";
 
 const MotionTableRow = m.create(TableRowWithRef);
 
-function TableBody<T>(props: TableLayoutProps<T>) {
+function TableBody<T extends RowData>(props: TableLayoutProps<T>) {
 	const { tableInstance, extraStyles, emptyState } = props;
 	const rows = tableInstance.getRowModel().rows;
 
@@ -32,7 +32,7 @@ function TableBody<T>(props: TableLayoutProps<T>) {
 						</TableCell>
 					</TableRow>
 				) : (
-					<EmptyRow tableInstance={tableInstance as unknown as Table<unknown>} />
+					<EmptyRow tableInstance={tableInstance} />
 				)}
 			</ShadcnTableBody>
 		);

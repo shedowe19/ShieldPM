@@ -1,16 +1,17 @@
-import type { Table as ReactTable } from "@tanstack/react-table";
+import type { ReactTable, RowData } from "@tanstack/react-table";
 import { Table } from "src/components/ui/table";
 import { TableBody } from "./TableBody";
 import { TableHeader } from "./TableHeader";
+import type { shieldTableFeatures } from "./tableFeatures";
 
-interface TableLayoutProps<TFields> {
-	tableInstance: ReactTable<TFields>;
+interface TableLayoutProps<TFields extends RowData> {
+	tableInstance: ReactTable<typeof shieldTableFeatures, TFields>;
 	emptyState?: React.ReactNode;
 	extraStyles?: {
 		row: (rowData: TFields) => React.HTMLAttributes<HTMLTableRowElement> | undefined;
 	};
 }
-function TableLayout<TFields>(props: TableLayoutProps<TFields>) {
+function TableLayout<TFields extends RowData>(props: TableLayoutProps<TFields>) {
 	return (
 		<div className="rounded-md border">
 			<Table>
