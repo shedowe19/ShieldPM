@@ -54,4 +54,28 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain('[[ ! "$NODE_VERSION" =~ ^v26\\. ]]');
 		expect(updater).toContain("yarn --version");
 	});
+
+	it("rebuilds existing installations exactly from committed lockfiles", () => {
+		expect(updater).toContain("yarn install --frozen-lockfile --production --silent");
+		expect(updater).toContain("yarn install --frozen-lockfile --silent");
+		expect(updater).toContain("find \"$BACKEND_DIR\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +");
+		expect(updater).toContain('cp -a "$TEMP_DIR/backend/." "$BACKEND_DIR/"');
+		expect(updater).toContain("find \"$FRONTEND_DIR\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +");
+		expect(updater).toContain('cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"');
+	});
+
+	it("updates optional runtime binaries and waits for migrations to become healthy", () => {
+		expect(updater).toContain('ANUBIS_VERSION="1.27.0"');
+		expect(updater).toContain('OAUTH2_VERSION="7.15.3"');
+		expect(updater).toContain("wait_for_backend_health()");
+		expect(updater).toContain("--unix-socket /run/shieldpm.sock");
+		expect(updater).toContain(".status == \"OK\"");
+		expect(updater).toContain("systemctl restart shieldpm");
+		expect(updater).toContain("local max_attempts=120");
+		expect(updater).toContain("jq");
+		expect(updater).toContain("journalctl --no-pager -u shieldpm -n 100");
+		expect(nativeInstaller).toContain('VERSION="1.27.0"');
+		expect(nativeInstaller).toContain('OAUTH2_VERSION="7.15.3"');
+		expect(nativeInstaller).not.toContain("SHOULD_UPDATE_OAUTH2");
+	});
 });

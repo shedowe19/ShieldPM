@@ -513,7 +513,7 @@ if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
         ANUBIS_ARCH="$ARCH"
     fi
 
-    VERSION="1.25.0"
+    VERSION="1.27.0"
     URL="https://github.com/TecharoHQ/anubis/releases/download/v${VERSION}/anubis-${VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
 
     echo "  > Downloading from $URL..."
@@ -562,37 +562,35 @@ if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
         OAUTH2_ARCH="$ARCH"
     fi
 
-    if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
-        OAUTH2_VERSION="7.14.2"
-        OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
-        OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
-        
-        OAUTH2_TMP_DIR=$(mktemp -d)
-        OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
+    OAUTH2_VERSION="7.15.3"
+    OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
+    OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
 
-        echo "  > Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
+    OAUTH2_TMP_DIR=$(mktemp -d)
+    OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
 
-        if [ -s "$OAUTH2_TAR" ]; then
-            cd "$OAUTH2_TMP_DIR"
-            if tar -xzf "$OAUTH2_TARBALL"; then
-                EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-                if [ -f "$EXTRACTED_BIN" ]; then
-                    mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                    chmod +x /usr/local/bin/oauth2-proxy
-                    echo "  > OAuth2 Proxy installed successfully."
-                else
-                    echo "  ! Failed to locate extracted OAuth2 Proxy binary."
-                fi
+    echo "  > Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
+    curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
+
+    if [ -s "$OAUTH2_TAR" ]; then
+        cd "$OAUTH2_TMP_DIR"
+        if tar -xzf "$OAUTH2_TARBALL"; then
+            EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
+            if [ -f "$EXTRACTED_BIN" ]; then
+                mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
+                chmod +x /usr/local/bin/oauth2-proxy
+                echo "  > OAuth2 Proxy installed successfully."
             else
-                echo "  ! Failed to extract OAuth2 Proxy."
+                echo "  ! Failed to locate extracted OAuth2 Proxy binary."
             fi
-            cd - > /dev/null
         else
-            echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
+            echo "  ! Failed to extract OAuth2 Proxy."
         fi
-        rm -rf "$OAUTH2_TMP_DIR"
+        cd - > /dev/null
+    else
+        echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
     fi
+    rm -rf "$OAUTH2_TMP_DIR"
 else
     echo "--> Skipping OAuth2 Proxy."
 fi

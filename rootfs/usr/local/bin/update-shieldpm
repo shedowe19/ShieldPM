@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Self-update protection: Run from /tmp to allow overwriting the original script file
 SELF_PATH=$(readlink -f "$0")
@@ -96,7 +96,7 @@ if [[ "$CURRENT_SHA" == "$LATEST_SHA_FULL" ]]; then
 fi
 
 # Self-Update: Fetch latest version of this script first
-echo "--> [0/7] Checking for script updates..."
+echo "--> [0/9] Checking for script updates..."
 SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${SCRIPT_BRANCH}/rootfs/usr/local/bin/update-shieldpm"
 SCRIPT_TMP="/tmp/update-shieldpm.new"
 SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
@@ -139,6 +139,24 @@ remove_stale_corepack_shims() {
                 ;;
         esac
     done
+}
+
+wait_for_backend_health() {
+    local attempt
+    local max_attempts=120
+
+    echo "    - Waiting for the updated backend and database migrations..."
+    for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+        if curl --fail --silent --show-error --unix-socket /run/shieldpm.sock \
+            http://localhost/api/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; then
+            echo "    - Backend is healthy; pending database migrations completed."
+            return 0
+        fi
+        sleep 1
+    done
+
+    echo "    ! ShieldPM did not become healthy within ${max_attempts}s."
+    return 1
 }
 
 install_node_26() {
@@ -216,37 +234,40 @@ apt-get install -y --no-install-recommends \
     python3-pip \
     python3-setuptools \
     libffi-dev \
-    gyp
+    gyp \
+    jq
 
-echo "--> [2/6] Fetching latest source..."
+echo "--> [2/9] Fetching latest source..."
 git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
 
-echo "--> [3/6] Building Backend..."
+echo "--> [3/9] Building Backend..."
 cd "$TEMP_DIR/backend"
 # LXC compatible: Run as root
 # Fix for node-gyp on Python 3.13: Ensure dist-packages is in python path
-export PYTHONPATH="/usr/lib/python3/dist-packages:$PYTHONPATH"
-yarn install --production --silent
-# Cleanup Dev Dependencies to save space
-# npm prune --production
+export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
+yarn install --frozen-lockfile --production --silent
 
-echo "--> [4/6] Building Frontend..."
+echo "--> [4/9] Building Frontend..."
 cd "$TEMP_DIR/frontend"
 # LXC compatible: Run as root
-yarn install --silent
+yarn install --frozen-lockfile --silent
 yarn run build
 
-echo "--> [5/6] Swapping files..."
+echo "--> [5/9] Swapping files..."
 # Backend
 echo "    - Updating Backend at $BACKEND_DIR..."
-# Preserve config/keys if any (though usually strictly in /data)
-cp -r "$TEMP_DIR/backend/"* "$BACKEND_DIR/"
-echo "$LATEST_SHA_FULL" > "$BACKEND_DIR/.git-commit"
+# Application state belongs in /data. Replacing /app exactly prevents removed
+# source files or native modules from surviving a release update.
+mkdir -p "$BACKEND_DIR"
+find "$BACKEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+cp -a "$TEMP_DIR/backend/." "$BACKEND_DIR/"
+printf '%s\n' "$LATEST_SHA_FULL" > "$BACKEND_DIR/.git-commit"
 
 # Frontend
 echo "    - Updating Frontend at $FRONTEND_DIR..."
-rm -rf "${FRONTEND_DIR:?}"/*
-cp -r "$TEMP_DIR/frontend/dist/"* "$FRONTEND_DIR/"
+mkdir -p "$FRONTEND_DIR"
+find "$FRONTEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"
 
 # Rootfs (System Scripts & Configs)
 echo "    - Updating System Configs (rootfs)..."
@@ -254,7 +275,7 @@ echo "    - Updating System Configs (rootfs)..."
 rm -rf "$TEMP_DIR/rootfs/data"
 cp -rf "$TEMP_DIR/rootfs/"* /
 
-echo "--> [6/7] Checking for Nginx Binary Updates..."
+echo "--> [6/9] Checking for Nginx Binary Updates..."
 RELEASE_BASE="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"
 ARCH=$(dpkg --print-architecture)
 
@@ -279,7 +300,7 @@ else
     echo "    - Skipping Nginx update: Architecture $ARCH not supported for auto-update."
 fi
 
-echo "--> [7/7] Checking for Anubis AI Firewall Updates..."
+echo "--> [7/9] Checking for Anubis AI Firewall Updates..."
 # Check if Anubis is installed or enabled
 ANUBIS_INSTALLED=false
 if [ -f "/usr/local/bin/anubis" ]; then
@@ -315,7 +336,7 @@ if [[ -n "$ANUBIS_ARCH" ]]; then
     fi
 
     if [ "$SHOULD_UPDATE" = true ]; then
-        ANUBIS_VERSION="1.25.0"
+        ANUBIS_VERSION="1.27.0"
         ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
         echo "    - Downloading Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
         curl -L -f -o /tmp/anubis.tar.gz "$ANUBIS_URL"
@@ -347,7 +368,7 @@ else
     echo "    - Skipping Anubis: Architecture $ARCH not supported."
 fi
 
-echo "--> [8/8] Checking for OAuth2 Proxy Updates..."
+echo "--> [8/9] Checking for OAuth2 Proxy Updates..."
 # Check if OAuth2 Proxy is installed
 OAUTH2_INSTALLED=false
 if [ -f "/usr/local/bin/oauth2-proxy" ]; then
@@ -383,7 +404,7 @@ if [[ -n "$OAUTH2_ARCH" ]]; then
     fi
 
     if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
-        OAUTH2_VERSION="7.15.2"
+        OAUTH2_VERSION="7.15.3"
         OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
         OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
         
@@ -420,13 +441,15 @@ else
     echo "    - Skipping OAuth2 Proxy: Architecture $ARCH not supported."
 fi
 
-echo "--> [9/9] Restarting ShieldPM..."
+echo "--> [9/9] Restarting ShieldPM and applying database migrations..."
 systemctl daemon-reload
-if systemctl is-active --quiet shieldpm; then
-    systemctl restart shieldpm
-    echo "    - Systemd service restarted."
+if systemctl restart shieldpm && systemctl is-active --quiet shieldpm && wait_for_backend_health; then
+    echo "    - ShieldPM is running; application update and database migrations are healthy."
 else
-    echo "    - Warning: shieldpm service not running. Please restart container manually."
+    echo "    ! ShieldPM did not become healthy after the update."
+    systemctl --no-pager --full status shieldpm || true
+    journalctl --no-pager -u shieldpm -n 100 || true
+    exit 1
 fi
 
 echo "--> Cleanup..."

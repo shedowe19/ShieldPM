@@ -101,11 +101,11 @@ update
 
 This command will:
 
-1. Check GitHub for updates.
-2. Upgrade system packages (`apt upgrade`).
-3. Install and verify signed Node.js 26 plus Yarn Classic 1.22.22; when NodeSource does not ship Corepack, npm installs Yarn as a controlled fallback.
-4. Update ShieldPM code.
-5. (Optional) Update Nginx binaries.
+1. Check GitHub for updates and self-update the updater first.
+2. Upgrade system packages (`apt upgrade`), migrate to Node.js 26 and install Yarn Classic 1.22.22.
+3. Rebuild and replace the application from its committed lockfiles while preserving `/data`.
+4. Offer updates for installed Nginx, Anubis and OAuth2 Proxy binaries.
+5. Restart or start ShieldPM, apply pending database migrations and verify the backend health endpoint before reporting success.
 
 ---
 
