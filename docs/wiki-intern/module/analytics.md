@@ -49,9 +49,12 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Netzwerkstatus und Datenbankstatistiken haben getrennte In-Flight-Sperren, Zeitgeber und exponentielle Backoffs. Ein langsamer Datenbankabruf verzögert daher weder den Netzwerkdurchsatz noch dessen nächsten Zweitakt. Beim Ausblenden oder Offline-Gehen werden beide Zeitgeber entfernt und laufende Antworten als veraltet markiert; nach Reaktivierung starten beide Kennzahlen wieder unmittelbar.
 - Die Weltkarte bleibt beim Aufruf der Analytics-Route zunächst als lokalisierter Ladezustand sichtbar und lädt ihre
   Visualisierungsabhängigkeiten erst, wenn ihr Bereich bis auf 200 Pixel an den Viewport heranreicht. Damit bleibt die
-  Kartenfunktion beim Scrollen verfügbar, ohne den anfänglichen Analytics-Chunk zu belasten. Schlägt ihre Visualisierung
-  fehl, begrenzt eine lokale `RouteErrorBoundary` den Fehler auf den reservierten Kartenbereich; die übrige
-  Analytics-Seite bleibt bedienbar.
+  Kartenfunktion beim Scrollen verfügbar, ohne den anfänglichen Analytics-Chunk zu belasten. `AnalyticsMapContent.tsx`
+  erzeugt die SVG-Pfade direkt mit `d3-geo` und `topojson-client` aus der lokal gebündelten
+  `world-atlas/countries-110m.json`; es gibt weder einen React-18-gebundenen Kartenwrapper noch einen externen
+  Geometrie-Download zur Laufzeit. Scrollrad und Doppelklick zoomen um den Pointer, Ziehen verschiebt die Karte; der
+  Zoom bleibt zwischen 1 und 8. Schlägt ihre Visualisierung fehl, begrenzt eine lokale `RouteErrorBoundary` den Fehler
+  auf den reservierten Kartenbereich; die übrige Analytics-Seite bleibt bedienbar.
 - Die Recharts-Zeit- und Statuscode-Charts folgen demselben viewport-gesteuerten Muster: `AnalyticsCharts.tsx` hält
   zunächst einen Ladezustand vor und lädt `AnalyticsChartContent.tsx` erst kurz vor dem Sichtbarwerden. Dadurch bleibt
   die Chart-Funktion beim Scrollen vollständig erhalten, ohne den anfänglichen Analytics-Chunk mit Recharts zu belasten.
@@ -64,7 +67,9 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend
-- `react-simple-maps` — Weltkarten-Visualisierung
+- `d3-geo` — Equal-Earth-Projektion, Länderpfade und Zentroiden der Weltkarte
+- `topojson-client` — Umwandlung der gebündelten Länder-Topologie in GeoJSON-Features
+- `world-atlas` — lokal mitgelieferte 110m-Länder-Topologie für die Weltkarte
 - GoAccess (optional, externe Binary)
 
 ## Offene Fragen

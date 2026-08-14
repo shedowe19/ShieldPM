@@ -105,6 +105,11 @@ Beschreibungen unverändert; `AnalyticsKpis.test.tsx` sichert Werte und Kennzeic
 `pages/Analytics/AnalyticsGeography.tsx` fasst die Länderübersicht aus Kartenrahmen, verzögert geladener Weltkarte und
 Top-Länderliste zusammen. Beide Kindkomponenten erhalten dieselbe Analytics-Zusammenfassung; damit bleibt die Route
 für Polling und Datenabruf zuständig, während die geografische Darstellung zusammenhängend bleibt.
+`AnalyticsMapContent.tsx` importiert die 110m-Länder-Topologie aus `world-atlas` direkt in den lazy Karten-Chunk und
+wandelt sie mit `topojson-client` sowie `d3-geo` in native SVG-Pfade um. Scrollrad/Doppelklick zoomen um die aktuelle
+Pointer-Position, Ziehen verschiebt den Viewport. Dadurch ist die Karte React-19-kompatibel und benötigt weder
+`react-simple-maps` noch einen Laufzeitabruf von einer CDN-URL; `AnalyticsMapContent.test.tsx` sichert lokale Geometrie,
+Marker, Zoom und Pan.
 `AnalyticsGeography.test.tsx` sichert Titel und Datenweitergabe an Karte und Länderliste ab.
 
 ## React-Kontexte (`frontend/src/context/`)

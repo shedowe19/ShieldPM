@@ -59,23 +59,25 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 
 ## Frontend-Abhängigkeiten (Auswahl)
 
-| Paket                       | Version        | Zweck                        |
-| --------------------------- | -------------- | ---------------------------- |
-| `react` / `react-dom`       | ^19.2.5        | UI-Framework                 |
-| `react-router-dom`          | ^7.14.2        | Routing                      |
-| `@tanstack/react-query`     | ^5.100.6       | Server-State                 |
-| `@tanstack/react-table`     | 8.21.3         | Tabellen                     |
-| `tailwindcss`               | ^3.4.19        | CSS-Framework                |
-| `@radix-ui/*`               | diverse        | Accessible UI-Primitives     |
-| `i18next` / `react-i18next` | ^25.10 / ^16.6 | i18n                         |
-| `framer-motion`             | ^12.38.0       | Animationen                  |
-| `recharts`                  | ^3.8.1         | Charts (Analytics)           |
-| `@xterm/xterm`              | ^6.0.0         | Terminal-Emulator            |
-| `lucide-react`              | ^0.577.0       | Icons                        |
-| `zod`                       | ^4.4.1         | Schema-Validierung           |
-| `react-hook-form`           | ^7.74.0        | Formulare                    |
-| `react-markdown`            | ^10.1.0        | Markdown-Rendering (AI Chat) |
-| `react-simple-maps`         | ^3.0.0         | Weltkarten (Analytics)       |
+| Paket                       | Version        | Zweck                                            |
+| --------------------------- | -------------- | ------------------------------------------------ |
+| `react` / `react-dom`       | ^19.2.5        | UI-Framework                                     |
+| `react-router-dom`          | ^7.14.2        | Routing                                          |
+| `@tanstack/react-query`     | ^5.100.6       | Server-State                                     |
+| `@tanstack/react-table`     | 8.21.3         | Tabellen                                         |
+| `tailwindcss`               | ^3.4.19        | CSS-Framework                                    |
+| `@radix-ui/*`               | diverse        | Accessible UI-Primitives                         |
+| `i18next` / `react-i18next` | ^25.10 / ^16.6 | i18n                                             |
+| `framer-motion`             | ^12.38.0       | Animationen                                      |
+| `recharts`                  | ^3.8.1         | Charts (Analytics)                               |
+| `@xterm/xterm`              | ^6.0.0         | Terminal-Emulator                                |
+| `lucide-react`              | ^0.577.0       | Icons                                            |
+| `zod`                       | ^4.4.1         | Schema-Validierung                               |
+| `react-hook-form`           | ^7.74.0        | Formulare                                        |
+| `react-markdown`            | ^10.1.0        | Markdown-Rendering (AI Chat)                     |
+| `d3-geo`                    | ^3.1.1         | Projektion und SVG-Pfade der Analytics-Weltkarte |
+| `topojson-client`           | ^3.1.0         | TopoJSON-Umwandlung für die Analytics-Weltkarte  |
+| `world-atlas`               | ^2.0.2         | Lokal gebündelte Länder-Topologie für Analytics  |
 
 ## Entwicklungsabhängigkeiten
 

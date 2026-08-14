@@ -35,14 +35,6 @@ vi.mock("src/components/ui/select", () => ({
 	),
 }));
 
-vi.mock("react-simple-maps", () => ({
-	ComposableMap: () => null,
-	Geographies: () => null,
-	Geography: () => null,
-	Marker: () => null,
-	ZoomableGroup: () => null,
-}));
-
 vi.mock("recharts", () => ({
 	Area: () => null,
 	AreaChart: () => <div data-testid="analytics-area-chart" />,
