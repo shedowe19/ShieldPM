@@ -11,10 +11,15 @@ const nativeInstaller = fs.readFileSync(backendSourcePath("..", "scripts", "inst
 const nodePackageVersionAssignment = updater
 	.split("\n")
 	.find((line) => line.includes('NODE_PACKAGE_VERSION="$(apt-cache madison nodejs'));
+const backendHealthCheck = updater.match(/wait_for_backend_health\(\) \{[\s\S]*?^\}/m)?.[0];
 const temporaryDirectories = [];
 
 if (!nodePackageVersionAssignment) {
 	throw new Error("The updater must determine a Node.js package version from apt-cache madison output.");
+}
+
+if (!backendHealthCheck) {
+	throw new Error("The updater must define the native backend health check.");
 }
 
 const createAptCacheFixture = () => {
@@ -122,6 +127,40 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain('cp -a "$TEMP_DIR/backend/." "$BACKEND_DIR/"');
 		expect(updater).toContain('find "$FRONTEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +');
 		expect(updater).toContain('cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"');
+	});
+
+	it("checks the native backend health endpoint at the socket root", () => {
+		const commandDirectory = fs.mkdtempSync(join(tmpdir(), "shieldpm-update-health-check-"));
+		temporaryDirectories.push(commandDirectory);
+		const curlArgumentsPath = join(commandDirectory, "curl-arguments");
+		const curlPath = join(commandDirectory, "curl");
+		const jqPath = join(commandDirectory, "jq");
+
+		fs.writeFileSync(
+			curlPath,
+			[
+				"#!/bin/sh",
+				'printf "%s\\n" "$@" > "$HEALTH_CHECK_CURL_ARGUMENTS"',
+				`printf '%s\\n' '{"status":"OK"}'`,
+			].join("\n"),
+		);
+		fs.writeFileSync(jqPath, ["#!/bin/sh", "cat >/dev/null"].join("\n"));
+		fs.chmodSync(curlPath, 0o755);
+		fs.chmodSync(jqPath, 0o755);
+
+		const result = spawnSync("bash", ["-c", `set -euo pipefail\n${backendHealthCheck}\nwait_for_backend_health`], {
+			encoding: "utf8",
+			env: {
+				...process.env,
+				HEALTH_CHECK_CURL_ARGUMENTS: curlArgumentsPath,
+				PATH: `${commandDirectory}:${process.env.PATH}`,
+			},
+		});
+
+		expect(result.status, result.stderr).toBe(0);
+		const curlArguments = fs.readFileSync(curlArgumentsPath, "utf8").split("\n");
+		expect(curlArguments).toContain("http://localhost/");
+		expect(curlArguments).not.toContain("http://localhost/api/");
 	});
 
 	it("updates optional runtime binaries and waits for migrations to become healthy", () => {

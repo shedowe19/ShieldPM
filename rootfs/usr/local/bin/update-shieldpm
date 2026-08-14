@@ -148,7 +148,7 @@ wait_for_backend_health() {
     echo "    - Waiting for the updated backend and database migrations..."
     for ((attempt = 1; attempt <= max_attempts; attempt++)); do
         if curl --fail --silent --show-error --unix-socket /run/shieldpm.sock \
-            http://localhost/api/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; then
+            http://localhost/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; then
             echo "    - Backend is healthy; pending database migrations completed."
             return 0
         fi
