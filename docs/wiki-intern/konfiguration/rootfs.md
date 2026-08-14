@@ -10,21 +10,25 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 
 ## Startup-Scripts (`rootfs/usr/local/bin/`)
 
-| Datei                | Größe  | Zweck                                                                                    |
-| -------------------- | ------ | ---------------------------------------------------------------------------------------- |
-| `start.sh`           | 27 KB  | **Haupt-Startup-Script**: Konfiguriert Nginx, Umgebungsvariablen, Module, Berechtigungen |
-| `launch.sh`          | 6 KB   | Startet Backend-Prozess und optional Tor, GoAccess                                       |
-| `entrypoint.sh`      | 839 B  | Docker-Entrypoint: Ruft `start.sh` auf, dann `launch.sh`                                 |
-| `healthcheck.sh`     | 1 KB   | Docker-Healthcheck: Prüft API-Erreichbarkeit                                             |
-| `envs.sh`            | 2 KB   | Lädt und exportiert Umgebungsvariablen                                                   |
-| `aio.sh`             | 1.5 KB | All-in-One Script für Dienst-Verwaltung                                                  |
+| Datei                | Größe  | Zweck                                                                                                                                                                                                                                                                                         |
+| -------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start.sh`           | 27 KB  | **Haupt-Startup-Script**: Konfiguriert Nginx, Umgebungsvariablen, Module, Berechtigungen                                                                                                                                                                                                      |
+| `launch.sh`          | 6 KB   | Startet Backend-Prozess und optional Tor, GoAccess                                                                                                                                                                                                                                            |
+| `entrypoint.sh`      | 839 B  | Docker-Entrypoint: Ruft `start.sh` auf, dann `launch.sh`                                                                                                                                                                                                                                      |
+| `healthcheck.sh`     | 1 KB   | Docker-Healthcheck: Prüft API-Erreichbarkeit                                                                                                                                                                                                                                                  |
+| `envs.sh`            | 2 KB   | Lädt und exportiert Umgebungsvariablen                                                                                                                                                                                                                                                        |
+| `aio.sh`             | 1.5 KB | All-in-One Script für Dienst-Verwaltung                                                                                                                                                                                                                                                       |
 | `update-shieldpm`    | 16 KB  | Update-Script für native Installationen; richtet NodeSource APT ein, installiert/verifiziert Node.js 26 sowie Yarn Classic 1.22.22, aktiviert den System-CA-Store für Node-Netzwerkzugriffe und räumt beim Node-Majorwechsel ausschließlich verwaiste Corepack-Shims vor dem npm-Fallback auf |
-| `npm-reset-password` | 45 B   | Passwort-Reset-Wrapper                                                                   |
-| `migration.sh`       | 34 B   | Migrations-Wrapper                                                                       |
+| `npm-reset-password` | 45 B   | Passwort-Reset-Wrapper                                                                                                                                                                                                                                                                        |
+| `migration.sh`       | 34 B   | Migrations-Wrapper                                                                                                                                                                                                                                                                            |
 
 ## Native-Update: NodeSource-Paketversion
 
 `update-shieldpm` läuft mit `set -o pipefail`. Die Node-26-Paketversion wird aus `apt-cache madison nodejs` ermittelt. Das `awk`-Kommando liest dabei die vollständige APT-Ausgabe, übernimmt aber nur die erste passende Version. Ein vorzeitiges Beenden von `awk` würde die vorgelagerte Ausgabe bei langen Versionslisten mit `SIGPIPE` abbrechen und das gesamte Update vor dem Quellcode-Download beenden.
+
+## Native-Update: Yarn-Classic-Fallback
+
+Falls Corepack nicht verfügbar ist, installieren sowohl `update-shieldpm` als auch `scripts/install.sh` Yarn Classic mit `npm install --global --allow-scripts=yarn yarn@1.22.22`. Damit ist ausschließlich das bekannte Yarn-`preinstall`-Skript für diesen Aufruf erlaubt; es gibt keine globale Freigabe fremder Install-Skripte. Zuvor entfernt der Fallback nur verwaiste Corepack-Shims.
 
 ## Native-Update: Backend-Health-Check
 

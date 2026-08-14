@@ -206,7 +206,7 @@ install_node_26() {
         corepack install --global yarn@1.22.22
     else
         remove_stale_corepack_shims
-        npm install --global yarn@1.22.22
+        npm install --global --allow-scripts=yarn yarn@1.22.22
     fi
 
     NODE_VERSION="$(node --version)"

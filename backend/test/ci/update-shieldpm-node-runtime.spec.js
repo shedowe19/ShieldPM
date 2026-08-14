@@ -108,14 +108,17 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 			expect(script).toContain("*corepack/dist/*");
 			expect(script).toContain('rm -f "$shim"');
 			expect(script).toContain('[ -x "$COREPACK_BIN" ]');
-			expect(script).toMatch(/else[\s\S]*remove_stale_corepack_shims[\s\S]*npm install --global yarn@1\.22\.22/);
+			expect(script).toMatch(
+				/else[\s\S]*remove_stale_corepack_shims[\s\S]*npm install --global --allow-scripts=yarn yarn@1\.22\.22/,
+			);
 		}
 	});
 
 	it("pins Yarn Classic through Corepack when available and npm otherwise", () => {
 		expect(updater).toContain("command -v corepack");
-		expect(updater).toContain("npm install --global yarn@1.22.22");
-		expect(nativeInstaller).toContain("npm install --global yarn@1.22.22");
+		for (const script of [updater, nativeInstaller]) {
+			expect(script).toContain("npm install --global --allow-scripts=yarn yarn@1.22.22");
+		}
 		expect(updater).toContain('[[ ! "$NODE_VERSION" =~ ^v26\\. ]]');
 		expect(updater).toContain("yarn --version");
 	});
