@@ -190,7 +190,8 @@ install_node_26() {
     printf 'deb [signed-by=%s] https://deb.nodesource.com/node_%s.x nodistro main\n' \
         "$NODESOURCE_KEYRING" "$NODE_MAJOR" > "$NODESOURCE_LIST"
     apt-get update
-    NODE_PACKAGE_VERSION="$(apt-cache madison nodejs | awk '$3 ~ /^26\./ { print $3; exit }')"
+    # With pipefail, awk must consume the complete listing; exiting early can make apt-cache fail with SIGPIPE.
+    NODE_PACKAGE_VERSION="$(apt-cache madison nodejs | awk '$3 ~ /^26\./ && !found { print $3; found = 1 }')"
     if [ -z "$NODE_PACKAGE_VERSION" ]; then
         echo "    ! NodeSource does not provide a Node.js ${NODE_MAJOR} package for this architecture."
         exit 1

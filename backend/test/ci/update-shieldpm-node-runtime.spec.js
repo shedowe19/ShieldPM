@@ -1,10 +1,49 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import { describe, expect, it } from "vitest";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import { backendSourcePath } from "../helpers/source-path.js";
 
 const nodePackageVersionVariable = "$" + "{NODE_PACKAGE_VERSION}";
 const updater = fs.readFileSync(backendSourcePath("..", "rootfs", "usr", "local", "bin", "update-shieldpm"), "utf8");
 const nativeInstaller = fs.readFileSync(backendSourcePath("..", "scripts", "install.sh"), "utf8");
+const nodePackageVersionAssignment = updater
+	.split("\n")
+	.find((line) => line.includes('NODE_PACKAGE_VERSION="$(apt-cache madison nodejs'));
+const temporaryDirectories = [];
+
+if (!nodePackageVersionAssignment) {
+	throw new Error("The updater must determine a Node.js package version from apt-cache madison output.");
+}
+
+const createAptCacheFixture = () => {
+	const directory = fs.mkdtempSync(join(tmpdir(), "shieldpm-update-apt-cache-"));
+	temporaryDirectories.push(directory);
+	const aptCachePath = join(directory, "apt-cache");
+
+	fs.writeFileSync(
+		aptCachePath,
+		[
+			"#!/bin/sh",
+			"i=0",
+			'while [ "$i" -lt 100000 ]; do',
+			"    printf '%s\\n' 'nodejs | 26.99.0-1nodesource1 | https://deb.nodesource.com/node_26.x nodistro/main amd64 Packages'",
+			"    i=$((i + 1))",
+			"done",
+			"",
+		].join("\n"),
+	);
+	fs.chmodSync(aptCachePath, 0o755);
+
+	return directory;
+};
+
+afterEach(() => {
+	for (const directory of temporaryDirectories.splice(0)) {
+		fs.rmSync(directory, { force: true, recursive: true });
+	}
+});
 
 describe("update-shieldpm Node 26 runtime contract", () => {
 	it("replaces an existing NodeSource major source with Node 26 before installing Node.js", () => {
@@ -13,6 +52,27 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain("deb[.]nodesource[.]com/node_[0-9]+[.]x");
 		expect(updater).toContain("apt-cache madison nodejs");
 		expect(updater).toContain(`"nodejs=\${NODE_PACKAGE_VERSION}"`);
+	});
+
+	it("consumes the complete NodeSource version listing under pipefail", () => {
+		const aptCacheDirectory = createAptCacheFixture();
+		const result = spawnSync(
+			"bash",
+			[
+				"-c",
+				[
+					"set -euo pipefail",
+					nodePackageVersionAssignment.trim(),
+					'test "$NODE_PACKAGE_VERSION" = "26.99.0-1nodesource1"',
+				].join("\n"),
+			],
+			{
+				encoding: "utf8",
+				env: { ...process.env, PATH: `${aptCacheDirectory}:${process.env.PATH}` },
+			},
+		);
+
+		expect(result.status, result.stderr).toBe(0);
 	});
 
 	it("uses the signed NodeSource repository instead of Debian npm packages", () => {
@@ -58,9 +118,9 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 	it("rebuilds existing installations exactly from committed lockfiles", () => {
 		expect(updater).toContain("yarn install --frozen-lockfile --production --silent");
 		expect(updater).toContain("yarn install --frozen-lockfile --silent");
-		expect(updater).toContain("find \"$BACKEND_DIR\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +");
+		expect(updater).toContain('find "$BACKEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +');
 		expect(updater).toContain('cp -a "$TEMP_DIR/backend/." "$BACKEND_DIR/"');
-		expect(updater).toContain("find \"$FRONTEND_DIR\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +");
+		expect(updater).toContain('find "$FRONTEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +');
 		expect(updater).toContain('cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"');
 	});
 
@@ -69,7 +129,7 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain('OAUTH2_VERSION="7.15.3"');
 		expect(updater).toContain("wait_for_backend_health()");
 		expect(updater).toContain("--unix-socket /run/shieldpm.sock");
-		expect(updater).toContain(".status == \"OK\"");
+		expect(updater).toContain('.status == "OK"');
 		expect(updater).toContain("systemctl restart shieldpm");
 		expect(updater).toContain("local max_attempts=120");
 		expect(updater).toContain("jq");
