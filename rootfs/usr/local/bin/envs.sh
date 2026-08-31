@@ -36,7 +36,8 @@ set -a
 set +a
 
 # Resolve generic FOO_FILE variables before validation and all child processes.
-# shellcheck source=/usr/local/bin/load-env-secrets.sh
+# The sourced file is linted separately from its image-runtime path.
+# shellcheck source=/dev/null
 . /usr/local/bin/load-env-secrets.sh || exit 1
 
 

@@ -267,10 +267,10 @@ validate_database_fields() {
         echo "ERROR: Invalid database host." >&2
         exit 1
     }
-    [[ "$DB_PORT" =~ ^[0-9]{1,5}$ ]] && [ "$DB_PORT" -ge 1 ] && [ "$DB_PORT" -le 65535 ] || {
+    if ! [[ "$DB_PORT" =~ ^[0-9]{1,5}$ ]] || [ "$DB_PORT" -lt 1 ] || [ "$DB_PORT" -gt 65535 ]; then
         echo "ERROR: Invalid database port." >&2
         exit 1
-    }
+    fi
     [[ "$DB_USER" =~ ^[A-Za-z_][A-Za-z0-9_.-]{0,62}$ ]] || {
         echo "ERROR: Invalid database user name." >&2
         exit 1

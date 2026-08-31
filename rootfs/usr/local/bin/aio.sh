@@ -13,6 +13,8 @@ esac
 
 while [ "$(healthcheck.sh)" != "OK" ]; do sleep 10s; done
 
+# The Nginx $http_accept_encoding variable must remain literal in the JSON payload.
+# shellcheck disable=SC2016
 payload='{"domain_names":["'"$NC_DOMAIN"'"],"forward_scheme":"http","forward_host":"127.0.0.1","forward_port":11000,"allow_websocket_upgrade":true,"access_list_id":"0","certificate_id":"new","ssl_forced":true,"http2_support":true,"hsts_enabled":true,"hsts_subdomains":true,"meta":{"letsencrypt_email":"","letsencrypt_agree":true,"dns_challenge":false},"advanced_config":"","locations":[{"path":"/","advanced_config":"proxy_set_header Accept-Encoding $http_accept_encoding;","forward_scheme":"http","forward_host":"127.0.0.1","forward_port":11000}],"block_exploits":false,"caching_enabled":false}'
 
 # Feed the short-lived access token through curl's stdin config so it never appears in the process arguments.

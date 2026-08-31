@@ -95,6 +95,8 @@ echo "Starting services..."
 shutdown_requested=false
 backend_pid=""
 
+# Invoked indirectly by the TERM/INT trap below.
+# shellcheck disable=SC2317
 request_shutdown() {
     shutdown_requested=true
     if [ -n "$backend_pid" ] && kill -0 "$backend_pid" 2>/dev/null; then

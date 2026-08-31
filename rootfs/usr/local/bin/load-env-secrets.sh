@@ -110,7 +110,7 @@ load_env_secrets() {
         esac
 
         printf -v "$destination" '%s' "$secret_value"
-        export "$destination"
+        export "${destination?}"
         unset "$file_name"
     done < <(compgen -A variable | LC_ALL=C sort)
 }
