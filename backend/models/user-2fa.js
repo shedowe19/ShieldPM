@@ -25,6 +25,8 @@ class UserTwoFa extends Model {
 	counter;
 	/** @type {string|null} */
 	transports;
+	/** @type {string|null} */
+	credential_id_hash;
 	/** @type {Object|null} */
 	meta;
 	/** @type {boolean} */
@@ -88,8 +90,10 @@ class UserTwoFa extends Model {
 	 * @param {number} userId
 	 * @returns {Promise<UserTwoFa[]>}
 	 */
-	static getActiveForUser(userId) {
-		return UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 });
+	static async getActiveForUser(userId) {
+		return await UserTwoFa.query()
+			.where({ user_id: userId, is_verified: 1, is_deleted: 0 })
+			.whereIn("type", ["totp", "yubikey", "passkey", "duo"]);
 	}
 
 	/**
@@ -98,7 +102,10 @@ class UserTwoFa extends Model {
 	 * @returns {Promise<boolean>}
 	 */
 	static async hasActive2FA(userId) {
-		const count = await UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 }).resultSize();
+		const count = await UserTwoFa.query()
+			.where({ user_id: userId, is_verified: 1, is_deleted: 0 })
+			.whereIn("type", ["totp", "yubikey", "passkey", "duo"])
+			.resultSize();
 		return count > 0;
 	}
 }

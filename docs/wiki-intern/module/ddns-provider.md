@@ -2,38 +2,24 @@
 
 ## Zweck
 
-Schnittstelle zu verschiedenen DDNS (Dynamic DNS) Anbietern.
+`backend/internal/ddns-provider.js` verwaltet Provider-Metadaten, verschlüsselte Konfiguration, Capabilities,
+Ownership und Audit-Ereignisse. Die Ausführung übernimmt `backend/internal/ddns.js`.
 
-## Kontext
+## Unterstützte Typen
 
-Das DDNS-Modul nutzt Provider-spezifische Logik, um IP-Adressen zu aktualisieren.
+- Cloudflare (Zone-ID + API-Token, A/AAAA)
+- DuckDNS (Token, IPv4/IPv6)
+- Custom HTTPS Callback mit strikter SSRF-Prüfung
 
-## Wichtige Dateien
+## Berechtigungen und Secrets
 
-- `backend/internal/ddns-provider.js` (4 KB) — Provider-Implementierungen
-- `backend/internal/ddns.js` — Hauptlogik, die die Provider aufruft
-
-## Verhalten
-
-- Enthält Logik für Anbieter wie Cloudflare, DuckDNS, Namecheap etc.
-- Standardisiert die Aktualisierungsanfragen für das Haupt-DDNS-Modul.
-
-## Berechtigungen und Ownership
-
-Die CRUD-Methoden in `backend/internal/ddns-provider.js` prüfen ihre jeweiligen Capabilities. Beim Löschen wird der
-Provider nach `ddns_providers:delete` über den autorisierten Leseweg aufgelöst. Damit begrenzt die
-`permission_visibility` bei eingeschränkten Rollen die Löschung auf `owner_user_id`; nur Sichtbarkeit `all` erlaubt das
-Löschen fremder Provider. Erst nach erfolgreicher autorisierter Löschung werden Audit-Log und GitOps-Auto-Push ausgelöst.
-
-## Abhängigkeiten
-
-- Keine direkten (nutzt Node.js interne Module für Requests)
-
-## Offene Fragen
-
-Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+CRUD prüft die jeweilige `ddns_providers:*`-Capability. Bei eingeschränkter Visibility werden Reads/Updates/Deletes vor
+der Mutation auf `owner_user_id` begrenzt. Provider-Token werden verschlüsselt gespeichert, in API-/Logfehlern
+redigiert und nicht in GitOps snapshot v2 exportiert. Nach Disaster Recovery müssen Secrets neu provisioniert werden.
 
 ## Verwandte Seiten
 
 - [DDNS](./ddns.md)
+- [GitOps](./gitops.md)
+- [Benutzer & Auth](./benutzer-auth.md)
 - [Modulübersicht](./README.md)

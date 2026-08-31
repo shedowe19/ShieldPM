@@ -21,6 +21,7 @@ interface Props extends InnerModalProps {
 	id: number;
 }
 interface SetPasswordValues {
+	current: string;
 	new: string;
 }
 
@@ -34,7 +35,7 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setIsSubmitting(true);
 		setError(null);
 		try {
-			await updateAuth(id, values.new);
+			await updateAuth(id, values.new, values.current);
 			remove();
 		} catch (err) {
 			if (err instanceof Error) setError(<T id={err.message} />);
@@ -48,6 +49,7 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 			<DialogContent className="sm:max-w-md">
 				<Formik<SetPasswordValues>
 					initialValues={{
+						current: "",
 						new: "",
 					}}
 					onSubmit={onSubmit}
@@ -70,7 +72,29 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							)}
 
 							<div className="grid gap-4 py-4">
-								<Field name="new" validate={validateString(8, 100)}>
+								<Field name="current" validate={validateString(1, 100)}>
+									{({ field }: FieldProps) => (
+										<div className="space-y-2">
+											<Label htmlFor="current">
+												<T id="user.current-password" />
+											</Label>
+											<Input
+												{...field}
+												id="current"
+												type="password"
+												autoComplete="current-password"
+												required
+												className={
+													errors.current && touched.current ? "border-destructive" : ""
+												}
+											/>
+											{errors.current && touched.current && (
+												<p className="text-sm text-destructive">{errors.current as string}</p>
+											)}
+										</div>
+									)}
+								</Field>
+								<Field name="new" validate={validateString(12, 100)}>
 									{({ field }: FieldProps) => (
 										<div className="space-y-2">
 											<Label htmlFor="new">

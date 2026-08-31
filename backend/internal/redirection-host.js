@@ -13,6 +13,16 @@ const omissions = () => {
 	return ["is_deleted"];
 };
 
+const runtimeFailure = (message, error, rollbackResults) => {
+	const failures = rollbackResults
+		.filter((result) => result.status === "rejected")
+		.map((result) => result.reason?.message || String(result.reason));
+	return new errs.ConfigurationError(
+		`${message}: ${error.message}${failures.length ? `; rollback errors: ${failures.join("; ")}` : ""}`,
+		error,
+	);
+};
+
 const internalRedirectionHost = {
 	/**
 	 * @param   {import("../lib/types.js").Access}  access
@@ -36,6 +46,7 @@ const internalRedirectionHost = {
 	create: async (access, data) => {
 		let thisData = /** @type {any} */ (data || {});
 		const createCertificate = thisData.certificate_id === "new";
+		let createdCertificateId = null;
 
 		if (createCertificate) {
 			delete thisData.certificate_id;
@@ -73,16 +84,19 @@ const internalRedirectionHost = {
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, thisData);
-			// update host with cert id
-			await internalRedirectionHost.update(
-				access,
-				{
-					id: row.id,
-					certificate_id: cert.id,
-				},
-				{ skip_configure: true },
-			);
+			try {
+				const cert = await internalCertificate.createQuickCertificate(access, thisData);
+				createdCertificateId = cert.id;
+				await redirectionHostModel.query().findById(row.id).patch({ certificate_id: cert.id });
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					redirectionHostModel.query().deleteById(row.id),
+					createdCertificateId
+						? internalCertificate.delete(access, { id: createdCertificateId })
+						: Promise.resolve(),
+				]);
+				throw runtimeFailure("Redirection-host certificate creation failed", error, rollbackResults);
+			}
 		}
 
 		// re-fetch with cert
@@ -91,8 +105,17 @@ const internalRedirectionHost = {
 			expand: ["certificate", "owner"],
 		});
 
-		// Configure nginx
-		await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+		try {
+			await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				redirectionHostModel.query().deleteById(row.id),
+				createdCertificateId
+					? internalCertificate.delete(access, { id: createdCertificateId })
+					: Promise.resolve(),
+			]);
+			throw runtimeFailure("Redirection-host creation failed", error, rollbackResults);
+		}
 
 		thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
 
@@ -132,6 +155,7 @@ const internalRedirectionHost = {
 	update: async (access, data, options = {}) => {
 		let thisData = /** @type {any} */ (data || {});
 		const createCertificate = thisData.certificate_id === "new";
+		let createdCertificateId = null;
 
 		if (createCertificate) {
 			delete thisData.certificate_id;
@@ -139,6 +163,7 @@ const internalRedirectionHost = {
 
 		await access.can("redirection_hosts:update", thisData.id);
 		let row = await internalRedirectionHost.get(access, { id: thisData.id });
+		const snapshot = await redirectionHostModel.query().findById(thisData.id).where("is_deleted", 0);
 
 		if (row.id !== thisData.id) {
 			throw new errs.InternalValidationError(
@@ -169,6 +194,7 @@ const internalRedirectionHost = {
 				domain_names: thisData.domain_names || row.domain_names,
 				meta: _.assign({}, row.meta, thisData.meta),
 			});
+			createdCertificateId = cert.id;
 			// update host with cert id
 			thisData.certificate_id = cert.id;
 		}
@@ -184,18 +210,10 @@ const internalRedirectionHost = {
 
 		thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);
 
-		const _saved_row = await redirectionHostModel
+		await redirectionHostModel
 			.query()
 			.patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
 			.then(/** @type {any} */ (utils.omitRow(omissions()))); // Ensure we omit rows here if needed, though patchAndFetchById returns object
-
-		// Add to audit log
-		await internalAuditLog.add(access, {
-			action: "updated",
-			object_type: "redirection-host",
-			object_id: row.id,
-			meta: thisData,
-		});
 
 		row = await internalRedirectionHost.get(access, {
 			id: thisData.id,
@@ -203,10 +221,40 @@ const internalRedirectionHost = {
 		});
 
 		if (!options.skip_configure) {
-			// Configure nginx
-			const new_meta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
-			row.meta = new_meta;
+			try {
+				const newMeta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+				row.meta = newMeta;
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					redirectionHostModel
+						.query()
+						.findById(row.id)
+						.patch(_.omit(snapshot.toJSON(), ["id", "created_on", "modified_on"])),
+					createdCertificateId
+						? internalCertificate.delete(access, { id: createdCertificateId })
+						: Promise.resolve(),
+				]);
+				if (rollbackResults[0].status === "fulfilled") {
+					rollbackResults.push(
+						...(await Promise.allSettled([
+							internalRedirectionHost
+								.get(access, { id: row.id, expand: ["owner", "certificate"] })
+								.then((restored) =>
+									internalNginx.configure(redirectionHostModel, "redirection_host", restored),
+								),
+						])),
+					);
+				}
+				throw runtimeFailure("Redirection-host update failed", error, rollbackResults);
+			}
 		}
+
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "redirection-host",
+			object_id: row.id,
+			meta: thisData,
+		});
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("redirection-host");
@@ -271,13 +319,16 @@ const internalRedirectionHost = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await redirectionHostModel.query().where("id", row.id).patch({
-			is_deleted: 1,
-		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("redirection_host", row);
-		await internalNginx.reload();
+		try {
+			await redirectionHostModel.query().where("id", row.id).patch({ is_deleted: 1 });
+			await internalNginx.deleteConfig("redirection_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				redirectionHostModel.query().findById(row.id).patch({ is_deleted: 0 }),
+				internalNginx.configure(redirectionHostModel, "redirection_host", row),
+			]);
+			throw runtimeFailure("Redirection-host deletion failed", error, rollbackResults);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -316,17 +367,16 @@ const internalRedirectionHost = {
 
 		row.enabled = 1;
 
-		await redirectionHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 1,
-				}),
-			);
-
-		// Configure nginx
-		await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+		try {
+			await redirectionHostModel.query().where("id", row.id).patch({ enabled: 1 });
+			await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				redirectionHostModel.query().findById(row.id).patch({ enabled: 0 }),
+				internalNginx.deleteConfig("redirection_host", row),
+			]);
+			throw runtimeFailure("Redirection-host enable failed", error, rollbackResults);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -359,18 +409,16 @@ const internalRedirectionHost = {
 
 		row.enabled = 0;
 
-		await redirectionHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 0,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("redirection_host", row);
-		await internalNginx.reload();
+		try {
+			await redirectionHostModel.query().where("id", row.id).patch({ enabled: 0 });
+			await internalNginx.deleteConfig("redirection_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				redirectionHostModel.query().findById(row.id).patch({ enabled: 1 }),
+				internalNginx.configure(redirectionHostModel, "redirection_host", { ...row, enabled: 1 }),
+			]);
+			throw runtimeFailure("Redirection-host disable failed", error, rollbackResults);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {

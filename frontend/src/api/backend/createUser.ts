@@ -15,10 +15,11 @@ export interface NewUser {
 	roles?: string[];
 }
 
-export async function createUser(item: NewUser, noAuth?: boolean): Promise<User> {
+export async function createUser(item: NewUser, noAuth?: boolean, setupToken?: string): Promise<User> {
 	return await api.post({
 		url: "/users",
 		data: item,
 		noAuth,
+		headers: setupToken ? { "X-ShieldPM-Setup-Token": setupToken } : undefined,
 	});
 }

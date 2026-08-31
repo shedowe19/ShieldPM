@@ -1,33 +1,47 @@
-name: Wiki Sync
+name: Wiki sync
 
 on:
-  push:
-    branches:
-      - develop
-    paths:
-      - "docs/wiki/**"
   workflow_dispatch:
-  repository_dispatch:
-    types: [docs]
 
-env:
-  GIT_AUTHOR_NAME: Actionbot
-  GIT_AUTHOR_EMAIL: actions@github.com
+permissions:
+  contents: read
 
 jobs:
-  job-sync-docs-to-wiki:
+  sync-public-docs:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v7
-
-      - name: Sync docs to wiki
-        uses: newrelic/wiki-sync-action@main
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          source: docs/wiki
-          destination: wiki
-          token: ${{ secrets.WIKI_TOKEN }}
-          gitAuthorName: ${{ env.GIT_AUTHOR_NAME }}
-          gitAuthorEmail: ${{ env.GIT_AUTHOR_EMAIL }}
+          persist-credentials: false
+
+      - name: Synchronize public documentation to the repository wiki
+        shell: bash
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+        run: |
+          if [[ -z "$WIKI_TOKEN" ]]; then
+            echo "::error::WIKI_TOKEN is required for an explicitly requested wiki synchronization."
+            exit 1
+          fi
+
+          auth_header="$(printf 'x-access-token:%s' "$WIKI_TOKEN" | base64 --wrap=0)"
+          wiki_directory="$RUNNER_TEMP/shieldpm-wiki"
+          wiki_url="https://github.com/${GITHUB_REPOSITORY}.wiki.git"
+
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" \
+            clone "$wiki_url" "$wiki_directory"
+          rsync --archive --delete --exclude .git/ docs/wiki/ "$wiki_directory/"
+          git -C "$wiki_directory" add --all
+
+          if git -C "$wiki_directory" diff --cached --quiet; then
+            echo "The public wiki is already synchronized."
+            exit 0
+          fi
+
+          git -C "$wiki_directory" config user.name "ShieldPM Wiki Bot"
+          git -C "$wiki_directory" config user.email "actions@users.noreply.github.com"
+          git -C "$wiki_directory" commit -m "docs: synchronize public wiki"
+          git -C "$wiki_directory" \
+            -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth_header" \
+            push origin HEAD

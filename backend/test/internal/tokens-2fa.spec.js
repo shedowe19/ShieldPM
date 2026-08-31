@@ -34,18 +34,18 @@ vi.mock("../../models/user.js", () => ({
 
 vi.mock("../../models/auth.js", () => ({
 	default: {
-		query: vi.fn(() => ({
-			where: vi.fn(() => ({
-				where: vi.fn(() => ({
-					first: vi.fn(() =>
-						Promise.resolve({
-							secret: "hashedpassword",
-							verifyPassword: vi.fn(() => Promise.resolve(true)),
-						}),
-					),
-				})),
-			})),
-		})),
+		query: vi.fn(() => {
+			const query = {
+				where: vi.fn(() => query),
+				first: vi.fn(() =>
+					Promise.resolve({
+						secret: "hashedpassword",
+						verifyPassword: vi.fn(() => Promise.resolve(true)),
+					}),
+				),
+			};
+			return query;
+		}),
 	},
 }));
 
@@ -146,7 +146,7 @@ describe("internalToken.getTokenFromEmail (2FA-aware login)", () => {
 		vi.clearAllMocks();
 	});
 
-	it("returns a token when the user has no 2FA configured", async () => {
+	it("returns a verified identity without minting a DB-unbound token", async () => {
 		UserTwoFa.hasActive2FA.mockResolvedValue(false);
 
 		const result = await internalToken.getTokenFromEmail({
@@ -154,8 +154,9 @@ describe("internalToken.getTokenFromEmail (2FA-aware login)", () => {
 			secret: "correctpassword",
 		});
 
-		expect(result).toHaveProperty("token");
 		expect(result).toHaveProperty("user");
+		expect(result.authentication_methods).toEqual(["pwd"]);
+		expect(result).not.toHaveProperty("token");
 		expect(result.user.email).toBe("alice@example.com");
 	});
 

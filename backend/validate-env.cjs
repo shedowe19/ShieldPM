@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const { execFileSync } = require('node:child_process');
+const path = require('node:path');
 
 // Utility to read env vars with defaults
 const getEnv = (key, defaultVal) => process.env[key] || defaultVal;
@@ -245,11 +246,43 @@ ensureDefault('LOGROTATIONS', '3');
 ensureDefault('CRT', '23');
 ensureDefault('IPRT', '1');
 ensureDefault('DEFAULT_CERT_ID', '0');
+ensureDefault('ANALYTICS_SPOOL_PATH', '/data/shieldpm/analytics-spool.ndjson');
+ensureDefault('ANALYTICS_SPOOL_MAX_BYTES', '67108864');
+ensureDefault('ANALYTICS_SPOOL_RECORD_MAX_BYTES', '262144');
+ensureDefault('ANALYTICS_SPOOL_BATCH_RECORDS', '250');
 
 checkInt('LOGROTATIONS');
 checkInt('CRT');
 checkInt('IPRT');
 checkInt('DEFAULT_CERT_ID');
+checkInt('ANALYTICS_SPOOL_MAX_BYTES');
+checkInt('ANALYTICS_SPOOL_RECORD_MAX_BYTES');
+checkInt('ANALYTICS_SPOOL_BATCH_RECORDS');
+
+const analyticsSpoolPath = getEnv('ANALYTICS_SPOOL_PATH', '/data/shieldpm/analytics-spool.ndjson');
+if (
+    !analyticsSpoolPath.startsWith('/data/') ||
+    analyticsSpoolPath.includes('\0') ||
+    path.posix.normalize(analyticsSpoolPath) !== analyticsSpoolPath
+) {
+    fatal('ANALYTICS_SPOOL_PATH must be an absolute, normalized path below /data/.');
+}
+const analyticsSpoolMaxBytes = Number(getEnv('ANALYTICS_SPOOL_MAX_BYTES', '67108864'));
+const analyticsRecordMaxBytes = Number(getEnv('ANALYTICS_SPOOL_RECORD_MAX_BYTES', '262144'));
+const analyticsBatchRecords = Number(getEnv('ANALYTICS_SPOOL_BATCH_RECORDS', '250'));
+if (
+    !Number.isSafeInteger(analyticsSpoolMaxBytes) ||
+    !Number.isSafeInteger(analyticsRecordMaxBytes) ||
+    !Number.isSafeInteger(analyticsBatchRecords) ||
+    analyticsSpoolMaxBytes <= 0 ||
+    analyticsRecordMaxBytes <= 0 ||
+    analyticsBatchRecords <= 0
+) {
+    fatal('Analytics spool size and batch values must be greater than zero.');
+}
+if (analyticsRecordMaxBytes > analyticsSpoolMaxBytes) {
+    fatal('ANALYTICS_SPOOL_RECORD_MAX_BYTES must not exceed ANALYTICS_SPOOL_MAX_BYTES.');
+}
 
 ensureDefault('GOACLA', "--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string");
 ensureDefault('INITIAL_DEFAULT_PAGE', 'congratulations');

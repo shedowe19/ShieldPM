@@ -13,6 +13,16 @@ const omissions = () => {
 	return ["is_deleted"];
 };
 
+const runtimeFailure = (message, error, rollbackResults) => {
+	const failures = rollbackResults
+		.filter((result) => result.status === "rejected")
+		.map((result) => result.reason?.message || String(result.reason));
+	return new errs.ConfigurationError(
+		`${message}: ${error.message}${failures.length ? `; rollback errors: ${failures.join("; ")}` : ""}`,
+		error,
+	);
+};
+
 const internalDeadHost = {
 	/**
 	 * @param   {import("../lib/types.js").Access}  access
@@ -21,6 +31,7 @@ const internalDeadHost = {
 	 */
 	create: async (access, data) => {
 		const createCertificate = data.certificate_id === "new";
+		let createdCertificateId = null;
 
 		if (createCertificate) {
 			delete data.certificate_id;
@@ -46,7 +57,7 @@ const internalDeadHost = {
 
 		// At this point the domains should have been checked
 		data.owner_user_id = access.token.getUserId(1);
-		const thisData = internalHost.cleanSslHstsData(createCertificate, data);
+		const thisData = /** @type {any} */ (internalHost.cleanSslHstsData(createCertificate, data));
 
 		// Fix for db field not having a default value
 		// for this optional field.
@@ -57,26 +68,20 @@ const internalDeadHost = {
 		let row = await deadHostModel.query().insertAndFetch(thisData);
 		row = utils.omitRow(omissions())(row);
 
-		// Add to audit log
-		await internalAuditLog.add(access, {
-			action: "created",
-			object_type: "dead-host",
-			object_id: row.id,
-			meta: thisData,
-		});
-
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, data);
-
-			// update host with cert id
-			await internalDeadHost.update(
-				access,
-				{
-					id: row.id,
-					certificate_id: cert.id,
-				},
-				{ skip_configure: true },
-			);
+			try {
+				const cert = await internalCertificate.createQuickCertificate(access, data);
+				createdCertificateId = cert.id;
+				await deadHostModel.query().findById(row.id).patch({ certificate_id: cert.id });
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					deadHostModel.query().deleteById(row.id),
+					createdCertificateId
+						? internalCertificate.delete(access, { id: createdCertificateId })
+						: Promise.resolve(),
+				]);
+				throw runtimeFailure("404-host certificate creation failed", error, rollbackResults);
+			}
 		}
 
 		// re-fetch with cert
@@ -90,8 +95,24 @@ const internalDeadHost = {
 			throw new errs.InternalValidationError("The host was created but the Certificate creation failed.");
 		}
 
-		// Configure nginx
-		await internalNginx.configure(deadHostModel, "dead_host", freshRow);
+		try {
+			await internalNginx.configure(deadHostModel, "dead_host", freshRow);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				deadHostModel.query().deleteById(row.id),
+				createdCertificateId
+					? internalCertificate.delete(access, { id: createdCertificateId })
+					: Promise.resolve(),
+			]);
+			throw runtimeFailure("404-host creation failed", error, rollbackResults);
+		}
+
+		await internalAuditLog.add(access, {
+			action: "created",
+			object_type: "dead-host",
+			object_id: row.id,
+			meta: thisData,
+		});
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("dead-host");
@@ -108,6 +129,7 @@ const internalDeadHost = {
 	update: async (access, data, options = {}) => {
 		let thisData = /** @type {any} */ (data);
 		const createCertificate = thisData.certificate_id === "new";
+		let createdCertificateId = null;
 		if (createCertificate) {
 			delete thisData.certificate_id;
 		}
@@ -131,6 +153,7 @@ const internalDeadHost = {
 			});
 		}
 		const row = await internalDeadHost.get(access, { id: thisData.id });
+		const snapshot = await deadHostModel.query().findById(thisData.id).where("is_deleted", 0);
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
@@ -147,6 +170,7 @@ const internalDeadHost = {
 					meta: _.assign({}, row.meta, thisData.meta),
 				}),
 			);
+			createdCertificateId = cert.id;
 
 			// update host with cert id
 			thisData.certificate_id = cert.id;
@@ -158,7 +182,7 @@ const internalDeadHost = {
 			{
 				domain_names: row.domain_names,
 			},
-			data,
+			thisData,
 		);
 
 		thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);
@@ -166,24 +190,43 @@ const internalDeadHost = {
 		// do the row update
 		await deadHostModel.query().where({ id: data.id }).patch(thisData);
 
-		// Add to audit log
-		await internalAuditLog.add(access, {
-			action: "updated",
-			object_type: "dead-host",
-			object_id: row.id,
-			meta: thisData,
-		});
-
 		const thisRow = await internalDeadHost.get(access, {
 			id: thisData.id,
 			expand: ["owner", "certificate"],
 		});
 
 		if (!options.skip_configure) {
-			// Configure nginx
-			const newMeta = await internalNginx.configure(deadHostModel, "dead_host", row);
-			row.meta = newMeta;
+			try {
+				await internalNginx.configure(deadHostModel, "dead_host", thisRow);
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					deadHostModel
+						.query()
+						.findById(row.id)
+						.patch(_.omit(snapshot.toJSON(), ["id", "created_on", "modified_on"])),
+					createdCertificateId
+						? internalCertificate.delete(access, { id: createdCertificateId })
+						: Promise.resolve(),
+				]);
+				if (rollbackResults[0].status === "fulfilled") {
+					rollbackResults.push(
+						...(await Promise.allSettled([
+							internalDeadHost
+								.get(access, { id: row.id, expand: ["owner", "certificate"] })
+								.then((restored) => internalNginx.configure(deadHostModel, "dead_host", restored)),
+						])),
+					);
+				}
+				throw runtimeFailure("404-host update failed", error, rollbackResults);
+			}
 		}
+
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "dead-host",
+			object_id: row.id,
+			meta: thisData,
+		});
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("dead-host");
@@ -247,13 +290,16 @@ const internalDeadHost = {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
-		await deadHostModel.query().where("id", row.id).patch({
-			is_deleted: 1,
-		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("dead_host", row);
-		await internalNginx.reload();
+		try {
+			await deadHostModel.query().where("id", row.id).patch({ is_deleted: 1 });
+			await internalNginx.deleteConfig("dead_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				deadHostModel.query().findById(row.id).patch({ is_deleted: 0 }),
+				internalNginx.configure(deadHostModel, "dead_host", row),
+			]);
+			throw runtimeFailure("404-host deletion failed", error, rollbackResults);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -292,17 +338,16 @@ const internalDeadHost = {
 
 		row.enabled = 1;
 
-		await deadHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 1,
-				}),
-			);
-
-		// Configure nginx
-		await internalNginx.configure(deadHostModel, "dead_host", row);
+		try {
+			await deadHostModel.query().where("id", row.id).patch({ enabled: 1 });
+			await internalNginx.configure(deadHostModel, "dead_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				deadHostModel.query().findById(row.id).patch({ enabled: 0 }),
+				internalNginx.deleteConfig("dead_host", row),
+			]);
+			throw runtimeFailure("404-host enable failed", error, rollbackResults);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -334,18 +379,16 @@ const internalDeadHost = {
 
 		row.enabled = 0;
 
-		await deadHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 0,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("dead_host", row);
-		await internalNginx.reload();
+		try {
+			await deadHostModel.query().where("id", row.id).patch({ enabled: 0 });
+			await internalNginx.deleteConfig("dead_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				deadHostModel.query().findById(row.id).patch({ enabled: 1 }),
+				internalNginx.configure(deadHostModel, "dead_host", { ...row, enabled: 1 }),
+			]);
+			throw runtimeFailure("404-host disable failed", error, rollbackResults);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {

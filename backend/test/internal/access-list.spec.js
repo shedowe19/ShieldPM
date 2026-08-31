@@ -16,36 +16,30 @@ describe("Fix #68: Delete before insert prevents race condition", () => {
 		source = fs.readFileSync(backendSourcePath("internal", "access-list.js"), "utf8");
 	});
 
-	it("delete query appears before insert in the items section", () => {
-		// Extract the items section specifically (between the items comment and clients comment)
-		const itemsStart = source.indexOf("// Check for items and add/update/remove them");
-		const clientsStart = source.indexOf("// Check for clients and add/update/remove them");
-		const itemsSection = source.slice(itemsStart, clientsStart);
-
-		const deleteIdx = itemsSection.indexOf("accessListAuthModel.query().delete()");
-		const insertIdx = itemsSection.indexOf("await Promise.all(promises)");
+	it("deletes old authentication rows before inserting replacements", () => {
+		const updateStart = source.indexOf("update: async (access, data)");
+		const getStart = source.indexOf("get: async (access, data", updateStart);
+		const updateSection = source.slice(updateStart, getStart);
+		const deleteIdx = updateSection.indexOf("await accessListAuthModel.query(trx).delete()");
+		const insertIdx = updateSection.indexOf("await insertRows(", deleteIdx);
 
 		expect(deleteIdx).toBeGreaterThan(-1);
 		expect(insertIdx).toBeGreaterThan(-1);
-		// Delete must come BEFORE insert in the items section
 		expect(deleteIdx).toBeLessThan(insertIdx);
 	});
 
-	it("comment documents the delete-before-insert order", () => {
-		expect(source).toContain("1. First delete");
-		expect(source).toContain("2. Then insert");
+	it("documents that replacement occurs inside the row-locked transaction", () => {
+		expect(source).toContain("Delete before insert, within the same row-locked transaction.");
 	});
 
-	it("items section: await query before Promise.all(promises)", () => {
-		const itemsStart = source.indexOf("// Check for items and add/update/remove them");
-		const clientsStart = source.indexOf("// Check for clients and add/update/remove them");
-		const itemsSection = source.slice(itemsStart, clientsStart);
+	it("takes the snapshot and performs replacement on the same transaction", () => {
+		const updateStart = source.indexOf("update: async (access, data)");
+		const getStart = source.indexOf("get: async (access, data", updateStart);
+		const updateSection = source.slice(updateStart, getStart);
 
-		const awaitQueryIdx = itemsSection.indexOf("await query");
-		const awaitPromiseIdx = itemsSection.indexOf("await Promise.all(promises)");
-
-		expect(awaitQueryIdx).toBeGreaterThan(-1);
-		expect(awaitPromiseIdx).toBeGreaterThan(-1);
-		expect(awaitQueryIdx).toBeLessThan(awaitPromiseIdx);
+		expect(updateSection).toContain("transaction(accessListModel.knex(), async (trx)");
+		expect(updateSection).toContain("snapshot = await snapshotAccessList(trx, data.id)");
+		expect(updateSection).toContain("accessListAuthModel.query(trx)");
+		expect(updateSection).toContain("accessListClientModel.query(trx)");
 	});
 });

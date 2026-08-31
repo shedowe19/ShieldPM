@@ -1,7 +1,7 @@
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { claimOidcToken } from "src/api/backend";
+import { claimOidcToken, getSetting } from "src/api/backend";
 import type { TokenResponse } from "src/api/backend/responseTypes";
 import type { TwoFaChallengeResponse } from "src/api/backend/verify2fa";
 import { LocalePicker } from "src/components/LocalePicker";
@@ -25,8 +25,13 @@ interface LoginValues {
 
 export default function Login() {
 	const emailRef = useRef<HTMLInputElement>(null);
-	const [formErr, setFormErr] = useState("");
+	const [formErr, setFormErr] = useState(() =>
+		new URLSearchParams(window.location.search).get("oidc_error") === "1"
+			? intl.formatMessage({ id: "oidc.login.error" })
+			: "",
+	);
 	const [pending2FA, setPending2FA] = useState<{ token: string; methods: string[] } | null>(null);
+	const [oidcProvider, setOidcProvider] = useState<string | null>(null);
 	const { completeLogin, login } = useAuthState();
 
 	const onSubmit = async (values: LoginValues, { setSubmitting }: FormikHelpers<LoginValues>) => {
@@ -64,6 +69,16 @@ export default function Login() {
 				// Ignore errors, no pending OIDC login
 			});
 	}, [completeLogin]);
+
+	useEffect(() => {
+		getSetting("oidc-config")
+			.then((setting) => {
+				if (setting.meta?.enabled === true && typeof setting.meta.name === "string" && setting.meta.name) {
+					setOidcProvider(setting.meta.name);
+				}
+			})
+			.catch(() => setOidcProvider(null));
+	}, []);
 
 	const health = useHealth();
 
@@ -192,6 +207,15 @@ export default function Login() {
 									)}
 								</Formik>
 							</>
+						)}
+						{!pending2FA && oidcProvider && (
+							<div className="mt-4 border-t pt-4">
+								<Button asChild type="button" variant="outline" size="lg" className="w-full py-6">
+									<a href="/api/oidc">
+										<T id="login.oidc" data={{ provider: oidcProvider }} />
+									</a>
+								</Button>
+							</div>
 						)}
 					</CardContent>
 				</Card>

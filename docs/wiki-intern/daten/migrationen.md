@@ -47,7 +47,7 @@ const down = (knex) => {
 export { up, down };
 ```
 
-## Migrations-Chronologie (76 Dateien)
+## Migrations-Chronologie
 
 ### Basis (2018-2021)
 
@@ -87,6 +87,17 @@ export { up, down };
 - `20260407000000_add_wireguard_tunnel` — WireGuard Tunnels
 - `20260409000000_add_turbo_loader` — Turbo-Loader
 - `20260712000000_fix_analytic_count_aggregation_key` — versionierter, nicht-nullbarer Aggregationsschlüssel für robuste Analytics-Upserts auf SQLite, MySQL und PostgreSQL
+- `20260831231500_add_analytics_ingestion_ledger` — transaktionales Analytics-Replay-Ledger mit stabilen Batch-Hashes, Claims und Sequenzgrenzen
+
+Der Security-Modernisierungsstand ergänzt retry-sichere Migrationen für Initial-Setup-Claim, MFA-Challenges,
+OIDC-Identity/Flow-Härtung und Terminal-Host-Key/ACL-Revision. Die konkrete Dateiliste wird aus
+`backend/migrations/` abgeleitet und nicht als manuell gepflegte Anzahl dupliziert.
+
+## Verifikation
+
+CI führt den kompletten Migrationsstand auf SQLite, MySQL 8.4 und PostgreSQL 17 aus und startet den Lauf ein zweites Mal.
+DDL muss daher sowohl dialektkompatibel als auch retry-sicher sein. Ein `down()` darf nur die Felder/Constraints der
+eigenen Migration entfernen. Vor externen DB-Migrationen ist ein nativer, restore-getesteter Dump Pflicht.
 
 ## Verwandte Seiten
 

@@ -1,81 +1,72 @@
-name: NPM Dependency Updates
+name: NPM dependency updates
 
 on:
-  schedule:
-    # Run every day at midnight
-    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: npm-dependency-updates
+  cancel-in-progress: false
+
+env:
+  COREPACK_VERSION: 0.36.0
+  YARN_VERSION: 4.18.0
 
 jobs:
   update-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 26
-          cache: "yarn"
-          cache-dependency-path: |
-            frontend/yarn.lock
-            backend/yarn.lock
+          node-version: 24.20.0
 
-      - name: Install dependency update tools
+      - name: Activate pinned package manager
         run: |
-          npm install --global npm-check-updates@23.0.2 license-checker@25.0.1
-          NPM_GLOBAL_BIN="$(npm prefix --global)/bin"
-          test -x "$NPM_GLOBAL_BIN/ncu"
-          test -x "$NPM_GLOBAL_BIN/license-checker"
-          printf '%s\n' "$NPM_GLOBAL_BIN" >> "$GITHUB_PATH"
+          npm install --global --ignore-scripts "corepack@$COREPACK_VERSION" npm-check-updates@23.0.2
+          corepack enable
+          corepack install --global "yarn@$YARN_VERSION"
+          yarn --version
+          ncu --version
 
-      - name: Update Frontend Dependencies
-        working-directory: ./frontend
+      - name: Install locked dependency baseline
         run: |
-          echo "Installing the locked frontend dependency baseline..."
-          npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
+          yarn --cwd frontend install --immutable
+          yarn --cwd backend install --immutable
 
-          echo "Checking for latest dependency updates..."
-          echo "### Frontend Updates" > /tmp/frontend-updates.txt
-          echo '```text' >> /tmp/frontend-updates.txt
-          ncu -u --target latest >> /tmp/frontend-updates.txt
-          echo '```' >> /tmp/frontend-updates.txt
-
-          echo "Installing updated frontend dependencies to update yarn.lock..."
-          npx --yes --package yarn@1.22.22 yarn install
-
-          echo "Deduplicating compatible frontend lockfile entries..."
-          npx --yes --package yarn-deduplicate@6.0.2 yarn-deduplicate --strategy highest yarn.lock
-
-          echo "Reinstalling the deduplicated frontend lockfile..."
-          npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
-
-      - name: Update Backend Dependencies
-        working-directory: ./backend
+      - name: Update frontend dependencies
+        working-directory: frontend
         run: |
-          echo "Installing the locked backend dependency baseline..."
-          npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
+          printf '### Frontend updates\n\n```text\n' > /tmp/frontend-updates.txt
+          ncu --upgrade --target latest | tee -a /tmp/frontend-updates.txt
+          printf '```\n' >> /tmp/frontend-updates.txt
+          yarn install
+          yarn dedupe --strategy highest
+          yarn install --immutable
 
-          echo "Checking for latest dependency updates..."
-          echo "### Backend Updates" > /tmp/backend-updates.txt
-          echo '```text' >> /tmp/backend-updates.txt
-          ncu -u --target latest >> /tmp/backend-updates.txt
-          echo '```' >> /tmp/backend-updates.txt
+      - name: Update backend dependencies
+        working-directory: backend
+        run: |
+          printf '### Backend updates\n\n```text\n' > /tmp/backend-updates.txt
+          ncu --upgrade --target latest | tee -a /tmp/backend-updates.txt
+          printf '```\n' >> /tmp/backend-updates.txt
+          yarn install
+          yarn dedupe --strategy highest
+          yarn install --immutable
 
-          echo "Installing updated backend dependencies to update yarn.lock..."
-          npx --yes --package yarn@1.22.22 yarn install
-
-      - name: Check for Direct Dependency Updates
+      - name: Check for direct dependency updates
         id: check_changes
+        shell: bash
         run: |
-          if git diff --quiet frontend/package.json backend/package.json; then
+          if git diff --quiet -- frontend/package.json backend/package.json; then
             echo "No direct dependencies were updated."
             echo "updates_found=false" >> "$GITHUB_OUTPUT"
           else
@@ -87,51 +78,62 @@ jobs:
         if: steps.check_changes.outputs.updates_found == 'true'
         run: node scripts/sync-verified-dependency-docs.js
 
-      - name: Generate Third-Party Notices
+      - name: Generate deterministic third-party notices
         if: steps.check_changes.outputs.updates_found == 'true'
-        run: node scripts/generate-notices.js
+        run: |
+          node --test scripts/generate-notices.test.js
+          node scripts/generate-notices.js
 
       - name: Run dependency verification
         if: steps.check_changes.outputs.updates_found == 'true'
         run: |
-          (cd backend && npx --yes --package yarn@1.22.22 yarn test --run)
-          (cd frontend && npx --yes --package yarn@1.22.22 yarn test --run)
-          (cd frontend && npx --yes --package yarn@1.22.22 yarn build)
+          yarn --cwd backend check
+          yarn --cwd backend tsc --noEmit
+          yarn --cwd backend test --run
+          yarn --cwd frontend check
+          yarn --cwd frontend tsc --noEmit
+          yarn --cwd frontend test --run
+          node frontend/check-locales.cjs
+          yarn --cwd frontend build
+          yarn --cwd backend npm audit --recursive --severity high
+          yarn --cwd frontend npm audit --recursive --severity high
+          git diff --check
 
       - name: Require dedicated pull request token
         if: steps.check_changes.outputs.updates_found == 'true'
         env:
           DEPENDENCY_UPDATES_TOKEN: ${{ secrets.DEPENDENCY_UPDATES_TOKEN }}
         run: |
-          if [ -z "$DEPENDENCY_UPDATES_TOKEN" ]; then
-            echo "::error::DEPENDENCY_UPDATES_TOKEN is required to create a PR that triggers normal workflow checks."
+          if [[ -z "$DEPENDENCY_UPDATES_TOKEN" ]]; then
+            echo "::error::DEPENDENCY_UPDATES_TOKEN is required so the pull request triggers normal workflow checks."
             exit 1
           fi
 
-      - name: Prepare PR Body
+      - name: Prepare pull request body
         if: steps.check_changes.outputs.updates_found == 'true'
         run: |
-          echo "## Automated Dependency Updates" > /tmp/pr_body.txt
-          echo "This PR updates direct frontend and backend dependencies to their latest published versions." >> /tmp/pr_body.txt
-          echo "" >> /tmp/pr_body.txt
-          cat /tmp/frontend-updates.txt >> /tmp/pr_body.txt
-          echo "" >> /tmp/pr_body.txt
-          cat /tmp/backend-updates.txt >> /tmp/pr_body.txt
-          echo "" >> /tmp/pr_body.txt
-          echo "### Verification" >> /tmp/pr_body.txt
-          echo "- Validated the installed Vite/Rolldown dependency baseline against the internal wiki." >> /tmp/pr_body.txt
-          echo "- Regenerated \`THIRD-PARTY-NOTICES.md\` after all license scans succeeded." >> /tmp/pr_body.txt
-          echo "- Ran backend tests, frontend tests, and the frontend production build." >> /tmp/pr_body.txt
+          {
+            printf '## Automated dependency updates\n\n'
+            printf 'This pull request updates direct frontend and backend dependencies and regenerates their Yarn 4 lockfiles.\n\n'
+            cat /tmp/frontend-updates.txt
+            printf '\n'
+            cat /tmp/backend-updates.txt
+            printf '\n### Verification\n\n'
+            printf -- '- Immutable Yarn 4 installs and lockfile deduplication\n'
+            printf -- '- Biome, TypeScript, locale, test, and production-build gates\n'
+            printf -- '- Fail-closed high/critical dependency audits\n'
+            printf -- '- Deterministic direct-dependency license notices\n'
+          } > /tmp/pr-body.md
 
-      - name: Create Pull Request
+      - name: Create pull request
         if: steps.check_changes.outputs.updates_found == 'true'
-        uses: peter-evans/create-pull-request@v8.1.1
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.DEPENDENCY_UPDATES_TOKEN }}
-          base: "develop"
+          base: develop
           signoff: true
           delete-branch: true
           commit-message: "chore(deps): update frontend and backend dependencies"
-          branch: "update-all-deps"
+          branch: automation/npm-dependency-updates
           title: "chore(deps): update npm dependencies"
-          body-path: /tmp/pr_body.txt
+          body-path: /tmp/pr-body.md

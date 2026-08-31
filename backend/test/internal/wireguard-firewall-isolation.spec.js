@@ -3,21 +3,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	execSync: vi.fn(),
 	existsSync: vi.fn(),
+	files: new Map(),
 	logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-	mkdirSync: vi.fn(),
 	peerQuery: vi.fn(),
 	readFileSync: vi.fn(),
 	settingQuery: vi.fn(),
-	writeFileSync: vi.fn(),
 }));
 
 vi.mock("node:child_process", () => ({ execSync: mocks.execSync, spawn: vi.fn() }));
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: mocks.existsSync,
-		mkdirSync: mocks.mkdirSync,
 		readFileSync: mocks.readFileSync,
-		writeFileSync: mocks.writeFileSync,
+		promises: {
+			mkdir: vi.fn(),
+			open: vi.fn(async (path) => ({
+				close: vi.fn(),
+				sync: vi.fn(),
+				writeFile: vi.fn((content) => mocks.files.set(path, content)),
+			})),
+			rename: vi.fn(async (source, target) => {
+				mocks.files.set(target, mocks.files.get(source));
+				mocks.files.delete(source);
+			}),
+			unlink: vi.fn(async (path) => mocks.files.delete(path)),
+		},
 	},
 }));
 vi.mock("../../logger.js", () => ({ global: mocks.logger }));
@@ -41,8 +51,9 @@ const countOccurrences = (text, value) => text.split(value).length - 1;
 describe("WireGuard firewall isolation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.files.clear();
 		mocks.existsSync.mockReturnValue(true);
-		mocks.readFileSync.mockReturnValue("server-private-key");
+		mocks.readFileSync.mockReturnValue(`${"A".repeat(43)}=`);
 		mocks.settingQuery.mockImplementation(() => ({
 			where: () => ({ first: async () => ({ meta: {} }) }),
 		}));
@@ -61,7 +72,7 @@ describe("WireGuard firewall isolation", () => {
 		expect(mocks.execSync).not.toHaveBeenCalledWith("iptables -t nat -F POSTROUTING", expect.any(Object));
 		expect(mocks.execSync).not.toHaveBeenCalledWith("iptables -t mangle -F POSTROUTING", expect.any(Object));
 
-		const config = mocks.writeFileSync.mock.calls.find(([path]) => path.endsWith("/wireguard/wg0.conf"))?.[1];
+		const config = [...mocks.files.entries()].find(([path]) => path.endsWith("/wireguard/wg0.conf"))?.[1];
 		expect(config).toEqual(expect.any(String));
 		expect(config).toContain("iptables -C INPUT -j SHIELDPM_WG_INPUT");
 		expect(config).toContain("iptables -C FORWARD -j SHIELDPM_WG_FORWARD");
@@ -86,7 +97,7 @@ describe("WireGuard firewall isolation", () => {
 	it("does not remove unmarked legacy direct rules that could belong to another firewall manager", async () => {
 		await internalWireguard.init();
 
-		const config = mocks.writeFileSync.mock.calls.find(([path]) => path.endsWith("/wireguard/wg0.conf"))?.[1];
+		const config = [...mocks.files.entries()].find(([path]) => path.endsWith("/wireguard/wg0.conf"))?.[1];
 		expect(config).toEqual(expect.any(String));
 		for (const legacyRule of [
 			"iptables -D INPUT -i wg0 -j ACCEPT 2>/dev/null || true",

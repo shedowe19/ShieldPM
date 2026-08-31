@@ -6,8 +6,9 @@
   "license": "UNLICENSED",
   "private": true,
   "type": "module",
+  "packageManager": "yarn@4.18.0",
   "engines": {
-    "node": ">=26"
+    "node": ">=24"
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
@@ -21,7 +22,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "playwright test --reporter=list"
+    "test:e2e:ci": "playwright test --reporter=list",
+    "check": "biome check ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -45,8 +47,6 @@
     "@tabler/icons-react": "^3.46.0",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-table": "9.2.4",
-    "@types/d3-geo": "^3.1.1",
-    "@types/ua-parser-js": "^0.7.39",
     "@uiw/react-textarea-code-editor": "3.1.1",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",
@@ -65,14 +65,13 @@
     "humps": "2.0.1",
     "i18n-iso-countries": "^7.14.0",
     "i18next": "^26.4.0",
-    "jwt-decode": "^4.0.0",
-    "lucide-react": "^1.37.0",
+    "lucide-react": "^1.38.0",
     "query-string": "9.5.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.87.0",
     "react-i18next": "^17.0.12",
-    "react-intl": "^10.1.24",
+    "react-intl": "^10.1.25",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.3",
     "react-select": "5.10.2",
@@ -82,14 +81,13 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "topojson-client": "^3.1.0",
-    "ua-parser-js": "^2.0.10",
     "world-atlas": "^2.0.2",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "@babel/runtime": "^8.0.0",
     "@biomejs/biome": "^2.5.11",
-    "@formatjs/cli": "^6.16.21",
+    "@formatjs/cli": "^6.16.22",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@tanstack/react-query-devtools": "^5.102.8",
@@ -97,8 +95,9 @@
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/country-flag-icons": "1.2.2",
+    "@types/d3-geo": "^3.1.1",
     "@types/humps": "^2.0.6",
-    "@types/node": "^26.4.0",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "19.2.5",
     "@types/topojson-client": "^3.1.5",
@@ -108,7 +107,6 @@
     "happy-dom": "^20.12.0",
     "postcss": "^8.5.26",
     "postcss-simple-vars": "7.0.1",
-    "prop-types": "^15.8.1",
     "react-is": "^19.2.8",
     "sass": "^1.103.1",
     "tailwindcss": "^4.3.3",

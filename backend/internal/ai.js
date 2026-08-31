@@ -3,11 +3,45 @@ import { global as logger } from "../logger.js";
 import { executeTools } from "./ai/executor.js";
 import { getSystemPrompt } from "./ai/prompt.js";
 import * as aiProviders from "./ai/providers.js";
+import { AI_LIMITS, createExecutionState, getToolEffect, readConfirmation, redactToolData } from "./ai/safety.js";
 // Modular AI components (SRP refactoring)
 import { getToolDefinitions } from "./ai/tools.js";
 import internalSetting from "./setting.js";
 
 const AI_CONFIG_ID = "ai-config";
+const MAX_MESSAGE_BYTES = 16 * 1024;
+const MAX_HISTORY_ITEMS = 20;
+const MAX_HISTORY_BYTES = 64 * 1024;
+const MAX_RESPONSE_BYTES = 64 * 1024;
+
+const boundedText = (value, maximumBytes, label) => {
+	if (typeof value !== "string" || !value.trim()) throw new TypeError(`${label} must be a non-empty string`);
+	if (Buffer.byteLength(value, "utf8") > maximumBytes) throw new RangeError(`${label} exceeds the size limit`);
+	return value;
+};
+
+const normalizeHistory = (history) => {
+	if (!Array.isArray(history) || history.length > MAX_HISTORY_ITEMS) {
+		throw new TypeError(`AI history must contain at most ${MAX_HISTORY_ITEMS} messages`);
+	}
+	let bytes = 0;
+	return history.map((entry) => {
+		if (!entry || typeof entry !== "object" || Array.isArray(entry))
+			throw new TypeError("Invalid AI history entry");
+		if (!["user", "assistant"].includes(entry.role)) throw new TypeError("Invalid AI history role");
+		const content = boundedText(entry.content, MAX_MESSAGE_BYTES, "AI history content");
+		bytes += Buffer.byteLength(content, "utf8");
+		if (bytes > MAX_HISTORY_BYTES) throw new RangeError("AI history exceeds the total size limit");
+		return { role: entry.role, content };
+	});
+};
+
+const truncateResponse = (value) => {
+	const buffer = Buffer.from(String(value || ""), "utf8");
+	return buffer.length <= MAX_RESPONSE_BYTES
+		? buffer.toString("utf8")
+		: `${buffer.subarray(0, MAX_RESPONSE_BYTES).toString("utf8")}\n[TRUNCATED]`;
+};
 
 /**
  * AI Service for handling Chat and Tool Execution
@@ -207,6 +241,8 @@ const ai = {
 	 * @param {Array} history
 	 */
 	chat: async (access, message, history = []) => {
+		const safeMessage = boundedText(message, MAX_MESSAGE_BYTES, "AI message");
+		const safeHistory = normalizeHistory(history);
 		// 1. Get Config (using internal method that doesn't require admin permission)
 		const config = await ai._getConfigForChat();
 		if (!config.enabled) {
@@ -235,16 +271,16 @@ const ai = {
 
 		logger.info("[AI Chat] Calling LLM:", {
 			provider: config.provider,
-			messageLength: message.length,
+			messageLength: safeMessage.length,
 			toolsCount: tools.length,
 		});
 
 		// 3. Call Provider
 		let response;
 		if (config.provider === "gemini") {
-			response = await aiProviders.callGemini(config, systemPrompt, message, history, tools);
+			response = await aiProviders.callGemini(config, systemPrompt, safeMessage, safeHistory, tools);
 		} else {
-			response = await aiProviders.callLocalLLM(config, systemPrompt, message, history, tools);
+			response = await aiProviders.callLocalLLM(config, systemPrompt, safeMessage, safeHistory, tools);
 		}
 
 		logger.info("[AI Chat] LLM Response:", {
@@ -256,96 +292,26 @@ const ai = {
 		// 4. Handle Tool Calls
 		// 4. Handle Tool Calls (Recursive Loop)
 		let iterations = 0;
-		const MAX_ITERATIONS = 5;
+		const MAX_ITERATIONS = AI_LIMITS.maxLoops;
 		let wasToolExecuted = false; // Track if ANY tool was executed in this chain
-
-		// Helper to extract tools from text content if structured tool calls are missing
-		const extractToolsFromText = (resp) => {
-			if ((!resp.toolCalls || resp.toolCalls.length === 0) && resp.content) {
-				const toolCallPatterns = [
-					// Pattern 1: {"name": "tool_name", "arguments": {...}}
-					/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
-					// Pattern 2: function call format (standard)
-					/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
-					// Pattern 2b: function call format (no parentheses, just JSON)
-					/(\w+_\w+)\s*(\{[^}]+\})/g,
-					// Pattern 3: XML-style <toolcall> or <tool_call> (Gemini Thinking/Flash models sometimes do this)
-					// Using [\s\S] instead of . to ensure newlines are matched across the whole block
-					/<tool_?call(?:\s+[^>]*)?>([\s\S]*?)<\/tool_?call>/gi,
-				];
-
-				for (const pattern of toolCallPatterns) {
-					const matches = [...resp.content.matchAll(pattern)];
-					if (matches.length > 0) {
-						logger.warn("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
-						resp.toolCalls = resp.toolCalls || [];
-						for (const match of matches) {
-							try {
-								let toolName;
-								let args;
-
-								// Check which pattern matched
-								if (match[0].startsWith("<tool")) {
-									// XML Pattern: match[1] is the JSON content
-									const json = JSON.parse(match[1]);
-									toolName = json.name;
-									args = json.arguments || {};
-								} else if (match[1] && match[2]) {
-									// Regex groups
-									toolName = match[1];
-									const argsStr = match[2] || "{}";
-									args = JSON.parse(argsStr.replace(/'/g, '"'));
-								} else {
-									// JSON Pattern
-									toolName = match[1];
-									const argsStr = match[2] || "{}";
-									args = JSON.parse(argsStr.replace(/'/g, '"'));
-								}
-
-								// Normalization: Fix hallucinated names (e.g. gethostanalytics -> get_host_analytics)
-								// We try updates if direct match fails.
-								const definedTools = tools;
-								const exactMatch = definedTools.find((t) => t.function.name === toolName);
-								if (!exactMatch) {
-									// Try to find by removing underscores from defined tools
-									const looseMatch = definedTools.find(
-										(t) => t.function.name.replace(/_/g, "") === toolName.replace(/_/g, ""),
-									);
-									if (looseMatch) {
-										logger.info(
-											`[AI Chat] Normalizing tool name: ${toolName} -> ${looseMatch.function.name}`,
-										);
-										toolName = looseMatch.function.name;
-									}
-								}
-
-								resp.toolCalls.push({ name: toolName, args });
-								logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
-							} catch (e) {
-								logger.warn("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
-							}
-						}
-						// Clear the text content since we extracted tool calls
-						if (resp.toolCalls.length > 0) {
-							resp.content = "";
-						}
-						break;
-					}
-				}
-			}
-		};
-
-		// Initial Check
-		extractToolsFromText(response);
+		const executionState = createExecutionState();
 
 		while (response.toolCalls && response.toolCalls.length > 0 && iterations < MAX_ITERATIONS) {
 			iterations++;
-			wasToolExecuted = true;
 			logger.info(
 				`[AI Chat] Executing tools (Turn ${iterations}):`,
 				response.toolCalls.map((tc) => tc.name),
 			);
-			const toolResults = await executeTools(access, response.toolCalls);
+			const toolResults = await executeTools(access, response.toolCalls, { state: executionState, tools });
+			const pendingConfirmation = toolResults.find((result) => result.confirmation);
+			if (pendingConfirmation) {
+				return {
+					role: "assistant",
+					content: `Confirmation required for ${pendingConfirmation.confirmation.tool}. Review and approve this exact action.`,
+					confirmation: pendingConfirmation.confirmation,
+				};
+			}
+			wasToolExecuted = true;
 
 			logger.info(
 				`[AI Chat] Tool results (Turn ${iterations}):`,
@@ -357,8 +323,8 @@ const ai = {
 				response = await aiProviders.callGeminiWithResults(
 					config,
 					systemPrompt,
-					message,
-					history,
+					safeMessage,
+					safeHistory,
 					response,
 					toolResults,
 					tools,
@@ -367,15 +333,12 @@ const ai = {
 				response = await aiProviders.callLocalWithResults(
 					config,
 					systemPrompt,
-					message,
-					history,
+					safeMessage,
+					safeHistory,
 					response,
 					toolResults,
 				);
 			}
-
-			// Check for tools in the new response (RECURSIVE FIX)
-			extractToolsFromText(response);
 
 			logger.info(`[AI Chat] LLM Response (Turn ${iterations}):`, {
 				hasContent: !!response.content,
@@ -390,7 +353,10 @@ const ai = {
 		});
 
 		// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
-		let finalContent = response.content || "";
+		let finalContent = truncateResponse(/** @type {string} */ (redactToolData(response.content || "")));
+		if (iterations >= MAX_ITERATIONS && response.toolCalls?.length) {
+			finalContent = "The tool-loop safety limit was reached. No additional actions were executed.";
+		}
 		const actionWords = [
 			// German
 			/gelöscht/i,
@@ -418,7 +384,7 @@ const ai = {
 
 		// Fail-safe: If content is empty but tools were executed, provide a default status
 		if (!finalContent && wasToolExecuted) {
-			finalContent = "✅ Validated actions. Please check the system state updates.";
+			finalContent = "Tool processing ended without a final provider response. Verify the individual results.";
 		}
 
 		// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called
@@ -437,6 +403,29 @@ const ai = {
 			role: "assistant",
 			content: finalContent,
 		};
+	},
+
+	/**
+	 * Execute an exact HMAC-bound action after an explicit UI/API confirmation.
+	 * The provider never receives the token and is not called again.
+	 *
+	 * @param {import("../lib/types.js").Access} access
+	 * @param {string} token
+	 */
+	confirm: async (access, token) => {
+		const pending = readConfirmation(access, token);
+		if (!pending || getToolEffect(pending.name) !== "destructive") {
+			throw new TypeError("Invalid or expired AI confirmation");
+		}
+		const tools = await getToolDefinitions(access);
+		const [result] = await executeTools(
+			access,
+			[{ id: `confirmed-${pending.nonce}`, name: pending.name, args: pending.args }],
+			{ state: createExecutionState(), tools, confirmationToken: token },
+		);
+		if (!result || result.confirmation) throw new TypeError("AI confirmation could not be consumed");
+		if (result.result.startsWith("Error: ")) throw new Error(result.result.slice("Error: ".length));
+		return { role: "assistant", content: truncateResponse(result.result) };
 	},
 };
 

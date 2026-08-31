@@ -157,7 +157,7 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 								<Label htmlFor="new">
 									<T id="user.new-password" />
 								</Label>
-								<Field name="new" validate={validateString(8, 100)}>
+								<Field name="new" validate={validateString(12, 100)}>
 									{({ field }: FieldProps) => (
 										<div className="flex gap-2">
 											<div className="relative flex-1">
@@ -219,7 +219,7 @@ const ChangePasswordModal = EasyModal.create(({ id, visible, remove }: Props) =>
 								<Label htmlFor="confirm">
 									<T id="user.confirm-password" />
 								</Label>
-								<Field name="confirm" validate={validateString(8, 100)}>
+								<Field name="confirm" validate={validateString(12, 100)}>
 									{({ field }: FieldProps) => (
 										<div className="relative">
 											<Input

@@ -1,0 +1,12 @@
+{
+	"operationId": "completeOidcFlow",
+	"summary": "Validate the one-time OIDC callback transaction",
+	"tags": ["tokens"],
+	"parameters": [
+		{ "in": "query", "name": "code", "required": true, "schema": { "type": "string" } },
+		{ "in": "query", "name": "state", "required": true, "schema": { "type": "string" } }
+	],
+	"responses": {
+		"302": { "description": "Redirect to ShieldPM after success or a generic failure" }
+	}
+}

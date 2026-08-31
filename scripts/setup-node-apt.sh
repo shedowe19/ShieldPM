@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# NodeSource APT repository setup for Node.js 26.
-# Derived from the user-provided NodeSource setup_26.x script and committed so
+# NodeSource APT repository setup for Node.js 24 LTS.
+# Derived from the user-provided NodeSource setup script and committed so
 # Docker builds do not fetch or execute a mutable remote setup script.
 
 log() {
@@ -86,7 +86,7 @@ EOF
   log "NodeSource Node.js $node_version repository configured successfully" "success"
 }
 
-NODE_VERSION="26.x"
+NODE_VERSION="24.x"
 check_os
 install_pre_reqs
 configure_repo "$NODE_VERSION"

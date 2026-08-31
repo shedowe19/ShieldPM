@@ -15,7 +15,8 @@
 						"pending_token": {
 							"description": "Short-lived 2FA pending token issued by POST /tokens when 2FA is required",
 							"type": "string",
-							"minLength": 1
+							"minLength": 16,
+							"maxLength": 16384
 						},
 						"method": {
 							"description": "The 2FA method used to generate the code",
@@ -29,7 +30,8 @@
 						"code": {
 							"description": "The 2FA code / OTP / backup code",
 							"type": "string",
-							"minLength": 1
+							"minLength": 1,
+							"maxLength": 256
 						}
 					},
 					"required": [

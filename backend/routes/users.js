@@ -12,8 +12,11 @@ const avatarLimiter = rateLimit({
 	},
 });
 
+import { getSetupTokenFromRequest } from "../internal/initial-setup.js";
+import internalToken from "../internal/token.js";
 import internalUser from "../internal/user.js";
 import Access from "../lib/access.js";
+import { setActorRefreshCookie, setAuthCookies } from "../lib/auth-cookies.js";
 import { isDestructiveTestMode } from "../lib/config.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
@@ -90,7 +93,7 @@ router
 	 * Create a new User
 	 */
 	.post(async (req, res) => {
-		const body = req.body;
+		const body = { ...req.body };
 		const setupComplete = await isSetup();
 		const currentUserId = res.locals.access?.token?.getUserId?.(0) || 0;
 
@@ -114,7 +117,11 @@ router
 		}
 
 		const payload = await apiValidator(getValidationSchema("/users", "post"), body);
-		const user = await internalUser.create(res.locals.access, payload);
+		const user = !setupComplete
+			? await internalUser.createInitialAdmin(res.locals.access, payload, getSetupTokenFromRequest(req), {
+					ip: req.ip || null,
+				})
+			: await internalUser.create(res.locals.access, payload);
 		res.status(201).send(user);
 	})
 
@@ -374,30 +381,29 @@ router
 			{ user_id: req.params.user_id },
 		);
 
-		const result = await internalUser.loginAs(res.locals.access, {
+		const targetUser = await internalUser.loginAs(res.locals.access, {
 			id: Number(params.user_id),
 		});
-
-		if (req.cookies?.shieldpm_jwt) {
-			res.cookie("shieldpm_jwt_original", req.cookies.shieldpm_jwt, {
-				httpOnly: true,
-				secure: req.secure,
-				sameSite: "strict",
-				// Backup cookie lives longer or same length
-				maxAge: 1000 * 60 * 60 * 24 * 30,
-			});
-		}
-
-		const safeMaxAge = result.expires ? Math.max(0, new Date(result.expires).getTime() - Date.now()) : undefined;
-
-		res.cookie("shieldpm_jwt", result.token, {
-			httpOnly: true,
-			secure: req.secure,
-			sameSite: "strict",
-			maxAge: safeMaxAge,
+		const result = await internalToken.issueImpersonationPair({
+			actorSessionId: res.locals.access.token.get("sid"),
+			actorUserId: res.locals.access.token.getUserId(0),
+			targetUser,
+			meta: { ip: req.ip || "unknown", userAgent: req.headers["user-agent"] || null },
 		});
 
-		res.status(200).send({ ...result, token: undefined });
+		setActorRefreshCookie(res, req, result.actor.refresh_token, result.actor.refresh_expires);
+		setAuthCookies(res, req, {
+			accessToken: result.pair.access_token,
+			accessExpires: result.pair.access_expires,
+			refreshToken: result.pair.refresh_token,
+			refreshExpires: result.pair.refresh_expires,
+		});
+
+		res.status(200).send({
+			expires: result.pair.access_expires,
+			user: result.pair.user,
+			csrfToken: res.locals.issueCsrfTokenForFamily(result.pair.session.family_id),
+		});
 	});
 
 export default router;

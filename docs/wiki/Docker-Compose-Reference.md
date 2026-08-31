@@ -7,6 +7,10 @@ This is the full reference `compose.yaml` file for ShieldPM. You can use this to
 > [!NOTE]
 > This is a comprehensive reference file containing all available `compose.yaml` options. You do not need to use all of them. Use the [Installation Guide](Installation) for a standard setup.
 
+> [!IMPORTANT]
+> ShieldPM has no default administrator credentials and does not print an initial password. After the first start,
+> read `/data/shieldpm/initial-admin-setup-token` locally and use it in the setup wizard. Port 81 is HTTP by default;
+> do not expose it directly to an untrusted network.
 
 ```yaml
 services:
@@ -15,24 +19,24 @@ services:
     image: ghcr.io/shedowe19/shieldpm:latest
     restart: always
     network_mode: host
-#    ipc: host # required when you want to use the openappsec attachment module
-#    cap_add: # required if you set NGINX_QUIC_BPF to true
-#      - BPF # required if you set NGINX_QUIC_BPF to true
-#      - PERFMON # required if you set NGINX_QUIC_BPF to true
-#      - NET_ADMIN # required if you set NGINX_QUIC_BPF to true
-#    dns: # only set this if you need/want to override the default DNS server
-#      - 192.168.1.1 # default for unifi/opnsense/pfsense
-#      - 192.168.8.1 # default for glinet
-#      - 192.168.178.1 # default for avm/fritz
-#      - 94.140.14.15 # Public AdGuard DNS
-#      - 94.140.15.16 # Public AdGuard DNS
-#      - 2a10:50c0::bad1:ff # Public AdGuard DNS
-#      - 2a10:50c0::bad2:ff # Public AdGuard DNS
+    #    ipc: host # required when you want to use the openappsec attachment module
+    #    cap_add: # required if you set NGINX_QUIC_BPF to true
+    #      - BPF # required if you set NGINX_QUIC_BPF to true
+    #      - PERFMON # required if you set NGINX_QUIC_BPF to true
+    #      - NET_ADMIN # required if you set NGINX_QUIC_BPF to true
+    #    dns: # only set this if you need/want to override the default DNS server
+    #      - 192.168.1.1 # default for unifi/opnsense/pfsense
+    #      - 192.168.8.1 # default for glinet
+    #      - 192.168.178.1 # default for avm/fritz
+    #      - 94.140.14.15 # Public AdGuard DNS
+    #      - 94.140.15.16 # Public AdGuard DNS
+    #      - 2a10:50c0::bad1:ff # Public AdGuard DNS
+    #      - 2a10:50c0::bad2:ff # Public AdGuard DNS
     volumes:
       - "/opt/shieldpm:/data"
-#      - "/var/www:/var/www" # optional, if you want to use ShieldPM directly as a webserver for html/php
-#      - "/path/to/old/npm/letsencrypt/folder:/etc/letsencrypt" # Only needed for initial migration from original nginx-proxy-manager to this fork, remove after migration
-#      - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
+    #      - "/var/www:/var/www" # optional, if you want to use ShieldPM directly as a webserver for html/php
+    #      - "/path/to/old/npm/letsencrypt/folder:/etc/letsencrypt" # Only needed for initial migration from original nginx-proxy-manager to this fork, remove after migration
+    #      - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
     environment:
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
 #    depends_on:
@@ -41,17 +45,17 @@ services:
 #        required: false
 #      - "DB_MYSQL_HOST=127.0.0.1" # MySQL/MariaDB Host
 #      - "DB_MYSQL_PORT=3306" # MySQL/MariaDB Port
-#      - "DB_MYSQL_USER=npm" # MySQL/MariaDB User
-#      - "DB_MYSQL_PASSWORD=npm" # MySQL/MariaDB Password
-#      - "DB_MYSQL_NAME=npm" # MySQL/MariaDB Database Name
+#      - "DB_MYSQL_USER=shieldpm" # MySQL/MariaDB User
+#      - "DB_MYSQL_PASSWORD=<set-a-strong-password>" # use a secret, never commit the value
+#      - "DB_MYSQL_NAME=shieldpm" # MySQL/MariaDB Database Name
 #      - "DB_MYSQL_SSL=false" # Enable SSL for MySQL/MariaDB? default false
 #      - "DB_MYSQL_SSL_REJECT_UNAUTHORIZED=true" # Reject unauthorized SSL certificates? default true
 #      - "DB_MYSQL_SSL_VERIFY_IDENTITY=true" # Verify SSL certificate identity? default true
 #      - "DB_POSTGRES_HOST=127.0.0.1" # Postgres Host
 #      - "DB_POSTGRES_PORT=5432" # Postgres Port
-#      - "DB_POSTGRES_USER=npm" # Postgres User
-#      - "DB_POSTGRES_PASSWORD=npm" # Postgres Password
-#      - "DB_POSTGRES_NAME=npm" # Postgres Database Name
+#      - "DB_POSTGRES_USER=shieldpm" # Postgres User
+#      - "DB_POSTGRES_PASSWORD=<set-a-strong-password>" # use a secret, never commit the value
+#      - "DB_POSTGRES_NAME=shieldpm" # Postgres Database Name
 #      - "ACME_EMAIL=your-email" # email address to use for acme, currently optional, may be required in the future, so I recommend entering your email here, optional for letsencrypt, but required for zerossl and google public ca
 #      - "ACME_SERVER=https://dv.acme-v02.api.pki.goog/directory (google public ca) / https://acme.zerossl.com/v2/DV90 (zerossl)" # acme server used when requesting/renewing certs using certbot, default: https://acme-v02.api.letsencrypt.org/directory (letsencrypt)
 #      - "ACME_EAB_KID=123456789abcdef" # Key Identifier for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
@@ -106,8 +110,13 @@ services:
 #      - "PHP84=true" # Activate PHP84, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
 #      - "PHP84_APKS=php8.4-curl php8.4-openssl" # Add php extensions, also enables PHP84, see available packages here: https://packages.debian.org/search?keywords=php8.4-*, default none, requires PHP84
 #      - "PHP_APKS=php-apcu php-redis" # Add php extensions, see available packages here: https://packages.debian.org/search?keywords=php-*, default none, requires PHP82, PHP83 and/or PHP84, not recommended, please use PHP82_APKS, PHP83_APKS or PHP84_APKS
-#      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # email to use instead of admin@example.org on first start of ShieldPM for the initial user
-#      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # password to use instead of a random password which is logged on first start of ShieldPM for the initial user
+#      - "INITIAL_ADMIN_SETUP_TOKEN_FILE=/run/secrets/shieldpm_initial_setup" # preferred: mounted 0600 secret file containing at least 256 bits of randomness
+#      - "INITIAL_ADMIN_SETUP_TOKEN=<strong-one-time-token>" # alternative only when your orchestrator cannot mount a secret file; never commit the value
+      - "TRUST_PROXY=1" # required for the official single-Nginx-proxy topology; use false only for direct backend access
+#      - "ANALYTICS_SPOOL_PATH=/data/shieldpm/analytics-spool.ndjson" # normalized path below /data
+#      - "ANALYTICS_SPOOL_MAX_BYTES=67108864" # durable-spool capacity
+#      - "ANALYTICS_SPOOL_RECORD_MAX_BYTES=262144" # per-record safety limit
+#      - "ANALYTICS_SPOOL_BATCH_RECORDS=250" # replay transaction size
 #      - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start of ShieldPM for the initial user, default congratulations, can be one of: 404, 444, redirect, congratulations or html
 #      - "ENABLE_PRERUN=true" # see readme, default off
 #      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" # loads the openappsec attachment module, you must also set ipc and enable the shm-volume for ShieldPM in this compose file, this will fully disable brotli, default false
@@ -143,10 +152,10 @@ services:
 #    restart: always
 #    network_mode: bridge
 #    environment:
-#      - "MYSQL_ROOT_PASSWORD=npm"
-#      - "MYSQL_DATABASE=npm"
-#      - "MYSQL_USER=npm"
-#      - "MYSQL_PASSWORD=npm"
+#      - "MYSQL_ROOT_PASSWORD=<set-a-distinct-root-password>"
+#      - "MYSQL_DATABASE=shieldpm"
+#      - "MYSQL_USER=shieldpm"
+#      - "MYSQL_PASSWORD=<set-a-strong-password>"
 #    ports:
 #      - "3306:3306"
 #    volumes:
@@ -159,9 +168,9 @@ services:
 #    restart: always
 #    network_mode: bridge
 #    environment:
-#      - "POSTGRES_DB=npm"
-#      - "POSTGRES_USER=npm"
-#      - "POSTGRES_PASSWORD=npm"
+#      - "POSTGRES_DB=shieldpm"
+#      - "POSTGRES_USER=shieldpm"
+#      - "POSTGRES_PASSWORD=<set-a-strong-password>"
 #    ports:
 #      - "5432:5432"
 #    volumes:
@@ -234,7 +243,7 @@ services:
 #      - "TZ=your-timezone" # needs to be changed
 #      - "SHARED_STORAGE_HOST=openappsec-shared-storage"
 #      - "QUERY_DB_HOST=openappsec-db"
-#      - "QUERY_DB_PASSWORD=password" # replace with something secure, should match POSTGRES_PASSWORD from openappsec-db container
+#      - "QUERY_DB_PASSWORD=<set-a-strong-password>" # must match POSTGRES_PASSWORD from openappsec-db
 #      - "QUERY_DB_USER=appsec"
 #    volumes:
 #      - "/opt/openappsec/conf:/etc/cp/conf"
@@ -247,7 +256,7 @@ services:
 #    restart: always
 #    environment:
 #      - "TZ=your-timezone" # needs to be changed
-#      - "POSTGRES_PASSWORD=password" # replace with something secure, should match QUERY_DB_PASSWORD from openappsec-tuning-svc container
+#      - "POSTGRES_PASSWORD=<set-a-strong-password>" # must match QUERY_DB_PASSWORD from openappsec-tuning-svc
 #      - "POSTGRES_USER=appsec"
 #    volumes:
 #      - "/opt/openappsec/pgdb:/var/lib/postgresql/data"
@@ -273,4 +282,5 @@ services:
 ```
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

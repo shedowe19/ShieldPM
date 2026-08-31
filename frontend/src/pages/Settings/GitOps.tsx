@@ -69,10 +69,10 @@ export default function GitOps() {
 
 	const handleSave = async () => {
 		const payload: Partial<typeof formData> = { ...formData };
-		if (!payload.credentials) {
-			delete payload.credentials; // Don't send empty credentials
-		}
-		updateConfig.mutate(payload);
+		if (!payload.credentials) delete payload.credentials;
+		updateConfig.mutate(payload, {
+			onSuccess: () => setFormData((current) => ({ ...current, credentials: "" })),
+		});
 	};
 
 	if (isLoading) return <Loading noLogo />;
@@ -151,7 +151,7 @@ export default function GitOps() {
 							<T id="settings.gitops.auth_type" />
 						</Label>
 						<div className="flex gap-4">
-							{[GITOPS_AUTH_TYPE.HTTPS, GITOPS_AUTH_TYPE.SSH].map((option) => (
+							{[GITOPS_AUTH_TYPE.HTTPS].map((option) => (
 								<label
 									key={option}
 									className={`
@@ -167,9 +167,7 @@ export default function GitOps() {
 										checked={formData.authType === option}
 										onChange={() => setFormData({ ...formData, authType: option })}
 									/>
-									<span className="uppercase text-sm font-medium">
-										{option === GITOPS_AUTH_TYPE.HTTPS ? "HTTPS (PAT)" : "SSH Key"}
-									</span>
+									<span className="uppercase text-sm font-medium">HTTPS (PAT)</span>
 								</label>
 							))}
 						</div>
@@ -177,30 +175,30 @@ export default function GitOps() {
 
 					{/* Credentials */}
 					<div className="space-y-2">
-						<Label htmlFor="credentials">
-							{formData.authType === GITOPS_AUTH_TYPE.HTTPS ? "Personal Access Token" : "SSH Private Key"}
-						</Label>
-						{formData.authType === GITOPS_AUTH_TYPE.HTTPS ? (
-							<Input
-								id="credentials"
-								type="password"
-								value={formData.credentials}
-								onChange={(e) => setFormData({ ...formData, credentials: e.target.value })}
-								placeholder="ghp_... or glpat-..."
-							/>
-						) : (
-							<textarea
-								id="credentials"
-								className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono"
-								value={formData.credentials}
-								onChange={(e) => setFormData({ ...formData, credentials: e.target.value })}
-								placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-							/>
-						)}
-						{config?.encryptedCredentials === "[REDACTED]" && (
-							<p className="text-xs text-muted-foreground">
-								Credentials are already configured. Leave empty to keep existing.
-							</p>
+						<Label htmlFor="credentials">Personal Access Token</Label>
+						<Input
+							id="credentials"
+							type="password"
+							value={formData.credentials}
+							onChange={(e) => setFormData({ ...formData, credentials: e.target.value })}
+							placeholder="ghp_... or glpat-..."
+							autoComplete="new-password"
+						/>
+						{config?.hasCredentials && (
+							<div className="flex items-center justify-between gap-4">
+								<p className="text-xs text-muted-foreground">
+									A PAT is configured. Leave this field empty to keep it.
+								</p>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() => updateConfig.mutate({ credentials: "" })}
+									disabled={updateConfig.isPending}
+								>
+									Remove PAT
+								</Button>
+							</div>
 						)}
 					</div>
 
@@ -329,8 +327,9 @@ export default function GitOps() {
 									<DialogHeader>
 										<DialogTitle>Import Configuration from Git?</DialogTitle>
 										<DialogDescription>
-											This will import proxy hosts, access lists, and other configuration from the
-											Git repository. Existing items with matching IDs may be overwritten.
+											The verified public snapshot contains proxy hosts, redirection hosts, 404
+											hosts, and streams. Replacement removes active entries missing from the
+											snapshot. Validate first without changing the database or Nginx runtime.
 										</DialogDescription>
 									</DialogHeader>
 									<DialogFooter>
@@ -338,10 +337,18 @@ export default function GitOps() {
 											<Button variant="outline">Cancel</Button>
 										</DialogClose>
 										<Button
-											onClick={() => importConfig.mutate(true)}
-											className="bg-amber-600 hover:bg-amber-700"
+											variant="outline"
+											onClick={() => importConfig.mutate({ overwrite: true, dryRun: true })}
+											disabled={importConfig.isPending}
 										>
-											Import
+											Validate
+										</Button>
+										<Button
+											onClick={() => importConfig.mutate({ overwrite: true, dryRun: false })}
+											className="bg-amber-600 hover:bg-amber-700"
+											disabled={importConfig.isPending}
+										>
+											Import & Replace
 										</Button>
 									</DialogFooter>
 								</DialogContent>

@@ -16,7 +16,7 @@ describe("archiver ESM compatibility", () => {
 		expect(source).not.toContain('import archiver from "archiver";');
 	});
 
-	it("creates a ZIP archive through archiver's Node 26 ESM API", async () => {
+	it("creates a ZIP archive through archiver's supported Node ESM API", async () => {
 		const directory = fs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-archiver-esm-"));
 		const sourcePath = path.join(directory, "certificate.pem");
 		const archivePath = path.join(directory, "certificate.zip");

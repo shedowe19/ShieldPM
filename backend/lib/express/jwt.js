@@ -1,3 +1,5 @@
+import { getAccessCookie } from "../auth-cookies.js";
+
 export default function () {
 	return (req, res, next) => {
 		if (req.headers.authorization) {
@@ -6,8 +8,11 @@ export default function () {
 			if (parts && parts[0] === "Bearer" && parts[1]) {
 				res.locals.token = parts[1];
 			}
-		} else if (req.cookies?.shieldpm_jwt) {
-			res.locals.token = req.cookies.shieldpm_jwt;
+		} else {
+			const cookieToken = getAccessCookie(req);
+			if (cookieToken) {
+				res.locals.token = cookieToken;
+			}
 		}
 
 		next();

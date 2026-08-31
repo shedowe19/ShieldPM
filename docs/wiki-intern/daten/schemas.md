@@ -10,8 +10,8 @@ Die Datenbankschemas werden durch Knex.js-Migrationen definiert und durch Object
 
 ## Wichtige Dateien
 
-- `backend/migrations/` — 74 Migrationsdateien definieren das Schema
-- `backend/models/` — 27 Objection.js-Modelle bilden die ORM-Schicht
+- `backend/migrations/` — versionierte ESM-Migrationen definieren das Schema
+- `backend/models/` — Objection.js-Modelle bilden die ORM-Schicht
 
 ## Schema-Konventionen
 
@@ -34,7 +34,7 @@ Die Objection.js-Modelle verwenden folgende Lifecycle-Hooks:
 ## Verhalten
 
 - Migrationen laufen beim Anwendungsstart automatisch
-- Alle Migrationen sind abwärtskompatibel (`up` + `down`)
+- Migrationen stellen `up` und gezielte `down`-Pfade bereit; ein externer DB-Rollback bleibt eine Operatoraufgabe
 - Migrationen verwenden ESM (`export { up, down }`)
 
 ## Abhängigkeiten

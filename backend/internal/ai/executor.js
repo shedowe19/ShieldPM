@@ -26,9 +26,18 @@ import internalRedirectionHost from "../redirection-host.js";
 import internalReport from "../report.js";
 import internalSetting from "../setting.js";
 import internalStream from "../stream.js";
-import internalToken from "../token.js";
 import internalTor from "../tor.js";
 import internalUser from "../user.js";
+import {
+	consumeConfirmation,
+	createExecutionState,
+	getToolEffect,
+	issueConfirmation,
+	reserveToolCall,
+	serializeConfirmationDetails,
+	serializeToolResult,
+} from "./safety.js";
+import { getAllStrictToolDefinitions, getToolPermission, validateToolCall } from "./tools.js";
 
 /**
  * Validate host data in Demo Mode - blocks private IPs and advanced config
@@ -136,17 +145,82 @@ const verifyProxyHostUpdateAccess = async (access, id) => {
 	await internalProxyHost.get(access, { id });
 };
 
+const authorizeToolCall = async (access, name, args) => {
+	const permission = getToolPermission(name);
+	if (!permission) throw new Error(`AI tool has no permission mapping: ${name}`);
+	const permissionId = getToolEffect(name) === "destructive" && Number.isInteger(args.id) ? args.id : undefined;
+	if (permissionId === undefined) await access.can(permission);
+	else await access.can(permission, permissionId);
+};
+
 /**
  * Execute a list of tool calls
  * @param {Object} access - The user access object (permission context)
  * @param {Array} toolCalls - List of tool calls from the LLM
+ * @param {{state?:Object,tools?:Array,confirmationToken?:string}} [options] - Turn budget and exact advertised tools
  * @returns {Promise<Array>} - List of tool results
  */
-export const executeTools = async (access, toolCalls) => {
+export const executeTools = async (access, toolCalls, options = {}) => {
+	if (!Array.isArray(toolCalls)) throw new TypeError("Provider tool calls must be an array");
+	const state = options.state || createExecutionState();
+	const authorizedTools = options.tools || getAllStrictToolDefinitions();
 	const toolResults = [];
+	const pendingDestructive = toolCalls.find(
+		(call) => typeof call?.name === "string" && getToolEffect(call.name) === "destructive",
+	);
+	if (pendingDestructive && !options.confirmationToken) {
+		try {
+			const args = validateToolCall(authorizedTools, pendingDestructive.name, pendingDestructive.args || {});
+			reserveToolCall(state, pendingDestructive.name, toolCalls.length);
+			await authorizeToolCall(access, pendingDestructive.name, args);
+			const token = issueConfirmation(access, pendingDestructive.name, args);
+			return [
+				{
+					name: pendingDestructive.name,
+					toolCallId: pendingDestructive.id,
+					result: "Confirmation required from the authenticated user before this exact action can run.",
+					confirmation: {
+						token,
+						tool: pendingDestructive.name,
+						details: serializeConfirmationDetails(args),
+					},
+				},
+			];
+		} catch (err) {
+			const message = serializeToolResult(err instanceof Error ? err.message : "Unknown error");
+			return [
+				{
+					name: pendingDestructive?.name || "invalid",
+					toolCallId: pendingDestructive?.id,
+					result: `Error: ${message}`,
+				},
+			];
+		}
+	}
 
 	for (const call of /** @type {any[]} */ (toolCalls)) {
 		try {
+			const validatedArgs = validateToolCall(authorizedTools, call.name, call.args || {});
+			call.args = validatedArgs;
+			reserveToolCall(state, call.name, toolCalls.length);
+			await authorizeToolCall(access, call.name, call.args);
+			if (
+				getToolEffect(call.name) === "destructive" &&
+				!consumeConfirmation(access, call.name, call.args, options.confirmationToken)
+			) {
+				const confirmation = issueConfirmation(access, call.name, call.args);
+				toolResults.push({
+					name: call.name,
+					toolCallId: call.id,
+					result: "Confirmation required from the authenticated user before this exact action can run.",
+					confirmation: {
+						token: confirmation,
+						tool: call.name,
+						details: serializeConfirmationDetails(call.args),
+					},
+				});
+				break;
+			}
 			let result = "";
 
 			// Check for Demo Mode restrictions
@@ -160,8 +234,6 @@ export const executeTools = async (access, toolCalls) => {
 					"get_users", // Privacy: Don't list other users
 					"update_global_setting",
 					"get_global_settings", // Security: Don't reveal secrets
-					"create_api_token",
-					"login_as_user",
 					"read_nginx_logs", // Privacy: Don't reveal IPs
 					"get_audit_log", // Privacy: Don't reveal user actions
 					"create_cloudflared_tunnel",
@@ -340,9 +412,9 @@ export const executeTools = async (access, toolCalls) => {
 						hsts_enabled: call.args.hsts_enabled || false,
 						hsts_subdomains: call.args.hsts_subdomains || false,
 						block_exploits: true,
-						advanced_config: "",
 						meta: meta,
 						...call.args,
+						advanced_config: "",
 					};
 					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
@@ -396,9 +468,9 @@ export const executeTools = async (access, toolCalls) => {
 						hsts_enabled: call.args.hsts_enabled || false,
 						hsts_subdomains: call.args.hsts_subdomains || false,
 						block_exploits: true,
-						advanced_config: "",
 						meta: meta,
 						...call.args,
+						advanced_config: "",
 					};
 					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
 					result = `Created 404 Host ID: ${newHost.id}`;
@@ -475,7 +547,6 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// IP Ranges
 				case "renew_ip_ranges": {
-					await access.can("settings:update");
 					await internalIpRanges.fetch();
 					result = "IP Ranges renewal triggered.";
 					break;
@@ -575,6 +646,10 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_user": {
+					const password = call.args.auth?.secret;
+					if (typeof password !== "string" || password.length === 0) {
+						throw new Error("Creating a local user requires an explicit password");
+					}
 					// Prepare data for internalUser.create
 					const userData = {
 						name: call.args.name,
@@ -584,7 +659,7 @@ export const executeTools = async (access, toolCalls) => {
 						is_disabled: false,
 						auth: {
 							type: "local",
-							secret: call.args.password || "changeme123", // Fallback if not provided, though generic prompt should ask
+							secret: password,
 						},
 					};
 					const newUser = await internalUser.create(access, userData);
@@ -626,7 +701,6 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "test_nginx_config": {
-					await access.can("settings:update");
 					try {
 						await internalNginx.test();
 						result = "Nginx configuration is valid.";
@@ -636,7 +710,6 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "force_nginx_reload": {
-					await access.can("settings:update");
 					await internalNginx.reload();
 					result = "Nginx Reloaded";
 					break;
@@ -684,7 +757,13 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "get_certificate_details": {
 					const cert = await internalCertificate.get(access, { id: call.args.id });
-					result = JSON.stringify(cert, null, 2);
+					result = JSON.stringify({
+						id: cert.id,
+						nice_name: cert.nice_name,
+						provider: cert.provider,
+						domain_names: cert.domain_names,
+						expires_on: cert.expires_on,
+					});
 					break;
 				}
 				case "get_dns_plugins": {
@@ -897,22 +976,6 @@ export const executeTools = async (access, toolCalls) => {
 					result = `Updated Certificate ID: ${call.args.id}`;
 					break;
 				}
-				// Auth & Tokens
-				case "login_as_user": {
-					const _loginResult = await internalUser.loginAs(access, { id: call.args.id });
-					result = `Logged in as User ${call.args.id}. Session created successfully.`;
-					break;
-				}
-				case "create_api_token": {
-					// Use getFreshToken to generate a new token
-					const expiry = call.args.expiry || "1d";
-					const newToken = await internalToken.getFreshToken(access, {
-						scope: "user", // Default scope as user
-						expiry: expiry,
-					});
-					result = `Created API Token successfully. Token ID: ${newToken.id}`;
-					break;
-				}
 				case "create_client_certificate": {
 					await access.can("certificates:create");
 					const tmpDir = `/tmp/client-cert-${Date.now()}`;
@@ -1070,10 +1133,11 @@ export const executeTools = async (access, toolCalls) => {
 			}
 
 			// Add result to list
-			toolResults.push({ name: call.name, toolCallId: call.id, result });
+			toolResults.push({ name: call.name, toolCallId: call.id, result: serializeToolResult(result) });
 		} catch (err) {
-			console.error(`[AI Executor] Error processing tool ${call.name}:`, err);
-			toolResults.push({ name: call.name, result: `Error: ${err.message}` });
+			const message = serializeToolResult(err instanceof Error ? err.message : "Unknown error");
+			console.error(`[AI Executor] Tool ${String(call?.name).slice(0, 64)} failed: ${message}`);
+			toolResults.push({ name: call?.name || "invalid", toolCallId: call?.id, result: `Error: ${message}` });
 		}
 	}
 

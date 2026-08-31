@@ -12,6 +12,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { complete2faDuoAuth } from "src/api/backend";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { useAuthState } from "src/context";
+import { intl, T } from "src/locale";
 
 export default function DuoCallback() {
 	const { completeLogin } = useAuthState();
@@ -25,22 +26,32 @@ export default function DuoCallback() {
 		called.current = true;
 
 		const duoCode = searchParams.get("duo_code");
+		const state = searchParams.get("state");
 		const pendingToken = sessionStorage.getItem("duo_pending_token");
+		const expectedState = sessionStorage.getItem("duo_expected_state");
+		const storedReturnTo = sessionStorage.getItem("duo_return_to");
+		const returnTo = storedReturnTo?.startsWith("/") && !storedReturnTo.startsWith("//") ? storedReturnTo : "/";
+		sessionStorage.removeItem("duo_pending_token");
+		sessionStorage.removeItem("duo_expected_state");
+		sessionStorage.removeItem("duo_return_to");
 
-		if (!duoCode || !pendingToken) {
-			setError("Missing Duo authorization code or session token. Please try signing in again.");
+		if (!duoCode || !state || !pendingToken || !expectedState) {
+			setError(intl.formatMessage({ id: "duo.callback.missing" }));
 			return;
 		}
 
-		sessionStorage.removeItem("duo_pending_token");
+		if (state !== expectedState) {
+			setError(intl.formatMessage({ id: "duo.callback.state-mismatch" }));
+			return;
+		}
 
-		complete2faDuoAuth(pendingToken, duoCode)
+		complete2faDuoAuth(pendingToken, duoCode, state)
 			.then((response) => {
 				completeLogin(response);
-				navigate("/", { replace: true });
+				navigate(returnTo, { replace: true });
 			})
 			.catch((err: Error) => {
-				setError(err.message || "Duo authentication failed. Please try again.");
+				setError(err.message || intl.formatMessage({ id: "duo.callback.failed" }));
 			});
 	}, [completeLogin, navigate, searchParams]);
 
@@ -50,14 +61,16 @@ export default function DuoCallback() {
 				<div className="w-full max-w-md">
 					<Alert variant="destructive">
 						<AlertCircle className="h-4 w-4" />
-						<AlertTitle>Authentication Failed</AlertTitle>
+						<AlertTitle>
+							<T id="duo.callback.failed-title" />
+						</AlertTitle>
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 					<a
 						href="/login"
 						className="mt-4 block text-center text-sm text-primary underline-offset-4 hover:underline"
 					>
-						Return to sign in
+						<T id="duo.callback.return" />
 					</a>
 				</div>
 			</div>
@@ -68,7 +81,9 @@ export default function DuoCallback() {
 		<div className="flex min-h-screen items-center justify-center">
 			<div className="flex flex-col items-center gap-4">
 				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm text-muted-foreground">Completing Duo authentication…</p>
+				<p className="text-sm text-muted-foreground">
+					<T id="duo.callback.completing" />
+				</p>
 			</div>
 		</div>
 	);

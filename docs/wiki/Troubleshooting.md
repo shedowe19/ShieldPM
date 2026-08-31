@@ -12,24 +12,28 @@ Stuck? Here are solutions to the most common problems, organized by category.
 
 ```bash
 # Docker
-docker exec -it shieldpm npm-reset-password
+docker exec -it shieldpm npm-reset-password user@example.org 'new-long-password'
 
 # Native / LXC
-npm-reset-password
+npm-reset-password user@example.org 'new-long-password'
 ```
+
+Pass both required arguments: `npm-reset-password USER_EMAIL PASSWORD`. The helper accesses only
+`/data/shieldpm/database.sqlite`.
 
 **MySQL / PostgreSQL:**
 
-Connect to the database and update the password manually, or use the reset utility documented above (it works with all database types).
+The SQLite helper is not available. Use a tested, operator-approved recovery procedure for the selected database and
+take a native database dump first; do not copy a SQLite password hash update blindly to another backend.
 
 ### "Invalid Login Credentials"
 
-| Cause | Fix |
-| :--- | :--- |
-| Wrong email | Check for typos; email is case-sensitive |
-| Account disabled | Ask an admin to re-enable your account |
-| Old browser cache | Clear cookies and try again |
-| CAPS LOCK | Passwords are case-sensitive |
+| Cause             | Fix                                      |
+| :---------------- | :--------------------------------------- |
+| Wrong email       | Check for typos; email is case-sensitive |
+| Account disabled  | Ask an admin to re-enable your account   |
+| Old browser cache | Clear cookies and try again              |
+| CAPS LOCK         | Passwords are case-sensitive             |
 
 ---
 
@@ -39,12 +43,12 @@ Connect to the database and update the password manually, or use the reset utili
 
 The most common error — Nginx cannot reach the upstream service.
 
-| Cause | Fix |
-| :--- | :--- |
-| Backend service is down | Start the service and verify it's running |
-| Wrong Forward Host | Check the IP/hostname in the Proxy Host config |
-| Docker network isolation | Use container name (bridge) or `127.0.0.1` (host mode) |
-| Container not on same network | Run `docker network connect <network> shieldpm` |
+| Cause                         | Fix                                                    |
+| :---------------------------- | :----------------------------------------------------- |
+| Backend service is down       | Start the service and verify it's running              |
+| Wrong Forward Host            | Check the IP/hostname in the Proxy Host config         |
+| Docker network isolation      | Use container name (bridge) or `127.0.0.1` (host mode) |
+| Container not on same network | Run `docker network connect <network> shieldpm`        |
 
 > [!TIP]
 > Quick test: `docker exec shieldpm curl -s http://<forward_host>:<forward_port>` — if this fails, the problem is networking, not ShieldPM.
@@ -73,12 +77,12 @@ client_max_body_size 10G; # 10 GB limit
 
 ### 403 Forbidden
 
-| Cause | Fix |
-| :--- | :--- |
-| Access List blocking | Check the assigned Access List |
-| ModSecurity rule | Check error log for rule ID, exclude it |
-| CrowdSec ban | Run `cscli decisions list` to check |
-| IP not in allow list | Add your IP to the Access List |
+| Cause                | Fix                                     |
+| :------------------- | :-------------------------------------- |
+| Access List blocking | Check the assigned Access List          |
+| ModSecurity rule     | Check error log for rule ID, exclude it |
+| CrowdSec ban         | Run `cscli decisions list` to check     |
+| IP not in allow list | Add your IP to the Access List          |
 
 ### 429 Too Many Requests
 
@@ -90,12 +94,12 @@ Rate limiting is rejecting your requests. Lower the limits or increase the burst
 
 ### Let's Encrypt Errors
 
-| Error | Fix |
-| :--- | :--- |
+| Error                           | Fix                                         |
+| :------------------------------ | :------------------------------------------ |
 | "Connection refused on port 80" | Check firewall/router, port 80 must be open |
-| "DNS problem: NXDOMAIN" | Domain doesn't point to your server |
-| "Too many requests" | Wait 1 hour, or use Staging server |
-| "ACME email not set" | Set `ACME_EMAIL` in environment |
+| "DNS problem: NXDOMAIN"         | Domain doesn't point to your server         |
+| "Too many requests"             | Wait 1 hour, or use Staging server          |
+| "ACME email not set"            | Set `ACME_EMAIL` in environment             |
 
 ### Self-Signed Certificate Warning
 
@@ -109,12 +113,12 @@ If you're seeing "Your connection is not private" on internal services:
 
 ## 📜 Where to Find Logs
 
-| Log Type | Docker | Native / LXC |
-| :--- | :--- | :--- |
-| **Application** | `docker logs -f shieldpm` | `journalctl -u shieldpm -f` |
-| **Nginx Access** | `/data/logs/json_access.log` | `/data/logs/json_access.log` |
-| **Nginx Error** | `/data/logs/error.log` | `/data/logs/error.log` |
-| **CrowdSec** | `docker logs crowdsec` | `journalctl -u crowdsec -f` |
+| Log Type         | Docker                        | Native / LXC                  |
+| :--------------- | :---------------------------- | :---------------------------- |
+| **Application**  | `docker logs -f shieldpm`     | `journalctl -u shieldpm -f`   |
+| **Nginx Access** | `/data/nginx/json_access.log` | `/data/nginx/json_access.log` |
+| **Nginx Error**  | `/data/nginx/error.log`       | `/data/nginx/error.log`       |
+| **CrowdSec**     | `docker logs crowdsec`        | `journalctl -u crowdsec -f`   |
 
 > [!TIP]
 > Enable `LOGROTATE=true` to auto-rotate and compress logs daily.
@@ -132,7 +136,7 @@ docker logs shieldpm
 # Common causes:
 # - Port already in use → Change ports in compose.yaml
 # - Permission denied → Check volume ownership
-# - Database locked → Remove WAL files: rm /data/database.sqlite-wal
+# - Database locked → stop ShieldPM and take a backup; never delete WAL/SHM files from a live SQLite database
 ```
 
 ### Port Conflict
@@ -152,10 +156,10 @@ systemctl disable apache2
 
 ### Slow Dashboard / High CPU
 
-| Cause | Fix |
-| :--- | :--- |
-| Too many log entries | Enable `LOGROTATE=true` |
-| SQLite on large deployment | Migrate to MySQL/PostgreSQL |
+| Cause                        | Fix                              |
+| :--------------------------- | :------------------------------- |
+| Too many log entries         | Enable `LOGROTATE=true`          |
+| SQLite on large deployment   | Migrate to MySQL/PostgreSQL      |
 | Many concurrent SSL renewals | Stagger certificate expiry dates |
 
 ### Nginx Not Reloading
@@ -166,9 +170,20 @@ If config changes aren't taking effect:
 # Test the Nginx config manually:
 docker exec shieldpm nginx -t
 
-# Force reload:
-docker exec shieldpm nginx -s reload
+# Validate before any manual intervention:
+docker exec shieldpm nginx -t
 ```
+
+Normal UI mutations stage and validate the complete Nginx configuration before reload and restore the prior state on
+failure. A direct `nginx -s reload` bypasses that compensation path; use it only during a controlled recovery.
+
+### Initial setup token rejected
+
+- Confirm there is no existing active user; setup tokens work only for the first administrator.
+- Read `/data/shieldpm/initial-admin-setup-token` locally and enter the exact value in the wizard.
+- If `INITIAL_ADMIN_SETUP_TOKEN_FILE` is used, it must be a regular non-symlink file with mode `0600` or stricter.
+- Do not regenerate a token after a pending ownership claim exists; use the same configured token or restore the
+  consistent database/token state from backup.
 
 ---
 

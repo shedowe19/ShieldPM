@@ -34,7 +34,9 @@ describe("AnalyticsService aggregation upserts", () => {
 		mocks.onConflict.mockReturnValue({ merge: mocks.merge });
 		mocks.insert.mockReturnValue({ onConflict: mocks.onConflict });
 		mocks.query.mockReturnValue({ insert: mocks.insert });
-		mocks.transaction.mockImplementation(async (callback) => callback({}));
+		mocks.transaction.mockImplementation(async (callback) =>
+			callback({ raw: vi.fn((sql, bindings) => ({ bindings, sql })) }),
+		);
 	});
 
 	it("uses a non-null aggregation key for both global and host analytics rows", async () => {

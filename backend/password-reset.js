@@ -3,6 +3,7 @@
 // based on: https://github.com/jlesage/docker-nginx-proxy-manager/blob/796734a3f9a87e0b1561b47fd418f82216359634/rootfs/opt/nginx-proxy-manager/bin/reset-password
 
 import fs from "node:fs";
+import path from "node:path";
 import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 
@@ -13,52 +14,74 @@ Reset password of a ShieldPM user.
 
 Arguments:
   USER_EMAIL      Email address of the user to reset the password.
-  PASSWORD        Optional new password of the user. If not set, password is set to 'changeme'.\n`);
+  PASSWORD        New password (12 to 100 characters).\n`);
 	process.exit(1);
 }
 
 const args = process.argv.slice(2);
-const USER_EMAIL = args[0];
-const PASSWORD = args[1];
+const userEmail = args[0]?.trim().toLowerCase();
+const password = args[1];
 
-if (!USER_EMAIL && !PASSWORD) {
+if (!userEmail && !password) {
 	console.error("ERROR: User email address must be set.");
 	console.error("ERROR: Password must be set.");
 	usage();
 }
 
-if (!USER_EMAIL) {
+if (!userEmail) {
 	console.error("ERROR: User email address must be set.");
 	usage();
 }
 
-if (!PASSWORD) {
+if (!password) {
 	console.error("ERROR: Password must be set.");
+	usage();
+}
+
+if (password.length < 12 || password.length > 100) {
+	console.error("ERROR: Password must contain between 12 and 100 characters.");
 	usage();
 }
 
 async function run() {
-	if (fs.existsSync("/data/shieldpm/database.sqlite")) {
+	const databasePath = path.join(process.env.DATA_PATH || "/data", "shieldpm", "database.sqlite");
+	if (fs.existsSync(databasePath)) {
 		try {
-			const PASSWORD_HASH = await bcrypt.hash(PASSWORD, 13);
-			const db = new Database("/data/shieldpm/database.sqlite");
+			const passwordHash = await bcrypt.hash(password, 13);
+			const db = new Database(databasePath);
 
 			try {
-				const stmt = db.prepare(`
-					UPDATE auth
-					SET secret = ?
-					WHERE EXISTS (
-						SELECT *
-						FROM user
-						WHERE user.id = auth.user_id AND user.email = ?
-					)`);
+				const resetPassword = db.transaction(() => {
+					const user = db
+						.prepare("SELECT id FROM user WHERE lower(email) = ? AND is_deleted = 0 AND is_disabled = 0")
+						.get(userEmail);
+					if (!user) return false;
 
-				const result = stmt.run(PASSWORD_HASH, USER_EMAIL);
+					const timestamp = new Date().toISOString().replace("T", " ").replace("Z", "");
+					const result = db
+						.prepare(
+							"UPDATE auth SET secret = ?, modified_on = ? WHERE user_id = ? AND type = 'password' AND is_deleted = 0",
+						)
+						.run(passwordHash, timestamp, user.id);
+					if (result.changes !== 1) return false;
 
-				if (result.changes > 0) {
-					process.stdout.write(`Password for user ${USER_EMAIL} has been reset.\n`);
+					const hasSessions = db
+						.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'auth_sessions'")
+						.get();
+					if (hasSessions) {
+						db.prepare(
+							"UPDATE auth_sessions SET revoked_at = ?, revoked_reason = 'password_reset_cli' WHERE user_id = ? AND revoked_at IS NULL",
+						).run(timestamp, user.id);
+					}
+					return true;
+				});
+
+				if (resetPassword()) {
+					process.stdout.write(
+						`Password for user ${userEmail} has been reset and active sessions were revoked.\n`,
+					);
 				} else {
-					process.stdout.write(`No user found with email ${USER_EMAIL}.\n`);
+					process.stdout.write(`No active password user found with email ${userEmail}.\n`);
 				}
 			} finally {
 				db.close();

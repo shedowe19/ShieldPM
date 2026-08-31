@@ -15,8 +15,13 @@ const packageVersions = (lockfilePath, packageName) => {
 			selected = selector.test(line);
 			continue;
 		}
-		if (selected && line.trimStart().startsWith("version ")) {
-			versions.push(line.trim().split(" ", 2)[1].replaceAll('"', ""));
+		if (selected && /^\s+version(?::|\s)/.test(line)) {
+			versions.push(
+				line
+					.trim()
+					.replace(/^version(?::|\s+)\s*/, "")
+					.replaceAll('"', ""),
+			);
 			selected = false;
 		}
 	}

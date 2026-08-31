@@ -2,75 +2,51 @@
 
 ## Zweck
 
-Verwaltung von ShieldPM über den Telegram-Messenger mit AI-Unterstützung.
+ChatOps nimmt private Telegram-Nachrichten allow-gelisteter externer Benutzer entgegen und leitet sie mit den aktuellen
+Berechtigungen des Integration-Owners an den AI-Agenten weiter.
 
-## Kontext
+## Principal statt synthetischem JWT
 
-ChatOps ermöglicht die Steuerung von ShieldPM über einen Telegram-Bot. Der Bot nutzt den integrierten AI-Agenten für natürlichsprachliche Befehle.
+`backend/lib/integration-access.js` baut ein serverseitiges `Access`-Objekt, das Integration-ID, Owner-ID und stabile
+Telegram-User-ID bindet. Es erzeugt **kein** JWT/Bearer-Token und übernimmt keine vom Telegram-Text gelieferten
+Authorization-Claims.
+
+Vor jeder Nachricht werden live geprüft:
+
+- private Chat-Art und numerische Sender-ID;
+- Integration vorhanden, aktiviert und nicht gelöscht;
+- Owner vorhanden, aktiv und nicht gelöscht;
+- Sender weiterhin in `allowed_ids`;
+- aktuelle Owner-Rollen, Permissions und Visibility.
+
+Damit wirken Deaktivierung, Owner-Sperre oder Allowlist-Entzug sofort. Owner-Scope wird in Query-Modifiern angewendet;
+ChatOps kann weder fremde Objekte sehen noch den Principal wechseln.
+
+## Nachrichtenfluss
+
+1. `backend/internal/chat.js` verwaltet genau eine Telegraf-Instanz pro aktivierter Integration.
+2. Middleware validiert den Telegram-Principal und erzeugt den live Access-Context.
+3. `backend/internal/ai/executor.js` erhält denselben Context wie ein autorisierter API-Aufruf.
+4. Tool-Schemas, Capabilities, Owner-Grenzen, Limits und Confirmations gelten unverändert.
+5. Antworten werden für Telegram MarkdownV2 escaped; bei Parserfehler folgt ein Plain-Text-Fallback.
+
+## Secrets und Audit
+
+Bot-Token werden verschlüsselt gespeichert und weder im API-Response noch in Logs ausgegeben. Audit-Einträge ordnen
+Aktionen dem Integration-Owner zu und erhalten den Integration-/externen Principal-Kontext. Token bei Verdacht sofort
+über BotFather widerrufen und die Integration deaktivieren.
 
 ## Wichtige Dateien
 
-- `backend/internal/chat.js` (7 KB) — Telegram-Bot-Logik
-- `backend/models/chat_integration.js` (1.5 KB) — Konfigurationsmodell
-- `backend/routes/chat.js` (3 KB) — API-Routen
-
-## Verhalten
-
-- Bot läuft via `telegraf` im Backend-Prozess
-- Authentifizierung über Whitelist von Telegram User-IDs (`allowed_ids`)
-- Bot-Caching in `bots{}` Map — jede Integration wird als `Telegraf`-Instanz gecached, um Doppelstarts zu vermeiden
-- Leitet Nachrichten an den AI-Agenten weiter
-
-### smartEscape() — MarkdownV2-Escaping
-
-`smartEscape()` (in `chat.js`, ~Zeile 25) escapet Text für Telegram MarkdownV2, **aber bewahrt Inline-Code-Blöcke** (Backticks) und **Code-Fences** (```) :
-
-````javascript
-const smartEscape = (text) => {
-  const parts = text.split(/(`[^`]+`|```[\s\S]+?```)/g);
-  return parts
-    .map((part) => {
-      if (part.startsWith("`")) return part; // Code unverändert lassen
-      // Escape für MarkdownV2: _ * [ ] ( ) ~ > # + - = | { } . ! \ `
-      return part.replace(/([_*[\]()~>#+\-=|{}.!\\`])/g, "\\$1");
-    })
-    .join("");
-};
-````
-
-### ctx.shieldAccess — Automatische JWT-Synthese
-
-Der ChatOps-Bot synthetisiert einen temporären JWT-Token für jeden eingehenden Request:
-
-```javascript
-const generatedToken = jwt.sign(
-  { scope: ["user"], attrs: { id: integration.user_id } },
-  getPrivateKey(),
-  { algorithm: "RS256", expiresIn: "5m" },
-);
-ctx.shieldAccess = new access(generatedToken); // Echtes Access-Objekt mit .can()
-```
-
-Dies ermöglicht dem AI-Agenten echte Berechtigungsprüfungen durchzuführen (nicht nur simulierte), weil `access.token` gesetzt ist — wichtig für Audit-Logs und Prompt-Kontext.
-
-### Markdown-Fallback
-
-Beim Senden einer AI-Antwort:
-
-1. Versucht `smartEscape()` + `parse_mode: "MarkdownV2"`
-2. Bei `can't parse entities`-Fehler → Fallback auf reinen Text ohne Formatierung
-
-## Abhängigkeiten
-
-- `telegraf` — Telegram-Bot-Framework
-- `internal/ai/` — AI-Agent für Sprachverarbeitung
-- `internal/token.js` — JWT-Token-Erzeugung
-
-## Offene Fragen
-
-Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+- `backend/internal/chat.js`
+- `backend/lib/integration-access.js`
+- `backend/models/chat_integration.js`
+- `backend/routes/chat.js`
+- `backend/internal/ai/`
 
 ## Verwandte Seiten
 
 - [AI-Agent](./ai-agent.md)
-- [Modulübersicht](./README.md)
+- [Benutzer & Auth](./benutzer-auth.md)
+- [Audit Log](../verwaltung/audit-log.md)
+- [Security-Modernisierung](../entscheidungen/2026-08-31-security-modernisierung.md)

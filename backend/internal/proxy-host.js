@@ -1,8 +1,11 @@
+import crypto from "node:crypto";
 import _ from "lodash";
+import { transaction } from "objection";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
+import HostDomain from "../models/host_domain.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalAuditLog from "./audit-log.js";
 import internalCertificate from "./certificate.js";
@@ -11,9 +14,34 @@ import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 import internalOAuth2Proxy from "./oauth2-proxy.js";
+import internalTerminal from "./terminal.js";
 
 const omissions = () => {
-	return ["is_deleted", "owner.is_deleted"];
+	return ["is_deleted", "owner.is_deleted", "terminal_password", "terminal_private_key", "terminal_gateway_secret"];
+};
+
+const omitSensitiveHostData = (data) =>
+	_.omit(data, ["terminal_password", "terminal_private_key", "terminal_gateway_secret", "git_credentials"]);
+
+const restoreProxySnapshot = async (snapshot) => {
+	await transaction(proxyHostModel.knex(), async (trx) => {
+		const rowData = _.omit(snapshot.row, ["id", "created_on", "modified_on", "host_domains", "domain_names"]);
+		await proxyHostModel.query(trx).findById(snapshot.row.id).patch(rowData);
+		await HostDomain.query(trx).delete().where("proxy_host_id", snapshot.row.id);
+		for (const domain of snapshot.domains) {
+			await HostDomain.query(trx).insert({ proxy_host_id: snapshot.row.id, domain_name: domain.domain_name });
+		}
+	});
+};
+
+const runtimeFailure = (message, error, rollbackResults) => {
+	const failures = rollbackResults
+		.filter((result) => result.status === "rejected")
+		.map((result) => result.reason?.message || String(result.reason));
+	return new errs.ConfigurationError(
+		`${message}: ${error.message}${failures.length ? `; rollback errors: ${failures.join("; ")}` : ""}`,
+		error,
+	);
 };
 
 const escapeLike = (value) => value.replaceAll("!", "!!").replaceAll("%", "!%").replaceAll("_", "!_");
@@ -85,12 +113,18 @@ const internalProxyHost = {
 	 * @param   {string}  [data.git_credentials]
 	 * @param   {string}  [data.terminal_password]
 	 * @param   {string}  [data.terminal_private_key]
+	 * @param   {string}  [data.terminal_host]
+	 * @param   {number}  [data.terminal_port]
+	 * @param   {string}  [data.terminal_username]
+	 * @param   {string}  [data.terminal_auth_type]
+	 * @param   {string}  [data.terminal_host_key_fingerprint]
 	 * @param   {Array<Object>} [data.host_domains]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		let thisData = data;
+		let thisData = /** @type {any} */ (data);
 		const createCertificate = thisData.certificate_id === "new";
+		let createdCertificateId = null;
 
 		if (createCertificate) {
 			delete thisData.certificate_id;
@@ -126,11 +160,15 @@ const internalProxyHost = {
 
 		// Encrypt terminal credentials if present
 		if (thisData.forward_scheme === "terminal") {
-			if (thisData.terminal_password) {
+			await internalTerminal.validateHostConfiguration(thisData, { allowNewCertificate: createCertificate });
+			thisData.terminal_gateway_secret = encrypt(crypto.randomBytes(32).toString("base64url"));
+			if (thisData.terminal_auth_type === "password" && thisData.terminal_password) {
 				thisData.terminal_password = encrypt(thisData.terminal_password);
+				thisData.terminal_private_key = null;
 			}
-			if (thisData.terminal_private_key) {
+			if (thisData.terminal_auth_type === "key" && thisData.terminal_private_key) {
 				thisData.terminal_private_key = encrypt(thisData.terminal_private_key);
+				thisData.terminal_password = null;
 			}
 		}
 
@@ -143,16 +181,22 @@ const internalProxyHost = {
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
-			const cert = await internalCertificate.createQuickCertificate(access, thisData);
-			// update host with cert id
-			await internalProxyHost.update(
-				access,
-				{
-					id: row.id,
-					certificate_id: cert.id,
-				},
-				{ skip_configure: true },
-			);
+			try {
+				const cert = await internalCertificate.createQuickCertificate(access, thisData);
+				createdCertificateId = cert.id;
+				await proxyHostModel.query().findById(row.id).patch({ certificate_id: cert.id });
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					transaction(proxyHostModel.knex(), async (trx) => {
+						await HostDomain.query(trx).delete().where("proxy_host_id", row.id);
+						await proxyHostModel.query(trx).deleteById(row.id);
+					}),
+					createdCertificateId
+						? internalCertificate.delete(access, { id: createdCertificateId })
+						: Promise.resolve(),
+				]);
+				throw runtimeFailure("Proxy-host certificate creation failed", error, rollbackResults);
+			}
 		}
 
 		// re-fetch with cert
@@ -161,8 +205,21 @@ const internalProxyHost = {
 			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
 		});
 
-		// Configure nginx
-		await internalNginx.configure(proxyHostModel, "proxy_host", row);
+		// Configure nginx. A rejected runtime activation removes the newly created DB graph as compensation.
+		try {
+			await internalNginx.configure(proxyHostModel, "proxy_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				transaction(proxyHostModel.knex(), async (trx) => {
+					await HostDomain.query(trx).delete().where("proxy_host_id", row.id);
+					await proxyHostModel.query(trx).deleteById(row.id);
+				}),
+				createdCertificateId
+					? internalCertificate.delete(access, { id: createdCertificateId })
+					: Promise.resolve(),
+			]);
+			throw runtimeFailure("Proxy-host creation failed", error, rollbackResults);
+		}
 
 		// Audit log
 		thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
@@ -172,7 +229,7 @@ const internalProxyHost = {
 			action: "created",
 			object_type: "proxy-host",
 			object_id: row.id,
-			meta: thisData,
+			meta: omitSensitiveHostData(thisData),
 		});
 
 		// Trigger GitOps auto-push
@@ -217,12 +274,18 @@ const internalProxyHost = {
 	 * @param  {string}  [data.git_credentials]
 	 * @param  {string}  [data.terminal_password]
 	 * @param  {string}  [data.terminal_private_key]
+	 * @param  {string}  [data.terminal_host]
+	 * @param  {number}  [data.terminal_port]
+	 * @param  {string}  [data.terminal_username]
+	 * @param  {string}  [data.terminal_auth_type]
+	 * @param  {string}  [data.terminal_host_key_fingerprint]
 	 * @param  {Array<Object>} [data.host_domains]
 	 * @return {Promise}
 	 */
 	update: async (access, data, options = {}) => {
-		let thisData = data;
+		let thisData = /** @type {any} */ (data);
 		const create_certificate = thisData.certificate_id === "new";
+		let createdCertificateId = null;
 
 		if (create_certificate) {
 			delete thisData.certificate_id;
@@ -248,6 +311,9 @@ const internalProxyHost = {
 		}
 
 		let row = await internalProxyHost.get(access, { id: thisData.id });
+		const storedRow = await proxyHostModel.query().findById(thisData.id).where("is_deleted", 0);
+		const storedDomains = await HostDomain.query().where("proxy_host_id", thisData.id);
+		const snapshot = { row: storedRow.toJSON(), domains: storedDomains.map((domain) => domain.toJSON()) };
 		const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
 
 		if (row.id !== thisData.id) {
@@ -262,6 +328,7 @@ const internalProxyHost = {
 				domain_names: thisData.domain_names || row.domain_names,
 				meta: _.assign({}, row.meta, thisData.meta),
 			});
+			createdCertificateId = cert.id;
 			// update host with cert id
 			thisData.certificate_id = cert.id;
 		}
@@ -272,7 +339,7 @@ const internalProxyHost = {
 			{
 				domain_names: row.domain_names,
 			},
-			data,
+			thisData,
 		);
 
 		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
@@ -284,25 +351,46 @@ const internalProxyHost = {
 			delete thisData.git_credentials;
 		}
 
+		if (data.terminal_password && Buffer.byteLength(data.terminal_password, "utf8") > 4096) {
+			throw new errs.ValidationError("Terminal passwords cannot exceed 4096 bytes");
+		}
+		if (data.terminal_private_key && Buffer.byteLength(data.terminal_private_key, "utf8") > 65536) {
+			throw new errs.ValidationError("Terminal private keys cannot exceed 64 KiB");
+		}
+
 		// Encrypt terminal credentials if present (on update)
 		if (data.terminal_password) {
 			thisData.terminal_password = encrypt(data.terminal_password);
+		} else if (data.terminal_password === "") {
+			delete thisData.terminal_password;
 		}
 		if (data.terminal_private_key) {
 			thisData.terminal_private_key = encrypt(data.terminal_private_key);
+		} else if (data.terminal_private_key === "") {
+			delete thisData.terminal_private_key;
 		}
 
-		// Let's double check `backend/internal/proxy-host.js` old content.
-		// `.patch(thisData).then(utils.omitRow(omissions())).then((saved_row) => { ... })`
-		// If `saved_row` was `{}`, then `return saved_row` at the end would return empty object.
-
-		// Actually, I should use `patchAndFetchById` if I want the row, or just `patch` and then `get`.
-		// But since we are updating by ID, `patchAndFetchById` is best.
-		// But wait, the original code used `proxyHostModel.query().where({ id: thisData.id }).patch(thisData)`.
-		// This is definitely returning a count in SQLite/MySQL.
-
-		// Let's assume I should fetch the row again or return `row` with merged data.
-		// But for safety, I will use `patchAndFetchById`.
+		const effectiveData = _.assign({}, storedRow, thisData);
+		if (effectiveData.forward_scheme === "terminal" && !effectiveData.terminal_gateway_secret) {
+			thisData.terminal_gateway_secret = encrypt(crypto.randomBytes(32).toString("base64url"));
+			effectiveData.terminal_gateway_secret = thisData.terminal_gateway_secret;
+		}
+		await internalTerminal.validateHostConfiguration(effectiveData, { credentialsEncrypted: true });
+		if (effectiveData.forward_scheme === "terminal") {
+			if (effectiveData.terminal_auth_type === "password") thisData.terminal_private_key = null;
+			if (effectiveData.terminal_auth_type === "key") thisData.terminal_password = null;
+		} else if (storedRow.forward_scheme === "terminal") {
+			Object.assign(thisData, {
+				terminal_auth_type: null,
+				terminal_gateway_secret: null,
+				terminal_host: null,
+				terminal_host_key_fingerprint: null,
+				terminal_password: null,
+				terminal_port: null,
+				terminal_private_key: null,
+				terminal_username: null,
+			});
+		}
 
 		// Transform domain_names into host_domains relation objects for upsertGraph
 		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
@@ -313,14 +401,7 @@ const internalProxyHost = {
 			await proxyHostModel.query().upsertGraphAndFetch(/** @type {any} */ (thisData))
 		);
 		const _saved_row = utils.omitRow(omissions())(new_saved_row);
-
-		// Add to audit log
-		await internalAuditLog.add(access, {
-			action: "updated",
-			object_type: "proxy-host",
-			object_id: row.id,
-			meta: thisData,
-		});
+		await internalTerminal.revokeHost(row.id);
 
 		row = await internalProxyHost.get(access, {
 			id: thisData.id,
@@ -328,10 +409,39 @@ const internalProxyHost = {
 		});
 
 		if (!options.skip_configure) {
-			// Configure nginx
-			const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
-			row.meta = new_meta;
+			try {
+				const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
+				row.meta = new_meta;
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					restoreProxySnapshot(snapshot),
+					createdCertificateId
+						? internalCertificate.delete(access, { id: createdCertificateId })
+						: Promise.resolve(),
+				]);
+				if (rollbackResults[0].status === "fulfilled") {
+					rollbackResults.push(
+						...(await Promise.allSettled([
+							(async () => {
+								const restored = await internalProxyHost.get(access, {
+									id: snapshot.row.id,
+									expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
+								});
+								await internalNginx.configure(proxyHostModel, "proxy_host", restored);
+							})(),
+						])),
+					);
+				}
+				throw runtimeFailure("Proxy-host update failed", error, rollbackResults);
+			}
 		}
+
+		await internalAuditLog.add(access, {
+			action: "updated",
+			object_type: "proxy-host",
+			object_id: row.id,
+			meta: omitSensitiveHostData(thisData),
+		});
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("proxy-host");
@@ -412,18 +522,22 @@ const internalProxyHost = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await proxyHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					is_deleted: 1,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
-		await internalNginx.reload();
+		try {
+			await proxyHostModel
+				.query()
+				.where("id", row.id)
+				.patch(/** @type {any} */ ({ is_deleted: 1 }));
+			await internalTerminal.revokeHost(row.id);
+			await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				proxyHostModel
+					.query()
+					.where("id", row.id)
+					.patch(/** @type {any} */ ({ is_deleted: 0 })),
+			]);
+			throw runtimeFailure("Proxy-host deletion failed", error, rollbackResults);
+		}
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -456,7 +570,7 @@ const internalProxyHost = {
 		await access.can("proxy_hosts:update", data.id);
 		const row = await internalProxyHost.get(access, {
 			id: data.id,
-			expand: ["certificate", "owner", "access_list", "host_domains"],
+			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
 		});
 
 		if (!row?.id) {
@@ -466,14 +580,20 @@ const internalProxyHost = {
 			throw new errs.ValidationError("Host is already enabled");
 		}
 
+		const storedRow = await proxyHostModel.query().findById(row.id).where("is_deleted", 0);
+		await internalTerminal.validateHostConfiguration({ ...storedRow, enabled: 1 });
 		row.enabled = 1;
 
-		await proxyHostModel.query().where("id", row.id).patch({
-			enabled: 1,
-		});
-
-		// Configure nginx
-		await internalNginx.configure(proxyHostModel, "proxy_host", row);
+		try {
+			await proxyHostModel.query().where("id", row.id).patch({ enabled: 1 });
+			await internalTerminal.revokeHost(row.id);
+			await internalNginx.configure(proxyHostModel, "proxy_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				proxyHostModel.query().where("id", row.id).patch({ enabled: 0 }),
+			]);
+			throw runtimeFailure("Proxy-host enable failed", error, rollbackResults);
+		}
 
 		// Start Git Deploy polling if enabled
 		if (row.git_sync_enabled && row.git_repo_url) {
@@ -511,13 +631,16 @@ const internalProxyHost = {
 
 		row.enabled = 0;
 
-		await proxyHostModel.query().where("id", row.id).patch({
-			enabled: 0,
-		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", row);
-		await internalNginx.reload();
+		try {
+			await proxyHostModel.query().where("id", row.id).patch({ enabled: 0 });
+			await internalTerminal.revokeHost(row.id);
+			await internalNginx.deleteConfig("proxy_host", row);
+		} catch (error) {
+			const rollbackResults = await Promise.allSettled([
+				proxyHostModel.query().where("id", row.id).patch({ enabled: 1 }),
+			]);
+			throw runtimeFailure("Proxy-host disable failed", error, rollbackResults);
+		}
 
 		// Stop Git Deploy polling
 		internalGitDeploy.stopPolling(data.id);
@@ -595,6 +718,9 @@ const internalProxyHost = {
 				// /data/websites/host-N paths expose server filesystem layout to users
 				if (row.forward_host?.startsWith("/data/websites/")) {
 					row.forward_host = "(managed)";
+				}
+				for (const field of ["terminal_password", "terminal_private_key", "terminal_gateway_secret"]) {
+					delete row[field];
 				}
 				return row;
 			});

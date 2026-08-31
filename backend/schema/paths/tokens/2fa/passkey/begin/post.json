@@ -15,7 +15,8 @@
 						"pending_token": {
 							"description": "Short-lived 2FA pending token issued by POST /tokens when 2FA is required",
 							"type": "string",
-							"minLength": 1
+							"minLength": 16,
+							"maxLength": 16384
 						}
 					},
 					"required": [
@@ -42,9 +43,9 @@
 									"timeout": 60000,
 									"rpId": "example.com",
 									"allowCredentials": [],
-									"userVerification": "preferred"
+									"userVerification": "required"
 								},
-								"challenge_id": "uuid-of-stored-challenge"
+								"challenge_id": "opaque-server-challenge-bearer"
 							}
 						}
 					},
@@ -56,8 +57,10 @@
 								"type": "object"
 							},
 							"challenge_id": {
-								"description": "Server-side identifier for the stored challenge, needed to complete authentication",
-								"type": "string"
+								"description": "Opaque, session-bound, single-use server challenge bearer",
+								"type": "string",
+								"minLength": 43,
+								"maxLength": 256
 							}
 						},
 						"required": [

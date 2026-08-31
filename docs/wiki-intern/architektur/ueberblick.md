@@ -2,120 +2,62 @@
 
 ## Zweck
 
-Beschreibung der Gesamtarchitektur von ShieldPM und wie die einzelnen Schichten zusammenspielen.
-
-## Kontext
-
-ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurationsengine als zentralem Integrationspunkt.
+ShieldPM ist eine React-/Express-Anwendung mit Objection/Knex-Persistenz und einer transaktional behandelten
+Nginx-Konfigurationsengine. Nginx terminiert öffentliche Verbindungen und spricht intern über
+`/run/shieldpm.sock` mit dem Backend.
 
 ## Schichten
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend (React)                         │
-│  React 19 + TypeScript + Vite 8 + Tailwind + shadcn/ui      │
-│  State: React Query (TanStack)                               │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ REST API
-┌──────────────────────────▼──────────────────────────────────┐
-│                     Backend (Node.js)                         │
-│  Express.js 5 + Objection.js/Knex.js                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │ Routes   │  │ Internal │  │ Models   │  │ Templates│    │
-│  │ (API)    │→ │ (Logic)  │→ │ (ORM)    │  │ (EJS)    │    │
-│  └──────────┘  └─────┬────┘  └──────────┘  └──────────┘    │
-│                       │                                      │
-│              ┌────────▼────────┐                             │
-│              │   nginx.js      │                             │
-│              │ (Config-Engine) │                             │
-│              └────────┬────────┘                             │
-└───────────────────────┼─────────────────────────────────────┘
-                        │ Schreibt .conf Dateien
-┌───────────────────────▼─────────────────────────────────────┐
-│                     Nginx (OpenResty)                         │
-│  HTTP/3 + ModSecurity + CrowdSec (Lua) + OpenAppSec          │
-│  /data/nginx/*.conf                                          │
-└─────────────────────────────────────────────────────────────┘
-```
+| Schicht          | Verantwortung                                       | Vertrauensgrenze                                          |
+| ---------------- | --------------------------------------------------- | --------------------------------------------------------- |
+| React/TypeScript | UI, Query-Cache, i18n, Setup-/Auth-Flows            | Browser ist untrusted; Server validiert erneut            |
+| Express/Node 24  | Auth, Schema, RBAC, Services, Hintergrundarbeit     | `TRUST_PROXY` bestimmt vertrauenswürdige Forwarded-Header |
+| Objection/Knex   | SQLite/MySQL/PostgreSQL, Migrationen, Transaktionen | Owner-/Tenant-Filter vor Paging/Mutation                  |
+| Nginx/OpenResty  | TLS, Proxy, WAF/IPS, generierte Hosts               | Candidate wird staged und mit `nginx -t` validiert        |
+| Persistenz       | `/data`, externe DB, verschlüsselte Schlüssel       | `/run` ist ephemer; Secrets nicht in GitOps               |
 
-## Technologie-Stack
+## Mutationsfluss
 
-### Backend
+1. Route validiert Body/Query und authentifiziert den Principal.
+2. Internal-Service prüft Capability und Ownership.
+3. Datenbankänderung und erforderliche Runtime-Dateien werden vorbereitet.
+4. Nginx rendert den vollständigen Kandidaten in Staging und führt `nginx -t` aus.
+5. Erst ein gültiger Kandidat wird aktiviert/reloaded.
+6. Fehler kompensieren DB und Runtime-Dateien; Audit protokolliert das Ergebnis.
 
-| Technologie    | Version | Zweck                              |
-| -------------- | ------- | ---------------------------------- |
-| Node.js        | v26+    | Runtime                            |
-| Express.js     | v5.2    | Web-Framework                      |
-| Objection.js   | v3.1    | ORM                                |
-| Knex.js        | v3.2    | Query-Builder / Migrationen        |
-| better-sqlite3 | v12.9   | SQLite-Treiber (Entwicklung)       |
-| mysql2         | v3.22   | MySQL/MariaDB-Treiber (Produktion) |
-| pg             | v8.20   | PostgreSQL-Treiber (Produktion)    |
+GitOps erweitert dies um ein fsync-gesichertes Recovery-Journal. Analytics verwendet einen eigenen fsync-NDJSON-Spool
+plus transaktionales Ledger. Der Shutdown stoppt Produzenten, drainiert In-Flight-Arbeit und schließt Ressourcen in
+definierter Reihenfolge.
 
-### Frontend
+## Laufzeit und Build
 
-| Technologie          | Version | Zweck                   |
-| -------------------- | ------- | ----------------------- |
-| React                | v19.2   | UI-Framework            |
-| TypeScript           | v5.9    | Typsicherheit           |
-| Vite                 | v8.0    | Build-Tool              |
-| TanStack React Query | v5.100  | Server-State-Management |
-| Tailwind CSS         | v3.4    | Styling                 |
-| shadcn/ui (Radix)    | aktuell | UI-Komponenten          |
-| react-router-dom     | v7.14   | Routing                 |
-| Framer Motion        | v12.38  | Animationen             |
-| i18next              | v25.10  | Internationalisierung   |
+- Node.js 24 LTS, Corepack, repository-pinned Yarn 4, immutable Lockfiles
+- Backend ESM/Express, Objection/Knex; SQLite als unterstützter Standard
+- Frontend React/TypeScript/Vite, TanStack Query, Tailwind/Radix
+- Docker Multi-Stage auf Debian Trixie; Native/LXC über signierte NodeSource-APT-Quelle
+- CI prüft zusätzlich eine neuere Node-Runtime und SQLite/MySQL/PostgreSQL-Migrationen
 
-### Infrastruktur
+## Wichtige Pfade
 
-| Technologie       | Zweck                      |
-| ----------------- | -------------------------- |
-| Nginx (OpenResty) | Reverse Proxy / Web Server |
-| ModSecurity       | WAF (CRS v4)               |
-| CrowdSec          | IPS (Lua Bouncer)          |
-| OpenAppSec        | AI WAF                     |
-| Anubis            | PoW-Gate gegen Bots        |
-| OAuth2-Proxy      | SSO-Integration            |
+| Pfad                                       | Inhalt                                 |
+| ------------------------------------------ | -------------------------------------- |
+| `/data/shieldpm/database.sqlite`           | Standarddatenbank                      |
+| `/data/shieldpm/keys.json`                 | JWT-/Verschlüsselungsschlüssel         |
+| `/data/shieldpm/analytics-spool.ndjson`    | Durable Analytics-Spool                |
+| `/data/shieldpm/initial-admin-setup-token` | One-Time-Ownership-Token bis zum Claim |
+| `/data/nginx/`                             | generierte Configs und Nginx-Logs      |
+| `/data/gitops/`                            | lokaler Snapshot/Recovery-Journal      |
+| `/run/shieldpm.sock`                       | ephemerer Backend-Unix-Socket          |
 
-## Verzeichnisstruktur
+## Repository-Grenze
 
-```
-ShieldPM/
-├── backend/              # Node.js Backend
-│   ├── internal/         # Business-Logik (36+ Module)
-│   │   └── ai/          # AI-Agent (executor, providers, tools, prompt)
-│   ├── models/           # Objection.js Modelle (27 Dateien)
-│   ├── routes/           # Express-Routen (16 Dateien + nginx/)
-│   ├── migrations/       # Knex-Migrationen (74 Dateien)
-│   ├── templates/        # EJS Nginx-Templates (9 Dateien)
-│   ├── schema/           # OpenAPI/Swagger Schemas
-│   ├── lib/              # Hilfsbibliotheken
-│   └── test/             # Tests
-├── frontend/             # React Frontend
-│   └── src/
-│       ├── pages/        # Seiten (13 Bereiche)
-│       ├── components/   # Wiederverwendbare Komponenten
-│       ├── api/          # React Query Hooks
-│       ├── locale/       # i18n (13 Sprachen)
-│       ├── modals/       # Dialog-Komponenten
-│       └── modules/      # Feature-Module
-├── rootfs/               # Docker-Overlay
-│   ├── .env.example      # Umgebungsvariablen-Referenz
-│   ├── usr/local/bin/    # Startup-Scripts
-│   └── etc/              # System-Konfiguration
-├── scripts/
-│   └── install.sh        # Native/LXC-Installer
-├── docs/
-│   └── wiki/             # Benutzerdokumentation (englisch)
-├── caddy/                # Caddy-Konfiguration
-├── Dockerfile            # Multi-Stage Build
-├── compose.yaml          # Docker Compose (vollständig)
-└── compose.easy.yaml     # Docker Compose (einfach)
-```
+`ShieldPM` enthält App, Templates, Installer und Rootfs-Overlay. Kompilierte Nginx-Module und das Base-Image gehören zu
+`shieldpm-nginx`. Ein bewegliches Base-Image kann hier nicht seriös digest-gepinnt werden, bis das externe Repository
+einen unterstützten Digest veröffentlicht.
 
 ## Verwandte Seiten
 
 - [Datenfluss](./datenfluss.md)
 - [Module](./module.md)
 - [Externe Abhängigkeiten](./externe-abhaengigkeiten.md)
-- [Projekt-Überblick](../projekt/ueberblick.md)
+- [Security-Modernisierung](../entscheidungen/2026-08-31-security-modernisierung.md)

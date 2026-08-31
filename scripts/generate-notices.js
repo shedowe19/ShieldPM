@@ -1,84 +1,137 @@
-const { execFileSync } = require("node:child_process");
+"use strict";
+
 const fs = require("node:fs");
 const path = require("node:path");
 
-const HEADER = `# Third-Party Notices
+const PROJECTS = [
+	{ label: "Backend", directory: "backend" },
+	{ label: "Frontend", directory: "frontend" },
+];
 
-This project (ShieldPM) incorporates the following third-party components. The licenses are extracted directly from the NPM Registry API for the specified versions. This list includes both production dependencies and development dependencies from the backend and frontend package.json files.
+const normalizeLicense = (manifest) => {
+	const value = manifest.license ?? manifest.licenses;
+	const values = Array.isArray(value) ? value : [value];
+	const licenses = values
+		.map((entry) => (typeof entry === "string" ? entry : entry?.type))
+		.filter((entry) => typeof entry === "string" && entry.trim())
+		.map((entry) => entry.trim());
 
-For verification, each entry links to the NPM package page (e.g., https://www.npmjs.com/package/<package>/v/<version>), where the license can be confirmed in the package metadata. Note: Transitive dependencies (dependencies of dependencies) are not included, as this focuses on direct dependencies.
-`;
-
-const FOOTER = `
-The above information is based solely on the NPM Registry data as of ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. For full license texts, refer to the respective package repositories or the NPM links provided.
-`;
-
-function getLicenses(cwd, production) {
-	const type = production ? "--production" : "--development";
-	const args = ["--start", ".", "--json", "--direct", type];
-
-	process.stdout.write(`Running in ${cwd}: license-checker ${args.join(" ")}\n`);
-	const output = execFileSync("license-checker", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-	return JSON.parse(output);
-}
-
-function formatDeps(deps) {
-	const lines = [];
-	const sortedKeys = Object.keys(deps).sort();
-
-	for (const key of sortedKeys) {
-		const pkg = deps[key];
-		// Key is usually "name@version"
-		const lastAt = key.lastIndexOf("@");
-		const name = key.substring(0, lastAt);
-		const version = key.substring(lastAt + 1);
-
-		let license = pkg.licenses;
-		if (Array.isArray(license)) license = license.join(" OR ");
-
-		const npmLink = `https://www.npmjs.com/package/${name}/v/${version}`;
-		lines.push(`- ${key} - ${license}[](${npmLink})`);
+	if (licenses.length === 0) {
+		throw new Error(`Installed package ${manifest.name}@${manifest.version} has no declared license`);
 	}
-	return lines.join("\n");
+
+	const license = [...new Set(licenses)].join(" OR ");
+	if (/\r|\n|[\[\]]/.test(license)) {
+		throw new Error(`Installed package ${manifest.name}@${manifest.version} has an invalid license field`);
+	}
+	return license;
+};
+
+const readJson = (filename) => {
+	try {
+		return JSON.parse(fs.readFileSync(filename, "utf8"));
+	} catch (error) {
+		throw new Error(`Unable to read ${filename}: ${error.message}`, { cause: error });
+	}
+};
+
+const installedManifestPath = (projectDirectory, packageName) => {
+	const nameParts = packageName.split("/");
+	if (
+		nameParts.some((part) => !part || part === "." || part === "..") ||
+		(nameParts.length !== 1 && !(nameParts.length === 2 && packageName.startsWith("@")))
+	) {
+		throw new Error(`Invalid dependency name in package.json: ${packageName}`);
+	}
+	return path.join(projectDirectory, "node_modules", ...nameParts, "package.json");
+};
+
+const collectDependencies = (projectDirectory, section) => {
+	const packageJsonPath = path.join(projectDirectory, "package.json");
+	const projectManifest = readJson(packageJsonPath);
+	const declaredDependencies = projectManifest[section] ?? {};
+
+	return Object.keys(declaredDependencies)
+		.sort((left, right) => left.localeCompare(right, "en"))
+		.map((declaredName) => {
+			const manifestPath = installedManifestPath(projectDirectory, declaredName);
+			const installedManifest = readJson(manifestPath);
+			if (installedManifest.name !== declaredName || typeof installedManifest.version !== "string") {
+				throw new Error(`Installed manifest does not match direct dependency ${declaredName}: ${manifestPath}`);
+			}
+
+			return {
+				name: declaredName,
+				version: installedManifest.version,
+				license: normalizeLicense(installedManifest),
+			};
+		});
+};
+
+const formatDependencies = (dependencies) =>
+	dependencies
+		.map(({ name, version, license }) => {
+			const npmUrl = `https://www.npmjs.com/package/${name}/v/${version}`;
+			return `- [${name}@${version}](${npmUrl}) — ${license}`;
+		})
+		.join("\n");
+
+const buildNotices = (repositoryRoot) => {
+	const sections = PROJECTS.map(({ label, directory }) => {
+		const projectDirectory = path.join(repositoryRoot, directory);
+		const production = formatDependencies(collectDependencies(projectDirectory, "dependencies"));
+		const development = formatDependencies(collectDependencies(projectDirectory, "devDependencies"));
+		return `## ${label} dependencies
+
+### Production
+
+${production || "_No direct production dependencies._"}
+
+### Development
+
+${development || "_No direct development dependencies._"}`;
+	});
+
+	return `# Third-party notices
+
+ShieldPM uses the direct third-party packages listed below. This file is generated deterministically from each locked installation and the package metadata installed in \`node_modules\`. Transitive packages remain governed by their own license files in the distributed dependency tree.
+
+${sections.join("\n\n")}
+
+For complete license texts and notices, follow the package links and inspect the corresponding distributed package files.
+`;
+};
+
+const writeNotices = (repositoryRoot, outputPath = path.join(repositoryRoot, "THIRD-PARTY-NOTICES.md")) => {
+	const content = buildNotices(repositoryRoot);
+	const temporaryPath = `${outputPath}.tmp-${process.pid}`;
+
+	try {
+		fs.writeFileSync(temporaryPath, content, { encoding: "utf8", mode: 0o644, flag: "wx" });
+		fs.renameSync(temporaryPath, outputPath);
+	} catch (error) {
+		try {
+			fs.unlinkSync(temporaryPath);
+		} catch (cleanupError) {
+			if (cleanupError.code !== "ENOENT") {
+				error.cleanupError = cleanupError;
+			}
+		}
+		throw error;
+	}
+
+	return outputPath;
+};
+
+if (require.main === module) {
+	try {
+		const repositoryRoot = path.resolve(__dirname, "..");
+		const outputPath = writeNotices(repositoryRoot);
+		process.stdout.write(`Wrote ${path.relative(repositoryRoot, outputPath)} from locked direct dependencies.\n`);
+	} catch (error) {
+		process.stderr.write(`Failed to generate third-party notices: ${error.message}\n`);
+		process.exitCode = 1;
+	}
 }
 
-function main() {
-	const backendPath = path.resolve(__dirname, "../backend");
-	const frontendPath = path.resolve(__dirname, "../frontend");
-
-	process.stdout.write("Fetching Backend Production...\n");
-	const backProd = getLicenses(backendPath, true);
-	process.stdout.write("Fetching Backend Development...\n");
-	const backDev = getLicenses(backendPath, false);
-
-	process.stdout.write("Fetching Frontend Production...\n");
-	const frontProd = getLicenses(frontendPath, true);
-	process.stdout.write("Fetching Frontend Development...\n");
-	const frontDev = getLicenses(frontendPath, false);
-
-	let content = HEADER;
-
-	content += "\n## Backend Dependencies (from backend/package.json)\n\n";
-	content += "### Production Dependencies\n";
-	content += formatDeps(backProd);
-	content += "\n\n### Development Dependencies\n";
-	content += formatDeps(backDev);
-
-	content += "\n\n## Frontend Dependencies (from frontend/package.json)\n\n";
-	content += "### Production Dependencies\n";
-	content += formatDeps(frontProd);
-	content += "\n\n### Development Dependencies\n";
-	content += formatDeps(frontDev);
-
-	content += `\n${FOOTER}`;
-
-	fs.writeFileSync(path.resolve(__dirname, "../THIRD-PARTY-NOTICES.md"), content);
-	process.stdout.write("Successfully wrote THIRD-PARTY-NOTICES.md\n");
-}
-
-try {
-	main();
-} catch (error) {
-	process.stderr.write(`Failed to generate third-party notices: ${error.message}\n`);
-	process.exitCode = 1;
-}
+module.exports = { buildNotices, collectDependencies, writeNotices };

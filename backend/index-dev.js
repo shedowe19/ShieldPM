@@ -1,10 +1,5 @@
 #!/usr/bin/env node
 
-process.env.DATA_PATH = `${process.cwd()}/data`;
-process.env.INITIAL_ADMIN_EMAIL = "admin@example.com";
-process.env.INITIAL_ADMIN_PASSWORD = "changeme";
-process.env.INITIAL_DEFAULT_PAGE = "congratulations";
-
 import app from "./app.js";
 import analyticsService from "./internal/analytics.js";
 import internalCertificate from "./internal/certificate.js";
@@ -63,17 +58,29 @@ async function start() {
 	try {
 		logger.info("Starting DB Migration...");
 		await migrateUp();
-		await analyticsService.init();
+		const analyticsInitialized = await analyticsService.init();
+		if (!analyticsInitialized) throw new Error("Analytics durable spool initialization failed");
 		logger.info("Starting Setup...");
 		await setup();
 		logger.info("Compiling Schema...");
 		await getCompiledSchema();
 
 		const port = 3000;
-		app.listen(port, () => {
+		const server = app.listen(port, () => {
 			logger.info(`Backend listening on port ${port}`);
-			logger.info(`Admin: ${process.env.INITIAL_ADMIN_EMAIL} / ${process.env.INITIAL_ADMIN_PASSWORD}`);
+			logger.info("Complete the one-time ownership claim in the setup wizard before signing in.");
 		});
+		let stopping = false;
+		const shutdown = async () => {
+			if (stopping) return;
+			stopping = true;
+			await analyticsService.stop();
+			await new Promise((resolve, reject) => {
+				server.close((err) => (err ? reject(err) : resolve()));
+			});
+		};
+		process.once("SIGTERM", () => void shutdown());
+		process.once("SIGINT", () => void shutdown());
 	} catch (err) {
 		logger.error("Startup Error", err);
 		process.exit(1);

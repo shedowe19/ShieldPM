@@ -1,0 +1,59 @@
+{
+    "tags": [
+        "AI"
+    ],
+    "summary": "Confirm an exact pending AI action",
+    "operationId": "confirmAiAction",
+    "requestBody": {
+        "required": true,
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "confirmation_token"
+                    ],
+                    "properties": {
+                        "confirmation_token": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "responses": {
+        "200": {
+            "description": "Confirmed action result",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                            "role",
+                            "content"
+                        ],
+                        "properties": {
+                            "role": {
+                                "type": "string",
+                                "const": "assistant"
+                            },
+                            "content": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "jwt": []
+        }
+    ]
+}

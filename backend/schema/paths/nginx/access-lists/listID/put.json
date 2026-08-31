@@ -60,6 +60,7 @@
 						},
 						"mtls_certificate": {
 							"type": "string",
+							"maxLength": 1048576,
 							"description": "The CA certificate content for mTLS verification"
 						},
 						"mtls_use_internal": {

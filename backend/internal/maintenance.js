@@ -16,6 +16,20 @@ const internalMaintenance = {
 		internalMaintenance.interval = setInterval(internalMaintenance.processMaintenance, 30 * 1000);
 	},
 
+	stopTimer: async () => {
+		if (internalMaintenance.interval) {
+			clearInterval(internalMaintenance.interval);
+			internalMaintenance.interval = null;
+		}
+		for (const timers of internalMaintenance.scheduledTimers.values()) {
+			for (const timer of timers) clearTimeout(timer);
+		}
+		internalMaintenance.scheduledTimers.clear();
+		while (internalMaintenance.intervalProcessing) {
+			await new Promise((resolve) => setTimeout(() => resolve(undefined), 25));
+		}
+	},
+
 	/**
 	 * Schedule precise timers for a specific host
 	 */

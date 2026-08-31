@@ -1,5 +1,7 @@
 import { execSync, spawn } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
+import { dirname } from "node:path";
 import ipaddr from "ipaddr.js";
 import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
@@ -13,6 +15,51 @@ const serverKeyFile = `${wgDataDir}/server_private.key`;
 const serverPubKeyFile = `${wgDataDir}/server_public.key`;
 
 const WG_INTERFACE = "wg0";
+const WG_KEY_PATTERN = /^[A-Za-z0-9+/]{43}=$/;
+let wireguardMutationTail = Promise.resolve();
+let serverKeysPromise = null;
+
+const withWireguardMutationLock = async (callback) => {
+	const previous = wireguardMutationTail;
+	let release;
+	wireguardMutationTail = new Promise((resolve) => {
+		release = resolve;
+	});
+	await previous;
+	try {
+		return await callback();
+	} finally {
+		release();
+	}
+};
+
+const runtimeFailure = (message, error, rollbackResults) => {
+	const failures = rollbackResults
+		.filter((result) => result.status === "rejected")
+		.map((result) => result.reason?.message || String(result.reason));
+	return new errs.ConfigurationError(
+		`${message}: ${error.message}${failures.length ? `; rollback errors: ${failures.join("; ")}` : ""}`,
+		error,
+	);
+};
+
+const writeAtomic = async (filename, content, mode) => {
+	await fs.promises.mkdir(dirname(filename), { recursive: true, mode: 0o700 });
+	const stage = `${filename}.stage-${crypto.randomUUID()}`;
+	const handle = await fs.promises.open(stage, "wx", mode);
+	try {
+		await handle.writeFile(content, "utf8");
+		await handle.sync();
+	} finally {
+		await handle.close();
+	}
+	try {
+		await fs.promises.rename(stage, filename);
+	} catch (error) {
+		await fs.promises.unlink(stage).catch(() => {});
+		throw error;
+	}
+};
 
 const firewallCommands = {
 	postUp: [
@@ -79,6 +126,81 @@ const hasControlCharacters = (value) => {
 	return false;
 };
 
+const validateWireguardKey = (value, field) => {
+	if (typeof value !== "string" || !WG_KEY_PATTERN.test(value)) {
+		throw new errs.ConfigurationError(`WireGuard ${field} is invalid.`);
+	}
+	return value;
+};
+
+const validateCidrList = (value, field) => {
+	if (typeof value !== "string" || !value || value.length > 2048 || hasControlCharacters(value)) {
+		throw new errs.ValidationError(`WireGuard ${field} must be a bounded CIDR list.`);
+	}
+	const entries = value.split(",").map((entry) => entry.trim());
+	if (!entries.length || entries.length > 32 || entries.some((entry) => !entry)) {
+		throw new errs.ValidationError(`WireGuard ${field} supports 1-32 CIDRs.`);
+	}
+	for (const entry of entries) {
+		try {
+			ipaddr.parseCIDR(entry);
+		} catch {
+			throw new errs.ValidationError(`WireGuard ${field} contains an invalid CIDR.`);
+		}
+	}
+	return entries.join(", ");
+};
+
+const validateDnsList = (value) => {
+	if (value === null || value === "") return value;
+	if (typeof value !== "string" || value.length > 512 || hasControlCharacters(value)) {
+		throw new errs.ValidationError("WireGuard DNS must be a bounded IP-address list.");
+	}
+	const entries = value.split(",").map((entry) => entry.trim());
+	if (!entries.length || entries.length > 8 || entries.some((entry) => !ipaddr.isValid(entry))) {
+		throw new errs.ValidationError("WireGuard DNS supports 1-8 IP addresses.");
+	}
+	return entries.join(", ");
+};
+
+const validatePeerInput = (data) => {
+	if (data.name !== undefined) {
+		if (
+			typeof data.name !== "string" ||
+			!data.name.trim() ||
+			data.name.length > 255 ||
+			hasControlCharacters(data.name)
+		) {
+			throw new errs.ValidationError("WireGuard peer name must be 1-255 characters without controls.");
+		}
+	}
+	if (data.description !== undefined && data.description !== null) {
+		if (
+			typeof data.description !== "string" ||
+			data.description.length > 1024 ||
+			hasControlCharacters(data.description)
+		) {
+			throw new errs.ValidationError("WireGuard peer description is invalid.");
+		}
+	}
+	if (data.allowed_ips !== undefined) data.allowed_ips = validateCidrList(data.allowed_ips, "allowed_ips");
+	if (data.dns !== undefined) data.dns = validateDnsList(data.dns);
+	if (
+		data.persistent_keepalive !== undefined &&
+		(!Number.isInteger(data.persistent_keepalive) ||
+			data.persistent_keepalive < 0 ||
+			data.persistent_keepalive > 65535)
+	) {
+		throw new errs.ValidationError("WireGuard persistent_keepalive must be an integer from 0 to 65535.");
+	}
+	return data;
+};
+
+/**
+ * @param {string} value
+ * @param {string} field
+ * @returns {[import("ipaddr.js").IPv4, number]}
+ */
 const validateIpv4Cidr = (value, field) => {
 	if (typeof value !== "string" || value.trim() !== value || hasControlCharacters(value)) {
 		throw new errs.ValidationError(`WireGuard ${field} must be an IPv4 CIDR.`);
@@ -139,6 +261,15 @@ const validateWireguardSettings = (data, { requireValues = false } = {}) => {
 	const subnet = data.subnet === undefined ? null : validateIpv4Cidr(data.subnet, "subnet");
 	const serverAddress =
 		data.server_address === undefined ? null : validateIpv4Cidr(data.server_address, "server_address");
+	if (subnet && subnet[0].toByteArray()[3] !== 0) {
+		throw new errs.ValidationError("WireGuard subnet must use the /24 network address ending in .0.");
+	}
+	if (serverAddress) {
+		const hostOctet = serverAddress[0].toByteArray()[3];
+		if (hostOctet === 0 || hostOctet === 255) {
+			throw new errs.ValidationError("WireGuard server_address must be a usable host address.");
+		}
+	}
 	if (subnet && serverAddress && (subnet[1] !== serverAddress[1] || !serverAddress[0].match(subnet))) {
 		throw new errs.ValidationError("WireGuard server_address must belong to the configured subnet.");
 	}
@@ -258,11 +389,13 @@ const isWgAvailable = () => {
 
 /**
  * Generate a WireGuard key pair
- * @returns {{ privateKey: string, publicKey: string }}
+ * @returns {Promise<{ privateKey: string, publicKey: string }>}
  */
 const generateKeyPair = async () => {
 	const privateKey = exec("wg genkey");
 	const publicKey = await execStdin("wg pubkey", privateKey);
+	validateWireguardKey(privateKey, "generated private key");
+	validateWireguardKey(publicKey, "generated public key");
 	return { privateKey, publicKey };
 };
 
@@ -271,7 +404,7 @@ const generateKeyPair = async () => {
  * @returns {string}
  */
 const generatePresharedKey = () => {
-	return exec("wg genpsk");
+	return validateWireguardKey(exec("wg genpsk"), "generated preshared key");
 };
 
 /**
@@ -279,9 +412,10 @@ const generatePresharedKey = () => {
  * @param {string} subnet
  * @returns {Promise<string>}
  */
-const getNextAvailableIP = async (subnet) => {
+const getNextAvailableIP = async (subnet, serverAddress) => {
 	const peers = await WireguardPeer.query().where("is_deleted", 0);
 	const usedIPs = new Set(peers.map((p) => p.client_address.split("/")[0]));
+	usedIPs.add(serverAddress.split("/")[0]);
 	const base = getSubnetBase(subnet);
 
 	// Start from .2 (.1 is the server)
@@ -291,23 +425,33 @@ const getNextAvailableIP = async (subnet) => {
 			return `${ip}/32`;
 		}
 	}
-	throw new Error("No available IPs in WireGuard subnet");
+	throw new errs.ConfigurationError("No available IPs in WireGuard subnet");
 };
 
 /**
  * Ensure the WG data directory and server keys exist
  */
 const ensureServerKeys = async () => {
-	if (!fs.existsSync(wgDataDir)) {
-		fs.mkdirSync(wgDataDir, { recursive: true });
-	}
+	if (serverKeysPromise) return await serverKeysPromise;
+	serverKeysPromise = (async () => {
+		await fs.promises.mkdir(wgDataDir, { recursive: true, mode: 0o700 });
+		if (fs.existsSync(serverKeyFile)) {
+			validateWireguardKey(fs.readFileSync(serverKeyFile, "utf8").trim(), "server private key");
+			return;
+		}
 
-	if (!fs.existsSync(serverKeyFile)) {
 		logger.info("WireGuard: Generating new server key pair...");
 		const { privateKey, publicKey } = await generateKeyPair();
-		fs.writeFileSync(serverKeyFile, privateKey, { mode: 0o600 });
-		fs.writeFileSync(serverPubKeyFile, publicKey, { mode: 0o644 });
+		validateWireguardKey(privateKey, "server private key");
+		validateWireguardKey(publicKey, "server public key");
+		await writeAtomic(serverKeyFile, `${privateKey}\n`, 0o600);
+		await writeAtomic(serverPubKeyFile, `${publicKey}\n`, 0o644);
 		logger.info("WireGuard: Server key pair generated");
+	})();
+	try {
+		await serverKeysPromise;
+	} finally {
+		serverKeysPromise = null;
 	}
 };
 
@@ -316,21 +460,22 @@ const ensureServerKeys = async () => {
  * @returns {string}
  */
 const getServerPrivateKey = () => {
-	return fs.readFileSync(serverKeyFile, "utf-8").trim();
+	return validateWireguardKey(fs.readFileSync(serverKeyFile, "utf-8").trim(), "server private key");
 };
 
 /**
  * Read server public key
- * @returns {string}
+ * @returns {Promise<string>}
  */
 const getServerPublicKey = async () => {
 	if (fs.existsSync(serverPubKeyFile)) {
-		return fs.readFileSync(serverPubKeyFile, "utf-8").trim();
+		return validateWireguardKey(fs.readFileSync(serverPubKeyFile, "utf-8").trim(), "server public key");
 	}
 	// Derive from private key
 	const privateKey = getServerPrivateKey();
 	const publicKey = await execStdin("wg pubkey", privateKey);
-	await fs.promises.writeFile(serverPubKeyFile, publicKey, { mode: 0o644 });
+	validateWireguardKey(publicKey, "server public key");
+	await writeAtomic(serverPubKeyFile, `${publicKey}\n`, 0o644);
 	return publicKey;
 };
 
@@ -359,6 +504,15 @@ PostDown = ${firewallCommands.postDown}
 `;
 
 	for (const peer of peers) {
+		if (typeof peer.name !== "string" || !peer.name || peer.name.length > 255 || hasControlCharacters(peer.name)) {
+			throw new errs.ConfigurationError(`WireGuard peer #${peer.id} has an invalid name.`);
+		}
+		validateWireguardKey(peer.client_public_key, `peer #${peer.id} public key`);
+		validateWireguardKey(peer.preshared_key, `peer #${peer.id} preshared key`);
+		const [clientAddress, clientPrefix] = ipaddr.parseCIDR(peer.client_address);
+		if (clientAddress.kind() !== "ipv4" || clientPrefix !== 32) {
+			throw new errs.ConfigurationError(`WireGuard peer #${peer.id} has an invalid client address.`);
+		}
 		config += `
 # Peer: ${peer.name} (ID: ${peer.id})
 [Peer]
@@ -368,7 +522,16 @@ AllowedIPs = ${peer.client_address}
 `;
 	}
 
-	fs.writeFileSync(wgConfFile, config, { mode: 0o600 });
+	const stage = `${wgDataDir}/.wg0.stage-${crypto.randomUUID()}.conf`;
+	await writeAtomic(stage, config, 0o600);
+	try {
+		// Parse before activation. `strip` does not execute PostUp/PostDown directives.
+		exec(`wg-quick strip ${stage} > /dev/null`);
+		await fs.promises.rename(stage, wgConfFile);
+	} catch (error) {
+		await fs.promises.unlink(stage).catch(() => {});
+		throw new errs.ConfigurationError("WireGuard configuration validation failed", error);
+	}
 	logger.info("WireGuard: Config file written");
 };
 
@@ -416,6 +579,10 @@ const applyConfig = async (forceRestart = false) => {
 			logger.info("WireGuard: Interface fallback restart successful");
 		} catch (restartErr) {
 			logger.error("WireGuard: Failed to restart interface:", restartErr.message);
+			throw new errs.ConfigurationError(
+				`WireGuard configuration could not be applied: ${err.message}; fallback failed: ${restartErr.message}`,
+				restartErr,
+			);
 		}
 	}
 };
@@ -505,44 +672,73 @@ const internalWireguard = {
 	 * @returns {Promise<Object>}
 	 */
 	updateSettings: async (data) => {
-		validateWireguardSettings(data, { requireValues: true });
-		const current = await getWgSettings();
-		const newMeta = {
-			endpoint: data.endpoint !== undefined ? data.endpoint : current.endpoint,
-			listen_port: data.listen_port !== undefined ? data.listen_port : current.listen_port,
-			subnet: data.subnet !== undefined ? data.subnet : current.subnet,
-			server_address: data.server_address !== undefined ? data.server_address : current.server_address,
-		};
-		validateWireguardSettings(newMeta);
-
-		await settingModel
-			.query()
-			.where("id", "wireguard-config")
-			.patch({
-				meta: JSON.stringify(newMeta),
-			});
-
-		// If endpoint or port changed, update all existing peers' endpoint field to stay in sync
-		if (data.endpoint !== undefined || data.listen_port !== undefined) {
+		return await withWireguardMutationLock(async () => {
+			validateWireguardSettings(data, { requireValues: true });
+			const current = await getWgSettings();
 			const peers = await WireguardPeer.query().where("is_deleted", 0);
-			const newEndpoint = formatEndpoint(newMeta.endpoint, newMeta.listen_port);
-
+			const previousEndpoints = peers.map((peer) => ({ id: peer.id, endpoint: peer.endpoint }));
+			const newMeta = {
+				endpoint: data.endpoint !== undefined ? data.endpoint : current.endpoint,
+				listen_port: data.listen_port !== undefined ? data.listen_port : current.listen_port,
+				subnet: data.subnet !== undefined ? data.subnet : current.subnet,
+				server_address: data.server_address !== undefined ? data.server_address : current.server_address,
+			};
+			validateWireguardSettings(newMeta);
+			const [newSubnet] = ipaddr.IPv4.parseCIDR(newMeta.subnet);
+			const [newServerAddress] = ipaddr.IPv4.parseCIDR(newMeta.server_address);
 			for (const peer of peers) {
-				await WireguardPeer.query().findById(peer.id).patch({
-					endpoint: newEndpoint,
-				});
+				let peerAddress;
+				try {
+					[peerAddress] = ipaddr.IPv4.parseCIDR(peer.client_address);
+				} catch {
+					throw new errs.ConfigurationError(`WireGuard peer #${peer.id} has an invalid client address.`);
+				}
+				if (!peerAddress.match(newSubnet, 24)) {
+					throw new errs.ValidationError("The WireGuard subnet cannot exclude existing peer addresses.");
+				}
+				if (peerAddress.toString() === newServerAddress.toString()) {
+					throw new errs.ValidationError(
+						"The WireGuard server address cannot collide with an existing peer.",
+					);
+				}
 			}
-			logger.info(`WireGuard: Updated endpoint for ${peers.length} peer(s) to ${newEndpoint}`);
-		}
 
-		// Re-sync and apply config if WG is available
-		if (isWgAvailable()) {
-			await syncConfig();
-			await applyConfig();
-		}
+			try {
+				await settingModel
+					.query()
+					.where("id", "wireguard-config")
+					.patch({ meta: JSON.stringify(newMeta) });
+				if (data.endpoint !== undefined || data.listen_port !== undefined) {
+					const newEndpoint = formatEndpoint(newMeta.endpoint, newMeta.listen_port);
+					for (const peer of peers)
+						await WireguardPeer.query().findById(peer.id).patch({ endpoint: newEndpoint });
+				}
+				if (isWgAvailable()) {
+					await syncConfig();
+					await applyConfig();
+				}
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					(async () => {
+						await settingModel
+							.query()
+							.where("id", "wireguard-config")
+							.patch({ meta: JSON.stringify(current) });
+						for (const peer of previousEndpoints) {
+							await WireguardPeer.query().findById(peer.id).patch({ endpoint: peer.endpoint });
+						}
+						if (isWgAvailable()) {
+							await syncConfig();
+							await applyConfig();
+						}
+					})(),
+				]);
+				throw runtimeFailure("WireGuard settings update failed", error, rollbackResults);
+			}
 
-		logger.info("WireGuard: Settings updated", newMeta);
-		return newMeta;
+			logger.info("WireGuard: Settings updated", newMeta);
+			return newMeta;
+		});
 	},
 
 	/**
@@ -596,50 +792,61 @@ const internalWireguard = {
 	 * @returns {Promise<Object>} Created peer with client config
 	 */
 	createPeer: async (data, ownerUserId) => {
-		if (!isWgAvailable()) {
-			throw new Error("WireGuard is not available on this system");
-		}
+		return await withWireguardMutationLock(async () => {
+			if (!isWgAvailable()) throw new errs.ConfigurationError("WireGuard is not available on this system");
+			if (!Number.isInteger(ownerUserId) || ownerUserId < 1) throw new errs.ValidationError("Invalid peer owner");
+			validatePeerInput(data);
 
-		await ensureServerKeys();
-		const settings = await getWgSettings();
+			await ensureServerKeys();
+			const settings = await getWgSettings();
 
-		// Generate keys
-		const clientKeys = await generateKeyPair();
-		const presharedKey = generatePresharedKey();
-		const serverPublicKey = await getServerPublicKey();
-		const clientAddress = await getNextAvailableIP(settings.subnet);
-		const endpoint = formatEndpoint(settings.endpoint, settings.listen_port);
+			// Generate keys
+			const clientKeys = await generateKeyPair();
+			const presharedKey = generatePresharedKey();
+			const serverPublicKey = await getServerPublicKey();
+			const clientAddress = await getNextAvailableIP(settings.subnet, settings.server_address);
+			const endpoint = formatEndpoint(settings.endpoint, settings.listen_port);
 
-		// Insert peer into DB
-		const peerData = {
-			name: data.name,
-			description: data.description || null,
-			client_address: clientAddress,
-			client_public_key: clientKeys.publicKey,
-			client_private_key: clientKeys.privateKey,
-			preshared_key: presharedKey,
-			server_public_key: serverPublicKey,
-			endpoint: endpoint,
-			allowed_ips: data.allowed_ips || settings.subnet,
-			persistent_keepalive: data.persistent_keepalive || 25,
-			dns: data.dns || "1.1.1.1",
-			status: 2, // Online (active)
-			owner_user_id: ownerUserId,
-			meta: {},
-		};
+			// Insert peer into DB
+			const peerData = {
+				name: data.name,
+				description: data.description || null,
+				client_address: clientAddress,
+				client_public_key: clientKeys.publicKey,
+				client_private_key: clientKeys.privateKey,
+				preshared_key: presharedKey,
+				server_public_key: serverPublicKey,
+				endpoint: endpoint,
+				allowed_ips: data.allowed_ips ?? settings.subnet,
+				persistent_keepalive: data.persistent_keepalive ?? 25,
+				dns: data.dns ?? "1.1.1.1",
+				status: 2, // Online (active)
+				owner_user_id: ownerUserId,
+				meta: {},
+			};
 
-		const peer = await WireguardPeer.query().insert(peerData);
+			const peer = await WireguardPeer.query().insert(peerData);
+			try {
+				await syncConfig();
+				await applyConfig();
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					(async () => {
+						await WireguardPeer.query().deleteById(peer.id);
+						await syncConfig();
+						await applyConfig();
+					})(),
+				]);
+				throw runtimeFailure("WireGuard peer creation failed", error, rollbackResults);
+			}
 
-		// Sync and apply config
-		await syncConfig();
-		await applyConfig();
+			// Refetch with decrypted keys
+			const createdPeer = await WireguardPeer.query().findById(peer.id);
 
-		// Refetch with decrypted keys
-		const createdPeer = await WireguardPeer.query().findById(peer.id);
+			logger.info(`WireGuard: Peer "${data.name}" created with IP ${clientAddress}`);
 
-		logger.info(`WireGuard: Peer "${data.name}" created with IP ${clientAddress}`);
-
-		return createdPeer;
+			return createdPeer;
+		});
 	},
 
 	/**
@@ -649,26 +856,42 @@ const internalWireguard = {
 	 * @returns {Promise<Object>}
 	 */
 	updatePeer: async (peerId, data) => {
-		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
-		if (!peer) {
-			throw new Error("Peer not found");
-		}
+		return await withWireguardMutationLock(async () => {
+			validatePeerInput(data);
+			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
+			if (!peer) throw new errs.ItemNotFoundError(peerId);
 
-		const updateData = {};
-		if (data.name !== undefined) updateData.name = data.name;
-		if (data.description !== undefined) updateData.description = data.description;
-		if (data.allowed_ips !== undefined) updateData.allowed_ips = data.allowed_ips;
-		if (data.persistent_keepalive !== undefined) updateData.persistent_keepalive = data.persistent_keepalive;
-		if (data.dns !== undefined) updateData.dns = data.dns;
+			const updateData = {};
+			if (data.name !== undefined) updateData.name = data.name;
+			if (data.description !== undefined) updateData.description = data.description;
+			if (data.allowed_ips !== undefined) updateData.allowed_ips = data.allowed_ips;
+			if (data.persistent_keepalive !== undefined) updateData.persistent_keepalive = data.persistent_keepalive;
+			if (data.dns !== undefined) updateData.dns = data.dns;
 
-		const updated = await peer.$query().patchAndFetch(updateData);
+			const updated = await peer.$query().patchAndFetch(updateData);
+			try {
+				await syncConfig();
+				await applyConfig();
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					(async () => {
+						await WireguardPeer.query().findById(peerId).patch({
+							name: peer.name,
+							description: peer.description,
+							allowed_ips: peer.allowed_ips,
+							persistent_keepalive: peer.persistent_keepalive,
+							dns: peer.dns,
+						});
+						await syncConfig();
+						await applyConfig();
+					})(),
+				]);
+				throw runtimeFailure("WireGuard peer update failed", error, rollbackResults);
+			}
 
-		// Re-sync config if relevant fields changed
-		await syncConfig();
-		await applyConfig();
-
-		logger.info(`WireGuard: Peer "${updated.name}" (ID: ${peerId}) updated`);
-		return updated;
+			logger.info(`WireGuard: Peer "${updated.name}" (ID: ${peerId}) updated`);
+			return updated;
+		});
 	},
 
 	/**
@@ -677,19 +900,28 @@ const internalWireguard = {
 	 * @returns {Promise<boolean>}
 	 */
 	deletePeer: async (peerId) => {
-		const peer = await WireguardPeer.query().findById(peerId);
-		if (!peer) {
-			return false;
-		}
+		return await withWireguardMutationLock(async () => {
+			const peer = await WireguardPeer.query().findById(peerId);
+			if (!peer) return false;
 
-		await peer.$query().patch({ is_deleted: 1 });
+			await peer.$query().patch({ is_deleted: 1 });
+			try {
+				await syncConfig();
+				await applyConfig();
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					(async () => {
+						await WireguardPeer.query().findById(peerId).patch({ is_deleted: 0 });
+						await syncConfig();
+						await applyConfig();
+					})(),
+				]);
+				throw runtimeFailure("WireGuard peer deletion failed", error, rollbackResults);
+			}
 
-		// Re-sync config
-		await syncConfig();
-		await applyConfig();
-
-		logger.info(`WireGuard: Peer "${peer.name}" (ID: ${peerId}) deleted`);
-		return true;
+			logger.info(`WireGuard: Peer "${peer.name}" (ID: ${peerId}) deleted`);
+			return true;
+		});
 	},
 
 	/**
@@ -698,18 +930,29 @@ const internalWireguard = {
 	 * @returns {Promise<Object>}
 	 */
 	enablePeer: async (peerId) => {
-		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
-		if (!peer) {
-			throw new Error("Peer not found");
-		}
+		return await withWireguardMutationLock(async () => {
+			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
+			if (!peer) throw new errs.ItemNotFoundError(peerId);
+			const oldStatus = peer.status;
 
-		await peer.$query().patch({ status: 2 });
+			await peer.$query().patch({ status: 2 });
+			try {
+				await syncConfig();
+				await applyConfig();
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					(async () => {
+						await WireguardPeer.query().findById(peerId).patch({ status: oldStatus });
+						await syncConfig();
+						await applyConfig();
+					})(),
+				]);
+				throw runtimeFailure("WireGuard peer enable failed", error, rollbackResults);
+			}
 
-		await syncConfig();
-		await applyConfig();
-
-		logger.info(`WireGuard: Peer "${peer.name}" enabled`);
-		return await WireguardPeer.query().findById(peerId);
+			logger.info(`WireGuard: Peer "${peer.name}" enabled`);
+			return await WireguardPeer.query().findById(peerId);
+		});
 	},
 
 	/**
@@ -718,18 +961,29 @@ const internalWireguard = {
 	 * @returns {Promise<Object>}
 	 */
 	disablePeer: async (peerId) => {
-		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
-		if (!peer) {
-			throw new Error("Peer not found");
-		}
+		return await withWireguardMutationLock(async () => {
+			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
+			if (!peer) throw new errs.ItemNotFoundError(peerId);
+			const oldStatus = peer.status;
 
-		await peer.$query().patch({ status: 0 });
+			await peer.$query().patch({ status: 0 });
+			try {
+				await syncConfig();
+				await applyConfig();
+			} catch (error) {
+				const rollbackResults = await Promise.allSettled([
+					(async () => {
+						await WireguardPeer.query().findById(peerId).patch({ status: oldStatus });
+						await syncConfig();
+						await applyConfig();
+					})(),
+				]);
+				throw runtimeFailure("WireGuard peer disable failed", error, rollbackResults);
+			}
 
-		await syncConfig();
-		await applyConfig();
-
-		logger.info(`WireGuard: Peer "${peer.name}" disabled`);
-		return await WireguardPeer.query().findById(peerId);
+			logger.info(`WireGuard: Peer "${peer.name}" disabled`);
+			return await WireguardPeer.query().findById(peerId);
+		});
 	},
 
 	/**
@@ -740,7 +994,29 @@ const internalWireguard = {
 	generateClientConfig: async (peerId) => {
 		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
 		if (!peer) {
-			throw new Error("Peer not found");
+			throw new errs.ItemNotFoundError(peerId);
+		}
+		validateWireguardKey(peer.client_private_key, `peer #${peer.id} private key`);
+		validateWireguardKey(peer.server_public_key, `peer #${peer.id} server public key`);
+		validateWireguardKey(peer.preshared_key, `peer #${peer.id} preshared key`);
+		validateCidrList(peer.allowed_ips, `peer #${peer.id} allowed_ips`);
+		validateDnsList(peer.dns);
+		const [clientAddress, clientPrefix] = ipaddr.parseCIDR(peer.client_address);
+		if (clientAddress.kind() !== "ipv4" || clientPrefix !== 32) {
+			throw new errs.ConfigurationError(`WireGuard peer #${peer.id} has an invalid client address.`);
+		}
+		if (
+			peer.endpoint !== null &&
+			(typeof peer.endpoint !== "string" || peer.endpoint.length > 320 || hasControlCharacters(peer.endpoint))
+		) {
+			throw new errs.ConfigurationError(`WireGuard peer #${peer.id} has an invalid endpoint.`);
+		}
+		if (
+			!Number.isInteger(peer.persistent_keepalive) ||
+			peer.persistent_keepalive < 0 ||
+			peer.persistent_keepalive > 65535
+		) {
+			throw new errs.ConfigurationError(`WireGuard peer #${peer.id} has an invalid keepalive value.`);
 		}
 
 		const settings = await getWgSettings();
@@ -782,7 +1058,8 @@ PersistentKeepalive = ${peer.persistent_keepalive}
 			return dataUrl;
 		} catch (err) {
 			logger.error("WireGuard: QR code generation failed:", err.message);
-			throw new Error("QR code generation is not available. Ensure the 'qrcode' npm package is installed.");
+			if (err instanceof errs.ItemNotFoundError || err instanceof errs.ConfigurationError) throw err;
+			throw new errs.InternalError("WireGuard QR code generation is unavailable", err);
 		}
 	},
 

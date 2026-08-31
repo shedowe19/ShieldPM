@@ -43,16 +43,22 @@ export class AuthStore {
 
 	// Set session details from login/refresh response
 	// Preserves existing userId if the response doesn't include user data (e.g. refresh)
-	set(data: { expires: number; user?: { id: number } }) {
+	set(data: { expires: number | string; user?: { id: number } }) {
+		const expires = typeof data.expires === "number" ? data.expires : new Date(data.expires).getTime();
+		if (!Number.isFinite(expires) || expires <= Date.now()) {
+			this.clear();
+			return false;
+		}
 		this.state = {
-			expires: data.expires,
+			expires,
 			userId: data.user?.id ?? this.state?.userId,
 		};
+		return true;
 	}
 
 	// Add is alias for Set in cookie mode
-	add(data: { expires: number; user?: { id: number } }) {
-		this.set(data);
+	add(data: { expires: number | string; user?: { id: number } }) {
+		return this.set(data);
 	}
 
 	// Clear memory state

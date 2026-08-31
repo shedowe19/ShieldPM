@@ -2,32 +2,36 @@
 
 ## Zweck
 
-Verwaltung von JWT (JSON Web Tokens) für die API-Authentifizierung.
+`backend/internal/token.js` stellt kurzlebige Access-JWTs aus und delegiert Refresh-, Replay-, Step-up- und
+Impersonation-Zustand an den Auth-Session-Service.
 
-## Kontext
+## Schlüssel und Persistenz
 
-Jede API-Anfrage an das Backend erfordert eine Authentifizierung. Dieses Modul handhabt die Erzeugung, Validierung und Verwaltung dieser JWT-Tokens.
+JWT-/Anwendungsschlüssel liegen in `/data/shieldpm/keys.json` mit restriktiven Rechten. Die Datei ist Teil des
+verschlüsselten Backups, aber niemals von GitOps. Ein Schlüsselverlust invalidiert Sessions und kann verschlüsselte
+Konfiguration unlesbar machen.
+
+## Token-Vertrag
+
+- Access-JWT enthält Subject, Scope, Session-ID und bei Impersonation den Actor-Kontext.
+- Middleware vergleicht die Claims mit der aktiven serverseitigen Session; ein gültig signiertes JWT zu einer
+  widerrufenen/inkonsistenten Session reicht nicht.
+- Refresh-Tokens sind opake Zufallswerte, werden gehasht gespeichert und rotieren bei Nutzung.
+- Step-up- und MFA-Pending-Tokens verweisen auf serverseitige One-Time-Challenges mit Zweck und Ablauf.
+- ChatOps erzeugt keine JWTs, sondern verwendet einen live Integration-Principal.
 
 ## Wichtige Dateien
 
-- `backend/internal/token.js` (6 KB) — JWT-Token-Verwaltung
-- `backend/routes/tokens.js` — API-Routen für Login/Logout
-
-## Verhalten
-
-- Liest/Erstellt Schlüssel unter `/data/keys.json` zur Signierung.
-- Verifiziert eingehende Tokens (Middlewares).
-- Enthält Berechtigungen und User-ID im Payload.
-
-## Abhängigkeiten
-
-- `jsonwebtoken` — JWT Bibliothek
-
-## Offene Fragen
-
-Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+- `backend/internal/token.js`
+- `backend/internal/auth-session-service.js`
+- `backend/internal/auth-challenge-service.js`
+- `backend/lib/express/jwt.js`
+- `backend/lib/express/jwt-decode.js`
+- `backend/routes/tokens.js`
 
 ## Verwandte Seiten
 
+- [Auth-Session-Service](./auth-session-service.md)
 - [Benutzer & Auth](./benutzer-auth.md)
-- [Modulübersicht](./README.md)
+- [ChatOps](./chatops.md)
+- [Secrets und Sicherheit](../konfiguration/secrets-und-sicherheit.md)

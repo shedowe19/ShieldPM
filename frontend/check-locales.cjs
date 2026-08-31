@@ -54,7 +54,8 @@ try {
 // get all translations used in frontend code
 const tmpobj = tmp.fileSync({ postfix: ".json" });
 const formatJs = path.join(__dirname, "node_modules", ".bin", "formatjs");
-const extraction = spawnSync(formatJs, ["extract", "src/**/*.tsx", "--out-file", tmpobj.name], {
+const sourceGlob = `${path.resolve(__dirname, "src").split(path.sep).join("/")}/**/*.tsx`;
+const extraction = spawnSync(formatJs, ["extract", sourceGlob, "--out-file", tmpobj.name], {
 	encoding: "utf8",
 });
 if (extraction.error || extraction.status !== 0) {
@@ -64,6 +65,25 @@ if (extraction.error || extraction.status !== 0) {
 }
 
 const allLocalesInProject = require(tmpobj.name);
+
+// FormatJS only understands its own components/functions. ShieldPM's small
+// <T id="…" /> wrapper must be scanned explicitly or newly added UI labels can
+// silently ship without translations.
+const collectTsxFiles = (directory) =>
+	fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+		const entryPath = path.join(directory, entry.name);
+		if (entry.isDirectory()) return collectTsxFiles(entryPath);
+		return entry.isFile() && entry.name.endsWith(".tsx") ? [entryPath] : [];
+	});
+
+for (const sourceFile of collectTsxFiles(path.join(__dirname, "src"))) {
+	const source = fs.readFileSync(sourceFile, "utf8");
+	for (const match of source.matchAll(/<T\b[^>]*\bid\s*=\s*["']([^"']+)["']/g)) {
+		if (typeof allLocalesInProject[match[1]] === "undefined") {
+			allLocalesInProject[match[1]] = { defaultMessage: match[1] };
+		}
+	}
+}
 
 // get list og language names and locales
 const langList = require("./src/locale/lang/lang-list.json");

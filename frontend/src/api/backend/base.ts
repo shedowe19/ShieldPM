@@ -7,6 +7,16 @@ const contentTypeHeader = "Content-Type";
 
 type DynamicResponse = unknown;
 
+export class ApiError extends Error {
+	status: number;
+
+	constructor(message: string, status: number) {
+		super(message);
+		this.name = "ApiError";
+		this.status = status;
+	}
+}
+
 interface BuildUrlArgs {
 	url: string;
 	params?: StringifiableRecord;
@@ -51,7 +61,22 @@ function buildBody(data?: object): string | undefined {
 }
 
 async function processResponse<T = DynamicResponse>(response: Response, silentAuth = false): Promise<T> {
-	const payload = await response.json();
+	let body = "";
+	let payload: Record<string, any> = {};
+	if (typeof response.text === "function") {
+		body = await response.text();
+	} else if (typeof response.json === "function") {
+		payload = await response.json();
+	}
+	if (body) {
+		try {
+			payload = JSON.parse(body);
+		} catch {
+			// Reverse proxies may return HTML or text. Preserve the HTTP status and
+			// avoid leaking an arbitrary upstream response into the application UI.
+			payload = {};
+		}
+	}
 	// Capture CSRF Token if present in response
 	if (payload.csrfToken) {
 		AuthStore.setCsrfToken(payload.csrfToken);
@@ -66,8 +91,11 @@ async function processResponse<T = DynamicResponse>(response: Response, silentAu
 				window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
 			}
 		}
-		throw new Error(
-			typeof payload.error.messageI18n !== "undefined" ? payload.error.messageI18n : payload.error.message,
+		throw new ApiError(
+			typeof payload.error?.messageI18n !== "undefined"
+				? payload.error.messageI18n
+				: payload.error?.message || response.statusText || `Request failed (${response.status})`,
+			response.status,
 		);
 	}
 	return camelizeKeys(payload) as unknown as T;
@@ -87,6 +115,7 @@ interface PostArgs {
 	silentAuth?: boolean;
 	/** Skip key decamelization — required for WebAuthn payloads where key casing matters */
 	rawKeys?: boolean;
+	headers?: Record<string, string>;
 }
 
 interface PutArgs {
@@ -171,15 +200,16 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 }
 
 export async function post<T = DynamicResponse>(
-	{ url, params, data, noAuth, silentAuth, rawKeys }: PostArgs,
+	{ url, params, data, noAuth, silentAuth, rawKeys, headers: extraHeaders }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
 	const apiUrl = buildUrl({ url, params });
 	const method = "POST";
 
-	let headers: Record<string, string> = {};
+	let headers: Record<string, string> = { ...extraHeaders };
 	if (!noAuth) {
 		headers = {
+			...headers,
 			...buildAuthHeader(),
 		};
 	}

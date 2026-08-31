@@ -13,6 +13,10 @@ export function sendAiChat(message: string, history: AiChatMessage[]): Promise<A
 	return post({ url: "/ai/chat", data: { message, history } });
 }
 
+export function confirmAiAction(confirmationToken: string): Promise<AiChatResponse> {
+	return post({ url: "/ai/confirm", data: { confirmation_token: confirmationToken } });
+}
+
 export function getAiModels(config: Partial<AiConfig>): Promise<{ id: string; name: string }[]> {
 	return post({ url: "/ai/models", data: config as unknown as Record<string, unknown> });
 }

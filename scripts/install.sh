@@ -1,5 +1,6 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -Eeo pipefail
+umask 077
 
 # ShieldPM Generic Installer (Linux AMD64/ARM64)
 # (c) 2026 Shedowe
@@ -14,76 +15,30 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-enable_node_system_ca() {
-    if [[ " ${NODE_OPTIONS:-} " != *" --use-system-ca "* ]]; then
-        export NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--use-system-ca"
-    fi
-}
+INSTALLER_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+cd "$INSTALLER_DIR"
 
-remove_stale_corepack_shims() {
-    local shim
-    local shim_target
+verify_prerequisites() {
+    local command
 
-    for shim in /usr/bin/corepack /usr/bin/yarn /usr/bin/yarnpkg /usr/bin/pnpm /usr/bin/pnpx; do
-        [ -L "$shim" ] || continue
-        shim_target="$(readlink "$shim")"
-        case "$shim_target" in
-            *corepack/dist/*)
-                rm -f "$shim"
-                ;;
-        esac
+    for command in apt-get bash chmod cp dirname mkdir sed sha256sum systemctl tar; do
+        command -v "$command" >/dev/null 2>&1 || {
+            echo "ERROR: Missing installer prerequisite: $command" >&2
+            exit 1
+        }
     done
-}
 
-install_node_26() {
-    local NODE_MAJOR=26
-    local NODESOURCE_KEYRING="/etc/apt/keyrings/nodesource.gpg"
-    local NODESOURCE_LIST="/etc/apt/sources.list.d/nodesource.list"
-    local NODE_PACKAGE_VERSION
-    local NODE_VERSION
-    local source_file
-
-    echo ">>> Installing Node.js ${NODE_MAJOR}..."
-    install -d -m 0755 /etc/apt/keyrings
-    curl -fsSL "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key" | \
-        gpg --dearmor --yes --output "$NODESOURCE_KEYRING"
-    chmod a+r "$NODESOURCE_KEYRING"
-
-    while IFS= read -r -d '' source_file; do
-        if grep -qE 'deb[.]nodesource[.]com/node_[0-9]+[.]x' "$source_file"; then
-            rm -f "$source_file"
-        fi
-    done < <(find /etc/apt/sources.list.d -maxdepth 1 -type f \( -name '*.list' -o -name '*.sources' \) -print0)
-
-    printf 'deb [signed-by=%s] https://deb.nodesource.com/node_%s.x nodistro main\n' \
-        "$NODESOURCE_KEYRING" "$NODE_MAJOR" > "$NODESOURCE_LIST"
-    apt-get update
-    NODE_PACKAGE_VERSION="$(apt-cache madison nodejs | awk '$3 ~ /^26\./ { print $3; exit }')"
-    if [ -z "$NODE_PACKAGE_VERSION" ]; then
-        echo "ERROR: NodeSource does not provide Node.js ${NODE_MAJOR} for this architecture."
-        exit 1
-    fi
-
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
-        "nodejs=${NODE_PACKAGE_VERSION}"
-    enable_node_system_ca
-    COREPACK_BIN="$(command -v corepack || true)"
-    if [ -n "$COREPACK_BIN" ] && [ -x "$COREPACK_BIN" ]; then
-        corepack enable
-        corepack install --global yarn@1.22.22
+    if [ -f SHA256SUMS ]; then
+        sha256sum --check --strict SHA256SUMS
     else
-        remove_stale_corepack_shims
-        npm install --global --allow-scripts=yarn yarn@1.22.22
-    fi
-
-    NODE_VERSION="$(node --version)"
-    if [[ ! "$NODE_VERSION" =~ ^v26\. ]]; then
-        echo "ERROR: Node.js ${NODE_MAJOR} installation failed; active version is $NODE_VERSION."
+        echo "ERROR: Native installer package has no SHA256SUMS manifest." >&2
         exit 1
     fi
 
-    echo "    Node.js $NODE_VERSION, npm $(npm --version), Yarn $(yarn --version)"
+    echo "    Verified the complete installer payload."
 }
+
+verify_prerequisites
 
 # 1. User Creation (Skipped - Running as root)
 # echo ">>> Creating 'shieldpm' user..."
@@ -96,11 +51,6 @@ install_node_26() {
 # 2. Install Runtime Dependencies
 echo ">>> Installing runtime dependencies..."
 apt-get update
-# Upgrade is necessary on Trixie to ensure kernel headers match
-# Upgrade is necessary on Trixie to ensure kernel headers match, especially during t64 transition
-DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y
-# Fix any broken dependencies from base image or previous runs
-DEBIAN_FRONTEND=noninteractive apt-get --fix-broken install -y
 apt-get install -y --no-install-recommends --fix-missing \
     libargon2-1 \
     bash \
@@ -109,12 +59,14 @@ apt-get install -y --no-install-recommends --fix-missing \
     ca-certificates \
     coreutils \
     curl \
+    build-essential \
     fcgiwrap \
     findutils \
     geoip-bin \
     goaccess \
     grep \
     gnupg \
+    git \
     jq \
     libatomic1 \
     libssl3 \
@@ -131,6 +83,7 @@ apt-get install -y --no-install-recommends --fix-missing \
     openssl \
     libpcre2-8-0 \
     python3 \
+    python3-dev \
     gosu \
     tini \
     tor \
@@ -141,7 +94,27 @@ apt-get install -y --no-install-recommends --fix-missing \
     zlib1g \
     zstd
 
-install_node_26
+[ -f setup-node-apt.sh ] || {
+    echo "ERROR: The verified installer payload has no setup-node-apt.sh." >&2
+    exit 1
+}
+bash ./setup-node-apt.sh
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs
+npm install --global --ignore-scripts corepack@0.36.0
+corepack enable
+corepack install --global yarn@4.18.0
+[[ "$(node --version)" =~ ^v24\. ]] || {
+    echo "ERROR: Node.js 24 installation failed; active version is $(node --version)." >&2
+    exit 1
+}
+[[ "$(corepack --version)" == "0.36.0" ]] || {
+    echo "ERROR: Corepack 0.36.0 activation failed; active version is $(corepack --version)." >&2
+    exit 1
+}
+[[ "$(yarn --version)" == "4.18.0" ]] || {
+    echo "ERROR: Yarn 4.18.0 activation failed; active version is $(yarn --version)." >&2
+    exit 1
+}
 
 # 2.1 Configure Locale (Interactive)
 echo ">>> Configuring locales..."
@@ -157,14 +130,28 @@ fi
 
 # 4. Copy Application Files
 echo ">>> Copying application files..."
-cp -r app /
-cp -r html /
+for application_directory in /app /html; do
+    if [ -d "$application_directory" ] && \
+        [ -n "$(find "$application_directory" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+        echo "ERROR: $application_directory is not empty. Use update-shieldpm for an existing installation." >&2
+        exit 1
+    fi
+done
+cp -a app /
+cp -a html /
 
 # 5. Copy Rootfs Overlays (Systemd service, scripts, configs)
 echo ">>> Installing system configs..."
 if [ -d "rootfs" ]; then
-    cp -r rootfs/* /
+    # /data is persistent operator state and must never be overwritten by the installer overlay.
+    tar --create --directory rootfs --exclude='./data' --file - . | tar --extract --directory / --file -
 fi
+
+for bundled_binary in anubis oauth2-proxy; do
+    if [ -f "/app/$bundled_binary" ] && [ ! -L "/app/$bundled_binary" ]; then
+        install -m 0755 "/app/$bundled_binary" "/usr/local/bin/$bundled_binary"
+    fi
+done
 
 # 6. Permissions
 echo ">>> Setting permissions..."
@@ -230,24 +217,83 @@ read -r -p "Enter choice [1-3] (Default: 1): " db_choice
 
 # Ensure .env exists
 if [ ! -f "$ENV_FILE" ]; then
-    cp "/rootfs/data/.env" "$ENV_FILE" 2>/dev/null || true
-    # If copy failed (because we are inside install script where rootfs is likely already at /), try /data/.env
-    if [ ! -f "$ENV_FILE" ]; then
-        echo "Creating default .env..."
-        touch "$ENV_FILE"
-    fi
+    cp "$INSTALLER_DIR/rootfs/data/.env" "$ENV_FILE"
 fi
+chmod 0600 "$ENV_FILE"
+install -d -m 0700 /data/shieldpm/secrets
+
+set_env_value() {
+    local key="$1"
+    local value="$2"
+    local temporary
+    local found=false
+
+    [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || return 1
+    temporary=$(mktemp "${ENV_FILE}.XXXXXXXX")
+    while IFS= read -r line || [ -n "$line" ]; do
+        if [[ "$line" =~ ^[[:space:]]*(export[[:space:]]+)?#?[[:space:]]*${key}= ]]; then
+            if [ "$found" = false ]; then
+                printf '%s=%s\n' "$key" "$value" >> "$temporary"
+                found=true
+            fi
+        else
+            printf '%s\n' "$line" >> "$temporary"
+        fi
+    done < "$ENV_FILE"
+    if [ "$found" = false ]; then
+        printf '%s=%s\n' "$key" "$value" >> "$temporary"
+    fi
+    chmod 0600 "$temporary"
+    mv -f "$temporary" "$ENV_FILE"
+}
+
+disable_env_prefix() {
+    local prefix="$1"
+    local temporary
+    temporary=$(mktemp "${ENV_FILE}.XXXXXXXX")
+    while IFS= read -r line || [ -n "$line" ]; do
+        if [[ "$line" =~ ^[[:space:]]*(export[[:space:]]+)?${prefix}[A-Z0-9_]*= ]]; then
+            printf '# %s\n' "$line" >> "$temporary"
+        else
+            printf '%s\n' "$line" >> "$temporary"
+        fi
+    done < "$ENV_FILE"
+    chmod 0600 "$temporary"
+    mv -f "$temporary" "$ENV_FILE"
+}
+
+validate_database_fields() {
+    [[ "$DB_HOST" =~ ^[A-Za-z0-9._:-]{1,253}$ ]] || {
+        echo "ERROR: Invalid database host." >&2
+        exit 1
+    }
+    [[ "$DB_PORT" =~ ^[0-9]{1,5}$ ]] && [ "$DB_PORT" -ge 1 ] && [ "$DB_PORT" -le 65535 ] || {
+        echo "ERROR: Invalid database port." >&2
+        exit 1
+    }
+    [[ "$DB_USER" =~ ^[A-Za-z_][A-Za-z0-9_.-]{0,62}$ ]] || {
+        echo "ERROR: Invalid database user name." >&2
+        exit 1
+    }
+    [[ "$DB_NAME" =~ ^[A-Za-z_][A-Za-z0-9_.-]{0,62}$ ]] || {
+        echo "ERROR: Invalid database name." >&2
+        exit 1
+    }
+    [ -n "$DB_PASS" ] || {
+        echo "ERROR: Database passwords must not be empty." >&2
+        exit 1
+    }
+}
 
 # Function to prompt for DB credentials
 prompt_db_creds() {
     local default_host="127.0.0.1"
     local default_port="$1"
-    local default_user="npm"
-    local default_pass="npm"
-    local default_name="npm"
+    local default_user="shieldpm"
+    local default_name="shieldpm"
 
     echo "  > SELECT SETUP MODE:"
-    echo "    1) Local (Default): Install DB Server locally & use default credentials ($default_user/$default_pass)"
+    echo "    1) Local (Default): Install a local DB server with a generated random password"
     echo "    2) Manual / External: Enter connection details manually"
     read -r -p "    Enter choice [1-2] (Default: 1): " db_mode
 
@@ -260,8 +306,8 @@ prompt_db_creds() {
         DB_NAME=${DB_NAME:-$default_name}
         read -r -p "    DB User (Default: $default_user): " DB_USER
         DB_USER=${DB_USER:-$default_user}
-        read -r -p "    DB Password (Default: $default_pass): " DB_PASS
-        DB_PASS=${DB_PASS:-$default_pass}
+        read -r -s -p "    DB Password: " DB_PASS
+        echo
         
         # Don't install server if external (unless user wants to, but assume external means existing)
         if [[ "$DB_HOST" != "127.0.0.1" && "$DB_HOST" != "localhost" ]]; then
@@ -273,10 +319,11 @@ prompt_db_creds() {
         DB_HOST=$default_host
         DB_PORT=$default_port
         DB_USER=$default_user
-        DB_PASS=$default_pass
         DB_NAME=$default_name
+        DB_PASS=$(openssl rand -hex 24)
         INSTALL_LOCAL_DB=true
     fi
+    validate_database_fields
 }
 
 case "$db_choice" in
@@ -290,27 +337,33 @@ case "$db_choice" in
              apt-get install -y --fix-missing mariadb-server mariadb-client libmariadb3 default-libmysqlclient-dev
              echo "--> Initializing MariaDB..."
              systemctl start mariadb
-             # Create DB and User
-             mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-             mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
-             mysql -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
-             mysql -e "FLUSH PRIVILEGES;"
+             DB_PASS_SQL=$(printf '%s' "$DB_PASS" | sed -e 's/\\/\\\\/g' -e "s/'/''/g")
+             mysql --batch <<MYSQL_SQL
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS_SQL}';
+ALTER USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS_SQL}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
+CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS_SQL}';
+ALTER USER '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS_SQL}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'127.0.0.1';
+FLUSH PRIVILEGES;
+MYSQL_SQL
         else
              echo "--> Installing MariaDB Client only..."
              apt-get install -y --fix-missing mariadb-client libmariadb3 default-libmysqlclient-dev
         fi
 
-        # Update .env
-        sed -i 's/^# DB_MYSQL_/DB_MYSQL_/g' "$ENV_FILE"
-        sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
-        sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
-
-        # Set values
-        sed -i "s|^DB_MYSQL_HOST=.*|DB_MYSQL_HOST=${DB_HOST}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_PORT=.*|DB_MYSQL_PORT=${DB_PORT}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_USER=.*|DB_MYSQL_USER=${DB_USER}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_PASSWORD=.*|DB_MYSQL_PASSWORD=${DB_PASS}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_NAME=.*|DB_MYSQL_NAME=${DB_NAME}|g" "$ENV_FILE"
+        disable_env_prefix DB_MYSQL_
+        disable_env_prefix DB_POSTGRES_
+        DB_SECRET_FILE=/data/shieldpm/secrets/db_mysql_password
+        printf '%s' "$DB_PASS" > "$DB_SECRET_FILE"
+        chmod 0600 "$DB_SECRET_FILE"
+        set_env_value DB_MYSQL_HOST "$DB_HOST"
+        set_env_value DB_MYSQL_PORT "$DB_PORT"
+        set_env_value DB_MYSQL_USER "$DB_USER"
+        set_env_value DB_MYSQL_PASSWORD_FILE "$DB_SECRET_FILE"
+        set_env_value DB_MYSQL_NAME "$DB_NAME"
+        unset DB_PASS DB_PASS_SQL
         
         echo "  > MySQL configured in $ENV_FILE."
         ;;
@@ -321,36 +374,43 @@ case "$db_choice" in
         if [ "$INSTALL_LOCAL_DB" = true ]; then
             echo "--> Installing PostgreSQL Server & Client..."
             apt-get update
-            apt-get install -y --fix-missing postgresql postgresql-contrib libpq-dev
-            echo "--> Initializing PostgreSQL..."
-            systemctl start postgresql
-            # Create DB and User
-            sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';" || true
-            sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" || true
+             apt-get install -y --fix-missing postgresql postgresql-contrib libpq-dev
+             echo "--> Initializing PostgreSQL..."
+             systemctl start postgresql
+             DB_PASS_SQL=$(printf '%s' "$DB_PASS" | sed "s/'/''/g")
+             if runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
+                 runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c \
+                     "ALTER USER \"${DB_USER}\" WITH PASSWORD '${DB_PASS_SQL}';"
+             else
+                 runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c \
+                     "CREATE USER \"${DB_USER}\" WITH PASSWORD '${DB_PASS_SQL}';"
+             fi
+             if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
+                 runuser -u postgres -- createdb --owner "$DB_USER" "$DB_NAME"
+             fi
         else
             echo "--> Installing PostgreSQL Client only..."
             apt-get install -y --fix-missing postgresql-client libpq-dev
         fi
 
-        # Update .env
-        sed -i 's/^# DB_POSTGRES_/DB_POSTGRES_/g' "$ENV_FILE"
-        sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
-        sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
-
-        # Set values
-        sed -i "s|^DB_POSTGRES_HOST=.*|DB_POSTGRES_HOST=${DB_HOST}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_PORT=.*|DB_POSTGRES_PORT=${DB_PORT}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_USER=.*|DB_POSTGRES_USER=${DB_USER}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_PASSWORD=.*|DB_POSTGRES_PASSWORD=${DB_PASS}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_NAME=.*|DB_POSTGRES_NAME=${DB_NAME}|g" "$ENV_FILE"
+        disable_env_prefix DB_MYSQL_
+        disable_env_prefix DB_POSTGRES_
+        DB_SECRET_FILE=/data/shieldpm/secrets/db_postgres_password
+        printf '%s' "$DB_PASS" > "$DB_SECRET_FILE"
+        chmod 0600 "$DB_SECRET_FILE"
+        set_env_value DB_POSTGRES_HOST "$DB_HOST"
+        set_env_value DB_POSTGRES_PORT "$DB_PORT"
+        set_env_value DB_POSTGRES_USER "$DB_USER"
+        set_env_value DB_POSTGRES_PASSWORD_FILE "$DB_SECRET_FILE"
+        set_env_value DB_POSTGRES_NAME "$DB_NAME"
+        unset DB_PASS DB_PASS_SQL
 
         echo "  > PostgreSQL configured in $ENV_FILE."
         ;;
     *)
         echo "--> Configuring for SQLite (Default)..."
-        # SQLite is default, just ensure others are commented out
-        sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
-        sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
+        disable_env_prefix DB_MYSQL_
+        disable_env_prefix DB_POSTGRES_
         ;;
 esac
 
@@ -363,9 +423,12 @@ echo ""
 read -r -p "Install CrowdSec? [y/N] (Default: N): " cs_choice
 
 if [[ "$cs_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Installing CrowdSec Agent..."
-    curl -s https://install.crowdsec.net | bash
-    apt-get install -y crowdsec
+    echo "--> Installing CrowdSec Agent from the configured signed APT repositories..."
+    apt-get install -y --no-install-recommends crowdsec || {
+        echo "ERROR: CrowdSec is unavailable in the configured signed APT repositories." >&2
+        echo "Configure CrowdSec's official signed repository separately, then run the installer again." >&2
+        exit 1
+    }
 
     # Create acquis with native log paths (/data/nginx/ instead of Docker's /opt/shieldpm/nginx/)
     ACQUIS_DIR="/etc/crowdsec/acquis.d"
@@ -378,26 +441,15 @@ labels:
   type: shieldpm
 ACQUIS_EOF
 
-    # Install ShieldPM parser and collections
-    echo "--> Installing CrowdSec parsers and collections..."
-    
-    # Download custom parser/collection from GitHub directly to target directories
-    mkdir -p /etc/crowdsec/parsers/s01-parse/
-    mkdir -p /etc/crowdsec/collections/
-    
-    wget -q -O /etc/crowdsec/parsers/s01-parse/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/parser.yaml
-    wget -q -O /etc/crowdsec/collections/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/collection.yaml
+    # Install the parser and collection from the already checksummed release payload.
+    echo "--> Installing verified ShieldPM CrowdSec configuration..."
+    install -d -m 0755 /etc/crowdsec/parsers/s01-parse /etc/crowdsec/collections
+    install -m 0644 "$INSTALLER_DIR/rootfs/etc/crowdsec/parser.yaml" \
+        /etc/crowdsec/parsers/s01-parse/shieldpm.yaml
+    install -m 0644 "$INSTALLER_DIR/rootfs/etc/crowdsec/collection.yaml" \
+        /etc/crowdsec/collections/shieldpm.yaml
 
     echo "  > Installed ShieldPM parser & collection"
-
-    cscli hub update
-    # Install standard collections/scenarios from hub
-    cscli collections install crowdsecurity/base-http-scenarios 2>/dev/null || true
-    cscli collections install crowdsecurity/http-cve 2>/dev/null || true
-    cscli collections install crowdsecurity/appsec-virtual-patching 2>/dev/null || true
-    cscli collections install crowdsecurity/appsec-generic-rules 2>/dev/null || true
-    cscli collections install crowdsecurity/modsecurity 2>/dev/null || true
-    cscli scenarios install crowdsecurity/nginx-req-limit-exceeded 2>/dev/null || true
 
     # Generate bouncer API key and auto-configure
     echo "--> Configuring CrowdSec Bouncer..."
@@ -412,9 +464,10 @@ ACQUIS_EOF
             sed -i "s|^API_KEY=.*|API_KEY=$CS_API_KEY|g" /data/crowdsec/crowdsec.conf
             sed -i "s|^API_URL=.*|API_URL=http://127.0.0.1:8080|g" /data/crowdsec/crowdsec.conf
             sed -i "s|^ENABLED.*|ENABLED=true|g" /data/crowdsec/crowdsec.conf
+            chmod 0600 /data/crowdsec/crowdsec.conf
         fi
         echo "  > CrowdSec installed and configured!"
-        echo "  > Bouncer API Key: $CS_API_KEY"
+        echo "  > The generated bouncer key was written to the private CrowdSec config."
     else
         echo "  > CrowdSec installed but bouncer key generation failed."
         echo "  > After startup, run: cscli bouncers add shieldpm-bouncer"
@@ -438,26 +491,18 @@ echo ""
 read -r -p "Install GeoIP Update? [y/N] (Default: N): " geoip_choice
 
 if [[ "$geoip_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Installing geoipupdate..."
-    # Add MaxMind PPA and install
-    apt-get install -y software-properties-common
-    add-apt-repository -y ppa:maxmind/ppa 2>/dev/null || true
-    apt-get update
-    apt-get install -y geoipupdate || {
-        # Fallback: direct download if PPA not available
-        echo "  > PPA not available, trying direct install..."
-        ARCH=$(dpkg --print-architecture)
-        GEOIP_URL="https://github.com/maxmind/geoipupdate/releases/latest/download/geoipupdate_7.1.0_linux_${ARCH}.deb"
-        curl -L -o /tmp/geoipupdate.deb "$GEOIP_URL" 2>/dev/null
-        dpkg -i /tmp/geoipupdate.deb 2>/dev/null || apt-get install -f -y
-        rm -f /tmp/geoipupdate.deb
+    echo "--> Installing geoipupdate from the configured signed APT repositories..."
+    apt-get install -y --no-install-recommends geoipupdate || {
+        echo "ERROR: geoipupdate is unavailable in the configured signed APT repositories." >&2
+        exit 1
     }
 
     # Prompt for MaxMind credentials
     echo ""
     echo "  Enter your MaxMind account details (from https://www.maxmind.com/en/accounts):"
     read -r -p "  Account ID: " GEOIP_ACCOUNT_ID
-    read -r -p "  License Key: " GEOIP_LICENSE_KEY
+    read -r -s -p "  License Key: " GEOIP_LICENSE_KEY
+    echo
 
     if [ -n "$GEOIP_ACCOUNT_ID" ] && [ -n "$GEOIP_LICENSE_KEY" ]; then
         # Write GeoIP config
@@ -467,6 +512,7 @@ LicenseKey $GEOIP_LICENSE_KEY
 EditionIDs GeoLite2-Country GeoLite2-City GeoLite2-ASN
 DatabaseDirectory /data/nginx
 GEOIP_EOF
+        chmod 0600 /etc/GeoIP.conf
 
         # Run initial download
         echo "--> Downloading GeoIP databases to /data/nginx/..."
@@ -494,106 +540,31 @@ fi
 echo ""
 echo "=== Anubis AI Firewall (Optional) ==="
 echo "Anubis weighs the soul of incoming HTTP requests to stop AI crawlers."
-echo "It runs as a sidecar proxy to filter traffic before it reaches Nginx."
+echo "The checksummed release payload already contains its pinned binary."
 echo ""
-read -r -p "Install Anubis? [y/N] (Default: N): " anubis_choice
+read -r -p "Enable Anubis? [y/N] (Default: N): " anubis_choice
 
 if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Installing Anubis..."
-
-    # Detect Architecture
-    ARCH=$(dpkg --print-architecture)
-    # Map Debian arch to Anubis binary naming (linux-amd64, linux-arm64)
-    if [ "$ARCH" = "amd64" ]; then
-        ANUBIS_ARCH="amd64"
-    elif [ "$ARCH" = "arm64" ]; then
-        ANUBIS_ARCH="arm64"
-    else
-        echo "  > Warning: Unsupported architecture $ARCH. Anubis might not work."
-        ANUBIS_ARCH="$ARCH"
-    fi
-
-    VERSION="1.27.0"
-    URL="https://github.com/TecharoHQ/anubis/releases/download/v${VERSION}/anubis-${VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
-
-    echo "  > Downloading from $URL..."
-    curl -L -o /tmp/anubis.tar.gz "$URL"
-
-    if [ -s /tmp/anubis.tar.gz ]; then
-        tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-        rm /tmp/anubis.tar.gz
-        chmod +x /usr/local/bin/anubis
-        echo "  > Anubis installed to /usr/local/bin/anubis"
-
-        # Enable in .env
-        if grep -q "ANUBIS_ENABLED" "$ENV_FILE" 2>/dev/null; then
-            sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
-        else
-            echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
-        fi
-        echo "  > Enabled in $ENV_FILE"
-    else
-        echo "  > Download failed!"
-    fi
+    [ -x /usr/local/bin/anubis ] || {
+        echo "ERROR: Verified Anubis binary is missing from the release payload." >&2
+        exit 1
+    }
+    set_env_value ANUBIS_ENABLED true
+    echo "  > Anubis enabled in $ENV_FILE"
 else
-    echo "--> Skipping Anubis."
+    set_env_value ANUBIS_ENABLED false
+    echo "--> Anubis remains disabled."
 fi
 
-# 14. OAuth2 Proxy (Optional)
+# 14. OAuth2 Proxy
 echo ""
-echo "=== OAuth2 Proxy (Optional) ==="
+echo "=== OAuth2 Proxy ==="
 echo "OAuth2 Proxy protects your applications using an external OAuth2 provider."
-echo "It handles authentication flow and passes user identity to the backend."
-echo ""
-read -r -p "Install OAuth2 Proxy? [y/N] (Default: N): " oauth2_choice
-
-if [[ "$oauth2_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Installing OAuth2 Proxy..."
-
-    # Detect Architecture
-    ARCH=$(dpkg --print-architecture)
-    # Map Debian arch to OAuth2 Proxy binary naming (linux-amd64, linux-arm64)
-    if [ "$ARCH" = "amd64" ]; then
-        OAUTH2_ARCH="amd64"
-    elif [ "$ARCH" = "arm64" ]; then
-        OAUTH2_ARCH="arm64"
-    else
-        echo "  > Warning: Unsupported architecture $ARCH. OAuth2 Proxy might not work."
-        OAUTH2_ARCH="$ARCH"
-    fi
-
-    OAUTH2_VERSION="7.15.3"
-    OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
-    OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
-
-    OAUTH2_TMP_DIR=$(mktemp -d)
-    OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
-
-    echo "  > Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-    curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
-
-    if [ -s "$OAUTH2_TAR" ]; then
-        cd "$OAUTH2_TMP_DIR"
-        if tar -xzf "$OAUTH2_TARBALL"; then
-            EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-            if [ -f "$EXTRACTED_BIN" ]; then
-                mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                chmod +x /usr/local/bin/oauth2-proxy
-                echo "  > OAuth2 Proxy installed successfully."
-            else
-                echo "  ! Failed to locate extracted OAuth2 Proxy binary."
-            fi
-        else
-            echo "  ! Failed to extract OAuth2 Proxy."
-        fi
-        cd - > /dev/null
-    else
-        echo "  ! Failed to download OAuth2 Proxy. Check internet connection."
-    fi
-    rm -rf "$OAUTH2_TMP_DIR"
-else
-    echo "--> Skipping OAuth2 Proxy."
-fi
+echo "Its pinned binary is installed but starts only for an assigned OAuth2 access list."
+[ -x /usr/local/bin/oauth2-proxy ] || {
+    echo "ERROR: Verified OAuth2 Proxy binary is missing from the release payload." >&2
+    exit 1
+}
 
 # 15. OpenAppSec WAF (Optional)
 echo ""
@@ -602,110 +573,43 @@ echo "OpenAppSec is an AI-based Web Application Firewall (WAF) that protects"
 echo "against OWASP Top 10 threats using machine learning."
 echo "The Nginx attachment module is already built-in."
 echo ""
-read -r -p "Install OpenAppSec Agent? [y/N] (Default: N): " oas_choice
+read -r -p "Enable a pre-installed OpenAppSec Agent? [y/N] (Default: N): " oas_choice
 
 if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
-    echo "--> Downloading OpenAppSec installer..."
-    cd /tmp
-    wget -q https://downloads.openappsec.io/open-appsec-install && chmod +x open-appsec-install
-
-    # Ask about cloud portal
-    echo ""
-    echo "  OpenAppSec can be managed via the Cloud Portal (https://my.openappsec.io)"
-    echo "  or locally via a policy file. Cloud management requires a Deployment Profile Token."
-    echo ""
-    read -r -p "  Enter AGENT_TOKEN (leave empty for local-only mode): " OAS_AGENT_TOKEN
-
-    echo "--> Running OpenAppSec installer (agent only)..."
-    # Run installer — ShieldPM already has the Nginx attachment module compiled in
-    if [ -n "$OAS_AGENT_TOKEN" ]; then
-        ./open-appsec-install --auto --token "$OAS_AGENT_TOKEN" || {
-            echo "  > Automatic install failed, trying manual mode..."
-            ./open-appsec-install --manual || true
-        }
-        echo "  > Connected to Cloud Portal with provided token."
-    else
-        ./open-appsec-install --auto || {
-            echo "  > Automatic install failed, trying manual mode..."
-            ./open-appsec-install --manual || true
-        }
-
-        # Create default local_policy.yaml for standalone mode
-        APPSEC_CONF_DIR="/etc/cp/conf"
-        mkdir -p "$APPSEC_CONF_DIR"
-        if [ ! -f "$APPSEC_CONF_DIR/local_policy.yaml" ]; then
-            cat > "$APPSEC_CONF_DIR/local_policy.yaml" << 'APPSEC_EOF'
-# OpenAppSec Local Policy for ShieldPM
-# Docs: https://docs.openappsec.io/
-policies:
-  default:
-    mode: detect-learn
-    practices:
-      - web-attacks:
-          override-mode: detect-learn
-          minimum-confidence: medium
-      - anti-bot:
-          override-mode: detect-learn
-          injected-URIs: []
-          validated-URIs: []
-    triggers:
-      - log:
-          verbosity: standard
-          extendedLogging: true
-          logToAgent: true
-          logToCloud: false
-APPSEC_EOF
-            echo "  > Created default policy at $APPSEC_CONF_DIR/local_policy.yaml"
-            echo "  > Default mode: detect-learn (logs only, does not block)"
-            echo "  > Change to 'prevent-learn' to enable active blocking"
-        fi
-    fi
-
-    # Ask about Advanced ML Model
-    echo ""
-    echo "  OpenAppSec offers an Advanced ML Model with improved detection accuracy."
-    echo "  Download it from: https://my.openappsec.io or https://downloads.openappsec.io"
-    echo ""
-    read -r -p "  Path to Advanced Model .tgz (leave empty to skip): " OAS_MODEL_PATH
-
-    if [ -n "$OAS_MODEL_PATH" ] && [ -f "$OAS_MODEL_PATH" ]; then
-        mkdir -p /etc/cp/conf
-        cp "$OAS_MODEL_PATH" /etc/cp/conf/open-appsec-advanced-model.tgz
-        echo "  > Advanced Model installed at /etc/cp/conf/open-appsec-advanced-model.tgz"
-    elif [ -n "$OAS_MODEL_PATH" ]; then
-        echo "  > File not found: $OAS_MODEL_PATH — skipping Advanced Model."
-    fi
-
-    # Enable the Nginx module in .env
-    if grep -q "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE" "$ENV_FILE" 2>/dev/null; then
-        sed -i "s|.*NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE.*|NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true|g" "$ENV_FILE"
-    else
-        echo "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" >> "$ENV_FILE"
-    fi
-
-    echo "  > OpenAppSec Agent installed!"
-    echo "  > Manage with: open-appsec-ctl"
-    if [ -z "$OAS_AGENT_TOKEN" ]; then
-        echo "  > Policy file: /etc/cp/conf/local_policy.yaml"
-        echo "  > Apply changes: open-appsec-ctl --apply-policy"
-    else
-        echo "  > Cloud Portal: https://my.openappsec.io"
-    fi
-
-    rm -f /tmp/open-appsec-install
+    command -v open-appsec-ctl >/dev/null 2>&1 || {
+        echo "ERROR: OpenAppSec is not installed." >&2
+        echo "Install it separately through a reviewed, signed vendor package; this installer never executes a mutable remote script." >&2
+        exit 1
+    }
+    set_env_value NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE true
+    echo "  > Enabled the module for the existing OpenAppSec installation."
 else
-    echo "--> Skipping OpenAppSec (can be installed later)."
+    set_env_value NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE false
+    echo "--> OpenAppSec remains disabled."
 fi
 
 echo "=== Starting ShieldPM ==="
 echo "--> Starting service to run initial migrations..."
 systemctl start shieldpm
 
-echo "--> Waiting 20 seconds for migrations to complete..."
-sleep 20
-
-echo "--> Restarting ShieldPM to load final configuration..."
-systemctl restart shieldpm
+frontend_port=$(sed -n 's/^[[:space:]]*NPM_PORT=\([0-9][0-9]*\)[[:space:]]*$/\1/p' "$ENV_FILE" | tail -n 1)
+frontend_port=${frontend_port:-81}
+echo "--> Waiting up to 120 seconds for migrations and all health checks..."
+health_deadline=$((SECONDS + 120))
+until systemctl is-active --quiet shieldpm && \
+      curl --fail --silent --show-error --max-time 3 --unix-socket /run/shieldpm.sock \
+          http://localhost/ | jq -e '.status == "OK"' >/dev/null && \
+      nginx -tq >/dev/null 2>&1 && \
+      [ -s /html/frontend/index.html ] && \
+      curl --fail --silent --show-error --max-time 3 "http://127.0.0.1:${frontend_port}/" >/dev/null; do
+    if [ "$SECONDS" -ge "$health_deadline" ]; then
+        systemctl --no-pager --full status shieldpm || true
+        journalctl --no-pager -u shieldpm -n 100 || true
+        echo "ERROR: ShieldPM did not become healthy within 120 seconds." >&2
+        exit 1
+    fi
+    sleep 1
+done
 
 echo "=== Installation Complete ==="
 echo "ShieldPM is installed. A system reboot is recommended to apply all changes."

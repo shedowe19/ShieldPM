@@ -46,6 +46,12 @@
 			"type": "integer",
 			"minimum": 0,
 			"example": 3
+		},
+		"revision": {
+			"type": "integer",
+			"minimum": 1,
+			"readOnly": true,
+			"description": "Monotonic authorization revision used to revoke terminal tickets"
 		}
 	}
 }

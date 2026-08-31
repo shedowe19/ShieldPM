@@ -555,9 +555,14 @@ fi
 
 find /data/tls \
      /data/access \
-     /data/shieldpm \
      -not -perm 770 \
      -exec chmod 770 {} \;
+
+# Application state contains signing keys, DB credentials and the one-time
+# ownership token. The backend and its helper processes share one uid, so no
+# group/world permissions are required here.
+find /data/shieldpm -type d -not -perm 700 -exec chmod 700 {} \;
+find /data/shieldpm -type f -not -perm 600 -exec chmod 600 {} \;
 
 rm -vf /usr/local/nginx/logs/nginx.pid
 rm -vf /run/*.sock

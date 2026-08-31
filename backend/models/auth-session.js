@@ -41,6 +41,16 @@ class AuthSession extends Model {
 	created_ip;
 	/** @type {string | null} */
 	created_user_agent;
+	/** @type {string | null} */
+	auth_time;
+	/** @type {string[]} */
+	authentication_methods;
+	/** @type {number | null} */
+	actor_user_id;
+	/** @type {number | null} */
+	actor_session_id;
+	/** @type {string | null} */
+	impersonated_at;
 	/** @type {import("./user.js").default} */
 	user;
 	/** @type {AuthSession | null} */
@@ -75,7 +85,7 @@ class AuthSession extends Model {
 	}
 
 	static get jsonAttributes() {
-		return ["scope"];
+		return ["scope", "authentication_methods"];
 	}
 
 	static get relationMappings() {

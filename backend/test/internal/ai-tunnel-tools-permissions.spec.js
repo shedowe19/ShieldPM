@@ -38,6 +38,7 @@ vi.mock("../../internal/tor.js", () => ({
 }));
 vi.mock("../../lib/config.js", () => ({
 	getEncryptionKey: vi.fn().mockReturnValue("0".repeat(64)),
+	getPrivateKey: vi.fn().mockReturnValue("test-confirmation-key"),
 	isDemoMode: vi.fn().mockReturnValue(false),
 }));
 vi.mock("../../models/cloudflared_tunnel.js", () => ({ default: { query: mocks.cloudflaredQuery } }));
@@ -60,6 +61,7 @@ vi.mock("../../internal/token.js", () => ({ default: {} }));
 vi.mock("../../internal/user.js", () => ({ default: {} }));
 
 import { executeTools } from "../../internal/ai/executor.js";
+import { getToolEffect, issueConfirmation } from "../../internal/ai/safety.js";
 import { getToolDefinitions } from "../../internal/ai/tools.js";
 
 const cloudflaredToolNames = [
@@ -229,15 +231,35 @@ describe("AI tunnel tool permissions", () => {
 		expect(toolNames).not.toEqual(expect.arrayContaining([...cloudflaredToolNames, ...torToolNames]));
 	});
 
+	it("never advertises tunnel mutations that would disclose provider tokens", async () => {
+		const access = { can: vi.fn().mockResolvedValue(true) };
+		const toolNames = (await getToolDefinitions(access)).map((tool) => tool.function.name);
+		expect(toolNames).not.toContain("create_cloudflared_tunnel");
+		expect(toolNames).not.toContain("update_cloudflared_tunnel");
+	});
+
 	it("rejects every Cloudflared and Tor operation before querying models when capability checks fail", async () => {
 		const access = {
 			can: vi.fn().mockRejectedValue(new Error("Permission Denied")),
 			token: { getUserId: vi.fn().mockReturnValue(7) },
 		};
 
-		const results = await executeTools(access, tunnelCalls);
+		const results = [];
+		for (const call of tunnelCalls) {
+			const confirmationToken =
+				getToolEffect(call.name) === "destructive"
+					? issueConfirmation(access, call.name, call.args)
+					: undefined;
+			results.push(...(await executeTools(access, [call], { confirmationToken })));
+		}
 
-		expect(results.map((result) => result.result)).toEqual(tunnelCalls.map(() => "Error: Permission Denied"));
+		expect(results.map((result) => result.result)).toEqual(
+			tunnelCalls.map((call) =>
+				["create_cloudflared_tunnel", "update_cloudflared_tunnel"].includes(call.name)
+					? `Error: Unknown or unauthorized AI tool: ${call.name}`
+					: "Error: Permission Denied",
+			),
+		);
 		expect(mocks.cloudflaredQuery).not.toHaveBeenCalled();
 		expect(mocks.torOnionQuery).not.toHaveBeenCalled();
 		expect(mocks.addAuditLog).not.toHaveBeenCalled();
@@ -258,13 +280,15 @@ describe("AI tunnel tool permissions", () => {
 			{ name: "update_cloudflared_tunnel", args: { id: 2, name: "takeover" } },
 			{ name: "start_tor_onion_service", args: { id: 12 } },
 		]);
+		const foreignStart = await executeTools(access, [{ name: "start_tor_onion_service", args: { id: 12 } }]);
 
 		expect(results.map((result) => result.result)).toEqual([
 			JSON.stringify([{ id: 1, name: "owner-cloud", status: 0, created_on: undefined }]),
 			JSON.stringify([{ id: 11, name: "owner-onion", onion: undefined, status: 0 }]),
-			"Error: Not Found - 2",
-			"Error: Not Found - 12",
+			"Error: Unknown or unauthorized AI tool: update_cloudflared_tunnel",
+			"Error: Mutation blocked after an untrusted read; start a new user turn",
 		]);
+		expect(foreignStart.map((result) => result.result)).toEqual(["Error: Not Found - 12"]);
 		expect(mocks.patchCloudTunnel).not.toHaveBeenCalled();
 		expect(mocks.startTorService).not.toHaveBeenCalled();
 		expect(mocks.addAuditLog).not.toHaveBeenCalled();
@@ -277,13 +301,17 @@ describe("AI tunnel tool permissions", () => {
 		};
 		mocks.getProxyHost.mockRejectedValue(new Error("Not Found - 99"));
 
-		const results = await executeTools(access, [
+		const createResults = await executeTools(access, [
 			{
 				name: "create_tor_onion_service",
 				args: { name: "foreign-host-onion", proxy_host_id: 99, virtual_port: 80, target_port: 8080 },
 			},
-			{ name: "update_tor_onion_service", args: { id: 11, proxy_host_id: 99 } },
 		]);
+		const updateArgs = { id: 11, proxy_host_id: 99 };
+		const updateResults = await executeTools(access, [{ name: "update_tor_onion_service", args: updateArgs }], {
+			confirmationToken: issueConfirmation(access, "update_tor_onion_service", updateArgs),
+		});
+		const results = [...createResults, ...updateResults];
 
 		expect(results.map((result) => result.result)).toEqual(["Error: Not Found - 99", "Error: Not Found - 99"]);
 		expect(mocks.torOnionQuery).toHaveBeenCalledOnce();
@@ -298,29 +326,37 @@ describe("AI tunnel tool permissions", () => {
 			token: { getUserId: vi.fn().mockReturnValue(7) },
 		};
 
-		const results = await executeTools(access, [
+		const calls = [
 			{ name: "create_cloudflared_tunnel", args: { name: "new-cloud", token: "token" } },
 			{ name: "update_cloudflared_tunnel", args: { id: 1, name: "updated-cloud" } },
 			{ name: "delete_cloudflared_tunnel", args: { id: 2 } },
 			{ name: "create_tor_onion_service", args: { name: "new-onion", virtual_port: 80, target_port: 8080 } },
 			{ name: "update_tor_onion_service", args: { id: 11, name: "updated-onion", virtual_port: 443 } },
 			{ name: "delete_tor_onion_service", args: { id: 12 } },
-		]);
+		];
+		const results = [];
+		for (const call of calls) {
+			const confirmationToken =
+				getToolEffect(call.name) === "destructive"
+					? issueConfirmation(access, call.name, call.args)
+					: undefined;
+			results.push(...(await executeTools(access, [call], { confirmationToken })));
+		}
 
 		expect(results.map((result) => result.result)).toEqual([
-			"Created Cloudflare Tunnel ID: 21",
-			"Updated Tunnel ID: 1",
+			"Error: Unknown or unauthorized AI tool: create_cloudflared_tunnel",
+			"Error: Unknown or unauthorized AI tool: update_cloudflared_tunnel",
 			"Deleted Tunnel ID: 2",
 			"Created Tor Onion Service ID: 21 (Address: undefined)",
 			"Updated Tor Onion Service ID: 11",
 			"Deleted Tor Onion Service ID: 12",
 		]);
-		expect(mocks.startCloudTunnel).toHaveBeenCalledOnce();
-		expect(mocks.restartCloudTunnel).toHaveBeenCalledOnce();
+		expect(mocks.startCloudTunnel).not.toHaveBeenCalled();
+		expect(mocks.restartCloudTunnel).not.toHaveBeenCalled();
 		expect(mocks.stopCloudTunnel).toHaveBeenCalledWith(2);
 		expect(mocks.createTorService).toHaveBeenCalledOnce();
 		expect(mocks.restartTorService).toHaveBeenCalledOnce();
 		expect(mocks.stopTorService).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
-		expect(mocks.addAuditLog).toHaveBeenCalledTimes(6);
+		expect(mocks.addAuditLog).toHaveBeenCalledTimes(4);
 	});
 });

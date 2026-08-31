@@ -55,7 +55,7 @@ fs.writeFileSync(args[args.indexOf("--out-file") + 1], "{}");
 		expect(`${result.stdout}\n${result.stderr}`).toContain("Locale extraction failed: exit code 7");
 	});
 
-	it("passes the source glob to the project FormatJS executable without shell quotes", () => {
+	it("passes an absolute source glob so extraction is independent of the caller's working directory", () => {
 		fakeBin = mkdtempSync(join(tmpdir(), "shieldpm-locale-check-"));
 		const argsFile = join(fakeBin, "formatjs-args.json");
 
@@ -75,6 +75,7 @@ fs.writeFileSync(args[args.indexOf("--out-file") + 1], "{}");
 		);
 
 		expect(result.status).toBe(0);
-		expect(JSON.parse(readFileSync(argsFile, "utf8"))).toContain("src/**/*.tsx");
+		const expectedGlob = `${resolve(process.cwd(), "src").split("\\").join("/")}/**/*.tsx`;
+		expect(JSON.parse(readFileSync(argsFile, "utf8"))).toContain(expectedGlob);
 	});
 });

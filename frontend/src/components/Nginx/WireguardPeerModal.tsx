@@ -109,7 +109,7 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>
-											<T id="description" />
+											<T id="wireguard.peer.description" />
 										</FormLabel>
 										<FormControl>
 											<Textarea

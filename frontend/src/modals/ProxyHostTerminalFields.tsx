@@ -104,6 +104,39 @@ const ProxyHostTerminalFields = () => (
 									)}
 								</Field>
 							</div>
+							<div className="col-span-12">
+								<Field name="terminalHostKeyFingerprint">
+									{({ field, form }: FieldProps) => (
+										<div className="space-y-2">
+											<Label htmlFor="terminalHostKeyFingerprint">
+												<T id="terminal.host-key-fingerprint" />
+											</Label>
+											<Input
+												id="terminalHostKeyFingerprint"
+												placeholder="SHA256:…"
+												autoComplete="off"
+												maxLength={80}
+												pattern="(?:SHA256:[A-Za-z0-9+/]{43}=?|[A-Fa-f0-9]{64})"
+												required
+												aria-describedby="terminalHostKeyFingerprintHelp"
+												className={
+													form.errors.terminalHostKeyFingerprint &&
+													form.touched.terminalHostKeyFingerprint
+														? "border-destructive"
+														: ""
+												}
+												{...field}
+											/>
+											<p
+												id="terminalHostKeyFingerprintHelp"
+												className="text-xs text-muted-foreground"
+											>
+												<T id="terminal.host-key-fingerprint-help" />
+											</p>
+										</div>
+									)}
+								</Field>
+							</div>
 
 							<Field name="terminalAuthType">
 								{({ field: authField }: FieldProps) =>

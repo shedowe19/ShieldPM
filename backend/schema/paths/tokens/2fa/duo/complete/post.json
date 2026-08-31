@@ -1,0 +1,73 @@
+{
+	"operationId": "complete2FADuo",
+	"summary": "Complete a session-bound Duo 2FA login",
+	"tags": [
+		"tokens"
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"additionalProperties": false,
+					"properties": {
+						"pending_token": {
+							"type": "string",
+							"minLength": 16,
+							"maxLength": 16384
+						},
+						"duo_code": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 4096
+						},
+						"state": {
+							"description": "The state returned by Duo and by POST /tokens/2fa/duo/begin",
+							"type": "string",
+							"minLength": 43,
+							"maxLength": 256
+						}
+					},
+					"required": [
+						"pending_token",
+						"duo_code",
+						"state"
+					],
+					"type": "object"
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "Duo verification successful; full authentication tokens issued",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/token-response.json"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Missing or invalid fields",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/error-object.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Pending token or Duo state invalid, expired, or already consumed",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

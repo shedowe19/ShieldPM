@@ -11,6 +11,7 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv from "ajv/dist/2020.js";
 import _ from "lodash";
+import authSessionService from "../internal/auth-session-service.js";
 import { access as logger } from "../logger.js";
 import proxyHostModel from "../models/proxy_host.js";
 import TokenModel from "../models/token.js";
@@ -32,6 +33,7 @@ export default function (tokenString) {
 	let allowInternalAccess = false;
 	let userRoles = [];
 	let permissions = {};
+	let authSession = null;
 
 	/**
 	 * Loads the Token object from the token string
@@ -48,6 +50,13 @@ export default function (tokenString) {
 		}
 
 		tokenData = await Token.load(tokenString);
+
+		if (tokenData?.attrs?.id && tokenData?.iss === "api") {
+			authSession = await authSessionService.validateAccessSession(tokenData.sid, tokenData.attrs.id, {
+				fid: tokenData.fid,
+				act: tokenData.act,
+			});
+		}
 
 		// At this point we need to load the user from the DB and make sure they:
 		// - exist (and not soft deleted)
@@ -197,6 +206,9 @@ export default function (tokenString) {
 
 	return {
 		token: Token,
+		get session() {
+			return authSession;
+		},
 
 		/**
 		 *
@@ -205,7 +217,8 @@ export default function (tokenString) {
 		 */
 		load: async (allowInternal) => {
 			if (tokenString) {
-				return await Token.load(tokenString);
+				await this.init();
+				return tokenData;
 			}
 			allowInternalAccess = allowInternal;
 			return allowInternal || null;

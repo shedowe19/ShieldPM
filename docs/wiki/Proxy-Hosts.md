@@ -34,11 +34,11 @@ Enter one or more domain names that this proxy host will respond to.
 
 ### Forward Destination
 
-| Field | Description | Examples |
-| :--- | :--- | :--- |
-| **Scheme** | Protocol used to talk to the backend | `http`, `https`, `terminal`, `grpc`, `path` |
-| **Forward Host** | IP or hostname of the backend service | `192.168.1.50`, `nextcloud`, `127.0.0.1` |
-| **Forward Port** | Port the service is listening on | `8080`, `3000`, `443` |
+| Field            | Description                           | Examples                                    |
+| :--------------- | :------------------------------------ | :------------------------------------------ |
+| **Scheme**       | Protocol used to talk to the backend  | `http`, `https`, `terminal`, `grpc`, `path` |
+| **Forward Host** | IP or hostname of the backend service | `192.168.1.50`, `nextcloud`, `127.0.0.1`    |
+| **Forward Port** | Port the service is listening on      | `8080`, `3000`, `443`                       |
 
 > [!TIP]
 >
@@ -48,25 +48,25 @@ Enter one or more domain names that this proxy host will respond to.
 
 ### Scheme Types
 
-| Scheme | Use Case |
-| :--- | :--- |
-| `http` | Standard web services (most common) |
-| `https` | Backend handles its own SSL (e.g., self-signed cert) |
-| `terminal` | Web-based SSH terminal (see below) |
-| `grpc` / `grpcs` | gRPC API services |
-| `path` | Serve static files or PHP directly from the filesystem |
+| Scheme           | Use Case                                               |
+| :--------------- | :----------------------------------------------------- |
+| `http`           | Standard web services (most common)                    |
+| `https`          | Backend handles its own SSL (e.g., self-signed cert)   |
+| `terminal`       | Web-based SSH terminal (see below)                     |
+| `grpc` / `grpcs` | gRPC API services                                      |
+| `path`           | Serve static files or PHP directly from the filesystem |
 
 ---
 
 ## ⚙️ Options
 
-| Option | Description | When to Enable |
-| :--- | :--- | :--- |
-| **Cache Assets** | Nginx caches static files (CSS, JS, images) | Static sites, blogs |
-| **Block Common Exploits** | Blocks SQL injection, path traversal, XSS | ✅ Always recommended |
-| **Websockets Support** | Enables WebSocket upgrade headers | Home Assistant, Nextcloud, Grafana |
-| **HTTP/2 Support** | Enable HTTP/2 for better performance | ✅ Most modern services |
-| **HSTS Enabled** | Strict Transport Security header | Production HTTPS sites |
+| Option                    | Description                                 | When to Enable                     |
+| :------------------------ | :------------------------------------------ | :--------------------------------- |
+| **Cache Assets**          | Nginx caches static files (CSS, JS, images) | Static sites, blogs                |
+| **Block Common Exploits** | Blocks SQL injection, path traversal, XSS   | ✅ Always recommended              |
+| **Websockets Support**    | Enables WebSocket upgrade headers           | Home Assistant, Nextcloud, Grafana |
+| **HTTP/2 Support**        | Enable HTTP/2 for better performance        | ✅ Most modern services            |
+| **HSTS Enabled**          | Strict Transport Security header            | Production HTTPS sites             |
 
 ---
 
@@ -74,20 +74,20 @@ Enter one or more domain names that this proxy host will respond to.
 
 In the **SSL** tab, configure how ShieldPM handles HTTPS:
 
-| Option | Description |
-| :--- | :--- |
-| **None** | No SSL — HTTP only |
-| **Request a New Certificate** | Auto-request from Let's Encrypt (requires domain pointing to ShieldPM) |
-| **Select Existing Certificate** | Use a previously created certificate (e.g., wildcard) |
+| Option                          | Description                                                            |
+| :------------------------------ | :--------------------------------------------------------------------- |
+| **None**                        | No SSL — HTTP only                                                     |
+| **Request a New Certificate**   | Auto-request from Let's Encrypt (requires domain pointing to ShieldPM) |
+| **Select Existing Certificate** | Use a previously created certificate (e.g., wildcard)                  |
 
 ### SSL Options
 
-| Option | Description |
-| :--- | :--- |
-| **Force SSL** | Redirect all HTTP requests to HTTPS (301 redirect) |
-| **HTTP/2** | Enable HTTP/2 protocol support |
-| **HSTS** | Add `Strict-Transport-Security` header |
-| **HSTS Subdomains** | Include subdomains in HSTS |
+| Option              | Description                                        |
+| :------------------ | :------------------------------------------------- |
+| **Force SSL**       | Redirect all HTTP requests to HTTPS (301 redirect) |
+| **HTTP/2**          | Enable HTTP/2 protocol support                     |
+| **HSTS**            | Add `Strict-Transport-Security` header             |
+| **HSTS Subdomains** | Include subdomains in HSTS                         |
 
 > [!IMPORTANT]
 > For Let's Encrypt to work, port 80 must be reachable from the internet and the domain must point to your ShieldPM server's IP address.
@@ -116,11 +116,11 @@ Append additional query parameters to every request forwarded to the backend:
 
 Protect individual hosts from abuse:
 
-| Field | Description | Example |
-| :--- | :--- | :--- |
-| **Rate** | Requests per unit | `10` |
-| **Unit** | Time unit | `second`, `minute`, `hour` |
-| **Burst** | Queue size for exceeding clients | `20` |
+| Field     | Description                      | Example                    |
+| :-------- | :------------------------------- | :------------------------- |
+| **Rate**  | Requests per unit                | `10`                       |
+| **Unit**  | Time unit                        | `second`, `minute`, `hour` |
+| **Burst** | Queue size for exceeding clients | `20`                       |
 
 > [!TIP]
 > See [Request Rate Limiting](Request-Rate-Limiting) for a detailed guide.
@@ -131,11 +131,11 @@ Protect individual hosts from abuse:
 
 Locations let you map specific URL paths to different backends or configurations:
 
-| Field | Description | Example |
-| :--- | :--- | :--- |
-| **Path** | URL path prefix to match | `/api`, `/static`, `/admin` |
-| **Forward Host/Port** | Can differ from the main host | `api-server:3001` |
-| **Custom Config** | Nginx directives for this path only | `proxy_read_timeout 300s;` |
+| Field                 | Description                         | Example                     |
+| :-------------------- | :---------------------------------- | :-------------------------- |
+| **Path**              | URL path prefix to match            | `/api`, `/static`, `/admin` |
+| **Forward Host/Port** | Can differ from the main host       | `api-server:3001`           |
+| **Custom Config**     | Nginx directives for this path only | `proxy_read_timeout 300s;`  |
 
 **Example:** Route `/api` to a different backend:
 
@@ -148,16 +148,31 @@ Locations let you map specific URL paths to different backends or configurations
 
 Selecting **terminal** as the scheme enables a web-based SSH terminal:
 
-| Field | Description |
-| :--- | :--- |
-| **Terminal Host** | SSH server address (usually same as Forward Host) |
-| **Terminal Port** | SSH port (default: `22`) |
-| **Username** | SSH user (e.g., `root`) |
-| **Auth Type** | `Password` or `Private Key` |
+| Field                        | Description                                                                                 |
+| :--------------------------- | :------------------------------------------------------------------------------------------ |
+| **Terminal Host**            | SSH server address (usually same as Forward Host)                                           |
+| **Terminal Port**            | SSH port (default: `22`)                                                                    |
+| **Username**                 | SSH user (e.g., `root`)                                                                     |
+| **Auth Type**                | `Password` or `Private Key`                                                                 |
+| **SSH Host Key Fingerprint** | Required OpenSSH `SHA256:…` (or SHA-256 hex) fingerprint obtained through a trusted channel |
 
 - Navigate to the configured domain (e.g., `https://term.example.com`) to open the terminal
 - A **Connect** shortcut is also available in the dashboard via the **⋮** (three dots) menu
 - Credentials are **encrypted at rest** using AES-256-GCM
+
+Terminal hosts fail closed unless the proxy host is certificate-backed, HTTPS-only and protected by an authenticated
+Access List. The browser first exchanges the authenticated Nginx gateway assertion for a 30-second, one-use ticket.
+The ticket is bound to the host ID, HTTP authority, client fingerprint and current Access-List revision; even a failed
+binding attempt consumes it. Nginx signs the gateway assertion with HMAC, and the WebSocket carries the ticket in the
+`shieldpm-terminal` subprotocol instead of a URL.
+
+The SSH connection verifies the configured host-key fingerprint before sending credentials. Changing or removing a
+Terminal host or its Access List revokes pending tickets and active sessions. Input frames are capped at 64 KiB and
+terminal resize values are range-checked.
+
+> [!WARNING]
+> Do not copy a fingerprint from the same untrusted connection you are trying to protect. Verify it from the SSH host
+> console, configuration management or another authenticated channel.
 
 ---
 

@@ -77,6 +77,7 @@ export * from "./setup2faDuo";
 export * from "./setup2faPasskey";
 export * from "./setup2faTotp";
 export * from "./setup2faYubikey";
+export * from "./stepUpAuthentication";
 export * from "./testDdnsProvider";
 export * from "./testHttpCertificate";
 export * from "./toggleDeadHost";

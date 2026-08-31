@@ -14,6 +14,7 @@ interface TwoFAStepProps {
 	pendingToken: string;
 	methods: string[];
 	onSuccess: (response: TokenResponse) => void;
+	duoReturnTo?: string;
 }
 
 type ActiveMethod = "totp" | "yubikey" | "backup_code" | "passkey" | "duo" | null;
@@ -32,7 +33,7 @@ const METHOD_LABELS: Record<string, string> = {
 	duo: intl.formatMessage({ id: "2fa.method.duo" }),
 };
 
-export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFAStepProps) {
+export default function TwoFAStep({ pendingToken, methods, onSuccess, duoReturnTo }: TwoFAStepProps) {
 	const [activeMethod, setActiveMethod] = useState<ActiveMethod>(null);
 	const [code, setCode] = useState("");
 	const [error, setError] = useState("");
@@ -79,8 +80,10 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 		setError("");
 		setLoading(true);
 		try {
-			const { authUrl } = await begin2faDuoAuth(pendingToken);
+			const { authUrl, state } = await begin2faDuoAuth(pendingToken);
 			sessionStorage.setItem("duo_pending_token", pendingToken);
+			sessionStorage.setItem("duo_expected_state", state);
+			if (duoReturnTo) sessionStorage.setItem("duo_return_to", duoReturnTo);
 			window.location.href = authUrl;
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);

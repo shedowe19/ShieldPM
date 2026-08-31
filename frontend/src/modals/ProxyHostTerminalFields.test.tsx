@@ -50,6 +50,7 @@ const terminalValues = (overrides: Partial<ProxyHostFormValues> = {}): ProxyHost
 	forwardScheme: FORWARD_SCHEME.TERMINAL,
 	terminalAuthType: TERMINAL_AUTH_TYPE.PASSWORD,
 	terminalHost: "terminal.example.test",
+	terminalHostKeyFingerprint: "SHA256:0123456789012345678901234567890123456789012",
 	terminalPassword: "secret",
 	terminalPort: 22,
 	terminalPrivateKey: "private-key",
@@ -73,6 +74,11 @@ describe("ProxyHostTerminalFields", () => {
 		expect(screen.getByLabelText("terminal.host")).toHaveValue("terminal.example.test");
 		expect(screen.getByLabelText("terminal.password")).toHaveValue("secret");
 		expect(screen.queryByLabelText("terminal.private-key")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("terminal.host-key-fingerprint")).toBeRequired();
+		expect(screen.getByLabelText("terminal.host-key-fingerprint")).toHaveAttribute(
+			"pattern",
+			"(?:SHA256:[A-Za-z0-9+/]{43}=?|[A-Fa-f0-9]{64})",
+		);
 	});
 
 	it("renders a key example without embedding a scanner-triggering private-key header", () => {

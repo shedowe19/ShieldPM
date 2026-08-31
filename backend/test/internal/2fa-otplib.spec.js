@@ -27,8 +27,8 @@ describe("Fix #69: otplib v13 uses standalone exports", () => {
 	});
 
 	it("uses verifySync().valid for TOTP verification", () => {
-		// Both verifyAndEnableTotp and verifyTotp use verifySync({ token, secret }).valid
-		expect(source).toContain("verifySync({ token: code, secret: record.secret }).valid");
+		// Stored secrets are decrypted immediately before otplib verification.
+		expect(source).toContain("verifySync({ token: code, secret: revealSecret(record.secret) }).valid");
 	});
 
 	it("does not use non-existent authenticator namespace", () => {

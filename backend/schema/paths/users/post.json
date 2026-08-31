@@ -11,6 +11,19 @@
 			]
 		}
 	],
+	"parameters": [
+		{
+			"in": "header",
+			"name": "X-ShieldPM-Setup-Token",
+			"required": false,
+			"description": "Required only while atomically claiming the initial administrator account. Must be the one-time 256-bit ownership token.",
+			"schema": {
+				"type": "string",
+				"minLength": 43,
+				"maxLength": 256
+			}
+		}
+	],
 	"requestBody": {
 		"description": "User Payload",
 		"required": true,
@@ -40,10 +53,26 @@
 						"is_disabled": {
 							"$ref": "../../components/user-object.json#/properties/is_disabled"
 						},
-						"auth": {
-							"type": "object",
-							"description": "Auth Credentials",
-							"example": {
+					"auth": {
+						"type": "object",
+						"description": "Auth Credentials",
+						"additionalProperties": false,
+						"required": [
+							"type",
+							"secret"
+						],
+						"properties": {
+							"type": {
+								"type": "string",
+								"const": "password"
+							},
+							"secret": {
+								"type": "string",
+								"minLength": 12,
+								"maxLength": 100
+							}
+						},
+						"example": {
 								"type": "password",
 								"secret": "bigredhorsebanana"
 							}

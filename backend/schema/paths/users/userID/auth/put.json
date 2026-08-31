@@ -57,7 +57,7 @@
 						},
 						"secret": {
 							"type": "string",
-							"minLength": 8,
+							"minLength": 12,
 							"maxLength": 100,
 							"example": "mySuperN3wP@ssword!"
 						}

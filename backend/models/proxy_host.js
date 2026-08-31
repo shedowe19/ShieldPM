@@ -36,6 +36,8 @@ const boolFields = [
 class ProxyHost extends Model {
 	/** @type {number} */
 	id;
+	/** @type {number} */
+	is_deleted;
 	/** @type {string} */
 	forward_scheme;
 	/** @type {string} */
@@ -58,6 +60,10 @@ class ProxyHost extends Model {
 	access_list_id;
 	/** @type {number} */
 	certificate_id;
+	/** @type {import("./access_list.js").default|null} */
+	access_list;
+	/** @type {import("./certificate.js").default|null} */
+	certificate;
 	/** @type {number} */
 	enabled;
 	/** @type {number} */
@@ -146,6 +152,10 @@ class ProxyHost extends Model {
 	terminal_password;
 	/** @type {string|null} */
 	terminal_private_key;
+	/** @type {string|null} */
+	terminal_host_key_fingerprint;
+	/** @type {string|null} */
+	terminal_gateway_secret;
 
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());

@@ -1,0 +1,31 @@
+{
+	"operationId": "stepUpAuthentication",
+	"summary": "Re-authenticate the current session before a privileged operation",
+	"tags": ["tokens"],
+	"security": [{ "bearerAuth": ["user"] }],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["current_password"],
+					"properties": {
+						"current_password": { "type": "string", "minLength": 1, "maxLength": 100 }
+					}
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": { "description": "Session re-authenticated" },
+		"202": { "description": "A configured second factor must also be completed" },
+		"401": {
+			"description": "Authentication failed",
+			"content": {
+				"application/json": { "schema": { "$ref": "../../../components/error-object.json" } }
+			}
+		}
+	}
+}

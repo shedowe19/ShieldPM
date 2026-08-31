@@ -24,6 +24,7 @@ vi.mock("../../internal/nginx.js", () => ({
 vi.mock("systeminformation", () => ({ default: { networkStats: mocks.getNetworkStats } }));
 vi.mock("../../lib/config.js", () => ({
 	getEncryptionKey: vi.fn().mockReturnValue("0".repeat(64)),
+	getPrivateKey: vi.fn().mockReturnValue("ai-confirmation-test-key"),
 	isDemoMode: vi.fn().mockReturnValue(false),
 }));
 vi.mock("../../models/cloudflared_tunnel.js", () => ({ default: {} }));
@@ -93,7 +94,7 @@ describe("AI system tool permissions", () => {
 		const toolNames = namesOf(await getToolDefinitions(access));
 
 		expect(toolNames).not.toEqual(expect.arrayContaining(systemToolNames));
-		expect(toolNames).toContain("get_proxy_hosts");
+		expect(toolNames).not.toContain("get_proxy_hosts");
 	});
 
 	it("advertises global Nginx and IP-range tools to users with settings:update", async () => {
@@ -164,11 +165,13 @@ describe("AI system tool permissions", () => {
 		]);
 
 		expect(toolNames).not.toContain(clientCertificateToolName);
-		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
+		expect(results.map((result) => result.result)).toEqual([
+			"Error: Unknown or unauthorized AI tool: create_client_certificate",
+		]);
 		expect(mocks.createClientCertificate).not.toHaveBeenCalled();
 	});
 
-	it("advertises and executes client certificate generation with certificates:create", async () => {
+	it("never advertises or executes secret-bearing client certificate generation", async () => {
 		const access = { can: vi.fn().mockResolvedValue(true) };
 
 		const toolNames = namesOf(await getToolDefinitions(access));
@@ -176,15 +179,11 @@ describe("AI system tool permissions", () => {
 			{ name: clientCertificateToolName, args: { common_name: "agent", password: "x", years: 2 } },
 		]);
 
-		expect(toolNames).toContain(clientCertificateToolName);
+		expect(toolNames).not.toContain(clientCertificateToolName);
 		expect(results.map((result) => result.result)).toEqual([
-			"Client Certificate Created at: /tmp/client.p12. You can retrieve it from the server filesystem.",
+			"Error: Unknown or unauthorized AI tool: create_client_certificate",
 		]);
-		expect(access.can).toHaveBeenCalledWith("certificates:create");
-		expect(mocks.createClientCertificate).toHaveBeenCalledWith(
-			{ common_name: "agent", password: "x", years: 2 },
-			expect.stringMatching(/^\/tmp\/client-cert-\d+$/),
-		);
+		expect(mocks.createClientCertificate).not.toHaveBeenCalled();
 	});
 
 	it("does not advertise or start certificate renewal without certificates:update", async () => {
@@ -200,7 +199,7 @@ describe("AI system tool permissions", () => {
 
 		expect(toolNames).not.toContain(certificateRenewalToolName);
 		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
-		expect(mocks.renewCertificate).toHaveBeenCalledWith(access, { id: 42 });
+		expect(mocks.renewCertificate).not.toHaveBeenCalled();
 		expect(mocks.requestCertbot).not.toHaveBeenCalled();
 	});
 
@@ -221,28 +220,36 @@ describe("AI system tool permissions", () => {
 
 		const results = await executeTools(access, systemToolCalls);
 
-		expect(results.map((result) => result.result)).toEqual([
-			"Error: Not allowed",
-			"Error: Not allowed",
-			"Error: Not allowed",
-		]);
+		// A batch containing a high-impact action is rejected before any of its
+		// earlier calls run, so an unauthorized reload cannot be hidden behind reads.
+		expect(results.map((result) => result.result)).toEqual(["Error: Not allowed"]);
 		expect(mocks.testNginx).not.toHaveBeenCalled();
 		expect(mocks.reloadNginx).not.toHaveBeenCalled();
 		expect(mocks.fetchIpRanges).not.toHaveBeenCalled();
 	});
 
-	it("executes global Nginx and IP-range tools for users with settings:update", async () => {
+	it("executes safe global tools and requires confirmation for Nginx reload", async () => {
 		const access = { can: vi.fn().mockResolvedValue(true) };
 
-		const results = await executeTools(access, systemToolCalls);
+		const safeResults = [
+			...(await executeTools(access, [systemToolCalls[0]])),
+			...(await executeTools(access, [systemToolCalls[2]])),
+		];
+		const reloadResults = await executeTools({ ...access, token: { getUserId: vi.fn().mockReturnValue(1) } }, [
+			systemToolCalls[1],
+		]);
 
-		expect(results.map((result) => result.result)).toEqual([
+		expect(safeResults.map((result) => result.result)).toEqual([
 			"Nginx configuration is valid.",
-			"Nginx Reloaded",
 			"IP Ranges renewal triggered.",
 		]);
+		expect(reloadResults[0].confirmation).toEqual({
+			tool: "force_nginx_reload",
+			token: expect.any(String),
+			details: "{}",
+		});
 		expect(mocks.testNginx).toHaveBeenCalledOnce();
-		expect(mocks.reloadNginx).toHaveBeenCalledOnce();
+		expect(mocks.reloadNginx).not.toHaveBeenCalled();
 		expect(mocks.fetchIpRanges).toHaveBeenCalledOnce();
 		expect(access.can).toHaveBeenCalledTimes(3);
 		expect(access.can).toHaveBeenNthCalledWith(1, "settings:update");

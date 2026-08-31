@@ -46,13 +46,23 @@ router.post("/models", jwtdecode(), async (req, res) => {
  */
 router.post("/chat", jwtdecode(), async (req, res) => {
 	logger.debug("AI Chat request received:", {
-		message: req.body.message,
+		messageLength: typeof req.body.message === "string" ? req.body.message.length : 0,
 		historyLength: req.body.history?.length || 0,
 	});
 	const payload = await apiValidator(getValidationSchema("/ai/chat", "post"), req.body);
 	const { message, history } = payload;
 	const result = await internalAi.chat(res.locals.access, message, history);
-	logger.debug("AI Chat response:", result);
+	logger.debug("AI Chat response:", {
+		contentLength: result.content.length,
+		confirmationRequired: Boolean(result.confirmation),
+	});
+	res.status(200).json(result);
+});
+
+router.post("/confirm", jwtdecode(), async (req, res) => {
+	const payload = await apiValidator(getValidationSchema("/ai/confirm", "post"), req.body);
+	const result = await internalAi.confirm(res.locals.access, payload.confirmation_token);
+	logger.info("AI action executed after explicit authenticated confirmation");
 	res.status(200).json(result);
 });
 

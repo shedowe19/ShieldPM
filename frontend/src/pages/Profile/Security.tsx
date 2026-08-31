@@ -19,19 +19,22 @@ import {
 	Smartphone,
 	Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	add2faYubikey,
 	beginPasskeyRegistration,
 	completePasskeyRegistration,
 	enable2faTotp,
 	get2fa,
+	getSetting,
 	regenerate2faBackupCodes,
 	remove2faMethod,
 	setup2faDuo,
 	setup2faTotp,
 	type TwoFaMethod,
 } from "src/api/backend";
+import { ApiError } from "src/api/backend/base";
+import StepUpDialog from "src/components/StepUpDialog";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card";
@@ -40,6 +43,10 @@ import { Label } from "src/components/ui/label";
 import { intl, T } from "src/locale";
 
 const QUERY_KEY = ["2fa", "me"] as const;
+type RequestStepUp = (retry: () => void) => void;
+
+const isStepUpRequired = (error: unknown) =>
+	error instanceof ApiError && error.status === 400 && error.message === "Recent authentication is required";
 
 const METHOD_LABELS: Record<string, string> = {
 	totp: intl.formatMessage({ id: "2fa.method.totp" }),
@@ -58,20 +65,25 @@ const METHOD_ICONS: Record<string, React.ReactNode> = {
 // ---------------------------------------------------------------------------
 // TOTP Setup Dialog
 // ---------------------------------------------------------------------------
-function TotpSetup({ onComplete }: { onComplete: () => void }) {
+function TotpSetup({ onComplete, requestStepUp }: { onComplete: () => void; requestStepUp: RequestStepUp }) {
 	const [qr, setQr] = useState<string | null>(null);
 	const [code, setCode] = useState("");
 	const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	useEffect(() => {
+	const beginSetup = useCallback(() => {
 		setLoading(true);
 		setup2faTotp("me")
 			.then((r) => setQr(r.qrDataUrl))
-			.catch((e) => setError(e.message))
+			.catch((caught) => {
+				if (isStepUpRequired(caught)) requestStepUp(beginSetup);
+				else if (caught instanceof Error) setError(caught.message);
+			})
 			.finally(() => setLoading(false));
-	}, []);
+	}, [requestStepUp]);
+
+	useEffect(() => beginSetup(), [beginSetup]);
 
 	const handleEnable = async () => {
 		setError("");
@@ -79,8 +91,9 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 		try {
 			const result = await enable2faTotp("me", code);
 			setBackupCodes(result.backupCodes);
-		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+		} catch (caught) {
+			if (isStepUpRequired(caught)) requestStepUp(handleEnable);
+			else if (caught instanceof Error) setError(caught.message);
 		} finally {
 			setLoading(false);
 		}
@@ -178,7 +191,7 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 // ---------------------------------------------------------------------------
 // YubiKey Setup
 // ---------------------------------------------------------------------------
-function YubikeySetup({ onComplete }: { onComplete: () => void }) {
+function YubikeySetup({ onComplete, requestStepUp }: { onComplete: () => void; requestStepUp: RequestStepUp }) {
 	const [otp, setOtp] = useState("");
 	const [label, setLabel] = useState("");
 	const [error, setError] = useState("");
@@ -196,8 +209,9 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 		try {
 			await add2faYubikey("me", otp, label || intl.formatMessage({ id: "2fa.method.yubikey" }));
 			onComplete();
-		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+		} catch (caught) {
+			if (isStepUpRequired(caught)) requestStepUp(() => void handleAdd());
+			else if (caught instanceof Error) setError(caught.message);
 		} finally {
 			setLoading(false);
 		}
@@ -254,7 +268,13 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 // ---------------------------------------------------------------------------
 // Passkey Setup
 // ---------------------------------------------------------------------------
-function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | null) => void }) {
+function PasskeySetup({
+	onComplete,
+	requestStepUp,
+}: {
+	onComplete: (backupCodes: string[] | null) => void;
+	requestStepUp: RequestStepUp;
+}) {
 	const [label, setLabel] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -272,8 +292,9 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 				label || intl.formatMessage({ id: "2fa.method.passkey" }),
 			);
 			onComplete(result.backupCodes);
-		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+		} catch (caught) {
+			if (isStepUpRequired(caught)) requestStepUp(() => void handleRegister());
+			else if (caught instanceof Error) setError(caught.message);
 		} finally {
 			setLoading(false);
 		}
@@ -311,7 +332,7 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 // ---------------------------------------------------------------------------
 // Duo Security Setup
 // ---------------------------------------------------------------------------
-function DuoSetup({ onComplete }: { onComplete: () => void }) {
+function DuoSetup({ onComplete, requestStepUp }: { onComplete: () => void; requestStepUp: RequestStepUp }) {
 	const [form, setForm] = useState({ clientId: "", clientSecret: "", apiHost: "", redirectUrl: "" });
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -322,8 +343,9 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 		try {
 			await setup2faDuo("me", form);
 			onComplete();
-		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+		} catch (caught) {
+			if (isStepUpRequired(caught)) requestStepUp(() => void handleSetup());
+			else if (caught instanceof Error) setError(caught.message);
 		} finally {
 			setLoading(false);
 		}
@@ -405,16 +427,29 @@ export default function SecuritySettings() {
 	const [setupView, setSetupView] = useState<SetupView>(null);
 	const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
 	const [error, setError] = useState("");
+	const [stepUpOpen, setStepUpOpen] = useState(false);
+	const pendingRetry = useRef<(() => void) | null>(null);
+	const requestStepUp = useCallback((retry: () => void) => {
+		pendingRetry.current = retry;
+		setStepUpOpen(true);
+	}, []);
 
 	const { data, isLoading } = useQuery({
 		queryKey: QUERY_KEY,
 		queryFn: () => get2fa("me"),
 	});
+	const { data: oidcSetting } = useQuery({
+		queryKey: ["setting", "oidc-config"],
+		queryFn: () => getSetting("oidc-config"),
+	});
 
 	const removeMutation = useMutation({
 		mutationFn: (methodId: number) => remove2faMethod("me", methodId),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
-		onError: (err: Error) => setError(err.message),
+		onError: (caught: Error, methodId) => {
+			if (isStepUpRequired(caught)) requestStepUp(() => removeMutation.mutate(methodId));
+			else setError(caught.message);
+		},
 	});
 
 	const regenMutation = useMutation({
@@ -423,7 +458,10 @@ export default function SecuritySettings() {
 			setBackupCodes(result.backupCodes);
 			queryClient.invalidateQueries({ queryKey: QUERY_KEY });
 		},
-		onError: (err: Error) => setError(err.message),
+		onError: (caught: Error) => {
+			if (isStepUpRequired(caught)) requestStepUp(() => regenMutation.mutate());
+			else setError(caught.message);
+		},
 	});
 
 	const handleSetupComplete = (newBackupCodes?: string[] | null) => {
@@ -434,6 +472,8 @@ export default function SecuritySettings() {
 
 	const activeMethods: TwoFaMethod[] = data?.methods?.filter((m) => m.isVerified) ?? [];
 	const hasMethods = activeMethods.length > 0;
+	const oidcEnabled = oidcSetting?.meta?.enabled === true;
+	const oidcLinked = new URLSearchParams(window.location.search).get("oidc_linked") === "1";
 
 	if (isLoading) {
 		return (
@@ -445,6 +485,48 @@ export default function SecuritySettings() {
 
 	return (
 		<div className="space-y-6">
+			<StepUpDialog
+				open={stepUpOpen}
+				onOpenChange={setStepUpOpen}
+				onComplete={() => {
+					const retry = pendingRetry.current;
+					pendingRetry.current = null;
+					retry?.();
+				}}
+			/>
+			{oidcLinked && (
+				<Alert>
+					<CheckCircle2 className="h-4 w-4 text-green-500" />
+					<AlertDescription>
+						<T id="oidc.link.success" />
+					</AlertDescription>
+				</Alert>
+			)}
+			{oidcEnabled && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-base">
+							<T id="oidc.link" />
+						</CardTitle>
+						<CardDescription>
+							<T id="oidc.link.description" />
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button asChild variant="outline">
+							<a
+								href="/api/oidc?purpose=link"
+								onClick={(event) => {
+									event.preventDefault();
+									requestStepUp(() => window.location.assign("/api/oidc?purpose=link"));
+								}}
+							>
+								<T id="oidc.link" />
+							</a>
+						</Button>
+					</CardContent>
+				</Card>
+			)}
 			<div>
 				<h3 className="text-lg font-semibold flex items-center gap-2">
 					<Shield className="h-5 w-5" />
@@ -555,10 +637,21 @@ export default function SecuritySettings() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						{setupView === "totp" && <TotpSetup onComplete={() => handleSetupComplete()} />}
-						{setupView === "yubikey" && <YubikeySetup onComplete={() => handleSetupComplete()} />}
-						{setupView === "passkey" && <PasskeySetup onComplete={(codes) => handleSetupComplete(codes)} />}
-						{setupView === "duo" && <DuoSetup onComplete={() => handleSetupComplete()} />}
+						{setupView === "totp" && (
+							<TotpSetup onComplete={() => handleSetupComplete()} requestStepUp={requestStepUp} />
+						)}
+						{setupView === "yubikey" && (
+							<YubikeySetup onComplete={() => handleSetupComplete()} requestStepUp={requestStepUp} />
+						)}
+						{setupView === "passkey" && (
+							<PasskeySetup
+								onComplete={(codes) => handleSetupComplete(codes)}
+								requestStepUp={requestStepUp}
+							/>
+						)}
+						{setupView === "duo" && (
+							<DuoSetup onComplete={() => handleSetupComplete()} requestStepUp={requestStepUp} />
+						)}
 						<Button variant="ghost" size="sm" className="mt-4 w-full" onClick={() => setSetupView(null)}>
 							<T id="2fa.cancel" />
 						</Button>

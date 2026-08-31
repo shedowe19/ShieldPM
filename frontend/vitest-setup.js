@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
-// Node 26 exposes an experimental global localStorage getter that is undefined
+// Some supported Node releases expose an experimental global localStorage getter that is undefined
 // without --localstorage-file. Happy DOM mirrors that getter onto window, so
 // provide the storage API the browser-based frontend tests require.
 if (typeof window.localStorage?.getItem !== "function") {

@@ -9,6 +9,7 @@ services:
       - '81:81'
     environment:
       TZ: 'Europe/Berlin'
+      TRUST_PROXY: '1'
       DISABLE_IPV6: 'true'
       DEMO_MODE: 'true'
     volumes:

@@ -173,9 +173,12 @@
 						"note": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/note"
 						},
-						"terminal_private_key": {
-							"$ref": "../../../components/proxy-host-object.json#/properties/terminal_private_key"
-						},
+							"terminal_private_key": {
+								"$ref": "../../../components/proxy-host-object.json#/properties/terminal_private_key"
+							},
+							"terminal_host_key_fingerprint": {
+								"$ref": "../../../components/proxy-host-object.json#/properties/terminal_host_key_fingerprint"
+							},
 						"turbo_loader": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/turbo_loader"
 						}

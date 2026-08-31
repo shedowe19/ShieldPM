@@ -1,9 +1,7 @@
-import jwt from "jsonwebtoken";
 import { Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
-import access from "../lib/access.js";
-import { getPrivateKey } from "../lib/config.js";
 import { decrypt } from "../lib/encryption.js";
+import { createIntegrationAccess } from "../lib/integration-access.js";
 import { global as logger } from "../logger.js";
 import ChatIntegrationModel from "../models/chat_integration.js";
 import ai from "./ai.js";
@@ -66,56 +64,19 @@ const internalChat = {
 			// Middleware: Access Control
 			bot.use(async (ctx, next) => {
 				const userId = ctx.from?.id;
-				const allowedIds = integration.config?.allowed_ids || [];
-
-				// Warn when allowed_ids is not configured — otherwise all access is silently denied
-				if (!integration.config?.allowed_ids?.length) {
-					logger.warn("[ChatOps] WARNING: allowed_ids is not configured — all access denied");
-					return;
-				}
-
-				// Check if user is allowed
-				// allowed_ids store strings or numbers, so loose check is safer or cast to string
-				const isAllowed = allowedIds.some((id) => String(id) === String(userId));
-
-				if (!isAllowed) {
-					logger.warn(`[ChatOps] Unauthorized access attempt from Telegram ID: ${userId}`);
+				if (!userId || ctx.chat?.type !== "private") {
+					logger.warn("[ChatOps] Refused a non-private or unidentified Telegram principal");
 					return; // Silently ignore unauthorized users
 				}
-
-				// Synthesize Access Object for this user
-				// We load permissions based on the owner of the integration
-				// This implies the chat user has the SAME permissions as the ShieldPM user who owns the bot
-
-				// Mock Access Object
-				// We can't easily get a real JWT token here, but internal functions generally need
-				// an 'access' object with .can() method.
-				// Solution: Use the internal Access logic but bound to the User ID.
-
-				// However, `access.js` usually parses a token string.
-				// We can create a "Internal" access object manually or use a helper.
-				// For now, let's create a minimal compatible object.
-
-				// Generate a temporary JWT for this user to reuse the access system
-				const secret = /** @type {string} */ (getPrivateKey());
-				const generatedToken = jwt.sign(
-					{
-						scope: ["user"],
-						attrs: {
-							id: integration.user_id,
-						},
-					},
-					secret,
-					{
-						algorithm: "RS256",
-						expiresIn: "5m",
-					},
-				);
-
-				// Initialize REAL access control object
-				// This ensures access.token is available for audit logs and prompts
+				const integrationAccess = createIntegrationAccess(integration.id, userId);
+				try {
+					await integrationAccess.load();
+				} catch (_err) {
+					logger.warn("[ChatOps] Refused an unauthorized integration principal");
+					return;
+				}
 				// @ts-expect-error: Custom property
-				ctx.shieldAccess = new access(generatedToken);
+				ctx.shieldAccess = integrationAccess;
 
 				return next();
 			});
@@ -170,8 +131,10 @@ const internalChat = {
 						await ctx.reply("🤔 I processed your request but have nothing to say.");
 					}
 				} catch (err) {
-					logger.error(`[ChatOps] Error handling message: ${err.message}`);
-					await ctx.reply(`❌ Error processing request: ${err.message}`);
+					logger.error(
+						`[ChatOps] Error handling message: ${err instanceof Error ? err.message : "Unknown error"}`,
+					);
+					await ctx.reply("❌ The request could not be processed safely.");
 				}
 			});
 
@@ -204,6 +167,10 @@ const internalChat = {
 				logger.warn(`[ChatOps] Error stopping bot ${integrationId}:`, err);
 			}
 		}
+	},
+
+	stopAll: async () => {
+		await Promise.allSettled(Object.keys(bots).map((integrationId) => internalChat.stopBot(integrationId)));
 	},
 
 	/**

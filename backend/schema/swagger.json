@@ -425,6 +425,11 @@
 				"$ref": "./paths/tokens/logout/post.json"
 			}
 		},
+		"/tokens/step-up": {
+			"post": {
+				"$ref": "./paths/tokens/step-up/post.json"
+			}
+		},
 		"/tokens/2fa/verify": {
 			"post": {
 				"$ref": "./paths/tokens/2fa/verify/post.json"
@@ -438,6 +443,31 @@
 		"/tokens/2fa/passkey/complete": {
 			"post": {
 				"$ref": "./paths/tokens/2fa/passkey/complete/post.json"
+			}
+		},
+		"/tokens/2fa/duo/begin": {
+			"post": {
+				"$ref": "./paths/tokens/2fa/duo/begin/post.json"
+			}
+		},
+		"/tokens/2fa/duo/complete": {
+			"post": {
+				"$ref": "./paths/tokens/2fa/duo/complete/post.json"
+			}
+		},
+		"/oidc": {
+			"get": {
+				"$ref": "./paths/oidc/get.json"
+			}
+		},
+		"/oidc/callback": {
+			"get": {
+				"$ref": "./paths/oidc/callback/get.json"
+			}
+		},
+		"/oidc/claim": {
+			"post": {
+				"$ref": "./paths/oidc/claim/post.json"
 			}
 		},
 		"/version/check": {
@@ -515,6 +545,11 @@
 		"/ai/chat": {
 			"post": {
 				"$ref": "./paths/ai/chat.json"
+			}
+		},
+		"/ai/confirm": {
+			"post": {
+				"$ref": "./paths/ai/confirm.json"
 			}
 		},
 		"/chat": {

@@ -25,6 +25,7 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	terminalAuthType: data.terminalAuthType || TERMINAL_AUTH_TYPE.PASSWORD,
 	terminalPassword: data.terminalPassword || "",
 	terminalPrivateKey: data.terminalPrivateKey || "",
+	terminalHostKeyFingerprint: data.terminalHostKeyFingerprint || "",
 
 	accessListId: data.accessListId || 0,
 	cachingEnabled: data.cachingEnabled || false,

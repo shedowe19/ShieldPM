@@ -25,10 +25,22 @@ class AccessList extends Model {
 	owner_user_id;
 	/** @type {number} */
 	is_deleted;
+	/** @type {number} */
+	satisfy_any;
+	/** @type {number} */
+	pass_auth;
+	/** @type {number} */
+	mtls_enabled;
+	/** @type {number} */
+	mtls_use_internal;
+	/** @type {string|null} */
+	mtls_certificate;
 	/** @type {string} */
 	created_on;
 	/** @type {string} */
 	modified_on;
+	/** @type {number} */
+	revision;
 	/** @type {import("./access_list_auth.js").default[]} */
 	items;
 	/** @type {import("./access_list_client.js").default[]} */

@@ -34,6 +34,7 @@ const mockAccess = {
 class DockerService {
 	constructor() {
 		this.clients = [];
+		this.eventStreams = new Set();
 	}
 
 	async init() {
@@ -168,6 +169,8 @@ class DockerService {
 					}
 
 					logger.info(`Docker Auto-Discovery [${client.name}]: Listening for Docker events...`);
+					this.eventStreams.add(stream);
+					stream.once("close", () => this.eventStreams.delete(stream));
 
 					stream.on("data", async (chunk) => {
 						try {
@@ -191,6 +194,13 @@ class DockerService {
 				},
 			);
 		}
+	}
+
+	async stop() {
+		if (this.reloadTimer) clearTimeout(this.reloadTimer);
+		this.reloadTimer = null;
+		for (const stream of this.eventStreams) stream.destroy();
+		this.eventStreams.clear();
 	}
 
 	// Helper for debounce

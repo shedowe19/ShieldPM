@@ -61,7 +61,7 @@ describe("WireguardSettingsCard", () => {
 	it("uses a localized server-address label and saves the edited settings", () => {
 		render(<WireguardSettingsCard />);
 
-		fireEvent.click(screen.getByRole("button", { name: "edit" }));
+		fireEvent.click(screen.getByRole("button", { name: "action.edit" }));
 		fireEvent.change(screen.getByLabelText("wireguard.settings.serverAddress"), {
 			target: { value: "10.8.0.2/24" },
 		});

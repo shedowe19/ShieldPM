@@ -10,9 +10,9 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ## Wichtige Dateien
 
-- `backend/internal/nginx.js` (12 KB) — Hauptlogik
-- `backend/templates/proxy_host.conf` (16 KB) — Proxy-Host-Template
-- `backend/templates/_proxy_logic.conf` (17 KB) — Gemeinsame Proxy-Logik
+- `backend/internal/nginx.js` — Hauptlogik und Staging/Validation
+- `backend/templates/proxy_host.conf` — Proxy-Host-Template
+- `backend/templates/_proxy_logic.conf` — Gemeinsame Proxy-Logik
 - `backend/templates/_proxy_host_custom_location.conf` — Partial für `custom_locations` (Liquid-Syntax, eingebettet in `proxy_host.conf`)
 - `backend/templates/_common.conf` (3 KB) — Gemeinsame Konfiguration
 - `backend/templates/stream.conf` (3 KB) — Stream-Template
@@ -26,26 +26,28 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 1. `nginx.js` wird getriggert bei CRUD-Operationen auf Hosts
 2. Liest aktuelle Daten aus der Datenbank
 3. Rendert EJS-Templates mit Host-Daten
-4. Schreibt `.conf`-Dateien nach `/data/nginx/`
-5. Führt `nginx -s reload` aus (Debouncing passiert in `docker.js`, nicht hier)
+4. Rendert den vollständigen Kandidaten in ein abgeschottetes Staging-Verzeichnis
+5. Führt `nginx -t` gegen den Kandidaten aus
+6. Aktiviert/Reloaded erst bei Erfolg; sonst werden DB und Runtime-Dateien kompensiert
 
 ## Wichtige Hinweise
 
-- `nginx -t` wird **aktiv** vor dem Reload ausgeführt via `test()` Methode (`nginx -tq`)
-- Reload ist **nicht** debounced in `nginx.js` — Debouncing passiert in `docker.js`
+- `nginx -t` prüft den vollständigen Kandidaten, nicht nur eine einzelne Hostdatei
+- Runtime-Mutationen müssen das DB-Transaction-/Compensation-Protokoll verwenden
+- Direkte `nginx -s reload`-Aufrufe außerhalb der Engine umgehen Rollback und sind verboten
 - Templates verwenden EJS-Syntax mit Liquid-Fallback
 
 ## Erweiterte Methoden
 
 ### Config-Backup/Restore
 
-- `backupConfig(host_type, host)` — Erstellt eine `.conf.bak` Sicherungskopie der aktuellen Config vor Änderungen
-- `restoreConfig(host_type, host)` — Stellt die `.conf.bak` Sicherung wieder her (z.B. nach fehlgeschlagenem `nginx -t`)
-- `deleteBackupConfig(host_type, host)` — Löscht die Backup-Datei nach erfolgreichem Configure (Commit)
+Staging/Backup werden in privaten, contained Verzeichnissen vorbereitet. Rename/Swap und Cleanup sind erst nach
+erfolgreicher Validation/Reload endgültig. Der aufrufende Service registriert DB- und Dateikompensation für
+Render-, Validation- und Reload-Fehler.
 
 ### Fehlerbehandlung
 
-- `renameConfigAsError(host_type, host)` — Benennt eine fehlerhafte Config als `.conf.err` um, bevor die Backup wiederhergestellt wird
+- Fehlerantworten nennen die fehlgeschlagene Phase, ohne Secrets oder vollständige sensitive Configs zu loggen.
 
 ### Bulk-Operationen
 

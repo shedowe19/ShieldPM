@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 echo "
 -------------------------------------
@@ -34,6 +34,10 @@ set -a
 # shellcheck source=/dev/null
 . /data/.env
 set +a
+
+# Resolve generic FOO_FILE variables before validation and all child processes.
+# shellcheck source=/usr/local/bin/load-env-secrets.sh
+. /usr/local/bin/load-env-secrets.sh || exit 1
 
 
 # Run Node.js validation script

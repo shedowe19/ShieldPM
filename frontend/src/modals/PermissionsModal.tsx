@@ -156,7 +156,7 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</div>
 					<DialogFooter>
 						<Button variant="outline" onClick={remove}>
-							<T id="close" />
+							<T id="action.close" />
 						</Button>
 					</DialogFooter>
 				</DialogContent>

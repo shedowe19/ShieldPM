@@ -78,37 +78,45 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).not.toContain("locale-sort.sh");
 	});
 
-	it("runs backend and frontend tests from frozen Yarn Classic installs", () => {
-		expect(workflow).toContain("yarn@1.22.22");
-		expect(workflow).toContain("install --frozen-lockfile");
+	it("runs the complete backend and frontend gates from immutable Yarn 4 installs", () => {
+		expect(workflow).toContain("YARN_VERSION: 4.18.0");
+		expect(workflow).toContain("install --immutable");
+		expect(workflow).not.toContain("yarn@1.22.22");
+		expect(workflow).toMatch(/backend[\s\S]*check/);
+		expect(workflow).toMatch(/frontend[\s\S]*check/);
+		expect(workflow).toMatch(/backend[\s\S]*tsc --noEmit/);
+		expect(workflow).toMatch(/frontend[\s\S]*tsc --noEmit/);
 		expect(workflow).toMatch(/backend[\s\S]*test --run/);
 		expect(workflow).toMatch(/frontend[\s\S]*test --run/);
+		expect(workflow).toContain("test:e2e:ci");
 	});
 
-	it("reports high and critical dependency findings without blocking existing baseline debt", () => {
-		expect(workflow).toMatch(/audit --level high/);
-		expect(workflow).toMatch(
-			/Audit backend dependencies \(advisory: high and critical\)"\n\s+continue-on-error: true/,
-		);
-		expect(workflow).toMatch(
-			/Audit frontend dependencies \(advisory: high and critical\)"\n\s+continue-on-error: true/,
-		);
+	it("blocks high and critical dependency findings", () => {
+		expect(workflow).toMatch(/npm audit --recursive --severity high/g);
+		expect(workflow).not.toContain("continue-on-error: true");
 		expect(workflow).toContain("git diff --check");
 	});
 
-	it("runs Biome within each package configuration root", () => {
-		expect(workflow).toContain('cd "$GITHUB_WORKSPACE/backend"');
-		expect(workflow).toContain('cd "$GITHUB_WORKSPACE/frontend"');
+	it("runs Biome through each package configuration", () => {
+		expect(workflow).toContain("yarn --cwd backend check");
+		expect(workflow).toContain("yarn --cwd frontend check");
 		expect(workflow).not.toContain("./backend/node_modules/.bin/biome check");
-	});
-
-	it("does not send ignored package manifests to Biome", () => {
-		expect(workflow).toContain("\\.(cjs|js|ts|tsx)$");
-		expect(workflow).not.toContain("\\.(cjs|js|ts|tsx|json)$");
 	});
 
 	it("delegates added-line token scanning to its tested script", () => {
 		expect(workflow).toContain("node backend/scripts/ci/scan-added-diff-secrets.js");
 		expect(workflow).not.toContain("node --input-type=module <<'NODE'");
+	});
+
+	it("pins third-party actions to full commit SHAs", () => {
+		for (const line of workflow.split("\n").filter((candidate) => candidate.trim().startsWith("uses:"))) {
+			expect(line).toMatch(/@[0-9a-f]{40}(?:\s+#.*)?$/);
+		}
+	});
+
+	it("verifies idempotent migrations on MySQL and PostgreSQL", () => {
+		expect(workflow).toContain("mysql:8.4");
+		expect(workflow).toContain("postgres:17");
+		expect(workflow).toContain("ci:migrate");
 	});
 });

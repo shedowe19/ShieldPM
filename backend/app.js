@@ -4,6 +4,7 @@ import { doubleCsrf } from "csrf-csrf";
 import express from "express";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
+import { getAccessCookie } from "./lib/auth-cookies.js";
 import jwt from "./lib/express/jwt.js";
 import { debug, express as logger } from "./logger.js";
 import mainRoutes from "./routes/main.js";
@@ -18,20 +19,17 @@ import rateLimit from "express-rate-limit";
 const resolveTrustProxy = () => {
 	const raw = process.env.TRUST_PROXY;
 	if (typeof raw === "undefined" || raw === null || raw === "") {
-		return 1;
+		return false;
 	}
 
 	const normalized = String(raw).trim().toLowerCase();
-	if (["true", "yes", "on"].includes(normalized)) {
-		return true;
-	}
 	if (["false", "no", "off"].includes(normalized)) {
 		return false;
 	}
-	if (/^\d+$/.test(normalized)) {
-		return Number.parseInt(normalized, 10);
+	if (normalized === "1") {
+		return 1;
 	}
-	return raw;
+	throw new Error("TRUST_PROXY accepts only false or 1 (the official single-proxy topology)");
 };
 
 const TRUST_PROXY = resolveTrustProxy();
@@ -68,8 +66,9 @@ const getRequestToken = (req) => {
 		}
 	}
 
-	if (typeof req.cookies?.shieldpm_jwt === "string" && req.cookies.shieldpm_jwt) {
-		return req.cookies.shieldpm_jwt;
+	const cookieToken = getAccessCookie(req);
+	if (typeof cookieToken === "string" && cookieToken) {
+		return cookieToken;
 	}
 
 	return null;
@@ -80,17 +79,22 @@ const getAnonymousCsrfIdentifier = (req) => {
 	return `anon:${crypto.createHash("sha256").update(fingerprint).digest("hex")}`;
 };
 
+const csrfFamilyOverrides = new WeakMap();
+
 const resolveCsrfSessionIdentifier = (req) => {
-	// Use a stable identifier that does NOT change on token refresh/rotation.
-	// The JWT changes on every refresh, so we cannot use jti or token hash.
-	// Instead, extract the user ID (stable across sessions) or fall back to
-	// an anonymous fingerprint for unauthenticated requests.
+	const familyOverride = csrfFamilyOverrides.get(req);
+	if (typeof familyOverride === "string" && familyOverride) {
+		return `session-family:${familyOverride}`;
+	}
+
+	// Bind CSRF state to the server-side refresh-token family. The family is
+	// stable across normal rotation but changes on a new login or impersonation.
 	const token = getRequestToken(req);
 	const payload = decodeJwtPayload(token);
-	const userId = payload?.attrs?.id || payload?.sub;
+	const sessionFamily = payload?.fid;
 
-	if (userId) {
-		return `user:${userId}`;
+	if (sessionFamily) {
+		return `session-family:${sessionFamily}`;
 	}
 
 	// For unauthenticated requests, use a stable anonymous fingerprint.
@@ -100,16 +104,9 @@ const resolveCsrfSessionIdentifier = (req) => {
 };
 
 const isHttpsRequest = (req) => {
-	if (req.secure) {
-		return true;
-	}
-
-	const forwardedProto = req.headers["x-forwarded-proto"];
-	if (typeof forwardedProto === "string") {
-		return forwardedProto.split(",")[0].trim().toLowerCase() === "https";
-	}
-
-	return false;
+	// Express evaluates X-Forwarded-Proto only through the strict trust-proxy setting.
+	// Reading the header directly here would bypass that boundary.
+	return req.secure;
 };
 
 const globalApiLimiter = rateLimit({
@@ -204,6 +201,9 @@ app.use(async (req, res, next) => {
 	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
+	const isOidcClaim = method === "POST" && (path === "/api/oidc/claim" || path === "/oidc/claim");
+	const isTerminalGatewayTicket =
+		method === "POST" && /^\/(?:api\/)?nginx\/proxy-hosts\/\d+\/terminal\/ticket$/.test(path);
 
 	// 2FA verification endpoints during login use the pending_token for auth, no CSRF cookie yet
 	const is2FaVerify = method === "POST" && /^\/(api\/)?tokens\/2fa\//.test(path);
@@ -217,6 +217,8 @@ app.use(async (req, res, next) => {
 		isLoginRequest ||
 		isTokenRefresh ||
 		isTokenLogout ||
+		isOidcClaim ||
+		isTerminalGatewayTicket ||
 		is2FaVerify ||
 		isDocsRequest
 	) {
@@ -228,12 +230,24 @@ app.use(async (req, res, next) => {
 
 // Generate Token and set cookie/local
 app.use((req, res, next) => {
+	const cookieOptions = {
+		...csrfCookieOptions,
+		secure: isHttpsRequest(req),
+	};
 	const token = generateCsrfToken(req, res, {
-		cookieOptions: {
-			...csrfCookieOptions,
-			secure: isHttpsRequest(req),
-		},
+		cookieOptions,
 	});
+	res.locals.issueCsrfTokenForFamily = (familyId) => {
+		csrfFamilyOverrides.set(req, familyId);
+		try {
+			return generateCsrfToken(req, res, {
+				cookieOptions,
+				overwrite: true,
+			});
+		} finally {
+			csrfFamilyOverrides.delete(req);
+		}
+	};
 	res.locals.csrfToken = token;
 	next();
 });

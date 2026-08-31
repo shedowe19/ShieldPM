@@ -12,20 +12,21 @@ Das `Dockerfile` verwendet drei Stages:
 
 #### Stage 1: Frontend
 
-- **Basis**: Debian Trixie mit dem eingecheckten NodeSource-APT-Setup für Node.js 26
-- **Aktion**: installiert Yarn Classic `1.22.22` und baut die React-App aus dem eingefrorenen Lockfile mit TypeScript + Vite
+- **Basis**: Debian Trixie mit dem eingecheckten, signierten NodeSource-APT-Setup für Node.js 24 LTS
+- **Aktion**: aktiviert Corepack, installiert die in `packageManager` fixierte Yarn-4-Version und baut aus dem
+  unveränderten Lockfile (`yarn install --immutable`)
 - **Ausgabe**: `/app/dist` (statische Dateien)
 
 #### Stage 2: Backend
 
-- **Basis**: dieselbe Debian-Trixie-NodeSource-APT-Runtime mit Node.js 26
-- **Aktion**: installiert Node-Dependencies aus dem eingefrorenen Lockfile und lädt Anubis + OAuth2-Proxy herunter
+- **Basis**: dieselbe Debian-Trixie-NodeSource-APT-Runtime mit Node.js 24 LTS
+- **Aktion**: installiert Backend-Abhängigkeiten immutable und lädt verifizierte Anubis-/OAuth2-Proxy-Artefakte
 - **Optimierungen**: Entfernt Source-Maps, strippt native Module
 - **Ausgabe**: `/app` (Backend-Anwendung)
 
 #### Stage 3: Final
 
-- **Basis**: `ghcr.io/shedowe19/shieldpm-nginx:master`
+- **Basis**: explizites `SHIELDPM_NGINX_IMAGE=ghcr.io/shedowe19/shieldpm-nginx@sha256:<digest>`
 - **Aktion**: Kopiert Backend + Frontend + rootfs-Overlay + WireGuard-Tools
 - **Entrypoint**: `tini -- entrypoint.sh` (Exec-/JSON-Syntax)
 - **Healthcheck**: `healthcheck.sh` (Exec-/JSON-Syntax, ohne zusätzliche Shell-Hülle)
@@ -33,16 +34,18 @@ Das `Dockerfile` verwendet drei Stages:
 ### Befehl
 
 ```bash
-docker build -t shieldpm:local .
+export SHIELDPM_NGINX_IMAGE='ghcr.io/shedowe19/shieldpm-nginx@sha256:<approved-multiarch-digest>'
+docker build --build-arg SHIELDPM_NGINX_IMAGE="$SHIELDPM_NGINX_IMAGE" -t shieldpm:local .
 ```
 
 ## Frontend Build (standalone)
 
 ```bash
 cd frontend
-yarn install --production=false
-yarn tsc          # TypeScript-Prüfung
-yarn vite build   # Produktions-Build
+corepack enable
+yarn install --immutable
+yarn check
+yarn build
 ```
 
 ### Modulpfade
@@ -53,7 +56,10 @@ Produktions-Build ohne das zusätzliche Plugin `vite-tsconfig-paths`.
 
 ## Native / LXC Build
 
-Kein Build nötig — der `install.sh`-Installer clont das Repository und installiert direkt.
+Der Installer prüft das externe Release-Archiv vor dem Entpacken und anschließend jede Payload-Datei gegen das
+mitgelieferte `SHA256SUMS`-Manifest. Er richtet Node.js 24 LTS ein, aktiviert exakt Corepack 0.36.0 und Yarn 4.18.0,
+baut in einem Staging-Verzeichnis aus immutable Lockfiles und aktiviert den Payload erst nach erfolgreichem Build. Ein
+Update nutzt eine atomare Umschaltung mit Health-Check und Payload-Rollback.
 
 ```bash
 bash scripts/install.sh
@@ -61,7 +67,12 @@ bash scripts/install.sh
 
 ## Build-Artefakte
 
-Die aktuelle Version wird in `.version` gespeichert (Plain Text, z.B. `v4.3.2`). Diese Version synchronisiert sich mit `backend/package.json` und `frontend/package.json`.
+Die Release-Version wird in `.version`, `backend/package.json` und `frontend/package.json` synchron gehalten. Ein
+Versionssprung erfolgt nur nach expliziter Patch-/Minor-/Major-Entscheidung.
+
+Der Build akzeptiert das externe Basisimage ausschließlich über `SHIELDPM_NGINX_IMAGE` im Format
+`ghcr.io/shedowe19/shieldpm-nginx@sha256:<digest>`. Der freigegebene Multiarch-Digest muss als Repository-Variable
+gesetzt werden; keinen Digest erfinden oder aus einem anderen Build-Kontext übernehmen.
 
 | Artefakt            | Pfad                          | Beschreibung           |
 | ------------------- | ----------------------------- | ---------------------- |

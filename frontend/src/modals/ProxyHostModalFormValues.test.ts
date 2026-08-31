@@ -49,6 +49,7 @@ describe("createProxyHostInitialValues", () => {
 			sslForced: false,
 			terminalAuthType: TERMINAL_AUTH_TYPE.PASSWORD,
 			terminalHost: "",
+			terminalHostKeyFingerprint: "",
 			terminalPassword: "",
 			terminalPort: 22,
 			terminalPrivateKey: "",

@@ -2,70 +2,57 @@
 
 ## Zweck
 
-Verwaltet Access- und Refresh-Token-Paare sowie HTTP-only Session-Cookies. Deckt den kompletten Token-Lifecycle ab: Erstellung, Refresh, Revokation.
+`backend/internal/auth-session-service.js` verwaltet serverseitige Refresh-Sessions, Rotation, Replay-Erkennung,
+Step-up-Zustand und Administrator-Impersonation. Access-JWTs sind kurzlebige Ableitungen einer aktiven Session.
 
-## Kontext
+## Session-Lifecycle
 
-`backend/internal/auth-session-service.js` (225 Zeilen) ist das Gegenstück zu `backend/internal/token.js`. Während `token.js` primär JWT-Erstellung und -Verifizierung übernimmt, kümmert sich `auth-session-service.js` um:
+- Refresh-Tokens werden nur gehasht gespeichert und bei jeder Nutzung in einer Transaktion rotiert.
+- Eine erfolgreiche Rotation verknüpft Parent, Family, Ablauf, Auth-Zeit und Authentifizierungsmethoden.
+- Parallele Nutzung eines gerade rotierten Tokens innerhalb von 15 Sekunden ergibt einen Konflikt/Retry-Pfad und
+  löscht nicht die inzwischen gültigen Browser-Cookies.
+- Eine Wiederverwendung außerhalb dieses Grace-Fensters gilt als Replay und widerruft die gesamte Familie.
+- Deaktivierte/gelöschte Benutzer, abgelaufene oder widerrufene Sessions scheitern geschlossen.
 
-- Token-Paar-Erstellung (Access + Refresh)
-- Refresh-Sessions in der DB
-- Session-Familien (für "alle Geräte abmelden")
-- Revokation (einzeln, familienbasiert)
+## Cookie- und CSRF-Grenze
 
-## Wichtige Funktionen
+`backend/lib/auth-cookies.js` leitet `Secure` aus dem effektiv vertrauten Request-Schema ab. `X-Forwarded-Proto` zählt
+nur, wenn Express den sendenden Proxy laut validiertem `TRUST_PROXY` tatsächlich vertraut. Access-, Refresh-, Actor-
+und CSRF-Cookies haben getrennte Pfade/Attribute; Logout entfernt alle Varianten.
 
-### Token-Erstellung
+CSRF-Zustand ist an die stabile Refresh-Familie gebunden und wechselt bei neuem Login/Impersonation, nicht bei jeder
+normalen Access-Token-Rotation.
 
-- `buildAccessToken(user, scope)` — Erstellt ein JWT-Access-Token mit `iss: "api"`, user-attrs und `scope`
-- `buildRefreshToken()` — Erzeugt einen kryptografisch sicheren 48-Byte-String (Base64url)
-- `buildTokenResponse(...)` — Aggregiert Access-Token, Refresh-Token, Session und User in ein Response-Objekt
+## Step-up und MFA
 
-### Session-Management
+Sensible Aktionen können frische Authentifizierung verlangen. Ein kurzlebiger serverseitiger Challenge-Datensatz
+bindet Zweck, Benutzer, Ablauf und Einmalverbrauch. TOTP, YubiKey, Passkey, Duo oder Backup-Code erfüllen nur die dafür
+ausgegebene Challenge; Ergebnisse aus einem Login-Flow sind nicht beliebig wiederverwendbar. Step-up ist während einer
+Impersonation gesperrt.
 
-- `createRefreshSession({ userId, familyId, meta })` — Erstellt einen Refresh-Token-Eintrag in der DB
-- `revokeSession(sessionId, reason, trx)` — Widerruft eine einzelne Session
-- `revokeFamily(familyId, reason, trx)` — Widerruft alle Sessions einer Family (z.B. "alle Geräte abmelden")
+## Impersonation
 
-### Token-Lifecycle
+Der Start verlangt eine aktive Actor-Refresh-Session und recent authentication. Die Actor-Session wird rotiert und
+browserseitig verborgen; die Target-Session speichert `actor_user_id`, `actor_session_id` und Zeitpunkt. Verschachtelte
+Impersonation ist verboten.
 
-- `issueTokenPair(user, scope, meta)` — Erstellt ein komplettes Token-Paar mit neuer Refresh-Session
-- `refreshTokenPair(rawRefreshToken, meta)` — Tauscht einen Refresh-Token gegen ein neues Access-Token
+Restore prüft Target- und Actor-Token, beide Sessionzustände, Userstatus, exakte gegenseitige Bindung und Family-Status.
+Danach rotiert es den Actor, widerruft die Target-Familie und entfernt Actor-/Target-Cookies konsistent. Ein Target-
+Cookie allein kann die Administratorrolle nicht wiederherstellen.
 
-## Token-TTL
+## Wichtige Dateien
 
-| Token         | TTL        | Konstante                   |
-| ------------- | ---------- | --------------------------- |
-| Access Token  | 15 Minuten | `ACCESS_TOKEN_TTL = "15m"`  |
-| Refresh Token | 30 Tage    | `REFRESH_TOKEN_TTL = "30d"` |
-
-## Datenbank-Modell
-
-- `AuthSession` — Refresh-Sessions (user_id, family_id, tokenHash, expiresAt, createdIp, createdUserAgent, revokedAt)
-
-## Metadaten-Sanitisierung
-
-`sanitizeMeta(meta)` extrahiert IP und User-Agent aus verschiedenen Feldnamen (`ip`/`created_ip`, `userAgent`/`user_agent`/`created_user_agent`) und normalisiert sie.
-
-## Fehlermeldungen
-
-- `TOKEN_NOT_FOUND_MESSAGE` — "Invalid refresh token"
-- `TOKEN_REVOKED_MESSAGE` — "Refresh token has been revoked"
-- `TOKEN_EXPIRED_MESSAGE` — "Refresh token has expired"
-- `TOKEN_REPLAY_MESSAGE` — "Refresh token replay detected"
-
-## Beziehung zu `token.js`
-
-- `auth-session-service.js` **erstellt** Token-Paare und verwaltet Refresh-Sessions
-- `token.js` **verifiziert** JWTs und parst Access-Token
-- Beide nutzen `TokenModel` für die JWT-Erstellung
-
-## Beziehung zu `benutzer-auth.md`
-
-Die Authentifizierung nutzt `issueTokenPair()` für den Login und `refreshTokenPair()` für Session-Verlängerung. Die Revokation über `revokeFamily()` ermöglicht "alle Geräte abmelden".
+- `backend/internal/auth-session-service.js`
+- `backend/models/auth-session.js`
+- `backend/internal/auth-challenge-service.js`
+- `backend/routes/tokens.js`
+- `backend/lib/auth-cookies.js`
+- `frontend/src/modules/SessionMutationQueue.ts`
+- `frontend/src/context/AuthContext.tsx`
 
 ## Verwandte Seiten
 
 - [Benutzer & Auth](./benutzer-auth.md)
-- [Token-Service](./token.md)
-- [Modulübersicht](./README.md)
+- [Token](./token.md)
+- [2FA-Service](./2fa-service.md)
+- [Security-Modernisierung](../entscheidungen/2026-08-31-security-modernisierung.md)

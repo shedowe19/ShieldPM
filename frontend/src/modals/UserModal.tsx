@@ -94,7 +94,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</div>
 					<DialogFooter>
 						<Button variant={SHADCN_VARIANT.OUTLINE} onClick={remove}>
-							<T id="close" />
+							<T id="action.close" />
 						</Button>
 					</DialogFooter>
 				</DialogContent>

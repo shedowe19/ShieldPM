@@ -21,19 +21,20 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## Netzwerk & Ports
 
-| Variable                | Standard | Beschreibung                                 |
-| ----------------------- | -------- | -------------------------------------------- |
-| `NPM_PORT`              | `81`     | UI-Port                                      |
-| `GOA_PORT`              | `91`     | GoAccess-Port                                |
-| `HTTP_PORT`             | `80`     | HTTP-Port                                    |
-| `HTTPS_PORT`            | `443`    | HTTPS-Port (TCP+UDP)                         |
-| `HTTP3_ALT_SVC_PORT`    | `443`    | Alt-Svc Port für HTTP/3                      |
-| `DISABLE_IPV6`          | `false`  | IPv6 vollständig deaktivieren                |
-| `DISABLE_HTTP`          | `false`  | Port 80 deaktivieren                         |
-| `DISABLE_H3_QUIC`       | `false`  | HTTP/3 + QUIC deaktivieren                   |
-| `LISTEN_PROXY_PROTOCOL` | `false`  | PROXY-Protokoll (deaktiviert H3)             |
-| `NPM_LISTEN_LOCALHOST`  | `false`  | Nginx Proxy Manager nur auf localhost binden |
-| `GOA_LISTEN_LOCALHOST`  | `false`  | GoAccess nur auf localhost binden            |
+| Variable                | Standard | Beschreibung                                                                          |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `NPM_PORT`              | `81`     | UI-Port                                                                               |
+| `GOA_PORT`              | `91`     | GoAccess-Port                                                                         |
+| `HTTP_PORT`             | `80`     | HTTP-Port                                                                             |
+| `HTTPS_PORT`            | `443`    | HTTPS-Port (TCP+UDP)                                                                  |
+| `HTTP3_ALT_SVC_PORT`    | `443`    | Alt-Svc Port für HTTP/3                                                               |
+| `DISABLE_IPV6`          | `false`  | IPv6 vollständig deaktivieren                                                         |
+| `DISABLE_HTTP`          | `false`  | Port 80 deaktivieren                                                                  |
+| `DISABLE_H3_QUIC`       | `false`  | HTTP/3 + QUIC deaktivieren                                                            |
+| `LISTEN_PROXY_PROTOCOL` | `false`  | PROXY-Protokoll (deaktiviert H3)                                                      |
+| `TRUST_PROXY`           | `false`  | Compose/Rootfs setzen `1` für den offiziellen Single-Proxy-Pfad; anderes wird abgelehnt |
+| `NPM_LISTEN_LOCALHOST`  | `false`  | Nginx Proxy Manager nur auf localhost binden                                          |
+| `GOA_LISTEN_LOCALHOST`  | `false`  | GoAccess nur auf localhost binden                                                     |
 
 ## IP-Bindings
 
@@ -90,12 +91,18 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## Analytics & Logging
 
-| Variable       | Standard | Beschreibung                     |
-| -------------- | -------- | -------------------------------- |
-| `LOGROTATE`    | `false`  | Log-Rotation aktivieren          |
-| `LOGROTATIONS` | `3`      | Anzahl der rotierten Log-Dateien |
-| `GOA`          | `false`  | GoAccess aktivieren              |
-| `GOACLA`       | —        | GoAccess CLI-Argumente           |
+| Variable                           | Standard                                | Beschreibung                                                     |
+| ---------------------------------- | --------------------------------------- | ---------------------------------------------------------------- |
+| `LOGROTATE`                        | `false`                                 | Log-Rotation aktivieren                                          |
+| `LOGROTATIONS`                     | `3`                                     | Anzahl der rotierten Log-Dateien                                 |
+| `GOA`                              | `false`                                 | GoAccess aktivieren                                              |
+| `GOACLA`                           | —                                       | GoAccess CLI-Argumente                                           |
+| `ANALYTICS_SPOOL_PATH`             | `/data/shieldpm/analytics-spool.ndjson` | Persistenter Spool-Pfad; muss normalisiert unter `/data/` liegen |
+| `ANALYTICS_SPOOL_MAX_BYTES`        | `67108864`                              | Harte Obergrenze des Spools in Bytes                             |
+| `ANALYTICS_SPOOL_RECORD_MAX_BYTES` | `262144`                                | Maximale Größe eines einzelnen NDJSON-Datensatzes                |
+| `ANALYTICS_SPOOL_BATCH_RECORDS`    | `250`                                   | Maximale Datensatzanzahl pro Datenbanktransaktion                |
+| `SQLITE_BACKUP_RETENTION_COUNT`    | `7`                                     | Aufbewahrte verifizierte SQLite-Snapshots (1–365)                 |
+| `SECRET_FILE_MAX_BYTES`            | `65536`                                 | Maximale Secret-Dateigröße; harte Obergrenze 1 MiB                |
 
 ## PHP
 
@@ -119,6 +126,7 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 | `DEFAULT_CERT_ID`               | `0`          | Standard-Zertifikat-ID für neue Hosts                                       |
 | `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                              |
 | `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)                        |
+| `SHIELDPM_AIO_ACCESS_TOKEN_FILE`| —            | Kurzlebiger Access-Token für einmalige AIO-Host-Anlage; danach entfernen    |
 | `PHP_APKS`                      | —            | Zusätzliche PHP-Pakete (veraltet, einzelne PHP-Vars nutzen)                 |
 | `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                                     |
 | `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                                     |
@@ -142,12 +150,15 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## Initialisierung
 
-| Variable                 | Beschreibung                                                            |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `INITIAL_ADMIN_EMAIL`    | Admin-E-Mail beim ersten Start (muss `@` und `.` enthalten)             |
-| `INITIAL_ADMIN_PASSWORD` | Admin-Passwort beim ersten Start. Wert nicht dokumentieren.             |
-| `INITIAL_DEFAULT_PAGE`   | Standard-Seite: `404`, `444`, `redirect`, `congratulations` oder `html` |
-| `ENABLE_PRERUN`          | Pre-Run-Scripts aktivieren                                              |
+| Variable                         | Beschreibung                                                             |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| `INITIAL_ADMIN_SETUP_TOKEN`      | One-Time-Ownership-Token mit mindestens 256 Bit; Wert nie dokumentieren  |
+| `INITIAL_ADMIN_SETUP_TOKEN_FILE` | Bevorzugter Pfad auf eine reguläre Secret-Datei mit `0600` oder strenger |
+| `INITIAL_DEFAULT_PAGE`           | Standard-Seite: `404`, `444`, `redirect`, `congratulations` oder `html`  |
+| `ENABLE_PRERUN`                  | Pre-Run-Scripts aktivieren                                               |
+
+Ohne Token-Vorgabe entsteht `/data/shieldpm/initial-admin-setup-token`. Der Wizard sendet ihn im Header
+`X-ShieldPM-Setup-Token`; Claim und Administratoranlage sind atomar, danach wird die generierte Datei entfernt.
 
 ## Sonstiges
 
