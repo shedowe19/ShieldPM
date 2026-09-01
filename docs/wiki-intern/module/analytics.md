@@ -13,6 +13,11 @@ zwischen Logtailer, fsync-Spool und atomarer Datenbanktransaktion.
 4. Ein verlorenes Commit-Ack wird über Ledger/Hash als bereits verarbeitet erkannt.
 5. Erst danach schreitet der Spool-Checkpoint voran; Kompaktierung bewahrt alle noch replaybaren Sequenzen.
 
+`analytics_logs.created_at` wird beim Batch-Aufbau explizit als Unix-Epoch in Millisekunden gesetzt. Eine idempotente
+Forward-Migration normalisiert außerdem parsebare historische SQLite-Textwerte; ungültige Fremdwerte bleiben zur
+verlustfreien Diagnose unverändert. Damit ist das Format neuer und regulär erzeugter Bestandsdaten unabhängig vom
+historischen Datenbank-Default über SQLite, MySQL und PostgreSQL identisch.
+
 Spool- und Checkpointdateien müssen regulär, contained und ohne Mehrfach-Hardlink sein. Trunkierte Tail-Records werden
 beim Replay ignoriert/repariert, valide vorangehende Records bleiben erhalten. Limits:
 

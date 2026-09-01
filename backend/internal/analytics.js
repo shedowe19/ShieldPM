@@ -414,7 +414,10 @@ export class AnalyticsService {
 	}
 
 	buildBatch(records) {
-		const detailedLogs = records.map((record) => record.event);
+		// Persist the ingestion timestamp explicitly so upgraded installations do not
+		// depend on the legacy, dialect-specific analytics_logs column default.
+		const createdAt = this.now().getTime();
+		const detailedLogs = records.map((record) => ({ ...record.event, created_at: createdAt }));
 		const aggregations = new Map();
 		for (const event of detailedLogs) {
 			const timestamp = dayjs(event.time).startOf("minute").toISOString();

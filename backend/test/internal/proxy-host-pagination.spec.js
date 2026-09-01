@@ -12,10 +12,12 @@ vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/host.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
+vi.mock("../../internal/terminal.js", () => ({ default: {} }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../lib/error.js", () => ({ default: {} }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));
 vi.mock("../../models/access_list.js", () => ({ default: {} }));
+vi.mock("../../models/host_domain.js", () => ({ default: {} }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
 		query: mocks.query,

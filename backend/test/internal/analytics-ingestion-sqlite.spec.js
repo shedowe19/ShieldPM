@@ -36,6 +36,7 @@ describe("analytics SQLite ingestion transaction", () => {
 			table.string("referer");
 			table.string("user_agent");
 			table.integer("duration");
+			table.bigInteger("created_at").notNullable();
 		});
 		await knex.schema.createTable("analytic_count", (table) => {
 			table.increments("id").primary();
@@ -88,7 +89,9 @@ describe("analytics SQLite ingestion transaction", () => {
 		await expect(service.commitBatch(batch)).resolves.toBe(true);
 		await expect(service.commitBatch(service.buildBatch(records))).resolves.toBe(false);
 
-		expect(await knex("analytics_logs").count("* as count").first()).toEqual({ count: 1 });
+		expect(await knex("analytics_logs").select("created_at").first()).toEqual({
+			created_at: Date.parse("2026-08-31T20:01:00.000Z"),
+		});
 		expect(await knex("analytic_count").select("request_count", "bytes_sent").first()).toEqual({
 			request_count: 1,
 			bytes_sent: 42,

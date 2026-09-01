@@ -67,7 +67,8 @@ export { up, down };
 
 ### Modernisierung (2024-2025)
 
-- Streams SSL, Port-Strings, Proxy-Protocol, Bandwidth-Limits, Forward-Query, Maintenance-Pages, Rate-Limiting, Buffering, Analytics
+- Streams SSL, Port-Strings, Proxy-Protocol, Bandwidth-Limits, Forward-Query, Maintenance-Pages, Rate-Limiting und Buffering
+- `20251231000000_analytics_logs` — dialektkompatibler Epoch-Millisekunden-Default für Analytics-Detailzeilen; die Laufzeit setzt den Wert zusätzlich explizit für bestehende Installationen
 
 ### ShieldPM Features (2026)
 
@@ -88,6 +89,7 @@ export { up, down };
 - `20260409000000_add_turbo_loader` — Turbo-Loader
 - `20260712000000_fix_analytic_count_aggregation_key` — versionierter, nicht-nullbarer Aggregationsschlüssel für robuste Analytics-Upserts auf SQLite, MySQL und PostgreSQL
 - `20260831231500_add_analytics_ingestion_ledger` — transaktionales Analytics-Replay-Ledger mit stabilen Batch-Hashes, Claims und Sequenzgrenzen
+- `20260901000000_normalize_analytics_log_created_at` — idempotenter SQLite-Backfill historischer Analytics-Zeitstempel auf Unix-Epoch-Millisekunden
 
 Der Security-Modernisierungsstand ergänzt retry-sichere Migrationen für Initial-Setup-Claim, MFA-Challenges,
 OIDC-Identity/Flow-Härtung und Terminal-Host-Key/ACL-Revision. Die konkrete Dateiliste wird aus
