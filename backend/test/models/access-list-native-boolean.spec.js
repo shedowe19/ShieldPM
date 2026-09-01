@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../db.js", () => ({ default: () => ({}) }));
+vi.mock("../../models/access_list_auth.js", () => ({ default: class AccessListAuth {} }));
+vi.mock("../../models/access_list_client.js", () => ({ default: class AccessListClient {} }));
+vi.mock("../../models/proxy_host.js", () => ({ default: class ProxyHost {} }));
+vi.mock("../../models/user.js", () => ({ default: class User {} }));
 
 import AccessList from "../../models/access_list.js";
 
