@@ -1,6 +1,119 @@
 import { migrate as logger } from "../logger.js";
 
 const migrateName = "normalize_domain_names";
+const tableName = "host_domain";
+const foreignKeyName = "host_domain_proxy_host_id_foreign";
+const domainIndexName = "host_domain_domain_name_index";
+const chunkSize = 100;
+const requiredColumns = ["id", "proxy_host_id", "domain_name", "created_on", "modified_on"];
+
+const domainKey = (proxyHostId, domainName) => JSON.stringify([String(proxyHostId), domainName.toLowerCase()]);
+
+const resultRows = (result) => {
+	const rows = result?.rows ?? (Array.isArray(result?.[0]) ? result[0] : result);
+	return Array.isArray(rows) ? rows : [];
+};
+
+const hasProxyHostForeignKey = async (knex) => {
+	const client = String(knex.client.config.client);
+	if (client.includes("sqlite")) {
+		const rows = resultRows(await knex.raw('PRAGMA foreign_key_list("host_domain")'));
+		return rows.some(
+			(row) =>
+				row.from === "proxy_host_id" &&
+				row.table === "proxy_host" &&
+				row.to === "id" &&
+				String(row.on_delete).toUpperCase() === "CASCADE" &&
+				String(row.on_update).toUpperCase() === "CASCADE",
+		);
+	}
+
+	if (client.includes("mysql")) {
+		const rows = resultRows(
+			await knex.raw(
+				`SELECT constraint_name FROM information_schema.table_constraints
+				 WHERE constraint_schema = DATABASE() AND table_name = ?
+				   AND constraint_name = ? AND constraint_type = 'FOREIGN KEY'`,
+				[tableName, foreignKeyName],
+			),
+		);
+		return rows.length > 0;
+	}
+
+	if (client === "pg" || client.includes("postgres")) {
+		const rows = resultRows(
+			await knex.raw(
+				`SELECT constraint_name FROM information_schema.table_constraints
+				 WHERE table_schema = current_schema() AND table_name = ?
+				   AND constraint_name = ? AND constraint_type = 'FOREIGN KEY'`,
+				[tableName, foreignKeyName],
+			),
+		);
+		return rows.length > 0;
+	}
+
+	throw new Error(`Unsupported database client for ${tableName} migration: ${client}`);
+};
+
+const hasDomainIndex = async (knex) => {
+	const client = String(knex.client.config.client);
+	let rows;
+	if (client.includes("sqlite")) {
+		rows = resultRows(await knex.raw('PRAGMA index_list("host_domain")'));
+		return rows.some((row) => row.name === domainIndexName);
+	}
+
+	if (client.includes("mysql")) {
+		rows = resultRows(
+			await knex.raw(
+				`SELECT index_name FROM information_schema.statistics
+				 WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?`,
+				[tableName, domainIndexName],
+			),
+		);
+		return rows.length > 0;
+	}
+
+	if (client === "pg" || client.includes("postgres")) {
+		rows = resultRows(
+			await knex.raw(
+				`SELECT indexname FROM pg_indexes
+				 WHERE schemaname = current_schema() AND tablename = ? AND indexname = ?`,
+				[tableName, domainIndexName],
+			),
+		);
+		return rows.length > 0;
+	}
+
+	throw new Error(`Unsupported database client for ${tableName} migration: ${client}`);
+};
+
+const assertExpectedColumns = async (knex) => {
+	const columns = await knex(tableName).columnInfo();
+	const missing = requiredColumns.filter((column) => !(column in columns));
+	if (missing.length > 0) {
+		throw new Error(`Existing ${tableName} table is missing required columns: ${missing.join(", ")}`);
+	}
+};
+
+const deleteDuplicateDomains = async (knex, rows) => {
+	const seen = new Set();
+	const duplicateIds = [];
+
+	for (const row of rows) {
+		const key = domainKey(row.proxy_host_id, row.domain_name);
+		if (seen.has(key)) duplicateIds.push(row.id);
+		else seen.add(key);
+	}
+
+	for (let i = 0; i < duplicateIds.length; i += chunkSize) {
+		await knex(tableName)
+			.whereIn("id", duplicateIds.slice(i, i + chunkSize))
+			.delete();
+	}
+
+	return { duplicateCount: duplicateIds.length, keys: seen };
+};
 
 /**
  * Migrate
@@ -9,28 +122,58 @@ const migrateName = "normalize_domain_names";
  * @returns {Promise}
  */
 const up = async (knex) => {
-	logger.info(`[${migrateName}] Migrating Up... Creating host_domain table`);
+	logger.info(`[${migrateName}] Migrating Up... Preparing host_domain table`);
 
-	await knex.schema.createTable("host_domain", (table) => {
-		table.increments("id").primary();
-		table.integer("proxy_host_id").unsigned().notNullable();
-		table.string("domain_name").notNullable();
-		table.string("created_on").notNullable().defaultTo(knex.fn.now());
-		table.string("modified_on").notNullable().defaultTo(knex.fn.now());
+	if (!(await knex.schema.hasTable(tableName))) {
+		await knex.schema.createTable(tableName, (table) => {
+			table.increments("id").primary();
+			table.integer("proxy_host_id").unsigned().notNullable();
+			table.string("domain_name").notNullable();
+			table.dateTime("created_on").notNullable().defaultTo(knex.fn.now());
+			table.dateTime("modified_on").notNullable().defaultTo(knex.fn.now());
 
-		// Foreign key to map cascade deletes
-		table.foreign("proxy_host_id").references("id").inTable("proxy_host").onDelete("CASCADE").onUpdate("CASCADE");
+			// Foreign key to map cascade deletes
+			table
+				.foreign("proxy_host_id", foreignKeyName)
+				.references("id")
+				.inTable("proxy_host")
+				.onDelete("CASCADE")
+				.onUpdate("CASCADE");
 
-		// Core B-Tree search index exactly for the LIKE search optimization
-		table.index(["domain_name"]);
-	});
+			// Core B-Tree search index exactly for the LIKE search optimization
+			table.index(["domain_name"], domainIndexName);
+		});
+		logger.info(`[${migrateName}] Created host_domain table.`);
+	} else {
+		await assertExpectedColumns(knex);
+		logger.info(`[${migrateName}] host_domain table already exists; resuming legacy data migration.`);
+	}
 
-	logger.info(`[${migrateName}] Created host_domain table. Migrating legacy JSON array data...`);
+	if (!(await hasProxyHostForeignKey(knex))) {
+		await knex.schema.alterTable(tableName, (table) => {
+			table
+				.foreign("proxy_host_id", foreignKeyName)
+				.references("id")
+				.inTable("proxy_host")
+				.onDelete("CASCADE")
+				.onUpdate("CASCADE");
+		});
+		logger.info(`[${migrateName}] Restored missing proxy-host foreign key.`);
+	}
+
+	if (!(await hasDomainIndex(knex))) {
+		await knex.schema.alterTable(tableName, (table) => {
+			table.index(["domain_name"], domainIndexName);
+		});
+		logger.info(`[${migrateName}] Restored missing domain-name index.`);
+	}
+
+	logger.info(`[${migrateName}] Migrating legacy JSON array data...`);
 
 	// Migrate existing data from proxy_host JSON array to normalized structure
 	const rows = await knex("proxy_host").select("id", "domain_names");
 
-	const inserts = [];
+	const candidates = new Map();
 	for (const row of rows) {
 		let domainNamesArr = [];
 		try {
@@ -47,21 +190,31 @@ const up = async (knex) => {
 		if (Array.isArray(domainNamesArr)) {
 			for (const domain of domainNamesArr) {
 				if (typeof domain === "string" && domain.length > 0) {
-					inserts.push({
-						proxy_host_id: row.id,
-						domain_name: domain,
-					});
+					const key = domainKey(row.id, domain);
+					if (!candidates.has(key)) {
+						candidates.set(key, {
+							proxy_host_id: row.id,
+							domain_name: domain,
+						});
+					}
 				}
 			}
 		}
 	}
 
+	const existingRows = await knex(tableName).select("id", "proxy_host_id", "domain_name").orderBy("id", "asc");
+	const { duplicateCount, keys: existingKeys } = await deleteDuplicateDomains(knex, existingRows);
+	if (duplicateCount > 0) {
+		logger.info(`[${migrateName}] Removed ${duplicateCount} duplicate rows left by an interrupted import.`);
+	}
+
+	const inserts = [...candidates.entries()].filter(([key]) => !existingKeys.has(key)).map(([, insert]) => insert);
+
 	if (inserts.length > 0) {
 		// Use batch mapping to prevent SQlite SQLITE_MAX_VARIABLE_NUMBER constraint (999 chunks)
-		const chunkSize = 100;
 		for (let i = 0; i < inserts.length; i += chunkSize) {
 			const chunk = inserts.slice(i, i + chunkSize);
-			await knex("host_domain").insert(chunk);
+			await knex(tableName).insert(chunk);
 		}
 		logger.info(`[${migrateName}] Successfully migrated ${inserts.length} domains to host_domain table.`);
 	} else {
@@ -82,7 +235,7 @@ const up = async (knex) => {
  */
 const down = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Down... Dropping host_domain table`);
-	await knex.schema.dropTableIfExists("host_domain");
+	await knex.schema.dropTableIfExists(tableName);
 	logger.info(`[${migrateName}] Dropped host_domain table.`);
 };
 

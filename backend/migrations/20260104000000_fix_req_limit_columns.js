@@ -2,26 +2,16 @@ import { migrate as logger } from "../logger.js";
 
 const migrateName = "fix_req_limit_columns";
 
-const addColumnSafe = async (knex, columnName, columnTypeCallback) => {
-	try {
-		await knex.schema.table("proxy_host", (table) => {
-			columnTypeCallback(table);
-		});
-		logger.info(`[${migrateName}] Added column ${columnName}`);
-	} catch (err) {
-		// ER_DUP_FIELDNAME is MySQL error 1060
-		// SQLITE_ERROR generic with "duplicate column name" message for SQLite
-		if (
-			err.code === "ER_DUP_FIELDNAME" ||
-			err.errno === 1060 ||
-			err.errno === 1060 ||
-			err.message?.includes("duplicate column name")
-		) {
-			logger.info(`[${migrateName}] Column ${columnName} already exists. Skipping.`);
-		} else {
-			throw err;
-		}
+const addColumnIfMissing = async (knex, columnName, columnTypeCallback) => {
+	if (await knex.schema.hasColumn("proxy_host", columnName)) {
+		logger.info(`[${migrateName}] Column ${columnName} already exists. Skipping.`);
+		return;
 	}
+
+	await knex.schema.table("proxy_host", (table) => {
+		columnTypeCallback(table);
+	});
+	logger.info(`[${migrateName}] Added column ${columnName}`);
 };
 
 /**
@@ -34,17 +24,17 @@ const up = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Up...`);
 
 	// adv_limit_req_rate (integer)
-	await addColumnSafe(knex, "adv_limit_req_rate", (table) => {
+	await addColumnIfMissing(knex, "adv_limit_req_rate", (table) => {
 		table.integer("adv_limit_req_rate").nullable().defaultTo(null);
 	});
 
 	// adv_limit_req_unit (string)
-	await addColumnSafe(knex, "adv_limit_req_unit", (table) => {
+	await addColumnIfMissing(knex, "adv_limit_req_unit", (table) => {
 		table.string("adv_limit_req_unit").nullable().defaultTo(null);
 	});
 
 	// adv_limit_req_burst (integer)
-	await addColumnSafe(knex, "adv_limit_req_burst", (table) => {
+	await addColumnIfMissing(knex, "adv_limit_req_burst", (table) => {
 		table.integer("adv_limit_req_burst").nullable().defaultTo(null);
 	});
 

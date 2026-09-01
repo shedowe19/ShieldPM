@@ -2,6 +2,18 @@ import { migrate as logger } from "../logger.js";
 
 const migrateName = "20260105000000_add_access_list_mtls";
 
+const decodeMeta = (value) => {
+	if (typeof value === "string") {
+		try {
+			return JSON.parse(value);
+		} catch (_error) {
+			return null;
+		}
+	}
+
+	return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+};
+
 /**
  * Migrate
  *
@@ -31,26 +43,21 @@ const up = async (knex) => {
 	// Migrate existing data from meta if any
 	const rows = await knex("access_list").select("id", "meta");
 	for (const row of rows) {
-		let meta = {};
-		try {
-			meta = JSON.parse(row.meta);
-		} catch (_e) {
-			// ignore invalid json
-		}
+		const meta = decodeMeta(row.meta);
+		const hasEnabled =
+			typeof meta?.mtls_enabled === "boolean" || meta?.mtls_enabled === 0 || meta?.mtls_enabled === 1;
+		const hasCertificate = typeof meta?.mtls_certificate === "string";
 
-		if (meta && (meta.mtls_enabled || meta.mtls_certificate)) {
+		if (meta && (hasEnabled || hasCertificate)) {
+			const cleanedMeta = { ...meta };
+			if (hasEnabled) delete cleanedMeta.mtls_enabled;
+			if (hasCertificate) delete cleanedMeta.mtls_certificate;
 			await knex("access_list")
 				.where("id", row.id)
 				.update({
-					mtls_enabled: !!meta.mtls_enabled,
-					mtls_certificate: meta.mtls_certificate || "",
-					// Optionally remove from meta, but keeping it safe is also fine.
-					// Let's remove to clean up.
-					meta: JSON.stringify({
-						...meta,
-						mtls_enabled: undefined,
-						mtls_certificate: undefined,
-					}),
+					mtls_enabled: hasEnabled ? !!meta.mtls_enabled : false,
+					mtls_certificate: hasCertificate ? meta.mtls_certificate : "",
+					meta: JSON.stringify(cleanedMeta),
 				});
 		}
 	}
@@ -64,12 +71,14 @@ const up = async (knex) => {
  * @param   {Object} knex
  * @returns {Promise}
  */
-const down = (knex) => {
+const down = async (_knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
-	return knex.schema.table("access_list", (table) => {
-		table.dropColumn("mtls_enabled");
-		table.dropColumn("mtls_certificate");
-	});
+	// These columns may already belong to the historical 20260103000000
+	// migration. Its file was later restored as a dummy, so there is no
+	// reliable schema marker that distinguishes legacy columns from columns
+	// created here. Keep them rather than deleting state this migration may
+	// not own.
+	logger.info(`[${migrateName}] Rollback skipped to preserve potentially pre-existing mTLS columns`);
 };
 
 export { down, up };

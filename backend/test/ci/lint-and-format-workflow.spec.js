@@ -151,9 +151,11 @@ describe("lint-and-format workflow", () => {
 		}
 	});
 
-	it("verifies idempotent migrations on MySQL and PostgreSQL", () => {
+	it("verifies resumable migrations on MySQL and PostgreSQL", () => {
 		expect(workflow).toContain("mysql:8.4");
 		expect(workflow).toContain("postgres:17");
+		expect(workflow).toContain("Verify MySQL migration resume");
+		expect(workflow).toContain("Verify PostgreSQL migration resume");
 		expect(workflow).toContain("ci:migrate");
 	});
 });

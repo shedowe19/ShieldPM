@@ -228,7 +228,7 @@ jobs:
       - name: Install backend
         run: yarn --cwd backend install --immutable
 
-      - name: Run MySQL migrations twice
+      - name: Verify MySQL migration resume
         if: matrix.database == 'mysql'
         env:
           CI: "true"
@@ -240,7 +240,7 @@ jobs:
           DB_MYSQL_NAME: shieldpm
         run: yarn --cwd backend ci:migrate
 
-      - name: Run PostgreSQL migrations twice
+      - name: Verify PostgreSQL migration resume
         if: matrix.database == 'postgres'
         env:
           CI: "true"

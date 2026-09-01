@@ -72,10 +72,18 @@ export { up, down };
 
 ### ShieldPM Features (2026)
 
-- `20260103000000_add_access_list_mtls` — mTLS-Support
+- `20260102000000_add_req_limit` / `20260104000000_fix_req_limit_columns` — Rate-Limit-Spalten und
+  retry-sichere Reparatur; jede Spalte wird vor DDL einzeln geprüft, damit insbesondere PostgreSQL-Transaktionen nicht
+  durch erwartbare Duplicate-Column-Fehler abgebrochen werden
+- `20260103000000_add_access_list_mtls` / `20260105000000_add_access_list_mtls` — mTLS-Support; übernimmt
+  bestehende Metadaten sowohl aus JSON-Strings (SQLite/MySQL) als auch aus bereits dekodierten JSON-Objekten
+  (PostgreSQL), ohne ungültige Metadaten zu verändern
 - `20260107000000_add_maintenance_schedule` — Geplante Wartungsfenster
 - `20260108000000_add_cloudflared_tunnel` — Cloudflare Tunnels
 - `20260109000000_add_ai_config` — AI-Agent Konfiguration
+- `20260110000000_reset_ai_system_prompt` — entfernt nur den veralteten System-Prompt aus der JSON-Konfiguration;
+  die Anwendung transformiert und serialisiert das JSON dialektunabhängig und retry-sicher für SQLite, MySQL und
+  PostgreSQL
 - `20260118000000_add_gitops_config` — GitOps
 - `20260121000000_add_ddns` — DDNS-Support
 - `20260122100000_add_tor_onion` — Tor Onion Services
@@ -97,9 +105,19 @@ OIDC-Identity/Flow-Härtung und Terminal-Host-Key/ACL-Revision. Die konkrete Dat
 
 ## Verifikation
 
-CI führt den kompletten Migrationsstand auf SQLite, MySQL 8.4 und PostgreSQL 17 aus und startet den Lauf ein zweites Mal.
-DDL muss daher sowohl dialektkompatibel als auch retry-sicher sein. Ein `down()` darf nur die Felder/Constraints der
-eigenen Migration entfernen. Vor externen DB-Migrationen ist ein nativer, restore-getesteter Dump Pflicht.
+CI führt den kompletten Migrationsstand auf SQLite, MySQL 8.4 und PostgreSQL 17 aus. Auf einer frischen Datenbank wird
+zuerst ein deterministisches Präfix angewendet, anschließend der offene Suffix über das normale `migrate.latest()`
+fortgesetzt. Das Gate gleicht nach beiden Phasen das Migrations-Ledger mit der Dateiliste ab und verlangt danach einen
+No-op-Lauf ohne offene Migration. Bereits im Ledger erfasste, möglicherweise irreversible Migrationen werden dabei
+nicht erneut ausgeführt.
+
+Dieser Ketten-Test belegt die Wiederaufnahme **zwischen** erfolgreich abgeschlossenen Migrationen. Retry-Sicherheit
+nach einem Fehler **innerhalb** einer nicht transaktionalen Migration muss zusätzlich ein gezielter Migrationstest mit
+einem absichtlich partiellen Schema- oder Datenzustand prüfen; ein pauschaler zweiter Aufruf aller `up()`-Funktionen
+wäre destruktiv und kein realistischer Knex-Retry. DDL muss sowohl dialektkompatibel als auch für diesen konkreten
+Fehlerfall retry-sicher sein. Ein `down()` darf nur die Felder/Constraints der eigenen Migration entfernen.
+`CURRENT_TIMESTAMP`-Defaults gehören auf temporale Spalten und JSON-Defaults dürfen nicht von dialektspezifischen
+Literalregeln abhängen. Vor externen DB-Migrationen ist ein nativer, restore-getesteter Dump Pflicht.
 
 ## Verwandte Seiten
 

@@ -56,8 +56,11 @@ Dateinamen festschreiben. Node-Kompatibilität gilt für Node 24 LTS und die zus
 
 ## Datenbankmatrix
 
-Migrationen werden mindestens auf SQLite, MySQL 8.4 und PostgreSQL 17 ausgeführt. Die CI migriert einen frischen Stand
-und ruft den Migrationslauf erneut auf, damit auch Idempotenz-/Retry-Pfade sichtbar werden. Dialektabhängige DDL muss in
+Migrationen werden mindestens auf SQLite, MySQL 8.4 und PostgreSQL 17 ausgeführt. Die CI wendet auf einem frischen
+Stand zuerst ein Präfix an, setzt anschließend den offenen Suffix fort, prüft das vollständige Knex-Ledger und verlangt
+einen abschließenden No-op-Lauf. Damit wird eine Wiederaufnahme zwischen abgeschlossenen Migrationen geprüft, ohne
+irreversible `up()`-Funktionen erneut auszuführen. Fehlerzustände innerhalb einer nicht transaktionalen Migration
+müssen gezielte Tests über vorbereitete partielle Schema- oder Datenzustände abdecken. Dialektabhängige DDL muss in
 Migrationen gekapselt sein; Servicecode verwendet Objection/Knex.
 
 ## Dependency- und Supply-Chain-Gates
