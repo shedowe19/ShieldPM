@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	analyticCountKnex: vi.fn(),
 	analyticCountQuery: vi.fn(),
 	analyticsLogsQuery: vi.fn(),
 	middlewares: [],
@@ -29,7 +30,9 @@ vi.mock("express", () => ({
 vi.mock("systeminformation", () => ({ default: { networkStats: vi.fn() } }));
 vi.mock("../../lib/config.js", () => ({ isMysql: vi.fn(), isPostgres: vi.fn(), isSqlite: vi.fn() }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => () => undefined }));
-vi.mock("../../models/analytic_count.js", () => ({ default: { query: mocks.analyticCountQuery } }));
+vi.mock("../../models/analytic_count.js", () => ({
+	default: { knex: mocks.analyticCountKnex, query: mocks.analyticCountQuery },
+}));
 vi.mock("../../models/analytics_logs.js", () => ({ default: { query: mocks.analyticsLogsQuery } }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyHostQuery } }));
 
@@ -77,6 +80,7 @@ const createTopHostsQuery = (rows) => {
 
 const createProxyHostQuery = (rows) => {
 	const query = {
+		andWhere: vi.fn(),
 		alias: vi.fn(),
 		groupBy: vi.fn(),
 		join: vi.fn(),
@@ -86,12 +90,18 @@ const createProxyHostQuery = (rows) => {
 		withGraphFetched: vi.fn().mockResolvedValue(rows),
 	};
 	query.alias.mockReturnValue(query);
+	query.andWhere.mockReturnValue(query);
 	query.groupBy.mockReturnValue(query);
 	query.join.mockReturnValue(query);
 	query.select.mockReturnValue(query);
 	query.where.mockReturnValue(query);
 	query.whereIn.mockReturnValue(query);
 	return query;
+};
+
+const fixedWindow = {
+	start: "2026-08-30T20:00:00.000Z",
+	end: "2026-08-31T20:00:00.000Z",
 };
 
 describe("analytics top-hosts route", () => {
@@ -174,6 +184,134 @@ describe("analytics top-hosts route", () => {
 		]);
 		expect(query.orderBy).toHaveBeenCalledWith("bytes", "desc");
 		expect(query.sum).toHaveBeenCalledWith("analytic_count.bytes_sent as bytes");
+	});
+
+	it("limits rankings and host hydration to the current owner when visibility is user-scoped", async () => {
+		const query = createTopHostsQuery([
+			{ bytes: "1024", client_errors: "0", id: "7", requests: "42", server_errors: "0" },
+		]);
+		const hostRows = [{ domain_names: ["api.example"], id: 7 }];
+		const proxyHostQuery = createProxyHostQuery(hostRows);
+		const hostsWithDomainsQuery = createProxyHostQuery(hostRows);
+		const response = {
+			...createResponse(),
+			locals: { analyticsScope: { unrestricted: false, userId: 22 } },
+		};
+		mocks.analyticCountQuery.mockReturnValue(query);
+		mocks.proxyHostQuery.mockReturnValueOnce(hostsWithDomainsQuery).mockReturnValueOnce(proxyHostQuery);
+
+		await mocks.routes.get("/top-hosts")({ query: {} }, response, vi.fn());
+
+		expect(hostsWithDomainsQuery.andWhere).toHaveBeenCalledWith("proxy_host.owner_user_id", 22);
+		expect(proxyHostQuery.andWhere).toHaveBeenCalledWith("owner_user_id", 22);
+		expect(response.json).toHaveBeenCalledWith([
+			{
+				bytes: 1024,
+				client_errors: 0,
+				domain_name: "api.example",
+				id: 7,
+				requests: 42,
+				server_errors: 0,
+			},
+		]);
+	});
+
+	it("scopes global summaries to proxy hosts owned by a user-visible role", async () => {
+		const ownedHostsQuery = {
+			andWhere: vi.fn().mockReturnThis(),
+			select: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+		};
+		const summaryQuery = {
+			andWhere: vi.fn().mockReturnThis(),
+			first: vi.fn().mockResolvedValue({ count: "4" }),
+			from: vi.fn().mockReturnThis(),
+			sum: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			whereIn: vi.fn().mockReturnThis(),
+		};
+		const database = vi.fn((table) => {
+			expect(table).toBe("proxy_host");
+			return ownedHostsQuery;
+		});
+		database.from = vi.fn().mockReturnValue(summaryQuery);
+		mocks.analyticCountKnex.mockReturnValue(database);
+		const response = {
+			...createResponse(),
+			locals: { analyticsScope: { unrestricted: false, userId: 22 } },
+		};
+
+		await mocks.routes.get("/summary")({ query: fixedWindow }, response, vi.fn());
+
+		expect(summaryQuery.whereIn).toHaveBeenCalledWith("proxy_host_id", ownedHostsQuery);
+		expect(database).toHaveBeenCalledWith("proxy_host");
+		expect(ownedHostsQuery.select).toHaveBeenCalledWith("id");
+		expect(ownedHostsQuery.where).toHaveBeenCalledWith("is_deleted", 0);
+		expect(ownedHostsQuery.andWhere).toHaveBeenCalledWith("owner_user_id", 22);
+		expect(mocks.proxyHostQuery).not.toHaveBeenCalled();
+		expect(response.json).toHaveBeenCalledWith(expect.objectContaining({ count: 4 }));
+	});
+
+	it("scopes global time series to proxy hosts owned by a user-visible role", async () => {
+		const ownedHostsQuery = createProxyHostQuery([]);
+		const rows = [
+			{
+				timestamp: "2026-08-31T19:59:00.000Z",
+				request_count: 2,
+				bytes_sent: "10",
+				status_code_2xx: 2,
+				status_code_3xx: 0,
+				status_code_4xx: 0,
+				status_code_5xx: 0,
+			},
+		];
+		const seriesQuery = {
+			andWhere: vi.fn().mockReturnThis(),
+			orderBy: vi.fn().mockReturnThis(),
+			// biome-ignore lint/suspicious/noThenProperty: Knex query builders are intentionally thenable.
+			then: (resolve, reject) => Promise.resolve(rows).then(resolve, reject),
+			where: vi.fn().mockReturnThis(),
+			whereIn: vi.fn().mockReturnThis(),
+		};
+		mocks.analyticCountQuery.mockReturnValue(seriesQuery);
+		mocks.proxyHostQuery.mockReturnValue(ownedHostsQuery);
+		const response = {
+			...createResponse(),
+			locals: { analyticsScope: { unrestricted: false, userId: 22 } },
+		};
+
+		await mocks.routes.get("/series")({ query: fixedWindow }, response, vi.fn());
+
+		expect(seriesQuery.whereIn).toHaveBeenCalledWith("proxy_host_id", ownedHostsQuery);
+		expect(ownedHostsQuery.andWhere).toHaveBeenCalledWith("owner_user_id", 22);
+		expect(response.json).toHaveBeenCalledWith([
+			{
+				timestamp: "2026-08-31T19:59:00.000Z",
+				count: 2,
+				bytes: 10,
+				s2xx: 2,
+				s3xx: 0,
+				s4xx: 0,
+				s5xx: 0,
+			},
+		]);
+	});
+
+	it("keeps platform network and database telemetry behind unrestricted visibility", async () => {
+		for (const route of ["/status", "/db-stats"]) {
+			const next = vi.fn();
+			const response = {
+				...createResponse(),
+				locals: { analyticsScope: { unrestricted: false, userId: 22 } },
+			};
+
+			await mocks.routes.get(route)({}, response, next);
+
+			expect(next).toHaveBeenCalledWith(
+				expect.objectContaining({ message: expect.stringMatching(/visibility/) }),
+			);
+			expect(response.json).not.toHaveBeenCalled();
+		}
 	});
 
 	it("returns the five active proxy hosts with the most server errors when sort=server_errors", async () => {

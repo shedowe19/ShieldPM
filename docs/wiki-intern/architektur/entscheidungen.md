@@ -16,15 +16,17 @@ Das gesamte Projekt ist `"type": "module"`. Kein `require()` erlaubt. Alle Impor
 
 **Ausnahme**: `backend/validate-env.cjs` ist eine CommonJS-Datei (wird vor dem ESM-Setup geladen).
 
-### E3: SQLite als Entwicklungsdatenbank
+### E3: SQLite als unterstützter Standard
 
-Entwicklung verwendet SQLite (`better-sqlite3`). Produktion unterstützt MySQL und PostgreSQL. Die Migrations sind so geschrieben, dass sie auf allen drei Engines funktionieren.
+SQLite ist ohne Zusatzkonfiguration der Standard, auch für kleine Installationen. Externe MySQL-/PostgreSQL-Backends
+sind optional. Migrationen und CI müssen alle drei Dialekte abdecken.
 
 **Gotcha**: Boolean-Felder in SQLite werden als `0`/`1` gespeichert. Das Objection.js-Modell konvertiert im `$afterGet()`.
 
 ### E4: Nginx-Validierung aktiviert
 
-`nginx -t` wird vor dem Reload **aktiv** ausgeführt (via `test()`-Methode = `nginx -tq`). Das schützt vor trivialen Config-Fehlern. Template-Fehler können Nginx dennoch brechen.
+`nginx -t` wird gegen einen vollständig gestagten Kandidaten ausgeführt. DB-/Dateimutationen verwenden Compensation,
+damit ein Render-, Test- oder Reload-Fehler den letzten gültigen Zustand wiederherstellt.
 
 ### E5: Kein Debouncing in der Nginx-Engine
 
@@ -50,13 +52,26 @@ Keine zusätzlichen UI-Component-Libraries. Frontend verwendet ausschließlich s
 
 Der Dockerfile verwendet drei Stages:
 
-1. `frontend` — Baut die React-App mit Debian Trixie, dem eingecheckten NodeSource-APT-Setup und Node 26
-2. `backend` — Installiert Node‑26-Dependencies + Anubis + OAuth2-Proxy
-3. `final` — Basiert auf `shieldpm-nginx:master`, kopiert Artefakte
+1. `frontend` — Baut die React-App mit Debian Trixie, signiertem NodeSource-APT und Node 24 LTS
+2. `backend` — Installiert immutable Yarn-4-Abhängigkeiten + verifizierte Laufzeit-Artefakte
+3. `final` — Verlangt ein freigegebenes `shieldpm-nginx@sha256:<digest>` und kopiert die geprüften Artefakte
 
 ### E11: Biome statt ESLint/Prettier
 
 Code-Qualität wird durch Biome (`@biomejs/biome`) sichergestellt, nicht durch ESLint + Prettier.
+
+### E12: Sicherheitszustand ist serverseitig und crash-durable
+
+Auth-Refresh/Impersonation, Initial-Setup, GitOps, Analytics und Terminal verwenden serverseitige Claims, Transaktionen,
+One-Time-Werte oder Journale. Browser-/Providertext und erfolgreiche Vorprüfungen sind keine Autorisierung. Details und
+Konsequenzen stehen im [Security-Modernisierungs-ADR](../entscheidungen/2026-08-31-security-modernisierung.md).
+
+### E13: Fail-closed Updates und unveränderliche Supply Chain
+
+SQLite-Updates erhalten vor jeder Mutation einen verifizierten Online-Snapshot und einen automatischen Restore-Pfad;
+externe Datenbanken erfordern ein ausdrücklich bestätigtes, engine-natives Backup. Container-Bases, Runtime-Archive und
+GitHub Actions sind an Digests, Prüfsummen beziehungsweise Commit-SHAs gebunden. Pull-Request-Code darf keine Images
+oder Release-Artefakte publizieren.
 
 ## Verwandte Seiten
 

@@ -338,36 +338,53 @@
 			"default": "auto",
 			"example": "auto"
 		},
-		"terminal_host": {
-			"type": ["string", "null"],
-			"description": "Terminal SSH Host",
-			"example": "192.168.1.10"
-		},
-		"terminal_port": {
-			"type": ["integer", "null"],
-			"description": "Terminal SSH Port",
-			"example": 22
-		},
-		"terminal_username": {
-			"type": ["string", "null"],
-			"description": "Terminal SSH Username",
-			"example": "root"
+			"terminal_host": {
+				"type": ["string", "null"],
+				"description": "Terminal SSH Host",
+				"minLength": 1,
+				"maxLength": 253,
+				"pattern": "^[^\\s\\u0000-\\u001F\\u007F]+$",
+				"example": "192.168.1.10"
+			},
+			"terminal_port": {
+				"type": ["integer", "null"],
+				"description": "Terminal SSH Port",
+				"minimum": 1,
+				"maximum": 65535,
+				"example": 22
+			},
+			"terminal_username": {
+				"type": ["string", "null"],
+				"description": "Terminal SSH Username",
+				"minLength": 1,
+				"maxLength": 255,
+				"pattern": "^[^\\u0000-\\u001F\\u007F]+$",
+				"example": "root"
 		},
 		"terminal_auth_type": {
 			"type": ["string", "null"],
 			"enum": ["password", "key"],
 			"example": "password"
 		},
-		"terminal_password": {
-			"type": ["string", "null"],
-			"description": "Encrypted Password",
-			"example": "encrypted..."
-		},
-		"terminal_private_key": {
-			"type": ["string", "null"],
-			"description": "Encrypted Private Key",
-			"example": "encrypted..."
-		},
+			"terminal_password": {
+				"type": ["string", "null"],
+				"description": "SSH password (write-only)",
+				"maxLength": 4096,
+				"writeOnly": true
+			},
+			"terminal_private_key": {
+				"type": ["string", "null"],
+				"description": "SSH private key (write-only)",
+				"maxLength": 65536,
+				"writeOnly": true
+			},
+			"terminal_host_key_fingerprint": {
+				"type": ["string", "null"],
+				"description": "Pinned SSH host-key fingerprint (OpenSSH SHA256 or 64-character SHA-256 hex)",
+				"maxLength": 80,
+				"pattern": "^(?:SHA256:[A-Za-z0-9+/]{43}=?|[A-Fa-f0-9]{64})$",
+				"example": "SHA256:0123456789012345678901234567890123456789012"
+			},
 		"turbo_loader": {
 			"type": "boolean",
 			"description": "Enable Browser Turbo-Loader (Multi-Part Injection) for large file downloads",

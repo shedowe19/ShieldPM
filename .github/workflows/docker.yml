@@ -31,14 +31,16 @@ on:
 
   workflow_dispatch:
 
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   IMAGE_NAME: ghcr.io/shedowe19/shieldpm
   LXC_TEMPLATE_NAME: "" # Placeholder for linter
 
 permissions:
-  contents: write
-  packages: write
-  pull-requests: write
+  contents: read
 
 jobs:
   # ---------------------------------------------------------
@@ -55,19 +57,22 @@ jobs:
       is_pr: ${{ steps.calc.outputs.is_pr }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: "Calculate Version & Tags"
         id: calc
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION=$(cat .version)
+          if [[ "${{ github.ref }}" == refs/tags/v* && "${{ github.ref_name }}" != "v${VERSION}" ]]; then
+            echo "Release tag must exactly match .version (expected v${VERSION})." >&2
+            exit 1
+          fi
           echo "hash=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            CLEAN_PR=$(echo pr-${{ github.ref_name }} | sed "s|refs/pull/:||g" | sed "s|/merge||g")
-            echo "tag_base=${CLEAN_PR}" >> $GITHUB_OUTPUT
+            echo "tag_base=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
             echo "is_pr=true" >> $GITHUB_OUTPUT
           else
             echo "tag_base=${{ github.ref_name }}" >> $GITHUB_OUTPUT
@@ -83,7 +88,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -96,32 +100,35 @@ jobs:
             flags: "FLAGS=-mbranch-protection=standard"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.2.0
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
         with:
           driver-opts: env.BUILDKIT_STEP_LOG_MAX_SIZE=-1
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Apply Version to package.json
+      - name: Require immutable base image
+        env:
+          SHIELDPM_NGINX_IMAGE: ${{ vars.SHIELDPM_NGINX_IMAGE }}
         run: |
-          VER="${{ needs.prepare.outputs.version_hash }}"
-          sed -i "s|\"0.0.0\"|\"$VER\"|g" frontend/package.json
-          sed -i "s|\"0.0.0\"|\"$VER\"|g" backend/package.json
-          # Save full commit hash for update-shieldpm
+          if [[ ! "$SHIELDPM_NGINX_IMAGE" =~ ^ghcr\.io/shedowe19/shieldpm-nginx@sha256:[0-9a-f]{64}$ ]]; then
+            echo "Repository variable SHIELDPM_NGINX_IMAGE must contain an approved multi-arch digest." >&2
+            exit 1
+          fi
+
+      - name: Scan source before any image push
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Record exact source revision
+        run: |
           echo "${{ github.sha }}" > backend/.git-commit
 
       # --- Build Steps ---
 
       - name: "📦 Build Stage: Frontend"
-        uses: docker/build-push-action@v7.3.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ./Dockerfile
@@ -129,11 +136,14 @@ jobs:
           push: false
           build-args: |
             ${{ matrix.flags }}
+            SHIELDPM_NGINX_IMAGE=${{ vars.SHIELDPM_NGINX_IMAGE }}
+            BUILD_VERSION=${{ needs.prepare.outputs.version }}
+            VCS_REF=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.arch }}-frontend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-frontend
 
       - name: "📦 Build Stage: Backend"
-        uses: docker/build-push-action@v7.3.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ./Dockerfile
@@ -141,34 +151,69 @@ jobs:
           push: false
           build-args: |
             ${{ matrix.flags }}
+            SHIELDPM_NGINX_IMAGE=${{ vars.SHIELDPM_NGINX_IMAGE }}
+            BUILD_VERSION=${{ needs.prepare.outputs.version }}
+            VCS_REF=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.arch }}-backend
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-backend
 
-      - name: "🚀 Build Final & Push"
-        uses: docker/build-push-action@v7.3.0
+      - name: "🔬 Build final image once as an OCI archive"
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ./Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+          push: false
+          tags: shieldpm-scan:${{ matrix.arch }}
+          outputs: type=oci,dest=/tmp/shieldpm-${{ matrix.arch }},tar=false
           build-args: |
             ${{ matrix.flags }}
+            SHIELDPM_NGINX_IMAGE=${{ vars.SHIELDPM_NGINX_IMAGE }}
+            BUILD_VERSION=${{ needs.prepare.outputs.version }}
+            VCS_REF=${{ github.sha }}
           cache-from: |
             type=gha,scope=${{ matrix.arch }}-frontend
             type=gha,scope=${{ matrix.arch }}-backend
             type=gha,scope=${{ matrix.arch }}-final
-
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
+          sbom: true
+          provenance: mode=max
+
+      - name: Scan the exact final OCI archive before publication
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          input: /tmp/shieldpm-${{ matrix.arch }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Upload the scanned OCI archive for the publication job
+        if: needs.prepare.outputs.is_pr != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: shieldpm-image-${{ matrix.arch }}
+          path: /tmp/shieldpm-${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Load the scanned image for native artifacts
+        if: needs.prepare.outputs.is_pr != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends skopeo
+          skopeo copy \
+            "oci:/tmp/shieldpm-${{ matrix.arch }}" \
+            "docker-daemon:shieldpm-scan:${{ matrix.arch }}"
 
       # ---------------------------------------------------------
       # NEW: Native Installer Package (Generic .tar.gz)
       # Uses pre-built nginx binaries from GitHub Releases
       # ---------------------------------------------------------
       - name: "📦 Create Native Installer Package"
+        if: needs.prepare.outputs.is_pr != 'true'
         run: |
-          # 1. Pull Image (For app/html only)
-          TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
-          docker pull "$TAG"
+          # 1. Use the exact image already scanned above (for app/html only)
+          TAG="shieldpm-scan:${{ matrix.arch }}"
 
           # 2. Create Temp Container
           CONTAINER_NAME="installer-extractor-${{ matrix.arch }}"
@@ -177,10 +222,13 @@ jobs:
           # 3. Determine Architecture Suffix
           if [ "${{ matrix.arch }}" == "x86_64" ]; then
             ARCH_SUFFIX="amd64"
+            NGINX_SHA256="879cbba5fb7b5b62db3f3ca5d10028fadbd00b6fd368424206278f639fbf9c94"
           elif [ "${{ matrix.arch }}" == "aarch64" ]; then
             ARCH_SUFFIX="arm64"
+            NGINX_SHA256="89c1c018ed9624c364425443dce0a836793af2edef1496181ab060a9c26b0e41"
           else
-            ARCH_SUFFIX="${{ matrix.arch }}"
+            echo "Unsupported release architecture: ${{ matrix.arch }}" >&2
+            exit 1
           fi
 
           # 4. Create Build Dir
@@ -195,7 +243,8 @@ jobs:
           # 6. Download Pre-built Nginx Binaries from Release
           echo "Downloading nginx-linux-${ARCH_SUFFIX}.tar.gz from GitHub Releases..."
           RELEASE_URL="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries/nginx-linux-${ARCH_SUFFIX}.tar.gz"
-          curl -L -f -o nginx-binaries.tar.gz "$RELEASE_URL"
+          curl --fail --location --proto '=https' --tlsv1.2 --output nginx-binaries.tar.gz "$RELEASE_URL"
+          echo "${NGINX_SHA256}  nginx-binaries.tar.gz" | sha256sum --check --strict -
           
           # 7. Extract Nginx Binaries
           echo "Extracting nginx binaries..."
@@ -207,21 +256,32 @@ jobs:
           
           # 9. Add Installer Script
           cp scripts/install.sh "$BUILD_DIR/install.sh"
+          cp scripts/setup-node-apt.sh "$BUILD_DIR/setup-node-apt.sh"
           chmod +x "$BUILD_DIR/install.sh"
+
+          # The installer verifies every shipped file before touching the host.
+          (
+            cd "$BUILD_DIR"
+            find . \( -type f -o -type l \) ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          )
           
           # 10. Package
           TAR_NAME="shieldpm-install-linux-${ARCH_SUFFIX}.tar.gz"
           tar -czf "$TAR_NAME" -C "$BUILD_DIR" .
+          sha256sum "$TAR_NAME" > "${TAR_NAME}.sha256"
           echo "INSTALLER_PKG=$TAR_NAME" >> $GITHUB_ENV
           
           # Cleanup
           rm -rf "$BUILD_DIR"
 
       - name: "📤 Upload Native Installer"
-        uses: actions/upload-artifact@v7.0.1
+        if: needs.prepare.outputs.is_pr != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: shieldpm-install-linux-${{ matrix.arch }}
-          path: ${{ env.INSTALLER_PKG }}
+          path: |
+            ${{ env.INSTALLER_PKG }}
+            ${{ env.INSTALLER_PKG }}.sha256
           if-no-files-found: error
 
       # ---------------------------------------------------------
@@ -229,12 +289,12 @@ jobs:
       # Now for both x86_64 and aarch64
       # ---------------------------------------------------------
       - name: "📦 Create Proxmox LXC Template"
+        if: needs.prepare.outputs.is_pr != 'true'
         id: lxc
         # if: matrix.arch == 'x86_64' # Enable for both architectures
         run: |
-          # 1. Pull the image we just pushed/built to ensure it's local
-          TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
-          docker pull "$TAG"
+          # 1. Use the exact image already scanned above
+          TAG="shieldpm-scan:${{ matrix.arch }}"
 
           # 2. Run a temporary builder container
           # We start it with a sleep entrypoint so we can exec patches into it
@@ -302,6 +362,7 @@ jobs:
           
           FILE_NAME="shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_${ARCH_SUFFIX}.tar.gz"
           mv rootfs.tar.gz "$FILE_NAME"
+          sha256sum "$FILE_NAME" > "${FILE_NAME}.sha256"
           
           echo "LXC_TEMPLATE_NAME=$FILE_NAME" >> $GITHUB_ENV
           
@@ -309,11 +370,14 @@ jobs:
           docker rm -f "$CONTAINER_NAME"
 
       - name: "📤 Upload LXC Template"
-        uses: actions/upload-artifact@v7.0.1
+        if: needs.prepare.outputs.is_pr != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           # ÄNDERUNG: ${{ matrix.arch }} zum Namen hinzufügen
           name: shieldpm-lxc-template-${{ matrix.arch }}
-          path: ${{ env.LXC_TEMPLATE_NAME }}
+          path: |
+            ${{ env.LXC_TEMPLATE_NAME }}
+            ${{ env.LXC_TEMPLATE_NAME }}.sha256
           if-no-files-found: error
 
   # ---------------------------------------------------------
@@ -323,15 +387,58 @@ jobs:
     name: "🔗 Merge Multiarch Image"
     needs: [prepare, build]
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'shedowe19' }}
+    if: ${{ github.repository_owner == 'shedowe19' && needs.prepare.outputs.is_pr != 'true' }}
+    permissions:
+      contents: read
+      packages: write
     steps:
 
+      - name: Download scanned x86_64 OCI archive
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: shieldpm-image-x86_64
+          path: /tmp/shieldpm-images/x86_64
+
+      - name: Download scanned aarch64 OCI archive
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: shieldpm-image-aarch64
+          path: /tmp/shieldpm-images/aarch64
+
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4.6.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Guard immutable release image tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag_base="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}"
+          for target in "$tag_base" "${tag_base}-x86_64" "${tag_base}-aarch64"; do
+            if docker buildx imagetools inspect "$target" >/dev/null 2>&1; then
+              echo "Refusing to overwrite immutable release image $target" >&2
+              exit 1
+            fi
+          done
+
+      - name: Publish only the scanned OCI archives
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends skopeo
+          tag_base="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}"
+          for arch in x86_64 aarch64; do
+            layout="/tmp/shieldpm-images/${arch}"
+            target="${tag_base}-${arch}"
+            local_digest="sha256:$(skopeo inspect --raw "oci:${layout}" | sha256sum | cut -d ' ' -f 1)"
+            skopeo copy --all --preserve-digests "oci:${layout}" "docker://${target}"
+            remote_digest="$(skopeo inspect --format '{{.Digest}}' "docker://${target}")"
+            if [ "$remote_digest" != "$local_digest" ]; then
+              echo "Published digest for ${arch} differs from the scanned OCI archive" >&2
+              exit 1
+            fi
+          done
 
       - name: Create Multiarch Manifest
         run: |
@@ -341,14 +448,6 @@ jobs:
             "${TAG_BASE}-x86_64" \
             "${TAG_BASE}-aarch64"
 
-      - name: "Add PR Comment"
-        uses: mshick/add-pr-comment@v3.12.0
-        if: ${{ needs.prepare.outputs.is_pr == 'true' }}
-        with:
-          message: "The Docker Image can now be found here: `${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}`"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          refresh-message-position: true
-
   # ---------------------------------------------------------
   # PHASE 4: RELEASE (Artifacts as GitHub Release)
   # ---------------------------------------------------------
@@ -356,33 +455,36 @@ jobs:
     name: "📦 Upload Release Artifacts"
     needs: [prepare, build, merge]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' && github.repository_owner == 'shedowe19' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'shedowe19' }}
     permissions:
+      actions: read
+      attestations: write
       contents: write
+      id-token: write
     steps:
       - name: Create Release Assets Directory
         run: mkdir -p release-assets
 
       - name: Download LXC Template (x86_64)
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-lxc-template-x86_64
           path: release-assets
 
       - name: Download LXC Template (aarch64)
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-lxc-template-aarch64
           path: release-assets
 
       - name: Download Native Installer (x86_64)
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-install-linux-x86_64
           path: release-assets
 
       - name: Download Native Installer (aarch64)
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: shieldpm-install-linux-aarch64
           path: release-assets
@@ -390,8 +492,13 @@ jobs:
       - name: List Release Assets
         run: ls -la release-assets/
 
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release-assets/*
+
       - name: Create Release
-        uses: softprops/action-gh-release@v3.0.2
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: "v${{ needs.prepare.outputs.version }}"
           name: "ShieldPM v${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.docker_tag_base }}-${{ needs.prepare.outputs.version_hash }})"
@@ -418,7 +525,8 @@ jobs:
             - **ARM64 (Raspberry Pi/Ampere):** `shieldpm-install-linux-arm64.tar.gz`
 
             ```bash
-            # Extract and run
+            # Verify the external release checksum before extracting.
+            sha256sum --check shieldpm-install-linux-*.tar.gz.sha256
             tar -xzf shieldpm-install-linux-*.tar.gz
             sudo ./install.sh
             ```

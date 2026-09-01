@@ -10,6 +10,7 @@ services:
     environment:
       # Set your timezone
       - "TZ=Europe/Berlin"
+      - "TRUST_PROXY=1" # The image routes the UI through one internal Nginx proxy
       
       # Minimal Configuration
       - "PUID=0" # Run as root by default (easy start)

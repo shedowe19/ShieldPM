@@ -1,0 +1,17 @@
+{
+	"operationId": "beginOidcFlow",
+	"summary": "Begin an OIDC login or authenticated identity-link flow",
+	"tags": ["tokens"],
+	"parameters": [
+		{
+			"in": "query",
+			"name": "purpose",
+			"required": false,
+			"schema": { "type": "string", "enum": ["login", "link"], "default": "login" }
+		}
+	],
+	"responses": {
+		"302": { "description": "Redirect to the configured OpenID Provider" },
+		"400": { "description": "OIDC is unavailable or incorrectly configured" }
+	}
+}

@@ -2,81 +2,58 @@
 
 ## Zweck
 
-Traffic-Analyse und Echtzeit-Statistiken für Proxy-Hosts.
+Analytics verarbeitet Nginx-JSON-Access-Logs zu Detailzeilen und Zeit-/Host-Aggregationen. Die Durability-Grenze liegt
+zwischen Logtailer, fsync-Spool und atomarer Datenbanktransaktion.
 
-## Kontext
+## Ingestion
 
-Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Weltkarte und Zeitreihen.
+1. Eine normalisierte Logzeile wird mit Sequenz/Checksumme als NDJSON angehängt und `fsync`-bestätigt.
+2. Ein bounded Batch erhält stabile Batch-ID und Payload-Hash.
+3. Detailzeilen, Aggregationen und `analytics_ingestion_batch` werden in derselben DB-Transaktion committed.
+4. Ein verlorenes Commit-Ack wird über Ledger/Hash als bereits verarbeitet erkannt.
+5. Erst danach schreitet der Spool-Checkpoint voran; Kompaktierung bewahrt alle noch replaybaren Sequenzen.
+
+`analytics_logs.created_at` wird beim Batch-Aufbau explizit als Unix-Epoch in Millisekunden gesetzt. Eine idempotente
+Forward-Migration normalisiert außerdem parsebare historische SQLite-Textwerte; ungültige Fremdwerte bleiben zur
+verlustfreien Diagnose unverändert. Damit ist das Format neuer und regulär erzeugter Bestandsdaten unabhängig vom
+historischen Datenbank-Default über SQLite, MySQL und PostgreSQL identisch.
+
+Spool- und Checkpointdateien müssen regulär, contained und ohne Mehrfach-Hardlink sein. Trunkierte Tail-Records werden
+beim Replay ignoriert/repariert, valide vorangehende Records bleiben erhalten. Limits:
+
+| Variable                           | Standard                                | Grenze                                       |
+| ---------------------------------- | --------------------------------------- | -------------------------------------------- |
+| `ANALYTICS_SPOOL_PATH`             | `/data/shieldpm/analytics-spool.ndjson` | normalisierter absoluter Pfad unter `/data/` |
+| `ANALYTICS_SPOOL_MAX_BYTES`        | `67108864`                              | Gesamtkapazität                              |
+| `ANALYTICS_SPOOL_RECORD_MAX_BYTES` | `262144`                                | Einzelrecord                                 |
+| `ANALYTICS_SPOOL_BATCH_RECORDS`    | `250`                                   | Transaktionsbatch                            |
+
+Ein voller Spool verwirft keine alten uncommitted Datensätze, sondern lehnt neue Ingestion begrenzt/geloggt ab.
+
+## Zeit- und Tenant-Grenzen
+
+API-Zeitfenster werden als vollständige ISO-8601-Werte mit Zeitzone validiert, geordnet und bounded. Owner-Visibility
+wird vor Aggregation/Paging angewendet. Globale System-/DB-Metriken sind nur für Principals mit globaler Sichtbarkeit
+erreichbar; Hostdaten bleiben auf sichtbare Proxy-Hosts begrenzt.
+
+## Shutdown
+
+`stop()` beendet zuerst Tail-Aufnahme/Timer, wartet dann auf alle pending Batches und schließt erst danach Spool und
+Datenbankpfad. `backend/index.js` ruft diesen Drain bei `SIGTERM`/`SIGINT` vor Prozessende auf.
 
 ## Wichtige Dateien
 
-- `backend/internal/analytics.js` (14 KB) — Business-Logik
-- `backend/models/analytic_count.js` (1 KB) — Zähler-Modell
-- `backend/models/analytics_logs.js` (1 KB) — Log-Modell
-- `backend/routes/analytics.js` (8 KB) — API-Routen
-- `backend/routes/nginx/analytics.js` (3 KB) — Nginx-Analytics-Routen
-- `frontend/src/pages/Analytics/` — UI-Seite
-- `frontend/src/pages/Analytics/index.tsx` — URL-gesteuerte Auswahl von Host und Zeitraum
-- `frontend/src/pages/Analytics/AnalyticsFilters.tsx` — Host- und Zeitraumfilter der Seitenkopfzeile
-- `frontend/src/pages/Analytics/useAnalyticsData.ts` — Summary-/Zeitreihenabfrage mit Sichtbarkeits-, Online- und Backoff-Policy
-- `frontend/src/pages/Analytics/useAnalyticsLiveMetrics.ts` — Live-Netzwerk- und Datenbankstatus mit Sichtbarkeits-, Online- und Backoff-Policy
-- `frontend/src/pages/Analytics/AnalyticsMap.tsx` — viewport-gesteuerter Lazy-Loader für die Weltkarte
-- `frontend/src/pages/Analytics/AnalyticsMapContent.tsx` — ausgelagerte Kartenvisualisierung
-- `frontend/src/components/Analytics/` — Analytics-Visualisierungen
-
-## Verhalten
-
-- Sammelt Traffic-Daten pro Host (Requests, Status-Codes)
-- Speichert aggregierte Zähler in `analytic_count`-Tabelle. Die Live-Upserts verwenden den nicht-nullbaren, versionierten Konfliktschlüssel aus `aggregation_key`, `aggregation_timestamp` und `aggregation_generation`; globale Zähler behalten dabei `proxy_host_id = NULL`, erhalten aber den Schlüssel `global`.
-- Bestehende Analytics-Zeilen bleiben bei der Migration in einer eigenen `legacy:<id>`-Generation erhalten. Dadurch kollidieren sie nicht mit den fortlaufenden Live-Upserts und ihre Zähler werden nicht bei der Schemaumstellung verändert.
-- `app.js` bleibt für Analytics nebenwirkungsfrei. Beide Backend-Einstiegspunkte führen zuerst die Datenbankmigrationen aus und initialisieren den Analytics-Tailer erst danach, damit Live-Flushing niemals auf ein vor-migriertes `analytic_count`-Schema schreibt. Die Initialisierung ist idempotent: ein Startup-Retry erzeugt keine weiteren Tailer oder Intervalle; nach einem tatsächlichen Initialisierungsfehler bleibt ein späterer Retry möglich.
-- GoAccess für erweiterte Analyse auf Port `:91`
-- Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
-- Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.
-- Die aktuelle Host- und Zeitraum-Auswahl steht als `host` und `range` in der Analytics-URL. Aufgerufene Links stellen damit
-  denselben Untersuchungszeitraum wieder her; Änderungen der vorhandenen Filter ersetzen den URL-Eintrag, statt bei jeder
-  Auswahl einen neuen Browserverlaufseintrag zu erzeugen. Nur die vier unterstützten Zeiträume (`1h`, `24h`, `7d`, `30d`)
-  und in der Hostliste sichtbare Hosts werden übernommen. Fehlende oder ungültige Werte werden auf den ersten sichtbaren Host
-  und 24 Stunden vereinheitlicht; die vorhandenen serverseitigen Zugriffsprüfungen der Analytics-Endpunkte bleiben maßgeblich.
-- Jede neuere Analytics-Aktualisierung verdrängt noch laufende Abfragen, sodass Wechsel von Host, Zeitraum oder Sichtbarkeit keine aktuellen Kennzahlen oder Zeitreihen mit langsamen Altantworten überschreiben können.
-- Die Seitenkopfzeile bietet für den aktuell ausgewählten Host und Zeitraum einen lokalisierten Download der bereits geladenen Zeitreihe als CSV. Der Browser erzeugt die Datei ohne zusätzlichen API-Aufruf; sie enthält Zeitstempel, Requests, übertragene Bytes und die 2xx- bis 5xx-Zähler. CSV-Zellen werden auch nach führenden Leerzeichen gegen formelartige Anfangszeichen geschützt, damit selbst fehlerhafte oder manipulierte Zeitstempel beim Öffnen in Tabellenprogrammen nicht als Formel ausgewertet werden. Die Funktion verwendet ausschließlich die bereits serverseitig zugriffsgeprüften Daten der aktuellen Auswahl.
-- Das Dashboard zeigt für Benutzer mit `analytics:view` oder `analytics:manage` getrennt die fünf Proxy-Hosts mit den meisten Requests, übertragenen Bytes, 4xx- beziehungsweise 5xx-Antworten sowie der höchsten durchschnittlichen Antwortzeit der letzten 24 Stunden. Die Bandbreitenrangliste formatiert die übertragenen Bytes lokalisiert mit passenden Einheiten; die Latenzrangliste zeigt die aus den Detail-Logs aggregierte Antwortzeit in Millisekunden. Die serverseitige Richtlinie `analytics:list` akzeptiert dieselben View-/Manage-Berechtigungen; `GET /api/analytics/top-hosts` berücksichtigt ausschließlich nicht gelöschte, hostgebundene Daten und liefert bei jeder Sortierung Request-, Byte-, 4xx- sowie 5xx-Zähler. Standardmäßig ordnet der Endpunkt nach Requests; `sort=bytes`, `sort=client_errors`, `sort=server_errors` und `sort=response_time` wählen ausschließlich die fest definierte Bandbreiten-, 4xx-, 5xx- beziehungsweise Durchschnittslatenz-Ordnung. Für die Latenzrangliste werden nur positive `duration`-Werte der Detail-Logs einbezogen und die vorhandenen Zähler der ausgewählten Hosts weitergegeben. Die 4xx-Rangliste macht fehlgeschlagene oder zurückgewiesene Client-Anfragen unmittelbar sichtbar; jeder Host verlinkt direkt auf seine vorhandene 24-Stunden-Analytics-Ansicht.
-- `useAnalyticsData` kapselt diese Summary-/Zeitreihenabfrage einschließlich der Zeitformatierung für Charts. `useAnalyticsLiveMetrics` kapselt die unabhängigen Live-Abfragen für Netzwerkdurchsatz und Datenbankkennzahlen; die Seite behält nur Auswahl und Layout.
-- Bei ausgeblendeter Browser-Registerkarte oder Offline-Status pausiert die Seite ihre Analytics- und Live-Statusabfragen. Laufende Abfragen werden dabei für veraltet erklärt, damit sie den unmittelbaren Refresh beim erneuten Sichtbarwerden oder nach einer Wiederverbindung nicht blockieren oder überschreiben können.
-- Die manuelle Analytics-Abfrage nutzt dafür dieselbe zentrale Sichtbarkeits- und Online-Prüfung wie die TanStack-Query-Polling-Hooks. Dadurch bleibt die Berechtigung zum nächsten Poll in allen Pfaden konsistent. Nach einem Fehler plant die Summary-/Zeitreihenabfrage ihren nächsten Lauf mit exponentiellem Backoff über `getPollingInterval`; ein erfolgreicher Lauf setzt das Grundintervall zurück.
-- Datenbank-Statistiken werden über `getDbStats` und damit den zentralen API-Client geladen. Sie folgen dadurch der gemeinsamen Cookie-/CSRF-Übergabe und der einheitlichen 401-Behandlung.
-- Der Live-Netzwerkstatus wird über `getAnalyticsStatus` im zentralen API-Client geladen und bleibt in einem eigenen zweisekündlichen Takt. Datenbankstatistiken werden ebenfalls eigenständig geplant: Sie werden beim ersten zulässigen Abruf sowie nach Sichtbarwerden oder Wiederverbindung sofort geladen und anschließend nur alle 30 Sekunden aktualisiert. Beide Abfragen erhalten damit die gemeinsame Cookie-/CSRF-Übergabe sowie die einheitliche 401-Behandlung.
-- Netzwerkstatus und Datenbankstatistiken haben getrennte In-Flight-Sperren, Zeitgeber und exponentielle Backoffs. Ein langsamer Datenbankabruf verzögert daher weder den Netzwerkdurchsatz noch dessen nächsten Zweitakt. Beim Ausblenden oder Offline-Gehen werden beide Zeitgeber entfernt und laufende Antworten als veraltet markiert; nach Reaktivierung starten beide Kennzahlen wieder unmittelbar.
-- Die Weltkarte bleibt beim Aufruf der Analytics-Route zunächst als lokalisierter Ladezustand sichtbar und lädt ihre
-  Visualisierungsabhängigkeiten erst, wenn ihr Bereich bis auf 200 Pixel an den Viewport heranreicht. Damit bleibt die
-  Kartenfunktion beim Scrollen verfügbar, ohne den anfänglichen Analytics-Chunk zu belasten. `AnalyticsMapContent.tsx`
-  erzeugt die SVG-Pfade direkt mit `d3-geo` und `topojson-client` aus der lokal gebündelten
-  `world-atlas/countries-110m.json`; es gibt weder einen React-18-gebundenen Kartenwrapper noch einen externen
-  Geometrie-Download zur Laufzeit. Scrollrad und Doppelklick zoomen um den Pointer, Ziehen verschiebt die Karte; der
-  Zoom bleibt zwischen 1 und 8. Schlägt ihre Visualisierung fehl, begrenzt eine lokale `RouteErrorBoundary` den Fehler
-  auf den reservierten Kartenbereich; die übrige Analytics-Seite bleibt bedienbar.
-- Die Recharts-Zeit- und Statuscode-Charts folgen demselben viewport-gesteuerten Muster: `AnalyticsCharts.tsx` hält
-  zunächst einen Ladezustand vor und lädt `AnalyticsChartContent.tsx` erst kurz vor dem Sichtbarwerden. Dadurch bleibt
-  die Chart-Funktion beim Scrollen vollständig erhalten, ohne den anfänglichen Analytics-Chunk mit Recharts zu belasten.
-  Schlägt der Lazy-Import fehl, begrenzt eine lokale `RouteErrorBoundary` den Fehler auf den Chart-Bereich und bietet
-  einen lokalisierten Seiten-Reload als Wiederherstellungsaktion an.
-- `AnalyticsTopCountries.tsx` kapselt die zuvor in `index.tsx` eingebettete Länderliste. Die Liste behält ihre auf zehn
-  Einträge begrenzte Reihenfolge, die relative Balkenbreite und den lokalisierten Leerzustand bei; der Seitencontainer
-  behält Auswahl, Datenabruf und Formularzustand.
-
-## Abhängigkeiten
-
-- `recharts` — Chart-Bibliothek im Frontend
-- `d3-geo` — Equal-Earth-Projektion, Länderpfade und Zentroiden der Weltkarte
-- `topojson-client` — Umwandlung der gebündelten Länder-Topologie in GeoJSON-Features
-- `world-atlas` — lokal mitgelieferte 110m-Länder-Topologie für die Weltkarte
-- GoAccess (optional, externe Binary)
-
-## Offene Fragen
-
-Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+- `backend/internal/analytics.js`
+- `backend/lib/analytics-spool.js`
+- `backend/models/analytic_count.js`
+- `backend/models/analytics_logs.js`
+- `backend/migrations/20260831231500_add_analytics_ingestion_ledger.js`
+- `backend/routes/analytics.js`
+- `frontend/src/pages/Analytics/`
 
 ## Verwandte Seiten
 
-- [Modulübersicht](./README.md)
+- [Datenbank](../daten/datenbank.md)
 - [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)
+- [Deployment](../entwicklung/deployment.md)
+- [Security-Modernisierung](../entscheidungen/2026-08-31-security-modernisierung.md)

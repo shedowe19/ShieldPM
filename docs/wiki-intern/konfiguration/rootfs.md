@@ -10,25 +10,30 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 
 ## Startup-Scripts (`rootfs/usr/local/bin/`)
 
-| Datei                | Größe  | Zweck                                                                                                                                                                                                                                                                                         |
-| -------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start.sh`           | 27 KB  | **Haupt-Startup-Script**: Konfiguriert Nginx, Umgebungsvariablen, Module, Berechtigungen                                                                                                                                                                                                      |
-| `launch.sh`          | 6 KB   | Startet Backend-Prozess und optional Tor, GoAccess                                                                                                                                                                                                                                            |
-| `entrypoint.sh`      | 839 B  | Docker-Entrypoint: Ruft `start.sh` auf, dann `launch.sh`                                                                                                                                                                                                                                      |
-| `healthcheck.sh`     | 1 KB   | Docker-Healthcheck: Prüft API-Erreichbarkeit                                                                                                                                                                                                                                                  |
-| `envs.sh`            | 2 KB   | Lädt und exportiert Umgebungsvariablen                                                                                                                                                                                                                                                        |
-| `aio.sh`             | 1.5 KB | All-in-One Script für Dienst-Verwaltung                                                                                                                                                                                                                                                       |
-| `update-shieldpm`    | 16 KB  | Update-Script für native Installationen; richtet NodeSource APT ein, installiert/verifiziert Node.js 26 sowie Yarn Classic 1.22.22, aktiviert den System-CA-Store für Node-Netzwerkzugriffe und räumt beim Node-Majorwechsel ausschließlich verwaiste Corepack-Shims vor dem npm-Fallback auf |
-| `npm-reset-password` | 45 B   | Passwort-Reset-Wrapper                                                                                                                                                                                                                                                                        |
-| `migration.sh`       | 34 B   | Migrations-Wrapper                                                                                                                                                                                                                                                                            |
+| Datei                | Zweck                                                                         |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `start.sh`           | Konfiguriert Nginx, Environment, Module, Datenpfade und Rechte                |
+| `launch.sh`          | Startet Backend sowie optionale Tor-/GoAccess-Prozesse und propagiert Signale |
+| `entrypoint.sh`      | Docker-Entrypoint für Vorbereitung und Launch                                 |
+| `healthcheck.sh`     | Prüft die Backend-API über den internen Unix-Socket                           |
+| `envs.sh`            | Lädt Umgebungsvariablen und generische `_FILE`-Secrets vor der Validierung    |
+| `load-env-secrets.sh`| Prüft Pfade, Inodes, Rechte und Größe von Secret-Dateien fail-closed          |
+| `aio.sh`             | Einmalige Nextcloud-AIO-Anlage mit explizitem kurzlebigem Access-Token        |
+| `update-shieldpm`    | Verifiziertes, staged und health-geprüftes Native-Update mit Payload-Rollback |
+| `npm-reset-password` | SQLite-only Passwort-Reset-Wrapper mit E-Mail- und Passwortargument           |
+| `migration.sh`       | Migrations-Wrapper                                                            |
 
-## Native-Update: NodeSource-Paketversion
+## Native-Update: Runtime und Atomizität
 
-`update-shieldpm` läuft mit `set -o pipefail`. Die Node-26-Paketversion wird aus `apt-cache madison nodejs` ermittelt. Das `awk`-Kommando liest dabei die vollständige APT-Ausgabe, übernimmt aber nur die erste passende Version. Ein vorzeitiges Beenden von `awk` würde die vorgelagerte Ausgabe bei langen Versionslisten mit `SIGPIPE` abbrechen und das gesamte Update vor dem Quellcode-Download beenden.
+`update-shieldpm [-b|--branch <branch>]` validiert den Branchnamen, bindet `refs/heads/<branch>` an eine exakte
+40-stellige Commit-SHA und baut genau diesen Stand mit `yarn install --immutable`. Es verlangt Node.js 24,
+Corepack 0.36.0 und Yarn 4.18.0 sowie deaktivierte Dependency-Skripte mit expliziter `better-sqlite3`-Buildfreigabe.
+Backend und Frontend werden im jeweiligen Zielfilesystem vorbereitet und per Rename aktiviert; ein fehlgeschlagener
+Start oder Health-Check stellt App, Frontend, Rootfs, Unit, Binaries und SQLite wieder her.
 
-## Native-Update: Yarn-Classic-Fallback
-
-Falls Corepack nicht verfügbar ist, installieren sowohl `update-shieldpm` als auch `scripts/install.sh` Yarn Classic mit `npm install --global --allow-scripts=yarn yarn@1.22.22`. Damit ist ausschließlich das bekannte Yarn-`preinstall`-Skript für diesen Aufruf erlaubt; es gibt keine globale Freigabe fremder Install-Skripte. Zuvor entfernt der Fallback nur verwaiste Corepack-Shims.
+Vorher entsteht eine konsistente Sicherung. SQLite wird über den sicheren Backup-Pfad erfasst. Bei MySQL/PostgreSQL
+wartet die Aktualisierung auf `--external-db-backup-confirmed`, da Payload-Rollback keine externe DB restauriert. Bei
+einem Fehler werden die Dateien zurückgesetzt, der Dienst bleibt bis zum externen Restore jedoch absichtlich gestoppt.
 
 ## Native-Update: Backend-Health-Check
 
@@ -47,27 +52,35 @@ Nach dem Neustart prüft `update-shieldpm` den Backend-Health-Status über `/run
 
 ## Umgebungsvariablen (`rootfs/.env.example`)
 
-Referenz-Datei für alle verfügbaren Umgebungsvariablen (2.9 KB). Wird als Vorlage für native Installationen verwendet.
+Referenz-Datei für unterstützte Umgebungsvariablen. Wird als Vorlage für native Installationen verwendet.
 
 Die gleiche Datei existiert als `rootfs/data/.env` für den Container.
 
+Die AIO-Automatik verwendet keine Initialpasswörter. Nach dem Ownership-Claim wird ein kurzlebiger Access-Token über
+`SHIELDPM_AIO_ACCESS_TOKEN_FILE` gemountet. `aio.sh` übergibt ihn nicht in Prozessargumenten, schreibt den Lock erst
+nach erfolgreicher Host-Anlage und kann danach samt Secret-Datei entfernt beziehungsweise deaktiviert werden.
+
 ## HTML-Seiten (`rootfs/html/`)
 
-| Pfad                           | Zweck                             |
-| ------------------------------ | --------------------------------- |
-| `default/index.html`           | Standard-Begrüßungsseite (1.9 KB) |
-| `404deadpage/404deadpage.html` | Custom 404-Seite (1.5 KB)         |
-| `maintenance.html`             | Wartungsseite (16 KB)             |
-| `terminal/index.html`          | Web-Terminal UI (7 KB)            |
-| `turbo_loader.html`            | Turbo-Loader Download-UI (24 KB)  |
-| `fancyindex/header.html`       | FancyIndex Header (3 KB)          |
-| `fancyindex/footer.html`       | FancyIndex Footer (1.4 KB)        |
+| Pfad                           | Zweck                     |
+| ------------------------------ | ------------------------- |
+| `default/index.html`           | Standard-Begrüßungsseite  |
+| `404deadpage/404deadpage.html` | Custom 404-Seite          |
+| `maintenance.html`             | Wartungsseite             |
+| `terminal/index.html`          | gehärtete Web-Terminal-UI |
+| `turbo_loader.html`            | Turbo-Loader Download-UI  |
+| `fancyindex/header.html`       | FancyIndex Header         |
+| `fancyindex/footer.html`       | FancyIndex Footer         |
 
 ## Systemd-Service (`rootfs/usr/lib/systemd/system/`)
 
 | Datei              | Zweck                                |
 | ------------------ | ------------------------------------ |
 | `shieldpm.service` | Systemd-Unit für native Installation |
+
+Die `Type=simple`-Unit sendet zum geordneten Stoppen zuerst `SIGTERM` und lässt dem Graceful-Shutdown eine feste
+Stop-Timeout-Grenze. `UMask=0077` schützt neu erzeugte Dateien. Weitere Capability-/Sandbox-Härtung muss gegen Native-,
+Docker- und LXC-Funktionen getestet werden, statt sie pauschal zu aktivieren.
 
 ## Offene Fragen
 

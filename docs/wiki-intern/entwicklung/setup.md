@@ -6,15 +6,16 @@ Anleitung zur Einrichtung der lokalen Entwicklungsumgebung.
 
 ## Voraussetzungen
 
-- Node.js v26+ (über das signierte NodeSource-APT-Repository)
-- npm / yarn
+- Node.js 24 LTS (passend zu `.nvmrc`)
+- Corepack und die in `packageManager` fixierte Yarn-4-Version
 - Git
 
 ## Frontend starten
 
 ```bash
 cd frontend
-yarn install
+corepack enable
+yarn install --immutable
 yarn dev     # Startet Vite Dev-Server
 ```
 
@@ -22,11 +23,11 @@ yarn dev     # Startet Vite Dev-Server
 
 ```bash
 cd backend
-yarn install
+yarn install --immutable
 yarn dev     # Startet Nodemon (Annahme: basierend auf index-dev.js)
 ```
 
-Annahme: Der `dev`-Script ist nicht explizit in `package.json` definiert. Das Backend könnte über `node index-dev.js` gestartet werden.
+Der Backend-`dev`-Script startet den Entwicklungs-Einstiegspunkt mit automatischem Reload.
 
 ## Tests ausführen
 
@@ -54,14 +55,15 @@ yarn test    # vitest
 
 ## Datenbank (Entwicklung)
 
-SQLite wird automatisch verwendet. Die Datei wird unter `/data/database.sqlite` erstellt. Migrationen laufen beim Start automatisch.
+SQLite wird automatisch verwendet. Die Datei liegt unter `/data/shieldpm/database.sqlite`; Migrationen laufen beim
+Start. Für isolierte Tests einen temporären `DATA_PATH` verwenden und niemals eine produktive Datenbank einbinden.
 
 ## Code-Qualität
 
 ```bash
 # Biome Linting & Formatting
-npx biome check .
-npx biome check --write .
+yarn check
+yarn biome check --write .
 ```
 
 Konfiguration: `backend/biome.json` und `frontend/biome.json`. Die jeweilige `$schema`-URL muss zur per Lockdatei

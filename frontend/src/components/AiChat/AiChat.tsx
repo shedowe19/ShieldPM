@@ -2,8 +2,8 @@ import { IconRobot } from "@tabler/icons-react";
 import { Loader2, Send, Trash2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { sendAiChat } from "src/api/backend/ai";
-import type { AiChatMessage } from "src/api/backend/models";
+import { confirmAiAction, sendAiChat } from "src/api/backend/ai";
+import type { AiChatMessage, AiChatResponse } from "src/api/backend/models";
 import { Button } from "src/components/ui/button";
 import { Input } from "src/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "src/components/ui/sheet";
@@ -22,6 +22,7 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [pendingConfirmation, setPendingConfirmation] = useState<AiChatResponse["confirmation"]>();
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const clearChatLabel = intl.formatMessage({ id: "ai.chat.clear" });
 	const sendMessageLabel = intl.formatMessage({ id: "ai.chat.send" });
@@ -43,6 +44,7 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 		};
 		setMessages((prev) => [...prev, userMsg]);
 		setInput("");
+		setPendingConfirmation(undefined);
 		setLoading(true);
 
 		try {
@@ -56,12 +58,35 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 				...prev,
 				{ role: AI_ROLE.ASSISTANT, content: response.content, id: Math.random().toString(36).substring(7) },
 			]);
+			setPendingConfirmation(response.confirmation);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			setMessages((prev) => [
 				...prev,
 				{ role: AI_ROLE.ASSISTANT, content: `Error: ${msg}`, id: Math.random().toString(36).substring(7) },
 			]);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleConfirmation = async () => {
+		if (!pendingConfirmation || loading) return;
+		setLoading(true);
+		try {
+			const response = await confirmAiAction(pendingConfirmation.token);
+			setMessages((prev) => [
+				...prev,
+				{ role: AI_ROLE.ASSISTANT, content: response.content, id: Math.random().toString(36).substring(7) },
+			]);
+			setPendingConfirmation(undefined);
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			setMessages((prev) => [
+				...prev,
+				{ role: AI_ROLE.ASSISTANT, content: `Error: ${msg}`, id: Math.random().toString(36).substring(7) },
+			]);
+			setPendingConfirmation(undefined);
 		} finally {
 			setLoading(false);
 		}
@@ -85,7 +110,10 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 					<Button
 						variant="ghost"
 						size="icon"
-						onClick={() => setMessages([])}
+						onClick={() => {
+							setMessages([]);
+							setPendingConfirmation(undefined);
+						}}
 						aria-label={clearChatLabel}
 						title={clearChatLabel}
 					>
@@ -115,6 +143,26 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 						<div className="flex w-full mt-2 space-x-3 max-w-md">
 							<div className="flex flex-col p-3 rounded-lg text-sm bg-gray-200 dark:bg-gray-700/50 rounded-bl-none">
 								<Loader2 className="h-4 w-4 animate-spin" />
+							</div>
+						</div>
+					)}
+					{pendingConfirmation && !loading && (
+						<div
+							className="space-y-2 rounded-md border p-3"
+							role="group"
+							aria-label={pendingConfirmation.tool}
+						>
+							<p className="font-medium">{pendingConfirmation.tool}</p>
+							<pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all text-xs">
+								{pendingConfirmation.details}
+							</pre>
+							<div className="flex justify-end gap-2">
+								<Button variant="outline" size="sm" onClick={() => setPendingConfirmation(undefined)}>
+									<T id="cancel" />
+								</Button>
+								<Button size="sm" onClick={handleConfirmation}>
+									<T id="confirm" />
+								</Button>
 							</div>
 						</div>
 					)}

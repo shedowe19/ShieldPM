@@ -2,86 +2,70 @@
 
 ## Zweck
 
-Dokumentation der Deployment-Optionen.
+ShieldPM unterstützt Docker sowie native/LXC-Installationen auf Debian. Alle Varianten verwenden Node.js 24 LTS,
+Corepack, repository-pinned Yarn 4 und persistieren dynamische Daten ausschließlich unter `/data`.
 
-## Docker (Standard)
+## Docker
 
 ```bash
-# compose.yaml herunterladen
 curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
-
-# Anpassen: TZ, ACME_EMAIL, etc.
-# Starten
 docker compose up -d
 ```
 
-**Port**: UI auf `:81`, HTTP auf `:80`, HTTPS auf `:443`, GoAccess auf `:91`
+- Management-UI: HTTP Port 81 (nicht direkt in untrusted Netze exponieren)
+- Proxy: Ports 80/TCP und 443/TCP+UDP
+- Backend: `/run/shieldpm.sock`, nicht als TCP-Port veröffentlicht
+- Persistenz: Hostpfad/Volume nach `/data`
 
-**Image**: `ghcr.io/shedowe19/shieldpm:develop`
+Auf dem ersten Start wird kein Standard-Credential erzeugt. Der Betreiber liest lokal den One-Time-Token aus
+`/data/shieldpm/initial-admin-setup-token` oder mountet eine `0600`-Secret-Datei per
+`INITIAL_ADMIN_SETUP_TOKEN_FILE`.
 
-**Persistente Daten**: `/opt/shieldpm` → gemountet nach `/data` im Container.
+## Native / LXC
 
-## Native / LXC (Proxmox)
+`scripts/install.sh` prüft das Release-Archiv und dessen internes `SHA256SUMS`-Manifest, richtet NodeSource signiert ein,
+verifiziert Node 24, aktiviert Corepack 0.36.0/Yarn 4.18.0, baut immutable in Staging und installiert eine gehärtete
+systemd-Unit. Persistente Secrets erhalten restriktive Rechte; der Service bekommt nur die nötigen Schreibpfade und
+Fähigkeiten. Mutable Remote-Skripte werden nicht ausgeführt.
 
-```bash
-bash scripts/install.sh
-```
+`update-shieldpm`:
 
-Der Installer:
+1. prüft Quelle und Update-Artefakte;
+2. erstellt vor Änderungen eine konsistente SQLite-/Daten-Sicherung;
+3. baut den neuen Payload isoliert aus Lockfiles;
+4. aktiviert atomar und startet den Service;
+5. prüft den Health-Endpunkt über den Unix-Socket;
+6. stellt bei Fehler den vorherigen Payload wieder her.
 
-1. Prüft Abhängigkeiten (Node, npm, Nginx, sqlite3, certbot)
-2. Erstellt systemd-Unit-Files
-3. Lädt CrowdSec-Parser/Collections herunter
-4. Installiert Frontend und Backend
+Für externe MySQL/PostgreSQL-Datenbanken muss der Betreiber vorab einen nativen Dump erstellen, dessen Restore testen
+und dies mit `--external-db-backup-confirmed` bestätigen. Payload-Rollback kann eine externe DB-Migration nicht
+rückgängig machen; nach einem Fehlschlag bleibt ShieldPM deshalb bis zum operatorgeführten Restore gestoppt.
 
-## Optionale Sidecar-Services
+## Shutdown
 
-| Service          | Image                                | Zweck                 |
-| ---------------- | ------------------------------------ | --------------------- |
-| CrowdSec         | `crowdsecurity/crowdsec:latest`      | IPS                   |
-| MySQL            | `mysql:8`                            | Produktions-DB        |
-| PostgreSQL       | `postgres:17-bookworm`               | Produktions-DB        |
-| GeoIP-Update     | `ghcr.io/maxmind/geoipupdate:latest` | GeoIP-Daten           |
-| Caddy            | `ghcr.io/shedowe19/shieldpm:caddy`   | HTTP→HTTPS Redirector |
-| OpenAppSec-Agent | `ghcr.io/openappsec/agent:latest`    | AI WAF                |
+`SIGTERM`/`SIGINT` stoppt neue Hintergrundarbeit, schließt den Listener, wartet auf Analytics-Drain sowie laufende
+DDNS-/Integrationsarbeit, beendet Terminal-Sessions und schließt Datenbankverbindungen. Docker/systemd benötigen dafür
+eine ausreichende Stop-Zeit; `SIGKILL` umgeht die Durability-Grenze.
+
+## CI/CD und Supply Chain
+
+Workflows unter `.github/workflows/` bauen/testen Node 24 und eine neuere kompatible Runtime, führen die vollständigen
+Workspace-Gates und die SQLite/MySQL/PostgreSQL-Migrationsmatrix aus. Aktionen und Binärdownloads werden auf
+unveränderliche Identitäten geprüft. Drittanbieterhinweise entstehen reproduzierbar aus installierten direkten Paketen.
+
+GitHub Rulesets/Branch Protection sind externe Repository-Einstellungen und müssen im GitHub-Projekt manuell aktiviert
+werden. Auch das bewegliche Basisimage `ghcr.io/shedowe19/shieldpm-nginx:master` kann erst dann digest-gepinnt werden,
+wenn das externe Image-Repository einen unterstützten Digest bereitstellt.
 
 ## Versionierung
 
-- **Source of Truth**: `.version` + `backend/package.json` + `frontend/package.json`
-- Alle drei müssen synchron gehalten werden
-- Aktueller Stand: `4.3.2`
-
-## CI/CD (GitHub Workflows)
-
-Workflows unter `.github/workflows/`:
-
-| Datei                                     | Zweck                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docker.yml`                              | Multi-Plattform-Docker-Image-Build und Push nach `ghcr.io`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `docker-latest.yml`                       | Latest-Tag-Update                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `dockerlint.yml`                          | Hadolint-Check für Dockerfile                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `caddy.yml`                               | Build des Caddy-Sidecar-Image (`shieldpm:caddy`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `caddy-fmt.yml`                           | Formatierungs-Check für `caddy/Caddyfile`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `codeql.yml`                              | Statische Sicherheitsanalyse (GitHub CodeQL)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `lint-and-format.yml`                     | Nicht-mutierende Quality-Gates: hunkbasierter Diff-/Token-Schutz mit Merge-Base-Fallback zum Default-Branch bei fehlender Vergleichsrevision, expliziter `refs/heads/`-Fetch schützt dabei gegen gleichnamige Tags, diff-basierter Biome-Check, Backend-/Frontend-Tests, Locale-/Build-Check und Audit ab Schweregrad High (bis zur Bereinigung der bestehenden Lockfile-Funde nur berichtend)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `shellcheck.yml`                          | Lint für `scripts/install.sh` und Rootfs-Shell-Scripts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `json.yml`                                | JSON-Lint (Schema-Files, RBAC-Rules)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `spellcheck.yml`                          | codespell mit Skip-Liste (siehe Konfig im Workflow)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `dependency-updates.yml`                  | Renovate-Trigger / Updater                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `npm-updates.yml`                         | Unpinned-Kompatibilitätstest für direkte npm-Updates: klont mit vollständiger Git-Historie, verwendet keine Manifest-`resolutions` oder `overrides` und ruft `ncu -u --target latest` ohne Paket-Ausschlüsse auf. Projekt-Yarn läuft dabei Node-26-gebunden über `npx --yes --package yarn@1.22.22 yarn`; `ncu` und `license-checker` kommen mit geprüften Binärdateien aus npm. Lizenzhinweise bleiben fail-closed, eine PR entstünde erst nach Backend-/Frontend-Tests und Frontend-Build. Der vollständig neu aufgelöste Teststand besteht Backend-/Frontend-Tests, TypeScript 7, Tailwind 4, Vite 8/Vitest 4, eingefrorene Installationen und den Docker-Build; die finale Produktionsschicht läuft verifiziert mit Node 26.5.0 und kann das native `better-sqlite3` laden. Ohne transitive Overrides/Resolutions bleiben jedoch Audit-Funde offen (Frontend: 3 hoch; Backend: 10 hoch, 17 mittel, 1 niedrig); diese benötigen einen separaten Security-Remediation-Change. |
-| `wiki-sync.yml`                           | Synchronisiert `docs/wiki/` mit dem GitHub-Wiki-Repo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `.github/codeql/codeql-config.yml`        | CodeQL-Analyse-Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `.github/delete-merged-branch-config.yml` | GitHub Auto-Delete Merged Branch Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-
-## Hilfs-Skripte
-
-- `scripts/install.sh` — Native/LXC-Installer (siehe oben).
-- `scripts/generate-notices.js` — generiert `THIRD-PARTY-NOTICES.md` aus den direkten NPM-Lizenzen. Es verwendet das vom Workflow bereitgestellte `license-checker`-Binary und bricht bei einem fehlgeschlagenen Lizenzscan ab, bevor die bestehende Notice-Datei überschrieben werden kann.
-- `scripts/wiki-graph.py` — erzeugt die interaktive Beziehungs-Visualisierung des internen Wikis (`docs/wiki-intern/wiki-graph.html`). Nutzt `scripts/lib/vis-network.min.js` als Abhängigkeit.
+`.version`, `backend/package.json` und `frontend/package.json` bleiben synchron. Ein Patch-/Minor-/Major-Bump benötigt
+eine explizite Entscheidung; Dokumentations- oder Sicherheitsarbeit erhöht die Version nicht automatisch.
 
 ## Verwandte Seiten
 
 - [Build](./build.md)
-- [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)
-- [Docker Compose Referenz](../../wiki/Docker-Compose-Reference.md)
-- [Caddy-Sidecar](../konfiguration/config-dateien.md)
+- [Tests](./tests.md)
+- [Setup intern](./setup-intern.md)
+- [Rootfs](../konfiguration/rootfs.md)
+- [Security-Modernisierung](../entscheidungen/2026-08-31-security-modernisierung.md)

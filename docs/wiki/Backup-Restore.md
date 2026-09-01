@@ -8,15 +8,15 @@ It is critical to maintain backups of your ShieldPM instance to recover from fai
 
 All persistent data is stored in the `/data` directory. This is the **only directory** you need to backup.
 
-| Content | Path | Description |
-| :--- | :--- | :--- |
-| **Database** | `/data/database.sqlite` | All hosts, users, settings, certificates (SQLite) |
-| **SSL Certificates** | `/data/tls/` | Let's Encrypt keys and custom certs |
-| **Access Lists** | `/data/access/` | htpasswd files for Basic Auth |
-| **Nginx Configs** | `/data/nginx/` | Generated configs (auto-regenerated on restart) |
-| **Encryption Keys** | `/data/shieldpm/keys.json` | AES-256 keys for token encryption |
-| **Tor Keys** | `/data/tor/` | Onion Service private keys (if using Tor) |
-| **Environment** | `/data/.env` | Configuration variables (Native/LXC only) |
+| Content              | Path                             | Description                                      |
+| :------------------- | :------------------------------- | :----------------------------------------------- |
+| **Database**         | `/data/shieldpm/database.sqlite` | All hosts, users, settings and metadata (SQLite) |
+| **SSL Certificates** | `/data/tls/`                     | Let's Encrypt keys and custom certs              |
+| **Access Lists**     | `/data/access/`                  | htpasswd files for Basic Auth                    |
+| **Nginx Configs**    | `/data/nginx/`                   | Generated configs (auto-regenerated on restart)  |
+| **Encryption Keys**  | `/data/shieldpm/keys.json`       | AES-256 keys for token encryption                |
+| **Tor Keys**         | `/data/tor/`                     | Onion Service private keys (if using Tor)        |
+| **Environment**      | `/data/.env`                     | Configuration variables (Native/LXC only)        |
 
 > [!IMPORTANT]
 > If using an **external database** (MySQL/PostgreSQL), you must back up that database separately — it is NOT inside `/data`.
@@ -58,11 +58,11 @@ If you use MySQL/MariaDB or PostgreSQL, backup the database separately:
 **MySQL / MariaDB:**
 
 ```bash
-# From Docker
-docker exec shieldpm-db mysqldump -u npm -p'yourpassword' npm > shieldpm-db-$(date +%F).sql
+# From Docker (let the client prompt, or use a protected defaults file)
+docker exec -i shieldpm-db mysqldump -u npm -p npm > shieldpm-db-$(date +%F).sql
 
 # From host
-mysqldump -h 127.0.0.1 -u npm -p'yourpassword' npm > shieldpm-db-$(date +%F).sql
+mysqldump -h 127.0.0.1 -u npm -p npm > shieldpm-db-$(date +%F).sql
 ```
 
 **PostgreSQL:**
@@ -134,15 +134,8 @@ crontab -e
    journalctl -u shieldpm -f         # Native / LXC
    ```
 
-6. **Run fullclean** to regenerate all Nginx configs from the database:
-
-   ```bash
-   # Docker
-   docker exec -it shieldpm fullclean
-
-   # Native / LXC
-   fullclean
-   ```
+6. **Verify generated configuration and health:** inspect startup logs, call the health endpoint and run `nginx -t`.
+   There is no `fullclean` command; `FULLCLEAN=true` is a startup environment option.
 
 ### Restoring an External Database
 
@@ -163,8 +156,8 @@ psql -h 127.0.0.1 -U npm npm < shieldpm-db-2026-01-15.sql
 1. Backup `/data` from your Docker volume
 2. Install ShieldPM natively via `install.sh` on a fresh Debian 13
 3. Copy your backup to `/data` on the new server
-4. Run `fullclean` to regenerate Nginx configs
-5. Start ShieldPM: `systemctl start shieldpm`
+4. Start ShieldPM: `systemctl start shieldpm`
+5. Verify migrations, the health endpoint and `nginx -t`
 
 ### Native / LXC → Docker
 
@@ -175,6 +168,11 @@ psql -h 127.0.0.1 -U npm npm < shieldpm-db-2026-01-15.sql
 
 > [!NOTE]
 > ShieldPM's data format is identical across all deployment methods. You can freely migrate between Docker, Native, and LXC without any conversion steps.
+
+> [!WARNING]
+> Treat database migrations as part of the restore plan. SQLite is captured with `/data` while stopped or through the
+> built-in consistent backup path. External MySQL/PostgreSQL rollback requires an operator-confirmed native dump; a
+> restored application payload alone does not reverse external schema or data changes.
 
 ---
 

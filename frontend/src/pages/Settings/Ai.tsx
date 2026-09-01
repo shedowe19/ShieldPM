@@ -121,7 +121,7 @@ export default function AiConfigPage() {
 													setFieldValue(
 														"model",
 														option === AI_PROVIDER.GEMINI
-															? "gemini-1.5-flash"
+															? "gemini-2.5-flash"
 															: "gpt-3.5-turbo",
 													);
 												}}
@@ -193,7 +193,7 @@ export default function AiConfigPage() {
 												placeholder={formatMessage({ id: "ai.model.placeholder" })}
 											/>
 										)}
-										<p className="text-xs text-muted-foreground">Default: gemini-1.5-flash</p>
+										<p className="text-xs text-muted-foreground">Default: gemini-2.5-flash</p>
 									</div>
 								</div>
 							)}

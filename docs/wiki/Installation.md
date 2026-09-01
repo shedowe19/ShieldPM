@@ -2,11 +2,11 @@
 
 ShieldPM offers three deployment methods to suit your environment:
 
-| Method | Best For | Update Method |
-| :--- | :--- | :--- |
-| 🐳 **Docker** (Recommended) | Most users — easy updates, isolated environment | `docker compose pull` |
-| 📦 **Native Installer** | Bare-metal Debian 13 (Trixie) servers | `update-shieldpm` |
-| 🖥️ **Proxmox LXC** | Proxmox users — pre-configured container template | `update` |
+| Method                      | Best For                                          | Update Method         |
+| :-------------------------- | :------------------------------------------------ | :-------------------- |
+| 🐳 **Docker** (Recommended) | Most users — easy updates, isolated environment   | `docker compose pull` |
+| 📦 **Native Installer**     | Bare-metal Debian 13 (Trixie) servers             | `update-shieldpm`     |
+| 🖥️ **Proxmox LXC**          | Proxmox users — pre-configured container template | `update`              |
 
 ---
 
@@ -18,32 +18,49 @@ Requires Docker Engine and Docker Compose.
 
 1. **Create a `compose.yaml` file:**
 
-    ```yaml
-    services:
-      app:
-        image: 'ghcr.io/shedowe19/shieldpm:latest'
-        restart: unless-stopped
-        ports:
-          - '80:80'
-          - '81:81'
-          - '443:443'
-        volumes:
-          - ./data:/data
-          - ./letsencrypt:/etc/letsencrypt
-    ```
+   ```yaml
+   services:
+     app:
+       image: "ghcr.io/shedowe19/shieldpm:latest"
+       restart: unless-stopped
+       ports:
+         - "80:80"
+         - "81:81"
+         - "443:443"
+       environment:
+         TRUST_PROXY: "1"
+       volumes:
+         - ./data:/data
+         - ./letsencrypt:/etc/letsencrypt
+   ```
+
+   `TRUST_PROXY=1` is required for the supported single Nginx-to-Express proxy hop inside the official image. The
+   `/data` bind mount hides the image's bundled environment file, so Compose must set this value explicitly.
 
 2. **Start ShieldPM:**
 
-    ```bash
-    docker compose up -d
-    ```
+   ```bash
+   docker compose up -d
+   ```
 
 3. **Access the Admin Panel:**
-    Open `http://<your-ip>:81` in your browser.
-    The **Setup Wizard** will guide you through creating your admin account.
+   Open `http://<your-ip>:81` in your browser.
+   The **Setup Wizard** will guide you through claiming the instance and creating your admin account.
 
 > [!TIP]
-> There are no default credentials — you create your own admin user during the initial setup.
+> There are no default credentials and no password is written to the logs. On first start ShieldPM writes a
+> cryptographically random ownership token to `/data/shieldpm/initial-admin-setup-token` with mode `0600`.
+> Read the file on the host/container and enter the token in the wizard. The API accepts it only through the
+> `X-ShieldPM-Setup-Token` header and retires it atomically after the first administrator is created.
+
+```bash
+# Compose example: print the one-time token locally
+docker compose exec app sh -c 'cat /data/shieldpm/initial-admin-setup-token'
+```
+
+> [!NOTE]
+> Port 81 is HTTP by default. If the management UI crosses an untrusted network, put it behind a trusted TLS
+> reverse proxy, tunnel or VPN and restrict direct access to port 81.
 
 ### Updating (Docker)
 
@@ -71,27 +88,32 @@ This method installs ShieldPM directly onto a fresh Debian 13 system. It include
 ### Installation
 
 1. **Download the Installer:**
-    Get the latest `shieldpm-install-linux-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
+   Get the latest `shieldpm-install-linux-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
 
-    *Example (for AMD64):*
+   _Example (for AMD64):_
 
-    ```bash
-    wget https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz
-    ```
+   ```bash
+   wget https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz
+   wget https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz.sha256
+   sha256sum --check --strict shieldpm-install-linux-amd64.tar.gz.sha256
+   ```
+
+   For a stronger origin check, GitHub CLI users can additionally run
+   `gh attestation verify shieldpm-install-linux-amd64.tar.gz --repo shedowe19/ShieldPM` before extraction.
 
 2. **Extract and Run:**
 
-    ```bash
-    tar -xzf shieldpm-install-linux-amd64.tar.gz
-    sudo ./install.sh
-    ```
+   ```bash
+   tar -xzf shieldpm-install-linux-amd64.tar.gz
+   sudo ./install.sh
+   ```
 
 3. **Access:**
-    Open `http://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
+   Open `http://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
 
 ### Updating (Native)
 
-ShieldPM includes a self-updating utility. Run:
+ShieldPM includes a transactional source updater. It deliberately does not modify the host toolchain. Run:
 
 ```bash
 update-shieldpm
@@ -101,11 +123,19 @@ update
 
 This command will:
 
-1. Check GitHub for updates and self-update the updater first.
-2. Upgrade system packages (`apt upgrade`), migrate to Node.js 26 and install Yarn Classic 1.22.22.
-3. Rebuild and replace the application from its committed lockfiles while preserving `/data`.
-4. Offer updates for installed Nginx, Anubis and OAuth2 Proxy binaries.
-5. Restart or start ShieldPM, apply pending database migrations and verify the backend health endpoint before reporting success.
+1. Require the already installed Node.js 24, Corepack 0.36.0 and Yarn 4.18.0 toolchain exactly; it performs no APT,
+   Node or package-manager upgrade.
+2. Resolve the selected remote branch (`--branch`, default from the installation) to one exact 40-character commit SHA.
+3. Create and verify an online SQLite backup. For MySQL/PostgreSQL it requires a tested native backup plus
+   `--external-db-backup-confirmed`.
+4. Build backend and frontend from immutable lockfiles in private staging directories while reusing the already
+   verified native binaries.
+5. Replace application, frontend, rootfs and service files transactionally while preserving `/data`; a failed
+   120-second health gate restores files and SQLite automatically.
+6. Keep ShieldPM stopped after a failed external-database update until the operator restores that database.
+
+The updater refuses unsafe or unverifiable inputs. Keep an independent backup: application rollback cannot undo
+an external MySQL/PostgreSQL schema or data change without an operator-provided database dump.
 
 ---
 
@@ -116,15 +146,15 @@ For Proxmox users, we provide a pre-built LXC template based on Debian 13.
 ### Installation
 
 1. **Download Template:**
-    Get `shieldpm-lxc-template-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
+   Get `shieldpm-lxc-template-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
 2. **Upload to Proxmox:**
-    Go to `local (pve) > CT Templates > Upload`.
+   Go to `local (pve) > CT Templates > Upload`.
 3. **Create CT:**
-    Create a new container using this template.
+   Create a new container using this template.
 4. **Important Setting:**
-    In the container **Options**, enable **Nesting**.
+   In the container **Options**, enable **Nesting**.
 5. **Start:**
-    Boot the container. Access `http://<IP>:81` — the Setup Wizard will create your admin account.
+   Boot the container. Access `http://<IP>:81` — the Setup Wizard will create your admin account.
 
 ### Updating (LXC)
 

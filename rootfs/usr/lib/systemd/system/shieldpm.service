@@ -18,6 +18,11 @@ ExecStart=/usr/local/bin/entrypoint.sh
 # Restart logic
 Restart=always
 RestartSec=5
+TimeoutStopSec=45s
+KillSignal=SIGTERM
+KillMode=mixed
+SendSIGKILL=yes
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target

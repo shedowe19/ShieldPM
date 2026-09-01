@@ -1,3 +1,6 @@
+import Ajv from "ajv/dist/2020.js";
+import { getToolEffect } from "./safety.js";
+
 /**
  * AI Tool Definitions
  * Extracted from ai.js for modularity
@@ -57,7 +60,6 @@ const getAllToolDefinitions = () => [
 								forward_scheme: { type: "string", description: "http, https, grpc, grpcs, path" },
 								forward_host: { type: "string" },
 								forward_port: { type: "integer" },
-								advanced_config: { type: "string" },
 							},
 							required: ["path", "forward_host", "forward_port"],
 						},
@@ -85,7 +87,6 @@ const getAllToolDefinitions = () => [
 					maintenance_start: { type: "string", description: "ISO 8601 Datetime start" },
 					maintenance_end: { type: "string", description: "ISO 8601 Datetime end" },
 					maintenance_reason: { type: "string", description: "Reason displayed to user" },
-					advanced_config: { type: "string" },
 					meta: { type: "object" },
 				},
 				required: ["domain_names", "forward_scheme", "forward_host", "forward_port"],
@@ -124,7 +125,6 @@ const getAllToolDefinitions = () => [
 					maintenance_start: { type: "string" },
 					maintenance_end: { type: "string" },
 					maintenance_reason: { type: "string" },
-					advanced_config: { type: "string" },
 					enabled: { type: "boolean" },
 					meta: { type: "object" },
 				},
@@ -195,7 +195,6 @@ const getAllToolDefinitions = () => [
 					hsts_subdomains: { type: "boolean" },
 					http2_support: { type: "boolean" },
 					certificate_id: { type: "integer" },
-					advanced_config: { type: "string" },
 					meta: { type: "object" },
 				},
 				required: ["domain_names", "forward_scheme", "forward_http_code", "forward_domain_name"],
@@ -221,7 +220,6 @@ const getAllToolDefinitions = () => [
 					hsts_subdomains: { type: "boolean" },
 					http2_support: { type: "boolean" },
 					certificate_id: { type: "integer" },
-					advanced_config: { type: "string" },
 					enabled: { type: "boolean" },
 				},
 				required: ["id"],
@@ -271,7 +269,6 @@ const getAllToolDefinitions = () => [
 					hsts_subdomains: { type: "boolean" },
 					http2_support: { type: "boolean" },
 					certificate_id: { type: "integer" },
-					advanced_config: { type: "string" },
 					meta: { type: "object" },
 				},
 				required: ["domain_names"],
@@ -292,7 +289,6 @@ const getAllToolDefinitions = () => [
 					hsts_subdomains: { type: "boolean" },
 					http2_support: { type: "boolean" },
 					certificate_id: { type: "integer" },
-					advanced_config: { type: "string" },
 					enabled: { type: "boolean" },
 				},
 				required: ["id"],
@@ -763,28 +759,6 @@ const getAllToolDefinitions = () => [
 			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
 		},
 	},
-	{
-		function: {
-			name: "login_as_user",
-			description: "Log in as another user (Impersonation)",
-			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
-		},
-	},
-	{
-		function: {
-			name: "create_api_token",
-			description: "Create a new API Token",
-			parameters: {
-				type: "object",
-				properties: {
-					identity: { type: "string" },
-					expiry: { type: "string", description: "ISO Date or null" },
-				},
-				required: ["identity"],
-			},
-		},
-	},
-
 	// Cloudflare Tunnels
 	{
 		function: {
@@ -1011,17 +985,80 @@ const getAllToolDefinitions = () => [
 	},
 ];
 
-const restrictedToolPermissions = new Map([
+const blockedAiTools = new Set([
+	// These operations require secret material or can change identities and
+	// authorization. They remain available through the regular audited UI/API,
+	// but are never exposed to an external model.
+	"create_access_list",
+	"update_access_list",
+	"validate_certificate",
+	"upload_certificate",
+	"create_client_certificate",
+	"create_ddns_provider",
+	"update_ddns_provider",
+	"create_user",
+	"update_user",
+	"update_user_password",
+	"update_user_permissions",
+	"delete_user",
+	"create_cloudflared_tunnel",
+	"update_cloudflared_tunnel",
+	"get_global_settings",
+	"update_global_setting",
+	"read_nginx_logs",
+]);
+
+const toolPermissions = new Map([
 	["get_system_status", "analytics:list"],
+	["get_proxy_hosts", "proxy_hosts:list"],
+	["create_proxy_host", "proxy_hosts:create"],
+	["update_proxy_host", "proxy_hosts:update"],
+	["delete_proxy_host", "proxy_hosts:delete"],
+	["enable_proxy_host", "proxy_hosts:update"],
+	["disable_proxy_host", "proxy_hosts:update"],
+	["set_maintenance_mode", "proxy_hosts:update"],
+	["get_redirection_hosts", "redirection_hosts:list"],
+	["create_redirection_host", "redirection_hosts:create"],
+	["update_redirection_host", "redirection_hosts:update"],
+	["delete_redirection_host", "redirection_hosts:delete"],
+	["enable_redirection_host", "redirection_hosts:update"],
+	["disable_redirection_host", "redirection_hosts:update"],
+	["get_dead_hosts", "dead_hosts:list"],
+	["create_dead_host", "dead_hosts:create"],
+	["update_dead_host", "dead_hosts:update"],
+	["delete_dead_host", "dead_hosts:delete"],
+	["enable_dead_host", "dead_hosts:update"],
+	["disable_dead_host", "dead_hosts:update"],
+	["get_streams", "streams:list"],
+	["create_stream", "streams:create"],
+	["update_stream", "streams:update"],
+	["delete_stream", "streams:delete"],
+	["enable_stream", "streams:update"],
+	["disable_stream", "streams:update"],
+	["get_access_lists", "access_lists:list"],
+	["delete_access_list", "access_lists:delete"],
+	["get_certificates", "certificates:list"],
+	["create_certificate", "certificates:create"],
+	["update_certificate", "certificates:update"],
+	["delete_certificate", "certificates:delete"],
+	["get_certificate_details", "certificates:get"],
+	["get_dns_plugins", "certificates:list"],
 	["get_audit_log", "auditlog:list"],
-	["create_client_certificate", "certificates:create"],
 	["renew_certificate", "certificates:update"],
+	["test_http_challenge", "certificates:update"],
+	["get_ddns_providers", "ddns_providers:list"],
+	["delete_ddns_provider", "ddns_providers:delete"],
+	["test_ddns_provider", "ddns_providers:update"],
+	["get_users", "users:list"],
 	["test_nginx_config", "settings:update"],
 	["force_nginx_reload", "settings:update"],
+	["read_nginx_logs", "settings:update"],
 	["renew_ip_ranges", "settings:update"],
+	["get_host_counts", "reports:hosts"],
+	["get_host_analytics", "analytics:list"],
+	["get_analytics_summary", "analytics:list"],
+	["get_analytics_series", "analytics:list"],
 	["get_cloudflared_tunnels", "cloudflared_tunnels:list"],
-	["create_cloudflared_tunnel", "cloudflared_tunnels:create"],
-	["update_cloudflared_tunnel", "cloudflared_tunnels:update"],
 	["delete_cloudflared_tunnel", "cloudflared_tunnels:delete"],
 	["get_tor_onion_services", "tor_onions:list"],
 	["create_tor_onion_service", "tor_onions:create"],
@@ -1030,6 +1067,70 @@ const restrictedToolPermissions = new Map([
 	["start_tor_onion_service", "tor_onions:update"],
 	["stop_tor_onion_service", "tor_onions:update"],
 ]);
+
+export const getToolPermission = (name) => toolPermissions.get(name);
+
+const schemaValidators = new Map();
+const strictAjv = new /** @type {any} */ (Ajv)({
+	allErrors: true,
+	strict: true,
+	allowUnionTypes: true,
+	coerceTypes: false,
+});
+
+const hardenSchema = (input, depth = 0) => {
+	if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("Invalid AI tool schema");
+	if (depth > 8) throw new RangeError("AI tool schema exceeds the nesting limit");
+	const schema = structuredClone(input);
+	if (schema.type === "object" || (Array.isArray(schema.type) && schema.type.includes("object"))) {
+		schema.additionalProperties = false;
+		schema.maxProperties = Math.min(schema.maxProperties || 64, 64);
+		schema.properties = schema.properties || {};
+		for (const [name, property] of Object.entries(schema.properties)) {
+			schema.properties[name] = hardenSchema(property, depth + 1);
+		}
+		if (schema.required) schema.required = [...new Set(schema.required)];
+	}
+	if (schema.type === "array" || (Array.isArray(schema.type) && schema.type.includes("array"))) {
+		schema.maxItems = Math.min(schema.maxItems || 100, 100);
+		if (schema.items) schema.items = hardenSchema(schema.items, depth + 1);
+	}
+	if (schema.type === "string" || (Array.isArray(schema.type) && schema.type.includes("string"))) {
+		schema.maxLength = Math.min(schema.maxLength || 4096, 4096);
+	}
+	if (schema.type === "integer" || schema.type === "number") {
+		if (schema.minimum === undefined) schema.minimum = -1_000_000_000;
+		if (schema.maximum === undefined) schema.maximum = 1_000_000_000;
+	}
+	if (schema.anyOf) schema.anyOf = schema.anyOf.map((entry) => hardenSchema(entry, depth + 1));
+	if (schema.oneOf) schema.oneOf = schema.oneOf.map((entry) => hardenSchema(entry, depth + 1));
+	return schema;
+};
+
+export const getAllStrictToolDefinitions = () => {
+	const definitions = [];
+	const names = new Set();
+	for (const tool of getAllToolDefinitions()) {
+		const name = tool?.function?.name;
+		if (typeof name !== "string" || !/^[a-z][a-z0-9_]{0,63}$/.test(name)) {
+			throw new TypeError("Invalid AI tool name");
+		}
+		if (names.has(name) || blockedAiTools.has(name)) continue;
+		if (!toolPermissions.has(name)) throw new TypeError(`AI tool has no permission mapping: ${name}`);
+		names.add(name);
+		const parameters = hardenSchema(tool.function.parameters || { type: "object", properties: {} });
+		const strictTool = {
+			function: {
+				name,
+				description: String(tool.function.description || "").slice(0, 1000),
+				parameters,
+			},
+		};
+		schemaValidators.set(name, strictAjv.compile(parameters));
+		definitions.push(strictTool);
+	}
+	return definitions;
+};
 
 /**
  * Returns the AI tool definitions the caller is authorized to receive.
@@ -1042,18 +1143,43 @@ const restrictedToolPermissions = new Map([
 export const getToolDefinitions = async (access) => {
 	const authorization = new Map();
 
-	for (const permission of new Set(restrictedToolPermissions.values())) {
-		try {
-			await access.can(permission);
-			authorization.set(permission, true);
-		} catch (_err) {
-			// Fail closed: do not reveal or offer privileged operations.
-			authorization.set(permission, false);
-		}
-	}
+	await Promise.all(
+		[...new Set(toolPermissions.values())].map(async (permission) => {
+			try {
+				await access.can(permission);
+				authorization.set(permission, true);
+			} catch (_err) {
+				// Fail closed: do not reveal or offer privileged operations.
+				authorization.set(permission, false);
+			}
+		}),
+	);
 
-	return getAllToolDefinitions().filter((tool) => {
-		const permission = restrictedToolPermissions.get(tool.function.name);
-		return !permission || authorization.get(permission);
+	return getAllStrictToolDefinitions().filter((tool) => {
+		const permission = toolPermissions.get(tool.function.name);
+		if (permission && !authorization.get(permission)) return false;
+		const principal = /** @type {any} */ (access).principal;
+		return principal?.type !== "integration" || getToolEffect(tool.function.name) !== "destructive";
 	});
+};
+
+/**
+ * Validate one native provider tool call against the exact schema advertised
+ * to this authenticated caller.
+ *
+ * @param {Array} authorizedTools
+ * @param {string} name
+ * @param {unknown} args
+ * @returns {Object}
+ */
+export const validateToolCall = (authorizedTools, name, args) => {
+	if (!authorizedTools.some((tool) => tool.function.name === name)) {
+		throw new Error(`Unknown or unauthorized AI tool: ${name}`);
+	}
+	const validator = schemaValidators.get(name);
+	if (!validator?.(args)) {
+		const details = validator?.errors?.map((entry) => `${entry.instancePath || "/"} ${entry.message}`).join("; ");
+		throw new TypeError(`Invalid arguments for ${name}: ${details || "schema rejected"}`);
+	}
+	return structuredClone(args);
 };

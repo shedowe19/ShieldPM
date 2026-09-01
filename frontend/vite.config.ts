@@ -58,8 +58,8 @@ export default defineConfig({
 						}
 
 						if (
-							["date-fns/", "dayjs/", "jwt-decode/", "i18next/", "react-i18next/", "react-intl/"].some(
-								(pkg) => id.includes(`node_modules/${pkg}`),
+							["date-fns/", "dayjs/", "i18next/", "react-i18next/", "react-intl/"].some((pkg) =>
+								id.includes(`node_modules/${pkg}`),
 							)
 						) {
 							return "vendor-utils";

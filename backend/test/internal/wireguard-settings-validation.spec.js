@@ -3,23 +3,33 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	execSync: vi.fn(),
 	existsSync: vi.fn(),
+	files: new Map(),
 	logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
-	mkdirSync: vi.fn(),
 	patchSettings: vi.fn(),
 	peerQuery: vi.fn(),
 	readFileSync: vi.fn(),
 	settingQuery: vi.fn(),
 	spawn: vi.fn(),
-	writeFileSync: vi.fn(),
 }));
 
 vi.mock("node:child_process", () => ({ execSync: mocks.execSync, spawn: mocks.spawn }));
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: mocks.existsSync,
-		mkdirSync: mocks.mkdirSync,
 		readFileSync: mocks.readFileSync,
-		writeFileSync: mocks.writeFileSync,
+		promises: {
+			mkdir: vi.fn(),
+			open: vi.fn(async (path) => ({
+				close: vi.fn(),
+				sync: vi.fn(),
+				writeFile: vi.fn((content) => mocks.files.set(path, content)),
+			})),
+			rename: vi.fn(async (source, target) => {
+				mocks.files.set(target, mocks.files.get(source));
+				mocks.files.delete(source);
+			}),
+			unlink: vi.fn(async (path) => mocks.files.delete(path)),
+		},
 	},
 }));
 vi.mock("../../logger.js", () => ({ global: mocks.logger }));
@@ -47,6 +57,7 @@ const flushMicrotasks = async () => {
 describe("WireGuard settings validation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.files.clear();
 		mocks.settingQuery.mockImplementation(() => ({
 			where: () => ({
 				first: async () => ({
@@ -81,23 +92,23 @@ describe("WireGuard settings validation", () => {
 
 	it("waits for server key creation before synchronizing the startup configuration", async () => {
 		let emitKeyGenerationComplete;
-		const knownFiles = new Set();
-		mocks.existsSync.mockImplementation((path) => knownFiles.has(path));
+		const privateKey = `${"A".repeat(43)}=`;
+		const publicKey = `${"B".repeat(43)}=`;
+		mocks.existsSync.mockImplementation((path) => mocks.files.has(path));
 		mocks.readFileSync.mockImplementation((path) => {
-			if (!knownFiles.has(path)) throw new Error("server private key is not ready");
-			return "server-private-key";
+			if (!mocks.files.has(path)) throw new Error("server private key is not ready");
+			return mocks.files.get(path);
 		});
-		mocks.writeFileSync.mockImplementation((path) => knownFiles.add(path));
 		mocks.execSync.mockImplementation((command) => {
 			if (command === "which wg") return "/usr/bin/wg";
-			if (command === "wg genkey") return "server-private-key";
+			if (command === "wg genkey") return privateKey;
 			if (command.startsWith("ip link show")) throw new Error("wg0 is down");
 			return "";
 		});
 		mocks.spawn.mockImplementation(() => {
 			const handlers = { close: [], data: [], error: [] };
 			emitKeyGenerationComplete = () => {
-				for (const handler of handlers.data) handler(Buffer.from("server-public-key"));
+				for (const handler of handlers.data) handler(Buffer.from(publicKey));
 				for (const handler of handlers.close) handler(0);
 			};
 			return {
@@ -118,7 +129,7 @@ describe("WireGuard settings validation", () => {
 		emitKeyGenerationComplete();
 		await initialization;
 
-		const config = mocks.writeFileSync.mock.calls.find(([path]) => path.endsWith("/wireguard/wg0.conf"))?.[1];
-		expect(config).toContain("PrivateKey = server-private-key");
+		const config = [...mocks.files.entries()].find(([path]) => path.endsWith("/wireguard/wg0.conf"))?.[1];
+		expect(config).toContain(`PrivateKey = ${privateKey}`);
 	});
 });

@@ -1,9 +1,9 @@
 import fs from "node:fs";
+import { ensureInitialSetupOwnership } from "./internal/initial-setup.js";
 import internalNginx from "./internal/nginx.js";
 import { installPlugins } from "./lib/certbot.js";
 import utils from "./lib/utils.js";
 import { setup as logger } from "./logger.js";
-import authModel from "./models/auth.js";
 import certificateModel from "./models/certificate.js";
 import deadModel from "./models/dead_host.js";
 import proxyModel from "./models/proxy_host.js";
@@ -11,66 +11,10 @@ import redirectionModel from "./models/redirection_host.js";
 import settingModel from "./models/setting.js";
 import streamModel from "./models/stream.js";
 import userModel from "./models/user.js";
-import userPermissionModel from "./models/user_permission.js";
 
 export const isSetup = async () => {
 	const row = await userModel.query().select("id").where("is_deleted", 0).first();
 	return row?.id > 0;
-};
-
-/**
- * Creates a default admin users if one doesn't already exist in the database
- *
- * @returns {Promise<void>}
- */
-const setupDefaultUser = async () => {
-	const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
-	const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
-
-	// This will only create a new user when there are no active users in the database
-	// and the INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD environment variables are set.
-	// Otherwise, users should be shown the setup wizard in the frontend.
-	// I'm keeping this legacy behavior in case some people are automating deployments.
-
-	if (!initialAdminEmail || !initialAdminPassword) {
-		return;
-	}
-
-	const userIsetup = await isSetup();
-	if (!userIsetup) {
-		// Create a new user and set password
-		logger.info(`Creating initial admin user: ${initialAdminEmail} (password: [HIDDEN])`);
-
-		const data = {
-			is_deleted: 0,
-			email: initialAdminEmail,
-			name: "Administrator",
-			nickname: "Admin",
-			avatar: "",
-			roles: ["admin"],
-		};
-
-		const user = await userModel.query().insertAndFetch(data);
-
-		await authModel.query().insert({
-			user_id: user.id,
-			type: "password",
-			secret: initialAdminPassword,
-			meta: {},
-		});
-
-		await userPermissionModel.query().insert({
-			user_id: user.id,
-			visibility: "all",
-			proxy_hosts: "manage",
-			redirection_hosts: "manage",
-			dead_hosts: "manage",
-			streams: "manage",
-			access_lists: "manage",
-			certificates: "manage",
-		});
-		logger.info("Initial admin setup completed. Credentials stored securely in DB; password output suppressed.");
-	}
 };
 
 /**
@@ -229,7 +173,7 @@ const regenerateAllHosts = async () => {
 };
 
 export default async () => {
-	await setupDefaultUser();
+	await ensureInitialSetupOwnership();
 	await setupDefaultSettings();
 	await setupCertbotPlugins();
 	await regenerateAllHosts();

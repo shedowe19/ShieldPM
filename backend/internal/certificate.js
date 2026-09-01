@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import path from "path";
+import path from "node:path";
 import { ZipArchive } from "archiver";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
@@ -41,6 +41,16 @@ const internalCertificate = {
 		// And do this now as well
 		internalCertificate.processExpiringHosts();
 		await internalCertificate.cleanUpMissingCertificates();
+	},
+
+	stopTimer: async () => {
+		if (internalCertificate.interval) {
+			clearInterval(internalCertificate.interval);
+			internalCertificate.interval = null;
+		}
+		while (internalCertificate.intervalProcessing || internalCertificate.processing) {
+			await new Promise((resolve) => setTimeout(() => resolve(undefined), 25));
+		}
 	},
 
 	/**
@@ -519,7 +529,7 @@ const internalCertificate = {
 				return true;
 			});
 			archive.on("error", (err) => reject(err)).pipe(stream);
-			stream.on("close", () => resolve());
+			stream.on("close", () => resolve(undefined));
 			archive.finalize();
 		});
 	},

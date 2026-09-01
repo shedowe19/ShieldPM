@@ -28,7 +28,7 @@ const internalDdnsProvider = {
 		});
 
 		// Trigger initial update in background
-		internalDdns.process(true);
+		void internalDdns.process(true);
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("ddns-provider");
@@ -43,7 +43,7 @@ const internalDdnsProvider = {
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
-		// simplified permission check
+		await access.can("ddns_providers:update", data.id);
 		const existing = await internalDdnsProvider.get(access, { id: data.id });
 		if (!existing) throw new errs.ItemNotFoundError(data.id);
 
@@ -60,7 +60,7 @@ const internalDdnsProvider = {
 		});
 
 		// Trigger update
-		internalDdns.process(true);
+		void internalDdns.process(true);
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("ddns-provider");
@@ -137,12 +137,8 @@ const internalDdnsProvider = {
 	test: async (access, data) => {
 		const row = await internalDdnsProvider.get(access, { id: data.id });
 		const ips = await internalDdns.getWanIps();
-		try {
-			await internalDdns.updateProvider(row, ips);
-			return { status: "success", ips };
-		} catch (e) {
-			throw new Error(e.message);
-		}
+		await internalDdns.updateProvider(row, ips);
+		return { status: "success", ips };
 	},
 };
 

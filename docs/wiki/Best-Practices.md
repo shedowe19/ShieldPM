@@ -11,16 +11,18 @@ Ensure your ShieldPM installation is secure, reliable, and performant with these
 When you access ShieldPM for the first time, a **Setup Wizard** guides you through creating your admin account. There are **no default credentials** — you choose your own email and password during setup.
 
 > [!TIP]
-> Use a strong, unique password for your admin account. Consider using a password manager to generate one.
+> Read the one-time ownership token from `/data/shieldpm/initial-admin-setup-token` locally. Never expose it in logs,
+> screenshots or a committed Compose file. Prefer `INITIAL_ADMIN_SETUP_TOKEN_FILE` with a mounted `0600` secret when
+> provisioning automatically, and use a strong unique administrator password.
 
 ### Security Headers
 
 Security headers add an extra layer of protection for visitors:
 
-| Header | Variable | Recommended Value | Description |
-| :--- | :--- | :--- | :--- |
-| **HSTS** | `NGINX_HSTS_SUBDOMAINS` | `true` | Forces HTTPS on all subdomains |
-| **X-Frame-Options** | `X_FRAME_OPTIONS` | `sameorigin` | Prevents clickjacking attacks |
+| Header              | Variable                | Recommended Value | Description                    |
+| :------------------ | :---------------------- | :---------------- | :----------------------------- |
+| **HSTS**            | `NGINX_HSTS_SUBDOMAINS` | `true`            | Forces HTTPS on all subdomains |
+| **X-Frame-Options** | `X_FRAME_OPTIONS`       | `sameorigin`      | Prevents clickjacking attacks  |
 
 ### Block Common Exploits
 
@@ -33,10 +35,10 @@ Enable **Block Exploits** on every Proxy Host. This activates built-in Nginx rul
 
 ### Network Isolation (Docker)
 
-| Mode | Security | Performance | When to Use |
-| :--- | :--- | :--- | :--- |
-| **Bridge** (default) | ✅ Isolated | Good | Most setups |
-| **Host** | ⚠️ Shared stack | Best | When you need real client IPs or IPv6 |
+| Mode                 | Security        | Performance | When to Use                           |
+| :------------------- | :-------------- | :---------- | :------------------------------------ |
+| **Bridge** (default) | ✅ Isolated     | Good        | Most setups                           |
+| **Host**             | ⚠️ Shared stack | Best        | When you need real client IPs or IPv6 |
 
 > [!TIP]
 > If using Bridge mode, ShieldPM automatically fetches and applies Cloudflare/CDN IP ranges so that the real client IP is preserved in logs and Access Lists.
@@ -55,17 +57,19 @@ Restrict access to the Admin UI (port 81) from the public internet:
 
 ### What to Backup
 
-| Data | Location | Critical |
-| :--- | :--- | :---: |
-| Database | `/data/database.sqlite` | ✅ |
-| SSL Certificates | `/data/tls/` | ✅ |
-| Configuration | `/data/nginx/` | ⚠️ (regenerated) |
-| Keys | `/data/shieldpm/keys.json` | ✅ |
-| Access Lists | `/data/access/` | ✅ |
-| Tor Keys | `/data/tor/` | ⚠️ (if using Onion Services) |
+| Data             | Location                         |           Critical           |
+| :--------------- | :------------------------------- | :--------------------------: |
+| Database         | `/data/shieldpm/database.sqlite` |              ✅              |
+| SSL Certificates | `/data/tls/`                     |              ✅              |
+| Configuration    | `/data/nginx/`                   |       ⚠️ (regenerated)       |
+| Keys             | `/data/shieldpm/keys.json`       |              ✅              |
+| Access Lists     | `/data/access/`                  |              ✅              |
+| Tor Keys         | `/data/tor/`                     | ⚠️ (if using Onion Services) |
 
-> [!TIP]
-> Use [GitOps](GitOps) to automatically back up your configuration to a Git repository after every change. This gives you versioned, off-site backups with zero effort.
+> [!IMPORTANT]
+> GitOps snapshot v2 is a secret-free public configuration projection, not a full backup. It deliberately excludes
+> credentials, private keys, certificate material and several object types. Combine it with an encrypted `/data`
+> backup and a database-native dump for external MySQL/PostgreSQL.
 
 ### Backup Commands
 
@@ -125,11 +129,11 @@ NGINX_WORKER_CONNECTIONS=4096
 
 ### Database Choice
 
-| Database | Best For | Concurrent Users |
-| :--- | :--- | :--- |
-| **SQLite** | Home/Small setups | 1-5 admins |
-| **MySQL/MariaDB** | Medium/Production | 5-50 admins |
-| **PostgreSQL** | Enterprise/Large | 50+ admins |
+| Database          | Best For          | Concurrent Users |
+| :---------------- | :---------------- | :--------------- |
+| **SQLite**        | Home/Small setups | 1-5 admins       |
+| **MySQL/MariaDB** | Medium/Production | 5-50 admins      |
+| **PostgreSQL**    | Enterprise/Large  | 50+ admins       |
 
 > [!NOTE]
 > SQLite works perfectly fine for most home and small business setups. Only switch to an external database if you experience performance issues or need multi-node deployments.
@@ -154,7 +158,13 @@ update-shieldpm
 ```
 
 > [!IMPORTANT]
-> Always create a backup **before** updating. While ShieldPM includes automatic database migrations, it's always safer to have a rollback option.
+> Always create and test a backup **before** updating. The native updater verifies artifacts, stages the new payload,
+> switches atomically and uses health-checked rollback. Application rollback cannot reverse an external database
+> migration; keep an operator-verified MySQL/PostgreSQL dump.
+
+ShieldPM handles `SIGTERM`/`SIGINT` by stopping new background work, draining analytics, DDNS and other in-flight
+operations, closing listeners and database connections, then exiting. Give Docker/systemd enough stop time for that
+sequence; avoid `SIGKILL` unless the process is irrecoverably stuck.
 
 ---
 
@@ -163,10 +173,12 @@ update-shieldpm
 Before exposing ShieldPM to the internet, verify:
 
 - [ ] Setup Wizard completed (admin account created)
+- [ ] One-time setup token removed/retired after the ownership claim
 - [ ] Admin UI not publicly accessible (or protected by Access List)
 - [ ] ACME email configured for Let's Encrypt
 - [ ] Time zone set correctly (`TZ` variable)
 - [ ] Backup strategy in place (manual or GitOps)
+- [ ] External database dump and restore test in place when not using SQLite
 - [ ] Block Exploits enabled on all Proxy Hosts
 - [ ] HSTS enabled on production hosts
 - [ ] CrowdSec configured (recommended)

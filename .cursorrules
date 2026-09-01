@@ -1,4 +1,4 @@
-# Project Rules: ShieldPM v4.1.0
+# Project Rules: ShieldPM 4.x
 
 ## Project Overview
 
@@ -12,7 +12,7 @@ modern protocols (HTTP/3, QUIC), and native performance.
 
 | Layer | Technology |
 |---|---|
-| **Backend Runtime** | Node.js `v26+` via signed NodeSource APT (ESM modules) |
+| **Backend Runtime** | Node.js 24 LTS via signed NodeSource APT (ESM modules) |
 | **Backend Framework** | Express.js `v5.2` |
 | **ORM** | Objection.js `v3.1` / Knex.js `v3.1` |
 | **Database (Dev)** | SQLite (`better-sqlite3`) |
@@ -25,7 +25,7 @@ modern protocols (HTTP/3, QUIC), and native performance.
 | **Linter/Formatter** | Biome `v2.4` (both frontend & backend) |
 | **Tests** | Vitest `v4.0` (both frontend & backend) |
 | **Web Server** | OpenResty-based custom Nginx |
-| **Package Manager** | Yarn |
+| **Package Manager** | Corepack + repository-pinned Yarn 4 (immutable lockfiles) |
 
 ## Architecture
 
@@ -203,7 +203,9 @@ export default internalProxyHost;
 
 ## Security Considerations
 
-- **JWT tokens**: Managed via `backend/internal/token.js`. Temporary tokens for ChatOps use `ctx.shieldAccess`.
+- **JWT tokens**: Browser/API sessions are managed via `backend/internal/token.js` and server-side refresh sessions.
+- **ChatOps principal**: Telegram requests use a live server-side integration principal bound to integration, owner and
+  external user; ChatOps must never synthesize a JWT or elevate permissions.
 - **CSRF**: Enabled via `csrf-csrf` middleware.
 - **Rate limiting**: Applied via `express-rate-limit`.
 - **Helmet**: Security headers enabled globally.

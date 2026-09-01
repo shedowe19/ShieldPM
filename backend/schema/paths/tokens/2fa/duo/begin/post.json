@@ -1,0 +1,77 @@
+{
+	"operationId": "begin2FADuo",
+	"summary": "Begin a session-bound Duo Universal Prompt during 2FA login",
+	"tags": [
+		"tokens"
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"additionalProperties": false,
+					"properties": {
+						"pending_token": {
+							"type": "string",
+							"minLength": 16,
+							"maxLength": 16384
+						}
+					},
+					"required": [
+						"pending_token"
+					],
+					"type": "object"
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "Duo authorization URL and single-use callback state",
+			"content": {
+				"application/json": {
+					"schema": {
+						"additionalProperties": false,
+						"properties": {
+							"auth_url": {
+								"type": "string",
+								"format": "uri"
+							},
+							"state": {
+								"description": "Opaque callback state bound to the pending login token",
+								"type": "string",
+								"minLength": 43,
+								"maxLength": 256
+							}
+						},
+						"required": [
+							"auth_url",
+							"state"
+						],
+						"type": "object"
+					}
+				}
+			}
+		},
+		"400": {
+			"description": "Invalid request or Duo configuration",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/error-object.json"
+					}
+				}
+			}
+		},
+		"401": {
+			"description": "Pending token invalid, expired, or already used",
+			"content": {
+				"application/json": {
+					"schema": {
+						"$ref": "../../../../../components/error-object.json"
+					}
+				}
+			}
+		}
+	}
+}

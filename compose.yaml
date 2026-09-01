@@ -29,6 +29,7 @@ services:
 
       # ── System ─────────────────────────────────────────────────────────────
       - "TZ=Europe/Berlin" # REQUIRED — https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      - "TRUST_PROXY=1" # REQUIRED for the image's single internal Nginx -> Express proxy hop
       # - "PUID=0"                                 # User ID (≥99 or 0), default: 0
       # - "PGID=0"                                 # Group ID (≥99 or 0), default: 0
       # - "CSRF_SECRET=your-secure-random-secret"  # Min 32 chars. Generate: openssl rand -hex 32
@@ -126,8 +127,8 @@ services:
       # - "DOCKER_HOSTS=tcp://10.10.10.1:2375,tcp://10.10.10.2:2375"  # Additional remote Docker hosts
 
       # ── Initialization (first start only) ──────────────────────────────────
-      # - "INITIAL_ADMIN_EMAIL=<initial@email.tld>"
-      # - "INITIAL_ADMIN_PASSWORD=<initial-password>"
+      # One-time Nextcloud AIO bootstrap after the ownership claim; prefer a mounted secret file.
+      # - "SHIELDPM_AIO_ACCESS_TOKEN_FILE=/run/secrets/shieldpm-aio-access-token"
       # - "INITIAL_DEFAULT_PAGE=444"
       # - "ENABLE_PRERUN=true"
 

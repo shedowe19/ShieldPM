@@ -3,8 +3,66 @@
  * Extracted from ai.js for modularity
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { global as logger } from "../../logger.js";
+
+const GOOGLE_GENAI_PACKAGE = "@google/genai";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const PROVIDER_TIMEOUT_MS = 30_000;
+const MAX_PROVIDER_RESPONSE_BYTES = 2 * 1024 * 1024;
+const MAX_PROVIDER_CONTENT_BYTES = 64 * 1024;
+let googleSdkPromise;
+
+const loadGoogleSdk = async () => {
+	googleSdkPromise ||= import(GOOGLE_GENAI_PACKAGE);
+	return googleSdkPromise;
+};
+
+const boundedContent = (value) => {
+	if (typeof value !== "string") return "";
+	const buffer = Buffer.from(value, "utf8");
+	return buffer.length <= MAX_PROVIDER_CONTENT_BYTES
+		? buffer.toString("utf8")
+		: `${buffer.subarray(0, MAX_PROVIDER_CONTENT_BYTES).toString("utf8")}\n[TRUNCATED]`;
+};
+
+const readBoundedBody = async (response) => {
+	const declaredLength = Number.parseInt(response.headers.get("content-length") || "0", 10);
+	if (declaredLength > MAX_PROVIDER_RESPONSE_BYTES) throw new RangeError("AI provider response is too large");
+	const chunks = [];
+	let total = 0;
+	for await (const chunk of response.body || []) {
+		const buffer = Buffer.from(chunk);
+		total += buffer.length;
+		if (total > MAX_PROVIDER_RESPONSE_BYTES) throw new RangeError("AI provider response is too large");
+		chunks.push(buffer);
+	}
+	return Buffer.concat(chunks).toString("utf8");
+};
+
+const readProviderJson = async (response) => {
+	const body = await readBoundedBody(response);
+	try {
+		return JSON.parse(body);
+	} catch (_err) {
+		throw new TypeError("AI provider returned invalid JSON");
+	}
+};
+
+const normalizeGeminiResponse = (response, chat) => {
+	const functionCalls = Array.isArray(response.functionCalls) ? response.functionCalls : [];
+	if (functionCalls.length > 0) {
+		logger.info(
+			"[Gemini SDK] Native tool calls detected:",
+			functionCalls.map((call) => call.name),
+		);
+		return {
+			content: boundedContent(response.text),
+			toolCalls: functionCalls.map((call) => ({ id: call.id, name: call.name, args: call.args || {} })),
+			chat,
+		};
+	}
+	return { content: boundedContent(response.text), chat };
+};
 
 /**
  * Call Gemini API
@@ -17,64 +75,30 @@ import { global as logger } from "../../logger.js";
  */
 export const callGemini = async (config, systemPrompt, message, history, tools) => {
 	if (!config.api_key) throw new Error("Gemini API Key is missing");
-
-	const genAI = new GoogleGenerativeAI(config.api_key);
-	const model = genAI.getGenerativeModel({
-		model: config.model || "gemini-1.5-flash",
-		systemInstruction: systemPrompt,
-	});
-
-	// Convert tools to SDK format
-	const geminiTools =
-		tools.length > 0
-			? tools.map((t) => ({
-					functionDeclarations: [
-						{
-							name: t.function.name,
-							description: t.function.description,
-							parameters: t.function.parameters,
-						},
-					],
-				}))
-			: undefined;
-
-	// Start chat session with history
-	const chat = model.startChat({
+	const { GoogleGenAI } = await loadGoogleSdk();
+	const client = new GoogleGenAI({ apiKey: config.api_key, httpOptions: { timeout: PROVIDER_TIMEOUT_MS } });
+	const functionDeclarations = tools.map((tool) => ({
+		name: tool.function.name,
+		description: tool.function.description,
+		// The hardened definitions are JSON Schema, not the narrower Gemini
+		// Schema type. @google/genai 2.x exposes this stable field specifically
+		// for standard JSON Schema (including additionalProperties: false).
+		parametersJsonSchema: tool.function.parameters,
+	}));
+	const chat = client.chats.create({
+		model: config.model || DEFAULT_GEMINI_MODEL,
 		history: history.map((h) => ({
 			role: h.role === "assistant" ? "model" : "user",
 			parts: [{ text: h.content || "" }],
 		})),
-		tools: geminiTools,
+		config: {
+			systemInstruction: systemPrompt,
+			tools: functionDeclarations.length ? [{ functionDeclarations }] : undefined,
+			maxOutputTokens: 4096,
+		},
 	});
-
-	logger.debug("[Gemini SDK] Sending message with tools:", geminiTools?.length || 0);
-
-	const result = await chat.sendMessage(message);
-	const response = result.response;
-
-	logger.debug("[Gemini SDK] Response:", {
-		hasText: !!response.text(),
-		hasFunctionCalls: !!(response.functionCalls() && response.functionCalls().length > 0),
-	});
-
-	// Check for function calls
-	const functionCalls = response.functionCalls();
-	if (functionCalls && functionCalls.length > 0) {
-		logger.info(
-			"[Gemini SDK] Tool calls detected:",
-			functionCalls.map((fc) => fc.name),
-		);
-		return {
-			content: response.text() || "",
-			toolCalls: functionCalls.map((fc) => ({
-				name: fc.name,
-				args: fc.args,
-			})),
-			chat: chat, // Store chat session for follow-up
-		};
-	}
-
-	return { content: response.text() || "" };
+	logger.debug("[Gemini SDK] Sending message with native tools:", functionDeclarations.length);
+	return normalizeGeminiResponse(await chat.sendMessage({ message }), chat);
 };
 
 /**
@@ -99,37 +123,15 @@ export const callGeminiWithResults = async (
 ) => {
 	const chat = previousResponse.chat;
 
-	// Format function responses
 	const functionResponses = toolResults.map((tr) => ({
 		functionResponse: {
 			name: tr.name,
-			response: { content: tr.result },
+			id: tr.toolCallId,
+			response: { result: tr.result },
 		},
 	}));
-
 	logger.debug("[Gemini SDK] Sending function responses:", functionResponses.length);
-
-	const result = await chat.sendMessage(functionResponses);
-	const response = result.response;
-
-	// Check for more function calls
-	const functionCalls = response.functionCalls();
-	if (functionCalls && functionCalls.length > 0) {
-		logger.info(
-			"[Gemini SDK] More tool calls detected:",
-			functionCalls.map((fc) => fc.name),
-		);
-		return {
-			content: response.text() || "",
-			toolCalls: functionCalls.map((fc) => ({
-				name: fc.name,
-				args: fc.args,
-			})),
-			chat: chat,
-		};
-	}
-
-	return { content: response.text() || "" };
+	return normalizeGeminiResponse(await chat.sendMessage({ message: functionResponses }), chat);
 };
 
 /**
@@ -199,27 +201,28 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 
 	logger.debug("[Local LLM] Request:", { url, model: config.model, toolsCount: tools.length });
 
+	/** @type {Record<string, string>} */
+	const headers = { "Content-Type": "application/json" };
+	if (config.api_key) headers.Authorization = `Bearer ${config.api_key}`;
 	const res = await fetch(url, {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${config.api_key}`,
-		},
+		headers,
 		body: JSON.stringify(payload),
+		signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
 	});
 
 	if (!res.ok) {
-		const err = await res.text();
-		throw new Error(`Local LLM Error: ${res.status} - ${err}`);
+		await readBoundedBody(res).catch(() => "");
+		throw new Error(`Local LLM Error: ${res.status}`);
 	}
 
-	const json = await res.json();
+	const json = await readProviderJson(res);
 
 	let content;
 	let toolCalls = [];
 
 	if (isOllamaNative) {
-		content = json.message?.content || "";
+		content = boundedContent(json.message?.content);
 		if (json.message?.tool_calls?.length > 0) {
 			toolCalls = json.message.tool_calls.map((tc, idx) => ({
 				id: tc.id || `call_${idx}`,
@@ -228,7 +231,7 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 			}));
 		}
 	} else {
-		content = json.choices?.[0]?.message?.content || "";
+		content = boundedContent(json.choices?.[0]?.message?.content);
 		if (json.choices?.[0]?.message?.tool_calls?.length > 0) {
 			toolCalls = json.choices[0].message.tool_calls.map((tc) => ({
 				id: tc.id,
@@ -344,25 +347,26 @@ export const callLocalWithResults = async (config, systemPrompt, message, histor
 		};
 	}
 
+	/** @type {Record<string, string>} */
+	const headers = { "Content-Type": "application/json" };
+	if (config.api_key) headers.Authorization = `Bearer ${config.api_key}`;
 	const res = await fetch(url, {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${config.api_key}`,
-		},
+		headers,
 		body: JSON.stringify(payload),
+		signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
 	});
 
 	if (!res.ok) {
-		const err = await res.text();
-		throw new Error(`Local LLM Result Error: ${res.status} - ${err}`);
+		await readBoundedBody(res).catch(() => "");
+		throw new Error(`Local LLM Result Error: ${res.status}`);
 	}
 
-	const json = await res.json();
+	const json = await readProviderJson(res);
 
 	if (isOllamaNative) {
-		return { content: json.message?.content || "" };
+		return { content: boundedContent(json.message?.content) };
 	}
 
-	return { content: json.choices?.[0]?.message?.content || "" };
+	return { content: boundedContent(json.choices?.[0]?.message?.content) };
 };

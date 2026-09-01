@@ -31,17 +31,20 @@ Die `lib/`-Dateien stellen grundlegende Infrastruktur bereit, die von den `inter
 
 ### Datenbank
 
-| Datei                 | Größe  | Zweck                                       |
-| --------------------- | ------ | ------------------------------------------- |
-| `db-migrate.js`       | 4.2 KB | Migrations-Verwaltung (custom Knex-Wrapper) |
-| `migrate_template.js` | 1.2 KB | Template für neue Migrationen               |
+| Datei                 | Größe  | Zweck                                              |
+| --------------------- | ------ | -------------------------------------------------- |
+| `db-migrate.js`       | 4.2 KB | Migrations-Verwaltung (custom Knex-Wrapper)        |
+| `migrate_template.js` | 1.2 KB | Template für neue Migrationen                      |
+| `sqlite-backup.js`    | —      | Verifizierte Online-Snapshots und atomarer Restore |
 
 ### Sicherheit
 
-| Datei           | Größe  | Zweck                            |
-| --------------- | ------ | -------------------------------- |
-| `encryption.js` | 1 KB   | Verschlüsselungs-Hilfsfunktionen |
-| `certbot.js`    | 1.3 KB | Certbot-Hilfsfunktionen          |
+| Datei                  | Größe  | Zweck                                                                |
+| ---------------------- | ------ | -------------------------------------------------------------------- |
+| `encryption.js`        | 1 KB   | Verschlüsselungs-Hilfsfunktionen                                     |
+| `certbot.js`           | 1.3 KB | Certbot-Hilfsfunktionen                                              |
+| `load-env-secrets.js`  | —      | Sicheres generisches Laden von `<NAME>_FILE` vor anderen App-Modulen |
+| `graceful-shutdown.js` | —      | Globaler 15-Sekunden-Shutdown-Koordinator                            |
 
 ### Spezial
 
@@ -77,6 +80,9 @@ Enthält RBAC-Regeln pro Ressource (ca. 3.3 KB gesamt).
 - `access.js` wird von **allen** `internal/`-Modulen über den `access`-Parameter verwendet
 - `config.js` liest Umgebungsvariablen und stellt sie als Konfigurationsobjekt bereit
 - `error.js` definiert strukturierte Fehlertypen für konsistente API-Fehlermeldungen
+- `graceful-shutdown.js` wartet auf den laufenden Startup-Versuch, beendet HTTP-Annahme innerhalb einer separaten
+  Fünf-Sekunden-Phase, führt alle Producer-Hooks zweimal idempotent mit `Promise.allSettled()` aus und schließt den
+  Knex-Pool zuletzt. Eine globale 15-Sekunden-Frist erzwingt notfalls das Prozessende.
 
 ## Abhängigkeiten
 

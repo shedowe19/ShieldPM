@@ -234,7 +234,7 @@ export function GitSyncTab({ hostId }: Props) {
 									<Alert variant="destructive" className="mt-2 py-2">
 										<IconX className="h-4 w-4" />
 										<AlertTitle>
-											<T id="error" />
+											<T id="error.title" />
 										</AlertTitle>
 										<AlertDescription className="font-mono text-xs break-all">
 											{status.gitLastError}

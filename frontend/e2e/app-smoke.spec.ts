@@ -60,6 +60,16 @@ async function installMockApi(page: Page) {
 			return fulfill(route, { error: { message: "No mocked OIDC token" } }, 404);
 		}
 
+		if (method === "GET" && path === "/api/settings/oidc-config") {
+			return fulfill(route, {
+				description: "Sign in to ShieldPM with an external Identity Provider",
+				id: "oidc-config",
+				meta: { enabled: false },
+				name: "Open ID Connect",
+				value: "metadata",
+			});
+		}
+
 		if (method === "POST" && path === "/api/tokens") {
 			authenticated = true;
 			return fulfill(route, { expires: Date.now() + 3_600_000, user: { id: 1 } });
@@ -135,6 +145,11 @@ test("keeps login, top-host analytics, route fallback, a11y, keyboard focus, and
 	const api = await installMockApi(page);
 
 	await signIn(page);
+	await expect
+		.poll(() =>
+			api.requests.filter((request) => request.path === "/api/settings/oidc-config" && request.method === "GET"),
+		)
+		.toHaveLength(1);
 	await expect(page.getByRole("heading", { name: "Top Proxy Hosts" })).toBeVisible();
 	await expect(page.getByRole("heading", { name: "Top Bandwidth Consumers" })).toBeVisible();
 	await expect(page.getByRole("heading", { name: "Top Server Errors" })).toBeVisible();

@@ -53,7 +53,7 @@ export function WireguardSettingsCard() {
 						{!isSettingsEditing ? (
 							<Button variant="outline" size="sm" onClick={() => setIsSettingsEditing(true)}>
 								<IconEdit className="h-4 w-4 mr-1" />
-								<T id="edit" />
+								<T id="action.edit" />
 							</Button>
 						) : (
 							<div className="flex gap-2">

@@ -92,6 +92,27 @@ fi
 
 
 echo "Starting services..."
+shutdown_requested=false
+backend_pid=""
+
+# Invoked indirectly by the TERM/INT trap below.
+# shellcheck disable=SC2317
+request_shutdown() {
+    shutdown_requested=true
+    if [ -n "$backend_pid" ] && kill -0 "$backend_pid" 2>/dev/null; then
+        kill -TERM "$backend_pid" 2>/dev/null || true
+    fi
+}
+
+terminate_tree() {
+    parent_pid="$1"
+    for child_pid in $(pgrep -P "$parent_pid" 2>/dev/null || true); do
+        terminate_tree "$child_pid"
+        kill -TERM "$child_pid" 2>/dev/null || true
+    done
+}
+
+trap request_shutdown TERM INT
 if [ "${TOR_ENABLED:-true}" = "true" ] && command -v tor >/dev/null 2>&1; then
     echo "Starting Tor daemon..."
     tor -f /etc/tor/torrc &
@@ -142,8 +163,20 @@ if [ "$GOA" = "true" ]; then while true; do if [ -f /data/nginx/json_access.log 
                     --real-time-html --output=/tmp/goa/index.html --persist --restore --db-path=/data/goaccess/data \
                     --browsers-file=/etc/goaccess/browsers.list --browsers-file=/etc/goaccess/podcast.list $GOACLA; else sleep 10s; fi; done; fi &
 while true; do nginx -e stderr; sleep 1; done &
-while true; do
+while [ "$shutdown_requested" = "false" ]; do
   cd /app || exit 1
-  node index.js
+  node index.js &
+  backend_pid=$!
+  while kill -0 "$backend_pid" 2>/dev/null; do
+      wait "$backend_pid" 2>/dev/null || true
+  done
+  backend_pid=""
+  [ "$shutdown_requested" = "false" ] || break
   sleep 1
 done
+
+# The backend owns the database shutdown deadline and has now exited. Stop the
+# auxiliary supervisors without leaving descendants behind.
+terminate_tree "$$"
+wait 2>/dev/null || true
+exit 0

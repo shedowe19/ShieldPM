@@ -1,5 +1,6 @@
-import dayjs from "dayjs";
 import express from "express";
+import { getAnalyticsAccessScope, parseAnalyticsWindow } from "../internal/analytics.js";
+import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
@@ -12,24 +13,43 @@ router.use(jwtdecode());
 
 // Enforce global admin access for platform-wide analytics
 router.use(async (_req, res, next) => {
-	await res.locals.access.can("analytics:list");
+	res.locals.analyticsScope = await getAnalyticsAccessScope(res.locals.access);
 	next();
 });
+
+const requestScope = (res) => res.locals?.analyticsScope || { unrestricted: true, userId: 0 };
+
+const ownedHostIds = (scope) =>
+	ProxyHost.query().select("id").where("is_deleted", 0).andWhere("owner_user_id", scope.userId);
+
+const applyAggregateScope = (query, scope, column = "proxy_host_id") =>
+	scope.unrestricted ? query : query.whereIn(column, ownedHostIds(scope));
+
+const requirePlatformScope = (res) => {
+	if (!requestScope(res).unrestricted) {
+		throw new errs.PermissionError("Platform analytics require unrestricted visibility.");
+	}
+};
 
 /**
  * GET /api/analytics/summary
  * Returns aggregated totals for a given time range.
  */
-router.get("/summary", async (req, res) => {
+router.get("/summary", async (req, res, next) => {
 	try {
-		// Default to last 24h
-		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
-		const end = req.query.end || dayjs().toISOString();
+		const { start, end } = parseAnalyticsWindow(req.query);
+		const scope = requestScope(res);
+		const database = AnalyticCount.knex();
+		const query = database.from("analytic_count").where("timestamp", ">=", start).andWhere("timestamp", "<=", end);
+		if (!scope.unrestricted) {
+			const ownedHosts = database("proxy_host")
+				.select("id")
+				.where("is_deleted", 0)
+				.andWhere("owner_user_id", scope.userId);
+			query.whereIn("proxy_host_id", ownedHosts);
+		}
 		const stats =
-			(await AnalyticCount.knex()
-				.from("analytic_count")
-				.where("timestamp", ">=", start)
-				.andWhere("timestamp", "<=", end)
+			(await query
 				.sum("request_count as count")
 				.sum("bytes_sent as bytes")
 				.sum("status_code_2xx as s2xx")
@@ -58,9 +78,7 @@ router.get("/summary", async (req, res) => {
 			status_5xx: Number.parseInt(safeStats.s5xx || 0, 10),
 		});
 	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
+		next(err);
 	}
 });
 
@@ -68,17 +86,19 @@ router.get("/summary", async (req, res) => {
  * GET /api/analytics/series
  * Returns time-series data for graphing.
  */
-router.get("/series", async (req, res) => {
+router.get("/series", async (req, res, next) => {
 	try {
-		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
-		const end = req.query.end || dayjs().toISOString();
+		const { start, end } = parseAnalyticsWindow(req.query);
+		const scope = requestScope(res);
 
 		// Fetch raw bucketed data
 		// For performance on large sets, we might want to aggregate by hour if range > 24h
-		const data = await AnalyticCount.query()
+		const query = AnalyticCount.query()
 			.where("timestamp", ">=", start)
 			.andWhere("timestamp", "<=", end)
 			.orderBy("timestamp", "asc");
+		applyAggregateScope(query, scope);
+		const data = await query;
 
 		// We might want to aggregate further per timestamp if multiple hosts exist
 		// But for now, we just pass the raw rows or aggregate in JS
@@ -107,9 +127,7 @@ router.get("/series", async (req, res) => {
 		}
 		res.json(Object.values(grouped));
 	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
+		next(err);
 	}
 });
 
@@ -117,10 +135,10 @@ router.get("/series", async (req, res) => {
  * GET /api/analytics/top-hosts
  * Returns top hosts by request count, transferred bytes, errors, or average response time
  */
-router.get("/top-hosts", async (req, res) => {
+router.get("/top-hosts", async (req, res, next) => {
 	try {
-		const start = req.query.start || dayjs().subtract(24, "hour").toISOString();
-		const end = req.query.end || dayjs().toISOString();
+		const { start, end } = parseAnalyticsWindow(req.query);
+		const scope = requestScope(res);
 		const sort = ["bytes", "client_errors", "response_time", "server_errors"].includes(req.query.sort)
 			? req.query.sort
 			: "requests";
@@ -130,6 +148,9 @@ router.get("/top-hosts", async (req, res) => {
 			.select("proxy_host.id")
 			.where("proxy_host.is_deleted", 0)
 			.groupBy("proxy_host.id");
+		if (!scope.unrestricted) {
+			hostsWithDomains.andWhere("proxy_host.owner_user_id", scope.userId);
+		}
 		const rankings =
 			sort === "response_time"
 				? await AnalyticsLogs.query()
@@ -178,10 +199,9 @@ router.get("/top-hosts", async (req, res) => {
 				: rankings;
 		const metricsByHostId = new Map(metrics.map((metric) => [Number(metric.id), metric]));
 
-		const hosts = await ProxyHost.query()
-			.whereIn("id", hostIds)
-			.where("is_deleted", 0)
-			.withGraphFetched("host_domains");
+		const hostsQuery = ProxyHost.query().whereIn("id", hostIds).where("is_deleted", 0);
+		if (!scope.unrestricted) hostsQuery.andWhere("owner_user_id", scope.userId);
+		const hosts = await hostsQuery.withGraphFetched("host_domains");
 		const domainsByHostId = new Map(hosts.map((host) => [host.id, host.domain_names[0]]));
 
 		res.json(
@@ -207,9 +227,7 @@ router.get("/top-hosts", async (req, res) => {
 			}),
 		);
 	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
+		next(err);
 	}
 });
 
@@ -219,8 +237,9 @@ router.get("/top-hosts", async (req, res) => {
  */
 import si from "systeminformation";
 
-router.get("/status", async (_req, res) => {
+router.get("/status", async (_req, res, next) => {
 	try {
+		requirePlatformScope(res);
 		const net = await si.networkStats();
 		// Sum up all interfaces or specifically 'eth0' if known?
 		// Usually, the first non-internal interface is good.
@@ -233,9 +252,7 @@ router.get("/status", async (_req, res) => {
 			total_sec: rx + tx,
 		});
 	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
+		next(err);
 	}
 });
 
@@ -245,8 +262,9 @@ import { isMysql, isPostgres, isSqlite } from "../lib/config.js";
  * GET /api/analytics/db-stats
  * Returns database statistics (size, connections, engine type)
  */
-router.get("/db-stats", async (_req, res) => {
+router.get("/db-stats", async (_req, res, next) => {
 	try {
+		requirePlatformScope(res);
 		const knex = AnalyticCount.knex();
 		const stats = {
 			engine: "unknown",
@@ -329,9 +347,7 @@ router.get("/db-stats", async (_req, res) => {
 		}
 		res.json(stats);
 	} catch (err) {
-		res.status(500).json({
-			error: err.message,
-		});
+		next(err);
 	}
 });
 export default router;

@@ -1,240 +1,139 @@
 # GitOps Synchronization
 
-GitOps is a powerful feature that allows you to backup, version control, and restore your ShieldPM configuration using Git.
+GitOps stores a deliberately limited, secret-free representation of ShieldPM runtime configuration in a Git
+repository. The database remains the source of truth; importing a snapshot is an explicit, validated operation.
 
-## Overview
+## Supported scope
 
-The GitOps feature enables:
+Snapshot v2 exports only public fields for these object types:
 
-- **Configuration Backup**: Export all Proxy Hosts, Redirection Hosts, Dead Hosts, Streams, and Access Lists as YAML files
-- **Version Control**: Every change is committed with full Git history
-- **Disaster Recovery**: Restore configuration from any previous commit
-- **Infrastructure as Code**: Store your configuration alongside your other IaC files
+- Proxy Hosts
+- Redirection Hosts
+- Dead Hosts
+- Streams
 
-## 🏗️ Architecture
+It does **not** export passwords, access-list credentials, API tokens, private keys, certificate material, DDNS secrets,
+Terminal credentials, user authentication, AI provider keys or Git credentials. Values that look secret-bearing cause
+the export to fail instead of being replaced with a reusable placeholder.
 
-```
-  ┌──────────────────┐      ┌───────────────────┐      ┌──────────────────┐
-  │   ShieldPM UI    │─────▶│  ShieldPM Backend  │─────▶│  Git Repository  │
-  │  Export / Import │      │                    │      │  (GitHub/GitLab) │
-  └──────────────────┘      │  ┌──────────────┐ │      └──────────────────┘
-                            │  │   Database    │ │             ▲
-                            │  │  (Source of   │ │             │
-                            │  │   Truth)      │ │             │
-                            │  └──────┬───────┘ │      ┌──────┴──────┐
-                            │         │         │      │ isomorphic- │
-                            │         ▼         │      │    git      │
-                            │  ┌──────────────┐ │      │ (commit,    │
-                            │  │ YAML Export  │─┼──────▶  push, pull)│
-                            │  │ Engine       │ │      └─────────────┘
-                            │  └──────────────┘ │
-                            └───────────────────┘
+## Repository layout
 
-  Auto-Push Flow:
-  ┌──────────┐      ┌────────────┐      ┌──────────┐      ┌──────────┐
-  │ Host     │─────▶│ Export     │─────▶│ git      │─────▶│ Remote   │
-  │ Changed  │      │ to YAML   │      │ commit   │      │ Push     │
-  └──────────┘      └────────────┘      └──────────┘      └──────────┘
-      (debounced 5s)
+```text
+shieldpm-config/
+├── manifest.json
+├── proxy-hosts/
+├── redirection-hosts/
+├── dead-hosts/
+└── streams/
 ```
 
-**Key Points:**
-
-- The database is the **source of truth** — YAML files are derived from it
-- Auto-push is debounced (5s) to avoid excessive commits during bulk operations
-- Credentials (PAT) are encrypted with **AES-256-GCM** before storage
-- Import can optionally **overwrite** existing hosts
+Each object is written to a deterministic `<id>.yaml` file (JSON is used as the YAML-compatible serialization). The
+manifest declares `version: 2`, projection `shieldpm-public-config-v2`, completeness, counts, file size and a SHA-256
+digest for every artifact.
 
 ## Configuration
 
-Navigate to **Settings → GitOps** to configure the feature.
+Open **Settings → GitOps**.
 
-### Repository Settings
+| Setting        | Description                                               |
+| :------------- | :-------------------------------------------------------- |
+| Repository URL | HTTPS repository URL without embedded credentials         |
+| Branch         | Explicit branch name                                      |
+| Authentication | HTTPS Personal Access Token (PAT)                         |
+| Auto-push      | Debounced export, commit and push after supported changes |
+| Auto-pull      | Pull and verify on startup when deliberately enabled      |
 
-| Setting | Description |
-|---------|-------------|
-| **Repository URL** | HTTPS URL of your Git repository (e.g., `https://github.com/user/shieldpm-backup.git`) |
-| **Branch** | Target branch (default: `main`) |
-| **Authentication Type** | `HTTPS` (Personal Access Token) or `SSH` (not recommended, use PAT instead) |
-| **Credentials** | Your Personal Access Token (PAT) for GitHub/GitLab/etc. |
+Use a narrowly scoped token that can access only the intended repository. ShieldPM encrypts the PAT at rest and never
+returns it to the UI. SSH remotes, local/file remotes, URL user information and unsafe branch names are rejected.
 
-### Automation Options
+> [!IMPORTANT]
+> A private repository is still recommended because snapshots reveal hostnames, upstream addresses, ports and routing
+> relationships even though credentials are excluded.
 
-| Option | Description |
-|--------|-------------|
-| **Auto-Push on Changes** | Automatically export and push when configuration changes (debounced 5s) |
-| **Auto-Pull on Startup** | Automatically pull from remote when ShieldPM starts |
+## Export and push
 
-## Usage
+1. ShieldPM reads all supported records in a database transaction.
+2. It projects allow-listed fields into a new private temporary directory.
+3. Every file and the manifest are durably written and then re-read through the import validator.
+4. The verified snapshot directory is swapped into place with a recovery journal.
+5. Only `shieldpm-config/` paths are staged; unrelated pre-staged changes abort the operation.
+6. The commit is pushed over verified HTTPS.
 
-### Test Connection
+An interrupted directory swap is completed or rolled back from the journal on the next start. Export permits at most
+1,000 files and 32 MiB in total; individual artifacts are bounded by the manifest schema.
 
-Click **Test Connection** to verify that ShieldPM can access your repository. This validates the URL and credentials.
+## Pull and verify
 
-### Export & Push
+Remote content is cloned into a new temporary directory. Before it can replace the local snapshot ShieldPM verifies:
 
-Click **Export & Push** to:
+- the exact snapshot-v2 manifest shape and projection;
+- allow-listed directories and regular files only;
+- normalized, contained paths (no traversal, symlinks or special files);
+- file count, per-file and total size limits;
+- declared object kind/ID and strict JSON schema;
+- SHA-256 digest and size for every artifact;
+- absence of extra, missing, duplicate, secret-bearing or redaction-marker content.
 
-1. Export all hosts and access lists as YAML files
-2. Stage and commit all changes
-3. Push to the remote repository
+The checked temporary tree is installed only after all validation succeeds, limiting path traversal, archive-bomb and
+time-of-check/time-of-use risks.
 
-### Pull Now
+## Dry run and import
 
-Click **Pull Now** to fetch the latest changes from the remote repository. This updates the local Git repository but does **not** automatically import the configuration.
+Run **Dry Run** before applying a pulled snapshot. It executes the same validation and database/runtime preparation,
+reports create/update/delete counts, then rolls back the transaction and restores staged runtime directories. It does
+not reload Nginx.
 
-### Import from Git
+A real import:
 
-Click **Import from Git** to import configuration from the YAML files into the database.
+1. captures a bounded database recovery set;
+2. stages the affected Nginx runtime directories;
+3. writes a crash-recovery journal;
+4. applies all database changes in one transaction under the importing user's ownership;
+5. renders and validates the complete Nginx configuration;
+6. reloads Nginx only after validation;
+7. commits runtime directories and clears the journal.
 
-> [!WARNING]
-> This can overwrite existing hosts if **Overwrite** is enabled. Use with caution.
+If a step fails, ShieldPM restores database rows and runtime directories and revalidates/reloads the recovered Nginx
+configuration when needed. On process interruption, startup recovery restores the pre-import state before accepting a
+new GitOps operation. Recovery state is bounded to prevent an untrusted snapshot from causing unlimited memory or disk
+use.
 
-### Commit History
+## Commit history and restore
 
-The history section shows recent commits with:
+History is bounded to the latest 50 commits. Restoring a commit checks out only the selected verified snapshot, runs
+the same import transaction and reports rollback errors separately. A Git commit is not trusted merely because it is
+present in the configured repository.
 
-- Commit SHA
-- Commit message
-- Author
-- Date
+## Operational guidance
 
-You can **Revert** to any previous commit to restore the YAML files to that state.
+- Protect the target repository and branch with your Git provider's branch/ruleset controls.
+- Store the PAT in ShieldPM only; never include it in the remote URL or snapshot.
+- Keep independent `/data` and database-native backups. GitOps is a public configuration projection, not a full backup.
+- Re-enter excluded credentials and certificate/private-key material after disaster recovery.
+- Review the dry-run summary and the Git diff before applying an import.
 
-## Repository Structure
-
-ShieldPM creates the following directory structure in your repository:
-
-```
-shieldpm-config/
-├── proxy-hosts/
-│   ├── 1-example-com.yaml
-│   └── 2-api-example-com.yaml
-├── redirection-hosts/
-│   └── 1-old-domain.yaml
-├── streams/
-│   └── 1-ssh-tunnel.yaml
-├── dead-hosts/
-│   └── 1-blocked-domain.yaml
-├── access-lists/
-│   ├── 1-admin-only.yaml
-│   └── 2-internal-network.yaml
-├── certificates/
-│   ├── 1-example-com.yaml
-│   └── 2-wildcard.yaml
-├── cloudflared-tunnels/
-│   └── 1-my-tunnel.yaml
-├── users/
-│   ├── 1-admin.yaml
-│   └── 2-user.yaml
-├── settings/
-│   ├── default-site.yaml
-│   └── ai-config.yaml
-└── certificate-files/
-    ├── letsencrypt/
-    │   └── example.com/
-    │       ├── fullchain.pem
-    │       ├── privkey.pem
-    │       ├── cert.pem
-    │       └── chain.pem
-    └── custom/
-        └── mycert.pem
-```
-
-### What is Exported
-
-| Data Type | Includes |
-|-----------|----------|
-| **Proxy Hosts** | All fields including owner, timestamps, meta |
-| **Redirection Hosts** | All fields |
-| **Dead Hosts** | All fields |
-| **Streams** | All fields |
-| **Access Lists** | Items (with hashed passwords), clients, mTLS config |
-| **Certificates** | Database entries with meta, provider, domain names |
-| **Certificate Files** | Let's Encrypt certs, custom certificates (PEM files) |
-| **Cloudflared Tunnels** | Tunnel name, token, status, meta |
-| **Users** | User data with permissions (no auth credentials) |
-| **Settings** | All settings except GitOps config |
-
-> [!WARNING]
-> The export includes sensitive data like hashed passwords, private keys, and Cloudflare tokens. **Always use a private repository!**
-
-### YAML File Example
-
-```yaml
-# proxy-hosts/1-example-com.yaml
-id: 1
-owner_user_id: 1
-domain_names:
-  - example.com
-  - www.example.com
-forward_scheme: http
-forward_host: 192.168.1.100
-forward_port: 8080
-ssl_forced: true
-block_exploits: true
-allow_websocket_upgrade: true
-http2_support: true
-enabled: true
-access_list_id: 0
-certificate_id: 1
-advanced_config: ""
-meta: {}
-locations: []
-created_on: "2026-01-15T10:00:00.000Z"
-modified_on: "2026-01-18T00:30:00.000Z"
-```
-
-## Security
-
-### Credential Encryption
-
-Your Git credentials (Personal Access Token) are encrypted using **AES-256-GCM** before being stored in the database. The encryption key is derived from the system's key file (`/data/shieldpm/keys.json`).
-
-### Private Repositories
-
-Always use **private repositories** for your configuration backups. The export includes:
-
-- Internal hostnames and IP addresses
-- Hashed passwords for Basic Auth
-- Private keys for SSL certificates
-- User email addresses
-
-## Creating a Personal Access Token
-
-### GitHub
-
-1. Go to **Settings → Developer settings → Personal access tokens → Tokens (classic)**
-2. Click **Generate new token (classic)**
-3. Select scopes: `repo` (Full control of private repositories)
-4. Copy the token and paste it in ShieldPM
-
-### GitLab
-
-1. Go to **User Settings → Access Tokens**
-2. Create a token with `write_repository` scope
-3. Copy the token and paste it in ShieldPM
-
-## Demo Mode
-
-GitOps is **disabled in Demo Mode** for security reasons. All GitOps API endpoints will return a `403 Forbidden` error.
+Provider-side branch protection and rulesets must be configured in the Git host; ShieldPM cannot enforce them. For an
+external MySQL/PostgreSQL database, retain an operator-verified native dump because an application payload rollback
+cannot reverse an external database migration.
 
 ## Troubleshooting
 
-### "Connection failed"
+### Connection failed
 
-- Verify the repository URL is correct
-- Ensure the PAT has the required permissions (`repo` scope)
-- Check if the repository exists and you have push access
+- Confirm the URL is HTTPS and contains no username/password.
+- Verify the PAT is current and restricted to the intended repository.
+- Confirm the branch exists and the deployment can reach the Git provider with valid TLS.
 
-### "No changes to commit"
+### Snapshot rejected
 
-This message appears when the exported configuration is identical to the last commit. This is normal behavior.
+Do not bypass validation. Inspect the reported manifest/path/schema/digest error, regenerate the snapshot from a known
+ShieldPM instance and review the diff. Hand-edited files must still satisfy the exact v2 schema.
 
-### "Could not get history"
+### Recovery journal remains
 
-This occurs when the Git repository has no commits yet. Push at least once to create the initial commit.
+Stop further imports, preserve `/data/gitops` and review backend logs. ShieldPM retries safe journal recovery at startup;
+do not delete the journal or its referenced staging/backup directories while recovery is pending.
 
 ---
 
-[🏠 Home](Home) | [🔒 Security](Security) | [⚙️ Settings](Configuration)
+[🏠 Home](Home) | [🔒 Security](Security) | [💾 Backup & Restore](Backup-Restore)

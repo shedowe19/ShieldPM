@@ -5,13 +5,34 @@ import AccessList from "../models/access_list.js";
 import ProxyHost from "../models/proxy_host.js";
 
 const processes = new Map();
+const retryTimers = new Map();
+const CHILD_STOP_TIMEOUT_MS = 5_000;
 const dataPath = process.env.DATA_PATH || "/data";
+
+let shuttingDown = false;
+
+const withTimeout = (promise, milliseconds, message) =>
+	new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error(message)), milliseconds);
+		timer.unref?.();
+		promise.then(
+			(value) => {
+				clearTimeout(timer);
+				resolve(value);
+			},
+			(error) => {
+				clearTimeout(timer);
+				reject(error);
+			},
+		);
+	});
 
 const internalOAuth2Proxy = {
 	/**
 	 * Initialize all proxies on startup
 	 */
 	init: async () => {
+		shuttingDown = false;
 		logger.info("Initializing OAuth2 Proxies...");
 
 		// Clean up any zombie proxies from previous runs before we initialize new ones
@@ -138,6 +159,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 	 * @param {number} [retryCount=0] - Internal retry counter
 	 */
 	start: async (list, retryCount = 0) => {
+		if (shuttingDown) return;
 		const MAX_RETRIES = 3;
 		const RETRY_DELAY_MS = 3000; // 3 seconds between retries
 
@@ -173,7 +195,11 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 				detached: false,
 			}); // allow node to exit without waiting for this child
 
-			processes.set(list.id, child);
+			let settleExit;
+			const exitSettled = new Promise((resolve) => {
+				settleExit = resolve;
+			});
+			processes.set(list.id, { child, exitSettled });
 
 			child.stdout.on("data", (data) => {
 				logger.debug(`[OAuth2Proxy #${list.id}] ${data.toString().trim()}`);
@@ -186,21 +212,23 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 				logger.info(`[OAuth2Proxy #${list.id}] ${msg}`);
 			});
 
-			child.on("exit", (code, signal) => {
-				processes.delete(list.id);
+			child.once("close", (code, signal) => {
+				if (processes.get(list.id)?.child === child) processes.delete(list.id);
 
 				// Retry on failure (e.g. OIDC Discovery 404 during boot because Nginx hasn't fully reloaded)
-				if (code !== 0 && signal === null && retryCount < MAX_RETRIES) {
+				if (!shuttingDown && code !== 0 && signal === null && retryCount < MAX_RETRIES) {
 					const nextRetry = retryCount + 1;
 					const delay = RETRY_DELAY_MS * nextRetry; // Linear backoff: 3s, 6s, 9s
 					logger.warn(
 						`OAuth2 Proxy #${list.id} exited with code ${code}, retrying in ${delay / 1000}s (attempt ${nextRetry}/${MAX_RETRIES})...`,
 					);
-					setTimeout(() => {
+					const retryTimer = setTimeout(() => {
+						retryTimers.delete(list.id);
 						internalOAuth2Proxy.start(list, nextRetry).catch((err) => {
 							logger.error(`OAuth2 Proxy #${list.id} retry ${nextRetry} failed:`, err);
 						});
 					}, delay);
+					retryTimers.set(list.id, retryTimer);
 				} else if (code !== 0) {
 					logger.error(
 						`OAuth2 Proxy #${list.id} exited with code ${code} / signal ${signal} after ${retryCount} retries. Giving up.`,
@@ -208,6 +236,7 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 				} else {
 					logger.info(`OAuth2 Proxy #${list.id} stopped (code ${code}, signal ${signal}).`);
 				}
+				settleExit();
 			});
 
 			child.on("error", (err) => {
@@ -223,14 +252,36 @@ ${groups.map((g) => `  "${g}"`).join(",\n")}
 	 * @param {number} id
 	 */
 	stop: async (id) => {
-		const child = processes.get(id);
-		if (child) {
-			logger.info(`Stopping OAuth2 Proxy #${id}...`);
-			child.kill("SIGTERM");
-			processes.delete(id);
-			// Wait a bit
-			await new Promise((resolve) => setTimeout(resolve, 500));
+		const retryTimer = retryTimers.get(id);
+		if (retryTimer) {
+			clearTimeout(retryTimer);
+			retryTimers.delete(id);
 		}
+		const processEntry = processes.get(id);
+		if (processEntry) {
+			logger.info(`Stopping OAuth2 Proxy #${id}...`);
+			processEntry.child.kill("SIGTERM");
+			try {
+				await withTimeout(processEntry.exitSettled, CHILD_STOP_TIMEOUT_MS, `OAuth2 Proxy #${id} did not stop`);
+			} catch (error) {
+				processEntry.child.kill("SIGKILL");
+				await withTimeout(
+					processEntry.exitSettled,
+					CHILD_STOP_TIMEOUT_MS,
+					`OAuth2 Proxy #${id} did not exit after SIGKILL`,
+				);
+				logger.warn(error.message);
+			}
+		}
+	},
+
+	stopAll: async () => {
+		shuttingDown = true;
+		for (const retryTimer of retryTimers.values()) clearTimeout(retryTimer);
+		retryTimers.clear();
+		const results = await Promise.allSettled([...processes.keys()].map((id) => internalOAuth2Proxy.stop(id)));
+		const failed = results.find((result) => result.status === "rejected");
+		if (failed) throw failed.reason;
 	},
 
 	/**

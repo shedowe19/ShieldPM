@@ -6,6 +6,7 @@ import SecuritySettings from "./Security";
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockGet2fa = vi.fn();
+const mockGetSetting = vi.fn();
 const mockSetup2faTotp = vi.fn();
 const mockEnable2faTotp = vi.fn();
 const mockAdd2faYubikey = vi.fn();
@@ -17,6 +18,8 @@ const mockRegenerate2faBackupCodes = vi.fn();
 
 vi.mock("src/api/backend", () => ({
 	get2fa: (...args: unknown[]) => mockGet2fa(...args),
+	getSetting: (...args: unknown[]) => mockGetSetting(...args),
+	stepUpAuthentication: vi.fn(),
 	setup2faTotp: (...args: unknown[]) => mockSetup2faTotp(...args),
 	enable2faTotp: (...args: unknown[]) => mockEnable2faTotp(...args),
 	add2faYubikey: (...args: unknown[]) => mockAdd2faYubikey(...args),
@@ -53,6 +56,7 @@ describe("SecuritySettings", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockGet2fa.mockResolvedValue(emptyStatus);
+		mockGetSetting.mockResolvedValue({ id: "oidc-config", meta: { enabled: true } });
 	});
 
 	afterEach(() => {
@@ -64,6 +68,13 @@ describe("SecuritySettings", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Two-Factor Authentication")).toBeInTheDocument();
 		});
+	});
+
+	it("offers the recent-session OIDC identity link flow", async () => {
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+
+		const link = await screen.findByRole("link", { name: "Link OpenID Connect" });
+		expect(link).toHaveAttribute("href", "/api/oidc?purpose=link");
 	});
 
 	it("shows add method section when no methods are active", async () => {

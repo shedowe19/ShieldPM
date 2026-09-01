@@ -1,9 +1,11 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
+import { decrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, nginx as logger } from "../logger.js";
@@ -12,6 +14,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import internalAnubis from "./anubis.js";
+
+let nginxMutationTail = Promise.resolve();
+
+const withNginxMutationLock = async (callback) => {
+	const previous = nginxMutationTail;
+	let release;
+	nginxMutationTail = new Promise((resolve) => {
+		release = resolve;
+	});
+	await previous;
+	try {
+		return await callback();
+	} finally {
+		release();
+	}
+};
+
+/**
+ * @param {Error} error
+ * @param {PromiseSettledResult<unknown>[]} rollbackResults
+ */
+const rollbackMessage = (error, rollbackResults) => {
+	const failures = rollbackResults
+		.filter((result) => result.status === "rejected")
+		.map((result) => result.reason?.message || String(result.reason));
+	return failures.length ? `${error.message}; rollback errors: ${failures.join("; ")}` : error.message;
+};
 
 const internalNginx = {
 	/**
@@ -29,65 +58,77 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	configure: async (model, host_type, host, options = {}) => {
-		const skip_reload = options.skip_reload || false;
-		let combined_meta = {};
+		return await withNginxMutationLock(async () => {
+			const skipReload = options.skip_reload || false;
+			const filename = internalNginx.getConfigName(internalNginx.getFileFriendlyHostType(host_type), host.id);
+			const stage = `${filename}.stage-${crypto.randomUUID()}`;
+			const backup = `${filename}.backup-${crypto.randomUUID()}`;
+			let hasBackup = false;
+			let activated = false;
+			let renderHost = host;
+			if (host_type === "proxy_host" && host.forward_scheme === "terminal" && !host.terminal_gateway_secret) {
+				const stored = await model.query().findById(host.id).select("terminal_gateway_secret");
+				renderHost = { ...host, terminal_gateway_secret: stored?.terminal_gateway_secret };
+			}
 
-		// 1. Backup existing config if it exists
-		await internalNginx.backupConfig(host_type, host);
+			try {
+				await internalNginx.generateConfig(host_type, renderHost, { filename: stage });
+				try {
+					await fs.promises.copyFile(filename, backup, fs.constants.COPYFILE_EXCL);
+					hasBackup = true;
+				} catch (error) {
+					if (error.code !== "ENOENT") throw error;
+				}
+				await fs.promises.rename(stage, filename);
+				activated = true;
+				await internalNginx.test();
+				if (!skipReload) await internalNginx.reload();
 
-		// 2. Generate new config (overwrites existing if any)
-		try {
-			await internalNginx.generateConfig(host_type, host);
-		} catch (err) {
-			logger.error(`Generation failed: ${err.message}`);
-			// Restore backup if generation fails
-			await internalNginx.restoreConfig(host_type, host);
-			throw err;
-		}
-
-		try {
-			// 3. Test nginx configuration
-			await internalNginx.test();
-
-			// 4. Verification successful
-			combined_meta = _.assign({}, host.meta, {
-				nginx_online: true,
-				nginx_err: null,
-			});
-
-			await model.query().where("id", host.id).patch({
-				meta: combined_meta,
-			});
-
-			// 5. Delete backup (commit change)
-			await internalNginx.deleteBackupConfig(host_type, host);
-
-			// 6. Regenerate Anubis Policy (async, don't block)
-			internalAnubis.generatePolicy();
-		} catch (err) {
-			logger.error(`Nginx test failed: ${err.message}`);
-
-			// 6. Config is bad: Restore previous config
-			// First, move the bad config to .err for debugging
-			await internalNginx.renameConfigAsError(host_type, host);
-			// Then restore the working backup
-			await internalNginx.restoreConfig(host_type, host);
-
-			// Update meta with error
-			combined_meta = _.assign({}, host.meta, {
-				nginx_online: false,
-				nginx_err: `[Rolled back] Configuration failed: ${err.message}`,
-			});
-
-			await model.query().where("id", host.id).patch({
-				meta: combined_meta,
-			});
-		}
-
-		if (!skip_reload) {
-			await internalNginx.reload();
-		}
-		return combined_meta;
+				const combinedMeta = _.assign({}, host.meta, { nginx_online: true, nginx_err: null });
+				await model.query().where("id", host.id).patch({ meta: combinedMeta });
+				if (hasBackup) await fs.promises.unlink(backup);
+				void Promise.resolve(internalAnubis.generatePolicy()).catch((error) => {
+					logger.error(`Anubis policy regeneration failed: ${error.message}`);
+				});
+				return combinedMeta;
+			} catch (error) {
+				logger.error(`Nginx configuration activation failed: ${error.message}`);
+				const removalResults = /** @type {PromiseSettledResult<unknown>[]} */ ([]);
+				if (activated) {
+					removalResults.push(
+						...(await Promise.allSettled([
+							fs.promises.unlink(filename).catch((unlinkError) => {
+								if (unlinkError.code !== "ENOENT") throw unlinkError;
+							}),
+						])),
+					);
+				}
+				const restoreResults = /** @type {PromiseSettledResult<unknown>[]} */ (
+					await Promise.allSettled([
+						hasBackup ? fs.promises.rename(backup, filename) : Promise.resolve(),
+						fs.promises.unlink(stage).catch((unlinkError) => {
+							if (unlinkError.code !== "ENOENT") throw unlinkError;
+						}),
+					])
+				);
+				restoreResults.push(
+					...(await Promise.allSettled([
+						internalNginx
+							.test()
+							.then(() => (skipReload ? undefined : utils.execFile("nginx", ["-s", "reload"]))),
+					])),
+				);
+				throw new errs.ConfigurationError(
+					`Nginx configuration was rejected and rolled back: ${rollbackMessage(error, [
+						...removalResults,
+						...restoreResults,
+					])}`,
+					error,
+				);
+			} finally {
+				await fs.promises.unlink(stage).catch(() => {});
+			}
+		});
 	},
 
 	/**
@@ -202,13 +243,20 @@ const internalNginx = {
 	 * @param   {Object}  host_row
 	 * @returns {Promise}
 	 */
-	generateConfig: async (host_type, host_row) => {
+	generateConfig: async (host_type, host_row, options = {}) => {
+		if (!options.filename && !options.mutation_locked) {
+			return await withNginxMutationLock(() =>
+				internalNginx.generateConfig(host_type, host_row, { ...options, mutation_locked: true }),
+			);
+		}
 		// Prevent modifying the original object:
 		const host = JSON.parse(JSON.stringify(host_row));
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 
 		const renderEngine = utils.getRenderEngine();
-		const filename = internalNginx.getConfigName(nice_host_type, host.id);
+		const canonicalFilename = internalNginx.getConfigName(nice_host_type, host.id);
+		const filename = options.filename || `${canonicalFilename}.stage-${crypto.randomUUID()}`;
+		const activateAfterRender = !options.filename;
 		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;
 
 		let origLocations;
@@ -259,6 +307,14 @@ const internalNginx = {
 		}
 
 		host.env = process.env;
+		if (nice_host_type === "proxy_host" && host.forward_scheme === "terminal" && host.enabled) {
+			try {
+				host.terminal_gateway_secret_plain = decrypt(host.terminal_gateway_secret);
+			} catch (err) {
+				throw new errs.ConfigurationError("Terminal gateway secret could not be decrypted", err);
+			}
+			delete host.terminal_gateway_secret;
+		}
 
 		if (host.certificate && host.certificate.provider === "internal") {
 			host.use_ml_kem = true;
@@ -286,14 +342,22 @@ const internalNginx = {
 		}
 
 		try {
+			await fs.promises.mkdir(dirname(filename), { recursive: true, mode: 0o700 });
 			const config_text = await renderEngine.renderFile(templatePath, host);
-			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
+			const handle = await fs.promises.open(filename, "wx", 0o600);
+			try {
+				await handle.writeFile(config_text, "utf8");
+				await handle.sync();
+			} finally {
+				await handle.close();
+			}
 			debug(logger, "Wrote config:", filename);
 
 			// Restore locations array
 			host.locations = origLocations;
 		} catch (err) {
 			debug(logger, `Could not write ${filename}:`, err.message);
+			await fs.promises.unlink(filename).catch(() => {});
 			throw new errs.ConfigurationError(err.message);
 		}
 
@@ -302,6 +366,55 @@ const internalNginx = {
 				await utils.execFile("nginxbeautifier", ["-s", "4", filename]);
 			} catch {
 				// ignore beautifier errors
+			}
+		}
+		await fs.promises.chmod(filename, 0o600);
+		const renderedHandle = await fs.promises.open(filename, "r+");
+		try {
+			await renderedHandle.sync();
+		} finally {
+			await renderedHandle.close();
+		}
+
+		if (activateAfterRender) {
+			const backup = `${canonicalFilename}.backup-${crypto.randomUUID()}`;
+			let hasBackup = false;
+			let activated = false;
+			try {
+				try {
+					await fs.promises.copyFile(canonicalFilename, backup, fs.constants.COPYFILE_EXCL);
+					hasBackup = true;
+				} catch (error) {
+					if (error.code !== "ENOENT") throw error;
+				}
+				await fs.promises.rename(filename, canonicalFilename);
+				activated = true;
+				await internalNginx.test();
+				if (hasBackup) await fs.promises.unlink(backup);
+			} catch (error) {
+				const rollbackResults = [];
+				if (activated) {
+					rollbackResults.push(
+						...(await Promise.allSettled([
+							fs.promises.unlink(canonicalFilename).catch((unlinkError) => {
+								if (unlinkError.code !== "ENOENT") throw unlinkError;
+							}),
+						])),
+					);
+				}
+				rollbackResults.push(
+					...(await Promise.allSettled([
+						hasBackup ? fs.promises.rename(backup, canonicalFilename) : Promise.resolve(),
+						fs.promises.unlink(filename).catch((unlinkError) => {
+							if (unlinkError.code !== "ENOENT") throw unlinkError;
+						}),
+					])),
+				);
+				rollbackResults.push(...(await Promise.allSettled([internalNginx.test()])));
+				throw new errs.ConfigurationError(
+					`Could not atomically activate ${canonicalFilename}: ${rollbackMessage(error, rollbackResults)}`,
+					error,
+				);
 			}
 		}
 
@@ -342,14 +455,45 @@ const internalNginx = {
 	 * @param   {Object}  [host]
 	 * @returns {Promise}
 	 */
-	deleteConfig: async (host_type, host) => {
-		const config_file = internalNginx.getConfigName(
-			internalNginx.getFileFriendlyHostType(host_type),
-			typeof host === "undefined" ? 0 : host.id,
-		);
+	deleteConfig: async (host_type, host, options = {}) => {
+		return await withNginxMutationLock(async () => {
+			const configFile = internalNginx.getConfigName(
+				internalNginx.getFileFriendlyHostType(host_type),
+				typeof host === "undefined" ? 0 : host.id,
+			);
+			const staged = `${configFile}.delete-${crypto.randomUUID()}`;
+			try {
+				await fs.promises.rename(configFile, staged);
+			} catch (error) {
+				if (error.code === "ENOENT") {
+					await internalNginx.deleteFile(`${configFile}.err`);
+					return;
+				}
+				throw new errs.ConfigurationError(`Could not stage Nginx config deletion: ${error.message}`, error);
+			}
 
-		await internalNginx.deleteFile(config_file);
-		await internalNginx.deleteFile(`${config_file}.err`);
+			try {
+				await internalNginx.test();
+				if (!options.skip_reload) await internalNginx.reload();
+				await fs.promises.unlink(staged);
+				await internalNginx.deleteFile(`${configFile}.err`);
+			} catch (error) {
+				const rollbackResults = /** @type {PromiseSettledResult<unknown>[]} */ (
+					await Promise.allSettled([fs.promises.rename(staged, configFile)])
+				);
+				rollbackResults.push(
+					...(await Promise.allSettled([
+						internalNginx
+							.test()
+							.then(() => (options.skip_reload ? undefined : utils.execFile("nginx", ["-s", "reload"]))),
+					])),
+				);
+				throw new errs.ConfigurationError(
+					`Nginx config deletion was rejected and rolled back: ${rollbackMessage(error, rollbackResults)}`,
+					error,
+				);
+			}
+		});
 	},
 
 	/**
@@ -428,13 +572,9 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	bulkGenerateConfigs: async (model, hostType, hosts) => {
-		const promises = [];
-		hosts.map((host) => {
-			promises.push(internalNginx.configure(model, hostType, host, { skip_reload: true }));
-			return true;
-		});
-
-		await Promise.all(promises);
+		for (const host of hosts) {
+			await internalNginx.configure(model, hostType, host, { skip_reload: true });
+		}
 	},
 
 	/**
@@ -445,7 +585,7 @@ const internalNginx = {
 
 	/**
 	 * Read nginx log file contents.
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {"error"|"access"}  logType
 	 * @returns {Promise<string>}
 	 */

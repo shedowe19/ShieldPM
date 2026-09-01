@@ -5,10 +5,12 @@ import { AiChat } from "./AiChat";
 
 const mocks = vi.hoisted(() => ({
 	sendAiChat: vi.fn(),
+	confirmAiAction: vi.fn(),
 }));
 
 vi.mock("src/api/backend/ai", () => ({
 	sendAiChat: mocks.sendAiChat,
+	confirmAiAction: mocks.confirmAiAction,
 }));
 
 function ControlledAiChat() {
@@ -27,6 +29,7 @@ function ControlledAiChat() {
 describe("AiChat", () => {
 	beforeEach(() => {
 		mocks.sendAiChat.mockResolvedValue({ content: "The configured AI provider is available." });
+		mocks.confirmAiAction.mockResolvedValue({ content: "Deleted and VERIFIED: Proxy Host ID: 7." });
 	});
 
 	afterEach(() => {
@@ -62,5 +65,25 @@ describe("AiChat", () => {
 		expect(screen.queryByText("Summarize the configured providers.")).not.toBeInTheDocument();
 		expect(screen.queryByText("The configured AI provider is available.")).not.toBeInTheDocument();
 		expect(screen.getByText("How can I help you manage your proxy hosts today?")).toBeInTheDocument();
+	});
+
+	it("requires an explicit UI confirmation without sending the token back to the provider", async () => {
+		mocks.sendAiChat.mockResolvedValueOnce({
+			content: "Confirmation required for delete_proxy_host. Review and approve this exact action.",
+			confirmation: { token: "signed-confirmation", tool: "delete_proxy_host", details: '{"id":7}' },
+		});
+		render(<ControlledAiChat />);
+
+		fireEvent.change(await screen.findByPlaceholderText("Ask AI to list hosts, check logs..."), {
+			target: { value: "Delete proxy host 7." },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+		await screen.findByText(/Confirmation required for delete_proxy_host/);
+		expect(screen.getByText('{"id":7}')).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+		await screen.findByText("Deleted and VERIFIED: Proxy Host ID: 7.");
+		expect(mocks.confirmAiAction).toHaveBeenCalledWith("signed-confirmation");
+		expect(mocks.sendAiChat).toHaveBeenCalledTimes(1);
 	});
 });

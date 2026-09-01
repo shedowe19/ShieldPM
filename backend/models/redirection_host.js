@@ -25,6 +25,8 @@ class RedirectionHost extends Model {
 	/** @type {number} */
 	id;
 	/** @type {number} */
+	enabled;
+	/** @type {number} */
 	owner_user_id;
 	/** @type {string[]} */
 	domain_names;

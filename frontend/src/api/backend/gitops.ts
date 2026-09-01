@@ -9,7 +9,7 @@ export interface GitOpsConfig {
 	repositoryUrl: string;
 	branch: string;
 	authType: GitOpsAuthType;
-	encryptedCredentials: string; // Always "[REDACTED]" from API
+	hasCredentials: boolean;
 	autoPush: boolean;
 	autoPullOnStartup: boolean;
 	lastSync: string | null;
@@ -56,6 +56,8 @@ export interface GitOpsImportResult {
 	success: boolean;
 	imported: number;
 	skipped: number;
+	deleted: number;
+	dryRun: boolean;
 	errors: string[];
 }
 
@@ -118,6 +120,6 @@ export async function revertGitOps(sha: string): Promise<GitOpsResult> {
 /**
  * Import configuration from Git
  */
-export async function importGitOpsConfig(overwrite = false): Promise<GitOpsImportResult> {
-	return post({ url: "/gitops/import", data: { overwrite } });
+export async function importGitOpsConfig(overwrite = false, dryRun = false): Promise<GitOpsImportResult> {
+	return post({ url: "/gitops/import", data: { overwrite, dryRun } });
 }

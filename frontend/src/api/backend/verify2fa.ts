@@ -59,9 +59,9 @@ export async function begin2faDuoAuth(pendingToken: string): Promise<DuoBeginRes
 	return api.post({ url: "/tokens/2fa/duo/begin", data: { pending_token: pendingToken } });
 }
 
-export async function complete2faDuoAuth(pendingToken: string, duoCode: string): Promise<TokenResponse> {
+export async function complete2faDuoAuth(pendingToken: string, duoCode: string, state: string): Promise<TokenResponse> {
 	return api.post({
 		url: "/tokens/2fa/duo/complete",
-		data: { pending_token: pendingToken, duo_code: duoCode },
+		data: { pending_token: pendingToken, duo_code: duoCode, state },
 	});
 }

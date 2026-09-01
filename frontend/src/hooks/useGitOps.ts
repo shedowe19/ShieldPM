@@ -182,20 +182,20 @@ export const useGitOps = () => {
 		},
 	});
 
-	const importConfig = useMutation<gitopsApi.GitOpsImportResult, Error, boolean>({
-		mutationFn: (overwrite = false) => gitopsApi.importGitOpsConfig(overwrite),
+	const importConfig = useMutation<gitopsApi.GitOpsImportResult, Error, { overwrite: boolean; dryRun: boolean }>({
+		mutationFn: ({ overwrite, dryRun }) => gitopsApi.importGitOpsConfig(overwrite, dryRun),
 		onSuccess: (result) => {
-			// Invalidate all host queries to reflect imported data
-			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
-			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
-			queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });
-			queryClient.invalidateQueries({ queryKey: ["streams"] });
-			queryClient.invalidateQueries({ queryKey: ["access-lists"] });
+			if (!result.dryRun) {
+				queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
+				queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
+				queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });
+				queryClient.invalidateQueries({ queryKey: ["streams"] });
+			}
 
 			if (result.success) {
 				toast({
-					title: "Import Complete",
-					description: `Imported ${result.imported} items, skipped ${result.skipped}.`,
+					title: result.dryRun ? "Validation Complete" : "Import Complete",
+					description: `${result.dryRun ? "Would import" : "Imported"} ${result.imported}, skipped ${result.skipped}, removed ${result.deleted}.`,
 				});
 			} else {
 				toast({

@@ -194,12 +194,12 @@ router.post("/", async (req, res, next) => {
  */
 router.put("/:id", async (req, res, next) => {
 	try {
-		await res.locals.access.can("wireguard_peers:update", req.params.id);
-		const peer = await WireguardPeer.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+		const accessData = await res.locals.access.can("wireguard_peers:update", req.params.id);
+		const query = WireguardPeer.query().andWhere("is_deleted", 0).where("id", req.params.id);
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+		const peer = await query.first();
 
 		if (!peer) {
 			res.status(404).send({ error: "WireGuard Peer not found" });
@@ -232,12 +232,12 @@ router.put("/:id", async (req, res, next) => {
  */
 router.delete("/:id", async (req, res, next) => {
 	try {
-		await res.locals.access.can("wireguard_peers:delete", req.params.id);
-		const peer = await WireguardPeer.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+		const accessData = await res.locals.access.can("wireguard_peers:delete", req.params.id);
+		const query = WireguardPeer.query().andWhere("is_deleted", 0).where("id", req.params.id);
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+		const peer = await query.first();
 
 		if (!peer) {
 			res.status(404).send({ error: "WireGuard Peer not found" });
@@ -267,12 +267,12 @@ router.delete("/:id", async (req, res, next) => {
  * POST /api/nginx/wireguard/:id/enable
  */
 router.post("/:id/enable", async (req, res) => {
-	await res.locals.access.can("wireguard_peers:update", req.params.id);
-	const peer = await WireguardPeer.query()
-		.where("owner_user_id", res.locals.access.token.getUserId(1))
-		.andWhere("is_deleted", 0)
-		.where("id", req.params.id)
-		.first();
+	const accessData = await res.locals.access.can("wireguard_peers:update", req.params.id);
+	const query = WireguardPeer.query().andWhere("is_deleted", 0).where("id", req.params.id);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
+	}
+	const peer = await query.first();
 
 	if (!peer) {
 		res.status(404).send({ error: "WireGuard Peer not found" });
@@ -296,12 +296,12 @@ router.post("/:id/enable", async (req, res) => {
  * POST /api/nginx/wireguard/:id/disable
  */
 router.post("/:id/disable", async (req, res) => {
-	await res.locals.access.can("wireguard_peers:update", req.params.id);
-	const peer = await WireguardPeer.query()
-		.where("owner_user_id", res.locals.access.token.getUserId(1))
-		.andWhere("is_deleted", 0)
-		.where("id", req.params.id)
-		.first();
+	const accessData = await res.locals.access.can("wireguard_peers:update", req.params.id);
+	const query = WireguardPeer.query().andWhere("is_deleted", 0).where("id", req.params.id);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
+	}
+	const peer = await query.first();
 
 	if (!peer) {
 		res.status(404).send({ error: "WireGuard Peer not found" });
@@ -326,12 +326,12 @@ router.post("/:id/disable", async (req, res) => {
  * Returns the WireGuard client configuration as text
  */
 router.get("/:id/config", async (req, res) => {
-	await res.locals.access.can("wireguard_peers:get", req.params.id);
-	const peer = await WireguardPeer.query()
-		.where("owner_user_id", res.locals.access.token.getUserId(1))
-		.andWhere("is_deleted", 0)
-		.where("id", req.params.id)
-		.first();
+	const accessData = await res.locals.access.can("wireguard_peers:get", req.params.id);
+	const query = WireguardPeer.query().andWhere("is_deleted", 0).where("id", req.params.id);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
+	}
+	const peer = await query.first();
 
 	if (!peer) {
 		res.status(404).send({ error: "WireGuard Peer not found" });
@@ -351,12 +351,12 @@ router.get("/:id/config", async (req, res) => {
  * Returns QR code as data URL
  */
 router.get("/:id/qrcode", async (req, res) => {
-	await res.locals.access.can("wireguard_peers:get", req.params.id);
-	const peer = await WireguardPeer.query()
-		.where("owner_user_id", res.locals.access.token.getUserId(1))
-		.andWhere("is_deleted", 0)
-		.where("id", req.params.id)
-		.first();
+	const accessData = await res.locals.access.can("wireguard_peers:get", req.params.id);
+	const query = WireguardPeer.query().andWhere("is_deleted", 0).where("id", req.params.id);
+	if (accessData.permission_visibility !== "all") {
+		query.where("owner_user_id", res.locals.access.token.getUserId(1));
+	}
+	const peer = await query.first();
 
 	if (!peer) {
 		res.status(404).send({ error: "WireGuard Peer not found" });

@@ -5,9 +5,11 @@ import _ from "lodash";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import authModel from "../models/auth.js";
+import InitialSetupClaim from "../models/initial-setup-claim.js";
 import userModel from "../models/user.js";
 import userPermissionModel from "../models/user_permission.js";
 import internalAuditLog from "./audit-log.js";
+import { retireGeneratedToken, SETUP_CLAIM_ID } from "./initial-setup.js";
 import internalToken from "./token.js";
 
 const omissions = () => {
@@ -68,6 +70,95 @@ const detectAvatarFileType = (buffer) => {
 };
 
 const internalUser = {
+	/**
+	 * Atomically consumes the one-time ownership token and creates the only
+	 * unauthenticated user permitted by ShieldPM: the initial administrator.
+	 *
+	 * @param {import("../lib/types.js").Access} access
+	 * @param {Object} data
+	 * @param {string} ownershipToken
+	 * @param {Object} [meta]
+	 * @returns {Promise<Object>}
+	 */
+	createInitialAdmin: async (access, data, ownershipToken, meta = {}) => {
+		if (!ownershipToken || typeof ownershipToken !== "string") {
+			throw new errs.AuthError("A valid initial admin setup token is required");
+		}
+		const auth = data.auth;
+		if (auth?.type !== "password" || typeof auth.secret !== "string") {
+			throw new errs.ValidationError("Initial administrator password authentication is required");
+		}
+
+		const email = data.email.toLowerCase().trim();
+		const tokenHash = InitialSetupClaim.hashToken(ownershipToken);
+		let user;
+
+		await userModel.transaction(async (trx) => {
+			const existingUser = await userModel.query(trx).select("id").where("is_deleted", 0).first();
+			if (existingUser) {
+				throw new errs.PermissionError("Initial setup is already complete");
+			}
+
+			const claimedRows = await InitialSetupClaim.query(trx)
+				.patch({
+					consumed_at: new Date().toISOString(),
+					claimed_ip: meta.ip || null,
+				})
+				.where("id", SETUP_CLAIM_ID)
+				.where("token_hash", tokenHash)
+				.whereNull("consumed_at");
+
+			if (claimedRows !== 1) {
+				throw new errs.AuthError("Initial admin setup token is invalid or has already been consumed");
+			}
+
+			user = await userModel.query(trx).insertAndFetch({
+				name: data.name,
+				nickname: data.nickname,
+				email,
+				avatar: getGravatarUrl(email),
+				roles: ["admin"],
+				is_disabled: 0,
+				is_deleted: 0,
+			});
+
+			await authModel.query(trx).insert({
+				user_id: user.id,
+				type: "password",
+				secret: auth.secret,
+				meta: {},
+			});
+
+			await userPermissionModel.query(trx).insert(
+				/** @type {any} */ ({
+					user_id: user.id,
+					visibility: "all",
+					access_lists: "manage",
+					certificates: "manage",
+					proxy_hosts: "manage",
+					redirection_hosts: "manage",
+					streams: "manage",
+					dead_hosts: "manage",
+					cloudflared_tunnels: "manage",
+					analytics: "view",
+				}),
+			);
+
+			await InitialSetupClaim.query(trx).patch({ claimed_user_id: user.id }).where("id", SETUP_CLAIM_ID);
+		});
+
+		await retireGeneratedToken();
+		user = await internalUser.get(access, { id: user.id, expand: ["permissions"] });
+		user = _.omit(user, omissions());
+		await internalAuditLog.add(access, {
+			action: "created",
+			object_type: "user",
+			object_id: user.id,
+			meta: { id: user.id, name: user.name, initial_setup: true },
+		});
+		return user;
+	},
+
 	/**
 	 * Create a user can happen unauthenticated only once and only when no active users exist.
 	 * Otherwise, a valid auth method is required.
@@ -409,6 +500,14 @@ const internalUser = {
 	setPassword: async (access, data) => {
 		await access.can("users:password", data.id);
 		const user = await internalUser.get(access, { id: data.id });
+		const currentSession = await internalToken.requireRecentAuthentication(access, Number.POSITIVE_INFINITY);
+		if (user.id !== access.token.getUserId(0)) {
+			if (data.current) {
+				await internalToken.verifyUserPassword(access.token.getUserId(0), data.current);
+			} else {
+				await internalToken.requireRecentAuthentication(access);
+			}
+		}
 
 		if (user.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
@@ -423,30 +522,37 @@ const internalUser = {
 				throw new errs.ValidationError("Current password was not supplied");
 			}
 
-			await internalToken.getTokenFromEmail({
-				identity: user.email,
-				secret: data.current,
-			});
+			await internalToken.verifyUserPassword(user.id, data.current);
 		}
 
-		// Get auth, patch if it exists
-		const existing_auth = await authModel.query().where("user_id", user.id).andWhere("type", data.type).first();
+		await userModel.transaction(async (trx) => {
+			const existingAuth = await authModel
+				.query(trx)
+				.where("user_id", user.id)
+				.andWhere("type", data.type)
+				.first();
 
-		if (existing_auth) {
-			// patch
-			await authModel.query().where("user_id", user.id).andWhere("type", data.type).patch({
-				type: data.type, // This is required for the model to encrypt on save
-				secret: data.secret,
-			});
-		} else {
-			// insert
-			await authModel.query().insert({
-				user_id: user.id,
-				type: data.type,
-				secret: data.secret,
-				meta: {},
-			});
-		}
+			if (existingAuth) {
+				await authModel.query(trx).where("id", existingAuth.id).patch({
+					type: data.type,
+					secret: data.secret,
+				});
+			} else {
+				await authModel.query(trx).insert({
+					user_id: user.id,
+					type: data.type,
+					secret: data.secret,
+					meta: {},
+				});
+			}
+
+			await internalToken.revokeUserSessions(
+				user.id,
+				"password_changed",
+				user.id === access.token.getUserId(0) ? currentSession.id : null,
+				trx,
+			);
+		});
 
 		// Add to Audit Log
 		await internalAuditLog.add(access, {
@@ -516,7 +622,10 @@ const internalUser = {
 	loginAs: async (access, data) => {
 		await access.can("users:loginas", data.id);
 		const user = await internalUser.get(access, data);
-		return internalToken.getTokenFromUser(user);
+		if (Number(user.id) === Number(access.token.getUserId(0))) {
+			throw new errs.ValidationError("You cannot impersonate your current account");
+		}
+		return user;
 	},
 
 	/**
@@ -587,7 +696,7 @@ const internalUser = {
 	getAvatarImage: async (_access, data) => {
 		// Public access allowed for avatars, but we check existence
 		const user = await userModel.query().findById(data.id);
-		if (!user || user.avatar_type !== "upload" || !user.avatar_value) {
+		if (user?.avatar_type !== "upload" || !user?.avatar_value) {
 			throw new errs.ItemNotFoundError("Avatar not found");
 		}
 

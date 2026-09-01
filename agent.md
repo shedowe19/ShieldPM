@@ -4,11 +4,12 @@ Ziel:
 Erstelle und pflege eine dauerhafte, gut strukturierte Markdown-Wissensbasis für dieses Projekt. Das Wiki soll es später einem LLM, Entwickler oder neuen Teammitglied ermöglichen, das Projekt schnell zu verstehen, wichtige Entscheidungen nachzuvollziehen und wiederkehrende Informationen leicht zu finden.
 
 Wichtig:
+
 - Arbeite im bestehenden Projekt.
 - Verändere keinen produktiven Code, außer es ist ausdrücklich notwendig.
 - Überschreibe keine bestehenden Dokumente ohne vorher eine Sicherung oder klare Begründung.
 - Wenn bereits ein Wiki, ein `docs`-Ordner oder Projekt-Dokumentation existiert, integriere dich dort sinnvoll.
-- Falls keine Struktur vorhanden ist, erstelle eine neue unter `docs/wiki/`.
+- Das interne LLM-Wiki liegt ausschließlich unter `docs/wiki-intern/`. `docs/wiki/` ist die öffentliche Benutzerdokumentation.
 - Schreibe alle Wiki-Inhalte auf Deutsch.
 - Nutze Markdown.
 - Verwende für alle internen Links relative Markdown-Links im Format `[Text](./pfad/datei.md)`. KEINE `[[Wiki-Syntax]]` verwenden, da GitHub diese nicht interpretiert.
@@ -81,12 +82,12 @@ Untersuche die vorhandene Projektstruktur.
 
 Lies wichtige Dateien wie:
 
-- `README.md`
-- `build.gradle.kts` / `settings.gradle.kts`
-- `app/build.gradle.kts`
-- Konfigurationsdateien
-- vorhandene Dokumentation
-- zentrale Quellcode-Ordner
+- `README.md`, `AGENTS.md`, `.cursorrules` und `GEMINI.md`
+- `backend/package.json`, `frontend/package.json` und die Yarn-Lockfiles
+- `backend/index.js`, `backend/app.js` und `frontend/src/Router.tsx`
+- `backend/internal/`, `backend/models/`, `backend/migrations/` und `backend/schema/`
+- `Dockerfile`, `compose.yaml`, `rootfs/` und `scripts/`
+- vorhandene öffentliche und interne Dokumentation
 
 Erkenne:
 
@@ -103,10 +104,10 @@ Erkenne:
 
 Das Wiki soll nicht nur aus flachen Einzelseiten bestehen. Es muss sinnvoll in Unterordner und Unterseiten gegliedert werden.
 
-Die Struktur für dieses Android/Kotlin-Projekt:
+Die Struktur für dieses Node.js-/React-/Nginx-Projekt:
 
 ```text
-docs/wiki/
+docs/wiki-intern/
 ├── index.md
 ├── projekt/
 │   ├── ueberblick.md
@@ -126,25 +127,25 @@ docs/wiki/
 │   └── deployment.md
 ├── module/
 │   ├── README.md
-│   ├── auth.md
-│   ├── auth-pkce.md
-│   ├── checkin.md
-│   ├── feed.md
-│   ├── notifications.md
-│   ├── profile.md
-│   ├── status-detail.md
-│   ├── trip-tracking.md
-│   ├── user-profile.md
-│   ├── user-search.md
-│   └── widget.md
+│   ├── benutzer-auth.md
+│   ├── auth-session-service.md
+│   ├── nginx-engine.md
+│   ├── proxy-host.md
+│   ├── analytics.md
+│   ├── ddns.md
+│   ├── gitops.md
+│   ├── terminal.md
+│   ├── ai-agent.md
+│   ├── chatops.md
+│   └── token.md
 ├── ui/
 │   ├── screens.md
 │   ├── komponenten.md
 │   └── theme.md
 ├── api/
 │   ├── ueberblick.md
-│   ├── interne-schnittstellen.md
-│   └── externe-schnittstellen.md
+│   ├── routen.md
+│   └── schemas.md
 ├── daten/
 │   ├── datenmodell.md
 │   ├── datenbank.md
@@ -154,7 +155,7 @@ docs/wiki/
 │   ├── umgebungsvariablen.md
 │   ├── config-dateien.md
 │   ├── secrets-und-sicherheit.md
-│   └── preferences-manager.md
+│   └── rootfs.md
 ├── entscheidungen/
 │   ├── README.md
 │   └── adr-template.md
@@ -175,10 +176,12 @@ Der Agent darf zusätzliche Unterordner anlegen, wenn das Projekt dadurch besser
 
 ```markdown
 # Korrekt:
+
 - [Architektur Überblick](./architektur/ueberblick.md)
 - [API Overview](./api/ueberblick.md)
 
 # Falsch:
+
 - [[architektur/ueberblick]]
 - [[api/ueberblick]]
 ```
@@ -211,7 +214,7 @@ Wo wird es im Projekt verwendet?
 
 ## Wichtige Dateien
 
-- `app/src/main/kotlin/de/traewelling/app/module/File.kt`
+- `backend/internal/beispiel.js`
 
 ## Verhalten
 
@@ -251,7 +254,7 @@ Doppelte Dokumentation vermeiden.
 
 # Index-Pflege
 
-Der Agent muss `docs/wiki/index.md` aktuell halten.
+Der Agent muss `docs/wiki-intern/index.md` aktuell halten.
 
 Wenn neue wichtige Seiten oder Unterordner entstehen, müssen sie im Index verlinkt werden.
 
@@ -266,10 +269,10 @@ Wenn während der Arbeit eine technische Entscheidung getroffen oder sichtbar wi
 Für größere Entscheidungen eine eigene ADR-Datei anlegen:
 
 ```text
-docs/wiki/entscheidungen/YYYY-MM-DD-kurzer-titel.md
+docs/wiki-intern/entscheidungen/YYYY-MM-DD-kurzer-titel.md
 ```
 
-Kleinere Entscheidungen können in `docs/wiki/architektur/entscheidungen.md` zusammengefasst werden.
+Kleinere Entscheidungen können in `docs/wiki-intern/architektur/entscheidungen.md` zusammengefasst werden.
 
 ---
 
@@ -285,7 +288,7 @@ TODO: ...
 Annahme: ...
 ```
 
-Offene Punkte zusätzlich in `docs/wiki/offene-fragen.md` sammeln.
+Offene Punkte zusätzlich in `docs/wiki-intern/offene-fragen.md` sammeln.
 
 ---
 
@@ -339,14 +342,14 @@ Falls passend, ergänze im Haupt-`README.md` einen kurzen Abschnitt:
 
 Die interne Projektdokumentation befindet sich unter:
 
-- [Projekt-Wiki](docs/wiki/index.md)
+- [Internes Projekt-Wiki](docs/wiki-intern/index.md)
 ```
 
 ---
 
 # Wiki-Pflege-Seite
 
-Die Datei `docs/wiki/wiki-pflege.md` enthält:
+Die Datei `docs/wiki-intern/wiki-pflege.md` enthält:
 
 - Wie neue Informationen ergänzt werden
 - Wann bestehende Seiten aktualisiert werden sollen
@@ -403,4 +406,6 @@ Bei jeder relevanten Änderung müssen Code und Wiki gemeinsam aktuell gehalten 
 
 # Formatierung
 
-- Alle Markdown-Dateien im Wiki müssen mit Prettier formatiert werden (`npx prettier --write "docs/wiki/**/*.md"`). Biome sollte für Markdown in diesem Projekt vermieden werden.
+- Alle Markdown-Dateien im internen Wiki müssen mit Prettier formatiert werden
+  (`yarn prettier --write "../docs/wiki-intern/**/*.md"` aus einem Workspace mit installierten Abhängigkeiten).
+  Biome sollte für Markdown in diesem Projekt vermieden werden.

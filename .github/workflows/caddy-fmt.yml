@@ -10,24 +10,29 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   caddy-fmt:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Read version
         id: version
-        run: echo "version=$(cat caddy/Dockerfile | grep "^COPY --from=caddy:.*$" | head -1 | sed "s|COPY --from=caddy:\([0-9.]\+\).*|\1|g")" >> $GITHUB_OUTPUT
-      - name: caddy-fmt
+        shell: bash
         run: |
-          docker run --rm -v ${{ github.workspace }}/caddy/Caddyfile:/etc/caddy/Caddyfile caddy:${{ steps.version.outputs.version }} caddy fmt --overwrite /etc/caddy/Caddyfile
-      - name: push changes
+          version="$(sed -nE 's/^COPY --from=caddy:([0-9.]+).*/\1/p' caddy/Dockerfile | head -1)"
+          test -n "$version"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+      - name: Verify Caddyfile formatting
+        shell: bash
         run: |
-          git add caddy/Caddyfile
-          git config user.name "GitHub"
-          git config user.email "noreply@github.com"
-          git diff-index --quiet HEAD || git commit -sm "caddy fmt"
-          git push
+          formatted="$(mktemp)"
+          docker run --rm \
+            --volume "${{ github.workspace }}/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            "caddy:${{ steps.version.outputs.version }}" \
+            caddy fmt /etc/caddy/Caddyfile > "$formatted"
+          diff --unified caddy/Caddyfile "$formatted"

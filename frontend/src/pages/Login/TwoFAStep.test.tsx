@@ -35,6 +35,7 @@ const renderStep = (methods = ["totp"]) =>
 describe("TwoFAStep", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		sessionStorage.clear();
 	});
 
 	afterEach(() => {
@@ -160,6 +161,9 @@ describe("TwoFAStep", () => {
 
 		await waitFor(() => {
 			expect(begin2faDuoAuth).toHaveBeenCalledWith("mock_pending_token");
+			expect(sessionStorage.getItem("duo_pending_token")).toBe("mock_pending_token");
+			expect(sessionStorage.getItem("duo_expected_state")).toBe("abc");
+			expect(window.location.href).toBe("https://duo.example.com/authorize?state=abc");
 		});
 
 		Object.defineProperty(window, "location", { value: originalLocation });

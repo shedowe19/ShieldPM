@@ -5,10 +5,10 @@ import { backendSourcePath } from "../helpers/source-path.js";
 
 const readSource = (path) => fs.readFileSync(backendSourcePath(path), "utf8");
 
-const yamlConsumers = ["internal/anubis.js", "internal/gitops.js"];
+const yamlConsumers = ["internal/anubis.js"];
 
 describe("js-yaml ESM compatibility", () => {
-	it("uses the named exports exposed by js-yaml under Node 26", () => {
+	it("uses the named exports exposed by js-yaml under supported Node releases", () => {
 		expect(yaml).not.toHaveProperty("default");
 		expect(yaml.dump).toBeTypeOf("function");
 		expect(yaml.load).toBeTypeOf("function");

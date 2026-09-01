@@ -2,108 +2,69 @@
 
 ## Zweck
 
-Dokumentation des integrierten AI-Assistenten.
-
-## Kontext
-
-Der AI-Agent ermöglicht natürlichsprachliche Interaktion mit ShieldPM — sowohl über die Web-UI als auch über Telegram (ChatOps).
-
-## Wichtige Dateien
-
-| Datei                                               | Beschreibung                                                                                                 |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `frontend/src/components/AiChat/AiChatLauncher.tsx` | Gemeinsamer Sidebar-Trigger und bedarfsorientierter Loader für genau eine Chat-Instanz                       |
-| `frontend/src/components/AiChat/AiChat.tsx`         | Seitlicher KI-Chat-Dialog mit lokalisierten Screenreader-Labels; wird erst nach einer Trigger-Aktion geladen |
-| `backend/internal/ai.js` (14 KB)                    | AI-Verwaltung (Einstellungen, Provider-Config)                                                               |
-| `backend/internal/ai/executor.js` (33 KB)           | Chat-Loop-Orchestrator                                                                                       |
-| `backend/internal/ai/providers.js` (9 KB)           | Provider-Abstraktion (Gemini, Ollama, OpenAI)                                                                |
-| `backend/internal/ai/tools.js` (27 KB)              | Ausführbare Funktionen für den AI-Agent                                                                      |
-| `backend/internal/ai/prompt.js` (10 KB)             | System-Prompt                                                                                                |
+Der AI-Agent übersetzt natürliche Sprache in serverseitig autorisierte ShieldPM-Tool-Aufrufe. Das Modell ist
+untrusted: Prompt, Providerantwort und Toolargumente erteilen keine Berechtigung.
 
 ## Provider
 
-| Provider          | Paket                   | Beschreibung                         |
-| ----------------- | ----------------------- | ------------------------------------ |
-| Google Gemini     | `@google/generative-ai` | Cloud-AI                             |
-| Ollama            | HTTP API (node-fetch)   | Lokale LLMs                          |
-| OpenAI-kompatibel | HTTP API                | Beliebiger OpenAI-kompatibler Server |
+- Google Gemini über `@google/genai`
+- Ollama Native API
+- OpenAI-kompatible Chat-Completions
 
-## Tools
+API-Keys werden verschlüsselt gespeichert und nie an Tool-Schemas oder Tool-Ergebnisse angehängt. Providerantworten
+werden normalisiert; unbekannte Tools oder Argumentformate werden abgewiesen.
 
-Der AI-Agent kann Aktionen im System ausführen (Tool-Calling). Die verfügbaren Tools sind in `tools.js` definiert (z. B. Hosts erstellen, Zertifikate erneuern, IP-Ranges aktualisieren, Status abfragen).
+## Tool-Grenze
 
-### Globale Systemaktionen
+`backend/internal/ai/tools.js` härtet jedes JSON-Schema rekursiv:
 
-Die globalen Tools `test_nginx_config`, `force_nginx_reload` und `renew_ip_ranges` werden nur bei erfolgreicher
-Prüfung von `settings:update` an das Modell übergeben. Der Executor prüft dieselbe Berechtigung unmittelbar vor der
-Ausführung erneut. Damit können eingebettete oder halluzinierte Tool-Calls weder einen Nginx-Test/-Reload noch eine
-Aktualisierung der IP-Ranges ohne Berechtigung auslösen.
+- `additionalProperties: false`, maximale Verschachtelung und Property-Anzahl;
+- begrenzte Stringlängen, Arrays und Zahlenbereiche;
+- AJV-Validierung gegen exakt das Schema, das dem Provider angeboten wurde;
+- Capability-/Owner-Prüfung sowohl beim Offer als auch unmittelbar vor Ausführung.
 
-Das lesende Tool `get_system_status` folgt der Zugriffsgrenze von `/api/analytics/status`: Es benötigt
-`analytics:list`, wird ohne diese Capability nicht angeboten und prüft die Berechtigung vor dem Auslesen der
-Netzwerkmetriken erneut.
+Legacy-Aliasse, die gefährliche Systemaktionen ohne denselben Vertrag erreichbar machten, sind entfernt.
 
-Das Audit-Log-Tool `get_audit_log` benötigt `auditlog:list`. Ohne diese Capability wird es nicht an das Modell
-übergeben; der Executor prüft sie nochmals vor dem delegierten Abruf über `internal/audit-log.js`. Damit können
-eingebettete oder halluzinierte Tool-Calls keine administrativen Aktionsprotokolle auslesen.
+## Serverseitige Safety-Limits
 
-Das Erzeugen eines internen Client-Zertifikats (`create_client_certificate`) benötigt `certificates:create`. Ohne diese
-Capability wird das Tool nicht an das Modell übergeben; der Executor prüft sie vor dem Zugriff auf die interne PKI noch
-einmal. Dadurch können nicht berechtigte AI-Aufrufe weder eine Root-CA anstoßen noch PKCS#12-Dateien erzeugen.
+`backend/internal/ai/safety.js` erzwingt unabhängig vom Prompt:
 
-Die Erneuerung von Let's-Encrypt-Zertifikaten (`renew_certificate`) benötigt `certificates:update` und wird ohne diese
-Capability ebenfalls nicht an das Modell übergeben. Der Executor delegiert an `internalCertificate.renew()`, das die
-Berechtigung, den Owner-Scope und das Audit-Logging selbst durchsetzt. Damit kann ein eingebetteter Tool-Call keine
-Certbot-Erneuerung mit reinen Leserechten auslösen.
+- höchstens 4 Tool-Calls pro Providerantwort;
+- höchstens 8 Tool-Calls pro User-Turn;
+- höchstens 2 mutierende Aktionen pro Turn;
+- höchstens 1 destruktive Aktion pro Turn;
+- höchstens 32 KiB serialisiertes Tool-Ergebnis.
 
-### Cloudflared- und Tor-Aktionen
+Nach dem Lesen untrusted Logs, Audit- oder Analytics-Daten ist im selben Turn keine Mutation erlaubt.
 
-Die Cloudflared- und Tor-Tools werden vor dem Modellaufruf anhand ihrer jeweiligen Capability ausgefiltert. Der
-Executor prüft bei jeder Ausführung erneut `cloudflared_tunnels:*` beziehungsweise `tor_onions:*`. Abfragen und
-Mutationen werden für eingeschränkte Berechtigungen zusätzlich auf `owner_user_id` begrenzt; nur Sichtbarkeit `all`
-erlaubt den Zugriff auf fremde Objekte. Erfolgreiche Erstellungen, Änderungen, Löschungen sowie Start-/Stopp-Aktionen
-werden über `internal/audit-log.js` protokolliert.
+## Bestätigung
 
-### DDNS-Löschung
+Destruktive und sicherheitssensitive Tools verlangen einen serverseitig ausgegebenen One-Time-HMAC-Token. Er bindet
+Actor, Toolname, kanonisierte Argumente, Nonce und Ablauf. Das Modell muss die konkrete Aktion anzeigen und den Nutzer
+um Zustimmung bitten. Nur derselbe Aufruf mit unveränderten Argumenten kann den Token einmal verbrauchen; Modelltext
+oder ein erfundener Token genügt nicht.
 
-Das Tool `delete_ddns_provider` delegiert ausschließlich an `internal/ddns-provider.js`. Der Service prüft
-`ddns_providers:delete` und löst den Provider anschließend über seinen autorisierten Leseweg auf. Dadurch greift bei
-eingeschränkter Sichtbarkeit derselbe `owner_user_id`-Scope wie bei Abfragen; fremde Provider werden weder gelöscht noch
-protokolliert. Administratoren mit Sichtbarkeit `all` behalten die Möglichkeit, fremde Provider zu verwalten.
+## Ablauf
 
-## Verhalten
+1. Web-Chat oder ChatOps liefert Userinput plus ein echtes `Access`-Principal-Objekt.
+2. Der Executor filtert Tools anhand aktueller Capabilities.
+3. Der Provider liefert Text und optional native Tool-Calls.
+4. Strikte Schema-, Limit-, Confirmation-, Ownership- und Capability-Prüfung läuft serverseitig.
+5. Interne Services führen Aktionen aus und schreiben Audit-Events.
+6. Bounded/redigierte Ergebnisse gehen zurück zum Provider.
 
-1. UI oder ChatOps schickt eine Nachricht an `routes/ai.js`.
-2. `internal/ai/executor.js` startet den Chat-Loop: System-Prompt aus `prompt.js`, History des Threads, aktueller User-Input.
-3. Der Provider (`providers.js`) ruft das LLM (Gemini, Ollama oder OpenAI-kompatibel) und liefert ggf. Tool-Calls zurück.
-4. Tool-Calls werden in `tools.js` gegen die internen ShieldPM-Module ausgeführt; das Ergebnis wandert zurück in den Loop.
-5. Final-Antwort wird zurück an Frontend/Telegram geschickt.
+## Wichtige Dateien
 
-### Seitlicher Web-Chat
-
-`Sidebar.tsx` rendert für die mobile und Desktop-Navigation nur die leichten, gemeinsamen Trigger aus
-`AiChatLauncher.tsx`. Erst eine Aktivierung lädt den Dialog `AiChat.tsx` dynamisch; damit bleiben auch `AiMessage.tsx`,
-`react-markdown` und `remark-gfm` aus der initialen Anwendungshülle. Der Loader bleibt nach dem Schließen gemountet,
-sodass es bei responsiven Wechseln nur eine Dialoginstanz gibt und der lokale Nachrichtenverlauf erhalten bleibt.
-
-## Integration mit ChatOps
-
-Über Telegram kann der AI-Agent gesteuert werden. Dafür synthetisiert `chat.js` temporäre JWT-Tokens (`ctx.shieldAccess`) für authentifizierte Interaktion.
-
-## Abhängigkeiten
-
-- `@google/generative-ai` — Gemini-SDK
-- HTTP-Client für Ollama und OpenAI-kompatible APIs
-- `internal/setting.js` — speichert Provider-Konfiguration (Provider, Model, API-Key, Base-URL)
-- `internal/token.js` — kurzlebige Tokens für Tool-Aufrufe
-- `internal/audit-log.js` — Protokollierung der AI-Aktionen
-- Aufgerufen von `routes/ai.js` und `internal/chat.js` (ChatOps)
-
-## Offene Fragen
-
-Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+- `backend/internal/ai/executor.js`
+- `backend/internal/ai/tools.js`
+- `backend/internal/ai/safety.js`
+- `backend/internal/ai/providers.js`
+- `backend/internal/ai/prompt.js`
+- `backend/routes/ai.js`
 
 ## Verwandte Seiten
 
 - [ChatOps](./chatops.md)
-- [Modulübersicht](./README.md)
+- [Benutzer & Auth](./benutzer-auth.md)
+- [Audit Log](../verwaltung/audit-log.md)
+- [Security-Modernisierung](../entscheidungen/2026-08-31-security-modernisierung.md)

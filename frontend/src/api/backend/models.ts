@@ -203,6 +203,7 @@ export interface ProxyHost {
 	terminalAuthType?: TerminalAuthType;
 	terminalPassword?: string;
 	terminalPrivateKey?: string;
+	terminalHostKeyFingerprint?: string;
 	// Expansions:
 	owner?: User;
 	accessList?: AccessList;
@@ -322,6 +323,11 @@ export interface AiChatMessage {
 export interface AiChatResponse {
 	role: "assistant";
 	content: string;
+	confirmation?: {
+		token: string;
+		tool: string;
+		details: string;
+	};
 }
 
 export interface DdnsProvider {
@@ -384,7 +390,7 @@ export interface ChatIntegration {
 	token?: string;
 	enabled: boolean;
 	config: {
-		allowed_ids: (string | number)[];
+		allowedIds: (string | number)[];
 	};
 	meta: Record<string, unknown>;
 	user?: User;

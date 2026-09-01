@@ -15,12 +15,14 @@
 						"pending_token": {
 							"description": "Short-lived 2FA pending token issued by POST /tokens when 2FA is required",
 							"type": "string",
-							"minLength": 1
+							"minLength": 16,
+							"maxLength": 16384
 						},
 						"challenge_id": {
 							"description": "The challenge_id returned by POST /tokens/2fa/passkey/begin",
 							"type": "string",
-							"minLength": 1
+							"minLength": 43,
+							"maxLength": 256
 						},
 						"auth_response": {
 							"description": "The AuthenticatorAssertionResponse from navigator.credentials.get()",
@@ -36,7 +38,7 @@
 				},
 				"example": {
 					"pending_token": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9...",
-					"challenge_id": "uuid-of-stored-challenge",
+					"challenge_id": "opaque-server-challenge-bearer",
 					"auth_response": {
 						"id": "base64-encoded-credential-id",
 						"rawId": "base64-encoded-raw-credential-id",

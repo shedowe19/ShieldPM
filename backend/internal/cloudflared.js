@@ -3,6 +3,23 @@ import { global as logger } from "../logger.js";
 import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 
 const processes = new Map();
+const CHILD_STOP_TIMEOUT_MS = 5_000;
+
+const withTimeout = (promise, milliseconds, message) =>
+	new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error(message)), milliseconds);
+		timer.unref?.();
+		promise.then(
+			(value) => {
+				clearTimeout(timer);
+				resolve(value);
+			},
+			(error) => {
+				clearTimeout(timer);
+				reject(error);
+			},
+		);
+	});
 
 const internalCloudflared = {
 	/**
@@ -40,9 +57,12 @@ const internalCloudflared = {
 				},
 			});
 
-			processes.set(tunnel.id, child);
-
 			let errorLog = "";
+			let settleExit;
+			const exitSettled = new Promise((resolve) => {
+				settleExit = resolve;
+			});
+			processes.set(tunnel.id, { child, exitSettled });
 
 			child.stdout.on("data", (data) => {
 				const str = data.toString();
@@ -59,9 +79,9 @@ const internalCloudflared = {
 				errorLog = (errorLog + str).slice(-2000);
 			});
 
-			child.on("exit", (code, signal) => {
+			child.once("close", async (code, signal) => {
 				logger.warn(`Cloudflared Tunnel ${tunnel.id} exited with code ${code} / signal ${signal}`);
-				processes.delete(tunnel.id);
+				if (processes.get(tunnel.id)?.child === child) processes.delete(tunnel.id);
 
 				// Determine status based on exit code
 				// 0 = Stopped (Clean exit)
@@ -81,15 +101,14 @@ const internalCloudflared = {
 				}
 				patchData.meta = meta;
 
-				tunnel
-					.$query()
-					.patch(patchData)
-					.then(() => {
-						logger.info(`[Cloudflared ${tunnel.id}] Updated status to ${newStatus}`);
-					})
-					.catch((err) => {
-						logger.error(`[Cloudflared ${tunnel.id}] Failed to update status:`, err);
-					});
+				try {
+					await tunnel.$query().patch(patchData);
+					logger.info(`[Cloudflared ${tunnel.id}] Updated status to ${newStatus}`);
+				} catch (err) {
+					logger.error(`[Cloudflared ${tunnel.id}] Failed to update status:`, err);
+				} finally {
+					settleExit();
+				}
 			});
 
 			// Wait 2 seconds to ensure the process is stable
@@ -114,14 +133,34 @@ const internalCloudflared = {
 	 * @param {number} tunnelId
 	 */
 	stop: async (tunnelId) => {
-		const child = processes.get(tunnelId);
-		if (child) {
+		const processEntry = processes.get(tunnelId);
+		if (processEntry) {
 			logger.info(`Stopping Cloudflared Tunnel: ${tunnelId}`);
-			child.kill("SIGTERM");
-			processes.delete(tunnelId);
-			// Status update is handled by 'exit' listener, but we can force it here too to be sure
-			await CloudflaredTunnel.query().findById(tunnelId).patch({ status: 0 });
+			processEntry.child.kill("SIGTERM");
+			try {
+				await withTimeout(
+					processEntry.exitSettled,
+					CHILD_STOP_TIMEOUT_MS,
+					`Cloudflared ${tunnelId} did not stop`,
+				);
+			} catch (error) {
+				processEntry.child.kill("SIGKILL");
+				await withTimeout(
+					processEntry.exitSettled,
+					CHILD_STOP_TIMEOUT_MS,
+					`Cloudflared ${tunnelId} did not exit after SIGKILL`,
+				);
+				logger.warn(error.message);
+			}
 		}
+	},
+
+	stopAll: async () => {
+		const results = await Promise.allSettled(
+			[...processes.keys()].map((tunnelId) => internalCloudflared.stop(tunnelId)),
+		);
+		const failed = results.find((result) => result.status === "rejected");
+		if (failed) throw failed.reason;
 	},
 
 	/**

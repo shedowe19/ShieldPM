@@ -1,6 +1,7 @@
 # ShieldPM — Internes LLM-Wiki
 
-Willkommen im internen Entwickler-Wiki von **ShieldPM** (v4.3.2).
+Willkommen im internen Entwickler-Wiki von **ShieldPM**. Den exakten Release-Stand liefern `.version` und die beiden
+Package-Manifeste; dieses Wiki dupliziert keine volatile Versionsangabe.
 
 Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur, Module, Entscheidungen und Zusammenhänge — für Entwickler, neue Teammitglieder und LLM-Agenten.
 
@@ -119,6 +120,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 - [ADR-Übersicht](./entscheidungen/README.md)
 - [ADR-Vorlage](./entscheidungen/adr-template.md)
+- [Security- und Durability-Modernisierung (2026-08-31)](./entscheidungen/2026-08-31-security-modernisierung.md)
 
 ### Features
 
@@ -141,27 +143,27 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 - **token.js** → nutzt jsonwebtoken
 - **2fa-service.js** → nutzt otplib, simplewebauthn, duo-universal, qrcode, bcryptjs
 - **auth-session-service.js** → nutzt token, benutzer-auth, 2fa-service
-- **chatops.js** → nutzt telegraf (Telegram), ai-agent, token (JWT-Synthese)
-- **ai-agent.js** → nutzt internal/setting (Provider/Model), internal/token, audit-log; aufgerufen von routes/ai.js und chatops
+- **chatops.js** → nutzt telegraf, ai-agent und einen live `integration-access`-Principal (keine JWT-Synthese)
+- **ai-agent.js** → nutzt internal/setting, strikte Tool-Schemas/Safety/Confirmation und audit-log
 - **tor.js** → nutzt nginx-engine, Tor-Daemon; bietet syncProxyHost() für Proxy-Host-Synchronisation
 - **oauth2-proxy.js** → nutzt nginx-engine, setting, audit-log
-- **gitops.js** → nutzt isomorphic-git, archiver, js-yaml; synchronisiert proxy-host, dead-host, stream
+- **gitops.js** → nutzt isomorphic-git/AJV; validiert snapshot v2 und importiert Proxy/Redirect/Dead/Stream mit Recovery
 - **git-deploy.js** → nutzt isomorphic-git, proxy-host, dead-host, audit-log
 - **certbot.js** → nutzt nginx-engine, certbot-CLI
 - **ip-ranges.js** → nutzt nginx-engine, proxy-agent, Cloudflare-API
 - **cloudflared.js** → nutzt Cloudflared-Binary, audit-log
 - **wireguard.js** → nutzt wireguard-tools, iproute2
 - **pki.js** → nutzt node:crypto, optional OpenSSL (ML-KEM-Hybrid)
-- **terminal.js** → nutzt ssh2, ws, @xterm/xterm
+- **terminal.js** → nutzt ssh2/ws; HMAC-Gateway, One-Time-Tickets, ACL-Revision und SSH-Host-Key-Pinning
 - **maintenance.js** → nutzt nginx-engine (Maintenance-Config)
 - **dashboard-notes.js** → nutzt audit-log, lib/access (RBAC)
-- **ddns.js / ddns-provider.js** → HTTP-Client für DNS-APIs
+- **ddns.js / ddns-provider.js** → feste DNS-APIs plus HTTPS-Custom-Callbacks innerhalb der SSRF-Grenze
 - **docker.js** → nutzt dockerode, Docker-Socket
 - **turbo-loader.js** → Frontend-Chunk-Download + Nginx-Interception
 - **openappsec.js** → WAF-Modul (nginx-Modul + Docker/native)
 - **anubis.js** → externer Anubis-Service (PoW-Gate)
 
-- **analytics.js** → nutzt recharts, react-simple-maps, GoAccess
+- **analytics.js** → nutzt fsync-Spool/Ledger im Backend und lokale Chart-/Map-Daten im Frontend; GoAccess optional
 
 ### API-Routen (Überblick)
 
@@ -205,7 +207,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 
 ---
 
-_Zuletzt aktualisiert: 2026-05-04_
+_Zuletzt aktualisiert: 2026-08-31_
 
 ## Verwandte Seiten
 

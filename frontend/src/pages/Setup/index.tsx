@@ -26,6 +26,7 @@ interface Payload {
 	name: string;
 	email: string;
 	password: string;
+	setupToken: string;
 }
 
 export default function Setup() {
@@ -39,7 +40,7 @@ export default function Setup() {
 		// Set a nickname, which is the first word of the name
 		const nickname = values.name.split(" ")[0];
 
-		const { password, ...payload } = {
+		const { password, setupToken, ...payload } = {
 			...values,
 			...{
 				nickname,
@@ -51,7 +52,7 @@ export default function Setup() {
 		};
 
 		try {
-			const user = await createUser(payload, true);
+			const user = await createUser(payload, true, setupToken);
 			if (user?.id) {
 				try {
 					await login(user.email, password);
@@ -109,6 +110,7 @@ export default function Setup() {
 								name: "",
 								email: "",
 								password: "",
+								setupToken: "",
 							}}
 							onSubmit={onSubmit}
 						>
@@ -122,6 +124,33 @@ export default function Setup() {
 								touched: FormikTouched<Payload>;
 							}) => (
 								<Form className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="setupToken">
+											<T id="setup.ownership-token" />
+										</Label>
+										<Field name="setupToken" validate={validateString(43, 256)}>
+											{({ field }: FieldProps) => (
+												<Input
+													{...field}
+													id="setupToken"
+													type="password"
+													autoComplete="off"
+													required
+													className={
+														errors.setupToken && touched.setupToken
+															? "border-destructive"
+															: ""
+													}
+												/>
+											)}
+										</Field>
+										<p className="text-sm text-muted-foreground">
+											<T id="setup.ownership-token-help" />
+										</p>
+										{errors.setupToken && touched.setupToken && (
+											<p className="text-sm text-destructive">{errors.setupToken}</p>
+										)}
+									</div>
 									<div className="space-y-2">
 										<Label htmlFor="name">
 											<T id="user.full-name" />
@@ -167,7 +196,7 @@ export default function Setup() {
 										<Label htmlFor="password">
 											<T id="user.new-password" />
 										</Label>
-										<Field name="password" validate={validateString(8, 100)}>
+										<Field name="password" validate={validateString(12, 100)}>
 											{({ field }: FieldProps) => (
 												<Input
 													{...field}

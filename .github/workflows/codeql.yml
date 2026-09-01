@@ -25,11 +25,13 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
+      uses: github/codeql-action/init@fddeee1a7ece751b577e409a89057319e3172939 # v4
       with:
         languages: ${{ matrix.language }}
         # START CUSTOM CONFIGURATION
@@ -37,9 +39,9 @@ jobs:
         # END CUSTOM CONFIGURATION
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v4
+      uses: github/codeql-action/autobuild@fddeee1a7ece751b577e409a89057319e3172939 # v4
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      uses: github/codeql-action/analyze@fddeee1a7ece751b577e409a89057319e3172939 # v4
       with:
         category: "/language:${{matrix.language}}"

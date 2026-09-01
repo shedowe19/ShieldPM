@@ -12,7 +12,9 @@ import User from "./user.js";
 
 Model.knex(db());
 
-const boolFields = ["is_deleted", "satisfy_any", "pass_auth", "mtls_enabled", "mtls_use_internal"];
+const integerBoolFields = ["is_deleted", "satisfy_any", "pass_auth", "mtls_use_internal"];
+
+const normalizeNativeBoolean = (value) => value === true || value === 1;
 
 class AccessList extends Model {
 	/** @type {number} */
@@ -25,10 +27,22 @@ class AccessList extends Model {
 	owner_user_id;
 	/** @type {number} */
 	is_deleted;
+	/** @type {number} */
+	satisfy_any;
+	/** @type {number} */
+	pass_auth;
+	/** @type {boolean} */
+	mtls_enabled;
+	/** @type {number} */
+	mtls_use_internal;
+	/** @type {string|null} */
+	mtls_certificate;
 	/** @type {string} */
 	created_on;
 	/** @type {string} */
 	modified_on;
+	/** @type {number} */
+	revision;
 	/** @type {import("./access_list_auth.js").default[]} */
 	items;
 	/** @type {import("./access_list_client.js").default[]} */
@@ -50,11 +64,18 @@ class AccessList extends Model {
 
 	$parseDatabaseJson(json) {
 		const thisJson = super.$parseDatabaseJson(json);
-		return convertIntFieldsToBool(thisJson, boolFields);
+		convertIntFieldsToBool(thisJson, integerBoolFields);
+		if (typeof thisJson.mtls_enabled !== "undefined") {
+			thisJson.mtls_enabled = normalizeNativeBoolean(thisJson.mtls_enabled);
+		}
+		return thisJson;
 	}
 
 	$formatDatabaseJson(json) {
-		const thisJson = convertBoolFieldsToInt(json, boolFields);
+		const thisJson = convertBoolFieldsToInt(json, integerBoolFields);
+		if (typeof thisJson.mtls_enabled !== "undefined") {
+			thisJson.mtls_enabled = normalizeNativeBoolean(thisJson.mtls_enabled);
+		}
 		return super.$formatDatabaseJson(thisJson);
 	}
 

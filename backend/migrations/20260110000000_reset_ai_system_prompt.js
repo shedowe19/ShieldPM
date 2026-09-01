@@ -6,11 +6,28 @@
  * @returns {Promise}
  */
 const up = async (knex) => {
-	// Update the ai-config setting to clear the old system_prompt
+	const row = await knex("setting").where("id", "ai-config").first();
+	if (!row?.meta) return;
+
+	let meta = row.meta;
+	if (typeof meta === "string") {
+		try {
+			meta = JSON.parse(meta);
+		} catch (_error) {
+			return;
+		}
+	}
+
+	if (typeof meta !== "object" || Array.isArray(meta) || !Object.hasOwn(meta, "system_prompt")) return;
+
+	const nextMeta = { ...meta };
+	delete nextMeta.system_prompt;
+
+	// Serialize explicitly so SQLite, MySQL, and PostgreSQL all receive the same JSON value.
 	await knex("setting")
 		.where("id", "ai-config")
 		.update({
-			meta: knex.raw(`json_remove(meta, '$.system_prompt')`),
+			meta: JSON.stringify(nextMeta),
 		});
 };
 

@@ -1,464 +1,388 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
 
-# Self-update protection: Run from /tmp to allow overwriting the original script file
-SELF_PATH=$(readlink -f "$0")
-if [[ "$SELF_PATH" != "/tmp/shieldpm_update_running" ]]; then
-    cp "$SELF_PATH" /tmp/shieldpm_update_running
-    exec /bin/bash /tmp/shieldpm_update_running "$@"
-fi
+readonly REPOSITORY_URL="https://github.com/shedowe19/ShieldPM.git"
+readonly BACKEND_DIR="/app"
+readonly FRONTEND_DIR="/html/frontend"
+readonly DATA_DIRECTORY="${DATA_PATH:-/data}"
+readonly ENV_FILE="$DATA_DIRECTORY/.env"
+readonly SQLITE_FILE="$DATA_DIRECTORY/shieldpm/database.sqlite"
+readonly BACKUP_DIR="$DATA_DIRECTORY/shieldpm/backups"
+readonly LOCK_DIRECTORY="/run/shieldpm-update"
+readonly LOCK_FILE="$LOCK_DIRECTORY/update.lock"
 
-# Only run as root
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root"
-  exit 1
-fi
+BRANCH="develop"
+EXTERNAL_DB_BACKUP_CONFIRMED=false
+ASSUME_YES=false
+TARGET_SHA=""
+WORK_DIR=""
+ROLLBACK_DIR=""
+NEW_BACKEND=""
+NEW_FRONTEND=""
+OLD_BACKEND=""
+OLD_FRONTEND=""
+SQLITE_BACKUP=""
+DATABASE_MODE="sqlite"
+MUTATION_STARTED=false
+SERVICE_STOPPED=false
 
-REPO_URL="https://github.com/shedowe19/ShieldPM.git"
+usage() {
+    cat <<'EOF'
+Usage: update-shieldpm [-b|--branch BRANCH] [--external-db-backup-confirmed] [--yes]
 
-BRANCH="develop" # Default branch for content
-SCRIPT_BRANCH="develop" # Always pull the updater from develop/master to avoid breaking on feature branches
+The external database flag confirms that an operator-created, tested MySQL/PostgreSQL
+backup exists. ShieldPM never pretends that copying local files backs up an external DB.
+EOF
+}
 
-# Preserve original arguments for self-update restart
-ORIGINAL_ARGS=("$@")
+fail() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
 
-# Argument Parsing
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -b|--branch)
-      BRANCH="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    *)
-      shift # past argument
-      ;;
-  esac
+require_value() {
+    [ "$#" -ge 2 ] && [ -n "$2" ] || fail "$1 requires a value"
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -b|--branch)
+            require_value "$@"
+            BRANCH="$2"
+            shift 2
+            ;;
+        --external-db-backup-confirmed)
+            EXTERNAL_DB_BACKUP_CONFIRMED=true
+            shift
+            ;;
+        --yes)
+            ASSUME_YES=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *) fail "unknown option: $1" ;;
+    esac
 done
 
-TEMP_DIR="/tmp/shieldpm_update_$(date +%s)"
-BACKEND_DIR="/app"
-FRONTEND_DIR="/html/frontend"
-
-echo "=========================================="
-echo "🛡️ ShieldPM In-Place Update Utility"
-echo "=========================================="
-echo "Target Branch: $BRANCH"
-echo "Temp Dir:      $TEMP_DIR"
-echo "Binary Tag:    nginx-binaries (Rolling)"
-echo "=========================================="
-
-echo ""
-echo "⚠️  WARNING: USE AT YOUR OWN RISK ⚠️"
-echo "This script will update ShieldPM in-place by pulling the latest code"
-echo "and rebuilding the application. Unexpected issues may occur."
-echo "Always backup your data before proceeding!"
-echo ""
-read -p "Are you sure you want to continue? [y/N] " -n 1 -r
-echo ""
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Update aborted."
-    exit 1
-fi
-echo "--> Checking for application updates..."
-# Fetch latest commit SHA for the target branch
-LATEST_SHA_FULL=$(curl -s "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH" | grep '"sha":' | head -n 1 | cut -d '"' -f 4)
-LATEST_SHORT=${LATEST_SHA_FULL:0:7}
-
-# Get local commit hash if available
-if [ -f "/app/.git-commit" ]; then
-    CURRENT_SHA=$(cat /app/.git-commit)
-    CURRENT_SHORT=${CURRENT_SHA:0:7}
-else
-    CURRENT_SHORT="unknown"
-    CURRENT_SHA=""
+if [[ ! "$BRANCH" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$ ]] ||
+    [[ "$BRANCH" == *".."* || "$BRANCH" == *"//"* || "$BRANCH" == */ ]]; then
+    fail "invalid branch name"
 fi
 
-# Get semantic version for display
-if [ -f "/app/package.json" ]; then
-    CURRENT_VER=$(grep '"version":' /app/package.json | head -n 1 | cut -d '"' -f 4)
-else
-    CURRENT_VER="unknown"
-fi
+[ "${EUID}" -eq 0 ] || fail "run as root"
 
-echo "    Current Version: $CURRENT_VER ($CURRENT_SHORT)"
-echo "    Latest Commit:   $LATEST_SHORT (Branch: $BRANCH)"
-echo ""
+for command in awk chmod corepack cp curl dirname find flock git grep install jq mkdir mktemp mv nginx node readlink rm rmdir sed sleep stat systemctl tail tar wc yarn; do
+    command -v "$command" >/dev/null 2>&1 || fail "missing prerequisite: $command"
+done
 
-if [[ "$CURRENT_SHA" == "$LATEST_SHA_FULL" ]]; then
-    echo "✅ You are already on the latest commit!"
-    read -p "Force update anyway? [y/N] " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Update cancelled."
-        exit 0
+git check-ref-format --branch "$BRANCH" >/dev/null 2>&1 || fail "invalid Git branch name"
+
+NODE_VERSION=$(node --version)
+COREPACK_VERSION=$(corepack --version)
+YARN_VERSION=$(yarn --version)
+[[ "$NODE_VERSION" =~ ^v24\. ]] || fail "Node.js 24 is required; active version is $NODE_VERSION"
+[ "$COREPACK_VERSION" = "0.36.0" ] || fail "Corepack 0.36.0 is required; active version is $COREPACK_VERSION"
+[ "$YARN_VERSION" = "4.18.0" ] || fail "Yarn 4.18.0 is required; active version is $YARN_VERSION"
+
+for target in "$BACKEND_DIR" "$FRONTEND_DIR"; do
+    if [ -e "$target" ] || [ -L "$target" ]; then
+        [ -d "$target" ] && [ ! -L "$target" ] || fail "unsafe application target: $target"
     fi
-fi
+done
 
-# Self-Update: Fetch latest version of this script first
-echo "--> [0/9] Checking for script updates..."
-SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${SCRIPT_BRANCH}/rootfs/usr/local/bin/update-shieldpm"
-SCRIPT_TMP="/tmp/update-shieldpm.new"
-SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
-
-# Allow curl to fail (e.g. if offline or github issues) without crashing the script (set -e)
-if curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL" && [ -f "$SCRIPT_TMP" ]; then
-    # Compare with current script
-    if ! cmp -s "$SCRIPT_TMP" "$SCRIPT_CURRENT"; then
-        echo "    - New version found. Updating self and restarting..."
-        cp "$SCRIPT_TMP" "$SCRIPT_CURRENT"
-        chmod +x "$SCRIPT_CURRENT"
-        rm -f "$SCRIPT_TMP"
-        # Re-execute with same arguments, but mark as already self-updated
-        export SHIELDPM_SELF_UPDATED=1
-        exec /bin/bash "$SCRIPT_CURRENT" "${ORIGINAL_ARGS[@]}"
-    else
-        echo "    - Script is up to date."
-        rm -f "$SCRIPT_TMP"
-    fi
+if [ -e "$LOCK_DIRECTORY" ] || [ -L "$LOCK_DIRECTORY" ]; then
+    [ -d "$LOCK_DIRECTORY" ] && [ ! -L "$LOCK_DIRECTORY" ] || fail "unsafe updater lock directory"
+    chmod 0700 "$LOCK_DIRECTORY"
 else
-    echo "    - Could not fetch latest script (continuing anyway)."
+    mkdir -m 0700 "$LOCK_DIRECTORY"
 fi
+[ ! -L "$LOCK_FILE" ] || fail "unsafe updater lock file"
+exec 9>>"$LOCK_FILE"
+chmod 0600 "$LOCK_FILE"
+flock -n 9 || fail "another ShieldPM update is already running"
 
-enable_node_system_ca() {
-    if [[ " ${NODE_OPTIONS:-} " != *" --use-system-ca "* ]]; then
-        export NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--use-system-ca"
-    fi
-}
+WORK_DIR=$(mktemp -d /tmp/shieldpm-update.XXXXXXXX)
+install -d -m 0700 "$DATA_DIRECTORY/shieldpm"
+ROLLBACK_DIR=$(mktemp -d "$DATA_DIRECTORY/shieldpm/update-rollback.XXXXXXXX")
+NEW_BACKEND=$(mktemp -d "$(dirname "$BACKEND_DIR")/.shieldpm-app-new.XXXXXXXX")
+NEW_FRONTEND=$(mktemp -d "$(dirname "$FRONTEND_DIR")/.shieldpm-frontend-new.XXXXXXXX")
+OLD_BACKEND=$(mktemp -d "$(dirname "$BACKEND_DIR")/.shieldpm-app-old.XXXXXXXX")
+OLD_FRONTEND=$(mktemp -d "$(dirname "$FRONTEND_DIR")/.shieldpm-frontend-old.XXXXXXXX")
+rmdir "$OLD_BACKEND" "$OLD_FRONTEND"
 
-remove_stale_corepack_shims() {
-    local shim
-    local shim_target
-
-    for shim in /usr/bin/corepack /usr/bin/yarn /usr/bin/yarnpkg /usr/bin/pnpm /usr/bin/pnpx; do
-        [ -L "$shim" ] || continue
-        shim_target="$(readlink "$shim")"
-        case "$shim_target" in
-            *corepack/dist/*)
-                rm -f "$shim"
-                ;;
-        esac
-    done
-}
-
-wait_for_backend_health() {
-    local attempt
-    local max_attempts=120
-
-    echo "    - Waiting for the updated backend and database migrations..."
-    for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-        if curl --fail --silent --show-error --unix-socket /run/shieldpm.sock \
-            http://localhost/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; then
-            echo "    - Backend is healthy; pending database migrations completed."
-            return 0
+cleanup() {
+    rm -rf -- "$WORK_DIR" "$NEW_BACKEND" "$NEW_FRONTEND"
+    if [ "$MUTATION_STARTED" = false ]; then
+        rm -rf -- "$ROLLBACK_DIR" "$OLD_BACKEND" "$OLD_FRONTEND"
+        if [ "$SERVICE_STOPPED" = true ]; then
+            systemctl start shieldpm || true
         fi
+    fi
+}
+trap cleanup EXIT
+
+handle_error() {
+    local status="$1"
+    local line="$2"
+    if [ "$MUTATION_STARTED" = true ]; then
+        rollback "unexpected command failure at line $line (status $status)"
+    fi
+    exit "$status"
+}
+trap 'handle_error $? $LINENO' ERR
+
+handle_signal() {
+    local signal="$1"
+    trap - ERR INT TERM
+    if [ "$MUTATION_STARTED" = true ]; then
+        rollback "received $signal"
+    fi
+    exit 130
+}
+trap 'handle_signal SIGINT' INT
+trap 'handle_signal SIGTERM' TERM
+
+echo "Resolving refs/heads/$BRANCH..."
+REMOTE_LINE=$(git ls-remote --exit-code --heads "$REPOSITORY_URL" "refs/heads/$BRANCH") || fail "branch not found"
+TARGET_SHA=$(awk 'NR == 1 { print $1 }' <<<"$REMOTE_LINE")
+[[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "remote did not return an exact commit SHA"
+[ "$(wc -l <<<"$REMOTE_LINE")" -eq 1 ] || fail "branch resolution was ambiguous"
+
+git -C "$WORK_DIR" init --quiet
+git -C "$WORK_DIR" remote add origin "$REPOSITORY_URL"
+git -C "$WORK_DIR" fetch --quiet --depth=1 origin "$TARGET_SHA"
+git -C "$WORK_DIR" checkout --quiet --detach "$TARGET_SHA"
+[ "$(git -C "$WORK_DIR" rev-parse HEAD)" = "$TARGET_SHA" ] || fail "checked-out commit differs from resolved SHA"
+
+TARGET_VERSION=$(<"$WORK_DIR/.version")
+[[ "$TARGET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || fail "invalid target version"
+for manifest in backend/package.json frontend/package.json; do
+    package_manager=$(jq -r '.packageManager // empty' "$WORK_DIR/$manifest")
+    [ "$package_manager" = "yarn@4.18.0" ] || fail "$manifest must pin yarn@4.18.0 in packageManager"
+    [ "$(jq -r '.version // empty' "$WORK_DIR/$manifest")" = "$TARGET_VERSION" ] || \
+        fail "$manifest version must match .version"
+done
+grep -Eq '^[[:space:]]*enableScripts:[[:space:]]*false[[:space:]]*$' "$WORK_DIR/backend/.yarnrc.yml" || \
+    fail "backend/.yarnrc.yml must disable dependency scripts by default"
+jq -e '.dependenciesMeta["better-sqlite3"].built == true' "$WORK_DIR/backend/package.json" >/dev/null || \
+    fail "backend/package.json must explicitly allow the better-sqlite3 native build"
+
+echo "Building exact commit $TARGET_SHA..."
+(
+    cd "$WORK_DIR/backend"
+    yarn install --immutable
+    yarn workspaces focus --production
+)
+(
+    cd "$WORK_DIR/frontend"
+    yarn install --immutable
+    yarn build
+)
+
+cp -a "$WORK_DIR/backend/." "$NEW_BACKEND/"
+cp -a "$WORK_DIR/frontend/dist/." "$NEW_FRONTEND/"
+printf '%s\n' "$TARGET_SHA" > "$NEW_BACKEND/.git-commit"
+
+# Native-only binaries are supplied by the verified installer package. The updater
+# deliberately preserves their exact bytes and never downloads or replaces runtimes.
+for binary in anubis oauth2-proxy; do
+    if [ -f "$BACKEND_DIR/$binary" ] && [ ! -L "$BACKEND_DIR/$binary" ]; then
+        cp -a "$BACKEND_DIR/$binary" "$NEW_BACKEND/$binary"
+    fi
+done
+
+[ "$(stat -c %d "$NEW_BACKEND")" = "$(stat -c %d "$(dirname "$BACKEND_DIR")")" ] || fail "backend staging is not on the target filesystem"
+[ "$(stat -c %d "$NEW_FRONTEND")" = "$(stat -c %d "$(dirname "$FRONTEND_DIR")")" ] || fail "frontend staging is not on the target filesystem"
+
+if grep -Eq '^[[:space:]]*(export[[:space:]]+)?DB_(MYSQL|POSTGRES)_HOST(_FILE)?=' "$ENV_FILE" 2>/dev/null; then
+    DATABASE_MODE="external"
+    [ "$EXTERNAL_DB_BACKUP_CONFIRMED" = true ] || fail "external DB detected; create and test a native DB backup, then pass --external-db-backup-confirmed"
+elif [ -e "$SQLITE_FILE" ]; then
+    [ -f "$SQLITE_FILE" ] && [ ! -L "$SQLITE_FILE" ] || fail "SQLite database is not a regular non-symlink file"
+fi
+
+if [ "$ASSUME_YES" != true ]; then
+    printf 'Update ShieldPM to %s (%s)? [y/N] ' "$BRANCH" "${TARGET_SHA:0:12}"
+    read -r reply
+    [[ "$reply" =~ ^[Yy]$ ]] || { echo "Update cancelled."; exit 0; }
+fi
+
+create_rootfs_snapshot() {
+    : > "$ROLLBACK_DIR/rootfs-existing.list"
+    : > "$ROLLBACK_DIR/rootfs-missing.list"
+    while IFS= read -r -d '' source; do
+        relative=${source#"$WORK_DIR/rootfs/"}
+        case "$relative" in
+            data|data/*) continue ;;
+        esac
+        target="/$relative"
+        if [ -e "$target" ] || [ -L "$target" ]; then
+            printf '%s\n' "$target" >> "$ROLLBACK_DIR/rootfs-existing.list"
+        else
+            printf '%s\n' "$target" >> "$ROLLBACK_DIR/rootfs-missing.list"
+        fi
+    done < <(find "$WORK_DIR/rootfs" \( -type f -o -type l \) -print0)
+
+    if [ -s "$ROLLBACK_DIR/rootfs-existing.list" ]; then
+        tar --create --preserve-permissions --absolute-names \
+            --file "$ROLLBACK_DIR/rootfs.tar" --files-from "$ROLLBACK_DIR/rootfs-existing.list"
+    else
+        tar --create --file "$ROLLBACK_DIR/rootfs.tar" --files-from /dev/null
+    fi
+}
+
+validate_rootfs_overlay() {
+    while IFS= read -r -d '' source; do
+        relative=${source#"$WORK_DIR/rootfs/"}
+        case "$relative" in
+            data|data/*) continue ;;
+        esac
+        case "$relative" in
+            *$'\n'*|*$'\r'*) fail "unsafe control character in rootfs path" ;;
+        esac
+        case "/$relative" in
+            *'/../'*|*'/./'*) fail "unsafe rootfs path: $relative" ;;
+        esac
+        if [ -L "$source" ]; then
+            link_target=$(readlink "$source")
+            case "$link_target" in
+                ''|/*|..|../*|*/..|*/../*) fail "unsafe rootfs symlink: $relative" ;;
+            esac
+        fi
+    done < <(find "$WORK_DIR/rootfs" \( -type f -o -type l \) -print0)
+}
+
+install_rootfs_overlay() {
+    while IFS= read -r -d '' source; do
+        relative=${source#"$WORK_DIR/rootfs/"}
+        case "$relative" in
+            data|data/*) continue ;;
+        esac
+        target="/$relative"
+        install -d -m 0755 "$(dirname "$target")"
+        staging="$(dirname "$target")/.shieldpm-new-$(basename "$target").$$"
+        rm -f -- "$staging"
+        if [ -L "$source" ]; then
+            link_target=$(readlink "$source")
+            case "$link_target" in
+                ''|/*|..|../*|*/..|*/../*) fail "unsafe rootfs symlink: $relative" ;;
+            esac
+            ln -s "$link_target" "$staging"
+        else
+            cp -a "$source" "$staging"
+        fi
+        mv -Tf "$staging" "$target"
+    done < <(find "$WORK_DIR/rootfs" \( -type f -o -type l \) -print0)
+}
+
+restore_rootfs_overlay() {
+    local restore_ok=true
+    while IFS= read -r target; do
+        if [ -n "$target" ]; then
+            rm -f -- "$target" || restore_ok=false
+        fi
+    done < "$ROLLBACK_DIR/rootfs-missing.list"
+    tar --extract --preserve-permissions --absolute-names --file "$ROLLBACK_DIR/rootfs.tar" || restore_ok=false
+    [ "$restore_ok" = true ]
+}
+
+frontend_port() {
+    local value
+    value=$(sed -n 's/^[[:space:]]*NPM_PORT=\([0-9][0-9]*\)[[:space:]]*$/\1/p' "$ENV_FILE" 2>/dev/null | tail -n 1)
+    printf '%s' "${value:-81}"
+}
+
+health_check() {
+    systemctl is-active --quiet shieldpm || return 1
+    curl --fail --silent --show-error --max-time 3 --unix-socket /run/shieldpm.sock \
+        http://localhost/ | jq -e '.status == "OK"' >/dev/null || return 1
+    nginx -tq >/dev/null 2>&1 || return 1
+    [ -s "$FRONTEND_DIR/index.html" ] || return 1
+    curl --fail --silent --show-error --max-time 3 "http://127.0.0.1:$(frontend_port)/" >/dev/null || return 1
+}
+
+wait_for_health() {
+    local deadline=$((SECONDS + 120))
+    until health_check; do
+        [ "$SECONDS" -lt "$deadline" ] || return 1
         sleep 1
     done
-
-    echo "    ! ShieldPM did not become healthy within ${max_attempts}s."
-    return 1
 }
 
-install_node_26() {
-    local NODE_MAJOR=26
-    local NODESOURCE_KEYRING="/etc/apt/keyrings/nodesource.gpg"
-    local NODESOURCE_LIST="/etc/apt/sources.list.d/nodesource.list"
-    local NODE_PACKAGE_VERSION
-    local NODE_VERSION
-    local source_file
+rollback() {
+    local reason="$1"
+    local files_restored=true
+    trap - ERR
+    echo "Update failed: $reason" >&2
+    systemctl stop shieldpm || true
 
-    echo "--> Installing Node.js ${NODE_MAJOR} build runtime..."
-    apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        gnupg
-
-    install -d -m 0755 /etc/apt/keyrings
-    curl -fsSL "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key" | \
-        gpg --dearmor --yes --output "$NODESOURCE_KEYRING"
-    chmod a+r "$NODESOURCE_KEYRING"
-
-    # An existing NodeSource major would otherwise win apt's version selection
-    # and prevent the intended Node 26 installation.
-    while IFS= read -r -d '' source_file; do
-        if grep -qE 'deb[.]nodesource[.]com/node_[0-9]+[.]x' "$source_file"; then
-            rm -f "$source_file"
-        fi
-    done < <(find /etc/apt/sources.list.d -maxdepth 1 -type f \( -name '*.list' -o -name '*.sources' \) -print0)
-
-    printf 'deb [signed-by=%s] https://deb.nodesource.com/node_%s.x nodistro main\n' \
-        "$NODESOURCE_KEYRING" "$NODE_MAJOR" > "$NODESOURCE_LIST"
-    apt-get update
-    # With pipefail, awk must consume the complete listing; exiting early can make apt-cache fail with SIGPIPE.
-    NODE_PACKAGE_VERSION="$(apt-cache madison nodejs | awk '$3 ~ /^26\./ && !found { print $3; found = 1 }')"
-    if [ -z "$NODE_PACKAGE_VERSION" ]; then
-        echo "    ! NodeSource does not provide a Node.js ${NODE_MAJOR} package for this architecture."
-        exit 1
+    rm -rf -- "$BACKEND_DIR" || files_restored=false
+    if [ -e "$OLD_BACKEND" ]; then
+        mv -T "$OLD_BACKEND" "$BACKEND_DIR" || files_restored=false
     fi
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
-        "nodejs=${NODE_PACKAGE_VERSION}"
-
-    enable_node_system_ca
-    COREPACK_BIN="$(command -v corepack || true)"
-    if [ -n "$COREPACK_BIN" ] && [ -x "$COREPACK_BIN" ]; then
-        corepack enable
-        corepack install --global yarn@1.22.22
-    else
-        remove_stale_corepack_shims
-        npm install --global --allow-scripts=yarn yarn@1.22.22
+    rm -rf -- "$FRONTEND_DIR" || files_restored=false
+    if [ -e "$OLD_FRONTEND" ]; then
+        mv -T "$OLD_FRONTEND" "$FRONTEND_DIR" || files_restored=false
     fi
+    restore_rootfs_overlay || files_restored=false
+    systemctl daemon-reload || files_restored=false
 
-    NODE_VERSION="$(node --version)"
-    if [[ ! "$NODE_VERSION" =~ ^v26\. ]]; then
-        echo "    ! Node.js 26 installation failed; active version is $NODE_VERSION."
+    if [ "$files_restored" != true ]; then
+        echo "File rollback was incomplete; ShieldPM remains stopped. Recovery assets: $ROLLBACK_DIR" >&2
         exit 1
     fi
 
-    echo "    - Node.js $NODE_VERSION, npm $(npm --version), Yarn $(yarn --version)"
-}
-
-echo "--> [1/9] Updating System & Dependencies..."
-
-apt-get update
-# Upgrade all packages to keep the system secure
-DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
-DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
-
-install_node_26
-
-apt-get install -y --no-install-recommends \
-    git \
-    build-essential \
-    python3 \
-    python3-dev \
-    python3-pip \
-    python3-setuptools \
-    libffi-dev \
-    gyp \
-    jq
-
-echo "--> [2/9] Fetching latest source..."
-git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
-
-echo "--> [3/9] Building Backend..."
-cd "$TEMP_DIR/backend"
-# LXC compatible: Run as root
-# Fix for node-gyp on Python 3.13: Ensure dist-packages is in python path
-export PYTHONPATH="/usr/lib/python3/dist-packages:${PYTHONPATH:-}"
-yarn install --frozen-lockfile --production --silent
-
-echo "--> [4/9] Building Frontend..."
-cd "$TEMP_DIR/frontend"
-# LXC compatible: Run as root
-yarn install --frozen-lockfile --silent
-yarn run build
-
-echo "--> [5/9] Swapping files..."
-# Backend
-echo "    - Updating Backend at $BACKEND_DIR..."
-# Application state belongs in /data. Replacing /app exactly prevents removed
-# source files or native modules from surviving a release update.
-mkdir -p "$BACKEND_DIR"
-find "$BACKEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
-cp -a "$TEMP_DIR/backend/." "$BACKEND_DIR/"
-printf '%s\n' "$LATEST_SHA_FULL" > "$BACKEND_DIR/.git-commit"
-
-# Frontend
-echo "    - Updating Frontend at $FRONTEND_DIR..."
-mkdir -p "$FRONTEND_DIR"
-find "$FRONTEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
-cp -a "$TEMP_DIR/frontend/dist/." "$FRONTEND_DIR/"
-
-# Rootfs (System Scripts & Configs)
-echo "    - Updating System Configs (rootfs)..."
-# SAFETY: Remove /data from the update payload to PREVENT overwriting user config (.env) and database
-rm -rf "$TEMP_DIR/rootfs/data"
-cp -rf "$TEMP_DIR/rootfs/"* /
-
-echo "--> [6/9] Checking for Nginx Binary Updates..."
-RELEASE_BASE="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries"
-ARCH=$(dpkg --print-architecture)
-
-if [[ "$ARCH" == "amd64" || "$ARCH" == "arm64" ]]; then
-    # Simple prompt, defaulting to Yes for convenience
-    read -p "    ? Update compiled Nginx binaries? (Recommended) [Y/n] " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
-         echo "    - Skipping binary update."
-    else
-         echo "    - Downloading nginx-linux-$ARCH.tar.gz..."
-         curl -L -f -o "$TEMP_DIR/nginx.tar.gz" "$RELEASE_BASE/nginx-linux-$ARCH.tar.gz"
-         if [ -f "$TEMP_DIR/nginx.tar.gz" ]; then
-             echo "    - Extracting binaries..."
-             tar -xzf "$TEMP_DIR/nginx.tar.gz" -C /
-             echo "    - Binaries updated successfully."
-         else
-             echo "    ! Failed to download binaries. Please check internet connection or GitHub status."
-         fi
-    fi
-else
-    echo "    - Skipping Nginx update: Architecture $ARCH not supported for auto-update."
-fi
-
-echo "--> [7/9] Checking for Anubis AI Firewall Updates..."
-# Check if Anubis is installed or enabled
-ANUBIS_INSTALLED=false
-if [ -f "/usr/local/bin/anubis" ]; then
-    ANUBIS_INSTALLED=true
-fi
-
-# Detect Arch for Anubis (reuse ARCH from nginx step if valid, else re-detect)
-# Anubis uses "amd64" / "arm64" suffix
-ANUBIS_ARCH=""
-if [[ "$ARCH" == "amd64" ]]; then
-    ANUBIS_ARCH="amd64"
-elif [[ "$ARCH" == "arm64" ]]; then
-    ANUBIS_ARCH="arm64"
-fi
-
-if [[ -n "$ANUBIS_ARCH" ]]; then
-    SHOULD_UPDATE=false
-
-    if [ "$ANUBIS_INSTALLED" = true ]; then
-        echo "    - Anubis is installed."
-        read -p "    ? Update Anubis binary? [Y/n] " -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            SHOULD_UPDATE=true
-        fi
-    else
-        echo "    - Anubis is NOT installed."
-        read -p "    ? Install Anubis AI Firewall? [y/N] " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            SHOULD_UPDATE=true
-        fi
+    if [ "$DATABASE_MODE" = "external" ]; then
+        echo "External database migrations cannot be rolled back automatically." >&2
+        echo "Files were restored, but ShieldPM is intentionally left STOPPED. Restore the external DB backup before starting it." >&2
+        exit 1
     fi
 
-    if [ "$SHOULD_UPDATE" = true ]; then
-        ANUBIS_VERSION="1.27.0"
-        ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
-        echo "    - Downloading Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
-        curl -L -f -o /tmp/anubis.tar.gz "$ANUBIS_URL"
-        if [ -s /tmp/anubis.tar.gz ]; then
-            tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-            rm /tmp/anubis.tar.gz
-            chmod +x /usr/local/bin/anubis
-            echo "    - Anubis installed successfully."
-
-            # Ensure enabled in env if installing fresh
-            if [ "$ANUBIS_INSTALLED" = false ]; then
-                ENV_FILE="/data/.env"
-                if [ -f "$ENV_FILE" ]; then
-                    if grep -q "ANUBIS_ENABLED" "$ENV_FILE"; then
-                        sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
-                    else
-                        echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
-                    fi
-                    echo "    - Enabled Anubis in $ENV_FILE"
-                fi
-            fi
-        else
-            echo "    ! Failed to download Anubis. Check internet connection."
-        fi
-    else
-        echo "    - Skipping Anubis update/install."
-    fi
-else
-    echo "    - Skipping Anubis: Architecture $ARCH not supported."
-fi
-
-echo "--> [8/9] Checking for OAuth2 Proxy Updates..."
-# Check if OAuth2 Proxy is installed
-OAUTH2_INSTALLED=false
-if [ -f "/usr/local/bin/oauth2-proxy" ]; then
-    OAUTH2_INSTALLED=true
-fi
-
-# Detect Arch for OAuth2 Proxy (reuse ARCH from nginx step if valid, else re-detect)
-# OAuth2 Proxy uses "amd64" / "arm64" suffix
-OAUTH2_ARCH=""
-if [[ "$ARCH" == "amd64" ]]; then
-    OAUTH2_ARCH="amd64"
-elif [[ "$ARCH" == "arm64" ]]; then
-    OAUTH2_ARCH="arm64"
-fi
-
-if [[ -n "$OAUTH2_ARCH" ]]; then
-    SHOULD_UPDATE_OAUTH2=false
-
-    if [ "$OAUTH2_INSTALLED" = true ]; then
-        echo "    - OAuth2 Proxy is installed."
-        read -p "    ? Update OAuth2 Proxy binary? [Y/n] " -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            SHOULD_UPDATE_OAUTH2=true
-        fi
-    else
-        echo "    - OAuth2 Proxy is NOT installed."
-        read -p "    ? Install OAuth2 Proxy? [y/N] " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            SHOULD_UPDATE_OAUTH2=true
-        fi
+    if [ -n "$SQLITE_BACKUP" ]; then
+        node "$WORK_DIR/backend/scripts/sqlite-backup.js" --restore "$SQLITE_BACKUP" --destination "$SQLITE_FILE" || {
+            echo "SQLite restore failed; ShieldPM remains stopped." >&2
+            exit 1
+        }
     fi
 
-    if [ "$SHOULD_UPDATE_OAUTH2" = true ]; then
-        OAUTH2_VERSION="7.15.3"
-        OAUTH2_TARBALL="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}.tar.gz"
-        OAUTH2_URL="https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v${OAUTH2_VERSION}/${OAUTH2_TARBALL}"
-        
-        OAUTH2_TMP_DIR=$(mktemp -d)
-        OAUTH2_TAR="$OAUTH2_TMP_DIR/$OAUTH2_TARBALL"
-
-        echo "    - Downloading OAuth2 Proxy $OAUTH2_VERSION ($OAUTH2_ARCH)..."
-        curl -L -f -o "$OAUTH2_TAR" "$OAUTH2_URL" || true
-
-        if [ -s "$OAUTH2_TAR" ]; then
-            cd "$OAUTH2_TMP_DIR"
-            if tar -xzf "$OAUTH2_TARBALL"; then
-                # Check if extracted binary exists before moving
-                EXTRACTED_BIN="oauth2-proxy-v${OAUTH2_VERSION}.linux-${OAUTH2_ARCH}/oauth2-proxy"
-                if [ -f "$EXTRACTED_BIN" ]; then
-                    mv "$EXTRACTED_BIN" /usr/local/bin/oauth2-proxy
-                    chmod +x /usr/local/bin/oauth2-proxy
-                    echo "    - OAuth2 Proxy installed successfully."
-                else
-                    echo "    ! Failed to locate extracted OAuth2 Proxy binary."
-                fi
-            else
-                echo "    ! Failed to extract OAuth2 Proxy."
-            fi
-            cd - > /dev/null
-        else
-            echo "    ! Failed to download OAuth2 Proxy or checksum. Check internet connection."
-        fi
-        rm -rf "$OAUTH2_TMP_DIR"
+    systemctl start shieldpm || true
+    if wait_for_health; then
+        echo "Previous ShieldPM version and SQLite database were restored successfully." >&2
     else
-        echo "    - Skipping OAuth2 Proxy update/install."
+        systemctl stop shieldpm || true
+        echo "Rollback health verification failed; ShieldPM remains stopped." >&2
     fi
-else
-    echo "    - Skipping OAuth2 Proxy: Architecture $ARCH not supported."
-fi
-
-echo "--> [9/9] Restarting ShieldPM and applying database migrations..."
-systemctl daemon-reload
-if systemctl restart shieldpm && systemctl is-active --quiet shieldpm && wait_for_backend_health; then
-    echo "    - ShieldPM is running; application update and database migrations are healthy."
-else
-    echo "    ! ShieldPM did not become healthy after the update."
-    systemctl --no-pager --full status shieldpm || true
-    journalctl --no-pager -u shieldpm -n 100 || true
     exit 1
+}
+
+validate_rootfs_overlay
+echo "Creating rollback snapshot and stopping ShieldPM..."
+create_rootfs_snapshot
+SERVICE_STOPPED=true
+systemctl stop shieldpm
+
+if [ "$DATABASE_MODE" = "sqlite" ] && [ -e "$SQLITE_FILE" ]; then
+    SQLITE_BACKUP=$(node "$NEW_BACKEND/scripts/sqlite-backup.js" \
+        --source "$SQLITE_FILE" --destination-directory "$BACKUP_DIR" --retention 7)
+    [ -f "$SQLITE_BACKUP" ] || fail "verified SQLite backup was not created"
 fi
+MUTATION_STARTED=true
 
-echo "--> Cleanup..."
-rm -rf "$TEMP_DIR"
-# Optional: remove build tools to save space?
-# apt-get remove -y git build-essential ...
-# apt-get autoremove -y
+mkdir -p "$(dirname "$BACKEND_DIR")" "$(dirname "$FRONTEND_DIR")"
+if [ -e "$BACKEND_DIR" ]; then mv -T "$BACKEND_DIR" "$OLD_BACKEND"; fi
+if [ -e "$FRONTEND_DIR" ]; then mv -T "$FRONTEND_DIR" "$OLD_FRONTEND"; fi
 
-echo "=========================================="
-echo "✅ Update Complete!"
-echo "=========================================="
+mv -T "$NEW_BACKEND" "$BACKEND_DIR" || rollback "backend atomic swap failed"
+mv -T "$NEW_FRONTEND" "$FRONTEND_DIR" || rollback "frontend atomic swap failed"
+install_rootfs_overlay
+systemctl daemon-reload || rollback "systemd reload failed"
+
+systemctl start shieldpm || rollback "service start failed"
+wait_for_health || rollback "120-second socket, HTTP, Nginx and frontend health gate failed"
+
+rm -rf -- "$ROLLBACK_DIR" "$OLD_BACKEND" "$OLD_FRONTEND"
+echo "ShieldPM update complete: $TARGET_SHA"

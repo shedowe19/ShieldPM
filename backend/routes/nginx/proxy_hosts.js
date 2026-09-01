@@ -1,6 +1,7 @@
 import express from "express";
 import internalGitDeploy from "../../internal/git-deploy.js";
 import internalProxyHost from "../../internal/proxy-host.js";
+import internalTerminal from "../../internal/terminal.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
@@ -10,6 +11,32 @@ const router = express.Router({
 	caseSensitive: true,
 	strict: true,
 	mergeParams: true,
+});
+
+/**
+ * This endpoint is deliberately authenticated by a short-lived HMAC assertion from the generated
+ * terminal vhost, not by the management JWT. The browser never receives the gateway secret.
+ */
+router.route("/:host_id/terminal/ticket").post(async (req, res) => {
+	const data = await validator(
+		{
+			type: "object",
+			required: ["host_id", "client_fingerprint"],
+			additionalProperties: false,
+			properties: {
+				host_id: { $ref: "common#/properties/id" },
+				client_fingerprint: { type: "string", pattern: "^[A-Za-z0-9_-]{43}$" },
+			},
+		},
+		{ host_id: req.params.host_id, client_fingerprint: req.body?.clientFingerprint },
+	);
+	const ticket = await internalTerminal.issueTicket(
+		Number.parseInt(data.host_id, 10),
+		req.headers,
+		data.client_fingerprint,
+	);
+	res.set({ "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" });
+	res.status(201).send(ticket);
 });
 
 /**

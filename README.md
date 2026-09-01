@@ -10,6 +10,7 @@ A modern, security-focused reverse proxy manager built on top of Nginx — with 
 
 > [!CAUTION]
 > **Migration from NPMplus required.**
+>
 > - Update your `compose.yaml` to use `ghcr.io/shedowe19/shieldpm:latest`
 > - Data now lives at `/data/shieldpm` (auto-migrated from `/data/npmplus` on first start)
 > - Switched from Alpine to **Debian Trixie** — use Debian package names (e.g. `php8.2-curl` instead of `php82-curl`)
@@ -27,11 +28,12 @@ curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/h
 docker compose up -d
 ```
 
-Open the admin UI at `https://<your-ip>:81`
+Open the admin UI at `http://<your-ip>:81`. Port 81 serves HTTP by default; terminate TLS in a trusted
+reverse proxy or tunnel if the management UI must be reachable over HTTPS.
 
-**Default credentials:**
-- **Email:** `admin@example.org`
-- **Password:** Check the container logs → `docker logs shieldpm`
+There are **no default credentials**. On first start ShieldPM creates a short-lived ownership token in
+`/data/shieldpm/initial-admin-setup-token` (mode `0600`). Read it locally and enter it in the setup wizard;
+the token is retired atomically after the first administrator is created. It is never printed to the logs.
 
 ---
 
@@ -75,7 +77,7 @@ Open the admin UI at `https://<your-ip>:81`
 - **CrowdSec IPS** — Community-powered intrusion prevention
 - **Cloudflare Tunnels** — Create and manage Zero Trust tunnels directly from the UI
 - **PHP-FPM** — Optional PHP 8.2 / 8.3 / 8.4 integration
-- **Analytics** — Built-in GoAccess dashboard on port `:91`
+- **Analytics** — Built-in durable analytics ingestion plus an optional GoAccess dashboard on port `:91`
 - **Auth Requests** — SSO support via Authentik and similar providers
 - **Multi-DB** — SQLite (default), MySQL/MariaDB, or PostgreSQL
 - **i18n** — UI available in English, German, Spanish, French, and more
@@ -85,6 +87,9 @@ Open the admin UI at `https://<your-ip>:81`
 ## 📚 Documentation
 
 Full setup guides, configuration options, and advanced usage are in the **[Wiki](https://github.com/shedowe19/ShieldPM/wiki)**.
+
+Report vulnerabilities privately according to the [Security Policy](SECURITY.md); do not publish exploit details in a
+public issue.
 
 ### Projekt-Wiki (Intern)
 
@@ -97,14 +102,17 @@ Die interne Entwicklerdokumentation für Entwickler und AI-Agenten befindet sich
 ## 🔨 Development
 
 ```bash
+# Node.js 24 LTS and Corepack are required
+corepack enable
+
 # Frontend
-cd frontend && yarn install && yarn dev
+cd frontend && yarn install --immutable && yarn dev
 
-# Backend
-cd backend && npm install && npm run dev
+# Backend (in a second shell)
+cd backend && yarn install --immutable && yarn dev
 
-# Tests
-npm test
+# Run the complete checks in each workspace
+yarn check
 ```
 
 ---
@@ -117,4 +125,4 @@ Special thanks to **[@ZoeyVid](https://github.com/ZoeyVid)** for the foundationa
 
 ---
 
-*Maintained with ❤️ by the ShieldPM Contributors.*
+_Maintained with ❤️ by the ShieldPM Contributors._

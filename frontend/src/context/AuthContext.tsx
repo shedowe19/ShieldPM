@@ -3,7 +3,9 @@ import { createContext, Fragment, type ReactNode, useCallback, useContext, useEf
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import * as api from "src/api/backend/base";
+import { ApiError } from "src/api/backend/base";
 import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
+import { serializeSessionMutation } from "src/modules/SessionMutationQueue";
 
 // Context
 export interface AuthContextType {
@@ -30,8 +32,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const [sessionVersion, setSessionVersion] = useState(0);
 
 	const handleTokenUpdate = useCallback((response: TokenResponse) => {
-		AuthStore.set(response);
-		setAuthenticated(true);
+		setAuthenticated(AuthStore.set(response));
 	}, []);
 
 	const completeLogin = useCallback(
@@ -42,9 +43,23 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		[handleTokenUpdate, queryClient],
 	);
 
+	const refreshSession = useCallback(async () => {
+		const retryDelays = [150, 350, 750];
+		for (let attempt = 0; ; attempt += 1) {
+			try {
+				return await serializeSessionMutation(refreshToken);
+			} catch (error) {
+				if (!(error instanceof ApiError) || error.status !== 409 || attempt >= retryDelays.length) {
+					throw error;
+				}
+				await new Promise((resolve) => window.setTimeout(resolve, retryDelays[attempt]));
+			}
+		}
+	}, []);
+
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
-		refreshToken()
+		refreshSession()
 			.then(handleTokenUpdate)
 			.catch(() => {
 				// No session or expired
@@ -53,7 +68,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			.finally(() => {
 				setLoading(false);
 			});
-	}, [handleTokenUpdate]);
+	}, [handleTokenUpdate, refreshSession]);
 
 	useEffect(() => {
 		const handleAuthenticationExpired = () => setAuthenticated(false);
@@ -63,7 +78,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	}, []);
 
 	const login = async (identity: string, secret: string) => {
-		const response = await getToken(identity, secret);
+		const response = await serializeSessionMutation(() => getToken(identity, secret));
 		// If the server requires 2FA, it returns an object with requires_2fa: true.
 		// We surface this to the caller as a thrown value so the Login page can
 		// switch to the 2FA step without treating it as an error.
@@ -75,32 +90,40 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const loginAs = async (id: number) => {
-		const response = await loginAsUser(id);
+		const response = await serializeSessionMutation(() => loginAsUser(id));
 		AuthStore.add(response);
 		queryClient.clear();
 		setSessionVersion((version) => version + 1);
 	};
 
 	const logout = async () => {
-		try {
-			// Check if we have a backup admin session cookie on the backend
-			const response = await restoreSession();
-			AuthStore.add(response);
-			queryClient.clear();
-			setSessionVersion((version) => version + 1);
-		} catch (_err) {
-			// No backup session found or failed to restore, do a full logout
-			AuthStore.clear();
-			setAuthenticated(false);
-			queryClient.clear();
-			// Call API to clear cookie (uses internal client for CSRF)
-			await api.post({ url: "/tokens/logout", silentAuth: true });
-		}
+		await serializeSessionMutation(async () => {
+			try {
+				// Check if we have a backup admin session cookie on the backend
+				const response = await restoreSession();
+				AuthStore.add(response);
+				queryClient.clear();
+				setSessionVersion((version) => version + 1);
+			} catch (_err) {
+				// No backup session found or failed to restore, do a full logout
+				AuthStore.clear();
+				setAuthenticated(false);
+				queryClient.clear();
+				// Call API to clear cookie (uses internal client for CSRF)
+				await api.post({ url: "/tokens/logout", silentAuth: true });
+			}
+		});
 	};
 
 	const refresh = async () => {
-		const response = await refreshToken();
-		handleTokenUpdate(response);
+		try {
+			const response = await refreshSession();
+			handleTokenUpdate(response);
+		} catch (error) {
+			if (!(error instanceof ApiError) || error.status !== 401) {
+				console.warn("Session refresh failed", error);
+			}
+		}
 	};
 
 	useIntervalWhen(

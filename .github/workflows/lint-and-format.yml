@@ -8,27 +8,35 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  COREPACK_VERSION: 0.36.0
+  YARN_VERSION: 4.18.0
+
 jobs:
-  quality:
+  policy:
+    name: Repository policy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 26
+          node-version: 24.20.0
 
       - name: Resolve comparison base
         id: base
         shell: bash
         run: |
           default_branch="${{ github.event.repository.default_branch }}"
-
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             base="${{ github.event.pull_request.base.sha }}"
           else
@@ -48,49 +56,198 @@ jobs:
       - name: Check changed lines
         run: git diff --check "${{ steps.base.outputs.sha }}" HEAD
 
-      - name: Scan added diff lines for recognizable token formats
+      - name: Scan added lines for recognizable token formats
         run: node backend/scripts/ci/scan-added-diff-secrets.js "${{ steps.base.outputs.sha }}"
 
-      - name: Install backend dependencies
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" install --frozen-lockfile
+      - name: Test deterministic notice generation
+        run: node --test scripts/generate-notices.test.js
 
-      - name: Install frontend dependencies
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" install --frozen-lockfile
+  quality:
+    name: Node ${{ matrix.node }}
+    needs: policy
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24.20.0, 26.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      - name: Check changed backend JavaScript and TypeScript files
-        shell: bash
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Activate pinned package manager
         run: |
-          mapfile -d '' files < <(git diff --name-only --diff-filter=ACMR -z "${{ steps.base.outputs.sha }}" HEAD -- backend | grep -z -E '\.(cjs|js|ts|tsx)$')
-          if ((${#files[@]})); then
-            cd "$GITHUB_WORKSPACE/backend"
-            ./node_modules/.bin/biome check "${files[@]#backend/}"
-          fi
+          npm install --global --ignore-scripts "corepack@$COREPACK_VERSION"
+          corepack enable
+          corepack install --global "yarn@$YARN_VERSION"
+          yarn --version
 
-      - name: Check changed frontend JavaScript and TypeScript files
-        shell: bash
+      - name: Install locked dependencies
         run: |
-          mapfile -d '' files < <(git diff --name-only --diff-filter=ACMR -z "${{ steps.base.outputs.sha }}" HEAD -- frontend | grep -z -E '\.(cjs|js|ts|tsx)$')
-          if ((${#files[@]})); then
-            cd "$GITHUB_WORKSPACE/frontend"
-            ./node_modules/.bin/biome check "${files[@]#frontend/}"
-          fi
+          yarn --cwd backend install --immutable
+          yarn --cwd frontend install --immutable
 
-      - name: Run backend tests
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" test --run
+      - name: Check backend source
+        run: |
+          yarn --cwd backend check
+          yarn --cwd backend tsc --noEmit
 
-      - name: Run frontend tests
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" test --run
+      - name: Check frontend source and locales
+        run: |
+          yarn --cwd frontend check
+          yarn --cwd frontend tsc --noEmit
+          node frontend/check-locales.cjs
 
-      - name: Check frontend locales
-        run: cd "$GITHUB_WORKSPACE/frontend" && node check-locales.cjs
+      - name: Run unit and integration tests
+        run: |
+          yarn --cwd backend test --run
+          yarn --cwd frontend test --run
 
       - name: Build frontend
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" build
+        run: yarn --cwd frontend build
 
-      - name: "Audit backend dependencies (advisory: high and critical)"
-        continue-on-error: true
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" audit --level high
+      - name: Verify third-party notices
+        run: |
+          node scripts/generate-notices.js
+          git diff --exit-code -- THIRD-PARTY-NOTICES.md
 
-      - name: "Audit frontend dependencies (advisory: high and critical)"
-        continue-on-error: true
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" audit --level high
+  browser-smoke:
+    name: Browser smoke test
+    needs: policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.20.0
+
+      - name: Activate pinned package manager
+        run: |
+          npm install --global --ignore-scripts "corepack@$COREPACK_VERSION"
+          corepack enable
+          corepack install --global "yarn@$YARN_VERSION"
+
+      - name: Install frontend and Chromium
+        run: |
+          yarn --cwd frontend install --immutable
+          yarn --cwd frontend playwright install --with-deps chromium
+
+      - name: Run fail-closed browser smoke test
+        run: yarn --cwd frontend test:e2e:ci
+
+  dependency-audit:
+    name: Dependency audit
+    needs: policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.20.0
+
+      - name: Activate pinned package manager
+        run: |
+          npm install --global --ignore-scripts "corepack@$COREPACK_VERSION"
+          corepack enable
+          corepack install --global "yarn@$YARN_VERSION"
+
+      - name: Audit all locked dependency trees
+        run: |
+          yarn --cwd backend npm audit --recursive --severity high
+          yarn --cwd frontend npm audit --recursive --severity high
+
+  database-migrations:
+    name: ${{ matrix.database }} migrations
+    needs: policy
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [mysql, postgres]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root-test-password
+          MYSQL_DATABASE: shieldpm
+          MYSQL_USER: shieldpm
+          MYSQL_PASSWORD: shieldpm-test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root-test-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: shieldpm
+          POSTGRES_USER: shieldpm
+          POSTGRES_PASSWORD: shieldpm-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready --username=shieldpm --dbname=shieldpm"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.20.0
+
+      - name: Activate pinned package manager
+        run: |
+          npm install --global --ignore-scripts "corepack@$COREPACK_VERSION"
+          corepack enable
+          corepack install --global "yarn@$YARN_VERSION"
+
+      - name: Install backend
+        run: yarn --cwd backend install --immutable
+
+      - name: Verify MySQL migration resume
+        if: matrix.database == 'mysql'
+        env:
+          CI: "true"
+          DATA_PATH: ${{ runner.temp }}/shieldpm-mysql
+          DB_MYSQL_HOST: 127.0.0.1
+          DB_MYSQL_PORT: "3306"
+          DB_MYSQL_USER: shieldpm
+          DB_MYSQL_PASSWORD: shieldpm-test-password
+          DB_MYSQL_NAME: shieldpm
+        run: yarn --cwd backend ci:migrate
+
+      - name: Verify PostgreSQL migration resume
+        if: matrix.database == 'postgres'
+        env:
+          CI: "true"
+          DATA_PATH: ${{ runner.temp }}/shieldpm-postgres
+          DB_POSTGRES_HOST: 127.0.0.1
+          DB_POSTGRES_PORT: "5432"
+          DB_POSTGRES_USER: shieldpm
+          DB_POSTGRES_PASSWORD: shieldpm-test-password
+          DB_POSTGRES_NAME: shieldpm
+        run: yarn --cwd backend ci:migrate

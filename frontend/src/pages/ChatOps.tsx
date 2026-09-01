@@ -55,7 +55,7 @@ export default function ChatOps() {
 		if (existing) {
 			form.reset({
 				token: "********", // Don't show real encrypted token
-				allowed_ids: existing.config?.allowed_ids?.join(", ") || "",
+				allowed_ids: existing.config?.allowedIds?.join(", ") || "",
 				enabled: existing.enabled,
 			});
 		}
@@ -109,7 +109,7 @@ export default function ChatOps() {
 			token: values.token === "********" ? undefined : values.token, // Don't send masked token
 			enabled: values.enabled,
 			config: {
-				allowed_ids: values.allowed_ids.split(",").map((s) => s.trim()),
+				allowedIds: values.allowed_ids.split(",").map((s) => s.trim()),
 			},
 		};
 

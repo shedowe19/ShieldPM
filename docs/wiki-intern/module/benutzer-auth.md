@@ -10,18 +10,14 @@ ShieldPM verwendet JWT-basierte Authentifizierung mit optionalem 2FA und OIDC.
 
 ## Wichtige Dateien
 
-- `backend/internal/user.js` (17 KB) — Benutzer-Business-Logik
-- `backend/internal/token.js` (6 KB) — JWT-Token-Verwaltung
-- `backend/internal/oauth2-proxy.js` (7 KB) — SSO-Integration (OAuth2 Proxy)
-- `backend/internal/auth-session-service.js` (6 KB) — Session-Verwaltung
-- `backend/models/user.js` (2 KB) — Benutzer-Modell
-- `backend/models/auth.js` (2 KB) — Auth-Modell
-- `backend/models/auth-session.js` (3 KB) — Session-Modell
-- `backend/models/user_permission.js` (1 KB) — Berechtigungen
-- `backend/routes/tokens.js` (22 KB) — Login/Token-API
-- `backend/routes/users.js` (10 KB) — Benutzer-API
-- `backend/routes/oidc.js` (7 KB) — OIDC-API
-- `backend/password-reset.js` (2 KB) — Passwort-Reset-Script
+- `backend/internal/user.js` — Benutzer-Business-Logik und atomarer erster Administrator
+- `backend/internal/initial-setup.js` — One-Time-Ownership-Claim
+- `backend/internal/token.js` und `backend/internal/auth-session-service.js` — Access-/Refresh-Lifecycle
+- `backend/internal/auth-challenge-service.js` — zweckgebundene One-Time-Challenges
+- `backend/models/user.js`, `auth.js`, `auth-session.js` — persistente Auth-Daten
+- `backend/models/oidc-identity.js`, `oidc-flow.js` — eindeutige IdP-Bindung und Flow-State
+- `backend/routes/tokens.js`, `users.js`, `oidc.js` — API-Grenzen
+- `backend/password-reset.js` — SQLite-only Recovery-CLI
 
 ## Verhalten
 
@@ -30,7 +26,12 @@ ShieldPM verwendet JWT-basierte Authentifizierung mit optionalem 2FA und OIDC.
 - Session-Verwaltung mit Geräte-Tracking
 - Berechtigungssystem (Permissions pro Benutzer)
 - Passwort-Hashing mit `bcryptjs`
-- JWT-Signierung mit `/data/keys.json`
+- JWT-Signierung und Anwendungsschlüssel unter `/data/shieldpm/keys.json`
+- Erster Admin nur mit 256-Bit-Ownership-Token aus `X-ShieldPM-Setup-Token`; Claim/User/Berechtigungen transaktional
+- Refresh-Rotation mit Replay-Family-Revoke und kurzem Parallel-Request-Retry-Fenster
+- Impersonation bindet Target an eine gültige Actor-Session; Restore benötigt beide Seiten und recent auth
+- Passwort-/Identity-Änderungen verlangen recent authentication/Step-up und widerrufen betroffene Sessions
+- OIDC bindet `(issuer, subject)` eindeutig; E-Mail allein darf keine bestehende Identity übernehmen
 
 ## Abhängigkeiten
 

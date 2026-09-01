@@ -12,8 +12,18 @@
 
 ## Offene Fragen
 
+- TODO: Den freigegebenen Multiarch-Digest aus dem privaten `shieldpm-nginx`-Repository als Repository-Variable
+  `SHIELDPM_NGINX_IMAGE` hinterlegen und bei jeder geplanten Baseline-Aktualisierung separat prüfen.
+- TODO: Für produktive MySQL-/PostgreSQL-Installationen einen operatorseitigen Backup-/Restore-Runbook-Test etablieren;
+  ShieldPM kann externe Datenbanken bewusst nicht durch lokale Dateikopien sichern oder automatisch zurückrollen.
 - TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen — der Auth-Typ ist parallel zu oauth2-proxy verfügbar, ein konkretes Setup-Beispiel fehlt aber noch.
 - TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
+- TODO (extern): GitHub Branch Protection/Rulesets für `develop` und Release-Branches im GitHub-Repository aktivieren
+  und erforderliche CI-Checks auswählen. Repositorycode kann diese Einstellung nicht setzen.
+- TODO (extern): Einen unterstützten unveränderlichen Digest für `ghcr.io/shedowe19/shieldpm-nginx:master` im
+  `shieldpm-nginx`-Repository veröffentlichen; erst danach den Base-Image-Tag in diesem Repo ersetzen.
+- TODO (Betrieb): Für jede externe MySQL/PostgreSQL-Installation einen nativen Dump-/Restore-Runbook bestätigen.
+  Application-Payload-Rollback ersetzt diesen Datenbank-Rollback nicht.
 
 ## Gelöste Fragen
 
@@ -29,12 +39,10 @@
 ### Frühere Sessions
 
 - ~~`backend/lib/`~~ → Dokumentiert in [Backend-Lib](./architektur/backend-lib.md).
-- ~~`frontend/src/modules/`~~ → 3 Module: AuthStore, Permissions, Validations → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/modals/`~~ → 21 Modals (19 + index + DeleteConfirm) → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/hooks/`~~ → 32 Custom-Hooks → [Frontend-Internas](./ui/frontend-internas.md).
+- ~~Frontend-Module, Modals und Hooks~~ → [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`frontend/src/context/`~~ → AuthContext, LocaleContext, ThemeContext → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/types/`~~ → `enums.ts` (8 KB) → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`rootfs/usr/local/bin/`~~ → 9 Scripts dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).
+- ~~Frontend-Typen~~ → [Frontend-Internas](./ui/frontend-internas.md).
+- ~~Rootfs-Start-/Wartungsskripte~~ → [Rootfs-Referenz](./konfiguration/rootfs.md).
 - ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` importiert, EJS ist der Standard für Nginx-Templates.
 - ~~Backend-`dev`-Script~~ → Es gibt kein dediziertes `yarn dev` im `package.json`, `node index-dev.js` wird direkt gestartet.
 - ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
@@ -44,3 +52,4 @@
 
 - [Wiki-Pflege](./wiki-pflege.md)
 - [Index](./index.md)
+- [Security-Modernisierung](./entscheidungen/2026-08-31-security-modernisierung.md)

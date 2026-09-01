@@ -40,6 +40,25 @@ describe("authenticated request failures", () => {
 		expect(AuthStore.clear).toHaveBeenCalledOnce();
 		expect(authenticationExpired).toHaveBeenCalledOnce();
 	});
+
+	it("preserves the HTTP status when an upstream proxy returns a non-JSON 401", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: false,
+				status: 401,
+				statusText: "Unauthorized",
+				text: vi.fn().mockResolvedValue("<html>upstream error</html>"),
+			}),
+		);
+
+		await expect(get({ url: "nginx/proxy-hosts" })).rejects.toMatchObject({
+			name: "ApiError",
+			status: 401,
+		});
+		expect(AuthStore.clear).toHaveBeenCalledOnce();
+		expect(authenticationExpired).toHaveBeenCalledOnce();
+	});
 });
 
 describe("download", () => {

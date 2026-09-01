@@ -154,20 +154,28 @@
 		},
 		"address": {
 			"type": "string",
+			"minLength": 1,
+			"maxLength": 80,
+			"pattern": "^[^;\\r\\n\\u0000]+$",
 			"example": "192.168.0.11"
 		},
 		"access_items": {
 			"type": "array",
+			"maxItems": 500,
 			"items": {
 				"type": "object",
 				"additionalProperties": false,
+				"required": ["username"],
 				"properties": {
 					"username": {
 						"type": "string",
-						"minLength": 1
+						"minLength": 1,
+						"maxLength": 255,
+						"pattern": "^[^:\\u0000-\\u001F\\u007F]+$"
 					},
 					"password": {
-						"type": "string"
+						"type": "string",
+						"maxLength": 4096
 					}
 				},
 				"example": {
@@ -184,9 +192,11 @@
 		},
 		"access_clients": {
 			"type": "array",
+			"maxItems": 2000,
 			"items": {
 				"type": "object",
 				"additionalProperties": false,
+				"required": ["address", "directive"],
 				"properties": {
 					"address": {
 						"$ref": "#/properties/address"

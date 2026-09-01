@@ -4,6 +4,13 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	ApiError: class ApiError extends Error {
+		status: number;
+		constructor(message: string, status: number) {
+			super(message);
+			this.status = status;
+		}
+	},
 	getToken: vi.fn(),
 	loginAsUser: vi.fn(),
 	post: vi.fn(),
@@ -23,7 +30,7 @@ vi.mock("src/api/backend", () => ({
 	restoreSession: mocks.restoreSession,
 }));
 
-vi.mock("src/api/backend/base", () => ({ post: mocks.post }));
+vi.mock("src/api/backend/base", () => ({ ApiError: mocks.ApiError, post: mocks.post }));
 
 vi.mock("src/modules/AuthStore", () => ({
 	AUTHENTICATION_EXPIRED_EVENT: "shieldpm:authentication-expired",
@@ -81,6 +88,7 @@ function renderAuthProvider() {
 describe("AuthProvider", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.authStoreSet.mockReturnValue(true);
 		nextSessionProbeInstance = 0;
 		mocks.refreshToken.mockRejectedValue(new Error("No existing session"));
 	});

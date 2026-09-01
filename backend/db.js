@@ -1,5 +1,5 @@
+import path from "node:path";
 import { fileURLToPath } from "node:url";
-import path from "path";
 import knex from "knex";
 import { configGet, configHas } from "./lib/config.js";
 import { global as logger } from "./logger.js";
@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let instance = null;
+let permanentlyClosed = false;
 
 const generateDbConfig = () => {
 	if (!configHas("database")) {
@@ -51,10 +52,22 @@ const generateDbConfig = () => {
 };
 
 const getInstance = () => {
+	if (permanentlyClosed) {
+		throw new Error("Database pool is closed during process shutdown");
+	}
 	if (!instance) {
 		instance = knex(generateDbConfig());
 	}
 	return instance;
 };
 
+const destroyDatabase = async () => {
+	permanentlyClosed = true;
+	if (!instance) return;
+	const current = instance;
+	instance = null;
+	await current.destroy();
+};
+
 export default getInstance;
+export { destroyDatabase };

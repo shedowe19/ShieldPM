@@ -109,6 +109,20 @@ class UnauthorizedError extends Error {
 	}
 }
 
+class ConflictError extends Error {
+	/** @type {boolean} */
+	preserveAuthCookies = false;
+
+	constructor(message, previous) {
+		super(message || "Conflict");
+		this.name = "ConflictError";
+		this.previous = previous;
+		this.public = true;
+		this.status = 409;
+		Error.captureStackTrace(this, this.constructor);
+	}
+}
+
 class CommandError extends Error {
 	constructor(stdErr, code, previous) {
 		super(stdErr);
@@ -131,6 +145,7 @@ const errs = {
 	ValidationError,
 	AssertionFailedError,
 	UnauthorizedError,
+	ConflictError,
 	CommandError,
 };
 

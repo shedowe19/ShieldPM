@@ -29,13 +29,15 @@ Browser → Nginx (Frontend)
 2. React sendet POST /api/nginx/proxy-hosts an Backend
 3. Express-Route validiert Schema (AJV)
 4. internal/proxy-host.js prüft Berechtigungen
-5. Objection.js Model speichert in Datenbank
+5. Service startet DB-Transaktion und registriert Runtime-Compensation
 6. internal/nginx.js wird getriggert:
    a. Liest aktuelle Host-Daten aus DB
    b. Rendert EJS-Template (templates/proxy_host.conf)
-   c. Schreibt .conf nach /data/nginx/proxy_host/X.conf
-7. nginx -s reload (debounced, 2s Verzögerung)
-8. Audit-Log-Eintrag wird erstellt
+   c. Rendert vollständigen Kandidaten in Staging
+   d. Führt nginx -t gegen den Kandidaten aus
+7. Bei Erfolg: atomare Aktivierung + Reload + DB-Commit
+8. Bei Fehler: Runtime- und DB-Rollback
+9. Audit-Log-Eintrag wird erstellt
 ```
 
 ## Datenbank-Zugriffsmuster
@@ -59,8 +61,8 @@ Route (Express) → Schema-Validierung (AJV)
 
 ## Wichtige Hinweise
 
-- **Nginx-Validierung deaktiviert**: `nginx -t` wird vor dem Reload **nicht** ausgeführt. Template-Fehler können Nginx brechen.
-- **Debounced Reload**: Schnelle aufeinanderfolgende Änderungen werden in einem einzigen Reload gebündelt.
+- **Nginx-Validierung**: Jeder vollständige Kandidat wird vor Aktivierung mit `nginx -t` geprüft.
+- **Compensation**: DB und generierte Dateien bilden eine gemeinsame Operation; Teilfehler stellen den letzten gültigen Zustand her.
 - **Boolean-Felder in SQLite**: Werden als `0`/`1` (Integer) gespeichert. Das Objection.js-Modell konvertiert automatisch.
 
 ## Verwandte Seiten

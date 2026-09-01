@@ -28,6 +28,16 @@ const internalIpRanges = {
 		internalIpRanges.interval = setInterval(internalIpRanges.fetch, internalIpRanges.interval_timeout);
 	},
 
+	stopTimer: async () => {
+		if (internalIpRanges.interval) {
+			clearInterval(internalIpRanges.interval);
+			internalIpRanges.interval = null;
+		}
+		while (internalIpRanges.interval_processing) {
+			await new Promise((resolve) => setTimeout(() => resolve(undefined), 25));
+		}
+	},
+
 	fetchUrl: (url) => {
 		const agent = new ProxyAgent();
 		return new Promise((resolve, reject) => {

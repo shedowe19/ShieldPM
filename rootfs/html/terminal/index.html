@@ -4,8 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <title>ShieldPM Terminal</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css"
+        integrity="sha384-n2n7twoohnW+d3myBKaUgl7DSiwidw6MkQy9oesGzkPpMjejKRR3XlnD+5yCdtBD"
+        crossorigin="anonymous"
+    >
     <style>
         * {
             margin: 0;
@@ -96,13 +102,42 @@
         <div id="terminal"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/lib/xterm.js"
+        integrity="sha384-f/1U6Z9wM4D71a5eRXEZnyOTMOvjqxr2XLwh+Go1OvIl3L3tOcvUrzudnhbECwl4"
+        crossorigin="anonymous"
+    ></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/lib/addon-fit.js"
+        integrity="sha384-txoiwu4RR2GD3qySbaj+BbzibkLbSJRcfqGYMu6z1EqHil4A2dyBiBW5dlacG6OR"
+        crossorigin="anonymous"
+    ></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.12.0/lib/addon-web-links.js"
+        integrity="sha384-0IIwkXq0LAkIxEVKxlOxWbje2g/VT+5CzVTZiEukyiZ02pOl/O+M0fkpEKAYqto9"
+        crossorigin="anonymous"
+    ></script>
     <script>
         (function () {
             const statusDot = document.getElementById('status-dot');
             const statusText = document.getElementById('status-text');
+            let opening = false;
+
+            function base64Url(bytes) {
+                let binary = '';
+                bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+                return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            }
+
+            function getClientFingerprint() {
+                const key = 'shieldpm-terminal-client-fingerprint';
+                let fingerprint = sessionStorage.getItem(key);
+                if (!fingerprint || !/^[A-Za-z0-9_-]{43}$/.test(fingerprint)) {
+                    fingerprint = base64Url(crypto.getRandomValues(new Uint8Array(32)));
+                    sessionStorage.setItem(key, fingerprint);
+                }
+                return fingerprint;
+            }
 
             const term = new Terminal({
                 cursorBlink: true,
@@ -131,10 +166,44 @@
                 }
             }
 
-            function openWebSocket() {
+            async function openWebSocket() {
+                if (opening || window._ws) return;
+                opening = true;
+                const clientFingerprint = getClientFingerprint();
+                let ticket;
+                try {
+                    const response = await fetch('/terminal-ticket', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        cache: 'no-store',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-ShieldPM-Client-Fingerprint': clientFingerprint
+                        },
+                        body: JSON.stringify({ clientFingerprint })
+                    });
+                    if (!response.ok) throw new Error('Terminal authorization failed');
+                    const payload = await response.json();
+                    if (!/^[A-Za-z0-9_-]{43}$/.test(payload.ticket || '')) {
+                        throw new Error('Terminal authorization response was invalid');
+                    }
+                    ticket = payload.ticket;
+                } catch (_error) {
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'Authorization failed';
+                    term.write('\r\n\x1b[31mTerminal authorization failed.\x1b[0m\r\n');
+                    opening = false;
+                    return;
+                }
+
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const wsUrl = `${protocol}//${window.location.host}/ws`;
-                const ws = new WebSocket(wsUrl);
+                const ws = new WebSocket(wsUrl, [
+                    'shieldpm-terminal',
+                    `ticket.${ticket}`,
+                    `fingerprint.${clientFingerprint}`
+                ]);
+                window._ws = ws;
 
                 ws.onopen = () => {
                     statusDot.className = 'status-dot connected';
@@ -169,6 +238,8 @@
                 };
 
                 ws.onclose = (event) => {
+					window._ws = null;
+					opening = false;
                     statusDot.className = 'status-dot disconnected';
                     statusText.textContent = 'Disconnected';
                     if (event.code === 1008) {
@@ -185,7 +256,6 @@
                     term.write('\r\n\x1b[31mConnection error.\x1b[0m\r\n');
                 };
 
-                window._ws = ws;
             }
 
             // Start fitting

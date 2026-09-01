@@ -8,6 +8,11 @@ Dokumentation der Express-Middleware in `backend/lib/express/`.
 
 Diese Middleware wird von `backend/app.js` verwendet und bildet die HTTP-Request-Verarbeitungsschicht.
 
+`backend/app.js` wertet Forwarded-Header nur aus, wenn die offizielle Compose- oder Rootfs-Konfiguration explizit
+`TRUST_PROXY=1` setzt. Die Compose-Dateien müssen den Wert selbst setzen, weil ihr `/data`-Bind-Mount die im Image
+enthaltene `/data/.env` verdeckt. Ohne Wert gilt `false`; andere Werte werden beim Start abgelehnt. Damit kann ein
+direkter Client weder Quell-IP noch HTTPS-Status über frei gesetzte Forwarded-Header vortäuschen.
+
 ## Middleware-Dateien
 
 | Datei                | Größe | Zweck                                      |

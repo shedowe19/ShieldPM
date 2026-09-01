@@ -1,0 +1,15 @@
+{
+	"operationId": "claimOidcLogin",
+	"summary": "Claim the short-lived successful OIDC browser handoff",
+	"tags": ["tokens"],
+	"security": [{ "bearerAuth": ["user"] }],
+	"responses": {
+		"200": { "description": "OIDC login claimed" },
+		"400": {
+			"description": "No pending OIDC login",
+			"content": {
+				"application/json": { "schema": { "$ref": "../../../components/error-object.json" } }
+			}
+		}
+	}
+}

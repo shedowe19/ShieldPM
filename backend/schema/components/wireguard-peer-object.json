@@ -23,7 +23,8 @@
         "name": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 255
+            "maxLength": 255,
+            "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
         },
         "description": {
             "type": ["string", "null"],
@@ -31,11 +32,12 @@
         },
         "client_address": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 64
         },
         "client_public_key": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^[A-Za-z0-9+/]{43}=$"
         },
         "client_private_key": {
             "type": "string"
@@ -47,11 +49,14 @@
             "type": "string"
         },
         "endpoint": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "maxLength": 320
         },
         "allowed_ips": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 2048,
+            "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
         },
         "persistent_keepalive": {
             "type": "integer",
@@ -59,7 +64,9 @@
             "maximum": 65535
         },
         "dns": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "maxLength": 512,
+            "pattern": "^[^\\u0000-\\u001F\\u007F]*$"
         },
         "status": {
             "type": "integer",

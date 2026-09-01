@@ -113,7 +113,7 @@ const resolveFromProductionConsumers = (requests) => {
 	return JSON.parse(resolver.stdout);
 };
 
-describe("Node 26 package default-import compatibility", () => {
+describe("supported Node package default-import compatibility", () => {
 	it("declares its source parser as a direct development dependency", () => {
 		const backendManifest = JSON.parse(fs.readFileSync(path.join(backendRoot, "package.json"), "utf8"));
 

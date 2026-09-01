@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../lib/config.js", () => ({
 	getEncryptionKey: vi.fn().mockReturnValue("0".repeat(64)),
+	getPrivateKey: vi.fn().mockReturnValue("test-confirmation-key"),
 	isDemoMode: vi.fn().mockReturnValue(false),
 }));
 vi.mock("../../models/cloudflared_tunnel.js", () => ({ default: {} }));
@@ -31,6 +32,7 @@ vi.mock("../../internal/tor.js", () => ({ default: {} }));
 vi.mock("../../internal/user.js", () => ({ default: {} }));
 
 import { executeTools } from "../../internal/ai/executor.js";
+import { issueConfirmation } from "../../internal/ai/safety.js";
 
 const makeAccess = (can) => ({
 	can,
@@ -54,8 +56,11 @@ describe("AI DDNS deletion authorization", () => {
 
 	it("delegates DDNS deletion to the authorized provider service", async () => {
 		const access = makeAccess(vi.fn().mockResolvedValue(true));
+		const confirmationToken = issueConfirmation(access, "delete_ddns_provider", { id: 42 });
 
-		const results = await executeTools(access, [{ name: "delete_ddns_provider", args: { id: 42 } }]);
+		const results = await executeTools(access, [{ name: "delete_ddns_provider", args: { id: 42 } }], {
+			confirmationToken,
+		});
 
 		expect(results.map((result) => result.result)).toEqual(["Deleted DDNS Provider ID: 42"]);
 		expect(mocks.deleteDdnsProvider).toHaveBeenCalledWith(access, { id: 42 });
@@ -63,8 +68,11 @@ describe("AI DDNS deletion authorization", () => {
 
 	it("does not delete a DDNS provider when the service rejects the capability", async () => {
 		const access = makeAccess(vi.fn().mockRejectedValue(new Error("Permission Denied")));
+		const confirmationToken = issueConfirmation(access, "delete_ddns_provider", { id: 42 });
 
-		const results = await executeTools(access, [{ name: "delete_ddns_provider", args: { id: 42 } }]);
+		const results = await executeTools(access, [{ name: "delete_ddns_provider", args: { id: 42 } }], {
+			confirmationToken,
+		});
 
 		expect(results.map((result) => result.result)).toEqual(["Error: Permission Denied"]);
 	});

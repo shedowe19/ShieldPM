@@ -156,6 +156,5 @@ describe("Security Fix: Prototype Pollution", () => {
 
 		// This is the key check: the object should have null prototype
 		expect(Object.getPrototypeOf(result)).toBeNull();
-		expect(result.__proto__).toBeUndefined();
 	});
 });

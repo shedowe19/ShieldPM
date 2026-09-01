@@ -45,7 +45,7 @@ router.get("/config", jwtdecode(), accessCheck, async (_req, res) => {
  * PUT /api/gitops/config
  * Update GitOps configuration
  */
-router.put("/config", jwtdecode(), demoCheck, async (req, res) => {
+router.put("/config", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
 	const config = await internalGitOps.updateConfig(res.locals.access, req.body);
 	res.status(200).json(config);
 });
@@ -55,7 +55,7 @@ router.put("/config", jwtdecode(), demoCheck, async (req, res) => {
  * Test repository connection
  */
 router.post("/test", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
-	const result = await internalGitOps.testConnection();
+	const result = await internalGitOps.testConnection(res.locals.access);
 	res.status(200).json(result);
 });
 
@@ -64,7 +64,7 @@ router.post("/test", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
  * Export current configuration to YAML files
  */
 router.post("/export", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
-	const files = await internalGitOps.exportConfig();
+	const files = await internalGitOps.exportConfig(res.locals.access);
 	res.status(200).json({
 		success: true,
 		files_exported: files.length,
@@ -78,8 +78,8 @@ router.post("/export", jwtdecode(), demoCheck, accessCheck, async (_req, res) =>
 router.post("/push", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
 	const { message } = req.body;
 	// First export, then push
-	await internalGitOps.exportConfig();
-	const result = await internalGitOps.commitAndPush(message);
+	await internalGitOps.exportConfig(res.locals.access);
+	const result = await internalGitOps.commitAndPush(res.locals.access, message);
 	res.status(200).json(result);
 });
 
@@ -88,7 +88,7 @@ router.post("/push", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
  * Pull from remote repository
  */
 router.post("/pull", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
-	const result = await internalGitOps.pull();
+	const result = await internalGitOps.pull(res.locals.access);
 	res.status(200).json(result);
 });
 
@@ -98,7 +98,7 @@ router.post("/pull", jwtdecode(), demoCheck, accessCheck, async (_req, res) => {
  */
 router.get("/history", jwtdecode(), accessCheck, async (req, res) => {
 	const limit = Number.parseInt(/** @type {string} */ (req.query.limit), 10) || 20;
-	const commits = await internalGitOps.getHistory(limit);
+	const commits = await internalGitOps.getHistory(res.locals.access, limit);
 	res.status(200).json(commits);
 });
 
@@ -121,9 +121,20 @@ router.post("/revert", jwtdecode(), demoCheck, accessCheck, async (req, res) => 
  * POST /api/gitops/import
  * Import configuration from Git
  */
-router.post("/import", jwtdecode(), demoCheck, async (req, res) => {
-	const { overwrite } = req.body;
-	const result = await internalGitOps.importConfig(res.locals.access, { overwrite: !!overwrite });
+router.post("/import", jwtdecode(), demoCheck, accessCheck, async (req, res) => {
+	const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+	const { overwrite, dry_run } = body;
+	if (
+		(overwrite !== undefined && typeof overwrite !== "boolean") ||
+		(dry_run !== undefined && typeof dry_run !== "boolean") ||
+		Object.keys(body).some((key) => !["overwrite", "dry_run"].includes(key))
+	) {
+		return res.status(400).json({ error: { message: "Invalid GitOps import options", code: 400 } });
+	}
+	const result = await internalGitOps.importConfig(res.locals.access, {
+		overwrite: overwrite === true,
+		dryRun: dry_run === true,
+	});
 	res.status(200).json(result);
 });
 

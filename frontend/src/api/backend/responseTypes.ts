@@ -8,7 +8,9 @@ export interface HealthResponse {
 }
 
 export interface TokenResponse {
-	expires: number;
+	expires: number | string;
+	user?: Pick<User, "id">;
+	csrfToken?: string;
 }
 
 export interface ValidatedCertificateResponse {
