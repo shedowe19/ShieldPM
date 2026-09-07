@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ exec: vi.fn(), exists: vi.fn(), read: vi.fn(), write: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+	exec: vi.fn(),
+	exists: vi.fn(),
+	read: vi.fn(),
+	write: vi.fn(),
+	rename: vi.fn(),
+	rm: vi.fn(),
+}));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: mocks.exec } }));
 vi.mock("node:fs", () => ({
 	default: {
@@ -8,7 +15,15 @@ vi.mock("node:fs", () => ({
 		mkdirSync: vi.fn(),
 		writeFileSync: mocks.write,
 		unlinkSync: vi.fn(),
-		promises: { mkdir: vi.fn(), readFile: mocks.read, writeFile: mocks.write },
+		promises: {
+			mkdir: vi.fn(),
+			readFile: mocks.read,
+			writeFile: mocks.write,
+			mkdtemp: vi.fn().mockResolvedValue("/data/tls/internal/.root-ca-test"),
+			chmod: vi.fn(),
+			rename: mocks.rename,
+			rm: mocks.rm,
+		},
 	},
 }));
 
@@ -72,9 +87,42 @@ describe("internal PKI", () => {
 		);
 		const first = pki.ensureRootCa();
 		const second = pki.ensureRootCa();
+		await Promise.resolve();
 		expect(mocks.exec).toHaveBeenCalledTimes(1);
 		release("");
 		await Promise.all([first, second]);
 		expect(mocks.exec.mock.calls.filter(([, args]) => args[0] === "genpkey")).toHaveLength(1);
+	});
+	it("preserves an existing trusted CA certificate when its private key is missing", async () => {
+		mocks.exists.mockImplementation((filename) => !filename.endsWith("root_ca.key"));
+		await expect(pki.ensureRootCa()).rejects.toThrow("Restore the original CA key");
+		expect(mocks.exec).not.toHaveBeenCalled();
+		expect(mocks.rename).not.toHaveBeenCalled();
+	});
+	it("does not publish a partial root certificate after an OpenSSL failure", async () => {
+		mocks.exists.mockImplementation((filename) => !filename.endsWith("root_ca.crt"));
+		mocks.exec.mockImplementation(async (_command, args) => {
+			if (args[0] === "req") throw new Error("certificate generation failed");
+			return "";
+		});
+		await expect(pki.ensureRootCa()).rejects.toThrow("certificate generation failed");
+		expect(mocks.rename).not.toHaveBeenCalled();
+		expect(mocks.rm).toHaveBeenCalledWith("/data/tls/internal/.root-ca-test", { recursive: true, force: true });
+		mocks.exec.mockResolvedValue("");
+		await pki.ensureRootCa();
+		expect(mocks.rename).toHaveBeenCalledWith(
+			"/data/tls/internal/.root-ca-test/root_ca.crt",
+			"/data/tls/internal/root_ca.crt",
+		);
+		expect(mocks.exec.mock.calls.find(([, args]) => args[0] === "req")[1]).toContain(
+			"basicConstraints=critical,CA:TRUE",
+		);
+	});
+	it("encodes international domain names into certificate DNS names", async () => {
+		await pki.createLeadCert({ domain_names: ["bücher.example"] }, "/tmp/pki-test");
+		expect(mocks.write).toHaveBeenCalledWith(
+			expect.stringContaining("openssl.cnf"),
+			expect.stringContaining("DNS:xn--bcher-kva.example"),
+		);
 	});
 });

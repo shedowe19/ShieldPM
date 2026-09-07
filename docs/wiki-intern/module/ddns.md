@@ -32,6 +32,10 @@ Benutzerdefinierte URLs dürfen ausschließlich öffentliche HTTP(S)-Ziele errei
 
 Ohne WAN-Adresse der gewählten IP-Version wird kein Provider-Update versendet. `updateProvider()` liefert zusätzlich zum persistierten Fehlerstatus ein strukturiertes Erfolg-/Fehlerergebnis. Die Testfunktion übernimmt diesen Status und meldet fehlgeschlagene Updates nicht mehr als Erfolg.
 
+### Kodierung von Provider-Parametern
+
+DuckDNS-Token und Domains sowie Cloudflare-Abfragefilter werden mit `URLSearchParams` kodiert. Zeichen wie `&` bleiben Teil des jeweiligen Werts und können keine zusätzlichen Update-Parameter oder DNS-Typfilter erzeugen. Cloudflare-Zonen- und Record-IDs werden beim Einfügen in den URL-Pfad kodiert. Regressionen prüfen die vom HTTP-Client tatsächlich verwendeten URLs.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

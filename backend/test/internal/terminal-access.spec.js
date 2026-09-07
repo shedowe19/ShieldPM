@@ -36,7 +36,8 @@ describe("terminal Nginx access handoff", () => {
 		expect(isValidTerminalAccessToken(8, token)).toBe(false);
 	});
 	it("rejects direct unauthenticated WebSockets before reading credentials", async () => {
-		const ws = { close: vi.fn() };
+		const ws = new EventEmitter();
+		ws.close = vi.fn();
 		await terminal.handleConnection(ws, { url: "/api/nginx/proxy-hosts/7/terminal/ws", headers: {} });
 		expect(ws.close).toHaveBeenCalledWith(1008, "Unauthorized terminal connection");
 		expect(mocks.query).not.toHaveBeenCalled();
@@ -66,5 +67,55 @@ describe("terminal Nginx access handoff", () => {
 		expect(stream.setWindow).toHaveBeenCalledWith(35, 120, 0, 0);
 		ws.emit("message", JSON.stringify({ type: "resize", cols: -1, rows: 50000 }));
 		expect(stream.setWindow).toHaveBeenCalledTimes(1);
+	});
+	it("does not open SSH when the WebSocket closes while the host query is pending", async () => {
+		let resolveHost;
+		mocks.query.mockReturnValue({
+			findById: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			throwIfNotFound: () =>
+				new Promise((resolve) => {
+					resolveHost = resolve;
+				}),
+		});
+		const ws = new EventEmitter();
+		ws.close = vi.fn();
+		const pending = terminal.handleConnection(ws, {
+			url: "/nginx/proxy-hosts/7/terminal/ws",
+			headers: { "x-shieldpm-terminal-token": getTerminalAccessToken(7) },
+		});
+		ws.emit("close");
+		resolveHost({ terminal_host: "server", terminal_username: "user" });
+		await pending;
+		expect(mocks.connect).not.toHaveBeenCalled();
+	});
+	it("handles protocol errors and keeps the first resize received during host lookup", async () => {
+		let resolveHost;
+		mocks.query.mockReturnValue({
+			findById: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+			throwIfNotFound: () =>
+				new Promise((resolve) => {
+					resolveHost = resolve;
+				}),
+		});
+		const ws = new EventEmitter();
+		ws.close = vi.fn();
+		ws.send = vi.fn();
+		const pending = terminal.handleConnection(ws, {
+			url: "/nginx/proxy-hosts/7/terminal/ws",
+			headers: { "x-shieldpm-terminal-token": getTerminalAccessToken(7) },
+		});
+		ws.emit("message", JSON.stringify({ type: "resize", cols: 140, rows: 42 }));
+		resolveHost({ terminal_host: "server", terminal_username: "user" });
+		await pending;
+		mocks.shell.mockImplementation(() => {});
+		mocks.ssh.emit("ready");
+		expect(mocks.shell).toHaveBeenCalledWith(
+			expect.objectContaining({ cols: 140, rows: 42 }),
+			expect.any(Function),
+		);
+		expect(() => ws.emit("error", new Error("Invalid UTF-8"))).not.toThrow();
+		expect(mocks.end).toHaveBeenCalled();
 	});
 });

@@ -29,7 +29,15 @@ vi.mock("node:https", async () => {
 	};
 });
 
-import { isProcessing, renewCertbot, requestCertbot, runCertbot, testHttpsChallenge } from "../../internal/certbot.js";
+import {
+	isProcessing,
+	renewCertbot,
+	requestCertbot,
+	requestCertbotWithDnsChallenge,
+	runCertbot,
+	testHttpsChallenge,
+} from "../../internal/certbot.js";
+import { installPlugin } from "../../lib/certbot.js";
 
 const certificate = { id: 1, domain_names: ["example.test"], meta: {} };
 
@@ -65,6 +73,60 @@ describe("Certbot process coordination", () => {
 		mocks.execFile.mockResolvedValueOnce("renewed");
 		await expect(runCertbot(["renew"])).resolves.toBe("renewed");
 	});
+	it("locks DNS plugin installation and credentials before they can race renewal", async () => {
+		let release;
+		installPlugin.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					release = resolve;
+				}),
+		);
+		vi.spyOn(fs.promises, "mkdir").mockResolvedValue();
+		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
+		vi.spyOn(fs.promises, "chmod").mockResolvedValue();
+		mocks.execFile.mockResolvedValue("created");
+		const pending = requestCertbotWithDnsChallenge({
+			...certificate,
+			meta: {
+				dns_provider: "mijnhost",
+				dns_provider_credentials: "synthetic-credential",
+				propagation_seconds: 0,
+			},
+		});
+		expect(isProcessing()).toBe(true);
+		await expect(renewCertbot(certificate)).rejects.toThrow("Another Certbot process");
+		expect(fs.promises.writeFile).not.toHaveBeenCalled();
+		release();
+		await pending;
+		const args = mocks.execFile.mock.calls[0][1];
+		expect(args).toContain("--dns-mijn-host-credentials");
+		expect(args).toContain("--dns-mijn-host-propagation-seconds");
+		expect(args).toContain("0");
+		expect(isProcessing()).toBe(false);
+	});
+	it("releases the DNS operation lock when installation fails", async () => {
+		installPlugin.mockRejectedValueOnce(new Error("pip failed"));
+		await expect(
+			requestCertbotWithDnsChallenge({
+				...certificate,
+				meta: {
+					dns_provider: "cloudflare",
+					dns_provider_credentials: "synthetic-credential",
+				},
+			}),
+		).rejects.toThrow("pip failed");
+		expect(mocks.execFile).not.toHaveBeenCalled();
+		expect(isProcessing()).toBe(false);
+	});
+	it.each(["__proto__", "constructor", "unknown"])(
+		"rejects unknown provider %s before installation",
+		async (provider) => {
+			await expect(
+				requestCertbotWithDnsChallenge({ ...certificate, meta: { dns_provider: provider } }),
+			).rejects.toThrow("Unknown DNS provider");
+			expect(installPlugin).not.toHaveBeenCalled();
+		},
+	);
 
 	it("uses separate files for concurrent challenge tests and cleans both up", async () => {
 		vi.spyOn(fs.promises, "mkdir").mockResolvedValue();

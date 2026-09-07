@@ -6,6 +6,8 @@ vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 vi.mock("../../models/tor_onion.js", () => ({ default: {} }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/anubis.js", () => ({ default: {} }));
+vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), error: vi.fn(), debug: vi.fn(), warn: vi.fn() } }));
 
 import tor from "../../internal/tor.js";

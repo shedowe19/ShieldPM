@@ -190,7 +190,13 @@ export function GitSyncTab({ hostId }: Props) {
 							<h4 className="font-semibold text-sm text-muted-foreground uppercase">
 								<T id="column.status" />
 							</h4>
-							<Button variant="default" size="sm" onClick={handleSync} disabled={isSyncing || isLoading}>
+							<Button
+								type="button"
+								variant="default"
+								size="sm"
+								onClick={handleSync}
+								disabled={isSyncing || isLoading}
+							>
 								{isSyncing ? (
 									<Loader2 className="mr-2 h-3 w-3 animate-spin" />
 								) : (

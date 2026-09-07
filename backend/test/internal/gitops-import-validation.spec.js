@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => {
 	const writes = [];
 	const prunes = [];
 	const rows = {};
+	const pruneError = { value: null };
 	const makeModel = (name) => ({
 		name,
 		query: () => {
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => {
 				withGraphFetched: () => query,
 				whereNotIn: (_field, ids) => {
 					prunes.push({ name, ids });
+					if (pruneError.value) return Promise.reject(pruneError.value);
 					return Promise.resolve([]);
 				},
 				findById: async (id) => (rows[name] || []).find((row) => row.id === id),
@@ -38,7 +40,7 @@ const mocks = vi.hoisted(() => {
 			return query;
 		},
 	});
-	return { files, writes, prunes, rows, makeModel };
+	return { files, writes, prunes, rows, makeModel, pruneError };
 });
 vi.mock("node:fs", () => ({
 	default: {
@@ -87,6 +89,7 @@ describe("GitOps import sanitization and safe restore", () => {
 		mocks.files.clear();
 		mocks.writes.length = 0;
 		mocks.prunes.length = 0;
+		mocks.pruneError.value = null;
 		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
 	});
 	it("removes unknown top-level and nested fields from the actual database payload", async () => {
@@ -161,6 +164,25 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(result.success).toBe(true);
 		expect(mocks.writes[0].data).not.toHaveProperty("is_deleted");
 		expect(mocks.writes[0].data.domains).toEqual(["test"]);
+	});
+	it("rejects string overwrite flags before any database writes or deletions", async () => {
+		file("proxy-hosts", { id: 9 });
+		await expect(gitops.importConfig(access, { overwrite: "false" })).rejects.toThrow("boolean");
+		expect(mocks.writes).toEqual([]);
+		expect(mocks.prunes).toEqual([]);
+	});
+	it("treats tracked empty-module markers as an explicit full-sync deletion", async () => {
+		mocks.files.set("/data/gitops/shieldpm-config/ddns-providers/.gitkeep", "");
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.prunes).toContainEqual({ name: "DdnsProvider", ids: [] });
+	});
+	it("reports a failed prune query instead of claiming a successful full sync", async () => {
+		mocks.files.set("/data/gitops/shieldpm-config/ddns-providers/.gitkeep", "");
+		mocks.pruneError.value = new Error("database unavailable");
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toContain("ddns-providers: database unavailable");
 	});
 	it("preserves imported IDs for new objects so references remain valid", async () => {
 		file("certificates", { id: 40, provider: "other", nice_name: "certificate" });

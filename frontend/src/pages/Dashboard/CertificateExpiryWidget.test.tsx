@@ -111,4 +111,22 @@ describe("CertificateExpiryWidget", () => {
 		expect(screen.getByText("No certificates expiring soon")).toBeInTheDocument();
 		expect(screen.queryByText("Valid Long Term")).not.toBeInTheDocument();
 	});
+
+	it("marks certificates expired within the current day as expired", () => {
+		mocks.certificates = [
+			{
+				id: 4,
+				niceName: "Recent expiry",
+				domainNames: ["expired.test"],
+				expiresOn: dayjs().subtract(1, "hour").toISOString(),
+			},
+		];
+		render(
+			<MemoryRouter>
+				<CertificateExpiryWidget />
+			</MemoryRouter>,
+		);
+		expect(screen.getByText("Expired")).toBeInTheDocument();
+		expect(screen.queryByText("0 Days Left")).not.toBeInTheDocument();
+	});
 });

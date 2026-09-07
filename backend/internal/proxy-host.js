@@ -1,7 +1,8 @@
+import fs from "node:fs";
 import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
-import { sanitizeProxyHost } from "../lib/host-response.js";
+import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
 import proxyHostModel from "../models/proxy_host.js";
@@ -105,6 +106,7 @@ const internalProxyHost = {
 		}
 
 		await access.can("proxy_hosts:create", thisData);
+		internalHost.validateDomainNames(thisData.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
 		const domain_name_check_promises = [];
@@ -150,7 +152,9 @@ const internalProxyHost = {
 			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
 		}
 
-		let row = await proxyHostModel.query().insertGraphAndFetch(/** @type {any} */ (thisData));
+		let row = await proxyHostModel
+			.query()
+			.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) }));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -249,6 +253,7 @@ const internalProxyHost = {
 		const domain_name_check_promises = [];
 
 		if (typeof thisData.domain_names !== "undefined") {
+			internalHost.validateDomainNames(thisData.domain_names);
 			thisData.domain_names.map((domain_name) => {
 				return domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name, "proxy", thisData.id));
 			});
@@ -319,6 +324,8 @@ const internalProxyHost = {
 		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
 			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
 		}
+
+		thisData.meta = sanitizeHostMeta(thisData.meta);
 
 		const new_saved_row = /** @type {any} */ (
 			await proxyHostModel.query().upsertGraphAndFetch(/** @type {any} */ (thisData))
@@ -423,18 +430,24 @@ const internalProxyHost = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await proxyHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					is_deleted: 1,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("proxy_host", row.id));
+			await internalNginx.backupConfig("proxy_host", row);
+			try {
+				await proxyHostModel.transaction(async (trx) => {
+					await proxyHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+					await internalNginx.deleteConfig("proxy_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("proxy_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("proxy_host", row);
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -527,13 +540,24 @@ const internalProxyHost = {
 
 		row.enabled = 0;
 
-		await proxyHostModel.query().where("id", row.id).patch({
-			enabled: 0,
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("proxy_host", row.id));
+			await internalNginx.backupConfig("proxy_host", row);
+			try {
+				await proxyHostModel.transaction(async (trx) => {
+					await proxyHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
+					await internalNginx.deleteConfig("proxy_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("proxy_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("proxy_host", row);
 		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", row);
-		await internalNginx.reload();
 		await _cleanupOAuth2Proxy(row.access_list_id);
 
 		// Stop Git Deploy polling

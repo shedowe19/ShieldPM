@@ -487,6 +487,10 @@ const internalGitOps = {
 				await assertNoSymlinkPath(GITOPS_DIR, dirPath);
 				await fs.promises.mkdir(dirPath, { recursive: true });
 			}
+			// Git does not track empty directories. Keep explicit empty modules for full-sync deletions.
+			const marker = path.join(dirPath, ".gitkeep");
+			await writeConfigFile(GITOPS_DIR, marker, "");
+			exportedFiles.push(marker);
 		}
 
 		// Export Proxy Hosts
@@ -766,48 +770,35 @@ const internalGitOps = {
 		try {
 			await internalGitOps.initRepo();
 
-			// Stage all changes
+			// Adding a directory does not remove deleted files from isomorphic-git's index.
+			const beforeStage = await git.statusMatrix({ fs, dir: GITOPS_DIR });
+			for (const [filepath, , workdir, stage] of beforeStage) {
+				if (workdir === 0 && stage !== 0) await git.remove({ fs, dir: GITOPS_DIR, filepath });
+			}
 			await git.add({ fs, dir: GITOPS_DIR, filepath: "." });
 
-			// Check if there are changes to commit
 			const status = await git.statusMatrix({ fs, dir: GITOPS_DIR });
-			const hasChanges = status.some(([, head, workdir, stage]) => head !== workdir || head !== stage);
-
-			if (!hasChanges) {
+			const hasChanges = status.some(([, head, , stage]) => head !== stage);
+			let sha;
+			if (hasChanges) {
+				sha = await git.commit({
+					fs,
+					dir: GITOPS_DIR,
+					message: message || `ShieldPM configuration backup - ${new Date().toISOString()}`,
+					author: { name: "ShieldPM GitOps", email: "gitops@shieldpm.local" },
+				});
+			} else if (!config.repository_url) {
 				return { success: true, message: "No changes to commit" };
 			}
 
-			// Commit
-			const commitMessage = message || `ShieldPM configuration backup - ${new Date().toISOString()}`;
-			const sha = await git.commit({
-				fs,
-				dir: GITOPS_DIR,
-				message: commitMessage,
-				author: {
-					name: "ShieldPM GitOps",
-					email: "gitops@shieldpm.local",
-				},
-			});
-
-			// Add remote if not exists
-			const remotes = await git.listRemotes({ fs, dir: GITOPS_DIR });
-			const hasOrigin = remotes.some((r) => r.remote === "origin");
-
-			if (!hasOrigin && config.repository_url) {
+			// A clean worktree may still have a commit whose previous push failed.
+			if (config.repository_url) {
 				await git.addRemote({
 					fs,
 					dir: GITOPS_DIR,
 					remote: "origin",
 					url: config.repository_url,
-				});
-			} else if (hasOrigin && config.repository_url) {
-				// Update remote URL if changed
-				await git.deleteRemote({ fs, dir: GITOPS_DIR, remote: "origin" });
-				await git.addRemote({
-					fs,
-					dir: GITOPS_DIR,
-					remote: "origin",
-					url: config.repository_url,
+					force: true,
 				});
 			}
 
@@ -818,7 +809,8 @@ const internalGitOps = {
 					http,
 					dir: GITOPS_DIR,
 					remote: "origin",
-					ref: config.branch || "main",
+					ref: "HEAD",
+					remoteRef: config.branch || "main",
 					...getAuth(config),
 				});
 			}
@@ -827,14 +819,13 @@ const internalGitOps = {
 			// the full config object to avoid accidentally overwriting encrypted_credentials
 			// with [REDACTED] if getConfig() was used instead of getConfigInternal()
 			// Update only last_sync/last_error fields within the meta JSON.
-			// Using a raw expression to JSON-merge only those fields, without
-			// touching encrypted_credentials or other meta fields.
+			// Re-read private metadata after the network operation to preserve credential rotations.
 			const meta1 = await internalGitOps.getConfigInternal();
 			const updatedMeta1 = { ...meta1, last_sync: new Date().toISOString(), last_error: null };
 			await settingModel.query().where("id", "gitops-config").patch({ meta: updatedMeta1 });
 
-			logger.info(`GitOps: Committed and pushed ${sha}`);
-			return { success: true, commit: sha };
+			logger.info(sha ? `GitOps: Committed and pushed ${sha}` : "GitOps: Pushed existing commits");
+			return sha ? { success: true, commit: sha } : { success: true, message: "Push successful" };
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Unknown error";
 			logger.error("GitOps commit/push failed:", err);
@@ -866,24 +857,21 @@ const internalGitOps = {
 		try {
 			await internalGitOps.initRepo();
 
-			// Ensure remote exists
-			const remotes = await git.listRemotes({ fs, dir: GITOPS_DIR });
-			const hasOrigin = remotes.some((r) => r.remote === "origin");
-
-			if (!hasOrigin) {
-				await git.addRemote({
-					fs,
-					dir: GITOPS_DIR,
-					remote: "origin",
-					url: config.repository_url,
-				});
-			}
+			// Bind credentials to the configured destination, including after a URL change.
+			await git.addRemote({
+				fs,
+				dir: GITOPS_DIR,
+				remote: "origin",
+				url: config.repository_url,
+				force: true,
+			});
 
 			await git.pull({
 				fs,
 				http,
 				dir: GITOPS_DIR,
-				ref: config.branch || "main",
+				ref: (await git.currentBranch({ fs, dir: GITOPS_DIR })) || config.branch || "main",
+				remoteRef: config.branch || "main",
 				singleBranch: true,
 				author: {
 					name: "ShieldPM GitOps",
@@ -894,8 +882,7 @@ const internalGitOps = {
 
 			// Update last sync time
 			// Update only last_sync/last_error fields within the meta JSON.
-			// Using a raw expression to JSON-merge only those fields, without
-			// touching encrypted_credentials or other meta fields.
+			// Re-read private metadata after the network operation to preserve credential rotations.
 			const meta1 = await internalGitOps.getConfigInternal();
 			const updatedMeta1 = { ...meta1, last_sync: new Date().toISOString(), last_error: null };
 			await settingModel.query().where("id", "gitops-config").patch({ meta: updatedMeta1 });
@@ -1006,6 +993,10 @@ const internalGitOps = {
 		}
 
 		await access.can("settings:update", "gitops-config");
+
+		if (options.overwrite !== undefined && typeof options.overwrite !== "boolean") {
+			throw new errs.ValidationError("overwrite must be a boolean");
+		}
 
 		const configDir = getConfigDir();
 		await assertSafeConfigTree(GITOPS_DIR, configDir);
@@ -1146,6 +1137,7 @@ const internalGitOps = {
 					}
 				} catch (err) {
 					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
+					errors.push(`${dirName}: ${err instanceof Error ? err.message : "Cleanup failed"}`);
 				}
 			}
 		};

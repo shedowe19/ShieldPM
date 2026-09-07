@@ -24,7 +24,7 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 1. Benutzer definiert einen Stream mit eingehendem Port (TCP/UDP), Forward-Host, Forward-Port und Protokoll.
 2. Optional: TLS-Termination mit Zertifikat, Proxy-Protocol, Bandwidth-Limit.
 3. `internal/stream.js` schreibt eine `.conf`-Datei unter `/data/nginx/stream/`, die Nginx im Stream-Kontext lädt.
-4. Nginx reload erfolgt debounced.
+4. Nginx reload erfolgt nach erfolgreicher Konfigurationsprüfung.
 
 ## Felder (relevant)
 
@@ -58,3 +58,5 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Proxy-Host](./proxy-host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
+
+Die Erstellungsantwort enthält den aktuellen Nginx-Status. Neue Zertifikatsdomains verwenden das getrennte Request-Schema für Zertifikate; DNS-Credentials werden ausschließlich im Zertifikatskontext aufbewahrt. Löschen und Deaktivieren sind mit der Konfigurationsgenerierung serialisiert.

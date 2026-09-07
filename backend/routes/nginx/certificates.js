@@ -25,6 +25,15 @@ const router = express.Router({
 	strict: true,
 	mergeParams: true,
 });
+
+const certificateId = (value) => {
+	if ((typeof value !== "string" && typeof value !== "number") || !/^[1-9]\d*$/.test(String(value))) {
+		throw new errs.ValidationError("id must be an integer greater than 0");
+	}
+	const id = Number(value);
+	if (!Number.isSafeInteger(id)) throw new errs.ValidationError("id must be a safe integer");
+	return id;
+};
 // Rate limiter for certificate downloads: max 10 downloads per 15 minutes per IP
 const downloadLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutes
@@ -260,15 +269,19 @@ router
  * /api/nginx/certificates/retrieve
  */
 router.post("/retrieve", jwtdecode(), async (req, res) => {
-	const { id, expand } = req.body;
-	const certificateId = Number.parseInt(id, 10);
-	if (Number.isNaN(certificateId) || certificateId < 1) {
-		throw new errs.ValidationError("id must be an integer greater than 0");
-	}
+	const id = certificateId(req.body?.id);
+	const payload = await validator(
+		{
+			type: "object",
+			additionalProperties: false,
+			properties: { expand: { $ref: "common#/properties/expand" } },
+		},
+		{ expand: req.body?.expand ?? null },
+	);
 
 	const row = await internalCertificate.get(res.locals.access, {
-		id: certificateId,
-		expand: expand,
+		id,
+		expand: payload.expand,
 	});
 	res.status(200).send(row);
 });
@@ -293,10 +306,10 @@ router
 	.put(async (req, res) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates/{certID}", "put"), {
 			...req.body,
-			id: req.params.certificate_id,
+			id: certificateId(req.params.certificate_id),
 		});
 		const result = await internalCertificate.update(res.locals.access, payload);
-		res.status(201).send(result);
+		res.status(200).send(result);
 	})
 
 	/**
@@ -305,12 +318,8 @@ router
 	 * Update and existing certificate
 	 */
 	.delete(async (req, res) => {
-		const parsedId = Number.parseInt(req.params.certificate_id, 10);
-		if (Number.isNaN(parsedId)) {
-			return res.status(400).send({ error: { code: 400, message: "Invalid certificate id" } });
-		}
 		const result = await internalCertificate.delete(res.locals.access, {
-			id: parsedId,
+			id: certificateId(req.params.certificate_id),
 		});
 		res.status(200).send(result);
 	});
@@ -339,7 +348,7 @@ router
 		}
 
 		const result = await internalCertificate.upload(res.locals.access, {
-			id: Number.parseInt(req.params.certificate_id, 10),
+			id: certificateId(req.params.certificate_id),
 			files: req.files,
 		});
 		res.status(200).send(result);
@@ -365,7 +374,7 @@ router
 	.post(async (req, res) => {
 		req.setTimeout(900000); // 15 minutes timeout
 		const result = await internalCertificate.renew(res.locals.access, {
-			id: Number.parseInt(req.params.certificate_id, 10),
+			id: certificateId(req.params.certificate_id),
 		});
 		res.status(200).send(result);
 	});
@@ -391,7 +400,7 @@ router
 	.post(async (req, res, next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
 		const result = await internalCertificate.download(res.locals.access, {
-			id: Number.parseInt(payload.id, 10),
+			id: certificateId(payload.id),
 		});
 		res.status(200).download(result.fileName, async (err) => {
 			try {

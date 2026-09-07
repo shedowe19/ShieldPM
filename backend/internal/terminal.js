@@ -39,6 +39,8 @@ const internalTerminal = {
 	},
 
 	handleConnection: async (ws, request) => {
+		// Protocol errors are emitted even while an unauthenticated socket is closing.
+		ws.on("error", () => ws.close());
 		let hostId = null;
 
 		// Parse host ID from URL path or query params
@@ -62,25 +64,18 @@ const internalTerminal = {
 			return;
 		}
 
-		// Get Host Credentials from ProxyHost (forward_scheme: 'terminal')
-		let host;
-		try {
-			host = await ProxyHost.query()
-				.findById(hostId)
-				.where("forward_scheme", "terminal")
-				.where("is_deleted", 0)
-				.where("enabled", 1)
-				.throwIfNotFound();
-		} catch (_err) {
-			ws.close(1008, "Terminal host not found");
-			return;
-		}
-
-		const sshClient = new Client();
+		let sshClient = null;
 		let initialCols = 80;
 		let initialRows = 24;
 		let sshStream = null;
-
+		let disconnected = false;
+		const disconnect = () => {
+			disconnected = true;
+			sshClient?.end();
+		};
+		// Register before database access: a browser may disconnect or send its size while it is pending.
+		ws.on("close", disconnect);
+		ws.on("error", disconnect);
 		// Listen for messages early to capture initial resize from frontend
 		ws.on("message", (data) => {
 			try {
@@ -108,7 +103,25 @@ const internalTerminal = {
 			}
 		});
 
+		// Get Host Credentials from ProxyHost (forward_scheme: 'terminal')
+		let host;
+		try {
+			host = await ProxyHost.query()
+				.findById(hostId)
+				.where("forward_scheme", "terminal")
+				.where("is_deleted", 0)
+				.where("enabled", 1)
+				.throwIfNotFound();
+		} catch (_err) {
+			ws.close(1008, "Terminal host not found");
+			return;
+		}
+
+		if (disconnected) return;
+		sshClient = new Client();
+
 		sshClient.on("ready", () => {
+			if (disconnected) return;
 			ws.send(JSON.stringify({ type: "status", status: "connected" }));
 
 			sshClient.shell({ term: "xterm-256color", cols: initialCols, rows: initialRows }, (err, stream) => {
@@ -118,7 +131,15 @@ const internalTerminal = {
 					return;
 				}
 
+				if (disconnected) {
+					stream.end();
+					return;
+				}
 				sshStream = stream;
+				stream.on("error", () => {
+					disconnect();
+					ws.close();
+				});
 				const decoder = new StringDecoder("utf8");
 
 				// Forward data SSH -> WS
@@ -140,10 +161,6 @@ const internalTerminal = {
 
 		sshClient.on("close", () => {
 			ws.close();
-		});
-
-		ws.on("close", () => {
-			sshClient.end();
 		});
 
 		// Decrypt password/key from ProxyHost terminal_* fields

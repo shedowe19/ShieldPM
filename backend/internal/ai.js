@@ -147,7 +147,7 @@ const ai = {
 			if (!config.api_key) throw new Error("API Key is required");
 			const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${config.api_key}`;
 			try {
-				const res = await fetch(url);
+				const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
 				if (!res.ok) throw new Error(`Gemini Error: ${res.status} ${res.statusText}`);
 				const data = await res.json();
 				return (data.models || [])
@@ -185,7 +185,10 @@ const ai = {
 				const headers = {};
 				if (config.api_key) headers.Authorization = `Bearer ${config.api_key}`;
 
-				const res = await fetch(targetUrl.toString(), { headers: /** @type {any} */ (headers) });
+				const res = await fetch(targetUrl.toString(), {
+					headers: /** @type {any} */ (headers),
+					signal: AbortSignal.timeout(10000),
+				});
 				if (!res.ok) throw new Error(`Local Provider Error: ${res.status} ${res.statusText}`);
 				const data = await res.json();
 				return (data.data || [])
@@ -259,84 +262,7 @@ const ai = {
 		const MAX_ITERATIONS = 5;
 		let wasToolExecuted = false; // Track if ANY tool was executed in this chain
 
-		// Helper to extract tools from text content if structured tool calls are missing
-		const extractToolsFromText = (resp) => {
-			if ((!resp.toolCalls || resp.toolCalls.length === 0) && resp.content) {
-				const toolCallPatterns = [
-					// Pattern 1: {"name": "tool_name", "arguments": {...}}
-					/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}/g,
-					// Pattern 2: function call format (standard)
-					/(\w+_\w+)\s*\(\s*(\{[^}]*\}|\s*)\s*\)/g,
-					// Pattern 2b: function call format (no parentheses, just JSON)
-					/(\w+_\w+)\s*(\{[^}]+\})/g,
-					// Pattern 3: XML-style <toolcall> or <tool_call> (Gemini Thinking/Flash models sometimes do this)
-					// Using [\s\S] instead of . to ensure newlines are matched across the whole block
-					/<tool_?call(?:\s+[^>]*)?>([\s\S]*?)<\/tool_?call>/gi,
-				];
-
-				for (const pattern of toolCallPatterns) {
-					const matches = [...resp.content.matchAll(pattern)];
-					if (matches.length > 0) {
-						logger.warn("[AI Chat] FALLBACK: Detected tool call in text response, extracting...");
-						resp.toolCalls = resp.toolCalls || [];
-						for (const match of matches) {
-							try {
-								let toolName;
-								let args;
-
-								// Check which pattern matched
-								if (match[0].startsWith("<tool")) {
-									// XML Pattern: match[1] is the JSON content
-									const json = JSON.parse(match[1]);
-									toolName = json.name;
-									args = json.arguments || {};
-								} else if (match[1] && match[2]) {
-									// Regex groups
-									toolName = match[1];
-									const argsStr = match[2] || "{}";
-									args = JSON.parse(argsStr.replace(/'/g, '"'));
-								} else {
-									// JSON Pattern
-									toolName = match[1];
-									const argsStr = match[2] || "{}";
-									args = JSON.parse(argsStr.replace(/'/g, '"'));
-								}
-
-								// Normalization: Fix hallucinated names (e.g. gethostanalytics -> get_host_analytics)
-								// We try updates if direct match fails.
-								const definedTools = tools;
-								const exactMatch = definedTools.find((t) => t.function.name === toolName);
-								if (!exactMatch) {
-									// Try to find by removing underscores from defined tools
-									const looseMatch = definedTools.find(
-										(t) => t.function.name.replace(/_/g, "") === toolName.replace(/_/g, ""),
-									);
-									if (looseMatch) {
-										logger.info(
-											`[AI Chat] Normalizing tool name: ${toolName} -> ${looseMatch.function.name}`,
-										);
-										toolName = looseMatch.function.name;
-									}
-								}
-
-								resp.toolCalls.push({ name: toolName, args });
-								logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`);
-							} catch (e) {
-								logger.warn("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
-							}
-						}
-						// Clear the text content since we extracted tool calls
-						if (resp.toolCalls.length > 0) {
-							resp.content = "";
-						}
-						break;
-					}
-				}
-			}
-		};
-
-		// Initial Check
-		extractToolsFromText(response);
+		// Only structured provider tool calls are executable; prose and code examples are inert.
 
 		while (response.toolCalls && response.toolCalls.length > 0 && iterations < MAX_ITERATIONS) {
 			iterations++;
@@ -374,9 +300,6 @@ const ai = {
 					tools,
 				);
 			}
-
-			// Check for tools in the new response (RECURSIVE FIX)
-			extractToolsFromText(response);
 
 			logger.info(`[AI Chat] LLM Response (Turn ${iterations}):`, {
 				hasContent: !!response.content,
@@ -419,7 +342,8 @@ const ai = {
 
 		// Fail-safe: If content is empty but tools were executed, provide a default status
 		if (!finalContent && wasToolExecuted) {
-			finalContent = "✅ Validated actions. Please check the system state updates.";
+			finalContent =
+				"Tool processing finished without a final response. Please check the system state and tool errors.";
 		}
 
 		// HALLUCINATION DETECTION: Warn if AI claims action but no tool was called

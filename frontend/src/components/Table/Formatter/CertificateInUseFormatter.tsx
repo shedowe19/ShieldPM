@@ -51,11 +51,6 @@ export function CertificateInUseFormatter({ proxyHosts, redirectionHosts, deadHo
 		return <TrueFalseFormatter value={false} falseLabel="certificate.not-in-use" />;
 	}
 
-	proxyHosts.sort();
-	redirectionHosts.sort();
-	deadHosts.sort();
-	streams.sort();
-
 	return (
 		<Popover>
 			<PopoverTrigger asChild>

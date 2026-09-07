@@ -16,7 +16,9 @@ vi.mock("src/components", () => ({
 	DomainsFormatter: () => null,
 	EmptyData: () => null,
 	HasPermission: ({ children }: { children?: React.ReactNode }) => children,
-	TrueFalseFormatter: () => null,
+	TrueFalseFormatter: ({ value }: { value: boolean }) => (
+		<span>{value ? "reported-online" : "reported-offline"}</span>
+	),
 	UserAvatar: () => null,
 	ValueWithDateFormatter: () => null,
 }));
@@ -137,5 +139,17 @@ describe("table action menus", () => {
 		for (const actionMenu of actionMenus) {
 			expect(actionMenu).toHaveAttribute("aria-label", "Aktionsmenü öffnen");
 		}
+	});
+	it("reports failed Nginx activation for dead hosts, redirects and streams", () => {
+		const meta = { nginxOnline: false, nginxErr: "Invalid directive" };
+		render(
+			<>
+				<DeadHostsTable data={[{ ...deadHost, meta }]} />
+				<RedirectionHostsTable data={[{ ...redirectionHost, meta }]} />
+				<StreamsTable data={[{ ...stream, meta }]} />
+			</>,
+		);
+		expect(screen.getAllByText("reported-offline")).toHaveLength(3);
+		expect(screen.getAllByTitle("Invalid directive")).toHaveLength(3);
 	});
 });

@@ -9,8 +9,10 @@ const getField = (body, camelName, snakeName) => body[camelName] ?? body[snakeNa
 /**
  * Helper: Validate a host against SSRF restrictions
  */
-const validateHost = (host, forbiddenHosts, res, context = "") => {
-	if (!host) return null;
+const validateHost = (value, forbiddenHosts, res, context = "") => {
+	if (!value) return null;
+	let host = String(value).toLowerCase().replace(/\.$/, "");
+	if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1);
 
 	if (forbiddenHosts.includes(host) || host.endsWith(".local")) {
 		return blockRequest(
@@ -57,7 +59,7 @@ const validateHost = (host, forbiddenHosts, res, context = "") => {
 
 /**
  * Middleware to block/validate functionality in demo mode
- * NOTE: req.path does NOT include /api prefix (routes are mounted at /api)
+ * NOTE: Nginx strips the /api prefix before forwarding to this application.
  */
 const checkDemoMode = (req, res, next) => {
 	if (isDemoMode()) {
@@ -65,7 +67,7 @@ const checkDemoMode = (req, res, next) => {
 
 		// Block User Password Changes & Permissions
 		// PUT /users/:id/auth or /users/:id/permissions
-		if (req.method === "PUT" && req.path.match(/^\/users\/\d+\/(auth|permissions)$/)) {
+		if (req.method === "PUT" && req.path.match(/^\/users\/(?:\d+|me)\/(auth|permissions)$/)) {
 			return blockRequest(res);
 		}
 
@@ -73,14 +75,14 @@ const checkDemoMode = (req, res, next) => {
 		// POST /users or DELETE /users/:id
 		if (
 			(req.method === "POST" && req.path === "/users") ||
-			(req.method === "DELETE" && req.path.match(/^\/users\/\d+$/))
+			(["PUT", "DELETE"].includes(req.method) && req.path.match(/^\/users\/(?:\d+|me)$/))
 		) {
 			return blockRequest(res);
 		}
 
 		// Block Global Settings Changes
-		// PATCH /settings/:id
-		if (req.method === "PATCH" && req.path.match(/^\/settings/)) {
+		// PUT /settings/:id
+		if (["PUT", "PATCH"].includes(req.method) && req.path.match(/^\/settings(?:\/|$)/)) {
 			return blockRequest(res);
 		}
 
@@ -158,9 +160,8 @@ const checkDemoMode = (req, res, next) => {
 			if (req.path.includes("/dead-hosts")) {
 				const domainNames = getField(body, "domainNames", "domain_names") || [];
 				for (const domain of domainNames) {
-					if (forbiddenHosts.includes(domain) || domain.endsWith(".local")) {
-						return blockRequest(res, "Internal domain names are disabled in Demo Mode.");
-					}
+					const hostError = validateHost(domain, forbiddenHosts, res);
+					if (hostError) return hostError;
 				}
 			}
 		}

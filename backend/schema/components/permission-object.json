@@ -70,6 +70,55 @@
 				"manage"
 			],
 			"example": "hidden"
+		},
+		"cloudflared_tunnels": {
+			"type": "string",
+			"enum": [
+				"hidden",
+				"view",
+				"manage"
+			]
+		},
+		"analytics": {
+			"type": "string",
+			"enum": [
+				"hidden",
+				"view",
+				"manage"
+			]
+		},
+		"dashboard_notes": {
+			"type": "string",
+			"enum": [
+				"hidden",
+				"view",
+				"manage"
+			]
+		},
+		"ddns_providers": {
+			"type": "string",
+			"enum": [
+				"hidden",
+				"view",
+				"manage"
+			]
+		},
+		"tor_onions": {
+			"type": "string",
+			"enum": [
+				"hidden",
+				"view",
+				"manage"
+			]
+		},
+		"chat": {
+			"type": "string",
+			"enum": [
+				"hidden",
+				"view",
+				"manage"
+			]
 		}
-	}
+	},
+	"additionalProperties": false
 }

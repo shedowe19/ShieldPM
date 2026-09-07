@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card
 import { useDashboardNotes } from "src/hooks/useDashboardNotes";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
-import { showObjectSuccess } from "src/notifications";
+import { showError, showObjectSuccess } from "src/notifications";
 import { showDashboardNoteModal } from "./lazy";
 
 const COLOR_MAP: Record<string, string> = {
@@ -27,9 +27,13 @@ export const DashboardNotesWidget = () => {
 	const handleDelete = async (e: React.MouseEvent, id: number) => {
 		e.stopPropagation();
 		if (confirm("Are you sure?")) {
-			await deleteDashboardNote(id);
-			showObjectSuccess("note", "deleted");
-			queryClient.invalidateQueries({ queryKey: ["dashboard-notes"] });
+			try {
+				await deleteDashboardNote(id);
+				showObjectSuccess("note", "deleted");
+				queryClient.invalidateQueries({ queryKey: ["dashboard-notes"] });
+			} catch (error) {
+				showError(error instanceof Error ? error.message : String(error));
+			}
 		}
 	};
 

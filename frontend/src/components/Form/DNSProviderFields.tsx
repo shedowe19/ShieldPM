@@ -1,6 +1,5 @@
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { Field, type FieldProps, useFormikContext } from "formik";
-import { useState } from "react";
 import Select, { type ActionMeta } from "react-select";
 import type { DNSProvider } from "src/api/backend";
 import { Input } from "src/components/ui/input";
@@ -19,15 +18,14 @@ interface Props {
 	showBoundaryBox?: boolean;
 }
 export function DNSProviderFields({ showBoundaryBox = false }: Props) {
-	const { setFieldValue } = useFormikContext();
+	const { values, setFieldValue } = useFormikContext<{ meta?: { dnsProvider?: string } }>();
 	const { data: dnsProviders, isLoading } = useDnsProviders();
-	const [dnsProviderId, setDnsProviderId] = useState<string | null>(null);
+	const dnsProviderId = values.meta?.dnsProvider;
 
 	const handleChange = (newValue: unknown, _actionMeta: ActionMeta<DNSProviderOption>) => {
 		const option = newValue as DNSProviderOption | null;
 		setFieldValue("meta.dnsProvider", option?.value);
 		setFieldValue("meta.dnsProviderCredentials", option?.credentials);
-		setDnsProviderId(option?.value || null);
 	};
 
 	const options: DNSProviderOption[] =
@@ -56,7 +54,7 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 							className="react-select-container"
 							classNamePrefix="react-select"
 							name={field.name}
-							id="dnsProvider"
+							inputId="dnsProvider"
 							closeMenuOnSelect={true}
 							isClearable={false}
 							placeholder={intl.formatMessage({ id: "certificates.dns.provider.placeholder" })}
@@ -64,6 +62,7 @@ export function DNSProviderFields({ showBoundaryBox = false }: Props) {
 							isSearchable
 							onChange={handleChange}
 							options={options}
+							value={options.find((option) => option.value === field.value) || null}
 							styles={{
 								control: (baseStyles) => ({
 									...baseStyles,

@@ -1,6 +1,8 @@
+import fs from "node:fs";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import deadHostModel from "../models/dead_host.js";
 import internalAuditLog from "./audit-log.js";
@@ -27,6 +29,7 @@ const internalDeadHost = {
 		}
 
 		await access.can("dead_hosts:create", data);
+		internalHost.validateDomainNames(data.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
 		const domainNameCheckPromises = [];
@@ -54,7 +57,7 @@ const internalDeadHost = {
 			thisData.advanced_config = "";
 		}
 
-		let row = await deadHostModel.query().insertAndFetch(thisData);
+		let row = await deadHostModel.query().insertAndFetch({ ...thisData, meta: sanitizeHostMeta(thisData.meta) });
 		row = utils.omitRow(omissions())(row);
 
 		// Add to audit log
@@ -62,7 +65,7 @@ const internalDeadHost = {
 			action: "created",
 			object_type: "dead-host",
 			object_id: row.id,
-			meta: thisData,
+			meta: { ...thisData, meta: sanitizeHostMeta(thisData.meta) },
 		});
 
 		if (createCertificate) {
@@ -91,7 +94,7 @@ const internalDeadHost = {
 		}
 
 		// Configure nginx
-		await internalNginx.configure(deadHostModel, "dead_host", freshRow);
+		freshRow.meta = await internalNginx.configure(deadHostModel, "dead_host", freshRow);
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("dead-host");
@@ -117,6 +120,7 @@ const internalDeadHost = {
 		// Get a list of the domain names and check each of them against existing records
 		const domainNameCheckPromises = [];
 		if (typeof thisData.domain_names !== "undefined") {
+			internalHost.validateDomainNames(thisData.domain_names);
 			thisData.domain_names.map((/** @type {any} */ domainName) => {
 				domainNameCheckPromises.push(internalHost.isHostnameTaken(domainName, "dead", thisData.id));
 				return true;
@@ -163,6 +167,8 @@ const internalDeadHost = {
 
 		thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);
 
+		thisData.meta = sanitizeHostMeta(thisData.meta);
+
 		// do the row update
 		await deadHostModel.query().where({ id: data.id }).patch(thisData);
 
@@ -171,7 +177,7 @@ const internalDeadHost = {
 			action: "updated",
 			object_type: "dead-host",
 			object_id: row.id,
-			meta: thisData,
+			meta: { ...thisData, meta: sanitizeHostMeta(thisData.meta) },
 		});
 
 		const thisRow = await internalDeadHost.get(access, {
@@ -247,13 +253,24 @@ const internalDeadHost = {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
-		await deadHostModel.query().where("id", row.id).patch({
-			is_deleted: 1,
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("dead_host", row.id));
+			await internalNginx.backupConfig("dead_host", row);
+			try {
+				await deadHostModel.transaction(async (trx) => {
+					await deadHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+					await internalNginx.deleteConfig("dead_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("dead_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("dead_host", row);
 		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("dead_host", row);
-		await internalNginx.reload();
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -334,18 +351,24 @@ const internalDeadHost = {
 
 		row.enabled = 0;
 
-		await deadHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 0,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("dead_host", row);
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("dead_host", row.id));
+			await internalNginx.backupConfig("dead_host", row);
+			try {
+				await deadHostModel.transaction(async (trx) => {
+					await deadHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
+					await internalNginx.deleteConfig("dead_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("dead_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("dead_host", row);
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -392,10 +415,7 @@ const internalDeadHost = {
 		let rows = await query;
 		rows = utils.omitRows(omissions())(rows);
 
-		if (typeof expand !== "undefined" && expand !== null && expand.indexOf("certificate") !== -1) {
-			internalHost.cleanAllRowsCertificateMeta(rows);
-		}
-		return rows;
+		return internalHost.cleanAllRowsCertificateMeta(rows);
 	},
 
 	/**

@@ -742,5 +742,6 @@
 	"wireguard.settings.subnet": "Подсеть VPN",
 	"wireguard.settings.serverAddress": "Адрес сервера",
 	"wireguard.settings.title": "Настройки WireGuard",
-	"wireguard.title": "Туннели WireGuard"
+	"wireguard.title": "Туннели WireGuard",
+	"settings.gitops.save-before-action": "Сохраните изменения конфигурации перед проверкой соединения или выполнением операций Git."
 }

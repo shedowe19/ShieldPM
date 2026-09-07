@@ -51,6 +51,8 @@ export const writeConfigFile = async (root, target, contents) => {
 		0o600,
 	);
 	try {
+		// Git checkouts create readable files; open(mode) only applies to new files.
+		await file.chmod(0o600);
 		await file.writeFile(contents);
 	} finally {
 		await file.close();

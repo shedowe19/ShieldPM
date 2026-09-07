@@ -4,8 +4,10 @@ import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import TorOnion from "../models/tor_onion.js";
+import internalAnubis from "./anubis.js";
 import internalGitOps from "./gitops.js";
 import internalNginx from "./nginx.js";
+import internalOAuth2Proxy from "./oauth2-proxy.js";
 
 const dataPath = process.env.DATA_PATH || "/data";
 const torControlHost = "127.0.0.1";
@@ -165,42 +167,187 @@ const sendAuthenticatedCommand = async (command) => {
  * @param {boolean} [skip_reload=false]
  * @returns {Promise<void>}
  */
-const syncProxyHost = async (service, skip_reload = false) => {
-	if (!service.proxy_host_id || !service.onion_address) {
-		return;
-	}
-
+const syncProxyHost = async (serviceSnapshot, skip_reload = false) => {
 	try {
-		const proxyHost = await ProxyHost.query()
-			.findById(service.proxy_host_id)
-			.where("is_deleted", 0)
-			.withGraphFetched("host_domains");
-		if (!proxyHost) {
-			return;
-		}
+		await internalNginx.withConfigurationLock(async () => {
+			// A Tor response can arrive after the service has been reassigned or deleted.
+			const service = await TorOnion.query().findById(serviceSnapshot.id).where("is_deleted", 0);
+			if (!service?.proxy_host_id || !service.onion_address) return;
+			const proxyHost = await ProxyHost.query()
+				.findById(service.proxy_host_id)
+				.where("is_deleted", 0)
+				.withGraphFetched("host_domains");
+			if (!proxyHost) {
+				return;
+			}
 
-		// Check if onion address is already in domain_names
-		if (proxyHost.domain_names.includes(service.onion_address)) {
-			return;
-		}
+			// Check if onion address is already in domain_names
+			if (proxyHost.domain_names.includes(service.onion_address)) {
+				return;
+			}
 
-		await proxyHost.$relatedQuery("host_domains").insert({ domain_name: service.onion_address });
+			await proxyHost.$relatedQuery("host_domains").insert({ domain_name: service.onion_address });
 
-		// Reconfigure Nginx
-		// We fetch the updated row to be sure
-		const updatedHost = await ProxyHost.query()
-			.findById(proxyHost.id)
-			.withGraphFetched("[host_domains, certificate, access_list.[clients,items]]");
-		await internalNginx.configure(ProxyHost, "proxy_host", updatedHost, { skip_reload });
+			// Reconfigure Nginx
+			// We fetch the updated row to be sure
+			const updatedHost = await ProxyHost.query()
+				.findById(proxyHost.id)
+				.withGraphFetched("[host_domains, certificate, access_list.[clients,items]]");
+			await internalNginx.configureHost(ProxyHost, "proxy_host", updatedHost, { skip_reload });
 
-		logger.info(`Added onion address ${service.onion_address} to Proxy Host ${proxyHost.id}`);
-		internalGitOps.triggerAutoPush("onion-sync");
+			logger.info(`Added onion address ${service.onion_address} to Proxy Host ${proxyHost.id}`);
+			internalGitOps.triggerAutoPush("onion-sync");
+		});
 	} catch (err) {
 		logger.error(`Failed to sync onion address to Proxy Host: ${err.message}`);
 	}
 };
 
 const internalTor = {
+	/**
+	 * Atomically update a service and move its onion domain between authorized hosts.
+	 * Both Nginx configs remain recoverable until the database transaction commits.
+	 * @param {Access} access
+	 * @param {TorOnion} service
+	 * @param {Object} payload
+	 * @returns {Promise<TorOnion>}
+	 */
+	update: async (access, service, payload) => {
+		const permission = await access.can("tor_onions:update", service.id);
+		const changedHosts = [];
+		const updated = await internalNginx.withConfigurationLock(async () => {
+			// Access.can may itself query the DB; resolve it before taking a transaction connection.
+			const currentQuery = TorOnion.query().findById(service.id).where("is_deleted", 0);
+			if (permission.permission_visibility !== "all")
+				currentQuery.where("owner_user_id", access.token.getUserId(1));
+			const snapshot = await currentQuery;
+			if (!snapshot) throw new errs.ItemNotFoundError(service.id);
+			const requestedHostId =
+				payload.proxy_host_id === undefined ? snapshot.proxy_host_id : payload.proxy_host_id;
+			const hostPermissions = new Map();
+			for (const id of new Set([snapshot.proxy_host_id, requestedHostId].filter(Boolean))) {
+				hostPermissions.set(id, await access.can("proxy_hosts:update", id));
+			}
+			const backups = [];
+			let result;
+			try {
+				result = await TorOnion.transaction(async (trx) => {
+					const query = TorOnion.query(trx).findById(service.id).where("is_deleted", 0);
+					if (permission.permission_visibility !== "all")
+						query.where("owner_user_id", access.token.getUserId(1));
+					const current = await query;
+					if (!current) throw new errs.ItemNotFoundError(service.id);
+					if ((current.proxy_host_id || 0) !== (snapshot.proxy_host_id || 0)) {
+						throw new errs.ValidationError("The onion service changed; reload it before updating");
+					}
+					const next = { ...current, ...payload };
+					validateServiceParams(next);
+					const oldId = current.proxy_host_id || 0;
+					const newId = next.proxy_host_id || 0;
+					const hosts = new Map();
+					for (const id of new Set([oldId, newId].filter(Boolean))) {
+						const hostPermission = hostPermissions.get(id);
+						const hostQuery = ProxyHost.query(trx)
+							.findById(id)
+							.where("is_deleted", 0)
+							.withGraphFetched("[host_domains, certificate, access_list.[clients,items]]");
+						if (hostPermission.permission_visibility !== "all")
+							hostQuery.where("owner_user_id", access.token.getUserId(1));
+						const host = await hostQuery;
+						if (!host) throw new errs.ItemNotFoundError(id);
+						hosts.set(id, host);
+					}
+					if (oldId !== newId && current.onion_address) {
+						const oldHost = hosts.get(oldId);
+						const newHost = hosts.get(newId);
+						if (oldHost) {
+							const remaining = oldHost.domain_names.filter((name) => name !== current.onion_address);
+							if (!remaining.length)
+								throw new errs.ValidationError(
+									"The previous proxy host must retain at least one domain",
+								);
+							await oldHost
+								.$relatedQuery("host_domains", trx)
+								.delete()
+								.where("domain_name", current.onion_address);
+						}
+						if (newHost && !newHost.domain_names.includes(current.onion_address)) {
+							await newHost
+								.$relatedQuery("host_domains", trx)
+								.insert({ domain_name: current.onion_address });
+						}
+						for (const id of hosts.keys()) {
+							const host = await ProxyHost.query(trx)
+								.findById(id)
+								.withGraphFetched("[host_domains, certificate, access_list.[clients,items]]");
+							await internalNginx.backupConfig("proxy_host", host);
+							backups.push(host);
+							await internalNginx.generateConfig("proxy_host", host);
+							await host.$query(trx).patch({
+								meta: { ...host.meta, nginx_online: Boolean(host.enabled), nginx_err: null },
+							});
+							changedHosts.push(host);
+						}
+					}
+					const record = await current.$query(trx).patchAndFetch(payload);
+					if (changedHosts.length) await internalNginx.reload();
+					return record;
+				});
+			} catch (err) {
+				// Roll back both files, including newly created configs without a backup.
+				const failures = [];
+				for (const host of backups) {
+					try {
+						await internalNginx.deleteConfig("proxy_host", host);
+						await internalNginx.restoreConfig("proxy_host", host);
+					} catch (restoreError) {
+						failures.push(restoreError);
+					}
+				}
+				if (backups.length) {
+					try {
+						await internalNginx.reload();
+					} catch (reloadError) {
+						failures.push(reloadError);
+					}
+				}
+				if (failures.length)
+					throw new errs.InternalError(
+						"Tor host reassignment rollback failed",
+						new AggregateError([err, ...failures]),
+					);
+				throw err;
+			}
+			for (const host of backups) {
+				try {
+					await internalNginx.deleteBackupConfig("proxy_host", host);
+				} catch (err) {
+					logger.error(`Unable to remove Tor host config backup: ${err.message}`);
+				}
+			}
+			return result;
+		});
+		if (changedHosts.length) {
+			const lists = new Map(
+				changedHosts.filter((host) => host.access_list).map((host) => [host.access_list.id, host.access_list]),
+			);
+			for (const list of lists.values()) {
+				if ((list.meta?.auth_type || list.meta?.authType) === "oauth2_proxy") {
+					try {
+						await internalOAuth2Proxy.start(list);
+					} catch (err) {
+						logger.error(`Tor OAuth2 redirect refresh failed: ${err.message}`);
+					}
+				}
+			}
+			internalAnubis
+				.generatePolicy()
+				.catch((err) => logger.error(`Tor Anubis policy refresh failed: ${err.message}`));
+			internalGitOps.triggerAutoPush("onion-sync");
+		}
+		return updated;
+	},
+
 	/**
 	 * Check if Tor is available
 	 * @returns {Promise<boolean>}
@@ -250,7 +397,7 @@ const internalTor = {
 
 		// Reload Nginx once after initialization
 		try {
-			await internalNginx.reload();
+			await internalNginx.withConfigurationLock(() => internalNginx.reload());
 		} catch (err) {
 			logger.error("Failed to reload Nginx after Tor initialization", err);
 		}
@@ -378,13 +525,15 @@ const internalTor = {
 				return true;
 			}
 
-			logger.warn("Unexpected response when stopping Tor Onion Service:", response);
-			await service.$query().patch({ status: 0 }); // Assume stopped
-			return true;
+			// Tor reports an already absent service with 552; other failures must remain visible.
+			if (/^552 /m.test(response)) {
+				await service.$query().patch({ status: 0 });
+				return true;
+			}
+			throw new Error("Tor refused to stop the onion service");
 		} catch (err) {
 			logger.error(`Failed to stop Tor Onion Service ${service.id}:`, err);
-			// Still mark as stopped since we can't verify
-			await service.$query().patch({ status: 0 });
+			await service.$query().patch({ status: 3 });
 			return false;
 		}
 	},
@@ -401,7 +550,7 @@ const internalTor = {
 		}
 
 		// Stop the service first
-		await internalTor.stop(service);
+		if (!(await internalTor.stop(service))) throw new errs.ValidationError("Unable to stop onion service");
 
 		// Delete from database
 		await service.$query().delete();
@@ -415,7 +564,7 @@ const internalTor = {
 	 * @returns {Promise<boolean>}
 	 */
 	restart: async (service) => {
-		await internalTor.stop(service);
+		if (!(await internalTor.stop(service))) return false;
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		return await internalTor.start(service);
 	},

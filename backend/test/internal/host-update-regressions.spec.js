@@ -109,6 +109,29 @@ describe("host update regressions", () => {
 		);
 	});
 
+	it.each([
+		[internalProxyHost, mocks.proxyQuery],
+		[internalDeadHost, mocks.deadQuery],
+		[internalStream, mocks.streamQuery],
+	])("removes legacy DNS provider credentials from host responses", async (service, query) => {
+		createStore({ id: 5, meta: { nginx_online: true, dns_provider_credentials: "dns-secret" } }, query);
+		expect((await service.get(access(), { id: 5 })).meta).toEqual({ nginx_online: true });
+	});
+
+	it("uses DNS credentials for issuance without retaining them in the updated stream", async () => {
+		const state = createStore(
+			{ id: 5, incoming_port: "8443", tcp_forwarding: true, udp_forwarding: false, meta: {} },
+			mocks.streamQuery,
+		);
+		await internalStream.update(access(), {
+			id: 5,
+			certificate_id: "new",
+			domain_names: ["tls.test"],
+			meta: { dns_provider_credentials: "dns-secret", dns_challenge: true },
+		});
+		expect(state.patches[0].meta).toEqual({ dns_challenge: true });
+	});
+
 	it("redacts expanded auth secrets and preserves blank terminal credentials on edits", async () => {
 		const state = createStore(
 			{

@@ -1,6 +1,8 @@
+import fs from "node:fs";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import streamModel from "../models/stream.js";
 import internalAuditLog from "./audit-log.js";
@@ -89,6 +91,7 @@ const internalStream = {
 		// streams aren't routed by domain name so don't store domain names in the DB
 		const data_no_domains = structuredClone(data);
 		delete data_no_domains.domain_names;
+		data_no_domains.meta = sanitizeHostMeta(data_no_domains.meta);
 
 		let row = await streamModel.query().insertAndFetch(/** @type {any} */ (data_no_domains));
 		row = utils.omitRow(omissions())(row);
@@ -113,14 +116,14 @@ const internalStream = {
 		});
 
 		// Configure nginx
-		await internalNginx.configure(streamModel, "stream", row);
+		row.meta = await internalNginx.configure(streamModel, "stream", row);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
 			action: "created",
 			object_type: "stream",
 			object_id: row.id,
-			meta: data,
+			meta: { ...data, meta: sanitizeHostMeta(data.meta) },
 		});
 
 		// Trigger GitOps auto-push
@@ -193,6 +196,7 @@ const internalStream = {
 		);
 
 		// Domain names are only used for certificate requests, never stored on streams.
+		if (thisData.meta) thisData.meta = sanitizeHostMeta(thisData.meta);
 		const persistedData = _.omit(thisData, ["domain_names"]);
 		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */ (persistedData));
 
@@ -276,13 +280,24 @@ const internalStream = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await streamModel.query().where("id", row.id).patch({
-			is_deleted: 1,
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("stream", row.id));
+			await internalNginx.backupConfig("stream", row);
+			try {
+				await streamModel.transaction(async (trx) => {
+					await streamModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+					await internalNginx.deleteConfig("stream", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("stream", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("stream", row);
 		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("stream", row);
-		await internalNginx.reload();
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -331,7 +346,7 @@ const internalStream = {
 			);
 
 		// Configure nginx
-		await internalNginx.configure(streamModel, "stream", row);
+		row.meta = await internalNginx.configure(streamModel, "stream", row);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -364,18 +379,24 @@ const internalStream = {
 
 		row.enabled = 0;
 
-		await streamModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 0,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("stream", row);
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("stream", row.id));
+			await internalNginx.backupConfig("stream", row);
+			try {
+				await streamModel.transaction(async (trx) => {
+					await streamModel.query(trx).where("id", row.id).patch({ enabled: 0 });
+					await internalNginx.deleteConfig("stream", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("stream", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("stream", row);
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -424,11 +445,7 @@ const internalStream = {
 		let rows = await query;
 		rows = utils.omitRows(omissions())(rows);
 
-		if (typeof expand !== "undefined" && expand !== null && expand.indexOf("certificate") !== -1) {
-			return internalHost.cleanAllRowsCertificateMeta(rows);
-		}
-
-		return rows;
+		return internalHost.cleanAllRowsCertificateMeta(rows);
 	},
 
 	/**

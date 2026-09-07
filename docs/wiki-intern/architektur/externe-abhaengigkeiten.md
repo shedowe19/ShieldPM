@@ -59,39 +59,40 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 
 ## Frontend-Abhängigkeiten (Auswahl)
 
-| Paket                       | Version        | Zweck                                            |
-| --------------------------- | -------------- | ------------------------------------------------ |
-| `react` / `react-dom`       | ^19.2.5        | UI-Framework                                     |
-| `react-router-dom`          | ^7.18.3        | Routing                                          |
-| `@tanstack/react-query`     | ^5.102.8       | Server-State                                     |
-| `@tanstack/react-table`     | 9.2.4          | Tabellen                                         |
-| `tailwindcss`               | ^4.3.3         | CSS-Framework                                    |
-| `@radix-ui/*`               | diverse        | Accessible UI-Primitives                         |
-| `i18next` / `react-i18next` | ^25.10 / ^16.6 | i18n                                             |
-| `framer-motion`             | ^13.1.1        | Animationen                                      |
-| `recharts`                  | ^3.10.1        | Charts (Analytics)                               |
-| `@xterm/xterm`              | ^6.0.0         | Terminal-Emulator                                |
-| `lucide-react`              | ^1.37.0        | Icons                                            |
-| `zod`                       | ^4.5.4         | Schema-Validierung                               |
-| `react-hook-form`           | ^7.87.0        | Formulare                                        |
-| `react-markdown`            | ^10.1.0        | Markdown-Rendering (AI Chat)                     |
-| `d3-geo`                    | ^3.1.1         | Projektion und SVG-Pfade der Analytics-Weltkarte |
-| `topojson-client`           | ^3.1.0         | TopoJSON-Umwandlung für die Analytics-Weltkarte  |
-| `world-atlas`               | ^2.0.2         | Lokal gebündelte Länder-Topologie für Analytics  |
+| Paket                       | Version       | Zweck                                            |
+| --------------------------- | ------------- | ------------------------------------------------ |
+| `react` / `react-dom`       | ^19.2.8       | UI-Framework                                     |
+| `react-router-dom`          | ^7.18.3       | Routing                                          |
+| `@tanstack/react-query`     | ^5.102.8      | Server-State                                     |
+| `@tanstack/react-table`     | 9.2.4         | Tabellen                                         |
+| `tailwindcss`               | ^4.3.3        | CSS-Framework                                    |
+| `@radix-ui/*`               | diverse       | Accessible UI-Primitives                         |
+| `i18next` / `react-i18next` | ^26.4 / ^17.0 | i18n                                             |
+| `framer-motion`             | ^13.1.1       | Animationen                                      |
+| `recharts`                  | ^3.10.1       | Charts (Analytics)                               |
+| `@xterm/xterm`              | ^6.0.0        | Terminal-Emulator                                |
+| `lucide-react`              | ^1.37.0       | Icons                                            |
+| `zod`                       | ^4.5.4        | Schema-Validierung                               |
+| `react-hook-form`           | ^7.87.0       | Formulare                                        |
+| `react-markdown`            | ^10.1.0       | Markdown-Rendering (AI Chat)                     |
+| `d3-geo`                    | ^3.1.1        | Projektion und SVG-Pfade der Analytics-Weltkarte |
+| `topojson-client`           | ^3.1.0        | TopoJSON-Umwandlung für die Analytics-Weltkarte  |
+| `world-atlas`               | ^2.0.2        | Lokal gebündelte Länder-Topologie für Analytics  |
 
 ## Entwicklungsabhängigkeiten
 
-| Paket                    | Zweck   |
-| ------------------------ | ------- |
-| `@biomejs/biome`         | ^2.5.11 |
-| `vitest`                 | 4.1.11  |
-| `@testing-library/react` | ^16.3.3 |
-| `typescript`             | 7.0.2   |
-| `vite`                   | 8.2.2   |
+| Paket                    | Zweck                                                                   |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `@biomejs/biome`         | ^2.5.11                                                                 |
+| `vitest`                 | 4.1.11                                                                  |
+| `@testing-library/react` | ^16.3.3                                                                 |
+| `typescript`             | 7.0.2                                                                   |
+| `@electric-sql/pglite`   | 0.5.8, ausschließlich Backend-Tests mit eingebetteter PostgreSQL-Engine |
+| `vite`                   | 8.2.2                                                                   |
 
 ## Sicherheitsprüfung September 2026
 
-`yarn audit --json` meldet nach der Korrektur keine bekannten Befunde: Backend 0 bei 535 erfassten Abhängigkeiten, Frontend 0 bei 610. Zuvor wurden im Backend 13 hohe und 4 mittlere Befunde gemeldet; mehrere davon betreffen dieselben Pakete über unterschiedliche Pfade. Dies ist der Stand der verwendeten Advisory-Datenbank, keine Zusicherung vollständiger Sicherheit.
+`yarn audit --json` meldet nach der Korrektur keine bekannten Befunde: Backend 0 bei 536 erfassten Abhängigkeiten, Frontend 0 bei 610. Zuvor wurden im Backend 13 hohe und 4 mittlere Befunde gemeldet; mehrere davon betreffen dieselben Pakete über unterschiedliche Pfade. Dies ist der Stand der verwendeten Advisory-Datenbank, keine Zusicherung vollständiger Sicherheit.
 
 Gezielt aktualisiert wurden `fast-uri` von 3.1.5 auf 3.1.6, `qs` von 6.15.3 auf 6.16.0 und `nanoid` von 3.3.16 auf 3.3.18. Die bestehenden und neuen Resolutions sind auf die betroffenen Abhängigkeitspfade begrenzt; die Sicherheitstests kontrollieren die korrigierten Lockfile-Versionen.
 

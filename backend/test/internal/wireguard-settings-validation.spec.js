@@ -72,6 +72,7 @@ describe("WireGuard settings validation", () => {
 		["newline injection", { endpoint: "vpn.example.com\nPostUp = iptables -F FORWARD" }],
 		["out-of-range ports", { listen_port: 65536 }],
 		["invalid IPv4 CIDRs", { subnet: "10.8.0.0/99" }],
+		["ambiguous IPv4 notation", { subnet: "10.8/24" }],
 		["CIDRs unsupported by the peer allocator", { subnet: "10.8.0.0/25", server_address: "10.8.0.1/25" }],
 		["server addresses outside the configured subnet", { server_address: "10.9.0.1/24" }],
 	])("rejects %s before persisting settings", async (_description, data) => {
@@ -102,7 +103,7 @@ describe("WireGuard settings validation", () => {
 			};
 			return {
 				stderr: { on: () => {} },
-				stdin: { end: vi.fn(), write: vi.fn() },
+				stdin: { end: vi.fn(), write: vi.fn(), on: vi.fn() },
 				stdout: { on: (_event, handler) => handlers.data.push(handler) },
 				on: (event, handler) => handlers[event].push(handler),
 			};

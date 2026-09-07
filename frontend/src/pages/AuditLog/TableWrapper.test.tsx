@@ -381,4 +381,13 @@ describe("Audit log table loading", () => {
 
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { limit: 100, page: 1, query: "first" });
 	});
+	it("repairs an out-of-range page while preserving investigation filters", async () => {
+		mocks.useAuditLogsPage.mockReturnValue({
+			data: { items: [], pagination: { page: 9, totalPages: 1, totalItems: 0 } },
+			isFetching: false,
+		});
+		renderAuditTable("/audit-log?action=deleted&page=9");
+		await waitFor(() => expect(screen.getByTestId("audit-log-location")).toHaveTextContent("?action=deleted"));
+		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { action: "deleted", limit: 100, page: 1 });
+	});
 });

@@ -29,6 +29,14 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 - Verzeichnisse unter `/data/tls`, `/data/access` und `/data/shieldpm` erhalten Modus `0700`, reguläre Dateien `0600`. Damit werden unter anderem private Schlüssel, Datenbanken und das Tor-Control-Passwort nicht mehr pauschal auf `0770` erweitert.
 - Die neuen Sicherungsverzeichnisse benötigen Speicherplatz. Vor einer manuellen Bereinigung müssen insbesondere abweichende Ziel- und Quelldateien verglichen werden.
 
+## Wiederholter Start und Zertifikatauswahl
+
+`runtime-config.sh` setzt Certbot-Schlüsseltyp, Must-Staple, TLS-Prüfung und ACME-Profil bei jedem Start auf die aktuellen Umgebungswerte zurück. Ein Wechsel zurück auf Standardwerte wird damit auch bei nativen Installationen wirksam. Dasselbe gilt für die IPv4-/IPv6-Adressen und Ports der Verwaltungsoberfläche und von GoAccess sowie für Worker-Anzahlen, Fehlerprotokollierung, 404-Weiterleitung, Proxy-Pufferung und die IPv6-DNS-Auflösung.
+
+`DEFAULT_CERT_ID` unterstützt Let's Encrypt, hochgeladene und interne Zertifikate. Zertifikat und privater Schlüssel werden immer als vollständiges, nicht leeres Paar ausgewählt; andernfalls greift das Dummy-Paar. Beim Wechsel des Zertifikats oder Abschalten von OCSP werden alte Stapling-Direktiven deaktiviert. Deaktiviertes GoAccess entfernt seine aktive Nginx-Konfiguration unabhängig von `FULLCLEAN`; historische Daten bleiben bei `FULLCLEAN=false` erhalten.
+
+Der Entrypoint überspringt Verzeichnisse ohne passende Prerun-Shellskripte. Ein Fehler beim Verschieben des alten Datenverzeichnisses bricht den Start ab. ZeroSSL-EAB-Anfragen kodieren die E-Mail-Adresse als Formulardaten, haben ein Zeitlimit von 30 Sekunden und melden HTTP-Fehler. Die Startreparatur erkennt fehlende Zertifikate und Schlüssel auch bei internen Zertifikaten.
+
 ## Native-Update: NodeSource-Paketversion
 
 `update-shieldpm` läuft mit `set -o pipefail`. Die Node-26-Paketversion wird aus `apt-cache madison nodejs` ermittelt. Das `awk`-Kommando liest dabei die vollständige APT-Ausgabe, übernimmt aber nur die erste passende Version. Ein vorzeitiges Beenden von `awk` würde die vorgelagerte Ausgabe bei langen Versionslisten mit `SIGPIPE` abbrechen und das gesamte Update vor dem Quellcode-Download beenden.

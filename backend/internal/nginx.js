@@ -31,16 +31,23 @@ const internalNginx = {
 	 * @param   {Object}         host
 	 * @returns {Promise}
 	 */
-	configure: (model, host_type, host, options = {}) => {
-		// Every test reads all configs; serialize writes and rollbacks across concurrent API requests.
-		const operation = configurationQueue.then(() => internalNginx.configureHost(model, host_type, host, options));
+	configure: (model, host_type, host, options = {}) =>
+		internalNginx.withConfigurationLock(() => internalNginx.configureHost(model, host_type, host, options)),
+
+	/** Serialize config changes and certificate activation; callbacks must not call configure(). */
+	withConfigurationLock: (callback) => {
+		const operation = configurationQueue.then(callback);
 		configurationQueue = operation.catch(() => {});
 		return operation;
 	},
 
-	configureHost: async (model, host_type, host, options = {}) => {
+	configureHost: async (model, host_type, hostSnapshot, options = {}) => {
 		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
+		// Bulk jobs may have loaded this snapshot before a concurrent disable/delete completed.
+		const current = await model.query().findById(hostSnapshot.id).select("enabled", "is_deleted");
+		const host =
+			!current || current.is_deleted || !current.enabled ? { ...hostSnapshot, enabled: false } : hostSnapshot;
 
 		// 1. Backup existing config if it exists
 		await internalNginx.backupConfig(host_type, host);
@@ -59,6 +66,8 @@ const internalNginx = {
 		try {
 			// 3. Test nginx configuration
 			await internalNginx.test();
+			// Keep the previous configuration until the running server has accepted this one.
+			if (!skip_reload) await internalNginx.reload();
 
 			// 4. Verification successful
 			combined_meta = _.assign({}, host.meta, {
@@ -92,13 +101,10 @@ const internalNginx = {
 				nginx_err: `[Rolled back] Configuration failed: ${err.message}`,
 			});
 
+			if (!skip_reload) await internalNginx.reload();
 			await model.query().where("id", host.id).patch({
 				meta: combined_meta,
 			});
-		}
-
-		if (!skip_reload) {
-			await internalNginx.reload();
 		}
 		return combined_meta;
 	},
@@ -218,6 +224,7 @@ const internalNginx = {
 	generateConfig: async (host_type, host_row) => {
 		// Prevent modifying the original object:
 		const host = JSON.parse(JSON.stringify(host_row));
+		if (host.is_deleted) host.enabled = false;
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 
 		const renderEngine = utils.getRenderEngine();
@@ -261,13 +268,19 @@ const internalNginx = {
 		}
 
 		if (host.domain_names) {
-			host.server_names = host.domain_names.map((domain_name) => punycode.toASCII(domain_name));
+			host.server_names = host.domain_names.map((domain_name) =>
+				domain_name.startsWith("~") ? domain_name : punycode.toASCII(domain_name.toLowerCase()),
+			);
 		}
 
 		host.env = process.env;
+		if (host.access_list?.meta?.oauth2_proxy_prefix) {
+			host.access_list.meta.oauth2_proxy_prefix = host.access_list.meta.oauth2_proxy_prefix.replace(/\/?$/, "/");
+		}
 		if (host.forward_scheme === "terminal") {
 			host.terminal_access_token = getTerminalAccessToken(host.id);
 		}
+		host.managed_web_root = host.forward_scheme === "path" && host.forward_host?.startsWith("/data/websites/");
 
 		if (host.certificate && host.certificate.provider === "internal") {
 			host.use_ml_kem = true;
@@ -451,7 +464,7 @@ const internalNginx = {
 	 * @returns {Promise<string>}
 	 */
 	getLogs: async (access, logType) => {
-		await access.can("settings:read");
+		await access.can("settings:get");
 		const dataPath = process.env.DATA_PATH || "/data";
 		const logPaths = {
 			error: `${dataPath}/nginx/error.log`,

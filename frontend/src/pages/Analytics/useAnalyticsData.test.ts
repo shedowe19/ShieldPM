@@ -1,4 +1,4 @@
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { getAnalyticsSeries, getAnalyticsSummary } from "src/api/backend";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAnalyticsData } from "./useAnalyticsData";
@@ -43,5 +43,52 @@ describe("useAnalyticsData", () => {
 				timestamp: "2026-01-01T12:00:00",
 			},
 		]);
+	});
+
+	it("clears the previous host and rejects partial refresh data when series fails", async () => {
+		const { result, rerender } = renderHook(({ host }) => useAnalyticsData(host, "24h"), {
+			initialProps: { host: "1" },
+		});
+		await waitFor(() => expect(result.current.summary).toEqual({ count: 3 }));
+		vi.mocked(getAnalyticsSummary).mockResolvedValue({ count: 99 });
+		vi.mocked(getAnalyticsSeries).mockRejectedValue(new Error("Series failed"));
+		rerender({ host: "2" });
+		await waitFor(() => expect(result.current.error).toBe("Series failed"));
+		expect(result.current.summary).toBeNull();
+		expect(result.current.series).toEqual([]);
+	});
+
+	it("does not leave loading stuck or apply stale results when going offline", async () => {
+		let complete!: (value: { count: number }) => void;
+		vi.mocked(getAnalyticsSummary).mockReturnValue(
+			new Promise((resolve) => {
+				complete = resolve;
+			}),
+		);
+		const { result } = renderHook(() => useAnalyticsData("1", "24h"));
+		expect(result.current.loading).toBe(true);
+		act(() => window.dispatchEvent(new Event("offline")));
+		expect(result.current.loading).toBe(false);
+		await act(async () => {
+			complete({ count: 55 });
+		});
+		expect(result.current.summary).toBeNull();
+	});
+
+	it("starts independent requests together and commits only a complete pair", async () => {
+		let complete!: (value: { count: number }) => void;
+		vi.mocked(getAnalyticsSummary).mockReturnValue(
+			new Promise((resolve) => {
+				complete = resolve;
+			}),
+		);
+		const { result } = renderHook(() => useAnalyticsData("1", "24h"));
+		expect(getAnalyticsSeries).toHaveBeenCalledWith(1, "24h");
+		expect(result.current.summary).toBeNull();
+		await act(async () => {
+			complete({ count: 55 });
+		});
+		expect(result.current.summary).toEqual({ count: 55 });
+		expect(result.current.series).toHaveLength(1);
 	});
 });

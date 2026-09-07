@@ -64,6 +64,8 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
   Einträge begrenzte Reihenfolge, die relative Balkenbreite und den lokalisierten Leerzustand bei; der Seitencontainer
   behält Auswahl, Datenabruf und Formularzustand.
 
+Hostbezogene Abfragen prüfen zuerst die aktuelle serverseitige `analytics:list`-Berechtigung. Ohne globale Analytics-Berechtigung muss `proxy_hosts:get` erfolgreich sein und der Host dem aktuellen Benutzer gehören, sofern dieser kein aktuell berechtigter Administrator ist. Eine alte Admin-Rolle aus dem JWT ersetzt keine aktuelle Berechtigungsprüfung. Unerwartete Datenbank- oder Berechtigungsfehler lösen keinen schwächeren Fallback aus.
+
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend

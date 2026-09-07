@@ -1,20 +1,33 @@
 import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ handlers: {}, createClientCert: vi.fn(), download: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+	handlers: {},
+	createClientCert: vi.fn(),
+	download: vi.fn(),
+	renew: vi.fn(),
+	delete: vi.fn(),
+	get: vi.fn(),
+}));
 vi.mock("express", () => ({
 	default: {
 		Router: () => {
 			const router = {
 				get: () => router,
-				post: () => router,
+				post: (path, ...handlers) => {
+					mocks.handlers[path] = handlers.at(-1);
+					return router;
+				},
 				route: (path) => {
 					const route = {
 						all: () => route,
 						options: () => route,
 						get: () => route,
 						put: () => route,
-						delete: () => route,
+						delete: (handler) => {
+							mocks.handlers[`DELETE ${path}`] = handler;
+							return route;
+						},
 						post: (...handlers) => {
 							mocks.handlers[path] = handlers.at(-1);
 							return route;
@@ -29,7 +42,9 @@ vi.mock("express", () => ({
 }));
 vi.mock("express-fileupload", () => ({ default: () => vi.fn() }));
 vi.mock("express-rate-limit", () => ({ default: () => vi.fn() }));
-vi.mock("../../internal/certificate.js", () => ({ default: { download: mocks.download } }));
+vi.mock("../../internal/certificate.js", () => ({
+	default: { download: mocks.download, renew: mocks.renew, delete: mocks.delete, get: mocks.get },
+}));
 vi.mock("../../internal/pki.js", () => ({ default: { createClientCert: mocks.createClientCert } }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => vi.fn() }));
 vi.mock("../../lib/validator/index.js", () => ({ default: async (_schema, payload) => payload }));
@@ -69,4 +84,16 @@ describe("certificate issuance and download routes", () => {
 		expect(fs.rm).toHaveBeenCalledWith("/tmp/mock-certificate.zip", { force: true });
 		expect(next).not.toHaveBeenCalled();
 	});
+	it.each(["1junk", "1.5", "1e2", "-1", "0", "9007199254740992", undefined])(
+		"rejects ambiguous certificate ids before delete, renewal or retrieval: %s",
+		async (id) => {
+			const req = { params: { certificate_id: id }, body: { id }, setTimeout: vi.fn() };
+			for (const route of ["DELETE /:certificate_id", "/:certificate_id/renew", "/retrieve"]) {
+				await expect(mocks.handlers[route](req, response(vi.fn()))).rejects.toThrow("id must be");
+			}
+			expect(mocks.delete).not.toHaveBeenCalled();
+			expect(mocks.renew).not.toHaveBeenCalled();
+			expect(mocks.get).not.toHaveBeenCalled();
+		},
+	);
 });

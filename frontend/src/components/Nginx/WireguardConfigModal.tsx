@@ -28,19 +28,29 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
+		let active = true;
+		setConfig(null);
+		setQrcode(null);
+		setLoading(true);
+		setCopied(false);
 		if (open && peerId) {
-			setLoading(true);
-			setCopied(false);
-
-			Promise.all([
-				getWireguardPeerConfig(peerId).then((r) => setConfig(r.config)),
-				getWireguardPeerQRCode(peerId)
-					.then((r) => setQrcode(r.qrcode))
-					.catch(() => setQrcode(null)),
-			])
-				.catch(() => setConfig(null))
-				.finally(() => setLoading(false));
+			Promise.all([getWireguardPeerConfig(peerId), getWireguardPeerQRCode(peerId).catch(() => null)])
+				.then(([result, qr]) => {
+					if (active) {
+						setConfig(result.config);
+						setQrcode(qr?.qrcode || null);
+					}
+				})
+				.catch(() => {
+					if (active) setConfig(null);
+				})
+				.finally(() => {
+					if (active) setLoading(false);
+				});
 		}
+		return () => {
+			active = false;
+		};
 	}, [open, peerId]);
 
 	const handleCopy = () => {
@@ -145,7 +155,7 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 					</Button>
 					<Button
 						onClick={handleDownload}
-						disabled={!config}
+						disabled={loading || !config}
 						className="bg-purple-600/90 text-white hover:bg-purple-600 shadow-sm"
 					>
 						<IconDownload className="mr-2 h-4 w-4" />

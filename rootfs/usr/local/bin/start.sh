@@ -3,19 +3,9 @@
 # shellcheck source=/dev/null
 . "$(dirname "$0")/migrate-data.sh"
 
-if [ "$ACME_KEY_TYPE" = "rsa" ]; then
-    sed -i "s|key-type = ecdsa|key-type = rsa|g" /etc/certbot.ini
-fi
-if [ "$ACME_MUST_STAPLE" = "false" ]; then
-    sed -i "s|must-staple = true|must-staple = false|g" /etc/certbot.ini
-fi
-if [ "$ACME_SERVER_TLS_VERIFY" = "false" ]; then
-    sed -i "s|no-verify-ssl = false|no-verify-ssl = true|g" /etc/certbot.ini
-fi
-if [ "$ACME_PROFILE" != "none" ]; then
-    sed -i "s|#required-profile|required-profile = $ACME_PROFILE|g" /etc/certbot.ini
-fi
-
+# shellcheck source=/dev/null
+. "$(dirname "$0")/runtime-config.sh"
+configure_certbot_ini /etc/certbot.ini || exit 1
 
 if [ "$PHP82" = "true" ]; then
     apt-get update && apt-get install -y --no-install-recommends php8.2-fpm
@@ -299,63 +289,9 @@ else
 fi
 
 
-if [ "$DEFAULT_CERT_ID" = "0" ]; then
-    export DEFAULT_CERT=/data/tls/dummycert.pem
-    export DEFAULT_KEY=/data/tls/dummykey.pem
-    echo "no DEFAULT_CERT_ID set, using dummycerts."
-else
-    if [ -d "/data/tls/certbot/live/npm-$DEFAULT_CERT_ID" ]; then
-        if [ ! -s /data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/fullchain.pem ]; then
-            echo "/data/tls/certbot/live/npm-$DEFAULT_CERT_ID/fullchain.pem does not exist"
-            export DEFAULT_CERT=/data/tls/dummycert.pem
-            export DEFAULT_KEY=/data/tls/dummykey.pem
-            echo "using dummycerts."
-        else
-            export DEFAULT_CERT=/data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/fullchain.pem
-            echo "DEFAULT_CERT set to /data/tls/certbot/live/npm-$DEFAULT_CERT_ID/fullchain.pem"
-            if [ ! -s /data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/privkey.pem ]; then
-                echo "/data/tls/certbot/live/npm-$DEFAULT_CERT_ID/privkey.pem does not exist"
-                export DEFAULT_CERT=/data/tls/dummycert.pem
-                export DEFAULT_KEY=/data/tls/dummykey.pem
-                echo "using dummycerts."
-            else
-                export DEFAULT_KEY=/data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/privkey.pem
-                echo "DEFAULT_KEY set to /data/tls/certbot/live/npm-$DEFAULT_CERT_ID/privkey.pem"
-                if [ -s /data/tls/certbot/live/npm-"$DEFAULT_CERT_ID".der ] && [ "$ACME_OCSP_STAPLING" = "true" ]; then
-                     export DEFAULT_STAPLING_FILE=/data/tls/certbot/live/npm-"$DEFAULT_CERT_ID".der
-                     echo "DEFAULT_STAPLING_FILE set to /data/tls/certbot/live/npm-$DEFAULT_CERT_ID.der"
-                fi
-            fi
-        fi
-    elif [ -d "/data/tls/custom/npm-$DEFAULT_CERT_ID" ]; then
-        if [ ! -s /data/tls/custom/npm-"$DEFAULT_CERT_ID"/fullchain.pem ]; then
-            echo "/data/tls/custom/npm-$DEFAULT_CERT_ID/fullchain.pem does not exist"
-            export DEFAULT_CERT=/data/tls/dummycert.pem
-            export DEFAULT_KEY=/data/tls/dummykey.pem
-            echo "using dummycerts."
-        else
-            export DEFAULT_CERT=/data/tls/custom/npm-"$DEFAULT_CERT_ID"/fullchain.pem
-            echo "DEFAULT_CERT set to /data/tls/custom/npm-$DEFAULT_CERT_ID/fullchain.pem"
-            if [ ! -s /data/tls/custom/npm-"$DEFAULT_CERT_ID"/privkey.pem ]; then
-                echo "/data/tls/custom/npm-$DEFAULT_CERT_ID/privkey.pem does not exist"
-                export DEFAULT_CERT=/data/tls/dummycert.pem
-                export DEFAULT_KEY=/data/tls/dummykey.pem
-                echo "using dummycerts."
-            else
-                export DEFAULT_KEY=/data/tls/custom/npm-"$DEFAULT_CERT_ID"/privkey.pem
-                echo "DEFAULT_KEY set to /data/tls/custom/npm-$DEFAULT_CERT_ID/privkey.pem"
-                if [ -s /data/tls/custom/npm-"$DEFAULT_CERT_ID".der ] && [ "$CUSTOM_OCSP_STAPLING" = "true" ]; then
-                     export DEFAULT_STAPLING_FILE=/data/tls/custom/npm-"$DEFAULT_CERT_ID".der
-                     echo "DEFAULT_STAPLING_FILE set to /data/tls/custom/npm-$DEFAULT_CERT_ID.der"
-                fi
-            fi
-        fi
-    else
-        export DEFAULT_CERT=/data/tls/dummycert.pem
-        export DEFAULT_KEY=/data/tls/dummykey.pem
-        echo "cert with ID $DEFAULT_CERT_ID does not exist, using dummycerts."
-    fi
-fi
+select_default_certificate /data/tls "$DEFAULT_CERT_ID"
+echo "DEFAULT_CERT set to $DEFAULT_CERT"
+echo "DEFAULT_KEY set to $DEFAULT_KEY"
 
 if { [ "$DEFAULT_CERT" = "/data/tls/dummycert.pem" ] && [ "$DEFAULT_KEY" != "/data/tls/dummykey.pem" ]; } || { [ "$DEFAULT_CERT" != "/data/tls/dummycert.pem" ] && [ "$DEFAULT_KEY" = "/data/tls/dummykey.pem" ]; }; then
     export DEFAULT_CERT=/data/tls/dummycert.pem
@@ -375,42 +311,32 @@ fi
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /app/templates/default.conf
 sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /app/templates/default.conf
-if [ -s "$DEFAULT_STAPLING_FILE" ]; then
-    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /app/templates/default.conf
-    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /app/templates/default.conf
-fi
+configure_certificate_stapling /app/templates/default.conf || exit 1
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
 sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-if [ -s "$DEFAULT_STAPLING_FILE" ]; then
-    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-fi
+configure_certificate_stapling /usr/local/nginx/conf/conf.d/shieldpm.conf || exit 1
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-if [ -s "$DEFAULT_STAPLING_FILE" ]; then
-    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-fi
+configure_certificate_stapling /usr/local/nginx/conf/conf.d/include/goaccess.conf || exit 1
 
-sed -i "s|#\?listen 0.0.0.0:81 |listen $NPM_IPV4_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-sed -i "s|#\?listen 0.0.0.0:91 |listen $GOA_IPV4_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-
-if [ "$DISABLE_IPV6" = "true" ]; then
+configure_ui_listeners /usr/local/nginx/conf/conf.d/shieldpm.conf "$NPM_IPV4_BINDING" "$NPM_IPV6_BINDING" "$NPM_PORT" || exit 1
+configure_ui_listeners /usr/local/nginx/conf/conf.d/include/goaccess.conf "$GOA_IPV4_BINDING" "$GOA_IPV6_BINDING" "$GOA_PORT" || exit 1
+if [ "$DISABLE_IPV6" = true ]; then
     sed -i "s|ipv6=on;|ipv6=off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|#\?listen \[::\]:81 |#listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-    sed -i "s|#\?listen \[::\]:91 |#listen $GOA_IPV6_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 else
-    sed -i "s|#\?listen \[::\]:81 |listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-    sed -i "s|#\?listen \[::\]:91 |listen $GOA_IPV6_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
+    sed -i "s|ipv6=off;|ipv6=on;|g" /usr/local/nginx/conf/nginx.conf
 fi
 
 if [ "$GOA" = "true" ]; then
     mkdir -vp /data/goaccess/data /data/goaccess/geoip
-    cp -van /usr/local/nginx/conf/conf.d/include/goaccess.conf /usr/local/nginx/conf/conf.d/goaccess.conf
-elif [ "$FULLCLEAN" = "true" ]; then
-    rm -vrf /data/goaccess
+    cp -a /usr/local/nginx/conf/conf.d/include/goaccess.conf /usr/local/nginx/conf/conf.d/goaccess.conf
+else
+    rm -f /usr/local/nginx/conf/conf.d/goaccess.conf
+    if [ "$FULLCLEAN" = "true" ]; then
+        rm -vrf /data/goaccess
+    fi
 fi
 
 if [ "$LISTEN_PROXY_PROTOCOL" = "true" ]; then
@@ -421,32 +347,10 @@ if [ "$NGINX_QUIC_BPF" = "true" ]; then
 else
   sed -i "s|quic_bpf.*|quic_bpf off;|g" /usr/local/nginx/conf/nginx.conf
 fi
-if [ "$NGINX_LOG_NOT_FOUND" = "true" ]; then
-    sed -i "s|log_not_found.*|log_not_found on;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_404_REDIRECT" = "true" ]; then
-    sed -i "s|#error_page 404|error_page 404|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_DISABLE_PROXY_BUFFERING" = "true" ]; then
-    sed -i "s|proxy_buffering.*|proxy_buffering off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|proxy_request_buffering.*|proxy_request_buffering off;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_WORKER_PROCESSES" != "auto" ]; then
-    sed -i "s|worker_processes.*|worker_processes $NGINX_WORKER_PROCESSES;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_WORKER_CONNECTIONS" != "512" ]; then
-    sed -i "s|worker_connections.*|worker_connections $NGINX_WORKER_CONNECTIONS;|g" /usr/local/nginx/conf/nginx.conf
-fi
+configure_nginx_toggles /usr/local/nginx/conf/nginx.conf || exit 1
 if [ "$NGINX_HSTS_SUBDOMAINS" = "false" ]; then
     sed -i "s|includeSubDomains; ||g" /usr/local/nginx/conf/nginx.conf
 fi
-if [ "$X_FRAME_OPTIONS" = "deny" ]; then
-    sed -i "s|SAMEORIGIN|DENY|g" /app/templates/_hsts.conf
-fi
-if [ "$X_FRAME_OPTIONS" = "none" ]; then
-    sed -i "s|#\?\(.*SAMEORIGIN\)|#\1|g" /app/templates/_hsts.conf
-fi
-
 if [ "$NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE" = "true" ]; then
     sed -i "s|#\(load_module.\+libngx_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
     sed -i "s|brotli on;|brotli off;|g" /usr/local/nginx/conf/nginx.conf

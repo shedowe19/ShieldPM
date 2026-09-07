@@ -117,6 +117,24 @@ Pointer-Position, Ziehen verschiebt den Viewport. Dadurch ist die Karte React-19
 Marker, Zoom und Pan.
 `AnalyticsGeography.test.tsx` sichert Titel und Datenweitergabe an Karte und Länderliste ab.
 
+## Formular- und Antwortzustand
+
+- Dynamische Basic-Auth-, Clientregel- und Location-Felder initialisieren sich beim erneuten Mounten aus dem aktuellen Formik-Zustand. Wechsel zwischen Tabs verlieren dadurch keine ungespeicherten Zeilen. DNS- und Access-List-Auswahlen sind ebenfalls an den Formularwert gebunden.
+- Geänderte Pfade verändern keine React-Keys mehr. Location- und Anubis-Eingaben behalten beim Tippen den Fokus. Anubis-Adresslisten bewahren ein gerade eingegebenes Komma bis zum Verlassen des Felds; Zugriffsregeln erlauben auch den vom Backend unterstützten Wert `all`.
+- `ui/form.tsx` rendert den eigentlichen Validierungstext innerhalb von `FormMessage` und verknüpft ihn über `aria-describedby`. Ohne diesen Inhalt waren Fehler zwar im Formularzustand vorhanden, aber unsichtbar.
+- `GitSyncTab` löst mit seiner Synchronisationsaktion keinen Submit des umgebenden Proxy-Host-Formulars aus. Die mobile Sidebar schließt sich bei Navigation und beim Öffnen des KI-Chats.
+- Antworten alter KI-Unterhaltungen, Modellabfragen und WireGuard-Peer-Dialoge dürfen einen inzwischen gewechselten Zustand nicht überschreiben. Der Peer-Konfigurationsdialog entfernt beim Wechsel sofort den alten Inhalt und deaktiviert dessen Download. WireGuard-Formulare bewahren explizit null Sekunden Keepalive und leere DNS-Angaben.
+- Die Hilfeauflösung berücksichtigt alle 13 unterstützten Sprachen einschließlich der vorhandenen spanischen Dokumente. Eine spätere Sprachwahl gewinnt gegenüber einer älteren, langsameren Sprachdatei-Ladung. Service-Icons versuchen nach einem URL-Wechsel erneut zu laden, auch wenn die vorherige URL fehlschlug. Tabellenformatierer verändern keine aus dem Query-Cache übernommenen Arrays.
+- KI-Markdown trennt Inline-Code und Codeblöcke über die tatsächlichen `code`- und `pre`-Elemente. Es verwendet keinen vom Renderer entfernten `inline`-Parameter.
+- DDNS-Neuanlagen verwenden POST; Änderungen benötigen eine numerische ID und erhalten den Aktivierungsstatus. Fehler beim ersten Laden von KI-, DDNS- oder ChatOps-Konfigurationen zeigen einen Fehlerzustand, damit leere Standardwerte keine vorhandene Konfiguration überschreiben.
+- Beim erneuten Versuch eines fehlgeschlagenen Zertifikat-Uploads wird dieselbe bereits erzeugte Zertifikats-ID verwendet. Änderungen am Namen werden vor dem Upload übernommen. Paste-Eingaben akzeptieren PKCS#8-, RSA- und EC-Schlüssel und werden anschließend weiterhin vom Backend geprüft. Die automatische Erneuerung startet auch bei wiederholten StrictMode-Effekten nur einmal.
+- Demo-Metadatenmaskierung erkennt sowohl API-Namen in `camelCase` als auch ältere Namen in `snake_case`. Fehlende optionale Berechtigungsstufen initialisieren sich mit dem gültigen Wert `hidden`; die Sichtbarkeit bleibt ein eigener Wert.
+
+Die Regressionstests verwenden echte Formularzustände, DOM-Interaktionen beziehungsweise kontrolliert verzögerte
+API-Antworten. Der eigenständige [Turbo-Loader](../module/turbo-loader.md) besitzt zusätzlich Tests für Dateiinhalte,
+Teilbereichsantworten, Wiederaufnahme und schrittweises Schreiben auf die Festplatte. Die Wartungsseite bleibt bei
+kleinen Bildschirmen und Zoom scrollbar und stoppt den Countdown beim ersten abgeschlossenen Intervall.
+
 ## React-Kontexte (`frontend/src/context/`)
 
 | Context         | Datei                      | Zweck                                                 |

@@ -60,6 +60,32 @@ Viele Seiten folgen einem dreistufigen Pattern:
 2. `Table.tsx` — Tabellen-Definition (Spalten, Aktionen)
 3. `TableWrapper.tsx` — Daten-Laden via React Query + Tabelle rendern
 
+## Fehlerzustände und konsistente Bedienung
+
+- Proxy-, Redirect-, Dead-Host- und Stream-Tabellen berücksichtigen neben `enabled` den tatsächlichen
+  Aktivierungsstatus `meta.nginxOnline`. Ein fehlgeschlagener Nginx-Ladevorgang wird als offline angezeigt;
+  die Fehlerdetails stehen am Status. Fehlgeschlagene Aktivierungsaktionen zeigen eine Fehlermeldung.
+  Nach dem Löschen eines Dead-Hosts wird die Liste neu geladen. Leere, inzwischen ungültige Ergebnisseiten
+  bei Proxy-Hosts und Audit-Logs werden auf die letzte verfügbare Seite zurückgesetzt.
+- Die Zertifikatstabelle bietet ACME-Erneuerung nur für Let's-Encrypt-Zertifikate mit Verwaltungsrecht an.
+  Fehler beim Root-CA-Download werden angezeigt. Das Ablauf-Widget erkennt auch Zertifikate, die erst
+  innerhalb des aktuellen Tages abgelaufen sind. Fehlgeschlagene Notizlöschungen werden gemeldet.
+- Analytics lädt Übersicht und Zeitreihe gleichzeitig und übernimmt erst ein vollständiges Wertepaar.
+  Beim Wechsel von Host oder Zeitraum werden bisherige Daten gelöscht, damit Fehler keine Kennzahlen
+  des vorherigen Hosts unter einer neuen Auswahl anzeigen. Ladefehler sind sichtbar; Offline-Wechsel
+  beenden den Ladeindikator und verwerfen verspätete Antworten. Diagramme bleiben auf kleinen Bildschirmen
+  innerhalb ihrer Rasterspalte.
+- Sicherheitsaktionen besitzen explizit `type="button"`, damit sie in eingebetteten Profilformularen
+  keine Profilspeicherung auslösen. TOTP-Einrichtung löst auch unter React StrictMode nur eine Anfrage aus.
+  Ausstehende Prüfungen blockieren doppelte Eingaben, konkurrierende Wiederherstellungscode-Aktionen und
+  das Schließen der Einrichtung. YubiKey- und Duo-Einrichtung zeigen neu erzeugte Wiederherstellungscodes
+  wie TOTP und Passkeys an. Fehler beim Laden aktiver Faktoren erscheinen als Fehleransicht.
+- WireGuard-Einstellungen lassen sich erst nach erfolgreichem Laden bearbeiten. Hintergrundabfragen
+  überschreiben keine begonnenen Eingaben; ungültige Ports und Änderungen während des Speicherns sind
+  gesperrt. Speicherfehler bleiben sichtbar. Tunnel-Seiten zeigen Ladefehler; Tor unterscheidet dabei
+  API-Fehler vom Zustand des Daemons. Kopierbestätigungen erscheinen erst nach erfolgreichem Zugriff
+  auf die Zwischenablage, und laufende Tunnel-Aktionen sperren konkurrierende Änderungen.
+
 ## Routing
 
 Datei: `frontend/src/Router.tsx`

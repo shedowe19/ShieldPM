@@ -46,9 +46,6 @@ const generateBackupCode = () =>
  * @returns {Promise<string[]>}
  */
 const regenerateBackupCodes = async (userId) => {
-	// Delete existing unused codes
-	await UserTwoFaBackupCode.query().delete().where({ user_id: userId });
-
 	const codes = Array.from({ length: BACKUP_CODE_COUNT }, generateBackupCode);
 	const rows = await Promise.all(
 		codes.map(async (code) => ({
@@ -57,7 +54,12 @@ const regenerateBackupCodes = async (userId) => {
 		})),
 	);
 
-	await Promise.all(rows.map((row) => UserTwoFaBackupCode.query().insert(row)));
+	await UserTwoFaBackupCode.transaction(async (trx) => {
+		await UserTwoFaBackupCode.query(trx).delete().where({ user_id: userId });
+		for (const row of rows) {
+			await UserTwoFaBackupCode.query(trx).insert(row);
+		}
+	});
 	return codes;
 };
 
@@ -126,11 +128,8 @@ const verifyAndEnableTotp = async (userId, code) => {
  * @returns {Promise<boolean>}
  */
 const verifyTotp = async (userId, code) => {
-	const record = await UserTwoFa.query().findOne({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
-	if (!record) {
-		return false;
-	}
-	return verifySync({ token: code, secret: record.secret }).valid;
+	const records = await UserTwoFa.query().where({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
+	return records.some((record) => verifySync({ token: code, secret: record.secret }).valid);
 };
 
 // ---------------------------------------------------------------------------
@@ -139,8 +138,9 @@ const verifyTotp = async (userId, code) => {
 
 /**
  * Validate a YubiKey OTP against the Yubico validation API.
- * Requires YUBICO_CLIENT_ID and YUBICO_SECRET_KEY in the environment
- * (or can point to a local validation server via YUBICO_API_URL).
+ * Uses YUBICO_CLIENT_ID and optionally YUBICO_SECRET_KEY to sign requests and
+ * verify responses, or a custom HTTPS server via YUBICO_API_URL.
+ * Protocol: https://developers.yubico.com/OTP/Specifications/OTP_validation_protocol.html
  *
  * @param {string} otp  44-character OTP from the YubiKey
  * @returns {Promise<{ status: string, deviceId: string }>}
@@ -152,6 +152,20 @@ const validateYubikeyOtp = (otp) => {
 
 	const clientId = process.env.YUBICO_CLIENT_ID || "1";
 	const apiUrl = process.env.YUBICO_API_URL || "api.yubico.com";
+	const signingKey = process.env.YUBICO_SECRET_KEY ? Buffer.from(process.env.YUBICO_SECRET_KEY, "base64") : null;
+	// HMAC-SHA1 is required by the Yubico validation protocol; this authenticates
+	// protocol messages and is not a password hash.
+	const sign = (parameters) =>
+		crypto
+			.createHmac("sha1", signingKey)
+			.update(
+				[...parameters]
+					.filter(([key]) => key !== "h")
+					.sort(([a], [b]) => a.localeCompare(b))
+					.map(([key, value]) => `${key}=${value}`)
+					.join("&"),
+			)
+			.digest();
 	const nonce = crypto.randomBytes(16).toString("hex");
 
 	// The device ID is the first 12 characters of the OTP (modhex encoded)
@@ -159,27 +173,47 @@ const validateYubikeyOtp = (otp) => {
 
 	return new Promise((resolve, reject) => {
 		const params = new URLSearchParams({ id: clientId, nonce, otp, sl: "secure", timestamp: "1" });
+		if (signingKey) params.set("h", sign(params).toString("base64"));
 		const path = `/wsapi/2.0/verify?${params.toString()}`;
 
 		const req = https.request({ hostname: apiUrl, path, method: "GET" }, (res) => {
 			let body = "";
+			res.on("error", reject);
 			res.on("data", (chunk) => {
 				body += chunk;
+				if (Buffer.byteLength(body) > 16384) {
+					req.destroy(new errs.ValidationError("Yubico API response is too large"));
+				}
 			});
 			res.on("end", () => {
-				const statusMatch = body.match(/status=(\w+)/);
-				if (!statusMatch) {
-					return reject(new errs.ValidationError("Unexpected Yubico API response"));
+				if (res.statusCode !== 200)
+					return reject(new errs.ValidationError("Yubico API request was unsuccessful"));
+				const values = new Map();
+				for (const line of body.trim().split(/\r?\n/)) {
+					const separator = line.indexOf("=");
+					const key = line.slice(0, separator);
+					if (separator <= 0 || values.has(key))
+						return reject(new errs.ValidationError("Unexpected Yubico API response"));
+					values.set(key, line.slice(separator + 1));
 				}
-				const status = statusMatch[1];
-				if (status !== "OK") {
-					return reject(new errs.ValidationError(`YubiKey validation failed: ${status}`));
+				if (values.get("otp") !== otp || values.get("nonce") !== nonce) {
+					return reject(new errs.ValidationError("Yubico API response does not match the request"));
 				}
+				if (signingKey) {
+					const supplied = Buffer.from(values.get("h") || "", "base64");
+					const expected = sign(values);
+					if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
+						return reject(new errs.ValidationError("Invalid Yubico API response signature"));
+					}
+				}
+				const status = values.get("status");
+				if (status !== "OK") return reject(new errs.ValidationError("YubiKey validation failed"));
 				resolve({ status, deviceId });
 			});
 		});
 
 		req.on("error", (err) => reject(new errs.InternalError(`Yubico API request failed: ${err.message}`)));
+		req.setTimeout(10000, () => req.destroy(new Error("Yubico API request timed out")));
 		req.end();
 	});
 };
@@ -213,8 +247,8 @@ const addYubikey = async (userId, otp, label = "YubiKey") => {
 		is_verified: 1,
 	});
 
-	await ensureBackupCodesExist(userId);
-	return record;
+	const backupCodes = await ensureBackupCodesExist(userId);
+	return { ...record, ...(backupCodes ? { backup_codes: backupCodes } : {}) };
 };
 
 /**
@@ -535,8 +569,8 @@ const setupDuo = async (userId, config) => {
 		is_verified: 1,
 	});
 
-	await ensureBackupCodesExist(userId);
-	return record;
+	const backupCodes = await ensureBackupCodesExist(userId);
+	return { ...record, ...(backupCodes ? { backup_codes: backupCodes } : {}) };
 };
 
 // These are uniformly random 256-bit identifiers, not human passwords. Keyed,
@@ -677,7 +711,7 @@ const getRemainingBackupCodeCount = async (userId) => {
 
 /**
  * Soft-delete a specific 2FA method.
- * Throws if it's the user's only 2FA method.
+ * Removing the last active method also removes recovery codes.
  * @param {number} userId
  * @param {number} methodId
  */
@@ -687,13 +721,12 @@ const removeTwoFaMethod = async (userId, methodId) => {
 		throw new errs.ItemNotFoundError(`2FA method ${methodId}`);
 	}
 
-	const activeCount = await UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 }).resultSize();
-
 	await UserTwoFa.query().patch({ is_deleted: 1 }).where({ id: methodId });
+	const activeCount = await UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 }).resultSize();
 
 	// If this was the last active method, 2FA is now disabled.
 	// Clean up backup codes so they don't linger.
-	if (activeCount <= 1) {
+	if (activeCount === 0) {
 		await UserTwoFaBackupCode.query().delete().where({ user_id: userId });
 	}
 };

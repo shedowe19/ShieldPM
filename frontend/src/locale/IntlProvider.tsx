@@ -95,15 +95,22 @@ const getLocale = (short = false) => {
 
 const cache = createIntlCache();
 let intl = createIntl({ locale: getLocale(), messages: mergeMessages(langEn) }, cache);
+let localeRequest = 0;
 
 const initializeLocale = async (): Promise<void> => {
 	const locale = getLocale();
-	intl = createIntl({ locale, messages: await loadMessages(locale) }, cache);
+	const request = ++localeRequest;
+	const messages = await loadMessages(locale);
+	if (request !== localeRequest) return;
+	intl = createIntl({ locale, messages }, cache);
 	document.documentElement.lang = locale;
 };
 
 const changeLocale = async (locale: string): Promise<void> => {
-	intl = createIntl({ locale, messages: await loadMessages(locale) }, cache);
+	const request = ++localeRequest;
+	const messages = await loadMessages(locale);
+	if (request !== localeRequest) return;
+	intl = createIntl({ locale, messages }, cache);
 	window.localStorage.setItem("locale", locale);
 	document.documentElement.lang = locale;
 };

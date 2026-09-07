@@ -393,23 +393,18 @@ export class AnalyticsService {
 			throw new errs.ItemNotFoundError("Host not found");
 		}
 
-		// Check if user has analytics permission - if so, allow access to any host
-		// (proxy-hosts visibility already filters which hosts are shown to the user)
 		try {
-			const analyticsPerm = await access.can("analytics:list");
-			if (
-				analyticsPerm &&
-				(analyticsPerm.permission_analytics === "manage" || analyticsPerm.permission_analytics === "view")
-			) {
-				return host;
-			}
-		} catch (_err) {
-			// Fall through to legacy admin/owner check
+			await access.can("analytics:list");
+			return host;
+		} catch (err) {
+			if (!(err instanceof errs.PermissionError)) throw err;
 		}
 
+		// Own-host analytics still requires a currently authorized proxy reader.
+		// A cached token scope or ownership alone must not override a denied account.
+		const permission = await access.can("proxy_hosts:get", hostId);
 		const userId = access?.token?.getUserId?.(0) || 0;
-		const isAdmin = access?.token?.hasScope?.("admin") || false;
-		if (!isAdmin && host.owner_user_id !== userId) {
+		if (!permission.roles?.includes("admin") && host.owner_user_id !== userId) {
 			throw new errs.PermissionError("You do not have permission to access analytics for this host.");
 		}
 

@@ -1,10 +1,26 @@
 import _ from "lodash";
+import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import deadHostModel from "../models/dead_host.js";
 import proxyHostModel from "../models/proxy_host.js";
 import redirectionHostModel from "../models/redirection_host.js";
 
 const internalHost = {
+	/** A domain is one Nginx server_name token, never a directive or comment. */
+	validateDomainNames: (domains) => {
+		if (
+			!Array.isArray(domains) ||
+			domains.length < 1 ||
+			domains.length > 99 ||
+			domains.some((domain) => typeof domain !== "string" || !domain.length || /[\s\p{Cc};{}"'#]/u.test(domain))
+		) {
+			throw new errs.ValidationError(
+				"Domain names must be nonempty Nginx server names without whitespace or directives",
+			);
+		}
+		return domains;
+	},
 	/**
 	 * Makes sure that the ssl_* and hsts_* fields play nicely together.
 	 * ie: if there is no cert, then force_ssl is off.
@@ -37,6 +53,7 @@ const internalHost = {
 	 */
 	cleanAllRowsCertificateMeta: (rows) => {
 		rows.map((_, idx) => {
+			if (rows[idx].meta) rows[idx].meta = sanitizeHostMeta(rows[idx].meta);
 			if (typeof rows[idx].certificate !== "undefined" && rows[idx].certificate) {
 				rows[idx].certificate.meta = {};
 			}
@@ -53,6 +70,7 @@ const internalHost = {
 	 * @returns {Object}
 	 */
 	cleanRowCertificateMeta: (row) => {
+		if (row.meta) row.meta = sanitizeHostMeta(row.meta);
 		if (typeof row.certificate !== "undefined" && row.certificate) {
 			row.certificate.meta = {};
 		}

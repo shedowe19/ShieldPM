@@ -12,8 +12,13 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 	const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
 	const [series, setSeries] = useState<ChartSeriesPoint[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		setSummary(null);
+		setSeries([]);
+		setError(null);
+		setLoading(false);
 		let cancelled = false;
 		let latestRequestId = 0;
 		let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -31,12 +36,13 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 			setLoading(true);
 			try {
 				const hostId = Number.parseInt(selectedHostId, 10);
-				const summaryData = await getAnalyticsSummary(hostId, range);
+				const [summaryData, seriesData] = await Promise.all([
+					getAnalyticsSummary(hostId, range),
+					getAnalyticsSeries(hostId, range),
+				]);
 				if (cancelled || requestId !== latestRequestId) return undefined;
 				setSummary(summaryData);
-
-				const seriesData = await getAnalyticsSeries(hostId, range);
-				if (cancelled || requestId !== latestRequestId) return undefined;
+				setError(null);
 				setSeries(
 					seriesData.map((point) => ({
 						...point,
@@ -46,7 +52,7 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 				return true;
 			} catch (error) {
 				if (!cancelled && requestId === latestRequestId) {
-					console.error("Failed to fetch analytics:", error);
+					setError(error instanceof Error ? error.message : String(error));
 				}
 				return false;
 			} finally {
@@ -85,6 +91,7 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 		};
 		const cancelPendingRequest = () => {
 			latestRequestId += 1;
+			setLoading(false);
 			clearScheduledFetch();
 		};
 
@@ -112,5 +119,5 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 		};
 	}, [selectedHostId, range]);
 
-	return { loading, series, summary };
+	return { loading, series, summary, error };
 };

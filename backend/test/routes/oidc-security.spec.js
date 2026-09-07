@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 	decrypt: vi.fn(),
 	getOauthToken: vi.fn(),
 	user: null,
+	enabled: true,
 }));
 vi.mock("openid-client", () => ({
 	discovery: async () => ({}),
@@ -28,6 +29,7 @@ vi.mock("../../models/setting.js", () => ({
 			where: () => ({
 				first: async () => ({
 					meta: {
+						enabled: mocks.enabled,
 						issuerURL: "https://idp.example.com",
 						redirectURL: "https://app.example.com/api/oidc/callback",
 					},
@@ -61,6 +63,7 @@ const req = (cookies = {}) => ({
 describe("OIDC callback binding and session claims", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mocks.enabled = true;
 		mocks.decrypt.mockReturnValue(`jwt-token---${new Date(Date.now() + 60000).toISOString()}`);
 		mocks.load.mockResolvedValue({ attrs: { id: 7 }, scope: ["user"] });
 		mocks.user = { id: 7, email: "test@example.com" };
@@ -76,6 +79,32 @@ describe("OIDC callback binding and session claims", () => {
 			token: "jwt-token",
 			expires: new Date(Date.now() + 60000).toISOString(),
 		});
+	});
+
+	it.each(["/", "/callback", "/claim"])("rejects disabled OIDC at %s", async (path) => {
+		mocks.enabled = false;
+		const res = response();
+		await handler(path)(req({ shieldpm_oidc: "nonce___state" }), res);
+		expect(mocks.grant).not.toHaveBeenCalled();
+		expect(mocks.issue).not.toHaveBeenCalled();
+		if (path === "/claim")
+			expect(res.send).toHaveBeenCalledWith({ error: { message: "OIDC authentication is disabled" } });
+		else expect(res.redirect).toHaveBeenCalledWith("/login");
+	});
+
+	it("does not disclose internal provider or database errors to the browser", async () => {
+		mocks.grant.mockRejectedValueOnce(new Error("private provider credentials"));
+		const callbackResponse = response();
+		await handler("/callback")(req({ shieldpm_oidc: "nonce___state" }), callbackResponse);
+		expect(callbackResponse.cookie).toHaveBeenCalledWith(
+			"shieldpm_oidc_error",
+			"OIDC authentication failed",
+			expect.any(Object),
+		);
+		mocks.issue.mockRejectedValueOnce(new Error("private database credentials"));
+		const claimResponse = response();
+		await handler("/claim")(req({ shieldpm_oidc: "encrypted" }), claimResponse);
+		expect(claimResponse.send).toHaveBeenCalledWith({ error: { message: "OIDC authentication failed" } });
 	});
 
 	it("uses an HTTP-only Lax cookie so state survives a top-level identity-provider callback", async () => {

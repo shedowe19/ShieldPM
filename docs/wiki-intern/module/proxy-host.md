@@ -58,6 +58,7 @@ Mechanik in `nginx.js` → `renderLocations(host)`:
 
 ## Interne Daten und API-Antworten
 
+- Der Objection-Hook `$afterFind()` bildet die geladenen `host_domains` auf `domain_names` ab und normalisiert Wartungszeitpunkte. Der frühere Name `$afterGet()` wurde von Objection nicht aufgerufen. Ein echter SQLite-Graph-Fetch in `tor-host-reassignment.spec.js` prüft die Domainabbildung auch bei JSON-Antworten.
 - Konfigurationsgenerierung und interne Aktualisierung behalten den tatsächlichen Pfad verwalteter Websites. Öffentliche Antworten zeigen für `/data/websites/...` weiterhin `(managed)`; beim Zurücksenden dieses Platzhalters bleibt der bestehende Pfad erhalten.
 - `backend/lib/host-response.js` entfernt Git-/Terminal-Zugangsdaten und Geheimnisse expandierter OAuth-/OIDC-Zugriffslisten aus Antworten und Proxy-Host-Auditdaten. Die Konfigurationsgenerierung erhält intern die erforderlichen Originaldaten.
 - Leere Terminal-Passwort-/Private-Key-Felder bei Updates behalten vorhandene Zugangsdaten. Neue Git-Zugangsdaten werden bereits beim Erstellen verschlüsselt.
@@ -89,3 +90,11 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Git-Deploy](./git-deploy.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
+
+## Ergänzungen der zweiten Codeprüfung
+
+Beim Löschen und Deaktivieren von Proxy-, Redirect-, 404-Hosts und Streams laufen Datenbankflag, Config-Entfernung und Reload in der Nginx-Warteschlange. Die Datenbankänderung bleibt bis zum erfolgreichen Reload in einer Transaktion. Ein Fehler beim Schreiben, Entfernen oder Reload setzt das Flag zurück und stellt eine zuvor vorhandene Konfiguration wieder her; anschließend wird diese erneut geladen. Audit-Einträge, GitOps und das Beenden des Proxy-Pollings folgen erst nach erfolgreichem Abschluss. Eine alte Sicherung wird nicht als aktive Konfiguration wiederbelebt, wenn vor der Änderung keine Config-Datei existierte. Bereits wartende Konfigurationsgenerierungen können dadurch nicht nachträglich die gerade entfernte Datei wiederherstellen.
+
+`backend/test/internal/host-removal-rollback.spec.js` prüft alle acht Lösch-/Deaktivierungspfade mit SQLite und temporären Konfigurationsdateien, einschließlich Schreib-, Datei- und Reloadfehlern. Nginx-Prozessaufrufe werden dabei simuliert.
+
+DNS-Zugangsdaten verbleiben ausschließlich im Zertifikatskontext. Für verwaltete Git-Websites sperrt die generierte Nginx-Konfiguration Symlinks und für statische Hosts den Zugriff auf Git-Metadaten. Details zu mTLS, OIDC und Limits stehen unter [Nginx-Templates](./nginx-templates.md).

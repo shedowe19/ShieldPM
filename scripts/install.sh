@@ -113,6 +113,7 @@ apt-get install -y --no-install-recommends --fix-missing \
     coreutils \
     curl \
     fcgiwrap \
+    libfcgi-bin \
     findutils \
     geoip-bin \
     goaccess \
@@ -132,9 +133,11 @@ apt-get install -y --no-install-recommends --fix-missing \
     lua-cjson \
     libluajit-5.1-2 \
     nano \
+    netcat-openbsd \
     openssl \
     libpcre2-8-0 \
     python3 \
+    sqlite3 \
     gosu \
     tini \
     tor \
@@ -757,11 +760,16 @@ echo "=== Starting ShieldPM ==="
 echo "--> Starting service to run initial migrations..."
 systemctl start shieldpm
 
-echo "--> Waiting 20 seconds for migrations to complete..."
-sleep 20
-
-echo "--> Restarting ShieldPM to load final configuration..."
-systemctl restart shieldpm
+echo "--> Waiting for the backend and initial database migrations..."
+INSTALL_HEALTH_DEADLINE=$((SECONDS + 180))
+while ! curl --fail --silent --show-error --max-time 2 --unix-socket /run/shieldpm.sock \
+    http://localhost/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; do
+    if ((SECONDS >= INSTALL_HEALTH_DEADLINE)); then
+        echo "ERROR: ShieldPM did not become healthy within 180 seconds. Check journalctl -u shieldpm."
+        exit 1
+    fi
+    sleep 1
+done
 
 echo "=== Installation Complete ==="
 echo "ShieldPM is installed. A system reboot is recommended to apply all changes."

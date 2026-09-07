@@ -1,10 +1,11 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TorOnionServices } from "./TorOnionServices";
 import { changeLocale } from "@/locale";
 
 const mocks = vi.hoisted(() => ({
 	useHealth: vi.fn(),
+	toast: vi.fn(),
 	useTorOnion: vi.fn(),
 	useTorOnions: vi.fn(),
 }));
@@ -19,7 +20,7 @@ vi.mock("@/hooks/useTorOnion", () => ({
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
-	useToast: () => ({ toast: vi.fn() }),
+	useToast: () => ({ toast: mocks.toast }),
 }));
 
 vi.mock("@/components/HasPermission", () => ({
@@ -35,6 +36,7 @@ vi.mock("./TorOnionServices.lazy", () => ({
 }));
 
 beforeEach(() => {
+	mocks.toast.mockReset();
 	mocks.useHealth.mockReturnValue({ data: { demo: false } });
 	mocks.useTorOnion.mockReturnValue({
 		remove: { mutate: vi.fn() },
@@ -89,5 +91,32 @@ describe("TorOnionServices", () => {
 		expect(screen.getByRole("button", { name: "Onion-Dienst stoppen" })).toBeInTheDocument();
 		expect(screen.getAllByRole("button", { name: "Onion-Dienst bearbeiten" })).toHaveLength(2);
 		expect(screen.getAllByRole("button", { name: "Löschen" })).toHaveLength(2);
+	});
+
+	it("reports clipboard rejection and never claims the address was copied", async () => {
+		const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+		Object.defineProperty(navigator, "clipboard", {
+			configurable: true,
+			value: { writeText: vi.fn().mockRejectedValue(new Error("Clipboard denied")) },
+		});
+		render(<TorOnionServices />);
+		fireEvent.click(screen.getAllByRole("button", { name: /copy onion address/i })[0]);
+		await waitFor(() =>
+			expect(mocks.toast).toHaveBeenCalledWith({ variant: "destructive", description: "Clipboard denied" }),
+		);
+		expect(mocks.toast).toHaveBeenCalledTimes(1);
+		if (original) Object.defineProperty(navigator, "clipboard", original);
+		else Reflect.deleteProperty(navigator, "clipboard");
+	});
+
+	it("distinguishes request failure from an unavailable Tor daemon", () => {
+		mocks.useTorOnions.mockReturnValue({
+			error: new Error("Tor request failed"),
+			isLoading: false,
+			refetch: vi.fn(),
+		});
+		render(<TorOnionServices />);
+		expect(screen.getByText("Tor request failed")).toBeInTheDocument();
+		expect(screen.queryByText(/Tor daemon is not available/i)).not.toBeInTheDocument();
 	});
 });

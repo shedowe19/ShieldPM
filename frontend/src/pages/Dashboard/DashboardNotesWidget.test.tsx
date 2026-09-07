@@ -1,10 +1,13 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import type { ButtonProps } from "src/components/ui/button";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	invalidateQueries: vi.fn(),
+	deleteNote: vi.fn(),
+	showError: vi.fn(),
+	showObjectSuccess: vi.fn(),
 	useDashboardNotes: vi.fn(),
 }));
 
@@ -19,13 +22,13 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 vi.mock("lucide-react", () => ({ Loader2: () => null }));
-vi.mock("src/api/backend", () => ({ deleteDashboardNote: vi.fn() }));
+vi.mock("src/api/backend", () => ({ deleteDashboardNote: mocks.deleteNote }));
 vi.mock("src/hooks/useDashboardNotes", () => ({ useDashboardNotes: mocks.useDashboardNotes }));
 vi.mock("src/locale", () => ({
 	intl: { formatMessage: ({ id }: { id: string }) => id },
 	T: ({ id }: { id: string }) => <>{id}</>,
 }));
-vi.mock("src/notifications", () => ({ showObjectSuccess: vi.fn() }));
+vi.mock("src/notifications", () => ({ showObjectSuccess: mocks.showObjectSuccess, showError: mocks.showError }));
 vi.mock("./lazy", () => ({ showDashboardNoteModal: vi.fn() }));
 
 vi.mock("src/components/ui/button", () => ({
@@ -95,5 +98,20 @@ describe("DashboardNotesWidget", () => {
 		deleteButton.focus();
 		expect(deleteButton).toHaveFocus();
 		expect(actionContainer).toHaveClass("group-focus-within:opacity-100");
+	});
+
+	it("reports a failed deletion without a false success or invalidation", async () => {
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		vi.stubGlobal(
+			"confirm",
+			vi.fn(() => true),
+		);
+		mocks.deleteNote.mockRejectedValue(new Error("Deletion failed"));
+		render(<DashboardNotesWidget />);
+		fireEvent.click(screen.getByRole("button", { name: "action.delete Keep this note" }));
+		await waitFor(() => expect(mocks.showError).toHaveBeenCalledWith("Deletion failed"));
+		expect(mocks.showObjectSuccess).not.toHaveBeenCalled();
+		expect(mocks.invalidateQueries).not.toHaveBeenCalled();
+		vi.unstubAllGlobals();
 	});
 });

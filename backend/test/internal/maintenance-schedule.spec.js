@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), configure: vi.fn(), reload: vi.fn() }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
-vi.mock("../../internal/nginx.js", () => ({ default: { configure: mocks.configure, reload: mocks.reload } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: { configure: mocks.configure, reload: mocks.reload, withConfigurationLock: (callback) => callback() },
+}));
 
 import maintenance from "../../internal/maintenance.js";
 

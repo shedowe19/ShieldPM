@@ -11,7 +11,7 @@ import { Input } from "src/components/ui/input";
 import { useProxyHostsPage } from "src/hooks";
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
-import { showObjectSuccess } from "src/notifications";
+import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { showAccessListModal, showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "./lazy";
 import Table from "./Table";
@@ -30,13 +30,12 @@ export default function TableWrapper() {
 	);
 	const rows = data?.items ?? [];
 	const pagination = data?.pagination;
-	const totalItems = pagination?.totalItems ?? 0;
 
 	useEffect(() => {
-		if (page > 1 && totalItems > 0 && rows.length === 0) {
-			setPage(page - 1);
+		if (!isFetching && pagination?.page === page && page > Math.max(1, pagination.totalPages)) {
+			setPage(Math.max(1, pagination.totalPages));
 		}
-	}, [page, rows.length, totalItems]);
+	}, [isFetching, page, pagination]);
 
 	if (isLoading) {
 		return <LoadingPage />;
@@ -58,10 +57,14 @@ export default function TableWrapper() {
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleProxyHost(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
+		try {
+			await toggleProxyHost(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
+		} catch (error) {
+			showError(error instanceof Error ? error.message : String(error));
+		}
 	};
 
 	return (

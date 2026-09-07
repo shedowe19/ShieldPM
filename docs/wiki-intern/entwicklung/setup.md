@@ -46,7 +46,7 @@ Für die Infrastrukturregressionen wird zusätzlich Python 3 benötigt:
 python3 -m unittest discover -s scripts/tests -v
 ```
 
-Die Tests prüfen Datenmigration, Certbot-Verknüpfungen, Shell-Syntax, unveränderte Zugangsdaten nach dem Schreiben der Umgebungsdatei sowie den AIO-Authentifizierungsablauf mit simuliertem Backend. Sie führen keine Installation und keine Dienständerung durch.
+Die Tests prüfen Datenmigration, Certbot-Verknüpfungen, Shell-Syntax, unveränderte Zugangsdaten nach dem Schreiben der Umgebungsdatei sowie den AIO-Authentifizierungsablauf mit simuliertem Backend. Hinzu kommen wiederholte Konfigurationswechsel, interne Standardzertifikate, OCSP-Deaktivierung, GoAccess-Abschaltung, sichere Wiki-Graph-Ausgabe und die begrenzte CrowdSec-Test-CLI. Sie führen keine Installation und keine Dienständerung durch; HTTP-Anfragen sind vollständig ersetzt. Der Graph-Test verwendet Node.js, das der Shellcheck-Workflow ausdrücklich bereitstellt.
 
 ## Wichtige Dateien für die Entwicklung
 

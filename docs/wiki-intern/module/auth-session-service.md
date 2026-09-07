@@ -67,6 +67,7 @@ Die Authentifizierung nutzt `issueTokenPair()` für den Login und `refreshTokenP
 ## Fehler- und Nebenläufigkeitsverhalten
 
 - Bei abgelaufenen Tokens, erkannter Wiederverwendung oder verlorenen Rotationsrennen werden notwendige Widerrufe zuerst in der Transaktion gespeichert. Der Authentifizierungsfehler wird erst nach deren Commit ausgelöst; sonst würde ein Rollback die Sperre aufheben.
+- Eine Passwortänderung widerruft alle noch aktiven Refresh-Sitzungen des betroffenen Benutzers mit `password_changed`, gemeinsam mit der Passwortänderung in einer Transaktion. Andere Benutzer und bereits widerrufene Sitzungen bleiben unverändert. Ausgestellte Access-JWTs werden dadurch nicht vorzeitig ungültig.
 - Die Rotation prüft zusätzlich, dass der bisherige Datensatz noch nicht widerrufen wurde.
 - Fehlende, deaktivierte oder gelöschte Benutzer erhalten kein neues Token-Paar; ihre betreffende Session-Familie wird widerrufen.
 - Der Refresh-Endpunkt entfernt Cookies bei dauerhaften Authentifizierungsfehlern (`401`). Bei vorübergehenden internen Fehlern (`500`) bleiben sie für einen späteren Versuch erhalten; interne Fehlerdetails werden nicht an den Client ausgegeben.

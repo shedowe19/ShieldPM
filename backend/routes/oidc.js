@@ -74,6 +74,7 @@ router
 	.all(oidcRateLimiter)
 	.post(async (req, res) => {
 		try {
+			assertEnabled(await settingModel.query().where({ id: "oidc-config" }).first());
 			const encryptedToken = req.cookies?.shieldpm_oidc;
 			if (typeof encryptedToken !== "string" || !encryptedToken) {
 				throw new errs.AuthError("No OIDC cookie found");
@@ -113,7 +114,7 @@ router
 			res.clearCookie("shieldpm_oidc");
 			res.status(200).send({ expires: pair.access_expires, user: pair.user });
 		} catch (err) {
-			res.status(400).send({ error: { message: err.message } });
+			res.status(400).send({ error: { message: err.public ? err.message : "OIDC authentication failed" } });
 		}
 	});
 
@@ -122,7 +123,14 @@ router
  *
  * @param {Setting} settings
  * */
+const assertEnabled = (settings) => {
+	if (settings?.meta?.enabled !== true) {
+		throw new errs.AuthError("OIDC authentication is disabled");
+	}
+};
+
 const getConfig = async (settings) => {
+	assertEnabled(settings);
 	return await client.discovery(new URL(settings.meta.issuerURL), settings.meta.clientID, settings.meta.clientSecret);
 };
 
@@ -221,7 +229,10 @@ const redirectWithJwtToken = (req, res, token) => {
 
 const redirectWithError = (res, error) => {
 	logger.error(`Callback error:  ${error.message}`);
-	res.cookie("shieldpm_oidc_error", error.message, { secure: true, sameSite: "Strict" });
+	res.cookie("shieldpm_oidc_error", error.public ? error.message : "OIDC authentication failed", {
+		secure: true,
+		sameSite: "Strict",
+	});
 	res.redirect("/login");
 };
 

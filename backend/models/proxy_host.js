@@ -193,7 +193,7 @@ class ProxyHost extends Model {
 		}
 	}
 
-	$afterGet() {
+	$afterFind() {
 		// Stored dates use the server timezone; expose explicit instants to browser-local forms.
 		for (const field of ["maintenance_start", "maintenance_end"]) {
 			if (this[field] && dayjs(this[field]).isValid()) {

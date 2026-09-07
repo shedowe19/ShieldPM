@@ -29,6 +29,12 @@ Ermöglicht das Exponieren von Diensten über Cloudflare ohne eingehende Portfre
 
 Das Modul startet die lokal installierte `cloudflared`-Binary mit dem Tunnel-Token in der Prozessumgebung. Es registriert einen `error`-Handler für Startfehler, beispielsweise eine fehlende Binary, und speichert Fehlerstatus und Fehlermeldung. Ein verspätetes `exit`-Event eines gestoppten Prozesses darf weder den Eintrag eines bereits gestarteten Nachfolgers löschen noch dessen Status überschreiben. Auch die verzögerte Online-Prüfung bezieht sich auf die konkrete Prozessinstanz.
 
+### Serialisierung und globale Sichtbarkeit
+
+Start, Stop und Restart laufen pro Tunnel-ID nacheinander. Gleichzeitige Starts können dadurch keinen zweiten unverwalteten Prozess erzeugen. Die Löschroute wartet auf Stop, bevor der Datenbankeintrag entfernt wird. Fehler asynchroner Start-/Restart-Aufträge werden ausdrücklich abgefangen und protokolliert.
+
+Ändern und Löschen beachten die von der jeweiligen Capability gelieferte `permission_visibility`: `all` erlaubt fremde Tunnel, eingeschränkte Sichtbarkeit begrenzt auf den Eigentümer. Globale Verwaltungsrechte werden nicht durch eine zusätzliche pauschale Owner-Prüfung blockiert.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

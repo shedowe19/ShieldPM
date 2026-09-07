@@ -17,7 +17,7 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 ## Verhalten
 
 1. Holt die aktuellen IPv4-Liste (`https://www.cloudflare.com/ips-v4`) und IPv6-Liste (`https://www.cloudflare.com/ips-v6`) per HTTPS, optional über `proxy-agent`.
-2. Filtert die Einträge per Regex (`^(\d+\.?){4}\/\d+`) und rendert sie via Liquid in `backend/templates/ip_ranges.conf`.
+2. Prüft die IPv4-/IPv6-CIDRs vollständig mit `ipaddr.js` und rendert sie via Liquid in `backend/templates/ip_ranges.conf`.
 3. Schreibt das Ergebnis nach `/data/nginx/ip_ranges.conf` und triggert einen Nginx-Reload.
 
 ## Konfiguration
@@ -44,3 +44,5 @@ IPv4- und IPv6-CIDRs werden mit `ipaddr.js` vollständig geprüft. Leere Listen,
 - [Nginx-Engine](./nginx-engine.md)
 - [Cloudflare Tunnels](./cloudflared.md)
 - [Modulübersicht](./README.md)
+
+`IPRT` muss eine ganze Zahl von 1 bis 99 sein. Andere Werte verwenden den Sechs-Stunden-Standard. Dadurch führen negative, zu große oder nichtnumerische Werte nicht zu überlaufenden Node-Timern mit Wiederholung im Millisekundentakt.

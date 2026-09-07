@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 	startTorService: vi.fn(),
 	stopCloudTunnel: vi.fn(),
 	stopTorService: vi.fn(),
+	updateTorService: vi.fn(),
 	torQueries: [],
 	torOnionQuery: vi.fn(),
 }));
@@ -34,6 +35,7 @@ vi.mock("../../internal/tor.js", () => ({
 		restart: mocks.restartTorService,
 		start: mocks.startTorService,
 		stop: mocks.stopTorService,
+		update: mocks.updateTorService,
 	},
 }));
 vi.mock("../../lib/config.js", () => ({
@@ -210,11 +212,14 @@ describe("AI tunnel tool permissions", () => {
 		mocks.addAuditLog.mockResolvedValue();
 		mocks.createTorService.mockResolvedValue();
 		mocks.restartCloudTunnel.mockResolvedValue();
-		mocks.restartTorService.mockResolvedValue();
+		mocks.restartTorService.mockResolvedValue(true);
+		mocks.updateTorService.mockImplementation((_access, service, payload) =>
+			service.$query().patchAndFetch(payload),
+		);
 		mocks.startCloudTunnel.mockResolvedValue();
 		mocks.startTorService.mockResolvedValue();
 		mocks.stopCloudTunnel.mockResolvedValue();
-		mocks.stopTorService.mockResolvedValue();
+		mocks.stopTorService.mockResolvedValue(true);
 	});
 
 	afterAll(() => {

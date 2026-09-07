@@ -91,6 +91,7 @@ vi.mock("../../models/user-2fa.js", () => ({
 
 vi.mock("../../models/user-2fa-backup-codes.js", () => ({
 	default: {
+		transaction: async (callback) => callback({}),
 		query: vi.fn(() => ({
 			delete: vi.fn(() => ({
 				where: vi.fn(() => {
@@ -489,6 +490,18 @@ describe("2fa-service", () => {
 			});
 			expect(record).toHaveProperty("type", "duo");
 			expect(record.is_verified).toBe(1);
+			expect(record.backup_codes).toHaveLength(8);
+		});
+		it("preserves existing recovery codes instead of generating an undisclosed replacement", async () => {
+			fakeBackupCodeRows = [{ user_id: 1, code_hash: "existing" }];
+			const record = await twoFaService.setupDuo(1, {
+				clientId: "DI123456",
+				clientSecret: "secret",
+				apiHost: "api.duosecurity.com",
+				redirectUrl: "https://app.example.com/duo-callback",
+			});
+			expect(record.backup_codes).toBeUndefined();
+			expect(fakeBackupCodeRows).toEqual([{ user_id: 1, code_hash: "existing" }]);
 		});
 	});
 

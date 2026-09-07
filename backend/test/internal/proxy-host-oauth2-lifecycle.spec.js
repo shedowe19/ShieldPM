@@ -1,12 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn(), list: vi.fn(), start: vi.fn(), stop: vi.fn() }));
+const mocks = vi.hoisted(() => ({ query: vi.fn(), list: vi.fn(), start: vi.fn(), stop: vi.fn(), reload: vi.fn() }));
+vi.mock("node:fs", () => ({ default: { existsSync: () => false } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: { stopPolling: vi.fn(), startPollingForHost: vi.fn() } }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/host.js", () => ({ default: {} }));
-vi.mock("../../internal/nginx.js", () => ({ default: { configure: vi.fn(), deleteConfig: vi.fn(), reload: vi.fn() } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: {
+		withConfigurationLock: (callback) => callback(),
+		configure: vi.fn(),
+		deleteConfig: vi.fn(),
+		getConfigName: () => "/mock/nginx/proxy_host/1.conf",
+		backupConfig: vi.fn(),
+		restoreConfig: vi.fn(),
+		deleteBackupConfig: vi.fn(),
+		reload: mocks.reload,
+	},
+}));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { start: mocks.start, stop: mocks.stop } }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));
@@ -18,7 +30,9 @@ vi.mock("../../models/access_list.js", () => ({
 		},
 	},
 }));
-vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
+vi.mock("../../models/proxy_host.js", () => ({
+	default: { query: mocks.query, transaction: async (callback) => callback({}) },
+}));
 
 import proxyHost from "../../internal/proxy-host.js";
 
@@ -37,6 +51,15 @@ describe("Proxy host OAuth2 lifecycle", () => {
 		mocks.list.mockResolvedValue(accessList);
 	});
 	afterEach(() => vi.restoreAllMocks());
+
+	it("keeps OAuth2 running when disabling its host fails to reload Nginx", async () => {
+		vi.spyOn(proxyHost, "get").mockResolvedValue({ id: 1, access_list_id: 12, enabled: 1 });
+		mocks.query.mockReturnValue(makeQuery());
+		mocks.reload.mockRejectedValueOnce(new Error("reload failed"));
+		await expect(proxyHost.disable(access, { id: 1 })).rejects.toThrow("reload failed");
+		expect(mocks.stop).not.toHaveBeenCalled();
+		expect(mocks.start).not.toHaveBeenCalled();
+	});
 
 	it("starts OAuth2 after a disabled host is enabled", async () => {
 		vi.spyOn(proxyHost, "get").mockResolvedValue({ id: 1, access_list_id: 12, enabled: 0 });

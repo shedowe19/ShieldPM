@@ -1,9 +1,9 @@
 import { IconRobot } from "@tabler/icons-react";
 import { Field, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
-import { getAiConfig, updateAiConfig } from "src/api/backend/ai";
+import { getAiConfig, getAiModels, updateAiConfig } from "src/api/backend/ai";
 import type { AiConfig } from "src/api/backend/models";
 import { Loading } from "src/components/Loading";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -20,6 +20,7 @@ export default function AiConfigPage() {
 	const [config, setConfig] = useState<AiConfig | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const modelRequest = useRef(0);
 	const [fetchedModels, setFetchedModels] = useState<{ id: string; name: string }[]>([]);
 
 	useEffect(() => {
@@ -32,13 +33,14 @@ export default function AiConfigPage() {
 	const { formatMessage } = useIntl();
 
 	const onSubmit = async (values: AiConfig, { setSubmitting }: FormikHelpers<AiConfig>) => {
+		setError(null);
 		try {
 			// Convert numeric fields from strings to integers
 			const payload = {
 				...values,
-				num_ctx: values.num_ctx ? Number.parseInt(String(values.num_ctx), 10) : undefined,
-				num_batch: values.num_batch ? Number.parseInt(String(values.num_batch), 10) : undefined,
-				num_thread: values.num_thread ? Number.parseInt(String(values.num_thread), 10) : undefined,
+				numCtx: values.numCtx ? Number.parseInt(String(values.numCtx), 10) : undefined,
+				numBatch: values.numBatch ? Number.parseInt(String(values.numBatch), 10) : undefined,
+				numThread: values.numThread ? Number.parseInt(String(values.numThread), 10) : undefined,
 			};
 			const res = await updateAiConfig(payload as AiConfig);
 			setConfig(res);
@@ -51,14 +53,14 @@ export default function AiConfigPage() {
 	};
 
 	if (isLoading) return <Loading noLogo />;
+	if (!config)
+		return (
+			<Alert variant="destructive">
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		);
 
-	const initialValues: AiConfig = config || {
-		enabled: false,
-		provider: AI_PROVIDER.GEMINI,
-		api_key: "",
-		base_url: "",
-		model: "",
-	};
+	const initialValues: AiConfig = config;
 
 	return (
 		<Formik initialValues={initialValues} onSubmit={onSubmit}>
@@ -117,6 +119,8 @@ export default function AiConfigPage() {
 												checked={values.provider === option}
 												onChange={() => {
 													setFieldValue("provider", option);
+													modelRequest.current += 1;
+													setFetchedModels([]);
 													// Set default model based on provider to avoid invalid state
 													setFieldValue(
 														"model",
@@ -137,10 +141,16 @@ export default function AiConfigPage() {
 							{values.provider === AI_PROVIDER.GEMINI && (
 								<div className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="api_key">
+										<Label htmlFor="apiKey">
 											<T id="ai.api_key" />
 										</Label>
-										<Field name="api_key" as={Input} type="password" placeholder="AIza..." />
+										<Field
+											id="apiKey"
+											name="apiKey"
+											as={Input}
+											type="password"
+											placeholder="AIza..."
+										/>
 									</div>
 									<div className="space-y-2">
 										<div className="flex justify-between items-center">
@@ -152,18 +162,20 @@ export default function AiConfigPage() {
 												size="sm"
 												type="button"
 												onClick={async () => {
-													if (!values.api_key) {
-														showObjectSuccess("API Key Required", "");
+													if (!values.apiKey) {
+														setError(
+															`${formatMessage({ id: "ai.api_key" })}: ${formatMessage({ id: "error.required" })}`,
+														);
 														return;
 													}
+													const request = ++modelRequest.current;
+													setError(null);
 													try {
-														const models = await import("src/api/backend/ai").then((m) =>
-															m.getAiModels(values),
-														);
-														setFetchedModels(models);
-														showObjectSuccess("Models Loaded", "");
+														const models = await getAiModels(values);
+														if (request === modelRequest.current) setFetchedModels(models);
 													} catch (e) {
-														if (e instanceof Error) setError(e.message);
+														if (request === modelRequest.current && e instanceof Error)
+															setError(e.message);
 													}
 												}}
 											>
@@ -180,6 +192,10 @@ export default function AiConfigPage() {
 													{formatMessage({ id: "frames.select_placeholder" }) ||
 														"Select a model"}
 												</option>
+												{values.model &&
+													!fetchedModels.some((model) => model.id === values.model) && (
+														<option value={values.model}>{values.model}</option>
+													)}
 												{fetchedModels.map((m) => (
 													<option key={m.id} value={m.id}>
 														{m.name}
@@ -201,10 +217,15 @@ export default function AiConfigPage() {
 							{values.provider === AI_PROVIDER.LOCAL && (
 								<div className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="base_url">
+										<Label htmlFor="baseUrl">
 											<T id="ai.base_url" />
 										</Label>
-										<Field name="base_url" as={Input} placeholder="http://localhost:11434" />
+										<Field
+											id="baseUrl"
+											name="baseUrl"
+											as={Input}
+											placeholder="http://localhost:11434"
+										/>
 										<p className="text-xs text-muted-foreground">
 											Ollama: http://localhost:11434 | OpenAI: https://api.openai.com
 										</p>
@@ -224,10 +245,16 @@ export default function AiConfigPage() {
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="api_key">
+										<Label htmlFor="apiKey">
 											<T id="ai.api_key" /> (Optional)
 										</Label>
-										<Field name="api_key" as={Input} type="password" placeholder="sk-..." />
+										<Field
+											id="apiKey"
+											name="apiKey"
+											as={Input}
+											type="password"
+											placeholder="sk-..."
+										/>
 									</div>
 									<div className="space-y-2">
 										<div className="flex justify-between items-center">
@@ -239,14 +266,14 @@ export default function AiConfigPage() {
 												size="sm"
 												type="button"
 												onClick={async () => {
+													const request = ++modelRequest.current;
+													setError(null);
 													try {
-														const models = await import("src/api/backend/ai").then((m) =>
-															m.getAiModels(values),
-														);
-														setFetchedModels(models);
-														showObjectSuccess("Models Loaded", "");
+														const models = await getAiModels(values);
+														if (request === modelRequest.current) setFetchedModels(models);
 													} catch (e) {
-														if (e instanceof Error) setError(e.message);
+														if (request === modelRequest.current && e instanceof Error)
+															setError(e.message);
 													}
 												}}
 											>
@@ -264,6 +291,10 @@ export default function AiConfigPage() {
 													{formatMessage({ id: "frames.select_placeholder" }) ||
 														"Select a model"}
 												</option>
+												{values.model &&
+													!fetchedModels.some((model) => model.id === values.model) && (
+														<option value={values.model}>{values.model}</option>
+													)}
 												{fetchedModels.map((m) => (
 													<option key={m.id} value={m.id}>
 														{m.name}
@@ -271,48 +302,61 @@ export default function AiConfigPage() {
 												))}
 											</Field>
 										) : (
-											<Field name="model" as={Input} placeholder="llama3" />
+											<Field id="model" name="model" as={Input} placeholder="llama3" />
 										)}
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="num_ctx">
+										<Label htmlFor="numCtx">
 											<T id="ai.context_window" />
 										</Label>
-										<Field name="num_ctx" as={Input} type="number" placeholder="8192" />
+										<Field id="numCtx" name="numCtx" as={Input} type="number" placeholder="8192" />
 										<p className="text-xs text-muted-foreground">Default: 8192</p>
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="num_batch">
+										<Label htmlFor="numBatch">
 											<T id="ai.batch_size" />
 										</Label>
-										<Field name="num_batch" as={Input} type="number" placeholder="512" />
+										<Field
+											id="numBatch"
+											name="numBatch"
+											as={Input}
+											type="number"
+											placeholder="512"
+										/>
 										<p className="text-xs text-muted-foreground">Default: 512</p>
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="num_thread">
+										<Label htmlFor="numThread">
 											<T id="ai.cpu_threads" />
 										</Label>
-										<Field name="num_thread" as={Input} type="number" placeholder="4" />
+										<Field
+											id="numThread"
+											name="numThread"
+											as={Input}
+											type="number"
+											placeholder="4"
+										/>
 										<p className="text-xs text-muted-foreground">Default: 4</p>
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="keep_alive">
+										<Label htmlFor="keepAlive">
 											<T id="ai.keep_alive" />
 										</Label>
-										<Field name="keep_alive" as={Input} placeholder="5m" />
+										<Field id="keepAlive" name="keepAlive" as={Input} placeholder="5m" />
 										<p className="text-xs text-muted-foreground">Default: 5m (e.g. 5m, 1h, -1)</p>
 									</div>
 
 									<div className="space-y-2">
-										<Label htmlFor="system_prompt">
+										<Label htmlFor="systemPrompt">
 											<T id="ai.system_prompt" />
 										</Label>
 										<Field
-											name="system_prompt"
+											id="systemPrompt"
+											name="systemPrompt"
 											as="textarea"
 											rows={8}
 											className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"

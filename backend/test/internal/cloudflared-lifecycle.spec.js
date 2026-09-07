@@ -24,7 +24,7 @@ describe("Cloudflared child lifecycle", () => {
 		const process = child();
 		mocks.spawn.mockReturnValue(process);
 		const started = cloudflared.start(tunnel(11));
-		await Promise.resolve();
+		await vi.advanceTimersByTimeAsync(1);
 		process.emit("error", new Error("spawn ENOENT"));
 		await vi.advanceTimersByTimeAsync(2000);
 		await started;
@@ -47,5 +47,16 @@ describe("Cloudflared child lifecycle", () => {
 		await restarted;
 		await cloudflared.stop(12);
 		expect(replacement.kill).toHaveBeenCalledWith("SIGTERM");
+	});
+	it("serializes simultaneous starts so the first child cannot become untracked", async () => {
+		const first = child();
+		const second = child();
+		mocks.spawn.mockReturnValueOnce(first).mockReturnValueOnce(second);
+		const pending = [cloudflared.start(tunnel(13)), cloudflared.start(tunnel(13))];
+		await vi.advanceTimersByTimeAsync(4001);
+		await Promise.all(pending);
+		expect(first.kill).toHaveBeenCalledWith("SIGTERM");
+		await cloudflared.stop(13);
+		expect(second.kill).toHaveBeenCalledWith("SIGTERM");
 	});
 });

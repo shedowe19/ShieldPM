@@ -101,10 +101,19 @@ Die Verifizierungs- und Passkey-Endpunkte sind im OpenAPI-Schema unter `backend/
 
 ## Gotchas & Bug-Fixes
 
+- **Mehrere Authenticator-Apps**: Die Anmeldung prüft alle aktivierten TOTP-Datensätze des Benutzers; ein gültiger Code einer später hinzugefügten App wird ebenfalls akzeptiert.
+- **Erste YubiKey-/Duo-Einrichtung**: Neu erzeugte Wiederherstellungscodes werden als `backup_codes` in der Einrichtungsantwort einmalig an die Oberfläche übergeben. Existieren noch unbenutzte Codes, bleibt dieser Satz erhalten und die Antwort enthält keinen neuen Satz. Provider-Geheimnisse bleiben aus der HTTP-Antwort ausgeschlossen.
+- **Wiederherstellungscodes bei Änderungen**: Das Entfernen einer noch unbestätigten Methode erhält die Codes, solange eine aktive Methode existiert. Neue Codes werden zuerst vollständig erzeugt und gehasht; Löschung des alten Satzes und Einfügen des vollständigen neuen Satzes erfolgen anschließend in einer Transaktion. Ein Schreibfehler erhält den bisherigen Satz.
 - **Nur aktivierte TOTP-Methoden beim Login**: `verifyTotp()` berücksichtigt ausschließlich `is_verified=1` und `is_deleted=0`. Ein neuer, noch unbestätigter Setup-Datensatz kann damit keine vorhandene Methode ersetzen oder die zweite Faktorprüfung bestehen. Direkte DB-Seeds müssen den Aktivierungsstatus ausdrücklich setzen.
 - **TOTP-Secret im Klartext**: Das TOTP-Secret wird in `user_2fa.secret` als Klartext (Base32) gespeichert. Das Secret muss für die Prüfung verfügbar sein; die aktuelle Speicherung erfolgt unverschlüsselt und ist sensibel.
 - **Passkey-Challenges sind kurzlebig**: Die bei `beginPasskeyAuthentication` erzeugten Challenges werden mit einer Frist von fünf Minuten in `meta.expiresAt` gespeichert. Abgelaufene oder ältere Datensätze ohne Frist werden abgelehnt. Die abschließende Löschung wird auf genau einen betroffenen Datensatz geprüft; parallele Verwendungen können deshalb nicht beide erfolgreich sein.
 - **Schema `$ref`-Pfade**: Die 2FA-Schema-Dateien unter `paths/tokens/2fa/` liegen auf unterschiedlicher Tiefe. `verify/post.json` ist auf 4 Ebenen (`paths/tokens/2fa/verify/`), die Passkey-Dateien auf 5 Ebenen (`paths/tokens/2fa/passkey/*/`). Falsche `../`-Tiefe führt zu ENOENT-Fehlern beim Schema-Dereferenzieren in Production. Siehe [Swagger UI](../features/swagger-ui.md) für Details.
+
+## YubiKey-Antwortprüfung
+
+Der HTTPS-Aufruf akzeptiert nur HTTP 200, den Status `OK` und genau zur Anfrage passende OTP- und Nonce-Werte. Doppelte Antwortfelder, Antworten über 16 KiB und ausbleibende Netzwerkaktivität von zehn Sekunden werden zurückgewiesen. Ist `YUBICO_SECRET_KEY` gesetzt, werden außerdem die Anfrage signiert und die Antwortsignatur mit dem Base64-dekodierten API-Schlüssel geprüft. Das hierfür verwendete HMAC-SHA1 ist durch das [Yubico-Validierungsprotokoll](https://developers.yubico.com/OTP/Specifications/OTP_validation_protocol.html) vorgegeben. Ohne konfigurierten Schlüssel bleibt die bisherige HTTPS-Variante erhalten; eine zusätzliche HMAC-Prüfung findet dann nicht statt.
+
+Regressionstests: `backend/test/internal/yubikey-response.spec.js` simuliert passende, fremde, manipulierte, übergroße und ausbleibende Providerantworten. `backend/test/internal/two-fa-recovery.spec.js` verwendet SQLite, echte TOTP-Prüfung und bcrypt für mehrere Methoden, atomaren Codeersatz und Einmalverwendung. Diese Prüfungen ersetzen keinen Test mit physischem YubiKey und produktivem Validierungsdienst.
 
 ## Autorisierung und Einmalverwendung
 

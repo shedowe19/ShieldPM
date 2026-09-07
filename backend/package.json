@@ -64,6 +64,7 @@
   "devDependencies": {
     "@apidevtools/swagger-parser": "12.1.0",
     "@biomejs/biome": "^2.5.11",
+    "@electric-sql/pglite": "0.5.8",
     "@types/json-schema": "^7.0.15",
     "es-module-lexer": "2.3.2",
     "openapi-types": "^12.1.3",

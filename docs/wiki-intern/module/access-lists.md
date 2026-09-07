@@ -70,3 +70,13 @@ Regressionstest: `backend/test/internal/access-list.spec.js` prüft reale Servic
 - [Benutzer & Auth](./benutzer-auth.md)
 - [OAuth2-Proxy (SSO)](./oauth2-proxy.md)
 - [Modulübersicht](./README.md)
+
+## Zweite Prüfung: Erstellung, Dateien und Expansionen
+
+Auch beim Erstellen werden Liste, Credentials und Clientregeln in einer Transaktion geschrieben. `items` ist optional, etwa für reine IP- oder SSO-Listen. Als bereits gehasht gelten nur vollständige bcrypt-Hashes; ein Passwort mit bloßem `$2`-Präfix wird weiterhin gehasht.
+
+Die htpasswd-Datei wird vollständig in einer temporären Datei vorbereitet und per Rename ersetzt. Lesende Nginx-Prozesse sehen keine leere oder teilweise geschriebene Credential-Liste. Die Datei erhält Modus `0600`; Backend und Nginx laufen im unterstützten Containerbetrieb unter derselben UID. Fehler beim Schreiben einer externen mTLS-CA werden weitergegeben.
+
+Neugenerierung nach Änderungen lädt `host_domains`, Zertifikate und komplette Zugriffsregeln. Auch beim Löschen der Liste bleibt dadurch die TLS-Zuordnung der Hosts erhalten. Expandierte Proxy-Hosts durchlaufen dieselbe Geheimnisbereinigung wie die Host-API; interne Aufrufe behalten die tatsächlichen Websitepfade. Authentik-URLs und OAuth2-Präfixe werden vor der Nginx-Ausgabe auf sichere Syntax geprüft.
+
+Tests: `access-list.spec.js` und `access-list-files.spec.js`, einschließlich echter temporärer Dateien und fehlgeschlagener Dateiersetzung.

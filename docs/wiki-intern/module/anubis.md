@@ -39,3 +39,9 @@ Die Policy-Erzeugung liest Domains aus `host_domains`. Wildcard-Domains werden i
 - [Access-Lists](./access-lists.md)
 - [OAuth2-Proxy (SSO)](./oauth2-proxy.md)
 - [Modulübersicht](./README.md)
+
+## Übereinstimmung mit Nginx-Hostnamen
+
+Die Domainbindung nutzt kleingeschriebene ASCII-IDNs wie Nginx. Wildcards erfassen auch mehrere Subdomain-Ebenen. Headerfilter werden sowohl unter dem Schemafeld `headers` als auch unter den bisherigen `headers_regex`-/`headersRegex`-Namen übernommen; ein Filter kann die interne Hostbindung weiterhin nicht ersetzen. `anubis-policy.spec.js` prüft die tatsächlich erzeugte YAML-Policy.
+
+Eine Generationsnummer verwirft verspätete Datenbankantworten älterer Policy-Aufträge. Dadurch kann ein bereits überholter Hostzustand die neuere Policy nicht nachträglich überschreiben.

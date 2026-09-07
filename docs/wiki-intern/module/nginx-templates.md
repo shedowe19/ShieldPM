@@ -50,3 +50,12 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 - [Nginx-Engine](../module/nginx-engine.md)
 - [Proxy-Host](../module/proxy-host.md)
 - [Stream](../module/stream.md)
+
+## Authentifizierung und Grenzfälle
+
+- OIDC-Discovery-URL, Client-ID und Client-Secret werden als korrekt maskierte Lua-Zeichenketten ausgegeben. Anführungszeichen, Backslashes und Steuerzeichen bleiben Daten.
+- Authentik-Outpost-Locations setzen `auth_request off`, damit sie nicht ihren eigenen Authentifizierungs-Unteraufruf erneut auslösen.
+- mTLS verlangt für weitergeleitete Anfragen `$ssl_client_verify = SUCCESS`. Damit kann eine unverschlüsselte HTTP-Anfrage die Clientzertifikatsprüfung auch bei ausgeschaltetem SSL-Redirect nicht umgehen.
+- Bandbreitenbegrenzung deklariert `$calculated_rate` auch im Standardserver; fehlendes Request-Burst-Limit wird zu `0`. Request-Limit-Schlüssel enthalten die Host-ID, damit verschiedene Hosts ihre Limits nicht teilen.
+- Statische Hosts sperren `.git`-Verzeichnisse. Verwaltete Websitewurzeln verwenden zusätzlich `disable_symlinks on`. PHP-Programme bleiben ausführbarer, vertrauenswürdiger Anwendungscode; diese Nginx-Einstellung ist keine PHP-Sandbox.
+- `X_FRAME_OPTIONS` wird im vorhandenen HSTS-Headerblock direkt aus der Umgebung gelesen, mit `SAMEORIGIN` als Standard.

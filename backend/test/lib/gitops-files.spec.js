@@ -40,6 +40,13 @@ describe("GitOps repository path isolation", () => {
 		);
 		expect(await fs.readFile(path.join(outside, "sensitive.yaml"), "utf8")).toBe("keep-original");
 	});
+	it("restricts existing checkout files before replacing secret-bearing contents", async () => {
+		const target = path.join(configuration, "settings.yaml");
+		await fs.writeFile(target, "old", { mode: 0o644 });
+		await writeConfigFile(root, target, "new secret");
+		expect((await fs.stat(target)).mode & 0o777).toBe(0o600);
+		expect(await fs.readFile(target, "utf8")).toBe("new secret");
+	});
 	it("rejects traversal and writes ordinary generated files with private permissions", async () => {
 		await expect(writeConfigFile(root, path.join(outside, "sensitive.yaml"), "overwrite")).rejects.toThrow(
 			"escapes",

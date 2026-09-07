@@ -192,18 +192,18 @@ const PermissionsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					<Formik
 						initialValues={{
 							visibility: data.permissions?.visibility || PERMISSION_SCOPE.ALL,
-							accessLists: data.permissions?.accessLists || PERMISSION_SCOPE.ALL,
-							certificates: data.permissions?.certificates || PERMISSION_SCOPE.ALL,
-							deadHosts: data.permissions?.deadHosts || PERMISSION_SCOPE.ALL,
-							proxyHosts: data.permissions?.proxyHosts || PERMISSION_SCOPE.ALL,
-							redirectionHosts: data.permissions?.redirectionHosts || PERMISSION_SCOPE.ALL,
-							streams: data.permissions?.streams || PERMISSION_SCOPE.ALL,
-							cloudflaredTunnels: data.permissions?.cloudflaredTunnels || PERMISSION_SCOPE.ALL,
-							analytics: data.permissions?.analytics || PERMISSION_SCOPE.ALL,
-							ddnsProviders: data.permissions?.ddnsProviders || PERMISSION_SCOPE.ALL,
-							torOnions: data.permissions?.torOnions || PERMISSION_SCOPE.ALL,
-							dashboardNotes: data.permissions?.dashboardNotes || PERMISSION_SCOPE.ALL,
-							chat: data.permissions?.chat || PERMISSION_SCOPE.ALL,
+							accessLists: data.permissions?.accessLists || PERMISSION_LEVEL.HIDDEN,
+							certificates: data.permissions?.certificates || PERMISSION_LEVEL.HIDDEN,
+							deadHosts: data.permissions?.deadHosts || PERMISSION_LEVEL.HIDDEN,
+							proxyHosts: data.permissions?.proxyHosts || PERMISSION_LEVEL.HIDDEN,
+							redirectionHosts: data.permissions?.redirectionHosts || PERMISSION_LEVEL.HIDDEN,
+							streams: data.permissions?.streams || PERMISSION_LEVEL.HIDDEN,
+							cloudflaredTunnels: data.permissions?.cloudflaredTunnels || PERMISSION_LEVEL.HIDDEN,
+							analytics: data.permissions?.analytics || PERMISSION_LEVEL.HIDDEN,
+							ddnsProviders: data.permissions?.ddnsProviders || PERMISSION_LEVEL.HIDDEN,
+							torOnions: data.permissions?.torOnions || PERMISSION_LEVEL.HIDDEN,
+							dashboardNotes: data.permissions?.dashboardNotes || PERMISSION_LEVEL.HIDDEN,
+							chat: data.permissions?.chat || PERMISSION_LEVEL.HIDDEN,
 						}}
 						onSubmit={onSubmit}
 					>

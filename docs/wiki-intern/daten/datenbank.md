@@ -6,11 +6,11 @@ Dokumentation der Datenbank-Konfiguration und -Verwaltung.
 
 ## Unterstützte Datenbanken
 
-| Engine          | Paket                  | Einsatz                      |
-| --------------- | ---------------------- | ---------------------------- |
-| SQLite          | `better-sqlite3` v12.9 | Entwicklung, einfache Setups |
-| MySQL / MariaDB | `mysql2` v3.22         | Produktion                   |
-| PostgreSQL      | `pg` v8.20             | Produktion                   |
+| Engine          | Paket                | Einsatz                      |
+| --------------- | -------------------- | ---------------------------- |
+| SQLite          | `better-sqlite3` v13 | Entwicklung, einfache Setups |
+| MySQL / MariaDB | `mysql2` v3          | Produktion                   |
+| PostgreSQL      | `pg` v8              | Produktion                   |
 
 ## Konfiguration
 
@@ -34,7 +34,7 @@ Datei: `backend/setup.js` (7 KB)
 
 Erstellt beim ersten Start:
 
-- Admin-Benutzer (`admin@example.org`)
+- Optionaler Admin-Benutzer aus `INITIAL_ADMIN_EMAIL` und `INITIAL_ADMIN_PASSWORD`; ansonsten Ersteinrichtung in der Oberfläche
 - Default-Einstellungen
 - Default-Zertifikate
 
@@ -59,7 +59,7 @@ Während des Datenbankwechsels darf keine weitere ShieldPM-Instanz in die Quelld
 
 Datei: `backend/sqlite-vaccum.js`
 
-Führt `VACUUM` auf der SQLite-Datenbank aus, um ungenutzten Speicher freizugeben.
+Führt `VACUUM` auf der vorhandenen SQLite-Datenbank unter `${DATA_PATH:-/data}/shieldpm/database.sqlite` aus. Eine fehlende Datei wird nicht stillschweigend als leere Datenbank angelegt.
 
 ```bash
 node /usr/local/bin/sqlite-vaccum.js
@@ -67,9 +67,9 @@ node /usr/local/bin/sqlite-vaccum.js
 
 ## Wichtige Hinweise
 
-- SQLite ist **nur für Entwicklung** geeignet. Produktion sollte MySQL oder PostgreSQL verwenden.
-- Migrationen sind so geschrieben, dass sie auf allen drei Engines funktionieren.
-- Boolean-Felder: SQLite speichert als `0`/`1`, nicht als `true`/`false`.
+- SQLite ist die Standard-Engine; MySQL/MariaDB und PostgreSQL werden ebenfalls unterstützt.
+- Die vollständige Migrationskette wird mit SQLite und der eingebetteten PostgreSQL-Engine PGlite ausgeführt. Ein echter MySQL/MariaDB-Server ist durch diesen Test nicht abgedeckt.
+- Boolean-Felder werden sowohl aus SQLite-/MySQL-Integerwerten als auch aus nativen PostgreSQL-Booleans korrekt gelesen.
 
 ## Verwandte Seiten
 

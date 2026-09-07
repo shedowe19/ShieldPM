@@ -51,3 +51,5 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Host-Hilfslogik](./host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
+
+Auch die Erstellungsantwort übernimmt jetzt den von Nginx ermittelten Status. DNS-Zugangsdaten werden aus Host-Metadaten und Auditdaten entfernt; für Zertifikatsanforderungen stehen sie weiterhin zur Verfügung. Löschen und Deaktivieren verwenden dieselbe Nginx-Warteschlange wie Konfigurationsänderungen.

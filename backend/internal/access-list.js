@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { isIP } from "node:net";
 import bcrypt from "bcryptjs";
 import _ from "lodash";
 import errs from "../lib/error.js";
+import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import { access as logger } from "../logger.js";
 import accessListModel from "../models/access_list.js";
@@ -19,6 +21,8 @@ const omissions = () => {
 	return ["is_deleted"];
 };
 
+const isBcryptHash = (password) => /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(password);
+
 const auditData = (list) =>
 	_.omit(internalAccessList.maskItems(_.cloneDeep(list)), [
 		"meta.oauth2_client_secret",
@@ -27,6 +31,44 @@ const auditData = (list) =>
 	]);
 
 const validateListInput = (data) => {
+	const meta = data.meta || {};
+	for (const field of [
+		"authentik_host",
+		"oauth2_proxy_prefix",
+		"oauth2_provider",
+		"oauth2_client_id",
+		"oauth2_client_secret",
+		"oauth2_cookie_secret",
+		"oauth2_oidc_issuer_url",
+		"oauth2_scope",
+		"oauth2_allowed_groups",
+		"oauth2_allowed_emails",
+		"oauth2_allowed_email_domains",
+		"oidc_discovery_url",
+		"oidc_client_id",
+		"oidc_client_secret",
+	]) {
+		if (meta[field] != null && typeof meta[field] !== "string") {
+			throw new errs.ValidationError(`Access-list ${field} must be a string`);
+		}
+	}
+	if (meta.auth_type && !["basic", "authentik_proxy", "oauth2_proxy", "oidc"].includes(meta.auth_type)) {
+		throw new errs.ValidationError("Invalid access-list authentication type");
+	}
+	if (meta.authentik_host) {
+		let url;
+		try {
+			url = new URL(meta.authentik_host);
+		} catch {
+			/* Report a validation error below. */
+		}
+		if (!url || !["http:", "https:"].includes(url.protocol) || /[\s;{}"'\\$#]/.test(meta.authentik_host)) {
+			throw new errs.ValidationError("Authentik host must be an HTTP(S) URL without Nginx directives");
+		}
+	}
+	if (meta.oauth2_proxy_prefix && !/^\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\/?$/.test(meta.oauth2_proxy_prefix)) {
+		throw new errs.ValidationError("OAuth2 proxy prefix must be an absolute URL path");
+	}
 	const usernames = new Set();
 	for (const item of data.items || []) {
 		if (typeof item.username !== "string" || !/^[^:\r\n\0]+$/.test(item.username)) {
@@ -76,67 +118,62 @@ const internalAccessList = {
 	create: async (access, data) => {
 		await access.can("access_lists:create", data);
 		validateListInput(data);
-		const row = await accessListModel.query().insertAndFetch(
-			/** @type {any} */ ({
-				name: data.name,
-				satisfy_any: data.satisfy_any,
-				pass_auth: data.pass_auth,
-				mtls_enabled: data.mtls_enabled || false,
-				mtls_use_internal: data.mtls_use_internal || false,
-				mtls_certificate: data.mtls_certificate || "",
-				meta: data.meta,
-				owner_user_id: access.token.getUserId(1),
-			}),
-		);
-
-		const omittedRow = utils.omitRow(omissions())(row);
-
-		data.id = omittedRow.id;
-
-		const promises = [];
-		// Items
-		// Items
-		const itemsPromises = data.items.map(async (/** @type {any} */ item) => {
-			let password = item.password;
-			if (password && !password.startsWith("$2")) {
-				password = await bcrypt.hash(password, 13);
-			}
-
-			return accessListAuthModel.query().insert(
+		const row = await accessListModel.transaction(async (trx) => {
+			const created = await accessListModel.query(trx).insertAndFetch(
 				/** @type {any} */ ({
-					access_list_id: omittedRow.id,
-					username: item.username,
-					password: password,
+					name: data.name,
+					satisfy_any: data.satisfy_any,
+					pass_auth: data.pass_auth,
+					mtls_enabled: data.mtls_enabled || false,
+					mtls_use_internal: data.mtls_use_internal || false,
+					mtls_certificate: data.mtls_certificate || "",
+					meta: data.meta,
+					owner_user_id: access.token.getUserId(1),
 				}),
 			);
-		});
 
-		promises.push(...itemsPromises);
+			for (const item of data.items || []) {
+				let password = item.password;
+				if (password && !isBcryptHash(password)) {
+					password = await bcrypt.hash(password, 13);
+				}
 
-		// Clients
-		data.clients?.map((/** @type {any} */ client) => {
-			promises.push(
-				accessListClientModel.query().insert(
+				await accessListAuthModel.query(trx).insert(
 					/** @type {any} */ ({
-						access_list_id: data.id,
+						access_list_id: created.id,
+						username: item.username,
+						password: password,
+					}),
+				);
+			}
+
+			// Clients
+			for (const client of data.clients || []) {
+				await accessListClientModel.query(trx).insert(
+					/** @type {any} */ ({
+						access_list_id: created.id,
 						address: client.address,
 						directive: client.directive,
 						created_on: now(),
 						modified_on: now(),
 					}),
-				),
-			);
-			return true;
+				);
+			}
+			return created;
 		});
-
-		await Promise.all(promises);
+		data.id = row.id;
 
 		// re-fetch with expansions
 		const freshRow = await internalAccessList.get(
 			access,
 			{
 				id: data.id,
-				expand: ["owner", "items", "clients", "proxy_hosts.access_list.[clients,items]"],
+				expand: [
+					"owner",
+					"items",
+					"clients",
+					"proxy_hosts.[host_domains,certificate,access_list.[clients,items]]",
+				],
 			},
 			true, // skip masking
 		);
@@ -218,7 +255,7 @@ const internalAccessList = {
 						.map(async (item) => ({
 							access_list_id: data.id,
 							username: item.username,
-							password: item.password.startsWith("$2")
+							password: isBcryptHash(item.password)
 								? item.password
 								: await bcrypt.hash(item.password, 13),
 						})),
@@ -265,7 +302,12 @@ const internalAccessList = {
 			access,
 			{
 				id: data.id,
-				expand: ["owner", "items", "clients", "proxy_hosts.[certificate,access_list.[clients,items]]"],
+				expand: [
+					"owner",
+					"items",
+					"clients",
+					"proxy_hosts.[host_domains,certificate,access_list.[clients,items]]",
+				],
 			},
 			true, // skip masking
 		);
@@ -283,7 +325,7 @@ const internalAccessList = {
 			await internalOAuth2Proxy.stop(freshRow.id);
 		}
 
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(() => internalNginx.reload());
 
 		// Trigger GitOps auto-push
 		internalGitOps.triggerAutoPush("access-list");
@@ -314,7 +356,7 @@ const internalAccessList = {
 			.where("access_list.is_deleted", 0)
 			.andWhere("access_list.id", thisData.id)
 			.groupBy("access_list.id")
-			.allowGraph("[owner,items,clients,proxy_hosts.[certificate,access_list.[clients,items]]]")
+			.allowGraph("[owner,items,clients,proxy_hosts.[host_domains,certificate,access_list.[clients,items]]]")
 			.first();
 
 		if (accessData.permission_visibility !== "all") {
@@ -352,17 +394,14 @@ const internalAccessList = {
 	 */
 	delete: async (access, data) => {
 		await access.can("access_lists:delete", data.id);
-		const row = await internalAccessList.get(access, {
-			id: data.id,
-			expand: ["proxy_hosts"],
-		});
-		// The instruction seems to have intended to add this line in a different context,
-		// likely an insert operation. Placing it here would cause a syntax error.
-		// If the intent was to add a new line of code, it should be placed outside the object literal.
-		// As per the instruction to make the change faithfully and syntactically correct,
-		// and given the provided context, this line cannot be inserted as-is.
-		// If the user intended to modify an existing `insertAndFetch` call, that call is not present here.
-		// Therefore, no change is made at this specific location to avoid syntax errors.
+		const row = await internalAccessList.get(
+			access,
+			{
+				id: data.id,
+				expand: ["proxy_hosts.[host_domains,certificate]"],
+			},
+			true,
+		);
 
 		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
@@ -392,7 +431,7 @@ const internalAccessList = {
 			await internalNginx.bulkGenerateConfigs(proxyHostModel, "proxy_host", row.proxy_hosts);
 		}
 
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(() => internalNginx.reload());
 
 		// delete the htpasswd file
 		try {
@@ -504,6 +543,9 @@ const internalAccessList = {
 				internalAccessList.maskItems(host.access_list);
 			}
 		}
+		if (Array.isArray(list?.proxy_hosts)) {
+			list.proxy_hosts = list.proxy_hosts.map(sanitizeProxyHost);
+		}
 		return list;
 	},
 
@@ -531,57 +573,36 @@ const internalAccessList = {
 
 		const htpasswdFile = internalAccessList.getFilename(list);
 
-		// 1. remove any existing access file
-		try {
-			await fs.promises.unlink(htpasswdFile);
-		} catch (_err) {
-			// do nothing
-		}
-
-		// 2. create empty access file
-		await fs.promises.writeFile(htpasswdFile, "", { encoding: "utf8" });
-
-		// 3. generate password for each user
-		if (list.items.length) {
-			for (const item of list.items) {
-				if (item.password?.length) {
-					logger.info(`Adding: ${item.username}`);
-					try {
-						// Password is already hashed in DB or migration
-						// But if it's plaintext (e.g. from old data not migrated?), we should check
-						let finalPass = item.password;
-						if (!finalPass.startsWith("$2") && !finalPass.startsWith("$apr1$")) {
-							// Fail-safe: hash it if it looks plain
-							finalPass = await bcrypt.hash(item.password, 13);
-						}
-
-						await fs.promises.appendFile(htpasswdFile, `${item.username}:${finalPass}\n`, {
-							encoding: "utf8",
-						});
-					} catch (err) {
-						logger.error(err);
-						throw err;
-					}
-				}
+		// Assemble first, then atomically replace: readers never see a partial htpasswd file.
+		const lines = [];
+		for (const item of list.items || []) {
+			if (!item.password) continue;
+			let finalPass = item.password;
+			if (!isBcryptHash(finalPass) && !/^\$apr1\$[./A-Za-z0-9]{1,8}\$[./A-Za-z0-9]{22}$/.test(finalPass)) {
+				finalPass = await bcrypt.hash(finalPass, 13);
 			}
+			lines.push(`${item.username}:${finalPass}\n`);
+		}
+		const temporaryFile = `${htpasswdFile}.${randomUUID()}.tmp`;
+		try {
+			await fs.promises.writeFile(temporaryFile, lines.join(""), { encoding: "utf8", mode: 0o600 });
+			await fs.promises.rename(temporaryFile, htpasswdFile);
+		} finally {
+			await fs.promises.rm(temporaryFile, { force: true });
 		}
 
-		// 4. mTLS Certificate Handling
+		// mTLS write errors must abort the update instead of silently retaining an old CA.
 		const crtFile = `${htpasswdFile}.crt`;
 		if (list.mtls_enabled && !list.mtls_use_internal && list.mtls_certificate) {
-			logger.info(`Writing mTLS Certificate for Access List #${list.id}`);
+			const temporaryCrt = `${crtFile}.${randomUUID()}.tmp`;
 			try {
-				await fs.promises.writeFile(crtFile, list.mtls_certificate, { encoding: "utf8" });
-			} catch (err) {
-				logger.error(`Failed to write mTLS certificate for Access List #${list.id}`, err);
+				await fs.promises.writeFile(temporaryCrt, list.mtls_certificate, { encoding: "utf8", mode: 0o600 });
+				await fs.promises.rename(temporaryCrt, crtFile);
+			} finally {
+				await fs.promises.rm(temporaryCrt, { force: true });
 			}
 		} else {
-			// Clean up if disabled or content missing
-			try {
-				await fs.promises.unlink(crtFile);
-			} catch (_err) {
-				// file might not exist, ignore
-			}
+			await fs.promises.rm(crtFile, { force: true });
 		}
 
 		logger.success(`Built Access file #${list.id} for: ${list.name}`);

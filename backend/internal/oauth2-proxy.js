@@ -87,7 +87,10 @@ const internalOAuth2Proxy = {
 		for (const list of lists) {
 			if (list.meta && (list.meta.auth_type === "oauth2_proxy" || list.meta.authType === "oauth2_proxy")) {
 				// Only start if this access list is actually assigned to at least one active proxy host
-				const assignedHosts = await ProxyHost.query().where("access_list_id", list.id).where("is_deleted", 0);
+				const assignedHosts = await ProxyHost.query()
+					.where("access_list_id", list.id)
+					.where("is_deleted", 0)
+					.where("enabled", 1);
 
 				if (assignedHosts.length > 0) {
 					logger.info(
@@ -110,7 +113,7 @@ const internalOAuth2Proxy = {
 	generateConfig: (list, redirectDomains = []) => {
 		const meta = list.meta || {};
 		const id = list.id;
-		const prefix = meta.oauth2_proxy_prefix || "/oauth2/";
+		const prefix = (meta.oauth2_proxy_prefix || "/oauth2/").replace(/\/?$/, "/");
 
 		let config = `
 ## ShieldPM Generated Config for Access List #${id}
@@ -208,6 +211,7 @@ allowed_groups = ${tomlArray(groups)}
 					.map((e) => e.trim())
 					.join("\n");
 				await fs.promises.writeFile(emailsFile, emailsContent, { mode: 0o600 });
+				await fs.promises.chmod(emailsFile, 0o600);
 			}
 
 			// Generate and Write Config
@@ -292,9 +296,8 @@ allowed_groups = ${tomlArray(groups)}
 	 */
 	stop: async (id) => {
 		generations.delete(id);
-		await stopProcess(id);
-		// Wait for any pending writes before callers remove or reassign the list.
-		await startQueues.get(id)?.catch(() => {});
+		// Serialize explicit stops too: a new start must wait for the old socket owner to exit.
+		await withStartLock(id, () => stopProcess(id));
 	},
 
 	/**

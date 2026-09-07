@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ insert: vi.fn(), upsert: vi.fn(), hosts: [] }));
+vi.mock("../../db.js", () => ({ default: () => ({}) }));
 vi.mock("dockerode", () => ({ default: class {} }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
@@ -69,5 +70,36 @@ describe("Docker discovery", () => {
 		stream.emit("data", '{"ID":"first"}}\n{"Action":"pause","Actor":{"ID":"second"}}\n');
 		await vi.waitFor(() => expect(disable).toHaveBeenCalledTimes(2));
 		expect(disable.mock.calls).toEqual([["first"], ["second"]]);
+	});
+	it("does not let an existing container claim another manually managed host's domain", async () => {
+		mocks.hosts = [
+			{
+				id: 1,
+				meta: { auto_discovered: true, docker_container_id: "abc123" },
+				domain_names: ["old.example.com"],
+			},
+			{ id: 2, meta: {}, domain_names: ["manual.example.com"] },
+		];
+		await docker.processContainer(
+			{ Id: "abc123", Labels: { "shieldpm.hostname": "manual.example.com" } },
+			{ isRemote: false },
+		);
+		expect(mocks.insert).not.toHaveBeenCalled();
+		expect(mocks.upsert).not.toHaveBeenCalled();
+	});
+	it.each([
+		["shieldpm.hostname", "example.com;include /tmp/config;"],
+		["shieldpm.scheme", "http;unexpected"],
+		["shieldpm.bandwidth_limit", '1"; unexpected(); --'],
+		["shieldpm.forward_query", 'test"; include /tmp/config; #'],
+		["shieldpm.limit_unit", 'm"; unexpected(); --'],
+		["shieldpm.port", "80garbage"],
+	])("rejects unsafe scalar label %s before creating a host", async (label, value) => {
+		await docker.processContainer(
+			{ Id: "abc123", Labels: { "shieldpm.hostname": "example.com", [label]: value } },
+			{ isRemote: false },
+		);
+		expect(mocks.insert).not.toHaveBeenCalled();
+		expect(mocks.upsert).not.toHaveBeenCalled();
 	});
 });

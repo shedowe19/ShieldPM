@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Loader2 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { renewCertificate } from "src/api/backend";
 import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -24,18 +24,19 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 	const queryClient = useQueryClient();
 	const { data, isLoading, error } = useCertificate(id);
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
-	const [isFresh, setIsFresh] = useState(true);
+	const renewalStarted = useRef(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	useEffect(() => {
-		if (!data || !isFresh || isSubmitting) return;
-		setIsFresh(false);
+		if (!data || renewalStarted.current) return;
+		renewalStarted.current = true;
 		setIsSubmitting(true);
 
 		renewCertificate(id)
 			.then(() => {
 				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "renewed");
 				queryClient.invalidateQueries({ queryKey: ["certificates"] });
+				queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, id] });
 				remove();
 			})
 			.catch((err: unknown) => {
@@ -44,7 +45,7 @@ const RenewCertificateModal = EasyModal.create(({ id, visible, remove }: Props) 
 			.finally(() => {
 				setIsSubmitting(false);
 			});
-	}, [id, data, isFresh, isSubmitting, remove, queryClient]);
+	}, [id, data, remove, queryClient]);
 
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && !isSubmitting && remove()}>

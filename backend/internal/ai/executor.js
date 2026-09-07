@@ -9,7 +9,6 @@ import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
 import errs from "../../lib/error.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
-import ProxyHost from "../../models/proxy_host.js";
 import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
@@ -26,7 +25,6 @@ import internalRedirectionHost from "../redirection-host.js";
 import internalReport from "../report.js";
 import internalSetting from "../setting.js";
 import internalStream from "../stream.js";
-import internalToken from "../token.js";
 import internalTor from "../tor.js";
 import internalUser from "../user.js";
 
@@ -222,6 +220,8 @@ export const executeTools = async (access, toolCalls) => {
 						// Ensure these are always valid (override any nulls from AI)
 						advanced_config: "",
 					};
+					delete data.request_ssl;
+					delete data.email;
 					const newHost = await internalProxyHost.create(access, /** @type {any} */ (data));
 					result = `Created Proxy Host ID: ${newHost.id}`;
 					break;
@@ -287,17 +287,6 @@ export const executeTools = async (access, toolCalls) => {
 					// Verify host exists first (optional, update throws if not found)
 					await internalProxyHost.update(access, payload);
 
-					// Force Nginx Reload
-					// We must fetch the FULL object with all relations (locations, access_list, etc)
-					// otherwise generateConfig fails when accessing missing properties (e.g. locations).
-					const updatedHost = await internalProxyHost.get(access, {
-						id: id,
-						expand: ["owner", "access_list", "certificate"],
-					});
-					// configure expects (Model, type, item)
-					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
-					await internalNginx.reload();
-
 					// Trigger immediate maintenance processing (don't wait for polling interval)
 					// This ensures scheduled maintenance activates/deactivates instantly
 					internalMaintenance.processMaintenance().catch(() => {});
@@ -344,6 +333,8 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
+					delete data.request_ssl;
+					delete data.email;
 					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
 					break;
@@ -400,6 +391,8 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
+					delete data.request_ssl;
+					delete data.email;
 					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
 					result = `Created 404 Host ID: ${newHost.id}`;
 					break;
@@ -575,7 +568,8 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_user": {
-					if (typeof call.args.password !== "string" || call.args.password.length < 8) {
+					const password = call.args.auth?.secret ?? call.args.password;
+					if (typeof password !== "string" || password.length < 8) {
 						throw new errs.ValidationError(
 							"A password of at least 8 characters is required to create a user",
 						);
@@ -588,8 +582,8 @@ export const executeTools = async (access, toolCalls) => {
 						roles: call.args.roles || ["user"],
 						is_disabled: false,
 						auth: {
-							type: "local",
-							secret: call.args.password,
+							type: "password",
+							secret: password,
 						},
 					};
 					const newUser = await internalUser.create(access, userData);
@@ -870,7 +864,12 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// User Updates
 				case "update_user_password": {
-					await internalUser.setPassword(access, { id: call.args.id, ...call.args });
+					await internalUser.setPassword(access, {
+						id: call.args.id,
+						type: "password",
+						secret: call.args.auth?.secret ?? call.args.password,
+						current: call.args.current,
+					});
 					result = `Updated Password for User ID: ${call.args.id}`;
 					break;
 				}
@@ -904,18 +903,13 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Auth & Tokens
 				case "login_as_user": {
-					const _loginResult = await internalUser.loginAs(access, { id: call.args.id });
-					result = `Logged in as User ${call.args.id}. Session created successfully.`;
+					result =
+						"Use the Users page to switch the browser session. Chat cannot change your logged-in session.";
 					break;
 				}
 				case "create_api_token": {
-					// Use getFreshToken to generate a new token
-					const expiry = call.args.expiry || "1d";
-					const newToken = await internalToken.getFreshToken(access, {
-						scope: "user", // Default scope as user
-						expiry: expiry,
-					});
-					result = `Created API Token successfully. Token ID: ${newToken.id}`;
+					result =
+						"Use the API token interface to create and securely retrieve a token. Chat does not expose bearer tokens to the AI provider.";
 					break;
 				}
 				case "create_client_certificate": {
@@ -985,10 +979,12 @@ export const executeTools = async (access, toolCalls) => {
 					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
 
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
-					if (call.args.proxy_host_id) {
-						await verifyProxyHostUpdateAccess(access, call.args.proxy_host_id);
+					const targetHostId =
+						call.args.proxy_host_id === undefined ? service.proxy_host_id : call.args.proxy_host_id;
+					for (const hostId of new Set([service.proxy_host_id, targetHostId].filter(Boolean))) {
+						await verifyProxyHostUpdateAccess(access, hostId);
 					}
-					const updated = await service.$query().patchAndFetch({
+					const updated = await internalTor.update(access, service, {
 						...(typeof call.args.name === "undefined" ? {} : { name: call.args.name }),
 						...(typeof call.args.proxy_host_id === "undefined"
 							? {}
@@ -1000,7 +996,8 @@ export const executeTools = async (access, toolCalls) => {
 					});
 
 					if (call.args.virtual_port || call.args.target_port) {
-						await internalTor.restart(updated);
+						if (!(await internalTor.restart(updated)))
+							throw new errs.ValidationError("Unable to restart onion service");
 					}
 
 					await internalAuditLog.add(access, {
@@ -1014,7 +1011,8 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "delete_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:delete", call.args.id);
-					await internalTor.stop(service);
+					if (!(await internalTor.stop(service)))
+						throw new errs.ValidationError("Unable to stop onion service");
 					await service.$query().patch({ is_deleted: 1 });
 					await internalAuditLog.add(access, {
 						action: "deleted",
@@ -1027,6 +1025,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "start_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
+					if (service.proxy_host_id) await verifyProxyHostUpdateAccess(access, service.proxy_host_id);
 					if (!service.private_key) await internalTor.create(service);
 					else await internalTor.start(service);
 					await internalAuditLog.add(access, {
@@ -1040,7 +1039,8 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "stop_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
-					await internalTor.stop(service);
+					if (!(await internalTor.stop(service)))
+						throw new errs.ValidationError("Unable to stop onion service");
 					await internalAuditLog.add(access, {
 						action: "updated",
 						object_type: "tor-onion",

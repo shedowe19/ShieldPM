@@ -6,6 +6,7 @@ import { showCloudflaredHelpModal } from "./CloudflaredTunnels.lazy";
 import type { CloudflaredTunnel } from "@/api/backend";
 import { HasPermission } from "@/components/HasPermission";
 import { CloudflaredTunnelModal } from "@/components/Nginx/CloudflaredTunnelModal";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,7 @@ import { CLOUDFLARED_TUNNELS, MANAGE } from "@/modules/Permissions";
 
 export function CloudflaredTunnels() {
 	const health = useHealth();
-	const { data: rawTunnels, isLoading, refetch } = useCloudflaredTunnels();
+	const { data: rawTunnels, isLoading, error, refetch } = useCloudflaredTunnels();
 	const { remove } = useCloudflaredTunnel();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [selectedTunnel, setSelectedTunnel] = useState<CloudflaredTunnel | null>(null);
@@ -90,7 +91,7 @@ export function CloudflaredTunnels() {
 							</TooltipTrigger>
 							<TooltipContent className="max-w-md">
 								<p className="font-mono text-xs whitespace-pre-wrap">
-									{(meta?.last_error as string) || "No error details available."}
+									{((meta?.lastError ?? meta?.last_error) as string) || "No error details available."}
 								</p>
 							</TooltipContent>
 						</Tooltip>
@@ -166,6 +167,11 @@ export function CloudflaredTunnels() {
 			</CardHeader>
 
 			<CardContent>
+				{error && (
+					<Alert variant="destructive" className="mb-4">
+						<AlertDescription>{error.message}</AlertDescription>
+					</Alert>
+				)}
 				<div className="border rounded-md">
 					<Table>
 						<TableHeader>
@@ -209,6 +215,7 @@ export function CloudflaredTunnels() {
 													variant="ghost"
 													size="icon"
 													aria-label={intl.formatMessage({ id: "cloudflared.edit" })}
+													disabled={remove.isPending}
 													onClick={() => handleEdit(tunnel)}
 												>
 													<IconEdit className="h-4 w-4" />
@@ -218,6 +225,7 @@ export function CloudflaredTunnels() {
 													size="icon"
 													className="text-destructive"
 													aria-label={intl.formatMessage({ id: "action.delete" })}
+													disabled={remove.isPending}
 													onClick={() => handleDelete(tunnel)}
 												>
 													<IconTrash className="h-4 w-4" />

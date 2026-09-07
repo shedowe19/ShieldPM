@@ -42,7 +42,10 @@
 						},
 						"avatar_type": {
 							"type": "string",
-							"enum": ["gravatar", "url"]
+							"enum": [
+								"gravatar",
+								"url"
+							]
 						},
 						"avatar_value": {
 							"$ref": "../../components/user-object.json#/properties/avatar_value"
@@ -53,6 +56,24 @@
 							"example": {
 								"type": "password",
 								"secret": "bigredhorsebanana"
+							},
+							"additionalProperties": false,
+							"required": [
+								"type",
+								"secret"
+							],
+							"properties": {
+								"type": {
+									"type": "string",
+									"enum": [
+										"password"
+									]
+								},
+								"secret": {
+									"type": "string",
+									"minLength": 8,
+									"maxLength": 72
+								}
 							}
 						}
 					}

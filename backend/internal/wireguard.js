@@ -13,6 +13,12 @@ const serverKeyFile = `${wgDataDir}/server_private.key`;
 const serverPubKeyFile = `${wgDataDir}/server_public.key`;
 
 const WG_INTERFACE = "wg0";
+let configurationChanges = Promise.resolve();
+const serializeConfigurationChange = (operation) => {
+	const task = configurationChanges.then(operation);
+	configurationChanges = task.catch(() => {});
+	return task;
+};
 
 const firewallCommands = {
 	postUp: [
@@ -110,6 +116,9 @@ const validateIpv4Cidr = (value, field) => {
 
 	try {
 		const [address, prefix] = ipaddr.IPv4.parseCIDR(value);
+		if (address.toString() !== value.split("/")[0]) {
+			throw new errs.ValidationError(`WireGuard ${field} must use canonical dotted IPv4 notation.`);
+		}
 		if (prefix !== 24) {
 			throw new errs.ValidationError(`WireGuard ${field} must be an IPv4 /24 CIDR.`);
 		}
@@ -235,7 +244,8 @@ const exec = (cmd, silent = false) => {
 const execStdin = (command, stdinData, silent = false) => {
 	return new Promise((resolve, reject) => {
 		const [cmd, ...args] = command.split(" ");
-		const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+		const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"], timeout: 10000 });
+		child.stdin.on("error", reject);
 		let stdout = "";
 		let stderr = "";
 
@@ -441,6 +451,7 @@ const applyConfig = async (forceRestart = false) => {
 			logger.info("WireGuard: Interface fallback restart successful");
 		} catch (restartErr) {
 			logger.error("WireGuard: Failed to restart interface:", restartErr.message);
+			throw restartErr;
 		}
 	}
 };
@@ -496,12 +507,8 @@ const internalWireguard = {
 		try {
 			await ensureServerKeys();
 
-			// Reset all peer statuses on boot
+			// Disabled peers must remain disabled across backend restarts.
 			const peers = await WireguardPeer.query().where("is_deleted", 0);
-			if (peers.length > 0) {
-				// Re-enable all non-deleted peers
-				await WireguardPeer.query().patch({ status: 2 }).where("is_deleted", 0);
-			}
 
 			// Write config and force restart interface to apply PostUp rules
 			await syncConfig();
@@ -529,46 +536,63 @@ const internalWireguard = {
 	 * @param {Object} data - { endpoint, listen_port, subnet, server_address }
 	 * @returns {Promise<Object>}
 	 */
-	updateSettings: async (data) => {
-		validateWireguardSettings(data, { requireValues: true });
-		const current = await getWgSettings();
-		const newMeta = {
-			endpoint: data.endpoint !== undefined ? data.endpoint : current.endpoint,
-			listen_port: data.listen_port !== undefined ? data.listen_port : current.listen_port,
-			subnet: data.subnet !== undefined ? data.subnet : current.subnet,
-			server_address: data.server_address !== undefined ? data.server_address : current.server_address,
-		};
-		validateWireguardSettings(newMeta);
+	updateSettings: (data) =>
+		serializeConfigurationChange(async () => {
+			validateWireguardSettings(data, { requireValues: true });
+			const current = await getWgSettings();
+			const newMeta = {
+				endpoint: data.endpoint !== undefined ? data.endpoint : current.endpoint,
+				listen_port: data.listen_port !== undefined ? data.listen_port : current.listen_port,
+				subnet: data.subnet !== undefined ? data.subnet : current.subnet,
+				server_address: data.server_address !== undefined ? data.server_address : current.server_address,
+			};
+			validateWireguardSettings(newMeta);
 
-		await settingModel
-			.query()
-			.where("id", "wireguard-config")
-			.patch({
-				meta: JSON.stringify(newMeta),
-			});
-
-		// If endpoint or port changed, update all existing peers' endpoint field to stay in sync
-		if (data.endpoint !== undefined || data.listen_port !== undefined) {
-			const peers = await WireguardPeer.query().where("is_deleted", 0);
-			const newEndpoint = formatEndpoint(newMeta.endpoint, newMeta.listen_port);
-
-			for (const peer of peers) {
-				await WireguardPeer.query().findById(peer.id).patch({
-					endpoint: newEndpoint,
-				});
+			if (newMeta.subnet !== current.subnet || newMeta.server_address !== current.server_address) {
+				const peers = await WireguardPeer.query().where("is_deleted", 0);
+				const serverIp = newMeta.server_address.split("/")[0];
+				const subnet = ipaddr.IPv4.parseCIDR(newMeta.subnet);
+				if (
+					peers.some((peer) => {
+						const address = peer.client_address.split("/")[0];
+						return address === serverIp || !ipaddr.IPv4.parse(address).match(subnet);
+					})
+				) {
+					throw new errs.ValidationError(
+						"WireGuard settings conflict with existing peer addresses. Remove those peers before changing the subnet or server address.",
+					);
+				}
 			}
-			logger.info(`WireGuard: Updated endpoint for ${peers.length} peer(s) to ${newEndpoint}`);
-		}
 
-		// Re-sync and apply config if WG is available
-		if (isWgAvailable()) {
-			await syncConfig();
-			await applyConfig();
-		}
+			await settingModel
+				.query()
+				.where("id", "wireguard-config")
+				.patch({
+					meta: JSON.stringify(newMeta),
+				});
 
-		logger.info("WireGuard: Settings updated", newMeta);
-		return newMeta;
-	},
+			// If endpoint or port changed, update all existing peers' endpoint field to stay in sync
+			if (data.endpoint !== undefined || data.listen_port !== undefined) {
+				const peers = await WireguardPeer.query().where("is_deleted", 0);
+				const newEndpoint = formatEndpoint(newMeta.endpoint, newMeta.listen_port);
+
+				for (const peer of peers) {
+					await WireguardPeer.query().findById(peer.id).patch({
+						endpoint: newEndpoint,
+					});
+				}
+				logger.info(`WireGuard: Updated endpoint for ${peers.length} peer(s) to ${newEndpoint}`);
+			}
+
+			// Re-sync and apply config if WG is available
+			if (isWgAvailable()) {
+				await syncConfig();
+				await applyConfig(newMeta.server_address !== current.server_address);
+			}
+
+			logger.info("WireGuard: Settings updated", newMeta);
+			return newMeta;
+		}),
 
 	/**
 	 * Get server information
@@ -620,53 +644,54 @@ const internalWireguard = {
 	 * @param {number} ownerUserId
 	 * @returns {Promise<Object>} Created peer with client config
 	 */
-	createPeer: async (data, ownerUserId) => {
-		validatePeerSettings(data);
-		if (!isWgAvailable()) {
-			throw new Error("WireGuard is not available on this system");
-		}
+	createPeer: (data, ownerUserId) =>
+		serializeConfigurationChange(async () => {
+			validatePeerSettings(data);
+			if (!isWgAvailable()) {
+				throw new Error("WireGuard is not available on this system");
+			}
 
-		await ensureServerKeys();
-		const settings = await getWgSettings();
+			await ensureServerKeys();
+			const settings = await getWgSettings();
 
-		// Generate keys
-		const clientKeys = await generateKeyPair();
-		const presharedKey = generatePresharedKey();
-		const serverPublicKey = await getServerPublicKey();
-		const clientAddress = await getNextAvailableIP(settings.subnet, settings.server_address);
-		const endpoint = formatEndpoint(settings.endpoint, settings.listen_port);
+			// Generate keys
+			const clientKeys = await generateKeyPair();
+			const presharedKey = generatePresharedKey();
+			const serverPublicKey = await getServerPublicKey();
+			const clientAddress = await getNextAvailableIP(settings.subnet, settings.server_address);
+			const endpoint = formatEndpoint(settings.endpoint, settings.listen_port);
 
-		// Insert peer into DB
-		const peerData = {
-			name: data.name,
-			description: data.description || null,
-			client_address: clientAddress,
-			client_public_key: clientKeys.publicKey,
-			client_private_key: clientKeys.privateKey,
-			preshared_key: presharedKey,
-			server_public_key: serverPublicKey,
-			endpoint: endpoint,
-			allowed_ips: data.allowed_ips || settings.subnet,
-			persistent_keepalive: data.persistent_keepalive ?? 25,
-			dns: data.dns || "1.1.1.1",
-			status: 2, // Online (active)
-			owner_user_id: ownerUserId,
-			meta: {},
-		};
+			// Insert peer into DB
+			const peerData = {
+				name: data.name,
+				description: data.description || null,
+				client_address: clientAddress,
+				client_public_key: clientKeys.publicKey,
+				client_private_key: clientKeys.privateKey,
+				preshared_key: presharedKey,
+				server_public_key: serverPublicKey,
+				endpoint: endpoint,
+				allowed_ips: data.allowed_ips || settings.subnet,
+				persistent_keepalive: data.persistent_keepalive ?? 25,
+				dns: data.dns || "1.1.1.1",
+				status: 2, // Online (active)
+				owner_user_id: ownerUserId,
+				meta: {},
+			};
 
-		const peer = await WireguardPeer.query().insert(peerData);
+			const peer = await WireguardPeer.query().insert(peerData);
 
-		// Sync and apply config
-		await syncConfig();
-		await applyConfig();
+			// Sync and apply config
+			await syncConfig();
+			await applyConfig();
 
-		// Refetch with decrypted keys
-		const createdPeer = await WireguardPeer.query().findById(peer.id);
+			// Refetch with decrypted keys
+			const createdPeer = await WireguardPeer.query().findById(peer.id);
 
-		logger.info(`WireGuard: Peer "${data.name}" created with IP ${clientAddress}`);
+			logger.info(`WireGuard: Peer "${data.name}" created with IP ${clientAddress}`);
 
-		return createdPeer;
-	},
+			return createdPeer;
+		}),
 
 	/**
 	 * Update a WireGuard peer

@@ -173,6 +173,21 @@ const internalGitDeploy = {
 					});
 				}
 
+				// Network operations can outlive a host deletion or a configuration change.
+				const currentHost = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
+				if (
+					currentHost?.forward_scheme !== "path" ||
+					currentHost.git_repo_url !== host.git_repo_url ||
+					(currentHost.git_branch || "main") !== (host.git_branch || "main") ||
+					currentHost.git_credentials !== host.git_credentials
+				) {
+					return {
+						success: false,
+						message:
+							"Host Git configuration changed during synchronization; retry with the current configuration",
+					};
+				}
+
 				// Get current commit SHA
 				const commits = await git.log({ fs, dir, depth: 1 });
 				const latestCommit = commits[0]?.oid || null;
@@ -188,7 +203,7 @@ const internalGitDeploy = {
 					});
 
 				// Update forward_host to point to the website directory
-				if (host.forward_host !== dir) {
+				if (currentHost.forward_host !== dir) {
 					await ProxyHost.query().findById(hostId).patch({
 						forward_host: dir,
 					});
@@ -210,7 +225,7 @@ const internalGitDeploy = {
 
 				// Update error state
 
-				await ProxyHost.query().findById(hostId).patch({
+				await ProxyHost.query().findById(hostId).where("is_deleted", 0).patch({
 					git_last_error: errorMessage,
 				});
 

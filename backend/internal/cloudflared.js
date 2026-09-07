@@ -3,6 +3,17 @@ import { global as logger } from "../logger.js";
 import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 
 const processes = new Map();
+const operations = new Map();
+const serialize = (id, operation) => {
+	const pending = (operations.get(id) || Promise.resolve()).catch(() => {}).then(operation);
+	operations.set(id, pending);
+	pending
+		.finally(() => {
+			if (operations.get(id) === pending) operations.delete(id);
+		})
+		.catch(() => {});
+	return pending;
+};
 
 const internalCloudflared = {
 	/**
@@ -22,9 +33,11 @@ const internalCloudflared = {
 	 * Start a tunnel
 	 * @param {CloudflaredTunnel} tunnel
 	 */
-	start: async (tunnel) => {
+	start: (tunnel) => serialize(tunnel.id, () => internalCloudflared._start(tunnel)),
+
+	_start: async (tunnel) => {
 		if (processes.has(tunnel.id)) {
-			await internalCloudflared.stop(tunnel.id);
+			await internalCloudflared._stop(tunnel.id);
 		}
 
 		logger.info(`Starting Cloudflared Tunnel: ${tunnel.name} (${tunnel.id})`);
@@ -123,7 +136,9 @@ const internalCloudflared = {
 	 * Stop a tunnel
 	 * @param {number} tunnelId
 	 */
-	stop: async (tunnelId) => {
+	stop: (tunnelId) => serialize(tunnelId, () => internalCloudflared._stop(tunnelId)),
+
+	_stop: async (tunnelId) => {
 		const child = processes.get(tunnelId);
 		if (child) {
 			logger.info(`Stopping Cloudflared Tunnel: ${tunnelId}`);
@@ -138,12 +153,12 @@ const internalCloudflared = {
 	 * Restart a tunnel
 	 * @param {CloudflaredTunnel} tunnel
 	 */
-	restart: async (tunnel) => {
-		await internalCloudflared.stop(tunnel.id);
-		// Wait a bit?
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-		await internalCloudflared.start(tunnel);
-	},
+	restart: (tunnel) =>
+		serialize(tunnel.id, async () => {
+			await internalCloudflared._stop(tunnel.id);
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await internalCloudflared._start(tunnel);
+		}),
 };
 
 export default internalCloudflared;

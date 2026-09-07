@@ -20,6 +20,14 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 - `setting.js` ermöglicht das Lesen und Aktualisieren von Systemeinstellungen.
 - Einzelne Settings werden per Key gespeichert (z. B. `default-site`, `oidc-config`).
 - Nach einer Änderung wird ggf. ein Nginx-Reload oder ein Service-Restart ausgelöst.
+- Die Default-Site-Variante mit eigenem HTML zeigt Validierungsfehler direkt unter dem beschrifteten Editor an und verknüpft sie über `aria-describedby`; ein leerer Inhalt kann nicht gespeichert werden. Regression: `frontend/src/pages/Settings/DefaultSite.test.tsx`.
+- GitOps-Einstellungen werden erst nach erfolgreichem Laden bearbeitbar. Ungespeicherte Änderungen sperren Aktionen gegen die bisher gespeicherte Repository-Konfiguration; siehe [GitOps](../module/gitops.md).
+
+## Standardseite und Fehlerbehandlung
+
+Änderungen an `default-site` laufen unter derselben Nginx-Konfigurationssperre wie Hoständerungen. Die bestehende Konfiguration und bei HTML-Änderungen der bisherige Seiteninhalt werden vor der Ersetzung gesichert. Erst nach erfolgreicher Generierung und Prüfung werden die Datenbankänderung und der Reload durchgeführt; bei einem Fehler werden die Datenbanktransaktion, Konfiguration und HTML zurückgesetzt und die bisherige Konfiguration erneut geladen. Scheitert auch diese Wiederherstellung, bleibt der Fehler sichtbar und muss anhand der Serverprotokolle geprüft werden.
+
+Beim Start wird die vollständige gespeicherte Einstellung einschließlich `value` und `meta` geladen. Die Option `REGENERATE_ALL` verwendet für 404-Hosts deren eigene Vorlage und deren Konfigurationsverzeichnis. Regressionstests: `backend/test/internal/setting-rollback.spec.js` und `backend/test/internal/setup-state.spec.js`.
 
 ## Abhängigkeiten
 

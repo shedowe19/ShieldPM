@@ -2,10 +2,12 @@ import { exec } from "node:child_process";
 import fs from "node:fs";
 import * as yaml from "js-yaml";
 import _ from "lodash";
+import punycode from "punycode.js";
 import { internal as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 
 const POLICY_FILE = "/data/anubis/policy.yaml";
+let policyGeneration = 0;
 
 const internalAnubis = {
 	/**
@@ -26,6 +28,7 @@ const internalAnubis = {
 	 * @returns {Promise<void>}
 	 */
 	generatePolicy: _.debounce(async () => {
+		const generation = ++policyGeneration;
 		try {
 			logger.info("Generating Anubis Policy...");
 
@@ -35,6 +38,7 @@ const internalAnubis = {
 				.where("enabled", 1)
 				.where("anubis_enabled", 1)
 				.withGraphFetched("host_domains");
+			if (generation !== policyGeneration) return;
 
 			const policy = {
 				bots: [],
@@ -49,7 +53,7 @@ const internalAnubis = {
 					for (const rule of rules) {
 						if (!rule.action) continue;
 
-						const domains = host.domain_names;
+						const domains = host.domain_names?.map((domain) => punycode.toASCII(domain.toLowerCase()));
 						if (!domains || domains.length === 0) continue;
 
 						ruleIndex++;
@@ -88,7 +92,7 @@ const internalAnubis = {
 						// (Go stores it in Request.Host), so Anubis headers_regex can't match it.
 						// We use the custom "X-ShieldPM-Host" header set by the Nginx frontend block.
 						const headers = {};
-						const escapeRegex = (s) => _.escapeRegExp(s).replace(/\\\*/g, "[^.]+");
+						const escapeRegex = (s) => _.escapeRegExp(s).replace(/\\\*/g, ".+");
 						if (domains.length === 1) {
 							headers["X-Shieldpm-Host"] = `^${escapeRegex(domains[0])}$`;
 						} else {
@@ -97,7 +101,7 @@ const internalAnubis = {
 						}
 
 						// Merge user-defined headers_regex if present
-						const userHeaders = rule.headersRegex || rule.headers_regex;
+						const userHeaders = rule.headersRegex || rule.headers_regex || rule.headers;
 						if (userHeaders && typeof userHeaders === "object") {
 							for (const [name, value] of Object.entries(userHeaders)) {
 								if (name.toLowerCase() !== "x-shieldpm-host") headers[name] = value;

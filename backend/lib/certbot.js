@@ -11,7 +11,7 @@ import utils from "./utils.js";
  * @returns {Promise<Object>}
  */
 const installPlugin = async (pluginKey) => {
-	if (typeof dnsPlugins[pluginKey] === "undefined") {
+	if (!Object.hasOwn(dnsPlugins, pluginKey)) {
 		throw new errs.ItemNotFoundError(pluginKey);
 	}
 

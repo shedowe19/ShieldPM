@@ -255,7 +255,8 @@ import checkDemoMode from "./lib/express/demo.js";
 app.use(checkDemoMode);
 
 // Apply global rate limiter to all API routes
-app.use("/api", globalApiLimiter);
+// The frontend Nginx strips /api; actual backend paths start at /users, /tokens, etc.
+app.use(globalApiLimiter);
 
 // Compile OpenAPI schema once (dereferences $refs)
 const _swaggerSpec = await getCompiledSchema();

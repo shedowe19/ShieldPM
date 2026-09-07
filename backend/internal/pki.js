@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { domainToASCII } from "node:url";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, global as logger } from "../logger.js";
@@ -29,40 +30,59 @@ const generateRootCa = async () => {
 	if (fs.existsSync(rootCaKey) && fs.existsSync(rootCaCrt)) {
 		return;
 	}
+	if (fs.existsSync(rootCaCrt) && !fs.existsSync(rootCaKey)) {
+		throw new errs.ConfigurationError(
+			"The Internal CA private key is missing. Restore the original CA key from backup.",
+		);
+	}
 
 	debug(logger, "Generating Internal Root CA...");
+	const stagingDir = await fs.promises.mkdtemp(path.join(internalDir, ".root-ca-"));
+	const stagingKey = path.join(stagingDir, "root_ca.key");
+	const stagingCertificate = path.join(stagingDir, "root_ca.crt");
+	try {
+		// Preserve an existing key if certificate creation is being retried.
+		if (!fs.existsSync(rootCaKey)) {
+			await utils.execFile("openssl", [
+				"genpkey",
+				"-algorithm",
+				"EC",
+				"-pkeyopt",
+				"ec_paramgen_curve:secp384r1",
+				"-out",
+				stagingKey,
+			]);
+			await fs.promises.chmod(stagingKey, 0o600);
+			await fs.promises.rename(stagingKey, rootCaKey);
+		}
 
-	// Preserve an existing key if certificate creation is being retried.
-	if (!fs.existsSync(rootCaKey))
+		// Secure the key
+		await utils.execFile("chmod", ["0600", rootCaKey]);
+
+		// Generate Root Certificate (Self-Signed)
+		// 3650 days = ~10 years
 		await utils.execFile("openssl", [
-			"genpkey",
-			"-algorithm",
-			"EC",
-			"-pkeyopt",
-			"ec_paramgen_curve:secp384r1",
-			"-out",
+			"req",
+			"-x509",
+			"-new",
+			"-sha384",
+			"-key",
 			rootCaKey,
+			"-days",
+			"3650",
+			"-out",
+			stagingCertificate,
+			"-subj",
+			"/CN=ShieldPM Internal CA/O=ShieldPM/C=US",
+			"-addext",
+			"basicConstraints=critical,CA:TRUE",
+			"-addext",
+			"keyUsage=critical,keyCertSign,cRLSign",
 		]);
-
-	// Secure the key
-	await utils.execFile("chmod", ["0600", rootCaKey]);
-
-	// Generate Root Certificate (Self-Signed)
-	// 3650 days = ~10 years
-	await utils.execFile("openssl", [
-		"req",
-		"-x509",
-		"-new",
-		"-sha384",
-		"-key",
-		rootCaKey,
-		"-days",
-		"3650",
-		"-out",
-		rootCaCrt,
-		"-subj",
-		"/CN=ShieldPM Internal CA/O=ShieldPM/C=US",
-	]);
+		await fs.promises.rename(stagingCertificate, rootCaCrt);
+	} finally {
+		await fs.promises.rm(stagingDir, { recursive: true, force: true });
+	}
 };
 
 const ensureRootCa = async () => {
@@ -96,11 +116,15 @@ const createLeadCert = async (data, outDir) => {
 	if (!Array.isArray(data.domain_names) || data.domain_names.length === 0) {
 		throw new errs.ValidationError("At least one domain name is required for certificate creation");
 	}
-	const validDomain = /^(?:\*\.)?[a-zA-Z0-9.-]+$/;
+	const validDomain = /^(?:\*\.)?[\p{L}\p{N}.-]+$/u;
 	for (const domain of data.domain_names) {
 		if (typeof domain !== "string" || !validDomain.test(domain)) {
 			throw new errs.ValidationError("Invalid domain name for certificate creation");
 		}
+	}
+	const domains = data.domain_names.map((domain) => domainToASCII(domain));
+	if (domains.some((domain) => !domain)) {
+		throw new errs.ValidationError("Invalid domain name for certificate creation");
 	}
 	await ensureRootCa();
 	await fs.promises.mkdir(outDir, { recursive: true });
@@ -125,7 +149,7 @@ const createLeadCert = async (data, outDir) => {
 
 	// 2. Create CSR
 	// We need a config file for SANs (Subject Alternative Names)
-	const sanList = data.domain_names.map((d) => `DNS:${d}`).join(",");
+	const sanList = domains.map((d) => `DNS:${d}`).join(",");
 	const configPath = path.join(outDir, "openssl.cnf");
 
 	// Minimal OpenSSL config for SAN
@@ -136,7 +160,7 @@ req_extensions = v3_req
 prompt = no
 
 [req_distinguished_name]
-CN = ${data.domain_names[0]}
+CN = ${domains[0]}
 
 [v3_req]
 keyUsage = critical, digitalSignature, keyEncipherment
@@ -159,7 +183,7 @@ subjectAltName = ${sanList}
 
 	// 3. Sign CSR with Root CA
 
-	// We verify strict use of -CAcreateserial if srl doesn't exist
+	// Independent serials avoid a shared mutable serial-number file.
 	const signArgs = [
 		"x509",
 		"-req",
@@ -244,13 +268,6 @@ const createClientCert = async (data, outDir) => {
 	await utils.execFile("chmod", ["0600", keyPath]);
 
 	// 2. Create CSR (Client Auth Extended Usage)
-	// SECURITY: Sanitize common_name to prevent OpenSSL Config Injection
-	if (!/^[a-zA-Z0-9.\-@]+$/.test(data.common_name)) {
-		throw new errs.ValidationError(
-			"Invalid Common Name: Only alphanumeric characters, dots, dashes, and @ are allowed.",
-		);
-	}
-
 	const configPath = path.join(outDir, "openssl-client.cnf");
 	const configContent = `
 [req]

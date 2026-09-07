@@ -31,6 +31,12 @@ function query(rows, needsDomains = false) {
 }
 
 describe("normalized host domain lookups", () => {
+	it.each(["example.test; return 200", "example.test\nserver", "foo #comment", "example.test\u0000"])(
+		"rejects invalid domain token %j",
+		(domain) => {
+			expect(() => host.validateDomainNames([domain])).toThrow();
+		},
+	);
 	beforeEach(() => {
 		mocks.proxy.mockImplementation(() => query([{ id: 7, domains: ["app.example.test"] }], true));
 		mocks.redirection.mockImplementation(() => query([]));

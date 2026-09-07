@@ -32,7 +32,7 @@ export function AiChatLauncher({ children }: PropsWithChildren) {
 	);
 }
 
-export function AiChatLauncherTrigger() {
+export function AiChatLauncherTrigger({ onClick }: { onClick?: () => void } = {}) {
 	const context = useContext(AiChatLauncherContext);
 
 	if (!context) return null;
@@ -44,7 +44,10 @@ export function AiChatLauncherTrigger() {
 				"group flex w-full items-center rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm font-medium text-purple-400 transition-colors duration-200 hover:bg-purple-500/10 hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 				context.isOpen ? "bg-purple-500/10 text-purple-400" : "transparent",
 			)}
-			onClick={context.openChat}
+			onClick={() => {
+				onClick?.();
+				context.openChat();
+			}}
 			aria-expanded={context.isOpen}
 		>
 			<IconRobot className="mr-2 h-4 w-4" />

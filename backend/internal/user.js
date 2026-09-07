@@ -2,9 +2,12 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import _ from "lodash";
+import { validatePasswordAuth } from "../lib/auth-password.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import authModel from "../models/auth.js";
+import AuthSession from "../models/auth-session.js";
+import settingModel from "../models/setting.js";
 import userModel from "../models/user.js";
 import userPermissionModel from "../models/user_permission.js";
 import internalAuditLog from "./audit-log.js";
@@ -85,6 +88,9 @@ const internalUser = {
 	 */
 	create: async (access, data) => {
 		const auth = data.auth || null;
+		if (auth) validatePasswordAuth(auth);
+		const initialSetup = !access.token.getUserId(0);
+		if (initialSetup && !auth) throw new errs.ValidationError("Initial setup requires password credentials");
 		delete data.auth;
 
 		data.avatar = data.avatar || "";
@@ -109,6 +115,15 @@ const internalUser = {
 		// Use transaction to ensure all user data is created or none at all
 		let user;
 		await userModel.transaction(async (trx) => {
+			if (initialSetup) {
+				// Startup creates this singleton before accepting HTTP requests. Its
+				// row lock serializes first-admin claims across PostgreSQL/MySQL workers;
+				// SQLite serializes/conflicts the surrounding write transactions.
+				const lock = await settingModel.query(trx).findById("default-site").forUpdate();
+				if (!lock) throw new errs.PermissionError("Initial setup is not ready");
+				const existingUser = await userModel.query(trx).where("is_deleted", 0).first();
+				if (existingUser) throw new errs.PermissionError("Initial setup is already complete");
+			}
 			user = await userModel.query(trx).insertAndFetch(data);
 
 			if (auth) {
@@ -429,6 +444,7 @@ const internalUser = {
 	 * @return {Promise}
 	 */
 	setPassword: async (access, data) => {
+		validatePasswordAuth(data);
 		await access.can("users:password", data.id);
 		const user = await internalUser.get(access, { id: data.id });
 
@@ -451,24 +467,20 @@ const internalUser = {
 			});
 		}
 
-		// Get auth, patch if it exists
-		const existing_auth = await authModel.query().where("user_id", user.id).andWhere("type", data.type).first();
-
-		if (existing_auth) {
-			// patch
-			await authModel.query().where("user_id", user.id).andWhere("type", data.type).patch({
-				type: data.type, // This is required for the model to encrypt on save
-				secret: data.secret,
-			});
-		} else {
-			// insert
-			await authModel.query().insert({
-				user_id: user.id,
-				type: data.type,
-				secret: data.secret,
-				meta: {},
-			});
-		}
+		// Password replacement and refresh-session revocation must commit together.
+		await authModel.transaction(async (trx) => {
+			const credentials = () => authModel.query(trx).where({ user_id: user.id, type: data.type, is_deleted: 0 });
+			const existingAuth = await credentials().first();
+			if (existingAuth) {
+				await credentials().patch({ type: data.type, secret: data.secret });
+			} else {
+				await authModel.query(trx).insert({ user_id: user.id, type: data.type, secret: data.secret, meta: {} });
+			}
+			await AuthSession.query(trx)
+				.where("user_id", user.id)
+				.whereNull("revoked_at")
+				.patch({ revoked_at: trx.fn.now(), revoked_reason: "password_changed" });
+		});
 
 		// Add to Audit Log
 		await internalAuditLog.add(access, {
@@ -501,6 +513,23 @@ const internalUser = {
 			);
 		}
 
+		// Route data.id identifies the user, never the permission row primary key.
+		const permissionData = _.pick(data, [
+			"visibility",
+			"access_lists",
+			"dead_hosts",
+			"proxy_hosts",
+			"redirection_hosts",
+			"streams",
+			"certificates",
+			"cloudflared_tunnels",
+			"analytics",
+			"dashboard_notes",
+			"ddns_providers",
+			"tor_onions",
+			"chat",
+		]);
+
 		// Get perms row, patch if it exists
 		const existing_auth = await userPermissionModel.query().where("user_id", user.id).first();
 
@@ -510,10 +539,10 @@ const internalUser = {
 			permissions = await userPermissionModel
 				.query()
 				.where("user_id", user.id)
-				.patchAndFetchById(/** @type {any} */ (existing_auth).id, _.assign({ user_id: user.id }, data));
+				.patchAndFetchById(/** @type {any} */ (existing_auth).id, { ...permissionData, user_id: user.id });
 		} else {
 			// insert
-			permissions = await userPermissionModel.query().insertAndFetch(_.assign({ user_id: user.id }, data));
+			permissions = await userPermissionModel.query().insertAndFetch({ ...permissionData, user_id: user.id });
 		}
 
 		// Add to Audit Log
@@ -576,24 +605,26 @@ const internalUser = {
 			fs.mkdirSync(avatarDir, { recursive: true });
 		}
 
-		// Delete old avatar if it exists and was an upload
-		if (user.avatar_type === "upload" && user.avatar_value) {
-			const oldPath = getAvatarPath(user.id, user.avatar_value);
-			if (fs.existsSync(oldPath)) {
-				fs.unlinkSync(oldPath);
-			}
-		}
-
-		const filename = `${user.id}-${Date.now()}${detectedType.extension}`;
+		const oldPath =
+			user.avatar_type === "upload" && user.avatar_value ? getAvatarPath(user.id, user.avatar_value) : null;
+		const filename = `${user.id}-${crypto.randomUUID()}${detectedType.extension}`;
 		const filePath = path.join(avatarDir, filename);
 
 		await fs.promises.writeFile(filePath, file.data);
 
-		await userModel.query().patchAndFetchById(user.id, {
-			avatar_type: "upload",
-			avatar_value: filename,
-			avatar: `/api/users/${user.id}/avatar/image`,
-		});
+		try {
+			await userModel.query().patchAndFetchById(user.id, {
+				avatar_type: "upload",
+				avatar_value: filename,
+				avatar: `/api/users/${user.id}/avatar/image`,
+			});
+		} catch (error) {
+			await fs.promises.rm(filePath, { force: true });
+			throw error;
+		}
+		if (oldPath) {
+			await fs.promises.rm(oldPath, { force: true });
+		}
 
 		return {
 			url: `/api/users/${user.id}/avatar/image`,

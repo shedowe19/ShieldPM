@@ -14,6 +14,11 @@ const __dirname = dirname(__filename);
 
 const CLOUDFARE_V4_URL = "https://www.cloudflare.com/ips-v4";
 const CLOUDFARE_V6_URL = "https://www.cloudflare.com/ips-v6";
+const requestedMultiplier = Number(process.env.IPRT);
+const renewalMultiplier =
+	Number.isInteger(requestedMultiplier) && requestedMultiplier >= 1 && requestedMultiplier <= 99
+		? requestedMultiplier
+		: 1;
 
 const parseRanges = (content, kind) => {
 	const ranges = content
@@ -30,7 +35,7 @@ const parseRanges = (content, kind) => {
 };
 
 const internalIpRanges = {
-	interval_timeout: 1000 * 60 * 60 * 6 * (Number.parseInt(process.env.IPRT, 10) || 1),
+	interval_timeout: 1000 * 60 * 60 * 6 * renewalMultiplier,
 	interval: null,
 	interval_processing: false,
 	iteration_count: 0,
@@ -93,12 +98,10 @@ const internalIpRanges = {
 
 				const clean_ip_ranges = ip_ranges.filter((range) => !!range);
 
-				await internalIpRanges.generateConfig(clean_ip_ranges);
-
-				if (internalIpRanges.iteration_count) {
-					// Reload nginx
-					await internalNginx.reload();
-				}
+				await internalNginx.withConfigurationLock(async () => {
+					await internalIpRanges.generateConfig(clean_ip_ranges);
+					if (internalIpRanges.iteration_count) await internalNginx.reload();
+				});
 
 				internalIpRanges.iteration_count++;
 			} catch (err) {

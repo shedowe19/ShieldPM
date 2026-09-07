@@ -150,6 +150,7 @@ router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
 		type: record.type,
 		label: record.label,
 		created_on: record.created_on,
+		...(record.backup_codes ? { backup_codes: record.backup_codes } : {}),
 	});
 });
 
@@ -220,6 +221,7 @@ router.post("/duo/setup", twoFaRateLimiter, async (req, res) => {
 		type: record.type,
 		label: record.label,
 		created_on: record.created_on,
+		...(record.backup_codes ? { backup_codes: record.backup_codes } : {}),
 	});
 });
 

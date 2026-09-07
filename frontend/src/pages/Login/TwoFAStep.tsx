@@ -25,12 +25,10 @@ const METHOD_ICONS: Record<string, React.ReactNode> = {
 	duo: <Lock className="h-5 w-5" />,
 };
 
-const METHOD_LABELS: Record<string, string> = {
-	totp: intl.formatMessage({ id: "2fa.method.totp" }),
-	yubikey: intl.formatMessage({ id: "2fa.method.yubikey" }),
-	passkey: intl.formatMessage({ id: "2fa.method.passkey" }),
-	duo: intl.formatMessage({ id: "2fa.method.duo" }),
-};
+const methodLabel = (method: string) =>
+	["totp", "yubikey", "passkey", "duo"].includes(method)
+		? intl.formatMessage({ id: `2fa.method.${method}` })
+		: method;
 
 export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFAStepProps) {
 	const [activeMethod, setActiveMethod] = useState<ActiveMethod>(null);
@@ -40,7 +38,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 
 	const handleCodeSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!activeMethod || !code.trim()) return;
+		if (loading || !activeMethod || !code.trim()) return;
 
 		setError("");
 		setLoading(true);
@@ -60,6 +58,8 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 	};
 
 	const handlePasskeyAuth = async () => {
+		if (loading) return;
+		setActiveMethod("passkey");
 		setError("");
 		setLoading(true);
 		try {
@@ -76,6 +76,8 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 	};
 
 	const handleDuoAuth = async () => {
+		if (loading) return;
+		setActiveMethod("duo");
 		setError("");
 		setLoading(true);
 		try {
@@ -101,7 +103,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 					disabled={loading}
 				>
 					{METHOD_ICONS[method]}
-					{METHOD_LABELS[method] || method}
+					{methodLabel(method)}
 					{loading && activeMethod === "passkey" && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
 				</Button>
 			);
@@ -117,7 +119,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 					disabled={loading}
 				>
 					{METHOD_ICONS[method]}
-					{METHOD_LABELS[method] || method}
+					{methodLabel(method)}
 					{loading && activeMethod === "duo" && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
 				</Button>
 			);
@@ -136,7 +138,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 				disabled={loading}
 			>
 				{METHOD_ICONS[method] || <ShieldCheck className="h-5 w-5" />}
-				{METHOD_LABELS[method] || method}
+				{methodLabel(method)}
 			</Button>
 		);
 	};
@@ -185,6 +187,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 						<Label htmlFor="2fa-code">{inputLabel[activeMethod] || ""}</Label>
 						<Input
 							id="2fa-code"
+							disabled={loading}
 							type="text"
 							inputMode={activeMethod === "totp" ? "numeric" : "text"}
 							value={code}
@@ -205,6 +208,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 			{/* Backup code fallback always available */}
 			<div className="pt-2 border-t">
 				<button
+					disabled={loading}
 					type="button"
 					className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline w-full text-center"
 					onClick={() => {

@@ -19,7 +19,7 @@ on:
       - "**/package.json"
 
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     paths:
       - .github/workflows/docker.yml
@@ -40,6 +40,11 @@ on:
 env:
   IMAGE_NAME: ghcr.io/shedowe19/shieldpm
   LXC_TEMPLATE_NAME: "" # Placeholder for linter
+
+# Arch tags must not be overwritten by another run before its manifest merges.
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -206,7 +211,7 @@ jobs:
           echo "Downloading nginx-linux-${ARCH_SUFFIX}.tar.gz from GitHub Releases..."
           RELEASE_URL="https://github.com/shedowe19/ShieldPM/releases/download/nginx-binaries/nginx-linux-${ARCH_SUFFIX}.tar.gz"
           curl -L -f -o nginx-binaries.tar.gz "$RELEASE_URL"
-          
+
           # 7. Extract Nginx Binaries
           echo "Extracting nginx binaries..."
           tar -xzf nginx-binaries.tar.gz -C "$BUILD_DIR"
@@ -214,16 +219,16 @@ jobs:
 
           # 8. Rootfs overlays (From Repo)
           cp -r rootfs "$BUILD_DIR/"
-          
+
           # 9. Add Installer Script
           cp scripts/install.sh "$BUILD_DIR/install.sh"
           chmod +x "$BUILD_DIR/install.sh"
-          
+
           # 10. Package
           TAR_NAME="shieldpm-install-linux-${ARCH_SUFFIX}.tar.gz"
           tar -czf "$TAR_NAME" -C "$BUILD_DIR" .
           echo "INSTALLER_PKG=$TAR_NAME" >> $GITHUB_ENV
-          
+
           # Cleanup
           rm -rf "$BUILD_DIR"
 
@@ -286,7 +291,7 @@ jobs:
 
           # Enable ShieldPM Service (Autostart)
           docker exec "$CONTAINER_NAME" systemctl enable shieldpm.service
-          
+
           # Alias update command
           docker exec "$CONTAINER_NAME" ln -s /usr/local/bin/update-shieldpm /usr/bin/update
 
@@ -297,11 +302,11 @@ jobs:
           # 6. Export Rootfs
           echo "Exporting Rootfs..."
           docker export "$CONTAINER_NAME" -o rootfs.tar
-          
+
           # 7. Compress (Standard Proxmox format: .tar.gz or .tar.xz)
           echo "Compressing..."
           gzip -9 rootfs.tar
-          
+
           if [ "${{ matrix.arch }}" == "x86_64" ]; then
             ARCH_SUFFIX="amd64"
           elif [ "${{ matrix.arch }}" == "aarch64" ]; then
@@ -309,12 +314,12 @@ jobs:
           else
             ARCH_SUFFIX="${{ matrix.arch }}"
           fi
-          
+
           FILE_NAME="shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_${ARCH_SUFFIX}.tar.gz"
           mv rootfs.tar.gz "$FILE_NAME"
-          
+
           echo "LXC_TEMPLATE_NAME=$FILE_NAME" >> $GITHUB_ENV
-          
+
           # Cleanup
           docker rm -f "$CONTAINER_NAME"
 
@@ -335,7 +340,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' && github.repository_owner == 'shedowe19' }}
     steps:
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4.6.0
         with:
@@ -346,7 +350,7 @@ jobs:
       - name: Create Multiarch Manifest
         run: |
           TAG_BASE="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}"
-          
+
           docker buildx imagetools create --tag "${TAG_BASE}" \
             "${TAG_BASE}-x86_64" \
             "${TAG_BASE}-aarch64"
@@ -432,7 +436,7 @@ jobs:
             tar -xzf shieldpm-install-linux-*.tar.gz
             sudo ./install.sh
             ```
-            
+
             **Update:** Run `update` or `update-shieldpm` anytime to fetch the latest version.
 
             ---

@@ -98,7 +98,9 @@ export default function DefaultSite() {
 							{errorMsg && (
 								<Alert className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive">
 									<AlertCircle className="h-4 w-4" />
-									<AlertTitle>Error</AlertTitle>
+									<AlertTitle>
+										<T id="error.title" />
+									</AlertTitle>
 									<AlertDescription>{errorMsg}</AlertDescription>
 								</Alert>
 							)}
@@ -178,28 +180,41 @@ export default function DefaultSite() {
 										<T id="settings.default-site.html" />
 									</Label>
 									<Field name="html" validate={validateString(1)}>
-										{({ field }: FieldProps) => (
-											<div className="rounded-md border overflow-hidden">
-												<LazyCodeEditor
-													language="php"
-													placeholder={intl.formatMessage({
-														id: "settings.default-site.html.placeholder",
-													})}
-													padding={15}
-													data-color-mode="dark"
-													minHeight={300}
-													style={{
-														fontFamily:
-															"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-														fontSize: 14,
-														backgroundColor: "var(--bg-background)",
-													}}
-													{...field}
-												/>
-											</div>
+										{({ field, form }: FieldProps) => (
+											<>
+												<div className="rounded-md border overflow-hidden">
+													<LazyCodeEditor
+														id="html"
+														aria-invalid={Boolean(form.errors.html && form.touched.html)}
+														aria-describedby={
+															form.errors.html && form.touched.html
+																? "html-error"
+																: undefined
+														}
+														language="php"
+														placeholder={intl.formatMessage({
+															id: "settings.default-site.html.placeholder",
+														})}
+														padding={15}
+														data-color-mode="dark"
+														minHeight={300}
+														style={{
+															fontFamily:
+																"ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+															fontSize: 14,
+															backgroundColor: "var(--bg-background)",
+														}}
+														{...field}
+													/>
+												</div>
+												{form.errors.html && form.touched.html && (
+													<p id="html-error" className="text-sm text-destructive">
+														{form.errors.html as string}
+													</p>
+												)}
+											</>
 										)}
 									</Field>
-									{/* Formik error for html field if needed */}
 								</div>
 							)}
 

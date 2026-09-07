@@ -25,12 +25,13 @@ let processing = false;
 export const isProcessing = () => processing;
 
 /** Execute all ACME operations under the same lock, including scheduled renewals. */
-export const runCertbot = async (args) => {
+export const runCertbot = async (args, prepare) => {
 	if (processing) {
 		throw new errs.ValidationError("Another Certbot process is currently running. Please try again later.");
 	}
 	processing = true;
 	try {
+		if (prepare) await prepare();
 		return await utils.execFile("certbot", args);
 	} finally {
 		processing = false;
@@ -68,45 +69,60 @@ export const requestCertbot = async (certificate) => {
  * @returns {Promise<string>}
  */
 export const requestCertbotWithDnsChallenge = async (certificate) => {
-	const dnsPlugin = dnsPlugins[certificate.meta.dns_provider];
+	const dnsPlugin = Object.hasOwn(dnsPlugins, certificate.meta.dns_provider)
+		? dnsPlugins[certificate.meta.dns_provider]
+		: null;
 	if (!dnsPlugin) {
 		throw new errs.ValidationError(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
 	}
-	await installPlugin(certificate.meta.dns_provider);
+	if (
+		typeof certificate.meta.dns_provider_credentials !== "string" ||
+		!certificate.meta.dns_provider_credentials.trim()
+	) {
+		throw new errs.ValidationError("DNS provider credentials are required");
+	}
 
 	logger.info(
 		`Requesting LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
 	);
 
 	const credentialsLocation = `/data/certbot-credentials/credentials-${certificate.id}`;
-	await fs.promises.mkdir("/data/certbot-credentials", { recursive: true });
-	await fs.promises.writeFile(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
-	await fs.promises.chmod(credentialsLocation, 0o600);
-
 	// Determine the credentials argument - use defined value or fall back to standard pattern
-	const credentialsArg = dnsPlugin.credentials_argument || `dns-${certificate.meta.dns_provider}-credentials`;
+	const pluginName = dnsPlugin.full_plugin_name || `dns-${certificate.meta.dns_provider}`;
+	const credentialsArg = dnsPlugin.credentials_argument || `${pluginName}-credentials`;
 
-	const result = await runCertbot([
-		"--config",
-		"/etc/certbot.ini",
-		"certonly",
-		"--cert-name",
-		`npm-${certificate.id}`,
-		"--domains",
-		certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
-		dnsPlugin.full_plugin_name ? "--authenticator" : `--dns-${certificate.meta.dns_provider}`,
-		...(dnsPlugin.full_plugin_name ? [dnsPlugin.full_plugin_name] : []),
-		`--${credentialsArg}`,
-		credentialsLocation,
-		...(certificate.meta.propagation_seconds
-			? [
-					`--dns-${certificate.meta.dns_provider}-propagation-seconds`,
-					String(certificate.meta.propagation_seconds),
-				]
-			: []),
-		"--server",
-		process.env.ACME_SERVER,
-	]);
+	const result = await runCertbot(
+		[
+			"--config",
+			"/etc/certbot.ini",
+			"certonly",
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--domains",
+			certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
+			dnsPlugin.full_plugin_name ? "--authenticator" : `--dns-${certificate.meta.dns_provider}`,
+			...(dnsPlugin.full_plugin_name ? [dnsPlugin.full_plugin_name] : []),
+			`--${credentialsArg}`,
+			credentialsLocation,
+			...(certificate.meta.propagation_seconds !== undefined
+				? [
+						`--${dnsPlugin.propagation_argument || `${pluginName}-propagation-seconds`}`,
+						String(certificate.meta.propagation_seconds),
+					]
+				: []),
+			"--server",
+			process.env.ACME_SERVER,
+		],
+		async () => {
+			// Installing/upgrading plugins and replacing credentials must not race a running renewal.
+			await installPlugin(certificate.meta.dns_provider);
+			await fs.promises.mkdir("/data/certbot-credentials", { recursive: true });
+			await fs.promises.writeFile(credentialsLocation, certificate.meta.dns_provider_credentials, {
+				mode: 0o600,
+			});
+			await fs.promises.chmod(credentialsLocation, 0o600);
+		},
+	);
 	logger.success(result);
 	return result;
 };
@@ -139,7 +155,9 @@ export const renewCertbot = async (certificate) => {
  * @returns {Promise<string>}
  */
 export const renewCertbotWithDnsChallenge = async (certificate) => {
-	const dnsPlugin = dnsPlugins[certificate.meta.dns_provider];
+	const dnsPlugin = Object.hasOwn(dnsPlugins, certificate.meta.dns_provider)
+		? dnsPlugins[certificate.meta.dns_provider]
+		: null;
 	if (!dnsPlugin) {
 		throw new errs.ValidationError(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
 	}

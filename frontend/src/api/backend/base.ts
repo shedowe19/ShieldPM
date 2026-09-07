@@ -1,4 +1,4 @@
-import { camelizeKeys, decamelize, decamelizeKeys } from "humps";
+import { camelize, decamelize } from "humps";
 import queryString, { type StringifiableRecord } from "query-string";
 import { queryClient } from "src/api/queryClient";
 import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
@@ -6,6 +6,20 @@ import AuthStore, { AUTHENTICATION_EXPIRED_EVENT } from "src/modules/AuthStore";
 const contentTypeHeader = "Content-Type";
 
 type DynamicResponse = unknown;
+
+function convertKeys(value: unknown, convert: (key: string) => string): unknown {
+	if (Array.isArray(value)) return value.map((item) => convertKeys(item, convert));
+	if (!value || typeof value !== "object" || ![Object.prototype, null].includes(Object.getPrototypeOf(value))) {
+		return value;
+	}
+	return Object.fromEntries(
+		Object.entries(value).map(([key, item]) => [
+			convert(key),
+			// Header names are data, not API field names. Renaming them changes Anubis rules.
+			["headers", "headers_regex", "headersRegex"].includes(key) ? item : convertKeys(item, convert),
+		]),
+	);
+}
 
 interface BuildUrlArgs {
 	url: string;
@@ -46,11 +60,15 @@ function buildAuthHeader(): Record<string, string> | undefined {
 
 function buildBody(data?: object): string | undefined {
 	if (data) {
-		return JSON.stringify(decamelizeKeys(data));
+		return JSON.stringify(convertKeys(data, decamelize));
 	}
 }
 
-async function processResponse<T = DynamicResponse>(response: Response, silentAuth = false): Promise<T> {
+async function processResponse<T = DynamicResponse>(
+	response: Response,
+	silentAuth = false,
+	rawResponse = false,
+): Promise<T> {
 	if (response.status === 401) {
 		// Authentication must expire even when a proxy returns HTML or an empty body.
 		AuthStore.clear();
@@ -87,7 +105,7 @@ async function processResponse<T = DynamicResponse>(response: Response, silentAu
 		);
 		throw new Error(message || `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`);
 	}
-	return camelizeKeys(payload) as unknown as T;
+	return (rawResponse ? payload : convertKeys(payload, camelize)) as T;
 }
 
 interface GetArgs {
@@ -104,6 +122,8 @@ interface PostArgs {
 	silentAuth?: boolean;
 	/** Skip key decamelization — required for WebAuthn payloads where key casing matters */
 	rawKeys?: boolean;
+	/** Preserve response keys that represent data, such as domain names. */
+	rawResponse?: boolean;
 }
 
 interface PutArgs {
@@ -188,7 +208,7 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 }
 
 export async function post<T = DynamicResponse>(
-	{ url, params, data, noAuth, silentAuth, rawKeys }: PostArgs,
+	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
 	const apiUrl = buildUrl({ url, params });
@@ -217,7 +237,7 @@ export async function post<T = DynamicResponse>(
 
 	const signal = abortController?.signal;
 	const response = await fetch(apiUrl, { method, headers, body, signal, credentials: "include" });
-	return processResponse(response, silentAuth);
+	return processResponse(response, silentAuth, rawResponse);
 }
 
 export async function put<T = DynamicResponse>(

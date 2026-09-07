@@ -50,7 +50,11 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 Parallele Erstausstellungen teilen sich dieselbe Root-CA-Initialisierung. Ein bereits vorhandener CA-Schlüssel wird bei einem fehlgeschlagenen Zertifikatsversuch erhalten. Zertifikate erhalten unabhängige kryptografisch zufällige Seriennummern, ohne konkurrierende Schreibzugriffe auf eine gemeinsame `.srl`-Datei.
 
+Root-Schlüssel und Root-Zertifikat werden zunächst in einem privaten temporären Verzeichnis erzeugt und erst nach erfolgreicher OpenSSL-Ausführung an ihren festen Pfad verschoben. Teilweise geschriebene Zertifikate werden dadurch nicht beim nächsten Versuch als fertige CA erkannt. Existiert das vertraute Root-Zertifikat, aber sein Schlüssel fehlt, wird die Initialisierung mit einem Wiederherstellungshinweis abgebrochen; eine neue CA würde bestehende Vertrauensbeziehungen zerstören. Neue Root-Zertifikate erhalten explizite CA- und Signatur-Erweiterungen unabhängig von der systemweiten OpenSSL-Konfiguration.
+
 Fehlende/ungültige Domainlisten und ungültige Laufzeiten werden vor der Schlüsselgenerierung abgewiesen; interne Wildcard-Domains sind zulässig. PKCS#12-Passwörter werden OpenSSL über eine nur für den Kindprozess gesetzte Umgebungsvariable übergeben. Der gemeinsame Prozesshelfer protokolliert keine Argumentlisten und hält in verschachtelten Fehlern nur Fehlercode und Signal fest.
+
+Internationale DNS-Namen werden vor dem Schreiben von Common Name und SAN in die ASCII-/Punycode-Darstellung umgewandelt. Regressionstests: `backend/test/internal/pki-validation.spec.js`.
 
 ## Verwandte Seiten
 

@@ -33,6 +33,12 @@ Der Docker-Ereignisstream ist zeilenweise JSON. Empfangene Daten werden bis zum 
 
 Die Direktivenliste für `shieldpm.advanced_config` akzeptiert pro Zeile genau eine erlaubte Direktive mit abschließendem Semikolon. Zusätzliche Direktiven auf derselben Zeile, Blockklammern und `include` werden verworfen.
 
+### Label-Validierung und Domain-Konflikte
+
+Auch der direkte Auto-Discovery-Schreibweg prüft Domains über die gemeinsame Host-Validierung. Scheme, Port, Bandbreite, Rate-Limit und Zeiteinheit werden vor Datenbank- und Nginx-Operationen auf zulässige Werte begrenzt; Query-Labels dürfen keine Zeichen zum Ausbrechen aus der Nginx-Zeichenkette enthalten.
+
+Die Kollisionssuche berücksichtigt alle vorhandenen Hosts. Ein bereits passender Container-Host beendet die Prüfung nicht vorzeitig: Belegt ein manuell angelegter Host eine der angeforderten Domains, wird der automatische Eintrag nicht darübergeschrieben.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

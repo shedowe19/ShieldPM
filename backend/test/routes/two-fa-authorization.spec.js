@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	refresh: vi.fn(),
+	addYubikey: vi.fn(),
+	setupDuo: vi.fn(),
 	remove: vi.fn(),
 	regenerate: vi.fn(),
 	verify: vi.fn(),
@@ -14,6 +16,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../internal/2fa-service.js", () => ({
 	default: {
 		removeTwoFaMethod: mocks.remove,
+		addYubikey: mocks.addYubikey,
+		setupDuo: mocks.setupDuo,
 		regenerateBackupCodes: mocks.regenerate,
 		verifyLoginChallenge: mocks.verify,
 		beginPasskeyAuthentication: mocks.beginPasskey,
@@ -51,6 +55,32 @@ const response = (access) => ({
 
 describe("2FA management authorization", () => {
 	beforeEach(() => vi.clearAllMocks());
+
+	it.each(["/yubikey/add", "/duo/setup"])(
+		"returns newly generated recovery codes without leaking factor secrets at %s",
+		async (path) => {
+			const record = {
+				id: 1,
+				type: path.includes("duo") ? "duo" : "yubikey",
+				label: "Factor",
+				created_on: "today",
+				secret: "private",
+				meta: { clientSecret: "private" },
+				backup_codes: ["NEWCODE"],
+			};
+			mocks.addYubikey.mockResolvedValue(record);
+			mocks.setupDuo.mockResolvedValue(record);
+			const res = response({ token: { getUserId: () => 7 }, can: vi.fn().mockResolvedValue(true) });
+			await handler(managementRouter, path)({ params: { user_id: "me" }, body: { otp: "otp" } }, res);
+			expect(res.json).toHaveBeenCalledWith({
+				id: 1,
+				type: record.type,
+				label: "Factor",
+				created_on: "today",
+				backup_codes: ["NEWCODE"],
+			});
+		},
+	);
 
 	it.each(["pending second factor", "disabled account"])(
 		"denies method deletion with a valid JWT for a %s",

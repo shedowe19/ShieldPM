@@ -8,6 +8,8 @@ vi.mock("../../models/user.js", () => ({
 		query: () => ({ patchAndFetchById: mocks.patch, findById: mocks.findById, insertAndFetch: mocks.insert }),
 	},
 }));
+vi.mock("../../models/setting.js", () => ({ default: {} }));
+vi.mock("../../models/auth-session.js", () => ({ default: {} }));
 vi.mock("../../models/auth.js", () => ({ default: {} }));
 vi.mock("../../models/user_permission.js", () => ({ default: { query: () => ({ insert: vi.fn() }) } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: mocks.audit } }));

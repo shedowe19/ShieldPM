@@ -148,7 +148,7 @@ const internalMaintenance = {
 			}
 
 			if (reloadNeeded) {
-				await internalNginx.reload();
+				await internalNginx.withConfigurationLock(() => internalNginx.reload());
 			}
 		} catch (err) {
 			logger.error(err);

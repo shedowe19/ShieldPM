@@ -157,7 +157,7 @@ const providers = {
 
 		// DuckDNS supports comma separated domains
 		const domainsStr = provider.domains.join(",");
-		let url = `https://www.duckdns.org/update?domains=${domainsStr}&token=${token}`;
+		let url = `https://www.duckdns.org/update?${new URLSearchParams({ domains: domainsStr, token })}`;
 
 		if (ips.ipv4) url += `&ip=${ips.ipv4}`;
 		if (ips.ipv6) url += `&ipv6=${ips.ipv6}`;
@@ -198,7 +198,7 @@ const providers = {
 async function updateCloudflareRecord(token, zone_id, domain, type, ip, results) {
 	// 1. Get Record ID
 	const listRes = await fetch(
-		`https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?type=${type}&name=${domain}`,
+		`https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zone_id)}/dns_records?${new URLSearchParams({ type, name: domain })}`,
 		{
 			signal: AbortSignal.timeout(10000),
 			headers: {
@@ -224,8 +224,8 @@ async function updateCloudflareRecord(token, zone_id, domain, type, ip, results)
 	// 2. Create or Update Record
 	const method = recordId ? "PUT" : "POST";
 	const url = recordId
-		? `https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records/${recordId}`
-		: `https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records`;
+		? `https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zone_id)}/dns_records/${encodeURIComponent(recordId)}`
+		: `https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zone_id)}/dns_records`;
 
 	const updateRes = await fetch(url, {
 		signal: AbortSignal.timeout(10000),

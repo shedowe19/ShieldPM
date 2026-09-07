@@ -12,8 +12,8 @@ interface Props {
 	name?: string;
 }
 export function BasicAuthFields({ initialValues, name = "items" }: Props) {
-	const [values, setValues] = useState<AccessListItem[]>(initialValues || []);
-	const { setFieldValue } = useFormikContext();
+	const { values: formValues, setFieldValue } = useFormikContext<Record<string, AccessListItem[]>>();
+	const [values, setValues] = useState<AccessListItem[]>(() => formValues?.[name] || initialValues || []);
 
 	const blankItem: AccessListItem = { username: "", password: "" };
 

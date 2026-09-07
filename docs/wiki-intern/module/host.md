@@ -46,3 +46,9 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Dead-Host](./dead-host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
+
+## Eingaben und Zertifikatsmetadaten
+
+`validateDomainNames()` prüft ein bis 99 nichtleere Nginx-Servernamen und verhindert Whitespace, Steuerzeichen und Direktiventrenner in Domain-Tokens. Bestehende Wildcard-, IDN- und als einzelnes Token zulässige Regex-Namen bleiben möglich.
+
+DNS-Provider-Credentials aus einer Zertifikatsanforderung werden für die Beantragung verwendet, aber nicht erneut in Host-Metadaten gespeichert. API-Antworten und Auditdaten bereinigen außerdem eventuell vorhandene Altwerte. Das gilt für Proxy-, Redirection-, Dead-Hosts und Streams.

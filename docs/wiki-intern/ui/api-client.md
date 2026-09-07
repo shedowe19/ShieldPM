@@ -12,6 +12,9 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 - Jede Datei exportiert eine Funktion, die einen HTTP-Aufruf an die Backend-API macht
 - Gruppiert nach CRUD-Operationen (create, get, getAll, update, delete, toggle)
+- JSON-Anfragen werden rekursiv nach `snake_case`, Antworten nach `camelCase` konvertiert. Die Frontend-Modelle und Formularwerte für KI, DDNS und ChatOps verwenden deshalb unter anderem `apiKey`, `baseUrl`, `numCtx`, `ipVer`, `zoneId` und `allowedIds`. Integrationstests mit unveränderten Backend-JSON-Antworten sichern das Lesen und Zurückschreiben dieser Felder.
+- Header-Wörterbücher (`headers`, `headers_regex` beziehungsweise `headersRegex`) bewahren ihre enthaltenen Schlüssel in beiden Richtungen. So wird beispielsweise eine Anubis-Regel für `User-Agent` beim Bearbeiten nicht versehentlich zu einer Regel für `user_agent`; umgebende API-Felder werden weiterhin konvertiert. Ein API-Roundtrip-Test prüft auch mehrere verschachtelte Regeln.
+- POST-Aufrufe können `rawResponse: true` setzen, wenn Antwortschlüssel Nutzdaten darstellen. Der HTTP-Zertifikatstest erhält damit Domainnamen einschließlich Bindestrichen unverändert. Authentisierung, CSRF und Fehlerbehandlung bleiben weiterhin zentral; `rawKeys` steuert separat die Schlüssel der Anfrage.
 - Verwendet einen zentralen API-Client (Basis-URL, Auth-Header, etc.)
 - `api/queryClient.ts` erzeugt genau einen React-Query-Client. Sowohl der Provider in `App.tsx` als auch die zentrale Antwortverarbeitung nutzen diese Instanz; ein 401 leert damit den tatsächlich sichtbaren Cache vor einer möglichen neuen Anmeldung.
 - Die zentrale Antwortverarbeitung akzeptiert erfolgreiche HTTP-204-/205-Antworten ohne JSON-Body, insbesondere beim Abmelden. HTTP-Fehler ohne JSON oder ohne das erwartete Fehlerobjekt behalten ihren Status im Fehlermeldungstext. Ein 401 räumt Sitzung und Cache bereits vor dem Einlesen des Bodys auf; HTML-Fehlerseiten eines vorgeschalteten Proxys können diesen Schritt daher nicht verhindern. `silentAuth` unterdrückt dabei nur das Ablaufereignis. `base.test.ts` prüft diese Fälle einschließlich JSON-`null` und lokalisierter Backend-Fehlerschlüssel.
@@ -41,7 +44,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Zertifikate
 
-`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `updateCertificate.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getDnsProviders.ts`, `getCertificateDNSProviders.ts`, `downloadCertificate.ts`, `downloadRootCa.ts`, `testHttpCertificate.ts`
+`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getDnsProviders.ts`, `getCertificateDNSProviders.ts`, `downloadCertificate.ts`, `downloadRootCa.ts`, `testHttpCertificate.ts`
 
 ### Access-Lists
 

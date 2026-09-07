@@ -4,12 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'name of the release'
+        description: "name of the release"
         required: true
         type: string
 
 env:
   IMAGE_NAME: ghcr.io/shedowe19/shieldpm
+
+# Every dispatch writes the same latest architecture tags, regardless of ref.
+concurrency:
+  group: docker-latest-publish
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -39,7 +44,7 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION_FILE=$(cat .version)
           FULL_VER="${RELEASE_TAG}-${SHORT_SHA}-${VERSION_FILE}"
-          
+
           echo "version=${FULL_VER}" >> $GITHUB_OUTPUT
           # Base tag for the arch-specific images will be 'latest'
           echo "tag_base=latest" >> $GITHUB_OUTPUT
@@ -133,7 +138,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'shedowe19' }}
     steps:
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4.6.0
         with:
@@ -148,7 +152,7 @@ jobs:
           LATEST_TAG="${{ env.IMAGE_NAME }}:latest"
           INPUT_TAG="${{ env.IMAGE_NAME }}:${RELEASE_TAG}"
           RUN_TAG="${{ env.IMAGE_NAME }}:${{ github.run_number }}"
-          
+
           # Create and push 'latest'
           docker buildx imagetools create --tag "${LATEST_TAG}" \
             "${LATEST_TAG}-x86_64" \

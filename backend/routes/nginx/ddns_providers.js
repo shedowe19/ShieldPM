@@ -64,7 +64,7 @@ router
 	 * PUT /api/nginx/ddns-providers/:id
 	 */
 	.put(async (req, res) => {
-		const payload = await apiValidator(getValidationSchema("/nginx/ddns-providers/providerID", "put"), req.body);
+		const payload = await apiValidator(getValidationSchema("/nginx/ddns-providers/{id}", "put"), req.body);
 		await res.locals.access.can("ddns_providers:update", req.params.id);
 		payload.id = Number.parseInt(req.params.id, 10);
 		const result = await internalDdnsProvider.update(res.locals.access, payload);

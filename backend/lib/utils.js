@@ -124,6 +124,17 @@ const getRenderEngine = () => {
 		return "";
 	});
 
+	// Lua decimal escapes preserve quotes, backslashes and control characters as data.
+	renderEngine.registerFilter(
+		"luaString",
+		(value) =>
+			`"${String(value ?? "").replace(
+				// biome-ignore lint/suspicious/noControlCharactersInRegex: Escape control bytes instead of emitting them into Lua source.
+				/[\\"\x00-\x1f\x7f]/g,
+				(character) => `\\${String(character.charCodeAt(0)).padStart(3, "0")}`,
+			)}"`,
+	);
+
 	if (!development) cachedRenderEngine = renderEngine;
 	return renderEngine;
 };

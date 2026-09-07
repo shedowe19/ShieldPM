@@ -3,6 +3,7 @@ import { SYSTEM_USER_ID } from "../lib/constants.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
+import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
 /**
@@ -350,31 +351,47 @@ class DockerService {
 		);
 
 		try {
-			const allHosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
-			let existingHost = null;
-			let collisionHost = null;
-
-			for (const h of allHosts) {
-				if (h.meta?.auto_discovered && h.meta.docker_container_id === container.Id) {
-					existingHost = h;
-					break;
-				}
-
-				if (!existingHost) {
-					const intersect = h.domain_names.filter((d) => domains.includes(d));
-					if (intersect.length > 0) {
-						if (h.meta?.auto_discovered) {
-							existingHost = h;
-						} else {
-							collisionHost = h;
-						}
-					}
-				}
+			internalHost.validateDomainNames(domains);
+			if (!["http", "https", "grpc", "grpcs"].includes(scheme))
+				throw new Error("Invalid Docker forwarding scheme");
+			if (
+				!Number.isInteger(forwardPort) ||
+				forwardPort < 1 ||
+				forwardPort > 65535 ||
+				(portLabel && !/^\d+$/.test(portLabel))
+			) {
+				throw new Error("Invalid Docker forwarding port");
 			}
-
-			if (collisionHost && !existingHost) {
+			if (bandwidthLimit && !/^\d+(?:\.\d+)?[km]?$/i.test(bandwidthLimit))
+				throw new Error("Invalid Docker bandwidth limit");
+			if (forwardQuery && /["\\\r\n\0]/.test(forwardQuery)) throw new Error("Invalid Docker forward query");
+			if (limitUnit && !["s", "m", "second", "minute"].includes(limitUnit))
+				throw new Error("Invalid Docker rate limit unit");
+			for (const [value, maximum] of [
+				[limitRate, 100000],
+				[limitBurst, 100000],
+				[accessListId, Number.MAX_SAFE_INTEGER],
+			]) {
+				if (value && (!/^\d+$/.test(value) || Number(value) > maximum))
+					throw new Error("Invalid Docker numeric label");
+			}
+			const allHosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
+			const existingHost =
+				allHosts.find((host) => host.meta?.auto_discovered && host.meta.docker_container_id === container.Id) ||
+				allHosts.find(
+					(host) =>
+						host.meta?.auto_discovered && host.domain_names.some((domain) => domains.includes(domain)),
+				);
+			// Inspect every host, even when the matching container appears first in the result.
+			const collisionHost = allHosts.find(
+				(host) =>
+					host.id !== existingHost?.id &&
+					!host.meta?.auto_discovered &&
+					host.domain_names.some((domain) => domains.includes(domain)),
+			);
+			if (collisionHost) {
 				logger.error(
-					`Docker Auto-Discovery: Collision detected! Domains [${domains.join(", ")}] are already used by Manual Host #${collisionHost.id}. Skipping.`,
+					`Docker Auto-Discovery: Domains [${domains.join(", ")}] collide with manual host #${collisionHost.id}. Skipping.`,
 				);
 				return;
 			}
@@ -452,7 +469,7 @@ class DockerService {
 			// Handle Rate Limiting
 			if (limitRate) {
 				payload.adv_limit_req_rate = Number.parseInt(limitRate, 10);
-				payload.adv_limit_req_unit = limitUnit || "second";
+				payload.adv_limit_req_unit = ["m", "minute"].includes(limitUnit) ? "m" : "s";
 				if (limitBurst) payload.adv_limit_req_burst = Number.parseInt(limitBurst, 10);
 			}
 

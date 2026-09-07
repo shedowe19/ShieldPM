@@ -18,8 +18,8 @@ Ermöglicht Zugriff auf Proxy-Hosts über `.onion`-Adressen. Nützlich für Priv
 ## Verhalten
 
 - Steuert den Tor-Prozess über `tor-control-port`
-- Schreibt Hidden-Service-Konfiguration nach `/data/tor/`
-- Liest `hostname`-Datei, um die Onion-Adresse anzuzeigen
+- Erzeugt laufende Onion-Dienste über `ADD_ONION` und stoppt sie über `DEL_ONION`
+- Speichert Onion-Adresse und verschlüsselten privaten Service-Schlüssel in der Datenbank
 - Aktivierung über Umgebungsvariable `TOR_ENABLED`
 - Die Icon-Aktionen für Aktualisieren, Hilfe, Adresse kopieren, Starten/Stoppen, Bearbeiten und Löschen haben
   lokalisierte zugängliche Namen. `TorOnionServices.test.tsx` prüft diese Namen mit der deutschen Locale.
@@ -36,6 +36,18 @@ Beim Erstellen oder Starten eines Onion-Service lädt `syncProxyHost()` den verk
 ### Validierung und Geheimnisse
 
 Virtueller und Zielport müssen vollständig ganzzahlige Werte zwischen 1 und 65535 sein. Teilweise numerische Strings mit zusätzlichen Tor-Control-Befehlen werden vor der Verbindung abgewiesen. Beim Stoppen wird die vollständige Onion-Adresse geprüft. Antworten auf `ADD_ONION`, die private Schlüssel enthalten können, werden nicht vollständig protokolliert.
+
+### Berechtigungen und verlässliches Stoppen
+
+Das Verknüpfen eines Onion-Service setzt zusätzlich die Änderungsberechtigung für den betroffenen Proxy-Host voraus. Eingeschränkte Sichtbarkeit begrenzt diese Verknüpfung auf eigene Hosts. Die eingebettete Proxy-Host-Relation in API-Antworten enthält nur die ID und Domains, keine SSH-, Git- oder sonstigen privaten Host-Felder.
+
+Stop gilt nur bei bestätigtem `DEL_ONION` oder einem bereits nicht vorhandenen Service als erfolgreich. Andere ControlPort-Fehler erzeugen Fehlerstatus und verhindern, dass Delete oder Restart dennoch Erfolg melden. Insbesondere bleibt der Datenbankeintrag bei fehlgeschlagenem Stop erhalten. REST-Mutationen beachten die globale Sichtbarkeit `all` ebenso wie den Owner-Scope eingeschränkter Berechtigungen.
+
+### Wechsel des verknüpften Proxy-Hosts
+
+REST und KI verwenden denselben internen Update-Service. Er prüft den Zugriff auf bisherigen und neuen Host, verschiebt die Onion-Domain zusammen mit der Service-Zuordnung in einer Datenbanktransaktion und behält Sicherungen beider Nginx-Dateien bis zum Commit. Bei einem Fehler werden Datenbank und vorherige Dateien wiederhergestellt. Der bisherige Host muss mindestens eine Domain behalten.
+
+Ein verspätetes Tor-Start-Ergebnis lädt vor der Domain-Synchronisierung die aktuelle Service-Zuordnung erneut. So fügt es die Onion-Adresse nicht wieder einem inzwischen abgelösten Host hinzu.
 
 ## Offene Fragen
 

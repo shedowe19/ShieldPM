@@ -118,6 +118,11 @@ export function useUsers() {
 }
 ```
 
+Nach einem GitOps-Import invalidiert `useImportFromGit` den gesamten Query-Cache. Der Import kann neben Hosts und
+Zugriffslisten auch Benutzer, Zertifikate, Einstellungen, DDNS und Tunnel verändern; einzelne Detailabfragen müssen
+entsprechend ebenfalls neu geladen werden. Auch eine abgeschlossene Importantwort mit gemeldeten Teilfehlern kann
+bereits Änderungen enthalten. `useGitOps.test.tsx` prüft diese Invalidierung mit einem echten Query-Client.
+
 ## Verwandte Seiten
 
 - [Frontend-Internas](./frontend-internas.md)

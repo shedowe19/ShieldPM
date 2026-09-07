@@ -90,6 +90,14 @@ export { up, down };
 
 - `20260907000000_fix_analytics_log_created_at` — numerischer Standardwert für `analytics_logs.created_at`; gültige alte SQLite-Zeitstempeltexte werden in Unix-Millisekunden umgerechnet. Neue Logeinträge setzen den tatsächlichen Erfassungszeitpunkt im Dienst. Die ursprüngliche Tabellenmigration verwendet ebenfalls den kompatiblen numerischen Standardwert, damit PostgreSQL-Neuinstallationen funktionieren.
 
+## Datenintegrität bei Migrationen
+
+Die Schema-Callbacks von Knex bleiben synchron; Datenänderungen werden erst nach Abschluss der Schemaänderung ausgeführt und vollständig abgewartet. Bereits vorhandene Rate-Limit-Spalten werden vor DDL geprüft, weil ein abgefangener Duplicate-Column-Fehler die PostgreSQL-Transaktion trotzdem abbrechen würde. JSON-Metadaten werden sowohl als Zeichenkette als auch als natives Treiberobjekt verarbeitet; der AI-Prompt-Reset erhält alle übrigen Konfigurationswerte.
+
+Beim Rollback der Domainnormalisierung werden die aktuellen Domainrelationen in die Legacy-Spalte zurückgeschrieben. Damit bleiben zwischenzeitliche Neuanlagen und Umbenennungen erhalten. Der mTLS-Rollback schreibt die aktuellen Werte zurück in `meta`; der Rate-Limit-Rollback entfernt alle drei zugehörigen Spalten.
+
+Die Tests `backend/test/migrations/full-schema.spec.js` und `data-preservation.spec.js` führen diese Abläufe mit SQLite und der echten PostgreSQL-Engine in PGlite aus. Dabei werden nur die externen Nginx-Aktionen gemockt. Änderungen historischer Migrationen wirken auf noch nicht ausgeführte Upgrades und auf Rollbacks; bereits durch frühere Versionen verlorene Werte lassen sich daraus nicht automatisch rekonstruieren.
+
 ## Wechsel der Datenbank-Engine
 
 Der SQLite-Import in `backend/lib/db-migrate.js` ist vom Knex-Schema-Upgrade getrennt. Er setzt gleiche ausgeführte Migrationen auf Quelle und Ziel voraus und importiert Anwendungsdaten atomar. Ablauf, Schutz vor Teilimporten und erhaltene Quelldateien sind unter [Datenbank](./datenbank.md#wechsel-von-sqlite-zu-mysql-oder-postgresql) dokumentiert.

@@ -14,8 +14,8 @@ Der AI-Agent ermöglicht natürlichsprachliche Interaktion mit ShieldPM — sowo
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `frontend/src/components/AiChat/AiChatLauncher.tsx` | Gemeinsamer Sidebar-Trigger und bedarfsorientierter Loader für genau eine Chat-Instanz                       |
 | `frontend/src/components/AiChat/AiChat.tsx`         | Seitlicher KI-Chat-Dialog mit lokalisierten Screenreader-Labels; wird erst nach einer Trigger-Aktion geladen |
-| `backend/internal/ai.js` (14 KB)                    | AI-Verwaltung (Einstellungen, Provider-Config)                                                               |
-| `backend/internal/ai/executor.js` (33 KB)           | Chat-Loop-Orchestrator                                                                                       |
+| `backend/internal/ai.js` (14 KB)                    | AI-Verwaltung und Chat-Loop                                                                                  |
+| `backend/internal/ai/executor.js` (33 KB)           | Ausführung strukturierter Tool-Aufrufe                                                                       |
 | `backend/internal/ai/providers.js` (9 KB)           | Provider-Abstraktion (Gemini, Ollama, OpenAI)                                                                |
 | `backend/internal/ai/tools.js` (27 KB)              | Ausführbare Funktionen für den AI-Agent                                                                      |
 | `backend/internal/ai/prompt.js` (10 KB)             | System-Prompt                                                                                                |
@@ -74,9 +74,9 @@ protokolliert. Administratoren mit Sichtbarkeit `all` behalten die Möglichkeit,
 ## Verhalten
 
 1. UI oder ChatOps schickt eine Nachricht an `routes/ai.js`.
-2. `internal/ai/executor.js` startet den Chat-Loop: System-Prompt aus `prompt.js`, History des Threads, aktueller User-Input.
+2. `internal/ai.js` startet den Chat-Loop: System-Prompt aus `prompt.js`, History des Threads, aktueller User-Input.
 3. Der Provider (`providers.js`) ruft das LLM (Gemini, Ollama oder OpenAI-kompatibel) und liefert ggf. Tool-Calls zurück.
-4. Tool-Calls werden in `tools.js` gegen die internen ShieldPM-Module ausgeführt; das Ergebnis wandert zurück in den Loop.
+4. Tool-Calls werden anhand der Definitionen in `tools.js` durch `executor.js` gegen die internen ShieldPM-Module ausgeführt; das Ergebnis wandert zurück in den Loop.
 5. Final-Antwort wird zurück an Frontend/Telegram geschickt.
 
 ### Seitlicher Web-Chat
@@ -105,7 +105,15 @@ sodass es bei responsiven Wechseln nur eine Dialoginstanz gibt und der lokale Na
 
 Folgerunden behalten sämtliche bisherigen Assistant-Tool-Calls und Tool-Ergebnisse. Strukturierte Tool-Calls werden auch aus Folgeantworten gelesen, und die Tool-Definitionen werden erneut mitgesendet. Fehlerergebnisse behalten die zugehörige Tool-Call-ID. Netzwerkaufrufe lokaler beziehungsweise OpenAI-kompatibler Provider haben ein Zeitlimit von zwei Minuten.
 
-Das Tool `create_user` verlangt ein explizites Passwort mit mindestens acht Zeichen; ein vorhersehbares Standardpasswort wird nicht eingesetzt. Protokolle für aus Text extrahierte Tool-Aufrufe enthalten keine vollständigen Argumentobjekte, da diese Zugangsdaten enthalten können.
+Das Tool `create_user` verlangt ein explizites Passwort mit mindestens acht Zeichen; ein vorhersehbares Standardpasswort wird nicht eingesetzt.
+
+### Strukturierte Aktionen und Konto-Verträge
+
+Nur strukturierte Tool-Aufrufe des Providers dürfen Aktionen auslösen. JSON-Beispiele, XML-Fragmente oder Funktionsnamen in normalem Antworttext bleiben Text; eine nachträgliche Extraktion und Ausführung entfällt. Tool-Namen sind eindeutig. Fehlt nach Tool-Aufrufen eine finale Antwort, behauptet der Fallback keine erfolgreiche Änderung.
+
+`create_user` übergibt das deklarierte `auth.secret` als lokale Authentifizierung vom Typ `password`. Passwortänderungen übersetzen die Tool-Argumente in den Servicevertrag mit `secret` und gegebenenfalls `current`. Damit greifen Passwort-Hashing und bestehende Berechtigungsprüfungen des Benutzer-Service. Die Browser-Aktionen „als Benutzer anmelden“ und API-Token-Erstellung werden nicht als KI-Tools angeboten, da deren sichere Ausgabe beziehungsweise Sitzungsübernahme eine UI-Interaktion benötigt.
+
+Wartungsmodus-Tools nutzen ausschließlich die Nginx-Konfiguration durch `internalProxyHost.update()` und rendern keine zweite Konfiguration aus einer für öffentliche Antworten bereinigten Host-Kopie. Modelllisten-Anfragen haben zehn Sekunden Zeitlimit. Die Chat-Route protokolliert Nachrichtenlängen statt Nachrichteninhalte.
 
 ## Offene Fragen
 

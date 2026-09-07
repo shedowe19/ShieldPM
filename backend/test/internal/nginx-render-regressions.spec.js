@@ -52,6 +52,16 @@ describe("Nginx configuration regressions", () => {
 		expect(rendered).toContain("alias /data/assets/;");
 	});
 
+	it("confines managed static roots and blocks repository metadata", async () => {
+		await internalNginx.generateConfig(
+			"proxy_host",
+			host({ forward_scheme: "path", forward_host: "/data/websites/host-12" }),
+		);
+		const rendered = fs.promises.writeFile.mock.calls[0][1];
+		expect(rendered).toContain("disable_symlinks on;");
+		expect(rendered).toContain("location ~ /\\.git(?:/|$)");
+	});
+
 	it("uses internal certificate files for TLS streams", async () => {
 		await internalNginx.generateConfig(
 			"stream",
@@ -68,6 +78,46 @@ describe("Nginx configuration regressions", () => {
 		expect(rendered).toContain("/data/tls/internal/npm-2/privkey.pem");
 		expect(rendered).not.toContain("/data/tls/custom/npm-2/");
 	});
+
+	it.each([false, true])(
+		"renders valid independent limits and quoted OIDC data with Anubis=%s",
+		async (anubisEnabled) => {
+			await internalNginx.generateConfig(
+				"proxy_host",
+				host({
+					anubis_enabled: anubisEnabled,
+					bandwidth_limit: "1m",
+					adv_limit_req_rate: 10,
+					adv_limit_req_burst: null,
+					access_list_id: 4,
+					access_list: { meta: { auth_type: "oidc", oidc_client_secret: 'a"\\b\nsecret' } },
+				}),
+			);
+			const rendered = fs.promises.writeFile.mock.calls[0][1];
+			expect(rendered).toContain("set $calculated_rate 0;");
+			expect(rendered).toContain("local burst = 0");
+			expect(rendered).toContain('local key = "12_" .. ngx.var.binary_remote_addr');
+			expect(rendered).toContain('client_secret = "a\\034\\092b\\010secret"');
+		},
+	);
+
+	it.each([false, true])(
+		"exempts the Authentik outpost from its own auth subrequest with Anubis=%s",
+		async (anubisEnabled) => {
+			await internalNginx.generateConfig(
+				"proxy_host",
+				host({
+					anubis_enabled: anubisEnabled,
+					access_list_id: 4,
+					access_list: {
+						meta: { auth_type: "authentik_proxy", authentik_host: "https://auth.example.test" },
+					},
+				}),
+			);
+			const rendered = fs.promises.writeFile.mock.calls[0][1];
+			expect(rendered.match(/location \/outpost\.goauthentik\.io \{([^}]+)\}/)[1]).toContain("auth_request off;");
+		},
+	);
 
 	it.each([false, true])("retains terminal authentication with Anubis=%s", async (anubisEnabled) => {
 		await internalNginx.generateConfig(
@@ -97,12 +147,35 @@ describe("Nginx configuration regressions", () => {
 		expect(rendered).not.toContain('if ngx.var.uri == "/ws" then return end');
 	});
 
+	it.each([false, true])(
+		"requires verified client certificates on HTTP as well as HTTPS with Anubis=%s",
+		async (anubisEnabled) => {
+			await internalNginx.generateConfig(
+				"proxy_host",
+				host({
+					anubis_enabled: anubisEnabled,
+					access_list_id: 4,
+					access_list: { mtls_enabled: true, mtls_use_internal: true, meta: {} },
+				}),
+			);
+			const rendered = fs.promises.writeFile.mock.calls[0][1];
+			expect(rendered).toContain("if ($ssl_client_verify != SUCCESS) { return 403; }");
+			expect(rendered).toContain("ssl_verify_client on;");
+		},
+	);
+
 	it("does not overwrite an existing configuration when its backup fails", async () => {
 		vi.spyOn(fs.promises, "copyFile").mockRejectedValue(
 			Object.assign(new Error("permission denied"), { code: "EACCES" }),
 		);
 		const generate = vi.spyOn(internalNginx, "generateConfig");
-		await expect(internalNginx.configure({}, "proxy_host", host())).rejects.toThrow("permission denied");
+		await expect(
+			internalNginx.configure(
+				{ query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }) }) },
+				"proxy_host",
+				host(),
+			),
+		).rejects.toThrow("permission denied");
 		expect(generate).not.toHaveBeenCalled();
 	});
 
@@ -126,6 +199,23 @@ describe("Nginx configuration regressions", () => {
 		expect(configure).toHaveBeenCalledTimes(2);
 	});
 
+	it("does not reactivate a stale snapshot after its host was disabled", async () => {
+		for (const method of ["backupConfig", "generateConfig", "test", "deleteBackupConfig", "reload"]) {
+			vi.spyOn(internalNginx, method).mockResolvedValue();
+		}
+		const model = {
+			query: () => ({
+				findById: () => ({ select: async () => ({ enabled: false, is_deleted: false }) }),
+				where: () => ({ patch: async () => 1 }),
+			}),
+		};
+		await internalNginx.configure(model, "proxy_host", host({ enabled: true }));
+		expect(internalNginx.generateConfig).toHaveBeenCalledWith(
+			"proxy_host",
+			expect.objectContaining({ enabled: false }),
+		);
+	});
+
 	it("reports config deletion errors instead of claiming the host was disabled", async () => {
 		vi.spyOn(fs.promises, "unlink").mockRejectedValue(
 			Object.assign(new Error("read-only filesystem"), { code: "EROFS" }),
@@ -139,12 +229,58 @@ describe("Nginx configuration regressions", () => {
 		}
 		const restore = vi.spyOn(internalNginx, "restoreConfig").mockResolvedValue();
 		const patch = vi.fn().mockResolvedValue(1);
-		const model = { query: () => ({ where: () => ({ patch }) }) };
+		const model = {
+			query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }), where: () => ({ patch }) }),
+		};
 		internalAnubis.generatePolicy.mockRejectedValueOnce(new Error("policy unavailable"));
 		const meta = await internalNginx.configure(model, "proxy_host", host());
 		await Promise.resolve();
 		expect(meta.nginx_online).toBe(true);
 		expect(restore).not.toHaveBeenCalled();
 		expect(internalNginx.reload).toHaveBeenCalledOnce();
+	});
+
+	it("restores and reloads the previous configuration when activation fails", async () => {
+		for (const method of [
+			"backupConfig",
+			"generateConfig",
+			"test",
+			"renameConfigAsError",
+			"restoreConfig",
+			"deleteBackupConfig",
+		]) {
+			vi.spyOn(internalNginx, method).mockResolvedValue();
+		}
+		vi.spyOn(internalNginx, "reload").mockRejectedValueOnce(new Error("reload failed")).mockResolvedValueOnce();
+		const patch = vi.fn().mockResolvedValue(1);
+		const model = {
+			query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }), where: () => ({ patch }) }),
+		};
+		const meta = await internalNginx.configure(model, "proxy_host", host());
+		expect(meta.nginx_online).toBe(false);
+		expect(internalNginx.restoreConfig).toHaveBeenCalledOnce();
+		expect(internalNginx.deleteBackupConfig).not.toHaveBeenCalled();
+		expect(internalNginx.reload).toHaveBeenCalledTimes(2);
+	});
+
+	it("reloads the restored configuration even when database metadata writes keep failing", async () => {
+		for (const method of [
+			"backupConfig",
+			"generateConfig",
+			"test",
+			"renameConfigAsError",
+			"restoreConfig",
+			"reload",
+		]) {
+			vi.spyOn(internalNginx, method).mockResolvedValue();
+		}
+		const patch = vi.fn().mockRejectedValue(new Error("database unavailable"));
+		const model = {
+			query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }), where: () => ({ patch }) }),
+		};
+		await expect(internalNginx.configure(model, "proxy_host", host())).rejects.toThrow("database unavailable");
+		expect(internalNginx.restoreConfig).toHaveBeenCalledOnce();
+		expect(internalNginx.reload).toHaveBeenCalledTimes(2);
+		expect(internalNginx.reload.mock.invocationCallOrder[1]).toBeLessThan(patch.mock.invocationCallOrder[1]);
 	});
 });

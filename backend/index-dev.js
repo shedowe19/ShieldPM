@@ -1,20 +1,35 @@
 #!/usr/bin/env node
 
-process.env.DATA_PATH = `${process.cwd()}/data`;
-process.env.INITIAL_ADMIN_EMAIL = "admin@example.com";
-process.env.INITIAL_ADMIN_PASSWORD = "changeme";
-process.env.INITIAL_DEFAULT_PAGE = "congratulations";
+process.env.DATA_PATH ||= `${process.cwd()}/data`;
+process.env.INITIAL_ADMIN_EMAIL ||= "admin@example.com";
+process.env.INITIAL_ADMIN_PASSWORD ||= "changeme";
+process.env.INITIAL_DEFAULT_PAGE ||= "congratulations";
 
-import app from "./app.js";
-import analyticsService from "./internal/analytics.js";
-import internalCertificate from "./internal/certificate.js";
-import internalIpRanges from "./internal/ip_ranges.js";
-import internalNginx from "./internal/nginx.js";
-import utils from "./lib/utils.js";
-import { global as logger } from "./logger.js";
-import { migrateUp } from "./migrate.js";
-import { getCompiledSchema } from "./schema/index.js";
-import setup from "./setup.js";
+// Imports initialize configuration and database connections, so the development
+// environment must be established before evaluating any application module.
+const [
+	{ default: app },
+	{ default: analyticsService },
+	{ default: internalCertificate },
+	{ default: internalIpRanges },
+	{ default: internalNginx },
+	{ default: utils },
+	{ global: logger },
+	{ migrateUp },
+	{ getCompiledSchema },
+	{ default: setup },
+] = await Promise.all([
+	import("./app.js"),
+	import("./internal/analytics.js"),
+	import("./internal/certificate.js"),
+	import("./internal/ip_ranges.js"),
+	import("./internal/nginx.js"),
+	import("./lib/utils.js"),
+	import("./logger.js"),
+	import("./migrate.js"),
+	import("./schema/index.js"),
+	import("./setup.js"),
+]);
 
 // Monkey patch internalNginx
 internalNginx.test = async () => true;
@@ -70,9 +85,8 @@ async function start() {
 		await getCompiledSchema();
 
 		const port = 3000;
-		app.listen(port, () => {
+		app.listen(port, "127.0.0.1", () => {
 			logger.info(`Backend listening on port ${port}`);
-			logger.info(`Admin: ${process.env.INITIAL_ADMIN_EMAIL} / ${process.env.INITIAL_ADMIN_PASSWORD}`);
 		});
 	} catch (err) {
 		logger.error("Startup Error", err);

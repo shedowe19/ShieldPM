@@ -33,7 +33,7 @@
 					"type": "object",
 					"additionalProperties": false,
 					"required": [
-						"provider"
+						"id"
 					],
 					"properties": {
 						"id": {

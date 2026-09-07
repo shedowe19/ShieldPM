@@ -104,7 +104,7 @@ describe("Proxy host table pagination", () => {
 			if (params.page === 2) {
 				visitedEmptyPage = true;
 				return {
-					data: createPage([], 2, 100),
+					data: createPage([], 2, 0),
 					isError: false,
 					isFetching: false,
 					isLoading: false,
@@ -112,7 +112,7 @@ describe("Proxy host table pagination", () => {
 			}
 
 			return {
-				data: createPage(createHosts(100), 1, visitedEmptyPage ? 100 : 200),
+				data: createPage(createHosts(100), 1, visitedEmptyPage ? 0 : 200),
 				isError: false,
 				isFetching: false,
 				isLoading: false,

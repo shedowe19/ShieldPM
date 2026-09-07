@@ -13,6 +13,7 @@ GitOps ermöglicht es, die gesamte ShieldPM-Konfiguration in einem Git-Repositor
 - `backend/internal/gitops.js` (38 KB) — Haupt-Business-Logik (größtes Modul)
 - `backend/internal/git-deploy.js` (11 KB) — Auto-Deploy von Git-Repos
 - `backend/routes/gitops.js` (3 KB) — API-Routen
+- `frontend/src/pages/Settings/GitOps.tsx` — Konfiguration und manuelle Aktionen
 
 ## Verhalten
 
@@ -39,7 +40,21 @@ Vor Import und Export prüft `backend/lib/gitops-files.js` den Konfigurationsbau
 
 Nach erfolgreichem Revert wird ausschließlich der Backend-Prozess per SIGTERM neu gestartet; PID 1 des Containers oder nativen Hosts wird nicht signalisiert.
 
-Unklar: Der Import ist weiterhin nicht als Gesamttransaktion über alle Module implementiert. Bereits erfolgreich importierte Objekte bleiben bei späteren Fehlern bestehen. GitOps verwendet `isomorphic-git` über HTTP(S); native SSH-Schlüssel-Authentifizierung wird nicht unterstützt, auch wenn die Oberfläche eine entsprechende Auswahl anbietet.
+Unklar: Der Import ist weiterhin nicht als Gesamttransaktion über alle Module implementiert. Bereits erfolgreich importierte Objekte bleiben bei späteren Fehlern bestehen. GitOps verwendet `isomorphic-git` über HTTP(S); native SSH-Schlüssel-Authentifizierung wird nicht unterstützt. Die Oberfläche bietet deshalb ausschließlich Token-Authentifizierung an.
+
+### Einstellungen und manuelle Aktionen
+
+Die GitOps-Seite zeigt bei fehlgeschlagener Erstabfrage keine speicherbaren Standardwerte an. Verbindungstests und Git-Aktionen verwenden die gespeicherte Backend-Konfiguration und bleiben gesperrt, solange die angezeigten Einstellungen ungespeicherte Änderungen enthalten. Während einer Mutation sind weitere Git-Aktionen und Änderungen der Konfiguration gesperrt. Ein neu eingegebener Token wird nach erfolgreichem Speichern aus dem Formular entfernt; leere Token-Felder erhalten die gespeicherten Zugangsdaten.
+
+Import- und Revert-Dialoge schließen nur bei einer Antwort mit `success: true`. Die Seitenzustände werden in `frontend/src/pages/Settings/GitOps.test.tsx` geprüft.
+
+### Synchronisation und Wiederholungen
+
+Jedes exportierte Modul enthält eine `.gitkeep`-Datei. Damit bleibt auch ein leeres Modul im Git-Commit erhalten und ein vollständiger Restore kann dessen letztes Objekt löschen. Fehlende Verzeichnisse älterer Backups bleiben weiterhin unverändert. `overwrite` akzeptiert nur einen echten Boolean; Fehler beim Abruf zu löschender Objekte werden als Importfehler zurückgegeben.
+
+Vor dem Commit werden entfernte Dateien ausdrücklich aus dem Git-Index gelöscht. Ein erneuter Push wird auch bei unverändertem Arbeitsverzeichnis ausgeführt, damit ein zuvor fehlgeschlagener Upload nachgeholt wird. Vor Push und Pull wird `origin` auf die aktuell konfigurierte URL gesetzt; Zugangsdaten gehen dadurch nicht an einen früheren Repository-Endpunkt. Push verwendet den aktuellen lokalen Commit und den konfigurierten Remote-Branch.
+
+Sync-Metadaten liegen in `setting.meta`. Nach Netzwerkoperationen wird die private Konfiguration erneut geladen, damit zwischenzeitlich aktualisierte Zugangsdaten erhalten bleiben. Bereits ausgecheckte Exportdateien werden beim Schreiben ebenfalls auf Modus `0600` gesetzt. Regressionen prüfen echte lokale Git-Commits, Push-Wiederholungen und die Entschlüsselbarkeit unveränderter Zugangsdaten.
 
 ## Offene Fragen
 

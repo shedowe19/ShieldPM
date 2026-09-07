@@ -66,6 +66,12 @@ Beim Senden einer AI-Antwort:
 - `internal/ai/` — AI-Agent für Sprachverarbeitung
 - `internal/token.js` — JWT-Token-Erzeugung
 
+### Abbruch während des Bot-Starts
+
+Jede Bot-Instanz besitzt einen eigenen `AbortController`. Stoppen oder Ersetzen bricht auch laufende Telegram-Anfragen während `getMe` oder vor dem Beginn des Pollings ab. Ein noch nicht vollständig gestarteter Bot bleibt dadurch nicht nach einem Stop im Hintergrund aktiv.
+
+Die Instanz wird bereits vor `launch()` registriert. Verspätete Fehler eines ersetzten Bots dürfen den Nachfolger nicht aus dem Cache entfernen; dessen Middleware verarbeitet nur Nachrichten der noch aktuellen Instanz. `chat-lifecycle.spec.js` prüft diese Übergänge mit verzögertem Verbindungsaufbau.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

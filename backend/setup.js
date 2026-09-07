@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import internalNginx from "./internal/nginx.js";
+import { validatePasswordAuth } from "./lib/auth-password.js";
 import { installPlugins } from "./lib/certbot.js";
 import utils from "./lib/utils.js";
 import { setup as logger } from "./logger.js";
@@ -23,8 +24,8 @@ export const isSetup = async () => {
  *
  * @returns {Promise<void>}
  */
-const setupDefaultUser = async () => {
-	const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
+export const setupDefaultUser = async () => {
+	const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase();
 	const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
 
 	// This will only create a new user when there are no active users in the database
@@ -38,6 +39,7 @@ const setupDefaultUser = async () => {
 
 	const userIsetup = await isSetup();
 	if (!userIsetup) {
+		validatePasswordAuth({ type: "password", secret: initialAdminPassword });
 		// Create a new user and set password
 		logger.info(`Creating initial admin user: ${initialAdminEmail} (password: [HIDDEN])`);
 
@@ -50,24 +52,26 @@ const setupDefaultUser = async () => {
 			roles: ["admin"],
 		};
 
-		const user = await userModel.query().insertAndFetch(data);
+		await userModel.transaction(async (trx) => {
+			const user = await userModel.query(trx).insertAndFetch(data);
 
-		await authModel.query().insert({
-			user_id: user.id,
-			type: "password",
-			secret: initialAdminPassword,
-			meta: {},
-		});
+			await authModel.query(trx).insert({
+				user_id: user.id,
+				type: "password",
+				secret: initialAdminPassword,
+				meta: {},
+			});
 
-		await userPermissionModel.query().insert({
-			user_id: user.id,
-			visibility: "all",
-			proxy_hosts: "manage",
-			redirection_hosts: "manage",
-			dead_hosts: "manage",
-			streams: "manage",
-			access_lists: "manage",
-			certificates: "manage",
+			await userPermissionModel.query(trx).insert({
+				user_id: user.id,
+				visibility: "all",
+				proxy_hosts: "manage",
+				redirection_hosts: "manage",
+				dead_hosts: "manage",
+				streams: "manage",
+				access_lists: "manage",
+				certificates: "manage",
+			});
 		});
 		logger.info("Initial admin setup completed. Credentials stored securely in DB; password output suppressed.");
 	}
@@ -78,8 +82,8 @@ const setupDefaultUser = async () => {
  *
  * @returns {Promise<void>}
  */
-const setupDefaultSettings = async () => {
-	let rowds = await settingModel.query().select("id").where({ id: "default-site" }).first();
+export const setupDefaultSettings = async () => {
+	let rowds = await settingModel.query().where({ id: "default-site" }).first();
 	if (!rowds?.id) {
 		await settingModel.query().insert({
 			id: "default-site",
@@ -89,7 +93,7 @@ const setupDefaultSettings = async () => {
 			meta: {},
 		});
 		logger.info("Default settings added");
-		rowds = await settingModel.query().select("id").where({ id: "default-site" }).first();
+		rowds = await settingModel.query().where({ id: "default-site" }).first();
 	}
 
 	const rowoidc = await settingModel.query().select("id").where({ id: "oidc-config" }).first();
@@ -182,7 +186,7 @@ const setupCertbotPlugins = async () => {
  *
  * @returns {Promise<void>}
  */
-const regenerateAllHosts = async () => {
+export const regenerateAllHosts = async () => {
 	if (process.env.REGENERATE_ALL === "true") {
 		const proxy_hosts = await proxyModel
 			.query()
@@ -211,7 +215,7 @@ const regenerateAllHosts = async () => {
 			.withGraphFetched("[certificate]");
 
 		if (dead_hosts?.length) {
-			await internalNginx.bulkGenerateConfigs(deadModel, "proxy_host", dead_hosts);
+			await internalNginx.bulkGenerateConfigs(deadModel, "dead_host", dead_hosts);
 		}
 
 		const streams = await streamModel

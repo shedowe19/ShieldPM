@@ -93,3 +93,11 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Host (gemeinsame Logik)](./host.md)
 - [IP-Ranges](./ip-ranges.md)
 - [Modulübersicht](./README.md)
+
+## Aktivierung und gemeinsame Dateisperre
+
+Die Sicherung bleibt bis zum erfolgreichen Reload erhalten. Scheitert die Aktivierung, wird die vorige Konfiguration wiederhergestellt und neu geladen; die Antwort enthält `nginx_online: false`. Der Rollback-Reload erfolgt vor dem Schreiben der Fehlermetadaten, damit ein Datenbankausfall ihn nicht überspringen kann. `withConfigurationLock(callback)` stellt auch Zertifikatsaktivierungen, Default-Site-Wechsel sowie Löschen/Deaktivieren von Hosts in dieselbe Warteschlange. Der Callback darf `test()` und `reload()`, aber nicht erneut `configure()` aufrufen.
+
+Vor der Verarbeitung eines gespeicherten Hostzustands liest `configureHost()` die aktuellen Flags `enabled` und `is_deleted` erneut. Inzwischen deaktivierte, gelöschte oder entfernte Hosts erhalten dadurch keine aktiven Listener. Das Lesen interner Nginx-Logs prüft die vorhandene Berechtigung `settings:get`. Die Regressionstests prüfen außerdem den Reload-Fehlerpfad und die Reihenfolge der Warteschlange.
+
+Auch die abschließenden Reloads von Access-List-, Wartungs- und Tor-Sammelläufen sowie Zertifikatserneuerungen werden eingereiht. Der IP-Range-Abruf lädt externe Daten vorab und schützt anschließend Schreiben und Reload gemeinsam. So lädt kein Hintergrundauftrag eine gerade teilweise erzeugte Hostkonfiguration.

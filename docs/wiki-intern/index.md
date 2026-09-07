@@ -183,7 +183,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 | `chat.js`                    | `/api/chat`                      | ChatOps / Telegram                      |
 | `gitops.js`                  | `/api/gitops`                    | GitOps Pull/Push                        |
 | `ai.js`                      | `/api/ai`                        | AI-Agent                                |
-| `password-reset.js`          | `/api/password-reset`            | Passwort-Reset                          |
+| `password-reset.js`          | CLI, kein API-Endpunkt           | SQLite-Passwort-Reset                   |
 | `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`         | proxy-host                              |
 | `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`   | redirection-host                        |
 | `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`          | dead-host                               |

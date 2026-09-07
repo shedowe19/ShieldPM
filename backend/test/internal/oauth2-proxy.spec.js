@@ -188,4 +188,19 @@ describe("OAuth2 proxy configuration and process lifecycle", () => {
 		expect(old.kill).toHaveBeenCalledWith("SIGKILL");
 		expect(mocks.spawn).toHaveBeenCalledTimes(2);
 	});
+
+	it("serializes an explicit stop with a subsequent start until the old socket owner exits", async () => {
+		const old = makeChild();
+		old.kill.mockReturnValue(true);
+		mocks.spawn.mockReturnValueOnce(old).mockReturnValueOnce(makeChild());
+		await oauth2.start(list(508));
+		const stopped = oauth2.stop(508);
+		await vi.advanceTimersByTimeAsync(0);
+		const restarted = oauth2.start(list(508));
+		await vi.advanceTimersByTimeAsync(0);
+		expect(mocks.spawn).toHaveBeenCalledTimes(1);
+		old.emit("exit", null, "SIGTERM");
+		await Promise.all([stopped, restarted]);
+		expect(mocks.spawn).toHaveBeenCalledTimes(2);
+	});
 });

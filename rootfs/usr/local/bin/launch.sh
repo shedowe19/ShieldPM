@@ -17,7 +17,7 @@ if [ -z "$(find /data/tls/certbot/accounts/"$(echo "$ACME_SERVER" | sed "s|^http
             sleep inf
         fi
 
-        ZS_EAB="$(curl -sSL https://api.zerossl.com/acme/eab-credentials-email --data "email=$ACME_EMAIL")"
+        ZS_EAB="$(curl --fail --silent --show-error --location --max-time 30 https://api.zerossl.com/acme/eab-credentials-email --data-urlencode "email=$ACME_EMAIL")" || exit 1
         export ZS_EAB
         ACME_EAB_KID="$(echo "$ZS_EAB" | jq -r .eab_kid)"
         export ACME_EAB_KID
@@ -56,7 +56,7 @@ if ! nginx -tq; then
     for conf in /data/nginx/proxy_host/*.conf /data/nginx/redirection_host/*.conf /data/nginx/dead_host/*.conf /data/nginx/stream/*.conf; do
         if [ -f "$conf" ]; then
             # Extract certificate paths referenced in the config
-            missing_certs=$(grep -oE '/data/tls/certbot/live/npm-[0-9]+/fullchain\.pem|/data/tls/custom/npm-[0-9]+/fullchain\.pem' "$conf" || true)
+            missing_certs=$(grep -oE '/data/tls/(certbot/live|custom|internal)/npm-[0-9]+/(fullchain|privkey)\.pem' "$conf" || true)
             for cert in $missing_certs; do
                 if [ ! -f "$cert" ]; then
                     echo "Deleting $conf because $cert is missing!"

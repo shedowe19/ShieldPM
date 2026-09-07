@@ -68,6 +68,14 @@ Peer-Namen, DNS-Angaben und Allowed-IPs dürfen keine Steuerzeichen oder Zeilenu
 
 Ein expliziter Keepalive-Wert `0` bleibt erhalten. Die Adressvergabe reserviert die tatsächlich konfigurierte Serveradresse zusätzlich zu den bereits belegten Peer-Adressen.
 
+### Adressvergabe und Laufzeitzustand
+
+Ein Backend-Neustart aktiviert zuvor deaktivierte Peers nicht. Peer-Erstellungen und Änderungen der Servereinstellungen teilen sich eine Warteschlange einschließlich Schlüsselerzeugung und IP-Auswahl. Gleichzeitige Anfragen vergeben dadurch weder identische Client-Adressen noch Adressen aus einem inzwischen ersetzten Subnetz.
+
+Subnetz und Serveradresse verlangen kanonische IPv4-Adressen mit vier Dezimaloktetten. Eine Änderung darf bestehende Peer-Adressen weder aus dem Subnetz ausschließen noch mit der Serveradresse kollidieren. Bei einer Änderung der Interface-Adresse wird das Interface neu gestartet, weil `wg syncconf` diese Adresse nicht aktualisiert. Schlägt auch der Neustart-Fallback fehl, wird der Fehler weitergegeben. Schlüsselbefehle haben ein Zeitlimit und behandeln geschlossene Standardeingabe-Pipes.
+
+Ändern, Löschen, Aktivieren und Deaktivieren beachten die `permission_visibility` ihrer Capability. Downloads privater Peer-Konfigurationen bleiben auf den jeweiligen Eigentümer begrenzt.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

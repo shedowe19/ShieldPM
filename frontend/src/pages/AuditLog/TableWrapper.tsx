@@ -7,6 +7,7 @@ import {
 	IconSearch,
 } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -154,6 +155,15 @@ export default function TableWrapper() {
 	});
 	const rows = data?.items ?? [];
 	const pagination = data?.pagination;
+	useEffect(() => {
+		if (!isFetching && pagination?.page === page && page > Math.max(1, pagination.totalPages)) {
+			const params = new URLSearchParams(searchParams);
+			const lastPage = Math.max(1, pagination.totalPages);
+			if (lastPage === 1) params.delete("page");
+			else params.set("page", String(lastPage));
+			setSearchParams(params, { replace: true });
+		}
+	}, [isFetching, page, pagination, searchParams, setSearchParams]);
 	const downloadCsv = () => {
 		const csv = createAuditLogCsv(rows, {
 			action: intl.formatMessage({ id: "audit-log.csv.action" }),

@@ -13,6 +13,7 @@ import {
 } from "@/api/backend";
 import type { ChatIntegration } from "@/api/backend/models";
 import { SiteContainer as Container } from "@/components/SiteContainer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -34,7 +35,11 @@ export default function ChatOps() {
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
 
-	const { data: integrations, isLoading } = useQuery({
+	const {
+		data: integrations,
+		isLoading,
+		error,
+	} = useQuery({
 		queryKey: ["chat-integrations"],
 		queryFn: getChatIntegrations,
 	});
@@ -55,7 +60,7 @@ export default function ChatOps() {
 		if (existing) {
 			form.reset({
 				token: "********", // Don't show real encrypted token
-				allowed_ids: existing.config?.allowed_ids?.join(", ") || "",
+				allowed_ids: existing.config?.allowedIds?.join(", ") || "",
 				enabled: existing.enabled,
 			});
 		}
@@ -109,7 +114,10 @@ export default function ChatOps() {
 			token: values.token === "********" ? undefined : values.token, // Don't send masked token
 			enabled: values.enabled,
 			config: {
-				allowed_ids: values.allowed_ids.split(",").map((s) => s.trim()),
+				allowedIds: values.allowed_ids
+					.split(",")
+					.map((s) => s.trim())
+					.filter(Boolean),
 			},
 		};
 
@@ -121,6 +129,12 @@ export default function ChatOps() {
 	};
 
 	if (isLoading) return <Loader2 className="animate-spin" />;
+	if (error)
+		return (
+			<Alert variant="destructive">
+				<AlertDescription>{error.message}</AlertDescription>
+			</Alert>
+		);
 
 	return (
 		<Container>

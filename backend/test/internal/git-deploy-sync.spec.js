@@ -78,4 +78,25 @@ describe("Git Deploy synchronization", () => {
 		await expect(first).resolves.toMatchObject({ success: true });
 		await expect(second).resolves.toMatchObject({ success: true });
 	});
+	it.each(["deleted", "changed"])(
+		"does not apply a checkout when the host was %s during the network request",
+		async (state) => {
+			let release;
+			mocks.clone.mockImplementation(
+				() =>
+					new Promise((resolve) => {
+						release = resolve;
+					}),
+			);
+			const pending = gitDeploy.sync(null, 7);
+			await vi.waitFor(() => expect(mocks.clone).toHaveBeenCalledOnce());
+			mocks.host =
+				state === "deleted"
+					? undefined
+					: { ...mocks.host, git_repo_url: "https://git.example/changed-again.git" };
+			release();
+			await expect(pending).resolves.toMatchObject({ success: false });
+			expect(mocks.patch).not.toHaveBeenCalled();
+		},
+	);
 });

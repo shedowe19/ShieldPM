@@ -68,3 +68,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Proxy-Host](./proxy-host.md)
 - [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)
 - [Modulübersicht](./README.md)
+
+## Zusätzliche Lebenszyklusabsicherung
+
+Auch ein expliziter `stop()` läuft in derselben Liste-Warteschlange wie `start()`. Ein unmittelbar folgender Start wartet auf das Ende des bisherigen Socketbesitzers. Beim Backendstart zählen ausschließlich aktivierte Hosts. Bestehende Dateien mit erlaubten E-Mail-Adressen werden ebenfalls auf `0600` gesetzt. Präfixe ohne abschließenden Slash werden in Nginx und OAuth2-Proxy einheitlich ergänzt.

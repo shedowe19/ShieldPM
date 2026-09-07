@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { changeLocale } from "src/locale";
 import { FORWARD_SCHEME } from "src/types/enums";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,4 +42,27 @@ describe("LocationsFields", () => {
 		const advancedSettingsButton = screen.getByRole("button", { name: "Erweiterte Einstellungen" });
 		expect(advancedSettingsButton).toHaveAttribute("aria-label", "Erweiterte Einstellungen");
 	});
+});
+
+it("keeps the same focused input while a location path is edited", () => {
+	render(
+		<LocationsFields
+			initialValues={[
+				{
+					path: "/",
+					advancedConfig: "",
+					forwardQuery: "",
+					forwardScheme: FORWARD_SCHEME.HTTP,
+					forwardHost: "127.0.0.1",
+					forwardPort: 80,
+				},
+			]}
+		/>,
+	);
+	const input = screen.getByDisplayValue("/");
+	input.focus();
+	fireEvent.change(input, { target: { value: "/app" } });
+	expect(screen.getByDisplayValue("/app")).toBe(input);
+	expect(input).toHaveFocus();
+	cleanup();
 });

@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const { execFileSync } = require('node:child_process');
+const { isIP } = require('node:net');
 
 // Utility to read env vars with defaults
 const getEnv = (key, defaultVal) => process.env[key] || defaultVal;
@@ -10,10 +11,10 @@ const getEnvBool = (key, defaultVal) => {
 };
 
 // Check if a string is a valid IPv4
-const isIPv4 = (ip) => /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
+const isIPv4 = (ip) => isIP(ip) === 4;
 
 // Check if a string is a valid IPv6
-const isIPv6 = (ip) => /^\[[0-9a-f:]+\]$/.test(ip);
+const isIPv6 = (ip) => ip.startsWith('[') && ip.endsWith(']') && isIP(ip.slice(1, -1)) === 6;
 
 // Check if a string is a valid integer
 const isInt = (val) => /^\d+$/.test(val);
@@ -125,11 +126,12 @@ if (process.env.ACME_KEY_TYPE && !['ecdsa', 'rsa'].includes(process.env.ACME_KEY
 
 // ACME Profile Check
 const acmeProfile = getEnv('ACME_PROFILE', 'none');
+if (/[^A-Za-z0-9_-]/.test(acmeProfile)) fatal('ACME_PROFILE needs to be an alphanumeric profile name.');
 if (acmeProfile !== 'none') {
     try {
-        const res = execFileSync('curl', ['-sSL', acmeServer], { encoding: 'utf8' });
+        const res = execFileSync('curl', ['-fsSL', '--connect-timeout', '10', '--max-time', '30', acmeServer], { encoding: 'utf8', timeout: 35000 });
         const json = JSON.parse(res);
-        if (!json.meta || !json.meta.profiles || !json.meta.profiles[acmeProfile]) {
+        if (!json.meta?.profiles || !Object.hasOwn(json.meta.profiles, acmeProfile)) {
             fatal('The ACME_PROFILE seems to be not supported by the ACME_SERVER.');
         }
     } catch {
@@ -161,12 +163,16 @@ checkInt('GOA_PORT');
 checkInt('HTTP_PORT');
 checkInt('HTTPS_PORT');
 checkInt('HTTP3_ALT_SVC_PORT');
+for (const key of ['NPM_PORT', 'GOA_PORT', 'HTTP_PORT', 'HTTPS_PORT', 'HTTP3_ALT_SVC_PORT']) {
+    const port = Number(getEnv(key, exportsMap[key]));
+    if (!Number.isInteger(port) || port < 1 || port > 65535) fatal(`${key} needs to be between 1 and 65535.`);
+}
 
 const httpPort = getEnv('HTTP_PORT', '80');
 const httpsPort = getEnv('HTTPS_PORT', '443');
 const disableHttp = getEnv('DISABLE_HTTP', 'false');
 
-if (httpPort === httpsPort && disableHttp === 'false') {
+if (Number(httpPort) === Number(httpsPort) && disableHttp === 'false') {
     fatal('HTTP_PORT and HTTPS_PORT need to be different.');
 }
 

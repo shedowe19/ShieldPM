@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WireguardConfigModal } from "./WireguardConfigModal";
 import { getWireguardPeerConfig, getWireguardPeerQRCode } from "@/api/backend";
@@ -57,4 +57,29 @@ describe("WireguardConfigModal", () => {
 		await waitFor(() => expect(screen.queryByText("Loading")).not.toBeInTheDocument());
 		expect(screen.getByRole("button", { name: "Download Config" })).toBeDisabled();
 	});
+});
+
+it("ignores late responses from a previously selected peer", async () => {
+	let finishOld: (data: { config: string }) => void = () => {};
+	vi.mocked(getWireguardPeerConfig).mockReturnValueOnce(
+		new Promise((resolve) => {
+			finishOld = resolve;
+		}),
+	);
+	const { rerender } = render(<WireguardConfigModal open onOpenChange={vi.fn()} peerId={1} peerName="Old peer" />);
+	vi.mocked(getWireguardPeerConfig).mockResolvedValueOnce({ config: "New peer private key" });
+	rerender(<WireguardConfigModal open onOpenChange={vi.fn()} peerId={2} peerName="New peer" />);
+	await screen.findByText("New peer private key");
+	await act(async () => {
+		finishOld({ config: "Old peer private key" });
+	});
+	expect(screen.getByText("New peer private key")).toBeInTheDocument();
+	expect(screen.queryByText("Old peer private key")).not.toBeInTheDocument();
+});
+it("disables downloading the previous peer while a new configuration is loading", async () => {
+	const { rerender } = render(<WireguardConfigModal open onOpenChange={vi.fn()} peerId={1} peerName="Old peer" />);
+	await screen.findByText(/PrivateKey = example/);
+	vi.mocked(getWireguardPeerConfig).mockReturnValueOnce(new Promise(() => {}));
+	rerender(<WireguardConfigModal open onOpenChange={vi.fn()} peerId={2} peerName="New peer" />);
+	expect(screen.getByRole("button", { name: "Download Config" })).toBeDisabled();
 });

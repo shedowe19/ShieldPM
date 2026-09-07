@@ -44,3 +44,11 @@ Details: [Benutzer & Auth](../module/benutzer-auth.md), [2FA-Service](../module/
 ## Verwandte Seiten
 
 - [Umgebungsvariablen](./umgebungsvariablen.md)
+
+## API-Limits und Demo-Modus
+
+Das globale Limit von 500 Anfragen je IP in 15 Minuten gilt für die tatsächlichen Backendpfade wie `/users` und `/tokens`; der vorgeschaltete Nginx entfernt den äußeren `/api`-Präfix. Die engeren Limits für Authentifizierungsrouten gelten zusätzlich.
+
+Der Demo-Modus sperrt Änderungen an Benutzern einschließlich des Alias `me` sowie `PUT`-Änderungen globaler Einstellungen. Bei gesperrten internen Weiterleitungszielen werden auch Groß-/Kleinschreibung, abschließender DNS-Punkt und geklammerte IPv6-Adressen berücksichtigt. Diese Prüfung ersetzt keine Netzwerktrennung des Demo-Systems und keine DNS-Auflösungskontrolle.
+
+Regressionstests: `backend/test/routes/api-rate-limit.spec.js` prüft das echte Express-Limit über 501 Anfragen an einen unpräfigierten Backendpfad; `backend/test/lib/demo-mode.spec.js` prüft die tatsächlich verwendeten Methoden und Pfadvarianten.

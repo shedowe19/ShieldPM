@@ -13,7 +13,10 @@ vi.mock("../../models/access_list.js", () => ({
 				throw error;
 			}
 		},
-		query: () => ({ where: () => ({ patch: async (data) => Object.assign(state.config, data) }) }),
+		query: () => ({
+			where: () => ({ patch: async (data) => Object.assign(state.config, data) }),
+			insertAndFetch: async (data) => Object.assign(state.config, data, { id: 1 }),
+		}),
 	},
 }));
 vi.mock("../../models/access_list_auth.js", () => ({
@@ -61,7 +64,9 @@ vi.mock("../../models/access_list_client.js", () => ({
 vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
 vi.mock("../../models/now_helper.js", () => ({ default: () => "now" }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
-vi.mock("../../internal/nginx.js", () => ({ default: { reload: vi.fn(), bulkGenerateConfigs: vi.fn() } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: { reload: vi.fn(), bulkGenerateConfigs: vi.fn(), withConfigurationLock: (callback) => callback() },
+}));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { stop: vi.fn(), restart: vi.fn() } }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));
@@ -69,7 +74,7 @@ vi.mock("../../logger.js", () => ({ access: { info: vi.fn() } }));
 
 import service from "../../internal/access-list.js";
 
-const access = { can: vi.fn().mockResolvedValue(true) };
+const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 1 } };
 
 describe("access list credential updates", () => {
 	beforeEach(() => {
@@ -94,6 +99,48 @@ describe("access list credential updates", () => {
 		vi.spyOn(service, "build").mockImplementation(async () => {
 			state.events.push("build");
 		});
+	});
+
+	it("creates lists without optional credential entries", async () => {
+		state.items = [];
+		const result = await service.create(access, {
+			name: "Clients only",
+			clients: [{ address: "all", directive: "deny" }],
+		});
+		expect(result.id).toBe(1);
+		expect(state.items).toEqual([]);
+		expect(state.clients).toEqual([expect.objectContaining({ address: "all", directive: "deny" })]);
+	});
+
+	it("rolls back list creation when credential insertion fails", async () => {
+		state.fail = true;
+		await expect(
+			service.create(access, { name: "Failed", items: [{ username: "new", password: "new-password" }] }),
+		).rejects.toThrow("Database insert failed");
+		expect(state.config.name).toBe("Original");
+		expect(service.build).not.toHaveBeenCalled();
+	});
+
+	it("hashes passwords that only pretend to be bcrypt hashes", async () => {
+		await service.update(access, { id: 1, items: [{ username: "replace", password: "$2malformed" }] });
+		expect(state.items[0].password).toBe("$2b$hashed-$2malformed");
+	});
+
+	it.each([
+		{ authentik_host: "https://auth.test;include /tmp/injected;" },
+		{ oauth2_proxy_prefix: "/oauth2/; return 200;" },
+		{ oauth2_proxy_prefix: ["/oauth2/"] },
+		{ oauth2_allowed_emails: ["user@example.test"] },
+	])("rejects malformed SSO metadata before persistence: %j", async (meta) => {
+		await expect(service.update(access, { id: 1, meta })).rejects.toMatchObject({ status: 400 });
+		expect(service.get).not.toHaveBeenCalled();
+	});
+
+	it("loads current domains and certificates before regenerating assigned hosts", async () => {
+		await service.update(access, { id: 1, name: "Changed" });
+		expect(service.get.mock.calls[1][1].expand).toContain(
+			"proxy_hosts.[host_domains,certificate,access_list.[clients,items]]",
+		);
 	});
 
 	it("preserves unchanged credentials and waits for replacements before rebuilding", async () => {
@@ -196,9 +243,19 @@ describe("access list credential updates", () => {
 	it("masks credential hashes in expanded proxy-host access lists", () => {
 		const result = service.maskItems({
 			items: [{ username: "direct", password: "plaintext" }],
-			proxy_hosts: [{ access_list: { items: [{ username: "nested", password: "$2b$private-hash" }] } }],
+			proxy_hosts: [
+				{
+					terminal_password: "ssh-secret",
+					terminal_private_key: "ssh-key",
+					git_credentials: "git-secret",
+					certificate: { meta: { certificate_key: "pem-key" } },
+					access_list: { items: [{ username: "nested", password: "$2b$private-hash" }] },
+				},
+			],
 		});
 		expect(result.items[0]).toMatchObject({ password: "", hint: "********" });
-		expect(result.proxy_hosts[0].access_list.items[0]).toMatchObject({ password: "", hint: "********" });
+		expect(result.proxy_hosts[0].access_list.items[0]).toMatchObject({ hint: "********" });
+		expect(result.proxy_hosts[0].access_list.items[0]).not.toHaveProperty("password");
+		expect(JSON.stringify(result)).not.toMatch(/ssh-secret|ssh-key|git-secret|pem-key/);
 	});
 });
