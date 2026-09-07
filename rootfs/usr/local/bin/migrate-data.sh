@@ -26,7 +26,9 @@ relink_certbot_certificates() {
         certbot_lineage=${certbot_live##*/}
         for certbot_kind in cert chain fullchain privkey; do
             certbot_file="$certbot_live/$certbot_kind.pem"
-            [ -f "$certbot_file" ] && [ ! -L "$certbot_file" ] || continue
+            if [ ! -f "$certbot_file" ] || [ -L "$certbot_file" ]; then
+                continue
+            fi
             certbot_match=""
             certbot_version=0
             for certbot_archive in "$certbot_root/archive/$certbot_lineage/$certbot_kind"[0-9]*.pem; do
