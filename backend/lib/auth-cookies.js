@@ -1,3 +1,6 @@
+import { decrypt, encrypt } from "./encryption.js";
+import errs from "./error.js";
+
 /**
  * Centralized cookie helpers for auth tokens.
  *
@@ -9,6 +12,7 @@ const ACCESS_COOKIE = "shieldpm_jwt";
 const REFRESH_COOKIE = "shieldpm_refresh";
 const DUO_COOKIE = "shieldpm_duo";
 const DUO_COOKIE_PATH = "/api/tokens/2fa/duo";
+const DUO_COOKIE_PURPOSE = "shieldpm:duo-cookie:v1";
 
 const isSecure = (req) => req.secure || req.headers["x-forwarded-proto"] === "https";
 
@@ -55,13 +59,40 @@ export const clearAuthCookies = (res) => {
 // The redirect binding must survive a cross-site top-level navigation, but must
 // never be readable by JavaScript or shared with another host.
 export const setDuoCookie = (res, req, browserToken, expiresAt) => {
-	res.cookie(DUO_COOKIE, browserToken, {
+	const encrypted = encrypt(JSON.stringify({ purpose: DUO_COOKIE_PURPOSE, browserToken, expiresAt }));
+	res.cookie(DUO_COOKIE, encrypted, {
 		httpOnly: true,
 		secure: req.secure,
 		sameSite: "lax",
 		path: DUO_COOKIE_PATH,
 		maxAge: Math.max(0, expiresAt - Date.now()),
 	});
+};
+
+/** Read only authenticated, purpose-bound Duo cookies; never accept plaintext. */
+export const readDuoCookie = (req) => {
+	const cookie = req.cookies?.[DUO_COOKIE];
+	if (!cookie) return null;
+	try {
+		// The shared decrypt helper does not enforce this cookie's fixed format.
+		// This boundary requires a canonical 96-bit IV and full 128-bit GCM tag.
+		if (typeof cookie !== "string" || !/^[a-f0-9]{24}:(?:[a-f0-9]{2}){1,256}:[a-f0-9]{32}$/.test(cookie)) {
+			throw new errs.ValidationError("Invalid Duo cookie format");
+		}
+		const payload = JSON.parse(decrypt(cookie));
+		if (
+			payload?.purpose !== DUO_COOKIE_PURPOSE ||
+			typeof payload.browserToken !== "string" ||
+			!/^[A-Za-z0-9_-]{43}$/.test(payload.browserToken) ||
+			!Number.isFinite(payload.expiresAt) ||
+			payload.expiresAt <= Date.now()
+		) {
+			throw new errs.ValidationError("Invalid Duo cookie payload");
+		}
+		return payload.browserToken;
+	} catch {
+		throw new errs.ValidationError("Duo login cookie is invalid or expired");
+	}
 };
 
 export const clearDuoCookie = (res, req) => {

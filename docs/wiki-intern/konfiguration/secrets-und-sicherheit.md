@@ -18,10 +18,10 @@ Dokumentation geheimer Werte und Sicherheitsmechanismen.
 
 ## Interne Secrets
 
-| Datei             | Beschreibung                          |
-| ----------------- | ------------------------------------- |
-| `/data/keys.json` | JWT-Signaturschlüssel                 |
-| `/data/tls/*`     | SSL-Zertifikate und private Schlüssel |
+| Datei                      | Beschreibung                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `/data/shieldpm/keys.json` | JWT-Signaturschlüssel und persistenter `encryptionKey` für AES-GCM und serverseitige HMAC-Tags |
+| `/data/tls/*`              | SSL-Zertifikate und private Schlüssel                                                          |
 
 ## Sicherheitsmechanismen
 

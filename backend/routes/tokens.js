@@ -1,8 +1,9 @@
+import crypto from "node:crypto";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import twoFaService from "../internal/2fa-service.js";
 import internalToken from "../internal/token.js";
-import { clearAuthCookies, clearDuoCookie, DUO_COOKIE, setAuthCookies, setDuoCookie } from "../lib/auth-cookies.js";
+import { clearAuthCookies, clearDuoCookie, readDuoCookie, setAuthCookies, setDuoCookie } from "../lib/auth-cookies.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
@@ -644,11 +645,9 @@ router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
 			return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		}
 
-		const { authUrl, browserToken, expiresAt } = await twoFaService.beginDuoAuthentication(
-			userId,
-			user.email,
-			payload.exp * 1000,
-		);
+		const browserToken = crypto.randomBytes(32).toString("base64url");
+		const expiresAt = Math.min(payload.exp * 1000, Date.now() + 5 * 60 * 1000);
+		const authUrl = await twoFaService.beginDuoAuthentication(userId, user.email, browserToken, expiresAt);
 		setDuoCookie(res, req, browserToken, expiresAt);
 		res.status(200).json({ auth_url: authUrl });
 	} catch (err) {
@@ -669,16 +668,16 @@ router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
 	res.set("Cache-Control", "no-store");
 	clearDuoCookie(res, req);
 	const { duo_code, state } = req.body || {};
-	const browserToken = req.cookies?.[DUO_COOKIE];
 
 	if (typeof duo_code !== "string" || !duo_code || typeof state !== "string" || !state) {
 		return res.status(400).send({ error: { code: 400, message: "duo_code and state are required" } });
 	}
-	if (!browserToken) {
-		return res.status(401).send({ error: { code: 401, message: "Duo login cookie is missing or expired" } });
-	}
 
 	try {
+		const browserToken = readDuoCookie(req);
+		if (!browserToken) {
+			return res.status(401).send({ error: { code: 401, message: "Duo login cookie is missing or expired" } });
+		}
 		const user = await twoFaService.completeDuoAuthentication(browserToken, duo_code, state);
 		if (!user) {
 			return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });

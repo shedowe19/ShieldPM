@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import knex from "knex";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,7 +6,10 @@ const state = vi.hoisted(() => ({
 	pendingExpires: 0,
 	exchange: vi.fn(),
 	issuePair: vi.fn(),
+	key: "01".repeat(32),
 }));
+
+vi.mock("../../lib/config.js", () => ({ getEncryptionKey: () => state.key }));
 
 // Keep real Express, cookie/CSRF middleware, token routes, 2FA service and SQL
 // operations. Only provider networking, unrelated application services and the
@@ -74,10 +76,11 @@ vi.mock("../../routes/main.js", async () => {
 });
 
 import app from "../../app.js";
+import { decrypt, encrypt } from "../../lib/encryption.js";
 
 let server;
 let origin;
-const hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
+const cookiePayload = (login) => JSON.parse(decrypt(decodeURIComponent(login.binding)));
 const duoCookie = (response) =>
 	response.headers.getSetCookie().findLast((cookie) => cookie.startsWith("shieldpm_duo="));
 const expectCleared = (response) => {
@@ -173,6 +176,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
 	vi.clearAllMocks();
+	state.key = "01".repeat(32);
 	state.pendingExpires = Math.floor(Date.now() / 1000) + 300;
 	state.exchange.mockReset().mockResolvedValue({ auth_result: { result: "allow", status: "allow" } });
 	state.issuePair.mockResolvedValue({
@@ -207,12 +211,19 @@ describe("Duo browser-bound redirect API", () => {
 		expect(Number(cookie.match(/Max-Age=(\d+)/)[1])).toBeLessThanOrEqual(30);
 		expect(login.response.headers.get("cache-control")).toBe("no-store");
 		const challenge = await state.db("user_2fa").where({ type: "duo_auth_challenge" }).first();
-		expect(challenge.secret).toBe(hash(login.binding));
+		const payload = cookiePayload(login);
+		expect(payload.purpose).toBe("shieldpm:duo-cookie:v1");
+		expect(payload.expiresAt).toBe(state.pendingExpires * 1000);
+		expect(payload.browserToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+		expect(login.binding).not.toContain(payload.browserToken);
+		expect(challenge.secret).toMatch(/^[a-f0-9]{64}$/);
+		expect(challenge.secret).not.toBe(payload.browserToken);
 		expect(JSON.parse(challenge.meta)).toEqual({
-			challenge: hash(login.state),
+			challenge: expect.stringMatching(/^[a-f0-9]{64}$/),
 			expiresAt: state.pendingExpires * 1000,
 		});
-		expect(login.binding).not.toBe(login.state);
+		expect(JSON.parse(challenge.meta).challenge).not.toBe(login.state);
+		expect(payload.browserToken).not.toBe(login.state);
 	});
 
 	it.each(["begin", "complete"])("requires valid CSRF protection for Duo %s", async (endpoint) => {
@@ -229,6 +240,109 @@ describe("Duo browser-bound redirect API", () => {
 		// A cross-site request must not cancel an in-progress browser login.
 		expect(duoCookie(response)).toBeUndefined();
 		expect(await state.db("user_2fa").where({ type: "duo_auth_challenge" })).toHaveLength(1);
+	});
+
+	it.each([0, 1, 2])(
+		"rejects an altered encrypted cookie component %i without consuming the challenge",
+		async (part) => {
+			const client = browser();
+			await client.health();
+			const login = await client.begin();
+			const pieces = decodeURIComponent(login.binding).split(":");
+			pieces[part] = `${pieces[part][0] === "a" ? "b" : "a"}${pieces[part].slice(1)}`;
+			client.jar.set("shieldpm_duo", encodeURIComponent(pieces.join(":")));
+			const response = await client.complete(login.state);
+			expect(response.status).toBe(400);
+			expectCleared(response);
+			expect(state.exchange).not.toHaveBeenCalled();
+			expect(state.issuePair).not.toHaveBeenCalled();
+			expect(await state.db("user_2fa").where({ type: "duo_auth_challenge" })).toHaveLength(1);
+		},
+	);
+
+	it.each(["short IV", "short tag", "invalid hex", "plaintext binding"])(
+		"rejects cookie format %s",
+		async (reason) => {
+			const client = browser();
+			await client.health();
+			const login = await client.begin();
+			const pieces = decodeURIComponent(login.binding).split(":");
+			if (reason === "short IV") pieces[0] = pieces[0].slice(2);
+			if (reason === "short tag") pieces[2] = pieces[2].slice(2);
+			if (reason === "invalid hex") pieces[1] = `zz${pieces[1].slice(2)}`;
+			const value = reason === "plaintext binding" ? cookiePayload(login).browserToken : pieces.join(":");
+			client.jar.set("shieldpm_duo", encodeURIComponent(value));
+			const response = await client.complete(login.state);
+			expect(response.status).toBe(400);
+			expectCleared(response);
+			expect(state.exchange).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each(["wrong purpose", "expired cookie", "invalid binding"])(
+		"rejects authenticated payload with %s",
+		async (reason) => {
+			const client = browser();
+			await client.health();
+			const login = await client.begin();
+			const payload = cookiePayload(login);
+			if (reason === "wrong purpose") payload.purpose = "shieldpm:another-cookie:v1";
+			if (reason === "expired cookie") payload.expiresAt = Date.now() - 1;
+			if (reason === "invalid binding") payload.browserToken = "invalid";
+			client.jar.set("shieldpm_duo", encodeURIComponent(encrypt(JSON.stringify(payload))));
+			const response = await client.complete(login.state);
+			expect(response.status).toBe(400);
+			expectCleared(response);
+			expect(state.exchange).not.toHaveBeenCalled();
+			expect(state.issuePair).not.toHaveBeenCalled();
+		},
+	);
+
+	it("looks up the underlying browser binding independently of the random encryption IV", async () => {
+		const client = browser();
+		await client.health();
+		const login = await client.begin();
+		const originalCookies = client.cookies();
+		const reencrypted = encodeURIComponent(encrypt(JSON.stringify(cookiePayload(login))));
+		expect(reencrypted).not.toBe(login.binding);
+		client.jar.set("shieldpm_duo", reencrypted);
+		const response = await client.complete(login.state);
+		expect(response.status).toBe(200);
+		expectCleared(response);
+		const replay = await client.complete(login.state, { cookie: originalCookies });
+		expect(replay.status).toBe(400);
+		expect(state.exchange).toHaveBeenCalledTimes(1);
+		expect(state.issuePair).toHaveBeenCalledTimes(1);
+	});
+
+	it("cannot validate a database tag with a different server key", async () => {
+		const client = browser();
+		await client.health();
+		const login = await client.begin();
+		// encryption.js retains the original fixture key; only HMAC lookup now
+		// uses another key, proving that database tags are server-key bound.
+		state.key = "02".repeat(32);
+		const response = await client.complete(login.state);
+		expect(response.status).toBe(400);
+		expect(state.exchange).not.toHaveBeenCalled();
+		expect(state.issuePair).not.toHaveBeenCalled();
+	});
+
+	it("does not accept a binding tag as a state tag even for the same input", async () => {
+		const client = browser();
+		await client.health();
+		const login = await client.begin();
+		const record = await state.db("user_2fa").where({ type: "duo_auth_challenge" }).first();
+		await state
+			.db("user_2fa")
+			.where({ id: record.id })
+			.update({
+				meta: JSON.stringify({ ...JSON.parse(record.meta), challenge: record.secret }),
+			});
+		const response = await client.complete(cookiePayload(login).browserToken);
+		expect(response.status).toBe(400);
+		expect(state.exchange).not.toHaveBeenCalled();
+		expect(state.issuePair).not.toHaveBeenCalled();
 	});
 
 	it("rejects another anonymous browser's CSRF token even with a matching cookie", async () => {
@@ -261,10 +375,11 @@ describe("Duo browser-bound redirect API", () => {
 			const login = await client.begin();
 			if (reason === "wrong cookie") client.jar.set("shieldpm_duo", "x".repeat(43));
 			if (reason === "expired challenge") {
+				const record = await state.db("user_2fa").where({ type: "duo_auth_challenge" }).first();
 				await state
 					.db("user_2fa")
 					.where({ type: "duo_auth_challenge" })
-					.update({ meta: JSON.stringify({ challenge: hash(login.state), expiresAt: Date.now() - 1 }) });
+					.update({ meta: JSON.stringify({ ...JSON.parse(record.meta), expiresAt: Date.now() - 1 }) });
 			}
 			const callbackState =
 				reason === "wrong state" ? "wrong-state" : reason === "missing state" ? undefined : login.state;

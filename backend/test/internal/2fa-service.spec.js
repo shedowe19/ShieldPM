@@ -12,6 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let fakeUserTwoFaRows = [];
 let fakeBackupCodeRows = [];
+const duoCreateAuthUrl = vi.hoisted(() => vi.fn((_user, state) => `https://api.duo.test/authorize?state=${state}`));
+
+vi.mock("../../lib/config.js", () => ({ getEncryptionKey: () => "01".repeat(32) }));
 
 const matchesFilter = (row, filter) => Object.entries(filter).every(([k, v]) => row[k] === v);
 
@@ -186,7 +189,7 @@ vi.mock("@duosecurity/duo_universal", () => {
 			return Promise.resolve();
 		}
 		createAuthUrl(_user, state) {
-			return Promise.resolve(`https://api.duo.test/authorize?state=${state}`);
+			return duoCreateAuthUrl(_user, state);
 		}
 		exchangeAuthorizationCodeFor2FAResult() {
 			return Promise.resolve({ sub: "testuser", auth_result: { result: "allow", status: "allow" } });
@@ -492,7 +495,7 @@ describe("2fa-service", () => {
 	describe("beginDuoAuthentication", () => {
 		it("throws ValidationError when Duo is not configured for the user", async () => {
 			await expect(
-				twoFaService.beginDuoAuthentication(99, "user@example.com", Date.now() + 60000),
+				twoFaService.beginDuoAuthentication(99, "user@example.com", "a".repeat(43), Date.now() + 60000),
 			).rejects.toMatchObject({
 				name: "ValidationError",
 				message: expect.stringContaining("not configured"),
@@ -502,19 +505,24 @@ describe("2fa-service", () => {
 
 	describe("Duo state binding", () => {
 		const config = { id: 1, user_id: 1, type: "duo", is_verified: 1, is_deleted: 0, meta: {} };
-		it("stores only hashes and consumes the cookie binding once after successful verification", async () => {
+		it("stores only tags and consumes the cookie binding once after successful verification", async () => {
 			fakeUserTwoFaRows = [config];
 			const pendingExpiry = Date.now() + 60000;
-			const { authUrl, browserToken, expiresAt } = await twoFaService.beginDuoAuthentication(
+			const browserToken = crypto.randomBytes(32).toString("base64url");
+			const authUrl = await twoFaService.beginDuoAuthentication(
 				1,
 				"user@example.com",
+				browserToken,
 				pendingExpiry,
 			);
-			const state = new URL(authUrl).searchParams.get("state");
+			const state = duoCreateAuthUrl.mock.calls.at(-1)[1];
+			expect(authUrl).toBe(`https://api.duo.test/authorize?state=${state}`);
 			const challenge = fakeUserTwoFaRows.find((row) => row.type === "duo_auth_challenge");
-			expect(expiresAt).toBe(pendingExpiry);
-			expect(challenge.secret).toBe(crypto.createHash("sha256").update(browserToken).digest("hex"));
-			expect(challenge.meta.challenge).toBe(crypto.createHash("sha256").update(state).digest("hex"));
+			expect(challenge.meta.expiresAt).toBe(pendingExpiry);
+			expect(challenge.secret).toMatch(/^[a-f0-9]{64}$/);
+			expect(challenge.meta.challenge).toMatch(/^[a-f0-9]{64}$/);
+			expect(challenge.secret).not.toBe(browserToken);
+			expect(challenge.meta.challenge).not.toBe(state);
 			expect(await twoFaService.completeDuoAuthentication(browserToken, "code", state)).toMatchObject({ id: 1 });
 			await expect(twoFaService.completeDuoAuthentication(browserToken, "code", state)).rejects.toThrow(
 				"expired",
@@ -528,8 +536,8 @@ describe("2fa-service", () => {
 		});
 		it("rejects the callback without the matching browser binding", async () => {
 			fakeUserTwoFaRows = [config];
-			const { authUrl } = await twoFaService.beginDuoAuthentication(1, "user@example.com", Date.now() + 60000);
-			const state = new URL(authUrl).searchParams.get("state");
+			await twoFaService.beginDuoAuthentication(1, "user@example.com", "b".repeat(43), Date.now() + 60000);
+			const state = duoCreateAuthUrl.mock.calls.at(-1)[1];
 			await expect(twoFaService.completeDuoAuthentication("a".repeat(43), "code", state)).rejects.toThrow(
 				"expired",
 			);

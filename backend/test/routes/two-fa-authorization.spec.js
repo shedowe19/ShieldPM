@@ -24,6 +24,7 @@ vi.mock("../../internal/2fa-service.js", () => ({
 }));
 vi.mock("../../internal/token.js", () => ({ default: { refreshTokenPair: mocks.refresh } }));
 vi.mock("../../models/token.js", () => ({ default: () => ({ load: async () => mocks.payload }) }));
+vi.mock("../../lib/config.js", () => ({ getEncryptionKey: () => "01".repeat(32) }));
 vi.mock("../../models/user.js", () => ({ default: {} }));
 vi.mock("../../models/user-2fa.js", () => ({ default: {} }));
 vi.mock("../../models/user-2fa-backup-codes.js", () => ({ default: {} }));
