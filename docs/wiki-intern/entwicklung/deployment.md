@@ -89,7 +89,7 @@ Der frühere `dependency-updates.yml`-Workflow wurde entfernt: Er bearbeitete au
 
 Docker-Publikationen derselben Git-Referenz laufen nacheinander; alle manuellen Latest-Publikationen teilen ebenfalls eine Warteschlange. So kann ein anderer Lauf die Architektur-Tags nicht während der Manifest-Erstellung ersetzen.
 
-Der Docker-Build-Workflow berücksichtigt auch `.dockerignore`, `scripts/install.sh` und `scripts/setup-node-apt.sh`. Pull Requests bauen lokale Images für die Prüfung; Registry-Anmeldung, Push und Multiarch-Publikation laufen nur außerhalb von Pull Requests. Der manuelle Latest-Workflow übergibt und validiert den Release-Tag als Umgebungsvariable, statt Benutzereingaben direkt in Shell-Code einzusetzen.
+Der Docker-Build-Workflow berücksichtigt auch `.dockerignore`, `scripts/install.sh` und `scripts/setup-node-apt.sh`. Pull Requests bauen lokale Images für die Prüfung. PRs aus demselben Repository melden sich bei GHCR an, damit das geschützte Nginx-Basisimage geladen werden kann; Fork-PRs erhalten keine Registry-Zugangsdaten. Push und Multiarch-Publikation laufen nur außerhalb von Pull Requests. Der manuelle Latest-Workflow übergibt und validiert den Release-Tag als Umgebungsvariable, statt Benutzereingaben direkt in Shell-Code einzusetzen.
 
 Der Shellcheck-Workflow prüft auch Erweiterungslose Helfer wie `update-shieldpm` und führt `python3 -m unittest discover -s scripts/tests -v` aus. Diese Tests arbeiten mit temporären Verzeichnissen und simulierten externen Befehlen, ohne einen Installer oder laufende Dienste zu starten.
 
