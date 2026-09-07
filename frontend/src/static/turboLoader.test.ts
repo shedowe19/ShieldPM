@@ -1,10 +1,11 @@
+// @vitest-environment-options {"settings":{"disableCSSFileLoading":true,"disableJavaScriptFileLoading":true,"handleDisabledFileLoadingAsSuccess":true}}
+// Parse static fixtures without loading their remote stylesheets or script files.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 const html = readFileSync(resolve("../rootfs/html/turbo_loader.html"), "utf8");
-const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 const bytes = new TextEncoder().encode("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-");
 const blobs: Blob[] = [];
 
@@ -16,10 +17,12 @@ async function setup(
 	fetchChunk: (range: string) => Promise<any>,
 	writable?: { write: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn>; abort: ReturnType<typeof vi.fn> },
 ) {
-	document.body.innerHTML = (html.match(/<body>([\s\S]*?)<\/body>/)?.[1] || "").replace(
-		/<script>[\s\S]*?<\/script>/g,
-		"",
-	);
+	const page = new DOMParser().parseFromString(html, "text/html");
+	const scripts = page.querySelectorAll("script:not([src])");
+	expect(scripts).toHaveLength(1);
+	const script = scripts[0].textContent;
+	for (const scriptElement of page.querySelectorAll("script")) scriptElement.remove();
+	document.body.replaceChildren(...page.body.childNodes);
 	const fetchMock = vi.fn(async (_url: string, options: RequestInit = {}) =>
 		options.method === "HEAD"
 			? new Response(null, {
