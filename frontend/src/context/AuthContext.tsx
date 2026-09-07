@@ -28,6 +28,9 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const [authenticated, setAuthenticated] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [sessionVersion, setSessionVersion] = useState(0);
+	const [isDuoCallback] = useState(
+		() => window.location.pathname.replace(/\/+$/, "").toLowerCase() === "/duo-callback",
+	);
 	const sessionGeneration = useRef(0);
 
 	const handleTokenUpdate = useCallback((response: TokenResponse) => {
@@ -46,6 +49,13 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
+		// Duo establishes its session through the callback. A competing refresh
+		// could expire its newly issued cookies after the callback succeeds.
+		if (isDuoCallback) {
+			setLoading(false);
+			return;
+		}
+
 		let active = true;
 		const generation = sessionGeneration.current;
 		refreshToken()
@@ -68,7 +78,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		return () => {
 			active = false;
 		};
-	}, [handleTokenUpdate]);
+	}, [handleTokenUpdate, isDuoCallback]);
 
 	useEffect(() => {
 		const handleAuthenticationExpired = () => {
@@ -141,7 +151,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 			}
 		},
 		tokenRefreshInterval,
-		true,
+		authenticated,
 	);
 
 	const value = { authenticated, completeLogin, login, logout, loginAs, loading };

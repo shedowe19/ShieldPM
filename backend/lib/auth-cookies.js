@@ -7,6 +7,8 @@
 
 const ACCESS_COOKIE = "shieldpm_jwt";
 const REFRESH_COOKIE = "shieldpm_refresh";
+const DUO_COOKIE = "shieldpm_duo";
+const DUO_COOKIE_PATH = "/api/tokens/2fa/duo";
 
 const isSecure = (req) => req.secure || req.headers["x-forwarded-proto"] === "https";
 
@@ -50,4 +52,25 @@ export const clearAuthCookies = (res) => {
 	res.clearCookie(REFRESH_COOKIE, { path: "/api/tokens" });
 };
 
-export { ACCESS_COOKIE, REFRESH_COOKIE };
+// The redirect binding must survive a cross-site top-level navigation, but must
+// never be readable by JavaScript or shared with another host.
+export const setDuoCookie = (res, req, browserToken, expiresAt) => {
+	res.cookie(DUO_COOKIE, browserToken, {
+		httpOnly: true,
+		secure: req.secure,
+		sameSite: "lax",
+		path: DUO_COOKIE_PATH,
+		maxAge: Math.max(0, expiresAt - Date.now()),
+	});
+};
+
+export const clearDuoCookie = (res, req) => {
+	res.clearCookie(DUO_COOKIE, {
+		httpOnly: true,
+		secure: req.secure,
+		sameSite: "lax",
+		path: DUO_COOKIE_PATH,
+	});
+};
+
+export { ACCESS_COOKIE, DUO_COOKIE, REFRESH_COOKIE };

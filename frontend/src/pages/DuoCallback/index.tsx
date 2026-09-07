@@ -25,29 +25,29 @@ export default function DuoCallback() {
 		called.current = true;
 
 		const duoCode = searchParams.get("duo_code");
-		const pendingToken = sessionStorage.getItem("duo_pending_token");
-		const expectedState = sessionStorage.getItem("duo_state");
 		const state = searchParams.get("state");
-		sessionStorage.removeItem("duo_pending_token");
-		sessionStorage.removeItem("duo_state");
+		// Keep callback credentials in this request only, out of browser history.
+		navigate("/duo-callback", { replace: true });
 
-		if (!duoCode || !pendingToken) {
+		if (!duoCode) {
 			setError("Missing Duo authorization code or session token. Please try signing in again.");
 			return;
 		}
 
-		if (!state || !expectedState || state !== expectedState) {
+		if (!state) {
 			setError("Duo authentication failed. Please try again.");
 			return;
 		}
 
-		complete2faDuoAuth(pendingToken, duoCode, state)
+		complete2faDuoAuth(duoCode, state)
 			.then((response) => {
 				completeLogin(response);
 				navigate("/", { replace: true });
 			})
-			.catch((err: Error) => {
-				setError(err.message || "Duo authentication failed. Please try again.");
+			.catch((err: unknown) => {
+				setError(
+					err instanceof Error && err.message ? err.message : "Duo authentication failed. Please try again.",
+				);
 			});
 	}, [completeLogin, navigate, searchParams]);
 

@@ -2,7 +2,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import twoFaService from "../internal/2fa-service.js";
 import internalToken from "../internal/token.js";
-import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
+import { clearAuthCookies, clearDuoCookie, DUO_COOKIE, setAuthCookies, setDuoCookie } from "../lib/auth-cookies.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
@@ -622,6 +622,8 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
  * Generate a Duo auth URL for the pending user.
  */
 router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
+	res.set("Cache-Control", "no-store");
+	clearDuoCookie(res, req);
 	const { pending_token } = req.body || {};
 
 	if (!pending_token) {
@@ -642,8 +644,13 @@ router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
 			return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		}
 
-		const { authUrl, state } = await twoFaService.beginDuoAuthentication(userId, user.email);
-		res.status(200).json({ auth_url: authUrl, state });
+		const { authUrl, browserToken, expiresAt } = await twoFaService.beginDuoAuthentication(
+			userId,
+			user.email,
+			payload.exp * 1000,
+		);
+		setDuoCookie(res, req, browserToken, expiresAt);
+		res.status(200).json({ auth_url: authUrl });
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/duo/begin: ${err}`);
 		const code = err.status || 500;
@@ -659,30 +666,21 @@ router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
  * Complete Duo authentication and issue full tokens.
  */
 router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
-	const { pending_token, duo_code, state } = req.body || {};
+	res.set("Cache-Control", "no-store");
+	clearDuoCookie(res, req);
+	const { duo_code, state } = req.body || {};
+	const browserToken = req.cookies?.[DUO_COOKIE];
 
-	if (!pending_token || !duo_code || typeof state !== "string" || !state) {
-		return res
-			.status(400)
-			.send({ error: { code: 400, message: "pending_token, duo_code, and state are required" } });
+	if (typeof duo_code !== "string" || !duo_code || typeof state !== "string" || !state) {
+		return res.status(400).send({ error: { code: 400, message: "duo_code and state are required" } });
+	}
+	if (!browserToken) {
+		return res.status(401).send({ error: { code: 401, message: "Duo login cookie is missing or expired" } });
 	}
 
 	try {
-		let payload;
-		try {
-			payload = await loadPendingTwoFaToken(pending_token);
-		} catch (_err) {
-			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
-		}
-
-		const userId = payload.attrs?.id;
-		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
+		const user = await twoFaService.completeDuoAuthentication(browserToken, duo_code, state);
 		if (!user) {
-			return res.status(401).send({ error: { code: 401, message: "User not found" } });
-		}
-
-		const valid = await twoFaService.completeDuoAuthentication(userId, user.email, duo_code, state);
-		if (!valid) {
 			return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });
 		}
 

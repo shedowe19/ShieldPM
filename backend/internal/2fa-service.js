@@ -539,12 +539,16 @@ const setupDuo = async (userId, config) => {
 };
 
 /**
- * Begin Duo authentication: generate the Duo auth URL.
+ * Bind a pending login to a short-lived, opaque browser cookie.
  * @param {number} userId
  * @param {string} userEmail
- * @returns {Promise<{ authUrl: string, state: string }>}
+ * @param {number} pendingExpiresAt Verified pending JWT expiry in milliseconds
+ * @returns {Promise<{ authUrl: string, browserToken: string, expiresAt: number }>}
  */
-const beginDuoAuthentication = async (userId, userEmail) => {
+const beginDuoAuthentication = async (userId, userEmail, pendingExpiresAt) => {
+	if (!Number.isFinite(pendingExpiresAt) || pendingExpiresAt <= Date.now()) {
+		throw new errs.ValidationError("Pending Duo login is invalid or expired");
+	}
 	const duoRecord = await UserTwoFa.query().findOne({ user_id: userId, type: "duo", is_verified: 1, is_deleted: 0 });
 	if (!duoRecord) {
 		throw new errs.ValidationError("Duo Security is not configured for this user");
@@ -552,49 +556,70 @@ const beginDuoAuthentication = async (userId, userEmail) => {
 
 	const client = createDuoClient(duoRecord.meta);
 	const state = crypto.randomBytes(32).toString("base64url");
+	const browserToken = crypto.randomBytes(32).toString("base64url");
+	const expiresAt = Math.min(pendingExpiresAt, Date.now() + 5 * 60 * 1000);
 	const authUrl = await client.createAuthUrl(userEmail, state);
 	await UserTwoFa.query().delete().where({ user_id: userId, type: "duo_auth_challenge", is_verified: 0 });
 	await UserTwoFa.query().insert({
 		user_id: userId,
 		type: "duo_auth_challenge",
-		secret: state,
+		secret: crypto.createHash("sha256").update(browserToken).digest("hex"),
 		is_verified: 0,
-		meta: { challenge: state, expiresAt: Date.now() + PASSKEY_CHALLENGE_TTL_MS },
+		meta: { challenge: crypto.createHash("sha256").update(state).digest("hex"), expiresAt },
 	});
 
-	return { authUrl, state };
+	return { authUrl, browserToken, expiresAt };
 };
 
 /**
  * Complete Duo authentication by exchanging the authorization code.
- * @param {number} userId
- * @param {string} userEmail
+ * @param {string} browserToken HttpOnly redirect cookie
  * @param {string} duoCode
- * @returns {Promise<boolean>}
+ * @param {string} state Provider callback state
+ * @returns {Promise<object|null>} Active user only after successful Duo verification
  */
-const completeDuoAuthentication = async (userId, userEmail, duoCode, state) => {
-	if (typeof state !== "string" || !state) {
-		throw new errs.ValidationError("Duo login state is required");
+const completeDuoAuthentication = async (browserToken, duoCode, state) => {
+	if (typeof browserToken !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(browserToken)) {
+		throw new errs.ValidationError("Duo login cookie is missing or invalid");
+	}
+	if (typeof state !== "string" || !state || typeof duoCode !== "string" || !duoCode) {
+		throw new errs.ValidationError("Duo login code and state are required");
 	}
 	const challenge = await UserTwoFa.query().findOne({
-		user_id: userId,
 		type: "duo_auth_challenge",
-		secret: state,
+		secret: crypto.createHash("sha256").update(browserToken).digest("hex"),
 		is_verified: 0,
+		is_deleted: 0,
 	});
 	requireFreshChallenge(challenge, "Duo");
+	const expectedStateHash = Buffer.from(challenge.meta.challenge, "hex");
+	const actualStateHash = crypto.createHash("sha256").update(state).digest();
+	if (
+		expectedStateHash.length !== actualStateHash.length ||
+		!crypto.timingSafeEqual(expectedStateHash, actualStateHash)
+	) {
+		throw new errs.ValidationError("Duo login state does not match");
+	}
+	const userId = challenge.user_id;
+	const user = await userModel.query().findById(userId).where({ is_deleted: 0, is_disabled: 0 });
+	if (!user) {
+		throw new errs.ValidationError("Duo login user is no longer available");
+	}
 	const duoRecord = await UserTwoFa.query().findOne({ user_id: userId, type: "duo", is_verified: 1, is_deleted: 0 });
 	if (!duoRecord) {
 		throw new errs.ValidationError("Duo Security is not configured for this user");
 	}
 
 	const client = createDuoClient(duoRecord.meta);
-	const tokenResult = await client.exchangeAuthorizationCodeFor2FAResult(duoCode, userEmail);
-	if (!tokenResult) {
-		return false;
-	}
+	// Claim before contacting Duo: concurrent callbacks must never exchange the
+	// same code or issue two sessions, including when an exchange fails.
 	await consumeChallenge(challenge, "Duo");
-	return true;
+	const tokenResult = await client.exchangeAuthorizationCodeFor2FAResult(duoCode, user.email);
+	if (tokenResult?.auth_result?.result !== "allow" || tokenResult.auth_result.status !== "allow") {
+		return null;
+	}
+	requireFreshChallenge(challenge, "Duo");
+	return userModel.query().findById(userId).where({ is_deleted: 0, is_disabled: 0 });
 };
 
 // ---------------------------------------------------------------------------

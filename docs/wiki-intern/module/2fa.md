@@ -35,7 +35,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Sicherheitsgrenzen
 
-Verwaltungszugriffe werden über die Benutzerberechtigungen geprüft. Tokens mit ausstehender zweiter Faktorprüfung erhalten keinen Zugriff auf diese Verwaltung. TOTP-Anmeldungen benötigen eine bestätigte Methode; Passkey- und Duo-Challenges laufen nach fünf Minuten ab und sind nur einmal verwendbar. Backup-Codes werden atomar verbraucht.
+Verwaltungszugriffe werden über die Benutzerberechtigungen geprüft. Tokens mit ausstehender zweiter Faktorprüfung erhalten keinen Zugriff auf diese Verwaltung. TOTP-Anmeldungen benötigen eine bestätigte Methode; Passkey- und Duo-Challenges laufen nach spätestens fünf Minuten ab und sind nur einmal verwendbar. Duo bindet den Redirect über ein kurzlebiges HttpOnly-Cookie an den Browser; beide Duo-Endpunkte prüfen CSRF. State und Pending-Token benötigen keinen dauerhaften JavaScript-Speicher. Backup-Codes werden atomar verbraucht.
 
 Die detaillierten Abläufe und der Duo-State-Vertrag stehen im [2FA-Servicedetail](./2fa-service.md).
 

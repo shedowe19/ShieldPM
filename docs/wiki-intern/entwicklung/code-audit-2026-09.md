@@ -34,16 +34,24 @@ Die einzelnen Änderungen und ihre Verträge stehen auf den bestehenden Modulsei
 
 | Prüfung                   | Ergebnis                                                                                                       |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Backend / Vitest          | 84 Dateien, 451 Tests bestanden                                                                                |
-| Frontend / Vitest         | 147 Dateien, 382 Tests bestanden                                                                               |
+| Backend / Vitest          | 85 Dateien, 468 Tests bestanden                                                                                |
+| Frontend / Vitest         | 149 Dateien, 398 Tests bestanden                                                                               |
 | Infrastruktur / Python    | 9 Tests bestanden                                                                                              |
 | Frontend-Produktionsbuild | TypeScript und Vite erfolgreich                                                                                |
-| Biome                     | Backend 292 und Frontend 548 Dateien; jeweils 0 Fehler und 0 Warnungen, je 2 bestehende Konfigurationshinweise |
+| Biome                     | Backend 293 und Frontend 550 Dateien; jeweils 0 Fehler und 0 Warnungen, je 2 bestehende Konfigurationshinweise |
 | Shell                     | ShellCheck und Syntaxprüfung bestanden                                                                         |
 | Abhängigkeiten            | Backend und Frontend jeweils 0 gemeldete Audit-Befunde                                                         |
 | Änderungen                | `git diff --check` ohne Befunde                                                                                |
 
-Insgesamt bestanden 842 Tests. Die Befehle sind unter [Tests](./tests.md) dokumentiert. Verwendete Laufzeit: Node.js 26.8.1. Abhängigkeiten bleiben über Yarn-Lockfiles reproduzierbar; ausschließlich gezielt betroffene transitive Sicherheitspakete werden angepasst.
+Insgesamt bestanden nach der PR-Nachprüfung 875 Tests. Die Befehle sind unter [Tests](./tests.md) dokumentiert. Verwendete Laufzeit: Node.js 26.8.1. Abhängigkeiten bleiben über Yarn-Lockfiles reproduzierbar; ausschließlich gezielt betroffene transitive Sicherheitspakete werden angepasst.
+
+## Nachprüfung von Pull Request 139
+
+Die erste GitHub-Ausführung zeigte drei zusätzliche Probleme, die durch die lokale Prüfung nicht vollständig abgedeckt waren:
+
+- **ShellCheck 0.9.0:** Das Migrationsskript verwendete eine verkettete `&&`-/`||`-Bedingung, die diese Runner-Version als SC2015 meldete. Eine ausdrückliche `if`-Bedingung erhält das Verhalten und besteht den vollständigen Workflow-Aufruf auch mit Version 0.9.0. Die neun Infrastrukturtests bleiben erfolgreich.
+- **Duo / CodeQL:** State und vorläufiger Anmeldetoken wurden für den Anbieter-Redirect im Browser-Speicher abgelegt. Jetzt erhält der Browser ausschließlich ein kurzlebiges HttpOnly-Cookie als unabhängige Bindung; serverseitig werden nur dessen Hash, der State-Hash und die Ablaufgrenze gespeichert. Die Challenge wird vor dem Duo-Austausch atomar verbraucht. Beide Duo-Endpunkte unterliegen CSRF-Schutz. Der Callback entfernt seine Parameter aus dem sichtbaren Verlauf; beim Rücksprung startet keine konkurrierende Session-Wiederherstellung.
+- **Docker / GHCR:** Der PR-Workflow übersprang den Registry-Login und konnte das Nginx-Basisimage nicht anonym laden (HTTP 401). PRs aus demselben Repository melden sich nun für den Abruf an. PR-Images bleiben lokal auf dem Runner; Push, Multiarch-Veröffentlichung und Releases sind weiterhin für PR-Ereignisse gesperrt. Details und die Einschränkung für Fork-PRs stehen unter [Build](./build.md).
 
 ## Betriebsrelevante Grenzen
 

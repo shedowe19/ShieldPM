@@ -33,13 +33,26 @@ const renderStep = (methods = ["totp"]) =>
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe("TwoFAStep", () => {
+	const storageAccess = vi.fn(() => {
+		throw new Error("Browser storage is unavailable");
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
-		sessionStorage.clear();
+		for (const storage of ["sessionStorage", "localStorage"]) {
+			vi.stubGlobal(storage, {
+				getItem: storageAccess,
+				setItem: storageAccess,
+				removeItem: storageAccess,
+				clear: storageAccess,
+			});
+		}
 	});
 
 	afterEach(() => {
 		cleanup();
+		vi.unstubAllGlobals();
+		expect(storageAccess).not.toHaveBeenCalled();
 	});
 
 	it("renders the 2FA heading", () => {
@@ -144,29 +157,33 @@ describe("TwoFAStep", () => {
 		});
 	});
 
-	it("redirects for Duo auth when Duo button is clicked", async () => {
+	it("redirects to Duo without persisting the pending token or state in browser storage", async () => {
 		vi.mocked(begin2faDuoAuth).mockResolvedValue({
 			authUrl: "https://duo.example.com/authorize?state=abc",
-			state: "abc",
 		});
 
-		const originalLocation = window.location;
-		Object.defineProperty(window, "location", {
-			writable: true,
-			value: { href: "" },
-		});
+		vi.stubGlobal("location", { href: "" });
 
 		renderStep(["duo"]);
 		fireEvent.click(screen.getByText("Duo Security"));
 
 		await waitFor(() => {
 			expect(begin2faDuoAuth).toHaveBeenCalledWith("mock_pending_token");
-			expect(sessionStorage.getItem("duo_pending_token")).toBe("mock_pending_token");
-			expect(sessionStorage.getItem("duo_state")).toBe("abc");
 			expect(window.location.href).toBe("https://duo.example.com/authorize?state=abc");
 		});
+		expect(AuthStore.set).not.toHaveBeenCalled();
+		expect(mockOnSuccess).not.toHaveBeenCalled();
+	});
 
-		Object.defineProperty(window, "location", { value: originalLocation });
+	it("shows a failed Duo start and allows another attempt without accessing browser storage", async () => {
+		vi.mocked(begin2faDuoAuth).mockRejectedValue(new Error("Duo is unavailable"));
+		renderStep(["duo"]);
+		fireEvent.click(screen.getByText("Duo Security"));
+
+		await waitFor(() => expect(screen.getByText("Duo is unavailable")).toBeInTheDocument());
+		expect(screen.getByRole("button", { name: "Duo Security" })).not.toBeDisabled();
+		expect(AuthStore.set).not.toHaveBeenCalled();
+		expect(mockOnSuccess).not.toHaveBeenCalled();
 	});
 
 	it("renders multiple methods simultaneously", () => {

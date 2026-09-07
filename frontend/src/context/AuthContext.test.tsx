@@ -44,11 +44,14 @@ import { AuthProvider, useAuthState } from "./AuthContext";
 let nextSessionProbeInstance = 0;
 
 function AuthProbe() {
-	const { authenticated, loading, login, loginAs, logout } = useAuthState();
+	const { authenticated, loading, completeLogin, login, loginAs, logout } = useAuthState();
 
 	return (
 		<>
 			<div data-testid="authentication-state">{loading ? "loading" : `ready:${authenticated}`}</div>
+			<button type="button" onClick={() => completeLogin({ expires: Date.now() + 900_000 })}>
+				Complete Duo login
+			</button>
 			<button type="button" onClick={() => void login("admin@example.test", "correct horse battery staple")}>
 				Sign in
 			</button>
@@ -86,6 +89,7 @@ function renderAuthProvider() {
 describe("AuthProvider", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		window.history.replaceState({}, "", "/");
 		nextSessionProbeInstance = 0;
 		mocks.authStoreActive = true;
 		mocks.refreshToken.mockRejectedValue(new Error("No existing session"));
@@ -93,7 +97,40 @@ describe("AuthProvider", () => {
 
 	afterEach(() => {
 		cleanup();
+		window.history.replaceState({}, "", "/");
 	});
+
+	it("restores an existing session on ordinary pages", async () => {
+		const token = { expires: Date.now() + 900_000 };
+		mocks.refreshToken.mockResolvedValue(token);
+		renderAuthProvider();
+
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+		expect(mocks.refreshToken).toHaveBeenCalledOnce();
+		expect(mocks.authStoreSet).toHaveBeenCalledWith(token);
+	});
+
+	it.each(["/duo-callback", "/duo-callback/", "/Duo-Callback"])(
+		"waits for Duo completion without starting a competing session refresh at %s",
+		async (pathname) => {
+			window.history.replaceState({}, "", `${pathname}?duo_code=code&state=state`);
+			renderAuthProvider();
+
+			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false");
+			expect(mocks.refreshToken).not.toHaveBeenCalled();
+			expect(mocks.useIntervalWhen.mock.lastCall?.[2]).toBe(false);
+			await act(async () => {
+				await mocks.useIntervalWhen.mock.lastCall?.[0]();
+			});
+			expect(mocks.refreshToken).not.toHaveBeenCalled();
+
+			fireEvent.click(screen.getByRole("button", { name: "Complete Duo login" }));
+
+			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
+			expect(mocks.useIntervalWhen.mock.lastCall?.[2]).toBe(true);
+			expect(mocks.refreshToken).not.toHaveBeenCalled();
+		},
+	);
 
 	it("clears cached user data before accepting a direct login token", async () => {
 		const token = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };

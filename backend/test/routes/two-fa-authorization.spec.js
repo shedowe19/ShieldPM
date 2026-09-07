@@ -45,6 +45,7 @@ const response = (access) => ({
 	json: vi.fn(),
 	sendStatus: vi.fn(),
 	clearCookie: vi.fn(),
+	set: vi.fn(),
 });
 
 describe("2FA management authorization", () => {
@@ -85,7 +86,7 @@ describe("2FA management authorization", () => {
 
 describe("pending 2FA login token validation", () => {
 	beforeEach(() => vi.clearAllMocks());
-	const paths = ["/2fa/verify", "/2fa/passkey/begin", "/2fa/passkey/complete", "/2fa/duo/begin", "/2fa/duo/complete"];
+	const paths = ["/2fa/verify", "/2fa/passkey/begin", "/2fa/passkey/complete", "/2fa/duo/begin"];
 	const body = {
 		pending_token: "signed-token",
 		method: "totp",

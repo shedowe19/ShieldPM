@@ -118,7 +118,11 @@ vi.mock("../../models/user-2fa-backup-codes.js", () => ({
 vi.mock("../../models/user.js", () => ({
 	default: {
 		query: vi.fn(() => ({
-			findById: vi.fn(() => Promise.resolve({ id: 1, name: "Test", email: "test@example.com" })),
+			findById: vi.fn(() => {
+				const result = Promise.resolve({ id: 1, name: "Test", email: "test@example.com" });
+				result.where = vi.fn(() => result);
+				return result;
+			}),
 		})),
 	},
 }));
@@ -185,7 +189,7 @@ vi.mock("@duosecurity/duo_universal", () => {
 			return Promise.resolve(`https://api.duo.test/authorize?state=${state}`);
 		}
 		exchangeAuthorizationCodeFor2FAResult() {
-			return Promise.resolve({ sub: "testuser" });
+			return Promise.resolve({ sub: "testuser", auth_result: { result: "allow", status: "allow" } });
 		}
 	}
 	return { Client };
@@ -487,7 +491,9 @@ describe("2fa-service", () => {
 
 	describe("beginDuoAuthentication", () => {
 		it("throws ValidationError when Duo is not configured for the user", async () => {
-			await expect(twoFaService.beginDuoAuthentication(99, "user@example.com")).rejects.toMatchObject({
+			await expect(
+				twoFaService.beginDuoAuthentication(99, "user@example.com", Date.now() + 60000),
+			).rejects.toMatchObject({
 				name: "ValidationError",
 				message: expect.stringContaining("not configured"),
 			});
@@ -496,24 +502,35 @@ describe("2fa-service", () => {
 
 	describe("Duo state binding", () => {
 		const config = { id: 1, user_id: 1, type: "duo", is_verified: 1, is_deleted: 0, meta: {} };
-		it("stores and consumes state once after successful verification", async () => {
+		it("stores only hashes and consumes the cookie binding once after successful verification", async () => {
 			fakeUserTwoFaRows = [config];
-			const { state } = await twoFaService.beginDuoAuthentication(1, "user@example.com");
-			expect(await twoFaService.completeDuoAuthentication(1, "user@example.com", "code", state)).toBe(true);
-			await expect(twoFaService.completeDuoAuthentication(1, "user@example.com", "code", state)).rejects.toThrow(
+			const pendingExpiry = Date.now() + 60000;
+			const { authUrl, browserToken, expiresAt } = await twoFaService.beginDuoAuthentication(
+				1,
+				"user@example.com",
+				pendingExpiry,
+			);
+			const state = new URL(authUrl).searchParams.get("state");
+			const challenge = fakeUserTwoFaRows.find((row) => row.type === "duo_auth_challenge");
+			expect(expiresAt).toBe(pendingExpiry);
+			expect(challenge.secret).toBe(crypto.createHash("sha256").update(browserToken).digest("hex"));
+			expect(challenge.meta.challenge).toBe(crypto.createHash("sha256").update(state).digest("hex"));
+			expect(await twoFaService.completeDuoAuthentication(browserToken, "code", state)).toMatchObject({ id: 1 });
+			await expect(twoFaService.completeDuoAuthentication(browserToken, "code", state)).rejects.toThrow(
 				"expired",
 			);
 		});
 		it("rejects missing state", async () => {
 			fakeUserTwoFaRows = [config];
-			await expect(twoFaService.completeDuoAuthentication(1, "user@example.com", "code")).rejects.toThrow(
-				"state is required",
+			await expect(twoFaService.completeDuoAuthentication("a".repeat(43), "code")).rejects.toThrow(
+				"state are required",
 			);
 		});
-		it("rejects state belonging to a different account", async () => {
+		it("rejects the callback without the matching browser binding", async () => {
 			fakeUserTwoFaRows = [config];
-			const { state } = await twoFaService.beginDuoAuthentication(1, "user@example.com");
-			await expect(twoFaService.completeDuoAuthentication(2, "other@example.com", "code", state)).rejects.toThrow(
+			const { authUrl } = await twoFaService.beginDuoAuthentication(1, "user@example.com", Date.now() + 60000);
+			const state = new URL(authUrl).searchParams.get("state");
+			await expect(twoFaService.completeDuoAuthentication("a".repeat(43), "code", state)).rejects.toThrow(
 				"expired",
 			);
 		});

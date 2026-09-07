@@ -1,16 +1,11 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { StrictMode } from "react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	complete2faDuoAuth: vi.fn(),
 	completeLogin: vi.fn(),
-	navigate: vi.fn(),
-}));
-
-vi.mock("react-router-dom", async (importOriginal) => ({
-	...(await importOriginal<typeof import("react-router-dom")>()),
-	useNavigate: () => mocks.navigate,
 }));
 
 vi.mock("src/api/backend", () => ({
@@ -19,54 +14,122 @@ vi.mock("src/api/backend", () => ({
 vi.mock("src/context", () => ({
 	useAuthState: () => ({ completeLogin: mocks.completeLogin }),
 }));
-vi.mock("src/modules/AuthStore", () => ({ default: { set: vi.fn() } }));
 
 import DuoCallback from "./index";
 
+function CurrentLocation() {
+	const location = useLocation();
+	return <output data-testid="location">{location.pathname + location.search}</output>;
+}
+
+function renderCallback(query = "?duo_code=duo-code&state=returned-state") {
+	return render(
+		<StrictMode>
+			<MemoryRouter initialEntries={[`/duo-callback${query}`]}>
+				<CurrentLocation />
+				<Routes>
+					<Route path="/duo-callback" element={<DuoCallback />} />
+					<Route path="/" element={<p>Signed in</p>} />
+				</Routes>
+			</MemoryRouter>
+		</StrictMode>,
+	);
+}
+
 describe("DuoCallback", () => {
+	const storageAccess = vi.fn(() => {
+		throw new Error("Browser storage is unavailable");
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
-		sessionStorage.clear();
+		for (const storage of ["sessionStorage", "localStorage"]) {
+			vi.stubGlobal(storage, {
+				getItem: storageAccess,
+				setItem: storageAccess,
+				removeItem: storageAccess,
+				clear: storageAccess,
+			});
+		}
 	});
 
 	afterEach(() => {
 		cleanup();
+		vi.unstubAllGlobals();
+		expect(storageAccess).not.toHaveBeenCalled();
 	});
 
-	it("accepts a completed Duo token through the auth context and navigates without a document reload", async () => {
+	it("completes login with only the returned code and state, once under StrictMode", async () => {
 		const response = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };
 		mocks.complete2faDuoAuth.mockResolvedValue(response);
-		sessionStorage.setItem("duo_pending_token", "pending-token");
-		sessionStorage.setItem("duo_state", "expected-state");
 
-		render(
-			<MemoryRouter initialEntries={["/duo-callback?duo_code=duo-code&state=expected-state"]}>
-				<DuoCallback />
-			</MemoryRouter>,
-		);
+		renderCallback();
 
-		await waitFor(() => {
-			expect(mocks.complete2faDuoAuth).toHaveBeenCalledWith("pending-token", "duo-code", "expected-state");
-			expect(mocks.completeLogin).toHaveBeenCalledWith(response);
-			expect(mocks.navigate).toHaveBeenCalledWith("/", { replace: true });
-		});
-		expect(sessionStorage.getItem("duo_pending_token")).toBeNull();
-		expect(sessionStorage.getItem("duo_state")).toBeNull();
+		await waitFor(() => expect(screen.getByText("Signed in")).toBeInTheDocument());
+		expect(mocks.complete2faDuoAuth).toHaveBeenCalledExactlyOnceWith("duo-code", "returned-state");
+		expect(mocks.completeLogin).toHaveBeenCalledExactlyOnceWith(response);
+		expect(screen.getByTestId("location").textContent).toBe("/");
 	});
 
-	it.each(["", "&state=wrong-state"])("rejects missing or mismatched callback state (%s)", (stateQuery) => {
-		sessionStorage.setItem("duo_pending_token", "pending-token");
-		sessionStorage.setItem("duo_state", "expected-state");
-		render(
-			<MemoryRouter initialEntries={[`/duo-callback?duo_code=duo-code${stateQuery}`]}>
-				<DuoCallback />
-			</MemoryRouter>,
+	it("removes callback credentials from the URL while retaining the in-flight login response", async () => {
+		let finishLogin: ((response: object) => void) | undefined;
+		mocks.complete2faDuoAuth.mockReturnValue(
+			new Promise((resolve) => {
+				finishLogin = resolve;
+			}),
 		);
+		renderCallback();
 
-		expect(screen.getByText("Duo authentication failed. Please try again.")).toBeInTheDocument();
-		expect(mocks.complete2faDuoAuth).not.toHaveBeenCalled();
+		expect(screen.getByTestId("location").textContent).toBe("/duo-callback");
+		expect(screen.getByText("Completing Duo authentication…")).toBeInTheDocument();
+		expect(mocks.complete2faDuoAuth).toHaveBeenCalledExactlyOnceWith("duo-code", "returned-state");
 		expect(mocks.completeLogin).not.toHaveBeenCalled();
-		expect(sessionStorage.getItem("duo_pending_token")).toBeNull();
-		expect(sessionStorage.getItem("duo_state")).toBeNull();
+
+		const response = { expires: "2026-09-07T12:15:00Z" };
+		finishLogin?.(response);
+
+		await waitFor(() => expect(screen.getByText("Signed in")).toBeInTheDocument());
+		expect(mocks.completeLogin).toHaveBeenCalledExactlyOnceWith(response);
+	});
+
+	it.each(["", "?state=returned-state", "?duo_code=&state=returned-state"])(
+		"rejects a missing code before requesting authentication (%s)",
+		(query) => {
+			renderCallback(query);
+
+			expect(
+				screen.getByText("Missing Duo authorization code or session token. Please try signing in again."),
+			).toBeInTheDocument();
+			expect(mocks.complete2faDuoAuth).not.toHaveBeenCalled();
+			expect(mocks.completeLogin).not.toHaveBeenCalled();
+			expect(screen.getByTestId("location").textContent).toBe("/duo-callback");
+		},
+	);
+
+	it.each(["?duo_code=duo-code", "?duo_code=duo-code&state="])(
+		"rejects missing callback state before requesting authentication (%s)",
+		(query) => {
+			renderCallback(query);
+
+			expect(screen.getByText("Duo authentication failed. Please try again.")).toBeInTheDocument();
+			expect(mocks.complete2faDuoAuth).not.toHaveBeenCalled();
+			expect(mocks.completeLogin).not.toHaveBeenCalled();
+			expect(screen.getByTestId("location").textContent).toBe("/duo-callback");
+		},
+	);
+
+	it.each([
+		[new Error("Duo session expired"), "Duo session expired"],
+		[new Error(""), "Duo authentication failed. Please try again."],
+		[null, "Duo authentication failed. Please try again."],
+	])("shows a failed verification without establishing a session (%s)", async (error, message) => {
+		mocks.complete2faDuoAuth.mockRejectedValue(error);
+		renderCallback();
+
+		await waitFor(() => expect(screen.getByText(message as string)).toBeInTheDocument());
+		expect(mocks.complete2faDuoAuth).toHaveBeenCalledExactlyOnceWith("duo-code", "returned-state");
+		expect(mocks.completeLogin).not.toHaveBeenCalled();
+		expect(screen.getByRole("link", { name: "Return to sign in" })).toHaveAttribute("href", "/login");
+		expect(screen.getByTestId("location").textContent).toBe("/duo-callback");
 	});
 });

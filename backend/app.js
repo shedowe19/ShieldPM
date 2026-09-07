@@ -205,8 +205,10 @@ app.use(async (req, res, next) => {
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
 
-	// 2FA verification endpoints during login use the pending_token for auth, no CSRF cookie yet
-	const is2FaVerify = method === "POST" && /^\/(api\/)?tokens\/2fa\//.test(path);
+	// Duo creates and consumes a browser-bound cookie, so both endpoints also
+	// require the anonymous CSRF token supplied by the health bootstrap.
+	const isDuoLogin = /^\/(api\/)?tokens\/2fa\/duo\/(begin|complete)$/.test(path);
+	const is2FaVerify = method === "POST" && /^\/(api\/)?tokens\/2fa\//.test(path) && !isDuoLogin;
 
 	// Docs endpoints - bypass CSRF for Swagger UI
 	const isDocsRequest =

@@ -40,9 +40,9 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 
 ### Duo Security
 
-- `setupDuo(userId, config)` — Konfiguriert Duo mit `duo_host`, `client_id`, `client_secret`
-- `beginDuoAuthentication(userId, userEmail)` — Gibt Duo-Embed-URL zurück
-- `completeDuoAuthentication(userId, userEmail, duoCode, state)` — Tauscht Code gegen Verifikation
+- `setupDuo(userId, config)` — Konfiguriert Duo mit `clientId`, `clientSecret`, `apiHost` und `redirectUrl`
+- `beginDuoAuthentication(userId, userEmail, pendingExpiresAt)` — Erzeugt die Duo-Weiterleitungs-URL und eine kurzlebige Browserbindung; `pendingExpiresAt` stammt aus dem geprüften Pending-JWT und wird in Millisekunden übergeben
+- `completeDuoAuthentication(browserToken, duoCode, state)` — Prüft die Browserbindung und den State, verbraucht die Challenge atomar und tauscht den Code gegen die Duo-Verifikation; gibt nur bei erfolgreicher Prüfung den weiterhin aktiven Benutzer zurück
 
 ### Backup-Codes
 
@@ -97,7 +97,7 @@ Neben den klassischen `/api/users/:user_id/2fa/...`-Routen gibt es seit v4.3.2 e
 
 Der Flow: User loggt sich ein → Server erkennt dass 2FA nötig → gibt `pending_token` → Client ruft 2FA-Endpunkt auf → bei Erfolg werden volle Tokens ausgestellt.
 
-Diese Endpunkte sind im OpenAPI-Schema unter `backend/schema/paths/tokens/2fa/` dokumentiert und über Swagger UI (`/docs`) einsehbar.
+Die Verifizierungs- und Passkey-Endpunkte sind im OpenAPI-Schema unter `backend/schema/paths/tokens/2fa/` dokumentiert und über Swagger UI (`/docs`) einsehbar. Der Duo-Vertrag ist im folgenden Abschnitt beschrieben.
 
 ## Gotchas & Bug-Fixes
 
@@ -109,12 +109,17 @@ Diese Endpunkte sind im OpenAPI-Schema unter `backend/schema/paths/tokens/2fa/` 
 ## Autorisierung und Einmalverwendung
 
 - Verwaltungsrouten prüfen `access.can("users:update", userId)`. Damit gelten die aktuellen Rollen und der Kontostatus aus der Datenbank. Ein `2fa_pending`-Token darf weder Methoden löschen noch neue Backup-Codes erzeugen.
-- Alle Login-Endpunkte für TOTP, Passkey und Duo prüfen den Scope `2fa_pending` sowie eine gültige Benutzer-ID vor der zweiten Faktorprüfung.
+- TOTP, Passkey und der Start einer Duo-Anmeldung prüfen den Scope `2fa_pending` sowie eine gültige Benutzer-ID vor der zweiten Faktorprüfung. Der Duo-Abschluss verwendet die beim Start serverseitig gespeicherte Benutzerbindung.
 - Backup-Codes werden mit einer bedingten Aktualisierung auf `used_at IS NULL` verbraucht. Nur der Aufruf, der tatsächlich einen Datensatz aktualisiert, ist erfolgreich.
-- Duo speichert den zufälligen `state` benutzergebunden als `duo_auth_challenge` mit fünf Minuten Gültigkeit. `/api/tokens/2fa/duo/complete` erwartet `pending_token`, `duo_code` und `state`. Das Frontend vergleicht den zurückgegebenen State mit dem vor der Weiterleitung gespeicherten Wert; das Backend prüft Ablauf und Einmalverwendung.
-- Nach einer Aktualisierung müssen bereits laufende Passkey- oder Duo-Anmeldungen ohne gespeicherte Ablaufdaten neu begonnen werden.
+- `POST /api/tokens/2fa/duo/begin` erwartet `pending_token` und gibt ausschließlich `{auth_url}` zurück. Die unabhängige Browserbindung wird als hostgebundenes `shieldpm_duo`-Cookie mit `HttpOnly`, `SameSite=Lax` und Pfad `/api/tokens/2fa/duo` gesetzt; `Secure` folgt dem über die konfigurierte Proxy-Vertrauensstellung ermittelten HTTPS-Status. Die Lebensdauer beträgt höchstens fünf Minuten und endet spätestens mit dem Pending-JWT.
+- Die Datenbank speichert in `duo_auth_challenge` nur SHA-256-Hashes der Browserbindung und des zufälligen States sowie Benutzer-ID und Ablaufzeit. `POST /api/tokens/2fa/duo/complete` erwartet ausschließlich `duo_code` und `state` im JSON-Body; die Browserbindung wird ausschließlich aus dem Cookie gelesen. Der State wird gegen den gespeicherten Hash verglichen. Ein Pending-JWT oder eine Browserbindung im JSON-Body ersetzt das Cookie nicht.
+- Beide Duo-Endpunkte benötigen den CSRF-Header und das dazugehörige Cookie. Bei einem vollständigen Neustart auf `/duo-callback` wartet der Router zuerst auf die Health-Antwort mit dem CSRF-Token. Der AuthProvider überspringt dort die automatische Sitzungswiederherstellung, damit eine verspätete Refresh-Antwort keine gerade ausgestellten Auth-Cookies löschen kann. Regelmäßiger Refresh beginnt erst nach erfolgreicher Anmeldung.
+- Duo-Zustand und Pending-Token werden nicht in `sessionStorage` oder `localStorage` gespeichert. Der Callback übernimmt Code und State einmalig aus der URL, entfernt die Query-Parameter sofort aus dem aktuellen History-Eintrag und übergibt die Werte über den zentralen API-Client mit Cookies und CSRF-Header an den Server.
+- Der Server prüft den aktiven Benutzer und die konfigurierte Duo-Methode und löscht anschließend die Challenge mit einer bedingten, auf genau einen Datensatz geprüften Operation, bevor er den Code bei Duo einlöst. Der SDK-Aufruf prüft die signierte Antwort gegen die serverseitig ermittelte E-Mail-Adresse; zusätzlich müssen `auth_result.result` und `auth_result.status` jeweils `allow` sein. Ablaufzeit und aktiver Kontostatus werden nach dem Austausch erneut geprüft. Fehlgeschlagene oder parallele Rückrufe können die verbrauchte Challenge nicht erneut verwenden.
+- Die Duo-Antworten setzen `Cache-Control: no-store`. Ein neuer Start verwirft ein vorhandenes Duo-Cookie; jeder vom Abschluss-Handler bearbeitete Erfolg oder Fehler löscht es ebenfalls. Eine vom vorgeschalteten CSRF-Schutz abgelehnte Anfrage verändert das Cookie und die Challenge nicht.
+- Nach einer Aktualisierung müssen bereits laufende Duo-Anmeldungen mit dem alten State-/Pending-Token-Vertrag neu begonnen werden. Das gilt ebenso für ältere Passkey-Challenges ohne gespeicherte Ablaufdaten. Eine Datenbankmigration ist hierfür nicht erforderlich.
 
-Regressionstests: `backend/test/internal/2fa-service.spec.js`, `backend/test/internal/backup-code-consumption.spec.js` und `backend/test/routes/two-fa-authorization.spec.js`.
+Regressionstests: `backend/test/internal/2fa-service.spec.js`, `backend/test/internal/backup-code-consumption.spec.js` und `backend/test/routes/two-fa-authorization.spec.js`. `backend/test/routes/duo-login.spec.js` verbindet die echte Express-/CSRF-Verarbeitung mit einer isolierten SQLite-Datenbank und prüft Cookie-Bindung, Ablauf, CSRF, Kontosperren, Replay und parallele Rückrufe. `frontend/src/Router.duo.test.tsx` prüft den Neustart mit zunächst leerem CSRF-Arbeitsspeicher einschließlich React StrictMode. Duo-Netzwerkantworten werden in diesen Tests simuliert; ein Login gegen einen echten Duo-Mandanten ist damit nicht abgedeckt.
 
 ## Verwandte Seiten
 
