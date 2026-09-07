@@ -67,6 +67,13 @@ const detectAvatarFileType = (buffer) => {
 	return AVATAR_SIGNATURES.find((signature) => signature.matches(buffer)) || null;
 };
 
+const getAvatarPath = (userId, filename) => {
+	if (typeof filename !== "string" || path.basename(filename) !== filename || !filename.startsWith(`${userId}-`)) {
+		throw new errs.ValidationError("Invalid avatar path");
+	}
+	return path.resolve(process.env.DATA_PATH || "/data", "avatars", filename);
+};
+
 const internalUser = {
 	/**
 	 * Create a user can happen unauthenticated only once and only when no active users exist.
@@ -94,7 +101,10 @@ const internalUser = {
 		}
 
 		await access.can("users:create", data);
-		data.avatar = getGravatarUrl(data.email);
+		if (data.avatar_type && !["gravatar", "url"].includes(data.avatar_type)) {
+			throw new errs.ValidationError("Upload an avatar after creating the user");
+		}
+		data.avatar = data.avatar_type === "url" && data.avatar_value ? data.avatar_value : getGravatarUrl(data.email);
 
 		// Use transaction to ensure all user data is created or none at all
 		let user;
@@ -159,6 +169,15 @@ const internalUser = {
 		// 1. get user we want to update
 		let user = await internalUser.get(access, { id: data.id });
 
+		// Profile editing is available to ordinary users, but account roles and
+		// disabled state require the same administrator permission as permissions.
+		if (
+			(typeof data.roles !== "undefined" && !_.isEqual([...data.roles].sort(), [...user.roles].sort())) ||
+			(typeof data.is_disabled !== "undefined" && Boolean(data.is_disabled) !== Boolean(user.is_disabled))
+		) {
+			await access.can("users:permissions", data.id);
+		}
+
 		// 2. if email is to be changed, find other users with that email
 		if (typeof data.email !== "undefined") {
 			data.email = data.email.toLowerCase().trim();
@@ -196,6 +215,9 @@ const internalUser = {
 		} else if (avatarType === "url") {
 			data.avatar = avatarValue || getGravatarUrl(email);
 		} else if (avatarType === "upload") {
+			if (avatarValue) {
+				getAvatarPath(user.id, avatarValue);
+			}
 			// If we are switching to upload, check if we have a value
 			if (avatarValue) {
 				data.avatar = `/api/users/${user.id}/avatar/image`;
@@ -556,7 +578,7 @@ const internalUser = {
 
 		// Delete old avatar if it exists and was an upload
 		if (user.avatar_type === "upload" && user.avatar_value) {
-			const oldPath = path.join(avatarDir, user.avatar_value);
+			const oldPath = getAvatarPath(user.id, user.avatar_value);
 			if (fs.existsSync(oldPath)) {
 				fs.unlinkSync(oldPath);
 			}
@@ -587,19 +609,11 @@ const internalUser = {
 	getAvatarImage: async (_access, data) => {
 		// Public access allowed for avatars, but we check existence
 		const user = await userModel.query().findById(data.id);
-		if (!user || user.avatar_type !== "upload" || !user.avatar_value) {
+		if (!user || user.is_deleted || user.avatar_type !== "upload" || !user.avatar_value) {
 			throw new errs.ItemNotFoundError("Avatar not found");
 		}
 
-		const dataPath = process.env.DATA_PATH || "/data";
-		const filePath = path.join(dataPath, "avatars", user.avatar_value);
-
-		// SECURITY: Path traversal check — ensure resolved path stays within avatars dir
-		const resolvedPath = path.resolve(filePath);
-		const avatarDir = path.resolve(path.join(dataPath, "avatars"));
-		if (!resolvedPath.startsWith(avatarDir)) {
-			throw new Error("Invalid avatar path");
-		}
+		const filePath = getAvatarPath(user.id, user.avatar_value);
 
 		if (!fs.existsSync(filePath)) {
 			throw new errs.ItemNotFoundError("Avatar file missing");

@@ -30,7 +30,11 @@ const internalAnubis = {
 			logger.info("Generating Anubis Policy...");
 
 			// Fetch all enabled proxy hosts with Anubis enabled
-			const hosts = await ProxyHost.query().where("is_deleted", 0).where("enabled", 1).where("anubis_enabled", 1);
+			const hosts = await ProxyHost.query()
+				.where("is_deleted", 0)
+				.where("enabled", 1)
+				.where("anubis_enabled", 1)
+				.withGraphFetched("host_domains");
 
 			const policy = {
 				bots: [],
@@ -84,7 +88,7 @@ const internalAnubis = {
 						// (Go stores it in Request.Host), so Anubis headers_regex can't match it.
 						// We use the custom "X-ShieldPM-Host" header set by the Nginx frontend block.
 						const headers = {};
-						const escapeRegex = (s) => s.replace(/\\/g, "\\\\").replace(/\./g, "\\.");
+						const escapeRegex = (s) => _.escapeRegExp(s).replace(/\\\*/g, "[^.]+");
 						if (domains.length === 1) {
 							headers["X-Shieldpm-Host"] = `^${escapeRegex(domains[0])}$`;
 						} else {
@@ -95,7 +99,9 @@ const internalAnubis = {
 						// Merge user-defined headers_regex if present
 						const userHeaders = rule.headersRegex || rule.headers_regex;
 						if (userHeaders && typeof userHeaders === "object") {
-							Object.assign(headers, userHeaders);
+							for (const [name, value] of Object.entries(userHeaders)) {
+								if (name.toLowerCase() !== "x-shieldpm-host") headers[name] = value;
+							}
 						}
 
 						botRule.headers_regex = headers;

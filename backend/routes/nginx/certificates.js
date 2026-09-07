@@ -138,7 +138,8 @@ router
 			},
 		);
 
-		const tmpDir = `/tmp/client-cert-${Date.now()}`;
+		await res.locals.access.can("certificates:create", payload);
+		const tmpDir = await fs.mkdtemp("/tmp/shieldpm-client-cert-");
 		const cleanupTmpDir = async () => {
 			try {
 				await fs.rm(tmpDir, { recursive: true, force: true });
@@ -387,12 +388,19 @@ router
 	 *
 	 * Download certificate
 	 */
-	.post(async (req, res) => {
+	.post(async (req, res, next) => {
 		const payload = await apiValidator(getValidationSchema("/nginx/certificates/download", "post"), req.body);
 		const result = await internalCertificate.download(res.locals.access, {
 			id: Number.parseInt(payload.id, 10),
 		});
-		res.status(200).download(result.fileName);
+		res.status(200).download(result.fileName, async (err) => {
+			try {
+				await fs.rm(result.fileName, { force: true });
+			} catch (cleanupErr) {
+				logger.warn(`Certificate download cleanup failed: ${cleanupErr.message}`);
+			}
+			if (err) next(err);
+		});
 	});
 
 export default router;

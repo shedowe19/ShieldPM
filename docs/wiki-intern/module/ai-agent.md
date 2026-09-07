@@ -99,6 +99,14 @@ sodass es bei responsiven Wechseln nur eine Dialoginstanz gibt und der lokale Na
 - `internal/audit-log.js` — Protokollierung der AI-Aktionen
 - Aufgerufen von `routes/ai.js` und `internal/chat.js` (ChatOps)
 
+### OpenAI-kompatible Provider und Tool-Folgerunden
+
+`getLocalEndpoint()` bewahrt Pfadpräfixe eines vorgeschalteten Proxys und verhindert doppelte `/v1`-Segmente bei Base-URLs mit abschließendem Slash. OpenAI-kompatible Anfragen enthalten keine ausschließlich für Ollama vorgesehenen `options`- oder `keep_alive`-Felder.
+
+Folgerunden behalten sämtliche bisherigen Assistant-Tool-Calls und Tool-Ergebnisse. Strukturierte Tool-Calls werden auch aus Folgeantworten gelesen, und die Tool-Definitionen werden erneut mitgesendet. Fehlerergebnisse behalten die zugehörige Tool-Call-ID. Netzwerkaufrufe lokaler beziehungsweise OpenAI-kompatibler Provider haben ein Zeitlimit von zwei Minuten.
+
+Das Tool `create_user` verlangt ein explizites Passwort mit mindestens acht Zeichen; ein vorhersehbares Standardpasswort wird nicht eingesetzt. Protokolle für aus Text extrahierte Tool-Aufrufe enthalten keine vollständigen Argumentobjekte, da diese Zugangsdaten enthalten können.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

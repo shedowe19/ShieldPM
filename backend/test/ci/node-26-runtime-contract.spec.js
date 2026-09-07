@@ -41,8 +41,11 @@ describe("Node 26 runtime contract", () => {
 
 	it("installs Yarn Classic through Corepack when available and npm otherwise", () => {
 		expect(dockerfile).toContain("command -v corepack");
-		expect(dockerfile).toContain("npm install --global yarn@1.22.22");
-		expect(dockerfile.match(/yarn install --frozen-lockfile --production=false/g)).toHaveLength(2);
+		expect(dockerfile).toContain("npm install --global --allow-scripts=yarn yarn@1.22.22");
+		const frontendStage = dockerfile.split("AS frontend")[1].split("AS backend")[0];
+		const backendStage = dockerfile.split("AS backend")[1].split(`FROM ${shieldpmNginxImageVariable}`)[0];
+		expect(frontendStage).toContain("yarn install --frozen-lockfile --production=false");
+		expect(backendStage).toContain("yarn install --frozen-lockfile --production=true");
 	});
 
 	it("uses the application root as the frontend and backend working directory", () => {

@@ -1,18 +1,45 @@
 #!/bin/bash
 set -euo pipefail
 
-# Self-update protection: Run from /tmp to allow overwriting the original script file
-SELF_PATH=$(readlink -f "$0")
-if [[ "$SELF_PATH" != "/tmp/shieldpm_update_running" ]]; then
-    cp "$SELF_PATH" /tmp/shieldpm_update_running
-    exec /bin/bash /tmp/shieldpm_update_running "$@"
-fi
-
 # Only run as root
 if [ "$EUID" -ne 0 ]; then
   echo "Please run as root"
   exit 1
 fi
+
+# Use a private, unpredictable directory before replacing the installed updater.
+SELF_PATH=$(readlink -f "$0")
+if [[ "$SELF_PATH" != /tmp/shieldpm-update.*/update-shieldpm || "$SELF_PATH" != "${SHIELDPM_UPDATE_RUNNING:-}" ]]; then
+    UPDATE_RUN_DIR=$(mktemp -d /tmp/shieldpm-update.XXXXXX)
+    install -m 700 "$SELF_PATH" "$UPDATE_RUN_DIR/update-shieldpm"
+    export SHIELDPM_UPDATE_RUNNING="$UPDATE_RUN_DIR/update-shieldpm"
+    exec /bin/bash "$SHIELDPM_UPDATE_RUNNING" "$@"
+fi
+UPDATE_RUN_DIR=$(dirname "$SELF_PATH")
+UPDATE_ROLLBACK=false
+cleanup_update() {
+    local result=$?
+    if [ "$UPDATE_ROLLBACK" = true ]; then
+        echo "Update interrupted before migrations; restoring application files..."
+        if find "$BACKEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && \
+            find "$FRONTEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && \
+            cp -a "$UPDATE_RUN_DIR/backend-backup/." "$BACKEND_DIR/" && \
+            cp -a "$UPDATE_RUN_DIR/frontend-backup/." "$FRONTEND_DIR/"; then
+            systemctl daemon-reload || true
+            systemctl start shieldpm || true
+        else
+            echo "Application recovery failed. Backups retained in $UPDATE_RUN_DIR."
+            return "$result"
+        fi
+    elif [ "$result" -ne 0 ] && [ -d "$UPDATE_RUN_DIR/backend-backup" ]; then
+        echo "Update failed after backups were created. Recovery files retained in $UPDATE_RUN_DIR."
+        echo "Check the database migration state before manually restoring older application files."
+        return "$result"
+    fi
+    rm -rf "$UPDATE_RUN_DIR"
+    return "$result"
+}
+trap cleanup_update EXIT
 
 REPO_URL="https://github.com/shedowe19/ShieldPM.git"
 
@@ -26,6 +53,10 @@ ORIGINAL_ARGS=("$@")
 while [[ $# -gt 0 ]]; do
   case $1 in
     -b|--branch)
+      if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
+        echo "A branch name is required after $1."
+        exit 1
+      fi
       BRANCH="$2"
       shift # past argument
       shift # past value
@@ -36,7 +67,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TEMP_DIR="/tmp/shieldpm_update_$(date +%s)"
+TEMP_DIR="$UPDATE_RUN_DIR/source"
 BACKEND_DIR="/app"
 FRONTEND_DIR="/html/frontend"
 
@@ -62,7 +93,13 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 echo "--> Checking for application updates..."
 # Fetch latest commit SHA for the target branch
-LATEST_SHA_FULL=$(curl -s "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH" | grep '"sha":' | head -n 1 | cut -d '"' -f 4)
+BRANCH_ENCODED=$(node -p 'encodeURIComponent(process.argv[1])' "$BRANCH")
+LATEST_SHA_FULL=$(curl -fsSL "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH_ENCODED" | \
+    node --input-type=module -e 'let data = ""; for await (const chunk of process.stdin) data += chunk; console.log(JSON.parse(data).sha || "");')
+if [[ ! "$LATEST_SHA_FULL" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "Could not resolve branch $BRANCH. No application files were changed."
+    exit 1
+fi
 LATEST_SHORT=${LATEST_SHA_FULL:0:7}
 
 # Get local commit hash if available
@@ -98,11 +135,11 @@ fi
 # Self-Update: Fetch latest version of this script first
 echo "--> [0/9] Checking for script updates..."
 SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${SCRIPT_BRANCH}/rootfs/usr/local/bin/update-shieldpm"
-SCRIPT_TMP="/tmp/update-shieldpm.new"
+SCRIPT_TMP="$UPDATE_RUN_DIR/update-shieldpm.new"
 SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
 
 # Allow curl to fail (e.g. if offline or github issues) without crashing the script (set -e)
-if curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL" && [ -f "$SCRIPT_TMP" ]; then
+if [[ "${SHIELDPM_SELF_UPDATED:-0}" != "1" ]] && curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL" && bash -n "$SCRIPT_TMP"; then
     # Compare with current script
     if ! cmp -s "$SCRIPT_TMP" "$SCRIPT_CURRENT"; then
         echo "    - New version found. Updating self and restarting..."
@@ -111,6 +148,7 @@ if curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL" && [ -f "$SCRIPT_TMP" ]; then
         rm -f "$SCRIPT_TMP"
         # Re-execute with same arguments, but mark as already self-updated
         export SHIELDPM_SELF_UPDATED=1
+        rm -rf "$UPDATE_RUN_DIR"
         exec /bin/bash "$SCRIPT_CURRENT" "${ORIGINAL_ARGS[@]}"
     else
         echo "    - Script is up to date."
@@ -142,12 +180,11 @@ remove_stale_corepack_shims() {
 }
 
 wait_for_backend_health() {
-    local attempt
-    local max_attempts=120
+    local deadline=$((SECONDS + 120))
 
     echo "    - Waiting for the updated backend and database migrations..."
-    for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-        if curl --fail --silent --show-error --unix-socket /run/shieldpm.sock \
+    while ((SECONDS < deadline)); do
+        if curl --fail --silent --show-error --max-time 2 --unix-socket /run/shieldpm.sock \
             http://localhost/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; then
             echo "    - Backend is healthy; pending database migrations completed."
             return 0
@@ -155,7 +192,7 @@ wait_for_backend_health() {
         sleep 1
     done
 
-    echo "    ! ShieldPM did not become healthy within ${max_attempts}s."
+    echo "    ! ShieldPM did not become healthy within 120s."
     return 1
 }
 
@@ -240,6 +277,8 @@ apt-get install -y --no-install-recommends \
 
 echo "--> [2/9] Fetching latest source..."
 git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$TEMP_DIR"
+# The branch may advance between the initial lookup and clone.
+LATEST_SHA_FULL=$(git -C "$TEMP_DIR" rev-parse HEAD)
 
 echo "--> [3/9] Building Backend..."
 cd "$TEMP_DIR/backend"
@@ -251,10 +290,17 @@ yarn install --frozen-lockfile --production --silent
 echo "--> [4/9] Building Frontend..."
 cd "$TEMP_DIR/frontend"
 # LXC compatible: Run as root
-yarn install --frozen-lockfile --silent
+yarn install --frozen-lockfile --production=false --silent
 yarn run build
 
 echo "--> [5/9] Swapping files..."
+# Preserve a recoverable copy before stopping the service. Rollback is disabled
+# once the new backend starts because migrations may change the database schema.
+cp -a "$BACKEND_DIR" "$UPDATE_RUN_DIR/backend-backup"
+cp -a "$FRONTEND_DIR" "$UPDATE_RUN_DIR/frontend-backup"
+# Do not serve a mixture of old modules and new files during replacement.
+systemctl stop shieldpm
+UPDATE_ROLLBACK=true
 # Backend
 echo "    - Updating Backend at $BACKEND_DIR..."
 # Application state belongs in /data. Replacing /app exactly prevents removed
@@ -340,10 +386,10 @@ if [[ -n "$ANUBIS_ARCH" ]]; then
         ANUBIS_VERSION="1.27.0"
         ANUBIS_URL="https://github.com/TecharoHQ/anubis/releases/download/v${ANUBIS_VERSION}/anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
         echo "    - Downloading Anubis $ANUBIS_VERSION ($ANUBIS_ARCH)..."
-        curl -L -f -o /tmp/anubis.tar.gz "$ANUBIS_URL"
-        if [ -s /tmp/anubis.tar.gz ]; then
-            tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-            rm /tmp/anubis.tar.gz
+        curl -L -f -o "$UPDATE_RUN_DIR/anubis.tar.gz" "$ANUBIS_URL"
+        if [ -s "$UPDATE_RUN_DIR/anubis.tar.gz" ]; then
+            tar -xzf "$UPDATE_RUN_DIR/anubis.tar.gz" -C /usr/local/bin --strip-components=2 "anubis-${ANUBIS_VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
+            rm "$UPDATE_RUN_DIR/anubis.tar.gz"
             chmod +x /usr/local/bin/anubis
             echo "    - Anubis installed successfully."
 
@@ -444,6 +490,7 @@ fi
 
 echo "--> [9/9] Restarting ShieldPM and applying database migrations..."
 systemctl daemon-reload
+UPDATE_ROLLBACK=false
 if systemctl restart shieldpm && systemctl is-active --quiet shieldpm && wait_for_backend_health; then
     echo "    - ShieldPM is running; application update and database migrations are healthy."
 else

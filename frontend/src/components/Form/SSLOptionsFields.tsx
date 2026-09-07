@@ -1,4 +1,5 @@
 import { Field, type FieldProps, useFormikContext } from "formik";
+import { useEffect } from "react";
 import { DNSProviderFields, DomainNamesField } from "src/components";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
@@ -35,9 +36,11 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 	const { sslForced, http2Support, hstsEnabled, hstsSubdomains, meta } = v;
 	const { dnsChallenge } = meta || {};
 
-	if (forceDNSForNew && newCertificate && !dnsChallenge) {
-		setFieldValue("meta.dnsChallenge", true);
-	}
+	useEffect(() => {
+		if (forceDNSForNew && newCertificate && !dnsChallenge) {
+			setFieldValue("meta.dnsChallenge", true);
+		}
+	}, [forceDNSForNew, newCertificate, dnsChallenge, setFieldValue]);
 
 	const handleToggleChange = (checked: boolean, fieldName: string) => {
 		setFieldValue(fieldName, checked);

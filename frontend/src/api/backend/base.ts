@@ -51,24 +51,41 @@ function buildBody(data?: object): string | undefined {
 }
 
 async function processResponse<T = DynamicResponse>(response: Response, silentAuth = false): Promise<T> {
-	const payload = await response.json();
+	if (response.status === 401) {
+		// Authentication must expire even when a proxy returns HTML or an empty body.
+		AuthStore.clear();
+		queryClient.clear();
+		if (!silentAuth) {
+			window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
+		}
+	}
+
+	// Logout and several DELETE endpoints intentionally return no response body.
+	if (response.ok && (response.status === 204 || response.status === 205)) {
+		return undefined as T;
+	}
+
+	let payload: unknown;
+	try {
+		payload = await response.json();
+	} catch (error) {
+		if (response.ok) {
+			throw error;
+		}
+	}
+	const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : undefined;
 	// Capture CSRF Token if present in response
-	if (payload.csrfToken) {
-		AuthStore.setCsrfToken(payload.csrfToken);
+	if (typeof record?.csrfToken === "string" && record.csrfToken) {
+		AuthStore.setCsrfToken(record.csrfToken);
 	}
 
 	if (!response.ok) {
-		if (response.status === 401) {
-			// Clear stale client state and let AuthProvider render the login screen.
-			AuthStore.clear();
-			queryClient.clear();
-			if (!silentAuth) {
-				window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
-			}
-		}
-		throw new Error(
-			typeof payload.error.messageI18n !== "undefined" ? payload.error.messageI18n : payload.error.message,
+		const details = record?.error;
+		const error = details && typeof details === "object" ? (details as Record<string, unknown>) : undefined;
+		const message = [error?.messageI18n, error?.message, record?.message].find(
+			(value): value is string => typeof value === "string" && value.length > 0,
 		);
+		throw new Error(message || `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`);
 	}
 	return camelizeKeys(payload) as unknown as T;
 }

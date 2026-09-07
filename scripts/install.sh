@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 # ShieldPM Generic Installer (Linux AMD64/ARM64)
 # (c) 2026 Shedowe
@@ -13,6 +13,9 @@ if [ "$EUID" -ne 0 ]; then
   echo "Please run as root"
   exit 1
 fi
+
+INSTALL_TMP_DIR=$(mktemp -d /tmp/shieldpm-install.XXXXXX)
+trap 'rm -rf "$INSTALL_TMP_DIR"' EXIT
 
 enable_node_system_ca() {
     if [[ " ${NODE_OPTIONS:-} " != *" --use-system-ca "* ]]; then
@@ -58,7 +61,7 @@ install_node_26() {
     printf 'deb [signed-by=%s] https://deb.nodesource.com/node_%s.x nodistro main\n' \
         "$NODESOURCE_KEYRING" "$NODE_MAJOR" > "$NODESOURCE_LIST"
     apt-get update
-    NODE_PACKAGE_VERSION="$(apt-cache madison nodejs | awk '$3 ~ /^26\./ { print $3; exit }')"
+    NODE_PACKAGE_VERSION="$(apt-cache madison nodejs | awk '$3 ~ /^26\./ && !found { print $3; found = 1 }')"
     if [ -z "$NODE_PACKAGE_VERSION" ]; then
         echo "ERROR: NodeSource does not provide Node.js ${NODE_MAJOR} for this architecture."
         exit 1
@@ -125,6 +128,7 @@ apt-get install -y --no-install-recommends --fix-missing \
     libxml2 \
     liblmdb0 \
     logrotate \
+    locales \
     lua-cjson \
     libluajit-5.1-2 \
     nano \
@@ -137,7 +141,6 @@ apt-get install -y --no-install-recommends --fix-missing \
     tzdata \
     util-linux \
     libyajl2 \
-    zlib1g \
     zlib1g \
     zstd
 
@@ -163,7 +166,15 @@ cp -r html /
 # 5. Copy Rootfs Overlays (Systemd service, scripts, configs)
 echo ">>> Installing system configs..."
 if [ -d "rootfs" ]; then
-    cp -r rootfs/* /
+    # Existing persistent data, including database credentials, must survive a reinstall.
+    for overlay in rootfs/*; do
+        [ "$(basename "$overlay")" = "data" ] && continue
+        cp -r "$overlay" /
+    done
+    mkdir -p /data
+    if [ ! -e /data/.env ] && [ -f rootfs/data/.env ]; then
+        install -m 600 rootfs/data/.env /data/.env
+    fi
 fi
 
 # 6. Permissions
@@ -238,6 +249,32 @@ if [ ! -f "$ENV_FILE" ]; then
     fi
 fi
 
+# Write shell-compatible values atomically; passwords must never become shell code.
+set_env_value() {
+    python3 - "$ENV_FILE" "$1" "$2" <<'PY'
+import os
+from pathlib import Path
+import re
+import shlex
+import sys
+import tempfile
+
+path = Path(sys.argv[1])
+key, value = sys.argv[2:]
+pattern = re.compile(r"^\s*(?:#\s*)?(?:export\s+)?" + re.escape(key) + r"\s*=")
+lines = [line for line in path.read_text().splitlines() if not pattern.match(line)]
+lines.append(f"{key}={shlex.quote(value)}")
+descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-env-", dir=path.parent)
+try:
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write("\n".join(lines) + "\n")
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+}
+
 # Function to prompt for DB credentials
 prompt_db_creds() {
     local default_host="127.0.0.1"
@@ -260,7 +297,8 @@ prompt_db_creds() {
         DB_NAME=${DB_NAME:-$default_name}
         read -r -p "    DB User (Default: $default_user): " DB_USER
         DB_USER=${DB_USER:-$default_user}
-        read -r -p "    DB Password (Default: $default_pass): " DB_PASS
+        read -r -s -p "    DB Password (Default: $default_pass): " DB_PASS
+        echo
         DB_PASS=${DB_PASS:-$default_pass}
         
         # Don't install server if external (unless user wants to, but assume external means existing)
@@ -291,10 +329,18 @@ case "$db_choice" in
              echo "--> Initializing MariaDB..."
              systemctl start mariadb
              # Create DB and User
-             mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-             mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
-             mysql -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
-             mysql -e "FLUSH PRIVILEGES;"
+             # Escape identifiers and string literals independently. Disable backslash
+             # escapes for this session so passwords retain their literal bytes.
+             MYSQL_NAME=${DB_NAME//\`/\`\`}
+             MYSQL_USER=${DB_USER//\'/\'\'}
+             MYSQL_PASS=${DB_PASS//\'/\'\'}
+             mysql <<SQL
+SET SESSION sql_mode = 'NO_BACKSLASH_ESCAPES';
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_NAME}\`;
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASS}';
+ALTER USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASS}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_NAME}\`.* TO '${MYSQL_USER}'@'localhost';
+SQL
         else
              echo "--> Installing MariaDB Client only..."
              apt-get install -y --fix-missing mariadb-client libmariadb3 default-libmysqlclient-dev
@@ -306,11 +352,11 @@ case "$db_choice" in
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
 
         # Set values
-        sed -i "s|^DB_MYSQL_HOST=.*|DB_MYSQL_HOST=${DB_HOST}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_PORT=.*|DB_MYSQL_PORT=${DB_PORT}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_USER=.*|DB_MYSQL_USER=${DB_USER}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_PASSWORD=.*|DB_MYSQL_PASSWORD=${DB_PASS}|g" "$ENV_FILE"
-        sed -i "s|^DB_MYSQL_NAME=.*|DB_MYSQL_NAME=${DB_NAME}|g" "$ENV_FILE"
+        set_env_value DB_MYSQL_HOST "$DB_HOST"
+        set_env_value DB_MYSQL_PORT "$DB_PORT"
+        set_env_value DB_MYSQL_USER "$DB_USER"
+        set_env_value DB_MYSQL_PASSWORD "$DB_PASS"
+        set_env_value DB_MYSQL_NAME "$DB_NAME"
         
         echo "  > MySQL configured in $ENV_FILE."
         ;;
@@ -325,8 +371,14 @@ case "$db_choice" in
             echo "--> Initializing PostgreSQL..."
             systemctl start postgresql
             # Create DB and User
-            sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';" || true
-            sudo -u postgres psql -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};" || true
+            runuser -u postgres -- psql --set=ON_ERROR_STOP=1 \
+                --set=db_user="$DB_USER" --set=db_password="$DB_PASS" --set=db_name="$DB_NAME" <<'SQL'
+SELECT format('CREATE ROLE %I LOGIN', :'db_user')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'db_user') \gexec
+SELECT format('ALTER ROLE %I PASSWORD %L', :'db_user', :'db_password') \gexec
+SELECT format('CREATE DATABASE %I OWNER %I', :'db_name', :'db_user')
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db_name') \gexec
+SQL
         else
             echo "--> Installing PostgreSQL Client only..."
             apt-get install -y --fix-missing postgresql-client libpq-dev
@@ -338,11 +390,11 @@ case "$db_choice" in
         sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
 
         # Set values
-        sed -i "s|^DB_POSTGRES_HOST=.*|DB_POSTGRES_HOST=${DB_HOST}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_PORT=.*|DB_POSTGRES_PORT=${DB_PORT}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_USER=.*|DB_POSTGRES_USER=${DB_USER}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_PASSWORD=.*|DB_POSTGRES_PASSWORD=${DB_PASS}|g" "$ENV_FILE"
-        sed -i "s|^DB_POSTGRES_NAME=.*|DB_POSTGRES_NAME=${DB_NAME}|g" "$ENV_FILE"
+        set_env_value DB_POSTGRES_HOST "$DB_HOST"
+        set_env_value DB_POSTGRES_PORT "$DB_PORT"
+        set_env_value DB_POSTGRES_USER "$DB_USER"
+        set_env_value DB_POSTGRES_PASSWORD "$DB_PASS"
+        set_env_value DB_POSTGRES_NAME "$DB_NAME"
 
         echo "  > PostgreSQL configured in $ENV_FILE."
         ;;
@@ -364,7 +416,7 @@ read -r -p "Install CrowdSec? [y/N] (Default: N): " cs_choice
 
 if [[ "$cs_choice" =~ ^[Yy]$ ]]; then
     echo "--> Installing CrowdSec Agent..."
-    curl -s https://install.crowdsec.net | bash
+    curl -fsSL https://install.crowdsec.net | bash
     apt-get install -y crowdsec
 
     # Create acquis with native log paths (/data/nginx/ instead of Docker's /opt/shieldpm/nginx/)
@@ -385,8 +437,8 @@ ACQUIS_EOF
     mkdir -p /etc/crowdsec/parsers/s01-parse/
     mkdir -p /etc/crowdsec/collections/
     
-    wget -q -O /etc/crowdsec/parsers/s01-parse/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/parser.yaml
-    wget -q -O /etc/crowdsec/collections/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/collection.yaml
+    curl -fsSL -o /etc/crowdsec/parsers/s01-parse/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/parser.yaml
+    curl -fsSL -o /etc/crowdsec/collections/shieldpm.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/develop/rootfs/etc/crowdsec/collection.yaml
 
     echo "  > Installed ShieldPM parser & collection"
 
@@ -414,7 +466,7 @@ ACQUIS_EOF
             sed -i "s|^ENABLED.*|ENABLED=true|g" /data/crowdsec/crowdsec.conf
         fi
         echo "  > CrowdSec installed and configured!"
-        echo "  > Bouncer API Key: $CS_API_KEY"
+        chmod 600 /data/crowdsec/crowdsec.conf
     else
         echo "  > CrowdSec installed but bouncer key generation failed."
         echo "  > After startup, run: cscli bouncers add shieldpm-bouncer"
@@ -447,17 +499,18 @@ if [[ "$geoip_choice" =~ ^[Yy]$ ]]; then
         # Fallback: direct download if PPA not available
         echo "  > PPA not available, trying direct install..."
         ARCH=$(dpkg --print-architecture)
-        GEOIP_URL="https://github.com/maxmind/geoipupdate/releases/latest/download/geoipupdate_7.1.0_linux_${ARCH}.deb"
-        curl -L -o /tmp/geoipupdate.deb "$GEOIP_URL" 2>/dev/null
-        dpkg -i /tmp/geoipupdate.deb 2>/dev/null || apt-get install -f -y
-        rm -f /tmp/geoipupdate.deb
+        GEOIP_URL="https://github.com/maxmind/geoipupdate/releases/download/v7.1.0/geoipupdate_7.1.0_linux_${ARCH}.deb"
+        curl -fL -o "$INSTALL_TMP_DIR/geoipupdate.deb" "$GEOIP_URL"
+        dpkg -i "$INSTALL_TMP_DIR/geoipupdate.deb" || apt-get install -f -y
+        rm -f "$INSTALL_TMP_DIR/geoipupdate.deb"
     }
 
     # Prompt for MaxMind credentials
     echo ""
     echo "  Enter your MaxMind account details (from https://www.maxmind.com/en/accounts):"
     read -r -p "  Account ID: " GEOIP_ACCOUNT_ID
-    read -r -p "  License Key: " GEOIP_LICENSE_KEY
+    read -r -s -p "  License Key: " GEOIP_LICENSE_KEY
+    echo
 
     if [ -n "$GEOIP_ACCOUNT_ID" ] && [ -n "$GEOIP_LICENSE_KEY" ]; then
         # Write GeoIP config
@@ -467,6 +520,7 @@ LicenseKey $GEOIP_LICENSE_KEY
 EditionIDs GeoLite2-Country GeoLite2-City GeoLite2-ASN
 DatabaseDirectory /data/nginx
 GEOIP_EOF
+        chmod 600 /etc/GeoIP.conf
 
         # Run initial download
         echo "--> Downloading GeoIP databases to /data/nginx/..."
@@ -517,11 +571,11 @@ if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
     URL="https://github.com/TecharoHQ/anubis/releases/download/v${VERSION}/anubis-${VERSION}-linux-${ANUBIS_ARCH}.tar.gz"
 
     echo "  > Downloading from $URL..."
-    curl -L -o /tmp/anubis.tar.gz "$URL"
+    curl -fL -o "$INSTALL_TMP_DIR/anubis.tar.gz" "$URL"
 
-    if [ -s /tmp/anubis.tar.gz ]; then
-        tar -xzf /tmp/anubis.tar.gz -C /usr/local/bin --strip-components=2 "anubis-${VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
-        rm /tmp/anubis.tar.gz
+    if [ -s "$INSTALL_TMP_DIR/anubis.tar.gz" ]; then
+        tar -xzf "$INSTALL_TMP_DIR/anubis.tar.gz" -C /usr/local/bin --strip-components=2 "anubis-${VERSION}-linux-${ANUBIS_ARCH}/bin/anubis"
+        rm "$INSTALL_TMP_DIR/anubis.tar.gz"
         chmod +x /usr/local/bin/anubis
         echo "  > Anubis installed to /usr/local/bin/anubis"
 
@@ -606,15 +660,17 @@ read -r -p "Install OpenAppSec Agent? [y/N] (Default: N): " oas_choice
 
 if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
     echo "--> Downloading OpenAppSec installer..."
-    cd /tmp
-    wget -q https://downloads.openappsec.io/open-appsec-install && chmod +x open-appsec-install
+    cd "$INSTALL_TMP_DIR"
+    curl -fsSL -o open-appsec-install https://downloads.openappsec.io/open-appsec-install
+    chmod +x open-appsec-install
 
     # Ask about cloud portal
     echo ""
     echo "  OpenAppSec can be managed via the Cloud Portal (https://my.openappsec.io)"
     echo "  or locally via a policy file. Cloud management requires a Deployment Profile Token."
     echo ""
-    read -r -p "  Enter AGENT_TOKEN (leave empty for local-only mode): " OAS_AGENT_TOKEN
+    read -r -s -p "  Enter AGENT_TOKEN (leave empty for local-only mode): " OAS_AGENT_TOKEN
+    echo
 
     echo "--> Running OpenAppSec installer (agent only)..."
     # Run installer — ShieldPM already has the Nginx attachment module compiled in
@@ -692,7 +748,7 @@ APPSEC_EOF
         echo "  > Cloud Portal: https://my.openappsec.io"
     fi
 
-    rm -f /tmp/open-appsec-install
+    rm -f "$INSTALL_TMP_DIR/open-appsec-install"
 else
     echo "--> Skipping OpenAppSec (can be installed later)."
 fi

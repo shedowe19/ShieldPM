@@ -11,8 +11,10 @@ describe("npm and Yarn dependency constraints", () => {
 		expect(readManifest("backend").resolutions).toEqual({
 			"@apidevtools/swagger-parser/**/js-yaml": "4.3.1",
 			"@duosecurity/duo_universal/axios": "1.18.0",
-			"ajv/fast-uri": "3.1.5",
+			"ajv/fast-uri": "3.1.6",
 			"archiver/**/brace-expansion": "5.0.9",
+			"express/**/qs": "6.16.0",
+			"vitest/vite/postcss/nanoid": "3.3.18",
 		});
 		expect(readManifest("frontend").resolutions).toBeUndefined();
 	});

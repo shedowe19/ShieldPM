@@ -19,6 +19,11 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 - Generiert Let's Encrypt Account-Keys.
 - Beantragt Zertifikate via HTTP-01 oder DNS-01 Challenge.
 - Erneuert ablaufende Zertifikate asynchron.
+- Beantragung, manuelle Erneuerung, Timer-Erneuerung und Widerruf teilen sich `runCertbot()` und dieselbe Prozesssperre. Gleichzeitige Aufrufe erhalten einen nachvollziehbaren Validierungsfehler; die Sperre wird bei Erfolg und Fehler freigegeben.
+- DNS-Zugangsdaten werden mit Dateimodus `0600` gespeichert. Numerische Propagationszeiten werden für CLI-Argumente in Strings umgewandelt.
+- Jeder HTTP-Challenge-Test verwendet einen eindeutigen Testdateinamen, damit gleichzeitige Tests sich nicht gegenseitig löschen. Die Datei wird im `finally`-Block entfernt.
+- Der externe HTTP-Test hat einen Socket-Timeout von 15 Sekunden und behandelt Fehler oder abgebrochene Antworten. Die Ziel-URL wird korrekt als Formularfeld kodiert.
+- Regressionen: `backend/test/internal/certbot-processing.spec.js` (alle externen Aufrufe gemockt).
 
 ## Abhängigkeiten
 

@@ -103,7 +103,7 @@ const ai = {
 		} catch (err) {
 			// Only ignore "not found" errors — 404 means the setting doesn't exist yet
 			// Any other error (DB, network, etc.) should be surfaced
-			if (err.code !== 404) {
+			if (err.status !== 404 && err.code !== 404) {
 				throw err;
 			}
 		}
@@ -176,7 +176,7 @@ const ai = {
 
 				// Safely construct the final URL using URL constructor
 				// This handles slash consistency and prevents some path traversal issues
-				targetUrl = new URL("v1/models", parsedBase);
+				targetUrl = aiProviders.getLocalEndpoint(parsedBase.toString(), "v1/models");
 			} catch (err) {
 				throw new Error(`Invalid base_url: ${err.message}`);
 			}
@@ -320,7 +320,7 @@ const ai = {
 								}
 
 								resp.toolCalls.push({ name: toolName, args });
-								logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`, args);
+								logger.info(`[AI Chat] FALLBACK: Extracted tool call: ${toolName}`);
 							} catch (e) {
 								logger.warn("[AI Chat] FALLBACK: Failed to parse embedded tool call:", e.message);
 							}
@@ -371,6 +371,7 @@ const ai = {
 					history,
 					response,
 					toolResults,
+					tools,
 				);
 			}
 

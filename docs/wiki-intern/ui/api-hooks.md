@@ -1,32 +1,33 @@
-# Frontend API-Client
+# Frontend API-Hooks
 
 ## Zweck
 
-Dokumentation der React-Query-basierten API-Hooks in `frontend/src/api/backend/`.
+Dokumentation der React-Query-basierten API-Hooks in `frontend/src/hooks/` und ihrer API-Funktionen.
 
 ## Kontext
 
-Alle API-Aufrufe vom Frontend zum Backend laufen über diese Hooks. Sie verwenden TanStack React Query für Caching und State-Management.
+Die Hooks verwenden TanStack React Query für Caching und State-Management. Die HTTP-Funktionen liegen separat in
+`frontend/src/api/backend/`; Dialoge und Auth-Flows können diese auch direkt verwenden.
 
 ## Struktur
 
 ```
-frontend/src/api/backend/
-├── index.ts           # Haupt-Exports
-├── base.ts            # Basis-API-Funktion
-├── helpers.ts         # Hilfsfunktionen
-├── models.ts          # TypeScript-Typen
-├── responseTypes.ts   # API-Antwort-Typen
-├── expansions.ts      # Expansion-Parameter
-└── [entity]/
-    ├── get*.ts        # GET-Operationen
-    ├── create*.ts     # POST-Operationen
-    ├── update*.ts     # PUT-Operationen
-    ├── delete*.ts     # DELETE-Operationen
-    └── *.ts           # Sonstige Operationen
+frontend/src/
+├── hooks/
+│   ├── useUser.ts       # Einzelabfrage und Benutzer-Mutation
+│   ├── useUsers.ts      # Benutzerlisten
+│   └── use*.ts          # Weitere Query-/Mutation-Hooks
+└── api/backend/
+    ├── base.ts          # HTTP, Cookie-/CSRF-Übergabe, Antwortverarbeitung
+    ├── models.ts        # Datenmodelle
+    ├── responseTypes.ts # Antworttypen
+    ├── get*.ts          # GET-Funktionen (flach im API-Ordner)
+    ├── create*.ts       # POST-Funktionen
+    ├── update*.ts       # PUT-Funktionen
+    └── delete*.ts       # DELETE-Funktionen
 ```
 
-## Dateien (104 .ts Dateien)
+## Verwendete API-Funktionen (Auswahl)
 
 ### Auth & User
 
@@ -100,21 +101,19 @@ frontend/src/api/backend/
 
 ## Pattern
 
-```typescript
-// Typisches GET-Hook
-export function useEntity() {
-  return useQuery({
-    queryKey: ["entity"],
-    queryFn: () => api.get("/api/entity"),
-  });
-}
+API-Funktionen übernehmen ausschließlich den Transport; Hooks legen die Cache-Schlüssel und Invalidierungen fest.
+Nach Benutzeränderungen werden sowohl `["user", id]` als auch `["user", "me"]` invalidiert. Der aktuelle
+Benutzer bleibt damit in Profil, Kopfzeile und Berechtigungsanzeige konsistent. Avatar-Uploads invalidieren diese
+Abfragen erneut nach dem tatsächlichen Upload, da die vorausgehende Profil-Mutation bereits abgeschlossen ist.
 
-// Typisches CREATE-Mutation
-export function useCreateEntity() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data) => api.post("/api/entity", data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["entity"] }),
+```typescript
+import { useQuery } from "@tanstack/react-query";
+import { getUsers } from "src/api/backend/getUsers";
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ["users"],
+    queryFn: () => getUsers(),
   });
 }
 ```
@@ -122,4 +121,5 @@ export function useCreateEntity() {
 ## Verwandte Seiten
 
 - [Frontend-Internas](./frontend-internas.md)
+- [HTTP-API-Client](./api-client.md)
 - [API-Überblick](../api/ueberblick.md)

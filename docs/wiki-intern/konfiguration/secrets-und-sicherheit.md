@@ -32,6 +32,15 @@ Dokumentation geheimer Werte und Sicherheitsmechanismen.
 - Security-Header: `helmet`
 - 2FA: TOTP, WebAuthn, Duo
 
+## Autorisierung und Authentifizierungszustand
+
+- Signaturprüfung allein genügt nicht: Der Access-Layer prüft den aktuellen Kontostatus und die Token-Scopes bereits beim Laden.
+- Rollenänderungen sind von gewöhnlichen Profiländerungen getrennt berechtigt. Eine ausstehende zweite Faktorprüfung kann ihre eigene 2FA-Verwaltung nicht aufrufen.
+- Refresh-Replay-Sperren müssen vor dem ausgehenden Fehler dauerhaft gespeichert sein. Passkey-/Duo-Challenges und Backup-Codes sind nur einmal verwendbar.
+- Access-List-Audit-Einträge entfernen die dort bekannten SSO-Secrets; Passwort-Hinweise verraten keine Passwortbestandteile.
+
+Details: [Benutzer & Auth](../module/benutzer-auth.md), [2FA-Service](../module/2fa-service.md), [Session-Verwaltung](../module/auth-session-service.md), [Access-Lists](../module/access-lists.md).
+
 ## Verwandte Seiten
 
 - [Umgebungsvariablen](./umgebungsvariablen.md)

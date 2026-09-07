@@ -181,8 +181,8 @@ const internalDeadHost = {
 
 		if (!options.skip_configure) {
 			// Configure nginx
-			const newMeta = await internalNginx.configure(deadHostModel, "dead_host", row);
-			row.meta = newMeta;
+			const newMeta = await internalNginx.configure(deadHostModel, "dead_host", thisRow);
+			thisRow.meta = newMeta;
 		}
 
 		// Trigger GitOps auto-push
@@ -223,7 +223,7 @@ const internalDeadHost = {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
 
-		row = utils.omitRow(omissions())(row);
+		row = internalHost.cleanRowCertificateMeta(utils.omitRow(omissions())(row));
 
 		// Custom omissions
 		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {

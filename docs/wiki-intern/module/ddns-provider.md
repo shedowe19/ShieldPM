@@ -29,6 +29,10 @@ Löschen fremder Provider. Erst nach erfolgreicher autorisierter Löschung werde
 
 - Keine direkten (nutzt Node.js interne Module für Requests)
 
+### Änderung und Test
+
+Auch direkte interne Aufrufe von `update()` und `test()` benötigen `ddns_providers:update`; anschließend gilt der autorisierte Leseweg mit Owner-Scope. Das ist insbesondere für AI-Tool-Aufrufe relevant, die nicht durch die REST-Routen laufen. Scheitert die DNS-Aktualisierung, liefert die Testfunktion einen Validierungsfehler statt einer Erfolgsmeldung.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

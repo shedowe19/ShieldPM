@@ -62,6 +62,12 @@ Client-Konfiguration mit eckigen Klammern formatiert, damit der Port eindeutig b
 - `iproute2` — Netzwerk-Konfiguration
 - `wireguard-go` — Userspace-Implementierung
 
+### Peer-Eingaben
+
+Peer-Namen, DNS-Angaben und Allowed-IPs dürfen keine Steuerzeichen oder Zeilenumbrüche enthalten. Allowed-IPs werden als kommaseparierte CIDRs geprüft; Keepalive-Werte müssen ganzzahlig zwischen 0 und 65535 liegen. Diese Prüfung erfolgt auch intern vor dem Schreiben oder der Konfigurationsgenerierung. Dadurch können Peer-Felder keine zusätzlichen `wg-quick`-Direktiven einschleusen. Bereits gespeicherte Namen werden bei der Ausgabe als Serverkommentar zusätzlich von Zeilenumbrüchen bereinigt.
+
+Ein expliziter Keepalive-Wert `0` bleibt erhalten. Die Adressvergabe reserviert die tatsächlich konfigurierte Serveradresse zusätzlich zu den bereits belegten Peer-Adressen.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

@@ -14,7 +14,7 @@ const internalCloudflared = {
 		for (const tunnel of tunnels) {
 			// Reset status to stopped on boot, then start
 			await /** @type {any} */ (tunnel).$query().patch({ status: 0 });
-			internalCloudflared.start(tunnel);
+			internalCloudflared.start(tunnel).catch((err) => logger.error("Failed to initialize tunnel", err));
 		}
 	},
 
@@ -28,9 +28,8 @@ const internalCloudflared = {
 		}
 
 		logger.info(`Starting Cloudflared Tunnel: ${tunnel.name} (${tunnel.id})`);
-		await /** @type {any} */ (tunnel).$query().patch({ status: 1 }); // Starting
-
 		try {
+			await /** @type {any} */ (tunnel).$query().patch({ status: 1 }); // Starting
 			const child = spawn("/usr/local/bin/cloudflared", ["tunnel", "run"], {
 				stdio: ["ignore", "pipe", "pipe"],
 				detached: false,
@@ -43,6 +42,15 @@ const internalCloudflared = {
 			processes.set(tunnel.id, child);
 
 			let errorLog = "";
+			child.on("error", (err) => {
+				if (processes.get(tunnel.id) !== child) return;
+				processes.delete(tunnel.id);
+				logger.error(`Cloudflared Tunnel ${tunnel.id} failed:`, err);
+				tunnel
+					.$query()
+					.patch({ status: 3, meta: { ...tunnel.meta, last_error: err.message } })
+					.catch((patchError) => logger.error("Failed to save tunnel error", patchError));
+			});
 
 			child.stdout.on("data", (data) => {
 				const str = data.toString();
@@ -60,6 +68,8 @@ const internalCloudflared = {
 			});
 
 			child.on("exit", (code, signal) => {
+				// A stopped child can exit after its replacement has already started.
+				if (processes.get(tunnel.id) !== child) return;
 				logger.warn(`Cloudflared Tunnel ${tunnel.id} exited with code ${code} / signal ${signal}`);
 				processes.delete(tunnel.id);
 
@@ -95,7 +105,7 @@ const internalCloudflared = {
 			// Wait 2 seconds to ensure the process is stable
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 
-			if (processes.has(tunnel.id)) {
+			if (processes.get(tunnel.id) === child) {
 				// Still running after 2 seconds, mark as Online
 				// clear any previous error
 				const meta = { ...tunnel.meta };

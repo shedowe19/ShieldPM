@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,17 +37,36 @@ describe("DuoCallback", () => {
 		const response = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };
 		mocks.complete2faDuoAuth.mockResolvedValue(response);
 		sessionStorage.setItem("duo_pending_token", "pending-token");
+		sessionStorage.setItem("duo_state", "expected-state");
 
 		render(
-			<MemoryRouter initialEntries={["/duo-callback?duo_code=duo-code"]}>
+			<MemoryRouter initialEntries={["/duo-callback?duo_code=duo-code&state=expected-state"]}>
 				<DuoCallback />
 			</MemoryRouter>,
 		);
 
 		await waitFor(() => {
-			expect(mocks.complete2faDuoAuth).toHaveBeenCalledWith("pending-token", "duo-code");
+			expect(mocks.complete2faDuoAuth).toHaveBeenCalledWith("pending-token", "duo-code", "expected-state");
 			expect(mocks.completeLogin).toHaveBeenCalledWith(response);
 			expect(mocks.navigate).toHaveBeenCalledWith("/", { replace: true });
 		});
+		expect(sessionStorage.getItem("duo_pending_token")).toBeNull();
+		expect(sessionStorage.getItem("duo_state")).toBeNull();
+	});
+
+	it.each(["", "&state=wrong-state"])("rejects missing or mismatched callback state (%s)", (stateQuery) => {
+		sessionStorage.setItem("duo_pending_token", "pending-token");
+		sessionStorage.setItem("duo_state", "expected-state");
+		render(
+			<MemoryRouter initialEntries={[`/duo-callback?duo_code=duo-code${stateQuery}`]}>
+				<DuoCallback />
+			</MemoryRouter>,
+		);
+
+		expect(screen.getByText("Duo authentication failed. Please try again.")).toBeInTheDocument();
+		expect(mocks.complete2faDuoAuth).not.toHaveBeenCalled();
+		expect(mocks.completeLogin).not.toHaveBeenCalled();
+		expect(sessionStorage.getItem("duo_pending_token")).toBeNull();
+		expect(sessionStorage.getItem("duo_state")).toBeNull();
 	});
 });

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import https from "node:https";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import ipaddr from "ipaddr.js";
 import { ProxyAgent } from "proxy-agent";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
@@ -14,8 +15,19 @@ const __dirname = dirname(__filename);
 const CLOUDFARE_V4_URL = "https://www.cloudflare.com/ips-v4";
 const CLOUDFARE_V6_URL = "https://www.cloudflare.com/ips-v6";
 
-const regIpV4 = /^(\d+\.?){4}\/\d+/;
-const regIpV6 = /^(([\\da-fA-F]+)?:)+\/\\d+/;
+const parseRanges = (content, kind) => {
+	const ranges = content
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean);
+	if (
+		!ranges.length ||
+		ranges.some((range) => !ipaddr.isValidCIDR(range) || ipaddr.parseCIDR(range)[0].kind() !== kind)
+	) {
+		throw new errs.ConfigurationError(`Invalid or empty ${kind} IP range response`);
+	}
+	return ranges;
+};
 
 const internalIpRanges = {
 	interval_timeout: 1000 * 60 * 60 * 6 * (Number.parseInt(process.env.IPRT, 10) || 1),
@@ -24,6 +36,7 @@ const internalIpRanges = {
 	iteration_count: 0,
 
 	initTimer: () => {
+		if (internalIpRanges.interval) return;
 		logger.info("IP Ranges Renewal Timer initialized");
 		internalIpRanges.interval = setInterval(internalIpRanges.fetch, internalIpRanges.interval_timeout);
 	},
@@ -33,7 +46,13 @@ const internalIpRanges = {
 		return new Promise((resolve, reject) => {
 			logger.info(`Fetching ${url}`);
 			return https
-				.get(url, { agent }, (res) => {
+				.get(url, { agent, timeout: 30000 }, (res) => {
+					if (res.statusCode !== 200) {
+						res.resume();
+						reject(new errs.ConfigurationError(`IP range request returned HTTP ${res.statusCode}`));
+						return;
+					}
+					res.on("error", reject);
 					res.setEncoding("utf8");
 					let raw_data = "";
 					res.on("data", (chunk) => {
@@ -43,6 +62,9 @@ const internalIpRanges = {
 					res.on("end", () => {
 						resolve(raw_data);
 					});
+				})
+				.on("timeout", function () {
+					this.destroy(new errs.ConfigurationError("IP range request timed out"));
 				})
 				.on("error", (err) => {
 					reject(err);
@@ -62,11 +84,11 @@ const internalIpRanges = {
 
 			try {
 				const cloudflare_v4_data = await internalIpRanges.fetchUrl(CLOUDFARE_V4_URL);
-				const items_v4 = cloudflare_v4_data.split("\n").filter((line) => regIpV4.test(line));
+				const items_v4 = parseRanges(cloudflare_v4_data, "ipv4");
 				ip_ranges = [...ip_ranges, ...items_v4];
 
 				const cloudflare_v6_data = await internalIpRanges.fetchUrl(CLOUDFARE_V6_URL);
-				const items_v6 = cloudflare_v6_data.split("\n").filter((line) => regIpV6.test(line));
+				const items_v6 = parseRanges(cloudflare_v6_data, "ipv6");
 				ip_ranges = [...ip_ranges, ...items_v6];
 
 				const clean_ip_ranges = ip_ranges.filter((range) => !!range);

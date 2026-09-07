@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
+import { getTerminalAccessToken } from "../lib/terminal-access.js";
 import utils from "../lib/utils.js";
 import { debug, nginx as logger } from "../logger.js";
 
@@ -12,6 +13,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import internalAnubis from "./anubis.js";
+
+let configurationQueue = Promise.resolve();
 
 const internalNginx = {
 	/**
@@ -28,7 +31,14 @@ const internalNginx = {
 	 * @param   {Object}         host
 	 * @returns {Promise}
 	 */
-	configure: async (model, host_type, host, options = {}) => {
+	configure: (model, host_type, host, options = {}) => {
+		// Every test reads all configs; serialize writes and rollbacks across concurrent API requests.
+		const operation = configurationQueue.then(() => internalNginx.configureHost(model, host_type, host, options));
+		configurationQueue = operation.catch(() => {});
+		return operation;
+	},
+
+	configureHost: async (model, host_type, host, options = {}) => {
 		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
 
@@ -40,6 +50,7 @@ const internalNginx = {
 			await internalNginx.generateConfig(host_type, host);
 		} catch (err) {
 			logger.error(`Generation failed: ${err.message}`);
+			await internalNginx.renameConfigAsError(host_type, host);
 			// Restore backup if generation fails
 			await internalNginx.restoreConfig(host_type, host);
 			throw err;
@@ -63,7 +74,9 @@ const internalNginx = {
 			await internalNginx.deleteBackupConfig(host_type, host);
 
 			// 6. Regenerate Anubis Policy (async, don't block)
-			internalAnubis.generatePolicy();
+			Promise.resolve()
+				.then(() => internalAnubis.generatePolicy())
+				.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
 		} catch (err) {
 			logger.error(`Nginx test failed: ${err.message}`);
 
@@ -211,8 +224,6 @@ const internalNginx = {
 		const filename = internalNginx.getConfigName(nice_host_type, host.id);
 		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;
 
-		let origLocations;
-
 		// Manipulate the data a bit before sending it to the template
 		if (nice_host_type !== "default") {
 			host.use_default_location = true;
@@ -230,16 +241,11 @@ const internalNginx = {
 		}
 
 		if (host.locations) {
-			origLocations = [].concat(host.locations);
-			const renderedLocations = await internalNginx.renderLocations(host);
-			host.locations = renderedLocations;
-
 			// Allow someone who is using / custom location path to use it, and skip the default / location
-			_.map(host.locations, (location) => {
-				if (location.path === "/") {
-					host.use_default_location = false;
-				}
-			});
+			if (host.locations.some((location) => location.path === "/")) {
+				host.use_default_location = false;
+			}
+			host.locations = await internalNginx.renderLocations(host);
 		}
 
 		if (
@@ -259,6 +265,9 @@ const internalNginx = {
 		}
 
 		host.env = process.env;
+		if (host.forward_scheme === "terminal") {
+			host.terminal_access_token = getTerminalAccessToken(host.id);
+		}
 
 		if (host.certificate && host.certificate.provider === "internal") {
 			host.use_ml_kem = true;
@@ -289,9 +298,6 @@ const internalNginx = {
 			const config_text = await renderEngine.renderFile(templatePath, host);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
-
-			// Restore locations array
-			host.locations = origLocations;
 		} catch (err) {
 			debug(logger, `Could not write ${filename}:`, err.message);
 			throw new errs.ConfigurationError(err.message);
@@ -315,16 +321,12 @@ const internalNginx = {
 	 */
 	deleteFile: async (filename) => {
 		try {
-			await fs.promises.access(filename);
-		} catch {
-			return; // file doesn't exist
-		}
-
-		try {
 			debug(logger, `Deleting file: ${filename}`);
 			await fs.promises.unlink(filename);
 		} catch (err) {
+			if (err.code === "ENOENT") return;
 			debug(logger, "Could not delete file:", JSON.stringify(err, null, 2));
+			throw err;
 		}
 	},
 
@@ -365,8 +367,8 @@ const internalNginx = {
 
 		try {
 			await fs.promises.rename(config_file, `${config_file}.err`);
-		} catch {
-			// ignore if file doesn't exist
+		} catch (err) {
+			if (err.code !== "ENOENT") throw err;
 		}
 	},
 
@@ -386,6 +388,7 @@ const internalNginx = {
 			// Ignore if original file doesn't exist (new host)
 			if (err.code !== "ENOENT") {
 				logger.error(`Failed to backup config: ${err.message}`);
+				throw err;
 			}
 		}
 	},
@@ -406,6 +409,7 @@ const internalNginx = {
 			// Ignore if backup doesn't exist
 			if (err.code !== "ENOENT") {
 				logger.error(`Failed to restore config: ${err.message}`);
+				throw err;
 			}
 		}
 	},
@@ -428,13 +432,10 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	bulkGenerateConfigs: async (model, hostType, hosts) => {
-		const promises = [];
-		hosts.map((host) => {
-			promises.push(internalNginx.configure(model, hostType, host, { skip_reload: true }));
-			return true;
-		});
-
-		await Promise.all(promises);
+		// nginx -t validates every host, so another host must not be halfway through a write or rollback.
+		for (const host of hosts) {
+			await internalNginx.configure(model, hostType, host, { skip_reload: true });
+		}
 	},
 
 	/**

@@ -26,15 +26,22 @@ export default function DuoCallback() {
 
 		const duoCode = searchParams.get("duo_code");
 		const pendingToken = sessionStorage.getItem("duo_pending_token");
+		const expectedState = sessionStorage.getItem("duo_state");
+		const state = searchParams.get("state");
+		sessionStorage.removeItem("duo_pending_token");
+		sessionStorage.removeItem("duo_state");
 
 		if (!duoCode || !pendingToken) {
 			setError("Missing Duo authorization code or session token. Please try signing in again.");
 			return;
 		}
 
-		sessionStorage.removeItem("duo_pending_token");
+		if (!state || !expectedState || state !== expectedState) {
+			setError("Duo authentication failed. Please try again.");
+			return;
+		}
 
-		complete2faDuoAuth(pendingToken, duoCode)
+		complete2faDuoAuth(pendingToken, duoCode, state)
 			.then((response) => {
 				completeLogin(response);
 				navigate("/", { replace: true });

@@ -26,6 +26,12 @@ Unterstützt Cloudflare, DuckDNS und benutzerdefinierte URLs als DDNS-Provider.
 
 - HTTP-Client für DNS-API-Aufrufe
 
+### Netzwerksicherheit und Fehlerstatus
+
+Benutzerdefinierte URLs dürfen ausschließlich öffentliche HTTP(S)-Ziele erreichen. IPv4, IPv6 und IPv4-gemappte IPv6-Adressen werden geprüft. DNS wird erst beim Verbindungsaufbau aufgelöst; enthält die Antwort private oder reservierte Adressen, scheitert der Abruf. Der Socket verwendet ausschließlich die geprüften Adressen, wodurch eine zweite DNS-Auflösung zwischen Prüfung und Verbindung entfällt. Redirects werden nicht verfolgt. Netzwerkabrufe haben ein Zeitlimit von zehn Sekunden.
+
+Ohne WAN-Adresse der gewählten IP-Version wird kein Provider-Update versendet. `updateProvider()` liefert zusätzlich zum persistierten Fehlerstatus ein strukturiertes Erfolg-/Fehlerergebnis. Die Testfunktion übernimmt diesen Status und meldet fehlgeschlagene Updates nicht mehr als Erfolg.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

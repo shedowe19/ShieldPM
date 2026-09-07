@@ -46,6 +46,12 @@ Aktuell **nicht implementiert** — die Aktualisierung läuft ausschließlich pe
 - `internal/proxy-host.js`, `internal/dead-host.js` — Hosts mit Git-Sync
 - `internal/audit-log.js` — Protokollierung
 
+### Parallelität und Konfigurationswechsel
+
+Gleichzeitige Sync-Anfragen für denselben Host teilen sich einen laufenden Sync, sodass Klonen und Pullen nicht parallel im selben Arbeitsverzeichnis laufen. Ein Wechsel der Repository-URL wird zusätzlich zum Branch-Wechsel erkannt und löst einen neuen Clone aus. Gelöschte Hosts werden nicht synchronisiert. Bei einem neuen Root-Pfad werden die normalisierten Domains, das Zertifikat und die vollständige Access List vor dem Nginx-Rendern geladen.
+
+Ändert sich die Repository-URL, wird die Polling-Konfiguration neu bewertet. Timerwerte werden auf mindestens zehn Sekunden und maximal den von Node.js unterstützten Timerbereich begrenzt; ungültige Werte erhalten einen sicheren Standard, statt durch einen Timerüberlauf eine schnelle Endlosschleife auszulösen.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

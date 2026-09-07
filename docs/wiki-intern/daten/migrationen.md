@@ -47,7 +47,7 @@ const down = (knex) => {
 export { up, down };
 ```
 
-## Migrations-Chronologie (76 Dateien)
+## Migrations-Chronologie (Auswahl)
 
 ### Basis (2018-2021)
 
@@ -87,6 +87,12 @@ export { up, down };
 - `20260407000000_add_wireguard_tunnel` — WireGuard Tunnels
 - `20260409000000_add_turbo_loader` — Turbo-Loader
 - `20260712000000_fix_analytic_count_aggregation_key` — versionierter, nicht-nullbarer Aggregationsschlüssel für robuste Analytics-Upserts auf SQLite, MySQL und PostgreSQL
+
+- `20260907000000_fix_analytics_log_created_at` — numerischer Standardwert für `analytics_logs.created_at`; gültige alte SQLite-Zeitstempeltexte werden in Unix-Millisekunden umgerechnet. Neue Logeinträge setzen den tatsächlichen Erfassungszeitpunkt im Dienst. Die ursprüngliche Tabellenmigration verwendet ebenfalls den kompatiblen numerischen Standardwert, damit PostgreSQL-Neuinstallationen funktionieren.
+
+## Wechsel der Datenbank-Engine
+
+Der SQLite-Import in `backend/lib/db-migrate.js` ist vom Knex-Schema-Upgrade getrennt. Er setzt gleiche ausgeführte Migrationen auf Quelle und Ziel voraus und importiert Anwendungsdaten atomar. Ablauf, Schutz vor Teilimporten und erhaltene Quelldateien sind unter [Datenbank](./datenbank.md#wechsel-von-sqlite-zu-mysql-oder-postgresql) dokumentiert.
 
 ## Verwandte Seiten
 

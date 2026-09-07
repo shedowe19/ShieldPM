@@ -125,7 +125,7 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 
 	it("rebuilds existing installations exactly from committed lockfiles", () => {
 		expect(updater).toContain("yarn install --frozen-lockfile --production --silent");
-		expect(updater).toContain("yarn install --frozen-lockfile --silent");
+		expect(updater).toContain("yarn install --frozen-lockfile --production=false --silent");
 		expect(updater).toContain('find "$BACKEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +');
 		expect(updater).toContain('cp -a "$TEMP_DIR/backend/." "$BACKEND_DIR/"');
 		expect(updater).toContain('find "$FRONTEND_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +');
@@ -164,6 +164,26 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		const curlArguments = fs.readFileSync(curlArgumentsPath, "utf8").split("\n");
 		expect(curlArguments).toContain("http://localhost/");
 		expect(curlArguments).not.toContain("http://localhost/api/");
+		expect(curlArguments[curlArguments.indexOf("--max-time") + 1]).toBe("2");
+	});
+
+	it("stops retrying when the health-check wall-clock budget has elapsed", () => {
+		const result = spawnSync(
+			"bash",
+			[
+				"-c",
+				`set -euo pipefail
+${backendHealthCheck}
+curl() { printf 'attempt\\n' >&2; return 22; }
+jq() { cat >/dev/null; return 1; }
+sleep() { SECONDS=$((SECONDS + 121)); }
+wait_for_backend_health
+`,
+			],
+			{ encoding: "utf8", timeout: 5000 },
+		);
+		expect(result.status).toBe(1);
+		expect(result.stdout).toContain("did not become healthy within 120s");
 	});
 
 	it("updates optional runtime binaries and waits for migrations to become healthy", () => {
@@ -173,7 +193,6 @@ describe("update-shieldpm Node 26 runtime contract", () => {
 		expect(updater).toContain("--unix-socket /run/shieldpm.sock");
 		expect(updater).toContain('.status == "OK"');
 		expect(updater).toContain("systemctl restart shieldpm");
-		expect(updater).toContain("local max_attempts=120");
 		expect(updater).toContain("jq");
 		expect(updater).toContain("journalctl --no-pager -u shieldpm -n 100");
 		expect(nativeInstaller).toContain('VERSION="1.27.0"');

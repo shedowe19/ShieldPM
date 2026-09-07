@@ -79,10 +79,13 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 		setError("");
 		setLoading(true);
 		try {
-			const { authUrl } = await begin2faDuoAuth(pendingToken);
+			const { authUrl, state } = await begin2faDuoAuth(pendingToken);
 			sessionStorage.setItem("duo_pending_token", pendingToken);
+			sessionStorage.setItem("duo_state", state);
 			window.location.href = authUrl;
 		} catch (err) {
+			sessionStorage.removeItem("duo_pending_token");
+			sessionStorage.removeItem("duo_state");
 			if (err instanceof Error) setError(err.message);
 			setLoading(false);
 		}

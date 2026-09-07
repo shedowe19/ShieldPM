@@ -13,6 +13,39 @@ const omissions = () => {
 	return ["is_deleted", "owner.is_deleted", "certificate.is_deleted"];
 };
 
+/** Parse and validate an incoming port or inclusive port range. */
+const incomingPortRange = (value) => {
+	const text = String(value);
+	if (!/^\d{1,5}(?:-\d{1,5})?$/.test(text)) {
+		throw new errs.ValidationError("Incoming port must be a port or port range");
+	}
+	const [start, last] = text.split("-").map(Number);
+	const end = last ?? start;
+	if (start < 1 || end > 65535 || end < start) {
+		throw new errs.ValidationError("Incoming ports must be within 1-65535 and ranges must be ascending");
+	}
+	return [start, end];
+};
+
+/** Detect overlapping listeners for the requested protocols across all owners. */
+const findPortCollision = async (incomingPort, tcpForwarding, udpForwarding, ignoredId) => {
+	const [start, end] = incomingPortRange(incomingPort);
+	const streams = await streamModel
+		.query()
+		.where("is_deleted", 0)
+		.select("id", "incoming_port", "tcp_forwarding", "udp_forwarding");
+	return streams.find((stream) => {
+		if (
+			stream.id === ignoredId ||
+			!((tcpForwarding && stream.tcp_forwarding) || (udpForwarding && stream.udp_forwarding))
+		) {
+			return false;
+		}
+		const [otherStart, otherEnd] = incomingPortRange(stream.incoming_port);
+		return start <= otherEnd && otherStart <= end;
+	});
+};
+
 const internalStream = {
 	/**
 	 * @param   {import("../lib/types.js").Access}  access
@@ -32,32 +65,16 @@ const internalStream = {
 		const create_certificate = data.certificate_id === "new";
 
 		if (create_certificate) {
+			if (!Array.isArray(data.domain_names) || data.domain_names.length === 0) {
+				throw new errs.ValidationError("Domain names are required when requesting a new certificate");
+			}
 			delete data.certificate_id;
 		}
 
 		await access.can("streams:create", data);
 
 		// Check for port collision
-		const collision = await streamModel
-			.query()
-			.where("is_deleted", 0)
-			.andWhere("incoming_port", data.incoming_port)
-			.andWhere(function () {
-				this.where(function () {
-					if (data.tcp_forwarding) {
-						this.where("tcp_forwarding", 1);
-					} else {
-						this.where("tcp_forwarding", 2); // Impossible condition to skip
-					}
-				}).orWhere(function () {
-					if (data.udp_forwarding) {
-						this.where("udp_forwarding", 1);
-					} else {
-						this.where("udp_forwarding", 2); // Impossible condition to skip
-					}
-				});
-			})
-			.first();
+		const collision = await findPortCollision(data.incoming_port, data.tcp_forwarding, data.udp_forwarding);
 
 		if (collision) {
 			throw new errs.ValidationError(`Incoming port ${data.incoming_port} is already in use by another stream.`);
@@ -131,41 +148,24 @@ const internalStream = {
 		const create_certificate = thisData.certificate_id === "new";
 
 		if (create_certificate) {
+			if (!Array.isArray(thisData.domain_names) || thisData.domain_names.length === 0) {
+				throw new errs.ValidationError("Domain names are required when requesting a new certificate");
+			}
 			delete thisData.certificate_id;
 		}
 
 		await access.can("streams:update", thisData.id);
+		let row = await internalStream.get(access, { id: thisData.id });
+		const incomingPort = thisData.incoming_port ?? row.incoming_port;
+		const tcpForwarding = thisData.tcp_forwarding ?? row.tcp_forwarding;
+		const udpForwarding = thisData.udp_forwarding ?? row.udp_forwarding;
 
 		// Check for port collision (excluding self)
-		const collision = await streamModel
-			.query()
-			.where("is_deleted", 0)
-			.andWhere("incoming_port", thisData.incoming_port)
-			.andWhere(function () {
-				this.where(function () {
-					if (thisData.tcp_forwarding) {
-						this.where("tcp_forwarding", 1);
-					} else {
-						this.where("tcp_forwarding", 2); // Impossible condition to skip
-					}
-				}).orWhere(function () {
-					if (thisData.udp_forwarding) {
-						this.where("udp_forwarding", 1);
-					} else {
-						this.where("udp_forwarding", 2); // Impossible condition to skip
-					}
-				});
-			})
-			.andWhereNot("id", thisData.id)
-			.first();
+		const collision = await findPortCollision(incomingPort, tcpForwarding, udpForwarding, thisData.id);
 
 		if (collision) {
-			throw new errs.ValidationError(
-				`Incoming port ${thisData.incoming_port} is already in use by another stream.`,
-			);
+			throw new errs.ValidationError(`Incoming port ${incomingPort} is already in use by another stream.`);
 		}
-
-		let row = await internalStream.get(access, { id: thisData.id });
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
@@ -192,7 +192,9 @@ const internalStream = {
 			data,
 		);
 
-		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */ (thisData));
+		// Domain names are only used for certificate requests, never stored on streams.
+		const persistedData = _.omit(thisData, ["domain_names"]);
+		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */ (persistedData));
 
 		saved_row = utils.omitRow(omissions())(saved_row);
 

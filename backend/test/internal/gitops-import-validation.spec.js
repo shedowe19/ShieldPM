@@ -1,208 +1,171 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/**
- * Fix #65: YAML import must validate fields against a whitelist.
- * Without validation, an attacker who can push commits could inject
- * arbitrary DB fields (is_deleted bypass, owner_user_id override, etc.)
- */
-
-vi.mock("../../db.js", () => ({ default: () => ({}) }));
-vi.mock("../../lib/config.js", () => ({
-	isDestructiveTestMode: vi.fn().mockReturnValue(false),
-	configHas: vi.fn().mockReturnValue(true),
-	configGet: vi.fn().mockReturnValue("mock-value"),
-	isSqlite: vi.fn().mockReturnValue(true),
-	isMysql: vi.fn().mockReturnValue(false),
-	isPostgres: vi.fn().mockReturnValue(false),
-	getPrivateKey: vi.fn().mockReturnValue("mock-private-key"),
-	getPublicKey: vi.fn().mockReturnValue("mock-public-key"),
-	getEncryptionKey: vi.fn().mockReturnValue("0".repeat(64)),
-	isDemoMode: vi.fn().mockReturnValue(false),
-}));
-vi.mock("../../internal/nginx.js", () => ({
-	default: {
-		bulkGenerateConfigs: vi.fn().mockResolvedValue({}),
-		reload: vi.fn().mockResolvedValue(undefined),
-		deleteConfig: vi.fn().mockResolvedValue({}),
-	},
-}));
-vi.mock("../../internal/audit-log.js", () => ({ default: {} }));
-vi.mock("isomorphic-git", () => ({
-	default: {
-		init: vi.fn().mockResolvedValue({}),
-		add: vi.fn().mockResolvedValue(undefined),
-		statusMatrix: vi.fn().mockResolvedValue([]),
-		commit: vi.fn().mockResolvedValue("abc123"),
-		listRemotes: vi.fn().mockResolvedValue([]),
-		addRemote: vi.fn().mockResolvedValue(undefined),
-		push: vi.fn().mockResolvedValue(undefined),
-	},
-}));
-vi.mock("isomorphic-git/http/node", () => ({ default: {} }));
-
-import internalGitOps from "../../internal/gitops.js";
-
-// Mock fs to simulate YAML files
-const mockFiles = {};
-const mockFs = {
-	existsSync: (p) => mockFiles[p] !== undefined,
-	readdir: (p) => Promise.resolve(Object.keys(mockFiles).filter((k) => k.startsWith(p))),
-	readFile: async (p) => {
-		if (mockFiles[p]) return mockFiles[p];
-		throw new Error("File not found");
-	},
-	promises: {
-		existsSync: (p) => mockFiles[p] !== undefined,
-		readdir: (p) => Promise.resolve(Object.keys(mockFiles).filter((k) => k.startsWith(p))),
-		readFile: async (p) => {
-			if (mockFiles[p]) return mockFiles[p];
-			throw new Error("File not found");
+const mocks = vi.hoisted(() => {
+	const files = new Map();
+	const writes = [];
+	const prunes = [];
+	const rows = {};
+	const makeModel = (name) => ({
+		name,
+		query: () => {
+			const query = {
+				where: () => query,
+				withGraphFetched: () => query,
+				whereNotIn: (_field, ids) => {
+					prunes.push({ name, ids });
+					return Promise.resolve([]);
+				},
+				findById: async (id) => (rows[name] || []).find((row) => row.id === id),
+				insert: async (data) => {
+					writes.push({ name, data });
+					return data;
+				},
+				insertGraph: async (data) => {
+					writes.push({ name, data });
+					return data;
+				},
+				upsertGraph: async (data) => {
+					writes.push({ name, data });
+					return data;
+				},
+				patchAndFetchById: async (_id, data) => {
+					writes.push({ name, data });
+					return data;
+				},
+				// biome-ignore lint/suspicious/noThenProperty: Objection query builders are intentionally thenable.
+				then: (resolve, reject) => Promise.resolve(rows[name] || []).then(resolve, reject),
+			};
+			return query;
 		},
-		mkdir: vi.fn().mockResolvedValue(undefined),
-		writeFile: vi.fn().mockResolvedValue(undefined),
-		unlink: vi.fn().mockResolvedValue(undefined),
-		rmdir: vi.fn().mockResolvedValue(undefined),
+	});
+	return { files, writes, prunes, rows, makeModel };
+});
+vi.mock("node:fs", () => ({
+	default: {
+		existsSync: (path) =>
+			mocks.files.has(path) || [...mocks.files.keys()].some((key) => key.startsWith(`${path}/`)),
+		promises: {
+			readdir: async (path) =>
+				[...mocks.files.keys()]
+					.filter((key) => key.startsWith(`${path}/`))
+					.map((key) => key.slice(path.length + 1))
+					.filter((key) => !key.includes("/")),
+			readFile: async (path) => mocks.files.get(path),
+		},
 	},
-};
+}));
+vi.mock("../../models/user.js", () => ({ default: mocks.makeModel("User") }));
+vi.mock("../../models/certificate.js", () => ({ default: mocks.makeModel("Certificate") }));
+vi.mock("../../models/access_list.js", () => ({ default: mocks.makeModel("AccessList") }));
+vi.mock("../../models/proxy_host.js", () => ({ default: mocks.makeModel("ProxyHost") }));
+vi.mock("../../models/redirection_host.js", () => ({ default: mocks.makeModel("RedirectionHost") }));
+vi.mock("../../models/dead_host.js", () => ({ default: mocks.makeModel("DeadHost") }));
+vi.mock("../../models/stream.js", () => ({ default: mocks.makeModel("Stream") }));
+vi.mock("../../models/cloudflared_tunnel.js", () => ({ default: mocks.makeModel("CloudflaredTunnel") }));
+vi.mock("../../models/ddns_provider.js", () => ({ default: mocks.makeModel("DdnsProvider") }));
+vi.mock("../../models/setting.js", () => ({ default: mocks.makeModel("Setting") }));
+vi.mock("../../lib/gitops-files.js", () => ({
+	assertSafeConfigTree: vi.fn(),
+	assertNoSymlinkPath: vi.fn(),
+	writeConfigFile: vi.fn(),
+}));
+vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
+vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn(), decrypt: vi.fn() }));
+vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock("../../internal/nginx.js", () => ({
+	default: { bulkGenerateConfigs: vi.fn(), reload: vi.fn(), deleteConfig: vi.fn() },
+}));
 
-vi.stubGlobal("fs", mockFs);
+import gitops from "../../internal/gitops.js";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const _mockAccess = {
-	can: vi.fn().mockResolvedValue(true),
-	token: { getUserId: () => 1 },
-};
+const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 1 } };
+const file = (directory, data) =>
+	mocks.files.set(`/data/gitops/shieldpm-config/${directory}/1.yaml`, JSON.stringify(data));
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-describe("Fix #65: YAML import field whitelist validation", () => {
+describe("GitOps import sanitization and safe restore", () => {
 	beforeEach(() => {
-		mockFiles.length = 0;
+		mocks.files.clear();
+		mocks.writes.length = 0;
+		mocks.prunes.length = 0;
+		for (const key of Object.keys(mocks.rows)) delete mocks.rows[key];
 	});
-
-	it("ALLOWED_IMPORT_FIELDS is defined for all importable models", () => {
-		const allowed = internalGitOps.ALLOWED_IMPORT_FIELDS;
-		expect(allowed.User).toBeDefined();
-		expect(allowed.Certificate).toBeDefined();
-		expect(allowed.AccessList).toBeDefined();
-		expect(allowed.ProxyHost).toBeDefined();
-		expect(allowed.RedirectionHost).toBeDefined();
-		expect(allowed.DeadHost).toBeDefined();
-		expect(allowed.Stream).toBeDefined();
-		expect(allowed.CloudflaredTunnel).toBeDefined();
-		expect(allowed.DdnsProvider).toBeDefined();
-		expect(allowed.Setting).toBeDefined();
-	});
-
-	it("sanitizeImportData returns null for unknown model", () => {
-		const result = internalGitOps.sanitizeImportData("UnknownModel", { id: 1, foo: "bar" });
-		expect(result).toBeNull();
-	});
-
-	it("sanitizeImportData picks only allowed fields", () => {
-		const result = internalGitOps.sanitizeImportData("User", {
-			id: 5,
-			email: "test@example.com",
-			nickname: "Test",
-			role: "admin",
-			// These should be stripped:
+	it("removes unknown top-level and nested fields from the actual database payload", async () => {
+		file("users", {
+			id: 8,
+			name: "Example",
+			email: "user@example.com",
+			roles: ["user"],
+			hacked_field: "remove",
+			permissions: { visibility: "user", proxy_hosts: "view", nested_attack: "remove" },
+		});
+		file("settings", { id: "default-site", value: "congratulations", hacked_field: "remove" });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes.find(({ name }) => name === "User").data).toEqual({
+			id: 8,
+			name: "Example",
+			email: "user@example.com",
+			roles: ["user"],
+			permissions: { visibility: "user", proxy_hosts: "view" },
 			is_deleted: 0,
-			owner_user_id: 99,
-			hacked_field: "injection",
-			another_hack: 123,
 		});
-		expect(result).not.toBeNull();
-		// is_deleted and owner_user_id are in the whitelist — they are kept
-		// only fields NOT in the whitelist are stripped
-		expect(result.hacked_field).toBeUndefined();
-		expect(result.another_hack).toBeUndefined();
-		// All whitelisted fields are preserved
-		expect(result.id).toBe(5);
-		expect(result.email).toBe("test@example.com");
-		expect(result.nickname).toBe("Test");
-		expect(result.role).toBe("admin");
-		expect(result.is_deleted).toBe(0);
-		expect(result.owner_user_id).toBe(99);
+		expect(mocks.writes.find(({ name }) => name === "Setting").data).toEqual({
+			id: "default-site",
+			value: "congratulations",
+		});
 	});
-
-	it("sanitizeImportData allows is_deleted when it's in whitelist", () => {
-		const result = internalGitOps.sanitizeImportData("User", {
-			id: 5,
-			email: "test@example.com",
-			is_deleted: 0,
-			injected_field: "should_be_removed",
-		});
-		expect(result.is_deleted).toBe(0); // allowed field
-		expect(result.injected_field).toBeUndefined();
+	it("never deletes existing integration data when older backups omit its directory", async () => {
+		await gitops.importConfig(access, { overwrite: true });
+		expect(mocks.prunes).toEqual([]);
 	});
-
-	it("sanitizeImportData strips owner_user_id injection for User model", () => {
-		// owner_user_id is in the whitelist, but sanitizeImportData should
-		// pick it — the actual owner enforcement happens separately in importModel
-		const result = internalGitOps.sanitizeImportData("User", {
-			id: 5,
-			email: "test@example.com",
-			owner_user_id: 99,
-			malicious_extra: "gone",
-		});
-		expect(result.owner_user_id).toBe(99); // allowed field, but import overwrites it
-		expect(result.malicious_extra).toBeUndefined();
+	it("reports invalid imports and prevents pruning that model", async () => {
+		file("proxy-hosts", { id: "invalid", domain_names: ["example.com"] });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toHaveLength(1);
+		expect(mocks.prunes).toEqual([]);
+		expect(mocks.writes).toEqual([]);
 	});
-
-	it("Certificate whitelist does not include raw_cert/raw_key/raw_chain (security)", () => {
-		const result = internalGitOps.sanitizeImportData("Certificate", {
-			id: 1,
-			nice_name: "Test Cert",
-			domain_names: ["test.example.com"],
-			provider: "letsencrypt",
-			raw_cert: "CERT_DATA",
-			raw_key: "KEY_DATA",
-			raw_chain: "CHAIN_DATA",
-			// Injection attempt
-			is_deleted: 0,
-			owner_user_id: 99,
-			injected_field: "REMOVED",
+	it("restores normalized host domains, SSL and configuration fields", async () => {
+		file("proxy-hosts", {
+			id: 9,
+			domain_names: ["example.com"],
+			forward_host: "upstream",
+			certificate_id: 4,
+			ssl_forced: true,
+			advanced_config: "add_header X-Test true;",
+			unknown: "remove",
 		});
-		expect(result.raw_cert).toBeUndefined();
-		expect(result.raw_key).toBeUndefined();
-		expect(result.raw_chain).toBeUndefined();
-		expect(result.domain_names).toEqual(["test.example.com"]);
-		expect(result.injected_field).toBeUndefined();
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes[0].data).toMatchObject({
+			id: 9,
+			host_domains: [{ domain_name: "example.com" }],
+			certificate_id: 4,
+			ssl_forced: true,
+		});
+		expect(mocks.writes[0].data).not.toHaveProperty("domain_names");
+		expect(mocks.writes[0].data).not.toHaveProperty("unknown");
 	});
-
-	it("ProxyHost whitelist contains expected fields", () => {
-		const result = internalGitOps.sanitizeImportData("ProxyHost", {
-			id: 1,
-			domain_names: ["proxy.example.com"],
-			forward_host: "localhost",
-			forward_port: 8080,
-			forward_scheme: "http",
-			access_list_id: null,
-			http_options: {},
-			ssl_options: {},
-			nginx_options: {},
-			nginx_settings: {},
-			is_deleted: 0,
-			owner_user_id: 1,
-			// Injection attempts
-			arbitrary_field: "REMOVED",
-			another_field: 999,
+	it("restores DDNS without inserting a nonexistent is_deleted column", async () => {
+		file("ddns-providers", {
+			id: 2,
+			name: "provider",
+			provider: "duckdns",
+			domains: ["test"],
+			config: {},
+			ip_ver: "dual",
+			enabled: true,
 		});
-		expect(Object.keys(result).sort()).toEqual(
-			[
-				"access_list_id",
-				"domain_names",
-				"forward_host",
-				"forward_port",
-				"forward_scheme",
-				"http_options",
-				"id",
-				"is_deleted",
-				"nginx_options",
-				"nginx_settings",
-				"owner_user_id",
-				"ssl_options",
-			].sort(),
-		);
-		expect(result.arbitrary_field).toBeUndefined();
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(mocks.writes[0].data).not.toHaveProperty("is_deleted");
+		expect(mocks.writes[0].data.domains).toEqual(["test"]);
+	});
+	it("preserves imported IDs for new objects so references remain valid", async () => {
+		file("certificates", { id: 40, provider: "other", nice_name: "certificate" });
+		const result = await gitops.importConfig(access);
+		expect(result.success).toBe(true);
+		expect(mocks.writes[0].data.id).toBe(40);
 	});
 });

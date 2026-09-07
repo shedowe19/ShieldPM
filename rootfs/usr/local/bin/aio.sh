@@ -1,16 +1,48 @@
 #!/usr/bin/env sh
+set -eu
 
-if [ "$NC_AIO" = "true" ] && [ ! -f /data/aio.lock ]; then
-    while [ "$(healthcheck.sh)" != "OK" ]; do sleep 10s; done
-    # shellcheck disable=SC2016
-    if ! curl -POST http://127.0.0.1:"$NIBEP"/nginx/proxy-hosts -sSH 'Content-Type: application/json' -d '{"domain_names":["'"$NC_DOMAIN"'"],"forward_scheme":"http","forward_host":"127.0.0.1","forward_port":11000,"allow_websocket_upgrade":true,"access_list_id":"0","certificate_id":"new","ssl_forced":true,"http2_support":true,"hsts_enabled":true,"hsts_subdomains":true,"meta":{"letsencrypt_email":"","letsencrypt_agree":true,"dns_challenge":false},"advanced_config":"","locations":[{"path":"/","advanced_config":"proxy_set_header Accept-Encoding $http_accept_encoding;","forward_scheme":"http","forward_host":"127.0.0.1","forward_port":11000}],"block_exploits":false,"caching_enabled":false}' -H "Authorization: Bearer $(curl -POST http://127.0.0.1:"$NIBEP"/tokens -sSH 'Content-Type: application/json' -d '{"identity":"'"$INITIAL_ADMIN_EMAIL"'","secret":"'"$INITIAL_ADMIN_PASSWORD"'"}' | jq -r .token)" > /dev/null 2>&1; then
-        echo
-        echo "The default config for AIO should now be created."
-        echo
-    else
-        echo
-        echo "There was an error creating the TLS certificate for AIO. Please try to create the cert yourself in the ShieldPM UI and update the AIO proxy host to use this cert, see the ShieldPM config in the AIO reverse proxy guide as an example for the TLS tab."
-        echo
-    fi
+if [ "${NC_AIO:-false}" != "true" ] || [ -f /data/aio.lock ]; then
+    exit 0
+fi
+
+while ! healthcheck.sh >/dev/null 2>&1; do sleep 10; done
+aio_tmp=$(mktemp -d)
+trap 'rm -rf "$aio_tmp"' EXIT
+trap 'exit 1' HUP INT TERM
+
+jq -n --arg identity "$INITIAL_ADMIN_EMAIL" --arg secret "$INITIAL_ADMIN_PASSWORD" \
+    '{identity: $identity, secret: $secret}' > "$aio_tmp/login.json"
+curl --fail --silent --show-error --max-time 30 --unix-socket /run/shieldpm.sock \
+    -c "$aio_tmp/cookies" -H 'Content-Type: application/json' \
+    --data-binary "@$aio_tmp/login.json" http://localhost/tokens > "$aio_tmp/login-response.json"
+if jq -e '.requires_2fa == true' "$aio_tmp/login-response.json" >/dev/null; then
+    echo "AIO setup requires an interactive login because the administrator uses two-factor authentication." >&2
+    exit 1
+fi
+aio_token=$(jq -er '.token | select(type == "string" and length > 0)' "$aio_tmp/login-response.json")
+
+# Fetch a CSRF token bound to the authenticated session, retaining both cookies.
+aio_csrf=$(curl --fail --silent --show-error --max-time 30 --unix-socket /run/shieldpm.sock \
+    -b "$aio_tmp/cookies" -c "$aio_tmp/cookies" -H "Authorization: Bearer $aio_token" \
+    http://localhost/ | jq -er '.csrfToken | select(type == "string" and length > 0)')
+
+jq -n --arg domain "$NC_DOMAIN" '{
+    domain_names: [$domain], forward_scheme: "http", forward_host: "127.0.0.1", forward_port: 11000,
+    allow_websocket_upgrade: true, access_list_id: 0, certificate_id: "new", ssl_forced: true,
+    http2_support: true, hsts_enabled: true, hsts_subdomains: true,
+    meta: {letsencrypt_email: "", letsencrypt_agree: true, dns_challenge: false},
+    advanced_config: "", block_exploits: false, caching_enabled: false,
+    locations: [{path: "/", advanced_config: "proxy_set_header Accept-Encoding $http_accept_encoding;",
+        forward_scheme: "http", forward_host: "127.0.0.1", forward_port: 11000}]
+}' > "$aio_tmp/proxy-host.json"
+
+if curl --fail --silent --show-error --max-time 300 --unix-socket /run/shieldpm.sock \
+    -b "$aio_tmp/cookies" -H 'Content-Type: application/json' \
+    -H "Authorization: Bearer $aio_token" -H "X-XSRF-TOKEN: $aio_csrf" \
+    --data-binary "@$aio_tmp/proxy-host.json" http://localhost/nginx/proxy-hosts > /dev/null; then
     touch /data/aio.lock
+    echo "The default AIO proxy host and TLS certificate have been created."
+else
+    echo "AIO setup failed. Check the certificate and proxy host in the ShieldPM UI before retrying."
+    exit 1
 fi

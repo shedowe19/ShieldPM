@@ -35,7 +35,8 @@ interface StreamValues {
 	forwardingPort: string;
 	tcpForwarding: boolean;
 	udpForwarding: boolean;
-	certificateId: number;
+	certificateId: number | "new";
+	domainNames: string[];
 	meta: Record<string, unknown>;
 	note: string;
 }
@@ -52,8 +53,10 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setErrorMsg(null);
 
 		// We need to ensure ports are numbers for the API
+		const { domainNames, ...streamValues } = values;
 		const payload = {
-			...values,
+			...streamValues,
+			...(values.certificateId === "new" ? { domainNames } : {}),
 			id: id === "new" ? undefined : id,
 			incomingPort: Number(values.incomingPort),
 			forwardingPort: Number(values.forwardingPort),
@@ -93,6 +96,7 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							tcpForwarding: data?.tcpForwarding || false,
 							udpForwarding: data?.udpForwarding || false,
 							certificateId: data?.certificateId || 0,
+							domainNames: [],
 							meta: data?.meta || {},
 							note: data?.note || "",
 						}}
@@ -232,8 +236,18 @@ const StreamModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									</TabsContent>
 
 									<TabsContent value={STREAM_TAB.SSL} className="pt-4">
-										<SSLCertificateField name="certificateId" label="ssl-certificate" allowNew />
-										<SSLOptionsFields color="bg-cyan" />
+										<SSLCertificateField
+											name="certificateId"
+											label="ssl-certificate"
+											allowNew
+											forHttp={false}
+										/>
+										<SSLOptionsFields
+											color="bg-cyan"
+											forHttp={false}
+											forceDNSForNew
+											requireDomainNames
+										/>
 									</TabsContent>
 
 									<TabsContent value={STREAM_TAB.NOTES} className="space-y-4 pt-4">

@@ -24,7 +24,8 @@ docker compose up -d
 ## Native / LXC (Proxmox)
 
 ```bash
-bash scripts/install.sh
+tar -xzf shieldpm-install-linux-amd64.tar.gz
+sudo bash install.sh
 ```
 
 Der Installer:
@@ -33,6 +34,14 @@ Der Installer:
 2. Erstellt systemd-Unit-Files
 3. Lädt CrowdSec-Parser/Collections herunter
 4. Installiert Frontend und Backend
+
+Der Aufruf erfolgt im entpackten Release-Paket (für ARM64 entsprechend `shieldpm-install-linux-arm64.tar.gz`). Bei einer erneuten Installation wird die vorhandene `/data/.env` nicht durch die mitgelieferte Vorlage überschrieben. Datenbankwerte werden atomar und für das Laden durch die Shell korrekt maskiert geschrieben; auch Passwörter mit Leerzeichen, Anführungszeichen oder Sonderzeichen bleiben unverändert. PostgreSQL-Aufrufe verwenden `runuser`, sodass kein zusätzliches `sudo`-Paket vorausgesetzt wird. HTTP-Download- und Pipelinefehler führen zum Abbruch.
+
+Die lokale Datenbankauswahl verwendet weiterhin die im Installer angebotenen Standardzugangsdaten, sofern keine manuellen Werte gewählt werden. Die Maskierung ersetzt keine individuelle Passwortwahl.
+
+## Demo-Reset
+
+`docker-compose.demo.yaml` erstellt die Ausgangskopie über SQLite `.backup`, einschließlich bereits bestätigter WAL-Transaktionen. Beim periodischen Reset wird der Anwendungscontainer vor dem Austausch der Datenbank und dem Entfernen der WAL-/SHM-Dateien gestoppt und anschließend gestartet. Der Reset-Sidecar besitzt weiterhin Zugriff auf den Docker-Socket und ist ausschließlich für die Demo gedacht.
 
 ## Optionale Sidecar-Services
 
@@ -74,6 +83,10 @@ Workflows unter `.github/workflows/`:
 | `.github/delete-merged-branch-config.yml` | GitHub Auto-Delete Merged Branch Konfiguration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ## Hilfs-Skripte
+
+Der Docker-Build-Workflow berücksichtigt auch `.dockerignore`, `scripts/install.sh` und `scripts/setup-node-apt.sh`. Pull Requests bauen lokale Images für die Prüfung; Registry-Anmeldung, Push und Multiarch-Publikation laufen nur außerhalb von Pull Requests. Der manuelle Latest-Workflow übergibt und validiert den Release-Tag als Umgebungsvariable, statt Benutzereingaben direkt in Shell-Code einzusetzen.
+
+Der Shellcheck-Workflow prüft auch Erweiterungslose Helfer wie `update-shieldpm` und führt `python3 -m unittest discover -s scripts/tests -v` aus. Diese Tests arbeiten mit temporären Verzeichnissen und simulierten externen Befehlen, ohne einen Installer oder laufende Dienste zu starten.
 
 - `scripts/install.sh` — Native/LXC-Installer (siehe oben).
 - `scripts/generate-notices.js` — generiert `THIRD-PARTY-NOTICES.md` aus den direkten NPM-Lizenzen. Es verwendet das vom Workflow bereitgestellte `license-checker`-Binary und bricht bei einem fehlgeschlagenen Lizenzscan ab, bevor die bestehende Notice-Datei überschrieben werden kann.

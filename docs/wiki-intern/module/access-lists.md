@@ -51,6 +51,16 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Konsistente Aktualisierung und Eingabeprüfung
+
+- Änderungen an Optionen, Basic-Auth-Zugangsdaten und IP-Regeln erfolgen zusammen in einer Datenbanktransaktion. Alte Zugangsdaten werden vor dem Einfügen ihrer Ersatzwerte entfernt; sämtliche Schreibvorgänge sind vor dem Neubau der Dateien abgeschlossen.
+- Ein leeres Passwort beim Bearbeiten erhält das bestehende Passwort dieses Benutzernamens. Nicht mehr übermittelte Benutzernamen werden entfernt.
+- mTLS-Zertifikate und andere Optionen können auch ohne Namensänderung aktualisiert werden.
+- Benutzernamen müssen eindeutig sein und dürfen weder Doppelpunkte, Zeilenumbrüche noch Nullbytes enthalten. Clientregeln akzeptieren ausschließlich `allow` oder `deny` mit IPv4, IPv6, gültigem CIDR-Präfix oder `all`.
+- Audit-Metadaten enthalten keine OAuth2-Client-Secrets, OAuth2-Cookie-Secrets oder OIDC-Client-Secrets. Die eigentliche Konfiguration behält diese Werte. Passwort-Hinweise haben eine feste Länge und verraten weder Anfangszeichen noch Passwortlänge.
+
+Regressionstest: `backend/test/internal/access-list.spec.js` prüft reale Service-Aufrufe einschließlich Schreibreihenfolge, Rollback, mTLS, Geheimnisbereinigung und Eingabevalidierung.
+
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)

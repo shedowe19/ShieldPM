@@ -68,4 +68,34 @@ describe("createUserPayload", () => {
 
 		expect(payload).toMatchObject({ id: undefined, roles: [] });
 	});
+
+	it.each([73, "me", "new"] as const)("includes custom avatar settings for user %s", (id) => {
+		const payload = createUserPayload({
+			id,
+			isCurrentUser: id === "me",
+			values: createValues({ avatar_type: AVATAR_TYPE.URL, avatar_value: "https://example.test/avatar.png" }),
+		});
+
+		expect(payload).toMatchObject({
+			avatar_type: AVATAR_TYPE.URL,
+			avatar_value: "https://example.test/avatar.png",
+		});
+	});
+
+	it("clears obsolete URL metadata when switching back to Gravatar", () => {
+		const payload = createUserPayload({
+			id: 73,
+			isCurrentUser: true,
+			values: createValues({ avatar_type: AVATAR_TYPE.GRAVATAR }),
+		});
+
+		expect(payload).toMatchObject({ avatar_type: AVATAR_TYPE.GRAVATAR, avatar_value: "" });
+	});
+
+	it("leaves uploaded filenames to the upload endpoint, even after a URL avatar was entered", () => {
+		const payload = createUserPayload({ id: 73, isCurrentUser: true, values: createValues() });
+
+		expect(payload).not.toHaveProperty("avatar_type");
+		expect(payload).not.toHaveProperty("avatar_value");
+	});
 });

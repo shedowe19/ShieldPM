@@ -20,9 +20,24 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 ## Verhalten
 
 - Zertifikate werden über ACME (Let's Encrypt) automatisch beantragt
-- Renewal-Check alle `CRT` Stunden (Standard: 23)
+- Renewal-Check alle `CRT` Stunden (Standard: 72); gültig sind ganze Werte von 1 bis 596 Stunden. Andere Werte fallen auf den Standard zurück, damit Node.js-Timer nicht überlaufen. Erneute Initialisierung ersetzt den vorhandenen Timer.
 - Zertifikate werden unter `/data/tls/` gespeichert
 - Unterstützt ECDSA und RSA Schlüsseltypen
+
+## Sicherheits- und Lebenszyklusregeln
+
+- API-Antworten enthalten vorhandene PEM-Dateien als boolesche Metadatenmarker. Private Schlüssel und DNS-Zugangsdaten werden dort und in Zertifikats-Auditdaten nicht zurückgegeben. Expandierte Proxy-Hosts werden ebenfalls von Verbindungsgeheimnissen bereinigt.
+- Der berechtigte Zertifikatsdownload liefert weiterhin die erforderlichen Dateien; temporäre ZIPs werden mit Modus `0600` erstellt und nach dem Download gelöscht.
+- Client-Zertifikatsausstellung verlangt `certificates:create`; jeder Auftrag nutzt ein eigenes temporäres Verzeichnis. Das öffentliche Root-CA-Zertifikat bleibt ohne Geheimnisse abrufbar.
+- Private Schlüssel werden mit Node.js Crypto im Speicher geprüft. Passwortgeschützte Schlüssel scheitern sofort; ein Upload prüft außerdem die Übereinstimmung zwischen Zertifikat und Schlüssel vor der Datenbankänderung.
+- Manuelle Erneuerung und erfolgreicher Upload laden Nginx neu, damit es die neuen Dateien verwendet.
+- Das Löschen interner Zertifikate räumt `/data/tls/internal/` auf. Die Bereinigung verwaister Zertifikatsverweise lädt Domains und Zugriffslisten nach, entfernt Konfigurationen deaktivierter Hosts und setzt den erfolgreichen Nginx-Status erst nach dem validierten Reload.
+- Zertifikatsdaten werden als GMT interpretiert; der Common Name wird gezielt aus `CN` gelesen, auch wenn im Subject zuerst Länder- oder Organisationsfelder stehen.
+
+## Regressionstests
+
+- `backend/test/internal/certificate-lifecycle.spec.js`
+- `backend/test/routes/certificate-issuance-permissions.spec.js`
 
 ## Abhängigkeiten
 

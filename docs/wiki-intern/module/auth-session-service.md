@@ -6,11 +6,11 @@ Verwaltet Access- und Refresh-Token-Paare sowie HTTP-only Session-Cookies. Deckt
 
 ## Kontext
 
-`backend/internal/auth-session-service.js` (225 Zeilen) ist das Gegenstück zu `backend/internal/token.js`. Während `token.js` primär JWT-Erstellung und -Verifizierung übernimmt, kümmert sich `auth-session-service.js` um:
+`backend/internal/auth-session-service.js` ist das Gegenstück zu `backend/internal/token.js`. Während `token.js` primär JWT-Erstellung und -Verifizierung übernimmt, kümmert sich `auth-session-service.js` um:
 
 - Token-Paar-Erstellung (Access + Refresh)
 - Refresh-Sessions in der DB
-- Session-Familien (für "alle Geräte abmelden")
+- Session-Familien (zusammengehörige Rotationen einer Anmeldung)
 - Revokation (einzeln, familienbasiert)
 
 ## Wichtige Funktionen
@@ -25,7 +25,7 @@ Verwaltet Access- und Refresh-Token-Paare sowie HTTP-only Session-Cookies. Deckt
 
 - `createRefreshSession({ userId, familyId, meta })` — Erstellt einen Refresh-Token-Eintrag in der DB
 - `revokeSession(sessionId, reason, trx)` — Widerruft eine einzelne Session
-- `revokeFamily(familyId, reason, trx)` — Widerruft alle Sessions einer Family (z.B. "alle Geräte abmelden")
+- `revokeFamily(familyId, reason, trx)` — Widerruft alle Sessions einer Family (die betreffende Anmeldekette)
 
 ### Token-Lifecycle
 
@@ -62,7 +62,16 @@ Verwaltet Access- und Refresh-Token-Paare sowie HTTP-only Session-Cookies. Deckt
 
 ## Beziehung zu `benutzer-auth.md`
 
-Die Authentifizierung nutzt `issueTokenPair()` für den Login und `refreshTokenPair()` für Session-Verlängerung. Die Revokation über `revokeFamily()` ermöglicht "alle Geräte abmelden".
+Die Authentifizierung nutzt `issueTokenPair()` für den Login und `refreshTokenPair()` für Session-Verlängerung. `revokeFamily()` widerruft die zusammengehörige Anmeldekette. Andere Geräte oder unabhängige Anmeldungen können eigene Familien besitzen und werden dadurch nicht automatisch abgemeldet.
+
+## Fehler- und Nebenläufigkeitsverhalten
+
+- Bei abgelaufenen Tokens, erkannter Wiederverwendung oder verlorenen Rotationsrennen werden notwendige Widerrufe zuerst in der Transaktion gespeichert. Der Authentifizierungsfehler wird erst nach deren Commit ausgelöst; sonst würde ein Rollback die Sperre aufheben.
+- Die Rotation prüft zusätzlich, dass der bisherige Datensatz noch nicht widerrufen wurde.
+- Fehlende, deaktivierte oder gelöschte Benutzer erhalten kein neues Token-Paar; ihre betreffende Session-Familie wird widerrufen.
+- Der Refresh-Endpunkt entfernt Cookies bei dauerhaften Authentifizierungsfehlern (`401`). Bei vorübergehenden internen Fehlern (`500`) bleiben sie für einen späteren Versuch erhalten; interne Fehlerdetails werden nicht an den Client ausgegeben.
+
+Regressionstests: `backend/test/internal/auth-session-security.spec.js` und `backend/test/routes/two-fa-authorization.spec.js`.
 
 ## Verwandte Seiten
 

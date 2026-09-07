@@ -46,8 +46,8 @@ export interface User {
 	name: string;
 	nickname: string;
 	avatar: string;
-	avatar_type: AvatarType;
-	avatar_value: string | null;
+	avatarType: AvatarType;
+	avatarValue: string | null;
 	roles: string[];
 	permissions?: UserPermissions;
 }
@@ -177,12 +177,13 @@ export interface ProxyHost {
 	hstsEnabled: boolean;
 	hstsSubdomains: boolean;
 	maintenanceActive: boolean;
-	maintenanceStart?: string;
-	maintenanceEnd?: string;
+	maintenanceStart?: string | null;
+	maintenanceEnd?: string | null;
 	maintenanceReason?: string;
 	// PHP hosting (for scheme=path)
 	phpEnabled?: boolean;
 	phpVersion?: PhpVersion;
+	phpOverrideIni?: string;
 	indexFile?: string; // Add indexFile
 	// Git Sync (for scheme=path)
 	gitRepoUrl?: string | null;

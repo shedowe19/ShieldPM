@@ -35,6 +35,10 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Validierung der Cloudflare-Listen
+
+IPv4- und IPv6-CIDRs werden mit `ipaddr.js` vollständig geprüft. Leere Listen, HTML-Fehlerantworten, falsche Adressfamilien und ungültige Präfixe ersetzen die bestehende Konfiguration nicht. HTTP-Fehler und Zeitüberschreitungen werden als Fehler behandelt; der nächste planmäßige Versuch bleibt möglich. Damit werden insbesondere die zuvor durch den fehlerhaften IPv6-Regulärausdruck verlorenen Netze übernommen.
+
 ## Verwandte Seiten
 
 - [Nginx-Engine](./nginx-engine.md)

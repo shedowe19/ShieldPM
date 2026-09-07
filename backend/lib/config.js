@@ -121,6 +121,7 @@ const getKeys = () => {
 
 	try {
 		// Load this json keysFile synchronously and return the json object
+		fs.chmodSync(keysFile, 0o600);
 		const rawData = fs.readFileSync(keysFile);
 		const keys = JSON.parse(rawData.toString());
 
@@ -128,7 +129,7 @@ const getKeys = () => {
 		if (!keys.encryptionKey) {
 			logger.info("Migrating keys file: Adding encryptionKey...");
 			keys.encryptionKey = crypto.randomBytes(32).toString("hex");
-			fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2));
+			fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2), { mode: 0o600 });
 		}
 
 		return keys;
@@ -165,7 +166,7 @@ const generateKeys = () => {
 		if (!fs.existsSync(dir)) {
 			fs.mkdirSync(dir, { recursive: true });
 		}
-		fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2));
+		fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2), { mode: 0o600 });
 	} catch (err) {
 		logger.error(`Could not write JWT key pair to config file: ${keysFile}: ${err.message}`);
 		process.exit(1);

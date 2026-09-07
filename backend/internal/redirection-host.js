@@ -66,7 +66,7 @@ const internalRedirectionHost = {
 		// Fix for db field not having a default value
 		// for this optional field.
 		if (typeof data.advanced_config === "undefined") {
-			data.advanced_config = "";
+			thisData.advanced_config = "";
 		}
 
 		let row = await redirectionHostModel.query().insertAndFetch(/** @type {any} */ (thisData));

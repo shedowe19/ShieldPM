@@ -32,10 +32,13 @@ jobs:
 
       - name: "Calculate Version & Tags"
         id: calc
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
+          [[ "$RELEASE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]] || exit 1
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION_FILE=$(cat .version)
-          FULL_VER="${{ inputs.tag }}-${SHORT_SHA}-${VERSION_FILE}"
+          FULL_VER="${RELEASE_TAG}-${SHORT_SHA}-${VERSION_FILE}"
           
           echo "version=${FULL_VER}" >> $GITHUB_OUTPUT
           # Base tag for the arch-specific images will be 'latest'
@@ -139,9 +142,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Multiarch Manifest
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
           LATEST_TAG="${{ env.IMAGE_NAME }}:latest"
-          INPUT_TAG="${{ env.IMAGE_NAME }}:${{ inputs.tag }}"
+          INPUT_TAG="${{ env.IMAGE_NAME }}:${RELEASE_TAG}"
           RUN_TAG="${{ env.IMAGE_NAME }}:${{ github.run_number }}"
           
           # Create and push 'latest'

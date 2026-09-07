@@ -214,3 +214,7 @@ _Zuletzt aktualisiert: 2026-05-04_
 - [Module](./module/README.md)
 - [API-Überblick](./api/ueberblick.md)
 - [Wiki-Pflege](./wiki-pflege.md)
+
+## Codeprüfung
+
+- [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen.

@@ -20,6 +20,7 @@ Das `Dockerfile` verwendet drei Stages:
 
 - **Basis**: dieselbe Debian-Trixie-NodeSource-APT-Runtime mit Node.js 26
 - **Aktion**: installiert Node-Dependencies aus dem eingefrorenen Lockfile und lädt Anubis + OAuth2-Proxy herunter
+- **Abhängigkeiten**: Es werden ausschließlich Produktionsabhängigkeiten des Backends installiert; Vitest, Biome und TypeScript gelangen nicht mehr aus dieser Stage in das Laufzeitimage.
 - **Optimierungen**: Entfernt Source-Maps, strippt native Module
 - **Ausgabe**: `/app` (Backend-Anwendung)
 
@@ -27,7 +28,7 @@ Das `Dockerfile` verwendet drei Stages:
 
 - **Basis**: `ghcr.io/shedowe19/shieldpm-nginx:master`
 - **Aktion**: Kopiert Backend + Frontend + rootfs-Overlay + WireGuard-Tools
-- **Entrypoint**: `tini -- entrypoint.sh` (Exec-/JSON-Syntax)
+- **Entrypoint**: `tini -g -- entrypoint.sh` (Exec-/JSON-Syntax; Stoppsignale an die Prozessgruppe)
 - **Healthcheck**: `healthcheck.sh` (Exec-/JSON-Syntax, ohne zusätzliche Shell-Hülle)
 
 ### Befehl
@@ -35,6 +36,8 @@ Das `Dockerfile` verwendet drei Stages:
 ```bash
 docker build -t shieldpm:local .
 ```
+
+`.dockerignore` schließt lokale `node_modules`, Builds, Git-Metadaten und eigene `.env`-Dateien aus. Die eingecheckte Standarddatei `rootfs/data/.env` und `rootfs/.env.example` bleiben ausdrücklich im Build-Kontext. Die Frontend-Abhängigkeiten werden vor dem Kopieren des übrigen Quellcodes installiert, damit reine Quellcodeänderungen den Dependency-Cache erhalten.
 
 ## Frontend Build (standalone)
 
@@ -53,10 +56,11 @@ Produktions-Build ohne das zusätzliche Plugin `vite-tsconfig-paths`.
 
 ## Native / LXC Build
 
-Kein Build nötig — der `install.sh`-Installer clont das Repository und installiert direkt.
+Der Installer erwartet das entpackte native Release-Paket mit `app/`, `html/`, `usr/` und `rootfs/`. Dieses Paket enthält die zuvor gebauten Anwendungsdateien und Nginx-Binaries; der Installer klont das Repository nicht. Ein Aufruf der einzelnen `scripts/install.sh` aus einem normalen Checkout ersetzt das native Paket nicht.
 
 ```bash
-bash scripts/install.sh
+tar -xzf shieldpm-install-linux-amd64.tar.gz
+sudo bash install.sh
 ```
 
 ## Build-Artefakte

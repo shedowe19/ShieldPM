@@ -575,6 +575,11 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_user": {
+					if (typeof call.args.password !== "string" || call.args.password.length < 8) {
+						throw new errs.ValidationError(
+							"A password of at least 8 characters is required to create a user",
+						);
+					}
 					// Prepare data for internalUser.create
 					const userData = {
 						name: call.args.name,
@@ -584,7 +589,7 @@ export const executeTools = async (access, toolCalls) => {
 						is_disabled: false,
 						auth: {
 							type: "local",
-							secret: call.args.password || "changeme123", // Fallback if not provided, though generic prompt should ask
+							secret: call.args.password,
 						},
 					};
 					const newUser = await internalUser.create(access, userData);
@@ -1073,7 +1078,7 @@ export const executeTools = async (access, toolCalls) => {
 			toolResults.push({ name: call.name, toolCallId: call.id, result });
 		} catch (err) {
 			console.error(`[AI Executor] Error processing tool ${call.name}:`, err);
-			toolResults.push({ name: call.name, result: `Error: ${err.message}` });
+			toolResults.push({ name: call.name, toolCallId: call.id, result: `Error: ${err.message}` });
 		}
 	}
 

@@ -6,7 +6,7 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 
 ## Kontext
 
-`backend/internal/2fa-service.js` (676 Zeilen) kapselt sämtliche 2FA-Operationen. Es wird direkt von `backend/routes/2fa.js` aufgerufen und ist der einzige Ort, an dem 2FA-Logik lebt.
+`backend/internal/2fa-service.js` kapselt sämtliche 2FA-Operationen. Es wird direkt von `backend/routes/2fa.js` aufgerufen und ist der einzige Ort, an dem 2FA-Logik lebt.
 
 ## Unterstützte 2FA-Methoden
 
@@ -42,7 +42,7 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 
 - `setupDuo(userId, config)` — Konfiguriert Duo mit `duo_host`, `client_id`, `client_secret`
 - `beginDuoAuthentication(userId, userEmail)` — Gibt Duo-Embed-URL zurück
-- `completeDuoAuthentication(userId, userEmail, duoCode)` — Tauscht Code gegen Verifikation
+- `completeDuoAuthentication(userId, userEmail, duoCode, state)` — Tauscht Code gegen Verifikation
 
 ### Backup-Codes
 
@@ -88,12 +88,12 @@ Wichtige Routen:
 
 Neben den klassischen `/api/users/:user_id/2fa/...`-Routen gibt es seit v4.3.2 einen separaten 2FA-Token-Flow für die Anmeldung. Die Endpunkte liegen unter `/api/tokens/2fa/...`:
 
-| Endpunkt | Funktion |
-|---|---|
-| `POST /api/tokens` | Login mit Credentials → gibt `pending_token` + `2fa_token_required` zurück wenn 2FA nötig |
-| `POST /api/tokens/2fa/verify` | TOTP/YubiKey/Backup-Code Verifizierung nach Login |
-| `POST /api/tokens/2fa/passkey/begin` | Passkey-Authentifizierung starten |
-| `POST /api/tokens/2fa/passkey/complete` | Passkey-Authentifizierung abschließen |
+| Endpunkt                                | Funktion                                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `POST /api/tokens`                      | Login mit Credentials → gibt `pending_token` + `2fa_token_required` zurück wenn 2FA nötig |
+| `POST /api/tokens/2fa/verify`           | TOTP/YubiKey/Backup-Code Verifizierung nach Login                                         |
+| `POST /api/tokens/2fa/passkey/begin`    | Passkey-Authentifizierung starten                                                         |
+| `POST /api/tokens/2fa/passkey/complete` | Passkey-Authentifizierung abschließen                                                     |
 
 Der Flow: User loggt sich ein → Server erkennt dass 2FA nötig → gibt `pending_token` → Client ruft 2FA-Endpunkt auf → bei Erfolg werden volle Tokens ausgestellt.
 
@@ -101,10 +101,20 @@ Diese Endpunkte sind im OpenAPI-Schema unter `backend/schema/paths/tokens/2fa/` 
 
 ## Gotchas & Bug-Fixes
 
-- **`verifyTotp()` akzeptiert `is_verified=0`**: Vor dem Fix in Commit `c3cf536c` verlangte `verifyTotp()` dass `is_verified=1` im Datenbank-Record des Benutzers gesetzt ist. Das verhinderte die Verifizierung für Benutzer die 2FA über DB-Seeding eingerichtet haben (kein Setup durchlaufen). Der Fix entfernt diese Prüfung — TOTP-Codes werden akzeptiert solange die Methode aktiviert ist, unabhängig vom `is_verified`-Flag.
-- **TOTP-Secret im Klartext**: Das TOTP-Secret wird in `user_2fa.secret` als Klartext (Base32) gespeichert. Das ist technisch erforderlich für die TOTP-Generierung, sollte aber als sensibel behandelt werden.
-- **Passkey-Challenges sind kurzlebig**: Die bei `beginPasskeyAuthentication` erzeugten Challenges werden in der DB gespeichert und müssen schnell abgeschlossen werden. Ablaufzeit ist Teil des Challenge-Records.
+- **Nur aktivierte TOTP-Methoden beim Login**: `verifyTotp()` berücksichtigt ausschließlich `is_verified=1` und `is_deleted=0`. Ein neuer, noch unbestätigter Setup-Datensatz kann damit keine vorhandene Methode ersetzen oder die zweite Faktorprüfung bestehen. Direkte DB-Seeds müssen den Aktivierungsstatus ausdrücklich setzen.
+- **TOTP-Secret im Klartext**: Das TOTP-Secret wird in `user_2fa.secret` als Klartext (Base32) gespeichert. Das Secret muss für die Prüfung verfügbar sein; die aktuelle Speicherung erfolgt unverschlüsselt und ist sensibel.
+- **Passkey-Challenges sind kurzlebig**: Die bei `beginPasskeyAuthentication` erzeugten Challenges werden mit einer Frist von fünf Minuten in `meta.expiresAt` gespeichert. Abgelaufene oder ältere Datensätze ohne Frist werden abgelehnt. Die abschließende Löschung wird auf genau einen betroffenen Datensatz geprüft; parallele Verwendungen können deshalb nicht beide erfolgreich sein.
 - **Schema `$ref`-Pfade**: Die 2FA-Schema-Dateien unter `paths/tokens/2fa/` liegen auf unterschiedlicher Tiefe. `verify/post.json` ist auf 4 Ebenen (`paths/tokens/2fa/verify/`), die Passkey-Dateien auf 5 Ebenen (`paths/tokens/2fa/passkey/*/`). Falsche `../`-Tiefe führt zu ENOENT-Fehlern beim Schema-Dereferenzieren in Production. Siehe [Swagger UI](../features/swagger-ui.md) für Details.
+
+## Autorisierung und Einmalverwendung
+
+- Verwaltungsrouten prüfen `access.can("users:update", userId)`. Damit gelten die aktuellen Rollen und der Kontostatus aus der Datenbank. Ein `2fa_pending`-Token darf weder Methoden löschen noch neue Backup-Codes erzeugen.
+- Alle Login-Endpunkte für TOTP, Passkey und Duo prüfen den Scope `2fa_pending` sowie eine gültige Benutzer-ID vor der zweiten Faktorprüfung.
+- Backup-Codes werden mit einer bedingten Aktualisierung auf `used_at IS NULL` verbraucht. Nur der Aufruf, der tatsächlich einen Datensatz aktualisiert, ist erfolgreich.
+- Duo speichert den zufälligen `state` benutzergebunden als `duo_auth_challenge` mit fünf Minuten Gültigkeit. `/api/tokens/2fa/duo/complete` erwartet `pending_token`, `duo_code` und `state`. Das Frontend vergleicht den zurückgegebenen State mit dem vor der Weiterleitung gespeicherten Wert; das Backend prüft Ablauf und Einmalverwendung.
+- Nach einer Aktualisierung müssen bereits laufende Passkey- oder Duo-Anmeldungen ohne gespeicherte Ablaufdaten neu begonnen werden.
+
+Regressionstests: `backend/test/internal/2fa-service.spec.js`, `backend/test/internal/backup-code-consumption.spec.js` und `backend/test/routes/two-fa-authorization.spec.js`.
 
 ## Verwandte Seiten
 

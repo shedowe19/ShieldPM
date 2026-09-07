@@ -12,7 +12,7 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 
 - `backend/internal/dead-host.js` (~420 Zeilen) — Business-Logik
 - `backend/models/dead_host.js` — Objection.js-Modell mit `host_domains`-Relation
-- `backend/templates/dead_host.conf` — EJS-Template für leere/404-Server-Blöcke
+- `backend/templates/dead_host.conf` — Liquid-Template für leere/404-Server-Blöcke
 - `backend/routes/nginx/dead_hosts.js` — REST-API-Routen unter `/api/nginx/dead-hosts`
 - `backend/lib/access/dead_hosts-*.json` — RBAC-Regeln
 - `frontend/src/pages/Nginx/DeadHosts/` — UI-Tabelle
@@ -25,6 +25,12 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 3. `internal/nginx.js` rendert das Template zu `.conf`-Datei unter `/data/nginx/dead_host/`.
 4. Eingehende Requests auf diese Domain erhalten standardmäßig HTTP 404.
 5. Optional kann eine Custom-Page oder ein eigenes SSL-Zertifikat verwendet werden.
+
+## Aktualisierung und Antworten
+
+- Nach einem Update wird der erneut geladene Datensatz einschließlich Zertifikat zur Konfiguration verwendet. Dadurch gelten neue SSL-Einstellungen und `advanced_config` unmittelbar.
+- Der neue Nginx-Status wird in der Antwort zurückgegeben; expandierte Zertifikat-Metadaten werden bereinigt.
+- Regression: `backend/test/internal/host-update-regressions.spec.js`.
 
 ## Abhängigkeiten
 

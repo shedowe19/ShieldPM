@@ -19,6 +19,7 @@ const WEBSITES_DIR = "/data/websites";
 
 /** @type {Map<number, any>} */
 const pollingTimers = new Map();
+const activeSyncs = new Map();
 
 /**
  * Ensures the websites directory exists
@@ -92,7 +93,7 @@ const internalGitDeploy = {
 			throw new errs.AuthError("Git Deploy is disabled in Demo Mode");
 		}
 
-		const host = await ProxyHost.query().findById(hostId);
+		const host = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
 		if (!host) {
 			throw new errs.ItemNotFoundError(hostId);
 		}
@@ -105,109 +106,119 @@ const internalGitDeploy = {
 			throw new errs.ValidationError("Git repository URL not configured");
 		}
 
-		const dir = getWebsiteDir(hostId);
-		const gitDir = path.join(dir, ".git");
+		if (activeSyncs.has(hostId)) return activeSyncs.get(hostId);
+		const syncTask = (async () => {
+			const dir = getWebsiteDir(hostId);
+			const gitDir = path.join(dir, ".git");
 
-		try {
-			logger.info(
-				`[git-deploy] Starting sync for host ${hostId} (Repo: ${host.git_repo_url}, Branch: ${host.git_branch || "main"})`,
-			);
+			try {
+				logger.info(
+					`[git-deploy] Starting sync for host ${hostId} (Repo: ${host.git_repo_url}, Branch: ${host.git_branch || "main"})`,
+				);
 
-			// Check if repo already exists
-			let repoExists = fs.existsSync(gitDir);
-			logger.debug(`[git-deploy] Host ${hostId}: Repo exists? ${repoExists}`);
+				// Check if repo already exists
+				let repoExists = fs.existsSync(gitDir);
+				logger.debug(`[git-deploy] Host ${hostId}: Repo exists? ${repoExists}`);
 
-			if (repoExists) {
-				// Check for branch mismatch
-				const currentBranch = await git.currentBranch({ fs, dir });
-				const targetBranch = host.git_branch || "main";
+				if (repoExists) {
+					// Check for branch mismatch
+					const currentBranch = await git.currentBranch({ fs, dir });
+					const targetBranch = host.git_branch || "main";
+					const currentRemote = await git.getConfig({ fs, dir, path: "remote.origin.url" });
 
-				logger.debug(`[git-deploy] Host ${hostId}: Current branch: ${currentBranch}, Target: ${targetBranch}`);
-
-				if (currentBranch !== targetBranch) {
-					logger.info(
-						`[git-deploy] Branch changed from '${currentBranch}' to '${targetBranch}' for host ${hostId}. Re-cloning...`,
+					logger.debug(
+						`[git-deploy] Host ${hostId}: Current branch: ${currentBranch}, Target: ${targetBranch}`,
 					);
-					fs.rmSync(dir, { recursive: true, force: true });
-					fs.mkdirSync(dir, { recursive: true });
-					repoExists = false; // Mark as not existing so we clone
+
+					if (currentBranch !== targetBranch || currentRemote !== host.git_repo_url) {
+						logger.info(
+							`[git-deploy] Branch changed from '${currentBranch}' to '${targetBranch}' for host ${hostId}. Re-cloning...`,
+						);
+						fs.rmSync(dir, { recursive: true, force: true });
+						fs.mkdirSync(dir, { recursive: true });
+						repoExists = false; // Mark as not existing so we clone
+					}
 				}
-			}
 
-			// Check if repo exists (it might have been deleted above)
-			if (fs.existsSync(gitDir)) {
-				// Pull latest changes
-				logger.info(`[git-deploy] Pulling updates for host ${hostId}...`);
+				// Check if repo exists (it might have been deleted above)
+				if (fs.existsSync(gitDir)) {
+					// Pull latest changes
+					logger.info(`[git-deploy] Pulling updates for host ${hostId}...`);
 
-				await git.pull({
-					fs,
-					http,
-					dir,
-					ref: host.git_branch || "main",
-					singleBranch: true,
-					author: {
-						name: "ShieldPM GitDeploy",
-						email: "gitdeploy@shieldpm.local",
-					},
-					...getAuth(host.git_credentials),
-				});
-			} else {
-				// Clone repository
-				logger.info(`[git-deploy] Cloning ${host.git_repo_url} for host ${hostId}...`);
+					await git.pull({
+						fs,
+						http,
+						dir,
+						ref: host.git_branch || "main",
+						singleBranch: true,
+						author: {
+							name: "ShieldPM GitDeploy",
+							email: "gitdeploy@shieldpm.local",
+						},
+						...getAuth(host.git_credentials),
+					});
+				} else {
+					// Clone repository
+					logger.info(`[git-deploy] Cloning ${host.git_repo_url} for host ${hostId}...`);
 
-				await git.clone({
-					fs,
-					http,
-					dir,
-					url: host.git_repo_url,
-					ref: host.git_branch || "main",
-					singleBranch: true,
-					depth: 1, // Shallow clone for efficiency
-					...getAuth(host.git_credentials),
-				});
-			}
+					await git.clone({
+						fs,
+						http,
+						dir,
+						url: host.git_repo_url,
+						ref: host.git_branch || "main",
+						singleBranch: true,
+						depth: 1, // Shallow clone for efficiency
+						...getAuth(host.git_credentials),
+					});
+				}
 
-			// Get current commit SHA
-			const commits = await git.log({ fs, dir, depth: 1 });
-			const latestCommit = commits[0]?.oid || null;
+				// Get current commit SHA
+				const commits = await git.log({ fs, dir, depth: 1 });
+				const latestCommit = commits[0]?.oid || null;
 
-			// Update host status
+				// Update host status
 
-			await ProxyHost.query()
-				.findById(hostId)
-				.patch({
-					git_last_sync: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-					git_last_commit: latestCommit,
-					git_last_error: null,
-				});
+				await ProxyHost.query()
+					.findById(hostId)
+					.patch({
+						git_last_sync: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+						git_last_commit: latestCommit,
+						git_last_error: null,
+					});
 
-			// Update forward_host to point to the website directory
-			if (host.forward_host !== dir) {
+				// Update forward_host to point to the website directory
+				if (host.forward_host !== dir) {
+					await ProxyHost.query().findById(hostId).patch({
+						forward_host: dir,
+					});
+
+					// Trigger Nginx reload to apply the new root path
+					const updatedHost = await ProxyHost.query()
+						.findById(hostId)
+						.withGraphFetched("[host_domains, certificate, access_list.[items,clients]]");
+					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
+
+					logger.info(`[git-deploy] Updated forward_host for host ${hostId} to ${dir} and reloaded Nginx`);
+				}
+
+				logger.info(`[git-deploy] Sync complete for host ${hostId}, commit: ${latestCommit}`);
+				return { success: true, commit: latestCommit };
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : "Unknown error";
+				logger.error(`[git-deploy] Sync failed for host ${hostId}:`, err);
+
+				// Update error state
+
 				await ProxyHost.query().findById(hostId).patch({
-					forward_host: dir,
+					git_last_error: errorMessage,
 				});
 
-				// Trigger Nginx reload to apply the new root path
-				const updatedHost = await ProxyHost.query().findById(hostId).withGraphFetched("access_list");
-				await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
-
-				logger.info(`[git-deploy] Updated forward_host for host ${hostId} to ${dir} and reloaded Nginx`);
+				return { success: false, message: errorMessage };
 			}
-
-			logger.info(`[git-deploy] Sync complete for host ${hostId}, commit: ${latestCommit}`);
-			return { success: true, commit: latestCommit };
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : "Unknown error";
-			logger.error(`[git-deploy] Sync failed for host ${hostId}:`, err);
-
-			// Update error state
-
-			await ProxyHost.query().findById(hostId).patch({
-				git_last_error: errorMessage,
-			});
-
-			return { success: false, message: errorMessage };
-		}
+		})().finally(() => activeSyncs.delete(hostId));
+		activeSyncs.set(hostId, syncTask);
+		return syncTask;
 	},
 
 	/**
@@ -221,7 +232,7 @@ const internalGitDeploy = {
 			await access.can("proxy_hosts:get", hostId);
 		}
 
-		const host = await ProxyHost.query().findById(hostId);
+		const host = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
 		if (!host) {
 			throw new errs.ItemNotFoundError(hostId);
 		}
@@ -253,7 +264,7 @@ const internalGitDeploy = {
 
 		await access.can("proxy_hosts:update", hostId);
 
-		const host = await ProxyHost.query().findById(hostId);
+		const host = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
 		if (!host) {
 			throw new errs.ItemNotFoundError(hostId);
 		}
@@ -297,9 +308,10 @@ const internalGitDeploy = {
 		if (
 			updateData.git_sync_enabled !== undefined ||
 			updateData.git_poll_interval !== undefined ||
-			updateData.git_poll_unit !== undefined
+			updateData.git_poll_unit !== undefined ||
+			updateData.git_repo_url !== undefined
 		) {
-			const updatedHost = await ProxyHost.query().findById(hostId);
+			const updatedHost = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
 			if (updatedHost.git_sync_enabled && updatedHost.git_repo_url) {
 				internalGitDeploy.startPollingForHost(updatedHost);
 			} else {
@@ -349,7 +361,10 @@ const internalGitDeploy = {
 			return;
 		}
 
-		const intervalMs = intervalToMs(host.git_poll_interval, host.git_poll_unit);
+		const configuredInterval = intervalToMs(host.git_poll_interval, host.git_poll_unit);
+		const intervalMs = Number.isFinite(configuredInterval)
+			? Math.min(2147483647, Math.max(10000, configuredInterval))
+			: 60000;
 
 		logger.info(
 			`[git-deploy] Starting polling for host ${host.id} every ${host.git_poll_interval}${host.git_poll_unit}`,

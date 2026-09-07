@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { createConnection } from "node:net";
+import errs from "../lib/error.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import TorOnion from "../models/tor_onion.js";
@@ -23,15 +24,15 @@ const torPasswordFile = `${dataPath}/shieldpm/tor-control-password`;
  */
 const validateServiceParams = (service) => {
 	// Validate virtual_port: must be a valid integer port
-	const vPort = Number.parseInt(service.virtual_port, 10);
-	if (Number.isNaN(vPort) || vPort < 1 || vPort > 65535) {
-		throw new Error(`Invalid virtual_port: ${service.virtual_port}. Must be 1-65535.`);
+	const vPort = Number(service.virtual_port);
+	if (!/^\d+$/.test(String(service.virtual_port)) || !Number.isInteger(vPort) || vPort < 1 || vPort > 65535) {
+		throw new errs.ValidationError("Invalid virtual_port. Must be an integer from 1 to 65535.");
 	}
 
 	// Validate target_port: must be a valid integer port
-	const tPort = Number.parseInt(service.target_port, 10);
-	if (Number.isNaN(tPort) || tPort < 1 || tPort > 65535) {
-		throw new Error(`Invalid target_port: ${service.target_port}. Must be 1-65535.`);
+	const tPort = Number(service.target_port);
+	if (!/^\d+$/.test(String(service.target_port)) || !Number.isInteger(tPort) || tPort < 1 || tPort > 65535) {
+		throw new errs.ValidationError("Invalid target_port. Must be an integer from 1 to 65535.");
 	}
 
 	// Validate private_key: no control characters allowed
@@ -170,7 +171,10 @@ const syncProxyHost = async (service, skip_reload = false) => {
 	}
 
 	try {
-		const proxyHost = await ProxyHost.query().findById(service.proxy_host_id).where("is_deleted", 0);
+		const proxyHost = await ProxyHost.query()
+			.findById(service.proxy_host_id)
+			.where("is_deleted", 0)
+			.withGraphFetched("host_domains");
 		if (!proxyHost) {
 			return;
 		}
@@ -180,17 +184,13 @@ const syncProxyHost = async (service, skip_reload = false) => {
 			return;
 		}
 
-		// Add onion address
-		const newDomains = [...proxyHost.domain_names, service.onion_address];
-
-		// Update Proxy Host in DB
-		await ProxyHost.query().patchAndFetchById(proxyHost.id, {
-			domain_names: newDomains,
-		});
+		await proxyHost.$relatedQuery("host_domains").insert({ domain_name: service.onion_address });
 
 		// Reconfigure Nginx
 		// We fetch the updated row to be sure
-		const updatedHost = await ProxyHost.query().findById(proxyHost.id);
+		const updatedHost = await ProxyHost.query()
+			.findById(proxyHost.id)
+			.withGraphFetched("[host_domains, certificate, access_list.[clients,items]]");
 		await internalNginx.configure(ProxyHost, "proxy_host", updatedHost, { skip_reload });
 
 		logger.info(`Added onion address ${service.onion_address} to Proxy Host ${proxyHost.id}`);
@@ -274,14 +274,12 @@ const internalTor = {
 			const command = `ADD_ONION NEW:ED25519-V3 Flags=Detach Port=${service.virtual_port},127.0.0.1:${service.target_port}`;
 			const response = await sendAuthenticatedCommand(command);
 
-			logger.debug("Tor ADD_ONION response:", response);
-
 			// Parse response for ServiceID and PrivateKey
 			const serviceIdMatch = response.match(/ServiceID=([a-z2-7]{56})/i);
 			const privateKeyMatch = response.match(/PrivateKey=(ED25519-V3:[^\s]+)/);
 
 			if (!serviceIdMatch || !privateKeyMatch) {
-				logger.error("Failed to parse Tor response:", response);
+				logger.error("Failed to parse Tor ADD_ONION response");
 				await service.$query().patch({ status: 3 }); // Error
 				return null;
 			}
@@ -367,6 +365,9 @@ const internalTor = {
 
 		try {
 			// Extract service ID from .onion address
+			if (!/^[a-z2-7]{56}\.onion$/i.test(service.onion_address)) {
+				throw new errs.ValidationError("Invalid onion address");
+			}
 			const serviceId = service.onion_address.replace(".onion", "");
 			const command = `DEL_ONION ${serviceId}`;
 			const response = await sendAuthenticatedCommand(command);

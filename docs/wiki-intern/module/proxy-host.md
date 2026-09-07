@@ -53,7 +53,16 @@ Mechanik in `nginx.js` → `renderLocations(host)`:
 3. Enthält `forward_host` einen Slash und beginnt nicht mit `/` oder `unix`, wird nach dem ersten Segment getrennt: erster Teil → `forward_host`, Rest → `forward_path`.
 4. Das Liquid-Template `backend/templates/_proxy_host_custom_location.conf` wird pro Location gerendert.
 5. Alle gerenderten Strings werden konkateniert und als String an das Haupt-Template `proxy_host.conf` übergeben.
-6. Existiert eine Custom-Location mit `path === "/"`, wird die Standard-`/`-Location automatisch deaktiviert (`use_default_location = false`).
+6. Vor dem Ersetzen des Arrays durch den gerenderten String wird eine Custom-Location mit `path === "/"` erkannt. Sie deaktiviert die Standard-`/`-Location (`use_default_location = false`).
+7. Custom-Locations mit abschließendem Slash erhalten den Redirect ohne Slash; statische Ziele mit abschließendem Slash verwenden `alias`.
+
+## Interne Daten und API-Antworten
+
+- Konfigurationsgenerierung und interne Aktualisierung behalten den tatsächlichen Pfad verwalteter Websites. Öffentliche Antworten zeigen für `/data/websites/...` weiterhin `(managed)`; beim Zurücksenden dieses Platzhalters bleibt der bestehende Pfad erhalten.
+- `backend/lib/host-response.js` entfernt Git-/Terminal-Zugangsdaten und Geheimnisse expandierter OAuth-/OIDC-Zugriffslisten aus Antworten und Proxy-Host-Auditdaten. Die Konfigurationsgenerierung erhält intern die erforderlichen Originaldaten.
+- Leere Terminal-Passwort-/Private-Key-Felder bei Updates behalten vorhandene Zugangsdaten. Neue Git-Zugangsdaten werden bereits beim Erstellen verschlüsselt.
+- Aktivieren lädt auch `access_list.clients` und `access_list.items`, damit bestehende Regeln erhalten bleiben.
+- `backend/test/internal/host-update-regressions.spec.js` prüft diese Abläufe mit gemockten Datenbank- und Nginx-Aufrufen.
 
 ## Abhängigkeiten
 

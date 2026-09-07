@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,9 +12,11 @@ const mocks = vi.hoisted(() => ({
 	authStoreAdd: vi.fn(),
 	authStoreClear: vi.fn(),
 	authStoreSet: vi.fn(),
+	authStoreActive: true,
+	useIntervalWhen: vi.fn(),
 }));
 
-vi.mock("rooks", () => ({ useIntervalWhen: vi.fn() }));
+vi.mock("rooks", () => ({ useIntervalWhen: mocks.useIntervalWhen }));
 
 vi.mock("src/api/backend", () => ({
 	getToken: mocks.getToken,
@@ -31,6 +33,9 @@ vi.mock("src/modules/AuthStore", () => ({
 		add: mocks.authStoreAdd,
 		clear: mocks.authStoreClear,
 		set: mocks.authStoreSet,
+		get active() {
+			return mocks.authStoreActive;
+		},
 	},
 }));
 
@@ -82,6 +87,7 @@ describe("AuthProvider", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		nextSessionProbeInstance = 0;
+		mocks.authStoreActive = true;
 		mocks.refreshToken.mockRejectedValue(new Error("No existing session"));
 	});
 
@@ -114,6 +120,60 @@ describe("AuthProvider", () => {
 		window.dispatchEvent(new Event("shieldpm:authentication-expired"));
 
 		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false"));
+	});
+
+	it("leaves the authenticated screen when a silent periodic refresh expires the session", async () => {
+		mocks.refreshToken.mockResolvedValueOnce({ expires: Date.now() + 900_000 });
+		renderAuthProvider();
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+
+		mocks.authStoreActive = false;
+		mocks.refreshToken.mockRejectedValueOnce(new Error("Unauthorized"));
+		await act(async () => {
+			await mocks.useIntervalWhen.mock.lastCall?.[0]();
+		});
+
+		expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false");
+	});
+
+	it("handles a temporary periodic refresh failure without logging out", async () => {
+		mocks.refreshToken.mockResolvedValueOnce({ expires: Date.now() + 900_000 });
+		renderAuthProvider();
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+
+		mocks.refreshToken.mockRejectedValueOnce(new Error("Offline"));
+		await act(async () => {
+			await mocks.useIntervalWhen.mock.lastCall?.[0]();
+		});
+
+		expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
+	});
+
+	it("does not restore a session from a refresh that finishes after logout", async () => {
+		const token = { expires: Date.now() + 900_000 };
+		mocks.refreshToken.mockResolvedValueOnce(token);
+		mocks.restoreSession.mockRejectedValueOnce(new Error("No backup session"));
+		mocks.post.mockResolvedValueOnce(undefined);
+		renderAuthProvider();
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+
+		let finishRefresh: (response: typeof token) => void = () => {};
+		mocks.refreshToken.mockReturnValueOnce(
+			new Promise((resolve) => {
+				finishRefresh = resolve;
+			}),
+		);
+		const pendingRefresh = mocks.useIntervalWhen.mock.lastCall?.[0]();
+		fireEvent.click(screen.getByRole("button", { name: "Return to administrator" }));
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false"));
+
+		await act(async () => {
+			finishRefresh(token);
+			await pendingRefresh;
+		});
+
+		expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false");
+		expect(mocks.authStoreSet).toHaveBeenCalledOnce();
 	});
 
 	it("remounts session-dependent UI after impersonating without a document reload", async () => {

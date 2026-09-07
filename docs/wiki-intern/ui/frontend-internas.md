@@ -40,6 +40,11 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 
 ## Custom Hooks (`frontend/src/hooks/`)
 
+`useSetUser` invalidiert nach dem Speichern sowohl die numerische Benutzerabfrage als auch den Alias `"me"`.
+Dadurch aktualisieren sich Kopfzeile und Berechtigungsansichten auch nach Änderungen über eine numerische Route.
+Eine optimistische Aktualisierung des Alias behält die numerische Benutzer-ID im gecachten Objekt bei.
+`useUser.test.tsx` sichert beide Fälle ab.
+
 32 Hooks für Server-State-Management (React Query):
 
 ### CRUD Hooks (Entitäten)
@@ -122,11 +127,17 @@ Marker, Zoom und Pan.
 
 ## Frontend-Module (`frontend/src/modules/`)
 
-| Modul         | Datei                      | Zweck                            |
-| ------------- | -------------------------- | -------------------------------- |
-| `AuthStore`   | `AuthStore.ts` (1.7 KB)    | Token-Speicherung (localStorage) |
-| `Permissions` | `Permissions.ts` (1.8 KB)  | Berechtigungslogik               |
-| `Validations` | `Validations.tsx` (2.8 KB) | Formular-Validierungsregeln      |
+| Modul         | Datei                      | Zweck                                                                              |
+| ------------- | -------------------------- | ---------------------------------------------------------------------------------- |
+| `AuthStore`   | `AuthStore.ts`             | Sitzungsmetadaten und CSRF-Token im Arbeitsspeicher; Auth-Cookies bleiben HttpOnly |
+| `Permissions` | `Permissions.ts` (1.8 KB)  | Berechtigungslogik                                                                 |
+| `Validations` | `Validations.tsx` (2.8 KB) | Formular-Validierungsregeln                                                        |
+
+`AuthStore` normalisiert ISO-Ablaufdaten der API zu Millisekunden; fehlende oder ungültige Ablaufdaten gelten bei der
+Gültigkeitsprüfung nicht als aktive Tokens. Die periodische Sitzungserneuerung in `AuthContext` verarbeitet abgelehnte
+Promises: Bei einem stillen 401 wechselt die UI zur Anmeldung, vorübergehende Netzwerkfehler lassen den bestehenden
+Auth-Zustand erhalten. Ein nach Abmeldung oder Benutzerwechsel eintreffendes altes Refresh-Ergebnis überschreibt den
+neuen Zustand nicht. `AuthStore.test.ts` und `AuthContext.test.tsx` prüfen Ablauf, Netzfehler und verspätete Ergebnisse.
 
 ## Modals (`frontend/src/modals/`)
 
@@ -179,6 +190,13 @@ Kontos lässt es Rollen und Deaktivierungsstatus weiterhin aus, damit sich Benut
 Rolle ändern können. `UserModalSubmission.test.ts` sichert diese Payload-Grenze sowie die Kennzeichnung neuer
 Benutzer.
 
+Avatar-Metadaten werden aus der API als `avatarType` und `avatarValue` gelesen und den bestehenden Formik-Feldern
+zugeordnet. URL- und Gravatar-Auswahl werden beim Anlegen und Bearbeiten mitgesendet. Upload-Dateinamen setzt nur der
+Upload-Endpunkt; der Dialog sendet dafür keine möglicherweise aus einer früheren URL-Auswahl stammenden Werte.
+Nach dem Upload werden Benutzer- und Listenabfragen erneut invalidiert. Falls ein Upload nach erfolgreicher
+Benutzeranlage fehlschlägt, verwendet ein erneuter Speicherversuch die bereits erzeugte ID und erstellt keinen zweiten
+Benutzer. Die Submission- und Dialogtests prüfen diese Übergänge.
+
 `SetPasswordModal.tsx` beschriftet die Icon-Aktionen zum Anzeigen/Verstecken und Generieren eines Passworts über die
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.
@@ -194,7 +212,9 @@ bereits konfigurierte Regeln bleiben erhalten.
 
 Die Terminal-Verbindungsfelder des `ProxyHostModal` liegen in `ProxyHostTerminalFields.tsx`. Die Komponente bleibt ein
 Formik-Kind, erscheint nur für das Forwarding-Schema `terminal` und zeigt abhängig von `terminalAuthType` unverändert
-das Passwort- oder Private-Key-Feld. `ProxyHostTerminalFields.test.tsx` sichert diese drei Zustände ab.
+das Passwort- oder Private-Key-Feld. Gespeicherte Terminal-Secrets werden nicht in den Formularzustand übernommen;
+leere Felder fehlen im Update-Payload und lassen bestehende Zugangsdaten unverändert. Explizit eingegebene neue
+Zugangsdaten werden weiterhin übertragen. Die Terminal- und Submission-Tests sichern diese Zustände ab.
 
 `ProxyHostIconSettings.tsx` kapselt die Symbolauswahl des `ProxyHostModal` als weiteres Formik-Kind. Bei `iconType`
 `custom` bleibt das URL-Feld sichtbar; die Vorschau erhält weiterhin Host, Port, Symboltyp und URL aus dem gemeinsamen
@@ -202,8 +222,9 @@ Formularzustand. `ProxyHostIconSettings.test.tsx` sichert beide Zustände ab.
 
 `ProxyHostPhpSettings.tsx` kapselt die PHP-Hosting-Felder des `ProxyHostModal` als Formik-Kind. Der Bereich bleibt auf
 das Forwarding-Schema `path` begrenzt; nach dem Aktivieren von PHP bleiben Versionswahl und benutzerdefinierte
-`php_override_ini` aus dem gemeinsamen Formularzustand verfügbar. `ProxyHostPhpSettings.test.tsx` sichert diese
-Sichtbarkeits- und Zustandsübergänge ab.
+`phpOverrideIni` aus dem gemeinsamen Formularzustand verfügbar. Der API-Client übernimmt die Umwandlung zu
+`php_override_ini`; vorhandene INI-Werte werden beim Bearbeiten geladen und auch bei Änderungen anderer Host-Felder
+erhalten. Die PHP-Feld-, Formwert- und Submission-Tests sichern diese Übergänge ab.
 
 `ProxyHostAdvancedTab.tsx` kapselt den erweiterten Tab des `ProxyHostModal` als Formik-Kind. Der Turbo-Loader-Schalter
 bleibt an `turboLoader` gebunden; Titel und Erläuterungen verwenden `proxy-host.turbo-loader.*` mit nativen Texten in
@@ -239,10 +260,17 @@ Zusammensetzung und beide Werte gegen Regressionsfehler ab.
 Host-ID werden unverändert an ihre Kinder weitergereicht; Git-Sync bleibt ausschließlich für das Weiterleitungsschema
 `path` sichtbar. `ProxyHostFormTabs.test.tsx` sichert beide Zustände.
 
-`ProxyHostModalSubmission.ts` kapselt die Serialisierung vor dem Speichern eines Proxy-Hosts. Leere Git-Zugangsdaten
-werden weiterhin nicht überschrieben, die UI-Option `crowdsecEnabled` wird in `securityCrowdsec` für die API überführt
-und ungültige Rate-Limit-Werte werden wie zuvor entfernt. `ProxyHostModalSubmission.test.ts` sichert diese
-Payload-Grenzen unabhängig vom Dialog ab.
+`ProxyHostModalSubmission.ts` kapselt die Serialisierung vor dem Speichern eines Proxy-Hosts. Leere Git- und
+Terminal-Zugangsdaten überschreiben gespeicherte Secrets nicht; die UI-Option `crowdsecEnabled` wird in
+`securityCrowdsec` für die API überführt. Explizit geleerte Rate-Limit-Felder werden als `null` übertragen, damit das
+Backend gespeicherte Limits entfernt. Zahlenfelder werden numerisch serialisiert, Nullwerte bleiben erhalten und
+nicht endliche Werte werden ausgelassen. `ProxyHostModalSubmission.test.ts` sichert diese Payload-Grenzen unabhängig
+vom Dialog ab.
+
+`SSLCertificateField` entfernt beim Wechsel von einer neuen zu einer vorhandenen oder keiner Zertifikatsauswahl die
+DNS-Challenge-Daten aus `meta`, einschließlich Zugangsdaten und einer Wartezeit von null Sekunden. Andere Metadaten
+bleiben erhalten. Streams bieten ausschließlich ihre unterstützten TLS-Optionen an; neue Zertifikate benötigen
+Domainnamen und DNS-Verifikation. Siehe [Streams](../module/stream.md).
 
 `AccessListDetailsTab.tsx` kapselt den Details-Tab des `AccessListModal` als Formik-Kind. Name sowie die Optionen
 `satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die

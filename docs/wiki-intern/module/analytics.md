@@ -76,6 +76,12 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Robuste Erfassung und Speicherung
+
+Die Domainzuordnung lädt `host_domains` und normalisiert Groß-/Kleinschreibung sowie den Port im HTTP-Host-Fallback. Ungültige JSON-Werte und ungültige Zeitstempel verändern keine Zähler. Detailzeilen erhalten `created_at` als Unix-Millisekunden.
+
+Alle Chunks eines Detail- oder Aggregationsbatches werden jeweils in einer Transaktion geschrieben. Bei einem Fehler in einem späteren Chunk bleiben frühere Chunks ungeschrieben; der Wiederholungsversuch zählt sie deshalb nicht doppelt. Während langsamer Datenbankzugriffe bleiben die Folgepuffer auf 1.000 Detailzeilen und 500 Aggregationsschlüssel begrenzt. Verwerfungen werden begrenzt protokolliert.
+
 ## Verwandte Seiten
 
 - [Modulübersicht](./README.md)

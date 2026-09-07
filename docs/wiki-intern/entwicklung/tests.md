@@ -82,6 +82,20 @@ npx biome check .           # Prüfen
 npx biome check --write .   # Auto-Fix
 ```
 
+## Abschlussprüfung September 2026
+
+Prüflauf mit Node.js 26.8.1 und den versionierten Yarn-Lockfiles:
+
+- Frontend: 147 Testdateien mit 382 bestandenen Tests; TypeScript-Prüfung und Vite-Produktionsbuild bestanden.
+- Backend: 84 Testdateien mit 451 bestandenen Tests; Details und Grenzen im [Prüfbericht](./code-audit-2026-09.md).
+- Infrastruktur: 9 Python-Regressionstests für Migration, AIO, Update und Betriebsdateien sowie ShellCheck und Shell-Syntaxprüfung bestanden.
+- Beide Codebereiche werden vollständig mit Biome geprüft. Die bisherigen Schema-/Deprecated-Hinweise der Biome-Konfigurationsdateien sind Informationsmeldungen.
+- Paketprüfung: Backend und Frontend jeweils ohne gemeldete `yarn audit`-Befunde nach gezielter Remediation.
+
+Ausführen: `cd backend && yarn test --run`; `cd frontend && yarn test --run && yarn build`; `python3 -m unittest discover -s scripts/tests -v` im Repository-Root. Für automatische Einmalläufe ist `--run` erforderlich, weil `yarn test` sonst im Beobachtungsmodus starten kann.
+
+Die neuen Tests decken unter anderem Berechtigungen, einmalige 2FA-Challenges, Refresh-Replay, geschützte Terminal-Upgrades, echte SQLite-Transaktionen mit Fremdschlüsseln, mehrseitigen Import, Symlink-Schutz, Konfigurationsfehler, Prozessrennen und Datums-/Formularverträge ab. Externe Dienste werden gemockt; die Prüfgrenzen stehen im Bericht.
+
 ## Verwandte Seiten
 
 - [Setup](./setup.md)

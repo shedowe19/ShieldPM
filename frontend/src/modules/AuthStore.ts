@@ -30,7 +30,7 @@ export class AuthStore {
 
 		const now = Date.now();
 		const oneMinuteBuffer = 60 * 1000;
-		// TokenResponse.expires is number
+		// API expiration timestamps are normalized to milliseconds when stored.
 		const expires = this.expires;
 
 		if (expires && expires - oneMinuteBuffer > now) {
@@ -43,15 +43,16 @@ export class AuthStore {
 
 	// Set session details from login/refresh response
 	// Preserves existing userId if the response doesn't include user data (e.g. refresh)
-	set(data: { expires: number; user?: { id: number } }) {
+	set(data: { expires: number | string | null; user?: { id: number } }) {
+		const expires = typeof data.expires === "string" ? Date.parse(data.expires) : data.expires;
 		this.state = {
-			expires: data.expires,
+			expires: typeof expires === "number" && Number.isFinite(expires) ? expires : 0,
 			userId: data.user?.id ?? this.state?.userId,
 		};
 	}
 
 	// Add is alias for Set in cookie mode
-	add(data: { expires: number; user?: { id: number } }) {
+	add(data: { expires: number | string | null; user?: { id: number } }) {
 		this.set(data);
 	}
 

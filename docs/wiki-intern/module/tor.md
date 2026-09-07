@@ -31,40 +31,11 @@ Ermöglicht Zugriff auf Proxy-Hosts über `.onion`-Adressen. Nützlich für Priv
 
 ## syncProxyHost() — Automatische Proxy-Host-Synchronisation
 
-Beim Anlegen oder Aktualisieren eines Onion-Service wird automatisch die Funktion `syncProxyHost()` aufgerufen (Zeile 137 in `tor.js`):
+Beim Erstellen oder Starten eines Onion-Service lädt `syncProxyHost()` den verknüpften Proxy-Host einschließlich `host_domains`. Fehlt die Onion-Adresse, wird sie als neues Kindobjekt der Relation eingefügt. Anschließend werden Domains, Zertifikat und vollständige Access List erneut geladen und Nginx konfiguriert. Beim Initialisieren kann der Reload bis zum Ende der Sammelverarbeitung ausgesetzt werden.
 
-```javascript
-const syncProxyHost = async (service, skip_reload = false) => {
-  if (!service.proxy_host_id || !service.onion_address) return;
+### Validierung und Geheimnisse
 
-  // Lädt den zugehörigen Proxy-Host aus der DB
-  const proxyHost = await ProxyHost.query()
-    .findById(service.proxy_host_id)
-    .where("is_deleted", 0);
-
-  // Prüft ob Onion-Adresse bereits in domain_names
-  if (!proxyHost.domain_names.includes(service.onion_address)) {
-    // Fügt Onion-Adresse hinzu
-    const newDomains = [...proxyHost.domain_names, service.onion_address];
-    await ProxyHost.query().patchAndFetchById(proxyHost.id, {
-      domain_names: newDomains,
-    });
-
-    // Rekonfiguriert Nginx mit neuem Domain-Satz
-    const updatedHost = await ProxyHost.query().findById(proxyHost.id);
-    await internalNginx.configure(ProxyHost, "proxy_host", updatedHost, {
-      skip_reload,
-    });
-
-    logger.info(
-      `Added onion address ${service.onion_address} to Proxy Host ${proxyHost.id}`,
-    );
-    internalGitOps.triggerAutoPush("onion-sync");
-  }
-};
-```
-
-**Wichtig:** Die `.onion`-Adresse wird automatisch in die `domain_names` des zugehörigen Proxy-Hosts aufgenommen. Dadurch muss der Benutzer die Onion-Adresse nicht manuell eintragen — Nginx wird automatisch mit dem korrekten Domain-Set konfiguriert.
+Virtueller und Zielport müssen vollständig ganzzahlige Werte zwischen 1 und 65535 sein. Teilweise numerische Strings mit zusätzlichen Tor-Control-Befehlen werden vor der Verbindung abgewiesen. Beim Stoppen wird die vollständige Onion-Adresse geprüft. Antworten auf `ADD_ONION`, die private Schlüssel enthalten können, werden nicht vollständig protokolliert.
 
 ## Offene Fragen
 

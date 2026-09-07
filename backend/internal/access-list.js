@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { isIP } from "node:net";
 import bcrypt from "bcryptjs";
 import _ from "lodash";
 import errs from "../lib/error.js";
@@ -16,6 +17,43 @@ import internalOAuth2Proxy from "./oauth2-proxy.js";
 
 const omissions = () => {
 	return ["is_deleted"];
+};
+
+const auditData = (list) =>
+	_.omit(internalAccessList.maskItems(_.cloneDeep(list)), [
+		"meta.oauth2_client_secret",
+		"meta.oauth2_cookie_secret",
+		"meta.oidc_client_secret",
+	]);
+
+const validateListInput = (data) => {
+	const usernames = new Set();
+	for (const item of data.items || []) {
+		if (typeof item.username !== "string" || !/^[^:\r\n\0]+$/.test(item.username)) {
+			throw new errs.ValidationError("Access-list usernames cannot be empty or contain colons or line breaks");
+		}
+		if (usernames.has(item.username)) {
+			throw new errs.ValidationError("Access-list usernames must be unique");
+		}
+		usernames.add(item.username);
+	}
+	for (const client of data.clients || []) {
+		if (!["allow", "deny"].includes(client.directive) || typeof client.address !== "string") {
+			throw new errs.ValidationError("Invalid access-list client rule");
+		}
+		if (client.address === "all") {
+			continue;
+		}
+		const parts = client.address.split("/");
+		const family = isIP(parts[0]);
+		if (
+			!family ||
+			parts.length > 2 ||
+			(parts.length === 2 && (!/^\d+$/.test(parts[1]) || Number(parts[1]) > (family === 4 ? 32 : 128)))
+		) {
+			throw new errs.ValidationError("Access-list client addresses must be IP addresses, CIDR ranges, or all");
+		}
+	}
 };
 
 const internalAccessList = {
@@ -37,6 +75,7 @@ const internalAccessList = {
 	 */
 	create: async (access, data) => {
 		await access.can("access_lists:create", data);
+		validateListInput(data);
 		const row = await accessListModel.query().insertAndFetch(
 			/** @type {any} */ ({
 				name: data.name,
@@ -120,7 +159,7 @@ const internalAccessList = {
 			action: "created",
 			object_type: "access-list",
 			object_id: freshRow.id,
-			meta: internalAccessList.maskItems(data),
+			meta: auditData(data),
 		});
 
 		// Trigger GitOps auto-push
@@ -146,6 +185,7 @@ const internalAccessList = {
 	 */
 	update: async (access, data) => {
 		await access.can("access_lists:update", data);
+		validateListInput(data);
 		const row = await internalAccessList.get(access, { id: data.id });
 		if (row.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
@@ -154,89 +194,70 @@ const internalAccessList = {
 			);
 		}
 
-		// patch name if specified
-		if (typeof data.name !== "undefined" && data.name) {
-			logger.info(`[Update] Access List #${data.id} meta: ${JSON.stringify(data.meta)}`);
-			await accessListModel
-				.query()
-				.where({ id: data.id })
-				.patch(
-					/** @type {any} */ ({
-						name: data.name,
-						satisfy_any: data.satisfy_any,
-						pass_auth: data.pass_auth,
-						mtls_enabled: data.mtls_enabled,
-						mtls_use_internal: data.mtls_use_internal,
-						meta: data.meta,
-					}),
-				);
-		}
+		// Keep configuration, credentials and client rules consistent on failure.
+		await accessListModel.transaction(async (trx) => {
+			const patch = _.pick(data, [
+				"name",
+				"satisfy_any",
+				"pass_auth",
+				"mtls_enabled",
+				"mtls_use_internal",
+				"mtls_certificate",
+				"meta",
+			]);
+			if (Object.keys(patch).length) {
+				await accessListModel.query(trx).where({ id: data.id }).patch(patch);
+			}
 
-		// Check for items and add/update/remove them
-		if (typeof data.items !== "undefined" && data.items) {
-			const promises = [];
-			const itemsToKeep = [];
-
-			// Re-implementation of the loop to run hashes concurrently
-			const _itemPromises = data.items.map(async (item) => {
-				if (item.password) {
-					let finalPass = item.password;
-					if (!finalPass.startsWith("$2")) {
-						finalPass = await bcrypt.hash(item.password, 13);
-					}
-
-					return accessListAuthModel.query().insert(
-						/** @type {any} */ ({
+			// Check for items and add/update/remove them
+			if (Array.isArray(data.items)) {
+				const itemsToKeep = data.items.filter((item) => !item.password).map((item) => item.username);
+				const replacements = await Promise.all(
+					data.items
+						.filter((item) => item.password)
+						.map(async (item) => ({
 							access_list_id: data.id,
 							username: item.username,
-							password: finalPass,
-						}),
-					);
+							password: item.password.startsWith("$2")
+								? item.password
+								: await bcrypt.hash(item.password, 13),
+						})),
+				);
+
+				// 1. First delete credentials that are removed or replaced.
+				const query = accessListAuthModel.query(trx).delete().where("access_list_id", data.id);
+				if (itemsToKeep.length) {
+					query.whereNotIn("username", itemsToKeep);
 				}
-				itemsToKeep.push(item.username);
-				return null;
-			});
+				await query;
 
-			// 1. First delete old items (those not in itemsToKeep)
-			//    Moving delete BEFORE insert prevents the race condition where
-			//    newly inserted items could be immediately deleted by the query below.
-			const query = accessListAuthModel.query().delete().where("access_list_id", data.id);
-			if (itemsToKeep.length) {
-				query.andWhere("username", "NOT IN", itemsToKeep);
-			}
-			await query;
-
-			// 2. Then insert new items (after delete to avoid race condition)
-			if (promises.length) {
-				await Promise.all(promises);
-			}
-		}
-
-		// Check for clients and add/update/remove them
-		if (typeof data.clients !== "undefined" && data.clients) {
-			const clientPromises = [];
-			data.clients.map((/** @type {any} */ client) => {
-				if (client.address) {
-					client.access_list_id = data.id;
-					clientPromises.push(accessListClientModel.query().insert(/** @type {any} */ (client)));
+				// 2. Then insert replacements and await every write before rebuilding.
+				for (const item of replacements) {
+					await accessListAuthModel.query(trx).insert(item);
 				}
-				return true;
-			});
-
-			const query = accessListClientModel.query().delete().where("access_list_id", data.id);
-			await query;
-			// Add new clitens
-			if (clientPromises.length) {
-				await Promise.all(clientPromises);
 			}
-		}
+
+			// Check for clients and add/update/remove them
+			if (Array.isArray(data.clients)) {
+				await accessListClientModel.query(trx).delete().where("access_list_id", data.id);
+				for (const client of data.clients) {
+					if (client.address) {
+						await accessListClientModel.query(trx).insert({
+							access_list_id: data.id,
+							address: client.address,
+							directive: client.directive,
+						});
+					}
+				}
+			}
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
 			action: "updated",
 			object_type: "access-list",
 			object_id: data.id,
-			meta: internalAccessList.maskItems(data),
+			meta: auditData(data),
 		});
 
 		// re-fetch with expansions
@@ -248,8 +269,6 @@ const internalAccessList = {
 			},
 			true, // skip masking
 		);
-
-		logger.info(`[Update Result] Access List #${data.id} fresh meta: ${JSON.stringify(freshRow.meta)}`);
 
 		await internalAccessList.build(freshRow);
 		if (Number.parseInt(freshRow.proxy_host_count, 10)) {
@@ -314,7 +333,7 @@ const internalAccessList = {
 
 		row = utils.omitRow(omissions())(row);
 
-		if (!skipMasking && typeof row.items !== "undefined" && row.items) {
+		if (!skipMasking) {
 			row = internalAccessList.maskItems(row);
 		}
 		// Custom omissions
@@ -390,7 +409,7 @@ const internalAccessList = {
 			action: "deleted",
 			object_type: "access-list",
 			object_id: row.id,
-			meta: _.omit(internalAccessList.maskItems(row), ["is_deleted", "proxy_hosts"]),
+			meta: _.omit(auditData(row), ["is_deleted", "proxy_hosts"]),
 		});
 
 		// Trigger GitOps auto-push
@@ -473,20 +492,17 @@ const internalAccessList = {
 	 * @returns {Object}
 	 */
 	maskItems: (list) => {
-		if (list && typeof list.items !== "undefined") {
-			list.items.map((val, idx) => {
-				let repeatFor = 8;
-				let firstChar = "*";
-
-				if (typeof val.password !== "undefined" && val.password) {
-					repeatFor = val.password.length - 1;
-					firstChar = val.password.charAt(0);
-				}
-
-				list.items[idx].hint = firstChar + "*".repeat(repeatFor);
+		if (Array.isArray(list?.items)) {
+			list.items.map((_val, idx) => {
+				list.items[idx].hint = "********";
 				list.items[idx].password = "";
 				return true;
 			});
+		}
+		for (const host of list?.proxy_hosts || []) {
+			if (host.access_list) {
+				internalAccessList.maskItems(host.access_list);
+			}
 		}
 		return list;
 	},

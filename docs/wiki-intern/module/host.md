@@ -35,6 +35,10 @@ Dieses Modul bündelt die wiederverwendbare Logik, sodass die einzelnen Host-Mod
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Korrekturen der Domain-Auflösung
+
+`isHostnameTaken()` und `getHostsWithDomains()` laden die normalisierte `host_domains`-Relation. Das alte JSON-Feld ist nach Änderungen nicht mehr zuverlässig. Auch PostgreSQL-Vorfilter suchen ohne Unterscheidung von Groß-/Kleinschreibung; anschließend wird exakt verglichen. Die Auswahl mehrerer Domains verwendet ein Set und liefert jeden Host nur einmal.
+
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)

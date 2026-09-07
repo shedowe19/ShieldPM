@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# shellcheck source=/dev/null
+. "$(dirname "$0")/migrate-data.sh"
+
 if [ "$ACME_KEY_TYPE" = "rsa" ]; then
     sed -i "s|key-type = ecdsa|key-type = rsa|g" /etc/certbot.ini
 fi
@@ -159,31 +162,13 @@ if [ "${TOR_ENABLED:-true}" = "true" ]; then
 fi
 
 
-if [ -n "$(ls -A /data/nginx/custom 2> /dev/null)"  ]; then
-    cp -van /data/nginx/custom/* /data/nginx_custom
+migrate_legacy_directory /data/nginx/custom /data/custom_nginx /data/shieldpm/migration-backups || exit 1
+migrate_legacy_directory /data/nginx_custom /data/custom_nginx /data/shieldpm/migration-backups || exit 1
+migrate_legacy_directory /data/etc /data /data/shieldpm/migration-backups || exit 1
+if [ -s /data/crowdsec/crowdsec.conf ]; then
+    sed -i "s|/data/etc|/data|g" /data/crowdsec/crowdsec.conf
 fi
-rm -vrf /data/nginx/custom
-
-#tmp
-if [ -n "$(ls -A /data/nginx_custom 2> /dev/null)"  ]; then
-    cp -van /data/nginx_custom/* /data/custom_nginx
-fi
-rm -vrf /data/nginx_custom
-
-#tmp
-if [ -n "$(ls -A /data/etc 2> /dev/null)" ]; then
-    cp -van /data/etc/* /data
-    if [ -s /data/crowdsec/crowdsec.conf ]; then
-        sed -i "s|/data/etc|/data|g" /data/crowdsec/crowdsec.conf
-    fi
-fi
-rm -vrf /data/etc
-
-#tmp
-if [ -n "$(ls -A /data/npm 2> /dev/null)" ]; then
-    cp -van /data/npm/* /data/shieldpm
-fi
-rm -vrf /data/npm
+migrate_legacy_directory /data/npm /data/shieldpm /data/shieldpm/migration-backups || exit 1
 
 #tmp
 if [ -s /data/database.sqlite ]; then
@@ -200,16 +185,8 @@ if [ -s /data/keys.json ]; then
 fi
 
 
-if [ -n "$(ls -A /data/nginx/default_www 2> /dev/null)" ]; then
-    cp -van /data/nginx/default_www/* /data/html
-fi
-rm -vrf /data/nginx/default_www
-
-if [ -n "$(ls -A /data/custom_ssl 2> /dev/null)" ]; then
-    cp -van /data/custom_ssl/* /data/tls/custom
-fi
-rm -vrf /data/custom_ssl
-
+migrate_legacy_directory /data/nginx/default_www /data/html /data/shieldpm/migration-backups || exit 1
+migrate_legacy_directory /data/custom_ssl /data/tls/custom /data/shieldpm/migration-backups || exit 1
 
 if mountpoint -q /etc/letsencrypt; then
     cp -van /etc/letsencrypt/* /data/tls/certbot
@@ -221,30 +198,7 @@ fi
 find /data/tls/certbot/renewal -type f -name '*.conf' -exec sed -i "s|/etc/letsencrypt|/data/tls/certbot|g" {} \;
 find /data/tls/certbot/renewal -type f -name '*.conf' -exec sed -i "s|/data/tls/certbot/credentials|/data/certbot-credentials|g" {} \;
 
-if [ -d /data/tls/certbot/live ] && [ -d /data/tls/certbot/archive ]; then
-  find /data/tls/certbot/live ! -name "$(printf "*\n*")" -type f -name "*.pem" > tmp
-  while IFS= read -r cert
-  do
-    rm -vf "$cert"
-    ln -s "$(find /data/tls/certbot/archive/"$(echo "$cert" | sed "s|/data/tls/certbot/live/\(npm-[0-9]\+/.*\).pem|\1|g")"*.pem | sort -r | head -n1 | sed "s|/data/tls/certbot/|../../|g")" "$cert"
-  done < tmp
-  rm tmp
-fi
-
-rm -vrf /data/tls/certbot/crs
-rm -vrf /data/tls/certbot/keys
-if [ -d /data/tls/certbot/live ] && [ -d /data/tls/certbot/archive ]; then
-    certs_in_use="$(find /data/tls/certbot/live -type l -name "*.pem" -exec readlink -f {} \;)"
-    export certs_in_use
-    find /data/tls/certbot/archive ! -name "$(printf "*\n*")" -type f -name "*.pem" > tmp
-    while IFS= read -r archive
-    do
-        if ! echo "$certs_in_use" | grep -q "$archive"; then
-          rm -vf "$archive"
-        fi
-    done < tmp
-    rm tmp
-fi
+relink_certbot_certificates /data/tls/certbot || exit 1
 
 # can be used to delete certificates which expired more than 16 weeks ago
 #if [ "$FULLCLEAN" = "true" ]; then
@@ -553,11 +507,9 @@ elif [ "$FULLCLEAN" = "true" ]; then
             /data/nginx/stream.log.*
 fi
 
-find /data/tls \
-     /data/access \
-     /data/shieldpm \
-     -not -perm 770 \
-     -exec chmod 770 {} \;
+# Certificates, credentials and database files are private to the service UID.
+find /data/tls /data/access /data/shieldpm -type d -not -perm 700 -exec chmod 700 {} +
+find /data/tls /data/access /data/shieldpm -type f -not -perm 600 -exec chmod 600 {} +
 
 rm -vf /usr/local/nginx/logs/nginx.pid
 rm -vf /run/*.sock

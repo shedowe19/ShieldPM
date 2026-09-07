@@ -52,16 +52,7 @@ export function SSLCertificateField({
 		}
 
 		setFieldValue(name, val);
-		const {
-			sslForced,
-			http2Support,
-			hstsEnabled,
-			hstsSubdomains,
-			dnsChallenge,
-			dnsProvider,
-			dnsProviderCredentials,
-			propagationSeconds,
-		} = v;
+		const { sslForced, http2Support, hstsEnabled, hstsSubdomains } = v;
 
 		if (forHttp && !val) {
 			sslForced && setFieldValue("sslForced", false);
@@ -70,10 +61,15 @@ export function SSLCertificateField({
 			hstsSubdomains && setFieldValue("hstsSubdomains", false);
 		}
 		if (val !== "new") {
-			dnsChallenge && setFieldValue("dnsChallenge", undefined);
-			dnsProvider && setFieldValue("dnsProvider", undefined);
-			dnsProviderCredentials && setFieldValue("dnsProviderCredentials", undefined);
-			propagationSeconds && setFieldValue("propagationSeconds", undefined);
+			const meta = (v.meta || {}) as Record<string, unknown>;
+			const {
+				dnsChallenge: _,
+				dnsProvider: __,
+				dnsProviderCredentials: ___,
+				propagationSeconds: ____,
+				...rest
+			} = meta;
+			setFieldValue("meta", rest);
 		}
 	};
 

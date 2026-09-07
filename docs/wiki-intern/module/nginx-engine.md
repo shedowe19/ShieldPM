@@ -6,7 +6,7 @@ Dokumentation der zentralen Nginx-Konfigurationsengine.
 
 ## Kontext
 
-Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, rendert EJS-Templates und schreibt `.conf`-Dateien.
+Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, rendert Liquid-Templates und schreibt `.conf`-Dateien.
 
 ## Wichtige Dateien
 
@@ -25,7 +25,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 1. `nginx.js` wird getriggert bei CRUD-Operationen auf Hosts
 2. Liest aktuelle Daten aus der Datenbank
-3. Rendert EJS-Templates mit Host-Daten
+3. Rendert Liquid-Templates mit Host-Daten
 4. Schreibt `.conf`-Dateien nach `/data/nginx/`
 5. Führt `nginx -s reload` aus (Debouncing passiert in `docker.js`, nicht hier)
 
@@ -33,9 +33,16 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 - `nginx -t` wird **aktiv** vor dem Reload ausgeführt via `test()` Methode (`nginx -tq`)
 - Reload ist **nicht** debounced in `nginx.js` — Debouncing passiert in `docker.js`
-- Templates verwenden EJS-Syntax mit Liquid-Fallback
+- Templates verwenden ausschließlich Liquid-Syntax (LiquidJS)
 
 ## Erweiterte Methoden
+
+### Gleichzeitige Änderungen
+
+- `configure()` stellt Host-Änderungen in eine gemeinsame Promise-Warteschlange. Schreiben, Testen und Zurückrollen überlappen dadurch nicht zwischen gleichzeitigen API-Anfragen.
+- `backupConfig()` und `restoreConfig()` ignorieren nur fehlende Dateien. Andere Dateisystemfehler brechen die Operation ab, statt einen erfolgreichen Wechsel vorzutäuschen.
+- Fehlgeschlagene Generierung legt auch bei neuen Hosts eine `.conf.err` ab, bevor eine vorhandene Sicherung wiederhergestellt wird.
+- Fehler beim Löschen einer aktiven Konfiguration werden an den Aufrufer weitergegeben.
 
 ### Config-Backup/Restore
 
@@ -49,7 +56,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ### Bulk-Operationen
 
-- `bulkGenerateConfigs(model, host_type, hosts)` — Generiert mehrere Host-Configs am Stück (ohne Reload) für GitOps oder Massen-Reload-Szenarien. Setzt `skip_reload: true` pro Host und wartet auf alle Promises.
+- `bulkGenerateConfigs(model, host_type, hosts)` — Generiert Host-Konfigurationen nacheinander ohne einzelnen Reload. Setzt `skip_reload: true`; ein anschließender gemeinsamer Reload liegt beim Aufrufer. Die Reihenfolge verhindert, dass `nginx -t` eine andere Konfiguration während eines Schreibvorgangs prüft.
 
 ### Config-Parsing
 
@@ -57,7 +64,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ### Anubis-Integration
 
-Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren.
+Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.
 
 ## Abhängigkeiten
 
@@ -67,6 +74,10 @@ Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **
 - `internal/access-list.js` — wird in den Templates referenziert
 - `internal/anubis.js` — `generatePolicy()` wird nach erfolgreichem Configure asynchron aufgerufen
 - Externes Binary `nginx` (für `nginx -s reload`)
+
+## Regressionstests
+
+- `backend/test/internal/nginx-render-regressions.spec.js`: echte Liquid-Ausgabe für Custom-Root, Alias und interne Stream-Zertifikate; Warteschlange und Dateisystemfehler mit gemockten Systemoperationen.
 
 ## Offene Fragen
 

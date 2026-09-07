@@ -76,7 +76,7 @@ const internalHost = {
 		};
 
 		const [proxyRes, redirRes, deadRes] = await Promise.all([
-			proxyHostModel.query().where("is_deleted", 0),
+			proxyHostModel.query().where("is_deleted", 0).withGraphFetched("host_domains"),
 			redirectionHostModel.query().where("is_deleted", 0),
 			deadHostModel.query().where("is_deleted", 0),
 		]);
@@ -106,15 +106,13 @@ const internalHost = {
 			proxyHostModel
 				.query()
 				.where("is_deleted", 0)
-				.whereExists(proxyHostModel.relatedQuery("host_domains").where("domain_name", hostname)),
+				.whereExists(proxyHostModel.relatedQuery("host_domains").whereILike("domain_name", hostname))
+				.withGraphFetched("host_domains"),
 			redirectionHostModel
 				.query()
 				.where("is_deleted", 0)
-				.andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
-			deadHostModel
-				.query()
-				.where("is_deleted", 0)
-				.andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
+				.whereILike(castJsonIfNeed("domain_names"), `%${hostname}%`),
+			deadHostModel.query().where("is_deleted", 0).whereILike(castJsonIfNeed("domain_names"), `%${hostname}%`),
 		];
 
 		const promises_results = await Promise.all(promises);
@@ -174,24 +172,10 @@ const internalHost = {
 	 * @returns {Boolean}
 	 */
 	_checkHostnameRecordsTaken: (hostname, existingRows, ignoreId) => {
-		let isTaken = false;
-
-		if (existingRows?.length) {
-			existingRows.map((existingRow) => {
-				existingRow.domain_names.map((existingHostname) => {
-					// Does this domain match?
-					if (existingHostname.toLowerCase() === hostname.toLowerCase()) {
-						if (!ignoreId || ignoreId !== existingRow.id) {
-							isTaken = true;
-						}
-					}
-					return true;
-				});
-				return true;
-			});
-		}
-
-		return isTaken;
+		const normalized = hostname.toLowerCase();
+		return (existingRows || []).some(
+			(row) => row.id !== ignoreId && row.domain_names.some((domain) => domain.toLowerCase() === normalized),
+		);
 	},
 
 	/**
@@ -202,30 +186,8 @@ const internalHost = {
 	 * @returns {Array}
 	 */
 	_getHostsWithDomains: (hosts, domainNames) => {
-		const response = [];
-
-		if (hosts?.length) {
-			hosts.map((host) => {
-				let hostMatches = false;
-
-				domainNames.map((domainName) => {
-					host.domain_names.map((hostDomainName) => {
-						if (domainName.toLowerCase() === hostDomainName.toLowerCase()) {
-							hostMatches = true;
-						}
-						return true;
-					});
-					return true;
-				});
-
-				if (hostMatches) {
-					response.push(host);
-				}
-				return true;
-			});
-		}
-
-		return response;
+		const domains = new Set(domainNames.map((domain) => domain.toLowerCase()));
+		return (hosts || []).filter((host) => host.domain_names.some((domain) => domains.has(domain.toLowerCase())));
 	},
 };
 

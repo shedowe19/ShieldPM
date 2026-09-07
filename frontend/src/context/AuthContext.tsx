@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, Fragment, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, Fragment, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import * as api from "src/api/backend/base";
@@ -28,6 +28,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const [authenticated, setAuthenticated] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [sessionVersion, setSessionVersion] = useState(0);
+	const sessionGeneration = useRef(0);
 
 	const handleTokenUpdate = useCallback((response: TokenResponse) => {
 		AuthStore.set(response);
@@ -36,6 +37,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	const completeLogin = useCallback(
 		(response: TokenResponse) => {
+			sessionGeneration.current += 1;
 			queryClient.clear();
 			handleTokenUpdate(response);
 		},
@@ -44,19 +46,35 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
+		let active = true;
+		const generation = sessionGeneration.current;
 		refreshToken()
-			.then(handleTokenUpdate)
+			.then((response) => {
+				if (active && generation === sessionGeneration.current) {
+					handleTokenUpdate(response);
+				}
+			})
 			.catch(() => {
 				// No session or expired
-				setAuthenticated(false);
+				if (active && generation === sessionGeneration.current) {
+					setAuthenticated(false);
+				}
 			})
 			.finally(() => {
-				setLoading(false);
+				if (active) {
+					setLoading(false);
+				}
 			});
+		return () => {
+			active = false;
+		};
 	}, [handleTokenUpdate]);
 
 	useEffect(() => {
-		const handleAuthenticationExpired = () => setAuthenticated(false);
+		const handleAuthenticationExpired = () => {
+			sessionGeneration.current += 1;
+			setAuthenticated(false);
+		};
 
 		window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
 		return () => window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
@@ -76,12 +94,14 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	const loginAs = async (id: number) => {
 		const response = await loginAsUser(id);
+		sessionGeneration.current += 1;
 		AuthStore.add(response);
 		queryClient.clear();
 		setSessionVersion((version) => version + 1);
 	};
 
 	const logout = async () => {
+		sessionGeneration.current += 1;
 		try {
 			// Check if we have a backup admin session cookie on the backend
 			const response = await restoreSession();
@@ -99,14 +119,25 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const refresh = async () => {
-		const response = await refreshToken();
-		handleTokenUpdate(response);
+		const generation = sessionGeneration.current;
+		try {
+			const response = await refreshToken();
+			if (generation === sessionGeneration.current) {
+				handleTokenUpdate(response);
+			}
+		} catch {
+			// The silent refresh client clears AuthStore on 401. Network failures keep
+			// the current session so the next interval can retry without logging out.
+			if (generation === sessionGeneration.current && !AuthStore.active) {
+				setAuthenticated(false);
+			}
+		}
 	};
 
 	useIntervalWhen(
 		() => {
 			if (authenticated) {
-				refresh();
+				return refresh();
 			}
 		},
 		tokenRefreshInterval,

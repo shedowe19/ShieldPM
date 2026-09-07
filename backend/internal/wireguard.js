@@ -79,6 +79,30 @@ const hasControlCharacters = (value) => {
 	return false;
 };
 
+/** Reject values that could add directives to wg-quick server or downloaded client configurations. */
+const validatePeerSettings = (data) => {
+	for (const field of ["name", "dns", "allowed_ips"]) {
+		if (data[field] != null && (typeof data[field] !== "string" || hasControlCharacters(data[field]))) {
+			throw new errs.ValidationError(`WireGuard ${field} must be a single-line string.`);
+		}
+	}
+	if (data.allowed_ips !== undefined) {
+		try {
+			for (const cidr of data.allowed_ips.split(",")) ipaddr.parseCIDR(cidr.trim());
+		} catch {
+			throw new errs.ValidationError("WireGuard allowed_ips must contain valid CIDRs.");
+		}
+	}
+	if (
+		data.persistent_keepalive !== undefined &&
+		(!Number.isInteger(data.persistent_keepalive) ||
+			data.persistent_keepalive < 0 ||
+			data.persistent_keepalive > 65535)
+	) {
+		throw new errs.ValidationError("WireGuard persistent_keepalive must be an integer from 0 to 65535.");
+	}
+};
+
 const validateIpv4Cidr = (value, field) => {
 	if (typeof value !== "string" || value.trim() !== value || hasControlCharacters(value)) {
 		throw new errs.ValidationError(`WireGuard ${field} must be an IPv4 CIDR.`);
@@ -279,9 +303,10 @@ const generatePresharedKey = () => {
  * @param {string} subnet
  * @returns {Promise<string>}
  */
-const getNextAvailableIP = async (subnet) => {
+const getNextAvailableIP = async (subnet, serverAddress) => {
 	const peers = await WireguardPeer.query().where("is_deleted", 0);
 	const usedIPs = new Set(peers.map((p) => p.client_address.split("/")[0]));
+	usedIPs.add(serverAddress.split("/")[0]);
 	const base = getSubnetBase(subnet);
 
 	// Start from .2 (.1 is the server)
@@ -360,7 +385,7 @@ PostDown = ${firewallCommands.postDown}
 
 	for (const peer of peers) {
 		config += `
-# Peer: ${peer.name} (ID: ${peer.id})
+# Peer: ${String(peer.name).replace(/[\r\n]/g, " ")} (ID: ${peer.id})
 [Peer]
 PublicKey = ${peer.client_public_key}
 PresharedKey = ${peer.preshared_key}
@@ -596,6 +621,7 @@ const internalWireguard = {
 	 * @returns {Promise<Object>} Created peer with client config
 	 */
 	createPeer: async (data, ownerUserId) => {
+		validatePeerSettings(data);
 		if (!isWgAvailable()) {
 			throw new Error("WireGuard is not available on this system");
 		}
@@ -607,7 +633,7 @@ const internalWireguard = {
 		const clientKeys = await generateKeyPair();
 		const presharedKey = generatePresharedKey();
 		const serverPublicKey = await getServerPublicKey();
-		const clientAddress = await getNextAvailableIP(settings.subnet);
+		const clientAddress = await getNextAvailableIP(settings.subnet, settings.server_address);
 		const endpoint = formatEndpoint(settings.endpoint, settings.listen_port);
 
 		// Insert peer into DB
@@ -621,7 +647,7 @@ const internalWireguard = {
 			server_public_key: serverPublicKey,
 			endpoint: endpoint,
 			allowed_ips: data.allowed_ips || settings.subnet,
-			persistent_keepalive: data.persistent_keepalive || 25,
+			persistent_keepalive: data.persistent_keepalive ?? 25,
 			dns: data.dns || "1.1.1.1",
 			status: 2, // Online (active)
 			owner_user_id: ownerUserId,
@@ -649,6 +675,7 @@ const internalWireguard = {
 	 * @returns {Promise<Object>}
 	 */
 	updatePeer: async (peerId, data) => {
+		validatePeerSettings(data);
 		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
 		if (!peer) {
 			throw new Error("Peer not found");
@@ -742,6 +769,7 @@ const internalWireguard = {
 		if (!peer) {
 			throw new Error("Peer not found");
 		}
+		validatePeerSettings(peer);
 
 		const settings = await getWgSettings();
 		const endpointLine = peer.endpoint

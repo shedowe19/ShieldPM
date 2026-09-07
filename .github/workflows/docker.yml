@@ -7,6 +7,9 @@ on:
     paths:
       - .github/workflows/docker.yml
       - Dockerfile
+      - .dockerignore
+      - scripts/install.sh
+      - scripts/setup-node-apt.sh
       - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**
@@ -21,6 +24,9 @@ on:
     paths:
       - .github/workflows/docker.yml
       - Dockerfile
+      - .dockerignore
+      - scripts/install.sh
+      - scripts/setup-node-apt.sh
       - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**
@@ -104,6 +110,7 @@ jobs:
           driver-opts: env.BUILDKIT_STEP_LOG_MAX_SIZE=-1
 
       - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v4.6.0
         with:
           registry: ghcr.io
@@ -149,7 +156,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
           build-args: |
             ${{ matrix.flags }}
@@ -168,7 +176,7 @@ jobs:
         run: |
           # 1. Pull Image (For app/html only)
           TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
-          docker pull "$TAG"
+          docker image inspect "$TAG" >/dev/null 2>&1 || docker pull "$TAG"
 
           # 2. Create Temp Container
           CONTAINER_NAME="installer-extractor-${{ matrix.arch }}"
@@ -234,7 +242,7 @@ jobs:
         run: |
           # 1. Pull the image we just pushed/built to ensure it's local
           TAG="${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}"
-          docker pull "$TAG"
+          docker image inspect "$TAG" >/dev/null 2>&1 || docker pull "$TAG"
 
           # 2. Run a temporary builder container
           # We start it with a sleep entrypoint so we can exec patches into it
@@ -323,7 +331,7 @@ jobs:
     name: "🔗 Merge Multiarch Image"
     needs: [prepare, build]
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'shedowe19' }}
+    if: ${{ github.event_name != 'pull_request' && github.repository_owner == 'shedowe19' }}
     steps:
 
       - name: Login to GitHub Container Registry

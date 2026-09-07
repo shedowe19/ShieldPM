@@ -49,7 +49,7 @@ const existingFileError = () => Object.assign(new Error("already exists"), { cod
 
 const configureDatabaseMocks = () => {
 	mocks.proxyHostQuery.mockReturnValue({
-		where: () => ({ select: vi.fn().mockResolvedValue([]) }),
+		where: () => ({ select: () => ({ withGraphFetched: vi.fn().mockResolvedValue([]) }) }),
 	});
 	mocks.analyticsLogsQuery.mockReturnValue({
 		where: () => ({ delete: vi.fn().mockResolvedValue(0) }),

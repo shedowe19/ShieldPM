@@ -12,7 +12,8 @@ export const up = (knex) =>
 		table.string("referer");
 		table.string("user_agent");
 		table.integer("duration"); // ms
-		table.bigInteger("created_at").defaultTo(knex.fn.now());
+		// Milliseconds are supplied by the ingestion service. CURRENT_TIMESTAMP is not a bigint on PostgreSQL.
+		table.bigInteger("created_at").defaultTo(0);
 
 		table.index(["host_id", "time"]);
 		// Index for cleanup

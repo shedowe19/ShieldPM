@@ -40,6 +40,14 @@ cd frontend
 yarn test    # vitest
 ```
 
+Für die Infrastrukturregressionen wird zusätzlich Python 3 benötigt:
+
+```bash
+python3 -m unittest discover -s scripts/tests -v
+```
+
+Die Tests prüfen Datenmigration, Certbot-Verknüpfungen, Shell-Syntax, unveränderte Zugangsdaten nach dem Schreiben der Umgebungsdatei sowie den AIO-Authentifizierungsablauf mit simuliertem Backend. Sie führen keine Installation und keine Dienständerung durch.
+
 ## Wichtige Dateien für die Entwicklung
 
 | Datei                         | Zweck                                             |

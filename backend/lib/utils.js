@@ -45,16 +45,21 @@ const writeHash = async () => {
 /**
  * @param   {String} cmd
  * @param   {Array}  args
+ * @param   {Object} [options]
  * @returns {Promise<string>}
  */
-const execFile = async (cmd, args) => {
-	debug(logger, `CMD: ${cmd} ${args ? args.join(" ") : ""}`);
+const execFile = async (cmd, args, options = {}) => {
+	debug(logger, `CMD: ${cmd}`);
 
 	try {
-		const { stdout, stderr } = await nodeExecFilePromise(cmd, args);
+		const { stdout, stderr } = await nodeExecFilePromise(cmd, args, options);
 		return (stdout + stderr).trim();
 	} catch (err) {
-		throw new errs.CommandError((err.stdout + err.stderr).trim(), 1, err);
+		const output = `${err.stdout || ""}${err.stderr || ""}`.trim();
+		throw new errs.CommandError(output || `Unable to execute ${cmd}`, err.code || 1, {
+			code: err.code,
+			signal: err.signal,
+		});
 	}
 };
 
@@ -96,10 +101,14 @@ const omitRows = (omissions) => {
 /**
  * @returns {Object} Liquid render engine
  */
+let cachedRenderEngine;
+
 const getRenderEngine = () => {
+	const development = process.env.NODE_ENV === "development";
+	if (!development && cachedRenderEngine) return cachedRenderEngine;
 	const renderEngine = new Liquid({
 		root: `${__dirname}/../templates/`,
-		cache: process.env.NODE_ENV !== "development",
+		cache: !development,
 	});
 
 	/**
@@ -115,6 +124,7 @@ const getRenderEngine = () => {
 		return "";
 	});
 
+	if (!development) cachedRenderEngine = renderEngine;
 	return renderEngine;
 };
 

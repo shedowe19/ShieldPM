@@ -17,13 +17,17 @@ Ermöglicht das Exponieren von Diensten über Cloudflare ohne eingehende Portfre
 ## Verhalten
 
 - Verwaltet Cloudflare-Tunnel-Konfigurationen in der Datenbank
-- Erstellt und verwaltet Tunnel über die Cloudflare API
+- Startet und überwacht die lokal installierte Cloudflared-Binary
 - Kein offener Port auf dem Host nötig
 
 ## Abhängigkeiten
 
 - Cloudflared-Binary (muss verfügbar sein)
 - `internal/audit-log.js` — Protokollierung
+
+### Prozesslebenszyklus
+
+Das Modul startet die lokal installierte `cloudflared`-Binary mit dem Tunnel-Token in der Prozessumgebung. Es registriert einen `error`-Handler für Startfehler, beispielsweise eine fehlende Binary, und speichert Fehlerstatus und Fehlermeldung. Ein verspätetes `exit`-Event eines gestoppten Prozesses darf weder den Eintrag eines bereits gestarteten Nachfolgers löschen noch dessen Status überschreiben. Auch die verzögerte Online-Prüfung bezieht sich auf die konkrete Prozessinstanz.
 
 ## Offene Fragen
 

@@ -46,6 +46,12 @@ Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeiche
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Ausstellung und Schutz privater Daten
+
+Parallele Erstausstellungen teilen sich dieselbe Root-CA-Initialisierung. Ein bereits vorhandener CA-Schlüssel wird bei einem fehlgeschlagenen Zertifikatsversuch erhalten. Zertifikate erhalten unabhängige kryptografisch zufällige Seriennummern, ohne konkurrierende Schreibzugriffe auf eine gemeinsame `.srl`-Datei.
+
+Fehlende/ungültige Domainlisten und ungültige Laufzeiten werden vor der Schlüsselgenerierung abgewiesen; interne Wildcard-Domains sind zulässig. PKCS#12-Passwörter werden OpenSSL über eine nur für den Kindprozess gesetzte Umgebungsvariable übergeben. Der gemeinsame Prozesshelfer protokolliert keine Argumentlisten und hält in verschachtelten Fehlern nur Fehlercode und Signal fest.
+
 ## Verwandte Seiten
 
 - [Zertifikate](./zertifikate.md)

@@ -35,8 +35,8 @@ describe("Users table", () => {
 						name: "Operator",
 						nickname: "operator",
 						avatar: "",
-						avatar_type: "upload",
-						avatar_value: null,
+						avatarType: "upload",
+						avatarValue: null,
 						roles: ["admin"],
 					},
 				]}

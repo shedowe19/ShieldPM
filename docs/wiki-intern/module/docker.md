@@ -25,6 +25,14 @@ Automatische Erkennung und Registrierung von Docker-Containern als Proxy-Hosts.
 - `dockerode` — Docker API Client
 - Docker-Socket oder Remote-API Zugriff
 
+### Daten- und Ereigniskonsistenz
+
+Erkannte Domains werden über `host_domains` mit `insertGraphAndFetch()` beziehungsweise `upsertGraphAndFetch()` gespeichert. Lesewege laden die Domain-Relation sowie beim Rendern Zertifikat und Access-List-Kindeinträge. Beim initialen Scan entfernter Docker-Hosts berücksichtigt die Portwahl das `Ports`-Array aus `listContainers()`, während Inspect-Ereignisse die Bindings unter `NetworkSettings.Ports` verwenden.
+
+Der Docker-Ereignisstream ist zeilenweise JSON. Empfangene Daten werden bis zum vollständigen Zeilenende gesammelt; mehrere Ereignisse pro Datenblock und über mehrere Blöcke verteilte Ereignisse werden in ihrer Reihenfolge verarbeitet.
+
+Die Direktivenliste für `shieldpm.advanced_config` akzeptiert pro Zeile genau eine erlaubte Direktive mit abschließendem Semikolon. Zusätzliche Direktiven auf derselben Zeile, Blockklammern und `include` werden verworfen.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

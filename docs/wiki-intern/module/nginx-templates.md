@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Dokumentation der EJS-Templates für Nginx-Konfigurationsdateien.
+Dokumentation der Liquid-Templates für Nginx-Konfigurationsdateien.
 
 ## Kontext
 
@@ -36,9 +36,14 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 
 ## Template-Engine
 
-- **Primär**: EJS-Syntax (`<%= %>`, `<% if () { } %>`)
-- **Fallback**: Liquid-Syntax (`{% if %}`)
+- **Engine**: LiquidJS mit Liquid-Syntax (`{{ value }}`, `{% if %}`); es gibt keinen EJS-Fallback.
 - Engine: `lib/utils.js` → `getRenderEngine()`
+
+## Geprüfte Sonderfälle
+
+- Custom-Root-Locations ersetzen die Standard-Root-Location; Slash-Redirects und `alias` werden anhand der tatsächlichen letzten Zeichen bestimmt.
+- Streams unterscheiden bei TLS zwischen Let's Encrypt, interner CA und importierten Zertifikaten.
+- Terminal-WebSockets übernehmen die Host-Authentifizierung. Der Anubis-OIDC-Pfad enthält keine Ausnahme für `/ws`; die Weitergabe an das Backend verwendet ein hostgebundenes internes Token.
 
 ## Verwandte Seiten
 

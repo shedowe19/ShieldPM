@@ -22,6 +22,13 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 | `npm-reset-password` | 45 B   | Passwort-Reset-Wrapper                                                                                                                                                                                                                                                                        |
 | `migration.sh`       | 34 B   | Migrations-Wrapper                                                                                                                                                                                                                                                                            |
 
+## Datenmigration und Dateirechte
+
+- `migrate-data.sh` enthält die von `start.sh` verwendeten Migrationsfunktionen. Alte Verzeichnisse werden einschließlich versteckter Dateien übernommen; vorhandene Zieldateien bleiben erhalten. Das Original bleibt unter `/data/shieldpm/migration-backups/<alter-name>.migrated.XXXXXX/original` als Sicherung bestehen. Bei Kopierfehlern bricht der Start vor dem Entfernen der Quelle ab.
+- Certbot-Live-Dateien werden nur dann atomar durch Symlinks ersetzt, wenn eine Archivdatei denselben Inhalt besitzt. Bei mehreren passenden Versionen gewinnt die numerisch höchste Version. Nicht passende Live-Dateien und Erneuerungsarchive werden nicht gelöscht.
+- Verzeichnisse unter `/data/tls`, `/data/access` und `/data/shieldpm` erhalten Modus `0700`, reguläre Dateien `0600`. Damit werden unter anderem private Schlüssel, Datenbanken und das Tor-Control-Passwort nicht mehr pauschal auf `0770` erweitert.
+- Die neuen Sicherungsverzeichnisse benötigen Speicherplatz. Vor einer manuellen Bereinigung müssen insbesondere abweichende Ziel- und Quelldateien verglichen werden.
+
 ## Native-Update: NodeSource-Paketversion
 
 `update-shieldpm` läuft mit `set -o pipefail`. Die Node-26-Paketversion wird aus `apt-cache madison nodejs` ermittelt. Das `awk`-Kommando liest dabei die vollständige APT-Ausgabe, übernimmt aber nur die erste passende Version. Ein vorzeitiges Beenden von `awk` würde die vorgelagerte Ausgabe bei langen Versionslisten mit `SIGPIPE` abbrechen und das gesamte Update vor dem Quellcode-Download beenden.
@@ -33,6 +40,20 @@ Falls Corepack nicht verfügbar ist, installieren sowohl `update-shieldpm` als a
 ## Native-Update: Backend-Health-Check
 
 Nach dem Neustart prüft `update-shieldpm` den Backend-Health-Status über `/run/shieldpm.sock` gegen `http://localhost/`. Der native Backend-Router liefert dort `status: "OK"`; `/api/` ist kein Socket-Präfix und antwortet mit 404. Der Check wartet höchstens 120 Sekunden und meldet nur dann ein erfolgreiches Update, wenn der Dienst aktiv und diese Antwort verfügbar ist.
+
+## Native-Update: Austausch und Fehlerbehandlung
+
+Das Update läuft aus einem privaten, mit `mktemp` angelegten Verzeichnis. Selbstupdates werden vor der Ausführung mit `bash -n` geprüft und höchstens einmal pro Aufruf durchgeführt. Der tatsächlich geklonte Commit wird als installierter Stand gespeichert. Der Frontend-Build installiert seine Entwicklungsabhängigkeiten auch dann, wenn `NODE_ENV=production` gesetzt ist.
+
+Vor dem Austausch werden Backend und Frontend gesichert und der Dienst gestoppt. Ein Abbruch vor dem ersten Start der neuen Datenbankmigrationen stellt diese Anwendungsdateien wieder her und versucht, den Dienst erneut zu starten. Sobald Migrationen beginnen, erfolgt kein automatisches Zurücksetzen auf den vorherigen Anwendungscode: Ein solcher Wechsel könnte mit dem bereits geänderten Datenbankschema inkompatibel sein. Das ist keine vollständige Systemsicherung; Systempakete, Nginx-Binaries und Rootfs-Konfigurationen können bereits aktualisiert worden sein.
+
+Scheitern Neustart oder Healthcheck nach diesem Punkt, bleiben die Recovery-Dateien im ausgegebenen privaten Arbeitsverzeichnis erhalten. Vor einer manuellen Wiederherstellung muss der Stand der Datenbankmigrationen geprüft werden.
+
+## Healthcheck und AIO
+
+`healthcheck.sh` liest `/data/.env` selbst, weil ein Docker-Healthcheck die nachträglichen Exporte des Entrypoints nicht erbt. HTTP-Anfragen haben einen Zeitrahmen von zehn Sekunden.
+
+`aio.sh` verwendet den Backend-Unix-Socket, JSON-Erzeugung mit `jq`, eine private Cookie-Datei und einen CSRF-Token aus der authentifizierten Sitzung. Die Datei `/data/aio.lock` entsteht erst nach erfolgreicher Host-Erstellung. Bei aktivierter Zwei-Faktor-Anmeldung muss die Einrichtung interaktiv erfolgen. Docker leitet Stoppsignale mit `tini -g` an die gesamte Prozessgruppe weiter.
 
 ## Konfigurationsdateien (`rootfs/etc/`)
 

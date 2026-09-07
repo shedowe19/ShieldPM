@@ -40,6 +40,13 @@
 						"is_disabled": {
 							"$ref": "../../components/user-object.json#/properties/is_disabled"
 						},
+						"avatar_type": {
+							"type": "string",
+							"enum": ["gravatar", "url"]
+						},
+						"avatar_value": {
+							"$ref": "../../components/user-object.json#/properties/avatar_value"
+						},
 						"auth": {
 							"type": "object",
 							"description": "Auth Credentials",

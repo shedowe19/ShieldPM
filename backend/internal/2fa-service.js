@@ -25,6 +25,7 @@ import UserTwoFaBackupCode from "../models/user-2fa-backup-codes.js";
 const APP_NAME = "ShieldPM";
 const BACKUP_CODE_COUNT = 8;
 const BACKUP_CODE_LENGTH = 10; // chars (alphanumeric)
+const PASSKEY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -124,12 +125,10 @@ const verifyAndEnableTotp = async (userId, code) => {
  * @returns {Promise<boolean>}
  */
 const verifyTotp = async (userId, code) => {
-	const record = await UserTwoFa.query().findOne({ user_id: userId, type: "totp", is_deleted: 0 });
+	const record = await UserTwoFa.query().findOne({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
 	if (!record) {
 		return false;
 	}
-	// Accept code even if is_verified=0 (TOTP was set up but the UI verification
-	// flow was bypassed, e.g. via direct DB seed)
 	return verifySync({ token: code, secret: record.secret }).valid;
 };
 
@@ -263,6 +262,22 @@ const getPasskeyContext = (req) => {
 	return { rpID, origin };
 };
 
+const requireFreshChallenge = (record, label = "Passkey") => {
+	if (!record || !Number.isFinite(record.meta?.expiresAt) || record.meta.expiresAt <= Date.now()) {
+		throw new errs.ValidationError(`${label} challenge not found or expired`);
+	}
+	if (!record.meta.challenge) {
+		throw new errs.ValidationError("Invalid challenge record");
+	}
+};
+
+const consumeChallenge = async (record, label = "Passkey") => {
+	const deleted = await UserTwoFa.query().delete().where({ id: record.id, is_verified: 0 });
+	if (deleted !== 1) {
+		throw new errs.ValidationError(`${label} challenge already used or expired`);
+	}
+};
+
 /**
  * Begin passkey registration: generate options and store the challenge.
  * @param {number} userId
@@ -302,7 +317,7 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
 		user_id: userId,
 		type: "passkey_challenge",
 		secret: challengeId,
-		meta: { challenge: options.challenge },
+		meta: { challenge: options.challenge, expiresAt: Date.now() + PASSKEY_CHALLENGE_TTL_MS },
 		is_verified: 0,
 	});
 
@@ -329,6 +344,7 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 	if (!challengeRecord) {
 		throw new errs.ValidationError("Passkey registration challenge not found or expired");
 	}
+	requireFreshChallenge(challengeRecord);
 
 	const expectedChallenge = challengeRecord.meta?.challenge;
 	if (!expectedChallenge) {
@@ -348,6 +364,7 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 
 	const { credential } = verification.registrationInfo;
 	const transports = registrationResponse.response?.transports?.join(",") || null;
+	await consumeChallenge(challengeRecord);
 
 	// Store the credential
 	await UserTwoFa.query().insert({
@@ -360,9 +377,6 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 		transports,
 		is_verified: 1,
 	});
-
-	// Clean up challenge
-	await UserTwoFa.query().delete().where({ id: challengeRecord.id });
 
 	const backupCodes = await ensureBackupCodesExist(userId);
 	return { backupCodes };
@@ -399,7 +413,7 @@ const beginPasskeyAuthentication = async (userId, req) => {
 		user_id: userId,
 		type: "passkey_auth_challenge",
 		secret: challengeId,
-		meta: { challenge: options.challenge },
+		meta: { challenge: options.challenge, expiresAt: Date.now() + PASSKEY_CHALLENGE_TTL_MS },
 		is_verified: 0,
 	});
 
@@ -425,6 +439,7 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 	if (!challengeRecord) {
 		throw new errs.ValidationError("Passkey authentication challenge not found or expired");
 	}
+	requireFreshChallenge(challengeRecord);
 
 	const expectedChallenge = challengeRecord.meta?.challenge;
 	const credentialId = authResponse.id;
@@ -459,12 +474,10 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 	if (!verification.verified) {
 		throw new errs.ValidationError("Passkey authentication failed");
 	}
+	await consumeChallenge(challengeRecord);
 
 	// Update counter to prevent replay attacks
 	await UserTwoFa.query().patch({ counter: verification.authenticationInfo.newCounter }).where({ id: passkey.id });
-
-	// Clean up challenge
-	await UserTwoFa.query().delete().where({ id: challengeRecord.id });
 
 	return true;
 };
@@ -540,6 +553,14 @@ const beginDuoAuthentication = async (userId, userEmail) => {
 	const client = createDuoClient(duoRecord.meta);
 	const state = crypto.randomBytes(32).toString("base64url");
 	const authUrl = await client.createAuthUrl(userEmail, state);
+	await UserTwoFa.query().delete().where({ user_id: userId, type: "duo_auth_challenge", is_verified: 0 });
+	await UserTwoFa.query().insert({
+		user_id: userId,
+		type: "duo_auth_challenge",
+		secret: state,
+		is_verified: 0,
+		meta: { challenge: state, expiresAt: Date.now() + PASSKEY_CHALLENGE_TTL_MS },
+	});
 
 	return { authUrl, state };
 };
@@ -551,7 +572,17 @@ const beginDuoAuthentication = async (userId, userEmail) => {
  * @param {string} duoCode
  * @returns {Promise<boolean>}
  */
-const completeDuoAuthentication = async (userId, userEmail, duoCode) => {
+const completeDuoAuthentication = async (userId, userEmail, duoCode, state) => {
+	if (typeof state !== "string" || !state) {
+		throw new errs.ValidationError("Duo login state is required");
+	}
+	const challenge = await UserTwoFa.query().findOne({
+		user_id: userId,
+		type: "duo_auth_challenge",
+		secret: state,
+		is_verified: 0,
+	});
+	requireFreshChallenge(challenge, "Duo");
 	const duoRecord = await UserTwoFa.query().findOne({ user_id: userId, type: "duo", is_verified: 1, is_deleted: 0 });
 	if (!duoRecord) {
 		throw new errs.ValidationError("Duo Security is not configured for this user");
@@ -559,7 +590,11 @@ const completeDuoAuthentication = async (userId, userEmail, duoCode) => {
 
 	const client = createDuoClient(duoRecord.meta);
 	const tokenResult = await client.exchangeAuthorizationCodeFor2FAResult(duoCode, userEmail);
-	return !!tokenResult;
+	if (!tokenResult) {
+		return false;
+	}
+	await consumeChallenge(challenge, "Duo");
+	return true;
 };
 
 // ---------------------------------------------------------------------------

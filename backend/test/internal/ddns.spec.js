@@ -45,8 +45,14 @@ describe("DDNS Service", () => {
 
 			const ips = await ddnsService.getWanIps();
 			expect(ips).toEqual({ ipv4: "1.2.3.4", ipv6: "2001:db8::1" });
-			expect(fetchMock).toHaveBeenCalledWith("https://api.ipify.org?format=json");
-			expect(fetchMock).toHaveBeenCalledWith("https://api6.ipify.org?format=json");
+			expect(fetchMock).toHaveBeenCalledWith(
+				"https://api.ipify.org?format=json",
+				expect.objectContaining({ signal: expect.any(AbortSignal) }),
+			);
+			expect(fetchMock).toHaveBeenCalledWith(
+				"https://api6.ipify.org?format=json",
+				expect.objectContaining({ signal: expect.any(AbortSignal) }),
+			);
 		});
 
 		it("should handle partial failures gracefully", async () => {
@@ -64,6 +70,25 @@ describe("DDNS Service", () => {
 	});
 
 	describe("updateProvider", () => {
+		it("does not send an update or report success when the selected WAN address is unavailable", async () => {
+			const patchAndFetchById = vi.fn().mockResolvedValue({});
+			DdnsProvider.query.mockReturnValue({ patchAndFetchById });
+			const result = await ddnsService.updateProvider(
+				{
+					id: 1,
+					name: "IPv6 only",
+					provider: "duckdns",
+					domains: ["example"],
+					config: { token: "test" },
+					ip_ver: "v6",
+				},
+				{ ipv4: "1.1.1.1", ipv6: null },
+			);
+			expect(result).toEqual({ success: false, error: "No WAN IP available for the selected IP version" });
+			expect(fetchMock).not.toHaveBeenCalled();
+			expect(patchAndFetchById).toHaveBeenCalledWith(1, { last_error: result.error });
+		});
+
 		it("does not request custom URLs targeting the IPv6 loopback address", async () => {
 			const patchAndFetchById = vi.fn().mockResolvedValue({});
 			DdnsProvider.query.mockReturnValue({

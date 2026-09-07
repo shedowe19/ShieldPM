@@ -28,6 +28,10 @@ Anubis agiert als Gatekeeper vor bestimmten Proxy-Routen und fordert von Clients
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Domainbindung der Regeln
+
+Die Policy-Erzeugung liest Domains aus `host_domains`. Wildcard-Domains werden in gültige reguläre Ausdrücke übersetzt. Benutzerdefinierte Headerregeln können den intern gesetzten `X-ShieldPM-Host`-Filter nicht überschreiben; dadurch bleiben Regeln an ihren Host gebunden.
+
 ## Verwandte Seiten
 
 - [Architektur-Überblick](../architektur/ueberblick.md)

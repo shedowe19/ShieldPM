@@ -14,8 +14,8 @@ const fetchUser = (id: number | string) => {
 			nickname: "",
 			roles: [],
 			avatar: "",
-			avatar_type: AVATAR_TYPE.GRAVATAR,
-			avatar_value: "",
+			avatarType: AVATAR_TYPE.GRAVATAR,
+			avatarValue: "",
 		} as User);
 	}
 	return getUser(id, ["permissions"]);
@@ -42,12 +42,14 @@ const useSetUser = () => {
 			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.USER, values.id], (old: User) => ({
 				...old,
 				...values,
+				id: old?.id ?? values.id,
 			}));
 			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.USER, values.id], previousObject);
 		},
 		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
 		onSuccess: async ({ id }: User) => {
 			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, "me"] });
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
 		},

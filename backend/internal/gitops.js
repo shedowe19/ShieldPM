@@ -7,6 +7,7 @@ import _ from "lodash";
 import { isDemoMode } from "../lib/config.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { assertNoSymlinkPath, assertSafeConfigTree, writeConfigFile } from "../lib/gitops-files.js";
 import { global as logger } from "../logger.js";
 import AccessList from "../models/access_list.js";
 import Certificate from "../models/certificate.js";
@@ -31,49 +32,158 @@ const CONFIG_SUBDIR = "shieldpm-config";
 const ALLOWED_IMPORT_FIELDS = {
 	User: [
 		"id",
+		"is_disabled",
 		"email",
+		"name",
 		"nickname",
-		"password",
-		"role",
-		"otp_enabled",
-		"otp_secret",
-		"allowed_ids",
-		"last_login",
-		"last_failed_login",
-		"failed_login_count",
+		"avatar",
+		"avatar_type",
+		"avatar_value",
+		"roles",
+		"permissions",
 		"is_deleted",
-		"owner_user_id",
 	],
-	Certificate: ["id", "nice_name", "domain_names", "provider", "expires_on", "is_deleted", "owner_user_id"],
-	AccessList: ["id", "name", "items", "clients", "is_deleted", "owner_user_id"],
+	Certificate: ["id", "owner_user_id", "provider", "nice_name", "domain_names", "expires_on", "meta", "is_deleted"],
+	AccessList: [
+		"id",
+		"owner_user_id",
+		"name",
+		"meta",
+		"satisfy_any",
+		"pass_auth",
+		"is_deleted",
+		"items",
+		"clients",
+		"mtls_enabled",
+		"mtls_certificate",
+		"mtls_use_internal",
+	],
 	ProxyHost: [
 		"id",
+		"owner_user_id",
 		"domain_names",
 		"forward_host",
 		"forward_port",
-		"forward_scheme",
 		"access_list_id",
-		"http_options",
-		"ssl_options",
-		"nginx_options",
-		"nginx_settings",
+		"certificate_id",
+		"ssl_forced",
+		"caching_enabled",
+		"block_exploits",
+		"security_crowdsec",
+		"anubis_enabled",
+		"anubis_rules",
+		"advanced_config",
+		"bandwidth_limit",
+		"forward_query",
+		"meta",
+		"note",
+		"allow_websocket_upgrade",
+		"http2_support",
+		"forward_scheme",
+		"enabled",
+		"locations",
+		"hsts_enabled",
+		"hsts_subdomains",
+		"maintenance_on_failure",
+		"adv_limit_req_rate",
+		"adv_limit_req_unit",
+		"adv_limit_req_burst",
+		"disable_buffering",
+		"maintenance_active",
+		"maintenance_start",
+		"maintenance_end",
+		"maintenance_reason",
+		"php_enabled",
+		"php_version",
+		"php_override_ini",
+		"index_file",
+		"git_repo_url",
+		"git_branch",
+		"git_sync_enabled",
+		"git_poll_interval",
+		"git_poll_unit",
+		"git_credentials",
+		"git_last_sync",
+		"git_last_commit",
+		"git_last_error",
+		"icon_url",
+		"icon_type",
+		"terminal_host",
+		"terminal_port",
+		"terminal_username",
+		"terminal_auth_type",
+		"terminal_password",
+		"terminal_private_key",
+		"turbo_loader",
 		"is_deleted",
-		"owner_user_id",
 	],
 	RedirectionHost: [
 		"id",
-		"domain_names",
-		"target_url",
-		"redirect_code",
-		"access_list_id",
-		"is_deleted",
 		"owner_user_id",
+		"domain_names",
+		"forward_http_code",
+		"forward_scheme",
+		"forward_domain_name",
+		"preserve_path",
+		"certificate_id",
+		"ssl_forced",
+		"hsts_enabled",
+		"hsts_subdomains",
+		"http2_support",
+		"block_exploits",
+		"advanced_config",
+		"enabled",
+		"meta",
+		"note",
+		"is_deleted",
 	],
-	DeadHost: ["id", "domain_names", "alternative_target_url", "mode", "is_deleted", "owner_user_id"],
-	Stream: ["id", "incoming_port", "target_url", "stream_type", "access_list_id", "is_deleted", "owner_user_id"],
-	CloudflaredTunnel: ["id", "name", "tunnel_id", "created_at", "is_deleted", "owner_user_id"],
-	DdnsProvider: ["id", "name", "provider", "config", "is_deleted", "owner_user_id"],
-	Setting: ["id", "value", "meta"],
+	DeadHost: [
+		"id",
+		"owner_user_id",
+		"domain_names",
+		"certificate_id",
+		"ssl_forced",
+		"hsts_enabled",
+		"hsts_subdomains",
+		"http2_support",
+		"advanced_config",
+		"enabled",
+		"meta",
+		"note",
+		"is_deleted",
+	],
+	Stream: [
+		"id",
+		"owner_user_id",
+		"incoming_port",
+		"forwarding_host",
+		"forwarding_port",
+		"tcp_forwarding",
+		"udp_forwarding",
+		"proxy_protocol_forwarding",
+		"enabled",
+		"certificate_id",
+		"meta",
+		"note",
+		"is_deleted",
+	],
+	CloudflaredTunnel: ["id", "owner_user_id", "name", "token", "status", "meta", "is_deleted"],
+	DdnsProvider: [
+		"id",
+		"owner_user_id",
+		"name",
+		"provider",
+		"domains",
+		"config",
+		"last_ipv4",
+		"last_ipv6",
+		"last_updated_on",
+		"last_error",
+		"enabled",
+		"meta",
+		"ip_ver",
+	],
+	Setting: ["id", "name", "description", "value", "meta"],
 };
 
 /**
@@ -88,7 +198,36 @@ const sanitizeImportData = (modelName, data) => {
 		logger.warn(`GitOps: Unknown model "${modelName}" — skipping import.`);
 		return null;
 	}
-	return _.pick(data, allowed);
+	if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+	const result = _.pick(data, allowed);
+	if (modelName === "User" && result.permissions) {
+		result.permissions = _.pick(result.permissions, [
+			"visibility",
+			"proxy_hosts",
+			"redirection_hosts",
+			"dead_hosts",
+			"streams",
+			"access_lists",
+			"certificates",
+			"cloudflared_tunnels",
+			"ddns_providers",
+			"tor_onions",
+			"wireguard_peers",
+			"chat",
+			"dashboard_notes",
+			"analytics",
+		]);
+	}
+	if (modelName === "AccessList") {
+		for (const [relation, fields] of Object.entries({
+			items: ["username", "password", "meta"],
+			clients: ["address", "directive", "meta"],
+		})) {
+			if (Array.isArray(result[relation]))
+				result[relation] = result[relation].map((item) => _.pick(item, fields));
+		}
+	}
+	return result;
 };
 
 /**
@@ -324,8 +463,9 @@ const internalGitOps = {
 			throw new errs.AuthError("GitOps is disabled in Demo Mode");
 		}
 
-		await internalGitOps.initRepo();
 		const configDir = getConfigDir();
+		await assertSafeConfigTree(GITOPS_DIR, configDir);
+		await internalGitOps.initRepo();
 		const exportedFiles = [];
 
 		// Create subdirectories
@@ -338,10 +478,13 @@ const internalGitOps = {
 			"users",
 			"settings",
 			"ddns-providers",
+			"access-lists",
+			"cloudflared-tunnels",
 		];
 		for (const dir of dirs) {
 			const dirPath = path.join(configDir, dir);
 			if (!fs.existsSync(dirPath)) {
+				await assertNoSymlinkPath(GITOPS_DIR, dirPath);
 				await fs.promises.mkdir(dirPath, { recursive: true });
 			}
 		}
@@ -352,7 +495,7 @@ const internalGitOps = {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "proxy-hosts", filename);
 			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
-			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -362,7 +505,7 @@ const internalGitOps = {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "redirection-hosts", filename);
 			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
-			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -372,7 +515,7 @@ const internalGitOps = {
 			const filename = `${host.id}-${(host.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "dead-hosts", filename);
 			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
-			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -382,7 +525,7 @@ const internalGitOps = {
 			const filename = `${stream.id}-${stream.incoming_port || "unknown"}.yaml`;
 			const filePath = path.join(configDir, "streams", filename);
 			const exportData = internalGitOps.sanitizeForExport(stream, ["is_deleted"]);
-			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -392,7 +535,7 @@ const internalGitOps = {
 			const filename = `${cert.id}-${(cert.nice_name || cert.domain_names?.[0] || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "certificates", filename);
 			const exportData = internalGitOps.sanitizeForExport(cert, ["is_deleted"]);
-			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -402,17 +545,36 @@ const internalGitOps = {
 			const filename = `${user.id}-${(user.nickname || user.email || "unknown").replace(/[^a-z0-9.-]/gi, "-")}.yaml`;
 			const filePath = path.join(configDir, "users", filename);
 			const exportData = internalGitOps.sanitizeForExport(user, ["is_deleted"]);
-			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
 		// Export Settings (excluding gitops-config to avoid overwriting credentials)
+		for (const [model, directory, graph] of [
+			[AccessList, "access-lists", "[items,clients]"],
+			[CloudflaredTunnel, "cloudflared-tunnels", null],
+			[DdnsProvider, "ddns-providers", null],
+		]) {
+			const query = model.query();
+			if (model !== DdnsProvider) query.where("is_deleted", 0);
+			if (graph) query.withGraphFetched(graph);
+			for (const row of await query) {
+				const filePath = path.join(configDir, directory, `${row.id}.yaml`);
+				await writeConfigFile(
+					GITOPS_DIR,
+					filePath,
+					yaml.dump(internalGitOps.sanitizeForExport(row, ["is_deleted"]), { indent: 2 }),
+				);
+				exportedFiles.push(filePath);
+			}
+		}
+
 		const settings = await settingModel.query().whereNot("id", "gitops-config");
 		for (const setting of settings) {
-			const filename = `${setting.id}.yaml`;
+			const filename = `${encodeURIComponent(setting.id)}.yaml`;
 			const filePath = path.join(configDir, "settings", filename);
 			const exportData = { ...setting };
-			await fs.promises.writeFile(filePath, yaml.dump(exportData, { indent: 2 }));
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -426,7 +588,7 @@ const internalGitOps = {
 			const items = await fs.promises.readdir(dir);
 			for (const item of items) {
 				const fullPath = path.join(dir, item);
-				const stat = await fs.promises.stat(fullPath);
+				const stat = await fs.promises.lstat(fullPath);
 				if (stat.isDirectory()) {
 					await pruneDirectory(fullPath);
 					// If empty after prune, delete dir
@@ -454,8 +616,10 @@ const internalGitOps = {
 	 * @param {string[]} exportedFiles
 	 */
 	exportCertificateFiles: async (configDir, exportedFiles) => {
+		await assertSafeConfigTree(GITOPS_DIR, configDir);
 		const certFilesDir = path.join(configDir, "certificate-files");
 		if (!fs.existsSync(certFilesDir)) {
+			await assertNoSymlinkPath(GITOPS_DIR, certFilesDir);
 			await fs.promises.mkdir(certFilesDir, { recursive: true });
 		}
 
@@ -467,6 +631,7 @@ const internalGitOps = {
 				const domainDir = path.join(letsencryptDir, domain);
 				const targetDir = path.join(certFilesDir, "letsencrypt", domain);
 				if (!fs.existsSync(targetDir)) {
+					await assertNoSymlinkPath(GITOPS_DIR, targetDir);
 					await fs.promises.mkdir(targetDir, { recursive: true });
 				}
 				// Copy cert files (exclude private keys)
@@ -475,7 +640,7 @@ const internalGitOps = {
 					const srcPath = path.join(domainDir, file);
 					const destPath = path.join(targetDir, file);
 					if (fs.existsSync(srcPath)) {
-						await fs.promises.copyFile(srcPath, destPath);
+						await writeConfigFile(GITOPS_DIR, destPath, await fs.promises.readFile(srcPath));
 						exportedFiles.push(destPath);
 					}
 				}
@@ -488,6 +653,7 @@ const internalGitOps = {
 			const items = await fs.promises.readdir(customDir);
 			const customTargetDir = path.join(certFilesDir, "custom");
 			if (!fs.existsSync(customTargetDir)) {
+				await assertNoSymlinkPath(GITOPS_DIR, customTargetDir);
 				await fs.promises.mkdir(customTargetDir, { recursive: true });
 			}
 			for (const item of items) {
@@ -497,12 +663,13 @@ const internalGitOps = {
 
 				if (stats.isFile()) {
 					if (!item.includes("privkey") && !item.endsWith(".key")) {
-						await fs.promises.copyFile(srcPath, destPath);
+						await writeConfigFile(GITOPS_DIR, destPath, await fs.promises.readFile(srcPath));
 						exportedFiles.push(destPath);
 					}
 				} else if (stats.isDirectory() && item.startsWith("npm-")) {
 					// Custom certs are often in folders like "npm-12"
 					if (!fs.existsSync(destPath)) {
+						await assertNoSymlinkPath(GITOPS_DIR, destPath);
 						await fs.promises.mkdir(destPath, { recursive: true });
 					}
 					const files = await fs.promises.readdir(srcPath);
@@ -511,7 +678,7 @@ const internalGitOps = {
 							const srcFile = path.join(srcPath, file);
 							const destFile = path.join(destPath, file);
 							if ((await fs.promises.stat(srcFile)).isFile()) {
-								await fs.promises.copyFile(srcFile, destFile);
+								await writeConfigFile(GITOPS_DIR, destFile, await fs.promises.readFile(srcFile));
 								exportedFiles.push(destFile);
 							}
 						}
@@ -525,6 +692,7 @@ const internalGitOps = {
 		if (fs.existsSync(internalDir)) {
 			const internalTargetDir = path.join(certFilesDir, "internal");
 			if (!fs.existsSync(internalTargetDir)) {
+				await assertNoSymlinkPath(GITOPS_DIR, internalTargetDir);
 				await fs.promises.mkdir(internalTargetDir, { recursive: true });
 			}
 
@@ -534,7 +702,7 @@ const internalGitOps = {
 				const srcPath = path.join(internalDir, file);
 				const destPath = path.join(internalTargetDir, file);
 				if (fs.existsSync(srcPath)) {
-					await fs.promises.copyFile(srcPath, destPath);
+					await writeConfigFile(GITOPS_DIR, destPath, await fs.promises.readFile(srcPath));
 					exportedFiles.push(destPath);
 				}
 			}
@@ -546,6 +714,7 @@ const internalGitOps = {
 				if ((await fs.promises.stat(itemPath)).isDirectory() && item.startsWith("npm-")) {
 					const destDir = path.join(internalTargetDir, item);
 					if (!fs.existsSync(destDir)) {
+						await assertNoSymlinkPath(GITOPS_DIR, destDir);
 						await fs.promises.mkdir(destDir, { recursive: true });
 					}
 
@@ -555,7 +724,7 @@ const internalGitOps = {
 						if (!file.includes("privkey") && !file.endsWith(".key")) {
 							const srcFile = path.join(itemPath, file);
 							const destFile = path.join(destDir, file);
-							await fs.promises.copyFile(srcFile, destFile);
+							await writeConfigFile(GITOPS_DIR, destFile, await fs.promises.readFile(srcFile));
 							exportedFiles.push(destFile);
 						}
 					}
@@ -799,19 +968,19 @@ const internalGitOps = {
 			const importResult = await internalGitOps.importConfig(access, { overwrite: true });
 
 			if (importResult.success) {
-				// Restart Container after 1 second to allow response to be sent
-				logger.info("GitOps Revert: Scheduling container restart in 1 second...");
+				// Restart only this service; PID 1 can be the native host's init system.
+				logger.info("GitOps Revert: Scheduling backend restart in 1 second...");
 				setTimeout(() => {
-					logger.info("GitOps Revert: Restarting container via SIGTERM (PID 1)...");
+					logger.info("GitOps Revert: Restarting backend via SIGTERM...");
 					try {
-						process.kill(1, "SIGTERM");
+						process.kill(process.pid, "SIGTERM");
 					} catch (e) {
-						logger.error("Failed to kill PID 1:", e);
+						logger.error("Failed to stop backend:", e);
 						process.exit(1); // Fallback
 					}
 				}, 1000);
 
-				return { success: true, message: `Reverted to ${sha}. Container will restart now.` };
+				return { success: true, message: `Reverted to ${sha}. Backend will restart now.` };
 			}
 			return {
 				success: false,
@@ -839,6 +1008,7 @@ const internalGitOps = {
 		await access.can("settings:update", "gitops-config");
 
 		const configDir = getConfigDir();
+		await assertSafeConfigTree(GITOPS_DIR, configDir);
 		let imported = 0;
 		let skipped = 0;
 		let deleted = 0;
@@ -854,6 +1024,9 @@ const internalGitOps = {
 		const importModel = async (modelClass, dirName, hostType = null, relationGraph = null) => {
 			const dirPath = path.join(configDir, dirName);
 			const importedIds = [];
+			const errorCountBeforeImport = errors.length;
+			// Older backups do not contain every integration. Absence is not a deletion request.
+			if (!fs.existsSync(dirPath)) return;
 
 			if (fs.existsSync(dirPath)) {
 				const files = await fs.promises.readdir(dirPath);
@@ -866,19 +1039,18 @@ const internalGitOps = {
 							const data = yaml.load(content);
 
 							if (data && typeof data === "object") {
-								const itemData = /** @type {any} */ (data);
-
 								// Apply field whitelist validation to prevent DB field injection
-								const sanitized = sanitizeImportData(modelClass.name, itemData);
-								if (!sanitized) {
+								const itemData = sanitizeImportData(modelClass.name, data);
+								if (!itemData) {
 									errors.push(
 										`${dirName}/${file}: Model "${modelClass.name}" not allowed or no valid fields`,
 									);
 									return;
 								}
-								Object.assign(itemData, sanitized);
-
 								const existingId = itemData.id;
+								if (!Number.isSafeInteger(existingId) || existingId <= 0) {
+									throw new errs.ValidationError("Imported objects require a positive integer ID");
+								}
 
 								if (existingId) {
 									importedIds.push(existingId);
@@ -890,7 +1062,13 @@ const internalGitOps = {
 								}
 
 								// Ensure item is not marked as deleted upon restore
-								itemData.is_deleted = 0;
+								if (modelClass !== DdnsProvider) itemData.is_deleted = 0;
+								if (modelClass === ProxyHost && Array.isArray(itemData.domain_names)) {
+									itemData.host_domains = itemData.domain_names.map((domain_name) => ({
+										domain_name,
+									}));
+									delete itemData.domain_names;
+								}
 
 								// Ensure owner_user_id is valid
 								if (itemData.owner_user_id) {
@@ -915,8 +1093,8 @@ const internalGitOps = {
 										}
 									}
 								} else {
-									if (!options.overwrite) delete itemData.id;
-									if (!itemData.owner_user_id) itemData.owner_user_id = access.token.getUserId(1);
+									if (modelClass !== User && !itemData.owner_user_id)
+										itemData.owner_user_id = access.token.getUserId(1);
 
 									let newRow;
 									if (relationGraph) {
@@ -929,6 +1107,8 @@ const internalGitOps = {
 									else if (newRow?.id) importedIds.push(newRow.id);
 								}
 								imported++;
+							} else {
+								throw new errs.ValidationError("Expected a YAML object");
 							}
 						} catch (err) {
 							logger.error(`Import failed for ${dirName}/${file}:`, err);
@@ -939,12 +1119,13 @@ const internalGitOps = {
 			}
 
 			// FULL SYNC: Delete items not in importedIds
-			if (options.overwrite) {
+			if (options.overwrite && errors.length === errorCountBeforeImport) {
 				const query = modelClass.query().whereNotIn("id", importedIds);
 
 				try {
 					const staleItems = await query;
 					const deletePromises = staleItems.map(async (item) => {
+						if (modelClass === User && item.id === access.token.getUserId(1)) return;
 						// Delete Nginx config if hostType is provided
 						if (hostType) {
 							await internalNginx.deleteConfig(hostType, item);
@@ -960,7 +1141,9 @@ const internalGitOps = {
 						logger.info(`GitOps Full Sync: Deleted ${dirName} #${item.id}`);
 					});
 
-					await Promise.allSettled(deletePromises);
+					for (const result of await Promise.allSettled(deletePromises)) {
+						if (result.status === "rejected") errors.push(`${dirName}: ${result.reason.message}`);
+					}
 				} catch (err) {
 					logger.warn(`GitOps Cleanup failed for ${dirName}:`, err);
 				}
@@ -978,7 +1161,7 @@ const internalGitOps = {
 			await importModel(AccessList, "access-lists", null, "[items, clients]");
 
 			// 4. Import Hosts & Streams
-			await importModel(ProxyHost, "proxy-hosts", "proxy_host");
+			await importModel(ProxyHost, "proxy-hosts", "proxy_host", "host_domains");
 			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
 			await importModel(DeadHost, "dead-hosts", "dead_host");
 			await importModel(Stream, "streams", "stream");
@@ -997,15 +1180,12 @@ const internalGitOps = {
 							const content = await fs.promises.readFile(path.join(settingsDir, file), "utf8");
 							const data = yaml.load(content);
 							if (data && typeof data === "object") {
-								const settingData = /** @type {any} */ (data);
-
 								// Apply field whitelist validation for settings
-								const sanitized = sanitizeImportData("Setting", settingData);
-								if (!sanitized) {
+								const settingData = sanitizeImportData("Setting", data);
+								if (!settingData || typeof settingData.id !== "string" || !settingData.id) {
 									errors.push(`settings/${file}: No valid fields allowed`);
 									return;
 								}
-								Object.assign(settingData, sanitized);
 
 								if (settingData.id === "gitops-config") return;
 
@@ -1211,7 +1391,7 @@ const internalGitOps = {
 			logger.info(
 				`GitOps import: ${imported} imported, ${skipped} skipped, ${deleted} deleted, ${errors.length} errors`,
 			);
-			return { success: true, imported, skipped, deleted, errors };
+			return { success: errors.length === 0, imported, skipped, deleted, errors };
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "Unknown error";
 			logger.error("GitOps import failed:", err);
