@@ -52,16 +52,15 @@ export async function complete2faPasskeyAuth(
 
 export interface DuoBeginResponse {
 	authUrl: string;
-	state: string;
 }
 
 export async function begin2faDuoAuth(pendingToken: string): Promise<DuoBeginResponse> {
 	return api.post({ url: "/tokens/2fa/duo/begin", data: { pending_token: pendingToken } });
 }
 
-export async function complete2faDuoAuth(pendingToken: string, duoCode: string): Promise<TokenResponse> {
+export async function complete2faDuoAuth(duoCode: string, state: string): Promise<TokenResponse> {
 	return api.post({
 		url: "/tokens/2fa/duo/complete",
-		data: { pending_token: pendingToken, duo_code: duoCode },
+		data: { duo_code: duoCode, state },
 	});
 }

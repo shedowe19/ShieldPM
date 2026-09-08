@@ -12,6 +12,7 @@ export interface DuoSetupResponse {
 	type: string;
 	label: string;
 	createdOn: string;
+	backupCodes?: string[] | null;
 }
 
 export async function setup2faDuo(userId: number | "me", config: DuoSetupRequest): Promise<DuoSetupResponse> {

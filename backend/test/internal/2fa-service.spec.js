@@ -12,6 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let fakeUserTwoFaRows = [];
 let fakeBackupCodeRows = [];
+const duoCreateAuthUrl = vi.hoisted(() => vi.fn((_user, state) => `https://api.duo.test/authorize?state=${state}`));
+
+vi.mock("../../lib/config.js", () => ({ getEncryptionKey: () => "01".repeat(32) }));
 
 const matchesFilter = (row, filter) => Object.entries(filter).every(([k, v]) => row[k] === v);
 
@@ -34,6 +37,7 @@ const makeQB = (arr) => {
 
 vi.mock("../../models/user-2fa.js", () => ({
 	default: {
+		transaction: async (callback) => callback({}),
 		query: vi.fn(() => ({
 			findOne: vi.fn((filter) =>
 				Promise.resolve(fakeUserTwoFaRows.find((r) => matchesFilter(r, filter)) ?? null),
@@ -46,9 +50,10 @@ vi.mock("../../models/user-2fa.js", () => ({
 			})),
 			delete: vi.fn(() => ({
 				where: vi.fn((filter) => {
+					const before = fakeUserTwoFaRows.length;
 					if (filter) fakeUserTwoFaRows = fakeUserTwoFaRows.filter((r) => !matchesFilter(r, filter));
 					else fakeUserTwoFaRows = [];
-					return Promise.resolve();
+					return Promise.resolve(before - fakeUserTwoFaRows.length);
 				}),
 			})),
 			insert: vi.fn((data) => {
@@ -87,6 +92,7 @@ vi.mock("../../models/user-2fa.js", () => ({
 
 vi.mock("../../models/user-2fa-backup-codes.js", () => ({
 	default: {
+		transaction: async (callback) => callback({}),
 		query: vi.fn(() => ({
 			delete: vi.fn(() => ({
 				where: vi.fn(() => {
@@ -117,7 +123,11 @@ vi.mock("../../models/user-2fa-backup-codes.js", () => ({
 vi.mock("../../models/user.js", () => ({
 	default: {
 		query: vi.fn(() => ({
-			findById: vi.fn(() => Promise.resolve({ id: 1, name: "Test", email: "test@example.com" })),
+			findById: vi.fn(() => {
+				const result = Promise.resolve({ id: 1, name: "Test", email: "test@example.com" });
+				result.where = vi.fn(() => result);
+				return result;
+			}),
 		})),
 	},
 }));
@@ -139,7 +149,7 @@ vi.mock("otplib", async (importOriginal) => {
 		generateURI: vi.fn(
 			(opts) => `otpauth://totp/${opts.issuer}:${opts.label}?secret=${opts.secret}&issuer=${opts.issuer}`,
 		),
-		verifySync: vi.fn(() => ({ valid: true })),
+		verifySync: vi.fn(() => ({ valid: true, timeStep: 123456 })),
 	};
 });
 
@@ -181,10 +191,10 @@ vi.mock("@duosecurity/duo_universal", () => {
 			return Promise.resolve();
 		}
 		createAuthUrl(_user, state) {
-			return Promise.resolve(`https://api.duo.test/authorize?state=${state}`);
+			return duoCreateAuthUrl(_user, state);
 		}
 		exchangeAuthorizationCodeFor2FAResult() {
-			return Promise.resolve({ sub: "testuser" });
+			return Promise.resolve({ sub: "testuser", auth_result: { result: "allow", status: "allow" } });
 		}
 	}
 	return { Client };
@@ -259,6 +269,22 @@ describe("2fa-service", () => {
 		it("returns false when no verified TOTP record exists for the user", async () => {
 			const result = await twoFaService.verifyTotp(1, "123456");
 			expect(result).toBe(false);
+		});
+	});
+
+	describe("TOTP activation boundary", () => {
+		it("does not accept a code for an unfinished enrollment during login", async () => {
+			fakeUserTwoFaRows = [{ id: 1, user_id: 1, type: "totp", secret: "pending", is_verified: 0, is_deleted: 0 }];
+			expect(await twoFaService.verifyTotp(1, "123456")).toBe(false);
+		});
+		it("uses the verified enrollment when a new pending setup also exists", async () => {
+			fakeUserTwoFaRows = [
+				{ id: 1, user_id: 1, type: "totp", secret: "pending", is_verified: 0, is_deleted: 0 },
+				{ id: 2, user_id: 1, type: "totp", secret: "active", is_verified: 1, is_deleted: 0 },
+			];
+			expect(await twoFaService.verifyTotp(1, "123456")).toBe(true);
+			const { verifySync } = await import("otplib");
+			expect(verifySync).toHaveBeenCalledWith({ token: "123456", secret: "active" });
 		});
 	});
 
@@ -385,6 +411,68 @@ describe("2fa-service", () => {
 		});
 	});
 
+	describe("passkey challenge expiry and one-time use", () => {
+		const req = { headers: { origin: "https://app.example.com" }, protocol: "https", hostname: "app.example.com" };
+		const seed = (expiresAt) => {
+			fakeUserTwoFaRows = [
+				{
+					id: 1,
+					user_id: 1,
+					type: "passkey_auth_challenge",
+					secret: "challenge-id",
+					is_verified: 0,
+					is_deleted: 0,
+					meta: { challenge: "challenge", expiresAt },
+				},
+				{
+					id: 2,
+					user_id: 1,
+					type: "passkey",
+					secret: "credential",
+					is_verified: 1,
+					is_deleted: 0,
+					public_key: "AQID",
+					counter: 0,
+				},
+			];
+		};
+		it("rejects an expired stored authentication challenge before verification", async () => {
+			seed(Date.now() - 1);
+			await expect(
+				twoFaService.completePasskeyAuthentication(1, "challenge-id", { id: "credential" }, req),
+			).rejects.toThrow("expired");
+			const { verifyAuthenticationResponse } = await import("@simplewebauthn/server");
+			expect(verifyAuthenticationResponse).not.toHaveBeenCalled();
+		});
+		it("rejects a registration challenge whose expiry is missing", async () => {
+			fakeUserTwoFaRows = [
+				{
+					id: 1,
+					user_id: 1,
+					type: "passkey_challenge",
+					secret: "old",
+					is_verified: 0,
+					meta: { challenge: "old" },
+				},
+			];
+			await expect(twoFaService.completePasskeyRegistration(1, "old", {}, req)).rejects.toThrow("expired");
+		});
+		it("allows only one concurrent completion of the same authentication challenge", async () => {
+			seed(Date.now() + 300000);
+			const results = await Promise.allSettled([
+				twoFaService.completePasskeyAuthentication(1, "challenge-id", { id: "credential" }, req),
+				twoFaService.completePasskeyAuthentication(1, "challenge-id", { id: "credential" }, req),
+			]);
+			expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+			expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+		});
+		it("persists a five minute deadline when creating a challenge", async () => {
+			const start = Date.now();
+			await twoFaService.beginPasskeyRegistration(1, "test@example.com", req);
+			expect(fakeUserTwoFaRows[0].meta.expiresAt).toBeGreaterThanOrEqual(start + 300000);
+		});
+	});
+
 	// ── Duo Security ────────────────────────────────────────────────────────
 
 	describe("setupDuo", () => {
@@ -403,15 +491,70 @@ describe("2fa-service", () => {
 			});
 			expect(record).toHaveProperty("type", "duo");
 			expect(record.is_verified).toBe(1);
+			expect(record.backup_codes).toHaveLength(8);
+		});
+		it("preserves existing recovery codes instead of generating an undisclosed replacement", async () => {
+			fakeBackupCodeRows = [{ user_id: 1, code_hash: "existing" }];
+			const record = await twoFaService.setupDuo(1, {
+				clientId: "DI123456",
+				clientSecret: "secret",
+				apiHost: "api.duosecurity.com",
+				redirectUrl: "https://app.example.com/duo-callback",
+			});
+			expect(record.backup_codes).toBeUndefined();
+			expect(fakeBackupCodeRows).toEqual([{ user_id: 1, code_hash: "existing" }]);
 		});
 	});
 
 	describe("beginDuoAuthentication", () => {
 		it("throws ValidationError when Duo is not configured for the user", async () => {
-			await expect(twoFaService.beginDuoAuthentication(99, "user@example.com")).rejects.toMatchObject({
+			await expect(
+				twoFaService.beginDuoAuthentication(99, "user@example.com", "a".repeat(43), Date.now() + 60000),
+			).rejects.toMatchObject({
 				name: "ValidationError",
 				message: expect.stringContaining("not configured"),
 			});
+		});
+	});
+
+	describe("Duo state binding", () => {
+		const config = { id: 1, user_id: 1, type: "duo", is_verified: 1, is_deleted: 0, meta: {} };
+		it("stores only tags and consumes the cookie binding once after successful verification", async () => {
+			fakeUserTwoFaRows = [config];
+			const pendingExpiry = Date.now() + 60000;
+			const browserToken = crypto.randomBytes(32).toString("base64url");
+			const authUrl = await twoFaService.beginDuoAuthentication(
+				1,
+				"user@example.com",
+				browserToken,
+				pendingExpiry,
+			);
+			const state = duoCreateAuthUrl.mock.calls.at(-1)[1];
+			expect(authUrl).toBe(`https://api.duo.test/authorize?state=${state}`);
+			const challenge = fakeUserTwoFaRows.find((row) => row.type === "duo_auth_challenge");
+			expect(challenge.meta.expiresAt).toBe(pendingExpiry);
+			expect(challenge.secret).toMatch(/^[a-f0-9]{64}$/);
+			expect(challenge.meta.challenge).toMatch(/^[a-f0-9]{64}$/);
+			expect(challenge.secret).not.toBe(browserToken);
+			expect(challenge.meta.challenge).not.toBe(state);
+			expect(await twoFaService.completeDuoAuthentication(browserToken, "code", state)).toMatchObject({ id: 1 });
+			await expect(twoFaService.completeDuoAuthentication(browserToken, "code", state)).rejects.toThrow(
+				"expired",
+			);
+		});
+		it("rejects missing state", async () => {
+			fakeUserTwoFaRows = [config];
+			await expect(twoFaService.completeDuoAuthentication("a".repeat(43), "code")).rejects.toThrow(
+				"state are required",
+			);
+		});
+		it("rejects the callback without the matching browser binding", async () => {
+			fakeUserTwoFaRows = [config];
+			await twoFaService.beginDuoAuthentication(1, "user@example.com", "b".repeat(43), Date.now() + 60000);
+			const state = duoCreateAuthUrl.mock.calls.at(-1)[1];
+			await expect(twoFaService.completeDuoAuthentication("a".repeat(43), "code", state)).rejects.toThrow(
+				"expired",
+			);
 		});
 	});
 

@@ -7,7 +7,7 @@ export const validateAccessListForm = (values: AccessListFormValues): string | n
 	if (
 		values.items?.length === 0 &&
 		values.clients?.length === 0 &&
-		!values.authentikHost &&
+		!(values.authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY && values.authentikHost?.trim()) &&
 		values.authType !== ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY &&
 		values.authType !== ACCESS_LIST_AUTH_TYPE.OIDC &&
 		!values.mtlsEnabled
@@ -25,7 +25,10 @@ export const validateAccessListForm = (values: AccessListFormValues): string | n
 		if (!values.oauth2ClientId) return "Client ID is required";
 		if (!values.oauth2ClientSecret) return "Client Secret is required";
 		if (!values.oauth2CookieSecret) return "Cookie Secret is required";
-		if (values.oauth2Provider === "oidc" && !values.oauth2OidcIssuerUrl) {
+		if (
+			(values.oauth2Provider === "oidc" || values.oauth2Provider === "keycloak-oidc") &&
+			!values.oauth2OidcIssuerUrl?.trim()
+		) {
 			return "OIDC Issuer URL is required for OIDC provider";
 		}
 	}

@@ -1,8 +1,16 @@
+import { lookup } from "node:dns";
+import http from "node:http";
+import https from "node:https";
+import { isIP } from "node:net";
 import dayjs from "dayjs";
+import ipaddr from "ipaddr.js";
 import { global as logger } from "../logger.js";
 import DdnsProvider from "../models/ddns_provider.js";
 
 let timer = null;
+let startupTimer = null;
+let runningProcess = null;
+let forcePending = false;
 const INTERVAL = 1000 * 60; // 60 seconds
 
 /**
@@ -29,21 +37,58 @@ const validatePublicUrl = (urlStr) => {
 		throw new Error("SSRF: Cloud metadata URLs are not allowed");
 	}
 
-	// Check private IP ranges
-	const isPrivateIP = (ip) => {
-		const parts = ip.split(".").map(Number);
-		if (parts.length === 4) {
-			if (parts[0] === 10) return true;
-			if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-			if (parts[0] === 192 && parts[1] === 168) return true;
-			if (parts[0] === 127) return true;
-		}
-		return false;
-	};
-
-	if (isPrivateIP(hostname)) {
-		throw new Error("SSRF: Private IP addresses are not allowed");
+	if (ipaddr.isValid(hostname) && ipaddr.process(hostname).range() !== "unicast") {
+		throw new Error("SSRF: Private or reserved IP addresses are not allowed");
 	}
+};
+
+/** Resolve at connection time and pin the socket to a validated public address. */
+export const requestPublicUrl = (url) => {
+	validatePublicUrl(url);
+	const target = new URL(url);
+	const transport = target.protocol === "https:" ? https : http;
+	return new Promise((resolve, reject) => {
+		const request = transport.get(
+			target,
+			{
+				signal: AbortSignal.timeout(10000),
+				/**
+				 * @param {string} hostname
+				 * @param {import("node:dns").LookupOptions} options
+				 * @param {(error: NodeJS.ErrnoException | null, address?: string | import("node:dns").LookupAddress[], family?: number) => void} callback
+				 */
+				lookup: (hostname, options, callback) => {
+					lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
+						if (error) return callback(error);
+						if (
+							!addresses.length ||
+							addresses.some(({ address }) => ipaddr.process(address).range() !== "unicast")
+						) {
+							return callback(new Error("SSRF: DNS resolved to a private or reserved IP address"));
+						}
+						const addressesForFamily = options.family
+							? addresses.filter(({ family }) => family === options.family)
+							: addresses;
+						if (!addressesForFamily.length)
+							return callback(new Error("No address for requested IP family"));
+						if (options.all) return callback(null, addressesForFamily);
+						callback(null, addressesForFamily[0].address, addressesForFamily[0].family);
+					});
+				},
+			},
+			(response) => {
+				// Never follow redirects to an unvalidated destination.
+				response.on("error", reject);
+				response.resume();
+				if (response.statusCode < 200 || response.statusCode >= 300) {
+					reject(new Error(`Custom URL Error: ${response.statusCode}`));
+					return;
+				}
+				resolve(response.statusCode);
+			},
+		);
+		request.on("error", reject);
+	});
 };
 
 // Track last known IPs to avoid log spam
@@ -58,10 +103,10 @@ export const getWanIps = async () => {
 
 	// Fetch IPv4
 	try {
-		const res4 = await fetch("https://api.ipify.org?format=json");
+		const res4 = await fetch("https://api.ipify.org?format=json", { signal: AbortSignal.timeout(10000) });
 		if (res4.ok) {
 			const data = await res4.json();
-			result.ipv4 = data.ip;
+			if (isIP(data.ip) === 4) result.ipv4 = data.ip;
 		}
 	} catch (err) {
 		// Ignore v4 failure if we strictly want what's available
@@ -70,7 +115,7 @@ export const getWanIps = async () => {
 
 	// Fetch IPv6
 	try {
-		const res6 = await fetch("https://api6.ipify.org?format=json");
+		const res6 = await fetch("https://api6.ipify.org?format=json", { signal: AbortSignal.timeout(10000) });
 		if (res6.ok) {
 			const data = await res6.json();
 			// Ensure it's actually an IPv6 address (ipify might return v4 on api6 if only v4 available? No, api6 usually dual stack but returns what connects)
@@ -80,7 +125,7 @@ export const getWanIps = async () => {
 			// But we want BOTH.
 			// Only way to force v6 is if the system supports it.
 			// Let's assume if the result contains a colon, it's v6.
-			if (data.ip.includes(":")) {
+			if (isIP(data.ip) === 6) {
 				result.ipv6 = data.ip;
 			}
 		}
@@ -111,7 +156,10 @@ const providers = {
 			}
 		}
 
-		await Promise.all(promises);
+		// A failed record must not release the process queue while another DNS write is still pending.
+		const updates = await Promise.allSettled(promises);
+		const failed = updates.find((update) => update.status === "rejected");
+		if (failed) throw failed.reason;
 		return `Updated: ${results.join(", ")}`;
 	},
 
@@ -121,15 +169,15 @@ const providers = {
 
 		// DuckDNS supports comma separated domains
 		const domainsStr = provider.domains.join(",");
-		let url = `https://www.duckdns.org/update?domains=${domainsStr}&token=${token}`;
+		let url = `https://www.duckdns.org/update?${new URLSearchParams({ domains: domainsStr, token })}`;
 
 		if (ips.ipv4) url += `&ip=${ips.ipv4}`;
 		if (ips.ipv6) url += `&ipv6=${ips.ipv6}`;
 
-		const res = await fetch(url);
+		const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
 		const text = await res.text();
 
-		if (text !== "OK") {
+		if (!res.ok || text.trim() !== "OK") {
 			throw new Error(`DuckDNS Error: ${text}`);
 		}
 		return "Updated OK";
@@ -151,11 +199,8 @@ const providers = {
 		// SSRF protection — validate URL before fetching
 		validatePublicUrl(finalUrl);
 
-		const res = await fetch(finalUrl);
-		if (!res.ok) {
-			throw new Error(`Custom URL Error: ${res.status} ${res.statusText}`);
-		}
-		return `Request sent: ${res.status}`;
+		const status = await requestPublicUrl(finalUrl);
+		return `Request sent: ${status}`;
 	},
 };
 
@@ -165,8 +210,9 @@ const providers = {
 async function updateCloudflareRecord(token, zone_id, domain, type, ip, results) {
 	// 1. Get Record ID
 	const listRes = await fetch(
-		`https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?type=${type}&name=${domain}`,
+		`https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zone_id)}/dns_records?${new URLSearchParams({ type, name: domain })}`,
 		{
+			signal: AbortSignal.timeout(10000),
 			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
@@ -190,10 +236,11 @@ async function updateCloudflareRecord(token, zone_id, domain, type, ip, results)
 	// 2. Create or Update Record
 	const method = recordId ? "PUT" : "POST";
 	const url = recordId
-		? `https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records/${recordId}`
-		: `https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records`;
+		? `https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zone_id)}/dns_records/${encodeURIComponent(recordId)}`
+		: `https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zone_id)}/dns_records`;
 
 	const updateRes = await fetch(url, {
+		signal: AbortSignal.timeout(10000),
 		method,
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -231,8 +278,9 @@ export const updateProvider = async (provider, ips) => {
 			ipv6: provider.ip_ver !== "v4" ? ips.ipv6 : null,
 		};
 
-		// If filtering results in no IPs (e.g. v4 only but no v4 WAN), we should probably skip or log?
-		// But let the handler decide or just send empty updates (for custom placeholders to be cleared)
+		if (!filteredIps.ipv4 && !filteredIps.ipv6) {
+			throw new Error("No WAN IP available for the selected IP version");
+		}
 
 		const result = await handler(provider, filteredIps);
 
@@ -244,11 +292,13 @@ export const updateProvider = async (provider, ips) => {
 		});
 
 		logger.info(`DDNS [${provider.name}]: Success - ${result}`);
+		return { success: true };
 	} catch (err) {
 		logger.error(`DDNS [${provider.name}]: Failed - ${err.message}`);
 		await /** @type {any} */ (DdnsProvider).query().patchAndFetchById(provider.id, {
 			last_error: err.message,
 		});
+		return { success: false, error: err.message };
 	}
 };
 
@@ -256,7 +306,7 @@ export const updateProvider = async (provider, ips) => {
  * Main Process
  * @param {boolean} force - Force update even if IP hasn't changed
  */
-export const process = async (force = false) => {
+const processOnce = async (force) => {
 	try {
 		const providersList = await /** @type {any} */ (DdnsProvider).query().where("enabled", 1);
 		if (providersList.length === 0) return;
@@ -275,7 +325,7 @@ export const process = async (force = false) => {
 			const v4Changed = provider.ip_ver !== "v6" && currentIps.ipv4 && provider.last_ipv4 !== currentIps.ipv4;
 			const v6Changed = provider.ip_ver !== "v4" && currentIps.ipv6 && provider.last_ipv6 !== currentIps.ipv6;
 
-			if (force || v4Changed || v6Changed) {
+			if (force || provider.last_error || v4Changed || v6Changed) {
 				logger.info(`DDNS: IP changed for ${provider.name} (IP Ver: ${provider.ip_ver}) or Force Update`);
 				await updateProvider(provider, currentIps);
 			}
@@ -285,14 +335,39 @@ export const process = async (force = false) => {
 	}
 };
 
+/** Coalesce interval ticks, preserving a forced refresh requested during a running update. */
+export const process = async (force = false) => {
+	if (runningProcess) {
+		if (force) forcePending = true;
+		return runningProcess;
+	}
+	runningProcess = (async () => {
+		let forced = force;
+		do {
+			forcePending = false;
+			await processOnce(forced);
+			forced = forcePending;
+		} while (forcePending);
+	})();
+	try {
+		await runningProcess;
+	} finally {
+		runningProcess = null;
+	}
+};
+
 /**
  * Initialize Timer
  */
 export const initTimer = () => {
 	if (timer) clearInterval(timer);
+	if (startupTimer) clearTimeout(startupTimer);
 	timer = setInterval(() => process(), INTERVAL);
 	// Run once on startup after a small delay
-	setTimeout(() => process(), 5000);
+	startupTimer = setTimeout(() => {
+		startupTimer = null;
+		void process();
+	}, 5000);
 };
 
 export default {

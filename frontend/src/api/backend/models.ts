@@ -46,8 +46,8 @@ export interface User {
 	name: string;
 	nickname: string;
 	avatar: string;
-	avatar_type: AvatarType;
-	avatar_value: string | null;
+	avatarType: AvatarType;
+	avatarValue: string | null;
 	roles: string[];
 	permissions?: UserPermissions;
 }
@@ -177,12 +177,13 @@ export interface ProxyHost {
 	hstsEnabled: boolean;
 	hstsSubdomains: boolean;
 	maintenanceActive: boolean;
-	maintenanceStart?: string;
-	maintenanceEnd?: string;
+	maintenanceStart?: string | null;
+	maintenanceEnd?: string | null;
 	maintenanceReason?: string;
 	// PHP hosting (for scheme=path)
 	phpEnabled?: boolean;
 	phpVersion?: PhpVersion;
+	phpOverrideIni?: string;
 	indexFile?: string; // Add indexFile
 	// Git Sync (for scheme=path)
 	gitRepoUrl?: string | null;
@@ -303,13 +304,14 @@ export interface CloudflaredTunnel {
 export interface AiConfig {
 	enabled: boolean;
 	provider: AiProvider;
-	api_key?: string;
-	base_url?: string;
+	apiKey?: string;
+	baseUrl?: string;
 	model?: string;
-	num_ctx?: number;
-	num_batch?: number;
-	num_thread?: number;
-	keep_alive?: string;
+	numCtx?: number;
+	numBatch?: number;
+	numThread?: number;
+	keepAlive?: string;
+	systemPrompt?: string;
 }
 
 export interface AiChatMessage {
@@ -333,7 +335,7 @@ export interface DdnsProvider {
 	provider: DdnsProviderName;
 	domains: string[];
 	config: Record<string, unknown>;
-	ip_ver?: IpVersion;
+	ipVer?: IpVersion;
 	lastIpv4?: string;
 	lastIpv6?: string;
 	lastUpdatedOn?: string;
@@ -384,7 +386,7 @@ export interface ChatIntegration {
 	token?: string;
 	enabled: boolean;
 	config: {
-		allowed_ids: (string | number)[];
+		allowedIds: (string | number)[];
 	};
 	meta: Record<string, unknown>;
 	user?: User;

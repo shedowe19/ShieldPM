@@ -47,10 +47,12 @@ router.post("/", jwtdecode(), async (req, res) => {
  * Update
  */
 router.put("/:id", jwtdecode(), async (req, res) => {
-	const integration = await ChatIntegrationModel.query().findById(req.params.id);
+	await res.locals.access.can("chat:update", req.params.id);
+	const integration = await ChatIntegrationModel.query()
+		.findById(req.params.id)
+		.where("user_id", res.locals.access.token.getUserId());
 	if (!integration) throw new errs.ItemNotFoundError();
 
-	await res.locals.access.can("chat:update", req.params.id);
 	const payload = await apiValidator(getValidationSchema("/chat/{integrationID}", "put"), req.body);
 	payload.id = Number.parseInt(req.params.id, 10);
 
@@ -71,13 +73,14 @@ router.put("/:id", jwtdecode(), async (req, res) => {
  * DELETE /api/chat-integrations/:id
  */
 router.delete("/:id", jwtdecode(), async (req, res) => {
-	const integration = await ChatIntegrationModel.query().findById(req.params.id);
+	await res.locals.access.can("chat:delete", req.params.id);
+	const integration = await ChatIntegrationModel.query()
+		.findById(req.params.id)
+		.where("user_id", res.locals.access.token.getUserId());
 	if (!integration) throw new errs.ItemNotFoundError();
 
-	await res.locals.access.can("chat:delete", req.params.id);
-
-	await internalChat.stopBot(integration.id);
 	await ChatIntegrationModel.query().deleteById(Number.parseInt(req.params.id, 10));
+	await internalChat.stopBot(integration.id);
 
 	res.json({ status: "ok" });
 });

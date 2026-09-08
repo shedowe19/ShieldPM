@@ -41,12 +41,10 @@ import { intl, T } from "src/locale";
 
 const QUERY_KEY = ["2fa", "me"] as const;
 
-const METHOD_LABELS: Record<string, string> = {
-	totp: intl.formatMessage({ id: "2fa.method.totp" }),
-	yubikey: intl.formatMessage({ id: "2fa.method.yubikey" }),
-	passkey: intl.formatMessage({ id: "2fa.method.passkey" }),
-	duo: intl.formatMessage({ id: "2fa.method.duo" }),
-};
+const methodLabel = (method: string) =>
+	["totp", "yubikey", "passkey", "duo"].includes(method)
+		? intl.formatMessage({ id: `2fa.method.${method}` })
+		: method;
 
 const METHOD_ICONS: Record<string, React.ReactNode> = {
 	totp: <Smartphone className="h-5 w-5 text-blue-500" />,
@@ -58,22 +56,29 @@ const METHOD_ICONS: Record<string, React.ReactNode> = {
 // ---------------------------------------------------------------------------
 // TOTP Setup Dialog
 // ---------------------------------------------------------------------------
-function TotpSetup({ onComplete }: { onComplete: () => void }) {
+function TotpSetup({ onComplete, onBusyChange }: { onComplete: () => void; onBusyChange: (busy: boolean) => void }) {
 	const [qr, setQr] = useState<string | null>(null);
+	const setupRequest = useRef<ReturnType<typeof setup2faTotp> | null>(null);
 	const [code, setCode] = useState("");
 	const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	useEffect(() => {
+		onBusyChange(loading);
+		return () => onBusyChange(false);
+	}, [loading, onBusyChange]);
 
 	useEffect(() => {
 		setLoading(true);
-		setup2faTotp("me")
+		setupRequest.current ??= setup2faTotp("me");
+		setupRequest.current
 			.then((r) => setQr(r.qrDataUrl))
 			.catch((e) => setError(e.message))
 			.finally(() => setLoading(false));
 	}, []);
 
 	const handleEnable = async () => {
+		if (loading || !/^\d{6}$/.test(code)) return;
 		setError("");
 		setLoading(true);
 		try {
@@ -103,7 +108,7 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 						<span key={c}>{c}</span>
 					))}
 				</div>
-				<Button onClick={onComplete} className="w-full">
+				<Button type="button" onClick={onComplete} className="w-full">
 					<T id="2fa.done" />
 				</Button>
 			</div>
@@ -163,7 +168,7 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 								handleEnable();
 							}}
 							className="w-full"
-							disabled={loading || code.length < 6}
+							disabled={loading || !/^\d{6}$/.test(code)}
 						>
 							{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 							<T id="2fa.totp.verify-enable" />
@@ -178,11 +183,21 @@ function TotpSetup({ onComplete }: { onComplete: () => void }) {
 // ---------------------------------------------------------------------------
 // YubiKey Setup
 // ---------------------------------------------------------------------------
-function YubikeySetup({ onComplete }: { onComplete: () => void }) {
+function YubikeySetup({
+	onComplete,
+	onBusyChange,
+}: {
+	onComplete: (backupCodes?: string[] | null) => void;
+	onBusyChange: (busy: boolean) => void;
+}) {
 	const [otp, setOtp] = useState("");
 	const [label, setLabel] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	useEffect(() => {
+		onBusyChange(loading);
+		return () => onBusyChange(false);
+	}, [loading, onBusyChange]);
 	const otpRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -190,12 +205,16 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 	}, []);
 
 	const handleAdd = async (e?: React.SyntheticEvent) => {
-		if (e) e.preventDefault();
+		if (e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+		if (loading || otp.length < 32) return;
 		setError("");
 		setLoading(true);
 		try {
-			await add2faYubikey("me", otp, label || intl.formatMessage({ id: "2fa.method.yubikey" }));
-			onComplete();
+			const result = await add2faYubikey("me", otp, label || intl.formatMessage({ id: "2fa.method.yubikey" }));
+			onComplete(result.backupCodes);
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);
 		} finally {
@@ -254,33 +273,64 @@ function YubikeySetup({ onComplete }: { onComplete: () => void }) {
 // ---------------------------------------------------------------------------
 // Passkey Setup
 // ---------------------------------------------------------------------------
-function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | null) => void }) {
+function PasskeySetup({
+	onComplete,
+	onBusyChange,
+}: {
+	onComplete: (backupCodes: string[] | null) => void;
+	onBusyChange: (busy: boolean) => void;
+}) {
 	const [label, setLabel] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	const mounted = useRef(false);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
+	useEffect(() => {
+		onBusyChange(loading);
+		return () => onBusyChange(false);
+	}, [loading, onBusyChange]);
 
 	const handleRegister = async () => {
+		if (loading) return;
 		setError("");
 		setLoading(true);
 		try {
 			const { options, challengeId } = await beginPasskeyRegistration("me");
+			if (!mounted.current) return;
 			const registrationResponse = await startRegistration({ optionsJSON: options as any });
+			if (!mounted.current) return;
 			const result = await completePasskeyRegistration(
 				"me",
 				challengeId,
 				registrationResponse,
 				label || intl.formatMessage({ id: "2fa.method.passkey" }),
 			);
+			if (!mounted.current) return;
 			onComplete(result.backupCodes);
 		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+			if (mounted.current && err instanceof Error) setError(err.message);
 		} finally {
-			setLoading(false);
+			if (mounted.current) setLoading(false);
 		}
 	};
 
 	return (
-		<div className="space-y-4">
+		<div
+			className="space-y-4"
+			role="form"
+			onKeyDown={(event) => {
+				if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+					event.preventDefault();
+					event.stopPropagation();
+					void handleRegister();
+				}
+			}}
+		>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
@@ -300,7 +350,7 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 					placeholder={intl.formatMessage({ id: "2fa.passkey.label-placeholder" })}
 				/>
 			</div>
-			<Button onClick={handleRegister} className="w-full" disabled={loading}>
+			<Button type="button" onClick={handleRegister} className="w-full" disabled={loading}>
 				{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
 				<T id="2fa.passkey.register" />
 			</Button>
@@ -311,17 +361,28 @@ function PasskeySetup({ onComplete }: { onComplete: (backupCodes: string[] | nul
 // ---------------------------------------------------------------------------
 // Duo Security Setup
 // ---------------------------------------------------------------------------
-function DuoSetup({ onComplete }: { onComplete: () => void }) {
+function DuoSetup({
+	onComplete,
+	onBusyChange,
+}: {
+	onComplete: (backupCodes?: string[] | null) => void;
+	onBusyChange: (busy: boolean) => void;
+}) {
 	const [form, setForm] = useState({ clientId: "", clientSecret: "", apiHost: "", redirectUrl: "" });
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	useEffect(() => {
+		onBusyChange(loading);
+		return () => onBusyChange(false);
+	}, [loading, onBusyChange]);
 
 	const handleSetup = async () => {
+		if (loading || Object.values(form).some((value) => !value.trim())) return;
 		setError("");
 		setLoading(true);
 		try {
-			await setup2faDuo("me", form);
-			onComplete();
+			const result = await setup2faDuo("me", form);
+			onComplete(result.backupCodes);
 		} catch (err) {
 			if (err instanceof Error) setError(err.message);
 		} finally {
@@ -386,7 +447,7 @@ function DuoSetup({ onComplete }: { onComplete: () => void }) {
 					handleSetup();
 				}}
 				className="w-full"
-				disabled={loading}
+				disabled={loading || Object.values(form).some((value) => !value.trim())}
 			>
 				{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 				<T id="2fa.duo.save-verify" />
@@ -403,17 +464,26 @@ type SetupView = "totp" | "yubikey" | "passkey" | "duo" | "backup_codes" | null;
 export default function SecuritySettings() {
 	const queryClient = useQueryClient();
 	const [setupView, setSetupView] = useState<SetupView>(null);
+	const [setupBusy, setSetupBusy] = useState(false);
 	const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
 	const [error, setError] = useState("");
 
-	const { data, isLoading } = useQuery({
+	const {
+		data,
+		isLoading,
+		isError,
+		error: queryError,
+	} = useQuery({
 		queryKey: QUERY_KEY,
 		queryFn: () => get2fa("me"),
 	});
 
 	const removeMutation = useMutation({
 		mutationFn: (methodId: number) => remove2faMethod("me", methodId),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+		onSuccess: () => {
+			setBackupCodes(null);
+			return queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+		},
 		onError: (err: Error) => setError(err.message),
 	});
 
@@ -434,12 +504,24 @@ export default function SecuritySettings() {
 
 	const activeMethods: TwoFaMethod[] = data?.methods?.filter((m) => m.isVerified) ?? [];
 	const hasMethods = activeMethods.length > 0;
+	const mutationPending = removeMutation.isPending || regenMutation.isPending;
 
 	if (isLoading) {
 		return (
 			<div className="flex justify-center py-12">
 				<Loader2 className="h-8 w-8 animate-spin" />
 			</div>
+		);
+	}
+
+	if (isError) {
+		return (
+			<Alert variant="destructive">
+				<AlertTitle>
+					<T id="2fa.error" />
+				</AlertTitle>
+				<AlertDescription>{queryError?.message || <T id="error.unknown" />}</AlertDescription>
+			</Alert>
 		);
 	}
 
@@ -481,7 +563,13 @@ export default function SecuritySettings() {
 								<span key={c}>{c}</span>
 							))}
 						</div>
-						<Button variant="outline" size="sm" className="mt-2" onClick={() => setBackupCodes(null)}>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="mt-2"
+							onClick={() => setBackupCodes(null)}
+						>
 							<T id="2fa.backup-codes.saved" />
 						</Button>
 					</AlertDescription>
@@ -509,16 +597,16 @@ export default function SecuritySettings() {
 									{METHOD_ICONS[method.type] ?? <Shield className="h-5 w-5" />}
 									<div>
 										<p className="text-sm font-medium">{method.label}</p>
-										<p className="text-xs text-muted-foreground">
-											{METHOD_LABELS[method.type] ?? method.type}
-										</p>
+										<p className="text-xs text-muted-foreground">{methodLabel(method.type)}</p>
 									</div>
 								</div>
 								<Button
+									type="button"
 									variant="ghost"
 									size="sm"
+									aria-label={intl.formatMessage({ id: "action.delete" })}
 									className="text-destructive hover:text-destructive"
-									disabled={removeMutation.isPending}
+									disabled={mutationPending || !!setupView}
 									onClick={() => removeMutation.mutate(method.id)}
 								>
 									<Trash2 className="h-4 w-4" />
@@ -528,10 +616,11 @@ export default function SecuritySettings() {
 
 						<div className="flex gap-2 pt-2">
 							<Button
+								type="button"
 								variant="outline"
 								size="sm"
 								onClick={() => regenMutation.mutate()}
-								disabled={regenMutation.isPending}
+								disabled={mutationPending || !!setupView}
 							>
 								{regenMutation.isPending ? (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -551,15 +640,33 @@ export default function SecuritySettings() {
 					<CardHeader>
 						<CardTitle className="text-base flex items-center gap-2">
 							{METHOD_ICONS[setupView] ?? <Shield className="h-5 w-5" />}
-							<T id="2fa.setup" data={{ method: METHOD_LABELS[setupView] ?? setupView }} />
+							<T id="2fa.setup" data={{ method: methodLabel(setupView) }} />
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						{setupView === "totp" && <TotpSetup onComplete={() => handleSetupComplete()} />}
-						{setupView === "yubikey" && <YubikeySetup onComplete={() => handleSetupComplete()} />}
-						{setupView === "passkey" && <PasskeySetup onComplete={(codes) => handleSetupComplete(codes)} />}
-						{setupView === "duo" && <DuoSetup onComplete={() => handleSetupComplete()} />}
-						<Button variant="ghost" size="sm" className="mt-4 w-full" onClick={() => setSetupView(null)}>
+						{setupView === "totp" && (
+							<TotpSetup onBusyChange={setSetupBusy} onComplete={() => handleSetupComplete()} />
+						)}
+						{setupView === "yubikey" && (
+							<YubikeySetup onBusyChange={setSetupBusy} onComplete={handleSetupComplete} />
+						)}
+						{setupView === "passkey" && (
+							<PasskeySetup
+								onBusyChange={setSetupBusy}
+								onComplete={(codes) => handleSetupComplete(codes)}
+							/>
+						)}
+						{setupView === "duo" && (
+							<DuoSetup onBusyChange={setSetupBusy} onComplete={handleSetupComplete} />
+						)}
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							className="mt-4 w-full"
+							disabled={setupBusy}
+							onClick={() => setSetupView(null)}
+						>
 							<T id="2fa.cancel" />
 						</Button>
 					</CardContent>
@@ -585,12 +692,13 @@ export default function SecuritySettings() {
 								<button
 									key={type}
 									type="button"
+									disabled={mutationPending}
 									onClick={() => setSetupView(type)}
 									className="flex items-start gap-3 rounded-lg border p-4 text-left hover:bg-muted transition-colors"
 								>
 									{METHOD_ICONS[type]}
 									<div>
-										<p className="text-sm font-medium">{METHOD_LABELS[type]}</p>
+										<p className="text-sm font-medium">{methodLabel(type)}</p>
 										<p className="text-xs text-muted-foreground mt-0.5">
 											<T id={descId} />
 										</p>

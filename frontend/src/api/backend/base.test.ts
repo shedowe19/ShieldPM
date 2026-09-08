@@ -11,7 +11,7 @@ vi.mock("src/modules/AuthStore", () => ({
 
 import { queryClient } from "src/api/queryClient";
 import AuthStore from "src/modules/AuthStore";
-import { download, downloadPost, get } from "./base";
+import { del, download, downloadPost, get, post } from "./base";
 
 describe("authenticated request failures", () => {
 	const authenticationExpired = vi.fn();
@@ -39,6 +39,69 @@ describe("authenticated request failures", () => {
 
 		expect(AuthStore.clear).toHaveBeenCalledOnce();
 		expect(authenticationExpired).toHaveBeenCalledOnce();
+	});
+
+	it("expires authentication and cached data even when the unauthorized body is not JSON", async () => {
+		queryClient.setQueryData(["profile"], { email: "admin@example.test" });
+		vi.mocked(fetch).mockResolvedValue(new Response("<html>Unauthorized</html>", { status: 401 }));
+
+		await expect(get({ url: "nginx/proxy-hosts" })).rejects.toThrow("HTTP 401");
+
+		expect(AuthStore.clear).toHaveBeenCalledOnce();
+		expect(authenticationExpired).toHaveBeenCalledOnce();
+		expect(queryClient.getQueryData(["profile"])).toBeUndefined();
+	});
+
+	it("keeps silent authentication failures silent without preserving stale cache", async () => {
+		queryClient.setQueryData(["profile"], { email: "admin@example.test" });
+		vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 401 }));
+
+		await expect(get({ url: "tokens/refresh", silentAuth: true })).rejects.toThrow("HTTP 401");
+
+		expect(authenticationExpired).not.toHaveBeenCalled();
+		expect(AuthStore.clear).toHaveBeenCalledOnce();
+		expect(queryClient.getQueryData(["profile"])).toBeUndefined();
+	});
+
+	it.each([null, {}, { error: null }, { error: { message: 42 } }])(
+		"reports the HTTP status for unexpected error payloads: %j",
+		async (payload) => {
+			vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(payload), { status: 502 }));
+			await expect(get({ url: "nginx/proxy-hosts" })).rejects.toThrow("HTTP 502");
+		},
+	);
+
+	it("preserves the backend's localized error key", async () => {
+		vi.mocked(fetch).mockResolvedValue(
+			new Response(JSON.stringify({ error: { messageI18n: "error.permission", message: "Forbidden" } }), {
+				status: 403,
+			}),
+		);
+		await expect(get({ url: "nginx/proxy-hosts" })).rejects.toThrow("error.permission");
+	});
+});
+
+describe("successful response bodies", () => {
+	afterEach(() => vi.unstubAllGlobals());
+
+	it("accepts the empty logout response", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+		await expect(post({ url: "tokens/logout" })).resolves.toBeUndefined();
+	});
+
+	it("accepts empty DELETE responses", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+		await expect(del({ url: "tokens" })).resolves.toBeUndefined();
+	});
+
+	it("accepts JSON null without attempting to read a CSRF token from it", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("null", { status: 200 })));
+		await expect(get({ url: "test" })).resolves.toBeNull();
+	});
+
+	it("continues to reject invalid JSON on successful data responses", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("invalid", { status: 200 })));
+		await expect(get({ url: "nginx/proxy-hosts" })).rejects.toThrow();
 	});
 });
 

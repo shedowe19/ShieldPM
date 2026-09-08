@@ -1,23 +1,37 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import $RefParser from "@apidevtools/json-schema-ref-parser";
+import PACKAGE from "../package.json" with { type: "json" };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let compiledSchema = null;
+let compilation = null;
 
 /**
  * Compiles the schema, by dereferencing it, only once
  * and returns the memory cached value
  */
 const getCompiledSchema = async () => {
-	if (compiledSchema === null) {
-		compiledSchema = await $RefParser.dereference(`${__dirname}/swagger.json`, {
-			mutateInputSchema: false,
-		});
+	if (compiledSchema !== null) {
+		return compiledSchema;
 	}
-	return compiledSchema;
+	if (compilation === null) {
+		compilation = $RefParser
+			.dereference(`${__dirname}/swagger.json`, {
+				mutateInputSchema: false,
+			})
+			.then((schema) => {
+				schema.info.version = PACKAGE.version;
+				compiledSchema = schema;
+				return schema;
+			})
+			.finally(() => {
+				compilation = null;
+			});
+	}
+	return compilation;
 };
 
 /**

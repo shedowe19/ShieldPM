@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, Fragment, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, Fragment, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useIntervalWhen } from "rooks";
 import { getToken, loginAsUser, refreshToken, restoreSession, type TokenResponse } from "src/api/backend";
 import * as api from "src/api/backend/base";
@@ -28,6 +28,10 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const [authenticated, setAuthenticated] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [sessionVersion, setSessionVersion] = useState(0);
+	const [isDuoCallback] = useState(
+		() => window.location.pathname.replace(/\/+$/, "").toLowerCase() === "/duo-callback",
+	);
+	const sessionGeneration = useRef(0);
 
 	const handleTokenUpdate = useCallback((response: TokenResponse) => {
 		AuthStore.set(response);
@@ -36,6 +40,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	const completeLogin = useCallback(
 		(response: TokenResponse) => {
+			sessionGeneration.current += 1;
 			queryClient.clear();
 			handleTokenUpdate(response);
 		},
@@ -44,26 +49,63 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
+		// Locale changes remount this provider. The retained refresh cookie belongs
+		// to the administrator, so keep an in-memory impersonated session intact.
+		if (AuthStore.isImpersonating) {
+			setAuthenticated(true);
+			setLoading(false);
+			return;
+		}
+
+		// Duo establishes its session through the callback. A competing refresh
+		// could expire its newly issued cookies after the callback succeeds.
+		if (isDuoCallback) {
+			setLoading(false);
+			return;
+		}
+
+		let active = true;
+		const generation = sessionGeneration.current;
 		refreshToken()
-			.then(handleTokenUpdate)
+			.then((response) => {
+				if (active && generation === sessionGeneration.current) {
+					handleTokenUpdate(response);
+				}
+			})
 			.catch(() => {
 				// No session or expired
-				setAuthenticated(false);
+				if (active && generation === sessionGeneration.current) {
+					setAuthenticated(false);
+				}
 			})
 			.finally(() => {
-				setLoading(false);
+				if (active) {
+					setLoading(false);
+				}
 			});
-	}, [handleTokenUpdate]);
+		return () => {
+			active = false;
+		};
+	}, [handleTokenUpdate, isDuoCallback]);
 
 	useEffect(() => {
-		const handleAuthenticationExpired = () => setAuthenticated(false);
+		const handleAuthenticationExpired = () => {
+			sessionGeneration.current += 1;
+			setAuthenticated(false);
+		};
 
 		window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
-		return () => window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+		return () => {
+			// A locale change replaces this provider while its requests may still be pending.
+			sessionGeneration.current += 1;
+			window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+		};
 	}, []);
 
 	const login = async (identity: string, secret: string) => {
+		const generation = ++sessionGeneration.current;
 		const response = await getToken(identity, secret);
+		if (generation !== sessionGeneration.current) return;
 		// If the server requires 2FA, it returns an object with requires_2fa: true.
 		// We surface this to the caller as a thrown value so the Login page can
 		// switch to the 2FA step without treating it as an error.
@@ -75,20 +117,28 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const loginAs = async (id: number) => {
+		const generation = ++sessionGeneration.current;
 		const response = await loginAsUser(id);
-		AuthStore.add(response);
+		if (generation !== sessionGeneration.current) return;
+		sessionGeneration.current += 1;
+		AuthStore.add(response, true);
 		queryClient.clear();
 		setSessionVersion((version) => version + 1);
 	};
 
 	const logout = async () => {
+		const generation = ++sessionGeneration.current;
 		try {
 			// Check if we have a backup admin session cookie on the backend
 			const response = await restoreSession();
+			if (generation !== sessionGeneration.current) return;
+			sessionGeneration.current += 1;
 			AuthStore.add(response);
 			queryClient.clear();
 			setSessionVersion((version) => version + 1);
 		} catch (_err) {
+			if (generation !== sessionGeneration.current) return;
+			sessionGeneration.current += 1;
 			// No backup session found or failed to restore, do a full logout
 			AuthStore.clear();
 			setAuthenticated(false);
@@ -99,18 +149,32 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const refresh = async () => {
-		const response = await refreshToken();
-		handleTokenUpdate(response);
+		// Impersonation only replaces the access cookie; refreshing would silently
+		// restore the administrator's identity without resetting the target's UI.
+		if (AuthStore.isImpersonating) return;
+		const generation = sessionGeneration.current;
+		try {
+			const response = await refreshToken();
+			if (generation === sessionGeneration.current) {
+				handleTokenUpdate(response);
+			}
+		} catch {
+			// The silent refresh client clears AuthStore on 401. Network failures keep
+			// the current session so the next interval can retry without logging out.
+			if (generation === sessionGeneration.current && !AuthStore.active) {
+				setAuthenticated(false);
+			}
+		}
 	};
 
 	useIntervalWhen(
 		() => {
 			if (authenticated) {
-				refresh();
+				return refresh();
 			}
 		},
 		tokenRefreshInterval,
-		true,
+		authenticated,
 	);
 
 	const value = { authenticated, completeLogin, login, logout, loginAs, loading };

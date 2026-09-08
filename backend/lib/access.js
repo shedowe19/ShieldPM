@@ -205,7 +205,10 @@ export default function (tokenString) {
 		 */
 		load: async (allowInternal) => {
 			if (tokenString) {
-				return await Token.load(tokenString);
+				// Authentication includes the current account and its scopes, even
+				// for routes that only inspect the token's user ID afterwards.
+				await this.init();
+				return tokenData;
 			}
 			allowInternalAccess = allowInternal;
 			return allowInternal || null;

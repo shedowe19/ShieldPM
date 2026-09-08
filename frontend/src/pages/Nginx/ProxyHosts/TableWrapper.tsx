@@ -11,7 +11,7 @@ import { Input } from "src/components/ui/input";
 import { useProxyHostsPage } from "src/hooks";
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
-import { showObjectSuccess } from "src/notifications";
+import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { showAccessListModal, showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "./lazy";
 import Table from "./Table";
@@ -25,32 +25,17 @@ export default function TableWrapper() {
 		{
 			limit: 100,
 			page,
-			query: search,
+			query: search.trim().toLowerCase(),
 		},
 	);
 	const rows = data?.items ?? [];
 	const pagination = data?.pagination;
-	const totalItems = pagination?.totalItems ?? 0;
 
 	useEffect(() => {
-		if (page > 1 && totalItems > 0 && rows.length === 0) {
-			setPage(page - 1);
+		if (!isFetching && pagination?.page === page && page > Math.max(1, pagination.totalPages)) {
+			setPage(Math.max(1, pagination.totalPages));
 		}
-	}, [page, rows.length, totalItems]);
-
-	if (isLoading) {
-		return <LoadingPage />;
-	}
-
-	if (isError) {
-		return (
-			<Alert variant="destructive">
-				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>Error</AlertTitle>
-				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
-			</Alert>
-		);
-	}
+	}, [isFetching, page, pagination]);
 
 	const handleDelete = async (id: number) => {
 		await deleteProxyHost(id);
@@ -58,10 +43,14 @@ export default function TableWrapper() {
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleProxyHost(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
+		try {
+			await toggleProxyHost(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
+		} catch (error) {
+			showError(error instanceof Error ? error.message : String(error));
+		}
 	};
 
 	return (
@@ -72,7 +61,7 @@ export default function TableWrapper() {
 					<T id="proxy-hosts" />
 				</CardTitle>
 				<div className="flex items-center space-x-2">
-					{rows.length > 0 || search !== "" ? (
+					{rows.length > 0 || search !== "" || isLoading || isError ? (
 						<div className="relative w-full max-w-sm">
 							<IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
@@ -82,7 +71,7 @@ export default function TableWrapper() {
 								value={search}
 								onChange={(e) => {
 									setPage(1);
-									setSearch(e.target.value.toLowerCase().trim());
+									setSearch(e.target.value);
 								}}
 							/>
 						</div>
@@ -110,50 +99,70 @@ export default function TableWrapper() {
 				</div>
 			</CardHeader>
 			<CardContent>
-				<Table
-					data={rows}
-					isFiltered={!!search}
-					isFetching={isFetching}
-					onEditAccessList={(id: number) => void showAccessListModal(id)}
-					onEdit={(id: number) => void showProxyHostModal(id)}
-					onDelete={(id: number) =>
-						showDeleteConfirmModal({
-							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />,
-							onConfirm: () => handleDelete(id),
-							invalidations: [["proxy-hosts"], [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id]],
-							children: (
-								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
-							),
-						})
-					}
-					onDisableToggle={handleDisableToggle}
-					onNew={() => void showProxyHostModal("new")}
-				/>
-				{pagination && pagination.totalPages > 1 ? (
-					<div className="mt-4 flex items-center justify-end gap-2" aria-live="polite">
-						<Button
-							variant="outline"
-							size="icon"
-							aria-label={intl.formatMessage({ id: "pagination.previous" })}
-							disabled={page === 1}
-							onClick={() => setPage(page - 1)}
-						>
-							<IconChevronLeft className="h-4 w-4" />
-						</Button>
-						<span className="text-sm text-muted-foreground">
-							<T id="pagination.page-info" data={{ current: page, total: pagination.totalPages }} />
-						</span>
-						<Button
-							variant="outline"
-							size="icon"
-							aria-label={intl.formatMessage({ id: "pagination.next" })}
-							disabled={page === pagination.totalPages}
-							onClick={() => setPage(page + 1)}
-						>
-							<IconChevronRight className="h-4 w-4" />
-						</Button>
-					</div>
-				) : null}
+				{isLoading ? (
+					<LoadingPage />
+				) : isError ? (
+					<Alert variant="destructive">
+						<AlertCircle className="h-4 w-4" />
+						<AlertTitle>Error</AlertTitle>
+						<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
+					</Alert>
+				) : (
+					<>
+						<Table
+							data={rows}
+							isFiltered={!!search}
+							isFetching={isFetching}
+							onEditAccessList={(id: number) => void showAccessListModal(id)}
+							onEdit={(id: number) => void showProxyHostModal(id)}
+							onDelete={(id: number) =>
+								showDeleteConfirmModal({
+									title: (
+										<T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }} />
+									),
+									onConfirm: () => handleDelete(id),
+									invalidations: [["proxy-hosts"], [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id]],
+									children: (
+										<T
+											id="object.delete.content"
+											tData={{ object: AUDIT_LOG_OBJECT_TYPE.PROXY_HOST }}
+										/>
+									),
+								})
+							}
+							onDisableToggle={handleDisableToggle}
+							onNew={() => void showProxyHostModal("new")}
+						/>
+						{pagination && pagination.totalPages > 1 ? (
+							<div className="mt-4 flex items-center justify-end gap-2" aria-live="polite">
+								<Button
+									variant="outline"
+									size="icon"
+									aria-label={intl.formatMessage({ id: "pagination.previous" })}
+									disabled={page === 1}
+									onClick={() => setPage(page - 1)}
+								>
+									<IconChevronLeft className="h-4 w-4" />
+								</Button>
+								<span className="text-sm text-muted-foreground">
+									<T
+										id="pagination.page-info"
+										data={{ current: page, total: pagination.totalPages }}
+									/>
+								</span>
+								<Button
+									variant="outline"
+									size="icon"
+									aria-label={intl.formatMessage({ id: "pagination.next" })}
+									disabled={page === pagination.totalPages}
+									onClick={() => setPage(page + 1)}
+								>
+									<IconChevronRight className="h-4 w-4" />
+								</Button>
+							</div>
+						) : null}
+					</>
+				)}
 			</CardContent>
 		</Card>
 	);

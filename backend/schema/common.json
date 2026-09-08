@@ -214,24 +214,24 @@
 					"schema": {
 						"type": "object",
 						"additionalProperties": false,
-						"required": [
-							"certificate",
-							"certificate_key"
-						],
 						"properties": {
 							"certificate": {
 								"type": "string",
-								"example": "-----BEGIN CERTIFICATE-----\nMIID...-----END CERTIFICATE-----"
+								"example": "-----BEGIN CERTIFICATE-----\nMIID...-----END CERTIFICATE-----",
+								"format": "binary"
 							},
 							"certificate_key": {
 								"type": "string",
-								"example": "-----BEGIN CERTIFICATE-----\nMIID...-----END CERTIFICATE-----"
+								"example": "-----BEGIN CERTIFICATE-----\nMIID...-----END CERTIFICATE-----",
+								"format": "binary"
 							},
 							"intermediate_certificate": {
 								"type": "string",
-								"example": "-----BEGIN CERTIFICATE-----\nMIID...-----END CERTIFICATE-----"
+								"example": "-----BEGIN CERTIFICATE-----\nMIID...-----END CERTIFICATE-----",
+								"format": "binary"
 							}
-						}
+						},
+						"minProperties": 1
 					},
 					"example": {
 						"certificate": "-----BEGIN CERTIFICATE-----\nMIID...-----END CERTIFICATE-----",

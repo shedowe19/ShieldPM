@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createStream, getStream, type Stream, updateStream } from "src/api/backend";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { optimisticQueryUpdate } from "./optimisticQueryUpdate";
 
 const fetchStream = (id: number | "new") => {
 	if (id === "new") {
@@ -36,15 +37,14 @@ const useSetStream = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.STREAM, values.id]);
-			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.STREAM, values.id], (old: Stream) => ({
+			return optimisticQueryUpdate<Stream>(queryClient, [AUDIT_LOG_OBJECT_TYPE.STREAM, values.id], (old) => ({
 				...old,
 				...values,
 			}));
-			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.STREAM, values.id], previousObject);
 		},
 		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
-		onSuccess: async ({ id }: Stream) => {
+		onSettled: (data, _error, values) => {
+			const id = data?.id ?? values.id;
 			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.STREAM, id] });
 			queryClient.invalidateQueries({ queryKey: ["streams"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });

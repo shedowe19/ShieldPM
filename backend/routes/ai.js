@@ -46,13 +46,13 @@ router.post("/models", jwtdecode(), async (req, res) => {
  */
 router.post("/chat", jwtdecode(), async (req, res) => {
 	logger.debug("AI Chat request received:", {
-		message: req.body.message,
+		messageLength: typeof req.body.message === "string" ? req.body.message.length : 0,
 		historyLength: req.body.history?.length || 0,
 	});
 	const payload = await apiValidator(getValidationSchema("/ai/chat", "post"), req.body);
 	const { message, history } = payload;
 	const result = await internalAi.chat(res.locals.access, message, history);
-	logger.debug("AI Chat response:", result);
+	logger.debug("AI Chat response:", { contentLength: result.content?.length || 0 });
 	res.status(200).json(result);
 });
 

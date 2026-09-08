@@ -39,7 +39,7 @@ export function ServiceIcon({
 	className = "",
 	showTooltip = false,
 }: ServiceIconProps) {
-	const [hasError, setHasError] = useState(false);
+	const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
 	// Determine which icon to show
 	let iconUrl: string | null = null;
@@ -62,7 +62,7 @@ export function ServiceIcon({
 	}
 
 	// Handle image load error or no icon found - show fallback
-	if (!iconUrl || hasError) {
+	if (!iconUrl || failedUrl === iconUrl) {
 		return (
 			<IconServer
 				size={size}
@@ -80,7 +80,7 @@ export function ServiceIcon({
 			width={size}
 			height={size}
 			className={cn("rounded shrink-0 object-contain", className)}
-			onError={() => setHasError(true)}
+			onError={() => setFailedUrl(iconUrl)}
 			loading="lazy"
 			decoding="async"
 		/>

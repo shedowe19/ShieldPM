@@ -37,7 +37,7 @@ router.use(userIdFromMe);
 /**
  * Helper: assert the requesting user is the target user or an admin.
  */
-const requireSelfOrAdmin = (req, res) => {
+const requireSelfOrAdmin = async (req, res) => {
 	const access = res.locals.access;
 	const requesterId = Number(access?.token?.getUserId?.());
 
@@ -51,10 +51,12 @@ const requireSelfOrAdmin = (req, res) => {
 	const rawParam = req.params.user_id;
 	const targetUserId = rawParam === "me" ? requesterId : Number(rawParam);
 
-	const isAdmin = access?.token?.hasScope?.("admin") === true;
-	if (!isAdmin && requesterId !== targetUserId) {
-		throw new errs.PermissionError("You can only manage your own 2FA settings");
+	if (!Number.isSafeInteger(targetUserId) || targetUserId <= 0) {
+		throw new errs.ValidationError("Invalid user ID");
 	}
+	// Validate the current account, user scope and database roles. A signed
+	// pending-2FA token contains a user ID but must never manage 2FA methods.
+	await access.can("users:update", targetUserId);
 
 	return targetUserId;
 };
@@ -64,7 +66,7 @@ const requireSelfOrAdmin = (req, res) => {
 // List active 2FA methods for a user
 // ---------------------------------------------------------------------------
 router.get("/", async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 
 	const methods = await UserTwoFa.query()
 		.where({ user_id: userId, is_deleted: 0 })
@@ -85,7 +87,7 @@ router.get("/", async (req, res) => {
  * Begin TOTP setup — returns a QR code data URL.
  */
 router.post("/totp/setup", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const access = res.locals.access;
 	const userEmail = access?.token?.get("email") || req.body.email;
 
@@ -115,7 +117,7 @@ router.post("/totp/setup", twoFaRateLimiter, async (req, res) => {
  * Verify a TOTP code and activate the method.
  */
 router.post("/totp/enable", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const { code } = req.body;
 
 	if (!code || typeof code !== "string") {
@@ -135,7 +137,7 @@ router.post("/totp/enable", twoFaRateLimiter, async (req, res) => {
  * Register a YubiKey by validating a fresh OTP.
  */
 router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const { otp, label } = req.body;
 
 	if (!otp || typeof otp !== "string") {
@@ -148,6 +150,7 @@ router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
 		type: record.type,
 		label: record.label,
 		created_on: record.created_on,
+		...(record.backup_codes ? { backup_codes: record.backup_codes } : {}),
 	});
 });
 
@@ -160,7 +163,7 @@ router.post("/yubikey/add", twoFaRateLimiter, async (req, res) => {
  * Generate WebAuthn registration options.
  */
 router.post("/passkey/register/begin", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const { default: userModel } = await import("../models/user.js");
 	const user = await userModel.query().findById(userId);
 
@@ -177,7 +180,7 @@ router.post("/passkey/register/begin", twoFaRateLimiter, async (req, res) => {
  * Verify WebAuthn registration and store the credential.
  */
 router.post("/passkey/register/complete", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const { challenge_id, registration_response, label } = req.body;
 
 	if (!challenge_id || !registration_response) {
@@ -203,7 +206,7 @@ router.post("/passkey/register/complete", twoFaRateLimiter, async (req, res) => 
  * Configure Duo Security integration.
  */
 router.post("/duo/setup", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const { client_id, client_secret, api_host, redirect_url } = req.body;
 
 	const record = await twoFaService.setupDuo(userId, {
@@ -218,6 +221,7 @@ router.post("/duo/setup", twoFaRateLimiter, async (req, res) => {
 		type: record.type,
 		label: record.label,
 		created_on: record.created_on,
+		...(record.backup_codes ? { backup_codes: record.backup_codes } : {}),
 	});
 });
 
@@ -230,7 +234,7 @@ router.post("/duo/setup", twoFaRateLimiter, async (req, res) => {
  * Remove a specific 2FA method.
  */
 router.delete("/:methodId", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const methodId = Number.parseInt(req.params.methodId, 10);
 
 	if (!methodId || Number.isNaN(methodId)) {
@@ -250,7 +254,7 @@ router.delete("/:methodId", twoFaRateLimiter, async (req, res) => {
  * Return the number of unused backup codes.
  */
 router.get("/backup-codes/count", async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const count = await twoFaService.getRemainingBackupCodeCount(userId);
 	res.status(200).json({ remaining: count });
 });
@@ -260,7 +264,7 @@ router.get("/backup-codes/count", async (req, res) => {
  * Regenerate all backup codes (invalidates existing ones).
  */
 router.post("/backup-codes/regenerate", twoFaRateLimiter, async (req, res) => {
-	const userId = requireSelfOrAdmin(req, res);
+	const userId = await requireSelfOrAdmin(req, res);
 	const codes = await twoFaService.regenerateBackupCodes(userId);
 	res.status(200).json({ backup_codes: codes });
 });

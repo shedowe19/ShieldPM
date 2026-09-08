@@ -112,7 +112,11 @@ export default function TableWrapper() {
 					<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>
 						<ShadcnButton
 							variant="outline"
-							onClick={() => downloadRootCa()}
+							onClick={() =>
+								downloadRootCa().catch((error: unknown) =>
+									showError(error instanceof Error ? error.message : String(error)),
+								)
+							}
 							title={intl.formatMessage({ id: "certificates.download_root_ca" })}
 						>
 							<IconCertificate className="mr-2 h-4 w-4" />

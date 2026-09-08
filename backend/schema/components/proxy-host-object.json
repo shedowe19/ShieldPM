@@ -229,7 +229,7 @@
 		},
 		"adv_limit_req_unit": {
 			"type": ["string", "null"],
-			"enum": ["s", "m"],
+			"enum": ["s", "m", null],
 			"example": "s"
 		},
 		"adv_limit_req_burst": {
@@ -355,7 +355,7 @@
 		},
 		"terminal_auth_type": {
 			"type": ["string", "null"],
-			"enum": ["password", "key"],
+			"enum": ["password", "key", null],
 			"example": "password"
 		},
 		"terminal_password": {

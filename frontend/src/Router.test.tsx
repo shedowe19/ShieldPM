@@ -1,12 +1,16 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	authenticated: false,
+	loading: false,
 	failAnalyticsImport: false,
 	failDashboard: false,
+	setup: true,
 	renderDashboard: vi.fn(),
+	renderLogin: vi.fn(),
 }));
 
 vi.mock("src/components/AnimatedPage", () => ({
@@ -38,11 +42,11 @@ vi.mock("src/components/Unhealthy", () => ({
 }));
 
 vi.mock("src/context", () => ({
-	useAuthState: () => ({ authenticated: mocks.authenticated }),
+	useAuthState: () => ({ authenticated: mocks.authenticated, loading: mocks.loading }),
 }));
 vi.mock("src/hooks/useHealth", () => ({
 	useHealth: () => ({
-		data: { setup: true, status: "OK" },
+		data: { setup: mocks.setup, status: "OK" },
 		isError: false,
 		isLoading: false,
 	}),
@@ -59,7 +63,10 @@ vi.mock("src/pages/Analytics", () => {
 	}
 	return { default: () => <div>Analytics</div> };
 });
-vi.mock("src/pages/Login", () => ({ default: () => <div>Login</div> }));
+vi.mock("src/pages/Login", () => ({ default: () => mocks.renderLogin() }));
+vi.mock("src/pages/Setup", () => {
+	throw new Error("Setup chunk failed");
+});
 
 afterEach(async () => {
 	cleanup();
@@ -71,6 +78,9 @@ afterEach(async () => {
 describe("Router", () => {
 	beforeEach(() => {
 		mocks.authenticated = false;
+		mocks.loading = false;
+		mocks.setup = true;
+		mocks.renderLogin.mockReset().mockReturnValue(<div>Login</div>);
 		mocks.failAnalyticsImport = false;
 		mocks.failDashboard = false;
 		mocks.renderDashboard.mockImplementation(() => {
@@ -82,6 +92,24 @@ describe("Router", () => {
 		window.history.replaceState({}, "", "/duo-callback?duo_code=duo-code");
 	});
 
+	it.each([true, false])("waits for session restoration before mounting login (restored=%s)", async (restored) => {
+		mocks.loading = true;
+		window.history.replaceState({}, "", "/");
+		const { default: Router } = await import("./Router");
+		const view = render(<Router />);
+		await act(async () => {
+			await import("src/pages/Login");
+		});
+
+		expect(mocks.renderLogin).not.toHaveBeenCalled();
+		expect(screen.getByText("Loading")).toBeInTheDocument();
+		mocks.authenticated = restored;
+		mocks.loading = false;
+		view.rerender(<Router />);
+		expect(await screen.findByText(restored ? "Dashboard" : "Login")).toBeInTheDocument();
+		if (restored) expect(mocks.renderLogin).not.toHaveBeenCalled();
+	});
+
 	it("renders the public Duo callback before authentication", async () => {
 		const { default: Router } = await import("./Router");
 
@@ -89,6 +117,22 @@ describe("Router", () => {
 
 		expect(await screen.findByText("Duo callback")).toBeInTheDocument();
 		expect(screen.queryByText("Login")).not.toBeInTheDocument();
+	});
+
+	it("contains a failed initial-setup chunk within the router", async () => {
+		mocks.setup = false;
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		const { default: Router } = await import("./Router");
+		render(
+			<RouteErrorBoundary>
+				<div>Application remains mounted</div>
+				<Router />
+			</RouteErrorBoundary>,
+		);
+
+		expect(await screen.findByRole("alert")).toBeInTheDocument();
+		expect(screen.getByText("Application remains mounted")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Reload page" })).toBeInTheDocument();
 	});
 
 	it("shows a localized reload action when an authenticated route render fails", async () => {

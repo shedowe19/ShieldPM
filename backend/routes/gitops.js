@@ -123,7 +123,7 @@ router.post("/revert", jwtdecode(), demoCheck, accessCheck, async (req, res) => 
  */
 router.post("/import", jwtdecode(), demoCheck, async (req, res) => {
 	const { overwrite } = req.body;
-	const result = await internalGitOps.importConfig(res.locals.access, { overwrite: !!overwrite });
+	const result = await internalGitOps.importConfig(res.locals.access, { overwrite });
 	res.status(200).json(result);
 });
 

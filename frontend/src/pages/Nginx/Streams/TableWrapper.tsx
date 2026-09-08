@@ -11,7 +11,7 @@ import { Input } from "src/components/ui/input";
 import { useStreams } from "src/hooks";
 import { intl, T } from "src/locale";
 import { MANAGE, STREAMS } from "src/modules/Permissions";
-import { showObjectSuccess } from "src/notifications";
+import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { showDeleteConfirmModal, showHelpModal, showStreamModal } from "./lazy";
 import Table from "./Table";
@@ -19,7 +19,6 @@ import Table from "./Table";
 export default function TableWrapper() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
-	const [_deleteId, _setDeleteIdd] = useState(0);
 	const { isFetching, isLoading, isError, error, data } = useStreams(["owner", AUDIT_LOG_OBJECT_TYPE.CERTIFICATE]);
 
 	if (isLoading) {
@@ -42,10 +41,14 @@ export default function TableWrapper() {
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleStream(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["streams"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.STREAM, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, enabled ? "enabled" : "disabled");
+		try {
+			await toggleStream(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["streams"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.STREAM, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.STREAM, enabled ? "enabled" : "disabled");
+		} catch (error) {
+			showError(error instanceof Error ? error.message : String(error));
+		}
 	};
 
 	let filtered = null;
@@ -54,7 +57,7 @@ export default function TableWrapper() {
 			return (
 				`${item.incomingPort}`.includes(search) ||
 				`${item.forwardingPort}`.includes(search) ||
-				item.forwardingHost.includes(search)
+				item.forwardingHost.toLowerCase().includes(search)
 			);
 		});
 	} else if (search !== "") {

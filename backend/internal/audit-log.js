@@ -1,3 +1,4 @@
+import { isSqlite } from "../lib/config.js";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
 import auditLogModel from "../models/audit-log.js";
@@ -53,11 +54,15 @@ const internalAuditLog = {
 		}
 
 		if (filters.created_after) {
-			query.where("created_on", ">=", filters.created_after);
+			if (isSqlite())
+				query.whereRaw("julianday(??, 'utc') >= julianday(?)", ["created_on", filters.created_after]);
+			else query.where("created_on", ">=", filters.created_after);
 		}
 
 		if (filters.created_before) {
-			query.where("created_on", "<=", filters.created_before);
+			if (isSqlite())
+				query.whereRaw("julianday(??, 'utc') <= julianday(?)", ["created_on", filters.created_before]);
+			else query.where("created_on", "<=", filters.created_before);
 		}
 
 		if (typeof expand !== "undefined" && expand !== null) {

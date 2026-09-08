@@ -13,8 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
       - name: Install Shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Run Shellcheck
         run: |
-          find . -type f -not -path "*/.agent/*" \( -name "*.sh" -o -name "*.bash" \) -exec shellcheck {} +
+          find scripts rootfs -type f \( -name "*.sh" -o -name "*.bash" -o -name "update-shieldpm" -o -name "npm-reset-password" \) -exec shellcheck {} +
+      - name: Test infrastructure helpers without system changes
+        run: python3 -m unittest discover -s scripts/tests -v

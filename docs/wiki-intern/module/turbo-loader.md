@@ -6,7 +6,7 @@ Turbo-Loader ist ein Download-Beschleuniger, der HTTP Range-Requests nutzt, um D
 
 ## Kontext
 
-Standard-Browser-Downloads sind Single-Connection, serielle Prozesse. Turbo-Loader teilt die Datei in 8 Segmente auf und lädt jedes Segment gleichzeitig, was bei großen Dateien zu **dramatisch höheren Durchsätzen** führt.
+Standard-Browser-Downloads sind Single-Connection, serielle Prozesse. Turbo-Loader teilt die Datei in 8 Segmente auf und lädt jedes Segment gleichzeitig, was bei geeigneten Servern und Verbindungen den Durchsatz erhöhen kann.
 
 ### Voraussetzungen
 
@@ -57,8 +57,8 @@ Das Frontend `turbo_loader.html` läuft vollständig im Browser:
 1. **Initialisierung** — `HEAD`-Request ermittelt Dateigröße und prüft `Accept-Ranges`
 2. **Fallback-Erkennung** — File System Access API verfügbar (Chrome/Edge → Direct-to-Disk) oder Blob-RAM-Fallback (Firefox, Brave Shields etc.)
 3. **8 parallele Chunk-Downloads** — Jeder Chunk wird als `bytes=START-END` Range-Request geladen
-4. **Fehlerresilienz** — Chunk-Downloads werden unbegrenzt wiederholt mit exponentieller Backoff (1s → 2s → 4s → max 30s)
-5. **Direktes Schreiben** — Bei File System Access API wird jeder Chunk sofort auf Disk geschrieben (Stream Write)
+4. **Fehlerresilienz** — Pro Chunk höchstens fünf Versuche mit exponentiellem Backoff; nach 60 Sekunden ohne Fortschritt wird die Anfrage abgebrochen
+5. **Direktes Schreiben** — Bei File System Access API wird jedes empfangene Datenstück über eine gemeinsame Schreibwarteschlange sofort auf Disk geschrieben; die Netzwerkleser warten auf den Schreibabschluss
 6. **Zusammenführung** — Im Blob-Fallback werden alle Chunks im RAM zusammengeführt, danach erscheint ein "Save"-Button
 
 ### 3. Speichermodi
@@ -74,8 +74,18 @@ Das Frontend `turbo_loader.html` läuft vollständig im Browser:
 - **Brave Shields** — Blockieren `showSaveFilePicker`, Trigger für RAM-Fallback
 - **Dateien >1.2 GB im Blob-Modus** — Hard Block, Standard-Download vorgeschlagen
 - **Server gibt 404** — Erkannt in der `init()`-Phase, zeigt "Standard Download"-Button
-- **Server gibt 200 statt 206** — Range-Request wird verworfen, Download ab `chunkGot` fortgesetzt
-- **Stream bricht ab** — Unbegrenzte Retries mit Byte-Range-Resume innerhalb des Chunks
+- **Server gibt 200 statt 206** — Sofortiger Abbruch mit Standard-Download-Option; vollständige Antworten werden niemals als Teilbereiche zusammengefügt
+- **Stream bricht ab** — Begrenzte Retries mit Byte-Range-Resume ab dem nächsten noch fehlenden Byte innerhalb des Chunks
+
+- **Falscher oder übergroßer Teilbereich** — `Content-Range` und Byteanzahl müssen exakt zur angeforderten Position und Dateigröße passen. Andernfalls wird keine Datei als erfolgreich ausgegeben.
+- **Datei während des Downloads geändert** — Ein verfügbarer starker ETag oder Last-Modified-Wert wird über `If-Range` mitgesendet.
+- **Permanenter HTTP- oder Schreibfehler** — Andere Teilanfragen werden abgebrochen und ein offener Dateistream verworfen; unbegrenzte Wiederholungen bei beispielsweise HTTP 403 oder voller Festplatte entfallen.
+- **Wiederholter Blob-Download** — Alte Blob-URLs werden gezielt freigegeben; der Timer eines früheren Speichervorgangs kann keine neuere Datei freigeben.
+
+`frontend/src/static/turboLoader.test.ts` prüft die Bytefolge über alle acht Bereiche, HTTP 200/403, falsche
+Bereichsangaben, Resume nach Teilübertragung, begrenzte Wiederholungen sowie inkrementelles Schreiben und
+Schreibfehler. Die Tests verwenden kontrollierte Streams; reale Browser- und Server-Kombinationen bleiben eine
+separate Integrationsprüfung.
 
 ## Konfiguration
 

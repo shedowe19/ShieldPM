@@ -9,7 +9,6 @@ import dnsPlugins from "../../certbot/dns-plugins.json" with { type: "json" };
 import { isDemoMode } from "../../lib/config.js";
 import errs from "../../lib/error.js";
 import CloudflaredTunnel from "../../models/cloudflared_tunnel.js";
-import ProxyHost from "../../models/proxy_host.js";
 import TorOnion from "../../models/tor_onion.js";
 import internalAccessList from "../access-list.js";
 import internalAuditLog from "../audit-log.js";
@@ -26,7 +25,6 @@ import internalRedirectionHost from "../redirection-host.js";
 import internalReport from "../report.js";
 import internalSetting from "../setting.js";
 import internalStream from "../stream.js";
-import internalToken from "../token.js";
 import internalTor from "../tor.js";
 import internalUser from "../user.js";
 
@@ -50,15 +48,20 @@ const validateDemoModeHost = (data) => {
 
 	// Block Internal Hostnames
 	const forbiddenHosts = ["localhost", "db", "app", "redis", "postgres", "mysql"];
-	if (data.forward_host) {
-		if (forbiddenHosts.includes(data.forward_host) || data.forward_host.endsWith(".local")) {
+	const rawHost = data.forward_host ?? data.forwarding_host;
+	if (rawHost) {
+		const host = String(rawHost)
+			.toLowerCase()
+			.replace(/^\[|\]$/g, "")
+			.replace(/\.$/, "");
+		if (forbiddenHosts.includes(host) || host.endsWith(".local")) {
 			throw new Error("Forwarding to internal services (localhost/db/local) is disabled in Demo Mode.");
 		}
 
 		// Block Private IPs
 		try {
-			if (ipaddr.isValid(data.forward_host)) {
-				const addr = ipaddr.parse(data.forward_host);
+			if (ipaddr.isValid(host)) {
+				const addr = ipaddr.parse(host);
 				const range = addr.range();
 				const blockedRanges = [
 					"loopback",
@@ -69,6 +72,7 @@ const validateDemoModeHost = (data) => {
 					"reserved",
 					"broadcast",
 					"multicast",
+					"unspecified",
 				];
 
 				if (blockedRanges.includes(range)) {
@@ -168,6 +172,11 @@ export const executeTools = async (access, toolCalls) => {
 					"update_cloudflared_tunnel",
 					"delete_cloudflared_tunnel",
 					"get_cloudflared_tunnels",
+					"create_tor_onion_service",
+					"update_tor_onion_service",
+					"delete_tor_onion_service",
+					"start_tor_onion_service",
+					"stop_tor_onion_service",
 					// DDNS is safe in Demo but creation might be blocked if we want to be strict, currently User said "allow all"
 				];
 				if (blockedTools.includes(call.name)) {
@@ -222,6 +231,8 @@ export const executeTools = async (access, toolCalls) => {
 						// Ensure these are always valid (override any nulls from AI)
 						advanced_config: "",
 					};
+					delete data.request_ssl;
+					delete data.email;
 					const newHost = await internalProxyHost.create(access, /** @type {any} */ (data));
 					result = `Created Proxy Host ID: ${newHost.id}`;
 					break;
@@ -287,17 +298,6 @@ export const executeTools = async (access, toolCalls) => {
 					// Verify host exists first (optional, update throws if not found)
 					await internalProxyHost.update(access, payload);
 
-					// Force Nginx Reload
-					// We must fetch the FULL object with all relations (locations, access_list, etc)
-					// otherwise generateConfig fails when accessing missing properties (e.g. locations).
-					const updatedHost = await internalProxyHost.get(access, {
-						id: id,
-						expand: ["owner", "access_list", "certificate"],
-					});
-					// configure expects (Model, type, item)
-					await internalNginx.configure(ProxyHost, "proxy_host", updatedHost);
-					await internalNginx.reload();
-
 					// Trigger immediate maintenance processing (don't wait for polling interval)
 					// This ensures scheduled maintenance activates/deactivates instantly
 					internalMaintenance.processMaintenance().catch(() => {});
@@ -344,6 +344,8 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
+					delete data.request_ssl;
+					delete data.email;
 					const newHost = await internalRedirectionHost.create(access, /** @type {any} */ (data));
 					result = `Created Redirection Host ID: ${newHost.id}`;
 					break;
@@ -400,6 +402,8 @@ export const executeTools = async (access, toolCalls) => {
 						meta: meta,
 						...call.args,
 					};
+					delete data.request_ssl;
+					delete data.email;
 					const newHost = await internalDeadHost.create(access, /** @type {any} */ (data));
 					result = `Created 404 Host ID: ${newHost.id}`;
 					break;
@@ -530,8 +534,7 @@ export const executeTools = async (access, toolCalls) => {
 						throw new Error("Cloudflare Tunnel management is disabled in Demo Mode.");
 					}
 					const tunnel = await getCloudflaredTunnel(access, "cloudflared_tunnels:delete", call.args.id);
-					await internalCloudflared.stop(tunnel.id);
-					await tunnel.$query().delete();
+					await internalCloudflared.delete(tunnel.id);
 					await internalAuditLog.add(access, {
 						action: "deleted",
 						object_type: "cloudflared-tunnel",
@@ -575,6 +578,12 @@ export const executeTools = async (access, toolCalls) => {
 					break;
 				}
 				case "create_user": {
+					const password = call.args.auth?.secret ?? call.args.password;
+					if (typeof password !== "string" || password.length < 8) {
+						throw new errs.ValidationError(
+							"A password of at least 8 characters is required to create a user",
+						);
+					}
 					// Prepare data for internalUser.create
 					const userData = {
 						name: call.args.name,
@@ -583,8 +592,8 @@ export const executeTools = async (access, toolCalls) => {
 						roles: call.args.roles || ["user"],
 						is_disabled: false,
 						auth: {
-							type: "local",
-							secret: call.args.password || "changeme123", // Fallback if not provided, though generic prompt should ask
+							type: "password",
+							secret: password,
 						},
 					};
 					const newUser = await internalUser.create(access, userData);
@@ -818,16 +827,19 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Other Updates
 				case "update_redirection_host": {
+					validateDemoModeHost(call.args);
 					await internalRedirectionHost.update(access, { id: call.args.id, ...call.args });
 					result = `Updated Redirection Host ID: ${call.args.id}`;
 					break;
 				}
 				case "update_dead_host": {
+					validateDemoModeHost(call.args);
 					await internalDeadHost.update(access, { id: call.args.id, ...call.args });
 					result = `Updated Dead Host ID: ${call.args.id}`;
 					break;
 				}
 				case "update_stream": {
+					validateDemoModeHost(call.args);
 					await internalStream.update(access, { id: call.args.id, ...call.args });
 					result = `Updated Stream ID: ${call.args.id}`;
 					break;
@@ -865,7 +877,12 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// User Updates
 				case "update_user_password": {
-					await internalUser.setPassword(access, { id: call.args.id, ...call.args });
+					await internalUser.setPassword(access, {
+						id: call.args.id,
+						type: "password",
+						secret: call.args.auth?.secret ?? call.args.password,
+						current: call.args.current,
+					});
 					result = `Updated Password for User ID: ${call.args.id}`;
 					break;
 				}
@@ -899,18 +916,13 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Auth & Tokens
 				case "login_as_user": {
-					const _loginResult = await internalUser.loginAs(access, { id: call.args.id });
-					result = `Logged in as User ${call.args.id}. Session created successfully.`;
+					result =
+						"Use the Users page to switch the browser session. Chat cannot change your logged-in session.";
 					break;
 				}
 				case "create_api_token": {
-					// Use getFreshToken to generate a new token
-					const expiry = call.args.expiry || "1d";
-					const newToken = await internalToken.getFreshToken(access, {
-						scope: "user", // Default scope as user
-						expiry: expiry,
-					});
-					result = `Created API Token successfully. Token ID: ${newToken.id}`;
+					result =
+						"Use the API token interface to create and securely retrieve a token. Chat does not expose bearer tokens to the AI provider.";
 					break;
 				}
 				case "create_client_certificate": {
@@ -963,7 +975,8 @@ export const executeTools = async (access, toolCalls) => {
 
 					const service = await TorOnion.query().insert(payload);
 					// Create in Tor
-					await internalTor.create(service);
+					if (!(await internalTor.create(service)))
+						throw new errs.ValidationError("Unable to create onion service");
 
 					// Refetch for address
 					const finalService = await TorOnion.query().findById(service.id);
@@ -980,10 +993,12 @@ export const executeTools = async (access, toolCalls) => {
 					if (isDemoMode()) throw new Error("Tor Onion Services are disabled in Demo Mode");
 
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
-					if (call.args.proxy_host_id) {
-						await verifyProxyHostUpdateAccess(access, call.args.proxy_host_id);
+					const targetHostId =
+						call.args.proxy_host_id === undefined ? service.proxy_host_id : call.args.proxy_host_id;
+					for (const hostId of new Set([service.proxy_host_id, targetHostId].filter(Boolean))) {
+						await verifyProxyHostUpdateAccess(access, hostId);
 					}
-					const updated = await service.$query().patchAndFetch({
+					const updated = await internalTor.update(access, service, {
 						...(typeof call.args.name === "undefined" ? {} : { name: call.args.name }),
 						...(typeof call.args.proxy_host_id === "undefined"
 							? {}
@@ -995,7 +1010,8 @@ export const executeTools = async (access, toolCalls) => {
 					});
 
 					if (call.args.virtual_port || call.args.target_port) {
-						await internalTor.restart(updated);
+						if (!(await internalTor.restart(updated)))
+							throw new errs.ValidationError("Unable to restart onion service");
 					}
 
 					await internalAuditLog.add(access, {
@@ -1009,8 +1025,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "delete_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:delete", call.args.id);
-					await internalTor.stop(service);
-					await service.$query().patch({ is_deleted: 1 });
+					await internalTor.delete(service.id, { soft: true });
 					await internalAuditLog.add(access, {
 						action: "deleted",
 						object_type: "tor-onion",
@@ -1022,8 +1037,11 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "start_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
-					if (!service.private_key) await internalTor.create(service);
-					else await internalTor.start(service);
+					if (service.proxy_host_id) await verifyProxyHostUpdateAccess(access, service.proxy_host_id);
+					const started = !service.private_key
+						? await internalTor.create(service)
+						: await internalTor.start(service);
+					if (!started) throw new errs.ValidationError("Unable to start onion service");
 					await internalAuditLog.add(access, {
 						action: "updated",
 						object_type: "tor-onion",
@@ -1035,7 +1053,8 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "stop_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
-					await internalTor.stop(service);
+					if (!(await internalTor.stop(service)))
+						throw new errs.ValidationError("Unable to stop onion service");
 					await internalAuditLog.add(access, {
 						action: "updated",
 						object_type: "tor-onion",
@@ -1073,7 +1092,7 @@ export const executeTools = async (access, toolCalls) => {
 			toolResults.push({ name: call.name, toolCallId: call.id, result });
 		} catch (err) {
 			console.error(`[AI Executor] Error processing tool ${call.name}:`, err);
-			toolResults.push({ name: call.name, result: `Error: ${err.message}` });
+			toolResults.push({ name: call.name, toolCallId: call.id, result: `Error: ${err.message}` });
 		}
 	}
 

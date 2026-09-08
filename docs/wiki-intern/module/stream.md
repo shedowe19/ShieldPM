@@ -12,7 +12,7 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 
 - `backend/internal/stream.js` (~451 Zeilen) — Business-Logik
 - `backend/models/stream.js` — Objection.js-Modell
-- `backend/templates/stream.conf` — EJS-Template für `stream { server { ... } }`
+- `backend/templates/stream.conf` — Liquid-Template für `stream { server { ... } }`
 - `backend/routes/nginx/streams.js` — REST-API-Routen unter `/api/nginx/streams`
 - `backend/lib/access/streams-*.json` — RBAC-Regeln
 - `frontend/src/pages/Nginx/Streams/` — UI-Tabelle
@@ -24,7 +24,7 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 1. Benutzer definiert einen Stream mit eingehendem Port (TCP/UDP), Forward-Host, Forward-Port und Protokoll.
 2. Optional: TLS-Termination mit Zertifikat, Proxy-Protocol, Bandwidth-Limit.
 3. `internal/stream.js` schreibt eine `.conf`-Datei unter `/data/nginx/stream/`, die Nginx im Stream-Kontext lädt.
-4. Nginx reload erfolgt debounced.
+4. Nginx reload erfolgt nach erfolgreicher Konfigurationsprüfung.
 
 ## Felder (relevant)
 
@@ -32,6 +32,14 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 - `tcp_forwarding`, `udp_forwarding` — Protokoll-Flags
 - `enabled`, `meta` (Custom-Optionen)
 - Optional: `certificate_id` für TLS-Termination
+
+## Zertifikate und Teilupdates
+
+- POST und PUT akzeptieren `domain_names` ausschließlich für die Beantragung eines neuen Zertifikats (`certificate_id: "new"`). Dafür ist mindestens eine Domain erforderlich. Streams speichern dieses Feld nicht in der Datenbank.
+- Bei Teilupdates nutzt die Port-Kollisionsprüfung nicht übermittelte Ports und Protokoll-Flags aus dem vorhandenen Datensatz. Zertifikatsänderungen funktionieren dadurch ohne erneute Angabe aller Routing-Felder.
+- Die Kollisionsprüfung erkennt auch überlappende Portbereiche, einschließlich ihrer Grenzen. TCP und UDP dürfen denselben Port getrennt verwenden. Eingehende Ports müssen zwischen 1 und 65535 liegen; Bereiche müssen aufsteigend sein.
+- TLS mit dem Anbieter `internal` verwendet `/data/tls/internal/npm-ID/`; eigene importierte Zertifikate verbleiben unter `/data/tls/custom/npm-ID/`.
+- Regressionen: `backend/test/internal/host-update-regressions.spec.js` und `backend/test/internal/nginx-render-regressions.spec.js`.
 
 ## Abhängigkeiten
 
@@ -50,3 +58,5 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Proxy-Host](./proxy-host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
+
+Die Erstellungsantwort enthält den aktuellen Nginx-Status. Neue Zertifikatsdomains verwenden das getrennte Request-Schema für Zertifikate; DNS-Credentials werden ausschließlich im Zertifikatskontext aufbewahrt. Löschen und Deaktivieren sind mit der Konfigurationsgenerierung serialisiert.

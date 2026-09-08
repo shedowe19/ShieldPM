@@ -9,7 +9,7 @@ import {
 	type FormikTouched,
 } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createUser } from "src/api/backend";
 import { LocalePicker } from "src/components/LocalePicker";
 import { ThemeSwitcher } from "src/components/ThemeSwitcher";
@@ -32,6 +32,13 @@ export default function Setup() {
 	const queryClient = useQueryClient();
 	const { login } = useAuthState();
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
+	const mounted = useRef(false);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
 
 	const onSubmit = async (values: Payload, { setSubmitting }: FormikHelpers<Payload>) => {
 		setErrorMsg(null);
@@ -54,12 +61,12 @@ export default function Setup() {
 			const user = await createUser(payload, true);
 			if (user?.id) {
 				try {
-					await login(user.email, password);
-					// Trigger a Health change
-					await queryClient.refetchQueries({ queryKey: ["health"] });
-					// window.location.reload();
+					if (mounted.current) await login(user.email, password);
 				} catch (err) {
 					if (err instanceof Error) setErrorMsg(err.message);
+				} finally {
+					// Creation completed even when automatic login fails: leave the setup route.
+					await queryClient.refetchQueries({ queryKey: ["health"] });
 				}
 			} else {
 				setErrorMsg("cannot_create_user");
@@ -167,7 +174,7 @@ export default function Setup() {
 										<Label htmlFor="password">
 											<T id="user.new-password" />
 										</Label>
-										<Field name="password" validate={validateString(8, 100)}>
+										<Field name="password" validate={validateString(8, 72)}>
 											{({ field }: FieldProps) => (
 												<Input
 													{...field}

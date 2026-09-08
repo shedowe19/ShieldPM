@@ -40,12 +40,40 @@
 						"is_disabled": {
 							"$ref": "../../components/user-object.json#/properties/is_disabled"
 						},
+						"avatar_type": {
+							"type": "string",
+							"enum": [
+								"gravatar",
+								"url"
+							]
+						},
+						"avatar_value": {
+							"$ref": "../../components/user-object.json#/properties/avatar_value"
+						},
 						"auth": {
 							"type": "object",
 							"description": "Auth Credentials",
 							"example": {
 								"type": "password",
 								"secret": "bigredhorsebanana"
+							},
+							"additionalProperties": false,
+							"required": [
+								"type",
+								"secret"
+							],
+							"properties": {
+								"type": {
+									"type": "string",
+									"enum": [
+										"password"
+									]
+								},
+								"secret": {
+									"type": "string",
+									"minLength": 8,
+									"maxLength": 72
+								}
 							}
 						}
 					}

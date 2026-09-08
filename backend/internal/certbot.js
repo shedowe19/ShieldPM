@@ -3,12 +3,14 @@
  * Handles Let's Encrypt certificate operations via Certbot
  */
 
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import punycode from "node:punycode";
 import { ProxyAgent } from "proxy-agent";
 import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
 import { installPlugin } from "../lib/certbot.js";
+import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { ssl as logger } from "../logger.js";
 import pjson from "../package.json" with { type: "json" };
@@ -22,6 +24,20 @@ let processing = false;
  */
 export const isProcessing = () => processing;
 
+/** Execute all ACME operations under the same lock, including scheduled renewals. */
+export const runCertbot = async (args, prepare) => {
+	if (processing) {
+		throw new errs.ValidationError("Another Certbot process is currently running. Please try again later.");
+	}
+	processing = true;
+	try {
+		if (prepare) await prepare();
+		return await utils.execFile("certbot", args);
+	} finally {
+		processing = false;
+	}
+};
+
 /**
  * Request a certificate using HTTP challenge
  * @param {Object} certificate - The certificate row
@@ -30,7 +46,7 @@ export const isProcessing = () => processing;
 export const requestCertbot = async (certificate) => {
 	logger.info(`Requesting Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
-	const result = await utils.execFile("certbot", [
+	const result = await runCertbot([
 		"--config",
 		"/etc/certbot.ini",
 		"certonly",
@@ -53,40 +69,60 @@ export const requestCertbot = async (certificate) => {
  * @returns {Promise<string>}
  */
 export const requestCertbotWithDnsChallenge = async (certificate) => {
-	const dnsPlugin = dnsPlugins[certificate.meta.dns_provider];
+	const dnsPlugin = Object.hasOwn(dnsPlugins, certificate.meta.dns_provider)
+		? dnsPlugins[certificate.meta.dns_provider]
+		: null;
 	if (!dnsPlugin) {
-		throw Error(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
+		throw new errs.ValidationError(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
 	}
-	await installPlugin(certificate.meta.dns_provider);
+	if (
+		typeof certificate.meta.dns_provider_credentials !== "string" ||
+		!certificate.meta.dns_provider_credentials.trim()
+	) {
+		throw new errs.ValidationError("DNS provider credentials are required");
+	}
 
 	logger.info(
 		`Requesting LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
 	);
 
 	const credentialsLocation = `/data/certbot-credentials/credentials-${certificate.id}`;
-	fs.writeFileSync(credentialsLocation, certificate.meta.dns_provider_credentials, { mode: 0o600 });
-
 	// Determine the credentials argument - use defined value or fall back to standard pattern
-	const credentialsArg = dnsPlugin.credentials_argument || `dns-${certificate.meta.dns_provider}-credentials`;
+	const pluginName = dnsPlugin.full_plugin_name || `dns-${certificate.meta.dns_provider}`;
+	const credentialsArg = dnsPlugin.credentials_argument || `${pluginName}-credentials`;
 
-	const result = await utils.execFile("certbot", [
-		"--config",
-		"/etc/certbot.ini",
-		"certonly",
-		"--cert-name",
-		`npm-${certificate.id}`,
-		"--domains",
-		certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
-		dnsPlugin.full_plugin_name ? "--authenticator" : `--dns-${certificate.meta.dns_provider}`,
-		...(dnsPlugin.full_plugin_name ? [dnsPlugin.full_plugin_name] : []),
-		`--${credentialsArg}`,
-		credentialsLocation,
-		...(certificate.meta.propagation_seconds
-			? [`--dns-${certificate.meta.dns_provider}-propagation-seconds`, certificate.meta.propagation_seconds]
-			: []),
-		"--server",
-		process.env.ACME_SERVER,
-	]);
+	const result = await runCertbot(
+		[
+			"--config",
+			"/etc/certbot.ini",
+			"certonly",
+			"--cert-name",
+			`npm-${certificate.id}`,
+			"--domains",
+			certificate.domain_names.map((domain_name) => punycode.toASCII(domain_name)).join(","),
+			dnsPlugin.full_plugin_name ? "--authenticator" : `--dns-${certificate.meta.dns_provider}`,
+			...(dnsPlugin.full_plugin_name ? [dnsPlugin.full_plugin_name] : []),
+			`--${credentialsArg}`,
+			credentialsLocation,
+			...(certificate.meta.propagation_seconds !== undefined
+				? [
+						`--${dnsPlugin.propagation_argument || `${pluginName}-propagation-seconds`}`,
+						String(certificate.meta.propagation_seconds),
+					]
+				: []),
+			"--server",
+			process.env.ACME_SERVER,
+		],
+		async () => {
+			// Installing/upgrading plugins and replacing credentials must not race a running renewal.
+			await installPlugin(certificate.meta.dns_provider);
+			await fs.promises.mkdir("/data/certbot-credentials", { recursive: true });
+			await fs.promises.writeFile(credentialsLocation, certificate.meta.dns_provider_credentials, {
+				mode: 0o600,
+			});
+			await fs.promises.chmod(credentialsLocation, 0o600);
+		},
+	);
 	logger.success(result);
 	return result;
 };
@@ -97,30 +133,20 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
  * @returns {Promise<string>}
  */
 export const renewCertbot = async (certificate) => {
-	if (processing) {
-		throw new Error("Another Certbot process is currently running. Please try again later.");
-	}
-
-	processing = true;
-
 	logger.info(`Renewing Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
-	try {
-		const renewResult = await utils.execFile("certbot", [
-			"--config",
-			"/etc/certbot.ini",
-			"renew",
-			"--server",
-			process.env.ACME_SERVER,
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--force-renewal",
-		]);
-		logger.info(renewResult);
-		return renewResult;
-	} finally {
-		processing = false;
-	}
+	const renewResult = await runCertbot([
+		"--config",
+		"/etc/certbot.ini",
+		"renew",
+		"--server",
+		process.env.ACME_SERVER,
+		"--cert-name",
+		`npm-${certificate.id}`,
+		"--force-renewal",
+	]);
+	logger.info(renewResult);
+	return renewResult;
 };
 
 /**
@@ -129,60 +155,55 @@ export const renewCertbot = async (certificate) => {
  * @returns {Promise<string>}
  */
 export const renewCertbotWithDnsChallenge = async (certificate) => {
-	if (processing) {
-		throw new Error("Another Certbot process is currently running. Please try again later.");
-	}
-
-	processing = true;
-
-	const dnsPlugin = dnsPlugins[certificate.meta.dns_provider];
+	const dnsPlugin = Object.hasOwn(dnsPlugins, certificate.meta.dns_provider)
+		? dnsPlugins[certificate.meta.dns_provider]
+		: null;
 	if (!dnsPlugin) {
-		processing = false;
-		throw Error(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
+		throw new errs.ValidationError(`Unknown DNS provider '${certificate.meta.dns_provider}'`);
 	}
 
 	logger.info(
 		`Renewing LetsEncrypt certificates via ${dnsPlugin.name} for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`,
 	);
 
-	try {
-		const renewResult = await utils.execFile("certbot", [
-			"--config",
-			"/etc/certbot.ini",
-			"renew",
-			"--server",
-			process.env.ACME_SERVER,
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--force-renewal",
-		]);
-		logger.info(renewResult);
-		return renewResult;
-	} finally {
-		processing = false;
-	}
+	const renewResult = await runCertbot([
+		"--config",
+		"/etc/certbot.ini",
+		"renew",
+		"--server",
+		process.env.ACME_SERVER,
+		"--cert-name",
+		`npm-${certificate.id}`,
+		"--force-renewal",
+	]);
+	logger.info(renewResult);
+	return renewResult;
 };
 
 /**
  * Revoke a certificate
  * @param {Object} certificate - The certificate row
  * @param {boolean} [throwErrors] - Whether to throw errors
+ * @param {Function} [prepare] - Detach hosts after acquiring the Certbot lock
  * @returns {Promise<string|undefined>}
  */
-export const revokeCertbot = async (certificate, throwErrors) => {
+export const revokeCertbot = async (certificate, throwErrors, prepare) => {
 	logger.info(`Revoking Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
 	try {
-		const result = await utils.execFile("certbot", [
-			"--config",
-			"/etc/certbot.ini",
-			"revoke",
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--reason",
-			"unspecified",
-			"--delete-after-revoke",
-		]);
+		const result = await runCertbot(
+			[
+				"--config",
+				"/etc/certbot.ini",
+				"revoke",
+				"--cert-name",
+				`npm-${certificate.id}`,
+				"--reason",
+				"unspecified",
+				"--delete-after-revoke",
+			],
+			prepare,
+		);
 		fs.rmSync(`/data/tls/certbot/live/npm-${certificate.id}.der`, { force: true });
 		logger.info(result);
 		return result;
@@ -206,17 +227,19 @@ export const testHttpsChallenge = async (access, payload) => {
 	// Create a test challenge file
 	const dataPath = process.env.DATA_PATH || "/data";
 	const testChallengeDir = `${dataPath}/acme-challenge/.well-known/acme-challenge`;
-	const testChallengeFile = `${testChallengeDir}/test-challenge`;
-	fs.mkdirSync(testChallengeDir, { recursive: true });
-	fs.writeFileSync(testChallengeFile, "Success", { encoding: "utf8" });
+	const challengeName = `test-challenge-${randomUUID()}`;
+	const testChallengeFile = `${testChallengeDir}/${challengeName}`;
+	await fs.promises.mkdir(testChallengeDir, { recursive: true });
+	await fs.promises.writeFile(testChallengeFile, "Success", { encoding: "utf8" });
 
 	const results = new Map();
-	for (const domain of payload.domains) {
-		results.set(domain, await performTestForDomain(domain));
+	try {
+		for (const domain of payload.domains) {
+			results.set(domain, await performTestForDomain(domain, challengeName));
+		}
+	} finally {
+		await fs.promises.rm(testChallengeFile, { force: true });
 	}
-
-	// Remove the test challenge file
-	fs.unlinkSync(testChallengeFile);
 
 	const finalResult = Object.create(null);
 	for (const [domain, result] of results) {
@@ -236,11 +259,11 @@ export const testHttpsChallenge = async (access, payload) => {
  * @param {string} domain - Domain name
  * @returns {Promise<string>}
  */
-export const performTestForDomain = async (domain) => {
+export const performTestForDomain = async (domain, challengeName = "test-challenge") => {
 	logger.info(`Testing http challenge for ${domain}`);
 	const agent = new ProxyAgent();
-	const url = `http://${punycode.toASCII(domain)}/.well-known/acme-challenge/test-challenge`;
-	const formBody = `method=G&url=${encodeURI(url)}&bodytype=T&locationid=10`;
+	const url = `http://${punycode.toASCII(domain)}/.well-known/acme-challenge/${challengeName}`;
+	const formBody = new URLSearchParams({ method: "G", url, bodytype: "T", locationid: "10" }).toString();
 	const options = {
 		method: "POST",
 		headers: {
@@ -254,6 +277,8 @@ export const performTestForDomain = async (domain) => {
 	const result = await new Promise((resolve) => {
 		const req = https.request("https://www.site24x7.com/tools/restapi-tester", options, (res) => {
 			let responseBody = "";
+			res.on("error", () => resolve(undefined));
+			res.on("aborted", () => resolve(undefined));
 
 			res.on("data", (chunk) => {
 				responseBody = responseBody + chunk;
@@ -283,6 +308,11 @@ export const performTestForDomain = async (domain) => {
 					resolve(undefined);
 				}
 			});
+		});
+
+		req.setTimeout(15000, () => {
+			req.destroy();
+			resolve(undefined);
 		});
 
 		// Make sure to write the request body.

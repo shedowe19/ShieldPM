@@ -11,7 +11,7 @@ const getAllToolDefinitions = () => [
 	{
 		function: {
 			name: "get_system_status",
-			description: "Get System Health (CPU, RAM, Network Traffic)",
+			description: "Get System Network Traffic",
 			parameters: { type: "object", properties: {} },
 		},
 	},
@@ -156,8 +156,10 @@ const getAllToolDefinitions = () => [
 					id: { type: "integer", description: "Proxy Host ID" },
 					active: { type: "boolean", description: "true to enable maintenance, false to disable" },
 					reason: { type: "string", description: "Reason for maintenance (optional)" },
+					maintenance_start: { type: "string", description: "ISO 8601 UTC start time" },
+					maintenance_end: { type: "string", description: "ISO 8601 UTC end time" },
 				},
-				required: ["id", "active"],
+				required: ["id"],
 			},
 		},
 	},
@@ -700,12 +702,15 @@ const getAllToolDefinitions = () => [
 					roles: { type: "array", items: { type: "string" } },
 					auth: {
 						type: "object",
-						properties: { type: { type: "string", enum: ["password"] }, secret: { type: "string" } },
+						properties: {
+							type: { type: "string", enum: ["password"] },
+							secret: { type: "string", minLength: 8 },
+						},
 						required: ["type", "secret"],
 					},
 					is_disabled: { type: "boolean" },
 				},
-				required: ["name", "nickname", "email"],
+				required: ["name", "nickname", "email", "auth"],
 			},
 		},
 	},
@@ -735,6 +740,10 @@ const getAllToolDefinitions = () => [
 				type: "object",
 				properties: {
 					id: { type: "integer" },
+					current: {
+						type: "string",
+						description: "Current password, required when changing your own password",
+					},
 					auth: {
 						type: "object",
 						properties: { type: { type: "string" }, secret: { type: "string" } },
@@ -761,27 +770,6 @@ const getAllToolDefinitions = () => [
 			name: "delete_user",
 			description: "Delete (soft delete) a User",
 			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
-		},
-	},
-	{
-		function: {
-			name: "login_as_user",
-			description: "Log in as another user (Impersonation)",
-			parameters: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] },
-		},
-	},
-	{
-		function: {
-			name: "create_api_token",
-			description: "Create a new API Token",
-			parameters: {
-				type: "object",
-				properties: {
-					identity: { type: "string" },
-					expiry: { type: "string", description: "ISO Date or null" },
-				},
-				required: ["identity"],
-			},
 		},
 	},
 
@@ -978,27 +966,6 @@ const getAllToolDefinitions = () => [
 		function: {
 			name: "get_host_counts",
 			description: "Get Counts of all Host types",
-			parameters: { type: "object", properties: {} },
-		},
-	},
-	{
-		function: {
-			name: "get_system_status",
-			description: "Get System Network Status",
-			parameters: { type: "object", properties: {} },
-		},
-	},
-	{
-		function: {
-			name: "test_nginx_config",
-			description: "Test Nginx Configuration",
-			parameters: { type: "object", properties: {} },
-		},
-	},
-	{
-		function: {
-			name: "force_nginx_reload",
-			description: "Force Nginx Reload",
 			parameters: { type: "object", properties: {} },
 		},
 	},

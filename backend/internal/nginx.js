@@ -5,6 +5,8 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
+import { getTerminalAccessToken } from "../lib/terminal-access.js";
 import utils from "../lib/utils.js";
 import { debug, nginx as logger } from "../logger.js";
 
@@ -12,6 +14,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import internalAnubis from "./anubis.js";
+
+/** @type {Promise<unknown>} */
+let configurationQueue = Promise.resolve();
+
+/** Merge status into current metadata under a short row lock, after slow Nginx operations finish. */
+const updateHostStatus = (model, host, status) =>
+	model.transaction(async (trx) => {
+		const current = await model.query(trx).findById(host.id).forUpdate();
+		const meta = _.assign({}, sanitizeHostMeta(current?.meta ?? host.meta), status);
+		if (current) await model.query(trx).where("id", host.id).patch({ meta });
+		return meta;
+	});
 
 const internalNginx = {
 	/**
@@ -28,9 +42,32 @@ const internalNginx = {
 	 * @param   {Object}         host
 	 * @returns {Promise}
 	 */
-	configure: async (model, host_type, host, options = {}) => {
+	configure: (model, host_type, host, options = {}) =>
+		internalNginx.withConfigurationLock(() => internalNginx.configureHost(model, host_type, host, options)),
+
+	/**
+	 * Serialize config changes and certificate activation; callbacks must not call configure().
+	 * @template T
+	 * @param {() => T | PromiseLike<T>} callback
+	 * @returns {Promise<T>}
+	 */
+	withConfigurationLock: (callback) => {
+		const operation = configurationQueue.then(callback);
+		configurationQueue = operation.catch(() => {});
+		return operation;
+	},
+
+	configureHost: async (model, host_type, hostSnapshot, options = {}) => {
 		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
+		// A bulk snapshot may predate a completed host, certificate or access-list change.
+		// Refresh the full render graph inside the configuration lock, not only its lifecycle flags.
+		const graph =
+			internalNginx.getFileFriendlyHostType(host_type) === "proxy_host"
+				? "[host_domains,certificate,access_list.[clients,items]]"
+				: "certificate";
+		const current = await model.query().findById(hostSnapshot.id).withGraphFetched(graph);
+		const host = !current || current.is_deleted ? { ...(current || hostSnapshot), enabled: false } : current;
 
 		// 1. Backup existing config if it exists
 		await internalNginx.backupConfig(host_type, host);
@@ -40,6 +77,7 @@ const internalNginx = {
 			await internalNginx.generateConfig(host_type, host);
 		} catch (err) {
 			logger.error(`Generation failed: ${err.message}`);
+			await internalNginx.renameConfigAsError(host_type, host);
 			// Restore backup if generation fails
 			await internalNginx.restoreConfig(host_type, host);
 			throw err;
@@ -47,23 +85,24 @@ const internalNginx = {
 
 		try {
 			// 3. Test nginx configuration
-			await internalNginx.test();
+			// reload() already validates the complete configuration before signalling Nginx.
+			// Bulk writes still need validation even though activation is deferred.
+			if (skip_reload) await internalNginx.test();
+			else await internalNginx.reload();
 
 			// 4. Verification successful
-			combined_meta = _.assign({}, host.meta, {
-				nginx_online: true,
+			combined_meta = await updateHostStatus(model, host, {
+				nginx_online: Boolean(host.enabled),
 				nginx_err: null,
-			});
-
-			await model.query().where("id", host.id).patch({
-				meta: combined_meta,
 			});
 
 			// 5. Delete backup (commit change)
 			await internalNginx.deleteBackupConfig(host_type, host);
 
 			// 6. Regenerate Anubis Policy (async, don't block)
-			internalAnubis.generatePolicy();
+			Promise.resolve()
+				.then(() => internalAnubis.generatePolicy())
+				.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
 		} catch (err) {
 			logger.error(`Nginx test failed: ${err.message}`);
 
@@ -73,19 +112,12 @@ const internalNginx = {
 			// Then restore the working backup
 			await internalNginx.restoreConfig(host_type, host);
 
-			// Update meta with error
-			combined_meta = _.assign({}, host.meta, {
+			if (!skip_reload) await internalNginx.reload();
+			// Update metadata only after restoring the running configuration, even if the database fails.
+			combined_meta = await updateHostStatus(model, host, {
 				nginx_online: false,
 				nginx_err: `[Rolled back] Configuration failed: ${err.message}`,
 			});
-
-			await model.query().where("id", host.id).patch({
-				meta: combined_meta,
-			});
-		}
-
-		if (!skip_reload) {
-			await internalNginx.reload();
 		}
 		return combined_meta;
 	},
@@ -146,7 +178,7 @@ const internalNginx = {
 	 */
 	getConfigName: (host_type, host_id) => {
 		if (host_type === "default") {
-			return "/usr/local/nginx/conf/conf.d/default.conf";
+			return "/data/nginx/default.conf";
 		}
 		return `/data/nginx/${internalNginx.getFileFriendlyHostType(host_type)}/${host_id}.conf`;
 	},
@@ -175,6 +207,7 @@ const internalNginx = {
 					{ hsts_subdomains: host.hsts_subdomains },
 					{ access_list: host.access_list },
 					{ certificate: host.certificate },
+					{ anubis_enabled: host.anubis_enabled },
 					location,
 				);
 
@@ -189,6 +222,8 @@ const internalNginx = {
 					locationCopy.forward_path = `/${split.join("/")}`;
 				}
 				locationCopy.env = process.env;
+				locationCopy.managed_web_root =
+					locationCopy.forward_scheme === "path" && locationCopy.forward_host.startsWith("/data/websites/");
 
 				return await renderEngine.renderFile(templatePath, locationCopy);
 			}),
@@ -205,13 +240,12 @@ const internalNginx = {
 	generateConfig: async (host_type, host_row) => {
 		// Prevent modifying the original object:
 		const host = JSON.parse(JSON.stringify(host_row));
+		if (host.is_deleted) host.enabled = false;
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 
 		const renderEngine = utils.getRenderEngine();
 		const filename = internalNginx.getConfigName(nice_host_type, host.id);
 		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;
-
-		let origLocations;
 
 		// Manipulate the data a bit before sending it to the template
 		if (nice_host_type !== "default") {
@@ -230,16 +264,11 @@ const internalNginx = {
 		}
 
 		if (host.locations) {
-			origLocations = [].concat(host.locations);
-			const renderedLocations = await internalNginx.renderLocations(host);
-			host.locations = renderedLocations;
-
 			// Allow someone who is using / custom location path to use it, and skip the default / location
-			_.map(host.locations, (location) => {
-				if (location.path === "/") {
-					host.use_default_location = false;
-				}
-			});
+			if (host.locations.some((location) => location.path === "/")) {
+				host.use_default_location = false;
+			}
+			host.locations = await internalNginx.renderLocations(host);
 		}
 
 		if (
@@ -255,10 +284,19 @@ const internalNginx = {
 		}
 
 		if (host.domain_names) {
-			host.server_names = host.domain_names.map((domain_name) => punycode.toASCII(domain_name));
+			host.server_names = host.domain_names.map((domain_name) =>
+				domain_name.startsWith("~") ? domain_name : punycode.toASCII(domain_name.toLowerCase()),
+			);
 		}
 
 		host.env = process.env;
+		if (host.access_list?.meta?.oauth2_proxy_prefix) {
+			host.access_list.meta.oauth2_proxy_prefix = host.access_list.meta.oauth2_proxy_prefix.replace(/\/?$/, "/");
+		}
+		if (host.forward_scheme === "terminal") {
+			host.terminal_access_token = getTerminalAccessToken(host.id);
+		}
+		host.managed_web_root = host.forward_scheme === "path" && host.forward_host?.startsWith("/data/websites/");
 
 		if (host.certificate && host.certificate.provider === "internal") {
 			host.use_ml_kem = true;
@@ -272,7 +310,7 @@ const internalNginx = {
 		} else if (host.maintenance_start && host.maintenance_end) {
 			const start = dayjs(host.maintenance_start);
 			const end = dayjs(host.maintenance_end);
-			if (now.isAfter(start) && now.isBefore(end)) {
+			if (!now.isBefore(start) && now.isBefore(end)) {
 				host.maintenance_mode = true;
 			}
 		}
@@ -289,9 +327,6 @@ const internalNginx = {
 			const config_text = await renderEngine.renderFile(templatePath, host);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
-
-			// Restore locations array
-			host.locations = origLocations;
 		} catch (err) {
 			debug(logger, `Could not write ${filename}:`, err.message);
 			throw new errs.ConfigurationError(err.message);
@@ -315,16 +350,12 @@ const internalNginx = {
 	 */
 	deleteFile: async (filename) => {
 		try {
-			await fs.promises.access(filename);
-		} catch {
-			return; // file doesn't exist
-		}
-
-		try {
 			debug(logger, `Deleting file: ${filename}`);
 			await fs.promises.unlink(filename);
 		} catch (err) {
+			if (err.code === "ENOENT") return;
 			debug(logger, "Could not delete file:", JSON.stringify(err, null, 2));
+			throw err;
 		}
 	},
 
@@ -365,8 +396,8 @@ const internalNginx = {
 
 		try {
 			await fs.promises.rename(config_file, `${config_file}.err`);
-		} catch {
-			// ignore if file doesn't exist
+		} catch (err) {
+			if (err.code !== "ENOENT") throw err;
 		}
 	},
 
@@ -383,9 +414,12 @@ const internalNginx = {
 			await fs.promises.copyFile(config_file, backup_file);
 			debug(logger, `Backed up config: ${config_file} -> ${backup_file}`);
 		} catch (err) {
-			// Ignore if original file doesn't exist (new host)
-			if (err.code !== "ENOENT") {
+			// No active config means no rollback target, even if an old operation left a backup.
+			if (err.code === "ENOENT") {
+				await internalNginx.deleteFile(backup_file);
+			} else {
 				logger.error(`Failed to backup config: ${err.message}`);
+				throw err;
 			}
 		}
 	},
@@ -406,6 +440,7 @@ const internalNginx = {
 			// Ignore if backup doesn't exist
 			if (err.code !== "ENOENT") {
 				logger.error(`Failed to restore config: ${err.message}`);
+				throw err;
 			}
 		}
 	},
@@ -428,13 +463,10 @@ const internalNginx = {
 	 * @returns {Promise}
 	 */
 	bulkGenerateConfigs: async (model, hostType, hosts) => {
-		const promises = [];
-		hosts.map((host) => {
-			promises.push(internalNginx.configure(model, hostType, host, { skip_reload: true }));
-			return true;
-		});
-
-		await Promise.all(promises);
+		// nginx -t validates every host, so another host must not be halfway through a write or rollback.
+		for (const host of hosts) {
+			await internalNginx.configure(model, hostType, host, { skip_reload: true });
+		}
 	},
 
 	/**
@@ -445,12 +477,12 @@ const internalNginx = {
 
 	/**
 	 * Read nginx log file contents.
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {"error"|"access"}  logType
 	 * @returns {Promise<string>}
 	 */
 	getLogs: async (access, logType) => {
-		await access.can("settings:read");
+		await access.can("settings:get");
 		const dataPath = process.env.DATA_PATH || "/data";
 		const logPaths = {
 			error: `${dataPath}/nginx/error.log`,

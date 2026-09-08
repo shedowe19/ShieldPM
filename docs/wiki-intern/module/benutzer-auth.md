@@ -43,6 +43,59 @@ ShieldPM verwendet JWT-basierte Authentifizierung mit optionalem 2FA und OIDC.
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Konten, Passwörter und Erstinstallation
+
+- Lokale Zugangsdaten verwenden ausschließlich `type=password`; nicht unterstützte Typen werden vor dem Speichern abgelehnt. Neue Passwörter benötigen mindestens acht Zeichen und dürfen höchstens 72 UTF-8-Bytes enthalten, damit bcrypt keine unterschiedlichen Eingaben auf denselben Präfix kürzt.
+- Die Passwortprüfung und Passwortänderung berücksichtigen nur aktive Passwortdatensätze. Gelöschte Zugangsdaten und andere Authentifizierungstypen bleiben unverändert.
+- Passwortänderung und Widerruf aller noch aktiven Refresh-Sitzungen des Benutzers werden gemeinsam in einer Datenbanktransaktion gespeichert. Scheitert der Widerruf, bleibt das bisherige Passwort erhalten. Bereits ausgestellte Access-JWTs bleiben bis zu ihrem Ablauf gültig; der Widerruf ist keine sofortige Sperre dieser zustandslosen Tokens.
+- Bei der Erstinstallation werden Benutzer, Passwort und Berechtigungen gemeinsam gespeichert. Die über `INITIAL_ADMIN_EMAIL` gelesene Adresse wird wie beim Login normalisiert. Eine fehlgeschlagene Initialisierung hinterlässt keinen scheinbar fertig eingerichteten Benutzer ohne Zugangsdaten.
+- Die anonyme erste Benutzeranlage verlangt Passwortdaten und prüft den Einrichtungszustand innerhalb ihrer Transaktion erneut. Eine Sperre des zuvor angelegten `default-site`-Datensatzes serialisiert konkurrierende Erstinstallationen unter PostgreSQL/MySQL; SQLite serialisiert beziehungsweise verwirft konkurrierende Schreibtransaktionen. Fehlt der Initialisierungsdatensatz, wird die Anlage abgelehnt.
+- Verlässt der Benutzer die Einrichtungsseite während der ersten Benutzeranlage, startet deren verspätete Antwort keinen automatischen Login mehr. Der Health-Status wird nach erfolgreicher Anlage trotzdem neu geladen, damit die Oberfläche den abgeschlossenen Einrichtungszustand erkennt. `frontend/src/pages/Setup/index.test.tsx` prüft diesen Ablauf sowie die Aktualisierung nach fehlgeschlagenem automatischem Login.
+- Berechtigungsänderungen übernehmen ausschließlich die unterstützten Berechtigungsfelder. Die Benutzer-ID aus der Route ersetzt niemals die eigene ID der Berechtigungszeile; `user_id` kann nicht auf einen anderen Benutzer umgebogen werden.
+
+Regressionen mit SQLite: `backend/test/internal/account-transactions.spec.js` und `backend/test/internal/setup-state.spec.js`; Passwortgrenzen: `backend/test/lib/password-auth.spec.js`.
+
+## Passwort-Reset per CLI
+
+`npm-reset-password <E-Mail> <neues-Passwort>` verwendet `backend/password-reset.js` und die vorhandene SQLite-Datei unter `${DATA_PATH:-/data}/shieldpm/database.sqlite`. Ohne beide Argumente, bei unbekanntem oder gelöschtem Benutzer sowie bei einem Passwort über 72 UTF-8-Bytes bricht das Werkzeug ab. Es verändert ausschließlich aktive Passwortdatensätze dieses Benutzers und widerruft dessen Refresh-Sitzungen in derselben Transaktion. Andere Authentifizierungsmethoden, gelöschte Zugangsdaten und fremde Sitzungen bleiben erhalten. Für MySQL/PostgreSQL ist dieser SQLite-Notfallhelfer nicht zuständig; reguläre Passwortänderungen laufen über die Benutzerverwaltung.
+
+Der im Docker-Image installierte Symlink `/usr/local/bin/password-reset.js` führt denselben CLI-Einstieg aus wie der direkte Aufruf von `/app/password-reset.js`. Der Einstieg wird über `import.meta.main` erkannt; ein Symlink darf weder einen wirkungslosen Erfolg melden noch Fehlerargumente überspringen. `password-reset-cli.spec.js` startet den tatsächlichen Node-Prozess über einen Symlink und prüft Passwortänderung, Sitzungswiderruf und Fehlercodes mit SQLite.
+
+## Profiländerungen und Avatare
+
+- Eigene Profilfelder bleiben über `users:update` bearbeitbar. Änderungen an `roles` oder `is_disabled` benötigen zusätzlich `users:permissions`; unveränderte Werte dürfen im Profilformular mitgesendet werden, werden aber nicht erneut geschrieben. Dadurch kann ein gewöhnliches Profilupdate keinen zwischenzeitlichen Rollenentzug oder eine Kontosperre zurücksetzen.
+- Neue Benutzer unterstützen Gravatar und benutzerdefinierte Avatar-URLs. Ein Datei-Upload erfolgt nach dem Anlegen über den Upload-Endpunkt.
+- Bei einem Avatar-Upload wird die bisherige Datei erst nach erfolgreichem Speichern der neuen Datei und ihres Datenbankverweises entfernt. Ein fehlgeschlagenes Datenbankupdate entfernt die neue Datei und erhält das bisherige Bild. Zufällige Dateinamen vermeiden Kollisionen gleichzeitiger Uploads.
+- Dateibasierte Avatare müssen einen reinen Dateinamen mit dem Präfix der Benutzer-ID besitzen. Lesezugriffe und das Entfernen eines bisherigen Avatars prüfen dieselbe Grenze; Pfadwechsel sowie Dateien anderer Benutzer werden zurückgewiesen.
+
+## OIDC-Anmeldung
+
+- Deaktiviertes OIDC wird an Start, Callback und Claim serverseitig abgewiesen. Interne Provider- und Datenbankfehler werden nicht an den Browser ausgegeben.
+- Das verschlüsselte JWT für die Übergabe vom Callback an den Claim ist wie sein Cookie höchstens fünf Minuten gültig.
+- Der temporäre OIDC-Cookie für Nonce und State ist HTTP-only, fünf Minuten gültig und verwendet `SameSite=Lax`, damit er bei der Navigation vom Identity Provider zurück ankommt.
+- Der Callback verlangt beide Werte aus dem Cookie und übergibt sie als erwartete Werte an `openid-client`. Ohne gültigen State wird kein Autorisierungscode eingelöst.
+- Erst nach erfolgreicher Callback-Validierung ersetzt OIDC die Anmeldung dieses Browsers: Access-, Refresh-, Impersonation-Backup- und ausstehende Duo-Cookies werden mit ihren jeweiligen Pfaden entfernt. Bestehende Datenbanksitzungen anderer Geräte bleiben erhalten. Bei einem Callback-Fehler bleibt die bisherige Browsersitzung erhalten. Der erfolgreiche Callback leitet mit dem verschlüsselten Übergabecookie auf `/` weiter; ohne altes Refresh-Cookie kann der Login-Claim dort zuerst die neue Sitzung übernehmen und danach das Dashboard anzeigen.
+- `/api/oidc/claim` verifiziert das entschlüsselte JWT einschließlich Signatur und Ablauf sowie den aktiven Benutzer. Anschließend erzeugt es das reguläre Access-/Refresh-Token-Paar und entfernt den temporären Cookie.
+- Die öffentlichen OIDC-Routen setzen kein bestehendes gültiges API-Token voraus; auch eine Anmeldung nach Ablauf eines bisherigen Cookies ist möglich.
+- `GET /api/settings/oidc-config` liefert den öffentlichen Provider-Namen und dessen Aktivierungsstatus unabhängig von vorhandenen Zugangsdaten. Abgelaufene, fehlerhafte oder inzwischen gesperrte JWTs sowie gewöhnliche Benutzer dürfen diese Login-Information lesen. Die Ausnahme gilt nur für diesen GET-Endpunkt; private Einstellungen und Änderungen benötigen weiterhin ihre regulären Berechtigungen.
+- Die Login-Seite startet pro Instanz nur einen OIDC-Claim, auch bei wiederholter Effekt-Ausführung im React-StrictMode. Nach Verlassen der Seite übernimmt sie keine verspätete Claim-Antwort mehr. Ein ausdrücklich gestarteter Passwortlogin verwirft die OIDC-Annahme und wartet vor seinem eigenen Request auf den bereits laufenden Claim, damit dessen Cookie-Antwort die Passwortsitzung nicht nachträglich ersetzt. Auch ein fehlgeschlagener Claim gibt den Passwortlogin frei; nach Verlassen der Seite wird ein noch wartender Passwortrequest nicht mehr gestartet. `frontend/src/pages/Login/index.test.tsx` prüft diese Reihenfolge und Lebenszyklusgrenzen.
+
+Regressionstests: `backend/test/internal/user-security.spec.js` und `backend/test/routes/oidc-security.spec.js`. `backend/test/routes/auth-response-contracts.spec.js` prüft über echte HTTP-Anfragen die Cookiepfade und die Folge Callback → Startup-Refresh → Claim sowie den Erhalt der alten Sitzung bei einem Callback-Fehler. `backend/test/routes/oidc-public-settings.spec.js` verbindet die echte Express-Route mit JWT-Prüfung, Berechtigungen und SQLite und prüft die öffentlichen Antworten sowie weiterhin gesperrte private Lese- und Schreibzugriffe.
+
+## CSRF bei Sitzungswechseln
+
+Nach Passwortlogin, erfolgreichem zweiten Faktor, OIDC-Claim, Refresh, Impersonation und Restore wird der CSRF-Token gegen die Benutzeridentität des ausgehenden Access-Cookies erzeugt. Die Antwort liefert ihn als `csrfToken` und über `X-XSRF-TOKEN`; ein bereits zur selben Identität passender Token bleibt beim Refresh erhalten. Die nächste schreibende Anfrage benötigt dadurch keinen vorgeschalteten Health-Aufruf. Beim Logout werden die Auth-Cookies gelöscht und der zur anonymen Sitzung passende Token über den Antwortheader übertragen; der Status bleibt `204`.
+
+Ein verspäteter Health-Aufruf kann im Browser dennoch einen älteren CSRF-Cookie setzen. Ausschließlich die Ablehnung durch die CSRF-Middleware trägt deshalb neben dem numerischen Fehlercode `403` den Zusatz `error.reason: "EBADCSRFTOKEN"`. Zu diesem Zeitpunkt ist noch keine Route ausgeführt worden. Der API-Client darf nach einem neuen Health-Aufruf exakt einmal wiederholen, solange sich die Sitzung nicht geändert hat. Ein gewöhnlicher Berechtigungsfehler erhält diesen Zusatz nicht.
+
+`backend/test/routes/csrf-session-transitions.spec.js` prüft diese Übergänge mit der echten App, CSRF-Middleware, RSA-JWTs und SQLite. Der verzögerte Health-Ablauf prüft zusätzlich, dass die abgewiesene Anfrage keine Route ausführt und der anschließende Versuch genau einmal schreibt. Die einzelnen externen 2FA-Verifizierungen werden in diesem Übergangstest simuliert; deren Kryptografie und Einmalverwendung haben eigene Integrationstests.
+
+## Demo-Konten
+
+Der Demo-Modus sperrt alle schreibenden Methoden im `/users`-Namensraum. Dazu zählen auch 2FA-Einrichtung, das Ersetzen von Wiederherstellungscodes und Avatar-Uploads. Der Schutz greift vor der Dekodierung einzelner Express-Parameter; kodierte oder teilweise numerische Benutzer-IDs umgehen die Sperre nicht. Lesende Kontozugriffe bleiben möglich.
+
+Regression: `backend/test/lib/third-auth-demo.spec.js` prüft die tatsächliche Express-Routenauflösung.
+
 ## Verwandte Seiten
 
 - [2FA-Service](./2fa.md)

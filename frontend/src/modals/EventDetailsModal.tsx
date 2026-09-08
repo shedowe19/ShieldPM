@@ -29,10 +29,10 @@ const EventDetailsModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		}
 
 		const masked = { ...(obj as Record<string, unknown>) };
-		const sensitiveKeys = ["ip", "client_ip", "remote_addr", "address", "ip_address"];
+		const sensitiveKeys = ["ip", "clientip", "remoteaddr", "address", "ipaddress"];
 
 		for (const key in masked) {
-			if (sensitiveKeys.includes(key.toLowerCase())) {
+			if (sensitiveKeys.includes(key.replace(/_/g, "").toLowerCase())) {
 				masked[key] = intl.formatMessage({ id: "audit-log.hidden-demo" });
 			} else {
 				masked[key] = maskSensitiveData(masked[key]);

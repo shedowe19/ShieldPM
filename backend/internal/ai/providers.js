@@ -6,6 +6,35 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { global as logger } from "../../logger.js";
 
+/** Build provider endpoints without dropping reverse-proxy prefixes or duplicating /v1. */
+export const getLocalEndpoint = (baseUrl, endpoint) => {
+	const base = new URL(baseUrl || "http://localhost:11434");
+	if (!["http:", "https:"].includes(base.protocol))
+		throw new Error("Only HTTP/HTTPS protocols are allowed for base_url");
+	base.pathname = `${base.pathname.replace(/\/$/, "")}/`;
+	base.search = "";
+	base.hash = "";
+	const route = base.pathname.endsWith("/v1/") && endpoint.startsWith("v1/") ? endpoint.slice(3) : endpoint;
+	return new URL(route, base);
+};
+
+const parseLocalResponse = (json, isOllamaNative, messages) => {
+	const message = isOllamaNative ? json.message : json.choices?.[0]?.message;
+	return {
+		content: message?.content || "",
+		toolCalls:
+			message?.tool_calls?.map((call, index) => ({
+				id: call.id || `call_${messages.length}_${index}`,
+				name: call.function?.name,
+				args:
+					typeof call.function?.arguments === "string"
+						? JSON.parse(call.function.arguments)
+						: call.function?.arguments || {},
+			})) || [],
+		messages,
+	};
+};
+
 /**
  * Call Gemini API
  * @param {Object} config - AI configuration
@@ -148,9 +177,9 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 	let targetUrl;
 	try {
 		if (isOllamaNative) {
-			targetUrl = new URL("api/chat", baseUrl);
+			targetUrl = getLocalEndpoint(baseUrl, "api/chat");
 		} else {
-			targetUrl = new URL("v1/chat/completions", baseUrl);
+			targetUrl = getLocalEndpoint(baseUrl, "v1/chat/completions");
 		}
 	} catch (err) {
 		throw new Error(`Invalid base_url: ${err.message}`);
@@ -191,8 +220,6 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 		payload = {
 			model: config.model,
 			messages,
-			keep_alive: config.keep_alive || "5m",
-			options,
 			tools: ollamaTools,
 		};
 	}
@@ -206,6 +233,7 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 			Authorization: `Bearer ${config.api_key}`,
 		},
 		body: JSON.stringify(payload),
+		signal: AbortSignal.timeout(120000),
 	});
 
 	if (!res.ok) {
@@ -215,44 +243,7 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
 
 	const json = await res.json();
 
-	let content;
-	let toolCalls = [];
-
-	if (isOllamaNative) {
-		content = json.message?.content || "";
-		if (json.message?.tool_calls?.length > 0) {
-			toolCalls = json.message.tool_calls.map((tc, idx) => ({
-				id: tc.id || `call_${idx}`,
-				name: tc.function?.name,
-				args: tc.function?.arguments || {},
-			}));
-		}
-	} else {
-		content = json.choices?.[0]?.message?.content || "";
-		if (json.choices?.[0]?.message?.tool_calls?.length > 0) {
-			toolCalls = json.choices[0].message.tool_calls.map((tc) => ({
-				id: tc.id,
-				name: tc.function?.name,
-				args:
-					typeof tc.function?.arguments === "string"
-						? JSON.parse(tc.function.arguments)
-						: tc.function?.arguments,
-			}));
-		}
-	}
-
-	if (toolCalls.length > 0) {
-		logger.info(
-			"[Local LLM] Tool calls detected:",
-			toolCalls.map((tc) => tc.name),
-		);
-		return {
-			content,
-			toolCalls,
-		};
-	}
-
-	return { content };
+	return parseLocalResponse(json, isOllamaNative, messages);
 };
 
 /**
@@ -265,16 +256,24 @@ export const callLocalLLM = async (config, systemPrompt, message, history, tools
  * @param {Array} toolResults - Results from tool execution
  * @returns {Promise<Object>} Response with content
  */
-export const callLocalWithResults = async (config, systemPrompt, message, history, previousResponse, toolResults) => {
+export const callLocalWithResults = async (
+	config,
+	systemPrompt,
+	message,
+	history,
+	previousResponse,
+	toolResults,
+	tools = [],
+) => {
 	const baseUrl = config.base_url || "http://localhost:11434";
 	const isOllamaNative = baseUrl.includes(":11434") && !baseUrl.includes("/v1");
 
 	let targetUrl;
 	try {
 		if (isOllamaNative) {
-			targetUrl = new URL("api/chat", baseUrl);
+			targetUrl = getLocalEndpoint(baseUrl, "api/chat");
 		} else {
-			targetUrl = new URL("v1/chat/completions", baseUrl);
+			targetUrl = getLocalEndpoint(baseUrl, "v1/chat/completions");
 		}
 	} catch (err) {
 		throw new Error(`Invalid base_url: ${err.message}`);
@@ -282,9 +281,11 @@ export const callLocalWithResults = async (config, systemPrompt, message, histor
 	const url = targetUrl.toString();
 
 	const messages = [
-		{ role: "system", content: systemPrompt },
-		...history,
-		{ role: "user", content: message },
+		...(previousResponse.messages || [
+			{ role: "system", content: systemPrompt },
+			...history,
+			{ role: "user", content: message },
+		]),
 		// Initial Assistant Response with Tool Calls
 		{
 			role: "assistant",
@@ -316,7 +317,8 @@ export const callLocalWithResults = async (config, systemPrompt, message, histor
 		...toolResults.map((tr) => ({
 			role: "tool",
 			tool_call_id: tr.toolCallId,
-			content: tr.result,
+			...(isOllamaNative ? { tool_name: tr.name } : {}),
+			content: typeof tr.result === "string" ? tr.result : JSON.stringify(tr.result),
 		})),
 	];
 
@@ -339,10 +341,10 @@ export const callLocalWithResults = async (config, systemPrompt, message, histor
 		payload = {
 			model: config.model,
 			messages,
-			keep_alive: config.keep_alive || "5m",
-			options,
 		};
 	}
+
+	if (tools.length > 0) payload.tools = tools.map((tool) => ({ type: "function", function: tool.function }));
 
 	const res = await fetch(url, {
 		method: "POST",
@@ -351,6 +353,7 @@ export const callLocalWithResults = async (config, systemPrompt, message, histor
 			Authorization: `Bearer ${config.api_key}`,
 		},
 		body: JSON.stringify(payload),
+		signal: AbortSignal.timeout(120000),
 	});
 
 	if (!res.ok) {
@@ -360,9 +363,5 @@ export const callLocalWithResults = async (config, systemPrompt, message, histor
 
 	const json = await res.json();
 
-	if (isOllamaNative) {
-		return { content: json.message?.content || "" };
-	}
-
-	return { content: json.choices?.[0]?.message?.content || "" };
+	return parseLocalResponse(json, isOllamaNative, messages);
 };

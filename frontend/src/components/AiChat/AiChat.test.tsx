@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiChat } from "./AiChat";
@@ -63,4 +63,23 @@ describe("AiChat", () => {
 		expect(screen.queryByText("The configured AI provider is available.")).not.toBeInTheDocument();
 		expect(screen.getByText("How can I help you manage your proxy hosts today?")).toBeInTheDocument();
 	});
+});
+
+it("does not bring back an in-flight response after the conversation is cleared", async () => {
+	let finish: (data: { content: string }) => void = () => {};
+	mocks.sendAiChat.mockReturnValueOnce(
+		new Promise((resolve) => {
+			finish = resolve;
+		}),
+	);
+	render(<ControlledAiChat />);
+	fireEvent.change(screen.getByRole("textbox"), { target: { value: "Old conversation" } });
+	fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+	fireEvent.click(screen.getByRole("button", { name: "Clear chat" }));
+	await act(async () => {
+		finish({ content: "Old response" });
+	});
+	expect(screen.queryByText("Old response")).not.toBeInTheDocument();
+	expect(screen.getByRole("textbox")).toBeEnabled();
+	cleanup();
 });

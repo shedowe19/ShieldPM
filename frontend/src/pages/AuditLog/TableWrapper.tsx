@@ -7,6 +7,7 @@ import {
 	IconSearch,
 } from "@tabler/icons-react";
 import { AlertCircle } from "lucide-react";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { LoadingPage } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -154,6 +155,15 @@ export default function TableWrapper() {
 	});
 	const rows = data?.items ?? [];
 	const pagination = data?.pagination;
+	useEffect(() => {
+		if (!isFetching && pagination?.page === page && page > Math.max(1, pagination.totalPages)) {
+			const params = new URLSearchParams(searchParams);
+			const lastPage = Math.max(1, pagination.totalPages);
+			if (lastPage === 1) params.delete("page");
+			else params.set("page", String(lastPage));
+			setSearchParams(params, { replace: true });
+		}
+	}, [isFetching, page, pagination, searchParams, setSearchParams]);
 	const downloadCsv = () => {
 		const csv = createAuditLogCsv(rows, {
 			action: intl.formatMessage({ id: "audit-log.csv.action" }),
@@ -171,22 +181,6 @@ export default function TableWrapper() {
 		URL.revokeObjectURL(url);
 	};
 
-	if (isLoading) {
-		return <LoadingPage />;
-	}
-
-	if (isError) {
-		return (
-			<Alert variant="destructive">
-				<AlertCircle className="h-4 w-4" />
-				<AlertTitle>
-					<T id="error.title" />
-				</AlertTitle>
-				<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
-			</Alert>
-		);
-	}
-
 	return (
 		<Card className="mt-4 border-t-4 border-purple-500/50">
 			<CardHeader className="flex flex-col gap-3 space-y-0 pb-2 xl:flex-row xl:items-center xl:justify-between">
@@ -194,7 +188,7 @@ export default function TableWrapper() {
 					<IconHistory className="h-6 w-6" />
 					<T id="auditlogs" />
 				</CardTitle>
-				{rows.length || hasActiveFilters ? (
+				{rows.length || hasActiveFilters || isLoading || isError ? (
 					<div className="flex w-full flex-wrap items-end gap-2 xl:w-auto xl:flex-nowrap">
 						<Button
 							className="h-9"
@@ -354,46 +348,63 @@ export default function TableWrapper() {
 				) : null}
 			</CardHeader>
 			<CardContent>
-				<Table
-					data={rows}
-					isFetching={isFetching}
-					onFilterByObject={filterByObject}
-					onFilterByUser={filterByUser}
-					onSelectItem={showEventDetailsModal}
-				/>
-				{pagination && pagination.totalPages > 1 ? (
-					<div className="mt-4 flex items-center justify-end gap-2" aria-live="polite">
-						<Button
-							aria-label={intl.formatMessage({ id: "pagination.previous" })}
-							disabled={page === 1}
-							onClick={() => {
-								const nextPage = page - 1;
-								updateSearchParams({ page: nextPage });
-							}}
-							size="icon"
-							type="button"
-							variant="outline"
-						>
-							<IconChevronLeft className="h-4 w-4" />
-						</Button>
-						<span className="text-sm text-muted-foreground">
-							<T id="pagination.page-info" data={{ current: page, total: pagination.totalPages }} />
-						</span>
-						<Button
-							aria-label={intl.formatMessage({ id: "pagination.next" })}
-							disabled={page === pagination.totalPages}
-							onClick={() => {
-								const nextPage = page + 1;
-								updateSearchParams({ page: nextPage });
-							}}
-							size="icon"
-							type="button"
-							variant="outline"
-						>
-							<IconChevronRight className="h-4 w-4" />
-						</Button>
-					</div>
-				) : null}
+				{isLoading ? (
+					<LoadingPage />
+				) : isError ? (
+					<Alert variant="destructive">
+						<AlertCircle className="h-4 w-4" />
+						<AlertTitle>
+							<T id="error.title" />
+						</AlertTitle>
+						<AlertDescription>{error?.message || <T id="error.unknown" />}</AlertDescription>
+					</Alert>
+				) : (
+					<>
+						<Table
+							data={rows}
+							isFetching={isFetching}
+							onFilterByObject={filterByObject}
+							onFilterByUser={filterByUser}
+							onSelectItem={showEventDetailsModal}
+						/>
+						{pagination && pagination.totalPages > 1 ? (
+							<div className="mt-4 flex items-center justify-end gap-2" aria-live="polite">
+								<Button
+									aria-label={intl.formatMessage({ id: "pagination.previous" })}
+									disabled={page === 1}
+									onClick={() => {
+										const nextPage = page - 1;
+										updateSearchParams({ page: nextPage });
+									}}
+									size="icon"
+									type="button"
+									variant="outline"
+								>
+									<IconChevronLeft className="h-4 w-4" />
+								</Button>
+								<span className="text-sm text-muted-foreground">
+									<T
+										id="pagination.page-info"
+										data={{ current: page, total: pagination.totalPages }}
+									/>
+								</span>
+								<Button
+									aria-label={intl.formatMessage({ id: "pagination.next" })}
+									disabled={page === pagination.totalPages}
+									onClick={() => {
+										const nextPage = page + 1;
+										updateSearchParams({ page: nextPage });
+									}}
+									size="icon"
+									type="button"
+									variant="outline"
+								>
+									<IconChevronRight className="h-4 w-4" />
+								</Button>
+							</div>
+						) : null}
+					</>
+				)}
 			</CardContent>
 		</Card>
 	);

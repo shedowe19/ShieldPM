@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Maintenance</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -41,12 +41,13 @@
 
         html,
         body {
-            height: 100%;
+            min-height: 100%;
             width: 100%;
-            overflow: hidden;
         }
 
         body {
+            min-height: 100vh;
+            padding: 1rem;
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             color: var(--text-title);
@@ -81,7 +82,7 @@
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--card-border);
             border-radius: 24px;
-            padding: 4rem;
+            padding: clamp(1rem, 5vw, 4rem);
             box-shadow:
                 0 0 0 1px rgba(255, 255, 255, 0.02),
                 0 24px 48px -12px rgba(0, 0, 0, 0.5);
@@ -501,7 +502,9 @@
                     }
 
                     if (!updateTimer()) {
-                        setInterval(updateTimer, 1000);
+                        var timerId = setInterval(function () {
+                            if (updateTimer()) clearInterval(timerId);
+                        }, 1000);
                     }
                 }
             }

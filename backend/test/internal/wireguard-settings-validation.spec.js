@@ -4,22 +4,28 @@ const mocks = vi.hoisted(() => ({
 	execSync: vi.fn(),
 	existsSync: vi.fn(),
 	logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+	linkSync: vi.fn(),
 	mkdirSync: vi.fn(),
 	patchSettings: vi.fn(),
 	peerQuery: vi.fn(),
 	readFileSync: vi.fn(),
+	renameSync: vi.fn(),
 	settingQuery: vi.fn(),
 	spawn: vi.fn(),
 	writeFileSync: vi.fn(),
+	unlinkSync: vi.fn(),
 }));
 
 vi.mock("node:child_process", () => ({ execSync: mocks.execSync, spawn: mocks.spawn }));
 vi.mock("node:fs", () => ({
 	default: {
 		existsSync: mocks.existsSync,
+		linkSync: mocks.linkSync,
 		mkdirSync: mocks.mkdirSync,
 		readFileSync: mocks.readFileSync,
+		renameSync: mocks.renameSync,
 		writeFileSync: mocks.writeFileSync,
+		unlinkSync: mocks.unlinkSync,
 	},
 }));
 vi.mock("../../logger.js", () => ({ global: mocks.logger }));
@@ -72,6 +78,7 @@ describe("WireGuard settings validation", () => {
 		["newline injection", { endpoint: "vpn.example.com\nPostUp = iptables -F FORWARD" }],
 		["out-of-range ports", { listen_port: 65536 }],
 		["invalid IPv4 CIDRs", { subnet: "10.8.0.0/99" }],
+		["ambiguous IPv4 notation", { subnet: "10.8/24" }],
 		["CIDRs unsupported by the peer allocator", { subnet: "10.8.0.0/25", server_address: "10.8.0.1/25" }],
 		["server addresses outside the configured subnet", { server_address: "10.9.0.1/24" }],
 	])("rejects %s before persisting settings", async (_description, data) => {
@@ -88,6 +95,12 @@ describe("WireGuard settings validation", () => {
 			return "server-private-key";
 		});
 		mocks.writeFileSync.mockImplementation((path) => knownFiles.add(path));
+		mocks.linkSync.mockImplementation((_source, destination) => knownFiles.add(destination));
+		mocks.renameSync.mockImplementation((source, destination) => {
+			knownFiles.add(destination);
+			knownFiles.delete(source);
+		});
+		mocks.unlinkSync.mockImplementation((path) => knownFiles.delete(path));
 		mocks.execSync.mockImplementation((command) => {
 			if (command === "which wg") return "/usr/bin/wg";
 			if (command === "wg genkey") return "server-private-key";
@@ -102,7 +115,7 @@ describe("WireGuard settings validation", () => {
 			};
 			return {
 				stderr: { on: () => {} },
-				stdin: { end: vi.fn(), write: vi.fn() },
+				stdin: { end: vi.fn(), write: vi.fn(), on: vi.fn() },
 				stdout: { on: (_event, handler) => handlers.data.push(handler) },
 				on: (event, handler) => handlers[event].push(handler),
 			};

@@ -161,7 +161,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 - **openappsec.js** → WAF-Modul (nginx-Modul + Docker/native)
 - **anubis.js** → externer Anubis-Service (PoW-Gate)
 
-- **analytics.js** → nutzt recharts, react-simple-maps, GoAccess
+- **analytics.js** → nutzt recharts, lokale world-atlas-Topologie, GoAccess
 
 ### API-Routen (Überblick)
 
@@ -183,7 +183,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 | `chat.js`                    | `/api/chat`                      | ChatOps / Telegram                      |
 | `gitops.js`                  | `/api/gitops`                    | GitOps Pull/Push                        |
 | `ai.js`                      | `/api/ai`                        | AI-Agent                                |
-| `password-reset.js`          | `/api/password-reset`            | Passwort-Reset                          |
+| `password-reset.js`          | CLI, kein API-Endpunkt           | SQLite-Passwort-Reset                   |
 | `nginx/proxy_hosts.js`       | `/api/nginx/proxy-hosts`         | proxy-host                              |
 | `nginx/redirection_hosts.js` | `/api/nginx/redirection-hosts`   | redirection-host                        |
 | `nginx/dead_hosts.js`        | `/api/nginx/dead-hosts`          | dead-host                               |
@@ -205,7 +205,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 
 ---
 
-_Zuletzt aktualisiert: 2026-05-04_
+_Zuletzt aktualisiert: 2026-09-08_
 
 ## Verwandte Seiten
 
@@ -214,3 +214,7 @@ _Zuletzt aktualisiert: 2026-05-04_
 - [Module](./module/README.md)
 - [API-Überblick](./api/ueberblick.md)
 - [Wiki-Pflege](./wiki-pflege.md)
+
+## Codeprüfung
+
+- [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des sechsten vollständigen Durchgangs in PR #139.

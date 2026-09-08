@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps, PropsWithChildren } from "react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -134,5 +134,20 @@ describe("AccessListModal", () => {
 		expect(await screen.findByText("Unbekannter Fehler")).toBeInTheDocument();
 		expect(screen.queryByText("Error")).not.toBeInTheDocument();
 		expect(screen.queryByText("Unknown error")).not.toBeInTheDocument();
+	});
+	it("preserves edits when a background refresh returns changed access-list data", async () => {
+		const { showAccessListModal } = await import("./AccessListModal");
+		showAccessListModal(73);
+		const Modal = mocks.show.mock.calls[0][0];
+		const { rerender } = render(<Modal id={73} remove={mocks.remove} visible />);
+		const input = screen.getByDisplayValue("Legacy access list");
+		fireEvent.change(input, { target: { value: "Unsaved access list" } });
+		mocks.useAccessList.mockReturnValue({
+			data: { clients: [], id: 73, items: [], meta: {}, name: "Refetched access list" },
+			error: null,
+			isLoading: false,
+		});
+		rerender(<Modal id={73} remove={mocks.remove} visible />);
+		await waitFor(() => expect(input).toHaveValue("Unsaved access list"));
 	});
 });

@@ -85,6 +85,15 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).toMatch(/frontend[\s\S]*test --run/);
 	});
 
+	it("checks backend JavaScript types before executing the tests", () => {
+		expect(workflow).toContain(
+			"- name: Check backend types\n        working-directory: backend\n        run: node node_modules/typescript/bin/tsc --noEmit",
+		);
+		expect(workflow.indexOf("- name: Check backend types")).toBeLessThan(
+			workflow.indexOf("- name: Run backend tests"),
+		);
+	});
+
 	it("reports high and critical dependency findings without blocking existing baseline debt", () => {
 		expect(workflow).toMatch(/audit --level high/);
 		expect(workflow).toMatch(

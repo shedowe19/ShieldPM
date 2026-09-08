@@ -1,8 +1,9 @@
+import crypto from "node:crypto";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import twoFaService from "../internal/2fa-service.js";
 import internalToken from "../internal/token.js";
-import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
+import { clearAuthCookies, clearDuoCookie, readDuoCookie, setAuthCookies, setDuoCookie } from "../lib/auth-cookies.js";
 import errs from "../lib/error.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import apiValidator from "../lib/validator/api.js";
@@ -23,6 +24,20 @@ const authRateLimiter = rateLimit({
 	legacyHeaders: false,
 	message: { error: { code: 429, message: "Too many requests, please try again later." } },
 });
+
+const loadPendingTwoFaToken = async (rawToken) => {
+	const token = TokenModel();
+	const payload = await token.load(rawToken);
+	if (
+		!Array.isArray(payload.scope) ||
+		!payload.scope.includes("2fa_pending") ||
+		!Number.isSafeInteger(payload.attrs?.id) ||
+		payload.attrs.id <= 0
+	) {
+		throw new errs.AuthError("Invalid pending 2FA token");
+	}
+	return payload;
+};
 
 const router = express.Router({
 	caseSensitive: true,
@@ -203,7 +218,8 @@ router
 		});
 
 		res.clearCookie("shieldpm_oidc");
-		res.status(200).send(data);
+		res.locals.refreshCsrfToken?.(data.token);
+		res.status(200).send({ ...data, csrfToken: res.locals.csrfToken });
 	})
 
 	/**
@@ -311,8 +327,8 @@ router
 				const AuthSession = (await import("../models/auth-session.js")).default;
 				const lookup = AuthSession.buildLookup(rawRefreshToken);
 				const session = await AuthSession.query().findOne(lookup);
-				if (session && !session.revoked_at) {
-					await internalToken.revokeSession(session.id, "logout");
+				if (session) {
+					await internalToken.revokeFamily(session.family_id, "logout");
 				}
 			} catch (err) {
 				debug(logger, `Failed to revoke refresh session on logout: ${err}`);
@@ -359,9 +375,10 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 	} catch (err) {
 		debug(logger, `POST /tokens/refresh: ${err}`);
 		const code = err instanceof errs.AuthError || err instanceof errs.UnauthorizedError ? 401 : 500;
-		clearAuthCookies(res);
+		// A delayed failure may belong to an older login. Clearing cookies here
+		// would also erase a newer session already installed by the browser.
 		res.status(code).send({
-			error: { code, message: err.message || "Token refresh failed" },
+			error: { code, message: err.public ? err.message : "Token refresh failed" },
 		});
 	}
 });
@@ -369,7 +386,7 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 /**
  * POST /tokens/logout
  *
- * Revoke the refresh session and clear all auth cookies.
+ * Revoke the login's refresh-token family and clear all auth cookies.
  */
 router.post("/logout", authRateLimiter, async (req, res) => {
 	const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
@@ -379,8 +396,8 @@ router.post("/logout", authRateLimiter, async (req, res) => {
 			const AuthSession = (await import("../models/auth-session.js")).default;
 			const lookup = AuthSession.buildLookup(rawRefreshToken);
 			const session = await AuthSession.query().findOne(lookup);
-			if (session && !session.revoked_at) {
-				await internalToken.revokeSession(session.id, "logout");
+			if (session) {
+				await internalToken.revokeFamily(session.family_id, "logout");
 			}
 		} catch (err) {
 			debug(logger, `POST /tokens/logout: revoke failed: ${err}`);
@@ -428,10 +445,12 @@ router
 
 			// Clear the backup cookie
 			res.clearCookie("shieldpm_jwt_original");
+			res.locals.refreshCsrfToken?.(originalToken);
 
 			// Respond with user/expiry so frontend AuthStore can update its state
 			res.status(200).send({
 				expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
+				csrfToken: res.locals.csrfToken,
 				user: {
 					id: payload.attrs?.id || payload.id,
 				},
@@ -460,32 +479,22 @@ router
  * On success, issues full access + refresh tokens and sets auth cookies.
  */
 router.post("/2fa/verify", authRateLimiter, async (req, res) => {
-	const { pending_token, method, code } = req.body;
+	const { pending_token, method, code } = req.body || {};
 
-	if (!pending_token || !method || !code) {
+	if (typeof pending_token !== "string" || typeof method !== "string" || typeof code !== "string" || !code) {
 		return res.status(400).send({ error: { code: 400, message: "pending_token, method, and code are required" } });
 	}
 
 	try {
 		// Verify the short-lived pending token
-		const Token = TokenModel();
 		let payload;
 		try {
-			payload = await Token.load(pending_token);
+			payload = await loadPendingTwoFaToken(pending_token);
 		} catch (_err) {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
 
-		const scope = payload.scope;
-		const scopes = Array.isArray(scope) ? scope : [scope];
-		if (!scopes.includes("2fa_pending")) {
-			return res.status(401).send({ error: { code: 401, message: "Invalid token scope for 2FA verification" } });
-		}
-
-		const userId = payload.attrs?.id;
-		if (!userId) {
-			return res.status(401).send({ error: { code: 401, message: "Invalid pending token" } });
-		}
+		const userId = payload.attrs.id;
 
 		// Verify the provided 2FA code
 		const valid = await twoFaService.verifyLoginChallenge(userId, method, code);
@@ -529,17 +538,16 @@ router.post("/2fa/verify", authRateLimiter, async (req, res) => {
  * Begin passkey authentication during the login 2FA step.
  */
 router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
-	const { pending_token } = req.body;
+	const { pending_token } = req.body || {};
 
 	if (!pending_token) {
 		return res.status(400).send({ error: { code: 400, message: "pending_token is required" } });
 	}
 
 	try {
-		const Token = TokenModel();
 		let payload;
 		try {
-			payload = await Token.load(pending_token);
+			payload = await loadPendingTwoFaToken(pending_token);
 		} catch (_err) {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
@@ -563,7 +571,7 @@ router.post("/2fa/passkey/begin", authRateLimiter, async (req, res) => {
  * Complete passkey authentication and issue full tokens.
  */
 router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
-	const { pending_token, challenge_id, auth_response } = req.body;
+	const { pending_token, challenge_id, auth_response } = req.body || {};
 
 	if (!pending_token || !challenge_id || !auth_response) {
 		return res
@@ -572,10 +580,9 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
 	}
 
 	try {
-		const Token = TokenModel();
 		let payload;
 		try {
-			payload = await Token.load(pending_token);
+			payload = await loadPendingTwoFaToken(pending_token);
 		} catch (_err) {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
@@ -618,29 +625,33 @@ router.post("/2fa/passkey/complete", authRateLimiter, async (req, res) => {
  * Generate a Duo auth URL for the pending user.
  */
 router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
-	const { pending_token } = req.body;
+	res.set("Cache-Control", "no-store");
+	clearDuoCookie(res, req);
+	const { pending_token } = req.body || {};
 
 	if (!pending_token) {
 		return res.status(400).send({ error: { code: 400, message: "pending_token is required" } });
 	}
 
 	try {
-		const Token = TokenModel();
 		let payload;
 		try {
-			payload = await Token.load(pending_token);
+			payload = await loadPendingTwoFaToken(pending_token);
 		} catch (_err) {
 			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
 		}
 
 		const userId = payload.attrs?.id;
-		const user = await User.query().findById(userId);
+		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
 		if (!user) {
 			return res.status(401).send({ error: { code: 401, message: "User not found" } });
 		}
 
-		const { authUrl, state } = await twoFaService.beginDuoAuthentication(userId, user.email);
-		res.status(200).json({ auth_url: authUrl, state });
+		const browserToken = crypto.randomBytes(32).toString("base64url");
+		const expiresAt = Math.min(payload.exp * 1000, Date.now() + 5 * 60 * 1000);
+		const authUrl = await twoFaService.beginDuoAuthentication(userId, user.email, browserToken, expiresAt);
+		setDuoCookie(res, req, browserToken, expiresAt);
+		res.status(200).json({ auth_url: authUrl });
 	} catch (err) {
 		debug(logger, `POST /tokens/2fa/duo/begin: ${err}`);
 		const code = err.status || 500;
@@ -656,29 +667,21 @@ router.post("/2fa/duo/begin", authRateLimiter, async (req, res) => {
  * Complete Duo authentication and issue full tokens.
  */
 router.post("/2fa/duo/complete", authRateLimiter, async (req, res) => {
-	const { pending_token, duo_code } = req.body;
+	res.set("Cache-Control", "no-store");
+	clearDuoCookie(res, req);
+	const { duo_code, state } = req.body || {};
 
-	if (!pending_token || !duo_code) {
-		return res.status(400).send({ error: { code: 400, message: "pending_token and duo_code are required" } });
+	if (typeof duo_code !== "string" || !duo_code || typeof state !== "string" || !state) {
+		return res.status(400).send({ error: { code: 400, message: "duo_code and state are required" } });
 	}
 
 	try {
-		const Token = TokenModel();
-		let payload;
-		try {
-			payload = await Token.load(pending_token);
-		} catch (_err) {
-			return res.status(401).send({ error: { code: 401, message: "Pending 2FA token is invalid or expired" } });
+		const browserToken = readDuoCookie(req);
+		if (!browserToken) {
+			return res.status(401).send({ error: { code: 401, message: "Duo login cookie is missing or expired" } });
 		}
-
-		const userId = payload.attrs?.id;
-		const user = await User.query().findById(userId).andWhere("is_deleted", 0).andWhere("is_disabled", 0);
+		const user = await twoFaService.completeDuoAuthentication(browserToken, duo_code, state);
 		if (!user) {
-			return res.status(401).send({ error: { code: 401, message: "User not found" } });
-		}
-
-		const valid = await twoFaService.completeDuoAuthentication(userId, user.email, duo_code);
-		if (!valid) {
 			return res.status(401).send({ error: { code: 401, message: "Duo authentication failed" } });
 		}
 

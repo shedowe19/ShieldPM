@@ -24,8 +24,8 @@ dayjs.extend(quarterOfYear);
  * @returns {Object}
  */
 const parseDatePeriod = (expression) => {
-	const matches = expression.match(/^([0-9]+)(y|Q|M|w|d|h|m|s|ms)$/m);
-	if (matches) {
+	const matches = typeof expression === "string" && expression.match(/^([0-9]+)(y|Q|M|w|d|h|m|s|ms)$/);
+	if (matches && matches[0] === expression) {
 		return dayjs().add(Number.parseInt(matches[1], 10), /** @type {import("dayjs").ManipulateType} */ (matches[2]));
 	}
 
@@ -35,7 +35,7 @@ const parseDatePeriod = (expression) => {
 const convertIntFieldsToBool = (obj, fields) => {
 	fields.forEach((field) => {
 		if (typeof obj[field] !== "undefined") {
-			obj[field] = obj[field] === 1;
+			obj[field] = obj[field] === true || obj[field] === 1 || obj[field] === "1";
 		}
 	});
 	return obj;

@@ -26,13 +26,12 @@
 	],
 	"responses": {
 		"200": {
-			"description": "200 response",
+			"description": "Impersonation session established through the HttpOnly shieldpm_jwt cookie",
 			"content": {
 				"application/json": {
 					"examples": {
 						"default": {
 							"value": {
-								"token": "eyJhbGciOiJSUzI1NiIsInR...16OjT8B3NLyXg",
 								"expires": "2020-01-31T10:56:23.239Z",
 								"user": {
 									"id": 1,
@@ -53,15 +52,13 @@
 						"description": "Login object",
 						"required": [
 							"expires",
-							"token",
 							"user"
 						],
 						"additionalProperties": false,
 						"properties": {
-							"token": {
-								"description": "JWT Token",
-								"type": "string",
-								"example": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.ey...xaHKYr3Kk6MvkUjcC4"
+							"csrfToken": {
+								"description": "CSRF token bound to the impersonated user's session",
+								"type": "string"
 							},
 							"expires": {
 								"description": "Token Expiry Timestamp",

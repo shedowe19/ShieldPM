@@ -1,6 +1,7 @@
 import * as bg from "./bg/index";
 import * as de from "./de/index";
 import * as en from "./en/index";
+import * as es from "./es/index";
 import * as it from "./it/index";
 import * as ja from "./ja/index";
 import * as ko from "./ko/index";
@@ -15,7 +16,7 @@ interface HelpDocModule {
 	[key: string]: { default: string };
 }
 
-const items: Record<string, HelpDocModule> = { en, de, ja, sk, zh, pl, ru, it, vi, nl, bg, ko };
+const items: Record<string, HelpDocModule> = { en, de, es, ja, sk, zh, pl, ru, it, vi, nl, bg, ko };
 
 const fallbackLang = "en";
 

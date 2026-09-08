@@ -3,12 +3,15 @@ import { global as logger } from "../logger.js";
 import proxyHostModel from "../models/proxy_host.js";
 import internalNginx from "./nginx.js";
 
+const MAX_TIMER_DELAY = 2 ** 31 - 1;
+
 const internalMaintenance = {
 	interval: null,
 	intervalProcessing: false,
 	scheduledTimers: new Map(), // Track scheduled timers by hostId
 
 	initTimer: () => {
+		if (internalMaintenance.interval) return;
 		logger.info("Maintenance Timer initialized");
 		// Initial scan and set up precise timers
 		internalMaintenance.processMaintenance();
@@ -34,7 +37,7 @@ const internalMaintenance = {
 		const newTimers = [];
 
 		// Schedule start timer
-		if (start && now.isBefore(start)) {
+		if (start && now.isBefore(start) && start.diff(now) <= MAX_TIMER_DELAY) {
 			const msUntilStart = start.diff(now);
 			logger.info(`Scheduling maintenance START for Host #${hostId} in ${Math.round(msUntilStart / 1000)}s`);
 			const startTimer = setTimeout(() => {
@@ -45,7 +48,7 @@ const internalMaintenance = {
 		}
 
 		// Schedule end timer
-		if (end && now.isBefore(end)) {
+		if (end && now.isBefore(end) && end.diff(now) <= MAX_TIMER_DELAY) {
 			const msUntilEnd = end.diff(now);
 			logger.info(`Scheduling maintenance END for Host #${hostId} in ${Math.round(msUntilEnd / 1000)}s`);
 			const endTimer = setTimeout(() => {
@@ -76,6 +79,14 @@ const internalMaintenance = {
 					this.whereNotNull("maintenance_start").orWhereNotNull("maintenance_end");
 				});
 
+			const activeTimerKeys = new Set(hosts.map((host) => `host_${host.id}`));
+			for (const [key, timers] of internalMaintenance.scheduledTimers) {
+				if (!activeTimerKeys.has(key)) {
+					timers.forEach(clearTimeout);
+					internalMaintenance.scheduledTimers.delete(key);
+				}
+			}
+
 			let reloadNeeded = false;
 
 			for (const host of hosts) {
@@ -87,8 +98,8 @@ const internalMaintenance = {
 
 				// STATE-BASED LOGIC:
 				// 1. Determine if we SHOULD be in maintenance right now
-				let shouldBeActive = false;
-				if (start && now.isAfter(start)) {
+				let shouldBeActive = !start && !!host.maintenance_active && !!end && now.isBefore(end);
+				if (start && !now.isBefore(start)) {
 					// It has started. Has it ended?
 					if (!end || now.isBefore(end)) {
 						shouldBeActive = true;
@@ -112,7 +123,7 @@ const internalMaintenance = {
 					if (shouldBeActive && !end) {
 						patchData.maintenance_start = null;
 						logger.info(`Cleared one-shot schedule for Host #${host.id}`);
-					} else if (!shouldBeActive && end && now.isAfter(end)) {
+					} else if (!shouldBeActive && end && !now.isBefore(end)) {
 						patchData.maintenance_start = null;
 						patchData.maintenance_end = null;
 						logger.info(`Cleared expired maintenance window for Host #${host.id}`);
@@ -121,11 +132,14 @@ const internalMaintenance = {
 					// Update DB
 					await proxyHostModel.query().findById(host.id).patch(patchData);
 
+					// Keep disabled hosts disabled when their schedule changes.
+					if (!host.enabled) continue;
+
 					// Refetch host and regenerate nginx config
 					const updatedHost = await proxyHostModel
 						.query()
 						.findById(host.id)
-						.withGraphFetched("[owner, access_list, certificate]");
+						.withGraphFetched("[owner, host_domains, access_list.[items, clients], certificate]");
 
 					await internalNginx.configure(proxyHostModel, "proxy_host", updatedHost, { skip_reload: true });
 
@@ -134,7 +148,7 @@ const internalMaintenance = {
 			}
 
 			if (reloadNeeded) {
-				await internalNginx.reload();
+				await internalNginx.withConfigurationLock(() => internalNginx.reload());
 			}
 		} catch (err) {
 			logger.error(err);

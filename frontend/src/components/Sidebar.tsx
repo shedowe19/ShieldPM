@@ -203,11 +203,13 @@ const SidebarItem = ({ item, onClick }: { item: MenuItem; onClick?: () => void }
 };
 
 export function Sidebar() {
+	const [mobileOpen, setMobileOpen] = useState(false);
+	const closeMobile = () => setMobileOpen(false);
 	return (
 		<AiChatLauncher>
 			{/* Mobile Trigger */}
 			<div className="lg:hidden p-4 border-b flex items-center gap-4 bg-background">
-				<Sheet>
+				<Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
 					<SheetTrigger asChild>
 						<Button variant="ghost" size="icon">
 							<IconMenu2 />
@@ -219,7 +221,7 @@ export function Sidebar() {
 					<SheetContent side="left" className="w-[280px] p-0">
 						<div className="flex flex-col h-full bg-slate-950 text-slate-100 border-r-slate-800">
 							<div className="p-6">
-								<Link to="/" className="flex items-center gap-2 font-semibold">
+								<Link to="/" onClick={closeMobile} className="flex items-center gap-2 font-semibold">
 									<img src="/images/logo-no-text.svg" alt="ShieldPM" className="h-8 w-8" />
 									<span className="text-lg">ShieldPM</span>
 								</Link>
@@ -227,10 +229,10 @@ export function Sidebar() {
 							<ScrollArea className="flex-1 px-4">
 								<nav className="flex flex-col gap-2 py-4">
 									{menuItems.map((item) => (
-										<SidebarItem key={item.to || item.label} item={item} />
+										<SidebarItem key={item.to || item.label} item={item} onClick={closeMobile} />
 									))}
 									<div className="pt-4 border-t border-slate-800 mt-2">
-										<AiChatLauncherTrigger />
+										<AiChatLauncherTrigger onClick={closeMobile} />
 									</div>
 								</nav>
 							</ScrollArea>

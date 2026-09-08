@@ -13,6 +13,14 @@
 | `backend/jsconfig.json` | JavaScript-Pfad-Konfiguration             |
 | `backend/tsconfig.json` | TypeScript-Konfiguration (für Typprüfung) |
 
+## Persistente Instanzkonfiguration
+
+`backend/lib/config.js` liest zuerst `${DATA_PATH:-/data}/shieldpm/default.json`, sofern darin eine Datenbank konfiguriert ist. Eine vorhandene, aber nicht lesbare oder ungültige JSON-Datei bricht die Initialisierung ab. Sie darf nicht stillschweigend eine andere Datenbank oder die Ersteinrichtung auswählen. Ohne diese Datei gelten die Datenbank-Umgebungsvariablen und anschließend SQLite als Standard.
+
+Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private temporäre Datei geschrieben und vor ihrer Veröffentlichung synchronisiert. Die Erweiterung um einen fehlenden `encryptionKey` ersetzt die bisherige Datei atomar; ein Schreibfehler erhält die bisherigen RSA-Schlüssel. Bei konkurrierender erstmaliger Erstellung gewinnt genau eine vollständige Datei, die anschließend von beiden Aufrufern gelesen wird. Konkurrierende Erweiterungen einer alten Datei wählen über eine ebenfalls private, atomar angelegte Kandidatendatei denselben Verschlüsselungsschlüssel. Der Kandidat wird vor dem erneuten Lesen der Hauptdatei gelesen; ein bereits veröffentlichter Schlüssel gewinnt. Bei fehlgeschlagener Veröffentlichung bleibt der vollständige Kandidat für den nächsten Versuch erhalten, nach Erfolg wird er entfernt.
+
+`backend/lib/environment-hash.js` berechnet gemeinsam für `envs.sh` und `utils.writeHash()` den Fingerabdruck der Nginx-Vorlagen, ihrer benannten Umgebungswerte und der Template-Version. Die strukturierte Kodierung unterscheidet beispielsweise die Portpaare `443/80` und `44/380`. Änderungen der Vorlagendateien selbst führen auch ohne Versionsänderung zu `REGENERATE_ALL=true`. Nach abgeschlossener Neuerzeugung liegt der Fingerabdruck unter `${DATA_PATH:-/data}/shieldpm/env.sha512sum`.
+
 ## Frontend
 
 | Datei                         | Zweck                              |
@@ -84,13 +92,12 @@ Siehe [Rootfs-Referenz](./rootfs.md) für vollständige Auflistung.
 
 Diese Dateien sind für KI-Agenten relevant und steuern das Verhalten bei der Arbeit mit diesem Projekt:
 
-| Datei | Zweck |
-| {
-|-------|-------|
-| `AGENTS.md` | deflection-Skill-Catalog, Common Code Patterns, Projekt-Constraints. **MUSS** vor jeder Aufgabe gelesen werden. |
-| `GEMINI.md` | **Source of Truth** für AI Agent Context — alle Agenten müssen diese Datei als autoritativ betrachten. |
-| `agent.md` | deflection-Pflicht-Regeln für Wiki-Pflege. Definiert wann und wie das Wiki aktualisiert werden muss. **MUSS** vor jeder Arbeitssitzung gelesen werden. |
-| `.cursorrules` | Coding-Standards, Naming-Conventions, Anti-Patterns. Relevant für alle Code-Änderungen. |
+| Datei          | Zweck                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`    | Skill-Katalog, gemeinsame Code-Muster und Projektvorgaben. **MUSS** vor jeder Aufgabe gelesen werden.                                                |
+| `GEMINI.md`    | **Source of Truth** für AI Agent Context — alle Agenten müssen diese Datei als autoritativ betrachten.                                               |
+| `agent.md`     | Verbindliche Regeln für die Wiki-Pflege. Definiert wann und wie das Wiki aktualisiert werden muss. **MUSS** vor jeder Arbeitssitzung gelesen werden. |
+| `.cursorrules` | Coding-Standards, Naming-Conventions, Anti-Patterns. Relevant für alle Code-Änderungen.                                                              |
 
 ## Verwandte Seiten
 

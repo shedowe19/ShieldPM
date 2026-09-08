@@ -66,10 +66,7 @@ const AnubisRulesField = () => {
 							</p>
 						)}
 						{rules.map((rule, index) => (
-							<div
-								key={`${index}-${rule.path}`}
-								className="border rounded bg-background/50 overflow-hidden"
-							>
+							<div key={index} className="border rounded bg-background/50 overflow-hidden">
 								{/* Main Row */}
 								<div className="flex gap-2 items-center p-2">
 									<div className="grid grid-cols-12 gap-2 flex-1">
@@ -173,11 +170,14 @@ const AnubisRulesField = () => {
 													id: "anubis.rules.remote-addresses.placeholder",
 												})}
 												value={(rule.remoteAddresses || []).join(", ")}
+												onBlur={() =>
+													setFieldValue(
+														`anubisRules.${index}.remoteAddresses`,
+														(rule.remoteAddresses || []).filter(Boolean),
+													)
+												}
 												onChange={(e) => {
-													const addresses = e.target.value
-														.split(",")
-														.map((s) => s.trim())
-														.filter((s) => s.length > 0);
+													const addresses = e.target.value.split(",").map((s) => s.trim());
 													setFieldValue(`anubisRules.${index}.remoteAddresses`, addresses);
 												}}
 												className="h-8 text-xs font-mono"

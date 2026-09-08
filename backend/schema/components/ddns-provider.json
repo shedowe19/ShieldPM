@@ -34,16 +34,16 @@
             "type": "object"
         },
         "last_ipv4": {
-            "type": "string"
+            "type": ["string", "null"]
         },
         "last_ipv6": {
-            "type": "string"
+            "type": ["string", "null"]
         },
         "last_updated_on": {
-            "type": "string"
+            "type": ["string", "null"]
         },
         "last_error": {
-            "type": "string"
+            "type": ["string", "null"]
         },
         "enabled": {
             "type": "boolean"

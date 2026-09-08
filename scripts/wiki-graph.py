@@ -4,7 +4,7 @@ Wiki-Graph-Generator für ShieldPM.
 
 Liest alle .md-Dateien unter docs/wiki-intern/, extrahiert relative Markdown-
 Links (z.B. [Text](./pfad.md), [Text](../pfad.md)) und erzeugt eine eigenständige,
-interaktive HTML-Datei (vis-network via CDN), die das Wiki als Netzwerk darstellt.
+interaktive HTML-Datei mit lokal eingebettetem vis-network, die das Wiki als Netzwerk darstellt.
 
 Aufruf:
     python3 scripts/wiki-graph.py            # nutzt docs/wiki-intern/
@@ -16,6 +16,7 @@ Ausgabe:
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import re
@@ -116,7 +117,7 @@ def build_graph(root: Path):
         n["value"] = max(deg, 1)
         # HTML-Tooltip mit <br> – funktioniert robust unabhängig von innerText/innerHTML.
         n["title"] = (
-            f"<b>{nid}</b><br>"
+            f"<b>{html.escape(nid)}</b><br>"
             f"<span style='color:#8a98b3'>Eingehend:</span> {deg} · "
             f"<span style='color:#8a98b3'>Ausgehend:</span> {n['outgoing']}"
         )
@@ -285,6 +286,9 @@ const EDGES = __EDGES__;
 const COLORS = __COLORS__;
 
 const $ = id => document.getElementById(id);
+const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+})[character]);
 $('stats').textContent = NODES.length + ' Seiten · ' + EDGES.length + ' Verknüpfungen · gebaut __BUILD_TS__';
 
 function showError(msg) {
@@ -305,7 +309,7 @@ EDGES.forEach(e => {
 const topList = [...NODES].sort((a, b) => (inAdj.get(b.id).length + outAdj.get(b.id).length) - (inAdj.get(a.id).length + outAdj.get(a.id).length)).slice(0, 8);
 $('toplist').innerHTML = topList.map(n => {
   const tot = inAdj.get(n.id).length + outAdj.get(n.id).length;
-  return `<div class=\"neighbors\"><a data-id=\"${n.id}\"><span class=\"dot\" style=\"background:${n.color}\"></span>${n.label}<span class=\"dir\">${tot}</span></a></div>`;
+  return `<div class=\"neighbors\"><a data-id=\"${escapeHtml(n.id)}\"><span class=\"dot\" style=\"background:${n.color}\"></span>${escapeHtml(n.label)}<span class=\"dir\">${tot}</span></a></div>`;
 }).join('');
 $('toplist').querySelectorAll('a').forEach(a => a.addEventListener('click', () => focusNode(a.dataset.id)));
 
@@ -313,8 +317,8 @@ $('toplist').querySelectorAll('a').forEach(a => a.addEventListener('click', () =
 const groupVisible = {};
 const legend = $('legend');
 Object.entries(COLORS).forEach(([k, c]) => {
-  if (k.startsWith('_')) return;
   groupVisible[k] = true;
+  if (k.startsWith('_')) return;
   const s = document.createElement('span');
   s.className = 'chip';
   s.style.background = c;
@@ -352,17 +356,17 @@ function showSelection(id) {
   const renderList = (ids, dir) => ids.length === 0 ? '' : ids.map(nid => {
     const n = NODES.find(x => x.id === nid);
     if (!n) return '';
-    return `<a data-id=\"${nid}\"><span class=\"dot\" style=\"background:${n.color}\"></span>${n.label}<span class=\"dir\">${dir}</span></a>`;
+    return `<a data-id=\"${escapeHtml(nid)}\"><span class=\"dot\" style=\"background:${n.color}\"></span>${escapeHtml(n.label)}<span class=\"dir\">${dir}</span></a>`;
   }).join('');
   $('selection').innerHTML = `
     <div class=\"panel\">
       <div class=\"label\">Seite</div>
-      <div class=\"title\">${node.label}</div>
-      <div class=\"path\">${node.id}</div>
+      <div class=\"title\">${escapeHtml(node.label)}</div>
+      <div class=\"path\">${escapeHtml(node.id)}</div>
       <div class=\"badges\">
         <span class=\"badge\"><b>${ins.length}</b>eingehend</span>
         <span class=\"badge\"><b>${outs.length}</b>ausgehend</span>
-        <span class=\"badge\" style=\"background:${node.color};color:#0a0f1a;\"><b>${node.group}</b></span>
+        <span class=\"badge\" style=\"background:${node.color};color:#0a0f1a;\"><b>${escapeHtml(node.group)}</b></span>
       </div>
     </div>
     ${ins.length ? `<div class=\"panel\"><div class=\"label\">Eingehend</div><div class=\"neighbors\">${renderList(ins, '→')}</div></div>` : ''}
@@ -422,7 +426,7 @@ window.addEventListener('load', () => {
     network.on('deselectNode', () => { resetHighlight(); $('selection').innerHTML = '<div class=\"empty\">Klicke einen Knoten für Details.</div>'; });
     network.on('hoverNode', p => network.canvas.body.container.style.cursor = 'pointer');
     network.on('blurNode', () => network.canvas.body.container.style.cursor = '');
-    network.on('doubleClick', p => { if (p.nodes.length) window.open(p.nodes[0], '_blank'); });
+    network.on('doubleClick', p => { if (p.nodes.length) window.open('./' + p.nodes[0].split('/').map(encodeURIComponent).join('/'), '_blank', 'noopener'); });
 
     function highlightNeighborhood(id) {
       const keep = new Set([id, ...(inAdj.get(id) || []), ...(outAdj.get(id) || [])]);
@@ -527,6 +531,14 @@ def load_vis_network(here: Path) -> str:
     return lib_path.read_text(encoding="utf-8")
 
 
+def script_json(value) -> str:
+    """Encode data without allowing filenames to terminate the inline script."""
+    return (json.dumps(value, ensure_ascii=False)
+            .replace("&", "\\u0026")
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e"))
+
+
 def main(argv: list[str]) -> int:
     here = Path(__file__).resolve().parent.parent
     target_arg = argv[1] if len(argv) > 1 else "docs/wiki-intern"
@@ -542,15 +554,17 @@ def main(argv: list[str]) -> int:
     vis_js = load_vis_network(here)
     out_path = root / "wiki-graph.html"
 
-    # Reihenfolge wichtig: zuerst die größte Ersetzung (vis_js), dann die JSONs.
-    html = HTML_TEMPLATE.replace("__VIS_NETWORK_JS__", vis_js)
-    html = (
-        html
-        .replace("__NODES__", json.dumps(nodes, ensure_ascii=False))
-        .replace("__EDGES__", json.dumps(edges, ensure_ascii=False))
-        .replace("__COLORS__", json.dumps(FOLDER_COLORS, ensure_ascii=False))
-        .replace("__BUILD_TS__", build_ts)
-    )
+    # Nur Platzhalter der Vorlage ersetzen. Dateinamen und eingebetteter Code
+    # dürfen nicht bei einer späteren Ersetzung erneut als Vorlage gelten.
+    replacements = {
+        "__VIS_NETWORK_JS__": vis_js,
+        "__NODES__": script_json(nodes),
+        "__EDGES__": script_json(edges),
+        "__COLORS__": script_json(FOLDER_COLORS),
+        "__BUILD_TS__": build_ts,
+    }
+    html = re.sub(r"__(?:VIS_NETWORK_JS|NODES|EDGES|COLORS|BUILD_TS)__",
+                  lambda match: replacements[match[0]], HTML_TEMPLATE)
     out_path.write_text(html, encoding="utf-8")
     size_kb = out_path.stat().st_size / 1024
     print(f"OK: {len(nodes)} Knoten, {len(edges)} Kanten -> {out_path} ({size_kb:.0f} KB, offline-fähig)")

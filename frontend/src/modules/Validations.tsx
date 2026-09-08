@@ -89,7 +89,7 @@ const validateDomains = (allowWildcards = false, maxDomains?: number) => {
 		}
 
 		// Deny if the list of domains is hit
-		if (maxDomains && value?.length >= maxDomains) {
+		if (maxDomains && value.length > maxDomains) {
 			return intl.formatMessage({ id: "error.max-domains" }, { max: maxDomains });
 		}
 

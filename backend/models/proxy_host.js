@@ -7,6 +7,7 @@ import db from "../db.js";
 import { convertBoolFieldsToInt, convertIntFieldsToBool } from "../lib/helpers.js";
 import AccessList from "./access_list.js";
 import Certificate from "./certificate.js";
+import HostDomain from "./host_domain.js";
 import now from "./now_helper.js";
 import TorOnion from "./tor_onion.js";
 import User from "./user.js";
@@ -34,6 +35,8 @@ const boolFields = [
 ];
 
 class ProxyHost extends Model {
+	/** @type {boolean | number} */
+	is_deleted;
 	/** @type {number} */
 	id;
 	/** @type {string} */
@@ -192,7 +195,14 @@ class ProxyHost extends Model {
 		}
 	}
 
-	$afterGet() {
+	$afterFind() {
+		// Stored dates use the server timezone; expose explicit instants to browser-local forms.
+		for (const field of ["maintenance_start", "maintenance_end"]) {
+			if (this[field] && dayjs(this[field]).isValid()) {
+				this[field] = dayjs(this[field]).toISOString();
+			}
+		}
+
 		// Map the host_domains relation back into the legacy domain_names array format
 		// This ensures seamless compatibility with APIs and Nginx templates
 		if (this.host_domains && Array.isArray(this.host_domains)) {
@@ -272,8 +282,8 @@ class ProxyHost extends Model {
 			},
 			host_domains: {
 				relation: Model.HasManyRelation,
-				// We use a dynamic import/require string here to avoid circular dependencies
-				modelClass: import.meta.url ? new URL("./host_domain.js", import.meta.url).pathname : "host_domain.js",
+				// Relation getters resolve the circular model binding only when a query needs it.
+				modelClass: HostDomain,
 				join: {
 					from: "proxy_host.id",
 					to: "host_domain.proxy_host_id",

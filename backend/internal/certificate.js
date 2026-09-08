@@ -1,11 +1,12 @@
+import { createPrivateKey, randomUUID, X509Certificate } from "node:crypto";
 import fs from "node:fs";
 import path from "path";
 import { ZipArchive } from "archiver";
 import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import _ from "lodash";
 import tempWrite from "temp-write";
 import error from "../lib/error.js";
+import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import { debug, ssl as logger } from "../logger.js";
 import certificateModel from "../models/certificate.js";
@@ -19,10 +20,111 @@ import internalGitOps from "./gitops.js";
 import internalNginx from "./nginx.js";
 import internalPki from "./pki.js";
 
-dayjs.extend(customParseFormat);
-
 const omissions = () => {
 	return ["is_deleted", "owner.is_deleted", "meta.dns_provider_credentials"];
+};
+
+const certificateOperations = new Set();
+const withCertificateLock = async (id, operation) => {
+	if (certificateOperations.has(id)) {
+		throw new error.ValidationError("Another operation is running for this certificate. Please try again later.");
+	}
+	certificateOperations.add(id);
+	try {
+		return await operation();
+	} finally {
+		certificateOperations.delete(id);
+	}
+};
+
+const cleanUpMissingCertificatesUnlocked = async () => {
+	const affectedHosts = [];
+	try {
+		logger.info("Checking for missing/deleted certificate references in hosts...");
+		const activeCerts = await certificateModel.query().select("id").where("is_deleted", 0);
+		const activeCertIds = new Set(activeCerts.map((certificate) => Number(certificate.id)));
+		/** @type {Array<{model: import("objection").ModelClass<proxyHostModel | redirectionHostModel | deadHostModel | streamModel>, type: string, graph?: string}>} */
+		const hostTypes = [
+			{ model: proxyHostModel, type: "proxy_host", graph: "[host_domains,access_list.[clients,items]]" },
+			{ model: redirectionHostModel, type: "redirection_host" },
+			{ model: deadHostModel, type: "dead_host" },
+			{ model: streamModel, type: "stream" },
+		];
+
+		for (const { model, type, graph } of hostTypes) {
+			const hosts = await model.query().where("certificate_id", ">", 0).andWhere("is_deleted", 0);
+			for (const host of hosts) {
+				if (activeCertIds.has(Number(host.certificate_id))) continue;
+				logger.warn(`Cleaning up ${type} ${host.id} due to missing certificate_id ${host.certificate_id}`);
+				const patch =
+					type === "stream"
+						? { certificate_id: 0 }
+						: {
+								certificate_id: 0,
+								ssl_forced: 0,
+								http2_support: 0,
+								hsts_enabled: 0,
+								hsts_subdomains: 0,
+							};
+				await internalNginx.backupConfig(type, host);
+				affectedHosts.push({ model, type, host, previous: _.pick(host, [...Object.keys(patch), "meta"]) });
+				await model.query().where("id", host.id).patch(patch);
+				const query = model.query().findById(host.id);
+				if (graph) query.withGraphFetched(graph);
+				const updatedHost = await query;
+				if (updatedHost.enabled) {
+					await internalNginx.generateConfig(type, updatedHost);
+				} else {
+					await internalNginx.deleteConfig(type, updatedHost);
+				}
+			}
+		}
+
+		if (affectedHosts.length > 0) {
+			// Validate only after every stale reference has been removed from the generated configuration.
+			await internalNginx.reload();
+			for (const { model, host } of affectedHosts) {
+				await model
+					.query()
+					.where("id", host.id)
+					.patch({
+						meta: { ...host.meta, nginx_online: Boolean(host.enabled), nginx_err: null },
+					});
+			}
+		}
+	} catch (err) {
+		// Keep certificate files and restore every previous host configuration before releasing the global lock.
+		for (const { model, type, host, previous } of affectedHosts.toReversed()) {
+			try {
+				await internalNginx.deleteConfig(type, host);
+				await internalNginx.restoreConfig(type, host);
+			} catch (rollbackError) {
+				logger.error(
+					`Failed to restore ${type} ${host.id} after certificate cleanup: ${rollbackError.message}`,
+				);
+			}
+			try {
+				await model.query().where("id", host.id).patch(previous);
+			} catch (rollbackError) {
+				logger.error(`Failed to restore ${type} ${host.id} metadata: ${rollbackError.message}`);
+			}
+		}
+		if (affectedHosts.length) {
+			try {
+				await internalNginx.reload();
+			} catch (rollbackError) {
+				logger.error(`Failed to reload after certificate cleanup rollback: ${rollbackError.message}`);
+			}
+		}
+		throw err;
+	}
+	for (const { type, host } of affectedHosts) {
+		try {
+			await internalNginx.deleteBackupConfig(type, host);
+		} catch (cleanupError) {
+			logger.error(`Failed to remove certificate cleanup backup: ${cleanupError.message}`);
+		}
+	}
 };
 
 const internalCertificate = {
@@ -34,135 +136,24 @@ const internalCertificate = {
 	initTimer: async () => {
 		// Defer CRT env var parsing to runtime so NaN is never set at module load time.
 		// Falls back to 72 hours if CRT is unset or not a valid integer.
-		const crtHours = Number.parseInt(process.env.CRT, 10);
-		const intervalTimeout = 1000 * 60 * 60 * (Number.isFinite(crtHours) ? crtHours : 72);
+		const crtHours = Number(process.env.CRT);
+		const validInterval = Number.isInteger(crtHours) && crtHours > 0 && crtHours <= 596;
+		const intervalTimeout = 1000 * 60 * 60 * (validInterval ? crtHours : 72);
 		logger.info(`Certbot Renewal Timer initialized (interval: ${intervalTimeout / 1000 / 60 / 60}h)`);
+		clearInterval(internalCertificate.interval);
 		internalCertificate.interval = setInterval(internalCertificate.processExpiringHosts, intervalTimeout);
 		// And do this now as well
 		internalCertificate.processExpiringHosts();
-		await internalCertificate.cleanUpMissingCertificates();
+		await internalCertificate.cleanUpMissingCertificates().catch((err) => {
+			logger.error(`Error during missing certificate cleanup: ${err.message}`);
+		});
 	},
 
 	/**
 	 * Automatically checks for any hosts assigned to a deleted/missing certificate
 	 * and unsets their certificate_id, then regenerates their nginx config.
 	 */
-	cleanUpMissingCertificates: async () => {
-		try {
-			logger.info("Checking for missing/deleted certificate references in hosts...");
-			let reloadRequired = false;
-
-			// Fetch all active certificate IDs
-			const activeCerts = await certificateModel.query().select("id").where("is_deleted", 0);
-			const activeCertIds = activeCerts.map((c) => c.id);
-
-			// Find proxy hosts pointing to certificates
-			const proxyHosts = await proxyHostModel.query().where("certificate_id", ">", 0).andWhere("is_deleted", 0);
-
-			for (const host of proxyHosts) {
-				if (!activeCertIds.includes(host.certificate_id)) {
-					logger.warn(
-						`Cleaning up proxy_host ${host.id} due to missing certificate_id ${host.certificate_id}`,
-					);
-					await proxyHostModel.query().where("id", host.id).patch({
-						certificate_id: 0,
-						ssl_forced: 0,
-						http2_support: 0,
-						hsts_enabled: 0,
-						hsts_subdomains: 0,
-					});
-					const updatedHost = await proxyHostModel.query().findById(host.id);
-					await internalNginx.generateConfig("proxy_host", updatedHost);
-					if (updatedHost.meta) {
-						updatedHost.meta.nginx_online = true;
-						updatedHost.meta.nginx_err = null;
-						await proxyHostModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
-					}
-					reloadRequired = true;
-				}
-			}
-
-			// Find redirection hosts pointing to certificates
-			const redirectionHosts = await redirectionHostModel
-				.query()
-				.where("certificate_id", ">", 0)
-				.andWhere("is_deleted", 0);
-
-			for (const host of redirectionHosts) {
-				if (!activeCertIds.includes(host.certificate_id)) {
-					logger.warn(
-						`Cleaning up redirection_host ${host.id} due to missing certificate_id ${host.certificate_id}`,
-					);
-					await redirectionHostModel.query().where("id", host.id).patch({
-						certificate_id: 0,
-						ssl_forced: 0,
-						http2_support: 0,
-						hsts_enabled: 0,
-						hsts_subdomains: 0,
-					});
-					const updatedHost = await redirectionHostModel.query().findById(host.id);
-					await internalNginx.generateConfig("redirection_host", updatedHost);
-					if (updatedHost.meta) {
-						updatedHost.meta.nginx_online = true;
-						updatedHost.meta.nginx_err = null;
-						await redirectionHostModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
-					}
-					reloadRequired = true;
-				}
-			}
-
-			// Find dead hosts pointing to certificates
-			const deadHosts = await deadHostModel.query().where("certificate_id", ">", 0).andWhere("is_deleted", 0);
-
-			for (const host of deadHosts) {
-				if (!activeCertIds.includes(host.certificate_id)) {
-					logger.warn(
-						`Cleaning up dead_host ${host.id} due to missing certificate_id ${host.certificate_id}`,
-					);
-					await deadHostModel.query().where("id", host.id).patch({
-						certificate_id: 0,
-						ssl_forced: 0,
-						http2_support: 0,
-						hsts_enabled: 0,
-						hsts_subdomains: 0,
-					});
-					const updatedHost = await deadHostModel.query().findById(host.id);
-					await internalNginx.generateConfig("dead_host", updatedHost);
-					if (updatedHost.meta) {
-						updatedHost.meta.nginx_online = true;
-						updatedHost.meta.nginx_err = null;
-						await deadHostModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
-					}
-					reloadRequired = true;
-				}
-			}
-
-			// Find streams pointing to certificates
-			const streams = await streamModel.query().where("certificate_id", ">", 0).andWhere("is_deleted", 0);
-
-			for (const host of streams) {
-				if (!activeCertIds.includes(host.certificate_id)) {
-					logger.warn(`Cleaning up stream ${host.id} due to missing certificate_id ${host.certificate_id}`);
-					await streamModel.query().where("id", host.id).patch({ certificate_id: 0 });
-					const updatedHost = await streamModel.query().findById(host.id);
-					await internalNginx.generateConfig("stream", updatedHost);
-					if (updatedHost.meta) {
-						updatedHost.meta.nginx_online = true;
-						updatedHost.meta.nginx_err = null;
-						await streamModel.query().where("id", host.id).patch({ meta: updatedHost.meta });
-					}
-					reloadRequired = true;
-				}
-			}
-
-			if (reloadRequired) {
-				logger.info("Reloading Nginx after missing certificate cleanup...");
-				await internalNginx.reload();
-			}
-		} catch (err) {
-			logger.error(`Error during missing certificate cleanup: ${err.message}`);
-		}
-	},
+	cleanUpMissingCertificates: () => internalNginx.withConfigurationLock(cleanUpMissingCertificatesUnlocked),
 
 	/**
 	 * Triggered by a timer, this will check for expiring hosts and renew their tls certs if required
@@ -174,7 +165,7 @@ const internalCertificate = {
 			logger.info("Renewing Certbot TLS certs close to expiry...");
 
 			try {
-				const result = await utils.execFile("certbot", [
+				const result = await certbot.runCertbot([
 					"--config",
 					"/etc/certbot.ini",
 					"renew",
@@ -187,7 +178,7 @@ const internalCertificate = {
 					logger.info(`Renew Result: ${result}`);
 				}
 
-				await internalNginx.reload();
+				await internalNginx.withConfigurationLock(() => internalNginx.reload());
 				logger.info("Renew Complete");
 
 				// Now go and fetch all the certbot certs from the db and query the files and update expiry times
@@ -238,113 +229,72 @@ const internalCertificate = {
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
-		const thisData = /** @type {any} */ (data);
+		const thisData = /** @type {any} */ (_.cloneDeep(data));
 		await access.can("certificates:create", thisData);
 		thisData.owner_user_id = access.token.getUserId(1);
-
 		if (thisData.provider === "letsencrypt" || thisData.provider === "internal") {
+			if (!Array.isArray(thisData.domain_names) || thisData.domain_names.length === 0) {
+				throw new error.ValidationError("At least one domain name is required for certificate creation");
+			}
 			thisData.nice_name = thisData.domain_names.join(", ");
 		}
 
-		// this command really should clean up and delete the cert if it can't fully succeed
-		const certificate = await certificateModel.query().insertAndFetch(/** @type {any} */ (thisData));
-
+		const certificate = await certificateModel.query().insertAndFetch(thisData);
+		let savedRow = certificate;
 		try {
+			let certInfo;
+			let meta = certificate.meta;
 			if (certificate.provider === "letsencrypt") {
-				// Request a new Cert with Certbot. Let the fun begin.
-				if (certificate.meta?.dns_challenge) {
-					await internalCertificate.requestCertbotWithDnsChallenge(certificate);
-				} else {
-					await internalCertificate.requestCertbot(certificate);
-				}
-
-				// At this point, the letsencrypt cert should exist on disk.
-				// Lets get the expiry date from the file and update the row silently
-				try {
-					const certInfo = await internalCertificate.getCertificateInfoFromFile(
-						`${internalCertificate.getLiveCertPath(certificate.id)}/fullchain.pem`,
-					);
-					const savedRow = await certificateModel
-						.query()
-						.patchAndFetchById(certificate.id, {
-							expires_on: /** @type {any} */ (
-								dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
-							),
-						})
-						.then(/** @type {any} */ (utils.omitRow(omissions())));
-
-					// Add cert data for audit log
-					savedRow.meta = _.assign({}, savedRow.meta, {
-						letsencrypt_certificate: certInfo,
-					});
-
-					await internalCertificate.addCreatedAuditLog(access, certificate.id, savedRow);
-
-					return savedRow;
-				} catch (err) {
-					// Delete the certificate from the database if it was not created successfully
-					await certificateModel.query().deleteById(certificate.id);
-					// Mark as public so the user sees the real error
-					err.public = true;
-					throw err;
-				}
+				const request = certificate.meta?.dns_challenge
+					? internalCertificate.requestCertbotWithDnsChallenge
+					: internalCertificate.requestCertbot;
+				await request(certificate);
+				certInfo = await internalCertificate.getCertificateInfoFromFile(
+					`${internalCertificate.getLiveCertPath(certificate.id)}/fullchain.pem`,
+				);
+				meta = { ...meta, letsencrypt_certificate: certInfo };
 			} else if (certificate.provider === "internal") {
-				try {
-					const outDir = `/data/tls/internal/npm-${certificate.id}`;
-					const result = await internalPki.createLeadCert(
-						{
-							domain_names: certificate.domain_names,
-							years: Number.parseInt(certificate.meta.years, 10) || 10,
-						},
-						outDir,
-					);
-
-					// Get Cert Info to set expiry properly
-					const certInfo = await internalCertificate.getCertificateInfoFromFile(result.fullchain);
-					const savedRow = await certificateModel
-						.query()
-						.patchAndFetchById(certificate.id, {
-							expires_on: /** @type {any} */ (
-								dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")
-							),
-							meta: _.assign({}, certificate.meta, {
-								certificate: result.fullchain,
-								certificate_key: result.privkey,
-							}),
-						})
-						.then(/** @type {any} */ (utils.omitRow(omissions())));
-
-					await internalCertificate.addCreatedAuditLog(access, certificate.id, savedRow);
-					return savedRow;
-				} catch (err) {
-					await certificateModel.query().deleteById(certificate.id);
-					throw err;
-				}
+				const result = await internalPki.createLeadCert(
+					{
+						domain_names: certificate.domain_names,
+						years: certificate.meta?.years ?? 10,
+					},
+					`/data/tls/internal/npm-${certificate.id}`,
+				);
+				certInfo = await internalCertificate.getCertificateInfoFromFile(result.fullchain);
+				meta = { ...meta, certificate: result.fullchain, certificate_key: result.privkey };
+			}
+			if (certInfo) {
+				savedRow = await certificateModel.query().patchAndFetchById(certificate.id, {
+					expires_on: dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss"),
+					meta,
+				});
 			}
 		} catch (err) {
-			// Delete the certificate here. This is a hard delete, since it never existed properly
 			await certificateModel.query().deleteById(certificate.id);
-			// Mark as public so the user sees the real error
+			if (certificate.provider === "internal") {
+				await fs.promises.rm(`/data/tls/internal/npm-${certificate.id}`, { recursive: true, force: true });
+			}
 			err.public = true;
 			throw err;
 		}
 
-		data.meta = _.assign({}, data.meta || {}, certificate.meta);
-
-		// Add to audit log
-		await internalCertificate.addCreatedAuditLog(access, certificate.id, utils.omitRow(omissions())(data));
-
+		const publicCertificate = utils.omitRow(omissions())(savedRow);
+		publicCertificate.meta = internalCertificate.cleanMeta(publicCertificate.meta);
+		// Once issuance is committed, an audit failure must not delete the working certificate.
+		await internalCertificate.addCreatedAuditLog(access, certificate.id, publicCertificate);
 		internalGitOps.triggerAutoPush("certificate");
-
-		return utils.omitRow(omissions())(certificate);
+		return publicCertificate;
 	},
 
 	addCreatedAuditLog: async (access, certificate_id, meta) => {
+		const publicMeta = utils.omitRow(omissions())(meta);
+		publicMeta.meta = internalCertificate.cleanMeta(publicMeta.meta);
 		await internalAuditLog.add(access, {
 			action: "created",
 			object_type: "certificate",
 			object_id: certificate_id,
-			meta: meta,
+			meta: publicMeta,
 		});
 	},
 
@@ -366,6 +316,11 @@ const internalCertificate = {
 		const thisData = /** @type {any} */ (data);
 		await access.can("certificates:update", thisData.id);
 		const row = await internalCertificate.get(access, { id: thisData.id });
+		if (thisData.provider !== undefined && thisData.provider !== row.provider) {
+			throw new error.ValidationError(
+				"Certificate provider cannot be changed. Create a new certificate instead.",
+			);
+		}
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
@@ -410,7 +365,7 @@ const internalCertificate = {
 	 * @param  {Array}    [data.omit]
 	 * @return {Promise}
 	 */
-	get: async (access, data) => {
+	get: async (access, data, options = {}) => {
 		const thisData = /** @type {any} */ (data || {});
 		const accessData = await access.can("certificates:get", thisData.id);
 		const query = certificateModel
@@ -432,17 +387,21 @@ const internalCertificate = {
 		if (!row?.id) {
 			throw new error.ItemNotFoundError(thisData.id);
 		}
+		if (!options.includeCertificateData) {
+			row.meta = internalCertificate.cleanMeta(row.meta);
+		}
+		internalCertificate.cleanExpansions(row);
 		// Custom omissions
 		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
 			return _.omit(row, [...thisData.omit]);
 		}
 
-		return internalCertificate.cleanExpansions(row);
+		return row;
 	},
 
 	cleanExpansions: (row) => {
 		if (typeof row.proxy_hosts !== "undefined") {
-			row.proxy_hosts = utils.omitRows(["is_deleted"])(row.proxy_hosts);
+			row.proxy_hosts = row.proxy_hosts.map(sanitizeProxyHost);
 		}
 		if (typeof row.redirection_hosts !== "undefined") {
 			row.redirection_hosts = utils.omitRows(["is_deleted"])(row.redirection_hosts);
@@ -463,7 +422,7 @@ const internalCertificate = {
 	 * @returns {Promise}
 	 */
 	download: async (access, data) => {
-		await access.can("certificates:get", data);
+		await access.can("certificates:get", data.id);
 		const certificate = await internalCertificate.get(access, data);
 
 		let zipDirectory;
@@ -492,10 +451,15 @@ const internalCertificate = {
 			throw new error.ItemNotFoundError(`No certificate files found for ${certificate.nice_name}`);
 		}
 
-		const downloadName = `npm-${data.id}-${Date.now()}.zip`;
+		const downloadName = `npm-${data.id}-${randomUUID()}.zip`;
 		const opName = `/tmp/${downloadName}`;
 
-		await internalCertificate.zipFiles(certFilesWithRealPaths, opName);
+		try {
+			await internalCertificate.zipFiles(certFilesWithRealPaths, opName);
+		} catch (err) {
+			await fs.promises.rm(opName, { force: true });
+			throw err;
+		}
 		debug(logger, "zip completed : ", opName);
 		return {
 			fileName: opName,
@@ -509,19 +473,28 @@ const internalCertificate = {
 	 */
 	zipFiles: async (source, out) => {
 		const archive = new ZipArchive({ zlib: { level: 9 } });
-		const stream = fs.createWriteStream(out);
+		const stream = fs.createWriteStream(out, { mode: 0o600, flags: "wx" });
 
-		return new Promise((resolve, reject) => {
-			source.map((fl) => {
-				const fileName = path.basename(fl);
-				debug(logger, fl, "added to certificate zip");
-				archive.file(fl, { name: fileName });
-				return true;
-			});
-			archive.on("error", (err) => reject(err)).pipe(stream);
-			stream.on("close", () => resolve());
-			archive.finalize();
-		});
+		return new Promise(
+			/** @param {(value?: void) => void} resolve */ (resolve, reject) => {
+				let failure;
+				source.map((fl) => {
+					const fileName = path.basename(fl);
+					debug(logger, fl, "added to certificate zip");
+					archive.file(fl, { name: fileName });
+					return true;
+				});
+				const fail = (err) => {
+					failure ||= err;
+					archive.abort();
+					stream.destroy();
+				};
+				archive.on("error", fail).on("warning", fail).pipe(stream);
+				stream.on("error", fail);
+				stream.on("close", () => (failure ? reject(failure) : resolve()));
+				archive.finalize().catch(fail);
+			},
+		);
 	},
 
 	/**
@@ -531,42 +504,53 @@ const internalCertificate = {
 	 * @param {String}  [data.reason]
 	 * @returns {Promise}
 	 */
-	delete: async (access, data) => {
-		await access.can("certificates:delete", data.id);
-		const row = await internalCertificate.get(access, { id: data.id });
+	delete: (access, data) =>
+		withCertificateLock(data.id, async () => {
+			await access.can("certificates:delete", data.id);
+			const row = await internalCertificate.get(access, { id: data.id });
 
-		if (!row?.id) {
-			throw new error.ItemNotFoundError(data.id);
-		}
+			if (!row?.id) {
+				throw new error.ItemNotFoundError(data.id);
+			}
 
-		await certificateModel.query().where("id", row.id).patch({
-			is_deleted: 1,
-		});
+			await internalNginx.withConfigurationLock(async () => {
+				const detachCertificate = async () => {
+					await certificateModel.query().where("id", row.id).patch({ is_deleted: 1 });
+					try {
+						// Detach TLS references and activate the new configuration while the old files still exist.
+						await cleanUpMissingCertificatesUnlocked();
+					} catch (cleanupError) {
+						await certificateModel.query().where("id", row.id).patch({ is_deleted: 0 });
+						throw cleanupError;
+					}
+				};
+				if (row.provider === "letsencrypt") {
+					// A busy renewal must reject before the certificate and host references are modified.
+					await internalCertificate.revokeCertbot(row, true, detachCertificate);
+				} else {
+					await detachCertificate();
+					if (row.provider === "internal") {
+						await fs.promises.rm(`/data/tls/internal/npm-${row.id}`, { force: true, recursive: true });
+					} else {
+						await fs.promises.rm(`/data/tls/custom/npm-${row.id}`, { force: true, recursive: true });
+						await fs.promises.rm(`/data/tls/custom/npm-${row.id}.der`, { force: true });
+					}
+				}
+			});
 
-		// Add to audit log
-		row.meta = internalCertificate.cleanMeta(row.meta);
+			// Audit persistence must not prevent removal of a certificate already marked deleted.
+			row.meta = internalCertificate.cleanMeta(row.meta);
+			await internalAuditLog.add(access, {
+				action: "deleted",
+				object_type: "certificate",
+				object_id: row.id,
+				meta: _.omit(row, omissions()),
+			});
 
-		await internalAuditLog.add(access, {
-			action: "deleted",
-			object_type: "certificate",
-			object_id: row.id,
-			meta: _.omit(row, omissions()),
-		});
+			internalGitOps.triggerAutoPush("certificate");
 
-		if (row.provider === "letsencrypt") {
-			// Revoke the cert
-			await internalCertificate.revokeCertbot(row);
-		} else {
-			await fs.promises.rm(`/data/tls/custom/npm-${row.id}`, { force: true, recursive: true });
-			await fs.promises.rm(`/data/tls/custom/npm-${row.id}.der`, { force: true });
-		}
-
-		await internalCertificate.cleanUpMissingCertificates();
-
-		internalGitOps.triggerAutoPush("certificate");
-
-		return true;
-	},
+			return true;
+		}),
 
 	/**
 	 * All Certs
@@ -603,6 +587,7 @@ const internalCertificate = {
 
 		const r = await query.then(/** @type {any} */ (utils.omitRows(omissions())));
 		for (let i = 0; i < r.length; i++) {
+			r[i].meta = internalCertificate.cleanMeta(r[i].meta);
 			r[i] = internalCertificate.cleanExpansions(r[i]);
 		}
 		return r;
@@ -630,7 +615,7 @@ const internalCertificate = {
 	 * @param   {Object} certificate
 	 * @returns {Promise}
 	 */
-	writeCustomCert: async (certificate) => {
+	writeCustomCert: async (certificate, activate = async () => {}) => {
 		logger.info("Writing Custom Certificate:", {
 			...certificate,
 			meta: internalCertificate.cleanMeta({ ...certificate.meta }, false),
@@ -639,7 +624,7 @@ const internalCertificate = {
 		const dir = `/data/tls/custom/npm-${certificate.id}`;
 
 		if (certificate.provider === "letsencrypt" || certificate.provider === "internal") {
-			throw new Error("Refusing to write certbot/internal certs here");
+			throw new error.ValidationError("Refusing to write certbot/internal certs here");
 		}
 
 		let certData = certificate.meta.certificate;
@@ -647,12 +632,55 @@ const internalCertificate = {
 			certData = `${certData}\n${certificate.meta.intermediate_certificate}`;
 		}
 
-		if (!fs.existsSync(dir)) {
-			await fs.promises.mkdir(dir);
+		await fs.promises.mkdir(path.dirname(dir), { recursive: true });
+		const stagingDir = await fs.promises.mkdtemp(`${dir}.staging-`);
+		const backupDir = `${dir}.backup-${randomUUID()}`;
+		let hadPrevious = false;
+		let installed = false;
+		let committed = false;
+		try {
+			await fs.promises.writeFile(`${stagingDir}/fullchain.pem`, certData);
+			await fs.promises.writeFile(`${stagingDir}/privkey.pem`, certificate.meta.certificate_key, { mode: 0o600 });
+			await internalNginx.withConfigurationLock(async () => {
+				try {
+					await fs.promises.rename(dir, backupDir);
+					hadPrevious = true;
+				} catch (err) {
+					if (err.code !== "ENOENT") throw err;
+				}
+				try {
+					await fs.promises.rename(stagingDir, dir);
+					installed = true;
+					await activate();
+					committed = true;
+				} catch (err) {
+					if (installed) await fs.promises.rm(dir, { recursive: true, force: true });
+					if (hadPrevious) await fs.promises.rename(backupDir, dir);
+					if (installed) {
+						try {
+							await internalNginx.reload();
+						} catch (reloadError) {
+							logger.error(`Certificate rollback reload failed: ${reloadError.message}`);
+						}
+					}
+					throw err;
+				}
+			});
+		} finally {
+			try {
+				await fs.promises.rm(stagingDir, { recursive: true, force: true });
+			} catch (cleanupError) {
+				logger.warn(`Certificate staging cleanup failed: ${cleanupError.message}`);
+			}
+			// Keep the backup if restoring it failed, so a working key is never discarded.
+			if (committed && hadPrevious) {
+				try {
+					await fs.promises.rm(backupDir, { recursive: true, force: true });
+				} catch (cleanupError) {
+					logger.warn(`Certificate backup cleanup failed: ${cleanupError.message}`);
+				}
+			}
 		}
-
-		await fs.promises.writeFile(`${dir}/fullchain.pem`, certData);
-		await fs.promises.writeFile(`${dir}/privkey.pem`, certificate.meta.certificate_key);
 	},
 
 	/**
@@ -684,6 +712,9 @@ const internalCertificate = {
 		const files = {};
 		Object.entries(data.files).forEach(([name, file]) => {
 			if (internalCertificate.allowedSslFiles.indexOf(name) !== -1) {
+				if (Array.isArray(file) || !Buffer.isBuffer(file?.data)) {
+					throw new error.ValidationError(`Exactly one ${name} file must be uploaded`);
+				}
 				files[name] = file.data.toString();
 			}
 		});
@@ -722,81 +753,75 @@ const internalCertificate = {
 	 * @param   {Object}  data.files
 	 * @returns {Promise}
 	 */
-	upload: async (access, data) => {
-		const row = await internalCertificate.get(access, { id: data.id });
-		if (row.provider !== "other") {
-			throw new error.ValidationError("Cannot upload certificates for this type of provider");
-		}
-
-		const validations = await internalCertificate.validate(data);
-		if (typeof validations.certificate === "undefined") {
-			throw new error.ValidationError("Certificate file was not provided");
-		}
-
-		_.map(data.files, (file, name) => {
-			if (internalCertificate.allowedSslFiles.indexOf(name) !== -1) {
-				row.meta[name] = file.data.toString();
+	upload: (access, data) =>
+		withCertificateLock(data.id, async () => {
+			await access.can("certificates:update", data.id);
+			const row = await internalCertificate.get(access, { id: data.id }, { includeCertificateData: true });
+			if (row.provider !== "other") {
+				throw new error.ValidationError("Cannot upload certificates for this type of provider");
 			}
-		});
 
-		const certificate = await internalCertificate.update(
-			access,
-			/** @type {any} */ ({
-				id: data.id,
+			const validations = await internalCertificate.validate(data);
+			if (typeof validations.certificate === "undefined") {
+				throw new error.ValidationError("Certificate file was not provided");
+			}
+
+			_.map(data.files, (file, name) => {
+				if (internalCertificate.allowedSslFiles.indexOf(name) !== -1) {
+					row.meta[name] = file.data.toString();
+				}
+			});
+			if (!row.meta.certificate_key) {
+				throw new error.ValidationError("Certificate key file was not provided");
+			}
+			try {
+				const certificate = new X509Certificate(row.meta.certificate);
+				if (!certificate.checkPrivateKey(createPrivateKey(row.meta.certificate_key))) {
+					throw new error.ValidationError("Certificate and private key do not match");
+				}
+			} catch (err) {
+				throw new error.ValidationError(`Certificate/key validation failed (${err.message})`, err);
+			}
+
+			const patch = {
 				expires_on: /** @type {any} */ (
 					dayjs.unix(validations.certificate.dates.to).format("YYYY-MM-DD HH:mm:ss")
 				),
 				domain_names: Array.from(
-					new Set([validations.certificate.cn, ...(validations.certificate.sans || [])]),
+					new Set([validations.certificate.cn, ...(validations.certificate.sans || [])].filter(Boolean)),
 				),
-				meta: _.clone(row.meta), // Prevent the update method from changing this value that we'll use later
-			}),
-		);
-
-		certificate.meta = row.meta;
-		await internalCertificate.writeCustomCert(certificate);
-		return _.pick(row.meta, internalCertificate.allowedSslFiles);
-	},
+				meta: _.clone(row.meta),
+			};
+			await internalCertificate.writeCustomCert(row, async () => {
+				await internalNginx.reload();
+				// Publish database metadata only after the complete file pair is active and validated.
+				await certificateModel.query().patchAndFetchById(data.id, patch);
+			});
+			await internalAuditLog.add(access, {
+				action: "updated",
+				object_type: "certificate",
+				object_id: data.id,
+				meta: {
+					nice_name: row.nice_name,
+					domain_names: patch.domain_names,
+					meta: internalCertificate.cleanMeta(row.meta),
+				},
+			});
+			internalGitOps.triggerAutoPush("certificate");
+			return internalCertificate.cleanMeta(_.pick(row.meta, internalCertificate.allowedSslFiles));
+		}),
 
 	/**
-	 * Uses the openssl command to validate the private key.
-	 * It will save the file to disk first, then run commands on it, then delete the file.
+	 * Validates a PEM private key in memory without writing its contents to temporary files.
 	 *
 	 * @param {String}  privateKey    This is the entire key contents as a string
 	 */
 	checkPrivateKey: async (privateKey) => {
-		const filepath = await tempWrite(privateKey, "key.pem");
-
-		const timeoutPromise = new Promise((_, reject) => {
-			setTimeout(
-				() =>
-					reject(
-						new error.ValidationError(
-							"Result Validation Error: Validation timed out. This could be due to the key being passphrase-protected.",
-						),
-					),
-				10000,
-			);
-		});
-
-		const checkPromise = (async () => {
-			const result = await utils.execFile("openssl", ["pkey", "-in", filepath, "-check", "-noout"]);
-			if (!result.toLowerCase().includes("key is valid")) {
-				throw new error.ValidationError(`Result Validation Error: ${result}`);
-			}
-			return true;
-		})();
-
 		try {
-			const result = await Promise.race([checkPromise, timeoutPromise]);
-			fs.unlinkSync(filepath);
-			return result;
+			// Parse in-process: encrypted keys fail immediately without prompting or leaving a child process behind.
+			createPrivateKey(privateKey);
+			return true;
 		} catch (err) {
-			try {
-				fs.unlinkSync(filepath);
-			} catch {
-				/* ignore cleanup error */
-			}
 			throw new error.ValidationError(`Certificate Key is not valid (${err.message})`, err);
 		}
 	},
@@ -838,10 +863,10 @@ const internalCertificate = {
 			// Examples:
 			// subject=CN = *.shieldpm.eu
 			// subject=CN = something.example.com
-			const regex = /(?:subject=)?[^=]+=\s*(\S+)/gim;
+			const regex = /(?:^subject=\s*|,\s*)CN\s*=\s*([^,\n]+)/i;
 			const match = regex.exec(result);
 			if (match && typeof match[1] !== "undefined") {
-				certData.cn = match[1];
+				certData.cn = match[1].trim();
 			}
 
 			const result2 = await utils.execFile("openssl", ["x509", "-in", certificateFile, "-issuer", "-noout"]);
@@ -895,7 +920,7 @@ const internalCertificate = {
 				if (match && typeof match[2] !== "undefined") {
 					// Use dayjs to parse the date
 					const dateString = match[2].replace(/\s+/g, " ");
-					const date = dayjs(dateString, "MMM D HH:mm:ss YYYY z").unix();
+					const date = Math.floor(Date.parse(dateString) / 1000);
 
 					if (match[1].toLowerCase() === "notbefore") {
 						validFrom = date;
@@ -933,17 +958,19 @@ const internalCertificate = {
 	 * @returns {Object}
 	 */
 	cleanMeta: (meta, remove) => {
+		const clean = { ...meta };
+		delete clean.dns_provider_credentials;
 		internalCertificate.allowedSslFiles.map((key) => {
-			if (typeof meta[key] !== "undefined" && meta[key]) {
+			if (typeof clean[key] !== "undefined" && clean[key]) {
 				if (remove) {
-					delete meta[key];
+					delete clean[key];
 				} else {
-					meta[key] = true;
+					clean[key] = true;
 				}
 			}
 			return true;
 		});
-		return meta;
+		return clean;
 	},
 
 	/**
@@ -965,37 +992,41 @@ const internalCertificate = {
 	 * @param   {Number}  data.id
 	 * @returns {Promise}
 	 */
-	renew: async (access, data) => {
-		await access.can("certificates:update", data);
-		const certificate = await internalCertificate.get(access, data);
+	renew: (access, data) =>
+		withCertificateLock(data.id, async () => {
+			await access.can("certificates:update", data.id);
+			const certificate = await internalCertificate.get(access, data);
 
-		if (certificate.provider === "letsencrypt") {
-			const renewMethod = certificate.meta.dns_challenge
-				? internalCertificate.renewCertbotWithDnsChallenge
-				: internalCertificate.renewCertbot;
+			if (certificate.provider === "letsencrypt") {
+				const renewMethod = certificate.meta.dns_challenge
+					? internalCertificate.renewCertbotWithDnsChallenge
+					: internalCertificate.renewCertbot;
 
-			await renewMethod(certificate);
-			const certInfo = await internalCertificate.getCertificateInfoFromFile(
-				`${internalCertificate.getLiveCertPath(certificate.id)}/fullchain.pem`,
-			);
+				await renewMethod(certificate);
+				const certInfo = await internalCertificate.getCertificateInfoFromFile(
+					`${internalCertificate.getLiveCertPath(certificate.id)}/fullchain.pem`,
+				);
 
-			const updatedCertificate = await certificateModel.query().patchAndFetchById(certificate.id, {
-				expires_on: /** @type {any} */ (dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")),
-			});
+				const updatedCertificate = await certificateModel.query().patchAndFetchById(certificate.id, {
+					expires_on: /** @type {any} */ (dayjs.unix(certInfo.dates.to).format("YYYY-MM-DD HH:mm:ss")),
+				});
+				await internalNginx.withConfigurationLock(() => internalNginx.reload());
+				const publicCertificate = utils.omitRow(omissions())(updatedCertificate);
+				publicCertificate.meta = internalCertificate.cleanMeta(publicCertificate.meta);
 
-			// Add to audit log
-			await internalAuditLog.add(access, {
-				action: "renewed",
-				object_type: "certificate",
-				object_id: updatedCertificate.id,
-				meta: updatedCertificate,
-			});
+				// Add to audit log
+				await internalAuditLog.add(access, {
+					action: "renewed",
+					object_type: "certificate",
+					object_id: updatedCertificate.id,
+					meta: publicCertificate,
+				});
 
-			return updatedCertificate;
-		}
+				return publicCertificate;
+			}
 
-		throw new error.ValidationError("Only Certbot certificates can be renewed");
-	},
+			throw new error.ValidationError("Only Certbot certificates can be renewed");
+		}),
 
 	/**
 	 * @param   {Object}  certificate   the certificate row
@@ -1012,9 +1043,10 @@ const internalCertificate = {
 	/**
 	 * @param   {Object}  certificate    the certificate row
 	 * @param   {Boolean} [throwErrors]
+	 * @param   {Function} [prepare]
 	 * @returns {Promise}
 	 */
-	revokeCertbot: (certificate, throwErrors) => certbot.revokeCertbot(certificate, throwErrors),
+	revokeCertbot: (certificate, throwErrors, prepare) => certbot.revokeCertbot(certificate, throwErrors, prepare),
 
 	/**
 	 *

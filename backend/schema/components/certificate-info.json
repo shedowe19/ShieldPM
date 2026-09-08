@@ -1,0 +1,45 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"dates",
+		"sans"
+	],
+	"properties": {
+		"cn": {
+			"type": "string",
+			"example": "example.com"
+		},
+		"issuer": {
+			"type": "string",
+			"example": "C = US, O = Let's Encrypt, CN = E5"
+		},
+		"dates": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"from",
+				"to"
+			],
+			"properties": {
+				"from": {
+					"type": "integer"
+				},
+				"to": {
+					"type": "integer"
+				}
+			},
+			"example": {
+				"from": 1728448218,
+				"to": 1736224217
+			}
+		},
+		"sans": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"description": "DNS subject alternative names"
+		}
+	}
+}

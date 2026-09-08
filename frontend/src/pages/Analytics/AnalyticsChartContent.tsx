@@ -10,7 +10,7 @@ interface Props {
 
 const AnalyticsChartContent = ({ series }: Props) => (
 	<>
-		<Card className="col-span-4">
+		<Card className="col-span-full lg:col-span-4">
 			<CardHeader>
 				<CardTitle>
 					<T id="analytics.requests-over-time" />
@@ -67,7 +67,7 @@ const AnalyticsChartContent = ({ series }: Props) => (
 			</CardContent>
 		</Card>
 
-		<Card className="col-span-3">
+		<Card className="col-span-full lg:col-span-3">
 			<CardHeader>
 				<CardTitle>
 					<T id="analytics.status-codes" />

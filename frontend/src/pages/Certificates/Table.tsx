@@ -139,11 +139,14 @@ export default function Table({ data, isFetching, onDelete, onRenew, onDownload,
 											data={{ id: info.row.original.id }}
 										/>
 									</DropdownMenuLabel>
-									<DropdownMenuItem onClick={() => onRenew?.(info.row.original.id)}>
-										<IconRefresh className="mr-2 h-4 w-4" />
-										<T id="action.renew" />
-									</DropdownMenuItem>
+
 									<HasPermission section={CERTIFICATES} permission={MANAGE} hideError>
+										{info.row.original.provider === "letsencrypt" && (
+											<DropdownMenuItem onClick={() => onRenew?.(info.row.original.id)}>
+												<IconRefresh className="mr-2 h-4 w-4" />
+												<T id="action.renew" />
+											</DropdownMenuItem>
+										)}
 										<DropdownMenuItem onClick={() => onDownload?.(info.row.original.id)}>
 											<IconDownload className="mr-2 h-4 w-4" />
 											<T id="action.download" />

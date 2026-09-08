@@ -47,7 +47,7 @@ const down = (knex) => {
 export { up, down };
 ```
 
-## Migrations-Chronologie (76 Dateien)
+## Migrations-Chronologie (Auswahl)
 
 ### Basis (2018-2021)
 
@@ -87,6 +87,24 @@ export { up, down };
 - `20260407000000_add_wireguard_tunnel` — WireGuard Tunnels
 - `20260409000000_add_turbo_loader` — Turbo-Loader
 - `20260712000000_fix_analytic_count_aggregation_key` — versionierter, nicht-nullbarer Aggregationsschlüssel für robuste Analytics-Upserts auf SQLite, MySQL und PostgreSQL
+
+- `20260907000000_fix_analytics_log_created_at` — numerischer Standardwert für `analytics_logs.created_at`; gültige alte SQLite-Zeitstempeltexte werden in Unix-Millisekunden umgerechnet. Neue Logeinträge setzen den tatsächlichen Erfassungszeitpunkt im Dienst. Die ursprüngliche Tabellenmigration verwendet ebenfalls den kompatiblen numerischen Standardwert, damit PostgreSQL-Neuinstallationen funktionieren.
+
+## Datenintegrität bei Migrationen
+
+Die Schemaänderungen werden innerhalb der Knex-Callbacks vollständig registriert; nachgelagerte Datenänderungen werden erst nach Abschluss der Schemaänderung ausgeführt und vollständig abgewartet. Einzelne historische Callbacks sind als `async` deklariert, registrieren ihre Schemaoperationen aber vor dem ersten `await`; neue Callbacks sollen synchron bleiben. Bereits vorhandene Rate-Limit-Spalten werden vor DDL geprüft, weil ein abgefangener Duplicate-Column-Fehler die PostgreSQL-Transaktion trotzdem abbrechen würde. JSON-Metadaten werden sowohl als Zeichenkette als auch als natives Treiberobjekt verarbeitet; der AI-Prompt-Reset erhält alle übrigen Konfigurationswerte.
+
+Beim Rollback der Domainnormalisierung werden die aktuellen Domainrelationen in die Legacy-Spalte zurückgeschrieben. Damit bleiben zwischenzeitliche Neuanlagen und Umbenennungen erhalten. Der mTLS-Rollback schreibt die aktuellen Werte zurück in `meta`; der Rate-Limit-Rollback entfernt alle drei zugehörigen Spalten.
+
+Die Access-List-Passwortmigration erkennt vollständige bcrypt- und APR1-Hashes. Diese bleiben unverändert; Klartext wird auch dann mit bcrypt gehasht, wenn er mit `$2` beginnt.
+
+Die Terminalmigration bewahrt den ursprünglichen Namen, Typ und die Metadaten. Ihr Rollback übernimmt aktuelle Zugangsdaten in `terminal_host`, verwendet für verschlüsselte Passwörter und SSH-Schlüssel Textspalten und entfernt erfolgreich zurückkopierte Terminal-Proxyzeilen. Dadurch entstehen bei einem anschließenden Upgrade keine doppelten aktiven Hosts mit verlorenen Zugangsdaten. Gewöhnliche HTTP-Proxyzeilen bleiben erhalten. Verweisen noch Tor-Dienste, Analytics oder Domainrelationen auf einen betroffenen Terminalhost, bricht der Rollback vor Schemaänderungen ab, um referenzierte Daten zu erhalten. `backend/test/migrations/third-database-credentials.spec.js` prüft diese Up-/Down-/Up-Abläufe einschließlich langer Schlüssel und Tor-Referenzen mit SQLite und PGlite.
+
+Die Tests `backend/test/migrations/full-schema.spec.js` und `data-preservation.spec.js` führen diese Abläufe mit SQLite und der echten PostgreSQL-Engine in PGlite aus. Dabei werden nur die externen Nginx-Aktionen gemockt. Änderungen historischer Migrationen wirken auf noch nicht ausgeführte Upgrades und auf Rollbacks; bereits durch frühere Versionen verlorene Werte lassen sich daraus nicht automatisch rekonstruieren.
+
+## Wechsel der Datenbank-Engine
+
+Der SQLite-Import in `backend/lib/db-migrate.js` ist vom Knex-Schema-Upgrade getrennt. Er setzt gleiche ausgeführte Migrationen auf Quelle und Ziel voraus und importiert Anwendungsdaten atomar. Ablauf, Schutz vor Teilimporten und erhaltene Quelldateien sind unter [Datenbank](./datenbank.md#wechsel-von-sqlite-zu-mysql-oder-postgresql) dokumentiert.
 
 ## Verwandte Seiten
 

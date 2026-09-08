@@ -41,8 +41,11 @@ class UserTwoFaBackupCode extends Model {
 		for (const record of unused) {
 			const matches = await bcrypt.compare(plainCode, record.code_hash);
 			if (matches) {
-				await UserTwoFaBackupCode.query().patch({ used_at: now() }).where({ id: record.id });
-				return record;
+				const consumed = await UserTwoFaBackupCode.query()
+					.patch({ used_at: now() })
+					.where({ id: record.id, user_id: userId })
+					.whereNull("used_at");
+				return consumed === 1 ? record : null;
 			}
 		}
 

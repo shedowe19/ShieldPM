@@ -1,5 +1,7 @@
+import { startRegistration } from "@simplewebauthn/browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SecuritySettings from "./Security";
 
@@ -180,5 +182,152 @@ describe("SecuritySettings", () => {
 			expect(mockRegenerate2faBackupCodes).toHaveBeenCalledWith("me");
 			expect(screen.getByText("CODE1")).toBeInTheDocument();
 		});
+	});
+
+	it("surfaces an initial status failure without offering an empty setup state", async () => {
+		mockGet2fa.mockRejectedValue(new Error("Security status unavailable"));
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		expect(await screen.findByText("Security status unavailable")).toBeInTheDocument();
+		expect(screen.queryByText("Add a New Method")).not.toBeInTheDocument();
+	});
+
+	it("keeps security actions from submitting an enclosing profile form", async () => {
+		const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+		mockGet2fa.mockResolvedValue({
+			methods: [{ id: 1, type: "totp", label: "App", isVerified: true }],
+			backupCodesRemaining: 5,
+		});
+		mockRegenerate2faBackupCodes.mockResolvedValue({ backupCodes: ["new-code"] });
+		render(
+			<form onSubmit={onSubmit}>
+				<SecuritySettings />
+			</form>,
+			{ wrapper: makeWrapper() },
+		);
+		fireEvent.click(await screen.findByText("Regenerate Backup Codes"));
+		expect(await screen.findByText("new-code")).toBeInTheDocument();
+		for (const button of screen.getAllByRole("button")) expect(button).toHaveAttribute("type", "button");
+		expect(onSubmit).not.toHaveBeenCalled();
+	});
+
+	it("issues one TOTP setup request under StrictMode and blocks invalid/repeated Enter verification", async () => {
+		mockSetup2faTotp.mockResolvedValue({ qrDataUrl: "data:image/png;base64,fake" });
+		mockEnable2faTotp.mockReturnValue(new Promise(() => {}));
+		render(
+			<StrictMode>
+				<SecuritySettings />
+			</StrictMode>,
+			{ wrapper: makeWrapper() },
+		);
+		fireEvent.click(await screen.findByText("Authenticator App"));
+		const input = await screen.findByPlaceholderText("123456");
+		expect(mockSetup2faTotp).toHaveBeenCalledTimes(1);
+		fireEvent.change(input, { target: { value: "abcdef" } });
+		fireEvent.keyDown(input, { key: "Enter" });
+		expect(mockEnable2faTotp).not.toHaveBeenCalled();
+		fireEvent.change(input, { target: { value: "123456" } });
+		fireEvent.keyDown(input, { key: "Enter" });
+		fireEvent.keyDown(input, { key: "Enter" });
+		expect(mockEnable2faTotp).toHaveBeenCalledTimes(1);
+	});
+
+	it("cannot remove a method while backup codes are being regenerated", async () => {
+		mockGet2fa.mockResolvedValue({
+			methods: [{ id: 1, type: "totp", label: "App", isVerified: true }],
+			backupCodesRemaining: 5,
+		});
+		mockRegenerate2faBackupCodes.mockReturnValue(new Promise(() => {}));
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Regenerate Backup Codes"));
+		await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled());
+		fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+		expect(mockRemove2faMethod).not.toHaveBeenCalled();
+	});
+	it("shows recovery codes returned by the first YubiKey registration", async () => {
+		mockAdd2faYubikey.mockResolvedValue({ id: 8, backupCodes: ["yubi-recovery"] });
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("YubiKey"));
+		const input = screen.getAllByRole("textbox")[1];
+		fireEvent.change(input, { target: { value: "c".repeat(44) } });
+		fireEvent.keyDown(input, { key: "Enter" });
+		expect(await screen.findByText("yubi-recovery")).toBeInTheDocument();
+	});
+
+	it("shows recovery codes returned by the first Duo registration", async () => {
+		mockSetup2faDuo.mockResolvedValue({ id: 9, backupCodes: ["duo-recovery"] });
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Duo Security"));
+		const inputs = document.querySelectorAll("input");
+		const values = ["DI123", "secret", "api-example.duosecurity.com", "https://example.test/duo-callback"];
+		inputs.forEach((input, index) => {
+			fireEvent.change(input, { target: { value: values[index] } });
+		});
+		fireEvent.keyDown(inputs[3], { key: "Enter" });
+		expect(await screen.findByText("duo-recovery")).toBeInTheDocument();
+	});
+
+	it("prevents closing a pending factor activation before recovery codes are returned", async () => {
+		mockBeginPasskeyRegistration.mockReturnValue(new Promise(() => {}));
+		render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Passkey"));
+		fireEvent.click(screen.getByText("Register Passkey"));
+		expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+	});
+	it("handles Enter in the passkey label without submitting the enclosing profile form", async () => {
+		mockBeginPasskeyRegistration.mockReturnValue(new Promise(() => {}));
+		const onKeyDown = vi.fn();
+		render(
+			<form onKeyDown={onKeyDown}>
+				<SecuritySettings />
+			</form>,
+			{ wrapper: makeWrapper() },
+		);
+		fireEvent.click(await screen.findByText("Passkey"));
+		const input = screen.getByRole("textbox");
+		expect(fireEvent.keyDown(input, { key: "Enter" })).toBe(false);
+		expect(mockBeginPasskeyRegistration).toHaveBeenCalledTimes(1);
+		expect(onKeyDown).not.toHaveBeenCalled();
+		fireEvent.keyDown(input, { key: "Enter" });
+		expect(mockBeginPasskeyRegistration).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not open a passkey prompt after the security tab has closed", async () => {
+		let finishBegin!: (response: object) => void;
+		mockBeginPasskeyRegistration.mockReturnValue(
+			new Promise((resolve) => {
+				finishBegin = resolve;
+			}),
+		);
+		const view = render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Passkey"));
+		fireEvent.click(screen.getByText("Register Passkey"));
+		expect(mockBeginPasskeyRegistration).toHaveBeenCalledOnce();
+		view.unmount();
+		await act(async () => {
+			finishBegin({ options: {}, challengeId: "challenge" });
+		});
+		expect(startRegistration).not.toHaveBeenCalled();
+		expect(mockCompletePasskeyRegistration).not.toHaveBeenCalled();
+	});
+
+	it("does not register a factor after leaving an open browser passkey prompt", async () => {
+		let finishPrompt!: (response: never) => void;
+		mockBeginPasskeyRegistration.mockResolvedValue({ options: {}, challengeId: "challenge" });
+		vi.mocked(startRegistration).mockReturnValueOnce(
+			new Promise((resolve) => {
+				finishPrompt = resolve;
+			}),
+		);
+		const view = render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Passkey"));
+		await act(async () => {
+			fireEvent.click(screen.getByText("Register Passkey"));
+		});
+		expect(startRegistration).toHaveBeenCalledOnce();
+		view.unmount();
+		await act(async () => {
+			finishPrompt({ id: "credential" } as never);
+		});
+		expect(mockCompletePasskeyRegistration).not.toHaveBeenCalled();
 	});
 });

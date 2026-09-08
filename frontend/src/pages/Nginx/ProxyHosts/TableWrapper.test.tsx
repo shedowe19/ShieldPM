@@ -104,7 +104,7 @@ describe("Proxy host table pagination", () => {
 			if (params.page === 2) {
 				visitedEmptyPage = true;
 				return {
-					data: createPage([], 2, 100),
+					data: createPage([], 2, 0),
 					isError: false,
 					isFetching: false,
 					isLoading: false,
@@ -112,7 +112,7 @@ describe("Proxy host table pagination", () => {
 			}
 
 			return {
-				data: createPage(createHosts(100), 1, visitedEmptyPage ? 100 : 200),
+				data: createPage(visitedEmptyPage ? [] : createHosts(100), 1, visitedEmptyPage ? 0 : 200),
 				isError: false,
 				isFetching: false,
 				isLoading: false,
@@ -149,5 +149,38 @@ describe("Proxy host table pagination", () => {
 		expect(mocks.deleteProxyHost).toHaveBeenCalledWith(101);
 		expect(modalOptions.invalidations).toContainEqual(["proxy-hosts"]);
 		expect(mocks.showObjectSuccess).toHaveBeenCalledWith("proxy-host", "deleted");
+	});
+	it("keeps the search input focused across loading and failed filter requests", () => {
+		const { rerender } = render(<TableWrapper />);
+		const input = screen.getByRole("searchbox");
+		input.focus();
+		fireEvent.change(input, { target: { value: "My Host " } });
+		expect(input).toHaveValue("My Host ");
+		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["owner", "access_list", "certificate"], {
+			limit: 100,
+			page: 1,
+			query: "my host",
+		});
+		mocks.useProxyHostsPage.mockReturnValue({ data: undefined, isFetching: true, isLoading: true, isError: false });
+		rerender(<TableWrapper />);
+		expect(screen.getByRole("searchbox")).toBe(input);
+		expect(input).toHaveFocus();
+		expect(screen.queryByTestId("table-row-count")).not.toBeInTheDocument();
+		mocks.useProxyHostsPage.mockReturnValue({
+			data: undefined,
+			isFetching: false,
+			isLoading: false,
+			isError: true,
+			error: new Error("Search failed"),
+		});
+		rerender(<TableWrapper />);
+		expect(screen.getByText("Search failed")).toBeInTheDocument();
+		expect(screen.getByRole("searchbox")).toBe(input);
+		fireEvent.change(input, { target: { value: "corrected" } });
+		expect(mocks.useProxyHostsPage).toHaveBeenLastCalledWith(["owner", "access_list", "certificate"], {
+			limit: 100,
+			page: 1,
+			query: "corrected",
+		});
 	});
 });

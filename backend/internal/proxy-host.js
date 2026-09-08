@@ -1,6 +1,8 @@
+import fs from "node:fs";
 import _ from "lodash";
 import { encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
+import { sanitizeHostMeta, sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import AccessList from "../models/access_list.js";
 import proxyHostModel from "../models/proxy_host.js";
@@ -47,9 +49,16 @@ const _cleanupOAuth2Proxy = async (accessListId) => {
 			return;
 		}
 		// Check if any other active proxy host still uses this access list
-		const otherHosts = await proxyHostModel.query().where("access_list_id", accessListId).where("is_deleted", 0);
+		const otherHosts = await proxyHostModel
+			.query()
+			.where("access_list_id", accessListId)
+			.where("is_deleted", 0)
+			.where("enabled", 1);
 		if (otherHosts.length === 0) {
 			await internalOAuth2Proxy.stop(accessListId);
+		} else {
+			// Refresh redirect domains after a host was removed, disabled or renamed.
+			await internalOAuth2Proxy.start(list);
 		}
 	} catch (err) {
 		console.error(`[OAuth2Proxy] Error cleaning up proxy for access list #${accessListId}:`, err);
@@ -97,6 +106,8 @@ const internalProxyHost = {
 		}
 
 		await access.can("proxy_hosts:create", thisData);
+		await internalHost.validateReferences(access, thisData);
+		internalHost.validateDomainNames(thisData.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
 		const domain_name_check_promises = [];
@@ -125,6 +136,9 @@ const internalProxyHost = {
 		}
 
 		// Encrypt terminal credentials if present
+		if (thisData.git_credentials) {
+			thisData.git_credentials = encrypt(thisData.git_credentials);
+		}
 		if (thisData.forward_scheme === "terminal") {
 			if (thisData.terminal_password) {
 				thisData.terminal_password = encrypt(thisData.terminal_password);
@@ -139,7 +153,12 @@ const internalProxyHost = {
 			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
 		}
 
-		let row = await proxyHostModel.query().insertGraphAndFetch(/** @type {any} */ (thisData));
+		// Objection graph writes span multiple statements and do not start a transaction.
+		let row = await proxyHostModel.transaction(async (trx) =>
+			proxyHostModel
+				.query(trx)
+				.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) })),
+		);
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -156,13 +175,17 @@ const internalProxyHost = {
 		}
 
 		// re-fetch with cert
-		row = await internalProxyHost.get(access, {
-			id: row.id,
-			expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
-		});
+		row = await internalProxyHost.get(
+			access,
+			{
+				id: row.id,
+				expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
+			},
+			{ preserveManagedPath: true },
+		);
 
 		// Configure nginx
-		await internalNginx.configure(proxyHostModel, "proxy_host", row);
+		row.meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
 
 		// Audit log
 		thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
@@ -172,7 +195,7 @@ const internalProxyHost = {
 			action: "created",
 			object_type: "proxy-host",
 			object_id: row.id,
-			meta: thisData,
+			meta: sanitizeProxyHost(thisData),
 		});
 
 		// Trigger GitOps auto-push
@@ -186,7 +209,7 @@ const internalProxyHost = {
 		// Start OAuth2 Proxy if needed
 		await _ensureOAuth2Proxy(row.access_list_id);
 
-		return row;
+		return sanitizeProxyHost(row);
 	},
 
 	/**
@@ -234,6 +257,7 @@ const internalProxyHost = {
 		const domain_name_check_promises = [];
 
 		if (typeof thisData.domain_names !== "undefined") {
+			internalHost.validateDomainNames(thisData.domain_names);
 			thisData.domain_names.map((domain_name) => {
 				return domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name, "proxy", thisData.id));
 			});
@@ -247,7 +271,12 @@ const internalProxyHost = {
 			});
 		}
 
-		let row = await internalProxyHost.get(access, { id: thisData.id });
+		let row = await internalProxyHost.get(access, { id: thisData.id }, { preserveManagedPath: true });
+		await internalHost.validateReferences(access, thisData, row);
+		// The API masks managed paths; preserve the actual path when an edit sends that placeholder back.
+		if (thisData.forward_host === "(managed)" && row.forward_host?.startsWith("/data/websites/")) {
+			thisData.forward_host = row.forward_host;
+		}
 		const oldAccessListId = row.access_list_id; // Save before update for OAuth2 Proxy lifecycle
 
 		if (row.id !== thisData.id) {
@@ -287,30 +316,26 @@ const internalProxyHost = {
 		// Encrypt terminal credentials if present (on update)
 		if (data.terminal_password) {
 			thisData.terminal_password = encrypt(data.terminal_password);
+		} else if (data.terminal_password === "") {
+			delete thisData.terminal_password;
 		}
 		if (data.terminal_private_key) {
 			thisData.terminal_private_key = encrypt(data.terminal_private_key);
+		} else if (data.terminal_private_key === "") {
+			delete thisData.terminal_private_key;
 		}
-
-		// Let's double check `backend/internal/proxy-host.js` old content.
-		// `.patch(thisData).then(utils.omitRow(omissions())).then((saved_row) => { ... })`
-		// If `saved_row` was `{}`, then `return saved_row` at the end would return empty object.
-
-		// Actually, I should use `patchAndFetchById` if I want the row, or just `patch` and then `get`.
-		// But since we are updating by ID, `patchAndFetchById` is best.
-		// But wait, the original code used `proxyHostModel.query().where({ id: thisData.id }).patch(thisData)`.
-		// This is definitely returning a count in SQLite/MySQL.
-
-		// Let's assume I should fetch the row again or return `row` with merged data.
-		// But for safety, I will use `patchAndFetchById`.
 
 		// Transform domain_names into host_domains relation objects for upsertGraph
 		if (thisData.domain_names && Array.isArray(thisData.domain_names)) {
 			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
 		}
 
+		thisData.meta = sanitizeHostMeta(thisData.meta);
+
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().upsertGraphAndFetch(/** @type {any} */ (thisData))
+			await proxyHostModel.transaction(async (trx) =>
+				proxyHostModel.query(trx).upsertGraphAndFetch(/** @type {any} */ (thisData)),
+			)
 		);
 		const _saved_row = utils.omitRow(omissions())(new_saved_row);
 
@@ -319,13 +344,17 @@ const internalProxyHost = {
 			action: "updated",
 			object_type: "proxy-host",
 			object_id: row.id,
-			meta: thisData,
+			meta: sanitizeProxyHost(thisData),
 		});
 
-		row = await internalProxyHost.get(access, {
-			id: thisData.id,
-			expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
-		});
+		row = await internalProxyHost.get(
+			access,
+			{
+				id: thisData.id,
+				expand: ["owner", "certificate", "access_list.[clients,items]", "host_domains"],
+			},
+			{ preserveManagedPath: true },
+		);
 
 		if (!options.skip_configure) {
 			// Configure nginx
@@ -339,15 +368,14 @@ const internalProxyHost = {
 		// Restart Git Deploy polling
 		internalGitDeploy.startPollingForHost(row);
 
-		// Handle OAuth2 Proxy lifecycle on access_list_id change
+		// Domains and enabled state also affect the OAuth2 redirect allowlist.
+		await _cleanupOAuth2Proxy(row.access_list_id);
 		if (row.access_list_id !== oldAccessListId) {
-			// Start new OAuth2 Proxy if needed
-			await _ensureOAuth2Proxy(row.access_list_id);
 			// Stop old one if no longer used
 			await _cleanupOAuth2Proxy(oldAccessListId);
 		}
 
-		return _.omit(internalHost.cleanRowCertificateMeta(row), omissions());
+		return sanitizeProxyHost(_.omit(internalHost.cleanRowCertificateMeta(row), omissions()));
 	},
 
 	/**
@@ -358,7 +386,7 @@ const internalProxyHost = {
 	 * @param  {Array}    [data.omit]
 	 * @return {Promise}
 	 */
-	get: async (access, data) => {
+	get: async (access, data, options = {}) => {
 		const thisData = /** @type {any} */ (data || {});
 
 		const access_data = await access.can("proxy_hosts:get", thisData.id);
@@ -385,11 +413,8 @@ const internalProxyHost = {
 		if (!row?.id) {
 			throw new errs.ItemNotFoundError(thisData.id);
 		}
-		const thisRow = internalHost.cleanRowCertificateMeta(row);
-		// SECURITY: Mask internal paths in forward_host from API responses
-		if (thisRow.forward_host?.startsWith("/data/websites/")) {
-			thisRow.forward_host = "(managed)";
-		}
+		const cleanedRow = internalHost.cleanRowCertificateMeta(row);
+		const thisRow = options.preserveManagedPath ? cleanedRow : sanitizeProxyHost(cleanedRow);
 		// Custom omissions — must use thisRow (cleaned) not raw row to avoid leaking certificate private keys
 		if (typeof thisData.omit !== "undefined" && thisData.omit !== null) {
 			return _.omit(thisRow, thisData.omit);
@@ -412,25 +437,31 @@ const internalProxyHost = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await proxyHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					is_deleted: 1,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", /** @type {any} */ (row));
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("proxy_host", row.id));
+			await internalNginx.backupConfig("proxy_host", row);
+			try {
+				await proxyHostModel.transaction(async (trx) => {
+					await proxyHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+					await internalNginx.deleteConfig("proxy_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("proxy_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("proxy_host", row);
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
 			action: "deleted",
 			object_type: "proxy-host",
 			object_id: row.id,
-			meta: _.omit(row, omissions()),
+			meta: sanitizeProxyHost(row),
 		});
 
 		// Trigger GitOps auto-push
@@ -454,10 +485,14 @@ const internalProxyHost = {
 	 */
 	enable: async (access, data) => {
 		await access.can("proxy_hosts:update", data.id);
-		const row = await internalProxyHost.get(access, {
-			id: data.id,
-			expand: ["certificate", "owner", "access_list", "host_domains"],
-		});
+		const row = await internalProxyHost.get(
+			access,
+			{
+				id: data.id,
+				expand: ["certificate", "owner", "access_list.[clients,items]", "host_domains"],
+			},
+			{ preserveManagedPath: true },
+		);
 
 		if (!row?.id) {
 			throw new errs.ItemNotFoundError(data.id);
@@ -474,6 +509,7 @@ const internalProxyHost = {
 
 		// Configure nginx
 		await internalNginx.configure(proxyHostModel, "proxy_host", row);
+		await _ensureOAuth2Proxy(row.access_list_id);
 
 		// Start Git Deploy polling if enabled
 		if (row.git_sync_enabled && row.git_repo_url) {
@@ -485,7 +521,7 @@ const internalProxyHost = {
 			action: "enabled",
 			object_type: "proxy-host",
 			object_id: row.id,
-			meta: _.omit(row, omissions()),
+			meta: sanitizeProxyHost(row),
 		});
 
 		return true;
@@ -511,13 +547,25 @@ const internalProxyHost = {
 
 		row.enabled = 0;
 
-		await proxyHostModel.query().where("id", row.id).patch({
-			enabled: 0,
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("proxy_host", row.id));
+			await internalNginx.backupConfig("proxy_host", row);
+			try {
+				await proxyHostModel.transaction(async (trx) => {
+					await proxyHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
+					await internalNginx.deleteConfig("proxy_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("proxy_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("proxy_host", row);
 		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("proxy_host", row);
-		await internalNginx.reload();
+		await _cleanupOAuth2Proxy(row.access_list_id);
 
 		// Stop Git Deploy polling
 		internalGitDeploy.stopPolling(data.id);
@@ -527,7 +575,7 @@ const internalProxyHost = {
 			action: "disabled",
 			object_type: "proxy-host",
 			object_id: row.id,
-			meta: _.omit(row, omissions()),
+			meta: sanitizeProxyHost(row),
 		});
 
 		return true;
@@ -581,15 +629,17 @@ const internalProxyHost = {
 		}
 
 		const pageResult = pagination ? await query.page(pagination.page - 1, pagination.limit) : null;
-		const rows = pageResult ? pageResult.results : await query;
+		const queriedRows = pageResult ? pageResult.results : await query;
+		const rows = queriedRows?.map(sanitizeProxyHost);
 
 		// return rows with count
 		if (rows) {
 			rows.map((row) => {
+				if (row.certificate) {
+					row.certificate.meta = {};
+				}
 				row.access_list_id = Number.parseInt(String(row.access_list_id), 10);
-				// @ts-expect-error
-				row.connected_tunnels = /** @type {any} */ (row).count || 0;
-				// @ts-expect-error
+				row.connected_tunnels = row.count || 0;
 				delete row.count;
 				// SECURITY: Mask internal paths in forward_host from API responses
 				// /data/websites/host-N paths expose server filesystem layout to users

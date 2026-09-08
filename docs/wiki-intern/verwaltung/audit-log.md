@@ -32,6 +32,8 @@ Um Änderungen im System nachvollziehbar zu machen (z.B. Erstellung eines Proxy-
 - Der Button „CSV exportieren“ schreibt ausschließlich die aktuell angezeigte, bereits über `auditlog:list` autorisierte Seite in eine lokale CSV-Datei. Die Datei übernimmt die gewählten Such-, Zeit-, Aktions-, Objekttyp- sowie Benutzer- und Objekt-ID-Filter und bleibt damit wie die Tabelle auf höchstens 100 Datensätze begrenzt. Zellen mit möglichen Tabellenformeln (`=`, `+`, `-` oder `@`, auch nach führendem Leerraum) erhalten vor dem CSV-Escaping ein Apostroph, damit Daten aus Audit-Metadaten beim Öffnen nicht als Formel ausgeführt werden.
 - Der Detaildialog kann die angezeigten Metadaten lokal in die Zwischenablage kopieren. Im Demo-Modus übernimmt er dabei dieselbe IP-Maskierung wie der JSON-Editor und übergibt keine unverdeckten Demo-Werte. Bei nicht verfügbarer oder abgelehnter Zwischenablage erscheint ein lokalisierter Fehlerhinweis. Die Aktion nutzt keine zusätzliche API und bleibt damit auf Daten beschränkt, die bereits mit `auditlog:list` autorisiert geladen wurden.
 
+SQLite speichert die historischen Audit-Zeitstempel als lokale Zeit mit einem Leerzeichen zwischen Datum und Uhrzeit. Die UTC-Zeitfilter vergleichen deshalb numerische Julianische Zeitwerte einschließlich der lokalen UTC-Umrechnung; ein lexikalischer Vergleich mit dem ISO-8601-Parameter würde gültige Ereignisse desselben Tages ausblenden. Ein Regressionstest prüft beide inklusiven Grenzen gegen eine echte SQLite-Datenbank.
+
 ## Abhängigkeiten
 
 - `backend/models/audit-log.js`

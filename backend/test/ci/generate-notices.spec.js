@@ -67,6 +67,8 @@ describe("third-party notice generator", () => {
 		const result = executeGenerator(fixture);
 
 		expect(result.status).toBe(0);
-		expect(fs.readFileSync(fixture.noticesPath, "utf8")).toContain("fixture-package@1.2.3");
+		expect(fs.readFileSync(fixture.noticesPath, "utf8")).toContain(
+			"[fixture-package@1.2.3](https://www.npmjs.com/package/fixture-package/v/1.2.3) - MIT",
+		);
 	});
 });

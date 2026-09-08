@@ -23,30 +23,34 @@ services:
       - /data/shieldpm:/data
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: |
-      sh -c '
+      sh -eu -c '
       echo "Auto-Reset Service Started..."
-      apt-get update && apt-get install -y docker.io
+      apt-get update
+      apt-get install -y --no-install-recommends docker.io sqlite3
+      umask 077
 
-      # Wait for main app to initialize DB if needed
-      sleep 60
+      until docker exec shieldpm-demo healthcheck.sh >/dev/null 2>&1; do
+          sleep 5
+      done
 
-      # Create a clean backup if it does not exist yet
-      # Default path inside container is /data/shieldpm/database.sqlite
+      # SQLite backup includes committed WAL contents without copying a live file.
       if [ ! -f /data/shieldpm/database.sqlite.clean ]; then
-          echo "Creating clean backup of database.sqlite..."
-          cp /data/shieldpm/database.sqlite /data/shieldpm/database.sqlite.clean
+          sqlite3 /data/shieldpm/database.sqlite ".backup /data/shieldpm/database.sqlite.clean.tmp"
+          mv /data/shieldpm/database.sqlite.clean.tmp /data/shieldpm/database.sqlite.clean
       fi
 
+      # Restart on an interrupted reset, too; the application must never write
+      # while its database and journal files are being replaced.
+      trap "docker start shieldpm-demo >/dev/null" EXIT
+      trap "exit 1" HUP INT TERM
       while true; do
-          echo "Waiting 60 minutes before reset..."
           sleep 3600
-          echo "Resetting database..."
-          # Copy clean DB over active DB
-          cp /data/shieldpm/database.sqlite.clean /data/shieldpm/database.sqlite
-          # Force remove WAL/SHM locks to avoid corruption
+          echo "Resetting demo database..."
+          cp /data/shieldpm/database.sqlite.clean /data/shieldpm/database.sqlite.reset
+          docker stop --time 30 shieldpm-demo
+          mv /data/shieldpm/database.sqlite.reset /data/shieldpm/database.sqlite
           rm -f /data/shieldpm/database.sqlite-wal /data/shieldpm/database.sqlite-shm
-          echo "Database reset complete. Restarting Application..."
-          docker restart shieldpm-demo
+          docker start shieldpm-demo
       done
       '
 

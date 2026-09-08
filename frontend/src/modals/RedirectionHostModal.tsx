@@ -21,7 +21,7 @@ import { useRedirectionHost } from "src/hooks";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
 import { showObjectSuccess } from "src/notifications";
-import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, REDIRECTION_HOST_TAB, UI_COLOR } from "src/types/enums";
+import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME, REDIRECTION_HOST_TAB } from "src/types/enums";
 
 const showRedirectionHostModal = (id: number | "new") => {
 	EasyModal.show(RedirectionHostModal, { id });
@@ -340,7 +340,7 @@ const RedirectionHostModal = EasyModal.create(({ id, visible, remove }: Props) =
 									<Button
 										type="submit"
 										disabled={isSubmitting}
-										className={`bg-${UI_COLOR.YELLOW}-600/90 hover:bg-${UI_COLOR.YELLOW}-600 text-white shadow-sm`}
+										className="bg-yellow-600/90 hover:bg-yellow-600 text-white shadow-sm"
 									>
 										{isSubmitting ? (
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -5,10 +5,7 @@ interface Props {
 	roles: string[];
 }
 export function RolesFormatter({ roles }: Props) {
-	const r = roles || [];
-	if (r.length === 0) {
-		r[0] = "standard-user";
-	}
+	const r = roles?.length ? roles : ["standard-user"];
 	return (
 		<>
 			{r.map((role: string) => (

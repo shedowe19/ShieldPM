@@ -1,6 +1,6 @@
 import { startAuthentication } from "@simplewebauthn/browser";
 import { AlertCircle, Key, Loader2, Lock, ShieldCheck, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { begin2faDuoAuth, begin2faPasskeyAuth, complete2faPasskeyAuth, verify2faCode } from "src/api/backend";
 import type { TokenResponse } from "src/api/backend/responseTypes";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -25,22 +25,27 @@ const METHOD_ICONS: Record<string, React.ReactNode> = {
 	duo: <Lock className="h-5 w-5" />,
 };
 
-const METHOD_LABELS: Record<string, string> = {
-	totp: intl.formatMessage({ id: "2fa.method.totp" }),
-	yubikey: intl.formatMessage({ id: "2fa.method.yubikey" }),
-	passkey: intl.formatMessage({ id: "2fa.method.passkey" }),
-	duo: intl.formatMessage({ id: "2fa.method.duo" }),
-};
+const methodLabel = (method: string) =>
+	["totp", "yubikey", "passkey", "duo"].includes(method)
+		? intl.formatMessage({ id: `2fa.method.${method}` })
+		: method;
 
 export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFAStepProps) {
+	const mounted = useRef(false);
 	const [activeMethod, setActiveMethod] = useState<ActiveMethod>(null);
 	const [code, setCode] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
 
 	const handleCodeSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		if (!activeMethod || !code.trim()) return;
+		if (loading || !activeMethod || !code.trim()) return;
 
 		setError("");
 		setLoading(true);
@@ -50,39 +55,48 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 				method: activeMethod as "totp" | "yubikey" | "backup_code",
 				code: code.trim(),
 			});
+			if (!mounted.current) return;
 			AuthStore.set(response);
 			onSuccess(response);
 		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+			if (mounted.current && err instanceof Error) setError(err.message);
 		} finally {
-			setLoading(false);
+			if (mounted.current) setLoading(false);
 		}
 	};
 
 	const handlePasskeyAuth = async () => {
+		if (loading) return;
+		setActiveMethod("passkey");
 		setError("");
 		setLoading(true);
 		try {
 			const { options, challengeId } = await begin2faPasskeyAuth(pendingToken);
+			if (!mounted.current) return;
 			const authResponse = await startAuthentication({ optionsJSON: options as any });
+			if (!mounted.current) return;
 			const response = await complete2faPasskeyAuth(pendingToken, challengeId, authResponse);
+			if (!mounted.current) return;
 			AuthStore.set(response);
 			onSuccess(response);
 		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+			if (mounted.current && err instanceof Error) setError(err.message);
 		} finally {
-			setLoading(false);
+			if (mounted.current) setLoading(false);
 		}
 	};
 
 	const handleDuoAuth = async () => {
+		if (loading) return;
+		setActiveMethod("duo");
 		setError("");
 		setLoading(true);
 		try {
 			const { authUrl } = await begin2faDuoAuth(pendingToken);
-			sessionStorage.setItem("duo_pending_token", pendingToken);
+			if (!mounted.current) return;
 			window.location.href = authUrl;
 		} catch (err) {
+			if (!mounted.current) return;
 			if (err instanceof Error) setError(err.message);
 			setLoading(false);
 		}
@@ -102,7 +116,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 					disabled={loading}
 				>
 					{METHOD_ICONS[method]}
-					{METHOD_LABELS[method] || method}
+					{methodLabel(method)}
 					{loading && activeMethod === "passkey" && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
 				</Button>
 			);
@@ -118,7 +132,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 					disabled={loading}
 				>
 					{METHOD_ICONS[method]}
-					{METHOD_LABELS[method] || method}
+					{methodLabel(method)}
 					{loading && activeMethod === "duo" && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
 				</Button>
 			);
@@ -137,7 +151,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 				disabled={loading}
 			>
 				{METHOD_ICONS[method] || <ShieldCheck className="h-5 w-5" />}
-				{METHOD_LABELS[method] || method}
+				{methodLabel(method)}
 			</Button>
 		);
 	};
@@ -186,6 +200,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 						<Label htmlFor="2fa-code">{inputLabel[activeMethod] || ""}</Label>
 						<Input
 							id="2fa-code"
+							disabled={loading}
 							type="text"
 							inputMode={activeMethod === "totp" ? "numeric" : "text"}
 							value={code}
@@ -206,6 +221,7 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 			{/* Backup code fallback always available */}
 			<div className="pt-2 border-t">
 				<button
+					disabled={loading}
 					type="button"
 					className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline w-full text-center"
 					onClick={() => {

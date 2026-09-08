@@ -50,7 +50,11 @@ interface DdnsProviderValues {
 
 const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	// If ID is provided, fetch existing data to edit locally or use a hook
-	const { data: providers, isLoading } = useQuery({
+	const {
+		data: providers,
+		isLoading,
+		error: loadError,
+	} = useQuery({
 		queryKey: ["ddns-providers"],
 		queryFn: getDdnsProviders,
 		enabled: id !== "new",
@@ -87,15 +91,15 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		const payload: Partial<DdnsProvider> = {
 			name: values.name,
 			provider: values.provider,
-			ip_ver: values.ip_ver,
+			ipVer: values.ip_ver,
 			domains,
 			config,
-			enabled: true, // Always enable on create/update for now
+			...(isEditing ? {} : { enabled: true }),
 		};
 
 		try {
-			if (id) {
-				await updateDdnsProvider(id as number, { ...payload, id: id as number }); // Cast id to number for update
+			if (typeof id === "number") {
+				await updateDdnsProvider(id, payload);
 				showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER, "saved");
 			} else {
 				await createDdnsProvider(payload);
@@ -137,17 +141,20 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 				{isLoading && isEditing ? (
 					<Loading noLogo />
+				) : isEditing && !data ? (
+					<Alert variant="destructive">
+						<AlertDescription>{loadError?.message || <T id="error.unknown" />}</AlertDescription>
+					</Alert>
 				) : (
 					<Formik<DdnsProviderValues>
-						enableReinitialize
 						initialValues={{
 							name: data?.name || "",
 							provider: (data?.provider as DdnsProviderName) || DDNS_PROVIDER_NAME.CLOUDFLARE,
-							ip_ver: (data?.ip_ver as IpVersion) || IP_VERSION.DUAL,
+							ip_ver: (data?.ipVer as IpVersion) || IP_VERSION.DUAL,
 							domainsStr: data?.domains.join(", ") || "",
 							// Cloudflare
 							cloudfare_token: (data?.config as { token?: string })?.token || "",
-							cloudfare_zone_id: (data?.config as { zone_id?: string })?.zone_id || "",
+							cloudfare_zone_id: (data?.config as { zoneId?: string })?.zoneId || "",
 							// DuckDNS
 							duckdns_token: (data?.config as { token?: string })?.token || "",
 							// Custom

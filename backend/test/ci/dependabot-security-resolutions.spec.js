@@ -51,7 +51,9 @@ describe("Dependabot security resolutions", () => {
 	it("keeps every resolved package above the current GitHub advisory fixed versions", () => {
 		assertPatched("backend/yarn.lock", "axios", "1.18.0");
 		assertPatched("backend/yarn.lock", "brace-expansion", "5.0.9");
-		assertPatched("backend/yarn.lock", "fast-uri", "3.1.5");
+		assertPatched("backend/yarn.lock", "fast-uri", "3.1.6");
+		assertPatched("backend/yarn.lock", "qs", "6.16.0");
+		assertPatched("backend/yarn.lock", "nanoid", "3.3.18");
 		assertPatched("backend/yarn.lock", "js-yaml", "4.3.1");
 		assertPatched("frontend/yarn.lock", "d3-color", "3.1.0");
 	});

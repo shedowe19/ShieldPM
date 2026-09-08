@@ -5,10 +5,17 @@ export const AUTHENTICATION_EXPIRED_EVENT = "shieldpm:authentication-expired";
 interface AuthState {
 	expires: number;
 	userId?: number;
+	impersonating: boolean;
 }
 
 export class AuthStore {
 	private state: AuthState | null = null;
+	private revision = 0;
+
+	// Responses may only change authentication for the session that sent them.
+	get sessionRevision() {
+		return this.revision;
+	}
 
 	// Check if we have an active session in memory
 	// Note: On page reload, this will be null until verified by API
@@ -24,13 +31,17 @@ export class AuthStore {
 		return this.state?.userId || 0;
 	}
 
+	get isImpersonating() {
+		return this.state?.impersonating || false;
+	}
+
 	// Helper to check validity based on expiration
 	hasActiveToken() {
 		if (!this.state) return false;
 
 		const now = Date.now();
 		const oneMinuteBuffer = 60 * 1000;
-		// TokenResponse.expires is number
+		// API expiration timestamps are normalized to milliseconds when stored.
 		const expires = this.expires;
 
 		if (expires && expires - oneMinuteBuffer > now) {
@@ -43,20 +54,25 @@ export class AuthStore {
 
 	// Set session details from login/refresh response
 	// Preserves existing userId if the response doesn't include user data (e.g. refresh)
-	set(data: { expires: number; user?: { id: number } }) {
+	set(data: { expires: number | string | null; user?: { id: number } }) {
+		this.revision += 1;
+		const expires = typeof data.expires === "string" ? Date.parse(data.expires) : data.expires;
 		this.state = {
-			expires: data.expires,
+			expires: typeof expires === "number" && Number.isFinite(expires) ? expires : 0,
 			userId: data.user?.id ?? this.state?.userId,
+			impersonating: false,
 		};
 	}
 
 	// Add is alias for Set in cookie mode
-	add(data: { expires: number; user?: { id: number } }) {
+	add(data: { expires: number | string | null; user?: { id: number } }, impersonating = false) {
 		this.set(data);
+		if (this.state) this.state.impersonating = impersonating;
 	}
 
 	// Clear memory state
 	clear() {
+		this.revision += 1;
 		this.state = null;
 		// We can't clear httpOnly cookie here, API must do it
 	}

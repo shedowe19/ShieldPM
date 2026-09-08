@@ -16,12 +16,14 @@ export const CertificateExpiryWidget = () => {
 		return null;
 	}
 
+	const now = dayjs();
+
 	// Filter certificates expiring in the next 30 days or already expired
 	const expiringCertificates = certificates
 		.filter((cert) => {
 			if (!cert.expiresOn) return false;
 			const expires = dayjs(cert.expiresOn);
-			const diff = expires.diff(dayjs(), "day");
+			const diff = expires.diff(now, "day");
 			return diff <= 30;
 		})
 		.sort((a, b) => {
@@ -43,8 +45,8 @@ export const CertificateExpiryWidget = () => {
 						<div className="space-y-4">
 							{expiringCertificates.map((cert) => {
 								const expires = dayjs(cert.expiresOn);
-								const diff = expires.diff(dayjs(), "day");
-								const isExpired = diff < 0;
+								const diff = expires.diff(now, "day");
+								const isExpired = !expires.isAfter(now);
 
 								return (
 									<div

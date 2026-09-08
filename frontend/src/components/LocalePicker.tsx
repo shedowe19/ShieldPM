@@ -7,7 +7,7 @@ import {
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
 import { useLocaleState } from "src/context";
-import { changeLocale, getFlagCodeForLocale, localeOptions, T } from "src/locale";
+import { changeLocale, getFlagCodeForLocale, getLocale, localeOptions, T } from "src/locale";
 
 interface Props {
 	menuAlign?: "start" | "end";
@@ -18,7 +18,7 @@ function LocalePicker(_props: Props) {
 
 	const changeTo = async (lang: string) => {
 		await changeLocale(lang);
-		setLocale(lang);
+		setLocale(getLocale());
 	};
 
 	return (

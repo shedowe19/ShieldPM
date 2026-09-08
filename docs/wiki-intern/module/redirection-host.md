@@ -11,8 +11,8 @@ Redirection-Hosts werden verwendet, um eingehende Anfragen z. B. von alten Domai
 ## Wichtige Dateien
 
 - `backend/internal/redirection-host.js` (~448 Zeilen) — Business-Logik (CRUD, Aktivieren/Deaktivieren, Zertifikat-Zuordnung)
-- `backend/models/redirection_host.js` — Objection.js-Modell, Relationen zu `host_domains` und `certificate`
-- `backend/templates/redirection_host.conf` — EJS-Template für das Nginx-`server`-Block
+- `backend/models/redirection_host.js` — Objection.js-Modell, JSON-Domainliste sowie Relationen zu `owner` und `certificate`
+- `backend/templates/redirection_host.conf` — Liquid-Template für das Nginx-`server`-Block
 - `backend/routes/nginx/redirection_hosts.js` — REST-API-Routen unter `/api/nginx/redirection-hosts`
 - `backend/lib/access/redirection_hosts-*.json` — RBAC-Regeln (create/get/list/update/delete)
 - `frontend/src/pages/Nginx/RedirectionHosts/` — UI-Tabelle und Modal
@@ -21,10 +21,10 @@ Redirection-Hosts werden verwendet, um eingehende Anfragen z. B. von alten Domai
 ## Verhalten
 
 1. Benutzer legt einen Redirection-Host mit Quell-Domain(s), Ziel-URL und HTTP-Code (301/302) an.
-2. `internal/redirection-host.js` validiert Berechtigungen, speichert das Modell und legt `host_domains`-Einträge an.
+2. `internal/redirection-host.js` validiert Berechtigungen, speichert das Modell einschließlich JSON-Domainliste.
 3. `internal/nginx.js` rendert das Template `redirection_host.conf` zu einer `.conf`-Datei unter `/data/nginx/redirection_host/`.
 4. Optional kann ein SSL-Zertifikat zugewiesen werden (HTTPS-Umleitung).
-5. Nginx-Reload (debounced).
+5. Nginx-Reload nach erfolgreicher Konfigurationsprüfung.
 
 ## Abhängigkeiten
 
@@ -45,3 +45,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Host-Hilfslogik](./host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
+
+## Aktualisierung und Fehlerstatus
+
+Die Erstellungsantwort übernimmt den aktuellen Nginx-Status, einschließlich fehlgeschlagener Konfiguration. DNS-Zugangsdaten für neue Zertifikate werden weder in Host-Metadaten noch im Audit gespeichert. Löschen und Deaktivieren teilen die Warteschlange der [Nginx-Engine](./nginx-engine.md).

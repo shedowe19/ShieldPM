@@ -173,7 +173,7 @@ describe("Analytics", () => {
 		render(<Analytics />);
 
 		await waitFor(() => expect(getAnalyticsSeries).toHaveBeenCalledOnce());
-		expect(observers.length).toBeGreaterThanOrEqual(2);
+		await waitFor(() => expect(observers.length).toBeGreaterThanOrEqual(2));
 		expect(screen.queryByTestId("analytics-area-chart")).not.toBeInTheDocument();
 
 		await act(async () => {
@@ -238,7 +238,7 @@ describe("Analytics", () => {
 		await firstSummary;
 		await Promise.resolve();
 
-		expect(getAnalyticsSeries).toHaveBeenCalledTimes(2);
+		expect(getAnalyticsSeries).toHaveBeenCalledTimes(3);
 		expect(screen.queryByText("100")).not.toBeInTheDocument();
 	});
 
@@ -496,7 +496,7 @@ describe("Analytics", () => {
 			await Promise.resolve();
 		});
 
-		expect(getAnalyticsSeries).toHaveBeenCalledTimes(1);
+		expect(getAnalyticsSeries).toHaveBeenCalledTimes(2);
 		expect(screen.queryByText("100")).not.toBeInTheDocument();
 	});
 

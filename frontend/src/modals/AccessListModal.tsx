@@ -85,7 +85,6 @@ const AccessListModal = EasyModal.create(({ id, visible, remove }: Props) => {
 
 				{!isLoading && data && (
 					<Formik<AccessListFormValues>
-						enableReinitialize
 						initialValues={createAccessListInitialValues(data)}
 						onSubmit={onSubmit}
 					>

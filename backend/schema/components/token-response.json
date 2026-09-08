@@ -9,13 +9,46 @@
 			"type": "string"
 		},
 		"user": {
-			"description": "Authenticated user object",
-			"$ref": "./user-object.json"
+			"type": "object",
+			"description": "Authenticated user summary",
+			"additionalProperties": false,
+			"required": [
+				"id",
+				"name",
+				"email",
+				"nickname",
+				"avatar",
+				"roles"
+			],
+			"properties": {
+				"id": {
+					"$ref": "./user-object.json#/properties/id"
+				},
+				"name": {
+					"$ref": "./user-object.json#/properties/name"
+				},
+				"email": {
+					"$ref": "./user-object.json#/properties/email"
+				},
+				"nickname": {
+					"$ref": "./user-object.json#/properties/nickname"
+				},
+				"avatar": {
+					"$ref": "./user-object.json#/properties/avatar"
+				},
+				"roles": {
+					"$ref": "./user-object.json#/properties/roles"
+				}
+			}
 		},
 		"csrfToken": {
 			"description": "CSRF protection token for subsequent requests",
 			"example": "csrf-token-value-here",
 			"type": "string"
+		},
+		"token": {
+			"type": "string",
+			"description": "JWT access token"
 		}
 	},
 	"required": [

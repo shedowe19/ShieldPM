@@ -71,6 +71,28 @@ Pfad: `frontend/src/components/ui/`
 | `Nginx/`     | Nginx-spezifische UI       |
 | `Table/`     | Tabellen-Komponenten       |
 
+## Fehlerbehandlung bei Git-Sync und WireGuard
+
+- `GitSyncTab.tsx` verlangt eine Repository-URL nur bei aktivierter automatischer Synchronisierung. Ein lokal
+  bereitgestellter Host kann deshalb auch nach dem Öffnen dieses Tabs ohne Git-Konfiguration gespeichert werden.
+  Manuelle Synchronisierungen prüfen das fachliche `success`-Feld der HTTP-200-Antwort; ein gemeldeter Git-Fehler oder
+  Transportfehler erzeugt eine Fehlermeldung statt einer Erfolgsmeldung. `GitSyncTab.test.tsx` prüft beide Formularfälle
+  sowie Erfolg, fachlichen Fehler und Transportfehler.
+- `Nginx/WireguardConfigModal.tsx` zeigt fehlgeschlagene Konfigurationsabfragen im Dialog an und lässt den Download
+  dabei gesperrt. Die Kopierbestätigung erscheint erst nach erfolgreichem Schreiben in die Zwischenablage. Bei einem
+  Peerwechsel oder Schließen werden verspätete Kopierantworten ignoriert und der Bestätigungstimer entfernt;
+  Clipboard-Fehler nutzen die bestehende Toast-Fehlermeldung. Die Dialogtests prüfen Ablehnung, Peerwechsel und Cleanup.
+
+## Fehler beim Laden von Oberflächen
+
+`RouteErrorBoundary.tsx` zeigt einen lokalisierten Fehler mit Neuladen-Aktion und fokussiert die Fehlerüberschrift.
+Der Router verwendet diese Grenze auch für die erstmalige Einrichtung, zusammen mit einem `Suspense`-Ladebildschirm.
+Damit kann ein fehlgeschlagener Setup-Chunk beim ersten Start nicht den gesamten React-Baum beenden.
+`Router.test.tsx` prüft die Einrichtung zusätzlich zu den öffentlichen und angemeldeten Routen.
+
+Der aus der Sidebar gestartete KI-Chat besitzt dieselbe Fehlergrenze ausschließlich um seinen dynamischen Inhalt.
+Seine Fehlermeldung erscheint separat; Navigation und aktive Seite bleiben verfügbar. Siehe [AI-Agent](../module/ai-agent.md).
+
 ## Verwandte Seiten
 
 - [Screens & Pages](./screens.md)

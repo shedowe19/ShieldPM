@@ -48,7 +48,12 @@ export default {
 			throw new errs.AuthError(ERROR_MESSAGE_INVALID_AUTH);
 		}
 
-		const auth = await authModel.query().where("user_id", "=", user.id).where("type", "=", "password").first();
+		const auth = await authModel
+			.query()
+			.where("user_id", "=", user.id)
+			.where("type", "=", "password")
+			.where("is_deleted", 0)
+			.first();
 
 		if (!auth) {
 			// Fake work to prevent timing attacks
@@ -114,7 +119,8 @@ export default {
 		const Token = TokenModel(); // Factory pattern — must NOT use `new`, consistent with all other call sites
 
 		data.scope = "user";
-		data.expiry = "1d";
+		// The encrypted browser handoff is valid for the same five minutes as its cookie.
+		data.expiry = "5m";
 
 		const user = await userModel
 			.query()

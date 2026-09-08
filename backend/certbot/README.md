@@ -17,3 +17,8 @@ File Structure:
   ...
 }
 ```
+
+The optional `credentials_argument` and `propagation_argument` fields override the
+corresponding CLI option names (without the leading `--`). Otherwise both options
+use `full_plugin_name` as their prefix, falling back to `dns-<registry-key>` when
+no full name is provided. Explicit propagation time `0` is supported.

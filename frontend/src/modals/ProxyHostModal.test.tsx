@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -51,7 +51,10 @@ vi.mock("src/hooks", () => ({
 }));
 
 vi.mock("./ProxyHostAdvancedTab", () => ({ default: () => null }));
-vi.mock("./ProxyHostDetailsTab", () => ({ default: () => null }));
+vi.mock("./ProxyHostDetailsTab", async () => {
+	const { Field } = await import("formik");
+	return { default: () => <Field name="forwardHost" aria-label="forward host" /> };
+});
 vi.mock("./ProxyHostMaintenanceTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostNotesTab", () => ({ default: () => null }));
 vi.mock("./ProxyHostSecurityTab", () => ({ default: () => null }));
@@ -101,5 +104,21 @@ describe("ProxyHostModal", () => {
 		expect(await screen.findByText("Unbekannter Fehler")).toBeInTheDocument();
 		expect(screen.queryByText("Error")).not.toBeInTheDocument();
 		expect(screen.queryByText("Unknown error")).not.toBeInTheDocument();
+	});
+	it("preserves an edited upstream when the host is refreshed in the background", async () => {
+		mocks.useProxyHost.mockReturnValue({ data: { id: 73, forwardHost: "old.example.test" }, isLoading: false });
+		mocks.useUser.mockReturnValue({ data: { id: 1 }, isLoading: false });
+		const { showProxyHostModal } = await import("./ProxyHostModal");
+		showProxyHostModal(73);
+		const Modal = mocks.show.mock.calls[0][0];
+		const { rerender } = render(<Modal id={73} remove={vi.fn()} visible />);
+		const input = screen.getByLabelText("forward host");
+		fireEvent.change(input, { target: { value: "edited.example.test" } });
+		mocks.useProxyHost.mockReturnValue({
+			data: { id: 73, forwardHost: "refetched.example.test" },
+			isLoading: false,
+		});
+		rerender(<Modal id={73} remove={vi.fn()} visible />);
+		await waitFor(() => expect(input).toHaveValue("edited.example.test"));
 	});
 });

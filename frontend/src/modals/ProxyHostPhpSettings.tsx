@@ -72,14 +72,14 @@ const ProxyHostPhpSettings = () => (
 												)}
 											</Field>
 
-											<Field name="php_override_ini">
+											<Field name="phpOverrideIni">
 												{({ field }: FieldProps) => (
 													<div className="space-y-2 pt-2">
-														<Label htmlFor="php_override_ini">
+														<Label htmlFor="phpOverrideIni">
 															<T id="proxy-host.php.custom-ini" />
 														</Label>
 														<Textarea
-															id="php_override_ini"
+															id="phpOverrideIni"
 															placeholder={intl.formatMessage({
 																id: "proxy-host.php.custom-ini.placeholder",
 															})}

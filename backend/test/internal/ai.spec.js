@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import internalAi from "../../internal/ai.js";
 import internalProxyHost from "../../internal/proxy-host.js";
 import internalSetting from "../../internal/setting.js";
@@ -8,9 +8,7 @@ import SettingModel from "../../models/setting.js";
 vi.mock("../../internal/setting.js");
 vi.mock("../../internal/proxy-host.js");
 vi.mock("../../models/setting.js");
-vi.mock("../../lib/logger.js", () => ({
-	logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
-}));
+vi.mock("../../logger.js");
 
 vi.mock("../../lib/encryption.js", () => ({
 	encrypt: vi.fn((val) => `encrypted_${val}`),
@@ -25,15 +23,15 @@ vi.mock("../../db.js", () => ({
 	})),
 }));
 
-// Mock fetch
-global.fetch = vi.fn();
-
 describe("internal/ai.js", () => {
 	const mockAccess = { can: vi.fn().mockResolvedValue(true) };
 
 	beforeEach(() => {
 		vi.resetAllMocks();
+		vi.stubGlobal("fetch", vi.fn());
 	});
+
+	afterEach(() => vi.unstubAllGlobals());
 
 	describe("getConfig", () => {
 		it("should return default config if setting not found", async () => {

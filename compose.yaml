@@ -136,7 +136,7 @@ services:
 
       # ── WireGuard Tunnel ───────────────────────────────────────────────────
       # Settings (endpoint, subnet, port) are configured in the ShieldPM UI.
-      # To enable, uncomment cap_add, sysctls and devices below.
+      # To enable, uncomment cap_add and devices below, and configure host routing.
 
     # ── Capabilities ───────────────────────────────────────────────────────
     # Uncomment for QUIC BPF and/or WireGuard Tunnels:
@@ -147,10 +147,11 @@ services:
     #   - NET_RAW                                  # WireGuard
 
     # ── Kernel Parameters ──────────────────────────────────────────────────
-    # Uncomment for WireGuard Tunnel routing:
-    # sysctls:
-    #   net.ipv4.ip_forward: 1
-    #   net.ipv4.conf.all.src_valid_mark: 1
+    # With network_mode: host, Docker does not allow network sysctls here.
+    # Configure WireGuard routing on the Docker host instead:
+    #   sudo sysctl -w net.ipv4.ip_forward=1
+    #   sudo sysctl -w net.ipv4.conf.all.src_valid_mark=1
+    # Persist those values in the host's /etc/sysctl.d/ configuration as needed.
 
     # ── Devices ────────────────────────────────────────────────────────────
     # Uncomment for WireGuard TUN interface:

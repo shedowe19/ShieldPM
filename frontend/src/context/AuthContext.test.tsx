@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,9 +12,11 @@ const mocks = vi.hoisted(() => ({
 	authStoreAdd: vi.fn(),
 	authStoreClear: vi.fn(),
 	authStoreSet: vi.fn(),
+	authStoreActive: true,
+	useIntervalWhen: vi.fn(),
 }));
 
-vi.mock("rooks", () => ({ useIntervalWhen: vi.fn() }));
+vi.mock("rooks", () => ({ useIntervalWhen: mocks.useIntervalWhen }));
 
 vi.mock("src/api/backend", () => ({
 	getToken: mocks.getToken,
@@ -31,6 +33,9 @@ vi.mock("src/modules/AuthStore", () => ({
 		add: mocks.authStoreAdd,
 		clear: mocks.authStoreClear,
 		set: mocks.authStoreSet,
+		get active() {
+			return mocks.authStoreActive;
+		},
 	},
 }));
 
@@ -39,11 +44,14 @@ import { AuthProvider, useAuthState } from "./AuthContext";
 let nextSessionProbeInstance = 0;
 
 function AuthProbe() {
-	const { authenticated, loading, login, loginAs, logout } = useAuthState();
+	const { authenticated, loading, completeLogin, login, loginAs, logout } = useAuthState();
 
 	return (
 		<>
 			<div data-testid="authentication-state">{loading ? "loading" : `ready:${authenticated}`}</div>
+			<button type="button" onClick={() => completeLogin({ expires: Date.now() + 900_000 })}>
+				Complete Duo login
+			</button>
 			<button type="button" onClick={() => void login("admin@example.test", "correct horse battery staple")}>
 				Sign in
 			</button>
@@ -81,13 +89,48 @@ function renderAuthProvider() {
 describe("AuthProvider", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		window.history.replaceState({}, "", "/");
 		nextSessionProbeInstance = 0;
+		mocks.authStoreActive = true;
 		mocks.refreshToken.mockRejectedValue(new Error("No existing session"));
 	});
 
 	afterEach(() => {
 		cleanup();
+		window.history.replaceState({}, "", "/");
 	});
+
+	it("restores an existing session on ordinary pages", async () => {
+		const token = { expires: Date.now() + 900_000 };
+		mocks.refreshToken.mockResolvedValue(token);
+		renderAuthProvider();
+
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+		expect(mocks.refreshToken).toHaveBeenCalledOnce();
+		expect(mocks.authStoreSet).toHaveBeenCalledWith(token);
+	});
+
+	it.each(["/duo-callback", "/duo-callback/", "/Duo-Callback"])(
+		"waits for Duo completion without starting a competing session refresh at %s",
+		async (pathname) => {
+			window.history.replaceState({}, "", `${pathname}?duo_code=code&state=state`);
+			renderAuthProvider();
+
+			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false");
+			expect(mocks.refreshToken).not.toHaveBeenCalled();
+			expect(mocks.useIntervalWhen.mock.lastCall?.[2]).toBe(false);
+			await act(async () => {
+				await mocks.useIntervalWhen.mock.lastCall?.[0]();
+			});
+			expect(mocks.refreshToken).not.toHaveBeenCalled();
+
+			fireEvent.click(screen.getByRole("button", { name: "Complete Duo login" }));
+
+			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
+			expect(mocks.useIntervalWhen.mock.lastCall?.[2]).toBe(true);
+			expect(mocks.refreshToken).not.toHaveBeenCalled();
+		},
+	);
 
 	it("clears cached user data before accepting a direct login token", async () => {
 		const token = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };
@@ -116,6 +159,60 @@ describe("AuthProvider", () => {
 		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false"));
 	});
 
+	it("leaves the authenticated screen when a silent periodic refresh expires the session", async () => {
+		mocks.refreshToken.mockResolvedValueOnce({ expires: Date.now() + 900_000 });
+		renderAuthProvider();
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+
+		mocks.authStoreActive = false;
+		mocks.refreshToken.mockRejectedValueOnce(new Error("Unauthorized"));
+		await act(async () => {
+			await mocks.useIntervalWhen.mock.lastCall?.[0]();
+		});
+
+		expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false");
+	});
+
+	it("handles a temporary periodic refresh failure without logging out", async () => {
+		mocks.refreshToken.mockResolvedValueOnce({ expires: Date.now() + 900_000 });
+		renderAuthProvider();
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+
+		mocks.refreshToken.mockRejectedValueOnce(new Error("Offline"));
+		await act(async () => {
+			await mocks.useIntervalWhen.mock.lastCall?.[0]();
+		});
+
+		expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
+	});
+
+	it("does not restore a session from a refresh that finishes after logout", async () => {
+		const token = { expires: Date.now() + 900_000 };
+		mocks.refreshToken.mockResolvedValueOnce(token);
+		mocks.restoreSession.mockRejectedValueOnce(new Error("No backup session"));
+		mocks.post.mockResolvedValueOnce(undefined);
+		renderAuthProvider();
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true"));
+
+		let finishRefresh: (response: typeof token) => void = () => {};
+		mocks.refreshToken.mockReturnValueOnce(
+			new Promise((resolve) => {
+				finishRefresh = resolve;
+			}),
+		);
+		const pendingRefresh = mocks.useIntervalWhen.mock.lastCall?.[0]();
+		fireEvent.click(screen.getByRole("button", { name: "Return to administrator" }));
+		await waitFor(() => expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false"));
+
+		await act(async () => {
+			finishRefresh(token);
+			await pendingRefresh;
+		});
+
+		expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:false");
+		expect(mocks.authStoreSet).toHaveBeenCalledOnce();
+	});
+
 	it("remounts session-dependent UI after impersonating without a document reload", async () => {
 		const adminToken = { expires: Date.now() + 60 * 60 * 1000, user: { id: 1 } };
 		const impersonatedToken = { expires: Date.now() + 60 * 60 * 1000, user: { id: 2 } };
@@ -134,7 +231,7 @@ describe("AuthProvider", () => {
 
 			await waitFor(() => expect(screen.getByTestId("session-instance")).toHaveTextContent("2"));
 			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
-			expect(mocks.authStoreAdd).toHaveBeenCalledWith(impersonatedToken);
+			expect(mocks.authStoreAdd).toHaveBeenCalledWith(impersonatedToken, true);
 			expect(queryClient.getQueryData(["profile"])).toBeUndefined();
 			expect(reload).not.toHaveBeenCalled();
 		} finally {

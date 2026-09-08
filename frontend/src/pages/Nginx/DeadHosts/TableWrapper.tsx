@@ -11,7 +11,7 @@ import { Input } from "src/components/ui/input";
 import { useDeadHosts } from "src/hooks";
 import { intl, T } from "src/locale";
 import { DEAD_HOSTS, MANAGE } from "src/modules/Permissions";
-import { showObjectSuccess } from "src/notifications";
+import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { showDeadHostModal, showDeleteConfirmModal, showHelpModal } from "./lazy";
 import Table from "./Table";
@@ -41,10 +41,14 @@ export default function TableWrapper() {
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleDeadHost(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, enabled ? "enabled" : "disabled");
+		try {
+			await toggleDeadHost(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, enabled ? "enabled" : "disabled");
+		} catch (error) {
+			showError(error instanceof Error ? error.message : String(error));
+		}
 	};
 
 	let filtered = null;
@@ -108,6 +112,7 @@ export default function TableWrapper() {
 						showDeleteConfirmModal({
 							title: <T id="object.delete" tData={{ object: AUDIT_LOG_OBJECT_TYPE.DEAD_HOST }} />,
 							onConfirm: () => handleDelete(id),
+							invalidations: [["dead-hosts"], [AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, id]],
 							children: (
 								<T id="object.delete.content" tData={{ object: AUDIT_LOG_OBJECT_TYPE.DEAD_HOST }} />
 							),

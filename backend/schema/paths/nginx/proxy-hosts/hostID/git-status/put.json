@@ -80,7 +80,7 @@
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "../get.json#/responses/200/content/application/json/schema"
+                        "$ref": "./get.json#/responses/200/content/application~1json/schema"
                     }
                 }
             }

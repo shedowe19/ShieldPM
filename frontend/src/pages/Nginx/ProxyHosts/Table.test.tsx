@@ -11,7 +11,9 @@ vi.mock("src/components", () => ({
 	EmptyData: () => null,
 	HasPermission: ({ children }: { children?: React.ReactNode }) => children,
 	ServiceIcon: () => null,
-	TrueFalseFormatter: () => null,
+	TrueFalseFormatter: ({ value }: { value: boolean }) => (
+		<span>{value ? "reported-online" : "reported-offline"}</span>
+	),
 	UserAvatar: () => null,
 }));
 
@@ -65,5 +67,15 @@ describe("Proxy hosts table", () => {
 			"aria-label",
 			"Aktionsmenü öffnen",
 		);
+	});
+	it("reports an enabled proxy with failed Nginx activation as offline", () => {
+		render(
+			<Table
+				data={[{ ...proxyHost, meta: { nginxOnline: false, nginxErr: "Invalid directive" } }]}
+				onEditAccessList={vi.fn()}
+			/>,
+		);
+		expect(screen.getByText("reported-offline")).toBeInTheDocument();
+		expect(screen.getByTitle("Invalid directive")).toBeInTheDocument();
 	});
 });
