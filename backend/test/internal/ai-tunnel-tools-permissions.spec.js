@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: mocks.addAuditLog } }));
 vi.mock("../../internal/cloudflared.js", () => ({
 	default: {
+		delete: mocks.deleteCloudTunnel,
 		restart: mocks.restartCloudTunnel,
 		start: mocks.startCloudTunnel,
 		stop: mocks.stopCloudTunnel,
@@ -324,7 +325,7 @@ describe("AI tunnel tool permissions", () => {
 		]);
 		expect(mocks.startCloudTunnel).toHaveBeenCalledOnce();
 		expect(mocks.restartCloudTunnel).toHaveBeenCalledOnce();
-		expect(mocks.stopCloudTunnel).toHaveBeenCalledWith(2);
+		expect(mocks.deleteCloudTunnel).toHaveBeenCalledWith(2);
 		expect(mocks.createTorService).toHaveBeenCalledOnce();
 		expect(mocks.restartTorService).toHaveBeenCalledOnce();
 		expect(mocks.deleteTorService).toHaveBeenCalledWith(12, { soft: true });

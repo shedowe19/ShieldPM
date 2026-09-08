@@ -95,11 +95,17 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 		};
 
 		window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
-		return () => window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+		return () => {
+			// A locale change replaces this provider while its requests may still be pending.
+			sessionGeneration.current += 1;
+			window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+		};
 	}, []);
 
 	const login = async (identity: string, secret: string) => {
+		const generation = ++sessionGeneration.current;
 		const response = await getToken(identity, secret);
+		if (generation !== sessionGeneration.current) return;
 		// If the server requires 2FA, it returns an object with requires_2fa: true.
 		// We surface this to the caller as a thrown value so the Login page can
 		// switch to the 2FA step without treating it as an error.
@@ -111,7 +117,9 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const loginAs = async (id: number) => {
+		const generation = ++sessionGeneration.current;
 		const response = await loginAsUser(id);
+		if (generation !== sessionGeneration.current) return;
 		sessionGeneration.current += 1;
 		AuthStore.add(response, true);
 		queryClient.clear();
@@ -119,14 +127,18 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const logout = async () => {
-		sessionGeneration.current += 1;
+		const generation = ++sessionGeneration.current;
 		try {
 			// Check if we have a backup admin session cookie on the backend
 			const response = await restoreSession();
+			if (generation !== sessionGeneration.current) return;
+			sessionGeneration.current += 1;
 			AuthStore.add(response);
 			queryClient.clear();
 			setSessionVersion((version) => version + 1);
 		} catch (_err) {
+			if (generation !== sessionGeneration.current) return;
+			sessionGeneration.current += 1;
 			// No backup session found or failed to restore, do a full logout
 			AuthStore.clear();
 			setAuthenticated(false);

@@ -31,7 +31,9 @@ Das Modul startet die lokal installierte `cloudflared`-Binary mit dem Tunnel-Tok
 
 ### Serialisierung und globale Sichtbarkeit
 
-Start, Stop und Restart laufen pro Tunnel-ID nacheinander. Gleichzeitige Starts können dadurch keinen zweiten unverwalteten Prozess erzeugen. Die Löschroute wartet auf Stop, bevor der Datenbankeintrag entfernt wird. Fehler asynchroner Start-/Restart-Aufträge werden ausdrücklich abgefangen und protokolliert.
+Start, Stop, Restart und Löschen laufen pro Tunnel-ID nacheinander. Gleichzeitige Starts können dadurch keinen zweiten unverwalteten Prozess erzeugen. REST und KI verwenden denselben internen Löschweg; dessen Sperre umfasst Stop und Datenbanklöschung. Ein bereits eingereihter Restart kann deshalb erst nach Abschluss der Löschung fortfahren. Fehler asynchroner Start-/Restart-Aufträge werden ausdrücklich abgefangen und protokolliert.
+
+Start und Restart laden innerhalb dieser Warteschlange den aktuellen, nicht gelöschten Datenbankeintrag. Ein alter Snapshot kann daher weder einen gelöschten Tunnel erneut starten noch nach einer Tokenrotation veraltete Zugangsdaten verwenden. Numerische und stringförmige IDs teilen dieselbe Warteschlange und Prozesszuordnung. `fifth-integrations-cloudflared-delete.spec.js` prüft entfernte und soft-gelöschte Einträge, Tokenrotation und einen während der verzögerten Datenbanklöschung eingereihten Restart.
 
 Ändern und Löschen beachten die von der jeweiligen Capability gelieferte `permission_visibility`: `all` erlaubt fremde Tunnel, eingeschränkte Sichtbarkeit begrenzt auf den Eigentümer. Globale Verwaltungsrechte werden nicht durch eine zusätzliche pauschale Owner-Prüfung blockiert.
 

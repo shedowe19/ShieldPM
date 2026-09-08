@@ -79,8 +79,8 @@ router.delete("/:id", jwtdecode(), async (req, res) => {
 		.where("user_id", res.locals.access.token.getUserId());
 	if (!integration) throw new errs.ItemNotFoundError();
 
-	await internalChat.stopBot(integration.id);
 	await ChatIntegrationModel.query().deleteById(Number.parseInt(req.params.id, 10));
+	await internalChat.stopBot(integration.id);
 
 	res.json({ status: "ok" });
 });

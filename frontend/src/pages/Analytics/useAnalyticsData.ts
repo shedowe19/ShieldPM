@@ -51,9 +51,8 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 				);
 				return true;
 			} catch (error) {
-				if (!cancelled && requestId === latestRequestId) {
-					setError(error instanceof Error ? error.message : String(error));
-				}
+				if (cancelled || requestId !== latestRequestId) return undefined;
+				setError(error instanceof Error ? error.message : String(error));
 				return false;
 			} finally {
 				if (!cancelled && requestId === latestRequestId) {

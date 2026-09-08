@@ -153,9 +153,12 @@ const internalProxyHost = {
 			thisData.host_domains = thisData.domain_names.map((domain) => ({ domain_name: domain }));
 		}
 
-		let row = await proxyHostModel
-			.query()
-			.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) }));
+		// Objection graph writes span multiple statements and do not start a transaction.
+		let row = await proxyHostModel.transaction((trx) =>
+			proxyHostModel
+				.query(trx)
+				.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) })),
+		);
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -330,7 +333,9 @@ const internalProxyHost = {
 		thisData.meta = sanitizeHostMeta(thisData.meta);
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.query().upsertGraphAndFetch(/** @type {any} */ (thisData))
+			await proxyHostModel.transaction((trx) =>
+				proxyHostModel.query(trx).upsertGraphAndFetch(/** @type {any} */ (thisData)),
+			)
 		);
 		const _saved_row = utils.omitRow(omissions())(new_saved_row);
 

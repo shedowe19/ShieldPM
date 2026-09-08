@@ -56,6 +56,8 @@ Fehlende/ungültige Domainlisten und ungültige Laufzeiten werden vor der Schlü
 
 Internationale DNS-Namen werden vor dem Schreiben von Common Name und SAN in die ASCII-/Punycode-Darstellung umgewandelt. Regressionstests: `backend/test/internal/pki-validation.spec.js`.
 
+Alle angeforderten DNS-Namen bleiben vollständig im SAN erhalten, auch wenn sie das OpenSSL-Limit von 64 Zeichen für den Common Name überschreiten. Als Common Name dient der erste höchstens 64 Zeichen lange DNS-Name oder ersatzweise `ShieldPM Internal Server`. Ein Regressionstest erzeugt und prüft dafür einen echten OpenSSL-CSR mit einem längeren DNS-Namen.
+
 ## Verwandte Seiten
 
 - [Zertifikate](./zertifikate.md)

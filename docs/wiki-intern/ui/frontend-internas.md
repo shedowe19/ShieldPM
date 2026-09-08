@@ -157,6 +157,33 @@ Promises: Bei einem stillen 401 wechselt die UI zur Anmeldung, vorübergehende N
 Auth-Zustand erhalten. Ein nach Abmeldung oder Benutzerwechsel eintreffendes altes Refresh-Ergebnis überschreibt den
 neuen Zustand nicht. `AuthStore.test.ts` und `AuthContext.test.tsx` prüfen Ablauf, Netzfehler und verspätete Ergebnisse.
 
+Der Router wartet bei einer eingerichteten Instanz zusätzlich auf das Ende der anfänglichen Sitzungswiederherstellung,
+bevor er die Login-Seite mountet. Deren OIDC-Claim kann dadurch nicht mit dem Start-Refresh konkurrieren; nach einem
+fehlgeschlagenen Restore erscheint weiterhin die Anmeldung. Der öffentliche Duo-Callback behält seinen eigenen
+Startpfad ohne Refresh. `Router.test.tsx` und `Router.duo.test.tsx` prüfen diese Übergänge.
+
+Nach einem erfolgreichen OIDC-Callback bereinigt das Backend die bisherigen Browser-Auth-Cookies und leitet zu `/`
+weiter. Der dortige Start-Refresh erhält ohne alten Refresh-Cookie den regulären Status 400; anschließend kann die
+Login-Seite den neuen OIDC-Token beanspruchen und direkt das Dashboard anzeigen. `claimOidcToken.ts` sendet dabei den
+vom Health-Aufruf erhaltenen CSRF-Header auch für den anonymen Claim und verwendet `silentAuth`. Ein fehlender
+OIDC-Cookie liefert regulär 400 und lässt den Passwortlogin verfügbar. `Router.oidc.test.tsx` prüft beide Abläufe unter
+StrictMode mit echtem Router, Login, AuthProvider, Store, Query-Client und API-Client. Die Cookie-Bereinigung selbst
+wird durch den HTTP-Regressionsfall des Auth-Backends abgesichert.
+
+Passwort-Login, Impersonation und Administrator-Restore merken sich beim Start die aktuelle Übergangsgeneration.
+Ein neuerer Übergang oder ein Provider-Unmount verwirft ihre verspätete Übernahme in `AuthStore`, UI und Query-Cache.
+Auch ein verspäteter Restore-Fehler darf eine inzwischen neu angemeldete Sitzung weder leeren noch erneut an den
+Logout-Endpunkt senden. Der Restore-Aufruf behandelt einen abgelaufenen Backup-Token als stillen Auth-Fehler, damit
+der verantwortliche `AuthProvider` anschließend die übrigen Cookies über `/tokens/logout` abmelden kann.
+`AuthContext.session-races.test.tsx` prüft diese Fälle mit echtem Store und Query-Client, einschließlich des
+401-Fallbacks über den echten API-Client. Der Schutz betrifft die Zustandsübernahme im Frontend; bereits verarbeitete
+HTTP-`Set-Cookie`-Antworten lassen sich damit nicht rückgängig machen.
+
+`api/backend/refreshToken.ts` teilt parallele Refresh-Anfragen nur innerhalb derselben `AuthStore.sessionRevision`.
+Nach einem Sessionwechsel beginnt ein neuer Aufrufer eine eigene Anfrage; das Ende einer älteren Anfrage kann deren
+laufenden Promise nicht entfernen. `refreshToken.test.ts` prüft Sitzungswechsel, Überschneidung und Wiederholung nach
+Fehlern. Das Unmount-Cleanup des Providers entwertet außerdem noch laufende periodische Refresh-Callbacks.
+
 Bei „Login als Benutzer“ markiert `AuthStore` die Sitzung im Arbeitsspeicher als impersoniert. Der Server ersetzt
 dabei nur den Access-Cookie; der Refresh-Cookie gehört weiterhin dem Administrator. Deshalb überspringt `AuthContext`
 während dieser Sitzung sowohl periodische Refresh-Aufrufe als auch den Start-Refresh nach einem sprachbedingten

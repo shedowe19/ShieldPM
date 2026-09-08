@@ -2,7 +2,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import * as client from "openid-client";
 import internalToken from "../internal/token.js";
-import { setAuthCookies } from "../lib/auth-cookies.js";
+import { clearAuthCookies, clearDuoCookie, setAuthCookies } from "../lib/auth-cookies.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
 import { oidc as logger } from "../logger.js";
@@ -218,13 +218,18 @@ const redirectToAuthorizationURL = (req, res, params) => {
 const redirectWithJwtToken = (req, res, token) => {
 	const payload = `${token.token}---${token.expires}`;
 	const encrypted = encrypt(payload);
+	// The verified OIDC login replaces this browser's previous session. Otherwise
+	// startup refresh would restore the old identity before the claim can run.
+	clearAuthCookies(res);
+	clearDuoCookie(res, req);
+	res.clearCookie("shieldpm_jwt_original");
 	res.cookie("shieldpm_oidc", encrypted, {
 		httpOnly: true,
 		secure: req.secure,
 		sameSite: "lax",
 		maxAge: 5 * 60 * 1000,
 	});
-	res.redirect("/login");
+	res.redirect("/");
 };
 
 const redirectWithError = (res, error) => {

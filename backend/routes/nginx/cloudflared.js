@@ -150,7 +150,6 @@ router.put("/:id", async (req, res, next) => {
  * DELETE /api/nginx/cloudflared-tunnels/:id
  */
 router.delete("/:id", async (req, res, next) => {
-	let trx;
 	try {
 		const accessData = await res.locals.access.can("cloudflared_tunnels:delete", req.params.id);
 		const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).where("id", req.params.id);
@@ -164,12 +163,7 @@ router.delete("/:id", async (req, res, next) => {
 			return;
 		}
 
-		// Stop process
-		await internalCloudflared.stop(tunnel.id);
-
-		trx = await transaction.start(CloudflaredTunnel.knex());
-		await tunnel.$query(trx).delete();
-		await trx.commit();
+		await internalCloudflared.delete(tunnel.id);
 
 		// Audit Log
 		await internalAuditLog.add(res.locals.access, {
@@ -183,9 +177,6 @@ router.delete("/:id", async (req, res, next) => {
 
 		res.status(200).send({ status: "OK" });
 	} catch (err) {
-		if (trx) {
-			await trx.rollback();
-		}
 		next(err);
 	}
 });

@@ -105,6 +105,8 @@ Der Shellcheck-Workflow prüft auch Erweiterungslose Helfer wie `update-shieldpm
 - `scripts/generate-notices.js` — generiert `THIRD-PARTY-NOTICES.md` aus Metadaten und Lizenzdateien der lokal installierten direkten NPM-Pakete; die Paketnamen sind sichtbar mit der passenden npm-Version verlinkt. Es verwendet das vom Workflow bereitgestellte `license-checker`-Binary und bricht bei einem fehlgeschlagenen Lizenzscan ab, bevor die bestehende Notice-Datei überschrieben werden kann.
 - `scripts/wiki-graph.py` — erzeugt die interaktive Beziehungs-Visualisierung des internen Wikis (`docs/wiki-intern/wiki-graph.html`). Nutzt `scripts/lib/vis-network.min.js` als Abhängigkeit.
 
+Der Wiki-Generator ersetzt seine HTML-Platzhalter in einem einzigen Durchlauf. Seitennamen wie `__EDGES__.md` bleiben dadurch als Dateinamen erhalten und beschädigen weder die eingebetteten Graphdaten noch das JavaScript. Die Regression führt den vollständigen Generator mit solchen Seitennamen aus und prüft die ausgegebenen Knoten und Verknüpfungen.
+
 Das optionale `pentest_crowdsec.py` benötigt Python mit `requests` und eine ausdrücklich angegebene HTTP(S)-Origin, beispielsweise `python3 pentest_crowdsec.py https://eigener-testhost.example --rounds 1`. Es startet beim Import keine Anfragen, folgt keinen Weiterleitungen und führt standardmäßig eine Runde aus (maximal 50 bei ausdrücklicher Angabe). Rückgabecode 0 bedeutet einen erkannten CrowdSec-Block, 1 bedeutet, dass keine entsprechende Blockantwort erkannt wurde.
 
 ## Verwandte Seiten

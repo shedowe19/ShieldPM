@@ -534,8 +534,7 @@ export const executeTools = async (access, toolCalls) => {
 						throw new Error("Cloudflare Tunnel management is disabled in Demo Mode.");
 					}
 					const tunnel = await getCloudflaredTunnel(access, "cloudflared_tunnels:delete", call.args.id);
-					await internalCloudflared.stop(tunnel.id);
-					await tunnel.$query().delete();
+					await internalCloudflared.delete(tunnel.id);
 					await internalAuditLog.add(access, {
 						action: "deleted",
 						object_type: "cloudflared-tunnel",

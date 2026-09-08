@@ -92,7 +92,7 @@ export { up, down };
 
 ## Datenintegrität bei Migrationen
 
-Die Schema-Callbacks von Knex bleiben synchron; Datenänderungen werden erst nach Abschluss der Schemaänderung ausgeführt und vollständig abgewartet. Bereits vorhandene Rate-Limit-Spalten werden vor DDL geprüft, weil ein abgefangener Duplicate-Column-Fehler die PostgreSQL-Transaktion trotzdem abbrechen würde. JSON-Metadaten werden sowohl als Zeichenkette als auch als natives Treiberobjekt verarbeitet; der AI-Prompt-Reset erhält alle übrigen Konfigurationswerte.
+Die Schemaänderungen werden innerhalb der Knex-Callbacks vollständig registriert; nachgelagerte Datenänderungen werden erst nach Abschluss der Schemaänderung ausgeführt und vollständig abgewartet. Einzelne historische Callbacks sind als `async` deklariert, registrieren ihre Schemaoperationen aber vor dem ersten `await`; neue Callbacks sollen synchron bleiben. Bereits vorhandene Rate-Limit-Spalten werden vor DDL geprüft, weil ein abgefangener Duplicate-Column-Fehler die PostgreSQL-Transaktion trotzdem abbrechen würde. JSON-Metadaten werden sowohl als Zeichenkette als auch als natives Treiberobjekt verarbeitet; der AI-Prompt-Reset erhält alle übrigen Konfigurationswerte.
 
 Beim Rollback der Domainnormalisierung werden die aktuellen Domainrelationen in die Legacy-Spalte zurückgeschrieben. Damit bleiben zwischenzeitliche Neuanlagen und Umbenennungen erhalten. Der mTLS-Rollback schreibt die aktuellen Werte zurück in `meta`; der Rate-Limit-Rollback entfernt alle drei zugehörigen Spalten.
 

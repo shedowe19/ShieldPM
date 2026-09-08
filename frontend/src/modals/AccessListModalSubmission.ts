@@ -1,10 +1,10 @@
 import type { AccessList, AccessListClient } from "src/api/backend";
 import { ACCESS_LIST_AUTH_TYPE } from "src/types/enums";
-import type { AccessListFormValues } from "./AccessListModalFormValues";
+import { type AccessListFormValues, parseAccessListMeta } from "./AccessListModalFormValues";
 
 type CreateAccessListPayloadParams = {
 	id: number | "new";
-	meta?: Record<string, unknown>;
+	meta?: unknown;
 	values: AccessListFormValues;
 };
 
@@ -24,7 +24,7 @@ export const createAccessListPayload = ({
 		mtlsUseInternal: values.mtlsUseInternal,
 		mtlsCertificate: values.mtlsEnabled && !values.mtlsUseInternal ? values.mtlsContent : "",
 		meta: {
-			...meta,
+			...parseAccessListMeta(meta),
 			auth_type: authType,
 			authentik_host: authType === ACCESS_LIST_AUTH_TYPE.AUTHENTIK_PROXY ? values.authentikHost : undefined,
 			oauth2_provider: authType === ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY ? values.oauth2Provider : undefined,

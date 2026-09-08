@@ -5,11 +5,12 @@ import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 const processes = new Map();
 const operations = new Map();
 const serialize = (id, operation) => {
-	const pending = (operations.get(id) || Promise.resolve()).catch(() => {}).then(operation);
-	operations.set(id, pending);
+	const key = String(id);
+	const pending = (operations.get(key) || Promise.resolve()).catch(() => {}).then(operation);
+	operations.set(key, pending);
 	pending
 		.finally(() => {
-			if (operations.get(id) === pending) operations.delete(id);
+			if (operations.get(key) === pending) operations.delete(key);
 		})
 		.catch(() => {});
 	return pending;
@@ -33,10 +34,15 @@ const internalCloudflared = {
 	 * Start a tunnel
 	 * @param {CloudflaredTunnel} tunnel
 	 */
-	start: (tunnel) => serialize(tunnel.id, () => internalCloudflared._start(tunnel)),
+	start: (snapshot) =>
+		serialize(snapshot.id, async () => {
+			const tunnel = await CloudflaredTunnel.query().findById(snapshot.id).where("is_deleted", 0);
+			if (tunnel) await internalCloudflared._start(tunnel);
+		}),
 
 	_start: async (tunnel) => {
-		if (processes.has(tunnel.id)) {
+		const processId = String(tunnel.id);
+		if (processes.has(processId)) {
 			await internalCloudflared._stop(tunnel.id);
 		}
 
@@ -52,12 +58,12 @@ const internalCloudflared = {
 				},
 			});
 
-			processes.set(tunnel.id, child);
+			processes.set(processId, child);
 
 			let errorLog = "";
 			child.on("error", (err) => {
-				if (processes.get(tunnel.id) !== child) return;
-				processes.delete(tunnel.id);
+				if (processes.get(processId) !== child) return;
+				processes.delete(processId);
 				logger.error(`Cloudflared Tunnel ${tunnel.id} failed:`, err);
 				tunnel
 					.$query()
@@ -82,9 +88,9 @@ const internalCloudflared = {
 
 			child.on("exit", (code, signal) => {
 				// A stopped child can exit after its replacement has already started.
-				if (processes.get(tunnel.id) !== child) return;
+				if (processes.get(processId) !== child) return;
 				logger.warn(`Cloudflared Tunnel ${tunnel.id} exited with code ${code} / signal ${signal}`);
-				processes.delete(tunnel.id);
+				processes.delete(processId);
 
 				// Determine status based on exit code
 				// 0 = Stopped (Clean exit)
@@ -118,7 +124,7 @@ const internalCloudflared = {
 			// Wait 2 seconds to ensure the process is stable
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 
-			if (processes.get(tunnel.id) === child) {
+			if (processes.get(processId) === child) {
 				// Still running after 2 seconds, mark as Online
 				// clear any previous error
 				const meta = { ...tunnel.meta };
@@ -139,11 +145,12 @@ const internalCloudflared = {
 	stop: (tunnelId) => serialize(tunnelId, () => internalCloudflared._stop(tunnelId)),
 
 	_stop: async (tunnelId) => {
-		const child = processes.get(tunnelId);
+		const processId = String(tunnelId);
+		const child = processes.get(processId);
 		if (child) {
 			logger.info(`Stopping Cloudflared Tunnel: ${tunnelId}`);
 			child.kill("SIGTERM");
-			processes.delete(tunnelId);
+			processes.delete(processId);
 			// Status update is handled by 'exit' listener, but we can force it here too to be sure
 			await CloudflaredTunnel.query().findById(tunnelId).patch({ status: 0 });
 		}
@@ -153,11 +160,22 @@ const internalCloudflared = {
 	 * Restart a tunnel
 	 * @param {CloudflaredTunnel} tunnel
 	 */
-	restart: (tunnel) =>
-		serialize(tunnel.id, async () => {
-			await internalCloudflared._stop(tunnel.id);
+	restart: (snapshot) =>
+		serialize(snapshot.id, async () => {
+			await internalCloudflared._stop(snapshot.id);
 			await new Promise((resolve) => setTimeout(resolve, 1000));
-			await internalCloudflared._start(tunnel);
+			const tunnel = await CloudflaredTunnel.query().findById(snapshot.id).where("is_deleted", 0);
+			if (tunnel) await internalCloudflared._start(tunnel);
+		}),
+
+	/** Stop and remove the record in one lifecycle operation before queued restarts can proceed. */
+	delete: (tunnelId) =>
+		serialize(tunnelId, async () => {
+			await internalCloudflared._stop(tunnelId);
+			const tunnel = await CloudflaredTunnel.query().findById(tunnelId).where("is_deleted", 0);
+			if (!tunnel) return false;
+			await tunnel.$query().delete();
+			return true;
 		}),
 };
 

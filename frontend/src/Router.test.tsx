@@ -1,12 +1,14 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	authenticated: false,
+	loading: false,
 	failAnalyticsImport: false,
 	failDashboard: false,
 	renderDashboard: vi.fn(),
+	renderLogin: vi.fn(),
 }));
 
 vi.mock("src/components/AnimatedPage", () => ({
@@ -38,7 +40,7 @@ vi.mock("src/components/Unhealthy", () => ({
 }));
 
 vi.mock("src/context", () => ({
-	useAuthState: () => ({ authenticated: mocks.authenticated }),
+	useAuthState: () => ({ authenticated: mocks.authenticated, loading: mocks.loading }),
 }));
 vi.mock("src/hooks/useHealth", () => ({
 	useHealth: () => ({
@@ -59,7 +61,7 @@ vi.mock("src/pages/Analytics", () => {
 	}
 	return { default: () => <div>Analytics</div> };
 });
-vi.mock("src/pages/Login", () => ({ default: () => <div>Login</div> }));
+vi.mock("src/pages/Login", () => ({ default: () => mocks.renderLogin() }));
 
 afterEach(async () => {
 	cleanup();
@@ -71,6 +73,8 @@ afterEach(async () => {
 describe("Router", () => {
 	beforeEach(() => {
 		mocks.authenticated = false;
+		mocks.loading = false;
+		mocks.renderLogin.mockReset().mockReturnValue(<div>Login</div>);
 		mocks.failAnalyticsImport = false;
 		mocks.failDashboard = false;
 		mocks.renderDashboard.mockImplementation(() => {
@@ -80,6 +84,24 @@ describe("Router", () => {
 			return <div>Dashboard</div>;
 		});
 		window.history.replaceState({}, "", "/duo-callback?duo_code=duo-code");
+	});
+
+	it.each([true, false])("waits for session restoration before mounting login (restored=%s)", async (restored) => {
+		mocks.loading = true;
+		window.history.replaceState({}, "", "/");
+		const { default: Router } = await import("./Router");
+		const view = render(<Router />);
+		await act(async () => {
+			await import("src/pages/Login");
+		});
+
+		expect(mocks.renderLogin).not.toHaveBeenCalled();
+		expect(screen.getByText("Loading")).toBeInTheDocument();
+		mocks.authenticated = restored;
+		mocks.loading = false;
+		view.rerender(<Router />);
+		expect(await screen.findByText(restored ? "Dashboard" : "Login")).toBeInTheDocument();
+		if (restored) expect(mocks.renderLogin).not.toHaveBeenCalled();
 	});
 
 	it("renders the public Duo callback before authentication", async () => {

@@ -4,7 +4,6 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import Database from "better-sqlite3";
 
@@ -53,7 +52,7 @@ export async function resetPassword(filename, email, password) {
 	}
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
 	const [email, password] = process.argv.slice(2);
 	if (!email || !password) usage();
 	try {

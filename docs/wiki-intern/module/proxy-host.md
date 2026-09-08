@@ -65,6 +65,12 @@ Mechanik in `nginx.js` → `renderLocations(host)`:
 - Aktivieren lädt auch `access_list.clients` und `access_list.items`, damit bestehende Regeln erhalten bleiben.
 - `backend/test/internal/host-update-regressions.spec.js` prüft diese Abläufe mit gemockten Datenbank- und Nginx-Aufrufen.
 
+## Atomare Speicherung der Domains
+
+Erstellung und Aktualisierung schreiben den Proxy-Host und seine normalisierten Domainzeilen gemeinsam in einer Datenbanktransaktion. Objections `insertGraphAndFetch()` und `upsertGraphAndFetch()` bestehen aus mehreren SQL-Anweisungen und starten selbst keine Transaktion. Scheitert eine Domain-Einfügung, bleibt daher weder ein unvollständiger neuer Host zurück noch verliert ein vorhandener Host seine bisherigen Domains. Nginx-Generierung und Audit folgen erst nach dem Commit.
+
+`backend/test/internal/fifth-proxy-graph-transactions.spec.js` prüft beide Fehlerpfade mit den echten Modellen, SQLite und einem ablehnenden Datenbanktrigger sowie erfolgreiche Erstellung und Änderung.
+
 ## Abhängigkeiten
 
 - `internal/nginx.js` — Config-Generierung und Reload

@@ -1,18 +1,26 @@
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ spawn: vi.fn(), patch: vi.fn() }));
+const mocks = vi.hoisted(() => ({ spawn: vi.fn(), patch: vi.fn(), rows: new Map() }));
 vi.mock("node:child_process", () => ({ spawn: mocks.spawn }));
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() } }));
 vi.mock("../../models/cloudflared_tunnel.js", () => ({
-	default: { query: () => ({ findById: () => ({ patch: mocks.patch }) }) },
+	default: {
+		query: () => ({
+			findById: (id) => ({ where: async () => mocks.rows.get(id), patch: mocks.patch }),
+		}),
+	},
 }));
 
 import cloudflared from "../../internal/cloudflared.js";
 
 const child = () =>
 	Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter(), kill: vi.fn() });
-const tunnel = (id) => ({ id, name: "test", token: "test-token", meta: {}, $query: () => ({ patch: mocks.patch }) });
+const tunnel = (id) => {
+	const row = { id, name: "test", token: "test-token", meta: {}, $query: () => ({ patch: mocks.patch }) };
+	mocks.rows.set(id, row);
+	return row;
+};
 describe("Cloudflared child lifecycle", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

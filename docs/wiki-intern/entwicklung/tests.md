@@ -117,6 +117,14 @@ Die neuen Regressionen prüfen atomare Schlüsselveröffentlichung und Duo-Erset
 
 Die Infrastrukturtests sichern Installation, Providerwechsel, Prozessneustart, eng begrenzte Besitzänderungen, migrierte Default-Konfigurationen und eigene Runtime-Verzeichnisse ab. Zusätzlich startet `scripts/ci/docker-smoke.sh` in beiden nativen Docker-PR-Jobs das frisch gebaute Image als root und als UID 1000. Es prüft tatsächliche Betriebsbereitschaft, Socketrechte, Nginx-Konfiguration und Reload sowie Schreibrechte und entfernt alle Testressourcen. Der Test läuft ohne externes Netzwerk und benötigt keine echten Anbieterzugangsdaten.
 
+## Regressionen des fünften Durchgangs
+
+Mit Node.js 26.8.1 bestehen **998 Backend-Tests in 152 Dateien und 567 Frontend-Tests in 179 Dateien**. Die Python-Suite umfasst **58 Tests**, davon lokal 57 bestanden und ein erwarteter Unix-Socket-Skip; in GitHub CI bleibt dieser Test verpflichtend. Gesamtsuiten laufen lokal mit zwei Workern. Die Frontend-Wiederholung ohne parallele Backend-Last besteht nach einem anfänglichen Import-Timeout mit unverändertem Zeitlimit. Locale-Check und Build werden nach Vitest ausgeführt.
+
+Neue Tests prüfen echte Passkey-Signaturen mit konkurrierendem Zählerupdate, Graph-Rollbacks bei SQLite-Triggerfehlern, den tatsächlich ausgeführten CLI-Symlink, lange OpenSSL-SANs und Certbot-Sperren vor Hoständerungen. Verzögerte Cloudflared-, DDNS-, ChatOps- und Frontend-Antworten sichern die Reihenfolge und verhindern die Wiederherstellung veralteter Zustände. Router, AuthProvider, QueryClient und API-Client werden gemeinsam für OIDC-Übernahme, erforderlichen CSRF-Header und normalen Passwortlogin geprüft. Echte HTTP-Tests prüfen Callback-Cookiepfade und veröffentlichte Auth-Antwortschemas.
+
+Der Docker-Smoke rendert beide tatsächlichen gRPC-Vorlagen und prüft mit einem lokalen HTTP/2-Echo Methode, Pfad, Query und Body unter root und UID 1000. Die Python-Regression des Wiki-Generators erzeugt Seiten mit Vorlagenmarkern in ihren Namen und prüft unveränderte Knoten-/Kantenidentitäten. Ausführliche Abdeckung und Grenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
+
 ## Verwandte Seiten
 
 - [Setup](./setup.md)

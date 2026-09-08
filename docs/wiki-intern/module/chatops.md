@@ -72,6 +72,8 @@ Jede Bot-Instanz besitzt einen eigenen `AbortController`. Stoppen oder Ersetzen 
 
 Die Instanz wird bereits vor `launch()` registriert. Verspätete Fehler eines ersetzten Bots dürfen den Nachfolger nicht aus dem Cache entfernen; dessen Middleware verarbeitet nur Nachrichten der noch aktuellen Instanz. `chat-lifecycle.spec.js` prüft diese Übergänge mit verzögertem Verbindungsaufbau.
 
+Auch noch laufende Konfigurationsabfragen sind einem konkreten Reload zugeordnet. Start, Stop oder ein neuerer Reload verwerfen ältere Antworten, bevor diese einen Bot erzeugen können. Beim Initialisieren wird jede Integration über diesen aktuellen Leseweg geladen. Die DELETE-Route entfernt zuerst den Datenbankeintrag und stoppt danach die aktuelle Instanz einschließlich offener Reloads; ein während der Löschung begonnener Reload kann daher keinen verwaisten Bot hinterlassen. `fifth-integrations-chat-reload.spec.js` prüft Stop während des Lesens, umgekehrte Antwortreihenfolge nach Tokenrotation und Reload während einer verzögerten Löschung.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

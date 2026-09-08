@@ -40,6 +40,8 @@ DuckDNS-Token und Domains sowie Cloudflare-Abfragefilter werden mit `URLSearchPa
 
 Überlappende Intervallaufrufe teilen einen laufenden Aktualisierungslauf. Trifft dabei eine erzwungene Aktualisierung nach einer Konfigurationsänderung ein, folgt anschließend ein weiterer Lauf mit neu geladenen Providern. Dadurch überschreiben konkurrierende periodische Läufe keine neueren Ergebnisse und erzeugen keine doppelten WAN-Abfragen.
 
+Cloudflare-Aktualisierungen warten auch bei einem einzelnen Fehler auf sämtliche bereits gestarteten Record-Anfragen. Erst danach wird der Fehler weitergegeben und gegebenenfalls der erzwungene Folgelauf gestartet. Eine langsame AAAA-Aktualisierung des alten Laufs kann dadurch nach einem schnellen A-Fehler nicht die neuere IPv6-Adresse zurücksetzen. `fifth-integrations-ddns-partial-failure.spec.js` prüft diese Reihenfolge mit verzögerten HTTP-Antworten.
+
 Ein erneuter Timer-Start ersetzt sowohl das Intervall als auch die verzögerte Erstabfrage. Fehler beim Leeren einer benutzerdefinierten HTTP-Antwort besitzen einen eigenen Listener und können den Backend-Prozess nicht als unbehandeltes Stream-Ereignis beenden.
 
 ## Offene Fragen

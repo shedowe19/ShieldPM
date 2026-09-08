@@ -21,6 +21,7 @@ ShieldPM abstrahiert Let's Encrypt via Certbot. Dieses Modul kümmert sich um di
 - Beantragt Zertifikate via HTTP-01 oder DNS-01 Challenge.
 - Erneuert ablaufende Zertifikate asynchron.
 - Beantragung, manuelle Erneuerung, Timer-Erneuerung und Widerruf teilen sich `runCertbot()` und dieselbe Prozesssperre. Gleichzeitige Aufrufe erhalten einen nachvollziehbaren Validierungsfehler; die Sperre wird bei Erfolg und Fehler freigegeben.
+- Beim Widerruf kann `revokeCertbot()` unter dieser Sperre die Host-Abkopplung vorbereiten. Die Zertifikatslöschung verwendet diesen Ablauf, damit ein belegter Certbot-Prozess keine bereits gelöschte Datenbankzeile mit weiterhin aktiver Certbot-Lineage hinterlässt. Vorbereitungsfehler verhindern den Widerruf und geben die Sperre frei.
 - DNS-Zugangsdaten werden mit Dateimodus `0600` gespeichert. Numerische Propagationszeiten werden für CLI-Argumente in Strings umgewandelt.
 - Die gemeinsame Prozesssperre umfasst bei DNS-Ausstellungen auch die Plugin-Installation und das Schreiben der Zugangsdaten; diese Schritte können keine laufende Erneuerung mehr verändern. Auch ein Vorbereitungsfehler gibt die Sperre frei.
 - CLI-Argumente für Zugangsdaten und Propagationszeit folgen dem registrierten `full_plugin_name`, einschließlich abweichender Namen wie `dns-mijn-host` und qualifizierter Plugin-Namen. Optionale `credentials_argument`-/`propagation_argument`-Felder können davon abweichen. Eine explizite Propagationszeit `0` wird weitergereicht.

@@ -10,6 +10,7 @@ import ai from "./ai.js";
 
 const botLifecycles = new WeakMap();
 const bots = {}; // Cache for bot instances: { integration_id: TelegrafInstance }
+const pendingReloads = new Map();
 
 // Smart MarkdownV2 Escaper
 // Escapes special characters OUTSIDE of code blocks, but preserves them INSIDE.
@@ -41,7 +42,7 @@ const internalChat = {
 			const integrations = await ChatIntegrationModel.query().where("enabled", 1).withGraphFetched("user");
 
 			for (const integration of integrations) {
-				await internalChat.startBot(integration);
+				await internalChat.reload(integration.id);
 			}
 			logger.info(`[ChatOps] Initialized ${Object.keys(bots).length} bots.`);
 		} catch (err) {
@@ -54,6 +55,7 @@ const internalChat = {
 	 * @param {import("../models/chat_integration.js").default} integration
 	 */
 	startBot: async (integration) => {
+		pendingReloads.delete(String(integration.id));
 		if (bots[integration.id]) {
 			internalChat.stopBot(integration.id);
 		}
@@ -207,6 +209,8 @@ const internalChat = {
 	 * Stop a bot instance
 	 */
 	stopBot: async (integrationId) => {
+		// Also invalidate a reload that has not created its bot yet.
+		pendingReloads.delete(String(integrationId));
 		const bot = bots[integrationId];
 		if (!bot) return;
 		delete bots[integrationId];
@@ -223,11 +227,19 @@ const internalChat = {
 	 * Reload a specific integration (after update)
 	 */
 	reload: async (integrationId) => {
-		const integration = await ChatIntegrationModel.query().findById(integrationId);
-		if (integration) {
-			await internalChat.startBot(integration);
-		} else {
-			await internalChat.stopBot(integrationId);
+		const key = String(integrationId);
+		const pending = {};
+		pendingReloads.set(key, pending);
+		try {
+			const integration = await ChatIntegrationModel.query().findById(integrationId);
+			if (pendingReloads.get(key) !== pending) return;
+			if (integration) {
+				await internalChat.startBot(integration);
+			} else {
+				await internalChat.stopBot(integrationId);
+			}
+		} finally {
+			if (pendingReloads.get(key) === pending) pendingReloads.delete(key);
 		}
 	},
 };

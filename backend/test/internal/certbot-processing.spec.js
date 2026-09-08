@@ -34,6 +34,7 @@ import {
 	renewCertbot,
 	requestCertbot,
 	requestCertbotWithDnsChallenge,
+	revokeCertbot,
 	runCertbot,
 	testHttpsChallenge,
 } from "../../internal/certbot.js";
@@ -72,6 +73,16 @@ describe("Certbot process coordination", () => {
 		expect(isProcessing()).toBe(false);
 		mocks.execFile.mockResolvedValueOnce("renewed");
 		await expect(runCertbot(["renew"])).resolves.toBe("renewed");
+	});
+	it("reserves Certbot before detaching a revoked certificate and propagates preparation errors", async () => {
+		const prepare = vi.fn(async () => {
+			expect(isProcessing()).toBe(true);
+			throw new Error("detachment failed");
+		});
+		await expect(revokeCertbot(certificate, true, prepare)).rejects.toThrow("detachment failed");
+		expect(prepare).toHaveBeenCalledOnce();
+		expect(mocks.execFile).not.toHaveBeenCalled();
+		expect(isProcessing()).toBe(false);
 	});
 	it("locks DNS plugin installation and credentials before they can race renewal", async () => {
 		let release;

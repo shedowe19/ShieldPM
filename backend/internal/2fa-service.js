@@ -522,8 +522,14 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 	}
 	await consumeChallenge(challengeRecord);
 
-	// Update counter to prevent replay attacks
-	await UserTwoFa.query().patch({ counter: verification.authenticationInfo.newCounter }).where({ id: passkey.id });
+	// The signature was checked against the previously read credential. Do not
+	// overwrite a concurrent counter advance or authenticate a removed method.
+	const updated = await UserTwoFa.query()
+		.patch({ counter: verification.authenticationInfo.newCounter })
+		.where({ id: passkey.id, user_id: userId, counter: passkey.counter, is_verified: 1, is_deleted: 0 });
+	if (updated !== 1) {
+		throw new errs.ValidationError("Passkey changed during authentication. Please retry.");
+	}
 
 	return true;
 };

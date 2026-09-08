@@ -202,7 +202,7 @@ function Content() {
 
 function Router() {
 	const health = useHealth();
-	const { authenticated } = useAuthState();
+	const { authenticated, loading } = useAuthState();
 
 	if (health.isLoading) {
 		return <LoadingPage />;
@@ -214,6 +214,11 @@ function Router() {
 
 	if (!health.data?.setup) {
 		return <Setup />;
+	}
+
+	// Login claims OIDC cookies on mount, so wait for the cookie refresh to finish.
+	if (loading) {
+		return <LoadingPage />;
 	}
 
 	if (!authenticated) {

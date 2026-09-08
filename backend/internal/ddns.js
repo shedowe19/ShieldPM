@@ -151,7 +151,10 @@ const providers = {
 			}
 		}
 
-		await Promise.all(promises);
+		// A failed record must not release the process queue while another DNS write is still pending.
+		const updates = await Promise.allSettled(promises);
+		const failed = updates.find((update) => update.status === "rejected");
+		if (failed) throw failed.reason;
 		return `Updated: ${results.join(", ")}`;
 	},
 

@@ -50,6 +50,142 @@ mkdir -p "$fixture/tls/certbot/accounts/acme-v02.api.letsencrypt.org/directory/c
 printf '%s\n' 'offline CI marker; no account credentials' > "$fixture/tls/certbot/accounts/acme-v02.api.letsencrypt.org/directory/ci-offline/marker"
 printf '%s\n' '# CI supplies its settings through the container environment.' > "$fixture/.env"
 
+# Render the image's actual forwarding templates and exercise their gRPC directives
+# against a local HTTP/2 echo service. The separate Nginx process cannot affect app listeners.
+cat > "$fixture/grpc-smoke.mjs" <<'GRPC_SMOKE'
+import assert from "node:assert/strict";
+import { execFileSync, spawn } from "node:child_process";
+import { once } from "node:events";
+import fs from "node:fs/promises";
+import http2 from "node:http2";
+import net from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
+import utils from "/app/lib/utils.js";
+
+const directory = "/data/nginx/grpc-smoke";
+const socket = "/run/shieldpm/grpc-smoke.sock";
+const sessions = new Set();
+const frame = (body) => {
+    const header = Buffer.alloc(5);
+    header.writeUInt32BE(body.length, 1);
+    return Buffer.concat([header, body]);
+};
+const upstream = http2.createServer();
+upstream.on("session", (session) => {
+    sessions.add(session);
+    session.on("close", () => sessions.delete(session));
+});
+upstream.on("stream", (stream, headers) => {
+    const chunks = [];
+    stream.on("error", () => {});
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("end", () => {
+        stream.respond({ ":status": 200, "content-type": "application/grpc", "grpc-status": "0" });
+        stream.end(frame(Buffer.from(JSON.stringify({
+            method: headers[":method"], path: headers[":path"], body: Buffer.concat(chunks).toString("hex"),
+        }))));
+    });
+});
+
+let nginx;
+let exited;
+let client;
+let nginxError;
+try {
+    await fs.mkdir(directory, { recursive: true });
+    upstream.listen(0, "127.0.0.1");
+    await once(upstream, "listening");
+    const engine = utils.getRenderEngine();
+    const base = {
+        id: 70001, use_default_location: true, forward_scheme: "grpc",
+        forward_host: "127.0.0.1", forward_port: upstream.address().port, access_list_id: 0,
+    };
+    const cases = [
+        { route: "/default/", template: "_proxy_logic.conf" },
+        { route: "/custom/", template: "_proxy_host_custom_location.conf" },
+    ];
+    const locations = [];
+    for (const item of cases) {
+        const rendered = await engine.renderFile(item.template, { ...base, path: item.route });
+        const directives = rendered.match(/^\s*grpc_pass [^;]+;/gm) || [];
+        assert.equal(directives.filter((line) => line.trim().startsWith("grpc_pass ")).length, 1);
+        locations.push(`location ${item.route} { ${directives.join("\n")} }`);
+    }
+    const config = `${directory}/nginx.conf`;
+    await fs.writeFile(config, `
+master_process off;
+pid ${directory}/nginx.pid;
+error_log ${directory}/error.log notice;
+events { worker_connections 64; }
+http {
+    access_log off;
+    client_body_temp_path ${directory}/body;
+    server {
+        listen unix:${socket};
+        http2 on;
+        ${locations.join("\n")}
+    }
+}
+`);
+    execFileSync("nginx", ["-tq", "-c", config, "-p", `${directory}/`], { stdio: "inherit" });
+    nginx = spawn("nginx", ["-c", config, "-p", `${directory}/`, "-g", "daemon off;"], { stdio: "inherit" });
+    nginx.on("error", (error) => { nginxError = error; });
+    exited = once(nginx, "exit").catch(() => {});
+    const deadline = Date.now() + 5000;
+    while (!(await fs.stat(socket).catch(() => null))?.isSocket()) {
+        if (nginxError) throw nginxError;
+        assert.equal(nginx.exitCode, null, "isolated Nginx exited before opening its socket");
+        assert.ok(Date.now() < deadline, "isolated Nginx socket did not become ready");
+        await delay(25);
+    }
+    client = http2.connect("http://localhost", { createConnection: () => net.connect(socket) });
+    client.on("error", () => {});
+    const payload = frame(Buffer.from("smoke request"));
+    for (const item of cases) {
+        const query = "?probe=a%26b";
+        const requestPath = `${item.route}service.Echo/Call${query}`;
+        const response = await new Promise((resolve, reject) => {
+            const request = client.request({
+                ":method": "POST", ":path": requestPath, "content-type": "application/grpc", te: "trailers",
+            });
+            const chunks = [];
+            let headers;
+            request.setTimeout(5000, () => request.destroy(new Error("gRPC echo timed out")));
+            request.on("response", (value) => { headers = value; });
+            request.on("data", (chunk) => chunks.push(chunk));
+            request.on("error", reject);
+            request.on("end", () => resolve({ headers, body: Buffer.concat(chunks) }));
+            request.end(payload);
+        });
+        assert.equal(response.headers[":status"], 200, `gRPC route ${item.route} failed`);
+        assert.equal(response.headers["content-type"], "application/grpc");
+        assert.equal(response.body.readUInt32BE(1), response.body.length - 5);
+        assert.deepEqual(JSON.parse(response.body.subarray(5)), {
+            method: "POST", path: requestPath,
+            body: payload.toString("hex"),
+        });
+    }
+    console.log("gRPC template smoke passed: default/custom POST, method path, query and body");
+} catch (error) {
+    console.error(await fs.readFile(`${directory}/error.log`, "utf8").catch(() => ""));
+    throw error;
+} finally {
+    client?.destroy();
+    for (const session of sessions) session.destroy();
+    if (nginx && nginx.exitCode === null && !nginxError) {
+        nginx.kill("SIGQUIT");
+        await Promise.race([exited, delay(3000)]);
+        if (nginx.exitCode === null && nginx.signalCode === null) {
+            nginx.kill("SIGKILL");
+            await exited;
+        }
+    }
+    await new Promise((resolve) => upstream.close(resolve));
+    await fs.rm(socket, { force: true });
+    await fs.rm(directory, { recursive: true, force: true });
+}
+GRPC_SMOKE
+
 for service_uid in 0 1000; do
     container="shieldpm-smoke-${fixture##*/}-$service_uid"
     volume="$container-data"
@@ -104,6 +240,7 @@ for service_uid in 0 1000; do
         nginx -tq
         nginx -s reload
         healthcheck.sh
+        node /data/grpc-smoke.mjs
     ' smoke "$service_uid"
     echo "Docker runtime smoke passed (UID $service_uid, $image_arch)"
 done

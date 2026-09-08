@@ -554,15 +554,17 @@ def main(argv: list[str]) -> int:
     vis_js = load_vis_network(here)
     out_path = root / "wiki-graph.html"
 
-    # Reihenfolge wichtig: zuerst die größte Ersetzung (vis_js), dann die JSONs.
-    html = HTML_TEMPLATE.replace("__VIS_NETWORK_JS__", vis_js)
-    html = (
-        html
-        .replace("__NODES__", script_json(nodes))
-        .replace("__EDGES__", script_json(edges))
-        .replace("__COLORS__", script_json(FOLDER_COLORS))
-        .replace("__BUILD_TS__", build_ts)
-    )
+    # Nur Platzhalter der Vorlage ersetzen. Dateinamen und eingebetteter Code
+    # dürfen nicht bei einer späteren Ersetzung erneut als Vorlage gelten.
+    replacements = {
+        "__VIS_NETWORK_JS__": vis_js,
+        "__NODES__": script_json(nodes),
+        "__EDGES__": script_json(edges),
+        "__COLORS__": script_json(FOLDER_COLORS),
+        "__BUILD_TS__": build_ts,
+    }
+    html = re.sub(r"__(?:VIS_NETWORK_JS|NODES|EDGES|COLORS|BUILD_TS)__",
+                  lambda match: replacements[match[0]], HTML_TEMPLATE)
     out_path.write_text(html, encoding="utf-8")
     size_kb = out_path.stat().st_size / 1024
     print(f"OK: {len(nodes)} Knoten, {len(edges)} Kanten -> {out_path} ({size_kb:.0f} KB, offline-fähig)")

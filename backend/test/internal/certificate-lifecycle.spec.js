@@ -488,6 +488,29 @@ describe("certificate lifecycle regressions", () => {
 		expect(remove).toHaveBeenCalledTimes(2);
 		expect(certificates.patch).toHaveBeenCalledExactlyOnceWith({ is_deleted: 1 });
 	});
+	it("leaves certificate and host references untouched when Certbot is already renewing", async () => {
+		const { certificates, proxyQuery } = mockCleanup([{ id: 8, certificate_id: 2, enabled: true, meta: {} }]);
+		vi.spyOn(internalCertificate, "get").mockResolvedValue({ id: 2, provider: "letsencrypt", meta: {} });
+		vi.spyOn(internalCertificate, "revokeCertbot").mockRejectedValue(new Error("Another Certbot process"));
+		await expect(internalCertificate.delete(access(), { id: 2 })).rejects.toThrow("Another Certbot process");
+		expect(certificates.patch).not.toHaveBeenCalled();
+		expect(proxyQuery.patch).not.toHaveBeenCalled();
+		expect(mocks.reload).not.toHaveBeenCalled();
+		expect(mocks.audit).not.toHaveBeenCalled();
+	});
+	it("detaches Let's Encrypt hosts only after the revocation operation has acquired Certbot", async () => {
+		const { certificates } = mockCleanup([{ id: 8, certificate_id: 2, enabled: true, meta: {} }]);
+		const row = { id: 2, provider: "letsencrypt", meta: {} };
+		vi.spyOn(internalCertificate, "get").mockResolvedValue(row);
+		vi.spyOn(internalCertificate, "revokeCertbot").mockImplementation(async (_row, _throwErrors, prepare) => {
+			expect(certificates.patch).not.toHaveBeenCalled();
+			await prepare();
+			expect(certificates.patch).toHaveBeenCalledExactlyOnceWith({ is_deleted: 1 });
+			expect(mocks.reload).toHaveBeenCalledOnce();
+		});
+		await expect(internalCertificate.delete(access(), { id: 2 })).resolves.toBe(true);
+		expect(internalCertificate.revokeCertbot).toHaveBeenCalledWith(row, true, expect.any(Function));
+	});
 	it("queues periodic renewal reloads behind active configuration writes", async () => {
 		const entered = Promise.withResolvers();
 		const hold = Promise.withResolvers();

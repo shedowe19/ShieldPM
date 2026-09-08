@@ -511,21 +511,27 @@ const internalCertificate = {
 			}
 
 			await internalNginx.withConfigurationLock(async () => {
-				await certificateModel.query().where("id", row.id).patch({ is_deleted: 1 });
-				try {
-					// Detach TLS references and activate the new configuration while the old files still exist.
-					await cleanUpMissingCertificatesUnlocked();
-				} catch (cleanupError) {
-					await certificateModel.query().where("id", row.id).patch({ is_deleted: 0 });
-					throw cleanupError;
-				}
+				const detachCertificate = async () => {
+					await certificateModel.query().where("id", row.id).patch({ is_deleted: 1 });
+					try {
+						// Detach TLS references and activate the new configuration while the old files still exist.
+						await cleanUpMissingCertificatesUnlocked();
+					} catch (cleanupError) {
+						await certificateModel.query().where("id", row.id).patch({ is_deleted: 0 });
+						throw cleanupError;
+					}
+				};
 				if (row.provider === "letsencrypt") {
-					await internalCertificate.revokeCertbot(row);
-				} else if (row.provider === "internal") {
-					await fs.promises.rm(`/data/tls/internal/npm-${row.id}`, { force: true, recursive: true });
+					// A busy renewal must reject before the certificate and host references are modified.
+					await internalCertificate.revokeCertbot(row, true, detachCertificate);
 				} else {
-					await fs.promises.rm(`/data/tls/custom/npm-${row.id}`, { force: true, recursive: true });
-					await fs.promises.rm(`/data/tls/custom/npm-${row.id}.der`, { force: true });
+					await detachCertificate();
+					if (row.provider === "internal") {
+						await fs.promises.rm(`/data/tls/internal/npm-${row.id}`, { force: true, recursive: true });
+					} else {
+						await fs.promises.rm(`/data/tls/custom/npm-${row.id}`, { force: true, recursive: true });
+						await fs.promises.rm(`/data/tls/custom/npm-${row.id}.der`, { force: true });
+					}
 				}
 			});
 
@@ -1034,9 +1040,10 @@ const internalCertificate = {
 	/**
 	 * @param   {Object}  certificate    the certificate row
 	 * @param   {Boolean} [throwErrors]
+	 * @param   {Function} [prepare]
 	 * @returns {Promise}
 	 */
-	revokeCertbot: (certificate, throwErrors) => certbot.revokeCertbot(certificate, throwErrors),
+	revokeCertbot: (certificate, throwErrors, prepare) => certbot.revokeCertbot(certificate, throwErrors, prepare),
 
 	/**
 	 *

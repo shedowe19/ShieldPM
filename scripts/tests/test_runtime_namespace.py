@@ -42,11 +42,12 @@ class RuntimeNamespaceTests(unittest.TestCase):
         self.assertEqual(runtime.stat().st_mode & 0o777, 0o700)
         self.assertEqual((runtime / "home").stat().st_mode & 0o777, 0o700)
         self.assertEqual(foreign.stat(), before)
-        self.assertEqual(foreign.read_text(), "another service")
         for name in ("client_body", "proxy", "fastcgi", "uwsgi", "scgi"):
             self.assertTrue((runtime / "nginx" / f"{name}_temp").is_dir())
         self.shell('prepare_runtime_directory "$1" "$2" "$3"', runtime, os.getuid(), os.getgid())
         self.assertEqual(foreign.stat(), before)
+        # Reading content can change atime; do it after both metadata checks.
+        self.assertEqual(foreign.read_text(), "another service")
 
     def test_namespace_rejects_symlinked_work_directories(self):
         runtime, foreign = self.root / "shieldpm", self.root / "foreign"

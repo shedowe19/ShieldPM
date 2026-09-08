@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -54,6 +55,23 @@ class PythonToolTests(unittest.TestCase):
         self.assertNotIn("<", serialized)
         self.assertNotIn(">", serialized)
         self.assertNotIn("&", serialized)
+
+    def test_graph_generation_keeps_template_marker_filenames_literal(self):
+        graph = load_module("wiki_graph", REPO / "scripts/wiki-graph.py")
+        names = ["__NODES__.md", "__EDGES__.md", "__COLORS__.md", "__BUILD_TS__.md"]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "index.md").write_text("\n".join(f"[Page](./{name})" for name in names))
+            for name in names:
+                (root / name).write_text("# Template marker example\n")
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(graph.main(["wiki-graph.py", directory]), 0)
+            generated = (root / "wiki-graph.html").read_text()
+        declarations = re.search(r"const NODES = (.*);\nconst EDGES = (.*);\nconst COLORS =", generated)
+        self.assertIsNotNone(declarations)
+        nodes, edges = map(json.loads, declarations.groups())
+        self.assertEqual({node["id"] for node in nodes}, {"index.md", *names})
+        self.assertEqual({edge["to"] for edge in edges}, set(names))
 
     def test_graph_javascript_preserves_special_groups_when_filtering(self):
         graph = load_module("wiki_graph", REPO / "scripts/wiki-graph.py")

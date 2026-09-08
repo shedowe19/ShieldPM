@@ -38,6 +38,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
 - Die Submission-Serialisierung übernimmt die aktive Authentifizierungsart in `meta`, entfernt ungenutzte OAuth2- bzw.
   OIDC-Felder und sendet bei deaktiviertem externen mTLS keinen Zertifikatstext. Sie reduziert Clients und Credentials
   auf die editierbaren API-Felder.
+- Formularinitialisierung und Submission verwenden denselben Parser für ältere JSON-Strings in `meta`. Beim Umbenennen oder Bearbeiten bleiben dadurch auch zusätzliche Metadaten erhalten; der JSON-Text wird nicht als einzelne Zeichen mit numerischen Schlüsseln gespeichert. `AccessListModalSubmission.test.ts` prüft den vollständigen Lade-/Speicherübergang für diese Legacy-Daten.
 - Die ausgelagerte Formularvalidierung behält die bisherige Prüfungsreihenfolge und die bestehenden Fehlermeldungen für
   leere Listen, unvollständige SSO- und mTLS-Konfigurationen sowie doppelte Benutzernamen bei.
 

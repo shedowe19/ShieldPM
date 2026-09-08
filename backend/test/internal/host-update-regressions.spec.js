@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({
 	configure: vi.fn(),
 	encrypt: vi.fn((value) => `encrypted:${value}`),
 }));
-vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.proxyQuery } }));
+vi.mock("../../models/proxy_host.js", () => ({
+	default: { query: mocks.proxyQuery, transaction: (callback) => callback({}) },
+}));
 vi.mock("../../models/stream.js", () => ({ default: { query: mocks.streamQuery } }));
 vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.deadQuery } }));
 vi.mock("../../models/redirection_host.js", () => ({ default: { query: mocks.redirectQuery } }));

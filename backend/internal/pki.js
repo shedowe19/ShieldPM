@@ -150,6 +150,8 @@ const createLeadCert = async (data, outDir) => {
 	// 2. Create CSR
 	// We need a config file for SANs (Subject Alternative Names)
 	const sanList = domains.map((d) => `DNS:${d}`).join(",");
+	// OpenSSL limits commonName to 64 characters; longer DNS names remain valid SAN entries.
+	const commonName = domains.find((domain) => domain.length <= 64) || "ShieldPM Internal Server";
 	const configPath = path.join(outDir, "openssl.cnf");
 
 	// Minimal OpenSSL config for SAN
@@ -160,7 +162,7 @@ req_extensions = v3_req
 prompt = no
 
 [req_distinguished_name]
-CN = ${domains[0]}
+CN = ${commonName}
 
 [v3_req]
 keyUsage = critical, digitalSignature, keyEncipherment

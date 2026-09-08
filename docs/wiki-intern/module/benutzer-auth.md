@@ -58,6 +58,8 @@ Regressionen mit SQLite: `backend/test/internal/account-transactions.spec.js` un
 
 `npm-reset-password <E-Mail> <neues-Passwort>` verwendet `backend/password-reset.js` und die vorhandene SQLite-Datei unter `${DATA_PATH:-/data}/shieldpm/database.sqlite`. Ohne beide Argumente, bei unbekanntem oder gelöschtem Benutzer sowie bei einem Passwort über 72 UTF-8-Bytes bricht das Werkzeug ab. Es verändert ausschließlich aktive Passwortdatensätze dieses Benutzers und widerruft dessen Refresh-Sitzungen in derselben Transaktion. Andere Authentifizierungsmethoden, gelöschte Zugangsdaten und fremde Sitzungen bleiben erhalten. Für MySQL/PostgreSQL ist dieser SQLite-Notfallhelfer nicht zuständig; reguläre Passwortänderungen laufen über die Benutzerverwaltung.
 
+Der im Docker-Image installierte Symlink `/usr/local/bin/password-reset.js` führt denselben CLI-Einstieg aus wie der direkte Aufruf von `/app/password-reset.js`. Der Einstieg wird über `import.meta.main` erkannt; ein Symlink darf weder einen wirkungslosen Erfolg melden noch Fehlerargumente überspringen. `password-reset-cli.spec.js` startet den tatsächlichen Node-Prozess über einen Symlink und prüft Passwortänderung, Sitzungswiderruf und Fehlercodes mit SQLite.
+
 ## Profiländerungen und Avatare
 
 - Eigene Profilfelder bleiben über `users:update` bearbeitbar. Änderungen an `roles` oder `is_disabled` benötigen zusätzlich `users:permissions`; unveränderte Werte dürfen im Profilformular mitgesendet werden, werden aber nicht erneut geschrieben. Dadurch kann ein gewöhnliches Profilupdate keinen zwischenzeitlichen Rollenentzug oder eine Kontosperre zurücksetzen.
@@ -71,10 +73,12 @@ Regressionen mit SQLite: `backend/test/internal/account-transactions.spec.js` un
 - Das verschlüsselte JWT für die Übergabe vom Callback an den Claim ist wie sein Cookie höchstens fünf Minuten gültig.
 - Der temporäre OIDC-Cookie für Nonce und State ist HTTP-only, fünf Minuten gültig und verwendet `SameSite=Lax`, damit er bei der Navigation vom Identity Provider zurück ankommt.
 - Der Callback verlangt beide Werte aus dem Cookie und übergibt sie als erwartete Werte an `openid-client`. Ohne gültigen State wird kein Autorisierungscode eingelöst.
+- Erst nach erfolgreicher Callback-Validierung ersetzt OIDC die Anmeldung dieses Browsers: Access-, Refresh-, Impersonation-Backup- und ausstehende Duo-Cookies werden mit ihren jeweiligen Pfaden entfernt. Bestehende Datenbanksitzungen anderer Geräte bleiben erhalten. Bei einem Callback-Fehler bleibt die bisherige Browsersitzung erhalten. Der erfolgreiche Callback leitet mit dem verschlüsselten Übergabecookie auf `/` weiter; ohne altes Refresh-Cookie kann der Login-Claim dort zuerst die neue Sitzung übernehmen und danach das Dashboard anzeigen.
 - `/api/oidc/claim` verifiziert das entschlüsselte JWT einschließlich Signatur und Ablauf sowie den aktiven Benutzer. Anschließend erzeugt es das reguläre Access-/Refresh-Token-Paar und entfernt den temporären Cookie.
 - Die öffentlichen OIDC-Routen setzen kein bestehendes gültiges API-Token voraus; auch eine Anmeldung nach Ablauf eines bisherigen Cookies ist möglich.
+- Die Login-Seite startet pro Instanz nur einen OIDC-Claim, auch bei wiederholter Effekt-Ausführung im React-StrictMode. Nach Verlassen der Seite übernimmt sie keine verspätete Claim-Antwort mehr. Ein ausdrücklich gestarteter Passwortlogin verwirft die OIDC-Annahme und wartet vor seinem eigenen Request auf den bereits laufenden Claim, damit dessen Cookie-Antwort die Passwortsitzung nicht nachträglich ersetzt. Auch ein fehlgeschlagener Claim gibt den Passwortlogin frei; nach Verlassen der Seite wird ein noch wartender Passwortrequest nicht mehr gestartet. `frontend/src/pages/Login/index.test.tsx` prüft diese Reihenfolge und Lebenszyklusgrenzen.
 
-Regressionstests: `backend/test/internal/user-security.spec.js` und `backend/test/routes/oidc-security.spec.js`.
+Regressionstests: `backend/test/internal/user-security.spec.js` und `backend/test/routes/oidc-security.spec.js`. `backend/test/routes/auth-response-contracts.spec.js` prüft über echte HTTP-Anfragen die Cookiepfade und die Folge Callback → Startup-Refresh → Claim sowie den Erhalt der alten Sitzung bei einem Callback-Fehler.
 
 ## Demo-Konten
 

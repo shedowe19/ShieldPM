@@ -36,9 +36,14 @@ elif args[0] == 'cp':
     fixture = Path(args[1])
     marker = fixture / 'tls/certbot/accounts/acme-v02.api.letsencrypt.org/directory/ci-offline/marker'
     assert marker.is_file() and (fixture / '.env').is_file()
+    assert (fixture / 'grpc-smoke.mjs').is_file()
 elif args[0] == 'exec' and mode == 'write-failure':
     print('Permission denied: simulated runtime write', file=sys.stderr)
     sys.exit(42)
+elif args[0] == 'exec' and mode == 'grpc-failure':
+    assert any('node /data/grpc-smoke.mjs' in arg for arg in args)
+    print('gRPC route /default/ failed', file=sys.stderr)
+    sys.exit(43)
 elif args[0] == 'logs':
     print('diagnostic container logs')
 """)
@@ -88,6 +93,13 @@ elif args[0] == 'logs':
         result, calls = self.run_smoke("write-failure")
         self.assertEqual(result.returncode, 42)
         self.assertIn("Permission denied", result.stderr)
+        self.assertIn("diagnostic container logs", result.stderr)
+        self.assert_cleaned(calls, 1)
+
+    def test_grpc_request_failure_fails_the_gate_and_cleans_up(self):
+        result, calls = self.run_smoke("grpc-failure")
+        self.assertEqual(result.returncode, 43)
+        self.assertIn("gRPC route /default/ failed", result.stderr)
         self.assertIn("diagnostic container logs", result.stderr)
         self.assert_cleaned(calls, 1)
 

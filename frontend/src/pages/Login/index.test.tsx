@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -66,6 +67,85 @@ describe("Login", () => {
 		await waitFor(() => expect(mocks.completeLogin).toHaveBeenCalledWith(token));
 		expect(mocks.authStoreAdd).not.toHaveBeenCalled();
 	});
+
+	it("does not adopt an OIDC response after leaving the login page", async () => {
+		let resolveClaim!: (response: { expires: number }) => void;
+		mocks.claimOidcToken.mockReturnValue(
+			new Promise((resolve) => {
+				resolveClaim = resolve;
+			}),
+		);
+		const { unmount } = render(<Login />);
+		unmount();
+		await act(async () => {
+			resolveClaim({ expires: Date.now() + 60_000 });
+		});
+		expect(mocks.completeLogin).not.toHaveBeenCalled();
+	});
+
+	it("claims and adopts an OIDC login only once in StrictMode", async () => {
+		const token = { expires: Date.now() + 60_000 };
+		mocks.claimOidcToken.mockResolvedValue(token);
+		render(
+			<StrictMode>
+				<Login />
+			</StrictMode>,
+		);
+		await waitFor(() => expect(mocks.completeLogin).toHaveBeenCalledWith(token));
+		expect(mocks.claimOidcToken).toHaveBeenCalledTimes(1);
+		expect(mocks.completeLogin).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not send a queued password login after the page has unmounted", async () => {
+		let resolveClaim!: (response: { expires: number }) => void;
+		mocks.claimOidcToken.mockReturnValue(
+			new Promise((resolve) => {
+				resolveClaim = resolve;
+			}),
+		);
+		mocks.login.mockResolvedValue(undefined);
+		const { unmount } = render(<Login />);
+		fireEvent.change(screen.getByLabelText("email-address"), { target: { value: "admin@example.test" } });
+		fireEvent.change(screen.getByLabelText("password"), { target: { value: "valid password" } });
+		await act(async () => {
+			fireEvent.click(screen.getByRole("button", { name: "sign-in" }));
+		});
+		unmount();
+		await act(async () => {
+			resolveClaim({ expires: Date.now() + 60_000 });
+		});
+		expect(mocks.login).not.toHaveBeenCalled();
+		expect(mocks.completeLogin).not.toHaveBeenCalled();
+	});
+
+	it.each(["success", "failure"])(
+		"waits for a pending OIDC claim (%s) before sending an explicit password login",
+		async (outcome) => {
+			let resolveClaim!: (response: { expires: number }) => void;
+			let rejectClaim!: (error: Error) => void;
+			mocks.claimOidcToken.mockReturnValue(
+				new Promise((resolve, reject) => {
+					resolveClaim = resolve;
+					rejectClaim = reject;
+				}),
+			);
+			mocks.login.mockResolvedValue(undefined);
+			render(<Login />);
+			fireEvent.change(screen.getByLabelText("email-address"), { target: { value: "admin@example.test" } });
+			fireEvent.change(screen.getByLabelText("password"), { target: { value: "valid password" } });
+			await act(async () => {
+				fireEvent.click(screen.getByRole("button", { name: "sign-in" }));
+			});
+			expect(mocks.login).not.toHaveBeenCalled();
+			await act(async () => {
+				if (outcome === "success") resolveClaim({ expires: Date.now() + 60_000 });
+				else rejectClaim(new Error("No pending OIDC login"));
+			});
+			expect(mocks.login).toHaveBeenCalledTimes(1);
+			expect(mocks.login).toHaveBeenCalledWith("admin@example.test", "valid password");
+			expect(mocks.completeLogin).not.toHaveBeenCalled();
+		},
+	);
 
 	it("uses localized descriptions for password and two-factor login", async () => {
 		mocks.login.mockRejectedValue({

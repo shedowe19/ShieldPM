@@ -25,13 +25,20 @@ interface LoginValues {
 
 export default function Login() {
 	const emailRef = useRef<HTMLInputElement>(null);
+	const oidcRequest = useRef<ReturnType<typeof claimOidcToken> | null>(null);
+	const passwordLoginStarted = useRef(false);
+	const mounted = useRef(false);
 	const [formErr, setFormErr] = useState("");
 	const [pending2FA, setPending2FA] = useState<{ token: string; methods: string[] } | null>(null);
 	const { completeLogin, login } = useAuthState();
 
 	const onSubmit = async (values: LoginValues, { setSubmitting }: FormikHelpers<LoginValues>) => {
+		passwordLoginStarted.current = true;
 		setFormErr("");
 		try {
+			// Finish the claim first so its cookie response cannot overwrite the password login.
+			await oidcRequest.current?.catch(() => undefined);
+			if (!mounted.current) return;
 			// login() may throw a TwoFaChallengeResponse if 2FA is required
 			await login(values.email, values.password);
 		} catch (err) {
@@ -54,15 +61,22 @@ export default function Login() {
 	};
 
 	useEffect(() => {
+		let active = true;
+		mounted.current = true;
 		emailRef.current?.focus();
 		// Try to claim OIDC token if available
-		claimOidcToken()
+		oidcRequest.current ??= claimOidcToken();
+		oidcRequest.current
 			.then((response) => {
-				completeLogin(response);
+				if (active && !passwordLoginStarted.current) completeLogin(response);
 			})
 			.catch(() => {
 				// Ignore errors, no pending OIDC login
 			});
+		return () => {
+			active = false;
+			mounted.current = false;
+		};
 	}, [completeLogin]);
 
 	const health = useHealth();

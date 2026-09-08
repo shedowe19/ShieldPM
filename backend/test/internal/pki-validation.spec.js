@@ -1,3 +1,7 @@
+import { execFileSync } from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -124,5 +128,33 @@ describe("internal PKI", () => {
 			expect.stringContaining("openssl.cnf"),
 			expect.stringContaining("DNS:xn--bcher-kva.example"),
 		);
+	});
+	it("creates an OpenSSL CSR for a valid DNS name longer than the common-name limit", async () => {
+		const realFs = await vi.importActual("node:fs");
+		const directory = realFs.mkdtempSync(path.join(os.tmpdir(), "shieldpm-long-dns-"));
+		const hostname = `${"a".repeat(63)}.example.test`;
+		const keyFile = path.join(directory, "key.pem");
+		const configFile = path.join(directory, "request.cnf");
+		const { privateKey } = generateKeyPairSync("ec", { namedCurve: "secp384r1" });
+		realFs.writeFileSync(keyFile, privateKey.export({ type: "pkcs8", format: "pem" }), { mode: 0o600 });
+		let request;
+		mocks.exec.mockImplementation(async (_command, args) => {
+			if (args[0] === "req") {
+				const [, config] = mocks.write.mock.calls.find(([filename]) => filename.endsWith("openssl.cnf"));
+				realFs.writeFileSync(configFile, config);
+				request = execFileSync("openssl", ["req", "-new", "-key", keyFile, "-config", configFile]);
+			}
+			return "";
+		});
+		try {
+			await pki.createLeadCert({ domain_names: [hostname] }, "/tmp/pki-test");
+			const details = execFileSync("openssl", ["req", "-text", "-noout", "-verify"], {
+				input: request,
+				encoding: "utf8",
+			});
+			expect(details).toContain(`DNS:${hostname}`);
+		} finally {
+			realFs.rmSync(directory, { recursive: true, force: true });
+		}
 	});
 });

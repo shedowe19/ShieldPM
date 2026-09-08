@@ -16,6 +16,20 @@
 			"description": "JWT Token",
 			"example": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.ey...xaHKYr3Kk6MvkUjcC4",
 			"type": "string"
+		},
+		"user": {
+			"description": "Identity associated with the renewed token",
+			"type": "object",
+			"required": [
+				"id"
+			],
+			"additionalProperties": false,
+			"properties": {
+				"id": {
+					"type": "integer",
+					"minimum": 0
+				}
+			}
 		}
 	}
 }

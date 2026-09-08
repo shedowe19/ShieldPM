@@ -184,22 +184,26 @@ export const renewCertbotWithDnsChallenge = async (certificate) => {
  * Revoke a certificate
  * @param {Object} certificate - The certificate row
  * @param {boolean} [throwErrors] - Whether to throw errors
+ * @param {Function} [prepare] - Detach hosts after acquiring the Certbot lock
  * @returns {Promise<string|undefined>}
  */
-export const revokeCertbot = async (certificate, throwErrors) => {
+export const revokeCertbot = async (certificate, throwErrors, prepare) => {
 	logger.info(`Revoking Certbot certificates for Cert #${certificate.id}: ${certificate.domain_names.join(", ")}`);
 
 	try {
-		const result = await runCertbot([
-			"--config",
-			"/etc/certbot.ini",
-			"revoke",
-			"--cert-name",
-			`npm-${certificate.id}`,
-			"--reason",
-			"unspecified",
-			"--delete-after-revoke",
-		]);
+		const result = await runCertbot(
+			[
+				"--config",
+				"/etc/certbot.ini",
+				"revoke",
+				"--cert-name",
+				`npm-${certificate.id}`,
+				"--reason",
+				"unspecified",
+				"--delete-after-revoke",
+			],
+			prepare,
+		);
 		fs.rmSync(`/data/tls/certbot/live/npm-${certificate.id}.der`, { force: true });
 		logger.info(result);
 		return result;
