@@ -146,7 +146,7 @@ http {
         const requestPath = `${item.route}service.Echo/Call${query}`;
         const response = await new Promise((resolve, reject) => {
             const request = client.request({
-                ":method": "POST", ":path": requestPath, "content-type": "application/grpc", te: "trailers",
+                ":method": "POST", ":path": requestPath, "content-type": "application/grpc", te: "trailers", // codespell:ignore te
             });
             const chunks = [];
             let headers;
