@@ -154,7 +154,7 @@ const internalProxyHost = {
 		}
 
 		// Objection graph writes span multiple statements and do not start a transaction.
-		let row = await proxyHostModel.transaction((trx) =>
+		let row = await proxyHostModel.transaction(async (trx) =>
 			proxyHostModel
 				.query(trx)
 				.insertGraphAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) })),
@@ -333,7 +333,7 @@ const internalProxyHost = {
 		thisData.meta = sanitizeHostMeta(thisData.meta);
 
 		const new_saved_row = /** @type {any} */ (
-			await proxyHostModel.transaction((trx) =>
+			await proxyHostModel.transaction(async (trx) =>
 				proxyHostModel.query(trx).upsertGraphAndFetch(/** @type {any} */ (thisData)),
 			)
 		);
@@ -639,9 +639,7 @@ const internalProxyHost = {
 					row.certificate.meta = {};
 				}
 				row.access_list_id = Number.parseInt(String(row.access_list_id), 10);
-				// @ts-expect-error
-				row.connected_tunnels = /** @type {any} */ (row).count || 0;
-				// @ts-expect-error
+				row.connected_tunnels = row.count || 0;
 				delete row.count;
 				// SECURITY: Mask internal paths in forward_host from API responses
 				// /data/websites/host-N paths expose server filesystem layout to users

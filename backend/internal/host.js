@@ -37,9 +37,11 @@ const internalHost = {
 	 * ie: if there is no cert, then force_ssl is off.
 	 *     if force_ssl is off, then hsts_enabled is definitely off.
 	 *
-	 * @param   {object} data
-	 * @param   {object} [existingData]
-	 * @returns {object}
+	 * @template {{certificate_id?: number|string, ssl_forced?: boolean|number, hsts_enabled?: boolean|number, hsts_subdomains?: boolean|number}} T
+	 * @param   {boolean} newCert
+	 * @param   {T} data
+	 * @param   {Partial<T>} [existingData]
+	 * @returns {T}
 	 */
 	cleanSslHstsData: (newCert, data, existingData) => {
 		const combinedData = _.assign({}, existingData || {}, data);

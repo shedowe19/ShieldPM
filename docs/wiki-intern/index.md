@@ -217,4 +217,4 @@ _Zuletzt aktualisiert: 2026-09-08_
 
 ## Codeprüfung
 
-- [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des fünften vollständigen Durchgangs in PR #139.
+- [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des sechsten vollständigen Durchgangs in PR #139.

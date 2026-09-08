@@ -1,5 +1,6 @@
 import { IconRobot } from "@tabler/icons-react";
 import { createContext, lazy, type PropsWithChildren, Suspense, useContext, useState } from "react";
+import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 import { cn } from "src/lib/utils";
 import { T } from "src/locale";
 
@@ -24,9 +25,13 @@ export function AiChatLauncher({ children }: PropsWithChildren) {
 		<AiChatLauncherContext.Provider value={{ isOpen, openChat }}>
 			{children}
 			{isLoaded && (
-				<Suspense fallback={null}>
-					<LazyAiChat open={isOpen} onOpenChange={setIsOpen} />
-				</Suspense>
+				<div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border bg-background px-6 shadow-lg empty:hidden">
+					<RouteErrorBoundary>
+						<Suspense fallback={null}>
+							<LazyAiChat open={isOpen} onOpenChange={setIsOpen} />
+						</Suspense>
+					</RouteErrorBoundary>
+				</div>
 			)}
 		</AiChatLauncherContext.Provider>
 	);

@@ -11,7 +11,17 @@ const mocks = vi.hoisted(() => ({
 	host: {},
 	patch: vi.fn(),
 }));
-vi.mock("node:fs", () => ({ default: { existsSync: mocks.exists, mkdirSync: vi.fn(), rmSync: mocks.rm } }));
+vi.mock("node:fs", () => ({
+	default: {
+		existsSync: mocks.exists,
+		mkdirSync: vi.fn(),
+		mkdtempSync: (prefix) => `${prefix}test`,
+		statSync: () => ({ mode: 0o755 }),
+		chmodSync: vi.fn(),
+		renameSync: vi.fn(),
+		rmSync: mocks.rm,
+	},
+}));
 vi.mock("isomorphic-git", () => ({
 	default: {
 		clone: mocks.clone,

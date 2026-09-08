@@ -15,7 +15,13 @@ const serverPubKeyFile = `${wgDataDir}/server_public.key`;
 
 const WG_INTERFACE = "wg0";
 let serverKeyInitialization = null;
+/** @type {Promise<unknown>} */
 let configurationChanges = Promise.resolve();
+/**
+ * @template T
+ * @param {() => Promise<T>} operation
+ * @returns {Promise<T>}
+ */
 const serializeConfigurationChange = (operation) => {
 	const task = configurationChanges.then(operation);
 	configurationChanges = task.catch(() => {});
@@ -111,6 +117,7 @@ const validatePeerSettings = (data) => {
 	}
 };
 
+/** @returns {[import("ipaddr.js").IPv4, number]} */
 const validateIpv4Cidr = (value, field) => {
 	if (typeof value !== "string" || value.trim() !== value || hasControlCharacters(value)) {
 		throw new errs.ValidationError(`WireGuard ${field} must be an IPv4 CIDR.`);
@@ -294,7 +301,7 @@ const isWgAvailable = () => {
 
 /**
  * Generate a WireGuard key pair
- * @returns {{ privateKey: string, publicKey: string }}
+ * @returns {Promise<{ privateKey: string, publicKey: string }>}
  */
 const generateKeyPair = async () => {
 	const privateKey = exec("wg genkey");
@@ -406,7 +413,7 @@ const getServerPrivateKey = () => {
 
 /**
  * Read server public key
- * @returns {string}
+ * @returns {Promise<string>}
  */
 const getServerPublicKey = async () => {
 	await ensureServerKeys();

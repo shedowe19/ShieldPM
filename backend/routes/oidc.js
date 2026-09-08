@@ -112,7 +112,7 @@ router
 				refreshExpires: pair.refresh_expires,
 			});
 			res.clearCookie("shieldpm_oidc");
-			res.status(200).send({ expires: pair.access_expires, user: pair.user });
+			res.status(200).send({ expires: pair.access_expires, user: pair.user, csrfToken: res.locals.csrfToken });
 		} catch (err) {
 			res.status(400).send({ error: { message: err.public ? err.message : "OIDC authentication failed" } });
 		}

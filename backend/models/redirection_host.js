@@ -22,6 +22,8 @@ const boolFields = [
 ];
 
 class RedirectionHost extends Model {
+	/** @type {boolean | number} */
+	enabled;
 	/** @type {number} */
 	id;
 	/** @type {number} */

@@ -67,6 +67,30 @@ describe("API responses crossing session boundaries", () => {
 		expect(AuthStore.csrfToken).toBe("new-csrf");
 	});
 
+	it("uses the anonymous CSRF response header immediately after an empty logout response", async () => {
+		AuthStore.clear();
+		const pending = post({ url: "/tokens/logout", silentAuth: true });
+		finish(new Response(null, { status: 204, headers: { "X-XSRF-TOKEN": "anonymous-csrf" } }));
+		await expect(pending).resolves.toBeUndefined();
+
+		vi.mocked(fetch).mockResolvedValue(Response.json({}));
+		await post({ url: "/oidc/claim" });
+		expect(fetch).toHaveBeenLastCalledWith(
+			"/api/oidc/claim",
+			expect.objectContaining({ headers: expect.objectContaining({ "X-XSRF-TOKEN": "anonymous-csrf" }) }),
+		);
+	});
+
+	it("ignores a delayed logout CSRF header after a newer login", async () => {
+		const pending = post({ url: "/tokens/logout", silentAuth: true });
+		AuthStore.set({ expires: Date.now() + 900_000, user: { id: 2 } });
+		AuthStore.setCsrfToken("new-csrf");
+		finish(new Response(null, { status: 204, headers: { "X-XSRF-TOKEN": "anonymous-csrf" } }));
+		await pending;
+		expect(AuthStore.csrfToken).toBe("new-csrf");
+		expect(AuthStore.userId).toBe(2);
+	});
+
 	it("rechecks the session after asynchronously reading the response body", async () => {
 		let finishBody: (value: unknown) => void = () => {};
 		const response = {

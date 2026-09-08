@@ -52,6 +52,11 @@ export const requestPublicUrl = (url) => {
 			target,
 			{
 				signal: AbortSignal.timeout(10000),
+				/**
+				 * @param {string} hostname
+				 * @param {import("node:dns").LookupOptions} options
+				 * @param {(error: NodeJS.ErrnoException | null, address?: string | import("node:dns").LookupAddress[], family?: number) => void} callback
+				 */
 				lookup: (hostname, options, callback) => {
 					lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
 						if (error) return callback(error);
@@ -320,7 +325,7 @@ const processOnce = async (force) => {
 			const v4Changed = provider.ip_ver !== "v6" && currentIps.ipv4 && provider.last_ipv4 !== currentIps.ipv4;
 			const v6Changed = provider.ip_ver !== "v4" && currentIps.ipv6 && provider.last_ipv6 !== currentIps.ipv6;
 
-			if (force || v4Changed || v6Changed) {
+			if (force || provider.last_error || v4Changed || v6Changed) {
 				logger.info(`DDNS: IP changed for ${provider.name} (IP Ver: ${provider.ip_ver}) or Force Update`);
 				await updateProvider(provider, currentIps);
 			}

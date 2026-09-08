@@ -19,6 +19,11 @@ const internalDeadHost = {
 	/**
 	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {Object}  data
+	 * @param   {string[]} data.domain_names
+	 * @param   {number|"new"} [data.certificate_id]
+	 * @param   {number} [data.owner_user_id]
+	 * @param   {string} [data.advanced_config]
+	 * @param   {Object} [data.meta]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {
@@ -58,7 +63,12 @@ const internalDeadHost = {
 			thisData.advanced_config = "";
 		}
 
-		let row = await deadHostModel.query().insertAndFetch({ ...thisData, meta: sanitizeHostMeta(thisData.meta) });
+		// The request-only "new" certificate marker was removed before persistence above.
+		const persistedData = /** @type {Omit<typeof thisData, "certificate_id"> & {certificate_id?: number}} */ ({
+			...thisData,
+			meta: sanitizeHostMeta(thisData.meta),
+		});
+		let row = await deadHostModel.query().insertAndFetch(persistedData);
 		row = utils.omitRow(omissions())(row);
 
 		// Add to audit log

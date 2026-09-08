@@ -43,6 +43,7 @@ const cleanUpMissingCertificatesUnlocked = async () => {
 		logger.info("Checking for missing/deleted certificate references in hosts...");
 		const activeCerts = await certificateModel.query().select("id").where("is_deleted", 0);
 		const activeCertIds = new Set(activeCerts.map((certificate) => Number(certificate.id)));
+		/** @type {Array<{model: import("objection").ModelClass<proxyHostModel | redirectionHostModel | deadHostModel | streamModel>, type: string, graph?: string}>} */
 		const hostTypes = [
 			{ model: proxyHostModel, type: "proxy_host", graph: "[host_domains,access_list.[clients,items]]" },
 			{ model: redirectionHostModel, type: "redirection_host" },
@@ -474,24 +475,26 @@ const internalCertificate = {
 		const archive = new ZipArchive({ zlib: { level: 9 } });
 		const stream = fs.createWriteStream(out, { mode: 0o600, flags: "wx" });
 
-		return new Promise((resolve, reject) => {
-			let failure;
-			source.map((fl) => {
-				const fileName = path.basename(fl);
-				debug(logger, fl, "added to certificate zip");
-				archive.file(fl, { name: fileName });
-				return true;
-			});
-			const fail = (err) => {
-				failure ||= err;
-				archive.abort();
-				stream.destroy();
-			};
-			archive.on("error", fail).on("warning", fail).pipe(stream);
-			stream.on("error", fail);
-			stream.on("close", () => (failure ? reject(failure) : resolve()));
-			archive.finalize().catch(fail);
-		});
+		return new Promise(
+			/** @param {(value?: void) => void} resolve */ (resolve, reject) => {
+				let failure;
+				source.map((fl) => {
+					const fileName = path.basename(fl);
+					debug(logger, fl, "added to certificate zip");
+					archive.file(fl, { name: fileName });
+					return true;
+				});
+				const fail = (err) => {
+					failure ||= err;
+					archive.abort();
+					stream.destroy();
+				};
+				archive.on("error", fail).on("warning", fail).pipe(stream);
+				stream.on("error", fail);
+				stream.on("close", () => (failure ? reject(failure) : resolve()));
+				archive.finalize().catch(fail);
+			},
+		);
 	},
 
 	/**

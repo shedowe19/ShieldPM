@@ -1,5 +1,6 @@
+import { startRegistration } from "@simplewebauthn/browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SecuritySettings from "./Security";
@@ -288,5 +289,45 @@ describe("SecuritySettings", () => {
 		expect(onKeyDown).not.toHaveBeenCalled();
 		fireEvent.keyDown(input, { key: "Enter" });
 		expect(mockBeginPasskeyRegistration).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not open a passkey prompt after the security tab has closed", async () => {
+		let finishBegin!: (response: object) => void;
+		mockBeginPasskeyRegistration.mockReturnValue(
+			new Promise((resolve) => {
+				finishBegin = resolve;
+			}),
+		);
+		const view = render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Passkey"));
+		fireEvent.click(screen.getByText("Register Passkey"));
+		expect(mockBeginPasskeyRegistration).toHaveBeenCalledOnce();
+		view.unmount();
+		await act(async () => {
+			finishBegin({ options: {}, challengeId: "challenge" });
+		});
+		expect(startRegistration).not.toHaveBeenCalled();
+		expect(mockCompletePasskeyRegistration).not.toHaveBeenCalled();
+	});
+
+	it("does not register a factor after leaving an open browser passkey prompt", async () => {
+		let finishPrompt!: (response: never) => void;
+		mockBeginPasskeyRegistration.mockResolvedValue({ options: {}, challengeId: "challenge" });
+		vi.mocked(startRegistration).mockReturnValueOnce(
+			new Promise((resolve) => {
+				finishPrompt = resolve;
+			}),
+		);
+		const view = render(<SecuritySettings />, { wrapper: makeWrapper() });
+		fireEvent.click(await screen.findByText("Passkey"));
+		await act(async () => {
+			fireEvent.click(screen.getByText("Register Passkey"));
+		});
+		expect(startRegistration).toHaveBeenCalledOnce();
+		view.unmount();
+		await act(async () => {
+			finishPrompt({ id: "credential" } as never);
+		});
+		expect(mockCompletePasskeyRegistration).not.toHaveBeenCalled();
 	});
 });

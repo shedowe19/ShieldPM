@@ -7,6 +7,10 @@
 	],
 	"additionalProperties": false,
 	"properties": {
+		"csrfToken": {
+			"description": "CSRF token bound to the renewed browser session",
+			"type": "string"
+		},
 		"expires": {
 			"description": "Token Expiry ISO Time String",
 			"example": "2025-02-04T20:40:46.340Z",

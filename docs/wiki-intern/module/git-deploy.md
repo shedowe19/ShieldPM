@@ -54,7 +54,9 @@ Gleichzeitige Sync-Anfragen für denselben Host teilen sich einen laufenden Sync
 
 ### Zustandsprüfung nach Netzwerkoperationen
 
-Nach Clone oder Pull lädt der Sync den aktuellen Host erneut. Ist er inzwischen gelöscht, auf ein anderes Weiterleitungsschema umgestellt oder wurden Repository, Branch oder Zugangsdaten geändert, wird der alte Sync nicht als Erfolg gespeichert und erzeugt keine neue Nginx-Konfiguration.
+Nach Clone oder Pull und dem anschließenden Lesen der Commit-ID lädt der Sync den aktuellen Host erneut. Zwischen dieser letzten Prüfung und dem Verzeichnistausch liegt keine weitere asynchrone Git-Abfrage. Ist der Host inzwischen gelöscht, auf ein anderes Weiterleitungsschema umgestellt oder wurden Repository, Branch oder Zugangsdaten geändert, wird der alte Sync nicht als Erfolg gespeichert und erzeugt keine neue Nginx-Konfiguration. Der Preservation-Test prüft zusätzlich Repository- und Schemawechsel während einer verzögerten Commit-Abfrage.
+
+Beim Wechsel von Repository oder Branch entsteht der Ersatz-Clone zunächst in einem eindeutigen Nachbarverzeichnis. Die bisher veröffentlichte Website bleibt während des Downloads sowie bei Clone-Fehlern oder inzwischen geänderter Hostkonfiguration erhalten. Erst nach erfolgreichem Clone und erneuter Zustandsprüfung wird das Verzeichnis ausgetauscht; seine bisherigen Zugriffsrechte bleiben erhalten. Scheitert die Veröffentlichung, wird das vorherige Verzeichnis zurückbenannt. Unvollständige Ersatzverzeichnisse werden aufgeräumt. `sixth-integrations-git-deploy-preservation.spec.js` prüft diese Übergänge auf einem echten lokalen Dateisystem mit simulierten Git-Netzwerkoperationen. Reguläre Pulls im unveränderten Repository arbeiten weiterhin im bestehenden Checkout.
 
 Für verwaltete Roots unter `/data/websites/` verhindert die Nginx-Konfiguration das Folgen symbolischer Links. `.git`-Pfade werden bei statischen Hosts gesperrt, damit Repository-Konfiguration und Historie nicht öffentlich ausgeliefert werden. PHP-Anwendungen werden weiterhin als ausführbarer Anwendungscode behandelt; die Dateipfadprüfung stellt keine PHP-Sandbox bereit.
 

@@ -44,6 +44,7 @@ export const setAuthCookies = (res, req, { accessToken, accessExpires, refreshTo
 		path: "/api/tokens",
 		maxAge: refreshExpires ? Math.max(0, new Date(refreshExpires).getTime() - Date.now()) : undefined,
 	});
+	res.locals?.refreshCsrfToken?.(accessToken);
 };
 
 /**
@@ -54,6 +55,7 @@ export const setAuthCookies = (res, req, { accessToken, accessExpires, refreshTo
 export const clearAuthCookies = (res) => {
 	res.clearCookie(ACCESS_COOKIE);
 	res.clearCookie(REFRESH_COOKIE, { path: "/api/tokens" });
+	res.locals?.refreshCsrfToken?.(null);
 };
 
 // The redirect binding must survive a cross-site top-level navigation, but must

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -90,6 +90,22 @@ describe("DuoCallback", () => {
 
 		await waitFor(() => expect(screen.getByText("Signed in")).toBeInTheDocument());
 		expect(mocks.completeLogin).toHaveBeenCalledExactlyOnceWith(response);
+	});
+
+	it("does not complete an obsolete login after the callback page unmounts", async () => {
+		let finishLogin!: (response: object) => void;
+		mocks.complete2faDuoAuth.mockReturnValue(
+			new Promise((resolve) => {
+				finishLogin = resolve;
+			}),
+		);
+		const view = renderCallback();
+		expect(mocks.complete2faDuoAuth).toHaveBeenCalledOnce();
+		view.unmount();
+		await act(async () => {
+			finishLogin({ expires: "2026-09-09T00:00:00Z" });
+		});
+		expect(mocks.completeLogin).not.toHaveBeenCalled();
 	});
 
 	it.each(["", "?state=returned-state", "?duo_code=&state=returned-state"])(

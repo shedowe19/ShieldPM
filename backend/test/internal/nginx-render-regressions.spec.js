@@ -171,7 +171,11 @@ describe("Nginx configuration regressions", () => {
 		const generate = vi.spyOn(internalNginx, "generateConfig");
 		await expect(
 			internalNginx.configure(
-				{ query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }) }) },
+				{
+					query: () => ({
+						findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+					}),
+				},
 				"proxy_host",
 				host(),
 			),
@@ -204,8 +208,12 @@ describe("Nginx configuration regressions", () => {
 			vi.spyOn(internalNginx, method).mockResolvedValue();
 		}
 		const model = {
+			transaction: (callback) => callback({}),
 			query: () => ({
-				findById: () => ({ select: async () => ({ enabled: false, is_deleted: false }) }),
+				findById: () => ({
+					withGraphFetched: async () => host({ enabled: false, is_deleted: false }),
+					forUpdate: async () => host({ enabled: false }),
+				}),
 				where: () => ({ patch: async () => 1 }),
 			}),
 		};
@@ -230,7 +238,11 @@ describe("Nginx configuration regressions", () => {
 		const restore = vi.spyOn(internalNginx, "restoreConfig").mockResolvedValue();
 		const patch = vi.fn().mockResolvedValue(1);
 		const model = {
-			query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }), where: () => ({ patch }) }),
+			transaction: (callback) => callback({}),
+			query: () => ({
+				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				where: () => ({ patch }),
+			}),
 		};
 		internalAnubis.generatePolicy.mockRejectedValueOnce(new Error("policy unavailable"));
 		const meta = await internalNginx.configure(model, "proxy_host", host());
@@ -254,7 +266,11 @@ describe("Nginx configuration regressions", () => {
 		vi.spyOn(internalNginx, "reload").mockRejectedValueOnce(new Error("reload failed")).mockResolvedValueOnce();
 		const patch = vi.fn().mockResolvedValue(1);
 		const model = {
-			query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }), where: () => ({ patch }) }),
+			transaction: (callback) => callback({}),
+			query: () => ({
+				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				where: () => ({ patch }),
+			}),
 		};
 		const meta = await internalNginx.configure(model, "proxy_host", host());
 		expect(meta.nginx_online).toBe(false);
@@ -276,7 +292,11 @@ describe("Nginx configuration regressions", () => {
 		}
 		const patch = vi.fn().mockRejectedValue(new Error("database unavailable"));
 		const model = {
-			query: () => ({ findById: () => ({ select: async () => ({ enabled: true }) }), where: () => ({ patch }) }),
+			transaction: (callback) => callback({}),
+			query: () => ({
+				findById: () => ({ withGraphFetched: async () => host(), forUpdate: async () => host() }),
+				where: () => ({ patch }),
+			}),
 		};
 		await expect(internalNginx.configure(model, "proxy_host", host())).rejects.toThrow("database unavailable");
 		expect(internalNginx.restoreConfig).toHaveBeenCalledOnce();

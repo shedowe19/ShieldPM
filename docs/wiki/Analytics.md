@@ -26,32 +26,32 @@ ShieldPM includes a powerful, privacy-friendly analytics dashboard directly inte
 
 ## Key Features
 
-* **Real-time Traffic Overview:** visualizes bandwidth usage and request counts.
-* **Requests Over Time:** Area chart showing traffic trends over the last 1h, 24h, 7d, or 30d.
-* **Status Codes:** Bar chart breakdown of HTTP response codes (2xx, 3xx, 4xx, 5xx).
-* **Top Lists:**
-  * **Countries:** GeoIP-based breakdown of traffic sources.
-  * **IPs:** Most frequent client IP addresses.
-  * **Referrers:** Top domains linking to your services.
-  * **Paths:** Most requested URL paths.
-  * **User Agents:** Breakdown of browsers and devices.
-* **Recent Requests:** Detailed table of the latest requests with method, status, path, IP, and duration.
-* **Database Statistics:** Real-time database metrics including:
-  * **Database Size:** Current size of the application database.
-  * **Engine Type:** Shows SQLite, MySQL, or PostgreSQL.
-  * **Connections:** Number of active database connections.
-  * **Read/Write I/O:** Cumulative read and write operations:
-    * **SQLite:** Uses `PRAGMA cache_stats` (if available).
-    * **MySQL:** Uses `Handler_read_rnd_next` and `Handler_write` status variables.
-    * **PostgreSQL:** Uses `blks_read`, `blks_hit`, and tuple statistics from `pg_stat_database`.
+- **Real-time Traffic Overview:** visualizes bandwidth usage and request counts.
+- **Requests Over Time:** Area chart showing traffic trends over the last 1h, 24h, 7d, or 30d.
+- **Status Codes:** Bar chart breakdown of HTTP response codes (2xx, 3xx, 4xx, 5xx).
+- **Top Lists:**
+  - **Countries:** GeoIP-based breakdown of traffic sources.
+  - **IPs:** Most frequent client IP addresses.
+  - **Referrers:** Top domains linking to your services.
+  - **Paths:** Most requested URL paths.
+  - **User Agents:** Breakdown of browsers and devices.
+- **Recent Requests:** Detailed table of the latest requests with method, status, path, IP, and duration.
+- **Database Statistics:** Real-time database metrics including:
+  - **Database Size:** Current size of the application database.
+  - **Engine Type:** Shows SQLite, MySQL, or PostgreSQL.
+  - **Connections:** Number of active database connections.
+  - **Read/Write I/O:** Cumulative read and write operations:
+    - **SQLite:** Uses `PRAGMA cache_stats` (if available).
+    - **MySQL:** Uses `Handler_read_rnd_next` and `Handler_write` status variables.
+    - **PostgreSQL:** Uses `blks_read`, `blks_hit`, and tuple statistics from `pg_stat_database`.
 
 ## Privacy
 
 The analytics feature is designed with privacy in mind:
 
-* **No Third-Party Cookies:** Everything is stored locally in your database.
-* **Data Retention:** Logs are automatically rotated to manage database size.
-* **Anonymization:** *(Future feature)* IP anonymization settings are planned.
+- **No Third-Party Cookies:** Everything is stored locally in your database.
+- **Data Retention:** Logs are automatically rotated to manage database size.
+- **Anonymization:** _(Future feature)_ IP anonymization settings are planned.
 
 ## Configuration
 
@@ -125,3 +125,5 @@ systemctl restart shieldpm
 ```
 
 Once restarted, Nginx will load the GeoIP database, and new requests will be tagged with their country code.
+
+With `GOA=true`, GoAccess also discovers the City, Country, and ASN databases in `/data/nginx` at startup. For each database, an existing non-empty file in `/data/goaccess/geoip` takes precedence. An explicit `--geoip-database` setting in `GOACLA` disables this automatic discovery.

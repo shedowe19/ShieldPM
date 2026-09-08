@@ -26,8 +26,8 @@ const writeHash = async () => {
 
 /**
  * @param   {String} cmd
- * @param   {Array}  args
- * @param   {Object} [options]
+ * @param   {string[]}  args
+ * @param   {import("node:child_process").ExecFileOptionsWithStringEncoding} [options]
  * @returns {Promise<string>}
  */
 const execFile = async (cmd, args, options = {}) => {

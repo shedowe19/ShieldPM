@@ -383,9 +383,9 @@ export class AnalyticsService {
 		}
 	}
 	/**
-	 * Get aggregated summary for a host (Top Lists)
+	 * Require analytics access or authorized ownership of a proxy host.
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {number} hostId
-	 * @param {String} range (1h, 24h, 7d, 30d)
 	 */
 	async assertHostAccess(access, hostId) {
 		const host = await ProxyHost.query().where("id", hostId).andWhere("is_deleted", 0).first();

@@ -35,6 +35,8 @@ const boolFields = [
 ];
 
 class ProxyHost extends Model {
+	/** @type {boolean | number} */
+	is_deleted;
 	/** @type {number} */
 	id;
 	/** @type {string} */

@@ -35,29 +35,31 @@ const stopProcess = async (id) => {
 	// Detach before signalling; its delayed exit must not remove a replacement.
 	processes.delete(id);
 	logger.info(`Stopping OAuth2 Proxy #${id}...`);
-	await new Promise((resolve, reject) => {
-		let killTimer;
-		let exitTimer;
-		const finish = () => {
-			clearTimeout(killTimer);
-			clearTimeout(exitTimer);
-			child.removeListener("exit", finish);
-			child.removeListener("error", finish);
-			resolve();
-		};
-		child.once("exit", finish);
-		child.once("error", finish);
-		killTimer = setTimeout(() => {
-			exitTimer = setTimeout(() => {
+	await new Promise(
+		/** @param {(value?: void) => void} resolve */ (resolve, reject) => {
+			let killTimer;
+			let exitTimer;
+			const finish = () => {
+				clearTimeout(killTimer);
+				clearTimeout(exitTimer);
 				child.removeListener("exit", finish);
 				child.removeListener("error", finish);
-				processes.set(id, child);
-				reject(new errs.InternalError(`OAuth2 Proxy #${id} did not exit after SIGKILL`));
-			}, 1000);
-			if (child.kill("SIGKILL") === false) finish();
-		}, 5000);
-		if (child.kill("SIGTERM") === false) finish();
-	});
+				resolve();
+			};
+			child.once("exit", finish);
+			child.once("error", finish);
+			killTimer = setTimeout(() => {
+				exitTimer = setTimeout(() => {
+					child.removeListener("exit", finish);
+					child.removeListener("error", finish);
+					processes.set(id, child);
+					reject(new errs.InternalError(`OAuth2 Proxy #${id} did not exit after SIGKILL`));
+				}, 1000);
+				if (child.kill("SIGKILL") === false) finish();
+			}, 5000);
+			if (child.kill("SIGTERM") === false) finish();
+		},
+	);
 };
 const dataPath = process.env.DATA_PATH || "/data";
 

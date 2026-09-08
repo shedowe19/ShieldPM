@@ -554,11 +554,12 @@ const internalGitOps = {
 		}
 
 		// Export Settings (excluding gitops-config to avoid overwriting credentials)
-		for (const [model, directory, graph] of [
+		/** @typedef {[import("objection").ModelClass<AccessList | CloudflaredTunnel | DdnsProvider>, string, string | null]} ModelExport */
+		for (const [model, directory, graph] of /** @type {ModelExport[]} */ ([
 			[AccessList, "access-lists", "[items,clients]"],
 			[CloudflaredTunnel, "cloudflared-tunnels", null],
 			[DdnsProvider, "ddns-providers", null],
-		]) {
+		])) {
 			const query = model.query();
 			if (model !== DdnsProvider) query.where("is_deleted", 0);
 			if (graph) query.withGraphFetched(graph);

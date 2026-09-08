@@ -218,7 +218,8 @@ router
 		});
 
 		res.clearCookie("shieldpm_oidc");
-		res.status(200).send(data);
+		res.locals.refreshCsrfToken?.(data.token);
+		res.status(200).send({ ...data, csrfToken: res.locals.csrfToken });
 	})
 
 	/**
@@ -444,10 +445,12 @@ router
 
 			// Clear the backup cookie
 			res.clearCookie("shieldpm_jwt_original");
+			res.locals.refreshCsrfToken?.(originalToken);
 
 			// Respond with user/expiry so frontend AuthStore can update its state
 			res.status(200).send({
 				expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
+				csrfToken: res.locals.csrfToken,
 				user: {
 					id: payload.attrs?.id || payload.id,
 				},

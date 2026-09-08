@@ -34,8 +34,12 @@ describe("third review Nginx activation and static location regressions", () => 
 		await fs.promises.rm(directory, { recursive: true, force: true });
 	});
 	const model = (enabled = true) => ({
+		transaction: (callback) => callback({}),
 		query: () => ({
-			findById: () => ({ select: async () => ({ enabled, is_deleted: false }) }),
+			findById: () => ({
+				withGraphFetched: async () => host({ enabled, is_deleted: false }),
+				forUpdate: async () => host({ enabled }),
+			}),
 			where: () => ({ patch: vi.fn().mockResolvedValue(1) }),
 		}),
 	});

@@ -83,6 +83,16 @@ Pfad: `frontend/src/components/ui/`
   Peerwechsel oder Schließen werden verspätete Kopierantworten ignoriert und der Bestätigungstimer entfernt;
   Clipboard-Fehler nutzen die bestehende Toast-Fehlermeldung. Die Dialogtests prüfen Ablehnung, Peerwechsel und Cleanup.
 
+## Fehler beim Laden von Oberflächen
+
+`RouteErrorBoundary.tsx` zeigt einen lokalisierten Fehler mit Neuladen-Aktion und fokussiert die Fehlerüberschrift.
+Der Router verwendet diese Grenze auch für die erstmalige Einrichtung, zusammen mit einem `Suspense`-Ladebildschirm.
+Damit kann ein fehlgeschlagener Setup-Chunk beim ersten Start nicht den gesamten React-Baum beenden.
+`Router.test.tsx` prüft die Einrichtung zusätzlich zu den öffentlichen und angemeldeten Routen.
+
+Der aus der Sidebar gestartete KI-Chat besitzt dieselbe Fehlergrenze ausschließlich um seinen dynamischen Inhalt.
+Seine Fehlermeldung erscheint separat; Navigation und aktive Seite bleiben verfügbar. Siehe [AI-Agent](../module/ai-agent.md).
+
 ## Verwandte Seiten
 
 - [Screens & Pages](./screens.md)

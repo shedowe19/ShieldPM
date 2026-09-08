@@ -28,6 +28,14 @@ const BACKUP_CODE_COUNT = 8;
 const BACKUP_CODE_LENGTH = 10; // chars (alphanumeric)
 const PASSKEY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
+/**
+ * @typedef {object} DuoConfig
+ * @property {string} clientId
+ * @property {string} clientSecret
+ * @property {string} apiHost
+ * @property {string} redirectUrl
+ */
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -80,10 +88,10 @@ const setupTotp = async (userId, userEmail) => {
 		secret,
 		issuer: APP_NAME,
 		label: userEmail,
-		algorithm: "SHA1",
+		algorithm: "sha1",
 		digits: 6,
 		period: 30,
-		type: "totp",
+		strategy: "totp",
 	});
 	const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
 
@@ -131,7 +139,8 @@ const verifyTotp = async (userId, code) => {
 	const records = await UserTwoFa.query().where({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
 	for (const record of records) {
 		const verification = verifySync({ token: code, secret: record.secret });
-		if (!verification.valid || verification.timeStep <= (record.counter || 0)) continue;
+		if (!verification.valid || !("timeStep" in verification) || verification.timeStep <= (record.counter || 0))
+			continue;
 
 		// A successful TOTP may only authenticate once. Compare-and-swap also
 		// prevents two simultaneous requests from consuming the same time step.
@@ -234,7 +243,7 @@ const validateYubikeyOtp = (otp) => {
  * @param {number} userId
  * @param {string} otp
  * @param {string} [label]
- * @returns {Promise<UserTwoFa>}
+ * @returns {Promise<import("objection").ModelObject<UserTwoFa> & {backup_codes?: string[]}>}
  */
 const addYubikey = async (userId, otp, label = "YubiKey") => {
 	const { deviceId } = await validateYubikeyOtp(otp);
@@ -292,7 +301,7 @@ const PASSKEY_ORIGIN = process.env.PASSKEY_ORIGIN || null; // null = derive dyna
 
 /**
  * Derive rpID and origin from the request when not explicitly configured.
- * @param {object} req  Express request object
+ * @param {import("express").Request} req  Express request object
  * @returns {{ rpID: string, origin: string }}
  */
 const getPasskeyContext = (req) => {
@@ -337,7 +346,9 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
 	const excludeCredentials = existingPasskeys.map((pk) => ({
 		id: pk.secret,
 		type: "public-key",
-		transports: pk.transports ? pk.transports.split(",") : [],
+		transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
+			pk.transports ? pk.transports.split(",") : []
+		),
 	}));
 
 	const user = await userModel.query().findById(userId);
@@ -374,7 +385,8 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
  * Complete passkey registration.
  * @param {number} userId
  * @param {string} challengeId
- * @param {object} registrationResponse  Credential from navigator.credentials.create()
+ * @param {import("@simplewebauthn/server").RegistrationResponseJSON} registrationResponse Credential from navigator.credentials.create()
+ * @param {import("express").Request} req
  * @param {string} [label]
  * @returns {Promise<{ backupCodes: string[] }>}
  */
@@ -444,7 +456,9 @@ const beginPasskeyAuthentication = async (userId, req) => {
 	const allowCredentials = passkeys.map((pk) => ({
 		id: pk.secret,
 		type: "public-key",
-		transports: pk.transports ? pk.transports.split(",") : [],
+		transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
+			pk.transports ? pk.transports.split(",") : []
+		),
 	}));
 
 	const options = await generateAuthenticationOptions({
@@ -470,7 +484,8 @@ const beginPasskeyAuthentication = async (userId, req) => {
  * Complete passkey authentication.
  * @param {number} userId
  * @param {string} challengeId
- * @param {object} authResponse  Credential from navigator.credentials.get()
+ * @param {import("@simplewebauthn/server").AuthenticationResponseJSON} authResponse Credential from navigator.credentials.get()
+ * @param {import("express").Request} req
  * @returns {Promise<boolean>}
  */
 const completePasskeyAuthentication = async (userId, challengeId, authResponse, req) => {
@@ -513,7 +528,9 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 			id: passkey.secret,
 			publicKey: new Uint8Array(publicKeyBuffer),
 			counter: passkey.counter,
-			transports: passkey.transports ? passkey.transports.split(",") : [],
+			transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
+				passkey.transports ? passkey.transports.split(",") : []
+			),
 		},
 	});
 
@@ -562,8 +579,8 @@ const createDuoClient = (duoConfig) => {
 /**
  * Save Duo Security configuration for a user and verify connectivity.
  * @param {number} userId
- * @param {object} config
- * @returns {Promise<UserTwoFa>}
+ * @param {DuoConfig} config
+ * @returns {Promise<import("objection").ModelObject<UserTwoFa> & {backup_codes?: string[]}>}
  */
 const setupDuo = async (userId, config) => {
 	const { clientId, clientSecret, apiHost, redirectUrl } = config;

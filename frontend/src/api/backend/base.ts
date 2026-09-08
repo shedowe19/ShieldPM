@@ -64,6 +64,52 @@ function buildBody(data?: object): string | undefined {
 	}
 }
 
+async function fetchWithCsrfRecovery(
+	url: string,
+	options: RequestInit,
+	sessionRevision: number,
+	silentAuth = false,
+): Promise<Response> {
+	const response = await fetch(url, options);
+	if (response.status !== 403 || sessionRevision !== AuthStore.sessionRevision || options.signal?.aborted) {
+		return response;
+	}
+	const rejected = await response
+		.clone()
+		.json()
+		.catch(() => null);
+	// This marker is emitted only by CSRF middleware, before a route can mutate data.
+	if (
+		rejected?.error?.code !== 403 ||
+		rejected.error.reason !== "EBADCSRFTOKEN" ||
+		sessionRevision !== AuthStore.sessionRevision ||
+		options.signal?.aborted
+	) {
+		return response;
+	}
+
+	const health = await fetch(buildUrl({ url: "/" }), {
+		method: "GET",
+		headers: buildAuthHeader(),
+		credentials: "include",
+		signal: options.signal,
+	});
+	const refreshed = await processResponse<{ csrfToken?: string }>(health, sessionRevision, silentAuth);
+	if (
+		sessionRevision !== AuthStore.sessionRevision ||
+		options.signal?.aborted ||
+		!refreshed?.csrfToken ||
+		AuthStore.csrfToken !== refreshed.csrfToken
+	) {
+		return response;
+	}
+
+	const headers = new Headers(options.headers);
+	headers.set("X-XSRF-TOKEN", refreshed.csrfToken);
+	// Fetch directly: a second rejection must never start another recovery loop.
+	return fetch(url, { ...options, headers });
+}
+
 async function processResponse<T = DynamicResponse>(
 	response: Response,
 	sessionRevision: number,
@@ -77,6 +123,12 @@ async function processResponse<T = DynamicResponse>(
 		if (!silentAuth) {
 			window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
 		}
+	}
+
+	// Cookie identity changes can return no JSON (for example logout).
+	const csrfHeader = response.headers?.get("X-XSRF-TOKEN");
+	if (sessionRevision === AuthStore.sessionRevision && csrfHeader) {
+		AuthStore.setCsrfToken(csrfHeader);
 	}
 
 	// Logout and several DELETE endpoints intentionally return no response body.
@@ -200,7 +252,12 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 		body = buildBody(data as Record<string, unknown>);
 	}
 
-	const res = await fetch(apiUrl, { method, headers, body, credentials: "include" });
+	const res = await fetchWithCsrfRecovery(
+		apiUrl,
+		{ method, headers, body, credentials: "include" },
+		sessionRevision,
+		silentAuth,
+	);
 	await throwDownloadError(res, sessionRevision, silentAuth);
 	const bl = await res.blob();
 	const u = window.URL.createObjectURL(bl);
@@ -241,7 +298,12 @@ export async function post<T = DynamicResponse>(
 	}
 
 	const signal = abortController?.signal;
-	const response = await fetch(apiUrl, { method, headers, body, signal, credentials: "include" });
+	const response = await fetchWithCsrfRecovery(
+		apiUrl,
+		{ method, headers, body, signal, credentials: "include" },
+		sessionRevision,
+		silentAuth,
+	);
 	return processResponse(response, sessionRevision, silentAuth, rawResponse);
 }
 
@@ -258,7 +320,12 @@ export async function put<T = DynamicResponse>(
 	};
 	const signal = abortController?.signal;
 	const body = buildBody(data);
-	const response = await fetch(apiUrl, { method, headers, body, signal, credentials: "include" });
+	const response = await fetchWithCsrfRecovery(
+		apiUrl,
+		{ method, headers, body, signal, credentials: "include" },
+		sessionRevision,
+		silentAuth,
+	);
 	return processResponse(response, sessionRevision, silentAuth);
 }
 
@@ -274,7 +341,12 @@ export async function del<T = DynamicResponse>(
 		[contentTypeHeader]: "application/json",
 	};
 	const signal = abortController?.signal;
-	const response = await fetch(apiUrl, { method, headers, signal, credentials: "include" });
+	const response = await fetchWithCsrfRecovery(
+		apiUrl,
+		{ method, headers, signal, credentials: "include" },
+		sessionRevision,
+		silentAuth,
+	);
 	return processResponse<T>(response, sessionRevision, silentAuth);
 }
 

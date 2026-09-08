@@ -217,7 +217,7 @@ const internalAccessList = {
 	 * @param  {boolean} [data.mtls_use_internal]
 	 * @param  {Object}  [data.meta]
 	 * @param  {Array<{username: string, password?: string}>} [data.items]
-	 * @param  {Array<{address: string, directive: string}>}  [data.clients]
+	 * @param  {Array<{address: string, directive: "allow" | "deny"}>}  [data.clients]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {

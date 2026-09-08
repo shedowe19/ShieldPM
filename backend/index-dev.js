@@ -85,7 +85,12 @@ async function start() {
 		await getCompiledSchema();
 
 		const port = 3000;
-		app.listen(port, "127.0.0.1", () => {
+		app.listen(port, "127.0.0.1", (err) => {
+			if (err) {
+				logger.error("Backend failed to listen:", err);
+				process.exit(1);
+				return;
+			}
 			logger.info(`Backend listening on port ${port}`);
 		});
 	} catch (err) {

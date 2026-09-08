@@ -56,6 +56,10 @@
 						],
 						"additionalProperties": false,
 						"properties": {
+							"csrfToken": {
+								"description": "CSRF token bound to the impersonated user's session",
+								"type": "string"
+							},
 							"expires": {
 								"description": "Token Expiry Timestamp",
 								"type": "string",

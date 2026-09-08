@@ -172,7 +172,7 @@ const csrfCookieOptions = {
 	path: "/",
 };
 
-const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
+const { doubleCsrfProtection, generateCsrfToken, invalidCsrfTokenError } = doubleCsrf({
 	getSecret: () => CSRF_SECRET,
 	cookieName: "XSRF-TOKEN",
 	cookieOptions: {
@@ -232,6 +232,25 @@ app.use(async (req, res, next) => {
 
 // Generate Token and set cookie/local
 app.use((req, res, next) => {
+	// Session handlers issue cookies after this middleware. Regenerate against
+	// their outgoing browser identity so its first write needs no extra GET.
+	res.locals.refreshCsrfToken = (accessToken) => {
+		const nextRequest = Object.create(req);
+		nextRequest.headers = { ...req.headers };
+		delete nextRequest.headers.authorization;
+		nextRequest.cookies = { ...req.cookies, shieldpm_jwt: accessToken };
+		const token = generateCsrfToken(nextRequest, res, {
+			cookieOptions: { ...csrfCookieOptions, secure: isHttpsRequest(req) },
+		});
+		res.locals.csrfToken = token;
+		// Logout keeps its 204 contract; clients can read the new anonymous token.
+		res.set("X-XSRF-TOKEN", token);
+	};
+	// Refresh success sets its matching token through setAuthCookies. A delayed
+	// failure must not overwrite a newer login's CSRF cookie either.
+	if (req.method === "POST" && /^\/(api\/)?tokens\/refresh$/.test(req.path)) {
+		return next();
+	}
 	const token = generateCsrfToken(req, res, {
 		cookieOptions: {
 			...csrfCookieOptions,
@@ -304,6 +323,11 @@ app.use((err, _req, res, next) => {
 			message: err.public ? err.message : "Internal Error",
 		},
 	};
+	// This middleware rejects the request before any route can perform a write.
+	// Clients may obtain fresh CSRF state and retry this specific rejection once.
+	if (err === invalidCsrfTokenError && status === 403) {
+		payload.error.reason = "EBADCSRFTOKEN";
+	}
 
 	if (typeof err.message_i18n !== "undefined") {
 		payload.error.message_i18n = err.message_i18n;

@@ -9,6 +9,8 @@ const internalSetting = {
 	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
 	 * @param  {String}  data.id
+	 * @param  {import("../models/setting.js").default["value"]} [data.value]
+	 * @param  {import("../models/setting.js").default["meta"]} [data.meta]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {

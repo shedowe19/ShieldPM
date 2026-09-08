@@ -115,6 +115,7 @@ const internalGitDeploy = {
 		const syncTask = (async () => {
 			const dir = getWebsiteDir(hostId);
 			const gitDir = path.join(dir, ".git");
+			let stagingDir = null;
 
 			try {
 				logger.info(
@@ -139,14 +140,14 @@ const internalGitDeploy = {
 						logger.info(
 							`[git-deploy] Branch changed from '${currentBranch}' to '${targetBranch}' for host ${hostId}. Re-cloning...`,
 						);
-						fs.rmSync(dir, { recursive: true, force: true });
-						fs.mkdirSync(dir, { recursive: true });
+						// Keep the published checkout intact until its replacement is complete.
+						stagingDir = fs.mkdtempSync(`${dir}.clone-`);
 						repoExists = false; // Mark as not existing so we clone
 					}
 				}
 
 				// Check if repo exists (it might have been deleted above)
-				if (fs.existsSync(gitDir)) {
+				if (repoExists) {
 					// Pull latest changes
 					logger.info(`[git-deploy] Pulling updates for host ${hostId}...`);
 
@@ -169,7 +170,7 @@ const internalGitDeploy = {
 					await git.clone({
 						fs,
 						http,
-						dir,
+						dir: stagingDir || dir,
 						url: host.git_repo_url,
 						ref: host.git_branch || "main",
 						singleBranch: true,
@@ -178,7 +179,11 @@ const internalGitDeploy = {
 					});
 				}
 
-				// Network operations can outlive a host deletion or a configuration change.
+				// Finish asynchronous Git reads before validating the configuration for publication.
+				const commits = await git.log({ fs, dir: stagingDir || dir, depth: 1 });
+				const latestCommit = commits[0]?.oid || null;
+
+				// Git operations can outlive a host deletion or a configuration change.
 				const currentHost = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
 				if (
 					currentHost?.forward_scheme !== "path" ||
@@ -193,9 +198,24 @@ const internalGitDeploy = {
 					};
 				}
 
-				// Get current commit SHA
-				const commits = await git.log({ fs, dir, depth: 1 });
-				const latestCommit = commits[0]?.oid || null;
+				if (stagingDir) {
+					const previousDir = `${stagingDir}.previous`;
+					// mkdtemp is private while cloning; preserve the published root's worker-readable mode.
+					fs.chmodSync(stagingDir, fs.statSync(dir).mode & 0o777);
+					fs.renameSync(dir, previousDir);
+					try {
+						fs.renameSync(stagingDir, dir);
+					} catch (err) {
+						fs.renameSync(previousDir, dir);
+						throw err;
+					}
+					stagingDir = null;
+					try {
+						fs.rmSync(previousDir, { recursive: true, force: true });
+					} catch (err) {
+						logger.error(`[git-deploy] Could not remove previous checkout for host ${hostId}:`, err);
+					}
+				}
 
 				// Update host status
 
@@ -235,6 +255,14 @@ const internalGitDeploy = {
 				});
 
 				return { success: false, message: errorMessage };
+			} finally {
+				if (stagingDir) {
+					try {
+						fs.rmSync(stagingDir, { recursive: true, force: true });
+					} catch (err) {
+						logger.error(`[git-deploy] Could not remove incomplete checkout for host ${hostId}:`, err);
+					}
+				}
 			}
 		})().finally(() => activeSyncs.delete(hostId));
 		activeSyncs.set(hostId, syncTask);

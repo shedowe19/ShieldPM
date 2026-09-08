@@ -44,6 +44,10 @@ Cloudflare-Aktualisierungen warten auch bei einem einzelnen Fehler auf sämtlich
 
 Ein erneuter Timer-Start ersetzt sowohl das Intervall als auch die verzögerte Erstabfrage. Fehler beim Leeren einer benutzerdefinierten HTTP-Antwort besitzen einen eigenen Listener und können den Backend-Prozess nicht als unbehandeltes Stream-Ereignis beenden.
 
+Ein gespeicherter `last_error` löst beim nächsten regulären Intervall einen erneuten Updateversuch aus, auch wenn die WAN-Adresse unverändert geblieben ist. Das betrifft insbesondere fehlgeschlagene erzwungene Aktualisierungen nach Domain- oder Zugangsdatenänderungen. Nach einem erfolgreichen Versuch wird der Fehler gelöscht; weitere Intervalle warten wieder auf eine IP-Änderung. `sixth-integrations-ddns-retry.spec.js` prüft Fehler, automatischen Wiederholungsversuch und anschließenden Ruhezustand.
+
+Die Statusfelder `last_ipv4`, `last_ipv6`, `last_updated_on` und `last_error` sind in der Datenbank nullable und dürfen auch in API-Antworten `null` enthalten. Das veröffentlichte Antwortschema bildet diese Werte ausdrücklich ab. `sixth-integrations-ddns-response-contract.spec.js` validiert vollständige Erstellungs- und Listenantworten des echten HTTP-Routers mit echten SQLite-Migrationen und Modellen gegen das zusammengesetzte OpenAPI-Schema.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Setup from ".";
 
@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 function fillSetup(password: string) {
-	render(
+	const view = render(
 		<QueryClientProvider client={client}>
 			<Setup />
 		</QueryClientProvider>,
@@ -35,6 +35,7 @@ function fillSetup(password: string) {
 	fireEvent.change(screen.getByLabelText("email-address"), { target: { value: "admin@example.test" } });
 	fireEvent.change(screen.getByLabelText("user.new-password"), { target: { value: password } });
 	fireEvent.click(screen.getByRole("button", { name: "save" }));
+	return view;
 }
 
 describe("Setup", () => {
@@ -57,5 +58,22 @@ describe("Setup", () => {
 		fillSetup("valid-password");
 		await waitFor(() => expect(refetch).toHaveBeenCalledWith({ queryKey: ["health"] }));
 		expect(mocks.createUser).toHaveBeenCalledTimes(1);
+	});
+	it("does not start an automatic login after leaving setup while user creation is pending", async () => {
+		let finishCreation!: (user: { id: number; email: string }) => void;
+		mocks.createUser.mockReturnValue(
+			new Promise((resolve) => {
+				finishCreation = resolve;
+			}),
+		);
+		const refetch = vi.spyOn(client, "refetchQueries");
+		const view = fillSetup("valid-password");
+		await waitFor(() => expect(mocks.createUser).toHaveBeenCalledTimes(1));
+		view.unmount();
+		await act(async () => {
+			finishCreation({ id: 1, email: "admin@example.test" });
+		});
+		expect(mocks.login).not.toHaveBeenCalled();
+		expect(refetch).toHaveBeenCalledWith({ queryKey: ["health"] });
 	});
 });

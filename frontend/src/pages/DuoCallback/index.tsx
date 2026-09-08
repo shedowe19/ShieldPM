@@ -19,36 +19,45 @@ export default function DuoCallback() {
 	const [searchParams] = useSearchParams();
 	const [error, setError] = useState("");
 	const called = useRef(false);
+	const request = useRef<ReturnType<typeof complete2faDuoAuth> | null>(null);
 
 	useEffect(() => {
-		if (called.current) return;
-		called.current = true;
+		let active = true;
+		if (!called.current) {
+			called.current = true;
 
-		const duoCode = searchParams.get("duo_code");
-		const state = searchParams.get("state");
-		// Keep callback credentials in this request only, out of browser history.
-		navigate("/duo-callback", { replace: true });
+			const duoCode = searchParams.get("duo_code");
+			const state = searchParams.get("state");
+			// Keep callback credentials in this request only, out of browser history.
+			navigate("/duo-callback", { replace: true });
 
-		if (!duoCode) {
-			setError("Missing Duo authorization code or session token. Please try signing in again.");
-			return;
+			if (!duoCode) {
+				setError("Missing Duo authorization code or session token. Please try signing in again.");
+				return;
+			}
+
+			if (!state) {
+				setError("Duo authentication failed. Please try again.");
+				return;
+			}
+			request.current = complete2faDuoAuth(duoCode, state);
 		}
 
-		if (!state) {
-			setError("Duo authentication failed. Please try again.");
-			return;
-		}
-
-		complete2faDuoAuth(duoCode, state)
-			.then((response) => {
+		request.current
+			?.then((response) => {
+				if (!active) return;
 				completeLogin(response);
 				navigate("/", { replace: true });
 			})
 			.catch((err: unknown) => {
+				if (!active) return;
 				setError(
 					err instanceof Error && err.message ? err.message : "Duo authentication failed. Please try again.",
 				);
 			});
+		return () => {
+			active = false;
+		};
 	}, [completeLogin, navigate, searchParams]);
 
 	if (error) {

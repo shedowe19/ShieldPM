@@ -76,6 +76,10 @@ yarn test
 - `frontend/src/pages/Analytics/AnalyticsMapContent.test.tsx` rendert die lokal aus `world-atlas` gebündelte Länder-Topologie mit einem echten DE-Marker und prüft die SVG-Viewport-Transformationen für pointerzentriertes Scroll-Zoom sowie Ziehen. Damit bleibt die Analytics-Karte unabhängig von `react-simple-maps` und einem Laufzeit-CDN-Abruf.
 - `test/internal/proxy-host-pagination.spec.js` sichert für 1.000 synthetische Hosts die Seitengröße, Zählmetadaten sowie die Owner- und Such-Einschränkung vor dem Paging. `proxy-hosts-route-pagination.spec.js` deckt den optionalen API-Vertrag und die Legacy-Arrayantwort ab; `ProxyHosts/TableWrapper.test.tsx` sichert die 100er-Seite, Seitennavigation und die Rückkehr von einer nach Löschen leeren Seite.
 
+## Typprüfung des Backends
+
+`cd backend && node node_modules/typescript/bin/tsc --noEmit` prüft die JavaScript-Module unter `internal/`, `lib/` und `models/` samt importierten Abhängigkeiten mit ihren JSDoc-Verträgen. Die CI führt diese Prüfung vor den Backend-Tests aus. Modellfelder, QueryBuilder-Rückgaben und asynchrone Serviceverträge sind dabei typisiert; die Standardbibliothek umfasst die bereits von Node 26 unterstützten ES2023-APIs. Die Frontend-Typprüfung bleibt Bestandteil des Produktionsbuilds.
+
 ## Code-Qualität
 
 Biome wird für Linting und Formatting eingesetzt:
@@ -124,6 +128,16 @@ Mit Node.js 26.8.1 bestehen **998 Backend-Tests in 152 Dateien und 567 Frontend-
 Neue Tests prüfen echte Passkey-Signaturen mit konkurrierendem Zählerupdate, Graph-Rollbacks bei SQLite-Triggerfehlern, den tatsächlich ausgeführten CLI-Symlink, lange OpenSSL-SANs und Certbot-Sperren vor Hoständerungen. Verzögerte Cloudflared-, DDNS-, ChatOps- und Frontend-Antworten sichern die Reihenfolge und verhindern die Wiederherstellung veralteter Zustände. Router, AuthProvider, QueryClient und API-Client werden gemeinsam für OIDC-Übernahme, erforderlichen CSRF-Header und normalen Passwortlogin geprüft. Echte HTTP-Tests prüfen Callback-Cookiepfade und veröffentlichte Auth-Antwortschemas.
 
 Der Docker-Smoke rendert beide tatsächlichen gRPC-Vorlagen und prüft mit einem lokalen HTTP/2-Echo Methode, Pfad, Query und Body unter root und UID 1000. Die Python-Regression des Wiki-Generators erzeugt Seiten mit Vorlagenmarkern in ihren Namen und prüft unveränderte Knoten-/Kantenidentitäten. Ausführliche Abdeckung und Grenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
+
+## Regressionen des sechsten Durchgangs
+
+Mit Node.js 26.8.1 bestehen **1.061 Backend-Tests in 162 Dateien und 588 Frontend-Tests in 182 Dateien**, ohne Skips. Die 58 Python-Infrastrukturtests ergeben lokal 57 bestandene Tests und den dokumentierten Unix-Socket-Skip; GitHub CI muss alle 58 ausführen. Backend-Typprüfung, OpenAPI, Locale-Check, Frontend-TypeScript, Vite-Produktionsbuild und vollständiges Biome-Linting sind erfolgreich. Die lokalen Gesamtsuiten liefen nacheinander mit zwei Workern.
+
+Die neuen Regressionen prüfen aktuelle Hostgraphen und Metadaten bei verzögerten Nginx-Aufträgen, erhaltene Git-Checkouts bei Clone-/Veröffentlichungsfehlern und verspäteten Konfigurationsänderungen, DDNS-Wiederholungen nach fehlgeschlagenen erzwungenen Updates sowie tatsächliche nullable API-Antworten. SQLite und PGlite führen die relevanten Datenoperationen tatsächlich aus; Git-Tests verwenden temporäre Verzeichnisse.
+
+Echte HTTP-, RSA-, Cookie- und CSRF-Verträge sichern alle Sitzungsübergänge und den verspäteten Health-/Refresh-Fall. Nur eine ausdrücklich markierte CSRF-Ablehnung vor Ausführung der Route erlaubt nach aktuellem Health-Zustand einen einmaligen Client-Retry. Normale 403, eine zweite Ablehnung, Sitzungswechsel und Abbruch erlauben keine weitere Wiederholung. UI-Tests prüfen verspätete zweite Faktoren, Duo-Callbacks, Profilregistrierung und Setup sowie Fehleransichten bei lazy geladenen Modulen.
+
+Weitere Tests verwenden Telegrafs tatsächlich installierte Legacy-Abbruchsignale, erzeugen echte Express-Portkonflikte und prüfen die automatische GeoIP-Auswahl durch den Validator im Kindprozess. Der Workflow prüft Backend-JSDoc-Typen vor den Tests. Alle Abdeckungszahlen, Nachweise und verbleibenden Betriebsgrenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
 
 ## Verwandte Seiten
 

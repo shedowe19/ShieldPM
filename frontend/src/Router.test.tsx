@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 	loading: false,
 	failAnalyticsImport: false,
 	failDashboard: false,
+	setup: true,
 	renderDashboard: vi.fn(),
 	renderLogin: vi.fn(),
 }));
@@ -44,7 +46,7 @@ vi.mock("src/context", () => ({
 }));
 vi.mock("src/hooks/useHealth", () => ({
 	useHealth: () => ({
-		data: { setup: true, status: "OK" },
+		data: { setup: mocks.setup, status: "OK" },
 		isError: false,
 		isLoading: false,
 	}),
@@ -62,6 +64,9 @@ vi.mock("src/pages/Analytics", () => {
 	return { default: () => <div>Analytics</div> };
 });
 vi.mock("src/pages/Login", () => ({ default: () => mocks.renderLogin() }));
+vi.mock("src/pages/Setup", () => {
+	throw new Error("Setup chunk failed");
+});
 
 afterEach(async () => {
 	cleanup();
@@ -74,6 +79,7 @@ describe("Router", () => {
 	beforeEach(() => {
 		mocks.authenticated = false;
 		mocks.loading = false;
+		mocks.setup = true;
 		mocks.renderLogin.mockReset().mockReturnValue(<div>Login</div>);
 		mocks.failAnalyticsImport = false;
 		mocks.failDashboard = false;
@@ -111,6 +117,22 @@ describe("Router", () => {
 
 		expect(await screen.findByText("Duo callback")).toBeInTheDocument();
 		expect(screen.queryByText("Login")).not.toBeInTheDocument();
+	});
+
+	it("contains a failed initial-setup chunk within the router", async () => {
+		mocks.setup = false;
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		const { default: Router } = await import("./Router");
+		render(
+			<RouteErrorBoundary>
+				<div>Application remains mounted</div>
+				<Router />
+			</RouteErrorBoundary>,
+		);
+
+		expect(await screen.findByRole("alert")).toBeInTheDocument();
+		expect(screen.getByText("Application remains mounted")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Reload page" })).toBeInTheDocument();
 	});
 
 	it("shows a localized reload action when an authenticated route render fails", async () => {

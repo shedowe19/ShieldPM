@@ -5,9 +5,11 @@ vi.mock("dockerode", () => ({ default: class {} }));
 vi.mock("../../db.js", () => ({ default: () => ({}) }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
+		transaction: async (operation) => operation({}),
 		query: () => {
 			const query = {
 				findById: () => query,
+				forUpdate: () => query,
 				where: () => query,
 				withGraphFetched: () => query,
 				select: async () => state.host,

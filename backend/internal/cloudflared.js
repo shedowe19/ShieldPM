@@ -32,7 +32,7 @@ const internalCloudflared = {
 
 	/**
 	 * Start a tunnel
-	 * @param {CloudflaredTunnel} tunnel
+	 * @param {CloudflaredTunnel} snapshot
 	 */
 	start: (snapshot) =>
 		serialize(snapshot.id, async () => {
@@ -158,7 +158,7 @@ const internalCloudflared = {
 
 	/**
 	 * Restart a tunnel
-	 * @param {CloudflaredTunnel} tunnel
+	 * @param {CloudflaredTunnel} snapshot
 	 */
 	restart: (snapshot) =>
 		serialize(snapshot.id, async () => {

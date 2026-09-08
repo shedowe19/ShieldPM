@@ -1,6 +1,6 @@
 import { startAuthentication } from "@simplewebauthn/browser";
 import { AlertCircle, Key, Loader2, Lock, ShieldCheck, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { begin2faDuoAuth, begin2faPasskeyAuth, complete2faPasskeyAuth, verify2faCode } from "src/api/backend";
 import type { TokenResponse } from "src/api/backend/responseTypes";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -31,10 +31,17 @@ const methodLabel = (method: string) =>
 		: method;
 
 export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFAStepProps) {
+	const mounted = useRef(false);
 	const [activeMethod, setActiveMethod] = useState<ActiveMethod>(null);
 	const [code, setCode] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
 
 	const handleCodeSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -48,12 +55,13 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 				method: activeMethod as "totp" | "yubikey" | "backup_code",
 				code: code.trim(),
 			});
+			if (!mounted.current) return;
 			AuthStore.set(response);
 			onSuccess(response);
 		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+			if (mounted.current && err instanceof Error) setError(err.message);
 		} finally {
-			setLoading(false);
+			if (mounted.current) setLoading(false);
 		}
 	};
 
@@ -64,14 +72,17 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 		setLoading(true);
 		try {
 			const { options, challengeId } = await begin2faPasskeyAuth(pendingToken);
+			if (!mounted.current) return;
 			const authResponse = await startAuthentication({ optionsJSON: options as any });
+			if (!mounted.current) return;
 			const response = await complete2faPasskeyAuth(pendingToken, challengeId, authResponse);
+			if (!mounted.current) return;
 			AuthStore.set(response);
 			onSuccess(response);
 		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+			if (mounted.current && err instanceof Error) setError(err.message);
 		} finally {
-			setLoading(false);
+			if (mounted.current) setLoading(false);
 		}
 	};
 
@@ -82,8 +93,10 @@ export default function TwoFAStep({ pendingToken, methods, onSuccess }: TwoFASte
 		setLoading(true);
 		try {
 			const { authUrl } = await begin2faDuoAuth(pendingToken);
+			if (!mounted.current) return;
 			window.location.href = authUrl;
 		} catch (err) {
+			if (!mounted.current) return;
 			if (err instanceof Error) setError(err.message);
 			setLoading(false);
 		}

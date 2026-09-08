@@ -283,6 +283,13 @@ function PasskeySetup({
 	const [label, setLabel] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	const mounted = useRef(false);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
 	useEffect(() => {
 		onBusyChange(loading);
 		return () => onBusyChange(false);
@@ -294,18 +301,21 @@ function PasskeySetup({
 		setLoading(true);
 		try {
 			const { options, challengeId } = await beginPasskeyRegistration("me");
+			if (!mounted.current) return;
 			const registrationResponse = await startRegistration({ optionsJSON: options as any });
+			if (!mounted.current) return;
 			const result = await completePasskeyRegistration(
 				"me",
 				challengeId,
 				registrationResponse,
 				label || intl.formatMessage({ id: "2fa.method.passkey" }),
 			);
+			if (!mounted.current) return;
 			onComplete(result.backupCodes);
 		} catch (err) {
-			if (err instanceof Error) setError(err.message);
+			if (mounted.current && err instanceof Error) setError(err.message);
 		} finally {
-			setLoading(false);
+			if (mounted.current) setLoading(false);
 		}
 	};
 

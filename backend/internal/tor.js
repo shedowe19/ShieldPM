@@ -177,7 +177,7 @@ const sendAuthenticatedCommand = async (command) => {
 
 /**
  * Syncs the onion address to the Proxy Host's domain_names
- * @param {TorOnion} service
+ * @param {TorOnion} serviceSnapshot
  * @param {boolean} [skip_reload=false]
  * @returns {Promise<void>}
  */
@@ -247,7 +247,7 @@ const internalTor = {
 	/**
 	 * Atomically update a service and move its onion domain between authorized hosts.
 	 * Both Nginx configs remain recoverable until the database transaction commits.
-	 * @param {Access} access
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {TorOnion} service
 	 * @param {Object} payload
 	 * @returns {Promise<TorOnion>}
@@ -596,7 +596,7 @@ const internalTor = {
 
 	/**
 	 * Restart an Onion Service
-	 * @param {TorOnion} service
+	 * @param {TorOnion} snapshot
 	 * @returns {Promise<boolean>}
 	 */
 	restart: (snapshot) =>

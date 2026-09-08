@@ -86,6 +86,11 @@ protokolliert. Administratoren mit Sichtbarkeit `all` behalten die Möglichkeit,
 `react-markdown` und `remark-gfm` aus der initialen Anwendungshülle. Der Loader bleibt nach dem Schließen gemountet,
 sodass es bei responsiven Wechseln nur eine Dialoginstanz gibt und der lokale Nachrichtenverlauf erhalten bleibt.
 
+Der dynamische Chat-Inhalt besitzt eine eigene `RouteErrorBoundary`, da der Sidebar-Loader außerhalb der
+Routenansicht liegt. Schlägt das Laden oder Rendern des Chats fehl, bleiben Navigation und aktuelle Seite erhalten;
+eine lokalisierte Fehlermeldung mit Neuladen-Aktion erscheint separat. `AiChatLauncher.error.test.tsx` sichert einen
+fehlgeschlagenen Chunk-Import und die weiterhin verfügbare Anwendung ab.
+
 ## Integration mit ChatOps
 
 Über Telegram kann der AI-Agent gesteuert werden. Dafür synthetisiert `chat.js` temporäre JWT-Tokens (`ctx.shieldAccess`) für authentifizierte Interaktion.

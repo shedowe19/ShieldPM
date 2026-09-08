@@ -354,14 +354,13 @@ if (currentGoacla.includes('geoip-database') === false) {
         fatal("All goaccess geoip databases need to be moved from etc/goaccess/geoip to goaccess/geoip inside the mounted data folder!");
     }
 
-    if (checkFile('/data/goaccess/geoip/GeoLite2-City.mmdb')) {
-        currentGoacla += " --geoip-database=/data/goaccess/geoip/GeoLite2-City.mmdb";
-    }
-    if (checkFile('/data/goaccess/geoip/GeoLite2-Country.mmdb')) {
-        currentGoacla += " --geoip-database=/data/goaccess/geoip/GeoLite2-Country.mmdb";
-    }
-    if (checkFile('/data/goaccess/geoip/GeoLite2-ASN.mmdb')) {
-        currentGoacla += " --geoip-database=/data/goaccess/geoip/GeoLite2-ASN.mmdb";
+    for (const kind of ['City', 'Country', 'ASN']) {
+        // Preserve dedicated GoAccess files; otherwise share the installer/Compose database.
+        const database = [
+            `/data/goaccess/geoip/GeoLite2-${kind}.mmdb`,
+            `/data/nginx/GeoLite2-${kind}.mmdb`,
+        ].find(checkFile);
+        if (database) currentGoacla += ` --geoip-database=${database}`;
     }
 
     // Only export if changed and not already exported by ensureDefault

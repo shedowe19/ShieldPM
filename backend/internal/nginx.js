@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import _ from "lodash";
 import punycode from "punycode.js";
 import errs from "../lib/error.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import { getTerminalAccessToken } from "../lib/terminal-access.js";
 import utils from "../lib/utils.js";
 import { debug, nginx as logger } from "../logger.js";
@@ -14,7 +15,17 @@ const __dirname = dirname(__filename);
 
 import internalAnubis from "./anubis.js";
 
+/** @type {Promise<unknown>} */
 let configurationQueue = Promise.resolve();
+
+/** Merge status into current metadata under a short row lock, after slow Nginx operations finish. */
+const updateHostStatus = (model, host, status) =>
+	model.transaction(async (trx) => {
+		const current = await model.query(trx).findById(host.id).forUpdate();
+		const meta = _.assign({}, sanitizeHostMeta(current?.meta ?? host.meta), status);
+		if (current) await model.query(trx).where("id", host.id).patch({ meta });
+		return meta;
+	});
 
 const internalNginx = {
 	/**
@@ -34,7 +45,12 @@ const internalNginx = {
 	configure: (model, host_type, host, options = {}) =>
 		internalNginx.withConfigurationLock(() => internalNginx.configureHost(model, host_type, host, options)),
 
-	/** Serialize config changes and certificate activation; callbacks must not call configure(). */
+	/**
+	 * Serialize config changes and certificate activation; callbacks must not call configure().
+	 * @template T
+	 * @param {() => T | PromiseLike<T>} callback
+	 * @returns {Promise<T>}
+	 */
 	withConfigurationLock: (callback) => {
 		const operation = configurationQueue.then(callback);
 		configurationQueue = operation.catch(() => {});
@@ -44,10 +60,14 @@ const internalNginx = {
 	configureHost: async (model, host_type, hostSnapshot, options = {}) => {
 		const skip_reload = options.skip_reload || false;
 		let combined_meta = {};
-		// Bulk jobs may have loaded this snapshot before a concurrent disable/delete completed.
-		const current = await model.query().findById(hostSnapshot.id).select("enabled", "is_deleted");
-		const host =
-			!current || current.is_deleted || !current.enabled ? { ...hostSnapshot, enabled: false } : hostSnapshot;
+		// A bulk snapshot may predate a completed host, certificate or access-list change.
+		// Refresh the full render graph inside the configuration lock, not only its lifecycle flags.
+		const graph =
+			internalNginx.getFileFriendlyHostType(host_type) === "proxy_host"
+				? "[host_domains,certificate,access_list.[clients,items]]"
+				: "certificate";
+		const current = await model.query().findById(hostSnapshot.id).withGraphFetched(graph);
+		const host = !current || current.is_deleted ? { ...(current || hostSnapshot), enabled: false } : current;
 
 		// 1. Backup existing config if it exists
 		await internalNginx.backupConfig(host_type, host);
@@ -71,13 +91,9 @@ const internalNginx = {
 			else await internalNginx.reload();
 
 			// 4. Verification successful
-			combined_meta = _.assign({}, host.meta, {
+			combined_meta = await updateHostStatus(model, host, {
 				nginx_online: Boolean(host.enabled),
 				nginx_err: null,
-			});
-
-			await model.query().where("id", host.id).patch({
-				meta: combined_meta,
 			});
 
 			// 5. Delete backup (commit change)
@@ -96,15 +112,11 @@ const internalNginx = {
 			// Then restore the working backup
 			await internalNginx.restoreConfig(host_type, host);
 
-			// Update meta with error
-			combined_meta = _.assign({}, host.meta, {
+			if (!skip_reload) await internalNginx.reload();
+			// Update metadata only after restoring the running configuration, even if the database fails.
+			combined_meta = await updateHostStatus(model, host, {
 				nginx_online: false,
 				nginx_err: `[Rolled back] Configuration failed: ${err.message}`,
-			});
-
-			if (!skip_reload) await internalNginx.reload();
-			await model.query().where("id", host.id).patch({
-				meta: combined_meta,
 			});
 		}
 		return combined_meta;
@@ -465,7 +477,7 @@ const internalNginx = {
 
 	/**
 	 * Read nginx log file contents.
-	 * @param   {Access}  access
+	 * @param   {import("../lib/types.js").Access}  access
 	 * @param   {"error"|"access"}  logType
 	 * @returns {Promise<string>}
 	 */

@@ -9,6 +9,13 @@ import now from "./now_helper.js";
 Model.knex(db());
 
 class AccessListClient extends Model {
+	/** @type {number} */
+	access_list_id;
+	/** @type {string} */
+	address;
+	/** @type {"allow" | "deny"} */
+	directive;
+
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());
 		this.modified_on = /** @type {any} */ (now());

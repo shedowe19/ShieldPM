@@ -66,7 +66,12 @@ async function appStart() {
 		await internalChat.init();
 		internalGitDeploy.init();
 
-		const server = app.listen("/run/shieldpm/shieldpm.sock", () => {
+		const server = app.listen("/run/shieldpm/shieldpm.sock", (err) => {
+			if (err) {
+				logger.error("Backend socket failed to listen:", err);
+				process.exit(1);
+				return;
+			}
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);
 
 			// Initialize Terminal WebSocket (needs server instance)

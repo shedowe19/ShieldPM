@@ -213,7 +213,13 @@ function Router() {
 	}
 
 	if (!health.data?.setup) {
-		return <Setup />;
+		return (
+			<RouteErrorBoundary>
+				<Suspense fallback={<LoadingPage />}>
+					<Setup />
+				</Suspense>
+			</RouteErrorBoundary>
+		);
 	}
 
 	// Login claims OIDC cookies on mount, so wait for the cookie refresh to finish.

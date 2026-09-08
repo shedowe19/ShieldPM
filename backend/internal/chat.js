@@ -69,11 +69,27 @@ const internalChat = {
 			const lifecycle = new AbortController();
 			botLifecycles.set(bot, lifecycle);
 			const callApi = bot.telegram.callApi.bind(bot.telegram);
-			bot.telegram.callApi = (method, payload, options = {}) =>
-				callApi(method, payload, {
-					...options,
-					signal: options.signal ? AbortSignal.any([options.signal, lifecycle.signal]) : lifecycle.signal,
-				});
+			bot.telegram.callApi = async (method, payload, options = {}) => {
+				if (!options.signal) return callApi(method, payload, { ...options, signal: lifecycle.signal });
+				// Telegraf polling uses abort-controller's signal, which native AbortSignal.any rejects.
+				const request = new AbortController();
+				const abort = () => request.abort();
+				/** @type {Array<{
+				 * aborted: boolean,
+				 * addEventListener: (type: "abort", listener: () => void, options: { once: boolean }) => void,
+				 * removeEventListener: (type: "abort", listener: () => void) => void
+				 * }>} */
+				const signals = [options.signal, lifecycle.signal];
+				for (const signal of signals) {
+					if (signal.aborted) request.abort();
+					else signal.addEventListener("abort", abort, { once: true });
+				}
+				try {
+					return await callApi(method, payload, { ...options, signal: request.signal });
+				} finally {
+					for (const signal of signals) signal.removeEventListener("abort", abort);
+				}
+			};
 
 			// Middleware: Access Control
 			bot.use(async (ctx, next) => {
