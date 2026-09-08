@@ -44,7 +44,6 @@ trap cleanup_update EXIT
 REPO_URL="https://github.com/shedowe19/ShieldPM.git"
 
 BRANCH="develop" # Default branch for content
-SCRIPT_BRANCH="develop" # Always pull the updater from develop/master to avoid breaking on feature branches
 
 # Preserve original arguments for self-update restart
 ORIGINAL_ARGS=("$@")
@@ -92,10 +91,18 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 1
 fi
 echo "--> Checking for application updates..."
-# Fetch latest commit SHA for the target branch
-BRANCH_ENCODED=$(node -p 'encodeURIComponent(process.argv[1])' "$BRANCH")
-LATEST_SHA_FULL=$(curl -fsSL "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH_ENCODED" | \
-    node --input-type=module -e 'let data = ""; for await (const chunk of process.stdin) data += chunk; console.log(JSON.parse(data).sha || "");')
+# Consume the complete response: grep | head can terminate the updater with SIGPIPE.
+if ! BRANCH_ENCODED=$(node -p 'encodeURIComponent(process.argv[1])' "$BRANCH"); then
+    echo "Could not run Node.js for the update check. No application files were changed."
+    exit 1
+fi
+if ! LATEST_SHA_FULL=$(curl -fsSL --connect-timeout 10 --max-time 60 \
+    "https://api.github.com/repos/shedowe19/ShieldPM/commits/$BRANCH_ENCODED" | \
+    node --input-type=module -e 'let data = ""; for await (const chunk of process.stdin) data += chunk; try { console.log(JSON.parse(data).sha || ""); } catch { process.exitCode = 1; }'); then
+    echo "Could not resolve branch $BRANCH. Check network access, the branch name and GitHub API rate limits."
+    echo "No application files were changed."
+    exit 1
+fi
 if [[ ! "$LATEST_SHA_FULL" =~ ^[0-9a-f]{40}$ ]]; then
     echo "Could not resolve branch $BRANCH. No application files were changed."
     exit 1
@@ -113,7 +120,7 @@ fi
 
 # Get semantic version for display
 if [ -f "/app/package.json" ]; then
-    CURRENT_VER=$(grep '"version":' /app/package.json | head -n 1 | cut -d '"' -f 4)
+    CURRENT_VER=$(node --input-type=module -e 'import fs from "node:fs"; try { console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).version || "unknown"); } catch { console.log("unknown"); }' /app/package.json)
 else
     CURRENT_VER="unknown"
 fi
@@ -134,12 +141,14 @@ fi
 
 # Self-Update: Fetch latest version of this script first
 echo "--> [0/9] Checking for script updates..."
-SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${SCRIPT_BRANCH}/rootfs/usr/local/bin/update-shieldpm"
+# Follow the selected target, never replace a feature-branch fix with develop's updater.
+SCRIPT_URL="https://raw.githubusercontent.com/shedowe19/ShieldPM/${LATEST_SHA_FULL}/rootfs/usr/local/bin/update-shieldpm"
 SCRIPT_TMP="$UPDATE_RUN_DIR/update-shieldpm.new"
 SCRIPT_CURRENT="/usr/local/bin/update-shieldpm"
 
 # Allow curl to fail (e.g. if offline or github issues) without crashing the script (set -e)
-if [[ "${SHIELDPM_SELF_UPDATED:-0}" != "1" ]] && curl -sfL -o "$SCRIPT_TMP" "$SCRIPT_URL" && bash -n "$SCRIPT_TMP"; then
+if [[ "${SHIELDPM_SELF_UPDATED:-0}" != "1" ]] && \
+    curl -fsSL --connect-timeout 10 --max-time 60 -o "$SCRIPT_TMP" "$SCRIPT_URL" && bash -n "$SCRIPT_TMP"; then
     # Compare with current script
     if ! cmp -s "$SCRIPT_TMP" "$SCRIPT_CURRENT"; then
         echo "    - New version found. Updating self and restarting..."

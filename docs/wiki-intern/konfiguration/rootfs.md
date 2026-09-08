@@ -50,6 +50,14 @@ Der Entrypoint überspringt Verzeichnisse ohne passende Prerun-Shellskripte. Ein
 
 `update-shieldpm` läuft mit `set -o pipefail`. Die Node-26-Paketversion wird aus `apt-cache madison nodejs` ermittelt. Das `awk`-Kommando liest dabei die vollständige APT-Ausgabe, übernimmt aber nur die erste passende Version. Ein vorzeitiges Beenden von `awk` würde die vorgelagerte Ausgabe bei langen Versionslisten mit `SIGPIPE` abbrechen und das gesamte Update vor dem Quellcode-Download beenden.
 
+## Native-Update: Versionsprüfung und Selbstupdate
+
+Alte Updater verwenden für den GitHub-Commit `curl | grep | head | cut`. Bei umfangreichen Commit-Antworten kann `head` die Pipe vorzeitig schließen; mit `pipefail` endet das Skript dann unmittelbar nach `Checking for application updates...` mit Status 141 und ohne weitere Meldung. Ein Update des Repositorys allein ersetzt diesen bereits installierten Updater nicht.
+
+Die aktuelle Prüfung kodiert den Branchnamen und liest die vollständige JSON-Antwort mit Node.js. Download- und Parsefehler werden ausdrücklich abgefangen; nur ein gültiger vollständiger Commit-Hash erlaubt die Fortsetzung. Die Versionsanzeige liest ebenfalls JSON und zeigt bei fehlenden oder ungültigen lokalen Versionsdaten `unknown`. GitHub-Abfragen haben zehn Sekunden Verbindungs- und 60 Sekunden Gesamtlaufzeit.
+
+Das Selbstupdate lädt das Skript aus genau dem aufgelösten Ziel-Commit, statt unabhängig von `-b` immer `develop` zu verwenden. Dadurch ersetzt ein Update auf einen Feature-Branch dessen korrigierten Updater nicht wieder durch einen älteren Stand. Syntaxprüfung, ursprüngliche Argumente und die Begrenzung auf einen Selbstupdate-Neustart bleiben erhalten. `scripts/tests/test_update_preflight.py` führt diese Vorprüfung mit echten Bash-/Node-Prozessen, temporären Dateien und simulierten Downloads aus; Paketinstallationen oder Dienständerungen werden dabei nicht gestartet. Hinweise für Altinstallationen stehen unter [Deployment](../entwicklung/deployment.md).
+
 ## Native-Update: Yarn-Classic-Fallback
 
 Falls Corepack nicht verfügbar ist, installieren sowohl `update-shieldpm` als auch `scripts/install.sh` Yarn Classic mit `npm install --global --allow-scripts=yarn yarn@1.22.22`. Damit ist ausschließlich das bekannte Yarn-`preinstall`-Skript für diesen Aufruf erlaubt; es gibt keine globale Freigabe fremder Install-Skripte. Zuvor entfernt der Fallback nur verwaiste Corepack-Shims.

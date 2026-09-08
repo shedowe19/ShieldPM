@@ -49,6 +49,28 @@ Die Compose-Beispiele verwenden `network_mode: host`. Deshalb werden `net.ipv4.i
 
 Die lokale Datenbankauswahl verwendet weiterhin die im Installer angebotenen Standardzugangsdaten, sofern keine manuellen Werte gewählt werden. Die Maskierung ersetzt keine individuelle Passwortwahl.
 
+## Nativen Updater einer Altinstallation erneuern
+
+Endet `update -b …` direkt nach `Checking for application updates...`, kann noch die alte Versionsprüfung mit `grep | head` installiert sein. Diese kann bei einer großen GitHub-Antwort unter `pipefail` lautlos abbrechen, bevor das Selbstupdate erreicht wird. Der Ziel-Branch muss bereits den korrigierten Updater enthalten. Für PR #139 ist dies `codex/comprehensive-code-audit`.
+
+Als root lässt sich der aktuelle Updater dieses Branches zunächst in eine private temporäre Datei laden, syntaktisch prüfen und dann starten:
+
+```bash
+(
+  set -e
+  branch='codex/comprehensive-code-audit'
+  updater_file=$(mktemp /tmp/shieldpm-updater.XXXXXX)
+  trap 'rm -f "$updater_file"' EXIT
+  curl -fL --connect-timeout 10 --max-time 60 \
+    "https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/$branch/rootfs/usr/local/bin/update-shieldpm" \
+    -o "$updater_file"
+  bash -n "$updater_file"
+  bash "$updater_file" -b "$branch"
+)
+```
+
+Das Skript fragt wie gewohnt nach Bestätigung und führt anschließend das normale In-Place-Update aus. Die Selbstaktualisierung bleibt an den gewählten Ziel-Commit gebunden. Die vorhandenen Sicherungs- und Wiederherstellungsgrenzen gelten weiterhin; Details stehen unter [Rootfs und Update-Ablauf](../konfiguration/rootfs.md).
+
 ## Demo-Reset
 
 `docker-compose.demo.yaml` erstellt die Ausgangskopie über SQLite `.backup`, einschließlich bereits bestätigter WAL-Transaktionen. Beim periodischen Reset wird der Anwendungscontainer vor dem Austausch der Datenbank und dem Entfernen der WAL-/SHM-Dateien gestoppt und anschließend gestartet. Der Reset-Sidecar besitzt weiterhin Zugriff auf den Docker-Socket und ist ausschließlich für die Demo gedacht.
