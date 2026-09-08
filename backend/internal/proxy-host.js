@@ -106,6 +106,7 @@ const internalProxyHost = {
 		}
 
 		await access.can("proxy_hosts:create", thisData);
+		await internalHost.validateReferences(access, thisData);
 		internalHost.validateDomainNames(thisData.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
@@ -268,6 +269,7 @@ const internalProxyHost = {
 		}
 
 		let row = await internalProxyHost.get(access, { id: thisData.id }, { preserveManagedPath: true });
+		await internalHost.validateReferences(access, thisData, row);
 		// The API masks managed paths; preserve the actual path when an edit sends that placeholder back.
 		if (thisData.forward_host === "(managed)" && row.forward_host?.startsWith("/data/websites/")) {
 			thisData.forward_host = row.forward_host;

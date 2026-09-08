@@ -390,4 +390,30 @@ describe("Audit log table loading", () => {
 		await waitFor(() => expect(screen.getByTestId("audit-log-location")).toHaveTextContent("?action=deleted"));
 		expect(mocks.useAuditLogsPage).toHaveBeenLastCalledWith(["user"], { action: "deleted", limit: 100, page: 1 });
 	});
+	it("keeps filter controls usable during requests and after an invalid filter response", () => {
+		mockAuditLogPage([{ id: 73 }]);
+		mocks.useAuditLogsPage.mockImplementation((_expand, params) =>
+			params.query
+				? {
+						data: undefined,
+						isFetching: params.query === "loading",
+						isLoading: params.query === "loading",
+						isError: params.query !== "loading",
+						error: new Error("Filter rejected"),
+					}
+				: { data: { items: [{ id: 73 }] }, isFetching: false, isLoading: false, isError: false },
+		);
+		renderAuditTable();
+		const input = screen.getByRole("searchbox");
+		input.focus();
+		fireEvent.change(input, { target: { value: "loading" } });
+		expect(screen.getByRole("searchbox")).toBe(input);
+		expect(input).toHaveFocus();
+		expect(screen.getByTestId("loading")).toBeInTheDocument();
+		fireEvent.change(input, { target: { value: "invalid" } });
+		expect(screen.getByText("Filter rejected")).toBeInTheDocument();
+		expect(screen.getByRole("searchbox")).toBe(input);
+		fireEvent.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+		expect(screen.queryByText("Filter rejected")).not.toBeInTheDocument();
+	});
 });

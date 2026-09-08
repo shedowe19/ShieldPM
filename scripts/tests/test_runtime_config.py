@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -116,7 +117,7 @@ class RuntimeConfigTests(unittest.TestCase):
     def test_disabled_goaccess_removes_listener_and_preserves_data(self):
         # Run the actual startup branch with only its paths redirected into a fixture.
         source = (REPO / "rootfs/usr/local/bin/start.sh").read_text()
-        branch = source.split('if [ "$GOA" = "true" ]; then', 1)[1].split('\nif [ "$LISTEN_PROXY_PROTOCOL"', 1)[0]
+        branch = source.split('if [ "$GOA" = "true" ]; then', 1)[1].split('\nif [ "$NGINX_QUIC_BPF"', 1)[0]
         program = 'if [ "$GOA" = "true" ]; then' + branch
         nginx, data = self.root / "nginx", self.root / "data"
         (nginx / "include").mkdir(parents=True)
@@ -130,6 +131,106 @@ class RuntimeConfigTests(unittest.TestCase):
         self.shell(program, GOA="false", FULLCLEAN="false")
         self.assertFalse((nginx / "goaccess.conf").exists())
         self.assertEqual((data / "goaccess/report").read_text(), "history")
+
+    def test_healthcheck_uses_effective_localhost_bindings(self):
+        executable = self.root / "bin"
+        executable.mkdir()
+        for name, program in {
+            "nc": '#!/bin/sh\n[ "$4" = 127.0.0.1 ] && [ "$5" = 9091 ]\n',
+            "curl": '#!/bin/sh\nfor last do :; done\n[ "$last" = https://127.0.0.1:9081/api/ ] || exit 22\nprintf \'{"status":"OK"}\'\n',
+        }.items():
+            path = executable / name
+            path.write_text(program)
+            path.chmod(0o700)
+        (self.root / "index.html").write_text("GoAccess")
+        env_file = self.root / ".env"
+        env_file.write_text("GOA=true\nGOA_PORT=9091\nNPM_PORT=9081\n"
+                            "NPM_IPV4_BINDING=192.0.2.1\nGOA_IPV4_BINDING=192.0.2.2\n"
+                            "NPM_LISTEN_LOCALHOST=true\nGOA_LISTEN_LOCALHOST=true\n")
+        script = (REPO / "rootfs/usr/local/bin/healthcheck.sh").read_text()
+        script = script.replace("/data/.env", str(env_file)).replace("/tmp/goa/index.html", str(self.root / "index.html"))
+        result = subprocess.run(["sh", "-c", script], capture_output=True, text=True,
+                                env={**os.environ, "PATH": f"{executable}:{os.environ['PATH']}"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "OK\n")
+
+    def test_optional_modules_are_reversible_and_do_not_uncomment_foreign_blocks(self):
+        # Representative directives from shieldpm-nginx master e8cadd2f.
+        config = self.root / "nginx.conf"
+        original = '''#load_module modules/libngx_module.so;
+#load_module modules/ngx_http_geoip2_module.so;
+#load_module modules/ngx_stream_geoip2_module.so;
+#load_module modules/ngx_http_js_module.so;
+#load_module modules/ngx_stream_js_module.so;
+#load_module modules/ngx_http_upstream_ntlm_module.so;
+#load_module modules/ngx_http_vhost_traffic_status_module.so;
+#load_module modules/otel_ngx_module.so;
+error_log stderr warn;
+#error_log /data/nginx/error.log warn;
+access_log /data/nginx/json_access.log json_analytics;
+access_log off; # http
+access_log off; # stream
+    #geoip2 /data/nginx/GeoLite2-Country.mmdb {
+    #    auto_reload 5m;
+    #    # Keep this documentation comment intact.
+    #    $geoip2_country_code default=XX source=$remote_addr country iso_code;
+    #}
+    #geoip2 /data/nginx/GeoLite2-City.mmdb {
+    #    auto_reload 5m;
+    #    $geoip2_city_name default=Unknown source=$remote_addr city names en;
+    #}
+    #map $host $unrelated {
+    #    default none;
+    #}
+    #,'"geoip_country_code": "$geoip2_country_code"'
+    map $scheme $hsts_header {
+        https "max-age=63072000; preload";
+    }
+    map $scheme $hsts_includeSubDomains_header {
+        https "max-age=63072000; includeSubDomains; preload";
+    }
+    brotli on;
+    unbrotli on;
+    brotli_static on;
+    zstd on;
+    zstd_static on;
+    real_ip_header X-Forwarded-For;
+'''
+        config.write_text(original)
+        keys = ["NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE", "NGINX_LOAD_GEOIP2_MODULE",
+                "NGINX_LOAD_NJS_MODULE", "NGINX_LOAD_NTLM_MODULE", "NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE",
+                "LISTEN_PROXY_PROTOCOL", "LOGROTATE"]
+        previous = {}
+        for enabled in ("true", "true", "false", "false", "true"):
+            self.shell('configure_nginx_modules "$1"', config,
+                       **{key: enabled for key in keys}, NGINX_HSTS_SUBDOMAINS=enabled)
+            content = config.read_text()
+            if enabled in previous:
+                self.assertEqual(content, previous[enabled])
+            previous[enabled] = content
+            self.assertIn("    #map $host $unrelated {\n    #    default none;\n    #}\n", content)
+            self.assertIn("#load_module modules/otel_ngx_module.so;", content)
+            self.assertIn("#    # Keep this documentation comment intact.", content)
+            self.assertIn("access_log /data/nginx/json_access.log json_analytics;", content)
+            self.assertIn("error_log stderr warn;", content)
+            if enabled == "true":
+                self.assertIn("\nload_module modules/ngx_stream_geoip2_module.so;", content)
+                self.assertIn("    geoip2 /data/nginx/GeoLite2-Country.mmdb {", content)
+                self.assertIn("    brotli off;", content)
+                self.assertIn("    real_ip_header proxy_protocol;", content)
+                self.assertEqual(content.count("includeSubDomains;"), 1)
+                self.assertIn("access_log /data/nginx/stream.log slog;", content)
+                self.assertIn("\nerror_log /data/nginx/error.log warn;", content)
+                fragment = next(line.strip() for line in content.splitlines() if '"geoip_country_code":' in line)
+                self.assertEqual(shlex.split(fragment), [',"geoip_country_code": "$geoip2_country_code"'])
+            else:
+                self.assertIn("\n#load_module modules/ngx_stream_geoip2_module.so;", content)
+                self.assertIn("    #geoip2 /data/nginx/GeoLite2-Country.mmdb {", content)
+                self.assertIn("    brotli on;", content)
+                self.assertIn("    real_ip_header X-Forwarded-For;", content)
+                self.assertNotIn("includeSubDomains;", content)
+                self.assertIn("access_log off; # stream", content)
+                self.assertIn("#error_log /data/nginx/error.log warn;", content)
 
 
 if __name__ == "__main__":

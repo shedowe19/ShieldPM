@@ -159,7 +159,8 @@
     const params = new URLSearchParams(window.location.search);
     params.delete('turbo');
     const cleanSearch = params.toString() ? '?' + params.toString() + '&turbo=0' : '?turbo=0';
-    const originUrl = window.location.pathname + cleanSearch;
+    // A path beginning with // must stay on this origin, not become a host URL.
+    const originUrl = window.location.origin + window.location.pathname + cleanSearch;
 
     // IMPORTANT: Web Apps like Synology DSM (File Station), Nextcloud, etc. often initiate
     // downloads by creating a hidden iframe. If the Turbo-Loader UI is loaded inside a 

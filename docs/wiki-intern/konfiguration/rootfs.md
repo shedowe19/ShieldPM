@@ -26,12 +26,17 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 
 - `migrate-data.sh` enthält die von `start.sh` verwendeten Migrationsfunktionen. Alte Verzeichnisse werden einschließlich versteckter Dateien übernommen; vorhandene Zieldateien bleiben erhalten. Das Original bleibt unter `/data/shieldpm/migration-backups/<alter-name>.migrated.XXXXXX/original` als Sicherung bestehen. Bei Kopierfehlern bricht der Start vor dem Entfernen der Quelle ab.
 - Certbot-Live-Dateien werden nur dann atomar durch Symlinks ersetzt, wenn eine Archivdatei denselben Inhalt besitzt. Bei mehreren passenden Versionen gewinnt die numerisch höchste Version. Nicht passende Live-Dateien und Erneuerungsarchive werden nicht gelöscht.
+- Die einzelne alte `/data/database.sqlite` wird über die SQLite-Backup-API migriert, damit bereits bestätigte WAL-Transaktionen erhalten bleiben. Vor der atomaren Veröffentlichung des Ziels wird der vollständige Originalsatz einschließlich WAL-/SHM-Dateien kopiert. Vorhandene Zieldatenbanken werden nicht ersetzt. Kopierfehler lassen die Quelle bestehen; eine fehlgeschlagene Quellbereinigung lässt den vollständigen Sicherungssatz und den Ziel-Snapshot erhalten. Eine beschädigte Quelle bricht den Start ab.
+- Temporäre Certbot-Symlinks liegen in einem privaten Zufallsverzeichnis. Ein zurückgebliebener Link eines unterbrochenen Starts blockiert damit keinen erneuten Start.
 - Verzeichnisse unter `/data/tls`, `/data/access` und `/data/shieldpm` erhalten Modus `0700`, reguläre Dateien `0600`. Damit werden unter anderem private Schlüssel, Datenbanken und das Tor-Control-Passwort nicht mehr pauschal auf `0770` erweitert.
 - Die neuen Sicherungsverzeichnisse benötigen Speicherplatz. Vor einer manuellen Bereinigung müssen insbesondere abweichende Ziel- und Quelldateien verglichen werden.
+- Besitzanpassungen verwenden `chown -h` und gebündelte `find -exec`-Aufrufe. Symlink-Ziele außerhalb der durchlaufenen Verzeichnisse werden nicht durch die Besitzanpassung verändert. Die Socketbereinigung entfernt ausschließlich ShieldPM-, GoAccess- und PHP-Sockets; fremde `/run/*.sock` wie `docker.sock` bleiben bestehen.
 
 ## Wiederholter Start und Zertifikatauswahl
 
 `runtime-config.sh` setzt Certbot-Schlüsseltyp, Must-Staple, TLS-Prüfung und ACME-Profil bei jedem Start auf die aktuellen Umgebungswerte zurück. Ein Wechsel zurück auf Standardwerte wird damit auch bei nativen Installationen wirksam. Dasselbe gilt für die IPv4-/IPv6-Adressen und Ports der Verwaltungsoberfläche und von GoAccess sowie für Worker-Anzahlen, Fehlerprotokollierung, 404-Weiterleitung, Proxy-Pufferung und die IPv6-DNS-Auflösung.
+
+Optionale Nginx-Module, ihre GeoIP-Blöcke, OpenAppSec-bedingte Kompressionseinstellungen, PROXY-Protokoll, HSTS-Subdomains und optionale Rotationslogs werden ebenfalls in beide Richtungen aktualisiert. Änderungen betreffen ausdrücklich benannte Direktiven; fremde auskommentierte Blöcke bleiben erhalten. Der GeoIP-Zusatz des JSON-Logs bleibt vollständig als Nginx-Zeichenkette gequotet. Die Konfigurationsdatei wird atomar ersetzt; das permanente JSON-Analytics-Log bleibt aktiv.
 
 `DEFAULT_CERT_ID` unterstützt Let's Encrypt, hochgeladene und interne Zertifikate. Zertifikat und privater Schlüssel werden immer als vollständiges, nicht leeres Paar ausgewählt; andernfalls greift das Dummy-Paar. Beim Wechsel des Zertifikats oder Abschalten von OCSP werden alte Stapling-Direktiven deaktiviert. Deaktiviertes GoAccess entfernt seine aktive Nginx-Konfiguration unabhängig von `FULLCLEAN`; historische Daten bleiben bei `FULLCLEAN=false` erhalten.
 
@@ -61,6 +66,8 @@ Scheitern Neustart oder Healthcheck nach diesem Punkt, bleiben die Recovery-Date
 
 `healthcheck.sh` liest `/data/.env` selbst, weil ein Docker-Healthcheck die nachträglichen Exporte des Entrypoints nicht erbt. HTTP-Anfragen haben einen Zeitrahmen von zehn Sekunden.
 
+Bei `NPM_LISTEN_LOCALHOST=true` beziehungsweise `GOA_LISTEN_LOCALHOST=true` verwendet der Healthcheck wie die Startvalidierung `127.0.0.1`, auch wenn zusätzlich eine andere Bind-Adresse konfiguriert ist.
+
 `aio.sh` verwendet den Backend-Unix-Socket, JSON-Erzeugung mit `jq`, eine private Cookie-Datei und einen CSRF-Token aus der authentifizierten Sitzung. Die Datei `/data/aio.lock` entsteht erst nach erfolgreicher Host-Erstellung. Bei aktivierter Zwei-Faktor-Anmeldung muss die Einrichtung interaktiv erfolgen. Docker leitet Stoppsignale mit `tini -g` an die gesamte Prozessgruppe weiter.
 
 ## Konfigurationsdateien (`rootfs/etc/`)
@@ -80,6 +87,8 @@ Referenz-Datei für alle verfügbaren Umgebungsvariablen (2.9 KB). Wird als Vorl
 
 Die gleiche Datei existiert als `rootfs/data/.env` für den Container.
 
+Beispielwerte mit Leerzeichen oder Shell-Sonderzeichen sind gequotet und können durch Entfernen des Kommentarpräfixes übernommen werden. Installer und Updater aktivieren Anubis beziehungsweise OpenAppSec nur über den exakten Variablennamen; gleichnamige Textteile in anderen Werten bleiben erhalten.
+
 ## HTML-Seiten (`rootfs/html/`)
 
 | Pfad                           | Zweck                             |
@@ -94,9 +103,12 @@ Die gleiche Datei existiert als `rootfs/data/.env` für den Container.
 
 ## Systemd-Service (`rootfs/usr/lib/systemd/system/`)
 
-| Datei              | Zweck                                |
-| ------------------ | ------------------------------------ |
-| `shieldpm.service` | Systemd-Unit für native Installation |
+| Datei                           | Zweck                                                                                                                                                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shieldpm.service`              | Systemd-Unit für native Installation                                                                                                                       |
+| `shieldpm-ssh-hostkeys.service` | Im LXC-Template vor `ssh.service` aktivierter Dienst zur einmaligen Erzeugung fehlender SSH-Hostkeys; vorhandene Schlüssel bleiben bei Neustarts erhalten. |
+
+Der Turbo-Loader setzt auch URL-Pfade mit führendem `//` auf derselben Origin fort. Probe, parallele Downloads und Standard-Download wechseln dadurch nicht auf einen aus dem Pfad abgeleiteten Fremdhost.
 
 ## Offene Fragen
 

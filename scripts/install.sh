@@ -134,15 +134,20 @@ apt-get install -y --no-install-recommends --fix-missing \
     libluajit-5.1-2 \
     nano \
     netcat-openbsd \
+    iproute2 \
+    iptables \
     openssl \
     libpcre2-8-0 \
     python3 \
+    procps \
     sqlite3 \
     gosu \
     tini \
     tor \
     tzdata \
     util-linux \
+    wireguard-tools \
+    wireguard-go \
     libyajl2 \
     zlib1g \
     zstd
@@ -583,11 +588,7 @@ if [[ "$anubis_choice" =~ ^[Yy]$ ]]; then
         echo "  > Anubis installed to /usr/local/bin/anubis"
 
         # Enable in .env
-        if grep -q "ANUBIS_ENABLED" "$ENV_FILE" 2>/dev/null; then
-            sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
-        else
-            echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
-        fi
+        set_env_value ANUBIS_ENABLED true
         echo "  > Enabled in $ENV_FILE"
     else
         echo "  > Download failed!"
@@ -736,11 +737,7 @@ APPSEC_EOF
     fi
 
     # Enable the Nginx module in .env
-    if grep -q "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE" "$ENV_FILE" 2>/dev/null; then
-        sed -i "s|.*NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE.*|NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true|g" "$ENV_FILE"
-    else
-        echo "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" >> "$ENV_FILE"
-    fi
+    set_env_value NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE true
 
     echo "  > OpenAppSec Agent installed!"
     echo "  > Manage with: open-appsec-ctl"

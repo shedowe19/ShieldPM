@@ -147,7 +147,6 @@ const DdnsProviderModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</Alert>
 				) : (
 					<Formik<DdnsProviderValues>
-						enableReinitialize
 						initialValues={{
 							name: data?.name || "",
 							provider: (data?.provider as DdnsProviderName) || DDNS_PROVIDER_NAME.CLOUDFLARE,

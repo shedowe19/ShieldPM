@@ -9,6 +9,12 @@ interface AuthState {
 
 export class AuthStore {
 	private state: AuthState | null = null;
+	private revision = 0;
+
+	// Responses may only change authentication for the session that sent them.
+	get sessionRevision() {
+		return this.revision;
+	}
 
 	// Check if we have an active session in memory
 	// Note: On page reload, this will be null until verified by API
@@ -44,6 +50,7 @@ export class AuthStore {
 	// Set session details from login/refresh response
 	// Preserves existing userId if the response doesn't include user data (e.g. refresh)
 	set(data: { expires: number | string | null; user?: { id: number } }) {
+		this.revision += 1;
 		const expires = typeof data.expires === "string" ? Date.parse(data.expires) : data.expires;
 		this.state = {
 			expires: typeof expires === "number" && Number.isFinite(expires) ? expires : 0,
@@ -58,6 +65,7 @@ export class AuthStore {
 
 	// Clear memory state
 	clear() {
+		this.revision += 1;
 		this.state = null;
 		// We can't clear httpOnly cookie here, API must do it
 	}

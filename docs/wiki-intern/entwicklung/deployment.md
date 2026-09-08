@@ -37,7 +37,11 @@ Der Installer:
 
 Der Aufruf erfolgt im entpackten Release-Paket (für ARM64 entsprechend `shieldpm-install-linux-arm64.tar.gz`). Bei einer erneuten Installation wird die vorhandene `/data/.env` nicht durch die mitgelieferte Vorlage überschrieben. Datenbankwerte werden atomar und für das Laden durch die Shell korrekt maskiert geschrieben; auch Passwörter mit Leerzeichen, Anführungszeichen oder Sonderzeichen bleiben unverändert. PostgreSQL-Aufrufe verwenden `runuser`, sodass kein zusätzliches `sudo`-Paket vorausgesetzt wird. HTTP-Download- und Pipelinefehler führen zum Abbruch.
 
-Nach dem ersten Dienststart wartet der Installer bis zu 180 Sekunden auf `status: "OK"` über den Backend-Unix-Socket. Ein pauschaler Neustart nach 20 Sekunden entfällt, damit laufende Migrationen nicht unterbrochen werden. Die nativen Laufzeitpakete enthalten außerdem `sqlite3`, `netcat-openbsd` und `libfcgi-bin` für Wartung, Socket-Helfer und FastCGI.
+Nach dem ersten Dienststart wartet der Installer bis zu 180 Sekunden auf `status: "OK"` über den Backend-Unix-Socket. Ein pauschaler Neustart nach 20 Sekunden entfällt, damit laufende Migrationen nicht unterbrochen werden. Die nativen Laufzeitpakete enthalten außerdem `sqlite3`, `netcat-openbsd` und `libfcgi-bin` für Wartung, Socket-Helfer und FastCGI sowie `wireguard-tools`, `wireguard-go`, `iproute2`, `iptables` und `procps` für WireGuard.
+
+LXC-Templates enthalten keine gemeinsam verwendeten SSH-Hostkeys oder Maschinen-ID. Der Build entfernt diese Identitäten ausschließlich im temporären Template-Container. Beim Start eines daraus erzeugten LXC erstellt `shieldpm-ssh-hostkeys.service` fehlende Schlüssel vor `ssh.service`; vorhandene Schlüssel bleiben bei späteren Neustarts erhalten.
+
+Die Compose-Beispiele verwenden `network_mode: host`. Deshalb werden `net.ipv4.ip_forward` und `net.ipv4.conf.all.src_valid_mark` für WireGuard auf dem Docker-Host gesetzt; Docker erlaubt diese Netzwerk-Sysctls bei Host-Netzwerkbetrieb nicht im Service-Block. Die erforderlichen Fähigkeiten und das TUN-Gerät bleiben im Compose-Service konfigurierbar.
 
 Die lokale Datenbankauswahl verwendet weiterhin die im Installer angebotenen Standardzugangsdaten, sofern keine manuellen Werte gewählt werden. Die Maskierung ersetzt keine individuelle Passwortwahl.
 

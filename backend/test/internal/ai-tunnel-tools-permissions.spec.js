@@ -210,14 +210,14 @@ describe("AI tunnel tool permissions", () => {
 			createCollectionQuery(torServices, mocks.torQueries, 21, mocks.patchTorService, mocks.deleteTorService),
 		);
 		mocks.addAuditLog.mockResolvedValue();
-		mocks.createTorService.mockResolvedValue();
+		mocks.createTorService.mockResolvedValue({ onionAddress: "test.onion", privateKey: "key" });
 		mocks.restartCloudTunnel.mockResolvedValue();
 		mocks.restartTorService.mockResolvedValue(true);
 		mocks.updateTorService.mockImplementation((_access, service, payload) =>
 			service.$query().patchAndFetch(payload),
 		);
 		mocks.startCloudTunnel.mockResolvedValue();
-		mocks.startTorService.mockResolvedValue();
+		mocks.startTorService.mockResolvedValue(true);
 		mocks.stopCloudTunnel.mockResolvedValue();
 		mocks.stopTorService.mockResolvedValue(true);
 	});

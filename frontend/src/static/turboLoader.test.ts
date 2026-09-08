@@ -16,6 +16,7 @@ afterEach(() => {
 async function setup(
 	fetchChunk: (range: string) => Promise<any>,
 	writable?: { write: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn>; abort: ReturnType<typeof vi.fn> },
+	pathname = "/archive.zip",
 ) {
 	const page = new DOMParser().parseFromString(html, "text/html");
 	const scripts = page.querySelectorAll("script:not([src])");
@@ -31,7 +32,7 @@ async function setup(
 			: fetchChunk((options.headers as Record<string, string>).Range),
 	);
 	const windowMock: any = {
-		location: { pathname: "/archive.zip", search: "?turbo=1", replace: vi.fn() },
+		location: { origin: "https://files.example.com", pathname, search: "?turbo=1", replace: vi.fn() },
 		addEventListener: vi.fn(),
 		confirm: () => true,
 	};
@@ -74,6 +75,18 @@ function rangeResponse(range: string) {
 		headers: { "Content-Range": `bytes ${start}-${end}/${bytes.length}` },
 	});
 }
+it("keeps double-slash paths on the file server for probes, ranges and standard downloads", async () => {
+	const { loader, fetchMock, windowMock } = await setup(
+		async (range) => rangeResponse(range),
+		undefined,
+		"//other.example.com/archive.zip",
+	);
+	await loader.startDownload();
+	const expected = "https://files.example.com//other.example.com/archive.zip?turbo=0";
+	expect(fetchMock.mock.calls.every(([url]) => url === expected)).toBe(true);
+	document.getElementById("standard-btn")?.click();
+	expect(windowMock.location.href).toBe(expected);
+});
 it("assembles all validated ranges in byte order", async () => {
 	const { loader, fetchMock } = await setup(async (range) => rangeResponse(range));
 	await loader.startDownload();

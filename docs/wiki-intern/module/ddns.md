@@ -36,6 +36,12 @@ Ohne WAN-Adresse der gewählten IP-Version wird kein Provider-Update versendet. 
 
 DuckDNS-Token und Domains sowie Cloudflare-Abfragefilter werden mit `URLSearchParams` kodiert. Zeichen wie `&` bleiben Teil des jeweiligen Werts und können keine zusätzlichen Update-Parameter oder DNS-Typfilter erzeugen. Cloudflare-Zonen- und Record-IDs werden beim Einfügen in den URL-Pfad kodiert. Regressionen prüfen die vom HTTP-Client tatsächlich verwendeten URLs.
 
+### Gleichzeitige Aktualisierungen und Startwiederholungen
+
+Überlappende Intervallaufrufe teilen einen laufenden Aktualisierungslauf. Trifft dabei eine erzwungene Aktualisierung nach einer Konfigurationsänderung ein, folgt anschließend ein weiterer Lauf mit neu geladenen Providern. Dadurch überschreiben konkurrierende periodische Läufe keine neueren Ergebnisse und erzeugen keine doppelten WAN-Abfragen.
+
+Ein erneuter Timer-Start ersetzt sowohl das Intervall als auch die verzögerte Erstabfrage. Fehler beim Leeren einer benutzerdefinierten HTTP-Antwort besitzen einen eigenen Listener und können den Backend-Prozess nicht als unbehandeltes Stream-Ereignis beenden.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

@@ -44,7 +44,7 @@ ist dadurch eine spätere Seite leer, wechselt die Oberfläche zur vorherigen g�
 
 ## Custom Locations
 
-Das Feld `locations` (DB-Feld `custom_locations`, JSON-Array) erlaubt zusätzliche Nginx-`location`-Blöcke pro Host. Jeder Eintrag enthält `path`, `forward_scheme`, `forward_host`, `forward_port`, optional `forward_path` und `advanced_config`.
+Das Feld `locations` (gleichnamiges DB-Feld, JSON-Array) erlaubt zusätzliche Nginx-`location`-Blöcke pro Host. Jeder Eintrag enthält `path`, `forward_scheme`, `forward_host`, `forward_port`, optional `forward_path` und `advanced_config`.
 
 Mechanik in `nginx.js` → `renderLocations(host)`:
 
@@ -98,3 +98,5 @@ Beim Löschen und Deaktivieren von Proxy-, Redirect-, 404-Hosts und Streams lauf
 `backend/test/internal/host-removal-rollback.spec.js` prüft alle acht Lösch-/Deaktivierungspfade mit SQLite und temporären Konfigurationsdateien, einschließlich Schreib-, Datei- und Reloadfehlern. Nginx-Prozessaufrufe werden dabei simuliert.
 
 DNS-Zugangsdaten verbleiben ausschließlich im Zertifikatskontext. Für verwaltete Git-Websites sperrt die generierte Nginx-Konfiguration Symlinks und für statische Hosts den Zugriff auf Git-Metadaten. Details zu mTLS, OIDC und Limits stehen unter [Nginx-Templates](./nginx-templates.md).
+
+Neue Zertifikats- und Access-List-Zuordnungen unterliegen den eigenständigen Berechtigungs- und Eigentümerprüfungen der [Host-Hilfslogik](./host.md).

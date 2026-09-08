@@ -102,6 +102,14 @@ frontend/src/
 ## Pattern
 
 API-Funktionen übernehmen ausschließlich den Transport; Hooks legen die Cache-Schlüssel und Invalidierungen fest.
+Die sieben schreibenden Detail-Hooks für Access Lists, Proxy-/Redirect-/Dead-Hosts, Streams, Benutzer und Einstellungen
+verwenden `optimisticQueryUpdate.ts`. Der Helfer bricht laufende Detailabfragen vor dem Update ab und verändert nur
+bereits geladene Cache-Einträge, einschließlich vorhandener Access-List-Expansionen. Ein fehlgeschlagenes Speichern
+stellt den vorherigen Wert nur wieder her, solange kein neuerer Cache-Schreibvorgang oder Sitzungswechsel stattgefunden
+hat. Leere Caches werden nicht mit unvollständigen Formulardaten befüllt; nach Abschluss werden die betroffenen Abfragen
+auch bei Fehlern invalidiert. `optimisticMutations.test.tsx` prüft die sieben Hooks mit einem echten QueryClient,
+`optimisticQueryUpdate.test.ts` zusätzlich Abbruch-, Überlappungs- und Sitzungswechsel-Fälle.
+
 Nach Benutzeränderungen werden sowohl `["user", id]` als auch `["user", "me"]` invalidiert. Der aktuelle
 Benutzer bleibt damit in Profil, Kopfzeile und Berechtigungsanzeige konsistent. Avatar-Uploads invalidieren diese
 Abfragen erneut nach dem tatsächlichen Upload, da die vorausgehende Profil-Mutation bereits abgeschlossen ist.

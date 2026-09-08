@@ -30,7 +30,7 @@ Das Repository wurde vollständig inventarisiert (1.414 versionierte Dateien am 
 
 Die einzelnen Änderungen und ihre Verträge stehen auf den bestehenden Modulseiten. Die Regressionstests prüfen unter anderem echte Transaktionen mit temporären SQLite-Datenbanken, konkurrierende Aufrufe, Fehlerpfade und Formularaktionen.
 
-## Validierung
+## Validierung nach dem zweiten Durchgang
 
 | Prüfung                   | Ergebnis                                                                                                       |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -81,6 +81,40 @@ Die Prüfung hat weitere Fehler außerhalb des ersten Diffs gefunden. Wesentlich
 
 Alle geänderten Sicherheits- und Datenverträge werden mit Regressionen geprüft. Unter anderem reproduzierten sieben ausgewählte neue Auth-Testdateien 38 Fehlschläge auf dem vorherigen PR-Stand; die neuen Migrationsprüfungen reproduzierten einen echten PostgreSQL-Transaktionsabbruch. Diese Nachweise ergänzen die Gesamtsuiten; sie sind keine Aussage, dass jede theoretische Fehlerklasse entdeckt ist.
 
+## Dritter vollständiger Durchgang im bestehenden PR
+
+Ausgangspunkt dieser weiteren Prüfung ist PR #139 bei `08c956611400dbfc005f31543a92d2ed3ca88f4b`. Alle 1.519 dort versionierten Dateien sind erneut inventarisiert. Der [dateibasierte Nachweis](./code-audit-coverage-2026-09.json) enthält einen eigenen dritten Durchgang: 1.225 Dateien wurden vollständig gelesen, einschließlich aller zugewiesenen handgeschriebenen Produktionsquellen, Konfigurationen und Tests. Übersetzungen, Bilder, generierte Metadaten, Dokumentation und die eingebundene Fremdbibliothek sind getrennt klassifiziert. Die 14 Sprach-JSONs wurden auf Struktur, doppelte Schlüssel und die gemeinsamen Übersetzungsschlüssel geprüft; dies ist keine vollständige sprachliche Prüfung aller Übersetzungen.
+
+| Bereich                   | Weitere bestätigte Korrekturen                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentifizierung         | Demo-Kontomutationen einschließlich 2FA/Avatar und kodierter IDs gesperrt; TOTP-Zeitschritte atomar verbraucht; Logout widerruft rotierte Nachfolger; verspäteter fehlgeschlagener Refresh löscht keine neueren Browsercookies. Unveränderte Profilflags überschreiben keinen zwischenzeitlichen Admin-Sperrstatus.                                                               |
+| Ressourcenrechte          | Neue Zertifikats-/Access-List-Zuordnungen und Git-Deployment prüfen die jeweilige Eigentümersichtbarkeit. Die KI-Werkzeuge folgen den tatsächlichen Demo-Feld- und Tor-Regeln.                                                                                                                                                                                                    |
+| Nginx                     | Veraltete Sicherungen werden nicht als Rollbackziel reaktiviert; statische Custom-Locations erhalten Git-/Symlink-Schutz; Bandbreitenzähler werden nur nach tatsächlicher Zuteilung vermindert. Einzeländerungen benötigen nur einen vollständigen Konfigurationstest beim Reload.                                                                                                |
+| Integrationen             | WireGuard-Mutationen teilen dieselbe Queue; DDNS fasst überlappende Abfragen zusammen und erhält notwendige erzwungene Folgeabfragen. Wiederholter Terminal-/Docker-Start erzeugt keine zusätzlichen Listener. Tor meldet echte Startfehler und entfernt private Identitätsschlüssel aus Verwaltungsantworten.                                                                    |
+| Daten und Startup         | SQLite-Umzug übernimmt bestätigte WAL-Transaktionen, sichert das vollständige Originalset vor Veröffentlichung und erhält es bei Fehlern. Historische Passwortmigration erkennt vollständige unterstützte Hashes; Terminal-Rollback erhält lange Schlüssel und vermeidet Duplikate beim erneuten Upgrade. Startup wartet auf den Konfigurations-Fingerprint.                      |
+| API                       | Setup-Datenbankabfrage nur am relevanten Benutzer-POST; IP-Limit vor kostenintensiver Middleware. Gleichzeitige Schemaaufrufe teilen eine Kompilierung. Health-, Token-, Access-List- und Fehlerantworten sowie Auth-Schemanamen entsprechen dem Laufzeitvertrag.                                                                                                                 |
+| Frontend                  | Verspätete Antworten und Cache-Rollbacks überschreiben keine neuere Sitzung; sieben CRUD-Hooks berücksichtigen tatsächliche Cachevarianten. Suchfelder bleiben während Laden/Fehler montiert. Formulare behalten ungespeicherte Eingaben. Keycloak-Issuer, optionale Git-Konfiguration, Clipboardfehler, Setup-/Passwortgrenzen, Passkey-Enter und Notiz-/DDNS-Rechte korrigiert. |
+| Laufzeit und Installation | Socketbereinigung auf ShieldPM-Namen begrenzt; Env-Ersetzungen exakt verankert; Module, GeoIP-JSON, HSTS und Logging reversibel konfiguriert. Healthcheck berücksichtigt abgeleitete Loopback-Adressen. LXC-Templates enthalten keine wiederverwendbaren SSH-Hostschlüssel; Installer enthält WireGuard-Laufzeitpakete.                                                           |
+| Effizienz                 | Weniger doppelte DB-, Schema-, Nginx-, Timer- und Netzwerkarbeit; Kartenprojektionen werden wiederverwendet und berücksichtigen die SVG-Seitenränder. Besitzanpassungen werden gebündelt und folgen keinen Symlinkzielen.                                                                                                                                                         |
+
+Die Gegenprüfung führte unter anderem die neue Nginx-Testdatei gegen den unveränderten Ausgangsstand aus (sechs erwartete Fehlschläge), führte die Lua-Zählerblöcke tatsächlich aus und reproduzierte den verspäteten Refresh-Cookie-Verlust über HTTP. Datenmigrationen laufen mit SQLite und PGlite; die vollständige Nginx-Basisdatei wurde gegen `shedowe19/shieldpm-nginx` bei `e8cadd2fa66a6d66569d8f7485187fbcda00f294` abgeglichen. Ein zusätzlicher Fehlerpfad beim Sichern des SQLite-Originalsets wurde in der unabhängigen Gegenprüfung erkannt und abgesichert.
+
+Nicht bestätigte Verdachtsfälle wurden verworfen: Die WireGuard-Verwaltung bleibt gemäß bestehender Policy auf Administratoren begrenzt; kein erfundenes Rechtefeld wurde ergänzt. Der PostgreSQL-Testadapter wurde wegen einer nicht produktiv bestätigten Zeitzonenhypothese nicht verändert.
+
+### Validierung des dritten Durchgangs
+
+| Prüfung                | Ergebnis                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| Backend / Vitest       | 133 Dateien, 903 Tests bestanden                                                                        |
+| Frontend / Vitest      | 176 Dateien, 536 Tests bestanden                                                                        |
+| Infrastruktur / Python | 37 Tests bestanden, keine Skips                                                                         |
+| Frontend               | Locale-Check, TypeScript und Vite-Produktionsbuild erfolgreich                                          |
+| Biome                  | Backend 343 und Frontend 579 Dateien, keine Fehler/Warnungen; je zwei bestehende Konfigurationshinweise |
+| OpenAPI                | Vollständige Schema-Validierung und neue Antwortvertragstests erfolgreich                               |
+| Markdown / Diff        | Geänderte Wiki-Seiten mit Prettier formatiert, `git diff --check` erfolgreich                           |
+
+Insgesamt **1.476 bestandene Tests**, 174 mehr als beim vorherigen Stand. Verwendet wurde Node.js 26.8.1. Die lokalen Gesamtsuiten liefen mit `--maxWorkers=2`; der erste Frontend-Gesamtlauf wurde nach einem nativen Prozessabbruch beendet und vollständig wiederholt. Für die Markdown-Formatierung war ein geprüftes Prettier-2.8.8-Standalone-Bundle verfügbar. ShellCheck, Container-/Installer-/LXC-Builds und aktuelle Dependency-Audits werden in GitHub ausgeführt. Die Ergebnisse sind am aktuellen Commit in [PR #139](https://github.com/shedowe19/ShieldPM/pull/139) einsehbar.
+
 ## Betriebsrelevante Grenzen
 
 - Live-Tests gegen das externe `shieldpm-nginx`-Image, echte ACME-/SSO-/DDNS-Anbieter, SSH, Tor und WireGuard benötigen die jeweilige Infrastruktur; die lokalen Tests mocken diese Dienste.
@@ -88,6 +122,8 @@ Alle geänderten Sicherheits- und Datenverträge werden mit Regressionen geprüf
 - Vor einem Enginewechsel muss die SQLite-Quelle einmal mit demselben Anwendungsschema gestartet werden. Bei abweichendem Schema bricht der Import vor Datenänderungen ab.
 - GitOps enthält weiterhin keine Gesamttransaktion über Datenbank, Dateisystem und externe Prozesse. Fehler werden gemeldet und anschließendes Bereinigen wird unterbunden; bereits erfolgreiche Schritte können bestehen bleiben.
 - Eine Änderung der Serverzeitzone für bereits gespeicherte Wartungstermine benötigt weiterhin eine gezielte Migration.
+- Der optionale PUID-Modus passt weiterhin Besitz breit unter `/run`, `/tmp` und `/usr/local` an. Die neuen Aufrufe folgen keinen Symlinkzielen; eine vollständige Eingrenzung benötigt einen koordinierten Umbau der Socketpfade.
+- Historische Migrationskorrekturen rekonstruieren keine bereits zuvor verlorenen Metadaten oder doppelt gehashten Passwörter. Der Terminal-Rollback verweigert bei bestehenden Tor-/Analytics-/Domainreferenzen die Änderung vor DDL.
 - Optimierungen sind funktional geprüft; ein Lastvergleich unter Produktionsverkehr wurde nicht durchgeführt.
 - Der Widerruf von Refresh-Sitzungen macht bereits ausgegebene Access-JWTs nicht sofort ungültig. Die bestehende Speicherung von TOTP-Secrets wurde nicht durch eine neue Verschlüsselungsmigration ersetzt.
 - Browser-E2E war lokal nicht ausführbar: Der benötigte Chromium-Download vom Playwright-CDN scheiterte an wiederholten Netzwerk-Zeitüberschreitungen. DOM-Tests und der Produktionsbuild sind separat ausgewiesen.

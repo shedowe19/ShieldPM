@@ -170,11 +170,12 @@ describe("refresh failures preserve recoverable sessions", () => {
 		expect(res.clearCookie).not.toHaveBeenCalled();
 		expect(res.send).toHaveBeenCalledWith({ error: { code: 500, message: "Token refresh failed" } });
 	});
-	it("clears cookies when the refresh token is permanently invalid", async () => {
+	it("returns an authentication error without deleting a potentially newer login's cookies", async () => {
 		mocks.refresh.mockRejectedValueOnce(new errs.AuthError("Invalid refresh token"));
 		const res = response();
 		await handler(tokenRouter, "/refresh")({ cookies: { shieldpm_refresh: "refresh" }, headers: {} }, res);
 		expect(res.status).toHaveBeenCalledWith(401);
-		expect(res.clearCookie).toHaveBeenCalledWith("shieldpm_jwt");
+		expect(res.clearCookie).not.toHaveBeenCalled();
+		expect(res.send).toHaveBeenCalledWith({ error: { code: 401, message: "Invalid refresh token" } });
 	});
 });

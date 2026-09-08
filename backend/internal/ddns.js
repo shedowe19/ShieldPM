@@ -8,6 +8,9 @@ import { global as logger } from "../logger.js";
 import DdnsProvider from "../models/ddns_provider.js";
 
 let timer = null;
+let startupTimer = null;
+let runningProcess = null;
+let forcePending = false;
 const INTERVAL = 1000 * 60; // 60 seconds
 
 /**
@@ -70,6 +73,7 @@ export const requestPublicUrl = (url) => {
 			},
 			(response) => {
 				// Never follow redirects to an unvalidated destination.
+				response.on("error", reject);
 				response.resume();
 				if (response.statusCode < 200 || response.statusCode >= 300) {
 					reject(new Error(`Custom URL Error: ${response.statusCode}`));
@@ -294,7 +298,7 @@ export const updateProvider = async (provider, ips) => {
  * Main Process
  * @param {boolean} force - Force update even if IP hasn't changed
  */
-export const process = async (force = false) => {
+const processOnce = async (force) => {
 	try {
 		const providersList = await /** @type {any} */ (DdnsProvider).query().where("enabled", 1);
 		if (providersList.length === 0) return;
@@ -323,14 +327,39 @@ export const process = async (force = false) => {
 	}
 };
 
+/** Coalesce interval ticks, preserving a forced refresh requested during a running update. */
+export const process = async (force = false) => {
+	if (runningProcess) {
+		if (force) forcePending = true;
+		return runningProcess;
+	}
+	runningProcess = (async () => {
+		let forced = force;
+		do {
+			forcePending = false;
+			await processOnce(forced);
+			forced = forcePending;
+		} while (forcePending);
+	})();
+	try {
+		await runningProcess;
+	} finally {
+		runningProcess = null;
+	}
+};
+
 /**
  * Initialize Timer
  */
 export const initTimer = () => {
 	if (timer) clearInterval(timer);
+	if (startupTimer) clearTimeout(startupTimer);
 	timer = setInterval(() => process(), INTERVAL);
 	// Run once on startup after a small delay
-	setTimeout(() => process(), 5000);
+	startupTimer = setTimeout(() => {
+		startupTimer = null;
+		void process();
+	}, 5000);
 };
 
 export default {

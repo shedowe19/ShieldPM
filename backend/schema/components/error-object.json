@@ -14,6 +14,10 @@
 		"message": {
 			"type": "string",
 			"example": "Bad Request"
+		},
+		"message_i18n": {
+			"type": "string",
+			"description": "Optional translation key"
 		}
 	}
 }

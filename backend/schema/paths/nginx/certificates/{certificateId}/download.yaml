@@ -3,7 +3,7 @@ tags:
 summary: Download a certificate
 operationId: downloadNginxCertificate
 security:
-  - AccessToken: []
+  - bearerAuth: []
 requestBody:
   content:
     application/json:

@@ -71,6 +71,18 @@ Pfad: `frontend/src/components/ui/`
 | `Nginx/`     | Nginx-spezifische UI       |
 | `Table/`     | Tabellen-Komponenten       |
 
+## Fehlerbehandlung bei Git-Sync und WireGuard
+
+- `GitSyncTab.tsx` verlangt eine Repository-URL nur bei aktivierter automatischer Synchronisierung. Ein lokal
+  bereitgestellter Host kann deshalb auch nach dem Öffnen dieses Tabs ohne Git-Konfiguration gespeichert werden.
+  Manuelle Synchronisierungen prüfen das fachliche `success`-Feld der HTTP-200-Antwort; ein gemeldeter Git-Fehler oder
+  Transportfehler erzeugt eine Fehlermeldung statt einer Erfolgsmeldung. `GitSyncTab.test.tsx` prüft beide Formularfälle
+  sowie Erfolg, fachlichen Fehler und Transportfehler.
+- `Nginx/WireguardConfigModal.tsx` zeigt fehlgeschlagene Konfigurationsabfragen im Dialog an und lässt den Download
+  dabei gesperrt. Die Kopierbestätigung erscheint erst nach erfolgreichem Schreiben in die Zwischenablage. Bei einem
+  Peerwechsel oder Schließen werden verspätete Kopierantworten ignoriert und der Bestätigungstimer entfernt;
+  Clipboard-Fehler nutzen die bestehende Toast-Fehlermeldung. Die Dialogtests prüfen Ablehnung, Peerwechsel und Cleanup.
+
 ## Verwandte Seiten
 
 - [Screens & Pages](./screens.md)

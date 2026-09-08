@@ -129,7 +129,18 @@ const verifyAndEnableTotp = async (userId, code) => {
  */
 const verifyTotp = async (userId, code) => {
 	const records = await UserTwoFa.query().where({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
-	return records.some((record) => verifySync({ token: code, secret: record.secret }).valid);
+	for (const record of records) {
+		const verification = verifySync({ token: code, secret: record.secret });
+		if (!verification.valid || verification.timeStep <= (record.counter || 0)) continue;
+
+		// A successful TOTP may only authenticate once. Compare-and-swap also
+		// prevents two simultaneous requests from consuming the same time step.
+		const consumed = await UserTwoFa.query()
+			.patch({ counter: verification.timeStep })
+			.where({ id: record.id, user_id: userId, counter: record.counter, is_verified: 1, is_deleted: 0 });
+		if (consumed === 1) return true;
+	}
+	return false;
 };
 
 // ---------------------------------------------------------------------------

@@ -76,6 +76,10 @@ Subnetz und Serveradresse verlangen kanonische IPv4-Adressen mit vier Dezimalokt
 
 Ändern, Löschen, Aktivieren und Deaktivieren beachten die `permission_visibility` ihrer Capability. Downloads privater Peer-Konfigurationen bleiben auf den jeweiligen Eigentümer begrenzt.
 
+### Reihenfolge aller Konfigurationsänderungen
+
+Auch Peer-Änderung, Löschung, Aktivierung und Deaktivierung nutzen dieselbe Warteschlange wie Peer-Erstellung und Servereinstellungen. Sie umfasst jeweils Datenbankänderung, Schreiben von `wg0.conf` und Anwendung auf dem Interface. Eine langsame ältere Änderung kann damit einen später deaktivierten oder gelöschten Peer nicht wieder in die Laufzeitkonfiguration aufnehmen.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

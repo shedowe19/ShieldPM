@@ -8,9 +8,12 @@ import ProxyHost from "../models/proxy_host.js";
 
 const internalTerminal = {
 	wss: null,
+	servers: new WeakSet(),
 
 	init: (server) => {
+		if (internalTerminal.servers.has(server)) return;
 		internalTerminal.wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+		internalTerminal.servers.add(server);
 
 		server.on("upgrade", (request, socket, head) => {
 			const pathname = request.url;

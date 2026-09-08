@@ -85,7 +85,7 @@ npx biome check .           # Prüfen
 npx biome check --write .   # Auto-Fix
 ```
 
-## Abschlussprüfung September 2026
+## Abschlussprüfung nach dem zweiten Durchgang
 
 Prüflauf mit Node.js 26.8.1 und den versionierten Yarn-Lockfiles:
 
@@ -98,6 +98,16 @@ Prüflauf mit Node.js 26.8.1 und den versionierten Yarn-Lockfiles:
 Ausführen: `cd backend && yarn test --run`; `cd frontend && yarn test --run && yarn build`; `python3 -m unittest discover -s scripts/tests -v` im Repository-Root. Für automatische Einmalläufe ist `--run` erforderlich, weil `yarn test` sonst im Beobachtungsmodus starten kann.
 
 Die neuen Tests decken unter anderem Berechtigungen, einmalige 2FA-Challenges, Refresh-Replay, geschützte Terminal-Upgrades, echte SQLite-Transaktionen mit Fremdschlüsseln, mehrseitigen Import, Symlink-Schutz, Konfigurationsfehler, Prozessrennen und Datums-/Formularverträge ab. Externe Dienste werden gemockt; die Prüfgrenzen stehen im Bericht.
+
+## Regressionen des dritten Durchgangs
+
+Gesamtstand: **903 Backend-Tests in 133 Dateien, 536 Frontend-Tests in 176 Dateien und 37 Infrastrukturtests**, zusammen 1.476 bestandene Tests. Locale-Check, TypeScript, Vite und vollständiges Biome-Linting sind ebenfalls erfolgreich. Lokale Gesamtsuiten verwenden `--maxWorkers=2`.
+
+Zusätzliche Prüfungen sichern TOTP-Einmalverwendung, vollständigen Logout-Widerruf und verspätete Refresh-Antworten über HTTP. SQLite/PGlite testen Passwortmigrationen und Terminal-Up/Down/Up mit langen Schlüsseln. Weitere Tests prüfen Owner-Zuordnungen, Nginx-Backups, echte Lua-Zähler, serialisierte WireGuard-Änderungen, DDNS-/Docker-/Terminal-Lebenszyklen, API-Antwortschemas und wartenden Startup-Abschluss.
+
+Die Frontend-Tests verwenden echte QueryClients für die sieben optimistischen CRUD-Hooks und prüfen verspätete Antworten mit dem tatsächlichen AuthStore. Formular-, Berechtigungs-, Fokus-, Karten- und Clipboard-Regressionen ergänzen den Bereich. `check-locales.test.ts` ersetzt vorübergehend das FormatJS-Binary; der reale Locale-Check läuft daher erst nach Vitest.
+
+Die Infrastrukturtests verwenden temporäre Dateien und echte SQLite-WAL-Snapshots. Sie simulieren Kopier-/Bereinigungsfehler und prüfen reversible Nginx-Optionen, Certbot-Link-Recovery, eigene Socketnamen und LXC-SSH-Hostschlüssel. Diese isolierten Prüfungen starten keine produktive Installation.
 
 ## Verwandte Seiten
 

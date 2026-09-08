@@ -59,3 +59,9 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 - Bandbreitenbegrenzung deklariert `$calculated_rate` auch im Standardserver; fehlendes Request-Burst-Limit wird zu `0`. Request-Limit-Schlüssel enthalten die Host-ID, damit verschiedene Hosts ihre Limits nicht teilen.
 - Statische Hosts sperren `.git`-Verzeichnisse. Verwaltete Websitewurzeln verwenden zusätzlich `disable_symlinks on`. PHP-Programme bleiben ausführbarer, vertrauenswürdiger Anwendungscode; diese Nginx-Einstellung ist keine PHP-Sandbox.
 - `X_FRAME_OPTIONS` wird im vorhandenen HSTS-Headerblock direkt aus der Umgebung gelesen, mit `SAMEORIGIN` als Standard.
+
+## Statische Custom-Locations und Bandbreitenzähler
+
+Auch statische Custom-Locations blockieren `.git` und sperren bei verwalteten Websitewurzeln Symlinks. Das gilt ebenso, wenn die Standard-Location einen HTTP-Upstream verwendet. Der Renderer berücksichtigt den exakten Wartungsbeginn einschließlich des Startzeitpunkts.
+
+Die Lua-Logphase vermindert den Verbindungszähler nur für Anfragen, denen die Access-Phase tatsächlich Bandbreite zugeteilt hat. Frühe Redirects oder Ablehnungen ohne Zuteilung verändern laufende Übertragungen nicht mehr. Dies gilt im Standardserver sowie im öffentlichen Anubis-Server. Die Gegenprüfung mit Lua 5.4 reproduzierte das Fehlverhalten beider bisherigen Logblöcke und bestätigte anschließend sowohl den unveränderten Zähler ohne Zuteilung als auch die korrekte Freigabe einer zugeteilten Übertragung.

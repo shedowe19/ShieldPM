@@ -74,6 +74,7 @@ const internalStream = {
 		}
 
 		await access.can("streams:create", data);
+		await internalHost.validateReferences(access, data);
 
 		// Check for port collision
 		const collision = await findPortCollision(data.incoming_port, data.tcp_forwarding, data.udp_forwarding);
@@ -159,6 +160,7 @@ const internalStream = {
 
 		await access.can("streams:update", thisData.id);
 		let row = await internalStream.get(access, { id: thisData.id });
+		await internalHost.validateReferences(access, thisData, row);
 		const incomingPort = thisData.incoming_port ?? row.incoming_port;
 		const tcpForwarding = thisData.tcp_forwarding ?? row.tcp_forwarding;
 		const udpForwarding = thisData.udp_forwarding ?? row.udp_forwarding;

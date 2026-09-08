@@ -11,7 +11,7 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 ## Wichtige Dateien
 
 - `backend/internal/dead-host.js` (~420 Zeilen) — Business-Logik
-- `backend/models/dead_host.js` — Objection.js-Modell mit `host_domains`-Relation
+- `backend/models/dead_host.js` — Objection.js-Modell mit JSON-Domainliste sowie Zertifikats- und Owner-Relation
 - `backend/templates/dead_host.conf` — Liquid-Template für leere/404-Server-Blöcke
 - `backend/routes/nginx/dead_hosts.js` — REST-API-Routen unter `/api/nginx/dead-hosts`
 - `backend/lib/access/dead_hosts-*.json` — RBAC-Regeln

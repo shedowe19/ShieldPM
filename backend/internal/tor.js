@@ -340,9 +340,9 @@ const internalTor = {
 					}
 				}
 			}
-			internalAnubis
-				.generatePolicy()
-				.catch((err) => logger.error(`Tor Anubis policy refresh failed: ${err.message}`));
+			Promise.resolve(internalAnubis.generatePolicy()).catch((err) =>
+				logger.error(`Tor Anubis policy refresh failed: ${err.message}`),
+			);
 			internalGitOps.triggerAutoPush("onion-sync");
 		}
 		return updated;

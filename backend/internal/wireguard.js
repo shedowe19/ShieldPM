@@ -699,90 +699,94 @@ const internalWireguard = {
 	 * @param {Object} data
 	 * @returns {Promise<Object>}
 	 */
-	updatePeer: async (peerId, data) => {
-		validatePeerSettings(data);
-		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
-		if (!peer) {
-			throw new Error("Peer not found");
-		}
+	updatePeer: (peerId, data) =>
+		serializeConfigurationChange(async () => {
+			validatePeerSettings(data);
+			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
+			if (!peer) {
+				throw new Error("Peer not found");
+			}
 
-		const updateData = {};
-		if (data.name !== undefined) updateData.name = data.name;
-		if (data.description !== undefined) updateData.description = data.description;
-		if (data.allowed_ips !== undefined) updateData.allowed_ips = data.allowed_ips;
-		if (data.persistent_keepalive !== undefined) updateData.persistent_keepalive = data.persistent_keepalive;
-		if (data.dns !== undefined) updateData.dns = data.dns;
+			const updateData = {};
+			if (data.name !== undefined) updateData.name = data.name;
+			if (data.description !== undefined) updateData.description = data.description;
+			if (data.allowed_ips !== undefined) updateData.allowed_ips = data.allowed_ips;
+			if (data.persistent_keepalive !== undefined) updateData.persistent_keepalive = data.persistent_keepalive;
+			if (data.dns !== undefined) updateData.dns = data.dns;
 
-		const updated = await peer.$query().patchAndFetch(updateData);
+			const updated = await peer.$query().patchAndFetch(updateData);
 
-		// Re-sync config if relevant fields changed
-		await syncConfig();
-		await applyConfig();
+			// Re-sync config if relevant fields changed
+			await syncConfig();
+			await applyConfig();
 
-		logger.info(`WireGuard: Peer "${updated.name}" (ID: ${peerId}) updated`);
-		return updated;
-	},
+			logger.info(`WireGuard: Peer "${updated.name}" (ID: ${peerId}) updated`);
+			return updated;
+		}),
 
 	/**
 	 * Delete a WireGuard peer
 	 * @param {number} peerId
 	 * @returns {Promise<boolean>}
 	 */
-	deletePeer: async (peerId) => {
-		const peer = await WireguardPeer.query().findById(peerId);
-		if (!peer) {
-			return false;
-		}
+	deletePeer: (peerId) =>
+		serializeConfigurationChange(async () => {
+			const peer = await WireguardPeer.query().findById(peerId);
+			if (!peer) {
+				return false;
+			}
 
-		await peer.$query().patch({ is_deleted: 1 });
+			await peer.$query().patch({ is_deleted: 1 });
 
-		// Re-sync config
-		await syncConfig();
-		await applyConfig();
+			// Re-sync config
+			await syncConfig();
+			await applyConfig();
 
-		logger.info(`WireGuard: Peer "${peer.name}" (ID: ${peerId}) deleted`);
-		return true;
-	},
+			logger.info(`WireGuard: Peer "${peer.name}" (ID: ${peerId}) deleted`);
+			return true;
+		}),
 
 	/**
 	 * Enable a peer
 	 * @param {number} peerId
 	 * @returns {Promise<Object>}
 	 */
-	enablePeer: async (peerId) => {
-		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
-		if (!peer) {
-			throw new Error("Peer not found");
-		}
+	enablePeer: (peerId) =>
+		serializeConfigurationChange(async () => {
+			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
+			if (!peer) {
+				throw new Error("Peer not found");
+			}
 
-		await peer.$query().patch({ status: 2 });
+			await peer.$query().patch({ status: 2 });
 
-		await syncConfig();
-		await applyConfig();
+			await syncConfig();
+			await applyConfig();
 
-		logger.info(`WireGuard: Peer "${peer.name}" enabled`);
-		return await WireguardPeer.query().findById(peerId);
-	},
+			logger.info(`WireGuard: Peer "${peer.name}" enabled`);
+			return await WireguardPeer.query().findById(peerId);
+		}),
 
 	/**
 	 * Disable a peer
 	 * @param {number} peerId
 	 * @returns {Promise<Object>}
 	 */
-	disablePeer: async (peerId) => {
-		const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
-		if (!peer) {
-			throw new Error("Peer not found");
-		}
+	disablePeer: (peerId) =>
+		serializeConfigurationChange(async () => {
+			const peer = await WireguardPeer.query().findById(peerId).where("is_deleted", 0);
+			if (!peer) {
+				throw new Error("Peer not found");
+			}
 
-		await peer.$query().patch({ status: 0 });
+			await peer.$query().patch({ status: 0 });
 
-		await syncConfig();
-		await applyConfig();
+			await syncConfig();
+			await applyConfig();
 
-		logger.info(`WireGuard: Peer "${peer.name}" disabled`);
-		return await WireguardPeer.query().findById(peerId);
-	},
+			logger.info(`WireGuard: Peer "${peer.name}" disabled`);
+			return await WireguardPeer.query().findById(peerId);
+		}),
 
 	/**
 	 * Generate a WireGuard client configuration string

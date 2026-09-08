@@ -65,18 +65,9 @@ const checkDemoMode = (req, res, next) => {
 	if (isDemoMode()) {
 		// 1. Block Critical Admin Actions
 
-		// Block User Password Changes & Permissions
-		// PUT /users/:id/auth or /users/:id/permissions
-		if (req.method === "PUT" && req.path.match(/^\/users\/(?:\d+|me)\/(auth|permissions)$/)) {
-			return blockRequest(res);
-		}
-
-		// Block User Creation & Deletion
-		// POST /users or DELETE /users/:id
-		if (
-			(req.method === "POST" && req.path === "/users") ||
-			(["PUT", "DELETE"].includes(req.method) && req.path.match(/^\/users\/(?:\d+|me)$/))
-		) {
+		// Account writes also include 2FA enrollment and avatar uploads. Match
+		// the namespace before Express decodes individual user-ID parameters.
+		if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method) && /^\/users(?:\/|$)/.test(req.path)) {
 			return blockRequest(res);
 		}
 
@@ -142,9 +133,9 @@ const checkDemoMode = (req, res, next) => {
 				return blockRequest(res, "Advanced Nginx Configuration is disabled in Demo Mode.");
 			}
 
-			// Streams: Check forward_host for private IPs
+			// Streams use forwarding_host, unlike HTTP proxy hosts.
 			if (req.path.includes("/streams")) {
-				const forwardHost = getField(body, "forwardHost", "forward_host");
+				const forwardHost = getField(body, "forwardingHost", "forwarding_host");
 				const hostError = validateHost(forwardHost, forbiddenHosts, res);
 				if (hostError) return hostError;
 			}

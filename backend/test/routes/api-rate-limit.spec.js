@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+const state = vi.hoisted(() => ({ isSetup: vi.fn(async () => true) }));
+
 vi.mock("../../lib/express/jwt.js", () => ({ default: () => (_req, _res, next) => next() }));
 vi.mock("../../lib/express/demo.js", () => ({ default: (_req, _res, next) => next() }));
 vi.mock("../../schema/index.js", () => ({ getCompiledSchema: async () => ({}) }));
-vi.mock("../../setup.js", () => ({ isSetup: async () => true }));
+vi.mock("../../setup.js", () => ({ isSetup: state.isSetup }));
 vi.mock("../../logger.js", () => ({ debug: vi.fn(), express: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("../../routes/main.js", async () => {
 	const { default: express } = await import("express");
@@ -35,5 +37,10 @@ describe("global API limiter on the actual Nginx upstream path", () => {
 		const rejected = await fetch(`${origin}/users`);
 		expect(rejected.status).toBe(429);
 		expect(await rejected.json()).toMatchObject({ error: { code: 429 } });
+		expect(state.isSetup).not.toHaveBeenCalled();
+		const rejectedSetup = await fetch(`${origin}/users`, { method: "POST" });
+		expect(rejectedSetup.status).toBe(429);
+		await rejectedSetup.arrayBuffer();
+		expect(state.isSetup).not.toHaveBeenCalled();
 	}, 15000);
 });

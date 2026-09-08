@@ -16,6 +16,12 @@ const router = express.Router({
 	mergeParams: true,
 });
 
+// Public management responses never need the key used to recreate an onion identity.
+const publicService = (service) => {
+	const { private_key, ...result } = service.toJSON();
+	return result;
+};
+
 // Linking an onion service changes the target host's domains, so host update access is required.
 const assertProxyHostAccess = async (access, hostId) => {
 	if (!hostId) return;
@@ -63,7 +69,7 @@ router.get("/", async (_req, res) => {
 	const torInfo = await internalTor.getInfo();
 
 	res.status(200).send({
-		services,
+		services: services.map(publicService),
 		tor: torInfo,
 	});
 });
@@ -86,7 +92,7 @@ router.get("/:id", async (req, res) => {
 		return;
 	}
 
-	res.status(200).send(service);
+	res.status(200).send(publicService(service));
 });
 
 /**
@@ -127,7 +133,7 @@ router.post("/", async (req, res, next) => {
 		});
 
 		res.status(201).send({
-			...finalService,
+			...publicService(finalService),
 			created: result !== null,
 		});
 	} catch (err) {
@@ -172,7 +178,7 @@ router.put("/:id", async (req, res, next) => {
 			},
 		});
 
-		res.status(200).send(updatedService);
+		res.status(200).send(publicService(updatedService));
 	} catch (err) {
 		next(err);
 	}
@@ -232,11 +238,8 @@ router.post("/:id/start", async (req, res) => {
 	await assertProxyHostAccess(res.locals.access, service.proxy_host_id);
 
 	// If no private key yet, create the onion service
-	if (!service.private_key) {
-		await internalTor.create(service);
-	} else {
-		await internalTor.start(service);
-	}
+	const started = !service.private_key ? await internalTor.create(service) : await internalTor.start(service);
+	if (!started) throw new errs.ValidationError("Unable to start onion service");
 
 	// Refetch with updated status
 	const updatedService = await TorOnion.query().findById(service.id).withGraphFetched("proxy_host");
@@ -253,7 +256,7 @@ router.post("/:id/start", async (req, res) => {
 		},
 	});
 
-	res.status(200).send(updatedService);
+	res.status(200).send(publicService(updatedService));
 });
 
 /**
@@ -284,7 +287,7 @@ router.post("/:id/stop", async (req, res) => {
 		},
 	});
 
-	res.status(200).send(updatedService);
+	res.status(200).send(publicService(updatedService));
 });
 
 export default router;

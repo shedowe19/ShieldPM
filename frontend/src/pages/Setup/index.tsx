@@ -55,11 +55,11 @@ export default function Setup() {
 			if (user?.id) {
 				try {
 					await login(user.email, password);
-					// Trigger a Health change
-					await queryClient.refetchQueries({ queryKey: ["health"] });
-					// window.location.reload();
 				} catch (err) {
 					if (err instanceof Error) setErrorMsg(err.message);
+				} finally {
+					// Creation completed even when automatic login fails: leave the setup route.
+					await queryClient.refetchQueries({ queryKey: ["health"] });
 				}
 			} else {
 				setErrorMsg("cannot_create_user");
@@ -167,7 +167,7 @@ export default function Setup() {
 										<Label htmlFor="password">
 											<T id="user.new-password" />
 										</Label>
-										<Field name="password" validate={validateString(8, 100)}>
+										<Field name="password" validate={validateString(8, 72)}>
 											{({ field }: FieldProps) => (
 												<Input
 													{...field}

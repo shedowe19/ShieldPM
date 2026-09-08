@@ -74,8 +74,7 @@ export const readDuoCookie = (req) => {
 	const cookie = req.cookies?.[DUO_COOKIE];
 	if (!cookie) return null;
 	try {
-		// The shared decrypt helper does not enforce this cookie's fixed format.
-		// This boundary requires a canonical 96-bit IV and full 128-bit GCM tag.
+		// Bound the encrypted cookie's size in addition to the shared format checks.
 		if (typeof cookie !== "string" || !/^[a-f0-9]{24}:(?:[a-f0-9]{2}){1,256}:[a-f0-9]{32}$/.test(cookie)) {
 			throw new errs.ValidationError("Invalid Duo cookie format");
 		}

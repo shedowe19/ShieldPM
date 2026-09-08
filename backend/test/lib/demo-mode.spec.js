@@ -40,4 +40,12 @@ describe("demo restrictions follow the real API methods and aliases", () => {
 		state.enabled = false;
 		expect(invoke("PUT", "/users/me/auth").next).toHaveBeenCalled();
 	});
+	it.each(["POST", "PUT"])("blocks a private stream destination on %s", (method) => {
+		for (const field of ["forwarding_host", "forwardingHost"]) {
+			expect(invoke(method, "/nginx/streams", { [field]: "127.0.0.1" }).response.status).toHaveBeenCalledWith(
+				403,
+			);
+			expect(invoke(method, "/nginx/streams", { [field]: "example.com" }).next).toHaveBeenCalled();
+		}
+	});
 });

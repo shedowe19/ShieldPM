@@ -84,13 +84,12 @@ Siehe [Rootfs-Referenz](./rootfs.md) für vollständige Auflistung.
 
 Diese Dateien sind für KI-Agenten relevant und steuern das Verhalten bei der Arbeit mit diesem Projekt:
 
-| Datei | Zweck |
-| {
-|-------|-------|
-| `AGENTS.md` | deflection-Skill-Catalog, Common Code Patterns, Projekt-Constraints. **MUSS** vor jeder Aufgabe gelesen werden. |
-| `GEMINI.md` | **Source of Truth** für AI Agent Context — alle Agenten müssen diese Datei als autoritativ betrachten. |
-| `agent.md` | deflection-Pflicht-Regeln für Wiki-Pflege. Definiert wann und wie das Wiki aktualisiert werden muss. **MUSS** vor jeder Arbeitssitzung gelesen werden. |
-| `.cursorrules` | Coding-Standards, Naming-Conventions, Anti-Patterns. Relevant für alle Code-Änderungen. |
+| Datei          | Zweck                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`    | Skill-Katalog, gemeinsame Code-Muster und Projektvorgaben. **MUSS** vor jeder Aufgabe gelesen werden.                                                |
+| `GEMINI.md`    | **Source of Truth** für AI Agent Context — alle Agenten müssen diese Datei als autoritativ betrachten.                                               |
+| `agent.md`     | Verbindliche Regeln für die Wiki-Pflege. Definiert wann und wie das Wiki aktualisiert werden muss. **MUSS** vor jeder Arbeitssitzung gelesen werden. |
+| `.cursorrules` | Coding-Standards, Naming-Conventions, Anti-Patterns. Relevant für alle Code-Änderungen.                                                              |
 
 ## Verwandte Seiten
 

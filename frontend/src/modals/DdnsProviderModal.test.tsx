@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { showDdnsProviderModal } from "./DdnsProviderModal";
 
@@ -80,4 +80,14 @@ it("does not offer an empty edit form when the provider cannot be loaded", async
 	open(7);
 	expect(await screen.findByText("Provider unavailable")).toBeInTheDocument();
 	expect(screen.queryByRole("button", { name: "save" })).not.toBeInTheDocument();
+});
+
+it("preserves unsaved provider fields across background cache updates", async () => {
+	open(7);
+	const name = await screen.findByLabelText("column.name");
+	fireEvent.change(name, { target: { value: "Unsaved provider" } });
+	act(() => {
+		client.setQueryData(["ddns-providers"], [{ ...provider, name: "Refreshed provider" }]);
+	});
+	await waitFor(() => expect(name).toHaveValue("Unsaved provider"));
 });

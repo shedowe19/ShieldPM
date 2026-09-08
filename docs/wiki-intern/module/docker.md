@@ -39,6 +39,10 @@ Auch der direkte Auto-Discovery-Schreibweg prüft Domains über die gemeinsame H
 
 Die Kollisionssuche berücksichtigt alle vorhandenen Hosts. Ein bereits passender Container-Host beendet die Prüfung nicht vorzeitig: Belegt ein manuell angelegter Host eine der angeforderten Domains, wird der automatische Eintrag nicht darübergeschrieben.
 
+### Wiederholte Initialisierung
+
+Gleichzeitige Initialisierungsaufrufe teilen dieselbe Verbindungserstellung. Nach erfolgreichem Verbinden und Einrichten der Ereignisüberwachung bleibt eine erneute Backend-Startsequenz ohne weitere Docker-Listener. Ist kein Docker-Client erreichbar, bleibt eine spätere Initialisierung möglich.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

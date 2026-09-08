@@ -191,6 +191,11 @@ const internalUser = {
 			(typeof data.is_disabled !== "undefined" && Boolean(data.is_disabled) !== Boolean(user.is_disabled))
 		) {
 			await access.can("users:permissions", data.id);
+		} else {
+			// Unchanged flags from a profile form need no privileged write. Do not
+			// overwrite a concurrent administrator's role change or account block.
+			delete data.roles;
+			delete data.is_disabled;
 		}
 
 		// 2. if email is to be changed, find other users with that email

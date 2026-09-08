@@ -24,7 +24,7 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 
 - `setupTotp(userId, userEmail)` — Generiert geheimen Schlüssel + QR-Code (Base64 PNG)
 - `verifyAndEnableTotp(userId, code)` — Verifiziert Code und aktiviert TOTP für den User
-- `verifyTotp(userId, code)` — Reine Verifizierung (ohne Aktivierungslogik)
+- `verifyTotp(userId, code)` — Prüft eine aktivierte Methode und verbraucht ihren Zeitschritt atomar
 
 ### YubiKey
 
@@ -102,6 +102,7 @@ Die Verifizierungs- und Passkey-Endpunkte sind im OpenAPI-Schema unter `backend/
 ## Gotchas & Bug-Fixes
 
 - **Mehrere Authenticator-Apps**: Die Anmeldung prüft alle aktivierten TOTP-Datensätze des Benutzers; ein gültiger Code einer später hinzugefügten App wird ebenfalls akzeptiert.
+- **TOTP-Einmalverwendung**: Der von `otplib` bestätigte `timeStep` wird in der vorhandenen `counter`-Spalte des TOTP-Datensatzes gespeichert. Eine bedingte Aktualisierung auf den zuvor gelesenen Zähler und den weiterhin aktiven Datensatz lässt genau einen konkurrierenden Login zu. Derselbe oder ein älterer Zeitschritt wird danach abgelehnt; die nächste Anmeldung benötigt einen neuen Code. Passkeys verwenden ihren eigenen Datensatz und Signaturzähler unverändert. Eine Migration ist nicht erforderlich.
 - **Erste YubiKey-/Duo-Einrichtung**: Neu erzeugte Wiederherstellungscodes werden als `backup_codes` in der Einrichtungsantwort einmalig an die Oberfläche übergeben. Existieren noch unbenutzte Codes, bleibt dieser Satz erhalten und die Antwort enthält keinen neuen Satz. Provider-Geheimnisse bleiben aus der HTTP-Antwort ausgeschlossen.
 - **Wiederherstellungscodes bei Änderungen**: Das Entfernen einer noch unbestätigten Methode erhält die Codes, solange eine aktive Methode existiert. Neue Codes werden zuerst vollständig erzeugt und gehasht; Löschung des alten Satzes und Einfügen des vollständigen neuen Satzes erfolgen anschließend in einer Transaktion. Ein Schreibfehler erhält den bisherigen Satz.
 - **Nur aktivierte TOTP-Methoden beim Login**: `verifyTotp()` berücksichtigt ausschließlich `is_verified=1` und `is_deleted=0`. Ein neuer, noch unbestätigter Setup-Datensatz kann damit keine vorhandene Methode ersetzen oder die zweite Faktorprüfung bestehen. Direkte DB-Seeds müssen den Aktivierungsstatus ausdrücklich setzen.

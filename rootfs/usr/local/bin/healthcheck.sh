@@ -10,7 +10,7 @@ fi
 export GOA="${GOA:-false}"
 export GOA_PORT="${GOA_PORT:-91}"
 export GOA_IPV4_BINDING="${GOA_IPV4_BINDING:-0.0.0.0}"
-if [ "$GOA_IPV4_BINDING" = "0.0.0.0" ]; then
+if [ "$GOA_IPV4_BINDING" = "0.0.0.0" ] || [ "${GOA_LISTEN_LOCALHOST:-false}" = true ]; then
     export GOA_IPV4_BINDING="127.0.0.1"
 fi
 
@@ -20,7 +20,7 @@ export PHP84="${PHP84:-false}"
 
 export NPM_PORT="${NPM_PORT:-81}"
 export NPM_IPV4_BINDING="${NPM_IPV4_BINDING:-0.0.0.0}"
-if [ "$NPM_IPV4_BINDING" = "0.0.0.0" ]; then
+if [ "$NPM_IPV4_BINDING" = "0.0.0.0" ] || [ "${NPM_LISTEN_LOCALHOST:-false}" = true ]; then
     export NPM_IPV4_BINDING="127.0.0.1"
 fi
 

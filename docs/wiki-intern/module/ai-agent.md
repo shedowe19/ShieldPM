@@ -115,6 +115,12 @@ Nur strukturierte Tool-Aufrufe des Providers dürfen Aktionen auslösen. JSON-Be
 
 Wartungsmodus-Tools nutzen ausschließlich die Nginx-Konfiguration durch `internalProxyHost.update()` und rendern keine zweite Konfiguration aus einer für öffentliche Antworten bereinigten Host-Kopie. Modelllisten-Anfragen haben zehn Sekunden Zeitlimit. Die Chat-Route protokolliert Nachrichtenlängen statt Nachrichteninhalte.
 
+### Demo-Grenzen und Tor-Fehler
+
+Der Executor prüft für Stream-Weiterleitungen das tatsächliche Feld `forwarding_host`; Hostnamen und IPv6-Klammern werden vor der Prüfung vereinheitlicht. Auch Updates von Streams, Weiterleitungs- und 404-Hosts durchlaufen die Demo-Prüfung. Sämtliche schreibenden Tor-Tools sind im Demo-Modus gesperrt, einschließlich Start, Stop und Löschen.
+
+Meldet der Tor-Service bei Erstellung oder Start `null` beziehungsweise `false`, erhält das Modell ein Fehlerergebnis. Der Executor erzeugt dafür keinen Audit-Eintrag mit angeblichem Erfolg.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

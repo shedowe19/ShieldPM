@@ -163,6 +163,10 @@ app.use(
 );
 
 // CSRF Protection (Double Submit Cookie)
+// Nginx strips /api. Reject excess upstream requests before authentication,
+// database lookups, CSRF generation and body parsing.
+app.use(globalApiLimiter);
+
 const csrfCookieOptions = {
 	sameSite: "strict",
 	path: "/",
@@ -193,14 +197,12 @@ app.use(jwt());
 // CSRF middleware with a strict first-time-setup bypass.
 // Only skip CSRF for POST /api/users while the system has no active users yet.
 app.use(async (req, res, next) => {
-	const setupComplete = await isSetup();
-
 	// Bypass CSRF for specific endpoints that are protected by other mechanisms.
 	// Match both with and without /api prefix to handle different proxy configurations.
 	const path = req.path;
 	const method = req.method;
 	const isInitialSetupUserCreation =
-		!setupComplete && method === "POST" && (path === "/api/users" || path === "/users");
+		method === "POST" && (path === "/api/users" || path === "/users") && !(await isSetup());
 	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
@@ -253,10 +255,6 @@ app.set("json spaces", 2);
 import checkDemoMode from "./lib/express/demo.js";
 
 app.use(checkDemoMode);
-
-// Apply global rate limiter to all API routes
-// The frontend Nginx strips /api; actual backend paths start at /users, /tokens, etc.
-app.use(globalApiLimiter);
 
 // Compile OpenAPI schema once (dereferences $refs)
 const _swaggerSpec = await getCompiledSchema();

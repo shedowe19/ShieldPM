@@ -43,6 +43,10 @@ WebSocket-Fehler und Schließen-Ereignisse werden bereits vor der asynchronen Ho
 
 Frühe gültige Resize-Ereignisse werden bis zur Shell-Erzeugung gespeichert und anschließend angewendet. Fehler der Shell-Streams und WebSocket-Protokollfehler werden behandelt, statt als unbehandelte EventEmitter-Fehler den Backend-Prozess zu beenden.
 
+### Wiederholte Initialisierung
+
+Der Terminal-Service registriert pro HTTP-Server nur einen Upgrade-Listener und einen WebSocket-Server. Wiederholt die Backend-Startsequenz die Initialisierung, bleibt die vorhandene Instanz erhalten; doppelte WebSocket-Upgrades werden dadurch vermieden.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

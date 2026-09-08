@@ -292,12 +292,18 @@ jobs:
           # Enable ShieldPM Service (Autostart)
           docker exec "$CONTAINER_NAME" systemctl enable shieldpm.service
 
+          # Every cloned LXC must generate its own SSH identity before sshd starts.
+          docker exec "$CONTAINER_NAME" systemctl enable shieldpm-ssh-hostkeys.service
+          docker exec "$CONTAINER_NAME" sh -c 'rm -f /etc/ssh/ssh_host_*'
+          docker exec "$CONTAINER_NAME" truncate -s 0 /etc/machine-id
+          docker exec "$CONTAINER_NAME" rm -f /var/lib/dbus/machine-id
+
           # Alias update command
           docker exec "$CONTAINER_NAME" ln -s /usr/local/bin/update-shieldpm /usr/bin/update
 
           # 5. Cleanup to reduce size
           docker exec "$CONTAINER_NAME" apt-get clean
-          docker exec "$CONTAINER_NAME" rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+          docker exec "$CONTAINER_NAME" sh -c 'rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*'
 
           # 6. Export Rootfs
           echo "Exporting Rootfs..."

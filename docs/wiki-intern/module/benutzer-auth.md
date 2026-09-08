@@ -60,7 +60,7 @@ Regressionen mit SQLite: `backend/test/internal/account-transactions.spec.js` un
 
 ## Profiländerungen und Avatare
 
-- Eigene Profilfelder bleiben über `users:update` bearbeitbar. Änderungen an `roles` oder `is_disabled` benötigen zusätzlich `users:permissions`; unveränderte Werte dürfen im Profilformular mitgesendet werden.
+- Eigene Profilfelder bleiben über `users:update` bearbeitbar. Änderungen an `roles` oder `is_disabled` benötigen zusätzlich `users:permissions`; unveränderte Werte dürfen im Profilformular mitgesendet werden, werden aber nicht erneut geschrieben. Dadurch kann ein gewöhnliches Profilupdate keinen zwischenzeitlichen Rollenentzug oder eine Kontosperre zurücksetzen.
 - Neue Benutzer unterstützen Gravatar und benutzerdefinierte Avatar-URLs. Ein Datei-Upload erfolgt nach dem Anlegen über den Upload-Endpunkt.
 - Bei einem Avatar-Upload wird die bisherige Datei erst nach erfolgreichem Speichern der neuen Datei und ihres Datenbankverweises entfernt. Ein fehlgeschlagenes Datenbankupdate entfernt die neue Datei und erhält das bisherige Bild. Zufällige Dateinamen vermeiden Kollisionen gleichzeitiger Uploads.
 - Dateibasierte Avatare müssen einen reinen Dateinamen mit dem Präfix der Benutzer-ID besitzen. Lesezugriffe und das Entfernen eines bisherigen Avatars prüfen dieselbe Grenze; Pfadwechsel sowie Dateien anderer Benutzer werden zurückgewiesen.
@@ -75,6 +75,12 @@ Regressionen mit SQLite: `backend/test/internal/account-transactions.spec.js` un
 - Die öffentlichen OIDC-Routen setzen kein bestehendes gültiges API-Token voraus; auch eine Anmeldung nach Ablauf eines bisherigen Cookies ist möglich.
 
 Regressionstests: `backend/test/internal/user-security.spec.js` und `backend/test/routes/oidc-security.spec.js`.
+
+## Demo-Konten
+
+Der Demo-Modus sperrt alle schreibenden Methoden im `/users`-Namensraum. Dazu zählen auch 2FA-Einrichtung, das Ersetzen von Wiederherstellungscodes und Avatar-Uploads. Der Schutz greift vor der Dekodierung einzelner Express-Parameter; kodierte oder teilweise numerische Benutzer-IDs umgehen die Sperre nicht. Lesende Kontozugriffe bleiben möglich.
+
+Regression: `backend/test/lib/third-auth-demo.spec.js` prüft die tatsächliche Express-Routenauflösung.
 
 ## Verwandte Seiten
 

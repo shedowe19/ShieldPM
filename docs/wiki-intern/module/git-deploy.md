@@ -58,6 +58,12 @@ Nach Clone oder Pull lädt der Sync den aktuellen Host erneut. Ist er inzwischen
 
 Für verwaltete Roots unter `/data/websites/` verhindert die Nginx-Konfiguration das Folgen symbolischer Links. `.git`-Pfade werden bei statischen Hosts gesperrt, damit Repository-Konfiguration und Historie nicht öffentlich ausgeliefert werden. PHP-Anwendungen werden weiterhin als ausführbarer Anwendungscode behandelt; die Dateipfadprüfung stellt keine PHP-Sandbox bereit.
 
+### Sichtbarkeit und Zeiteinheiten
+
+Manueller Sync, Statusabfrage und Konfigurationsänderung laden Hosts innerhalb der aktuellen `permission_visibility`. Eingeschränkte Benutzer können ausschließlich eigene Hosts abrufen oder ändern; nur Sichtbarkeit `all` beziehungsweise interne Polling-Aufrufe erlauben fremde Hosts. Die Prüfung erfolgt vor Datei-, Git- oder Datenbankänderungen.
+
+Gespeicherte Polling-Intervalle bleiben in ihrer gewählten Einheit erhalten: `1m` bedeutet eine Minute und `1h` eine Stunde. Erst nach der Umrechnung in Millisekunden gilt die Mindestdauer von zehn Sekunden.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

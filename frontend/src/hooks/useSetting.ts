@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSetting, type Setting, updateSetting } from "src/api/backend";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { optimisticQueryUpdate } from "./optimisticQueryUpdate";
 
 const fetchSetting = (id: string) => {
 	return getSetting(id);
@@ -24,12 +25,10 @@ export const useSetSetting = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.SETTING, values.id]);
-			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.SETTING, values.id], (old: Setting) => ({
+			return optimisticQueryUpdate<Setting>(queryClient, [AUDIT_LOG_OBJECT_TYPE.SETTING, values.id], (old) => ({
 				...old,
 				...values,
 			}));
-			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.SETTING, values.id], previousObject);
 		},
 		onError: (_err, _values, context) => {
 			if (context) {

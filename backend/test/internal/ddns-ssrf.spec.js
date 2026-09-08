@@ -49,7 +49,13 @@ describe("custom DDNS SSRF protection", () => {
 					expect(error).toBeNull();
 					expect(address).toBe("1.1.1.1");
 					expect(family).toBe(4);
-					onResponse({ statusCode: 302, headers: { location: "http://127.0.0.1/" }, resume: vi.fn() });
+					onResponse(
+						Object.assign(new EventEmitter(), {
+							statusCode: 302,
+							headers: { location: "http://127.0.0.1/" },
+							resume: vi.fn(),
+						}),
+					);
 				}),
 			);
 			return request;

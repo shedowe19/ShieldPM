@@ -35,9 +35,22 @@ const mockAccess = {
 class DockerService {
 	constructor() {
 		this.clients = [];
+		this.initialized = false;
+		this.initializationPromise = null;
 	}
 
 	async init() {
+		if (this.initialized) return;
+		if (this.initializationPromise) return this.initializationPromise;
+		this.initializationPromise = this.initialize();
+		try {
+			await this.initializationPromise;
+		} finally {
+			this.initializationPromise = null;
+		}
+	}
+
+	async initialize() {
 		try {
 			this.clients = [];
 
@@ -79,7 +92,8 @@ class DockerService {
 			await this.sync();
 
 			// Start Watching
-			this.watch();
+			await this.watch();
+			this.initialized = this.clients.some((client) => client.isConnected);
 		} catch (err) {
 			logger.warn("Docker Auto-Discovery: Initialization failed.", err.message);
 		}

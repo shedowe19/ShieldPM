@@ -21,6 +21,18 @@ const WEBSITES_DIR = "/data/websites";
 const pollingTimers = new Map();
 const activeSyncs = new Map();
 
+/** Resolve hosts within the caller's current visibility before reading or changing deployment state. */
+const getAuthorizedHost = async (access, hostId, permission) => {
+	const accessData = access ? await access.can(permission, hostId) : true;
+	const query = ProxyHost.query().findById(hostId).where("is_deleted", 0);
+	if (accessData !== true && accessData?.permission_visibility !== "all") {
+		query.where("owner_user_id", access.token.getUserId(1));
+	}
+	const host = await query;
+	if (!host) throw new errs.ItemNotFoundError(hostId);
+	return host;
+};
+
 /**
  * Ensures the websites directory exists
  * @param {number} hostId
@@ -85,18 +97,11 @@ const internalGitDeploy = {
 	 * @returns {Promise<{success: boolean, commit?: string, message?: string}>}
 	 */
 	sync: async (access, hostId) => {
-		if (access) {
-			await access.can("proxy_hosts:update", hostId);
-		}
-
 		if (isDemoMode()) {
 			throw new errs.AuthError("Git Deploy is disabled in Demo Mode");
 		}
 
-		const host = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
-		if (!host) {
-			throw new errs.ItemNotFoundError(hostId);
-		}
+		const host = await getAuthorizedHost(access, hostId, "proxy_hosts:update");
 
 		if (host.forward_scheme !== "path") {
 			throw new errs.ValidationError("Git Deploy is only available for path-based proxy hosts");
@@ -243,14 +248,7 @@ const internalGitDeploy = {
 	 * @returns {Promise<Object>}
 	 */
 	getStatus: async (access, hostId) => {
-		if (access) {
-			await access.can("proxy_hosts:get", hostId);
-		}
-
-		const host = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
-		if (!host) {
-			throw new errs.ItemNotFoundError(hostId);
-		}
+		const host = await getAuthorizedHost(access, hostId, "proxy_hosts:get");
 
 		return {
 			git_repo_url: host.git_repo_url,
@@ -277,12 +275,7 @@ const internalGitDeploy = {
 			throw new errs.AuthError("Git Deploy is disabled in Demo Mode");
 		}
 
-		await access.can("proxy_hosts:update", hostId);
-
-		const host = await ProxyHost.query().findById(hostId).where("is_deleted", 0);
-		if (!host) {
-			throw new errs.ItemNotFoundError(hostId);
-		}
+		const host = await getAuthorizedHost(access, hostId, "proxy_hosts:update");
 
 		if (host.forward_scheme !== "path") {
 			throw new errs.ValidationError("Git Deploy is only available for path-based proxy hosts");
@@ -300,8 +293,8 @@ const internalGitDeploy = {
 			updateData.git_sync_enabled = data.git_sync_enabled;
 		}
 		if (data.git_poll_interval !== undefined) {
-			// Enforce minimum of 10 seconds
-			updateData.git_poll_interval = Math.max(10, data.git_poll_interval);
+			// The timer applies the ten-second minimum after converting the selected unit.
+			updateData.git_poll_interval = data.git_poll_interval;
 		}
 		if (data.git_poll_unit !== undefined) {
 			if (["s", "m", "h"].includes(data.git_poll_unit)) {

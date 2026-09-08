@@ -397,8 +397,8 @@ if [[ -n "$ANUBIS_ARCH" ]]; then
             if [ "$ANUBIS_INSTALLED" = false ]; then
                 ENV_FILE="/data/.env"
                 if [ -f "$ENV_FILE" ]; then
-                    if grep -q "ANUBIS_ENABLED" "$ENV_FILE"; then
-                        sed -i "s|.*ANUBIS_ENABLED.*|ANUBIS_ENABLED=true|g" "$ENV_FILE"
+                    if grep -qE '^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=' "$ENV_FILE"; then
+                        sed -i -E 's|^[[:space:]]*(#[[:space:]]*)?(export[[:space:]]+)?ANUBIS_ENABLED=.*$|ANUBIS_ENABLED=true|' "$ENV_FILE"
                     else
                         echo "ANUBIS_ENABLED=true" >> "$ENV_FILE"
                     fi

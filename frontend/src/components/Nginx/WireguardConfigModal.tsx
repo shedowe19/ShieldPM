@@ -1,6 +1,7 @@
 import { IconCheck, IconCopy, IconDownload } from "@tabler/icons-react";
 import { QrCode, Shield } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { showError } from "src/notifications";
 import { getWireguardPeerConfig, getWireguardPeerQRCode } from "@/api/backend";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,12 +27,16 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 	const [qrcode, setQrcode] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const copyAttempt = useRef(0);
+	const copyTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
 	useEffect(() => {
 		let active = true;
 		setConfig(null);
 		setQrcode(null);
 		setLoading(true);
+		setError(null);
 		setCopied(false);
 		if (open && peerId) {
 			Promise.all([getWireguardPeerConfig(peerId), getWireguardPeerQRCode(peerId).catch(() => null)])
@@ -41,8 +46,13 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 						setQrcode(qr?.qrcode || null);
 					}
 				})
-				.catch(() => {
-					if (active) setConfig(null);
+				.catch((error: unknown) => {
+					if (active) {
+						setConfig(null);
+						setError(
+							error instanceof Error ? error.message : intl.formatMessage({ id: "notification.error" }),
+						);
+					}
 				})
 				.finally(() => {
 					if (active) setLoading(false);
@@ -50,14 +60,25 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 		}
 		return () => {
 			active = false;
+			copyAttempt.current += 1;
+			clearTimeout(copyTimeout.current);
 		};
 	}, [open, peerId]);
 
-	const handleCopy = () => {
-		if (config) {
-			navigator.clipboard.writeText(config);
+	const handleCopy = async () => {
+		if (!config || !open) return;
+		const attempt = ++copyAttempt.current;
+		clearTimeout(copyTimeout.current);
+		setCopied(false);
+		try {
+			await navigator.clipboard.writeText(config);
+			if (attempt !== copyAttempt.current) return;
 			setCopied(true);
-			setTimeout(() => setCopied(false), 2000);
+			copyTimeout.current = setTimeout(() => setCopied(false), 2000);
+		} catch (error) {
+			if (attempt === copyAttempt.current) {
+				showError(error instanceof Error ? error.message : intl.formatMessage({ id: "notification.error" }));
+			}
 		}
 	};
 
@@ -96,6 +117,10 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 					<div className="p-12 text-center text-muted-foreground">
 						<T id="loading" />
 					</div>
+				) : error ? (
+					<div role="alert" className="p-6 text-sm text-destructive">
+						{error}
+					</div>
 				) : (
 					<Tabs defaultValue="config" className="px-6 pb-4">
 						<TabsList className="grid w-full grid-cols-2">
@@ -120,6 +145,7 @@ export function WireguardConfigModal({ open, onOpenChange, peerId, peerName }: W
 									className="absolute top-2 right-2"
 									aria-label={intl.formatMessage({ id: "wireguard.config.copy" })}
 									onClick={handleCopy}
+									disabled={!config}
 								>
 									{copied ? (
 										<IconCheck className="h-4 w-4 text-green-500" />

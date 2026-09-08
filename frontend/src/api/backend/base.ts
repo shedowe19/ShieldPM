@@ -66,10 +66,11 @@ function buildBody(data?: object): string | undefined {
 
 async function processResponse<T = DynamicResponse>(
 	response: Response,
+	sessionRevision: number,
 	silentAuth = false,
 	rawResponse = false,
 ): Promise<T> {
-	if (response.status === 401) {
+	if (response.status === 401 && sessionRevision === AuthStore.sessionRevision) {
 		// Authentication must expire even when a proxy returns HTML or an empty body.
 		AuthStore.clear();
 		queryClient.clear();
@@ -93,7 +94,7 @@ async function processResponse<T = DynamicResponse>(
 	}
 	const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : undefined;
 	// Capture CSRF Token if present in response
-	if (typeof record?.csrfToken === "string" && record.csrfToken) {
+	if (sessionRevision === AuthStore.sessionRevision && typeof record?.csrfToken === "string" && record.csrfToken) {
 		AuthStore.setCsrfToken(record.csrfToken);
 	}
 
@@ -149,19 +150,21 @@ async function baseGet({ url, params }: GetArgs, abortController?: AbortControll
 }
 
 export async function get<T = DynamicResponse>(args: GetArgs, abortController?: AbortController): Promise<T> {
-	return processResponse<T>(await baseGet(args, abortController), args.silentAuth);
+	const sessionRevision = AuthStore.sessionRevision;
+	return processResponse<T>(await baseGet(args, abortController), sessionRevision, args.silentAuth);
 }
 
-async function throwDownloadError(response: Response, silentAuth = false): Promise<void> {
+async function throwDownloadError(response: Response, sessionRevision: number, silentAuth = false): Promise<void> {
 	if (!response.ok) {
-		await processResponse(response, silentAuth);
+		await processResponse(response, sessionRevision, silentAuth);
 	}
 }
 
 export async function download({ url, params, silentAuth }: GetArgs, filename = "download.file") {
+	const sessionRevision = AuthStore.sessionRevision;
 	const headers = buildAuthHeader();
 	const res = await fetch(buildUrl({ url, params }), { headers, credentials: "include" });
-	await throwDownloadError(res, silentAuth);
+	await throwDownloadError(res, sessionRevision, silentAuth);
 	const bl = await res.blob();
 	const u = window.URL.createObjectURL(bl);
 	const a = document.createElement("a");
@@ -172,6 +175,7 @@ export async function download({ url, params, silentAuth }: GetArgs, filename = 
 }
 
 export async function downloadPost({ url, params, data, noAuth, silentAuth }: PostArgs, filename = "download.file") {
+	const sessionRevision = AuthStore.sessionRevision;
 	const apiUrl = buildUrl({ url, params });
 	const method = "POST";
 
@@ -197,7 +201,7 @@ export async function downloadPost({ url, params, data, noAuth, silentAuth }: Po
 	}
 
 	const res = await fetch(apiUrl, { method, headers, body, credentials: "include" });
-	await throwDownloadError(res, silentAuth);
+	await throwDownloadError(res, sessionRevision, silentAuth);
 	const bl = await res.blob();
 	const u = window.URL.createObjectURL(bl);
 	const a = document.createElement("a");
@@ -211,6 +215,7 @@ export async function post<T = DynamicResponse>(
 	{ url, params, data, noAuth, silentAuth, rawKeys, rawResponse }: PostArgs,
 	abortController?: AbortController,
 ): Promise<T> {
+	const sessionRevision = AuthStore.sessionRevision;
 	const apiUrl = buildUrl({ url, params });
 	const method = "POST";
 
@@ -237,13 +242,14 @@ export async function post<T = DynamicResponse>(
 
 	const signal = abortController?.signal;
 	const response = await fetch(apiUrl, { method, headers, body, signal, credentials: "include" });
-	return processResponse(response, silentAuth, rawResponse);
+	return processResponse(response, sessionRevision, silentAuth, rawResponse);
 }
 
 export async function put<T = DynamicResponse>(
 	{ url, params, data, silentAuth }: PutArgs,
 	abortController?: AbortController,
 ): Promise<T> {
+	const sessionRevision = AuthStore.sessionRevision;
 	const apiUrl = buildUrl({ url, params });
 	const method = "PUT";
 	const headers = {
@@ -253,13 +259,14 @@ export async function put<T = DynamicResponse>(
 	const signal = abortController?.signal;
 	const body = buildBody(data);
 	const response = await fetch(apiUrl, { method, headers, body, signal, credentials: "include" });
-	return processResponse(response, silentAuth);
+	return processResponse(response, sessionRevision, silentAuth);
 }
 
 export async function del<T = DynamicResponse>(
 	{ url, params, silentAuth }: DeleteArgs,
 	abortController?: AbortController,
 ): Promise<T> {
+	const sessionRevision = AuthStore.sessionRevision;
 	const apiUrl = buildUrl({ url, params });
 	const method = "DELETE";
 	const headers = {
@@ -268,7 +275,7 @@ export async function del<T = DynamicResponse>(
 	};
 	const signal = abortController?.signal;
 	const response = await fetch(apiUrl, { method, headers, signal, credentials: "include" });
-	return processResponse<T>(response, silentAuth);
+	return processResponse<T>(response, sessionRevision, silentAuth);
 }
 
 export const apiClient = {

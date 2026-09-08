@@ -48,15 +48,20 @@ const validateDemoModeHost = (data) => {
 
 	// Block Internal Hostnames
 	const forbiddenHosts = ["localhost", "db", "app", "redis", "postgres", "mysql"];
-	if (data.forward_host) {
-		if (forbiddenHosts.includes(data.forward_host) || data.forward_host.endsWith(".local")) {
+	const rawHost = data.forward_host ?? data.forwarding_host;
+	if (rawHost) {
+		const host = String(rawHost)
+			.toLowerCase()
+			.replace(/^\[|\]$/g, "")
+			.replace(/\.$/, "");
+		if (forbiddenHosts.includes(host) || host.endsWith(".local")) {
 			throw new Error("Forwarding to internal services (localhost/db/local) is disabled in Demo Mode.");
 		}
 
 		// Block Private IPs
 		try {
-			if (ipaddr.isValid(data.forward_host)) {
-				const addr = ipaddr.parse(data.forward_host);
+			if (ipaddr.isValid(host)) {
+				const addr = ipaddr.parse(host);
 				const range = addr.range();
 				const blockedRanges = [
 					"loopback",
@@ -67,6 +72,7 @@ const validateDemoModeHost = (data) => {
 					"reserved",
 					"broadcast",
 					"multicast",
+					"unspecified",
 				];
 
 				if (blockedRanges.includes(range)) {
@@ -166,6 +172,11 @@ export const executeTools = async (access, toolCalls) => {
 					"update_cloudflared_tunnel",
 					"delete_cloudflared_tunnel",
 					"get_cloudflared_tunnels",
+					"create_tor_onion_service",
+					"update_tor_onion_service",
+					"delete_tor_onion_service",
+					"start_tor_onion_service",
+					"stop_tor_onion_service",
 					// DDNS is safe in Demo but creation might be blocked if we want to be strict, currently User said "allow all"
 				];
 				if (blockedTools.includes(call.name)) {
@@ -817,16 +828,19 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				// Other Updates
 				case "update_redirection_host": {
+					validateDemoModeHost(call.args);
 					await internalRedirectionHost.update(access, { id: call.args.id, ...call.args });
 					result = `Updated Redirection Host ID: ${call.args.id}`;
 					break;
 				}
 				case "update_dead_host": {
+					validateDemoModeHost(call.args);
 					await internalDeadHost.update(access, { id: call.args.id, ...call.args });
 					result = `Updated Dead Host ID: ${call.args.id}`;
 					break;
 				}
 				case "update_stream": {
+					validateDemoModeHost(call.args);
 					await internalStream.update(access, { id: call.args.id, ...call.args });
 					result = `Updated Stream ID: ${call.args.id}`;
 					break;
@@ -962,7 +976,8 @@ export const executeTools = async (access, toolCalls) => {
 
 					const service = await TorOnion.query().insert(payload);
 					// Create in Tor
-					await internalTor.create(service);
+					if (!(await internalTor.create(service)))
+						throw new errs.ValidationError("Unable to create onion service");
 
 					// Refetch for address
 					const finalService = await TorOnion.query().findById(service.id);
@@ -1026,8 +1041,10 @@ export const executeTools = async (access, toolCalls) => {
 				case "start_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:update", call.args.id);
 					if (service.proxy_host_id) await verifyProxyHostUpdateAccess(access, service.proxy_host_id);
-					if (!service.private_key) await internalTor.create(service);
-					else await internalTor.start(service);
+					const started = !service.private_key
+						? await internalTor.create(service)
+						: await internalTor.start(service);
+					if (!started) throw new errs.ValidationError("Unable to start onion service");
 					await internalAuditLog.add(access, {
 						action: "updated",
 						object_type: "tor-onion",

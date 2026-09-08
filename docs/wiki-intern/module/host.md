@@ -22,8 +22,8 @@ Dieses Modul bündelt die wiederverwendbare Logik, sodass die einzelnen Host-Mod
 
 ## Verhalten
 
-- `domainExists(domain)` prüft, ob eine Domain in irgendeinem Host-Typ bereits genutzt wird (verhindert Konflikte beim Anlegen).
-- Helfer für das Erzeugen, Aktualisieren oder Entfernen von `host_domains`-Einträgen (eine Zeile pro Domain).
+- `isHostnameTaken(domain)` prüft, ob eine Domain in irgendeinem Host-Typ bereits genutzt wird (verhindert Konflikte beim Anlegen).
+- `getHostsWithDomains()` löst aktive Host-Datensätze über ihre Domainlisten auf. Proxy-Hosts laden dazu `host_domains`; Redirect- und Dead-Hosts speichern Domains im JSON-Feld `domain_names`.
 - Wird typischerweise von `internal/proxy-host.js`, `internal/redirection-host.js`, `internal/dead-host.js` aufgerufen.
 
 ## Abhängigkeiten
@@ -52,3 +52,9 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 `validateDomainNames()` prüft ein bis 99 nichtleere Nginx-Servernamen und verhindert Whitespace, Steuerzeichen und Direktiventrenner in Domain-Tokens. Bestehende Wildcard-, IDN- und als einzelnes Token zulässige Regex-Namen bleiben möglich.
 
 DNS-Provider-Credentials aus einer Zertifikatsanforderung werden für die Beantragung verwendet, aber nicht erneut in Host-Metadaten gespeichert. API-Antworten und Auditdaten bereinigen außerdem eventuell vorhandene Altwerte. Das gilt für Proxy-, Redirection-, Dead-Hosts und Streams.
+
+## Berechtigung neu zugewiesener Ressourcen
+
+Beim Erstellen und Aktualisieren prüfen Proxy-, Redirect-, Dead-Hosts und Streams neue Zertifikatszuordnungen über `internalCertificate.get()`. Proxy-Hosts prüfen neue Zugriffslisten über `internalAccessList.get()`. Die Ressourcen benötigen ihre eigene Leseberechtigung und müssen im Eigentümer-Sichtbereich liegen; gelöschte oder fehlende IDs werden vor einer Hoständerung abgewiesen. Unveränderte, bereits bestehende Zuordnungen können weiter bearbeitet und mit `0` entfernt werden. `"new"` bleibt der eigene Ausstellungsablauf.
+
+Regressionen: `third-proxy-references.spec.js` prüft sämtliche Create-/Update-Aufrufer; `third-proxy-reference-ownership.spec.js` prüft die tatsächlichen Services mit SQLite für eigene, fremde, gelöschte und global sichtbare Ressourcen.

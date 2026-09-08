@@ -14,7 +14,7 @@ Dokumentation der Datenbank-Konfiguration und -Verwaltung.
 
 ## Konfiguration
 
-Datei: `backend/knexfile.js`
+Dateien: `backend/lib/config.js` und `backend/db.js`. `backend/knexfile.js` stellt die Knex-Konfiguration zum Erstellen von Migrationsdateien bereit.
 
 Die Datenbank-Auswahl erfolgt über Umgebungsvariablen:
 

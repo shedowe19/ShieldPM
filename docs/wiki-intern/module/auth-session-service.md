@@ -69,10 +69,11 @@ Die Authentifizierung nutzt `issueTokenPair()` für den Login und `refreshTokenP
 - Bei abgelaufenen Tokens, erkannter Wiederverwendung oder verlorenen Rotationsrennen werden notwendige Widerrufe zuerst in der Transaktion gespeichert. Der Authentifizierungsfehler wird erst nach deren Commit ausgelöst; sonst würde ein Rollback die Sperre aufheben.
 - Eine Passwortänderung widerruft alle noch aktiven Refresh-Sitzungen des betroffenen Benutzers mit `password_changed`, gemeinsam mit der Passwortänderung in einer Transaktion. Andere Benutzer und bereits widerrufene Sitzungen bleiben unverändert. Ausgestellte Access-JWTs werden dadurch nicht vorzeitig ungültig.
 - Die Rotation prüft zusätzlich, dass der bisherige Datensatz noch nicht widerrufen wurde.
+- Beide Logout-Endpunkte widerrufen die gesamte Familie des vorgelegten Refresh-Tokens, auch wenn der Browser noch dessen bereits rotierten oder widerrufenen Vorgänger sendet. Ein vor dem Logout ausgestellter Nachfolger kann dadurch die Anmeldung nicht wiederherstellen. Unabhängige Anmeldungen desselben Benutzers bleiben erhalten.
 - Fehlende, deaktivierte oder gelöschte Benutzer erhalten kein neues Token-Paar; ihre betreffende Session-Familie wird widerrufen.
-- Der Refresh-Endpunkt entfernt Cookies bei dauerhaften Authentifizierungsfehlern (`401`). Bei vorübergehenden internen Fehlern (`500`) bleiben sie für einen späteren Versuch erhalten; interne Fehlerdetails werden nicht an den Client ausgegeben.
+- Fehlerhafte Refresh-Antworten (`401`/`500`) verändern die Auth-Cookies nicht: Eine verspätete Antwort einer älteren Sitzung darf eine zwischenzeitlich erfolgreiche Anmeldung nicht löschen. `401` meldet weiterhin den ungültigen Refresh; die expliziten Logout-Endpunkte löschen die Cookies. Interne Fehlerdetails werden nicht an den Client ausgegeben.
 
-Regressionstests: `backend/test/internal/auth-session-security.spec.js` und `backend/test/routes/two-fa-authorization.spec.js`.
+Regressionstests: `backend/test/internal/auth-session-security.spec.js`, `backend/test/routes/two-fa-authorization.spec.js` und `backend/test/routes/third-auth-logout.spec.js` (echte Refresh-Rotation und Logout mit SQLite). `third-auth-refresh.spec.js` prüft über HTTP eine erfolgreiche neue Anmeldung vor einer verspäteten Refresh-Fehlerantwort und die dabei ausgegebenen Cookies.
 
 ## Verwandte Seiten
 

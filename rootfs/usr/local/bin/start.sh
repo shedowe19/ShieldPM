@@ -160,10 +160,7 @@ if [ -s /data/crowdsec/crowdsec.conf ]; then
 fi
 migrate_legacy_directory /data/npm /data/shieldpm /data/shieldpm/migration-backups || exit 1
 
-#tmp
-if [ -s /data/database.sqlite ]; then
-    mv -vn /data/database.sqlite /data/shieldpm/database.sqlite
-fi
+migrate_legacy_sqlite /data/database.sqlite /data/shieldpm/database.sqlite /data/shieldpm/migration-backups || exit 1
 
 if [ -s /data/shieldpm/database.sqlite ]; then
     sqlite-vaccum.js
@@ -339,53 +336,13 @@ else
     fi
 fi
 
-if [ "$LISTEN_PROXY_PROTOCOL" = "true" ]; then
-  sed -i "s|real_ip_header.*|real_ip_header proxy_protocol;|g" /usr/local/nginx/conf/nginx.conf
-fi
 if [ "$NGINX_QUIC_BPF" = "true" ]; then
   sed -i "s|quic_bpf.*|quic_bpf on;|g" /usr/local/nginx/conf/nginx.conf
 else
   sed -i "s|quic_bpf.*|quic_bpf off;|g" /usr/local/nginx/conf/nginx.conf
 fi
 configure_nginx_toggles /usr/local/nginx/conf/nginx.conf || exit 1
-if [ "$NGINX_HSTS_SUBDOMAINS" = "false" ]; then
-    sed -i "s|includeSubDomains; ||g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+libngx_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|brotli on;|brotli off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|unbrotli on;|unbrotli off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|brotli_static on;|brotli_static off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|zstd on;|zstd off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|zstd_static on;|zstd_static off;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_GEOIP2_MODULE" = "true" ]; then
-
-    sed -i "s|#\s*\(load_module.\+geoip2_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(geoip2 /data/nginx/GeoLite2-Country.mmdb {\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(auto_reload 5m;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*,'\"geoip_country_code\": \"\$geoip2_country_code\"'|,\"geoip_country_code\": \"\$geoip2_country_code\"|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(}\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(geoip2 /data/nginx/GeoLite2-City.mmdb {\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(.*\$geoip2_city_name default=Unknown source=\$remote_addr city names en;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(\$geoip2_country_code.\+country iso_code;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_NJS_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+js_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_NTLM_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+ngx_http_upstream_ntlm_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+ngx_http_vhost_traffic_status_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
+configure_nginx_modules /usr/local/nginx/conf/nginx.conf || exit 1
 
 if [ "$REGENERATE_ALL" = "true" ]; then
     find /data/nginx -name "*.conf" -delete
@@ -394,9 +351,6 @@ fi
 
 if [ "$LOGROTATE" = "true" ]; then
     sed -i "s|rotate [0-9]\+|rotate $LOGROTATIONS|g" /etc/logrotate
-    sed -i "s|access_log off; # http|access_log /data/nginx/access.log alog;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|access_log off; # stream|access_log /data/nginx/stream.log slog;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|#error_log|error_log|g" /usr/local/nginx/conf/nginx.conf
     touch /data/nginx/access.log \
           /data/nginx/json_access.log \
           /data/nginx/stream.log \
@@ -416,7 +370,9 @@ find /data/tls /data/access /data/shieldpm -type d -not -perm 700 -exec chmod 70
 find /data/tls /data/access /data/shieldpm -type f -not -perm 600 -exec chmod 600 {} +
 
 rm -vf /usr/local/nginx/logs/nginx.pid
-rm -vf /run/*.sock
+# Native hosts share /run with other services (including Docker). Only remove
+# sockets owned by ShieldPM; deleting another service's socket disconnects it.
+rm -vf /run/shieldpm.sock /run/goaccess.sock /run/php82.sock /run/php83.sock /run/php84.sock
 
 if [ "$PUID" != "0" ]; then
     if id -u npm > /dev/null 2>&1; then
@@ -444,7 +400,7 @@ if [ "$PUID" != "0" ]; then
          /run \
          /tmp \
          -not \( -uid "$PUID" -and -gid "$PGID" \) \
-         -exec chown "$PUID:$PGID" {} \;
+         -exec chown -h "$PUID:$PGID" {} +
     chown "$PUID:$PGID" /proc/self/fd/2
     if [ "$PHP82" = "true" ]; then
         sed -i "s|;\?user =.*|;user = root|" /data/php/82/pool.d/www.conf
@@ -461,7 +417,7 @@ if [ "$PUID" != "0" ]; then
     sed -i "s|user root;|#user root;|g" /usr/local/nginx/conf/nginx.conf
     exec gosu "$PUID:$PGID" launch.sh
 else
-    find /data -not \( -uid 0 -and -gid 0 \) -exec chown 0:0 {} \;
+    find /data -not \( -uid 0 -and -gid 0 \) -exec chown -h 0:0 {} +
     if [ "$PHP82" = "true" ]; then
         sed -i "s|;user =.*|user = root|" /data/php/82/pool.d/www.conf
         sed -i "s|;group =.*|group = root|" /data/php/82/pool.d/www.conf

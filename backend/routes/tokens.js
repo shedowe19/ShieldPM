@@ -326,8 +326,8 @@ router
 				const AuthSession = (await import("../models/auth-session.js")).default;
 				const lookup = AuthSession.buildLookup(rawRefreshToken);
 				const session = await AuthSession.query().findOne(lookup);
-				if (session && !session.revoked_at) {
-					await internalToken.revokeSession(session.id, "logout");
+				if (session) {
+					await internalToken.revokeFamily(session.family_id, "logout");
 				}
 			} catch (err) {
 				debug(logger, `Failed to revoke refresh session on logout: ${err}`);
@@ -374,9 +374,8 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 	} catch (err) {
 		debug(logger, `POST /tokens/refresh: ${err}`);
 		const code = err instanceof errs.AuthError || err instanceof errs.UnauthorizedError ? 401 : 500;
-		if (code === 401) {
-			clearAuthCookies(res);
-		}
+		// A delayed failure may belong to an older login. Clearing cookies here
+		// would also erase a newer session already installed by the browser.
 		res.status(code).send({
 			error: { code, message: err.public ? err.message : "Token refresh failed" },
 		});
@@ -386,7 +385,7 @@ router.post("/refresh", authRateLimiter, async (req, res) => {
 /**
  * POST /tokens/logout
  *
- * Revoke the refresh session and clear all auth cookies.
+ * Revoke the login's refresh-token family and clear all auth cookies.
  */
 router.post("/logout", authRateLimiter, async (req, res) => {
 	const rawRefreshToken = req.cookies?.shieldpm_refresh || req.body?.refresh_token;
@@ -396,8 +395,8 @@ router.post("/logout", authRateLimiter, async (req, res) => {
 			const AuthSession = (await import("../models/auth-session.js")).default;
 			const lookup = AuthSession.buildLookup(rawRefreshToken);
 			const session = await AuthSession.query().findOne(lookup);
-			if (session && !session.revoked_at) {
-				await internalToken.revokeSession(session.id, "logout");
+			if (session) {
+				await internalToken.revokeFamily(session.family_id, "logout");
 			}
 		} catch (err) {
 			debug(logger, `POST /tokens/logout: revoke failed: ${err}`);

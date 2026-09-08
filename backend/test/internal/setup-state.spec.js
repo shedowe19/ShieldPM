@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ db: null, generate: vi.fn(), bulk: vi.fn(), hosts: [] }));
+const state = vi.hoisted(() => ({ db: null, generate: vi.fn(), bulk: vi.fn(), writeHash: vi.fn(), hosts: [] }));
 vi.mock("../../db.js", async () => {
 	const { default: knex } = await import("knex");
 	state.db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
@@ -11,7 +11,7 @@ vi.mock("../../internal/nginx.js", () => ({
 	default: { generateConfig: state.generate, bulkGenerateConfigs: state.bulk },
 }));
 vi.mock("../../lib/certbot.js", () => ({ installPlugins: vi.fn() }));
-vi.mock("../../lib/utils.js", () => ({ default: { writeHash: vi.fn() } }));
+vi.mock("../../lib/utils.js", () => ({ default: { writeHash: state.writeHash } }));
 vi.mock("../../logger.js", () => ({ setup: { info: vi.fn() } }));
 vi.mock("../../models/certificate.js", () => ({ default: {} }));
 vi.mock("../../models/proxy_host.js", () => ({
@@ -85,6 +85,7 @@ describe("startup preserves persisted setup state", () => {
 	});
 	beforeEach(async () => {
 		vi.clearAllMocks();
+		state.writeHash.mockReset();
 		for (const table of ["user", "auth", "user_permission", "setting"]) await state.db(table).delete();
 		vi.stubEnv("INITIAL_ADMIN_EMAIL", " ADMIN@Example.Test ");
 		vi.stubEnv("INITIAL_ADMIN_PASSWORD", "initial-password");
@@ -150,5 +151,29 @@ describe("startup preserves persisted setup state", () => {
 		vi.stubEnv("REGENERATE_ALL", "true");
 		await regenerateAllHosts();
 		expect(state.bulk).toHaveBeenCalledWith(expect.anything(), "dead_host", state.hosts);
+	});
+	it("keeps startup pending until the regenerated configuration fingerprint is persisted", async () => {
+		vi.stubEnv("REGENERATE_ALL", "true");
+		let finishWrite;
+		let settled = false;
+		state.writeHash.mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					finishWrite = resolve;
+				}),
+		);
+		const regeneration = regenerateAllHosts().then(() => {
+			settled = true;
+		});
+		await vi.waitFor(() => expect(state.writeHash).toHaveBeenCalledOnce());
+		expect(settled).toBe(false);
+		finishWrite();
+		await regeneration;
+		expect(settled).toBe(true);
+	});
+	it("propagates fingerprint write failures to the startup retry handler", async () => {
+		vi.stubEnv("REGENERATE_ALL", "true");
+		state.writeHash.mockRejectedValue(new Error("disk full"));
+		await expect(regenerateAllHosts()).rejects.toThrow("disk full");
 	});
 });

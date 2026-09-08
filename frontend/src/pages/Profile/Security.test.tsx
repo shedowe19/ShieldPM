@@ -272,4 +272,21 @@ describe("SecuritySettings", () => {
 		fireEvent.click(screen.getByText("Register Passkey"));
 		expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
 	});
+	it("handles Enter in the passkey label without submitting the enclosing profile form", async () => {
+		mockBeginPasskeyRegistration.mockReturnValue(new Promise(() => {}));
+		const onKeyDown = vi.fn();
+		render(
+			<form onKeyDown={onKeyDown}>
+				<SecuritySettings />
+			</form>,
+			{ wrapper: makeWrapper() },
+		);
+		fireEvent.click(await screen.findByText("Passkey"));
+		const input = screen.getByRole("textbox");
+		expect(fireEvent.keyDown(input, { key: "Enter" })).toBe(false);
+		expect(mockBeginPasskeyRegistration).toHaveBeenCalledTimes(1);
+		expect(onKeyDown).not.toHaveBeenCalled();
+		fireEvent.keyDown(input, { key: "Enter" });
+		expect(mockBeginPasskeyRegistration).toHaveBeenCalledTimes(1);
+	});
 });

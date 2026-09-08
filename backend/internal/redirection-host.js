@@ -44,6 +44,7 @@ const internalRedirectionHost = {
 		}
 
 		await access.can("redirection_hosts:create", thisData);
+		await internalHost.validateReferences(access, thisData);
 		internalHost.validateDomainNames(thisData.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
@@ -144,6 +145,7 @@ const internalRedirectionHost = {
 
 		await access.can("redirection_hosts:update", thisData.id);
 		let row = await internalRedirectionHost.get(access, { id: thisData.id });
+		await internalHost.validateReferences(access, thisData, row);
 
 		if (row.id !== thisData.id) {
 			throw new errs.InternalValidationError(

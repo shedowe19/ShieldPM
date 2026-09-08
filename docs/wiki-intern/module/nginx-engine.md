@@ -101,3 +101,9 @@ Die Sicherung bleibt bis zum erfolgreichen Reload erhalten. Scheitert die Aktivi
 Vor der Verarbeitung eines gespeicherten Hostzustands liest `configureHost()` die aktuellen Flags `enabled` und `is_deleted` erneut. Inzwischen deaktivierte, gelöschte oder entfernte Hosts erhalten dadurch keine aktiven Listener. Das Lesen interner Nginx-Logs prüft die vorhandene Berechtigung `settings:get`. Die Regressionstests prüfen außerdem den Reload-Fehlerpfad und die Reihenfolge der Warteschlange.
 
 Auch die abschließenden Reloads von Access-List-, Wartungs- und Tor-Sammelläufen sowie Zertifikatserneuerungen werden eingereiht. Der IP-Range-Abruf lädt externe Daten vorab und schützt anschließend Schreiben und Reload gemeinsam. So lädt kein Hintergrundauftrag eine gerade teilweise erzeugte Hostkonfiguration.
+
+## Dritte Nachprüfung: Sicherungen und Validierungsaufwand
+
+Fehlt vor einer Konfigurationsänderung die aktive Datei, entfernt `backupConfig()` eine eventuell veraltete `.bak`-Datei. Ein späterer Generierungsfehler kann damit keinen zuvor inaktiven Listener wiederherstellen. Deaktivierte oder inzwischen gelöschte Hosts erhalten auch nach erfolgreichem Rendern `nginx_online: false`.
+
+Ein Einzelwechsel prüft die Gesamtkonfiguration einmal innerhalb von `reload()`, bevor das Reloadsignal gesendet wird. Die zuvor unmittelbar davor ausgeführte identische Prüfung entfällt. `skip_reload` prüft weiterhin jede geschriebene Konfiguration; der abschließende Sammel-Reload validiert erneut. `third-proxy-nginx.spec.js` deckt diese Pfade mit temporären Dateien und gemockten Prozessaufrufen ab.

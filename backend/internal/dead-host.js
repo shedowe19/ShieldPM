@@ -29,6 +29,7 @@ const internalDeadHost = {
 		}
 
 		await access.can("dead_hosts:create", data);
+		await internalHost.validateReferences(access, data);
 		internalHost.validateDomainNames(data.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
@@ -135,6 +136,7 @@ const internalDeadHost = {
 			});
 		}
 		const row = await internalDeadHost.get(access, { id: thisData.id });
+		await internalHost.validateReferences(access, thisData, row);
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened

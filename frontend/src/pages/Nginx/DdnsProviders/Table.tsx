@@ -174,6 +174,7 @@ export default function Table({ data, isFetching, onEdit, onDelete, onNew, isFil
 				<EmptyData
 					object={intl.formatMessage({ id: AUDIT_LOG_OBJECT_TYPE.DDNS_PROVIDER })}
 					objects="ddns-providers"
+					permissionSection={DDNS_PROVIDERS}
 					onNew={onNew}
 					isFiltered={isFiltered}
 					color="cyan"

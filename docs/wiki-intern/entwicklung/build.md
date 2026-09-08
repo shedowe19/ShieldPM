@@ -62,6 +62,8 @@ Produktions-Build ohne das zusätzliche Plugin `vite-tsconfig-paths`.
 
 ## Native / LXC Build
 
+Vor dem Export des LXC-Rootfs entfernt der Workflow SSH-Hostkeys und leert die Maschinen-ID. Ein aktivierter Systemd-Dienst erzeugt fehlende SSH-Hostkeys vor dem SSH-Start pro Instanz. Bereinigungs-Globs werden innerhalb des Builder-Containers ausgewertet, damit sie dessen Dateisystem erfassen.
+
 Der Installer erwartet das entpackte native Release-Paket mit `app/`, `html/`, `usr/` und `rootfs/`. Dieses Paket enthält die zuvor gebauten Anwendungsdateien und Nginx-Binaries; der Installer klont das Repository nicht. Ein Aufruf der einzelnen `scripts/install.sh` aus einem normalen Checkout ersetzt das native Paket nicht.
 
 ```bash

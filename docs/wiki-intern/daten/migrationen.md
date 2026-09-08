@@ -96,6 +96,10 @@ Die Schema-Callbacks von Knex bleiben synchron; Datenänderungen werden erst nac
 
 Beim Rollback der Domainnormalisierung werden die aktuellen Domainrelationen in die Legacy-Spalte zurückgeschrieben. Damit bleiben zwischenzeitliche Neuanlagen und Umbenennungen erhalten. Der mTLS-Rollback schreibt die aktuellen Werte zurück in `meta`; der Rate-Limit-Rollback entfernt alle drei zugehörigen Spalten.
 
+Die Access-List-Passwortmigration erkennt vollständige bcrypt- und APR1-Hashes. Diese bleiben unverändert; Klartext wird auch dann mit bcrypt gehasht, wenn er mit `$2` beginnt.
+
+Die Terminalmigration bewahrt den ursprünglichen Namen, Typ und die Metadaten. Ihr Rollback übernimmt aktuelle Zugangsdaten in `terminal_host`, verwendet für verschlüsselte Passwörter und SSH-Schlüssel Textspalten und entfernt erfolgreich zurückkopierte Terminal-Proxyzeilen. Dadurch entstehen bei einem anschließenden Upgrade keine doppelten aktiven Hosts mit verlorenen Zugangsdaten. Gewöhnliche HTTP-Proxyzeilen bleiben erhalten. Verweisen noch Tor-Dienste, Analytics oder Domainrelationen auf einen betroffenen Terminalhost, bricht der Rollback vor Schemaänderungen ab, um referenzierte Daten zu erhalten. `backend/test/migrations/third-database-credentials.spec.js` prüft diese Up-/Down-/Up-Abläufe einschließlich langer Schlüssel und Tor-Referenzen mit SQLite und PGlite.
+
 Die Tests `backend/test/migrations/full-schema.spec.js` und `data-preservation.spec.js` führen diese Abläufe mit SQLite und der echten PostgreSQL-Engine in PGlite aus. Dabei werden nur die externen Nginx-Aktionen gemockt. Änderungen historischer Migrationen wirken auf noch nicht ausgeführte Upgrades und auf Rollbacks; bereits durch frühere Versionen verlorene Werte lassen sich daraus nicht automatisch rekonstruieren.
 
 ## Wechsel der Datenbank-Engine

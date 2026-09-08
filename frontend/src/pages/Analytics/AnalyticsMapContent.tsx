@@ -61,7 +61,20 @@ const AnalyticsMapContent = ({ summary }: Props) => {
 				.translate([MAP_WIDTH / 2, MAP_HEIGHT / 2]),
 		[],
 	);
-	const countryPath = useMemo(() => geoPath(projection), [projection]);
+	const projectedCountries = useMemo(() => {
+		const countryPath = geoPath(projection);
+		return worldCountries.map((country, index) => {
+			const countryId = country.id === undefined ? `country-${index}` : String(country.id);
+			const countryCode = countries.numericToAlpha2(countryId);
+			return {
+				countryId,
+				countryCode,
+				countryName: country.properties?.name || countryCode || countryId,
+				path: countryPath(country),
+				markerPosition: projection(geoCentroid(country)),
+			};
+		});
+	}, [projection]);
 	const countriesByCode = useMemo(
 		() => new Map((summary?.topCountries ?? []).map((country) => [country.countryCode, country])),
 		[summary?.topCountries],
@@ -76,9 +89,13 @@ const AnalyticsMapContent = ({ summary }: Props) => {
 		const safeClientX = Number.isFinite(clientX) ? clientX : bounds.left + bounds.width / 2;
 		const safeClientY = Number.isFinite(clientY) ? clientY : bounds.top + bounds.height / 2;
 
+		// The default SVG xMidYMid meet viewport keeps its aspect ratio and may add margins.
+		const scale = Math.min(bounds.width / MAP_WIDTH, bounds.height / MAP_HEIGHT);
+		const offsetX = (bounds.width - MAP_WIDTH * scale) / 2;
+		const offsetY = (bounds.height - MAP_HEIGHT * scale) / 2;
 		return {
-			x: ((safeClientX - bounds.left) / bounds.width) * MAP_WIDTH,
-			y: ((safeClientY - bounds.top) / bounds.height) * MAP_HEIGHT,
+			x: (safeClientX - bounds.left - offsetX) / scale,
+			y: (safeClientY - bounds.top - offsetY) / scale,
 		};
 	};
 
@@ -118,10 +135,11 @@ const AnalyticsMapContent = ({ summary }: Props) => {
 			return;
 		}
 
+		const scale = Math.min(bounds.width / MAP_WIDTH, bounds.height / MAP_HEIGHT);
 		setViewport({
 			scale: origin.viewport.scale,
-			x: origin.viewport.x + ((event.clientX - origin.clientX) / bounds.width) * MAP_WIDTH,
-			y: origin.viewport.y + ((event.clientY - origin.clientY) / bounds.height) * MAP_HEIGHT,
+			x: origin.viewport.x + (event.clientX - origin.clientX) / scale,
+			y: origin.viewport.y + (event.clientY - origin.clientY) / scale,
 		});
 	};
 
@@ -164,18 +182,13 @@ const AnalyticsMapContent = ({ summary }: Props) => {
 					data-testid="analytics-map-viewport"
 					transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`}
 				>
-					{worldCountries.map((country, index) => {
-						const countryId = country.id === undefined ? `country-${index}` : String(country.id);
-						const countryCode = countries.numericToAlpha2(countryId);
+					{projectedCountries.map(({ countryId, countryCode, countryName, markerPosition, path }) => {
 						const currentCountry = countryCode ? countriesByCode.get(countryCode) : undefined;
 						const maxCount = summary?.topCountries?.[0]?.count || 1;
 						const intensity = currentCountry
 							? Math.max(0.2, Math.log(currentCountry.count + 1) / Math.log(maxCount + 1))
 							: 0;
 						const fillColor = currentCountry ? `rgba(6, 182, 212, ${intensity * 0.8 + 0.2})` : "#1e293b";
-						const markerPosition = currentCountry ? projection(geoCentroid(country)) : undefined;
-						const countryName = country.properties?.name || countryCode || countryId;
-						const path = countryPath(country);
 
 						if (!path) {
 							return null;

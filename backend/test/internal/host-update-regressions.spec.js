@@ -16,7 +16,10 @@ vi.mock("../../models/access_list.js", () => ({ default: {} }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
 vi.mock("../../internal/nginx.js", () => ({ default: { configure: mocks.configure } }));
 vi.mock("../../internal/certificate.js", () => ({
-	default: { createQuickCertificate: vi.fn().mockResolvedValue({ id: 8 }) },
+	default: {
+		createQuickCertificate: vi.fn().mockResolvedValue({ id: 8 }),
+		get: vi.fn().mockResolvedValue({ id: 8 }),
+	},
 }));
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn() } }));

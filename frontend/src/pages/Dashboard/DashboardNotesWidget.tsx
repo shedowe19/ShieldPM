@@ -3,11 +3,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import type React from "react";
 import { deleteDashboardNote } from "src/api/backend";
+import { HasPermission } from "src/components/HasPermission";
+import { Alert, AlertDescription } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card";
 import { useDashboardNotes } from "src/hooks/useDashboardNotes";
 import { cn } from "src/lib/utils";
 import { intl, T } from "src/locale";
+import { DASHBOARD_NOTES, MANAGE, VIEW } from "src/modules/Permissions";
 import { showError, showObjectSuccess } from "src/notifications";
 import { showDashboardNoteModal } from "./lazy";
 
@@ -20,8 +23,8 @@ const COLOR_MAP: Record<string, string> = {
 	gray: "bg-gray-200/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-800",
 };
 
-export const DashboardNotesWidget = () => {
-	const { data: notes, isLoading } = useDashboardNotes();
+const DashboardNotesContent = () => {
+	const { data: notes, isLoading, error } = useDashboardNotes();
 	const queryClient = useQueryClient();
 
 	const handleDelete = async (e: React.MouseEvent, id: number) => {
@@ -44,21 +47,29 @@ export const DashboardNotesWidget = () => {
 					<IconNote className="h-5 w-5" />
 					<T id="dashboard.notes.title" />
 				</CardTitle>
-				<Button
-					size="sm"
-					variant="ghost"
-					className="h-8 w-8 p-0"
-					aria-label={intl.formatMessage({ id: "dashboard.notes.add" })}
-					onClick={() => showDashboardNoteModal()}
-				>
-					<IconPlus className="h-5 w-5" />
-				</Button>
+				<HasPermission section={DASHBOARD_NOTES} permission={MANAGE} hideError>
+					<Button
+						size="sm"
+						variant="ghost"
+						className="h-8 w-8 p-0"
+						aria-label={intl.formatMessage({ id: "dashboard.notes.add" })}
+						onClick={() => showDashboardNoteModal()}
+					>
+						<IconPlus className="h-5 w-5" />
+					</Button>
+				</HasPermission>
 			</CardHeader>
 			<CardContent className="pt-4 h-full">
 				{isLoading ? (
 					<div className="flex justify-center items-center h-40">
 						<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
 					</div>
+				) : error ? (
+					<Alert variant="destructive">
+						<AlertDescription>
+							{error.message || intl.formatMessage({ id: "error.unknown" })}
+						</AlertDescription>
+					</Alert>
 				) : notes && notes.length > 0 ? (
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 						{notes.map((note) => {
@@ -74,16 +85,18 @@ export const DashboardNotesWidget = () => {
 										COLOR_MAP[note.color || "yellow"],
 									)}
 								>
-									<button
-										type="button"
-										className="absolute inset-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-										aria-labelledby={`${editActionId} ${contentId}`}
-										onClick={() => showDashboardNoteModal(note)}
-									>
-										<span id={editActionId} className="sr-only">
-											<T id="action.edit" />
-										</span>
-									</button>
+									<HasPermission section={DASHBOARD_NOTES} permission={MANAGE} hideError>
+										<button
+											type="button"
+											className="absolute inset-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+											aria-labelledby={`${editActionId} ${contentId}`}
+											onClick={() => showDashboardNoteModal(note)}
+										>
+											<span id={editActionId} className="sr-only">
+												<T id="action.edit" />
+											</span>
+										</button>
+									</HasPermission>
 									<div
 										id={contentId}
 										className="relative pointer-events-none whitespace-pre-wrap break-all text-sm font-medium leading-relaxed"
@@ -91,20 +104,22 @@ export const DashboardNotesWidget = () => {
 										{note.content}
 									</div>
 
-									<div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-6 w-6 hover:bg-destructive/20 hover:text-destructive"
-											aria-labelledby={`${deleteActionId} ${contentId}`}
-											onClick={(e) => handleDelete(e, note.id)}
-										>
-											<span id={deleteActionId} className="sr-only">
-												<T id="action.delete" />
-											</span>
-											<IconTrash className="h-3 w-3" />
-										</Button>
-									</div>
+									<HasPermission section={DASHBOARD_NOTES} permission={MANAGE} hideError>
+										<div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-6 w-6 hover:bg-destructive/20 hover:text-destructive"
+												aria-labelledby={`${deleteActionId} ${contentId}`}
+												onClick={(e) => handleDelete(e, note.id)}
+											>
+												<span id={deleteActionId} className="sr-only">
+													<T id="action.delete" />
+												</span>
+												<IconTrash className="h-3 w-3" />
+											</Button>
+										</div>
+									</HasPermission>
 								</div>
 							);
 						})}
@@ -115,12 +130,20 @@ export const DashboardNotesWidget = () => {
 						<p className="text-sm">
 							<T id="dashboard.notes.empty" />
 						</p>
-						<Button variant="link" className="mt-2" onClick={() => showDashboardNoteModal()}>
-							<T id="dashboard.notes.add" />
-						</Button>
+						<HasPermission section={DASHBOARD_NOTES} permission={MANAGE} hideError>
+							<Button variant="link" className="mt-2" onClick={() => showDashboardNoteModal()}>
+								<T id="dashboard.notes.add" />
+							</Button>
+						</HasPermission>
 					</div>
 				)}
 			</CardContent>
 		</Card>
 	);
 };
+
+export const DashboardNotesWidget = () => (
+	<HasPermission section={DASHBOARD_NOTES} permission={VIEW} hideError>
+		<DashboardNotesContent />
+	</HasPermission>
+);

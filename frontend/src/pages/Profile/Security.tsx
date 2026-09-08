@@ -310,7 +310,17 @@ function PasskeySetup({
 	};
 
 	return (
-		<div className="space-y-4">
+		<div
+			className="space-y-4"
+			role="form"
+			onKeyDown={(event) => {
+				if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+					event.preventDefault();
+					event.stopPropagation();
+					void handleRegister();
+				}
+			}}
+		>
 			{error && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />

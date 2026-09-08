@@ -49,6 +49,12 @@ REST und KI verwenden denselben internen Update-Service. Er prüft den Zugriff a
 
 Ein verspätetes Tor-Start-Ergebnis lädt vor der Domain-Synchronisierung die aktuelle Service-Zuordnung erneut. So fügt es die Onion-Adresse nicht wieder einem inzwischen abgelösten Host hinzu.
 
+### Öffentliche Antworten und verzögerte Folgearbeiten
+
+REST-Antworten für Liste, Detail, Erstellung, Änderung, Start und Stop entfernen den privaten Onion-Schlüssel. Der Schlüssel bleibt intern für `ADD_ONION` verfügbar. Ein fehlgeschlagener Start ergibt einen Fehler und keinen Audit-Eintrag mit Status „started“.
+
+Nach einer Host-Neuzuordnung wird auch der erste Aufruf der verzögerten Anubis-Policy-Erzeugung korrekt behandelt: `lodash.debounce` kann zunächst `undefined` zurückgeben. Dies darf eine bereits erfolgreich abgeschlossene Datenbank- und Nginx-Änderung nicht nachträglich als Fehler melden.
+
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).

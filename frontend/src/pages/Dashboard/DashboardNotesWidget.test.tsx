@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	showError: vi.fn(),
 	showObjectSuccess: vi.fn(),
 	useDashboardNotes: vi.fn(),
+	permission: "manage",
 }));
 
 vi.mock("@tabler/icons-react", () => ({
@@ -21,7 +22,10 @@ vi.mock("@tanstack/react-query", () => ({
 	useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
 }));
 
-vi.mock("lucide-react", () => ({ Loader2: () => null }));
+vi.mock("src/hooks/useUser", () => ({
+	useUser: () => ({ data: { permissions: { dashboardNotes: mocks.permission }, roles: ["user"] }, isLoading: false }),
+}));
+vi.mock("lucide-react", () => ({ AlertCircle: () => null, Loader2: () => null }));
 vi.mock("src/api/backend", () => ({ deleteDashboardNote: mocks.deleteNote }));
 vi.mock("src/hooks/useDashboardNotes", () => ({ useDashboardNotes: mocks.useDashboardNotes }));
 vi.mock("src/locale", () => ({
@@ -48,7 +52,8 @@ describe("DashboardNotesWidget", () => {
 	afterEach(cleanup);
 
 	beforeEach(() => {
-		mocks.invalidateQueries.mockClear();
+		vi.clearAllMocks();
+		mocks.permission = "manage";
 		mocks.useDashboardNotes.mockReturnValue({
 			data: [
 				{ id: 1, color: "yellow", content: "Keep this note" },
@@ -98,6 +103,30 @@ describe("DashboardNotesWidget", () => {
 		deleteButton.focus();
 		expect(deleteButton).toHaveFocus();
 		expect(actionContainer).toHaveClass("group-focus-within:opacity-100");
+	});
+
+	it("shows notes without editing controls for read-only users", async () => {
+		mocks.permission = "view";
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		render(<DashboardNotesWidget />);
+		expect(screen.getByText("Keep this note")).toBeInTheDocument();
+		expect(screen.queryByRole("button")).not.toBeInTheDocument();
+	});
+
+	it("does not request notes without view permission", async () => {
+		mocks.permission = "hidden";
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		render(<DashboardNotesWidget />);
+		expect(mocks.useDashboardNotes).not.toHaveBeenCalled();
+		expect(screen.queryByText("dashboard.notes.title")).not.toBeInTheDocument();
+	});
+
+	it("reports a failed query without showing a false empty state", async () => {
+		mocks.useDashboardNotes.mockReturnValue({ error: new Error("Notes unavailable"), isLoading: false });
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		render(<DashboardNotesWidget />);
+		expect(screen.getByRole("alert")).toHaveTextContent("Notes unavailable");
+		expect(screen.queryByText("dashboard.notes.empty")).not.toBeInTheDocument();
 	});
 
 	it("reports a failed deletion without a false success or invalidation", async () => {

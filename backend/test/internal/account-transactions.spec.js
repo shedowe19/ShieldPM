@@ -115,6 +115,27 @@ describe("account database and filesystem transactions", () => {
 		});
 	});
 
+	it("does not undo concurrent account restrictions with unchanged profile-form flags", async () => {
+		service.get.mockImplementationOnce(async () => {
+			// The request read the old account before an administrator removed its
+			// role and blocked it. Its stale form must not restore either flag.
+			await state.db("user").where({ id: 7 }).update({ roles: "[]", is_disabled: 1 });
+			return { ...account, roles: ["admin"], is_disabled: false };
+		});
+		const profileAccess = {
+			token: { getUserId: () => 7 },
+			can: vi.fn(async (permission) => {
+				if (permission === "users:permissions") throw new Error("Not an administrator");
+			}),
+		};
+		await service.update(profileAccess, { id: 7, name: "Updated profile", roles: ["admin"], is_disabled: false });
+		expect(await state.db("user").where({ id: 7 }).first()).toMatchObject({
+			name: "Updated profile",
+			roles: "[]",
+			is_disabled: 1,
+		});
+	});
+
 	it("inserts missing permissions using the database row sequence", async () => {
 		await state.db("user_permission").insert({ id: 7, user_id: 8, visibility: "all" });
 		await service.setPermissions(access, { id: 7, user_id: 8, visibility: "user" });

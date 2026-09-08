@@ -12,7 +12,7 @@ import { Switch } from "src/components/ui/switch";
 import { useGitSyncStatus, useTriggerGitSync } from "src/hooks/useGitSync";
 import { intl, T } from "src/locale";
 import { validateString } from "src/modules/Validations";
-import { showObjectSuccess } from "src/notifications";
+import { showError, showSuccess } from "src/notifications";
 import { TIME_UNIT } from "src/types/enums";
 
 interface Props {
@@ -27,10 +27,15 @@ export function GitSyncTab({ hostId }: Props) {
 	const handleSync = () => {
 		if (hostId) {
 			triggerSync(hostId, {
-				onSuccess: () => {
-					showObjectSuccess("Git Sync", "started");
+				onSuccess: (result) => {
+					if (result.success) {
+						showSuccess(intl.formatMessage({ id: "proxy-host.git-sync.success" }));
+					} else {
+						showError(result.message || intl.formatMessage({ id: "notification.error" }));
+					}
 					// Status reload happens via hook invalidation
 				},
+				onError: (error) => showError(error.message),
 			});
 		}
 	};
@@ -52,7 +57,7 @@ export function GitSyncTab({ hostId }: Props) {
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div className="md:col-span-2">
-					<Field name="gitRepoUrl" validate={validateString(1, 255)}>
+					<Field name="gitRepoUrl" validate={validateString(values.gitSyncEnabled ? 1 : 0, 255)}>
 						{({ field, form }: FieldProps) => (
 							<div className="space-y-2">
 								<Label htmlFor="gitRepoUrl">

@@ -15,15 +15,23 @@ export const encrypt = (text) => {
 };
 
 export const decrypt = (text) => {
+	if (typeof text !== "string") {
+		throw new Error("Invalid encrypted text format");
+	}
 	const parts = text.split(":");
-	if (parts.length !== 3) {
+	if (
+		parts.length !== 3 ||
+		!/^[a-f0-9]{24}$/.test(parts[0]) ||
+		!/^(?:[a-f0-9]{2})*$/.test(parts[1]) ||
+		!/^[a-f0-9]{32}$/.test(parts[2])
+	) {
 		throw new Error("Invalid encrypted text format");
 	}
 	const iv = Buffer.from(parts[0], "hex");
 	const encryptedText = parts[1];
 	const authTag = Buffer.from(parts[2], "hex");
 
-	const decipher = crypto.createDecipheriv(algorithm, key, iv);
+	const decipher = crypto.createDecipheriv(algorithm, key, iv, { authTagLength: 16 });
 	decipher.setAuthTag(authTag);
 	let decrypted = decipher.update(encryptedText, "hex", "utf8");
 	decrypted += decipher.final("utf8");

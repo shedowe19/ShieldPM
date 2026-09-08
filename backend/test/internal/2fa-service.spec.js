@@ -148,7 +148,7 @@ vi.mock("otplib", async (importOriginal) => {
 		generateURI: vi.fn(
 			(opts) => `otpauth://totp/${opts.issuer}:${opts.label}?secret=${opts.secret}&issuer=${opts.issuer}`,
 		),
-		verifySync: vi.fn(() => ({ valid: true })),
+		verifySync: vi.fn(() => ({ valid: true, timeStep: 123456 })),
 	};
 });
 

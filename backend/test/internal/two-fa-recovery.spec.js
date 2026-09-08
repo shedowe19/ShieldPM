@@ -22,6 +22,7 @@ describe("multiple TOTP methods and recovery-code persistence", () => {
 			t.integer("user_id");
 			t.string("type");
 			t.string("secret");
+			t.integer("counter").defaultTo(0);
 			t.text("meta");
 			t.integer("is_verified");
 			t.integer("is_deleted").defaultTo(0);
@@ -63,6 +64,15 @@ describe("multiple TOTP methods and recovery-code persistence", () => {
 	it("preserves backup codes when deleting an unverified method", async () => {
 		await service.removeTwoFaMethod(7, 2);
 		expect(await state.db("user_2fa_backup_codes").where({ user_id: 7 })).toHaveLength(1);
+	});
+
+	it("consumes an authenticator time step once, including concurrent login attempts", async () => {
+		const code = generateSync({ secret: firstSecret });
+		const results = await Promise.all([service.verifyTotp(7, code), service.verifyTotp(7, code)]);
+		expect(results.sort()).toEqual([false, true]);
+		expect(await service.verifyTotp(7, code)).toBe(false);
+		const row = await state.db("user_2fa").where({ id: 1 }).first();
+		expect(row.counter).toBeGreaterThan(0);
 	});
 
 	it("deletes only that user's backup codes when the final enabled method is removed", async () => {

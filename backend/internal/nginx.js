@@ -65,13 +65,14 @@ const internalNginx = {
 
 		try {
 			// 3. Test nginx configuration
-			await internalNginx.test();
-			// Keep the previous configuration until the running server has accepted this one.
-			if (!skip_reload) await internalNginx.reload();
+			// reload() already validates the complete configuration before signalling Nginx.
+			// Bulk writes still need validation even though activation is deferred.
+			if (skip_reload) await internalNginx.test();
+			else await internalNginx.reload();
 
 			// 4. Verification successful
 			combined_meta = _.assign({}, host.meta, {
-				nginx_online: true,
+				nginx_online: Boolean(host.enabled),
 				nginx_err: null,
 			});
 
@@ -208,6 +209,8 @@ const internalNginx = {
 					locationCopy.forward_path = `/${split.join("/")}`;
 				}
 				locationCopy.env = process.env;
+				locationCopy.managed_web_root =
+					locationCopy.forward_scheme === "path" && locationCopy.forward_host.startsWith("/data/websites/");
 
 				return await renderEngine.renderFile(templatePath, locationCopy);
 			}),
@@ -294,7 +297,7 @@ const internalNginx = {
 		} else if (host.maintenance_start && host.maintenance_end) {
 			const start = dayjs(host.maintenance_start);
 			const end = dayjs(host.maintenance_end);
-			if (now.isAfter(start) && now.isBefore(end)) {
+			if (!now.isBefore(start) && now.isBefore(end)) {
 				host.maintenance_mode = true;
 			}
 		}
@@ -398,8 +401,10 @@ const internalNginx = {
 			await fs.promises.copyFile(config_file, backup_file);
 			debug(logger, `Backed up config: ${config_file} -> ${backup_file}`);
 		} catch (err) {
-			// Ignore if original file doesn't exist (new host)
-			if (err.code !== "ENOENT") {
+			// No active config means no rollback target, even if an old operation left a backup.
+			if (err.code === "ENOENT") {
+				await internalNginx.deleteFile(backup_file);
+			} else {
 				logger.error(`Failed to backup config: ${err.message}`);
 				throw err;
 			}
