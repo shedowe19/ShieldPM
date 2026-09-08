@@ -30,7 +30,11 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 - Temporäre Certbot-Symlinks liegen in einem privaten Zufallsverzeichnis. Ein zurückgebliebener Link eines unterbrochenen Starts blockiert damit keinen erneuten Start.
 - Verzeichnisse unter `/data/tls`, `/data/access` und `/data/shieldpm` erhalten Modus `0700`, reguläre Dateien `0600`. Damit werden unter anderem private Schlüssel, Datenbanken und das Tor-Control-Passwort nicht mehr pauschal auf `0770` erweitert.
 - Die neuen Sicherungsverzeichnisse benötigen Speicherplatz. Vor einer manuellen Bereinigung müssen insbesondere abweichende Ziel- und Quelldateien verglichen werden.
-- Besitzanpassungen verwenden `chown -h` und gebündelte `find -exec`-Aufrufe. Symlink-Ziele außerhalb der durchlaufenen Verzeichnisse werden nicht durch die Besitzanpassung verändert. Die Socketbereinigung entfernt ausschließlich ShieldPM-, GoAccess- und PHP-Sockets; fremde `/run/*.sock` wie `docker.sock` bleiben bestehen.
+- Besitzanpassungen verwenden `chown -h` und gebündelte `find -exec`-Aufrufe ausschließlich für `/data` und das eigene Runtime-Verzeichnis `/run/shieldpm`. Symlink-Ziele außerhalb der durchlaufenen Verzeichnisse werden nicht durch die Besitzanpassung verändert. Die Socketbereinigung entfernt ausschließlich ShieldPM-, GoAccess- und PHP-Sockets; fremde `/run/*.sock` wie `docker.sock` bleiben bestehen.
+- `/run/shieldpm` und das dortige Home-Verzeichnis erhalten Modus `0700` für `PUID:PGID`. Backend, PHP, GoAccess, Anubis und interne Nginx-Upstreams legen dort ihre Unix-Sockets an. Nginx-PID und die fünf HTTP-Tempverzeichnisse liegen unter `/run/shieldpm/nginx`; GoAccess schreibt seinen Bericht nach `/run/shieldpm/goa`.
+- PHP-FPM schreibt seine PID-Dateien nach `/run/shieldpm/php82.pid`, `php83.pid` beziehungsweise `php84.pid`; der konfigurierte Fehlerlogpfad liegt unter `/data/php/XX/php-fpm.log`. Der Start aktualisiert aktive sowie kommentierte Direktiven bei jedem Lauf. PHP-FPM öffnet diese Dateien auch im Vordergrund; alte Pfade unter `/run/php` oder `/var/log` würden den unprivilegierten Start verhindern. `-FOR` gibt die Meldungen weiterhin über das geerbte stderr aus, ohne `/proc/self/fd/2` erneut öffnen oder dessen Besitzer ändern zu müssen. Explizite `listen.owner`-/`listen.group`-Vorgaben werden deaktiviert, sodass die Sockets den effektiven Dienstbenutzer behalten und kein unzulässiger Besitzerwechsel zu `www-data` versucht wird.
+- `runtime-config.sh` passt die mitgelieferten Nginx-, UI- und GoAccess-Konfigurationen vor dem Dienststart gezielt an diese Pfade an. Die veränderliche Default-Site liegt unter `/data/nginx/default.conf`; die bisherige Datei unter `/usr/local/nginx/conf/conf.d/default.conf` wird nach Sicherung des alten Inhalts durch ein atomar erzeugtes, root-eigenes Include ersetzt. Eine bereits vorhandene Zielkonfiguration bleibt erhalten. Die Host-Regenerierung löscht weder dieses Ziel noch `ip_ranges.conf`.
+- DNS-Plugins werden unter `/data/certbot-plugins` installiert. Der Launcher stellt dieses Verzeichnis dem bestehenden `PYTHONPATH` voran; die Python-Systeminstallation unter `/usr/local` benötigt keine Schreibrechte für den Dienstbenutzer.
 
 ## Wiederholter Start und Zertifikatauswahl
 
@@ -52,7 +56,7 @@ Falls Corepack nicht verfügbar ist, installieren sowohl `update-shieldpm` als a
 
 ## Native-Update: Backend-Health-Check
 
-Nach dem Neustart prüft `update-shieldpm` den Backend-Health-Status über `/run/shieldpm.sock` gegen `http://localhost/`. Der native Backend-Router liefert dort `status: "OK"`; `/api/` ist kein Socket-Präfix und antwortet mit 404. Der Check wartet höchstens 120 Sekunden und meldet nur dann ein erfolgreiches Update, wenn der Dienst aktiv und diese Antwort verfügbar ist.
+Nach dem Neustart prüft `update-shieldpm` den Backend-Health-Status über `/run/shieldpm/shieldpm.sock` gegen `http://localhost/`. Der native Backend-Router liefert dort `status: "OK"`; `/api/` ist kein Socket-Präfix und antwortet mit 404. Der Check wartet höchstens 120 Sekunden und meldet nur dann ein erfolgreiches Update, wenn der Dienst aktiv und diese Antwort verfügbar ist.
 
 ## Native-Update: Austausch und Fehlerbehandlung
 
@@ -69,6 +73,8 @@ Scheitern Neustart oder Healthcheck nach diesem Punkt, bleiben die Recovery-Date
 Bei `NPM_LISTEN_LOCALHOST=true` beziehungsweise `GOA_LISTEN_LOCALHOST=true` verwendet der Healthcheck wie die Startvalidierung `127.0.0.1`, auch wenn zusätzlich eine andere Bind-Adresse konfiguriert ist.
 
 `aio.sh` verwendet den Backend-Unix-Socket, JSON-Erzeugung mit `jq`, eine private Cookie-Datei und einen CSRF-Token aus der authentifizierten Sitzung. Die Datei `/data/aio.lock` entsteht erst nach erfolgreicher Host-Erstellung. Bei aktivierter Zwei-Faktor-Anmeldung muss die Einrichtung interaktiv erfolgen. Docker leitet Stoppsignale mit `tini -g` an die gesamte Prozessgruppe weiter.
+
+Die Wiederanlaufschleifen für PHP 8.2/8.3/8.4 und GoAccess warten nach einem beendeten Prozess eine Sekunde. Ein sofortiger Startfehler erzeugt dadurch keine ungebremste Schleife aus Prozessen und Logmeldungen. Fehlende GoAccess-Eingangslogs werden weiterhin nach zehn Sekunden erneut geprüft.
 
 ## Konfigurationsdateien (`rootfs/etc/`)
 
@@ -111,6 +117,10 @@ Beispielwerte mit Leerzeichen oder Shell-Sonderzeichen sind gequotet und können
 Der Turbo-Loader setzt auch URL-Pfade mit führendem `//` auf derselben Origin fort. Probe, parallele Downloads und Standard-Download wechseln dadurch nicht auf einen aus dem Pfad abgeleiteten Fremdhost.
 
 ## Offene Fragen
+
+Frühere Versionen änderten bei `PUID != 0` rekursiv den Besitz von `/usr/local`, `/run` und `/tmp`. Neue Starts begrenzen dies auf ShieldPM-Daten und das eigene Runtime-Verzeichnis. Bereits veränderte Eigentümer fremder Dateien oder übergeordneter Systemverzeichnisse lassen sich nicht automatisch zuverlässig rekonstruieren; betroffene native Hosts benötigen eine individuelle Prüfung und Wiederherstellung durch ihre Administration. Das neue root-eigene Default-Include behebt keine früheren Schreibrechte auf dessen übergeordnete Verzeichnisse.
+
+Die Infrastrukturtests prüfen Dateirechte, wiederholte Pfadkonfiguration, Default-Migration und eine echte Unix-Socket-Bindung mit Schreibzugriff auf alle Runtime-Arbeitsverzeichnisse. In eingeschränkten lokalen Prüfumgebungen, die bereits `socket(AF_UNIX)` verbieten, wird nur dieser Systemaufruf-Test mit ausdrücklichem Grund übersprungen; in CI bleibt er verpflichtend.
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 

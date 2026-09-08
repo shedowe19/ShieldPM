@@ -39,6 +39,8 @@ Auch der direkte Auto-Discovery-Schreibweg prüft Domains über die gemeinsame H
 
 Die Kollisionssuche berücksichtigt alle vorhandenen Hosts. Ein bereits passender Container-Host beendet die Prüfung nicht vorzeitig: Belegt ein manuell angelegter Host eine der angeforderten Domains, wird der automatische Eintrag nicht darübergeschrieben.
 
+Auch Auto-Discovery verwendet den gesperrten Nginx-Konfigurationsweg mit Sicherung und `nginx -t`. Erzeugt ein Label trotz zulässiger Direktive ungültige Nginx-Argumente, wird die vorherige Datei wiederhergestellt und der Fehler im Host-Status gespeichert. Erfolgreiche Änderungen behalten den verzögerten gemeinsamen Reload. `fourth-integrations-docker-config.spec.js` prüft Rücknahme und erfolgreichen Statuswechsel.
+
 ### Wiederholte Initialisierung
 
 Gleichzeitige Initialisierungsaufrufe teilen dieselbe Verbindungserstellung. Nach erfolgreichem Verbinden und Einrichten der Ereignisüberwachung bleibt eine erneute Backend-Startsequenz ohne weitere Docker-Listener. Ist kein Docker-Client erreichbar, bleibt eine spätere Initialisierung möglich.

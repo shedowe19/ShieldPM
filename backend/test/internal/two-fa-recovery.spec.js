@@ -9,8 +9,14 @@ vi.mock("../../db.js", async () => {
 	return { default: () => state.db };
 });
 vi.mock("../../lib/config.js", () => ({ isSqlite: () => true, getEncryptionKey: () => "01".repeat(32) }));
+vi.mock("@duosecurity/duo_universal", () => ({
+	Client: class {
+		async healthCheck() {}
+	},
+}));
 
 import service from "../../internal/2fa-service.js";
+import UserTwoFa from "../../models/user-2fa.js";
 
 const firstSecret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
 const secondSecret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
@@ -22,6 +28,8 @@ describe("multiple TOTP methods and recovery-code persistence", () => {
 			t.integer("user_id");
 			t.string("type");
 			t.string("secret");
+			t.string("label");
+			t.string("created_on");
 			t.integer("counter").defaultTo(0);
 			t.text("meta");
 			t.integer("is_verified");
@@ -38,6 +46,7 @@ describe("multiple TOTP methods and recovery-code persistence", () => {
 	});
 	beforeEach(async () => {
 		await state.db.raw("DROP TRIGGER IF EXISTS reject_backup");
+		await state.db.raw("DROP TRIGGER IF EXISTS reject_duo");
 		await state.db("user_2fa").delete();
 		await state.db("user_2fa_backup_codes").delete();
 		await state.db("user_2fa").insert([
@@ -99,5 +108,42 @@ describe("multiple TOTP methods and recovery-code persistence", () => {
 		expect(await service.verifyBackupCode(7, codes[0])).toBe(true);
 		expect(await service.verifyBackupCode(7, codes[0])).toBe(false);
 		expect(await state.db("user_2fa_backup_codes").where({ user_id: 8 })).toHaveLength(1);
+	});
+
+	it("keeps Duo enabled when storing its replacement fails", async () => {
+		await state.db("user_2fa").where({ user_id: 7 }).delete();
+		await state.db("user_2fa").insert({ user_id: 7, type: "duo", is_verified: 1, meta: "{}" });
+		await state.db.raw(
+			"CREATE TRIGGER reject_duo BEFORE INSERT ON user_2fa WHEN NEW.type = 'duo' BEGIN SELECT RAISE(ABORT, 'duo insert failed'); END",
+		);
+		await expect(
+			service.setupDuo(7, {
+				clientId: "test-client",
+				clientSecret: "test-secret",
+				apiHost: "api.example.test",
+				redirectUrl: "https://shield.example.test/duo-callback",
+			}),
+		).rejects.toThrow("duo insert failed");
+		// This is the exact predicate used by password login to require a second factor.
+		expect(await UserTwoFa.hasActive2FA(7)).toBe(true);
+		expect(await state.db("user_2fa").where({ user_id: 7, type: "duo", is_deleted: 0 })).toHaveLength(1);
+	});
+
+	it("replaces Duo atomically while preserving the other user's methods and existing recovery codes", async () => {
+		await state.db("user_2fa").insert([
+			{ user_id: 7, type: "duo", is_verified: 1, meta: "{}" },
+			{ user_id: 8, type: "duo", is_verified: 1, meta: "{}" },
+		]);
+		const result = await service.setupDuo(7, {
+			clientId: "replacement-client",
+			clientSecret: "test-secret",
+			apiHost: "api.example.test",
+			redirectUrl: "https://shield.example.test/duo-callback",
+		});
+		expect(result.meta.clientId).toBe("replacement-client");
+		expect(result.backup_codes).toBeUndefined();
+		expect(await state.db("user_2fa").where({ user_id: 7, type: "duo", is_deleted: 0 })).toHaveLength(1);
+		expect(await state.db("user_2fa").where({ user_id: 8, type: "duo", is_deleted: 0 })).toHaveLength(1);
+		expect(await state.db("user_2fa_backup_codes").where({ user_id: 7 })).toHaveLength(1);
 	});
 });

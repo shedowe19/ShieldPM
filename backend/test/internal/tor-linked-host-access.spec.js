@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
 	host: {},
 	filters: [],
 	startTransaction: vi.fn(),
-	stop: vi.fn(),
+	deleteService: vi.fn(),
 	remove: vi.fn(),
 }));
 vi.mock("express", () => ({
@@ -23,7 +23,7 @@ vi.mock("express", () => ({
 }));
 vi.mock("objection", () => ({ transaction: { start: mocks.startTransaction } }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: vi.fn() } }));
-vi.mock("../../internal/tor.js", () => ({ default: { stop: mocks.stop } }));
+vi.mock("../../internal/tor.js", () => ({ default: { delete: mocks.deleteService } }));
 vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => () => {} }));
 vi.mock("../../lib/validator/api.js", () => ({ default: async (_schema, body) => ({ ...body }) }));
@@ -103,9 +103,10 @@ describe("Tor linked-host authorization and stop failures", () => {
 		expect(mocks.startTransaction).not.toHaveBeenCalled();
 	});
 	it("retains the service record when Tor cannot stop the detached service", async () => {
-		mocks.stop.mockResolvedValue(false);
+		mocks.deleteService.mockRejectedValue(new Error("Unable to stop onion service"));
 		const next = vi.fn();
 		await mocks.handlers["delete:/:id"]({ params: { id: 3 } }, response("all"), next);
+		expect(mocks.deleteService).toHaveBeenCalledWith(3);
 		expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: "Unable to stop onion service" }));
 		expect(mocks.startTransaction).not.toHaveBeenCalled();
 		expect(mocks.remove).not.toHaveBeenCalled();

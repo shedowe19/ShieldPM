@@ -45,6 +45,14 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 - Streams unterscheiden bei TLS zwischen Let's Encrypt, interner CA und importierten Zertifikaten.
 - Terminal-WebSockets übernehmen die Host-Authentifizierung. Der Anubis-OIDC-Pfad enthält keine Ausnahme für `/ws`; die Weitergabe an das Backend verwendet ein hostgebundenes internes Token.
 
+## Authentifizierungsheader am Upstream
+
+`_proxy_auth_headers.conf` setzt OAuth2-Identitätsheader, die bestehenden Authentik-Kontextheader und die optionale Entfernung des Basic-Auth-Headers direkt in der weiterleitenden Location. Nginx übernimmt `proxy_set_header` aus dem Serverblock nur, wenn die Location keine eigenen Headerdirektiven besitzt; die allgemeinen Proxy-Includes verhinderten deshalb zuvor diese Weitergabe. HTTP- und gRPC-Ziele verwenden jeweils ihre eigene Headerdirektive. Default- und Custom-Locations sowie Terminal-WebSockets werden berücksichtigt.
+
+`pass_auth: true` entspricht der UI-Option „Pass Auth to Upstream“ und lässt den Authorization-Header passieren. Bei `false` wird er für Listen mit Basic-Auth-Einträgen entfernt. Die frühere umgekehrte Bedingung ist korrigiert.
+
+Mit Anubis werden die vertrauenswürdigen Header am öffentlichen Server gesetzt. Der interne Server reicht diese weiter, statt sie durch leere Auth-Unteranfragewerte zu überschreiben. `fourth-proxy-auth-headers.spec.js` prüft die tatsächliche Liquid-Ausgabe einschließlich Headerplatzierung und beider Pass-Auth-Zustände; ein externer OAuth-Provider wird dabei nicht aufgerufen.
+
 ## Verwandte Seiten
 
 - [Nginx-Engine](../module/nginx-engine.md)

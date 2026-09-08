@@ -109,6 +109,14 @@ Die Frontend-Tests verwenden echte QueryClients für die sieben optimistischen C
 
 Die Infrastrukturtests verwenden temporäre Dateien und echte SQLite-WAL-Snapshots. Sie simulieren Kopier-/Bereinigungsfehler und prüfen reversible Nginx-Optionen, Certbot-Link-Recovery, eigene Socketnamen und LXC-SSH-Hostschlüssel. Diese isolierten Prüfungen starten keine produktive Installation.
 
+## Regressionen des vierten Durchgangs
+
+Mit Node.js 26.8.1 bestehen **970 Backend-Tests in 144 Dateien und 544 Frontend-Tests in 177 Dateien**. Von 56 Python-Infrastrukturtests bestehen lokal 55; nur der echte Unix-Socket-Test wird wegen einer lokalen `EPERM`-Beschränkung übersprungen. In GitHub CI darf dieser Test nicht übersprungen werden. Locale-Check, TypeScript, Vite-Produktionsbuild, OpenAPI und vollständige Biome-Prüfungen sind erfolgreich.
+
+Die neuen Regressionen prüfen atomare Schlüsselveröffentlichung und Duo-Ersetzung, Impersonation bei verspätetem Refresh und Provider-Remount, tatsächliche Nginx-Headervererbung, partielle Einstellungen, atomare IP-Listen, GitOps-Zielbindung, WireGuard-Schlüsseldateien, serialisierte Tor-Lebenszyklen und veröffentlichte API-Verträge. Der gemeinsame Template-Fingerabdruck wird zwischen Backend und echter Shell verglichen, einschließlich Aufruf über einen Symlink. Certbot-Tests prüfen die Erkennung von Plugins aus dem veränderlichen Zielverzeichnis.
+
+Die Infrastrukturtests sichern Installation, Providerwechsel, Prozessneustart, eng begrenzte Besitzänderungen, migrierte Default-Konfigurationen und eigene Runtime-Verzeichnisse ab. Zusätzlich startet `scripts/ci/docker-smoke.sh` in beiden nativen Docker-PR-Jobs das frisch gebaute Image als root und als UID 1000. Es prüft tatsächliche Betriebsbereitschaft, Socketrechte, Nginx-Konfiguration und Reload sowie Schreibrechte und entfernt alle Testressourcen. Der Test läuft ohne externes Netzwerk und benötigt keine echten Anbieterzugangsdaten.
+
 ## Verwandte Seiten
 
 - [Setup](./setup.md)

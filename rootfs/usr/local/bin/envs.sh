@@ -52,10 +52,11 @@ fi
 eval "$VALIDATION_OUTPUT"
 
 
-# Template Version Hash Check (kept in shell for simplicity as it involves piping many unix tools)
+# Share the exact fingerprint with the backend's post-regeneration writer.
 export TV="5c"
-if [ ! -s /data/shieldpm/env.sha512sum ] || [ "$(cat /data/shieldpm/env.sha512sum)" != "$( (grep "env\.[A-Z0-9_]\+" -roh /app/templates | sed "s|env.||g" | sort | uniq | xargs printenv; echo "$TV") | tr -d "\n" | sha512sum | cut -d" " -f1)" ]; then
-    echo "At least one env or the template version changed, all hosts will be regenerated."
+CURRENT_TEMPLATE_HASH=$(node /app/lib/environment-hash.js) || exit 1
+if [ ! -s "${DATA_PATH:-/data}/shieldpm/env.sha512sum" ] || [ "$(cat "${DATA_PATH:-/data}/shieldpm/env.sha512sum")" != "$CURRENT_TEMPLATE_HASH" ]; then
+    echo "The templates or their environment changed, all hosts will be regenerated."
     export REGENERATE_ALL="true"
 fi
 

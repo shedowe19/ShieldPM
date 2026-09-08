@@ -190,7 +190,7 @@ wait_for_backend_health
 		expect(updater).toContain('ANUBIS_VERSION="1.27.0"');
 		expect(updater).toContain('OAUTH2_VERSION="7.15.3"');
 		expect(updater).toContain("wait_for_backend_health()");
-		expect(updater).toContain("--unix-socket /run/shieldpm.sock");
+		expect(updater).toContain("--unix-socket /run/shieldpm/shieldpm.sock");
 		expect(updater).toContain('.status == "OK"');
 		expect(updater).toContain("systemctl restart shieldpm");
 		expect(updater).toContain("jq");

@@ -1,7 +1,7 @@
 import { IconRobot } from "@tabler/icons-react";
 import { Field, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { getAiConfig, getAiModels, updateAiConfig } from "src/api/backend/ai";
 import type { AiConfig } from "src/api/backend/models";
@@ -22,6 +22,10 @@ export default function AiConfigPage() {
 	const [error, setError] = useState<string | null>(null);
 	const modelRequest = useRef(0);
 	const [fetchedModels, setFetchedModels] = useState<{ id: string; name: string }[]>([]);
+	const invalidateModels = () => {
+		modelRequest.current += 1;
+		setFetchedModels([]);
+	};
 
 	useEffect(() => {
 		getAiConfig()
@@ -119,8 +123,7 @@ export default function AiConfigPage() {
 												checked={values.provider === option}
 												onChange={() => {
 													setFieldValue("provider", option);
-													modelRequest.current += 1;
-													setFetchedModels([]);
+													invalidateModels();
 													// Set default model based on provider to avoid invalid state
 													setFieldValue(
 														"model",
@@ -150,6 +153,10 @@ export default function AiConfigPage() {
 											as={Input}
 											type="password"
 											placeholder="AIza..."
+											onChange={(event: ChangeEvent<HTMLInputElement>) => {
+												invalidateModels();
+												setFieldValue("apiKey", event.target.value);
+											}}
 										/>
 									</div>
 									<div className="space-y-2">
@@ -225,6 +232,10 @@ export default function AiConfigPage() {
 											name="baseUrl"
 											as={Input}
 											placeholder="http://localhost:11434"
+											onChange={(event: ChangeEvent<HTMLInputElement>) => {
+												invalidateModels();
+												setFieldValue("baseUrl", event.target.value);
+											}}
 										/>
 										<p className="text-xs text-muted-foreground">
 											Ollama: http://localhost:11434 | OpenAI: https://api.openai.com
@@ -254,6 +265,10 @@ export default function AiConfigPage() {
 											as={Input}
 											type="password"
 											placeholder="sk-..."
+											onChange={(event: ChangeEvent<HTMLInputElement>) => {
+												invalidateModels();
+												setFieldValue("apiKey", event.target.value);
+											}}
 										/>
 									</div>
 									<div className="space-y-2">

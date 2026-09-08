@@ -24,6 +24,33 @@
 					"certificate"
 				]
 			}
+		},
+		{
+			"in": "query",
+			"name": "query",
+			"description": "Substring search across proxy-host domain names",
+			"schema": {
+				"$ref": "../../../common.json#/properties/query"
+			}
+		},
+		{
+			"in": "query",
+			"name": "page",
+			"description": "One-based page number; requesting page or limit returns items with pagination metadata",
+			"schema": {
+				"type": "integer",
+				"minimum": 1
+			}
+		},
+		{
+			"in": "query",
+			"name": "limit",
+			"description": "Maximum items per requested page (default 100)",
+			"schema": {
+				"type": "integer",
+				"minimum": 1,
+				"maximum": 100
+			}
 		}
 	],
 	"responses": {
@@ -66,7 +93,46 @@
 						}
 					},
 					"schema": {
-						"$ref": "../../../components/proxy-host-list.json"
+						"oneOf": [
+							{
+								"$ref": "../../../components/proxy-host-list.json"
+							},
+							{
+								"type": "object",
+								"required": [
+									"items",
+									"pagination"
+								],
+								"properties": {
+									"items": {
+										"$ref": "../../../components/proxy-host-list.json"
+									},
+									"pagination": {
+										"type": "object",
+										"required": [
+											"limit",
+											"page",
+											"totalItems",
+											"totalPages"
+										],
+										"properties": {
+											"limit": {
+												"type": "integer"
+											},
+											"page": {
+												"type": "integer"
+											},
+											"totalItems": {
+												"type": "integer"
+											},
+											"totalPages": {
+												"type": "integer"
+											}
+										}
+									}
+								}
+							}
+						]
 					}
 				}
 			}

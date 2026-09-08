@@ -252,12 +252,9 @@ class DockerService {
 				.withGraphFetched("[owner,access_list.[items,clients],certificate,host_domains]")
 				.where("is_deleted", 0);
 
-			if (host?.enabled) {
-				// This generates the config file on disk
-				await internalNginx.generateConfig("proxy_host", host);
-			} else if (host) {
-				// If disabled, delete config
-				await internalNginx.deleteConfig("proxy_host", host);
+			if (host) {
+				// Validate each generated file and restore its backup before batching activation.
+				await internalNginx.configure(ProxyHost, "proxy_host", host, { skip_reload: true });
 			}
 
 			// Always trigger the debounced reload

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { dirname } from "node:path";
@@ -119,6 +120,7 @@ const internalIpRanges = {
 	generateConfig: async (ip_ranges) => {
 		const renderEngine = utils.getRenderEngine();
 		const filename = "/data/nginx/ip_ranges.conf";
+		const temporaryFile = `${filename}.${randomUUID()}.tmp`;
 
 		let template = null;
 		try {
@@ -129,11 +131,14 @@ const internalIpRanges = {
 
 		try {
 			const config_text = await renderEngine.parseAndRender(template, { ip_ranges: ip_ranges });
-			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
+			await fs.promises.writeFile(temporaryFile, config_text, { encoding: "utf8" });
+			await fs.promises.rename(temporaryFile, filename);
 			return true;
 		} catch (err) {
 			logger.warn(`Could not write ${filename}: ${err.message}`);
 			throw new errs.ConfigurationError(err.message);
+		} finally {
+			await fs.promises.rm(temporaryFile, { force: true });
 		}
 	},
 };

@@ -1,4 +1,5 @@
 import { execSync, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import ipaddr from "ipaddr.js";
 import errs from "../lib/error.js";
@@ -13,6 +14,7 @@ const serverKeyFile = `${wgDataDir}/server_private.key`;
 const serverPubKeyFile = `${wgDataDir}/server_public.key`;
 
 const WG_INTERFACE = "wg0";
+let serverKeyInitialization = null;
 let configurationChanges = Promise.resolve();
 const serializeConfigurationChange = (operation) => {
 	const task = configurationChanges.then(operation);
@@ -330,19 +332,67 @@ const getNextAvailableIP = async (subnet, serverAddress) => {
 };
 
 /**
+ * Publish a complete key file; an existing private identity must never be replaced.
+ * @param {string} file
+ * @param {string} value
+ * @param {number} mode
+ * @param {boolean} replace
+ * @returns {boolean} Whether this key was published
+ */
+const writeServerKeyAtomically = (file, value, mode, replace = false) => {
+	const temporaryFile = `${file}.${randomUUID()}.tmp`;
+	try {
+		fs.writeFileSync(temporaryFile, value, { mode, flag: "wx", flush: true });
+		if (replace) {
+			fs.renameSync(temporaryFile, file);
+		} else {
+			try {
+				fs.linkSync(temporaryFile, file);
+			} catch (err) {
+				if (err.code === "EEXIST") return false;
+				throw err;
+			}
+		}
+		return true;
+	} finally {
+		try {
+			fs.unlinkSync(temporaryFile);
+		} catch (err) {
+			if (err.code !== "ENOENT") logger.warn("WireGuard: Could not remove temporary key file:", err.message);
+		}
+	}
+};
+
+/**
  * Ensure the WG data directory and server keys exist
  */
 const ensureServerKeys = async () => {
-	if (!fs.existsSync(wgDataDir)) {
-		fs.mkdirSync(wgDataDir, { recursive: true });
-	}
+	if (serverKeyInitialization) return serverKeyInitialization;
+	serverKeyInitialization = (async () => {
+		if (!fs.existsSync(wgDataDir)) {
+			fs.mkdirSync(wgDataDir, { recursive: true });
+		}
 
-	if (!fs.existsSync(serverKeyFile)) {
-		logger.info("WireGuard: Generating new server key pair...");
-		const { privateKey, publicKey } = await generateKeyPair();
-		fs.writeFileSync(serverKeyFile, privateKey, { mode: 0o600 });
-		fs.writeFileSync(serverPubKeyFile, publicKey, { mode: 0o644 });
-		logger.info("WireGuard: Server key pair generated");
+		if (!fs.existsSync(serverKeyFile)) {
+			logger.info("WireGuard: Generating new server key pair...");
+			const { privateKey, publicKey } = await generateKeyPair();
+			if (writeServerKeyAtomically(serverKeyFile, privateKey, 0o600)) {
+				writeServerKeyAtomically(serverPubKeyFile, publicKey, 0o644, true);
+				logger.info("WireGuard: Server key pair generated");
+				return;
+			}
+		}
+
+		if (!fs.existsSync(serverPubKeyFile)) {
+			const privateKey = getServerPrivateKey();
+			const publicKey = await execStdin("wg pubkey", privateKey);
+			writeServerKeyAtomically(serverPubKeyFile, publicKey, 0o644, true);
+		}
+	})();
+	try {
+		await serverKeyInitialization;
+	} finally {
+		serverKeyInitialization = null;
 	}
 };
 
@@ -359,14 +409,8 @@ const getServerPrivateKey = () => {
  * @returns {string}
  */
 const getServerPublicKey = async () => {
-	if (fs.existsSync(serverPubKeyFile)) {
-		return fs.readFileSync(serverPubKeyFile, "utf-8").trim();
-	}
-	// Derive from private key
-	const privateKey = getServerPrivateKey();
-	const publicKey = await execStdin("wg pubkey", privateKey);
-	await fs.promises.writeFile(serverPubKeyFile, publicKey, { mode: 0o644 });
-	return publicKey;
+	await ensureServerKeys();
+	return fs.readFileSync(serverPubKeyFile, "utf-8").trim();
 };
 
 /**

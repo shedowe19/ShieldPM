@@ -5,6 +5,7 @@
 
 # shellcheck source=/dev/null
 . "$(dirname "$0")/runtime-config.sh"
+prepare_runtime_directory /run/shieldpm "$PUID" "$PGID" || exit 1
 configure_certbot_ini /etc/certbot.ini || exit 1
 
 if [ "$PHP82" = "true" ]; then
@@ -27,8 +28,10 @@ if [ "$PHP82" = "true" ]; then
         sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/82/php.ini
     fi
 
-    sed -i "s|#\?listen =.*|listen = /run/php82.sock|" /data/php/82/pool.d/www.conf
-    sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/82/php-fpm.conf
+    sed -i "s|#\?listen =.*|listen = /run/shieldpm/php82.sock|" /data/php/82/pool.d/www.conf
+    sed -i -E 's#^([[:space:]]*)listen\.(owner|group)[[:space:]]*=#\1;listen.\2 =#' /data/php/82/pool.d/www.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*pid[[:space:]]*=.*|pid = /run/shieldpm/php82.pid|" /data/php/82/php-fpm.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*error_log[[:space:]]*=.*|error_log = /data/php/82/php-fpm.log|" /data/php/82/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/82/pool.d/*.conf|g" /data/php/82/php-fpm.conf
     sed -i "s|;clear_env = no|clear_env = no|g" /data/php/82/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
@@ -55,8 +58,10 @@ if [ "$PHP83" = "true" ]; then
         sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/83/php.ini
     fi
 
-    sed -i "s|#\?listen =.*|listen = /run/php83.sock|" /data/php/83/pool.d/www.conf
-    sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/83/php-fpm.conf
+    sed -i "s|#\?listen =.*|listen = /run/shieldpm/php83.sock|" /data/php/83/pool.d/www.conf
+    sed -i -E 's#^([[:space:]]*)listen\.(owner|group)[[:space:]]*=#\1;listen.\2 =#' /data/php/83/pool.d/www.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*pid[[:space:]]*=.*|pid = /run/shieldpm/php83.pid|" /data/php/83/php-fpm.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*error_log[[:space:]]*=.*|error_log = /data/php/83/php-fpm.log|" /data/php/83/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/83/pool.d/*.conf|g" /data/php/83/php-fpm.conf
     sed -i "s|;clear_env = no|clear_env = no|g" /data/php/83/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
@@ -83,8 +88,10 @@ if [ "$PHP84" = "true" ]; then
         sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/84/php.ini
     fi
 
-    sed -i "s|#\?listen =.*|listen = /run/php84.sock|" /data/php/84/pool.d/www.conf
-    sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/84/php-fpm.conf
+    sed -i "s|#\?listen =.*|listen = /run/shieldpm/php84.sock|" /data/php/84/pool.d/www.conf
+    sed -i -E 's#^([[:space:]]*)listen\.(owner|group)[[:space:]]*=#\1;listen.\2 =#' /data/php/84/pool.d/www.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*pid[[:space:]]*=.*|pid = /run/shieldpm/php84.pid|" /data/php/84/php-fpm.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*error_log[[:space:]]*=.*|error_log = /data/php/84/php-fpm.log|" /data/php/84/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/84/pool.d/*.conf|g" /data/php/84/php-fpm.conf
     sed -i "s|;clear_env = no|clear_env = no|g" /data/php/84/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
@@ -107,11 +114,12 @@ fi
 
 
 mkdir -p /data/acme-challenge \
-         /tmp/npmhome \
-         /tmp/goa \
+         /run/shieldpm/home \
+         /run/shieldpm/goa \
          /data/certbot-log \
          /data/certbot-work \
-         /data/certbot-credentials
+         /data/certbot-credentials \
+         /data/certbot-plugins
 mkdir -vp /data/tls/certbot/renewal \
           /data/tls/custom \
           /data/shieldpm \
@@ -326,16 +334,6 @@ else
     sed -i "s|ipv6=off;|ipv6=on;|g" /usr/local/nginx/conf/nginx.conf
 fi
 
-if [ "$GOA" = "true" ]; then
-    mkdir -vp /data/goaccess/data /data/goaccess/geoip
-    cp -a /usr/local/nginx/conf/conf.d/include/goaccess.conf /usr/local/nginx/conf/conf.d/goaccess.conf
-else
-    rm -f /usr/local/nginx/conf/conf.d/goaccess.conf
-    if [ "$FULLCLEAN" = "true" ]; then
-        rm -vrf /data/goaccess
-    fi
-fi
-
 if [ "$NGINX_QUIC_BPF" = "true" ]; then
   sed -i "s|quic_bpf.*|quic_bpf on;|g" /usr/local/nginx/conf/nginx.conf
 else
@@ -343,10 +341,22 @@ else
 fi
 configure_nginx_toggles /usr/local/nginx/conf/nginx.conf || exit 1
 configure_nginx_modules /usr/local/nginx/conf/nginx.conf || exit 1
+configure_nginx_runtime /usr/local/nginx/conf/nginx.conf /run/shieldpm || exit 1
+configure_nginx_runtime /usr/local/nginx/conf/conf.d/shieldpm.conf /run/shieldpm || exit 1
+configure_nginx_runtime /usr/local/nginx/conf/conf.d/include/goaccess.conf /run/shieldpm || exit 1
+if [ "$GOA" = "true" ]; then
+    mkdir -vp /data/goaccess/data /data/goaccess/geoip
+    cp -a /usr/local/nginx/conf/conf.d/include/goaccess.conf /usr/local/nginx/conf/conf.d/goaccess.conf || exit 1
+else
+    rm -f /usr/local/nginx/conf/conf.d/goaccess.conf
+    if [ "$FULLCLEAN" = "true" ]; then
+        rm -vrf /data/goaccess
+    fi
+fi
+migrate_default_nginx_config /usr/local/nginx/conf/conf.d/default.conf /data/nginx/default.conf /data/shieldpm/migration-backups || exit 1
 
 if [ "$REGENERATE_ALL" = "true" ]; then
-    find /data/nginx -name "*.conf" -delete
-    touch /data/nginx/ip_ranges.conf
+    find /data/nginx/proxy_host /data/nginx/redirection_host /data/nginx/dead_host /data/nginx/stream -name "*.conf" -delete
 fi
 
 if [ "$LOGROTATE" = "true" ]; then
@@ -369,16 +379,18 @@ fi
 find /data/tls /data/access /data/shieldpm -type d -not -perm 700 -exec chmod 700 {} +
 find /data/tls /data/access /data/shieldpm -type f -not -perm 600 -exec chmod 600 {} +
 
-rm -vf /usr/local/nginx/logs/nginx.pid
+rm -vf /usr/local/nginx/logs/nginx.pid /run/shieldpm/nginx/nginx.pid
 # Native hosts share /run with other services (including Docker). Only remove
 # sockets owned by ShieldPM; deleting another service's socket disconnects it.
+rm -vf /run/shieldpm/shieldpm.sock /run/shieldpm/goaccess.sock /run/shieldpm/php82.sock /run/shieldpm/php83.sock /run/shieldpm/php84.sock
+# Remove only obsolete ShieldPM socket names from previous releases.
 rm -vf /run/shieldpm.sock /run/goaccess.sock /run/php82.sock /run/php83.sock /run/php84.sock
 
 if [ "$PUID" != "0" ]; then
     if id -u npm > /dev/null 2>&1; then
-        usermod -u "$PUID" npm
+        usermod -u "$PUID" -d /run/shieldpm/home npm
     else
-        useradd -o -u "$PUID" -U -d /tmp/npmhome -s /sbin/nologin npm
+        useradd -o -u "$PUID" -U -d /run/shieldpm/home -s /sbin/nologin npm
     fi
     if [ -z "$(getent group npm | cut -d: -f3)" ]; then
         groupadd -f -g "$PGID" npm
@@ -395,13 +407,10 @@ if [ "$PUID" != "0" ]; then
         echo "ERROR: Unable to set group against the user properly"
         sleep inf
     fi
-    find /usr/local \
-         /data \
-         /run \
-         /tmp \
+    find /data \
          -not \( -uid "$PUID" -and -gid "$PGID" \) \
          -exec chown -h "$PUID:$PGID" {} +
-    chown "$PUID:$PGID" /proc/self/fd/2
+    export HOME=/run/shieldpm/home
     if [ "$PHP82" = "true" ]; then
         sed -i "s|;\?user =.*|;user = root|" /data/php/82/pool.d/www.conf
         sed -i "s|;\?group =.*|;group = root|" /data/php/82/pool.d/www.conf

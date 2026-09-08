@@ -166,7 +166,7 @@ const internalNginx = {
 	 */
 	getConfigName: (host_type, host_id) => {
 		if (host_type === "default") {
-			return "/usr/local/nginx/conf/conf.d/default.conf";
+			return "/data/nginx/default.conf";
 		}
 		return `/data/nginx/${internalNginx.getFileFriendlyHostType(host_type)}/${host_id}.conf`;
 	},
@@ -195,6 +195,7 @@ const internalNginx = {
 					{ hsts_subdomains: host.hsts_subdomains },
 					{ access_list: host.access_list },
 					{ certificate: host.certificate },
+					{ anubis_enabled: host.anubis_enabled },
 					location,
 				);
 

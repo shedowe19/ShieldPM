@@ -808,6 +808,8 @@ const internalGitOps = {
 					fs,
 					http,
 					dir: GITOPS_DIR,
+					// A concurrent sync can rewrite origin; bind this credential snapshot to its URL.
+					url: config.repository_url,
 					remote: "origin",
 					ref: "HEAD",
 					remoteRef: config.branch || "main",
@@ -870,6 +872,7 @@ const internalGitOps = {
 				fs,
 				http,
 				dir: GITOPS_DIR,
+				url: config.repository_url,
 				ref: (await git.currentBranch({ fs, dir: GITOPS_DIR })) || config.branch || "main",
 				remoteRef: config.branch || "main",
 				singleBranch: true,

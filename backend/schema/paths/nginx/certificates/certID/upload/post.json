@@ -25,7 +25,24 @@
 		}
 	],
 	"requestBody": {
-		"$ref": "../../../../../common.json#/properties/certificate_files"
+		"required": true,
+		"description": "Replacement certificate; a private key must be supplied unless one is already stored",
+		"content": {
+			"multipart/form-data": {
+				"schema": {
+					"allOf": [
+						{
+							"$ref": "../../../../../common.json#/properties/certificate_files/content/multipart~1form-data/schema"
+						},
+						{
+							"required": [
+								"certificate"
+							]
+						}
+					]
+				}
+			}
+		}
 	},
 	"responses": {
 		"200": {

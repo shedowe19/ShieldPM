@@ -37,6 +37,7 @@ const makeQB = (arr) => {
 
 vi.mock("../../models/user-2fa.js", () => ({
 	default: {
+		transaction: async (callback) => callback({}),
 		query: vi.fn(() => ({
 			findOne: vi.fn((filter) =>
 				Promise.resolve(fakeUserTwoFaRows.find((r) => matchesFilter(r, filter)) ?? null),

@@ -231,7 +231,7 @@ describe("AuthProvider", () => {
 
 			await waitFor(() => expect(screen.getByTestId("session-instance")).toHaveTextContent("2"));
 			expect(screen.getByTestId("authentication-state")).toHaveTextContent("ready:true");
-			expect(mocks.authStoreAdd).toHaveBeenCalledWith(impersonatedToken);
+			expect(mocks.authStoreAdd).toHaveBeenCalledWith(impersonatedToken, true);
 			expect(queryClient.getQueryData(["profile"])).toBeUndefined();
 			expect(reload).not.toHaveBeenCalled();
 		} finally {

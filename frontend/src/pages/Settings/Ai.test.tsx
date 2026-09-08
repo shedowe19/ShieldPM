@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import AiConfigPage from "./Ai";
 
@@ -73,4 +73,59 @@ it("ignores model lists fetched for a provider that is no longer selected", asyn
 	finishModels(new Response(JSON.stringify([{ id: "stale-local-model", name: "Stale local model" }])));
 	await waitFor(() => expect(screen.getByRole("radio", { name: "Google Gemini" })).toBeChecked());
 	expect(screen.queryByRole("option", { name: "Stale local model" })).not.toBeInTheDocument();
+});
+
+it.each(["ai.base_url", "ai.api_key (Optional)"])(
+	"discards pending model responses when %s changes, including after switching back",
+	async (label) => {
+		let finishModels!: (response: Response) => void;
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify(config)))
+			.mockImplementationOnce(
+				() =>
+					new Promise<Response>((resolve) => {
+						finishModels = resolve;
+					}),
+			);
+		vi.stubGlobal("fetch", fetchMock);
+		render(<AiConfigPage />);
+		const input = await screen.findByLabelText(label);
+		const originalValue = (input as HTMLInputElement).value;
+		fireEvent.click(screen.getByRole("button", { name: "ai.fetch_models" }));
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		fireEvent.change(input, { target: { value: "https://replacement.example.test" } });
+		fireEvent.change(input, { target: { value: originalValue } });
+		await act(async () => {
+			finishModels(new Response(JSON.stringify([{ id: "old-model", name: "Old server model" }])));
+		});
+		expect(screen.queryByRole("option", { name: "Old server model" })).not.toBeInTheDocument();
+	},
+);
+
+it("clears loaded model options when connection settings change and ignores a stale failure", async () => {
+	let finishModels!: (response: Response) => void;
+	const fetchMock = vi
+		.fn()
+		.mockResolvedValueOnce(new Response(JSON.stringify(config)))
+		.mockResolvedValueOnce(new Response(JSON.stringify([{ id: "old-model", name: "Old server model" }])))
+		.mockImplementationOnce(
+			() =>
+				new Promise<Response>((resolve) => {
+					finishModels = resolve;
+				}),
+		);
+	vi.stubGlobal("fetch", fetchMock);
+	render(<AiConfigPage />);
+	const input = await screen.findByLabelText("ai.base_url");
+	fireEvent.click(screen.getByRole("button", { name: "ai.fetch_models" }));
+	await screen.findByRole("option", { name: "Old server model" });
+	fireEvent.click(screen.getByRole("button", { name: "ai.fetch_models" }));
+	await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+	fireEvent.change(input, { target: { value: "https://replacement.example.test" } });
+	expect(screen.queryByRole("option", { name: "Old server model" })).not.toBeInTheDocument();
+	await act(async () => {
+		finishModels(new Response(JSON.stringify({ error: { message: "Old server failed" } }), { status: 503 }));
+	});
+	expect(screen.queryByText("Old server failed")).not.toBeInTheDocument();
 });

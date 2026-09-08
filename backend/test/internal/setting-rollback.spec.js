@@ -141,6 +141,21 @@ describe("default-site configuration recovery", () => {
 		expect(fs.readFileSync("/data/html/index.html", "utf8")).toBe("new-html");
 	});
 
+	it("keeps the stored site mode when only HTML metadata is updated", async () => {
+		const row = await settings.update(access, { id: "default-site", meta: { html: "new-html" } });
+		expect(row).toMatchObject({ value: "html", meta: { html: "new-html" } });
+		expect(fs.readFileSync("/data/html/index.html", "utf8")).toBe("new-html");
+		expect(fs.readFileSync(path.join(state.directory, "default.conf"), "utf8")).toBe("config:html:new-html");
+	});
+
+	it("uses stored HTML metadata when switching the site mode without replacing metadata", async () => {
+		await state.db("setting").where({ id: "default-site" }).update({ value: "404" });
+		const row = await settings.update(access, { id: "default-site", value: "html" });
+		expect(row).toMatchObject({ value: "html", meta: initial.meta });
+		expect(fs.readFileSync("/data/html/index.html", "utf8")).toBe("old-html");
+		expect(fs.readFileSync(path.join(state.directory, "default.conf"), "utf8")).toBe("config:html:old-html");
+	});
+
 	it("serializes updates and restores the last successful value when the queued update fails", async () => {
 		state.failHtml = "second";
 		const first = update("first");

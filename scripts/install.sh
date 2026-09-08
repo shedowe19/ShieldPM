@@ -14,6 +14,18 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Resolve the release payload beside this script, independently of the caller's
+# working directory. Reject an incomplete/source checkout before changing apt.
+INSTALL_SOURCE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+for required_file in app/package.json html/frontend/index.html usr/local/nginx/sbin/nginx rootfs/usr/local/bin/start.sh; do
+    if [ ! -f "$INSTALL_SOURCE_DIR/$required_file" ]; then
+        echo "ERROR: Incomplete native installer package: missing $required_file." >&2
+        echo "Extract the full shieldpm-install-linux archive before running install.sh." >&2
+        exit 1
+    fi
+done
+cd "$INSTALL_SOURCE_DIR"
+
 INSTALL_TMP_DIR=$(mktemp -d /tmp/shieldpm-install.XXXXXX)
 trap 'rm -rf "$INSTALL_TMP_DIR"' EXIT
 
@@ -160,6 +172,12 @@ echo "    Please select your desired system locale (e.g., en_US.UTF-8 or de_DE.U
 dpkg-reconfigure locales
 
 # 3. Copy Pre-built Binaries (Nginx, Certbot, Cloudflared, Libs)
+# A reinstall must not replace files while the old backend is still serving
+# requests. The final service start must launch the newly installed code.
+# Stop even an activating/auto-restarting unit, not only an active one.
+if systemctl cat shieldpm.service >/dev/null 2>&1; then
+    systemctl stop shieldpm
+fi
 echo ">>> Installing pre-built binaries..."
 # The tarball structure already mirrors the final filesystem layout
 if [ -d "usr" ]; then
@@ -283,6 +301,36 @@ finally:
 PY
 }
 
+# Select exactly one provider, including shell exports and indented assignments.
+# Keep disabled credentials as comments so switching back preserves custom paths.
+configure_database_environment() {
+    python3 - "$ENV_FILE" "$1" <<'PY'
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+
+path = Path(sys.argv[1])
+selected = sys.argv[2]
+pattern = re.compile(r"^(\s*)(#\s*)?((?:export\s+)?DB_(MYSQL|POSTGRES|SQLITE)_[A-Z0-9_]+=.*)$")
+lines = []
+for line in path.read_text().splitlines():
+    match = pattern.match(line)
+    if match:
+        line = match[1] + ("" if match[4] == selected else "# ") + match[3]
+    lines.append(line)
+descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-env-", dir=path.parent)
+try:
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write("\n".join(lines) + "\n")
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+}
+
 # Function to prompt for DB credentials
 prompt_db_creds() {
     local default_host="127.0.0.1"
@@ -355,9 +403,7 @@ SQL
         fi
 
         # Update .env
-        sed -i 's/^# DB_MYSQL_/DB_MYSQL_/g' "$ENV_FILE"
-        sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
-        sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
+        configure_database_environment MYSQL
 
         # Set values
         set_env_value DB_MYSQL_HOST "$DB_HOST"
@@ -393,9 +439,7 @@ SQL
         fi
 
         # Update .env
-        sed -i 's/^# DB_POSTGRES_/DB_POSTGRES_/g' "$ENV_FILE"
-        sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
-        sed -i 's/^DB_SQLITE_/# DB_SQLITE_/g' "$ENV_FILE"
+        configure_database_environment POSTGRES
 
         # Set values
         set_env_value DB_POSTGRES_HOST "$DB_HOST"
@@ -408,9 +452,7 @@ SQL
         ;;
     *)
         echo "--> Configuring for SQLite (Default)..."
-        # SQLite is default, just ensure others are commented out
-        sed -i 's/^DB_MYSQL_/# DB_MYSQL_/g' "$ENV_FILE"
-        sed -i 's/^DB_POSTGRES_/# DB_POSTGRES_/g' "$ENV_FILE"
+        configure_database_environment SQLITE
         ;;
 esac
 
@@ -681,13 +723,19 @@ if [[ "$oas_choice" =~ ^[Yy]$ ]]; then
     if [ -n "$OAS_AGENT_TOKEN" ]; then
         ./open-appsec-install --auto --token "$OAS_AGENT_TOKEN" || {
             echo "  > Automatic install failed, trying manual mode..."
-            ./open-appsec-install --manual || true
+            ./open-appsec-install --manual || {
+                echo "ERROR: OpenAppSec installation failed. The Nginx module was not enabled." >&2
+                exit 1
+            }
         }
         echo "  > Connected to Cloud Portal with provided token."
     else
         ./open-appsec-install --auto || {
             echo "  > Automatic install failed, trying manual mode..."
-            ./open-appsec-install --manual || true
+            ./open-appsec-install --manual || {
+                echo "ERROR: OpenAppSec installation failed. The Nginx module was not enabled." >&2
+                exit 1
+            }
         }
 
         # Create default local_policy.yaml for standalone mode
@@ -759,7 +807,7 @@ systemctl start shieldpm
 
 echo "--> Waiting for the backend and initial database migrations..."
 INSTALL_HEALTH_DEADLINE=$((SECONDS + 180))
-while ! curl --fail --silent --show-error --max-time 2 --unix-socket /run/shieldpm.sock \
+while ! curl --fail --silent --show-error --max-time 2 --unix-socket /run/shieldpm/shieldpm.sock \
     http://localhost/ 2>/dev/null | jq -e '.status == "OK"' >/dev/null; do
     if ((SECONDS >= INSTALL_HEALTH_DEADLINE)); then
         echo "ERROR: ShieldPM did not become healthy within 180 seconds. Check journalctl -u shieldpm."

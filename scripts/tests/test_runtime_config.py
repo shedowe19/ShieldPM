@@ -117,8 +117,8 @@ class RuntimeConfigTests(unittest.TestCase):
     def test_disabled_goaccess_removes_listener_and_preserves_data(self):
         # Run the actual startup branch with only its paths redirected into a fixture.
         source = (REPO / "rootfs/usr/local/bin/start.sh").read_text()
-        branch = source.split('if [ "$GOA" = "true" ]; then', 1)[1].split('\nif [ "$NGINX_QUIC_BPF"', 1)[0]
-        program = 'if [ "$GOA" = "true" ]; then' + branch
+        branch = source.split('if [ "$GOA" = "true" ]; then', 1)[1].split('\nfi\n', 1)[0]
+        program = 'if [ "$GOA" = "true" ]; then' + branch + '\nfi\n'
         nginx, data = self.root / "nginx", self.root / "data"
         (nginx / "include").mkdir(parents=True)
         (nginx / "include/goaccess.conf").write_text("listen updated;")
@@ -148,7 +148,7 @@ class RuntimeConfigTests(unittest.TestCase):
                             "NPM_IPV4_BINDING=192.0.2.1\nGOA_IPV4_BINDING=192.0.2.2\n"
                             "NPM_LISTEN_LOCALHOST=true\nGOA_LISTEN_LOCALHOST=true\n")
         script = (REPO / "rootfs/usr/local/bin/healthcheck.sh").read_text()
-        script = script.replace("/data/.env", str(env_file)).replace("/tmp/goa/index.html", str(self.root / "index.html"))
+        script = script.replace("/data/.env", str(env_file)).replace("/run/shieldpm/goa/index.html", str(self.root / "index.html"))
         result = subprocess.run(["sh", "-c", script], capture_output=True, text=True,
                                 env={**os.environ, "PATH": f"{executable}:{os.environ['PATH']}"})
         self.assertEqual(result.returncode, 0, result.stderr)

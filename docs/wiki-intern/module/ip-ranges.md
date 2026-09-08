@@ -39,6 +39,10 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 IPv4- und IPv6-CIDRs werden mit `ipaddr.js` vollständig geprüft. Leere Listen, HTML-Fehlerantworten, falsche Adressfamilien und ungültige Präfixe ersetzen die bestehende Konfiguration nicht. HTTP-Fehler und Zeitüberschreitungen werden als Fehler behandelt; der nächste planmäßige Versuch bleibt möglich. Damit werden insbesondere die zuvor durch den fehlerhaften IPv6-Regulärausdruck verlorenen Netze übernommen.
 
+## Atomarer Dateiaustausch
+
+Die neue Liste wird vollständig in einer eindeutigen temporären Datei im selben Verzeichnis geschrieben und anschließend per Rename veröffentlicht. Schreibfehler wie ein voller Datenträger oder ein fehlgeschlagener Dateiaustausch lassen die bisherige vollständige Trust-Liste erhalten. Temporäre Dateien werden im `finally`-Block entfernt. `fourth-ip-ranges-files.spec.js` prüft diese Fehlerpfade mit echten temporären Dateien und die erfolgreiche Veröffentlichung beider Adressfamilien.
+
 ## Verwandte Seiten
 
 - [Nginx-Engine](./nginx-engine.md)

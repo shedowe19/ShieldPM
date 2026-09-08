@@ -34,6 +34,8 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - `nginx -t` wird **aktiv** vor dem Reload ausgeführt via `test()` Methode (`nginx -tq`)
 - Reload ist **nicht** debounced in `nginx.js` — Debouncing passiert in `docker.js`
 - Templates verwenden ausschließlich Liquid-Syntax (LiquidJS)
+- Eigene Unix-Sockets liegen unter `/run/shieldpm/`: Backend, PHP, GoAccess, Anubis, OAuth2 und HTTP-Ersatzlistener. Die Startskripte vergeben nur diesem Laufzeitverzeichnis Schreibrechte; fremde Host-Sockets unter `/run` bleiben unverändert. Templateänderungen erzwingen die Neuerzeugung gespeicherter Hosts beim Start.
+- Die editierbare Default-Konfiguration einschließlich Sicherungen liegt unter `/data/nginx/default.conf`. Ein festes Include unter `/usr/local/nginx/conf/conf.d/default.conf` bindet sie ein; der Backendprozess benötigt dort keine Schreibrechte mehr.
 
 ## Erweiterte Methoden
 

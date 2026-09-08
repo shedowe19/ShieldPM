@@ -49,6 +49,14 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 
 	// On mount, try to refresh token (via cookie) to restore session
 	useEffect(() => {
+		// Locale changes remount this provider. The retained refresh cookie belongs
+		// to the administrator, so keep an in-memory impersonated session intact.
+		if (AuthStore.isImpersonating) {
+			setAuthenticated(true);
+			setLoading(false);
+			return;
+		}
+
 		// Duo establishes its session through the callback. A competing refresh
 		// could expire its newly issued cookies after the callback succeeds.
 		if (isDuoCallback) {
@@ -105,7 +113,7 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	const loginAs = async (id: number) => {
 		const response = await loginAsUser(id);
 		sessionGeneration.current += 1;
-		AuthStore.add(response);
+		AuthStore.add(response, true);
 		queryClient.clear();
 		setSessionVersion((version) => version + 1);
 	};
@@ -129,6 +137,9 @@ function AuthProvider({ children, tokenRefreshInterval = 5 * 60 * 1000 }: Props)
 	};
 
 	const refresh = async () => {
+		// Impersonation only replaces the access cookie; refreshing would silently
+		// restore the administrator's identity without resetting the target's UI.
+		if (AuthStore.isImpersonating) return;
 		const generation = sessionGeneration.current;
 		try {
 			const response = await refreshToken();

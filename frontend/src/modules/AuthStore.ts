@@ -5,6 +5,7 @@ export const AUTHENTICATION_EXPIRED_EVENT = "shieldpm:authentication-expired";
 interface AuthState {
 	expires: number;
 	userId?: number;
+	impersonating: boolean;
 }
 
 export class AuthStore {
@@ -28,6 +29,10 @@ export class AuthStore {
 
 	get userId() {
 		return this.state?.userId || 0;
+	}
+
+	get isImpersonating() {
+		return this.state?.impersonating || false;
 	}
 
 	// Helper to check validity based on expiration
@@ -55,12 +60,14 @@ export class AuthStore {
 		this.state = {
 			expires: typeof expires === "number" && Number.isFinite(expires) ? expires : 0,
 			userId: data.user?.id ?? this.state?.userId,
+			impersonating: false,
 		};
 	}
 
 	// Add is alias for Set in cookie mode
-	add(data: { expires: number | string | null; user?: { id: number } }) {
+	add(data: { expires: number | string | null; user?: { id: number } }, impersonating = false) {
 		this.set(data);
+		if (this.state) this.state.impersonating = impersonating;
 	}
 
 	// Clear memory state

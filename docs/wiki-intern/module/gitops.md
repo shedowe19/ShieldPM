@@ -54,6 +54,8 @@ Jedes exportierte Modul enthält eine `.gitkeep`-Datei. Damit bleibt auch ein le
 
 Vor dem Commit werden entfernte Dateien ausdrücklich aus dem Git-Index gelöscht. Ein erneuter Push wird auch bei unverändertem Arbeitsverzeichnis ausgeführt, damit ein zuvor fehlgeschlagener Upload nachgeholt wird. Vor Push und Pull wird `origin` auf die aktuell konfigurierte URL gesetzt; Zugangsdaten gehen dadurch nicht an einen früheren Repository-Endpunkt. Push verwendet den aktuellen lokalen Commit und den konfigurierten Remote-Branch.
 
+Push und Pull übergeben zusätzlich die Repository-URL aus demselben Konfigurationsstand wie die Zugangsdaten direkt an `isomorphic-git`. Eine gleichzeitige Änderung von `origin` kann dadurch den authentifizierten Netzwerkaufruf nicht auf ein anderes Repository umleiten. `fourth-integrations-gitops-destination.spec.js` prüft beide Wege mit einem echten lokalen Git-Repository und einem HTTP-Stub, ohne einen Provider zu kontaktieren.
+
 Sync-Metadaten liegen in `setting.meta`. Nach Netzwerkoperationen wird die private Konfiguration erneut geladen, damit zwischenzeitlich aktualisierte Zugangsdaten erhalten bleiben. Bereits ausgecheckte Exportdateien werden beim Schreiben ebenfalls auf Modus `0600` gesetzt. Regressionen prüfen echte lokale Git-Commits, Push-Wiederholungen und die Entschlüsselbarkeit unveränderter Zugangsdaten.
 
 ## Offene Fragen

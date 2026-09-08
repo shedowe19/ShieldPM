@@ -8,8 +8,8 @@ Beschreibung der OpenAPI/Swagger Schema-Struktur.
 
 | Datei                         | Beschreibung                         |
 | ----------------------------- | ------------------------------------ |
-| `backend/schema/swagger.json` | Hauptdatei (11 KB)                   |
-| `backend/schema/common.json`  | Gemeinsame Definitionen (5 KB)       |
+| `backend/schema/swagger.json` | Hauptdatei                           |
+| `backend/schema/common.json`  | Gemeinsame Definitionen              |
 | `backend/schema/index.js`     | Schema-Loader                        |
 | `backend/schema/components/`  | Wiederverwendbare Schema-Komponenten |
 | `backend/schema/paths/`       | Endpunkt-Pfad-Definitionen           |
@@ -23,6 +23,12 @@ Datei: `backend/validate-schema.js`
 Parallele Aufrufe des Loaders teilen sich dieselbe laufende Kompilierung. Nach einem Lesefehler darf der nächste Aufruf erneut kompilieren; ein erfolgreiches Ergebnis wird im Speicher wiederverwendet. Die Versionsnummer stammt aus `backend/package.json`, auch bei `/docs/swagger.json`.
 
 Die Antwortverträge beschreiben den Health-Bootstrap mit Demo- und CSRF-Feldern, Access-List-Arrays und die kompakte Benutzerzusammenfassung bei Anmeldung, Refresh und zweitem Faktor. Logout antwortet mit HTTP 204 ohne JSON-Körper. Fehler stehen unter `error`; alle dokumentierten Authentifizierungsanforderungen verweisen auf das definierte `bearerAuth`-Schema. Die Tests `schema-response-contracts.spec.js` und `schema-compilation.spec.js` prüfen diese Verträge neben der OpenAPI-Validierung.
+
+Bei Proxy-Hosts liefert eine Anfrage ohne `page` und `limit` ein Array; mit einem dieser Parameter enthält die Antwort `items` und `pagination`. Das Schema beschreibt beide Formen sowie die Such- und Paginationparameter. Ein Update der Git-Konfiguration antwortet mit demselben kompakten Status wie der Git-Status-GET. Die Enum-Felder `adv_limit_req_unit` und `terminal_auth_type` erlauben den in der Datenbank vorgesehenen Wert `null`.
+
+Ein einzelnes Zertifikat wird über `POST /api/nginx/certificates/retrieve` mit `id` und optionalem `expand` abgerufen. Die Antwort erlaubt die bereinigten Host-Beziehungen und ältere, nicht geheime Kontometadaten; DNS-Zugangsdaten bleiben ausgeschlossen. Bei der Zertifikatprüfung dürfen Zertifikat, Schlüssel und Zwischenzertifikat unabhängig hochgeladen werden. Zertifikatinformationen enthalten `sans`; `cn` ist bei Zertifikaten ohne Common Name optional. Beim Ersetzen eines gespeicherten Zertifikats ist die Zertifikatdatei erforderlich, während ein bereits gespeicherter passender Schlüssel wiederverwendet werden darf.
+
+`fourth-published-contracts.spec.js` prüft diese Antwort- und Uploadverträge gegen das vollständig aufgelöste Schema. Diese Prüfungen und `validate-schema.js` ersetzen keine Zertifikatausstellung oder einen Test gegen einen externen DNS-Anbieter.
 
 ## Verwandte Seiten
 

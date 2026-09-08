@@ -45,6 +45,12 @@ Pull Requests aus demselben Repository melden sich mit dem vorhandenen `GITHUB_T
 
 PR-Builds laden das fertige Image nur in den lokalen Docker-Daemon des Runners (`load: true`, `push: false`); Registry-Push, Multiarch-Veröffentlichung und Releases bleiben auf Ereignisse außerhalb von Pull Requests begrenzt. Fork-PRs erhalten über den Login-Schritt keine Registry-Zugangsdaten und benötigen ein anonym zugängliches Basisimage für den vollständigen Build.
 
+Direkt nach dem Laden führt `scripts/ci/docker-smoke.sh` in beiden PR-Build-Jobs einen echten Containerstart mit PUID/PGID `0` und `1000` aus. Die Runner `ubuntu-latest` und `ubuntu-24.04-arm` passen nativ zu ihren Images; QEMU ist dafür nicht erforderlich. Jeder Container erhält ein eigenes temporäres Datenvolume und `--network none`. `TZ=UTC`, deaktiviertes IPv6 und `SKIP_IP_RANGES=true` halten die Prüfung unabhängig von externen Diensten.
+
+Ein ausdrücklich als Testfixture gekennzeichneter Marker im ACME-Account-Verzeichnis überspringt ausschließlich die sonst vor dem Dienststart versuchte Registrierung. Er enthält keine Zugangsdaten und ist kein nutzbarer ACME-Account. Die Prüfung wartet höchstens 180 Sekunden pro Container auf den vorhandenen Healthcheck. Anschließend prüft sie als jeweilige Service-UID den Backend-Socket, schreibt in die generierte Standardkonfiguration und das Certbot-Plugin-Verzeichnis, führt `nginx -tq`, Reload und Healthcheck aus und kontrolliert, dass `/run`, `/tmp` und `/usr/local` weiterhin Root gehören. Bei Fehlern werden Status und begrenzte Containerlogs ausgegeben; Container, Volumes und lokale Fixtures werden auch im Fehlerfall entfernt. Der Workflow-Schritt ist zusätzlich auf zehn Minuten begrenzt.
+
+Lokal verwendet `bash scripts/ci/docker-smoke.sh IMAGE` ausschließlich ein bereits geladenes Image derselben Architektur. `scripts/tests/test_docker_smoke.py` prüft Erfolg, Health-Timeout und Schreibfehler einschließlich Cleanup mit einem simulierten Docker-CLI; erst der PR-Build führt den tatsächlichen Docker-Lauf aus.
+
 ## Frontend Build (standalone)
 
 ```bash

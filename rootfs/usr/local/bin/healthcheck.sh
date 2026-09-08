@@ -24,7 +24,7 @@ if [ "$NPM_IPV4_BINDING" = "0.0.0.0" ] || [ "${NPM_LISTEN_LOCALHOST:-false}" = t
     export NPM_IPV4_BINDING="127.0.0.1"
 fi
 
-if (if [ "$GOA" = "true" ]; then [ -f /tmp/goa/index.html ] && nc -z -w 5 "$GOA_IPV4_BINDING" "$GOA_PORT"; fi && if [ "$PHP82" = true ]; then cgi-fcgi -bind -connect /run/php82.sock > /dev/null 2>&1; fi && if [ "$PHP83" = true ]; then cgi-fcgi -bind -connect /run/php83.sock > /dev/null 2>&1; fi && if [ "$PHP84" = true ]; then cgi-fcgi -bind -connect /run/php84.sock > /dev/null 2>&1; fi && [ "$(curl -fsSk --max-time 10 https://"$NPM_IPV4_BINDING":"$NPM_PORT"/api/ | jq --raw-output .status)" = "OK" ]); then
+if (if [ "$GOA" = "true" ]; then [ -f /run/shieldpm/goa/index.html ] && nc -z -w 5 "$GOA_IPV4_BINDING" "$GOA_PORT"; fi && if [ "$PHP82" = true ]; then cgi-fcgi -bind -connect /run/shieldpm/php82.sock > /dev/null 2>&1; fi && if [ "$PHP83" = true ]; then cgi-fcgi -bind -connect /run/shieldpm/php83.sock > /dev/null 2>&1; fi && if [ "$PHP84" = true ]; then cgi-fcgi -bind -connect /run/shieldpm/php84.sock > /dev/null 2>&1; fi && [ "$(curl -fsSk --max-time 10 https://"$NPM_IPV4_BINDING":"$NPM_PORT"/api/ | jq --raw-output .status)" = "OK" ]); then
 	echo "OK"
 	exit 0
 else

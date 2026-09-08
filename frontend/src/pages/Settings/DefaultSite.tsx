@@ -53,7 +53,7 @@ export default function DefaultSite() {
 		});
 	};
 
-	if (!isLoading && error) {
+	if (!isLoading && error && !data) {
 		return (
 			<div className="card-body">
 				<div className="mb-3">
@@ -95,13 +95,13 @@ export default function DefaultSite() {
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
-							{errorMsg && (
+							{(errorMsg || error) && (
 								<Alert className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive">
 									<AlertCircle className="h-4 w-4" />
 									<AlertTitle>
 										<T id="error.title" />
 									</AlertTitle>
-									<AlertDescription>{errorMsg}</AlertDescription>
+									<AlertDescription>{errorMsg || error?.message}</AlertDescription>
 								</Alert>
 							)}
 

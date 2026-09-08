@@ -1,11 +1,17 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { TextareaHTMLAttributes } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import DefaultSite from "./DefaultSite";
 
 const mutate = vi.hoisted(() => vi.fn());
+const state = vi.hoisted(() => ({
+	data: { id: "default-site", value: "html", meta: { html: "" } } as
+		| { id: string; value: string; meta: { html: string } }
+		| undefined,
+	error: null as Error | null,
+}));
 vi.mock("src/hooks", () => ({
-	useSetting: () => ({ data: { id: "default-site", value: "html", meta: { html: "" } }, isLoading: false }),
+	useSetting: () => ({ ...state, isLoading: false }),
 	useSetSetting: () => ({ mutate }),
 }));
 vi.mock("src/notifications", () => ({ showObjectSuccess: vi.fn() }));
@@ -27,6 +33,11 @@ vi.mock("src/components/LazyCodeEditor", () => ({
 	),
 }));
 afterEach(cleanup);
+beforeEach(() => {
+	state.data = { id: "default-site", value: "html", meta: { html: "" } };
+	state.error = null;
+	mutate.mockClear();
+});
 
 it("explains why an empty default HTML page cannot be saved and labels its editor", async () => {
 	render(<DefaultSite />);
@@ -36,4 +47,27 @@ it("explains why an empty default HTML page cannot be saved and labels its edito
 	expect(editor).toHaveAttribute("aria-invalid", "true");
 	expect(editor).toHaveAccessibleDescription("error.required");
 	expect(mutate).not.toHaveBeenCalled();
+});
+
+it("preserves unsaved HTML across a failed background refresh and recovery", async () => {
+	const { rerender } = render(<DefaultSite />);
+	const editor = screen.getByLabelText("settings.default-site.html", { selector: "textarea" });
+	fireEvent.change(editor, { target: { value: "<h1>Unsaved maintenance page</h1>" } });
+	state.error = new Error("Settings refresh failed");
+	rerender(<DefaultSite />);
+	expect(screen.getByText("Settings refresh failed")).toBeInTheDocument();
+	expect(screen.getByLabelText("settings.default-site.html", { selector: "textarea" })).toBe(editor);
+	expect(editor).toHaveValue("<h1>Unsaved maintenance page</h1>");
+	state.error = null;
+	state.data = { id: "default-site", value: "html", meta: { html: "<p>Server content</p>" } };
+	rerender(<DefaultSite />);
+	expect(editor).toHaveValue("<h1>Unsaved maintenance page</h1>");
+});
+
+it("blocks saving defaults when the first settings request fails", () => {
+	state.data = undefined;
+	state.error = new Error("Settings unavailable");
+	render(<DefaultSite />);
+	expect(screen.getByText("Settings unavailable")).toBeInTheDocument();
+	expect(screen.queryByRole("button", { name: "save" })).not.toBeInTheDocument();
 });

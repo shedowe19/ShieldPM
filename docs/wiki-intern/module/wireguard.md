@@ -56,6 +56,10 @@ Persistierte, ungültige Einstellungen fallen beim Einlesen sicher auf die Stand
 Beim Start wartet `init()` vor `syncConfig()` auf die Erzeugung der Server-Schlüssel. IPv6-Endpunkte werden bei der
 Client-Konfiguration mit eckigen Klammern formatiert, damit der Port eindeutig bleibt.
 
+Gleichzeitige Erstaufrufe von Initialisierung, Serverstatus und Peer-Erstellung teilen dieselbe laufende Server-Schlüsselerzeugung. Dadurch überschreibt keine zweite Erzeugung die gerade vergebene Serveridentität. Nach einem Fehler bleibt ein späterer Versuch möglich.
+
+Neue Schlüssel werden vollständig in eindeutige temporäre Dateien geschrieben und vor der Veröffentlichung synchronisiert. Ein atomarer harter Link veröffentlicht den privaten Schlüssel mit Modus `0600`, ohne eine bereits vorhandene Identität zu überschreiben. Der öffentliche Schlüssel wird durch atomare Umbenennung veröffentlicht. Schlägt ein Schreibvorgang fehl, bleibt keine unvollständige endgültige Schlüsseldatei zurück; temporäre Dateien werden anschließend entfernt. Fehlt der öffentliche Schlüssel, wird er innerhalb derselben gemeinsamen Initialisierung aus dem vorhandenen privaten Schlüssel abgeleitet. Ein erneuter Versuch nach einem Fehler beim öffentlichen Schlüssel ersetzt daher nicht die private Serveridentität. `fourth-integrations-wireguard-keys.spec.js` prüft parallele Initialisierung, Wiederherstellung, partielle Schreibfehler und den Erhalt einer während der Erzeugung hinzugekommenen privaten Identität.
+
 ## Abhängigkeiten
 
 - `wireguard-tools` — WireGuard-CLI

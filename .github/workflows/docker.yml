@@ -10,6 +10,7 @@ on:
       - .dockerignore
       - scripts/install.sh
       - scripts/setup-node-apt.sh
+      - scripts/ci/docker-smoke.sh
       - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**
@@ -27,6 +28,7 @@ on:
       - .dockerignore
       - scripts/install.sh
       - scripts/setup-node-apt.sh
+      - scripts/ci/docker-smoke.sh
       - global/certbot-dns-plugins.json
       - frontend/**
       - backend/**
@@ -174,6 +176,14 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-final
 
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-final
+
+      - name: "🧪 Smoke loaded image as root and UID 1000"
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 10
+        env:
+          SMOKE_IMAGE: ${{ env.IMAGE_NAME }}:${{ needs.prepare.outputs.docker_tag_base }}-${{ matrix.arch }}
+        # Both matrix runners execute their image architecture natively; QEMU is not required.
+        run: bash scripts/ci/docker-smoke.sh "$SMOKE_IMAGE"
 
       # ---------------------------------------------------------
       # NEW: Native Installer Package (Generic .tar.gz)

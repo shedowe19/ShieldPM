@@ -188,7 +188,6 @@ router.put("/:id", async (req, res, next) => {
  * DELETE /api/nginx/tor-onion/:id
  */
 router.delete("/:id", async (req, res, next) => {
-	let trx;
 	try {
 		const service = await getMutableService(res.locals.access, req.params.id, "delete");
 
@@ -197,12 +196,7 @@ router.delete("/:id", async (req, res, next) => {
 			return;
 		}
 
-		// Stop the Tor onion service first
-		if (!(await internalTor.stop(service))) throw new errs.ValidationError("Unable to stop onion service");
-
-		trx = await transaction.start(TorOnion.knex());
-		await service.$query(trx).delete();
-		await trx.commit();
+		await internalTor.delete(service.id);
 
 		// Audit Log
 		await internalAuditLog.add(res.locals.access, {
@@ -217,9 +211,6 @@ router.delete("/:id", async (req, res, next) => {
 
 		res.status(200).send({ status: "OK" });
 	} catch (err) {
-		if (trx) {
-			await trx.rollback();
-		}
 		next(err);
 	}
 });

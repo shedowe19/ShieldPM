@@ -157,6 +157,16 @@ Promises: Bei einem stillen 401 wechselt die UI zur Anmeldung, vorübergehende N
 Auth-Zustand erhalten. Ein nach Abmeldung oder Benutzerwechsel eintreffendes altes Refresh-Ergebnis überschreibt den
 neuen Zustand nicht. `AuthStore.test.ts` und `AuthContext.test.tsx` prüfen Ablauf, Netzfehler und verspätete Ergebnisse.
 
+Bei „Login als Benutzer“ markiert `AuthStore` die Sitzung im Arbeitsspeicher als impersoniert. Der Server ersetzt
+dabei nur den Access-Cookie; der Refresh-Cookie gehört weiterhin dem Administrator. Deshalb überspringt `AuthContext`
+während dieser Sitzung sowohl periodische Refresh-Aufrufe als auch den Start-Refresh nach einem sprachbedingten
+Provider-Remount. Sonst würde der nächste Refresh die Administratoridentität mit dem noch sichtbaren Zielbenutzer-Cache
+kombinieren. Die explizite Rückkehr zum Administrator, eine neue Anmeldung oder das Leeren des Stores entfernen die
+Markierung; danach arbeitet der normale Refresh wieder. Abgelaufene Access-Tokens verwenden weiterhin die zentrale
+401-Abmeldung. `AuthContext.impersonation.test.tsx` prüft diese Übergänge mit dem echten Store. Die Markierung überlebt
+keinen vollständigen Dokument-Reload; dort stellt der bestehende Refresh-Cookie weiterhin die ursprüngliche Sitzung
+wieder her. Eine eigenständige Refresh-Sitzung für den impersonierten Benutzer wird nicht angelegt.
+
 ## Modals (`frontend/src/modals/`)
 
 21 Dialog-Komponenten für CRUD-Operationen:

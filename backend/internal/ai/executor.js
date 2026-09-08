@@ -1026,9 +1026,7 @@ export const executeTools = async (access, toolCalls) => {
 				}
 				case "delete_tor_onion_service": {
 					const service = await getTorOnionService(access, "tor_onions:delete", call.args.id);
-					if (!(await internalTor.stop(service)))
-						throw new errs.ValidationError("Unable to stop onion service");
-					await service.$query().patch({ is_deleted: 1 });
+					await internalTor.delete(service.id, { soft: true });
 					await internalAuditLog.add(access, {
 						action: "deleted",
 						object_type: "tor-onion",

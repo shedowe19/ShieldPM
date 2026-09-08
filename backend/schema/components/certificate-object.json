@@ -89,10 +89,48 @@
 				"intermediate_certificate": {
 					"type": "boolean",
 					"description": "Whether this certificate file is available"
+				},
+				"letsencrypt_email": {
+					"type": "string",
+					"description": "Legacy account email retained on existing certificate records",
+					"deprecated": true
+				},
+				"letsencrypt_agree": {
+					"type": "boolean",
+					"description": "Legacy account agreement retained on existing certificate records",
+					"deprecated": true
 				}
 			},
 			"example": {
 				"dns_challenge": false
+			}
+		},
+		"proxy_hosts": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
+			}
+		},
+		"redirection_hosts": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
+			}
+		},
+		"dead_hosts": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
+			}
+		},
+		"streams": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
 			}
 		}
 	}

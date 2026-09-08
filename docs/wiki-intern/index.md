@@ -161,7 +161,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 - **openappsec.js** → WAF-Modul (nginx-Modul + Docker/native)
 - **anubis.js** → externer Anubis-Service (PoW-Gate)
 
-- **analytics.js** → nutzt recharts, react-simple-maps, GoAccess
+- **analytics.js** → nutzt recharts, lokale world-atlas-Topologie, GoAccess
 
 ### API-Routen (Überblick)
 
@@ -205,7 +205,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 
 ---
 
-_Zuletzt aktualisiert: 2026-05-04_
+_Zuletzt aktualisiert: 2026-09-08_
 
 ## Verwandte Seiten
 
@@ -217,4 +217,4 @@ _Zuletzt aktualisiert: 2026-05-04_
 
 ## Codeprüfung
 
-- [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des dritten vollständigen Durchgangs in PR #139.
+- [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des vierten vollständigen Durchgangs in PR #139.

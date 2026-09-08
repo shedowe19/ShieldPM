@@ -21,7 +21,10 @@ const internalSetting = {
 					`Setting could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
 				);
 			}
-			const patch = { value: data.value, meta: data.meta };
+			const patch = {
+				...(data.value !== undefined ? { value: data.value } : {}),
+				...(data.meta !== undefined ? { meta: data.meta } : {}),
+			};
 			if (row.id !== "default-site") {
 				await settingModel.query().where({ id: data.id }).patch(patch);
 				return internalSetting.get(access, { id: data.id });

@@ -1,5 +1,4 @@
 import { execFile as nodeExecFile } from "node:child_process";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +6,7 @@ import { promisify } from "node:util";
 import { Liquid } from "liquidjs";
 import _ from "lodash";
 import { debug, global as logger } from "../logger.js";
+import { getEnvironmentHash } from "./environment-hash.js";
 import errs from "./error.js";
 
 const nodeExecFilePromise = promisify(nodeExecFile);
@@ -15,26 +15,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const writeHash = async () => {
-	const templatesDir = `${__dirname}/../templates`;
-	const files = await fs.promises.readdir(templatesDir);
-	const envVars = (
-		await Promise.all(
-			files.map(async (file) => {
-				const content = await fs.promises.readFile(`${templatesDir}/${file}`, "utf8");
-				const matches = content.match(/env\.[A-Z0-9_]+/g) || [];
-				return matches.map((match) => match.replace("env.", ""));
-			}),
-		)
-	).flat();
-
-	const uniqueEnvVars =
-		[...new Set(envVars)]
-			.sort()
-			.map((varName) => process.env[varName])
-			.join("") + process.env.TV;
-	const hash = crypto.createHash("sha512").update(uniqueEnvVars).digest("hex");
-
-	const hashFile = "/data/shieldpm/env.sha512sum";
+	const hash = await getEnvironmentHash();
+	const hashFile = `${process.env.DATA_PATH || "/data"}/shieldpm/env.sha512sum`;
 	const hashDir = dirname(hashFile);
 	if (!fs.existsSync(hashDir)) {
 		await fs.promises.mkdir(hashDir, { recursive: true });

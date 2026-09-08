@@ -32,6 +32,7 @@ vi.mock("../../internal/cloudflared.js", () => ({
 vi.mock("../../internal/tor.js", () => ({
 	default: {
 		create: mocks.createTorService,
+		delete: mocks.deleteTorService,
 		restart: mocks.restartTorService,
 		start: mocks.startTorService,
 		stop: mocks.stopTorService,
@@ -249,6 +250,7 @@ describe("AI tunnel tool permissions", () => {
 		expect(mocks.createTorService).not.toHaveBeenCalled();
 		expect(mocks.startTorService).not.toHaveBeenCalled();
 		expect(mocks.stopTorService).not.toHaveBeenCalled();
+		expect(mocks.deleteTorService).not.toHaveBeenCalled();
 	});
 
 	it("limits tunnel reads and mutations to the caller's owned records", async () => {
@@ -325,7 +327,7 @@ describe("AI tunnel tool permissions", () => {
 		expect(mocks.stopCloudTunnel).toHaveBeenCalledWith(2);
 		expect(mocks.createTorService).toHaveBeenCalledOnce();
 		expect(mocks.restartTorService).toHaveBeenCalledOnce();
-		expect(mocks.stopTorService).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));
+		expect(mocks.deleteTorService).toHaveBeenCalledWith(12, { soft: true });
 		expect(mocks.addAuditLog).toHaveBeenCalledTimes(6);
 	});
 });

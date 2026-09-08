@@ -21,9 +21,13 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 - Einzelne Settings werden per Key gespeichert (z. B. `default-site`, `oidc-config`).
 - Nach einer Änderung wird ggf. ein Nginx-Reload oder ein Service-Restart ausgelöst.
 - Die Default-Site-Variante mit eigenem HTML zeigt Validierungsfehler direkt unter dem beschrifteten Editor an und verknüpft sie über `aria-describedby`; ein leerer Inhalt kann nicht gespeichert werden. Regression: `frontend/src/pages/Settings/DefaultSite.test.tsx`.
+- Ein fehlgeschlagenes Nachladen der Default-Site-Einstellung zeigt bei bereits vorhandenen Daten einen Fehler im weiterhin geöffneten Formular. Ungespeichertes HTML bleibt auch bei anschließender Wiederherstellung der Verbindung erhalten. Scheitert das erste Laden ohne Daten, wird kein Formular mit Ersatzwerten angeboten.
+- AI-Modelllisten gelten nur für die Verbindung, mit der sie angefordert wurden. Änderungen an Provider, Base-URL oder API-Key verwerfen geladene Optionen und ausstehende Antworten einschließlich deren Fehlern. Auch ein Wechsel zurück zum vorherigen Wert reaktiviert keine ältere Anfrage. Regression: `frontend/src/pages/Settings/Ai.test.tsx`.
 - GitOps-Einstellungen werden erst nach erfolgreichem Laden bearbeitbar. Ungespeicherte Änderungen sperren Aktionen gegen die bisher gespeicherte Repository-Konfiguration; siehe [GitOps](../module/gitops.md).
 
 ## Standardseite und Fehlerbehandlung
+
+Partielle Settings-Updates verändern nur die tatsächlich mitgesendeten Felder `value` und `meta`. Ausgelassene Felder bleiben aus dem gespeicherten Datensatz erhalten, auch bei der anschließenden Nginx- und HTML-Erzeugung. Ein reines HTML-Metadaten-Update behält daher den bisherigen Seitenmodus; ein Wechsel des Modus auf `html` kann vorhandene HTML-Metadaten weiterverwenden. Ein mitgesendetes `meta` ersetzt weiterhin das gesamte Metadatenobjekt.
 
 Änderungen an `default-site` laufen unter derselben Nginx-Konfigurationssperre wie Hoständerungen. Die bestehende Konfiguration und bei HTML-Änderungen der bisherige Seiteninhalt werden vor der Ersetzung gesichert. Erst nach erfolgreicher Generierung und Prüfung werden die Datenbankänderung und der Reload durchgeführt; bei einem Fehler werden die Datenbanktransaktion, Konfiguration und HTML zurückgesetzt und die bisherige Konfiguration erneut geladen. Scheitert auch diese Wiederherstellung, bleibt der Fehler sichtbar und muss anhand der Serverprotokolle geprüft werden.
 

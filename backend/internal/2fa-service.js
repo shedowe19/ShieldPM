@@ -569,15 +569,17 @@ const setupDuo = async (userId, config) => {
 	const client = createDuoClient({ clientId, clientSecret, apiHost, redirectUrl });
 	await client.healthCheck();
 
-	// Remove any existing Duo config
-	await UserTwoFa.query().patch({ is_deleted: 1 }).where({ user_id: userId, type: "duo", is_deleted: 0 });
-
-	const record = await UserTwoFa.query().insertAndFetch({
-		user_id: userId,
-		type: "duo",
-		label: "Duo Security",
-		meta: { clientId, clientSecret, apiHost, redirectUrl },
-		is_verified: 1,
+	// A failed replacement must not disable the account's existing second
+	// factor or expose an intermediate state with no active Duo method.
+	const record = await UserTwoFa.transaction(async (trx) => {
+		await UserTwoFa.query(trx).patch({ is_deleted: 1 }).where({ user_id: userId, type: "duo", is_deleted: 0 });
+		return UserTwoFa.query(trx).insertAndFetch({
+			user_id: userId,
+			type: "duo",
+			label: "Duo Security",
+			meta: { clientId, clientSecret, apiHost, redirectUrl },
+			is_verified: 1,
+		});
 	});
 
 	const backupCodes = await ensureBackupCodesExist(userId);

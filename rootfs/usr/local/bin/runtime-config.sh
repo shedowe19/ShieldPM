@@ -2,6 +2,116 @@
 
 # These files survive native service and Docker container restarts. Always
 # replace the current value, rather than matching only the shipped default.
+prepare_runtime_directory() {
+    runtime_root=$1
+    runtime_uid=$2
+    runtime_gid=$3
+    for runtime_directory in "$runtime_root" "$runtime_root/nginx" "$runtime_root/goa" "$runtime_root/home" \
+        "$runtime_root/nginx/client_body_temp" "$runtime_root/nginx/proxy_temp" \
+        "$runtime_root/nginx/fastcgi_temp" "$runtime_root/nginx/uwsgi_temp" "$runtime_root/nginx/scgi_temp"; do
+        if [ -L "$runtime_directory" ]; then
+            echo "Refusing a symlink runtime directory: $runtime_directory" >&2
+            return 1
+        fi
+        mkdir -p "$runtime_directory" || return 1
+    done
+    # Only this application's namespace belongs to the selected runtime UID.
+    find "$runtime_root" -xdev -not \( -uid "$runtime_uid" -and -gid "$runtime_gid" \) \
+        -exec chown -h "$runtime_uid:$runtime_gid" {} + || return 1
+    chmod 700 "$runtime_root" "$runtime_root/home" || return 1
+}
+
+configure_nginx_runtime() {
+    python3 - "$1" "$2" <<'PY'
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+
+path, runtime = map(Path, sys.argv[1:])
+content = path.read_text()
+replacements = {
+    "/run/shieldpm.sock": str(runtime / "shieldpm.sock"),
+    "/run/goaccess.sock": str(runtime / "goaccess.sock"),
+    "/run/anubis/nginx.sock": str(runtime / "anubis.sock"),
+    "/run/nginx/anubis-upstream.sock": str(runtime / "anubis-upstream.sock"),
+    "/tmp/goa": str(runtime / "goa"),
+    **{f"/run/php{version}.sock": str(runtime / f"php{version}.sock") for version in (82, 83, 84)},
+}
+for old, new in replacements.items():
+    content = re.sub(re.escape(old) + r"(?=[:/;\s'\"]|$)", lambda _: new, content)
+content = re.sub(r"/run/nginx-(\d+)\.sock(?=[:;\s'\"]|$)",
+                 lambda match: str(runtime / f"nginx-{match[1]}.sock"), content)
+if re.search(r"^\s*http\s*\{", content, re.MULTILINE):
+    pid = f"pid {runtime}/nginx/nginx.pid;"
+    if re.search(r"^\s*pid\s+[^;]+;", content, re.MULTILINE):
+        content = re.sub(r"^\s*pid\s+[^;]+;", lambda _: pid, content, flags=re.MULTILINE)
+    else:
+        content = pid + "\n" + content
+    missing = []
+    for name in ("client_body", "proxy", "fastcgi", "uwsgi", "scgi"):
+        directive = f"{name}_temp_path"
+        pattern = rf"(^[ \t]*{directive}\s+)[^;\s]+"
+        if re.search(pattern, content, re.MULTILINE):
+            content = re.sub(pattern, lambda match: match[1] + str(runtime / "nginx" / f"{name}_temp"),
+                             content, flags=re.MULTILINE)
+        else:
+            missing.append(f"    {directive} {runtime}/nginx/{name}_temp;")
+    if missing:
+        content = re.sub(r"(^[ \t]*http\s*\{)", lambda match: match[1] + "\n" + "\n".join(missing),
+                         content, count=1, flags=re.MULTILINE)
+descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-runtime-", dir=path.parent)
+try:
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(content)
+        os.fchmod(handle.fileno(), path.stat().st_mode & 0o777)
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+}
+
+migrate_default_nginx_config() {
+    python3 - "$1" "$2" "$3" <<'PY'
+import os
+from pathlib import Path
+import shutil
+import sys
+import tempfile
+
+legacy, target, backup_root = map(Path, sys.argv[1:])
+include = f"include {target};\n"
+target.parent.mkdir(parents=True, exist_ok=True)
+if target.exists() and not target.is_file():
+    raise RuntimeError(f"Default Nginx configuration is not a regular file: {target}")
+content = legacy.read_text() if legacy.exists() else ""
+if content and content.strip() != include.strip():
+    backup_root.mkdir(parents=True, exist_ok=True)
+    backup = Path(tempfile.mkdtemp(prefix="nginx-default.", dir=backup_root)) / "default.conf"
+    shutil.copy2(legacy, backup)
+    print(f"Original default Nginx configuration retained in {backup}")
+if not target.exists():
+    descriptor, temporary = tempfile.mkstemp(prefix=".default-runtime-", dir=target.parent)
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            handle.write(content if content.strip() != include.strip() else "")
+        os.link(temporary, target)
+    finally:
+        os.unlink(temporary)
+descriptor, temporary = tempfile.mkstemp(prefix=".default-include-", dir=legacy.parent)
+try:
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(include)
+        os.fchmod(handle.fileno(), 0o644)
+    os.replace(temporary, legacy)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+}
+
 configure_certbot_ini() {
     certbot_ini=$1
     certbot_no_verify=false

@@ -140,7 +140,7 @@ class InfrastructureTests(unittest.TestCase):
             # The cleanup is a filename operation; no listening socket is needed.
             (runtime / name).touch()
         source = (REPO / "rootfs/usr/local/bin/start.sh").read_text()
-        cleanup = next(line for line in source.splitlines() if line.startswith("rm ") and "/run/" in line)
+        cleanup = "\n".join(line for line in source.splitlines() if line.startswith("rm ") and ".sock" in line)
         result = subprocess.run(["sh", "-c", cleanup.replace("/run/", str(runtime) + "/")], capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(sorted(path.name for path in runtime.iterdir()), ["docker.sock", "foreign.sock"])
@@ -250,7 +250,7 @@ class InfrastructureTests(unittest.TestCase):
         curl.write_text('''#!/usr/bin/env python3
 import json, os, pathlib, sys
 args = sys.argv[1:]
-assert args[args.index("--unix-socket") + 1] == "/run/shieldpm.sock"
+assert args[args.index("--unix-socket") + 1] == "/run/shieldpm/shieldpm.sock"
 url = args[-1]
 if url.endswith("/tokens"):
     payload = json.loads(pathlib.Path(args[args.index("--data-binary") + 1][1:]).read_text())

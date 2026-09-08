@@ -13,6 +13,20 @@ const dataPath = process.env.DATA_PATH || "/data";
 const torControlHost = "127.0.0.1";
 const torControlPort = 9051;
 const torPasswordFile = `${dataPath}/shieldpm/tor-control-password`;
+const serviceOperations = new Map();
+
+// Keep detached Tor identities and their database records in the same lifecycle order.
+const withServiceLock = (id, operation) => {
+	const key = String(id);
+	const previous = serviceOperations.get(key) || Promise.resolve();
+	const pending = previous.catch(() => {}).then(operation);
+	serviceOperations.set(key, pending);
+	return pending.finally(() => {
+		if (serviceOperations.get(key) === pending) serviceOperations.delete(key);
+	});
+};
+
+const currentService = (id) => TorOnion.query().findById(id).where("is_deleted", 0);
 
 /**
  * Sends a command to Tor Control Port and returns the response
@@ -204,6 +218,32 @@ const syncProxyHost = async (serviceSnapshot, skip_reload = false) => {
 };
 
 const internalTor = {
+	create: (snapshot) =>
+		withServiceLock(snapshot.id, async () => {
+			const service = await currentService(snapshot.id);
+			if (!service) return null;
+			// Another request may have created the identity while this caller was waiting.
+			if (service.private_key && service.onion_address) {
+				if (service.status !== 2 && !(await internalTor._start(service))) return null;
+				return { onionAddress: service.onion_address, privateKey: service.private_key };
+			}
+			return internalTor._create(service);
+		}),
+
+	start: (snapshot, skip_reload = false) =>
+		withServiceLock(snapshot.id, async () => {
+			const service = await currentService(snapshot.id);
+			if (!service) return false;
+			if (service.status === 2) return true;
+			return internalTor._start(service, skip_reload);
+		}),
+
+	stop: (snapshot) =>
+		withServiceLock(snapshot.id, async () => {
+			const service = await currentService(snapshot.id);
+			return service ? internalTor._stop(service) : true;
+		}),
+
 	/**
 	 * Atomically update a service and move its onion domain between authorized hosts.
 	 * Both Nginx configs remain recoverable until the database transaction commits.
@@ -408,7 +448,7 @@ const internalTor = {
 	 * @param {TorOnion} service
 	 * @returns {Promise<{onionAddress: string, privateKey: string} | null>}
 	 */
-	create: async (service) => {
+	_create: async (service) => {
 		logger.info(`Creating Tor Onion Service: ${service.name} (${service.id})`);
 
 		try {
@@ -460,7 +500,7 @@ const internalTor = {
 	 * @param {boolean} [skip_reload=false]
 	 * @returns {Promise<boolean>}
 	 */
-	start: async (service, skip_reload = false) => {
+	_start: async (service, skip_reload = false) => {
 		if (!service.private_key || !service.onion_address) {
 			logger.warn(`Cannot start Tor Onion Service ${service.id}: missing private key or address`);
 			return false;
@@ -503,7 +543,7 @@ const internalTor = {
 	 * @param {TorOnion} service
 	 * @returns {Promise<boolean>}
 	 */
-	stop: async (service) => {
+	_stop: async (service) => {
 		if (!service.onion_address) {
 			return true;
 		}
@@ -543,31 +583,30 @@ const internalTor = {
 	 * @param {number} serviceId
 	 * @returns {Promise<boolean>}
 	 */
-	delete: async (serviceId) => {
-		const service = await TorOnion.query().findById(serviceId);
-		if (!service) {
-			return false;
-		}
-
-		// Stop the service first
-		if (!(await internalTor.stop(service))) throw new errs.ValidationError("Unable to stop onion service");
-
-		// Delete from database
-		await service.$query().delete();
-		logger.info(`Tor Onion Service deleted: ${serviceId}`);
-		return true;
-	},
+	delete: (serviceId, { soft = false } = {}) =>
+		withServiceLock(serviceId, async () => {
+			const service = await currentService(serviceId);
+			if (!service) return false;
+			if (!(await internalTor._stop(service))) throw new errs.ValidationError("Unable to stop onion service");
+			if (soft) await service.$query().patch({ is_deleted: 1 });
+			else await service.$query().delete();
+			logger.info(`Tor Onion Service deleted: ${serviceId}`);
+			return true;
+		}),
 
 	/**
 	 * Restart an Onion Service
 	 * @param {TorOnion} service
 	 * @returns {Promise<boolean>}
 	 */
-	restart: async (service) => {
-		if (!(await internalTor.stop(service))) return false;
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		return await internalTor.start(service);
-	},
+	restart: (snapshot) =>
+		withServiceLock(snapshot.id, async () => {
+			const service = await currentService(snapshot.id);
+			if (!service || !(await internalTor._stop(service))) return false;
+			await new Promise((resolve) => setTimeout(resolve, 500));
+			const updated = await currentService(snapshot.id);
+			return updated ? internalTor._start(updated) : false;
+		}),
 
 	/**
 	 * Get Tor daemon info

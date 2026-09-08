@@ -23,6 +23,8 @@ Dokumentation geheimer Werte und Sicherheitsmechanismen.
 | `/data/shieldpm/keys.json` | JWT-Signaturschlüssel und persistenter `encryptionKey` für AES-GCM und serverseitige HMAC-Tags |
 | `/data/tls/*`              | SSL-Zertifikate und private Schlüssel                                                          |
 
+Die Schlüsseldatei wird mit Modus `0600` geladen und über vollständig geschriebene temporäre Dateien aktualisiert. Fehlgeschlagene Schreibvorgänge beim Ergänzen des Verschlüsselungsschlüssels erhalten die bisherigen Signaturschlüssel. Konkurrierende erstmalige Ersteller übernehmen die bereits veröffentlichte Datei, statt sie zu überschreiben. Details: [Instanzkonfiguration](./config-dateien.md#persistente-instanzkonfiguration).
+
 ## Sicherheitsmechanismen
 
 - Passwort-Hashing: `bcryptjs`

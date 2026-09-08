@@ -43,6 +43,8 @@ Das Verknüpfen eines Onion-Service setzt zusätzlich die Änderungsberechtigung
 
 Stop gilt nur bei bestätigtem `DEL_ONION` oder einem bereits nicht vorhandenen Service als erfolgreich. Andere ControlPort-Fehler erzeugen Fehlerstatus und verhindern, dass Delete oder Restart dennoch Erfolg melden. Insbesondere bleibt der Datenbankeintrag bei fehlgeschlagenem Stop erhalten. REST-Mutationen beachten die globale Sichtbarkeit `all` ebenso wie den Owner-Scope eingeschränkter Berechtigungen.
 
+Erstellen, Starten, Stoppen, Neustart und Löschen sind pro Service serialisiert und laden den aktuellen Datenbankeintrag nach dem Warten erneut. Zwei gleichzeitige Erstellungen behalten dadurch dieselbe Onion-Identität. Löschen wartet auf eine bereits laufende Erstellung, stoppt deren abgekoppelten Tor-Dienst und entfernt erst dann den Eintrag. REST und KI verwenden denselben internen Löschweg; die KI behält dabei das Soft-Delete-Verhalten. Veraltete Anfragen können gelöschte Dienste nicht erneut starten. `fourth-integrations-tor-lifecycle.spec.js` prüft diese Reihenfolge sowie Fehler und erneute Löschversuche.
+
 ### Wechsel des verknüpften Proxy-Hosts
 
 REST und KI verwenden denselben internen Update-Service. Er prüft den Zugriff auf bisherigen und neuen Host, verschiebt die Onion-Domain zusammen mit der Service-Zuordnung in einer Datenbanktransaktion und behält Sicherungen beider Nginx-Dateien bis zum Commit. Bei einem Fehler werden Datenbank und vorherige Dateien wiederhergestellt. Der bisherige Host muss mindestens eine Domain behalten.
