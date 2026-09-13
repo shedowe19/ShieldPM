@@ -11,7 +11,7 @@ import { Input } from "src/components/ui/input";
 import { useRedirectionHosts } from "src/hooks";
 import { intl, T } from "src/locale";
 import { MANAGE, REDIRECTION_HOSTS } from "src/modules/Permissions";
-import { showObjectSuccess } from "src/notifications";
+import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { showDeleteConfirmModal, showHelpModal, showRedirectionHostModal } from "./lazy";
 import Table from "./Table";
@@ -44,10 +44,14 @@ export default function TableWrapper() {
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleRedirectionHost(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, enabled ? "enabled" : "disabled");
+		try {
+			await toggleRedirectionHost(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, enabled ? "enabled" : "disabled");
+		} catch (error) {
+			showError(error instanceof Error ? error.message : String(error));
+		}
 	};
 
 	let filtered = null;

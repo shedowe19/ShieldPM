@@ -2,14 +2,7 @@ import { IconDotsVertical, IconEdit, IconPower, IconTrash } from "@tabler/icons-
 import { createColumnHelper, useTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { Stream } from "src/api/backend";
-import {
-	CertificateFormatter,
-	EmptyData,
-	HasPermission,
-	TrueFalseFormatter,
-	UserAvatar,
-	ValueWithDateFormatter,
-} from "src/components";
+import { CertificateFormatter, EmptyData, HasPermission, UserAvatar, ValueWithDateFormatter } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { shieldTableFeatures } from "src/components/Table/tableFeatures";
 import { Button } from "src/components/ui/button";
@@ -24,6 +17,7 @@ import {
 import { intl, T } from "src/locale";
 import { MANAGE, STREAMS } from "src/modules/Permissions";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { HostStatus } from "../HostStatus";
 
 interface Props {
 	data: Stream[];
@@ -95,11 +89,11 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 						return <CertificateFormatter value={info.getValue()} />;
 					},
 				}),
-				columnHelper.accessor("enabled", {
+				columnHelper.accessor((row) => row, {
 					id: "enabled",
 					header: intl.formatMessage({ id: "column.status" }),
 					cell: (info) => {
-						return <TrueFalseFormatter value={info.getValue()} trueLabel="online" falseLabel="offline" />;
+						return <HostStatus host={info.getValue()} />;
 					},
 				}),
 				columnHelper.display({
@@ -135,7 +129,7 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 											}
 										>
 											<IconPower className="mr-2 h-4 w-4" />
-											<T id="action.disable" />
+											<T id={info.row.original.enabled ? "action.disable" : "action.enable"} />
 										</DropdownMenuItem>
 										<DropdownMenuSeparator />
 										<DropdownMenuItem

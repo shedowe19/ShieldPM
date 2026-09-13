@@ -17,25 +17,7 @@
 		"content": {
 			"application/json": {
 				"schema": {
-					"type": "object",
-					"additionalProperties": false,
-					"required": [
-						"provider"
-					],
-					"properties": {
-						"provider": {
-							"$ref": "../../../components/certificate-object.json#/properties/provider"
-						},
-						"nice_name": {
-							"$ref": "../../../components/certificate-object.json#/properties/nice_name"
-						},
-						"domain_names": {
-							"$ref": "../../../components/certificate-object.json#/properties/domain_names"
-						},
-						"meta": {
-							"$ref": "../../../components/certificate-object.json#/properties/meta"
-						}
-					}
+					"$ref": "../../../components/certificate-request.json"
 				},
 				"example": {
 					"provider": "letsencrypt",

@@ -31,6 +31,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Bestehende Analytics-Zeilen bleiben bei der Migration in einer eigenen `legacy:<id>`-Generation erhalten. Dadurch kollidieren sie nicht mit den fortlaufenden Live-Upserts und ihre Zähler werden nicht bei der Schemaumstellung verändert.
 - `app.js` bleibt für Analytics nebenwirkungsfrei. Beide Backend-Einstiegspunkte führen zuerst die Datenbankmigrationen aus und initialisieren den Analytics-Tailer erst danach, damit Live-Flushing niemals auf ein vor-migriertes `analytic_count`-Schema schreibt. Die Initialisierung ist idempotent: ein Startup-Retry erzeugt keine weiteren Tailer oder Intervalle; nach einem tatsächlichen Initialisierungsfehler bleibt ein späterer Retry möglich.
 - GoAccess für erweiterte Analyse auf Port `:91`
+- Beim Start erkennt GoAccess die GeoLite2-Datenbanken für City, Country und ASN einzeln: Eine nicht leere Datei unter `/data/goaccess/geoip` hat Vorrang; andernfalls verwendet es dieselbe Datei unter `/data/nginx`, die Installer und Compose-GeoIP-Updater bereitstellen. Eine explizite `--geoip-database`-Angabe in `GOACLA` bleibt unverändert. Nginx verwendet weiterhin `/data/nginx`.
 - Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
 - Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.
 - Die aktuelle Host- und Zeitraum-Auswahl steht als `host` und `range` in der Analytics-URL. Aufgerufene Links stellen damit
@@ -43,6 +44,7 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 - Das Dashboard zeigt für Benutzer mit `analytics:view` oder `analytics:manage` getrennt die fünf Proxy-Hosts mit den meisten Requests, übertragenen Bytes, 4xx- beziehungsweise 5xx-Antworten sowie der höchsten durchschnittlichen Antwortzeit der letzten 24 Stunden. Die Bandbreitenrangliste formatiert die übertragenen Bytes lokalisiert mit passenden Einheiten; die Latenzrangliste zeigt die aus den Detail-Logs aggregierte Antwortzeit in Millisekunden. Die serverseitige Richtlinie `analytics:list` akzeptiert dieselben View-/Manage-Berechtigungen; `GET /api/analytics/top-hosts` berücksichtigt ausschließlich nicht gelöschte, hostgebundene Daten und liefert bei jeder Sortierung Request-, Byte-, 4xx- sowie 5xx-Zähler. Standardmäßig ordnet der Endpunkt nach Requests; `sort=bytes`, `sort=client_errors`, `sort=server_errors` und `sort=response_time` wählen ausschließlich die fest definierte Bandbreiten-, 4xx-, 5xx- beziehungsweise Durchschnittslatenz-Ordnung. Für die Latenzrangliste werden nur positive `duration`-Werte der Detail-Logs einbezogen und die vorhandenen Zähler der ausgewählten Hosts weitergegeben. Die 4xx-Rangliste macht fehlgeschlagene oder zurückgewiesene Client-Anfragen unmittelbar sichtbar; jeder Host verlinkt direkt auf seine vorhandene 24-Stunden-Analytics-Ansicht.
 - `useAnalyticsData` kapselt diese Summary-/Zeitreihenabfrage einschließlich der Zeitformatierung für Charts. `useAnalyticsLiveMetrics` kapselt die unabhängigen Live-Abfragen für Netzwerkdurchsatz und Datenbankkennzahlen; die Seite behält nur Auswahl und Layout.
 - Bei ausgeblendeter Browser-Registerkarte oder Offline-Status pausiert die Seite ihre Analytics- und Live-Statusabfragen. Laufende Abfragen werden dabei für veraltet erklärt, damit sie den unmittelbaren Refresh beim erneuten Sichtbarwerden oder nach einer Wiederverbindung nicht blockieren oder überschreiben können.
+- Auch verspätete Fehler einer veralteten Summary-/Zeitreihenabfrage werden vollständig verworfen: Sie verändern weder den Backoff noch den Zeitgeber des aktuellen Refreshs. Damit bleibt nach erfolgreicher Reaktivierung der Zehnsekundentakt erhalten; während eines noch laufenden Refreshs entsteht kein konkurrierender Poll.
 - Die manuelle Analytics-Abfrage nutzt dafür dieselbe zentrale Sichtbarkeits- und Online-Prüfung wie die TanStack-Query-Polling-Hooks. Dadurch bleibt die Berechtigung zum nächsten Poll in allen Pfaden konsistent. Nach einem Fehler plant die Summary-/Zeitreihenabfrage ihren nächsten Lauf mit exponentiellem Backoff über `getPollingInterval`; ein erfolgreicher Lauf setzt das Grundintervall zurück.
 - Datenbank-Statistiken werden über `getDbStats` und damit den zentralen API-Client geladen. Sie folgen dadurch der gemeinsamen Cookie-/CSRF-Übergabe und der einheitlichen 401-Behandlung.
 - Der Live-Netzwerkstatus wird über `getAnalyticsStatus` im zentralen API-Client geladen und bleibt in einem eigenen zweisekündlichen Takt. Datenbankstatistiken werden ebenfalls eigenständig geplant: Sie werden beim ersten zulässigen Abruf sowie nach Sichtbarwerden oder Wiederverbindung sofort geladen und anschließend nur alle 30 Sekunden aktualisiert. Beide Abfragen erhalten damit die gemeinsame Cookie-/CSRF-Übergabe sowie die einheitliche 401-Behandlung.
@@ -64,6 +66,8 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
   Einträge begrenzte Reihenfolge, die relative Balkenbreite und den lokalisierten Leerzustand bei; der Seitencontainer
   behält Auswahl, Datenabruf und Formularzustand.
 
+Hostbezogene Abfragen prüfen zuerst die aktuelle serverseitige `analytics:list`-Berechtigung. Ohne globale Analytics-Berechtigung muss `proxy_hosts:get` erfolgreich sein und der Host dem aktuellen Benutzer gehören, sofern dieser kein aktuell berechtigter Administrator ist. Eine alte Admin-Rolle aus dem JWT ersetzt keine aktuelle Berechtigungsprüfung. Unerwartete Datenbank- oder Berechtigungsfehler lösen keinen schwächeren Fallback aus.
+
 ## Abhängigkeiten
 
 - `recharts` — Chart-Bibliothek im Frontend
@@ -75,6 +79,12 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 ## Offene Fragen
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+
+## Robuste Erfassung und Speicherung
+
+Die Domainzuordnung lädt `host_domains` und normalisiert Groß-/Kleinschreibung sowie den Port im HTTP-Host-Fallback. Ungültige JSON-Werte und ungültige Zeitstempel verändern keine Zähler. Detailzeilen erhalten `created_at` als Unix-Millisekunden.
+
+Alle Chunks eines Detail- oder Aggregationsbatches werden jeweils in einer Transaktion geschrieben. Bei einem Fehler in einem späteren Chunk bleiben frühere Chunks ungeschrieben; der Wiederholungsversuch zählt sie deshalb nicht doppelt. Während langsamer Datenbankzugriffe bleiben die Folgepuffer auf 1.000 Detailzeilen und 500 Aggregationsschlüssel begrenzt. Verwerfungen werden begrenzt protokolliert.
 
 ## Verwandte Seiten
 

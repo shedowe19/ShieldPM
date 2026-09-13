@@ -79,7 +79,7 @@ router.post("/", async (req, res, next) => {
 		const newTunnel = await CloudflaredTunnel.query().findById(tunnel.id);
 
 		// Start the process
-		internalCloudflared.start(newTunnel);
+		internalCloudflared.start(newTunnel).catch((err) => logger.error("Failed to start tunnel", err));
 
 		// Audit Log
 		await internalAuditLog.add(res.locals.access, {
@@ -106,12 +106,12 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
 	let trx;
 	try {
-		await res.locals.access.can("cloudflared_tunnels:update", req.params.id);
-		const tunnel = await CloudflaredTunnel.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1)) // Ensure ownership
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+		const accessData = await res.locals.access.can("cloudflared_tunnels:update", req.params.id);
+		const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).where("id", req.params.id);
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+		const tunnel = await query.first();
 
 		if (!tunnel) {
 			res.status(404).send({ error: "Tunnel not found" });
@@ -125,7 +125,7 @@ router.put("/:id", async (req, res, next) => {
 		await trx.commit();
 
 		// Restart with new config
-		internalCloudflared.restart(result);
+		internalCloudflared.restart(result).catch((err) => logger.error("Failed to restart tunnel", err));
 
 		// Audit Log
 		await internalAuditLog.add(res.locals.access, {
@@ -150,26 +150,20 @@ router.put("/:id", async (req, res, next) => {
  * DELETE /api/nginx/cloudflared-tunnels/:id
  */
 router.delete("/:id", async (req, res, next) => {
-	let trx;
 	try {
-		await res.locals.access.can("cloudflared_tunnels:delete", req.params.id);
-		const tunnel = await CloudflaredTunnel.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+		const accessData = await res.locals.access.can("cloudflared_tunnels:delete", req.params.id);
+		const query = CloudflaredTunnel.query().andWhere("is_deleted", 0).where("id", req.params.id);
+		if (accessData.permission_visibility !== "all") {
+			query.where("owner_user_id", res.locals.access.token.getUserId(1));
+		}
+		const tunnel = await query.first();
 
 		if (!tunnel) {
 			res.status(404).send({ error: "Tunnel not found" });
 			return;
 		}
 
-		// Stop process
-		internalCloudflared.stop(tunnel.id);
-
-		trx = await transaction.start(CloudflaredTunnel.knex());
-		await tunnel.$query(trx).delete();
-		await trx.commit();
+		await internalCloudflared.delete(tunnel.id);
 
 		// Audit Log
 		await internalAuditLog.add(res.locals.access, {
@@ -183,9 +177,6 @@ router.delete("/:id", async (req, res, next) => {
 
 		res.status(200).send({ status: "OK" });
 	} catch (err) {
-		if (trx) {
-			await trx.rollback();
-		}
 		next(err);
 	}
 });

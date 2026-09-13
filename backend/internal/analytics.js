@@ -101,12 +101,12 @@ export class AnalyticsService {
 
 	async loadDomains() {
 		try {
-			const hosts = await ProxyHost.query().where("is_deleted", 0).select("id", "domain_names");
+			const hosts = await ProxyHost.query().where("is_deleted", 0).select("id").withGraphFetched("host_domains");
 			const newMap = new Map();
 			for (const host of hosts) {
 				if (host.domain_names && Array.isArray(host.domain_names)) {
 					for (const domain of host.domain_names) {
-						newMap.set(domain, host.id);
+						newMap.set(domain.toLowerCase(), host.id);
 					}
 				}
 			}
@@ -123,18 +123,21 @@ export class AnalyticsService {
 			// Fix common Nginx JSON log errors if any (e.g. unquoted country code)
 			const fixedLine = line.replace(/"geoip_country_code":([A-Z]{2})}/g, '"geoip_country_code":"$1"}');
 			const data = JSON.parse(fixedLine);
+			if (!data || typeof data !== "object" || Array.isArray(data)) return;
 
 			// Resolve Host ID
 			let hostname = data.server_name;
 			if (!hostname || hostname === "_") {
 				hostname = data.http_host;
 			}
-			const hostId = this.hostCache.get(hostname) || 0; // 0 for unknown/unmatched
+			const normalizedHost = typeof hostname === "string" ? hostname.toLowerCase().replace(/:\d+$/, "") : "";
+			const hostId = this.hostCache.get(normalizedHost) || 0; // 0 for unknown/unmatched
 
 			const status = Number.parseInt(data.status, 10) || 0;
 			const bytes = Number.parseInt(data.body_bytes_sent, 10) || 0;
 			// Nginx time is usually ISO8601
 			const dayjsTime = dayjs(data.time_iso8601 || new Date());
+			if (!dayjsTime.isValid()) return;
 			// For DB timestamp (ISO string for sqlite usually, or could use unix)
 			// Detailed logs use specific time, Aggregation uses minute start
 			const detailedTime = dayjsTime.toISOString();
@@ -170,6 +173,7 @@ export class AnalyticsService {
 			this.detailedLogBuffer.push({
 				host_id: hostId,
 				time: detailedTime,
+				created_at: Date.now(),
 				method: data.request_method,
 				path: data.request_uri,
 				status: status,
@@ -178,7 +182,7 @@ export class AnalyticsService {
 				country_code: data.geoip_country_code || null,
 				referer: data.http_referer || null,
 				user_agent: data.http_user_agent || null,
-				duration: Math.floor(Number.parseFloat(data.request_time || 0) * 1000), // ms
+				duration: Math.max(0, Math.floor(Number.parseFloat(data.request_time || 0) * 1000) || 0), // ms
 			});
 
 			this.applyBackpressure();
@@ -207,6 +211,17 @@ export class AnalyticsService {
 		if (shouldFlush) {
 			void this.flush();
 		}
+		// A slow database must not allow the next in-memory batch to grow without bound.
+		const detailedLogsDropped = Math.max(0, this.detailedLogBuffer.length - DETAILED_LOG_BUFFER_LIMIT);
+		if (detailedLogsDropped) this.detailedLogBuffer.splice(0, detailedLogsDropped);
+		let aggregationsDropped = 0;
+		while (this.aggregationBuffer.size > AGGREGATION_BUFFER_LIMIT) {
+			this.aggregationBuffer.delete(this.aggregationBuffer.keys().next().value);
+			aggregationsDropped++;
+		}
+		if (detailedLogsDropped || aggregationsDropped) {
+			this.logDroppedAnalyticsData({ detailedLogsDropped, aggregationsDropped });
+		}
 	}
 
 	chunkArray(items, chunkSize) {
@@ -225,7 +240,7 @@ export class AnalyticsService {
 
 		this.lastDropLogAt = now;
 		logger.error(
-			`Dropping analytics data due to DB failure (detailed_logs=${details.detailedLogsDropped}, aggregations=${details.aggregationsDropped})`,
+			`Dropping analytics data due to DB failure or backpressure (detailed_logs=${details.detailedLogsDropped}, aggregations=${details.aggregationsDropped})`,
 		);
 	}
 
@@ -235,9 +250,11 @@ export class AnalyticsService {
 		}
 
 		const tableName = AnalyticsLogs.tableName || "analytics_logs";
-		for (const chunk of this.chunkArray(batch, INSERT_CHUNK_SIZE)) {
-			await AnalyticsLogs.knex().table(tableName).insert(chunk);
-		}
+		await AnalyticsLogs.knex().transaction(async (trx) => {
+			for (const chunk of this.chunkArray(batch, INSERT_CHUNK_SIZE)) {
+				await trx.table(tableName).insert(chunk);
+			}
+		});
 	}
 
 	async flushAggregations(entries) {
@@ -259,10 +276,10 @@ export class AnalyticsService {
 			request_count: entry.count,
 		}));
 
-		for (const chunk of this.chunkArray(rows, INSERT_CHUNK_SIZE)) {
-			// Knex/Objection does not support batch insert with onConflict merge for sqlite/mysql well.
-			// Insert individually to prevent "batch insert only works with Postgresql and SQL Server"
-			await AnalyticCount.transaction(async (trx) => {
+		await AnalyticCount.transaction(async (trx) => {
+			for (const chunk of this.chunkArray(rows, INSERT_CHUNK_SIZE)) {
+				// Knex/Objection does not support batch insert with onConflict merge for sqlite/mysql well.
+				// Insert individually to prevent "batch insert only works with Postgresql and SQL Server"
 				for (const row of chunk) {
 					await AnalyticCount.query(trx)
 						.insert(row)
@@ -292,8 +309,8 @@ export class AnalyticsService {
 							]),
 						});
 				}
-			});
-		}
+			}
+		});
 	}
 
 	async flush() {
@@ -366,9 +383,9 @@ export class AnalyticsService {
 		}
 	}
 	/**
-	 * Get aggregated summary for a host (Top Lists)
+	 * Require analytics access or authorized ownership of a proxy host.
+	 * @param {import("../lib/types.js").Access} access
 	 * @param {number} hostId
-	 * @param {String} range (1h, 24h, 7d, 30d)
 	 */
 	async assertHostAccess(access, hostId) {
 		const host = await ProxyHost.query().where("id", hostId).andWhere("is_deleted", 0).first();
@@ -376,23 +393,18 @@ export class AnalyticsService {
 			throw new errs.ItemNotFoundError("Host not found");
 		}
 
-		// Check if user has analytics permission - if so, allow access to any host
-		// (proxy-hosts visibility already filters which hosts are shown to the user)
 		try {
-			const analyticsPerm = await access.can("analytics:list");
-			if (
-				analyticsPerm &&
-				(analyticsPerm.permission_analytics === "manage" || analyticsPerm.permission_analytics === "view")
-			) {
-				return host;
-			}
-		} catch (_err) {
-			// Fall through to legacy admin/owner check
+			await access.can("analytics:list");
+			return host;
+		} catch (err) {
+			if (!(err instanceof errs.PermissionError)) throw err;
 		}
 
+		// Own-host analytics still requires a currently authorized proxy reader.
+		// A cached token scope or ownership alone must not override a denied account.
+		const permission = await access.can("proxy_hosts:get", hostId);
 		const userId = access?.token?.getUserId?.(0) || 0;
-		const isAdmin = access?.token?.hasScope?.("admin") || false;
-		if (!isAdmin && host.owner_user_id !== userId) {
+		if (!permission.roles?.includes("admin") && host.owner_user_id !== userId) {
 			throw new errs.PermissionError("You do not have permission to access analytics for this host.");
 		}
 

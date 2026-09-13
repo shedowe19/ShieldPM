@@ -30,7 +30,9 @@
 			"example": "certificate"
 		},
 		"object_id": {
-			"$ref": "../common.json#/properties/id"
+			"type": "integer",
+			"minimum": 0,
+			"description": "Object identifier; zero represents resources with string identifiers, such as settings"
 		},
 		"action": {
 			"type": "string",

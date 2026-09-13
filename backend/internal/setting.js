@@ -9,47 +9,68 @@ const internalSetting = {
 	 * @param  {import("../lib/types.js").Access}  access
 	 * @param  {Object}  data
 	 * @param  {String}  data.id
+	 * @param  {import("../models/setting.js").default["value"]} [data.value]
+	 * @param  {import("../models/setting.js").default["meta"]} [data.meta]
 	 * @return {Promise}
 	 */
 	update: async (access, data) => {
 		await access.can("settings:update", data.id);
-		const row = await internalSetting.get(access, { id: data.id });
-
-		if (row.id !== data.id) {
-			// Sanity check that something crazy hasn't happened
-			throw new errs.InternalValidationError(
-				`Setting could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
-			);
-		}
-
-		await settingModel.query().where({ id: data.id }).patch({
-			value: data.value,
-			meta: data.meta,
-		});
-		const updatedRow = await internalSetting.get(access, {
-			id: data.id,
-		});
-
-		if (updatedRow.id === "default-site") {
-			// write the html if we need to
-			if (updatedRow.value === "html") {
-				fs.writeFileSync("/data/html/index.html", updatedRow.meta.html, { encoding: "utf8" });
+		const performUpdate = async () => {
+			// Read inside the Nginx lock so rollback cannot restore a stale setting.
+			const row = await internalSetting.get(access, { id: data.id });
+			if (row.id !== data.id) {
+				throw new errs.InternalValidationError(
+					`Setting could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
+				);
+			}
+			const patch = {
+				...(data.value !== undefined ? { value: data.value } : {}),
+				...(data.meta !== undefined ? { meta: data.meta } : {}),
+			};
+			if (row.id !== "default-site") {
+				await settingModel.query().where({ id: data.id }).patch(patch);
+				return internalSetting.get(access, { id: data.id });
 			}
 
-			// Configure nginx
+			const updatedRow = { ...row, ...patch };
+			const htmlPath = "/data/html/index.html";
+			const changesHtml = updatedRow.value === "html";
+			const previousHtml = changesHtml && fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath) : null;
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("default", row.id));
+			await internalNginx.backupConfig("default", row);
 			try {
-				await internalNginx.deleteConfig("default");
+				if (changesHtml) {
+					fs.mkdirSync("/data/html", { recursive: true });
+					fs.writeFileSync(htmlPath, updatedRow.meta.html, { encoding: "utf8" });
+				}
 				await internalNginx.generateConfig("default", updatedRow);
 				await internalNginx.test();
-				await internalNginx.reload();
-			} catch (_err) {
-				await internalNginx.deleteConfig("default");
+				await settingModel.transaction(async (trx) => {
+					await settingModel.query(trx).where({ id: data.id }).patch(patch);
+					await internalNginx.reload();
+				});
+			} catch (_error) {
+				// Restore files as well as the database transaction before reloading.
+				if (changesHtml) {
+					if (previousHtml !== null) fs.writeFileSync(htmlPath, previousHtml);
+					else fs.rmSync(htmlPath, { force: true });
+				}
+				if (hadConfig) await internalNginx.restoreConfig("default", row);
+				else await internalNginx.deleteConfig("default");
 				await internalNginx.test();
 				await internalNginx.reload();
-				// I'm being slack here I know..
-				throw new errs.ValidationError("Could not reconfigure Nginx. Please check logs.");
+				throw new errs.ValidationError(
+					"Could not reconfigure Nginx. Previous configuration restored. Please check logs.",
+				);
 			}
-		}
+			await internalNginx.deleteBackupConfig("default", row);
+			return internalSetting.get(access, { id: data.id });
+		};
+
+		const updatedRow =
+			data.id === "default-site"
+				? await internalNginx.withConfigurationLock(performUpdate)
+				: await performUpdate();
 
 		// Add to audit log
 		await internalAuditLog.add(access, {

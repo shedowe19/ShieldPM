@@ -10,13 +10,14 @@ ARG NODE_ENV=production
 COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
 RUN bash /usr/local/bin/setup-node-apt.sh && \
     apt-get install -y --no-install-recommends nodejs && \
-    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global yarn@1.22.22; fi && \
+    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global --allow-scripts=yarn yarn@1.22.22; fi && \
     node --version | grep -E '^v26\.' && \
     rm -rf /var/lib/apt/lists/*
-COPY frontend /app
 WORKDIR /app
-RUN yarn install --frozen-lockfile --production=false && \
-    yarn tsc && \
+COPY frontend/package.json frontend/yarn.lock ./
+RUN yarn install --frozen-lockfile --production=false
+COPY frontend /app
+RUN yarn tsc && \
     yarn vite build
 
 
@@ -30,24 +31,24 @@ ARG TARGETARCH
 COPY scripts/setup-node-apt.sh /usr/local/bin/setup-node-apt.sh
 RUN bash /usr/local/bin/setup-node-apt.sh && \
     apt-get install -y --no-install-recommends nodejs && \
-    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global yarn@1.22.22; fi && \
+    if command -v corepack >/dev/null 2>&1; then corepack install --global yarn@1.22.22; else npm install --global --allow-scripts=yarn yarn@1.22.22; fi && \
     node --version | grep -E '^v26\.'
 COPY backend /app
 WORKDIR /app
 # hadolint ignore=DL3016
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates binutils file curl make g++ python3 && \
-    curl -L "https://github.com/TecharoHQ/anubis/releases/download/v1.27.0/anubis-1.27.0-linux-${TARGETARCH}.tar.gz" -o /tmp/anubis.tar.gz && \
+    curl -fL "https://github.com/TecharoHQ/anubis/releases/download/v1.27.0/anubis-1.27.0-linux-${TARGETARCH}.tar.gz" -o /tmp/anubis.tar.gz && \
     tar -xzf /tmp/anubis.tar.gz -C /app --strip-components=2 "anubis-1.27.0-linux-${TARGETARCH}/bin/anubis" && \
     rm /tmp/anubis.tar.gz && \
     chmod +x /app/anubis && \
-    curl -L "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.15.3/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" -o "/tmp/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" && \
+    curl -fL "https://github.com/oauth2-proxy/oauth2-proxy/releases/download/v7.15.3/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" -o "/tmp/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" && \
     tar -xzf "/tmp/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" -C /app --strip-components=1 "oauth2-proxy-v7.15.3.linux-${TARGETARCH}/oauth2-proxy" && \
     rm "/tmp/oauth2-proxy-v7.15.3.linux-${TARGETARCH}.tar.gz" && \
     chmod +x /app/oauth2-proxy && \
-    yarn install --frozen-lockfile --production=false && \
+    yarn install --frozen-lockfile --production=true && \
     yarn cache clean && \
     find node_modules -name "*.map" -delete && \
-    rm -r node_modules/better-sqlite3/deps/sqlite3 && \
+    rm -rf node_modules/better-sqlite3/deps/sqlite3 && \
     find /app/node_modules -name "*.node" -type f -exec strip -s {} \; && \
     find /app/node_modules -name "*.node" -type f -exec file {} \; && \
     rm -rf /var/lib/apt/lists/*
@@ -104,5 +105,5 @@ RUN echo "exit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d &&
     mkdir -p /var/log/nginx && \
     find /tmp -mindepth 1 -delete
 
-ENTRYPOINT ["tini", "--", "entrypoint.sh"]
+ENTRYPOINT ["tini", "-g", "--", "entrypoint.sh"]
 HEALTHCHECK CMD ["healthcheck.sh"]

@@ -2,14 +2,7 @@ import { IconDotsVertical, IconEdit, IconPower, IconTrash } from "@tabler/icons-
 import { createColumnHelper, useTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import type { RedirectionHost } from "src/api/backend";
-import {
-	CertificateFormatter,
-	DomainsFormatter,
-	EmptyData,
-	HasPermission,
-	TrueFalseFormatter,
-	UserAvatar,
-} from "src/components";
+import { CertificateFormatter, DomainsFormatter, EmptyData, HasPermission, UserAvatar } from "src/components";
 import { TableLayout } from "src/components/Table/TableLayout";
 import { shieldTableFeatures } from "src/components/Table/tableFeatures";
 import { Button } from "src/components/ui/button";
@@ -24,6 +17,7 @@ import {
 import { intl, T } from "src/locale";
 import { MANAGE, REDIRECTION_HOSTS } from "src/modules/Permissions";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { HostStatus } from "../HostStatus";
 
 interface Props {
 	data: RedirectionHost[];
@@ -85,11 +79,11 @@ export default function Table({ data, isFetching, onEdit, onDelete, onDisableTog
 						return <CertificateFormatter value={info.getValue()} />;
 					},
 				}),
-				columnHelper.accessor("enabled", {
+				columnHelper.accessor((row) => row, {
 					id: "enabled",
 					header: intl.formatMessage({ id: "column.status" }),
 					cell: (info) => {
-						return <TrueFalseFormatter value={info.getValue()} trueLabel="online" falseLabel="offline" />;
+						return <HostStatus host={info.getValue()} />;
 					},
 				}),
 				columnHelper.display({

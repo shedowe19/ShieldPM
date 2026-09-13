@@ -112,7 +112,7 @@ class TorOnion extends Model {
 					to: "proxy_host.id",
 				},
 				modify: (qb) => {
-					qb.where("proxy_host.is_deleted", 0);
+					qb.where("proxy_host.is_deleted", 0).select("proxy_host.id").withGraphFetched("host_domains");
 				},
 			},
 		};

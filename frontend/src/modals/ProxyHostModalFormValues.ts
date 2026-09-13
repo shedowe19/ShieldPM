@@ -1,4 +1,5 @@
 import type { ProxyHost } from "src/api/backend";
+import { formatMaintenanceDateTime } from "src/lib/maintenanceDateTime";
 import { FORWARD_SCHEME, ICON_TYPE, PHP_VERSION, TERMINAL_AUTH_TYPE, TIME_UNIT } from "src/types/enums";
 
 export interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitReqRate" | "advLimitReqBurst"> {
@@ -8,7 +9,6 @@ export interface ProxyHostFormValues extends Omit<Partial<ProxyHost>, "advLimitR
 	anubisEnabled?: boolean;
 	anubisRules?: ProxyHost["anubisRules"];
 	gitCredentials?: string;
-	php_override_ini?: string;
 }
 
 export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): ProxyHostFormValues => ({
@@ -23,8 +23,8 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	terminalPort: data.terminalPort || 22,
 	terminalUsername: data.terminalUsername || "",
 	terminalAuthType: data.terminalAuthType || TERMINAL_AUTH_TYPE.PASSWORD,
-	terminalPassword: data.terminalPassword || "",
-	terminalPrivateKey: data.terminalPrivateKey || "",
+	terminalPassword: "",
+	terminalPrivateKey: "",
 
 	accessListId: data.accessListId || 0,
 	cachingEnabled: data.cachingEnabled || false,
@@ -35,6 +35,7 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	// PHP hosting (for scheme=path)
 	phpEnabled: data.phpEnabled || false,
 	phpVersion: data.phpVersion || PHP_VERSION.PHP83,
+	phpOverrideIni: data.phpOverrideIni || "",
 	// Locations tab
 	locations: data.locations || [],
 	// SSL tab
@@ -47,15 +48,13 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	advancedConfig: data.advancedConfig || "",
 	bandwidthLimit: data.bandwidthLimit || "",
 	turboLoader: data.turboLoader || false,
-	advLimitReqRate: data.advLimitReqRate || undefined,
+	advLimitReqRate: data.advLimitReqRate ?? undefined,
 	advLimitReqUnit: data.advLimitReqUnit || TIME_UNIT.SECONDS,
-	advLimitReqBurst: data.advLimitReqBurst || undefined,
+	advLimitReqBurst: data.advLimitReqBurst ?? undefined,
 	forwardQuery: data.forwardQuery || "",
 	maintenanceActive: data.maintenanceActive || false,
-	// datetime-local requires format: YYYY-MM-DDTHH:mm:ss (no timezone)
-	// API returns ISO format with 'Z' suffix, so we strip it
-	maintenanceStart: data.maintenanceStart ? data.maintenanceStart.replace("Z", "").split(".")[0] : "",
-	maintenanceEnd: data.maintenanceEnd ? data.maintenanceEnd.replace("Z", "").split(".")[0] : "",
+	maintenanceStart: formatMaintenanceDateTime(data.maintenanceStart),
+	maintenanceEnd: formatMaintenanceDateTime(data.maintenanceEnd),
 	maintenanceReason: data.maintenanceReason || "",
 	// Git Sync
 	gitRepoUrl: data.gitRepoUrl || "",

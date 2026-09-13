@@ -77,3 +77,30 @@ describe("AnubisRulesField", () => {
 		expect(screen.getByPlaceholderText("Standard: 4")).toBeInTheDocument();
 	});
 });
+
+it("keeps a rule path focused while typing and accepts comma-separated addresses incrementally", async () => {
+	await changeLocale("en");
+	render(
+		<Formik
+			initialValues={{ anubisRules: [{ action: "CHALLENGE", path: "/", remoteAddresses: [] }] }}
+			onSubmit={() => {}}
+		>
+			<Form>
+				<AnubisRulesField />
+			</Form>
+		</Formik>,
+	);
+	const path = screen.getByDisplayValue("/");
+	path.focus();
+	fireEvent.change(path, { target: { value: "/a" } });
+	expect(screen.getByDisplayValue("/a")).toBe(path);
+	expect(path).toHaveFocus();
+	fireEvent.click(screen.getByRole("button", { name: "Advanced settings" }));
+	const addresses = screen.getAllByRole("textbox")[3];
+	fireEvent.change(addresses, { target: { value: "192.0.2.1," } });
+	expect(addresses).toHaveValue("192.0.2.1, ");
+	fireEvent.change(addresses, { target: { value: "192.0.2.1, 198.51.100.1" } });
+	fireEvent.blur(addresses);
+	expect(addresses).toHaveValue("192.0.2.1, 198.51.100.1");
+	cleanup();
+});

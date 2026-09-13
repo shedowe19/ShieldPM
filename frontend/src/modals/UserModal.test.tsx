@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	avatarType: "upload",
 	health: vi.fn(),
+	invalidateQueries: vi.fn(),
 	remove: vi.fn(),
 	setUser: vi.fn(),
 	show: vi.fn(),
@@ -37,6 +38,9 @@ vi.mock("lucide-react", () => ({
 }));
 
 vi.mock("src/api/backend", () => ({ uploadUserAvatar: mocks.uploadUserAvatar }));
+vi.mock("@tanstack/react-query", () => ({
+	useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
+}));
 
 vi.mock("src/components", () => ({
 	Loading: () => null,
@@ -134,6 +138,7 @@ describe("UserModal", () => {
 		mocks.setUser.mockClear();
 		mocks.show.mockClear();
 		mocks.showObjectSuccess.mockClear();
+		mocks.invalidateQueries.mockClear();
 		mocks.uploadUserAvatar.mockRejectedValue(new Error("Avatar upload failed"));
 		mocks.avatarType = "upload";
 		mocks.useUser.mockImplementation((id: number | "me" | "new") => ({
@@ -141,8 +146,8 @@ describe("UserModal", () => {
 				id === "me"
 					? { id: 1 }
 					: {
-							avatar_type: mocks.avatarType,
-							avatar_value: "",
+							avatarType: mocks.avatarType,
+							avatarValue: mocks.avatarType === "url" ? "https://example.test/avatar.png" : "",
 							email: "avatar@example.test",
 							id: id === "new" ? 0 : 73,
 							isDisabled: false,
@@ -242,6 +247,13 @@ describe("UserModal", () => {
 		expect(screen.getByLabelText("user.avatar.image-url")).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("user.avatar.image-url-placeholder")).toBeInTheDocument();
 		expect(screen.getByText("user.avatar.image-url-help")).toBeInTheDocument();
+		expect(screen.getByLabelText("user.avatar.image-url")).toHaveValue("https://example.test/avatar.png");
+		fireEvent.click(screen.getByRole("button", { name: "save" }));
+		await waitFor(() => expect(mocks.setUser).toHaveBeenCalled());
+		expect(mocks.setUser.mock.calls[0][0]).toMatchObject({
+			avatar_type: "url",
+			avatar_value: "https://example.test/avatar.png",
+		});
 	});
 
 	it("uses localized error titles and fallback messages", async () => {
@@ -333,5 +345,46 @@ describe("UserModal", () => {
 		expect(await screen.findByText("Avatar upload failed")).toBeInTheDocument();
 		expect(mocks.remove).not.toHaveBeenCalled();
 		expect(mocks.showObjectSuccess).not.toHaveBeenCalled();
+	});
+
+	it("refreshes avatars only after the upload completes", async () => {
+		mocks.uploadUserAvatar.mockResolvedValue({ id: 73 });
+		const { showUserModal } = await import("./UserModal");
+		showUserModal(73);
+		const ModalComponent = mocks.show.mock.calls[0][0];
+		render(<ModalComponent id={73} remove={mocks.remove} visible />);
+		fireEvent.change(screen.getByLabelText("user.avatar.upload-image"), {
+			target: { files: [new File(["avatar"], "avatar.png", { type: "image/png" })] },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "save" }));
+
+		await waitFor(() => expect(mocks.remove).toHaveBeenCalled());
+		expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["user", 73] });
+		expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["user", "me"] });
+		expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["users"] });
+		const uploadCalls = mocks.uploadUserAvatar.mock.invocationCallOrder;
+		expect(uploadCalls[uploadCalls.length - 1]).toBeLessThan(mocks.invalidateQueries.mock.invocationCallOrder[0]);
+	});
+
+	it("retries a failed avatar upload using the newly created user instead of creating a duplicate", async () => {
+		const { showUserModal } = await import("./UserModal");
+		showUserModal("new");
+		const ModalComponent = mocks.show.mock.calls[0][0];
+		render(<ModalComponent id="new" remove={mocks.remove} visible />);
+		fireEvent.change(screen.getByLabelText("user.full-name"), { target: { value: "New User" } });
+		fireEvent.change(screen.getByLabelText("user.avatar.upload-image"), {
+			target: { files: [new File(["avatar"], "avatar.png", { type: "image/png" })] },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "save" }));
+		await screen.findByText("Avatar upload failed");
+
+		mocks.uploadUserAvatar.mockResolvedValue({ id: 73 });
+		fireEvent.click(screen.getByRole("button", { name: "save" }));
+		await waitFor(() => expect(mocks.remove).toHaveBeenCalled());
+
+		expect(mocks.setUser.mock.calls[0][0].id).toBeUndefined();
+		expect(mocks.setUser.mock.calls[1][0].id).toBe(73);
+		const uploadCalls = mocks.uploadUserAvatar.mock.calls;
+		expect(uploadCalls[uploadCalls.length - 1]?.[0].id).toBe(73);
 	});
 });

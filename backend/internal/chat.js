@@ -8,7 +8,9 @@ import { global as logger } from "../logger.js";
 import ChatIntegrationModel from "../models/chat_integration.js";
 import ai from "./ai.js";
 
+const botLifecycles = new WeakMap();
 const bots = {}; // Cache for bot instances: { integration_id: TelegrafInstance }
+const pendingReloads = new Map();
 
 // Smart MarkdownV2 Escaper
 // Escapes special characters OUTSIDE of code blocks, but preserves them INSIDE.
@@ -40,7 +42,7 @@ const internalChat = {
 			const integrations = await ChatIntegrationModel.query().where("enabled", 1).withGraphFetched("user");
 
 			for (const integration of integrations) {
-				await internalChat.startBot(integration);
+				await internalChat.reload(integration.id);
 			}
 			logger.info(`[ChatOps] Initialized ${Object.keys(bots).length} bots.`);
 		} catch (err) {
@@ -53,8 +55,9 @@ const internalChat = {
 	 * @param {import("../models/chat_integration.js").default} integration
 	 */
 	startBot: async (integration) => {
+		pendingReloads.delete(String(integration.id));
 		if (bots[integration.id]) {
-			await internalChat.stopBot(integration.id);
+			internalChat.stopBot(integration.id);
 		}
 
 		if (!integration.enabled) return;
@@ -62,9 +65,35 @@ const internalChat = {
 		try {
 			const token = decrypt(integration.token);
 			const bot = new Telegraf(token);
+			// Stop must cancel getMe/deleteWebhook too, before Telegraf has created its polling loop.
+			const lifecycle = new AbortController();
+			botLifecycles.set(bot, lifecycle);
+			const callApi = bot.telegram.callApi.bind(bot.telegram);
+			bot.telegram.callApi = async (method, payload, options = {}) => {
+				if (!options.signal) return callApi(method, payload, { ...options, signal: lifecycle.signal });
+				// Telegraf polling uses abort-controller's signal, which native AbortSignal.any rejects.
+				const request = new AbortController();
+				const abort = () => request.abort();
+				/** @type {Array<{
+				 * aborted: boolean,
+				 * addEventListener: (type: "abort", listener: () => void, options: { once: boolean }) => void,
+				 * removeEventListener: (type: "abort", listener: () => void) => void
+				 * }>} */
+				const signals = [options.signal, lifecycle.signal];
+				for (const signal of signals) {
+					if (signal.aborted) request.abort();
+					else signal.addEventListener("abort", abort, { once: true });
+				}
+				try {
+					return await callApi(method, payload, { ...options, signal: request.signal });
+				} finally {
+					for (const signal of signals) signal.removeEventListener("abort", abort);
+				}
+			};
 
 			// Middleware: Access Control
 			bot.use(async (ctx, next) => {
+				if (bots[integration.id] !== bot || lifecycle.signal.aborted) return;
 				const userId = ctx.from?.id;
 				const allowedIds = integration.config?.allowed_ids || [];
 
@@ -180,12 +209,12 @@ const internalChat = {
 				logger.error(`[ChatOps] Bot ${integration.id} error for ${ctx.updateType}:`, err);
 			});
 
-			// Launch with explicit error handling
-			bot.launch().catch((err) => {
-				logger.error(`[ChatOps] Failed to launch bot ${integration.id}:`, err);
-			});
-
 			bots[integration.id] = bot;
+			// A rejected old launch must not remove its replacement from the cache.
+			bot.launch().catch((err) => {
+				if (!lifecycle.signal.aborted) logger.error(`[ChatOps] Failed to launch bot ${integration.id}:`, err);
+				if (bots[integration.id] === bot) delete bots[integration.id];
+			});
 			logger.info(`[ChatOps] Started Telegram bot for Integration ID ${integration.id}`);
 		} catch (err) {
 			logger.error(`[ChatOps] Failed to start bot ${integration.id}:`, err);
@@ -196,13 +225,17 @@ const internalChat = {
 	 * Stop a bot instance
 	 */
 	stopBot: async (integrationId) => {
-		if (bots[integrationId]) {
-			try {
-				bots[integrationId].stop();
-				delete bots[integrationId];
-			} catch (err) {
-				logger.warn(`[ChatOps] Error stopping bot ${integrationId}:`, err);
-			}
+		// Also invalidate a reload that has not created its bot yet.
+		pendingReloads.delete(String(integrationId));
+		const bot = bots[integrationId];
+		if (!bot) return;
+		delete bots[integrationId];
+		botLifecycles.get(bot)?.abort();
+		try {
+			bot.stop();
+		} catch (err) {
+			// Telegraf throws before polling starts; the aborted lifecycle still prevents launch.
+			logger.debug(`[ChatOps] Bot ${integrationId} stopped before polling: ${err.message}`);
 		}
 	},
 
@@ -210,11 +243,19 @@ const internalChat = {
 	 * Reload a specific integration (after update)
 	 */
 	reload: async (integrationId) => {
-		const integration = await ChatIntegrationModel.query().findById(integrationId);
-		if (integration) {
-			await internalChat.startBot(integration);
-		} else {
-			await internalChat.stopBot(integrationId);
+		const key = String(integrationId);
+		const pending = {};
+		pendingReloads.set(key, pending);
+		try {
+			const integration = await ChatIntegrationModel.query().findById(integrationId);
+			if (pendingReloads.get(key) !== pending) return;
+			if (integration) {
+				await internalChat.startBot(integration);
+			} else {
+				await internalChat.stopBot(integrationId);
+			}
+		} finally {
+			if (pendingReloads.get(key) === pending) pendingReloads.delete(key);
 		}
 	},
 };

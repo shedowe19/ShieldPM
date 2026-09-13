@@ -22,7 +22,9 @@ const configure = () => {
 			const rawData = fs.readFileSync(filename);
 			configData = JSON.parse(rawData.toString());
 		} catch (_) {
-			// do nothing
+			// An unreadable explicit configuration must not silently switch an
+			// existing installation to another database or a fresh setup wizard.
+			throw new Error(`Could not read database configuration from file: ${filename}`);
 		}
 
 		if (configData?.database) {
@@ -121,14 +123,14 @@ const getKeys = () => {
 
 	try {
 		// Load this json keysFile synchronously and return the json object
+		fs.chmodSync(keysFile, 0o600);
 		const rawData = fs.readFileSync(keysFile);
-		const keys = JSON.parse(rawData.toString());
+		let keys = JSON.parse(rawData.toString());
 
 		// Migration: Add encryptionKey if missing
 		if (!keys.encryptionKey) {
 			logger.info("Migrating keys file: Adding encryptionKey...");
-			keys.encryptionKey = crypto.randomBytes(32).toString("hex");
-			fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2));
+			keys = migrateEncryptionKey(keys);
 		}
 
 		return keys;
@@ -136,6 +138,54 @@ const getKeys = () => {
 		logger.error(`Could not read JWT key pair from config file: ${keysFile}`, err);
 		process.exit(1);
 	}
+};
+
+// Publish only complete, flushed files. A failed migration must not truncate
+// the existing RSA keys; a concurrent first start must not replace its winner.
+const writeKeys = (keys, createOnly = false, filename = keysFile) => {
+	fs.mkdirSync(dirname(filename), { recursive: true });
+	const temporaryFile = `${filename}.${process.pid}.${crypto.randomUUID()}.tmp`;
+	try {
+		fs.writeFileSync(temporaryFile, JSON.stringify(keys, null, 2), { mode: 0o600, flag: "wx", flush: true });
+		if (createOnly) {
+			try {
+				fs.linkSync(temporaryFile, filename);
+			} catch (err) {
+				if (err.code !== "EEXIST") throw err;
+			}
+		} else {
+			fs.renameSync(temporaryFile, filename);
+		}
+	} finally {
+		fs.rmSync(temporaryFile, { force: true });
+	}
+};
+
+const migrateEncryptionKey = (keys) => {
+	const identity = crypto.createHash("sha256").update(keys.pub).digest("hex");
+	const candidateFile = `${keysFile}.${identity}.migration`;
+	writeKeys({ ...keys, encryptionKey: crypto.randomBytes(32).toString("hex") }, true, candidateFile);
+
+	// Elect one complete candidate without a persistent process lock. Read that
+	// candidate BEFORE re-reading keys.json: a delayed caller can propose a new
+	// candidate after the winner has published and removed the previous one.
+	let candidate;
+	try {
+		candidate = JSON.parse(fs.readFileSync(candidateFile, "utf8"));
+	} catch (err) {
+		if (err.code !== "ENOENT") throw err;
+		// A successful publisher may already have removed the election file.
+	}
+	const current = JSON.parse(fs.readFileSync(keysFile, "utf8"));
+	if (!current.encryptionKey) {
+		if (!candidate || candidate.pub !== current.pub || !candidate.encryptionKey) {
+			throw new Error("Could not recover the encryption-key migration candidate");
+		}
+		writeKeys(candidate);
+	}
+	// Failed writes deliberately retain the complete candidate for a retry.
+	fs.rmSync(candidateFile, { force: true });
+	return current.encryptionKey ? current : candidate;
 };
 
 const generateKeys = () => {
@@ -161,11 +211,7 @@ const generateKeys = () => {
 
 	// Write keys config
 	try {
-		const dir = dirname(keysFile);
-		if (!fs.existsSync(dir)) {
-			fs.mkdirSync(dir, { recursive: true });
-		}
-		fs.writeFileSync(keysFile, JSON.stringify(keys, null, 2));
+		writeKeys(keys, true);
 	} catch (err) {
 		logger.error(`Could not write JWT key pair to config file: ${keysFile}: ${err.message}`);
 		process.exit(1);

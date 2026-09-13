@@ -1,0 +1,133 @@
+{
+	"type": "object",
+	"description": "Certificate creation payload; private PEM data is never part of certificate responses",
+	"additionalProperties": false,
+	"required": [
+		"provider"
+	],
+	"properties": {
+		"provider": {
+			"$ref": "./certificate-object.json#/properties/provider"
+		},
+		"nice_name": {
+			"$ref": "./certificate-object.json#/properties/nice_name"
+		},
+		"domain_names": {
+			"type": "array",
+			"maxItems": 99,
+			"uniqueItems": true,
+			"items": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 255,
+				"description": "DNS hostname, including internal single-label names, IDNs and a leading wildcard",
+				"pattern": "^(?:\\*\\.)?[\\p{L}\\p{N}](?:[\\p{L}\\p{N}-]{0,61}[\\p{L}\\p{N}])?(?:\\.[\\p{L}\\p{N}](?:[\\p{L}\\p{N}-]{0,61}[\\p{L}\\p{N}])?)*$",
+				"not": {
+					"pattern": "\\s"
+				}
+			}
+		},
+		"meta": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"certificate": {
+					"type": "string",
+					"minLength": 1
+				},
+				"certificate_key": {
+					"type": "string",
+					"minLength": 1
+				},
+				"dns_challenge": {
+					"type": "boolean"
+				},
+				"dns_provider_credentials": {
+					"type": "string",
+					"writeOnly": true
+				},
+				"dns_provider": {
+					"type": "string"
+				},
+				"letsencrypt_certificate": {
+					"type": "object"
+				},
+				"propagation_seconds": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"years": {
+					"type": "integer",
+					"minimum": 1,
+					"maximum": 10
+				}
+			}
+		}
+	},
+	"allOf": [
+		{
+			"if": {
+				"properties": {
+					"provider": {
+						"enum": [
+							"letsencrypt",
+							"internal"
+						]
+					}
+				}
+			},
+			"then": {
+				"required": [
+					"domain_names"
+				],
+				"properties": {
+					"domain_names": {
+						"minItems": 1
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"required": [
+					"meta"
+				],
+				"properties": {
+					"meta": {
+						"required": [
+							"dns_challenge"
+						],
+						"properties": {
+							"dns_challenge": {
+								"const": true,
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			},
+			"then": {
+				"properties": {
+					"meta": {
+						"required": [
+							"dns_provider",
+							"dns_provider_credentials"
+						],
+						"properties": {
+							"dns_provider": {
+								"type": "string",
+								"minLength": 1,
+								"pattern": "\\S"
+							},
+							"dns_provider_credentials": {
+								"type": "string",
+								"minLength": 1,
+								"pattern": "\\S"
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}

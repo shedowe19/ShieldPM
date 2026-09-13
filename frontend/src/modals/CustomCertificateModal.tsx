@@ -3,8 +3,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Field, type FieldProps, Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { type Certificate, createCertificate, uploadCertificate, validateCertificate } from "src/api/backend";
+import { put } from "src/api/backend/base";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -40,9 +41,13 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 	const [errorMsg, setErrorMsg] = useState<ReactNode | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [mode, setMode] = useState<CertCustomMode>(CERT_CUSTOM_MODE.UPLOAD);
+	const createdCertificate = useRef<{ id: number; niceName: string } | null>(null);
 
 	const validatePem = (content: string, type: PemType) => {
 		if (!content) return false;
+		if (type === PEM_TYPE.KEY) {
+			return /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/.test(content);
+		}
 		return content.includes(`-----BEGIN ${type}-----`);
 	};
 
@@ -98,11 +103,20 @@ const CustomCertificateModal = EasyModal.create(({ visible, remove }: InnerModal
 			// Validate
 			await validateCertificate(formData);
 
-			// Create certificate, as other without anything else
-			const cert = await createCertificate({ niceName, provider } as Certificate);
+			// Reuse the record if an earlier upload failed after creation.
+			if (!createdCertificate.current) {
+				const cert = await createCertificate({ niceName, provider } as Certificate);
+				createdCertificate.current = { id: cert.id, niceName };
+			} else if (createdCertificate.current.niceName !== niceName) {
+				await put({
+					url: `/nginx/certificates/${createdCertificate.current.id}`,
+					data: { id: createdCertificate.current.id, niceName },
+				});
+				createdCertificate.current.niceName = niceName;
+			}
 
 			// Upload the certificates to the created certificate
-			await uploadCertificate(cert.id, formData);
+			await uploadCertificate(createdCertificate.current.id, formData);
 
 			// Success
 			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.CERTIFICATE, "saved");

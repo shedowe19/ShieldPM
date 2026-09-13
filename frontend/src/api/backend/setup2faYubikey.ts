@@ -5,6 +5,7 @@ export interface YubikeyAddResponse {
 	type: string;
 	label: string;
 	createdOn: string;
+	backupCodes?: string[] | null;
 }
 
 export async function add2faYubikey(userId: number | "me", otp: string, label?: string): Promise<YubikeyAddResponse> {

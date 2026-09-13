@@ -742,5 +742,6 @@
 	"wireguard.settings.subnet": "Mạng con VPN",
 	"wireguard.settings.serverAddress": "Địa chỉ máy chủ",
 	"wireguard.settings.title": "Cài đặt WireGuard",
-	"wireguard.title": "Đường hầm WireGuard"
+	"wireguard.title": "Đường hầm WireGuard",
+	"settings.gitops.save-before-action": "Lưu các thay đổi cấu hình trước khi kiểm tra kết nối hoặc thực hiện các thao tác Git."
 }

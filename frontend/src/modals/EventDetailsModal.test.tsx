@@ -105,7 +105,7 @@ describe("EventDetailsModal", () => {
 				action: "updated",
 				createdOn: "2026-07-12T00:00:00Z",
 				id: 73,
-				meta: { client_ip: "192.0.2.10" },
+				meta: { clientIp: "192.0.2.10" },
 				modifiedOn: "2026-07-12T00:00:00Z",
 				objectId: 11,
 				objectType: "proxy-host",
@@ -132,7 +132,7 @@ describe("EventDetailsModal", () => {
 				action: "updated",
 				createdOn: "2026-07-12T00:00:00Z",
 				id: 73,
-				meta: { client_ip: "192.0.2.10" },
+				meta: { clientIp: "192.0.2.10" },
 				modifiedOn: "2026-07-12T00:00:00Z",
 				objectId: 11,
 				objectType: "proxy-host",
@@ -147,7 +147,7 @@ describe("EventDetailsModal", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "Metadaten kopieren" }));
 
-		expect(writeText).toHaveBeenCalledWith('{\n  "client_ip": "Ausgeblendet (Demo)"\n}');
+		expect(writeText).toHaveBeenCalledWith('{\n  "clientIp": "Ausgeblendet (Demo)"\n}');
 		expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining("192.0.2.10"));
 	});
 
@@ -159,7 +159,7 @@ describe("EventDetailsModal", () => {
 				action: "updated",
 				createdOn: "2026-07-12T00:00:00Z",
 				id: 73,
-				meta: { client_ip: "192.0.2.10" },
+				meta: { clientIp: "192.0.2.10" },
 				modifiedOn: "2026-07-12T00:00:00Z",
 				objectId: 11,
 				objectType: "proxy-host",
@@ -180,7 +180,7 @@ describe("EventDetailsModal", () => {
 				variant: "destructive",
 			});
 		});
-		expect(writeText).toHaveBeenCalledWith('{\n  "client_ip": "Ausgeblendet (Demo)"\n}');
+		expect(writeText).toHaveBeenCalledWith('{\n  "clientIp": "Ausgeblendet (Demo)"\n}');
 		expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining("192.0.2.10"));
 	});
 });

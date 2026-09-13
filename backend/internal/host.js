@@ -1,18 +1,47 @@
 import _ from "lodash";
+import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import deadHostModel from "../models/dead_host.js";
 import proxyHostModel from "../models/proxy_host.js";
 import redirectionHostModel from "../models/redirection_host.js";
 
 const internalHost = {
+	/** Validate newly assigned resources with their own read permissions and owner scope. */
+	validateReferences: async (access, data, existing = {}) => {
+		if (data.certificate_id && data.certificate_id !== "new" && data.certificate_id !== existing.certificate_id) {
+			const { default: internalCertificate } = await import("./certificate.js");
+			await internalCertificate.get(access, { id: data.certificate_id });
+		}
+		if (data.access_list_id && data.access_list_id !== existing.access_list_id) {
+			const { default: internalAccessList } = await import("./access-list.js");
+			await internalAccessList.get(access, { id: data.access_list_id });
+		}
+	},
+	/** A domain is one Nginx server_name token, never a directive or comment. */
+	validateDomainNames: (domains) => {
+		if (
+			!Array.isArray(domains) ||
+			domains.length < 1 ||
+			domains.length > 99 ||
+			domains.some((domain) => typeof domain !== "string" || !domain.length || /[\s\p{Cc};{}"'#]/u.test(domain))
+		) {
+			throw new errs.ValidationError(
+				"Domain names must be nonempty Nginx server names without whitespace or directives",
+			);
+		}
+		return domains;
+	},
 	/**
 	 * Makes sure that the ssl_* and hsts_* fields play nicely together.
 	 * ie: if there is no cert, then force_ssl is off.
 	 *     if force_ssl is off, then hsts_enabled is definitely off.
 	 *
-	 * @param   {object} data
-	 * @param   {object} [existingData]
-	 * @returns {object}
+	 * @template {{certificate_id?: number|string, ssl_forced?: boolean|number, hsts_enabled?: boolean|number, hsts_subdomains?: boolean|number}} T
+	 * @param   {boolean} newCert
+	 * @param   {T} data
+	 * @param   {Partial<T>} [existingData]
+	 * @returns {T}
 	 */
 	cleanSslHstsData: (newCert, data, existingData) => {
 		const combinedData = _.assign({}, existingData || {}, data);
@@ -37,6 +66,7 @@ const internalHost = {
 	 */
 	cleanAllRowsCertificateMeta: (rows) => {
 		rows.map((_, idx) => {
+			if (rows[idx].meta) rows[idx].meta = sanitizeHostMeta(rows[idx].meta);
 			if (typeof rows[idx].certificate !== "undefined" && rows[idx].certificate) {
 				rows[idx].certificate.meta = {};
 			}
@@ -53,6 +83,7 @@ const internalHost = {
 	 * @returns {Object}
 	 */
 	cleanRowCertificateMeta: (row) => {
+		if (row.meta) row.meta = sanitizeHostMeta(row.meta);
 		if (typeof row.certificate !== "undefined" && row.certificate) {
 			row.certificate.meta = {};
 		}
@@ -76,7 +107,7 @@ const internalHost = {
 		};
 
 		const [proxyRes, redirRes, deadRes] = await Promise.all([
-			proxyHostModel.query().where("is_deleted", 0),
+			proxyHostModel.query().where("is_deleted", 0).withGraphFetched("host_domains"),
 			redirectionHostModel.query().where("is_deleted", 0),
 			deadHostModel.query().where("is_deleted", 0),
 		]);
@@ -106,15 +137,13 @@ const internalHost = {
 			proxyHostModel
 				.query()
 				.where("is_deleted", 0)
-				.whereExists(proxyHostModel.relatedQuery("host_domains").where("domain_name", hostname)),
+				.whereExists(proxyHostModel.relatedQuery("host_domains").whereILike("domain_name", hostname))
+				.withGraphFetched("host_domains"),
 			redirectionHostModel
 				.query()
 				.where("is_deleted", 0)
-				.andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
-			deadHostModel
-				.query()
-				.where("is_deleted", 0)
-				.andWhere(castJsonIfNeed("domain_names"), "like", `%${hostname}%`),
+				.whereILike(castJsonIfNeed("domain_names"), `%${hostname}%`),
+			deadHostModel.query().where("is_deleted", 0).whereILike(castJsonIfNeed("domain_names"), `%${hostname}%`),
 		];
 
 		const promises_results = await Promise.all(promises);
@@ -174,24 +203,10 @@ const internalHost = {
 	 * @returns {Boolean}
 	 */
 	_checkHostnameRecordsTaken: (hostname, existingRows, ignoreId) => {
-		let isTaken = false;
-
-		if (existingRows?.length) {
-			existingRows.map((existingRow) => {
-				existingRow.domain_names.map((existingHostname) => {
-					// Does this domain match?
-					if (existingHostname.toLowerCase() === hostname.toLowerCase()) {
-						if (!ignoreId || ignoreId !== existingRow.id) {
-							isTaken = true;
-						}
-					}
-					return true;
-				});
-				return true;
-			});
-		}
-
-		return isTaken;
+		const normalized = hostname.toLowerCase();
+		return (existingRows || []).some(
+			(row) => row.id !== ignoreId && row.domain_names.some((domain) => domain.toLowerCase() === normalized),
+		);
 	},
 
 	/**
@@ -202,30 +217,8 @@ const internalHost = {
 	 * @returns {Array}
 	 */
 	_getHostsWithDomains: (hosts, domainNames) => {
-		const response = [];
-
-		if (hosts?.length) {
-			hosts.map((host) => {
-				let hostMatches = false;
-
-				domainNames.map((domainName) => {
-					host.domain_names.map((hostDomainName) => {
-						if (domainName.toLowerCase() === hostDomainName.toLowerCase()) {
-							hostMatches = true;
-						}
-						return true;
-					});
-					return true;
-				});
-
-				if (hostMatches) {
-					response.push(host);
-				}
-				return true;
-			});
-		}
-
-		return response;
+		const domains = new Set(domainNames.map((domain) => domain.toLowerCase()));
+		return (hosts || []).filter((host) => host.domain_names.some((domain) => domains.has(domain.toLowerCase())));
 	},
 };
 

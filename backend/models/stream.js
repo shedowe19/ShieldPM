@@ -10,6 +10,8 @@ Model.knex(db());
 const boolFields = ["is_deleted", "enabled", "tcp_forwarding", "udp_forwarding", "proxy_protocol_forwarding"];
 
 class Stream extends Model {
+	/** @type {boolean | number} */
+	enabled;
 	/** @type {number} */
 	id;
 	/** @type {number} */

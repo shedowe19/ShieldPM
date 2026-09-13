@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createDeadHost, type DeadHost, getDeadHost, updateDeadHost } from "src/api/backend";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { optimisticQueryUpdate } from "./optimisticQueryUpdate";
 
 const fetchDeadHost = (id: number | "new") => {
 	if (id === "new") {
@@ -40,15 +41,18 @@ const useSetDeadHost = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, values.id]);
-			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, values.id], (old: DeadHost) => ({
-				...old,
-				...values,
-			}));
-			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, values.id], previousObject);
+			return optimisticQueryUpdate<DeadHost>(
+				queryClient,
+				[AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, values.id],
+				(old) => ({
+					...old,
+					...values,
+				}),
+			);
 		},
 		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
-		onSuccess: async ({ id }: DeadHost) => {
+		onSettled: (data, _error, values) => {
+			const id = data?.id ?? values.id;
 			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.DEAD_HOST, id] });
 			queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });

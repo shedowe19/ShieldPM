@@ -6,6 +6,7 @@ import {
 	updateRedirectionHost,
 } from "src/api/backend";
 import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME } from "src/types/enums";
+import { optimisticQueryUpdate } from "./optimisticQueryUpdate";
 
 const fetchRedirectionHost = (id: number | "new") => {
 	if (id === "new") {
@@ -51,15 +52,18 @@ const useSetRedirectionHost = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, values.id]);
-			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, values.id], (old: RedirectionHost) => ({
-				...old,
-				...values,
-			}));
-			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, values.id], previousObject);
+			return optimisticQueryUpdate<RedirectionHost>(
+				queryClient,
+				[AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, values.id],
+				(old) => ({
+					...old,
+					...values,
+				}),
+			);
 		},
 		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
-		onSuccess: async ({ id }: RedirectionHost) => {
+		onSettled: (data, _error, values) => {
+			const id = data?.id ?? values.id;
 			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.REDIRECTION_HOST, id] });
 			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });

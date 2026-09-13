@@ -163,12 +163,16 @@ app.use(
 );
 
 // CSRF Protection (Double Submit Cookie)
+// Nginx strips /api. Reject excess upstream requests before authentication,
+// database lookups, CSRF generation and body parsing.
+app.use(globalApiLimiter);
+
 const csrfCookieOptions = {
 	sameSite: "strict",
 	path: "/",
 };
 
-const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
+const { doubleCsrfProtection, generateCsrfToken, invalidCsrfTokenError } = doubleCsrf({
 	getSecret: () => CSRF_SECRET,
 	cookieName: "XSRF-TOKEN",
 	cookieOptions: {
@@ -193,20 +197,20 @@ app.use(jwt());
 // CSRF middleware with a strict first-time-setup bypass.
 // Only skip CSRF for POST /api/users while the system has no active users yet.
 app.use(async (req, res, next) => {
-	const setupComplete = await isSetup();
-
 	// Bypass CSRF for specific endpoints that are protected by other mechanisms.
 	// Match both with and without /api prefix to handle different proxy configurations.
 	const path = req.path;
 	const method = req.method;
 	const isInitialSetupUserCreation =
-		!setupComplete && method === "POST" && (path === "/api/users" || path === "/users");
+		method === "POST" && (path === "/api/users" || path === "/users") && !(await isSetup());
 	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
 
-	// 2FA verification endpoints during login use the pending_token for auth, no CSRF cookie yet
-	const is2FaVerify = method === "POST" && /^\/(api\/)?tokens\/2fa\//.test(path);
+	// Duo creates and consumes a browser-bound cookie, so both endpoints also
+	// require the anonymous CSRF token supplied by the health bootstrap.
+	const isDuoLogin = /^\/(api\/)?tokens\/2fa\/duo\/(begin|complete)$/.test(path);
+	const is2FaVerify = method === "POST" && /^\/(api\/)?tokens\/2fa\//.test(path) && !isDuoLogin;
 
 	// Docs endpoints - bypass CSRF for Swagger UI
 	const isDocsRequest =
@@ -228,6 +232,25 @@ app.use(async (req, res, next) => {
 
 // Generate Token and set cookie/local
 app.use((req, res, next) => {
+	// Session handlers issue cookies after this middleware. Regenerate against
+	// their outgoing browser identity so its first write needs no extra GET.
+	res.locals.refreshCsrfToken = (accessToken) => {
+		const nextRequest = Object.create(req);
+		nextRequest.headers = { ...req.headers };
+		delete nextRequest.headers.authorization;
+		nextRequest.cookies = { ...req.cookies, shieldpm_jwt: accessToken };
+		const token = generateCsrfToken(nextRequest, res, {
+			cookieOptions: { ...csrfCookieOptions, secure: isHttpsRequest(req) },
+		});
+		res.locals.csrfToken = token;
+		// Logout keeps its 204 contract; clients can read the new anonymous token.
+		res.set("X-XSRF-TOKEN", token);
+	};
+	// Refresh success sets its matching token through setAuthCookies. A delayed
+	// failure must not overwrite a newer login's CSRF cookie either.
+	if (req.method === "POST" && /^\/(api\/)?tokens\/refresh$/.test(req.path)) {
+		return next();
+	}
 	const token = generateCsrfToken(req, res, {
 		cookieOptions: {
 			...csrfCookieOptions,
@@ -251,9 +274,6 @@ app.set("json spaces", 2);
 import checkDemoMode from "./lib/express/demo.js";
 
 app.use(checkDemoMode);
-
-// Apply global rate limiter to all API routes
-app.use("/api", globalApiLimiter);
 
 // Compile OpenAPI schema once (dereferences $refs)
 const _swaggerSpec = await getCompiledSchema();
@@ -303,6 +323,11 @@ app.use((err, _req, res, next) => {
 			message: err.public ? err.message : "Internal Error",
 		},
 	};
+	// This middleware rejects the request before any route can perform a write.
+	// Clients may obtain fresh CSRF state and retry this specific rejection once.
+	if (err === invalidCsrfTokenError && status === 403) {
+		payload.error.reason = "EBADCSRFTOKEN";
+	}
 
 	if (typeof err.message_i18n !== "undefined") {
 		payload.error.message_i18n = err.message_i18n;

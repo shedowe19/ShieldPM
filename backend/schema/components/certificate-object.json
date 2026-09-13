@@ -40,8 +40,7 @@
 			"maxItems": 99,
 			"uniqueItems": true,
 			"items": {
-				"type": "string",
-				"pattern": "^(([^.]+\\.)+[^.]+)|(\\[[0-9a-f:]+\\])$"
+				"type": "string"
 			},
 			"example": [
 				"example.com",
@@ -62,18 +61,15 @@
 			"additionalProperties": false,
 			"properties": {
 				"certificate": {
-					"type": "string",
-					"minLength": 1
+					"type": "boolean",
+					"description": "Whether this certificate file is available"
 				},
 				"certificate_key": {
-					"type": "string",
-					"minLength": 1
+					"type": "boolean",
+					"description": "Whether this certificate file is available"
 				},
 				"dns_challenge": {
 					"type": "boolean"
-				},
-				"dns_provider_credentials": {
-					"type": "string"
 				},
 				"dns_provider": {
 					"type": "string"
@@ -87,11 +83,54 @@
 				},
 				"years": {
 					"type": "integer",
-					"minimum": 1
+					"minimum": 1,
+					"maximum": 10
+				},
+				"intermediate_certificate": {
+					"type": "boolean",
+					"description": "Whether this certificate file is available"
+				},
+				"letsencrypt_email": {
+					"type": "string",
+					"description": "Legacy account email retained on existing certificate records",
+					"deprecated": true
+				},
+				"letsencrypt_agree": {
+					"type": "boolean",
+					"description": "Legacy account agreement retained on existing certificate records",
+					"deprecated": true
 				}
 			},
 			"example": {
 				"dns_challenge": false
+			}
+		},
+		"proxy_hosts": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
+			}
+		},
+		"redirection_hosts": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
+			}
+		},
+		"dead_hosts": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
+			}
+		},
+		"streams": {
+			"type": "array",
+			"description": "Sanitized related host rows, included only when explicitly expanded",
+			"items": {
+				"type": "object"
 			}
 		}
 	}

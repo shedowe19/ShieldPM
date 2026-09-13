@@ -1,3 +1,4 @@
+import type { AccessList } from "src/api/backend";
 import { ACCESS_LIST_AUTH_TYPE } from "src/types/enums";
 import { describe, expect, it } from "vitest";
 import { type AccessListFormValues, createAccessListInitialValues } from "./AccessListModalFormValues";
@@ -16,6 +17,20 @@ const createValues = (overrides: Partial<AccessListFormValues> = {}): AccessList
 });
 
 describe("createAccessListPayload", () => {
+	it("preserves legacy JSON metadata when saving an edited access list", () => {
+		const meta = JSON.stringify({
+			retained: { enabled: true },
+			auth_type: "oidc",
+			oidc_client_id: "client",
+			oidc_client_secret: "example-secret",
+			oidc_discovery_url: "https://id.example.test/.well-known/openid-configuration",
+		}) as unknown as AccessList["meta"];
+		const values = createAccessListInitialValues({ name: "Original", meta });
+		const payload = createAccessListPayload({ id: 73, meta, values: { ...values, name: "Renamed" } });
+		expect(JSON.parse(JSON.stringify(payload)).meta).toEqual(JSON.parse(meta as unknown as string));
+		expect(payload.name).toBe("Renamed");
+	});
+
 	it("keeps active OIDC metadata while omitting stale OAuth2 fields", () => {
 		const payload = createAccessListPayload({
 			id: 73,

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessClientFields } from "./AccessClientFields";
@@ -28,4 +28,11 @@ describe("AccessClientFields", () => {
 		const deleteButton = screen.getByRole("button", { name: "Löschen" });
 		expect(deleteButton).toHaveAttribute("aria-label", "Löschen");
 	});
+});
+
+it("accepts nginx's all rule without silently changing its address", () => {
+	render(<AccessClientFields initialValues={[{ address: "", directive: "allow" }]} />);
+	fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "all" } });
+	expect(mocks.setFieldValue).toHaveBeenLastCalledWith("clients", [{ address: "all", directive: "allow" }]);
+	cleanup();
 });

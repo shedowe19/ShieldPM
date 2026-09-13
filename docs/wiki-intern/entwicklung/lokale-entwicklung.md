@@ -12,6 +12,8 @@ Tipps und Hinweise für die tägliche Entwicklungsarbeit.
 | `index-dev.js` | Entwicklung: führt Migrationen aus, initialisiert danach Analytics und startet den HTTP-Server |
 | `app.js`       | Express-App-Konfiguration (Middleware, Routen)                                                 |
 
+`index-dev.js` setzt fehlende lokale Umgebungswerte vor den dynamischen Imports, damit Datenbank und Konfiguration denselben `DATA_PATH` verwenden. Bereits gesetzte Werte bleiben erhalten. Der Entwicklungsserver lauscht auf `127.0.0.1:3000`; das Startprotokoll gibt kein Administratorpasswort aus.
+
 ## Entwicklungs-Workflow
 
 1. Backend und Frontend parallel starten

@@ -1,18 +1,12 @@
 #!/usr/bin/env sh
 
-if [ "$ACME_KEY_TYPE" = "rsa" ]; then
-    sed -i "s|key-type = ecdsa|key-type = rsa|g" /etc/certbot.ini
-fi
-if [ "$ACME_MUST_STAPLE" = "false" ]; then
-    sed -i "s|must-staple = true|must-staple = false|g" /etc/certbot.ini
-fi
-if [ "$ACME_SERVER_TLS_VERIFY" = "false" ]; then
-    sed -i "s|no-verify-ssl = false|no-verify-ssl = true|g" /etc/certbot.ini
-fi
-if [ "$ACME_PROFILE" != "none" ]; then
-    sed -i "s|#required-profile|required-profile = $ACME_PROFILE|g" /etc/certbot.ini
-fi
+# shellcheck source=/dev/null
+. "$(dirname "$0")/migrate-data.sh"
 
+# shellcheck source=/dev/null
+. "$(dirname "$0")/runtime-config.sh"
+prepare_runtime_directory /run/shieldpm "$PUID" "$PGID" || exit 1
+configure_certbot_ini /etc/certbot.ini || exit 1
 
 if [ "$PHP82" = "true" ]; then
     apt-get update && apt-get install -y --no-install-recommends php8.2-fpm
@@ -34,8 +28,10 @@ if [ "$PHP82" = "true" ]; then
         sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/82/php.ini
     fi
 
-    sed -i "s|#\?listen =.*|listen = /run/php82.sock|" /data/php/82/pool.d/www.conf
-    sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/82/php-fpm.conf
+    sed -i "s|#\?listen =.*|listen = /run/shieldpm/php82.sock|" /data/php/82/pool.d/www.conf
+    sed -i -E 's#^([[:space:]]*)listen\.(owner|group)[[:space:]]*=#\1;listen.\2 =#' /data/php/82/pool.d/www.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*pid[[:space:]]*=.*|pid = /run/shieldpm/php82.pid|" /data/php/82/php-fpm.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*error_log[[:space:]]*=.*|error_log = /data/php/82/php-fpm.log|" /data/php/82/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/82/pool.d/*.conf|g" /data/php/82/php-fpm.conf
     sed -i "s|;clear_env = no|clear_env = no|g" /data/php/82/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
@@ -62,8 +58,10 @@ if [ "$PHP83" = "true" ]; then
         sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/83/php.ini
     fi
 
-    sed -i "s|#\?listen =.*|listen = /run/php83.sock|" /data/php/83/pool.d/www.conf
-    sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/83/php-fpm.conf
+    sed -i "s|#\?listen =.*|listen = /run/shieldpm/php83.sock|" /data/php/83/pool.d/www.conf
+    sed -i -E 's#^([[:space:]]*)listen\.(owner|group)[[:space:]]*=#\1;listen.\2 =#' /data/php/83/pool.d/www.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*pid[[:space:]]*=.*|pid = /run/shieldpm/php83.pid|" /data/php/83/php-fpm.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*error_log[[:space:]]*=.*|error_log = /data/php/83/php-fpm.log|" /data/php/83/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/83/pool.d/*.conf|g" /data/php/83/php-fpm.conf
     sed -i "s|;clear_env = no|clear_env = no|g" /data/php/83/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
@@ -90,8 +88,10 @@ if [ "$PHP84" = "true" ]; then
         sed -i 's|^zend_extension=|;zend_extension=|g' /data/php/84/php.ini
     fi
 
-    sed -i "s|#\?listen =.*|listen = /run/php84.sock|" /data/php/84/pool.d/www.conf
-    sed -i "s|;error_log =.*|error_log = /proc/self/fd/2|g" /data/php/84/php-fpm.conf
+    sed -i "s|#\?listen =.*|listen = /run/shieldpm/php84.sock|" /data/php/84/pool.d/www.conf
+    sed -i -E 's#^([[:space:]]*)listen\.(owner|group)[[:space:]]*=#\1;listen.\2 =#' /data/php/84/pool.d/www.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*pid[[:space:]]*=.*|pid = /run/shieldpm/php84.pid|" /data/php/84/php-fpm.conf
+    sed -i -E "s|^[[:space:]]*;?[[:space:]]*error_log[[:space:]]*=.*|error_log = /data/php/84/php-fpm.log|" /data/php/84/php-fpm.conf
     sed -i "s|include=.*|include=/data/php/84/pool.d/*.conf|g" /data/php/84/php-fpm.conf
     sed -i "s|;clear_env = no|clear_env = no|g" /data/php/84/pool.d/www.conf
 elif [ "$FULLCLEAN" = "true" ]; then
@@ -114,11 +114,12 @@ fi
 
 
 mkdir -p /data/acme-challenge \
-         /tmp/npmhome \
-         /tmp/goa \
+         /run/shieldpm/home \
+         /run/shieldpm/goa \
          /data/certbot-log \
          /data/certbot-work \
-         /data/certbot-credentials
+         /data/certbot-credentials \
+         /data/certbot-plugins
 mkdir -vp /data/tls/certbot/renewal \
           /data/tls/custom \
           /data/shieldpm \
@@ -159,36 +160,15 @@ if [ "${TOR_ENABLED:-true}" = "true" ]; then
 fi
 
 
-if [ -n "$(ls -A /data/nginx/custom 2> /dev/null)"  ]; then
-    cp -van /data/nginx/custom/* /data/nginx_custom
+migrate_legacy_directory /data/nginx/custom /data/custom_nginx /data/shieldpm/migration-backups || exit 1
+migrate_legacy_directory /data/nginx_custom /data/custom_nginx /data/shieldpm/migration-backups || exit 1
+migrate_legacy_directory /data/etc /data /data/shieldpm/migration-backups || exit 1
+if [ -s /data/crowdsec/crowdsec.conf ]; then
+    sed -i "s|/data/etc|/data|g" /data/crowdsec/crowdsec.conf
 fi
-rm -vrf /data/nginx/custom
+migrate_legacy_directory /data/npm /data/shieldpm /data/shieldpm/migration-backups || exit 1
 
-#tmp
-if [ -n "$(ls -A /data/nginx_custom 2> /dev/null)"  ]; then
-    cp -van /data/nginx_custom/* /data/custom_nginx
-fi
-rm -vrf /data/nginx_custom
-
-#tmp
-if [ -n "$(ls -A /data/etc 2> /dev/null)" ]; then
-    cp -van /data/etc/* /data
-    if [ -s /data/crowdsec/crowdsec.conf ]; then
-        sed -i "s|/data/etc|/data|g" /data/crowdsec/crowdsec.conf
-    fi
-fi
-rm -vrf /data/etc
-
-#tmp
-if [ -n "$(ls -A /data/npm 2> /dev/null)" ]; then
-    cp -van /data/npm/* /data/shieldpm
-fi
-rm -vrf /data/npm
-
-#tmp
-if [ -s /data/database.sqlite ]; then
-    mv -vn /data/database.sqlite /data/shieldpm/database.sqlite
-fi
+migrate_legacy_sqlite /data/database.sqlite /data/shieldpm/database.sqlite /data/shieldpm/migration-backups || exit 1
 
 if [ -s /data/shieldpm/database.sqlite ]; then
     sqlite-vaccum.js
@@ -200,16 +180,8 @@ if [ -s /data/keys.json ]; then
 fi
 
 
-if [ -n "$(ls -A /data/nginx/default_www 2> /dev/null)" ]; then
-    cp -van /data/nginx/default_www/* /data/html
-fi
-rm -vrf /data/nginx/default_www
-
-if [ -n "$(ls -A /data/custom_ssl 2> /dev/null)" ]; then
-    cp -van /data/custom_ssl/* /data/tls/custom
-fi
-rm -vrf /data/custom_ssl
-
+migrate_legacy_directory /data/nginx/default_www /data/html /data/shieldpm/migration-backups || exit 1
+migrate_legacy_directory /data/custom_ssl /data/tls/custom /data/shieldpm/migration-backups || exit 1
 
 if mountpoint -q /etc/letsencrypt; then
     cp -van /etc/letsencrypt/* /data/tls/certbot
@@ -221,30 +193,7 @@ fi
 find /data/tls/certbot/renewal -type f -name '*.conf' -exec sed -i "s|/etc/letsencrypt|/data/tls/certbot|g" {} \;
 find /data/tls/certbot/renewal -type f -name '*.conf' -exec sed -i "s|/data/tls/certbot/credentials|/data/certbot-credentials|g" {} \;
 
-if [ -d /data/tls/certbot/live ] && [ -d /data/tls/certbot/archive ]; then
-  find /data/tls/certbot/live ! -name "$(printf "*\n*")" -type f -name "*.pem" > tmp
-  while IFS= read -r cert
-  do
-    rm -vf "$cert"
-    ln -s "$(find /data/tls/certbot/archive/"$(echo "$cert" | sed "s|/data/tls/certbot/live/\(npm-[0-9]\+/.*\).pem|\1|g")"*.pem | sort -r | head -n1 | sed "s|/data/tls/certbot/|../../|g")" "$cert"
-  done < tmp
-  rm tmp
-fi
-
-rm -vrf /data/tls/certbot/crs
-rm -vrf /data/tls/certbot/keys
-if [ -d /data/tls/certbot/live ] && [ -d /data/tls/certbot/archive ]; then
-    certs_in_use="$(find /data/tls/certbot/live -type l -name "*.pem" -exec readlink -f {} \;)"
-    export certs_in_use
-    find /data/tls/certbot/archive ! -name "$(printf "*\n*")" -type f -name "*.pem" > tmp
-    while IFS= read -r archive
-    do
-        if ! echo "$certs_in_use" | grep -q "$archive"; then
-          rm -vf "$archive"
-        fi
-    done < tmp
-    rm tmp
-fi
+relink_certbot_certificates /data/tls/certbot || exit 1
 
 # can be used to delete certificates which expired more than 16 weeks ago
 #if [ "$FULLCLEAN" = "true" ]; then
@@ -345,63 +294,9 @@ else
 fi
 
 
-if [ "$DEFAULT_CERT_ID" = "0" ]; then
-    export DEFAULT_CERT=/data/tls/dummycert.pem
-    export DEFAULT_KEY=/data/tls/dummykey.pem
-    echo "no DEFAULT_CERT_ID set, using dummycerts."
-else
-    if [ -d "/data/tls/certbot/live/npm-$DEFAULT_CERT_ID" ]; then
-        if [ ! -s /data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/fullchain.pem ]; then
-            echo "/data/tls/certbot/live/npm-$DEFAULT_CERT_ID/fullchain.pem does not exist"
-            export DEFAULT_CERT=/data/tls/dummycert.pem
-            export DEFAULT_KEY=/data/tls/dummykey.pem
-            echo "using dummycerts."
-        else
-            export DEFAULT_CERT=/data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/fullchain.pem
-            echo "DEFAULT_CERT set to /data/tls/certbot/live/npm-$DEFAULT_CERT_ID/fullchain.pem"
-            if [ ! -s /data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/privkey.pem ]; then
-                echo "/data/tls/certbot/live/npm-$DEFAULT_CERT_ID/privkey.pem does not exist"
-                export DEFAULT_CERT=/data/tls/dummycert.pem
-                export DEFAULT_KEY=/data/tls/dummykey.pem
-                echo "using dummycerts."
-            else
-                export DEFAULT_KEY=/data/tls/certbot/live/npm-"$DEFAULT_CERT_ID"/privkey.pem
-                echo "DEFAULT_KEY set to /data/tls/certbot/live/npm-$DEFAULT_CERT_ID/privkey.pem"
-                if [ -s /data/tls/certbot/live/npm-"$DEFAULT_CERT_ID".der ] && [ "$ACME_OCSP_STAPLING" = "true" ]; then
-                     export DEFAULT_STAPLING_FILE=/data/tls/certbot/live/npm-"$DEFAULT_CERT_ID".der
-                     echo "DEFAULT_STAPLING_FILE set to /data/tls/certbot/live/npm-$DEFAULT_CERT_ID.der"
-                fi
-            fi
-        fi
-    elif [ -d "/data/tls/custom/npm-$DEFAULT_CERT_ID" ]; then
-        if [ ! -s /data/tls/custom/npm-"$DEFAULT_CERT_ID"/fullchain.pem ]; then
-            echo "/data/tls/custom/npm-$DEFAULT_CERT_ID/fullchain.pem does not exist"
-            export DEFAULT_CERT=/data/tls/dummycert.pem
-            export DEFAULT_KEY=/data/tls/dummykey.pem
-            echo "using dummycerts."
-        else
-            export DEFAULT_CERT=/data/tls/custom/npm-"$DEFAULT_CERT_ID"/fullchain.pem
-            echo "DEFAULT_CERT set to /data/tls/custom/npm-$DEFAULT_CERT_ID/fullchain.pem"
-            if [ ! -s /data/tls/custom/npm-"$DEFAULT_CERT_ID"/privkey.pem ]; then
-                echo "/data/tls/custom/npm-$DEFAULT_CERT_ID/privkey.pem does not exist"
-                export DEFAULT_CERT=/data/tls/dummycert.pem
-                export DEFAULT_KEY=/data/tls/dummykey.pem
-                echo "using dummycerts."
-            else
-                export DEFAULT_KEY=/data/tls/custom/npm-"$DEFAULT_CERT_ID"/privkey.pem
-                echo "DEFAULT_KEY set to /data/tls/custom/npm-$DEFAULT_CERT_ID/privkey.pem"
-                if [ -s /data/tls/custom/npm-"$DEFAULT_CERT_ID".der ] && [ "$CUSTOM_OCSP_STAPLING" = "true" ]; then
-                     export DEFAULT_STAPLING_FILE=/data/tls/custom/npm-"$DEFAULT_CERT_ID".der
-                     echo "DEFAULT_STAPLING_FILE set to /data/tls/custom/npm-$DEFAULT_CERT_ID.der"
-                fi
-            fi
-        fi
-    else
-        export DEFAULT_CERT=/data/tls/dummycert.pem
-        export DEFAULT_KEY=/data/tls/dummykey.pem
-        echo "cert with ID $DEFAULT_CERT_ID does not exist, using dummycerts."
-    fi
-fi
+select_default_certificate /data/tls "$DEFAULT_CERT_ID"
+echo "DEFAULT_CERT set to $DEFAULT_CERT"
+echo "DEFAULT_KEY set to $DEFAULT_KEY"
 
 if { [ "$DEFAULT_CERT" = "/data/tls/dummycert.pem" ] && [ "$DEFAULT_KEY" != "/data/tls/dummykey.pem" ]; } || { [ "$DEFAULT_CERT" != "/data/tls/dummycert.pem" ] && [ "$DEFAULT_KEY" = "/data/tls/dummykey.pem" ]; }; then
     export DEFAULT_CERT=/data/tls/dummycert.pem
@@ -421,124 +316,51 @@ fi
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /app/templates/default.conf
 sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /app/templates/default.conf
-if [ -s "$DEFAULT_STAPLING_FILE" ]; then
-    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /app/templates/default.conf
-    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /app/templates/default.conf
-fi
+configure_certificate_stapling /app/templates/default.conf || exit 1
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
 sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-if [ -s "$DEFAULT_STAPLING_FILE" ]; then
-    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-fi
+configure_certificate_stapling /usr/local/nginx/conf/conf.d/shieldpm.conf || exit 1
 
 sed -i "s|ssl_certificate .*|ssl_certificate $DEFAULT_CERT;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 sed -i "s|ssl_certificate_key .*|ssl_certificate_key $DEFAULT_KEY;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-if [ -s "$DEFAULT_STAPLING_FILE" ]; then
-    sed -i "s|#\?ssl_stapling|ssl_stapling|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-    sed -i "s|#\?ssl_stapling_file .*|ssl_stapling_file $DEFAULT_STAPLING_FILE;|g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-fi
+configure_certificate_stapling /usr/local/nginx/conf/conf.d/include/goaccess.conf || exit 1
 
-sed -i "s|#\?listen 0.0.0.0:81 |listen $NPM_IPV4_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-sed -i "s|#\?listen 0.0.0.0:91 |listen $GOA_IPV4_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
-
-if [ "$DISABLE_IPV6" = "true" ]; then
+configure_ui_listeners /usr/local/nginx/conf/conf.d/shieldpm.conf "$NPM_IPV4_BINDING" "$NPM_IPV6_BINDING" "$NPM_PORT" || exit 1
+configure_ui_listeners /usr/local/nginx/conf/conf.d/include/goaccess.conf "$GOA_IPV4_BINDING" "$GOA_IPV6_BINDING" "$GOA_PORT" || exit 1
+if [ "$DISABLE_IPV6" = true ]; then
     sed -i "s|ipv6=on;|ipv6=off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|#\?listen \[::\]:81 |#listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-    sed -i "s|#\?listen \[::\]:91 |#listen $GOA_IPV6_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
 else
-    sed -i "s|#\?listen \[::\]:81 |listen $NPM_IPV6_BINDING:$NPM_PORT |g" /usr/local/nginx/conf/conf.d/shieldpm.conf
-    sed -i "s|#\?listen \[::\]:91 |listen $GOA_IPV6_BINDING:$GOA_PORT |g" /usr/local/nginx/conf/conf.d/include/goaccess.conf
+    sed -i "s|ipv6=off;|ipv6=on;|g" /usr/local/nginx/conf/nginx.conf
 fi
 
-if [ "$GOA" = "true" ]; then
-    mkdir -vp /data/goaccess/data /data/goaccess/geoip
-    cp -van /usr/local/nginx/conf/conf.d/include/goaccess.conf /usr/local/nginx/conf/conf.d/goaccess.conf
-elif [ "$FULLCLEAN" = "true" ]; then
-    rm -vrf /data/goaccess
-fi
-
-if [ "$LISTEN_PROXY_PROTOCOL" = "true" ]; then
-  sed -i "s|real_ip_header.*|real_ip_header proxy_protocol;|g" /usr/local/nginx/conf/nginx.conf
-fi
 if [ "$NGINX_QUIC_BPF" = "true" ]; then
   sed -i "s|quic_bpf.*|quic_bpf on;|g" /usr/local/nginx/conf/nginx.conf
 else
   sed -i "s|quic_bpf.*|quic_bpf off;|g" /usr/local/nginx/conf/nginx.conf
 fi
-if [ "$NGINX_LOG_NOT_FOUND" = "true" ]; then
-    sed -i "s|log_not_found.*|log_not_found on;|g" /usr/local/nginx/conf/nginx.conf
+configure_nginx_toggles /usr/local/nginx/conf/nginx.conf || exit 1
+configure_nginx_modules /usr/local/nginx/conf/nginx.conf || exit 1
+configure_nginx_runtime /usr/local/nginx/conf/nginx.conf /run/shieldpm || exit 1
+configure_nginx_runtime /usr/local/nginx/conf/conf.d/shieldpm.conf /run/shieldpm || exit 1
+configure_nginx_runtime /usr/local/nginx/conf/conf.d/include/goaccess.conf /run/shieldpm || exit 1
+if [ "$GOA" = "true" ]; then
+    mkdir -vp /data/goaccess/data /data/goaccess/geoip
+    cp -a /usr/local/nginx/conf/conf.d/include/goaccess.conf /usr/local/nginx/conf/conf.d/goaccess.conf || exit 1
+else
+    rm -f /usr/local/nginx/conf/conf.d/goaccess.conf
+    if [ "$FULLCLEAN" = "true" ]; then
+        rm -vrf /data/goaccess
+    fi
 fi
-if [ "$NGINX_404_REDIRECT" = "true" ]; then
-    sed -i "s|#error_page 404|error_page 404|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_DISABLE_PROXY_BUFFERING" = "true" ]; then
-    sed -i "s|proxy_buffering.*|proxy_buffering off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|proxy_request_buffering.*|proxy_request_buffering off;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_WORKER_PROCESSES" != "auto" ]; then
-    sed -i "s|worker_processes.*|worker_processes $NGINX_WORKER_PROCESSES;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_WORKER_CONNECTIONS" != "512" ]; then
-    sed -i "s|worker_connections.*|worker_connections $NGINX_WORKER_CONNECTIONS;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_HSTS_SUBDOMAINS" = "false" ]; then
-    sed -i "s|includeSubDomains; ||g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$X_FRAME_OPTIONS" = "deny" ]; then
-    sed -i "s|SAMEORIGIN|DENY|g" /app/templates/_hsts.conf
-fi
-if [ "$X_FRAME_OPTIONS" = "none" ]; then
-    sed -i "s|#\?\(.*SAMEORIGIN\)|#\1|g" /app/templates/_hsts.conf
-fi
-
-if [ "$NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+libngx_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|brotli on;|brotli off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|unbrotli on;|unbrotli off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|brotli_static on;|brotli_static off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|zstd on;|zstd off;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|zstd_static on;|zstd_static off;|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_GEOIP2_MODULE" = "true" ]; then
-
-    sed -i "s|#\s*\(load_module.\+geoip2_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(geoip2 /data/nginx/GeoLite2-Country.mmdb {\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(auto_reload 5m;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*,'\"geoip_country_code\": \"\$geoip2_country_code\"'|,\"geoip_country_code\": \"\$geoip2_country_code\"|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(}\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(geoip2 /data/nginx/GeoLite2-City.mmdb {\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(.*\$geoip2_city_name default=Unknown source=\$remote_addr city names en;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-
-    sed -i "s|#\s*\(\$geoip2_country_code.\+country iso_code;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_NJS_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+js_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_NTLM_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+ngx_http_upstream_ntlm_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
-if [ "$NGINX_LOAD_VHOST_TRAFFIC_STATUS_MODULE" = "true" ]; then
-    sed -i "s|#\(load_module.\+ngx_http_vhost_traffic_status_module.so;\)|\1|g" /usr/local/nginx/conf/nginx.conf
-fi
+migrate_default_nginx_config /usr/local/nginx/conf/conf.d/default.conf /data/nginx/default.conf /data/shieldpm/migration-backups || exit 1
 
 if [ "$REGENERATE_ALL" = "true" ]; then
-    find /data/nginx -name "*.conf" -delete
-    touch /data/nginx/ip_ranges.conf
+    find /data/nginx/proxy_host /data/nginx/redirection_host /data/nginx/dead_host /data/nginx/stream -name "*.conf" -delete
 fi
 
 if [ "$LOGROTATE" = "true" ]; then
     sed -i "s|rotate [0-9]\+|rotate $LOGROTATIONS|g" /etc/logrotate
-    sed -i "s|access_log off; # http|access_log /data/nginx/access.log alog;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|access_log off; # stream|access_log /data/nginx/stream.log slog;|g" /usr/local/nginx/conf/nginx.conf
-    sed -i "s|#error_log|error_log|g" /usr/local/nginx/conf/nginx.conf
     touch /data/nginx/access.log \
           /data/nginx/json_access.log \
           /data/nginx/stream.log \
@@ -553,20 +375,22 @@ elif [ "$FULLCLEAN" = "true" ]; then
             /data/nginx/stream.log.*
 fi
 
-find /data/tls \
-     /data/access \
-     /data/shieldpm \
-     -not -perm 770 \
-     -exec chmod 770 {} \;
+# Certificates, credentials and database files are private to the service UID.
+find /data/tls /data/access /data/shieldpm -type d -not -perm 700 -exec chmod 700 {} +
+find /data/tls /data/access /data/shieldpm -type f -not -perm 600 -exec chmod 600 {} +
 
-rm -vf /usr/local/nginx/logs/nginx.pid
-rm -vf /run/*.sock
+rm -vf /usr/local/nginx/logs/nginx.pid /run/shieldpm/nginx/nginx.pid
+# Native hosts share /run with other services (including Docker). Only remove
+# sockets owned by ShieldPM; deleting another service's socket disconnects it.
+rm -vf /run/shieldpm/shieldpm.sock /run/shieldpm/goaccess.sock /run/shieldpm/php82.sock /run/shieldpm/php83.sock /run/shieldpm/php84.sock
+# Remove only obsolete ShieldPM socket names from previous releases.
+rm -vf /run/shieldpm.sock /run/goaccess.sock /run/php82.sock /run/php83.sock /run/php84.sock
 
 if [ "$PUID" != "0" ]; then
     if id -u npm > /dev/null 2>&1; then
-        usermod -u "$PUID" npm
+        usermod -u "$PUID" -d /run/shieldpm/home npm
     else
-        useradd -o -u "$PUID" -U -d /tmp/npmhome -s /sbin/nologin npm
+        useradd -o -u "$PUID" -U -d /run/shieldpm/home -s /sbin/nologin npm
     fi
     if [ -z "$(getent group npm | cut -d: -f3)" ]; then
         groupadd -f -g "$PGID" npm
@@ -583,13 +407,10 @@ if [ "$PUID" != "0" ]; then
         echo "ERROR: Unable to set group against the user properly"
         sleep inf
     fi
-    find /usr/local \
-         /data \
-         /run \
-         /tmp \
+    find /data \
          -not \( -uid "$PUID" -and -gid "$PGID" \) \
-         -exec chown "$PUID:$PGID" {} \;
-    chown "$PUID:$PGID" /proc/self/fd/2
+         -exec chown -h "$PUID:$PGID" {} +
+    export HOME=/run/shieldpm/home
     if [ "$PHP82" = "true" ]; then
         sed -i "s|;\?user =.*|;user = root|" /data/php/82/pool.d/www.conf
         sed -i "s|;\?group =.*|;group = root|" /data/php/82/pool.d/www.conf
@@ -605,7 +426,7 @@ if [ "$PUID" != "0" ]; then
     sed -i "s|user root;|#user root;|g" /usr/local/nginx/conf/nginx.conf
     exec gosu "$PUID:$PGID" launch.sh
 else
-    find /data -not \( -uid 0 -and -gid 0 \) -exec chown 0:0 {} \;
+    find /data -not \( -uid 0 -and -gid 0 \) -exec chown -h 0:0 {} +
     if [ "$PHP82" = "true" ]; then
         sed -i "s|;user =.*|user = root|" /data/php/82/pool.d/www.conf
         sed -i "s|;group =.*|group = root|" /data/php/82/pool.d/www.conf

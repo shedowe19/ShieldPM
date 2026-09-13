@@ -23,6 +23,7 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const conversation = useRef(0);
 	const clearChatLabel = intl.formatMessage({ id: "ai.chat.clear" });
 	const sendMessageLabel = intl.formatMessage({ id: "ai.chat.send" });
 
@@ -36,6 +37,7 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 	const handleSend = async () => {
 		if (!input.trim() || loading) return;
 
+		const generation = conversation.current;
 		const userMsg: ChatMessage = {
 			role: AI_ROLE.USER,
 			content: input,
@@ -51,19 +53,21 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 			const history = messages.map(({ id, ...rest }) => rest);
 
 			const response = await sendAiChat(userMsg.content, history);
+			if (generation !== conversation.current) return;
 
 			setMessages((prev) => [
 				...prev,
 				{ role: AI_ROLE.ASSISTANT, content: response.content, id: Math.random().toString(36).substring(7) },
 			]);
 		} catch (err) {
+			if (generation !== conversation.current) return;
 			const msg = err instanceof Error ? err.message : String(err);
 			setMessages((prev) => [
 				...prev,
 				{ role: AI_ROLE.ASSISTANT, content: `Error: ${msg}`, id: Math.random().toString(36).substring(7) },
 			]);
 		} finally {
-			setLoading(false);
+			if (generation === conversation.current) setLoading(false);
 		}
 	};
 
@@ -85,7 +89,11 @@ export function AiChat({ open, onOpenChange }: AiChatProps) {
 					<Button
 						variant="ghost"
 						size="icon"
-						onClick={() => setMessages([])}
+						onClick={() => {
+							conversation.current += 1;
+							setMessages([]);
+							setLoading(false);
+						}}
 						aria-label={clearChatLabel}
 						title={clearChatLabel}
 					>

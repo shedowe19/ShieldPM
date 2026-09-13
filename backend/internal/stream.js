@@ -1,6 +1,8 @@
+import fs from "node:fs";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import streamModel from "../models/stream.js";
 import internalAuditLog from "./audit-log.js";
@@ -11,6 +13,39 @@ import internalNginx from "./nginx.js";
 
 const omissions = () => {
 	return ["is_deleted", "owner.is_deleted", "certificate.is_deleted"];
+};
+
+/** Parse and validate an incoming port or inclusive port range. */
+const incomingPortRange = (value) => {
+	const text = String(value);
+	if (!/^\d{1,5}(?:-\d{1,5})?$/.test(text)) {
+		throw new errs.ValidationError("Incoming port must be a port or port range");
+	}
+	const [start, last] = text.split("-").map(Number);
+	const end = last ?? start;
+	if (start < 1 || end > 65535 || end < start) {
+		throw new errs.ValidationError("Incoming ports must be within 1-65535 and ranges must be ascending");
+	}
+	return [start, end];
+};
+
+/** Detect overlapping listeners for the requested protocols across all owners. */
+const findPortCollision = async (incomingPort, tcpForwarding, udpForwarding, ignoredId) => {
+	const [start, end] = incomingPortRange(incomingPort);
+	const streams = await streamModel
+		.query()
+		.where("is_deleted", 0)
+		.select("id", "incoming_port", "tcp_forwarding", "udp_forwarding");
+	return streams.find((stream) => {
+		if (
+			stream.id === ignoredId ||
+			!((tcpForwarding && stream.tcp_forwarding) || (udpForwarding && stream.udp_forwarding))
+		) {
+			return false;
+		}
+		const [otherStart, otherEnd] = incomingPortRange(stream.incoming_port);
+		return start <= otherEnd && otherStart <= end;
+	});
 };
 
 const internalStream = {
@@ -32,32 +67,17 @@ const internalStream = {
 		const create_certificate = data.certificate_id === "new";
 
 		if (create_certificate) {
+			if (!Array.isArray(data.domain_names) || data.domain_names.length === 0) {
+				throw new errs.ValidationError("Domain names are required when requesting a new certificate");
+			}
 			delete data.certificate_id;
 		}
 
 		await access.can("streams:create", data);
+		await internalHost.validateReferences(access, data);
 
 		// Check for port collision
-		const collision = await streamModel
-			.query()
-			.where("is_deleted", 0)
-			.andWhere("incoming_port", data.incoming_port)
-			.andWhere(function () {
-				this.where(function () {
-					if (data.tcp_forwarding) {
-						this.where("tcp_forwarding", 1);
-					} else {
-						this.where("tcp_forwarding", 2); // Impossible condition to skip
-					}
-				}).orWhere(function () {
-					if (data.udp_forwarding) {
-						this.where("udp_forwarding", 1);
-					} else {
-						this.where("udp_forwarding", 2); // Impossible condition to skip
-					}
-				});
-			})
-			.first();
+		const collision = await findPortCollision(data.incoming_port, data.tcp_forwarding, data.udp_forwarding);
 
 		if (collision) {
 			throw new errs.ValidationError(`Incoming port ${data.incoming_port} is already in use by another stream.`);
@@ -72,6 +92,7 @@ const internalStream = {
 		// streams aren't routed by domain name so don't store domain names in the DB
 		const data_no_domains = structuredClone(data);
 		delete data_no_domains.domain_names;
+		data_no_domains.meta = sanitizeHostMeta(data_no_domains.meta);
 
 		let row = await streamModel.query().insertAndFetch(/** @type {any} */ (data_no_domains));
 		row = utils.omitRow(omissions())(row);
@@ -96,14 +117,14 @@ const internalStream = {
 		});
 
 		// Configure nginx
-		await internalNginx.configure(streamModel, "stream", row);
+		row.meta = await internalNginx.configure(streamModel, "stream", row);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
 			action: "created",
 			object_type: "stream",
 			object_id: row.id,
-			meta: data,
+			meta: { ...data, meta: sanitizeHostMeta(data.meta) },
 		});
 
 		// Trigger GitOps auto-push
@@ -131,41 +152,25 @@ const internalStream = {
 		const create_certificate = thisData.certificate_id === "new";
 
 		if (create_certificate) {
+			if (!Array.isArray(thisData.domain_names) || thisData.domain_names.length === 0) {
+				throw new errs.ValidationError("Domain names are required when requesting a new certificate");
+			}
 			delete thisData.certificate_id;
 		}
 
 		await access.can("streams:update", thisData.id);
+		let row = await internalStream.get(access, { id: thisData.id });
+		await internalHost.validateReferences(access, thisData, row);
+		const incomingPort = thisData.incoming_port ?? row.incoming_port;
+		const tcpForwarding = thisData.tcp_forwarding ?? row.tcp_forwarding;
+		const udpForwarding = thisData.udp_forwarding ?? row.udp_forwarding;
 
 		// Check for port collision (excluding self)
-		const collision = await streamModel
-			.query()
-			.where("is_deleted", 0)
-			.andWhere("incoming_port", thisData.incoming_port)
-			.andWhere(function () {
-				this.where(function () {
-					if (thisData.tcp_forwarding) {
-						this.where("tcp_forwarding", 1);
-					} else {
-						this.where("tcp_forwarding", 2); // Impossible condition to skip
-					}
-				}).orWhere(function () {
-					if (thisData.udp_forwarding) {
-						this.where("udp_forwarding", 1);
-					} else {
-						this.where("udp_forwarding", 2); // Impossible condition to skip
-					}
-				});
-			})
-			.andWhereNot("id", thisData.id)
-			.first();
+		const collision = await findPortCollision(incomingPort, tcpForwarding, udpForwarding, thisData.id);
 
 		if (collision) {
-			throw new errs.ValidationError(
-				`Incoming port ${thisData.incoming_port} is already in use by another stream.`,
-			);
+			throw new errs.ValidationError(`Incoming port ${incomingPort} is already in use by another stream.`);
 		}
-
-		let row = await internalStream.get(access, { id: thisData.id });
 
 		if (row.id !== thisData.id) {
 			// Sanity check that something crazy hasn't happened
@@ -192,7 +197,10 @@ const internalStream = {
 			data,
 		);
 
-		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */ (thisData));
+		// Domain names are only used for certificate requests, never stored on streams.
+		if (thisData.meta) thisData.meta = sanitizeHostMeta(thisData.meta);
+		const persistedData = _.omit(thisData, ["domain_names"]);
+		let saved_row = await streamModel.query().patchAndFetchById(row.id, /** @type {any} */ (persistedData));
 
 		saved_row = utils.omitRow(omissions())(saved_row);
 
@@ -274,13 +282,24 @@ const internalStream = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await streamModel.query().where("id", row.id).patch({
-			is_deleted: 1,
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("stream", row.id));
+			await internalNginx.backupConfig("stream", row);
+			try {
+				await streamModel.transaction(async (trx) => {
+					await streamModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+					await internalNginx.deleteConfig("stream", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("stream", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("stream", row);
 		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("stream", row);
-		await internalNginx.reload();
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -329,7 +348,7 @@ const internalStream = {
 			);
 
 		// Configure nginx
-		await internalNginx.configure(streamModel, "stream", row);
+		row.meta = await internalNginx.configure(streamModel, "stream", row);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -362,18 +381,24 @@ const internalStream = {
 
 		row.enabled = 0;
 
-		await streamModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 0,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("stream", row);
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("stream", row.id));
+			await internalNginx.backupConfig("stream", row);
+			try {
+				await streamModel.transaction(async (trx) => {
+					await streamModel.query(trx).where("id", row.id).patch({ enabled: 0 });
+					await internalNginx.deleteConfig("stream", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("stream", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("stream", row);
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -422,11 +447,7 @@ const internalStream = {
 		let rows = await query;
 		rows = utils.omitRows(omissions())(rows);
 
-		if (typeof expand !== "undefined" && expand !== null && expand.indexOf("certificate") !== -1) {
-			return internalHost.cleanAllRowsCertificateMeta(rows);
-		}
-
-		return rows;
+		return internalHost.cleanAllRowsCertificateMeta(rows);
 	},
 
 	/**

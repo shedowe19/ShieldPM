@@ -24,8 +24,11 @@ router.get("/icons", jwtdecode(), (_req, res) => {
 router.get("/detect", jwtdecode(), (req, res) => {
 	const { port, hostname } = req.query;
 
-	if (!port) {
+	if (typeof port !== "string" || !/^\d+$/.test(port)) {
 		return res.status(400).json({ error: "Port is required" });
+	}
+	if (hostname !== undefined && typeof hostname !== "string") {
+		return res.status(400).json({ error: "Invalid hostname" });
 	}
 
 	const parsedPort = Number.parseInt(port, 10);

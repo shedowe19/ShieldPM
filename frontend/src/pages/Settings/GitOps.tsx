@@ -28,7 +28,7 @@ import {
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
-import { T } from "src/locale";
+import { intl, T } from "src/locale";
 import { GITOPS_AUTH_TYPE, type GitOpsAuthType } from "src/types/enums";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -52,6 +52,7 @@ export default function GitOps() {
 
 	const [isInitialized, setIsInitialized] = useState(false);
 	const [openRevertId, setOpenRevertId] = useState<string | null>(null);
+	const [isImportOpen, setIsImportOpen] = useState(false);
 
 	// Initialize form data when config is loaded
 	if (config && !isInitialized) {
@@ -59,7 +60,7 @@ export default function GitOps() {
 			enabled: config.enabled,
 			repositoryUrl: config.repositoryUrl || "",
 			branch: config.branch || "main",
-			authType: config.authType || GITOPS_AUTH_TYPE.HTTPS,
+			authType: GITOPS_AUTH_TYPE.HTTPS,
 			credentials: "", // Never populate credentials from server
 			autoPush: config.autoPush,
 			autoPullOnStartup: config.autoPullOnStartup,
@@ -67,15 +68,49 @@ export default function GitOps() {
 		setIsInitialized(true);
 	}
 
-	const handleSave = async () => {
+	const isPending =
+		updateConfig.isPending ||
+		testConnection.isPending ||
+		push.isPending ||
+		pull.isPending ||
+		revert.isPending ||
+		importConfig.isPending;
+	const hasUnsavedChanges =
+		Boolean(formData.credentials) ||
+		Boolean(
+			config &&
+				(formData.enabled !== config.enabled ||
+					formData.repositoryUrl !== (config.repositoryUrl || "") ||
+					formData.branch !== (config.branch || "main") ||
+					formData.authType !== (config.authType || GITOPS_AUTH_TYPE.HTTPS) ||
+					formData.autoPush !== config.autoPush ||
+					formData.autoPullOnStartup !== config.autoPullOnStartup),
+		);
+	const actionsDisabled = isPending || hasUnsavedChanges || Boolean(fetchError);
+
+	const handleSave = () => {
+		if (isPending || !config || fetchError) return;
 		const payload: Partial<typeof formData> = { ...formData };
 		if (!payload.credentials) {
 			delete payload.credentials; // Don't send empty credentials
 		}
-		updateConfig.mutate(payload);
+		updateConfig.mutate(payload, {
+			onSuccess: () => setFormData((current) => ({ ...current, credentials: "" })),
+		});
 	};
 
 	if (isLoading) return <Loading noLogo />;
+	if (!config) {
+		return (
+			<Alert variant="destructive">
+				<AlertCircle className="h-4 w-4" />
+				<AlertTitle>
+					<T id="error.title" />
+				</AlertTitle>
+				<AlertDescription>{fetchError?.message || <T id="error.unknown" />}</AlertDescription>
+			</Alert>
+		);
+	}
 
 	return (
 		<div className="space-y-6">
@@ -90,181 +125,156 @@ export default function GitOps() {
 						<T id="settings.gitops.description" />
 					</CardDescription>
 				</CardHeader>
-				<CardContent className="space-y-6">
-					{fetchError && (
-						<Alert variant="destructive">
-							<AlertCircle className="h-4 w-4" />
-							<AlertTitle>Error</AlertTitle>
-							<AlertDescription>{fetchError.message}</AlertDescription>
-						</Alert>
-					)}
+				<CardContent>
+					<fieldset disabled={isPending || Boolean(fetchError)} className="space-y-6">
+						{fetchError && (
+							<Alert variant="destructive">
+								<AlertCircle className="h-4 w-4" />
+								<AlertTitle>Error</AlertTitle>
+								<AlertDescription>{fetchError.message}</AlertDescription>
+							</Alert>
+						)}
 
-					{config?.lastError && (
-						<Alert variant="destructive">
-							<AlertCircle className="h-4 w-4" />
-							<AlertTitle>Last Sync Error</AlertTitle>
-							<AlertDescription>{config.lastError}</AlertDescription>
-						</Alert>
-					)}
+						{config?.lastError && (
+							<Alert variant="destructive">
+								<AlertCircle className="h-4 w-4" />
+								<AlertTitle>Last Sync Error</AlertTitle>
+								<AlertDescription>{config.lastError}</AlertDescription>
+							</Alert>
+						)}
 
-					{/* Enable Toggle */}
-					<div className="flex items-center space-x-2">
-						<Switch
-							checked={formData.enabled}
-							onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
-							id="enabled"
-						/>
-						<Label htmlFor="enabled">
-							<T id="settings.gitops.enable" />
-						</Label>
-					</div>
-
-					{/* Repository URL */}
-					<div className="space-y-2">
-						<Label htmlFor="repositoryUrl">
-							<T id="settings.gitops.repository_url" />
-						</Label>
-						<Input
-							id="repositoryUrl"
-							value={formData.repositoryUrl}
-							onChange={(e) => setFormData({ ...formData, repositoryUrl: e.target.value })}
-							placeholder="https://github.com/user/shieldpm-backup.git"
-						/>
-					</div>
-
-					{/* Branch */}
-					<div className="space-y-2">
-						<Label htmlFor="branch">
-							<T id="settings.gitops.branch" />
-						</Label>
-						<Input
-							id="branch"
-							value={formData.branch}
-							onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-							placeholder="main"
-						/>
-					</div>
-
-					{/* Auth Type */}
-					<div className="space-y-2">
-						<Label>
-							<T id="settings.gitops.auth_type" />
-						</Label>
-						<div className="flex gap-4">
-							{[GITOPS_AUTH_TYPE.HTTPS, GITOPS_AUTH_TYPE.SSH].map((option) => (
-								<label
-									key={option}
-									className={`
-										relative flex cursor-pointer rounded-lg border bg-card p-4 shadow-sm focus:outline-none 
-										${formData.authType === option ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/50"}
-									`}
-								>
-									<input
-										type="radio"
-										name="authType"
-										value={option}
-										className="sr-only"
-										checked={formData.authType === option}
-										onChange={() => setFormData({ ...formData, authType: option })}
-									/>
-									<span className="uppercase text-sm font-medium">
-										{option === GITOPS_AUTH_TYPE.HTTPS ? "HTTPS (PAT)" : "SSH Key"}
-									</span>
-								</label>
-							))}
+						{/* Enable Toggle */}
+						<div className="flex items-center space-x-2">
+							<Switch
+								checked={formData.enabled}
+								onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
+								id="enabled"
+							/>
+							<Label htmlFor="enabled">
+								<T id="settings.gitops.enable" />
+							</Label>
 						</div>
-					</div>
 
-					{/* Credentials */}
-					<div className="space-y-2">
-						<Label htmlFor="credentials">
-							{formData.authType === GITOPS_AUTH_TYPE.HTTPS ? "Personal Access Token" : "SSH Private Key"}
-						</Label>
-						{formData.authType === GITOPS_AUTH_TYPE.HTTPS ? (
+						{/* Repository URL */}
+						<div className="space-y-2">
+							<Label htmlFor="repositoryUrl">
+								<T id="settings.gitops.repository_url" />
+							</Label>
+							<Input
+								id="repositoryUrl"
+								value={formData.repositoryUrl}
+								onChange={(e) => setFormData({ ...formData, repositoryUrl: e.target.value })}
+								placeholder="https://github.com/user/shieldpm-backup.git"
+							/>
+						</div>
+
+						{/* Branch */}
+						<div className="space-y-2">
+							<Label htmlFor="branch">
+								<T id="settings.gitops.branch" />
+							</Label>
+							<Input
+								id="branch"
+								value={formData.branch}
+								onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+								placeholder="main"
+							/>
+						</div>
+
+						{/* GitOps currently supports HTTP(S) token authentication only. */}
+						<div className="space-y-2">
+							<Label>
+								<T id="settings.gitops.auth_type" />
+							</Label>
+							<p className="text-sm">HTTPS (PAT)</p>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="credentials">Personal Access Token</Label>
 							<Input
 								id="credentials"
 								type="password"
 								value={formData.credentials}
 								onChange={(e) => setFormData({ ...formData, credentials: e.target.value })}
 								placeholder="ghp_... or glpat-..."
+								autoComplete="new-password"
 							/>
-						) : (
-							<textarea
-								id="credentials"
-								className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-mono"
-								value={formData.credentials}
-								onChange={(e) => setFormData({ ...formData, credentials: e.target.value })}
-								placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-							/>
+							{config?.encryptedCredentials === "[REDACTED]" && (
+								<p className="text-xs text-muted-foreground">
+									Credentials are already configured. Leave empty to keep existing.
+								</p>
+							)}
+						</div>
+
+						{/* Auto Options */}
+						<div className="rounded-lg border p-4 space-y-4">
+							<div className="flex items-center space-x-2">
+								<Switch
+									checked={formData.autoPush}
+									onCheckedChange={(checked) => setFormData({ ...formData, autoPush: checked })}
+									id="autoPush"
+								/>
+								<Label htmlFor="autoPush">
+									<T id="settings.gitops.auto_push" />
+								</Label>
+							</div>
+							<div className="flex items-center space-x-2">
+								<Switch
+									checked={formData.autoPullOnStartup}
+									onCheckedChange={(checked) =>
+										setFormData({ ...formData, autoPullOnStartup: checked })
+									}
+									id="autoPullOnStartup"
+								/>
+								<Label htmlFor="autoPullOnStartup">
+									<T id="settings.gitops.auto_pull" />
+								</Label>
+							</div>
+						</div>
+
+						{/* Status Display */}
+						{config?.lastSync && (
+							<div className="flex items-center gap-2 text-sm text-muted-foreground">
+								<Clock className="h-4 w-4" />
+								<span>Last Sync: {new Date(config.lastSync).toLocaleString()}</span>
+							</div>
 						)}
-						{config?.encryptedCredentials === "[REDACTED]" && (
-							<p className="text-xs text-muted-foreground">
-								Credentials are already configured. Leave empty to keep existing.
+
+						{hasUnsavedChanges && (
+							<p role="status" className="text-sm text-muted-foreground">
+								<T id="settings.gitops.save-before-action" />
 							</p>
 						)}
-					</div>
 
-					{/* Auto Options */}
-					<div className="rounded-lg border p-4 space-y-4">
-						<div className="flex items-center space-x-2">
-							<Switch
-								checked={formData.autoPush}
-								onCheckedChange={(checked) => setFormData({ ...formData, autoPush: checked })}
-								id="autoPush"
-							/>
-							<Label htmlFor="autoPush">
-								<T id="settings.gitops.auto_push" />
-							</Label>
+						{/* Action Buttons */}
+						<div className="flex flex-wrap gap-2 pt-4">
+							<Button
+								variant="outline"
+								onClick={() => testConnection.mutate()}
+								disabled={actionsDisabled || !config.repositoryUrl}
+							>
+								{testConnection.isPending ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<TestTube className="mr-2 h-4 w-4" />
+								)}
+								<T id="settings.gitops.test_connection" />
+							</Button>
+
+							<Button
+								onClick={handleSave}
+								disabled={isPending || Boolean(fetchError)}
+								className="bg-emerald-600 hover:bg-emerald-700 text-white"
+							>
+								{updateConfig.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+								<T id="save" />
+							</Button>
 						</div>
-						<div className="flex items-center space-x-2">
-							<Switch
-								checked={formData.autoPullOnStartup}
-								onCheckedChange={(checked) => setFormData({ ...formData, autoPullOnStartup: checked })}
-								id="autoPullOnStartup"
-							/>
-							<Label htmlFor="autoPullOnStartup">
-								<T id="settings.gitops.auto_pull" />
-							</Label>
-						</div>
-					</div>
-
-					{/* Status Display */}
-					{config?.lastSync && (
-						<div className="flex items-center gap-2 text-sm text-muted-foreground">
-							<Clock className="h-4 w-4" />
-							<span>Last Sync: {new Date(config.lastSync).toLocaleString()}</span>
-						</div>
-					)}
-
-					{/* Action Buttons */}
-					<div className="flex flex-wrap gap-2 pt-4">
-						<Button
-							variant="outline"
-							onClick={() => testConnection.mutate()}
-							disabled={testConnection.isPending || !formData.repositoryUrl}
-						>
-							{testConnection.isPending ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : (
-								<TestTube className="mr-2 h-4 w-4" />
-							)}
-							<T id="settings.gitops.test_connection" />
-						</Button>
-
-						<Button
-							onClick={handleSave}
-							disabled={updateConfig.isPending}
-							className="bg-emerald-600 hover:bg-emerald-700 text-white"
-						>
-							{updateConfig.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-							<T id="save" />
-						</Button>
-					</div>
+					</fieldset>
 				</CardContent>
 			</Card>
 
 			{/* Actions Card */}
-			{formData.enabled && (
+			{config.enabled && (
 				<Card>
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2 text-lg">
@@ -278,7 +288,7 @@ export default function GitOps() {
 								variant="outline"
 								className="h-auto py-4 flex-col"
 								onClick={() => push.mutate(undefined)}
-								disabled={push.isPending}
+								disabled={actionsDisabled}
 							>
 								{push.isPending ? (
 									<Loader2 className="h-6 w-6 animate-spin mb-2" />
@@ -297,7 +307,7 @@ export default function GitOps() {
 								variant="outline"
 								className="h-auto py-4 flex-col"
 								onClick={() => pull.mutate()}
-								disabled={pull.isPending}
+								disabled={actionsDisabled}
 							>
 								{pull.isPending ? (
 									<Loader2 className="h-6 w-6 animate-spin mb-2" />
@@ -310,11 +320,12 @@ export default function GitOps() {
 								<span className="text-xs text-muted-foreground mt-1">Pull latest from remote</span>
 							</Button>
 
-							<Dialog>
+							<Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
 								<DialogTrigger asChild>
 									<Button
 										variant="outline"
 										className="h-auto py-4 flex-col border-amber-500/50 hover:border-amber-500"
+										disabled={actionsDisabled}
 									>
 										<RotateCcw className="h-6 w-6 mb-2 text-amber-500" />
 										<span className="font-medium">
@@ -338,8 +349,15 @@ export default function GitOps() {
 											<Button variant="outline">Cancel</Button>
 										</DialogClose>
 										<Button
-											onClick={() => importConfig.mutate(true)}
+											onClick={() =>
+												importConfig.mutate(true, {
+													onSuccess: (result) => {
+														if (result.success) setIsImportOpen(false);
+													},
+												})
+											}
 											className="bg-amber-600 hover:bg-amber-700"
+											disabled={actionsDisabled}
 										>
 											Import
 										</Button>
@@ -382,7 +400,15 @@ export default function GitOps() {
 												onOpenChange={(open) => setOpenRevertId(open ? commit.sha : null)}
 											>
 												<DialogTrigger asChild>
-													<Button variant="ghost" size="sm" className="ml-2">
+													<Button
+														variant="ghost"
+														size="sm"
+														className="ml-2"
+														disabled={actionsDisabled}
+														aria-label={intl.formatMessage({
+															id: "settings.gitops.revert",
+														})}
+													>
 														<RotateCcw className="h-4 w-4" />
 													</Button>
 												</DialogTrigger>
@@ -401,11 +427,13 @@ export default function GitOps() {
 														<Button
 															onClick={() =>
 																revert.mutate(commit.sha, {
-																	onSuccess: () => setOpenRevertId(null),
+																	onSuccess: (result) => {
+																		if (result.success) setOpenRevertId(null);
+																	},
 																})
 															}
 															className="bg-amber-600 hover:bg-amber-700"
-															disabled={revert.isPending}
+															disabled={actionsDisabled}
 														>
 															{revert.isPending && openRevertId === commit.sha && (
 																<Loader2 className="mr-2 h-4 w-4 animate-spin" />

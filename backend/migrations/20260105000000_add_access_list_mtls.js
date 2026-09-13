@@ -33,7 +33,7 @@ const up = async (knex) => {
 	for (const row of rows) {
 		let meta = {};
 		try {
-			meta = JSON.parse(row.meta);
+			meta = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
 		} catch (_e) {
 			// ignore invalid json
 		}
@@ -64,8 +64,27 @@ const up = async (knex) => {
  * @param   {Object} knex
  * @returns {Promise}
  */
-const down = (knex) => {
+const down = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
+	const rows = await knex("access_list").select("id", "meta", "mtls_enabled", "mtls_certificate");
+	for (const row of rows) {
+		let meta = {};
+		try {
+			const parsed = typeof row.meta === "string" ? JSON.parse(row.meta) : row.meta;
+			if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) meta = parsed;
+		} catch {
+			// Match up(): malformed legacy metadata must not prevent schema rollback.
+		}
+		await knex("access_list")
+			.where("id", row.id)
+			.update({
+				meta: JSON.stringify({
+					...meta,
+					mtls_enabled: !!row.mtls_enabled,
+					mtls_certificate: row.mtls_certificate,
+				}),
+			});
+	}
 	return knex.schema.table("access_list", (table) => {
 		table.dropColumn("mtls_enabled");
 		table.dropColumn("mtls_certificate");

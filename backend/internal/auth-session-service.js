@@ -157,7 +157,7 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 
 	const lookup = AuthSession.buildLookup(rawRefreshToken);
 
-	return transaction(AuthSession.knex(), async (trx) => {
+	const result = await transaction(AuthSession.knex(), async (trx) => {
 		const session = await AuthSession.query(trx).findOne(lookup).withGraphFetched("user");
 
 		if (!session) {
@@ -170,12 +170,17 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 
 		if (dayjs(session.expires_at).isBefore(dayjs())) {
 			await revokeSession(session.id, "expired_refresh_token", trx);
-			throw new errs.AuthError(TOKEN_EXPIRED_MESSAGE);
+			return { error: new errs.AuthError(TOKEN_EXPIRED_MESSAGE) };
 		}
 
 		if (session.rotated_at || session.replaced_by_session_id) {
 			await revokeFamily(session.family_id, "refresh_token_replay_detected", trx);
-			throw new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE);
+			return { error: new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE) };
+		}
+
+		if (!session.user || session.user.is_deleted || session.user.is_disabled) {
+			await revokeFamily(session.family_id, "user_unavailable", trx);
+			return { error: new errs.AuthError("User cannot be loaded for refresh token") };
 		}
 
 		const nextRefreshToken = buildRefreshToken();
@@ -196,12 +201,13 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 				last_used_at: db().fn.now(),
 			})
 			.where("id", session.id)
+			.whereNull("revoked_at")
 			.whereNull("rotated_at")
 			.whereNull("replaced_by_session_id");
 
 		if (updatedRows === 0) {
 			await revokeFamily(session.family_id, "refresh_token_rotation_race", trx);
-			throw new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE);
+			return { error: new errs.UnauthorizedError(TOKEN_REPLAY_MESSAGE) };
 		}
 
 		const accessToken = await buildAccessToken(session.user, session.scope);
@@ -213,6 +219,13 @@ const refreshTokenPair = async (rawRefreshToken, meta = {}) => {
 			user: session.user,
 		});
 	});
+
+	// Throw only after the transaction commits so security revocations survive
+	// a rejected refresh. Throwing inside the callback rolls them back.
+	if ("error" in result) {
+		throw result.error;
+	}
+	return result;
 };
 
 export default {

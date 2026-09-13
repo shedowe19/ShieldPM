@@ -742,5 +742,6 @@
 	"wireguard.settings.subnet": "VPN 子网",
 	"wireguard.settings.serverAddress": "服务器地址",
 	"wireguard.settings.title": "WireGuard 设置",
-	"wireguard.title": "WireGuard 隧道"
+	"wireguard.title": "WireGuard 隧道",
+	"settings.gitops.save-before-action": "请先保存配置更改，再测试连接或执行 Git 操作。"
 }

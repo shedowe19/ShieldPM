@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# Certbot discovers dynamically installed DNS plugins without changing system Python.
+export PYTHONPATH="/data/certbot-plugins${PYTHONPATH:+:$PYTHONPATH}"
+
 echo "
 -------------------------------------
 User:     $(whoami)
@@ -17,7 +20,7 @@ if [ -z "$(find /data/tls/certbot/accounts/"$(echo "$ACME_SERVER" | sed "s|^http
             sleep inf
         fi
 
-        ZS_EAB="$(curl -sSL https://api.zerossl.com/acme/eab-credentials-email --data "email=$ACME_EMAIL")"
+        ZS_EAB="$(curl --fail --silent --show-error --location --max-time 30 https://api.zerossl.com/acme/eab-credentials-email --data-urlencode "email=$ACME_EMAIL")" || exit 1
         export ZS_EAB
         ACME_EAB_KID="$(echo "$ZS_EAB" | jq -r .eab_kid)"
         export ACME_EAB_KID
@@ -56,7 +59,7 @@ if ! nginx -tq; then
     for conf in /data/nginx/proxy_host/*.conf /data/nginx/redirection_host/*.conf /data/nginx/dead_host/*.conf /data/nginx/stream/*.conf; do
         if [ -f "$conf" ]; then
             # Extract certificate paths referenced in the config
-            missing_certs=$(grep -oE '/data/tls/certbot/live/npm-[0-9]+/fullchain\.pem|/data/tls/custom/npm-[0-9]+/fullchain\.pem' "$conf" || true)
+            missing_certs=$(grep -oE '/data/tls/(certbot/live|custom|internal)/npm-[0-9]+/(fullchain|privkey)\.pem' "$conf" || true)
             for cert in $missing_certs; do
                 if [ ! -f "$cert" ]; then
                     echo "Deleting $conf because $cert is missing!"
@@ -106,11 +109,10 @@ fi
 
 if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
     echo "Starting Anubis ($ANUBIS_BIN)..."
-    mkdir -p /run/anubis
-    mkdir -p /run/nginx
+    mkdir -p /run/shieldpm
     mkdir -p /data/anubis
 
-    ANUBIS_ARGS="-bind-network unix -bind /run/anubis/nginx.sock -target unix:///run/nginx/anubis-upstream.sock -socket-mode 0777"
+    ANUBIS_ARGS="-bind-network unix -bind /run/shieldpm/anubis.sock -target unix:///run/shieldpm/anubis-upstream.sock -socket-mode 0777"
 
     # Check for custom policy file
     if [ -f /data/anubis/policy.yaml ]; then
@@ -124,7 +126,7 @@ if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
     # Run Anubis in a loop to restart on failure (clearing socket first)
     (
       while true; do
-        rm -f /run/anubis/nginx.sock
+        rm -f /run/shieldpm/anubis.sock
         # shellcheck disable=SC2086
         $ANUBIS_BIN $ANUBIS_ARGS
         sleep 1
@@ -132,15 +134,15 @@ if [ "${ANUBIS_ENABLED:-true}" = "true" ] && [ -n "$ANUBIS_BIN" ]; then
     ) &
 fi
 aio.sh &
-if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; done; fi &
-if [ "$PHP83" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm8.3 -c /data/php/83 -y /data/php/83/php-fpm.conf -FOR; done; fi &
-if [ "$PHP84" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm8.4 -c /data/php/84 -y /data/php/84/php-fpm.conf -FOR; done; fi &
+if [ "$PHP82" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/82/conf.d php-fpm8.2 -c /data/php/82 -y /data/php/82/php-fpm.conf -FOR; sleep 1; done; fi &
+if [ "$PHP83" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/83/conf.d php-fpm8.3 -c /data/php/83 -y /data/php/83/php-fpm.conf -FOR; sleep 1; done; fi &
+if [ "$PHP84" = "true" ]; then while true; do PHP_INI_SCAN_DIR=/data/php/84/conf.d php-fpm8.4 -c /data/php/84 -y /data/php/84/php-fpm.conf -FOR; sleep 1; done; fi &
 if [ "$LOGROTATE" = "true" ]; then while true; do logrotate --verbose --state /data/logrotate.state /etc/logrotate; sleep 25h; done; fi &
 # shellcheck disable=SC2086
 if [ "$GOA" = "true" ]; then while true; do if [ -f /data/nginx/json_access.log ]; then tail -F /data/nginx/json_access.log | jq --unbuffered -R -r 'try (fromjson | "[" + .time_local + "] " + .http_host + " " + .remote_addr + " " + .request_time + " \"" + (.request | gsub("\""; "\\\"")) + "\" " + .status + " " + .body_bytes_sent + " " + .bytes_sent + " \"" + (.http_referer | gsub("\""; "\\\"")) + "\" \"" + (.http_user_agent | gsub("\""; "\\\"")) + "\"") catch empty' | goaccess --no-global-config --num-tests=0 --tz="$TZ" --time-format="%H:%M:%S" \
-                    --date-format="%d/%b/%Y" --log-format='[%d:%t %^] %v %h %T "%r" %s %b %b "%R" "%u"' --unix-socket=/run/goaccess.sock --log-file=- \
-                    --real-time-html --output=/tmp/goa/index.html --persist --restore --db-path=/data/goaccess/data \
-                    --browsers-file=/etc/goaccess/browsers.list --browsers-file=/etc/goaccess/podcast.list $GOACLA; else sleep 10s; fi; done; fi &
+                    --date-format="%d/%b/%Y" --log-format='[%d:%t %^] %v %h %T "%r" %s %b %b "%R" "%u"' --unix-socket=/run/shieldpm/goaccess.sock --log-file=- \
+                    --real-time-html --output=/run/shieldpm/goa/index.html --persist --restore --db-path=/data/goaccess/data \
+                    --browsers-file=/etc/goaccess/browsers.list --browsers-file=/etc/goaccess/podcast.list $GOACLA; sleep 1; else sleep 10s; fi; done; fi &
 while true; do nginx -e stderr; sleep 1; done &
 while true; do
   cd /app || exit 1

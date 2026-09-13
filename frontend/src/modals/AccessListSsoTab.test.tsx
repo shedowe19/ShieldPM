@@ -100,49 +100,52 @@ describe("AccessListSsoTab", () => {
 		});
 	});
 
-	it("keeps OAuth2 provider-specific fields and the unverified-email option bound to the access-list form", async () => {
-		render(
-			<Formik<Values>
-				initialValues={{
-					authType: ACCESS_LIST_AUTH_TYPE.NONE,
-					authentikHost: "",
-					oauth2ClientId: "",
-					oauth2InsecureOidcAllowUnverifiedEmail: false,
-					oauth2OidcIssuerUrl: "",
-					oauth2Provider: "google",
-					oauth2Scope: "",
-				}}
-				onSubmit={() => {}}
-			>
-				<Tabs defaultValue={ACCESS_LIST_TAB.SSO}>
-					<AccessListSsoTab />
-					<FormState />
-				</Tabs>
-			</Formik>,
-		);
+	it.each(["oidc", "keycloak-oidc"])(
+		"keeps %s provider fields and the unverified-email option bound to the access-list form",
+		async (provider) => {
+			render(
+				<Formik<Values>
+					initialValues={{
+						authType: ACCESS_LIST_AUTH_TYPE.NONE,
+						authentikHost: "",
+						oauth2ClientId: "",
+						oauth2InsecureOidcAllowUnverifiedEmail: false,
+						oauth2OidcIssuerUrl: "",
+						oauth2Provider: "google",
+						oauth2Scope: "",
+					}}
+					onSubmit={() => {}}
+				>
+					<Tabs defaultValue={ACCESS_LIST_TAB.SSO}>
+						<AccessListSsoTab />
+						<FormState />
+					</Tabs>
+				</Formik>,
+			);
 
-		fireEvent.change(screen.getByRole("combobox"), {
-			target: { value: ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY },
-		});
-		fireEvent.change(screen.getAllByRole("combobox")[1], { target: { value: "oidc" } });
-		fireEvent.change(screen.getByLabelText("OIDC Issuer URL"), {
-			target: { value: "https://issuer.example.test" },
-		});
-		fireEvent.change(screen.getByLabelText("Client ID"), { target: { value: "oauth-client" } });
-		fireEvent.change(screen.getByLabelText("Scope"), { target: { value: "openid email" } });
-		fireEvent.click(screen.getByRole("button", { name: "oauth2InsecureOidcAllowUnverifiedEmail" }));
-
-		await waitFor(() => {
-			expect(getFormState()).toMatchObject({
-				authType: ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY,
-				oauth2ClientId: "oauth-client",
-				oauth2InsecureOidcAllowUnverifiedEmail: true,
-				oauth2OidcIssuerUrl: "https://issuer.example.test",
-				oauth2Provider: "oidc",
-				oauth2Scope: "openid email",
+			fireEvent.change(screen.getByRole("combobox"), {
+				target: { value: ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY },
 			});
-		});
-	});
+			fireEvent.change(screen.getAllByRole("combobox")[1], { target: { value: provider } });
+			fireEvent.change(screen.getByLabelText("OIDC Issuer URL"), {
+				target: { value: "https://issuer.example.test" },
+			});
+			fireEvent.change(screen.getByLabelText("Client ID"), { target: { value: "oauth-client" } });
+			fireEvent.change(screen.getByLabelText("Scope"), { target: { value: "openid email" } });
+			fireEvent.click(screen.getByRole("button", { name: "oauth2InsecureOidcAllowUnverifiedEmail" }));
+
+			await waitFor(() => {
+				expect(getFormState()).toMatchObject({
+					authType: ACCESS_LIST_AUTH_TYPE.OAUTH2_PROXY,
+					oauth2ClientId: "oauth-client",
+					oauth2InsecureOidcAllowUnverifiedEmail: true,
+					oauth2OidcIssuerUrl: "https://issuer.example.test",
+					oauth2Provider: provider,
+					oauth2Scope: "openid email",
+				});
+			});
+		},
+	);
 
 	it("keeps native OIDC credentials bound to the access-list form", async () => {
 		render(

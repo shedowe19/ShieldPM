@@ -45,6 +45,7 @@ describe("createProxyHostInitialValues", () => {
 			maintenanceStart: "",
 			note: "",
 			phpEnabled: false,
+			phpOverrideIni: "",
 			phpVersion: PHP_VERSION.PHP83,
 			sslForced: false,
 			terminalAuthType: TERMINAL_AUTH_TYPE.PASSWORD,
@@ -98,12 +99,13 @@ describe("createProxyHostInitialValues", () => {
 				},
 			],
 			maintenanceActive: true,
-			maintenanceEnd: "2026-07-12T10:30:00.000Z",
+			maintenanceEnd: new Date(2026, 6, 12, 10, 30, 0).toISOString(),
 			maintenanceOnFailure: true,
 			maintenanceReason: "Deploy",
-			maintenanceStart: "2026-07-12T09:30:00Z",
+			maintenanceStart: new Date(2026, 6, 12, 9, 30, 0).toISOString(),
 			note: "Production host",
 			phpEnabled: true,
+			phpOverrideIni: "memory_limit=512M",
 			phpVersion: PHP_VERSION.PHP84,
 			securityCrowdsec: true,
 			sslForced: true,
@@ -164,15 +166,23 @@ describe("createProxyHostInitialValues", () => {
 			maintenanceStart: "2026-07-12T09:30:00",
 			note: "Production host",
 			phpEnabled: true,
+			phpOverrideIni: "memory_limit=512M",
 			phpVersion: PHP_VERSION.PHP84,
 			sslForced: true,
 			terminalAuthType: TERMINAL_AUTH_TYPE.KEY,
 			terminalHost: "terminal.example.test",
 			terminalPassword: "",
 			terminalPort: 2222,
-			terminalPrivateKey: "private-key",
+			terminalPrivateKey: "",
 			terminalUsername: "deploy",
 			turboLoader: true,
+		});
+	});
+
+	it("preserves explicitly disabled rate limits", () => {
+		expect(createProxyHostInitialValues({ advLimitReqRate: 0, advLimitReqBurst: 0 })).toMatchObject({
+			advLimitReqRate: 0,
+			advLimitReqBurst: 0,
 		});
 	});
 });

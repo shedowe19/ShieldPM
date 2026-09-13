@@ -21,15 +21,19 @@ Diese Middleware wird von `backend/app.js` verwendet und bildet die HTTP-Request
 
 ### jwt.js
 
-Bindet JWT-Token an `res.locals.user` und `res.locals.csrfToken`.
+Übernimmt einen Bearer-Token aus dem Authorization-Header oder das `shieldpm_jwt`-Cookie nach `res.locals.token`. Die eigentliche Prüfung erfolgt im Access-Layer.
 
 ### jwt-decode.js
 
-Dekodiert JWT aus `Authorization: Bearer <token>` Header.
+Erzeugt und lädt `Access`, einschließlich Token-, Kontostatus- und Scope-Prüfung, und stellt ihn als `res.locals.access` bereit.
 
 ### demo.js
 
-Aktiviert Demo-Modus wenn `isDemoMode()` true zurückgibt. Alle POST/PUT/DELETE requests werden blockiert.
+Wendet bei aktivem Demo-Modus die Sperren für Benutzeränderungen, kritische Einstellungen, Integrationen und interne Weiterleitungsziele an. Einzelne Demo-Hostaktionen bleiben gemäß den Prüfregeln zulässig.
+
+### Reihenfolge in app.js
+
+Das globale IP-Limit läuft nach Helmet und vor Authentifizierung, Datenbankabfragen, CSRF-Erzeugung und Body-Parsing. Die CSRF-Middleware liest den Setup-Status nur für `POST /users` beziehungsweise `POST /api/users`, weil ausschließlich dort eine Ausnahme für die Ersteinrichtung möglich ist. Der Health-Endpunkt liest den Status weiterhin selbst. Der Konfigurations-Fingerprint wird bei der Hostregeneration vollständig geschrieben, bevor der Start als abgeschlossen gilt.
 
 ### user-id-from-me.js
 

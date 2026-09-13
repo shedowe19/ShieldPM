@@ -6,7 +6,7 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 
 ## Kontext
 
-`backend/internal/2fa-service.js` (676 Zeilen) kapselt sämtliche 2FA-Operationen. Es wird direkt von `backend/routes/2fa.js` aufgerufen und ist der einzige Ort, an dem 2FA-Logik lebt.
+`backend/internal/2fa-service.js` kapselt sämtliche 2FA-Operationen. Es wird direkt von `backend/routes/2fa.js` aufgerufen und ist der einzige Ort, an dem 2FA-Logik lebt.
 
 ## Unterstützte 2FA-Methoden
 
@@ -24,7 +24,7 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 
 - `setupTotp(userId, userEmail)` — Generiert geheimen Schlüssel + QR-Code (Base64 PNG)
 - `verifyAndEnableTotp(userId, code)` — Verifiziert Code und aktiviert TOTP für den User
-- `verifyTotp(userId, code)` — Reine Verifizierung (ohne Aktivierungslogik)
+- `verifyTotp(userId, code)` — Prüft eine aktivierte Methode und verbraucht ihren Zeitschritt atomar
 
 ### YubiKey
 
@@ -40,9 +40,9 @@ Zwei-Faktor-Authentifizierung (TOTP, YubiKey OTP, Passkeys/WebAuthn, Duo Securit
 
 ### Duo Security
 
-- `setupDuo(userId, config)` — Konfiguriert Duo mit `duo_host`, `client_id`, `client_secret`
-- `beginDuoAuthentication(userId, userEmail)` — Gibt Duo-Embed-URL zurück
-- `completeDuoAuthentication(userId, userEmail, duoCode)` — Tauscht Code gegen Verifikation
+- `setupDuo(userId, config)` — Konfiguriert Duo mit `clientId`, `clientSecret`, `apiHost` und `redirectUrl`
+- `beginDuoAuthentication(userId, userEmail, browserToken, expiresAt)` — Speichert die vom HTTP-Controller erzeugte zufällige Browserkennung mit dessen JWT-begrenzter Frist in Millisekunden und gibt ausschließlich die Duo-Weiterleitungs-URL zurück
+- `completeDuoAuthentication(browserToken, duoCode, state)` — Prüft die Browserbindung und den State, verbraucht die Challenge atomar und tauscht den Code gegen die Duo-Verifikation; gibt nur bei erfolgreicher Prüfung den weiterhin aktiven Benutzer zurück
 
 ### Backup-Codes
 
@@ -88,23 +88,60 @@ Wichtige Routen:
 
 Neben den klassischen `/api/users/:user_id/2fa/...`-Routen gibt es seit v4.3.2 einen separaten 2FA-Token-Flow für die Anmeldung. Die Endpunkte liegen unter `/api/tokens/2fa/...`:
 
-| Endpunkt | Funktion |
-|---|---|
-| `POST /api/tokens` | Login mit Credentials → gibt `pending_token` + `2fa_token_required` zurück wenn 2FA nötig |
-| `POST /api/tokens/2fa/verify` | TOTP/YubiKey/Backup-Code Verifizierung nach Login |
-| `POST /api/tokens/2fa/passkey/begin` | Passkey-Authentifizierung starten |
-| `POST /api/tokens/2fa/passkey/complete` | Passkey-Authentifizierung abschließen |
+| Endpunkt                                | Funktion                                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `POST /api/tokens`                      | Login mit Credentials → gibt `pending_token` + `2fa_token_required` zurück wenn 2FA nötig |
+| `POST /api/tokens/2fa/verify`           | TOTP/YubiKey/Backup-Code Verifizierung nach Login                                         |
+| `POST /api/tokens/2fa/passkey/begin`    | Passkey-Authentifizierung starten                                                         |
+| `POST /api/tokens/2fa/passkey/complete` | Passkey-Authentifizierung abschließen                                                     |
 
 Der Flow: User loggt sich ein → Server erkennt dass 2FA nötig → gibt `pending_token` → Client ruft 2FA-Endpunkt auf → bei Erfolg werden volle Tokens ausgestellt.
 
-Diese Endpunkte sind im OpenAPI-Schema unter `backend/schema/paths/tokens/2fa/` dokumentiert und über Swagger UI (`/docs`) einsehbar.
+Die Verifizierungs- und Passkey-Endpunkte sind im OpenAPI-Schema unter `backend/schema/paths/tokens/2fa/` dokumentiert und über Swagger UI (`/docs`) einsehbar. Der Duo-Vertrag ist im folgenden Abschnitt beschrieben.
 
 ## Gotchas & Bug-Fixes
 
-- **`verifyTotp()` akzeptiert `is_verified=0`**: Vor dem Fix in Commit `c3cf536c` verlangte `verifyTotp()` dass `is_verified=1` im Datenbank-Record des Benutzers gesetzt ist. Das verhinderte die Verifizierung für Benutzer die 2FA über DB-Seeding eingerichtet haben (kein Setup durchlaufen). Der Fix entfernt diese Prüfung — TOTP-Codes werden akzeptiert solange die Methode aktiviert ist, unabhängig vom `is_verified`-Flag.
-- **TOTP-Secret im Klartext**: Das TOTP-Secret wird in `user_2fa.secret` als Klartext (Base32) gespeichert. Das ist technisch erforderlich für die TOTP-Generierung, sollte aber als sensibel behandelt werden.
-- **Passkey-Challenges sind kurzlebig**: Die bei `beginPasskeyAuthentication` erzeugten Challenges werden in der DB gespeichert und müssen schnell abgeschlossen werden. Ablaufzeit ist Teil des Challenge-Records.
+- **Mehrere Authenticator-Apps**: Die Anmeldung prüft alle aktivierten TOTP-Datensätze des Benutzers; ein gültiger Code einer später hinzugefügten App wird ebenfalls akzeptiert.
+- **TOTP-Einmalverwendung**: Der von `otplib` bestätigte `timeStep` wird in der vorhandenen `counter`-Spalte des TOTP-Datensatzes gespeichert. Eine bedingte Aktualisierung auf den zuvor gelesenen Zähler und den weiterhin aktiven Datensatz lässt genau einen konkurrierenden Login zu. Derselbe oder ein älterer Zeitschritt wird danach abgelehnt; die nächste Anmeldung benötigt einen neuen Code. Passkeys verwenden ihren eigenen Datensatz und Signaturzähler unverändert. Eine Migration ist nicht erforderlich.
+- **SDK-Verträge**: Die installierte `otplib`-API erhält beim Setup `strategy: "totp"` und `algorithm: "sha1"`; ein Verifikationsergebnis ohne bestätigten `timeStep` wird nicht als TOTP-Login akzeptiert. WebAuthn-Antworten und Transportangaben verwenden die Typen des installierten Server-SDKs. Die Modelltypen berücksichtigen sowohl gelesene boolesche Statuswerte als auch die beim Schreiben verwendeten Datenbankwerte `0` und `1`.
+- **Erste YubiKey-/Duo-Einrichtung**: Neu erzeugte Wiederherstellungscodes werden als `backup_codes` in der Einrichtungsantwort einmalig an die Oberfläche übergeben. Existieren noch unbenutzte Codes, bleibt dieser Satz erhalten und die Antwort enthält keinen neuen Satz. Provider-Geheimnisse bleiben aus der HTTP-Antwort ausgeschlossen.
+- **Duo-Konfiguration ersetzen**: Das Deaktivieren der bisherigen Methode und das Speichern ihrer Nachfolgerin erfolgen in derselben Datenbanktransaktion. Scheitert die neue Speicherung, bleibt die bisherige zweite Faktorprüfung aktiv. Gleichzeitige Anmeldungen sehen keinen Zwischenzustand ohne Duo-Methode. `two-fa-recovery.spec.js` prüft einen echten SQLite-Schreibfehler sowie den erfolgreichen Austausch mit unveränderten fremden Methoden und bestehenden Wiederherstellungscodes.
+- **Wiederherstellungscodes bei Änderungen**: Das Entfernen einer noch unbestätigten Methode erhält die Codes, solange eine aktive Methode existiert. Neue Codes werden zuerst vollständig erzeugt und gehasht; Löschung des alten Satzes und Einfügen des vollständigen neuen Satzes erfolgen anschließend in einer Transaktion. Ein Schreibfehler erhält den bisherigen Satz.
+- **Nur aktivierte TOTP-Methoden beim Login**: `verifyTotp()` berücksichtigt ausschließlich `is_verified=1` und `is_deleted=0`. Ein neuer, noch unbestätigter Setup-Datensatz kann damit keine vorhandene Methode ersetzen oder die zweite Faktorprüfung bestehen. Direkte DB-Seeds müssen den Aktivierungsstatus ausdrücklich setzen.
+- **TOTP-Secret im Klartext**: Das TOTP-Secret wird in `user_2fa.secret` als Klartext (Base32) gespeichert. Das Secret muss für die Prüfung verfügbar sein; die aktuelle Speicherung erfolgt unverschlüsselt und ist sensibel.
+- **Passkey-Challenges sind kurzlebig**: Die bei `beginPasskeyAuthentication` erzeugten Challenges werden mit einer Frist von fünf Minuten in `meta.expiresAt` gespeichert. Abgelaufene oder ältere Datensätze ohne Frist werden abgelehnt. Die abschließende Löschung wird auf genau einen betroffenen Datensatz geprüft; parallele Verwendungen können deshalb nicht beide erfolgreich sein.
+- **Passkey-Zähler bei Nebenläufigkeit**: Nach der kryptografischen Prüfung wird der Signaturzähler nur aktualisiert, wenn der zuvor gelesene Zähler unverändert und die Methode weiterhin bestätigt und nicht gelöscht ist. Eine verzögerte Antwort kann damit weder einen zwischenzeitlich erhöhten Zähler zurücksetzen noch eine inzwischen entfernte Methode zur Anmeldung verwenden. Bei einem Konflikt muss die Anmeldung mit einer neuen Challenge wiederholt werden; die alte Challenge bleibt verbraucht. Authenticatoren ohne Signaturzähler (`0`) bleiben nutzbar. `backend/test/internal/passkey-counter-race.spec.js` prüft diese Fälle mit SQLite, echten ES256-Signaturen und der installierten SimpleWebAuthn-Verifikation; gesteuert wird nur die Reihenfolge der konkurrierenden Abschlüsse.
 - **Schema `$ref`-Pfade**: Die 2FA-Schema-Dateien unter `paths/tokens/2fa/` liegen auf unterschiedlicher Tiefe. `verify/post.json` ist auf 4 Ebenen (`paths/tokens/2fa/verify/`), die Passkey-Dateien auf 5 Ebenen (`paths/tokens/2fa/passkey/*/`). Falsche `../`-Tiefe führt zu ENOENT-Fehlern beim Schema-Dereferenzieren in Production. Siehe [Swagger UI](../features/swagger-ui.md) für Details.
+
+## Lebensdauer der Frontend-Abläufe
+
+Nach dem Verlassen eines 2FA-Formulars, etwa durch einen Sprachwechsel, übernimmt die entfernte Instanz keine verspätete Code- oder Passkey-Antwort mehr in den AuthStore. Eine noch ausstehende Begin-Antwort öffnet keinen neuen Passkey-Dialog und löst keine Duo-Weiterleitung aus. Wird ein bereits geöffneter Passkey-Dialog erst danach bestätigt, startet kein abschließender API-Aufruf. Dieselben Grenzen gelten für die Passkey-Registrierung im Profil beim Schließen oder Wechseln des Sicherheitstabs.
+
+Der Duo-Callback teilt seinen einmal gestarteten Request zwischen wiederholten Effekten, damit StrictMode und das Entfernen der URL-Parameter keinen zweiten Abschluss senden. Nur der noch aktive Effekt darf die Sitzung übernehmen und zum Dashboard wechseln. Bereits gesendete HTTP-Anfragen und deren serverseitig gesetzte Cookies lassen sich durch diese Frontend-Grenzen nicht rückgängig machen.
+
+Regressionen mit verzögerten Antworten: `frontend/src/pages/Login/TwoFAStep.lifecycle.test.tsx`, `frontend/src/pages/DuoCallback/index.test.tsx` und `frontend/src/pages/Profile/Security.test.tsx`. Browser-WebAuthn und Duo-Antworten werden dabei simuliert.
+
+## YubiKey-Antwortprüfung
+
+Der HTTPS-Aufruf akzeptiert nur HTTP 200, den Status `OK` und genau zur Anfrage passende OTP- und Nonce-Werte. Doppelte Antwortfelder, Antworten über 16 KiB und ausbleibende Netzwerkaktivität von zehn Sekunden werden zurückgewiesen. Ist `YUBICO_SECRET_KEY` gesetzt, werden außerdem die Anfrage signiert und die Antwortsignatur mit dem Base64-dekodierten API-Schlüssel geprüft. Das hierfür verwendete HMAC-SHA1 ist durch das [Yubico-Validierungsprotokoll](https://developers.yubico.com/OTP/Specifications/OTP_validation_protocol.html) vorgegeben. Ohne konfigurierten Schlüssel bleibt die bisherige HTTPS-Variante erhalten; eine zusätzliche HMAC-Prüfung findet dann nicht statt.
+
+Regressionstests: `backend/test/internal/yubikey-response.spec.js` simuliert passende, fremde, manipulierte, übergroße und ausbleibende Providerantworten. `backend/test/internal/two-fa-recovery.spec.js` verwendet SQLite, echte TOTP-Prüfung und bcrypt für mehrere Methoden, atomaren Codeersatz und Einmalverwendung. Diese Prüfungen ersetzen keinen Test mit physischem YubiKey und produktivem Validierungsdienst.
+
+## Autorisierung und Einmalverwendung
+
+- Verwaltungsrouten prüfen `access.can("users:update", userId)`. Damit gelten die aktuellen Rollen und der Kontostatus aus der Datenbank. Ein `2fa_pending`-Token darf weder Methoden löschen noch neue Backup-Codes erzeugen.
+- TOTP, Passkey und der Start einer Duo-Anmeldung prüfen den Scope `2fa_pending` sowie eine gültige Benutzer-ID vor der zweiten Faktorprüfung. Der Duo-Abschluss verwendet die beim Start serverseitig gespeicherte Benutzerbindung.
+- Backup-Codes werden mit einer bedingten Aktualisierung auf `used_at IS NULL` verbraucht. Nur der Aufruf, der tatsächlich einen Datensatz aktualisiert, ist erfolgreich.
+- `POST /api/tokens/2fa/duo/begin` erwartet `pending_token` und gibt ausschließlich `{auth_url}` zurück. Der HTTP-Controller erzeugt die unabhängige Browserkennung aus 32 kryptografisch zufälligen Bytes und begrenzt ihre Lebensdauer auf höchstens fünf Minuten beziehungsweise die frühere Ablaufzeit des geprüften Pending-JWT. Die Kennung wird zusammen mit Frist und dem Zweck `shieldpm:duo-cookie:v1` über den bestehenden AES-256-GCM-Helfer verschlüsselt und als hostgebundenes `shieldpm_duo`-Cookie mit `HttpOnly`, `SameSite=Lax` und Pfad `/api/tokens/2fa/duo` gesetzt; `Secure` folgt dem über die konfigurierte Proxy-Vertrauensstellung ermittelten HTTPS-Status.
+- Die Cookie-Prüfung verlangt das vollständige Format mit 96-Bit-IV und 128-Bit-GCM-Tag, eine authentifizierte Entschlüsselung sowie den korrekten Zweck, die gültige Browserkennung und eine zukünftige Ablaufzeit. Klartext-Cookies und manipulierte oder zweckfremde Payloads werden abgelehnt. Verschlüsselung und HMAC verwenden den vorhandenen persistenten `encryptionKey` aus `${DATA_PATH || "/data"}/shieldpm/keys.json`; alle Prozesse benötigen dieselbe Schlüsseldatei. Ein Schlüsselwechsel macht laufende Duo-Anmeldungen ungültig.
+- Die Datenbank speichert in `duo_auth_challenge` nur HMAC-SHA-256-Tags der Browserkennung und des ebenfalls aus 32 zufälligen Bytes erzeugten States sowie Benutzer-ID und Ablaufzeit. Die Präfixe `shieldpm:duo:binding:v1:` und `shieldpm:duo:state:v1:` trennen beide Verwendungszwecke; Kennungen sind keine Benutzerpasswörter. `POST /api/tokens/2fa/duo/complete` erwartet ausschließlich `duo_code` und `state` im JSON-Body; die Browserkennung stammt ausschließlich aus dem entschlüsselten Cookie. Der State-Tag wird zeitkonstant mit dem gespeicherten Tag verglichen. Ein Pending-JWT oder eine Browserkennung im JSON-Body ersetzt das Cookie nicht.
+- Beide Duo-Endpunkte benötigen den CSRF-Header und das dazugehörige Cookie. Bei einem vollständigen Neustart auf `/duo-callback` wartet der Router zuerst auf die Health-Antwort mit dem CSRF-Token. Der AuthProvider überspringt dort die automatische Sitzungswiederherstellung, damit eine verspätete Refresh-Antwort keine gerade ausgestellten Auth-Cookies löschen kann. Regelmäßiger Refresh beginnt erst nach erfolgreicher Anmeldung.
+- Duo-Zustand und Pending-Token werden nicht in `sessionStorage` oder `localStorage` gespeichert. Der Callback übernimmt Code und State einmalig aus der URL, entfernt die Query-Parameter sofort aus dem aktuellen History-Eintrag und übergibt die Werte über den zentralen API-Client mit Cookies und CSRF-Header an den Server.
+- Der Server prüft den aktiven Benutzer und die konfigurierte Duo-Methode und löscht anschließend die Challenge mit einer bedingten, auf genau einen Datensatz geprüften Operation, bevor er den Code bei Duo einlöst. Der SDK-Aufruf prüft die signierte Antwort gegen die serverseitig ermittelte E-Mail-Adresse; zusätzlich müssen `auth_result.result` und `auth_result.status` jeweils `allow` sein. Ablaufzeit und aktiver Kontostatus werden nach dem Austausch erneut geprüft. Fehlgeschlagene oder parallele Rückrufe können die verbrauchte Challenge nicht erneut verwenden.
+- Die Duo-Antworten setzen `Cache-Control: no-store`. Ein neuer Start verwirft ein vorhandenes Duo-Cookie; jeder vom Abschluss-Handler bearbeitete Erfolg oder Fehler löscht es ebenfalls. Eine vom vorgeschalteten CSRF-Schutz abgelehnte Anfrage verändert das Cookie und die Challenge nicht.
+- Nach einer Aktualisierung müssen bereits laufende Duo-Anmeldungen mit dem alten State-/Pending-Token-Vertrag oder unverschlüsselten Cookies beziehungsweise ungekeyten SHA-256-Datensätzen neu begonnen werden. Das gilt ebenso für ältere Passkey-Challenges ohne gespeicherte Ablaufdaten. Eine Datenbankmigration ist hierfür nicht erforderlich.
+
+Regressionstests: `backend/test/internal/2fa-service.spec.js`, `backend/test/internal/backup-code-consumption.spec.js` und `backend/test/routes/two-fa-authorization.spec.js`. `backend/test/routes/duo-login.spec.js` verbindet die echte Express-/CSRF-Verarbeitung, AES-GCM und HMAC mit einem isolierten Testschlüssel und einer SQLite-Datenbank. Geprüft werden Cookie-Manipulation, Schlüssel-/Zweckbindung, Ablauf, CSRF, Kontosperren, Replay und parallele Rückrufe. `frontend/src/Router.duo.test.tsx` prüft den Neustart mit zunächst leerem CSRF-Arbeitsspeicher einschließlich React StrictMode. Duo-Netzwerkantworten werden in diesen Tests simuliert; ein Login gegen einen echten Duo-Mandanten ist damit nicht abgedeckt.
 
 ## Verwandte Seiten
 

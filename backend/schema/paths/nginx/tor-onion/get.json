@@ -6,7 +6,7 @@
 	],
 	"security": [
 		{
-			"BearerAuth": []
+			"bearerAuth": []
 		}
 	],
 	"responses": {

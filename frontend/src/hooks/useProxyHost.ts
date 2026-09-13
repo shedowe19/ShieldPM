@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProxyHost, getProxyHost, type ProxyHost, updateProxyHost } from "src/api/backend";
 import { AUDIT_LOG_OBJECT_TYPE, FORWARD_SCHEME } from "src/types/enums";
+import { optimisticQueryUpdate } from "./optimisticQueryUpdate";
 
 const fetchProxyHost = (id: number | "new") => {
 	if (id === "new") {
@@ -54,15 +55,18 @@ const useSetProxyHost = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, values.id]);
-			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, values.id], (old: ProxyHost) => ({
-				...old,
-				...values,
-			}));
-			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, values.id], previousObject);
+			return optimisticQueryUpdate<ProxyHost>(
+				queryClient,
+				[AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, values.id],
+				(old) => ({
+					...old,
+					...values,
+				}),
+			);
 		},
 		onError: (_: Error, __: ProxyHost, rollback: (() => void) | undefined) => rollback?.(),
-		onSuccess: async ({ id }: ProxyHost) => {
+		onSettled: (data, _error, values) => {
+			const id = data?.id ?? values.id;
 			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
 			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });

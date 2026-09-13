@@ -40,7 +40,12 @@ const up = async (knex) => {
 				forward_host: th.host,
 				forward_port: th.port,
 				domain_names: JSON.stringify([`terminal-${th.id}.local`]), // Placeholder domain
-				meta: JSON.stringify({ migrated_from_terminal_host: th.id, original_name: th.name }),
+				meta: JSON.stringify({
+					migrated_from_terminal_host: th.id,
+					original_name: th.name,
+					original_type: th.type,
+					original_meta: th.meta,
+				}),
 				locations: JSON.stringify([]),
 				terminal_host: th.host,
 				terminal_port: th.port,
@@ -83,6 +88,19 @@ const up = async (knex) => {
 const down = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 
+	const terminalQuery = () => knex("proxy_host").where("forward_scheme", "terminal").where("is_deleted", 0);
+	// Check before DDL as MySQL schema changes implicitly commit. Cascading Tor/domain
+	// references must not disappear when their terminal proxy is moved back.
+	for (const table of ["tor_onion", "analytic_count", "host_domain"]) {
+		if (
+			(await knex.schema.hasTable(table)) &&
+			(await knex(table).whereIn("proxy_host_id", terminalQuery().select("id")).first("id"))
+		) {
+			throw new Error(`Cannot roll back terminal hosts while ${table} references them`);
+		}
+	}
+	const terminalProxyHosts = await terminalQuery();
+
 	// Recreate terminal_host table
 	await knex.schema.createTable("terminal_host", (table) => {
 		table.increments("id").primary();
@@ -96,15 +114,13 @@ const down = async (knex) => {
 		table.integer("port").notNullable().defaultTo(22);
 		table.string("auth_type").notNullable().defaultTo("password");
 		table.string("username").notNullable();
-		table.string("password");
-		table.string("private_key");
+		table.text("password");
+		table.text("private_key");
 		table.json("meta").notNullable();
 		table.integer("is_deleted").notNullable().defaultTo(0);
 	});
 
 	// Migrate back from proxy_host (best effort)
-	const terminalProxyHosts = await knex("proxy_host").where("forward_scheme", "terminal").where("is_deleted", 0);
-
 	for (const ph of terminalProxyHosts) {
 		const meta = typeof ph.meta === "string" ? JSON.parse(ph.meta) : ph.meta;
 		await knex("terminal_host").insert({
@@ -112,7 +128,7 @@ const down = async (knex) => {
 			modified_on: ph.modified_on,
 			owner_user_id: ph.owner_user_id,
 			enabled: ph.enabled,
-			type: "ssh",
+			type: meta?.original_type || "ssh",
 			name: meta?.original_name || `Terminal ${ph.id}`,
 			host: ph.terminal_host,
 			port: ph.terminal_port || 22,
@@ -120,9 +136,15 @@ const down = async (knex) => {
 			username: ph.terminal_username || "root",
 			password: ph.terminal_password,
 			private_key: ph.terminal_private_key,
-			meta: JSON.stringify({}),
+			meta:
+				typeof meta?.original_meta === "string"
+					? meta.original_meta
+					: JSON.stringify(meta?.original_meta ?? {}),
 			is_deleted: 0,
 		});
+		// The restored legacy row now owns these credentials. Leaving its proxy copy
+		// would drop the credentials below and duplicate the host on the next upgrade.
+		await knex("proxy_host").where("id", ph.id).delete();
 	}
 
 	// Remove terminal columns from proxy_host

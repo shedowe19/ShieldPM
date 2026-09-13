@@ -74,7 +74,7 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 					</div>
 				)}
 				{!isLoading && !userIsLoading && data && currentUser && (
-					<Formik initialValues={createProxyHostInitialValues(data)} enableReinitialize onSubmit={onSubmit}>
+					<Formik initialValues={createProxyHostInitialValues(data)} onSubmit={onSubmit}>
 						{() => (
 							<Form className="flex flex-col h-full overflow-hidden">
 								<DialogHeader className="px-6 py-4 border-b">

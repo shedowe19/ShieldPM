@@ -4,13 +4,13 @@ const path = require("node:path");
 
 const HEADER = `# Third-Party Notices
 
-This project (ShieldPM) incorporates the following third-party components. The licenses are extracted directly from the NPM Registry API for the specified versions. This list includes both production dependencies and development dependencies from the backend and frontend package.json files.
+This project (ShieldPM) incorporates the following third-party components. The licenses are collected from installed package metadata and license files by license-checker. This list includes both production dependencies and development dependencies from the backend and frontend package.json files.
 
 For verification, each entry links to the NPM package page (e.g., https://www.npmjs.com/package/<package>/v/<version>), where the license can be confirmed in the package metadata. Note: Transitive dependencies (dependencies of dependencies) are not included, as this focuses on direct dependencies.
 `;
 
 const FOOTER = `
-The above information is based solely on the NPM Registry data as of ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. For full license texts, refer to the respective package repositories or the NPM links provided.
+The above information reflects the installed packages as of ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. For full license texts, refer to the respective package repositories or the NPM links provided.
 `;
 
 function getLicenses(cwd, production) {
@@ -37,7 +37,7 @@ function formatDeps(deps) {
 		if (Array.isArray(license)) license = license.join(" OR ");
 
 		const npmLink = `https://www.npmjs.com/package/${name}/v/${version}`;
-		lines.push(`- ${key} - ${license}[](${npmLink})`);
+		lines.push(`- [${key}](${npmLink}) - ${license}`);
 	}
 	return lines.join("\n");
 }

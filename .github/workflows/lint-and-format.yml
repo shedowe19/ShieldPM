@@ -75,6 +75,10 @@ jobs:
             ./node_modules/.bin/biome check "${files[@]#frontend/}"
           fi
 
+      - name: Check backend types
+        working-directory: backend
+        run: node node_modules/typescript/bin/tsc --noEmit
+
       - name: Run backend tests
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" test --run
 

@@ -70,7 +70,7 @@ const SetPasswordModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							)}
 
 							<div className="grid gap-4 py-4">
-								<Field name="new" validate={validateString(8, 100)}>
+								<Field name="new" validate={validateString(8, 72)}>
 									{({ field }: FieldProps) => (
 										<div className="space-y-2">
 											<Label htmlFor="new">

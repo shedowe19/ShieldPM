@@ -66,11 +66,11 @@ describe("Fix #59: internalNginx.getLogs", () => {
 		await expect(internalNginx.getLogs(access, "error")).rejects.toThrow("EACCES");
 	});
 
-	it("calls access.can('settings:read') before reading log", async () => {
+	it("calls access.can('settings:get') before reading log", async () => {
 		readFileSpy.mockResolvedValueOnce("some log");
 		const access = makeAccess();
 		await internalNginx.getLogs(access, "error");
-		expect(access.can).toHaveBeenCalledWith("settings:read");
+		expect(access.can).toHaveBeenCalledWith("settings:get");
 	});
 
 	it("returns json_access log for log_type='json_access'", async () => {

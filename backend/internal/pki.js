@@ -1,12 +1,15 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { domainToASCII } from "node:url";
+import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { debug, global as logger } from "../logger.js";
 
 const internalDir = "/data/tls/internal";
 const rootCaKey = path.join(internalDir, "root_ca.key");
 const rootCaCrt = path.join(internalDir, "root_ca.crt");
-const rootCaSrl = path.join(internalDir, "root_ca.srl");
+let rootCaPromise = null;
 
 /**
  * Ensure the Internal Directory exists
@@ -21,46 +24,85 @@ const ensureDir = () => {
  * Generate Root CA if it doesn't exist
  * Uses ECDSA P-384 (secp384r1) for key and 10 year validity
  */
-const ensureRootCa = async () => {
+const generateRootCa = async () => {
 	ensureDir();
 
 	if (fs.existsSync(rootCaKey) && fs.existsSync(rootCaCrt)) {
 		return;
 	}
+	if (fs.existsSync(rootCaCrt) && !fs.existsSync(rootCaKey)) {
+		throw new errs.ConfigurationError(
+			"The Internal CA private key is missing. Restore the original CA key from backup.",
+		);
+	}
 
 	debug(logger, "Generating Internal Root CA...");
+	const stagingDir = await fs.promises.mkdtemp(path.join(internalDir, ".root-ca-"));
+	const stagingKey = path.join(stagingDir, "root_ca.key");
+	const stagingCertificate = path.join(stagingDir, "root_ca.crt");
+	try {
+		// Preserve an existing key if certificate creation is being retried.
+		if (!fs.existsSync(rootCaKey)) {
+			await utils.execFile("openssl", [
+				"genpkey",
+				"-algorithm",
+				"EC",
+				"-pkeyopt",
+				"ec_paramgen_curve:secp384r1",
+				"-out",
+				stagingKey,
+			]);
+			await fs.promises.chmod(stagingKey, 0o600);
+			await fs.promises.rename(stagingKey, rootCaKey);
+		}
 
-	// Generate Private Key (ECDSA P-384)
-	await utils.execFile("openssl", [
-		"genpkey",
-		"-algorithm",
-		"EC",
-		"-pkeyopt",
-		"ec_paramgen_curve:secp384r1",
-		"-out",
-		rootCaKey,
-	]);
+		// Secure the key
+		await utils.execFile("chmod", ["0600", rootCaKey]);
 
-	// Secure the key
-	await utils.execFile("chmod", ["0600", rootCaKey]);
-
-	// Generate Root Certificate (Self-Signed)
-	// 3650 days = ~10 years
-	await utils.execFile("openssl", [
-		"req",
-		"-x509",
-		"-new",
-		"-sha384",
-		"-key",
-		rootCaKey,
-		"-days",
-		"3650",
-		"-out",
-		rootCaCrt,
-		"-subj",
-		"/CN=ShieldPM Internal CA/O=ShieldPM/C=US",
-	]);
+		// Generate Root Certificate (Self-Signed)
+		// 3650 days = ~10 years
+		await utils.execFile("openssl", [
+			"req",
+			"-x509",
+			"-new",
+			"-sha384",
+			"-key",
+			rootCaKey,
+			"-days",
+			"3650",
+			"-out",
+			stagingCertificate,
+			"-subj",
+			"/CN=ShieldPM Internal CA/O=ShieldPM/C=US",
+			"-addext",
+			"basicConstraints=critical,CA:TRUE",
+			"-addext",
+			"keyUsage=critical,keyCertSign,cRLSign",
+		]);
+		await fs.promises.rename(stagingCertificate, rootCaCrt);
+	} finally {
+		await fs.promises.rm(stagingDir, { recursive: true, force: true });
+	}
 };
+
+const ensureRootCa = async () => {
+	if (!rootCaPromise) {
+		rootCaPromise = generateRootCa().finally(() => {
+			rootCaPromise = null;
+		});
+	}
+	return rootCaPromise;
+};
+
+const validityDays = (years = 1) => {
+	const value = Number(years);
+	if (!Number.isInteger(value) || value < 1 || value > 10) {
+		throw new errs.ValidationError("Certificate validity must be between 1 and 10 years");
+	}
+	return value * 365;
+};
+
+const serialArgs = () => ["-set_serial", `0x${crypto.randomBytes(19).toString("hex")}`];
 
 /**
  * Create a Leaf Certificate signed by the Root CA
@@ -70,23 +112,22 @@ const ensureRootCa = async () => {
  * @param {String} outDir
  */
 const createLeadCert = async (data, outDir) => {
-	await ensureRootCa();
-
-	if (!fs.existsSync(outDir)) {
-		fs.mkdirSync(outDir, { recursive: true });
+	const days = validityDays(data.years);
+	if (!Array.isArray(data.domain_names) || data.domain_names.length === 0) {
+		throw new errs.ValidationError("At least one domain name is required for certificate creation");
 	}
-
-	// SECURITY: Validate domain_names to prevent OpenSSL config injection
-	const validDomain = /^[a-zA-Z0-9.-]+$/;
+	const validDomain = /^(?:\*\.)?[\p{L}\p{N}.-]+$/u;
 	for (const domain of data.domain_names) {
-		if (!validDomain.test(domain)) {
-			throw new Error(`Invalid domain name: ${domain}. Only alphanumeric, dots, and dashes allowed.`);
+		if (typeof domain !== "string" || !validDomain.test(domain)) {
+			throw new errs.ValidationError("Invalid domain name for certificate creation");
 		}
 	}
-
-	if (!data.domain_names || data.domain_names.length === 0) {
-		throw new Error("At least one domain name is required for certificate creation");
+	const domains = data.domain_names.map((domain) => domainToASCII(domain));
+	if (domains.some((domain) => !domain)) {
+		throw new errs.ValidationError("Invalid domain name for certificate creation");
 	}
+	await ensureRootCa();
+	await fs.promises.mkdir(outDir, { recursive: true });
 
 	const keyPath = path.join(outDir, "privkey.pem");
 	const csrPath = path.join(outDir, "request.csr");
@@ -108,7 +149,9 @@ const createLeadCert = async (data, outDir) => {
 
 	// 2. Create CSR
 	// We need a config file for SANs (Subject Alternative Names)
-	const sanList = data.domain_names.map((d) => `DNS:${d}`).join(",");
+	const sanList = domains.map((d) => `DNS:${d}`).join(",");
+	// OpenSSL limits commonName to 64 characters; longer DNS names remain valid SAN entries.
+	const commonName = domains.find((domain) => domain.length <= 64) || "ShieldPM Internal Server";
 	const configPath = path.join(outDir, "openssl.cnf");
 
 	// Minimal OpenSSL config for SAN
@@ -119,7 +162,7 @@ req_extensions = v3_req
 prompt = no
 
 [req_distinguished_name]
-CN = ${data.domain_names[0]}
+CN = ${commonName}
 
 [v3_req]
 keyUsage = critical, digitalSignature, keyEncipherment
@@ -141,9 +184,8 @@ subjectAltName = ${sanList}
 	]);
 
 	// 3. Sign CSR with Root CA
-	const days = (data.years || 1) * 365;
 
-	// We verify strict use of -CAcreateserial if srl doesn't exist
+	// Independent serials avoid a shared mutable serial-number file.
 	const signArgs = [
 		"x509",
 		"-req",
@@ -164,12 +206,7 @@ subjectAltName = ${sanList}
 		"v3_req",
 	];
 
-	if (!fs.existsSync(rootCaSrl)) {
-		signArgs.push("-CAcreateserial");
-		signArgs.push("-CAserial", rootCaSrl);
-	} else {
-		signArgs.push("-CAserial", rootCaSrl);
-	}
+	signArgs.push(...serialArgs());
 
 	await utils.execFile("openssl", signArgs);
 
@@ -200,6 +237,15 @@ subjectAltName = ${sanList}
  * @param {String} outDir
  */
 const createClientCert = async (data, outDir) => {
+	const days = validityDays(data.years);
+	if (typeof data.common_name !== "string" || !/^[a-zA-Z0-9.\-@]+$/.test(data.common_name)) {
+		throw new errs.ValidationError(
+			"Invalid Common Name: Only alphanumeric characters, dots, dashes, and @ are allowed.",
+		);
+	}
+	if (typeof data.password !== "string" || data.password.includes("\0")) {
+		throw new errs.ValidationError("A valid PKCS#12 password string is required");
+	}
 	await ensureRootCa();
 
 	if (!fs.existsSync(outDir)) {
@@ -224,11 +270,6 @@ const createClientCert = async (data, outDir) => {
 	await utils.execFile("chmod", ["0600", keyPath]);
 
 	// 2. Create CSR (Client Auth Extended Usage)
-	// SECURITY: Sanitize common_name to prevent OpenSSL Config Injection
-	if (!/^[a-zA-Z0-9.\-@]+$/.test(data.common_name)) {
-		throw new Error("Invalid Common Name: Only alphanumeric characters, dots, dashes, and @ are allowed.");
-	}
-
 	const configPath = path.join(outDir, "openssl-client.cnf");
 	const configContent = `
 [req]
@@ -258,7 +299,6 @@ extendedKeyUsage = clientAuth
 	]);
 
 	// 3. Sign CSR with Root CA
-	const days = (data.years || 1) * 365;
 	const signArgs = [
 		"x509",
 		"-req",
@@ -279,30 +319,29 @@ extendedKeyUsage = clientAuth
 		"v3_req",
 	];
 
-	if (!fs.existsSync(rootCaSrl)) {
-		signArgs.push("-CAcreateserial");
-		signArgs.push("-CAserial", rootCaSrl);
-	} else {
-		signArgs.push("-CAserial", rootCaSrl);
-	}
+	signArgs.push(...serialArgs());
 
 	await utils.execFile("openssl", signArgs);
 
 	// 4. Export to PKCS#12 (.p12)
-	await utils.execFile("openssl", [
-		"pkcs12",
-		"-export",
-		"-out",
-		p12Path,
-		"-inkey",
-		keyPath,
-		"-in",
-		certPath,
-		"-certfile",
-		rootCaCrt,
-		"-passout",
-		`pass:${data.password}`,
-	]);
+	await utils.execFile(
+		"openssl",
+		[
+			"pkcs12",
+			"-export",
+			"-out",
+			p12Path,
+			"-inkey",
+			keyPath,
+			"-in",
+			certPath,
+			"-certfile",
+			rootCaCrt,
+			"-passout",
+			"env:SHIELDPM_P12_PASSWORD",
+		],
+		{ env: { ...process.env, SHIELDPM_P12_PASSWORD: data.password } },
+	);
 
 	// Cleanup temp files (keep p12 only? No, maybe keep them for reference if needed,
 	// but mostly we just return p12 path and let the caller handle it.

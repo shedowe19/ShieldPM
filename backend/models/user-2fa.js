@@ -27,9 +27,9 @@ class UserTwoFa extends Model {
 	transports;
 	/** @type {Object|null} */
 	meta;
-	/** @type {boolean} */
+	/** @type {boolean | 0 | 1} */
 	is_verified;
-	/** @type {boolean} */
+	/** @type {boolean | 0 | 1} */
 	is_deleted;
 	/** @type {string} */
 	created_on;
@@ -86,7 +86,7 @@ class UserTwoFa extends Model {
 	/**
 	 * Get all active (verified, non-deleted) 2FA methods for a user.
 	 * @param {number} userId
-	 * @returns {Promise<UserTwoFa[]>}
+	 * @returns {import("objection").QueryBuilder<UserTwoFa, UserTwoFa[]>}
 	 */
 	static getActiveForUser(userId) {
 		return UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 });

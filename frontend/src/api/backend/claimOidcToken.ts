@@ -4,6 +4,6 @@ import type { TokenResponse } from "./responseTypes";
 export async function claimOidcToken(): Promise<TokenResponse> {
 	return await api.post({
 		url: "/oidc/claim",
-		noAuth: true,
+		silentAuth: true,
 	});
 }

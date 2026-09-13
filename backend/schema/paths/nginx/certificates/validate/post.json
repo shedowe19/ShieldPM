@@ -28,7 +28,8 @@
 									"dates": {
 										"from": 1728458537,
 										"to": 1799479337
-									}
+									},
+									"sans": []
 								},
 								"certificate_key": true
 							}
@@ -37,53 +38,16 @@
 					"schema": {
 						"type": "object",
 						"additionalProperties": false,
-						"required": [
-							"certificate",
-							"certificate_key"
-						],
 						"properties": {
 							"certificate": {
-								"type": "object",
-								"additionalProperties": false,
-								"required": [
-									"cn",
-									"issuer",
-									"dates"
-								],
-								"properties": {
-									"cn": {
-										"type": "string",
-										"example": "example.com"
-									},
-									"issuer": {
-										"type": "string",
-										"example": "C = US, O = Let's Encrypt, CN = E5"
-									},
-									"dates": {
-										"type": "object",
-										"additionalProperties": false,
-										"required": [
-											"from",
-											"to"
-										],
-										"properties": {
-											"from": {
-												"type": "integer"
-											},
-											"to": {
-												"type": "integer"
-											}
-										},
-										"example": {
-											"from": 1728448218,
-											"to": 1736224217
-										}
-									}
-								}
+								"$ref": "../../../../components/certificate-info.json"
 							},
 							"certificate_key": {
 								"type": "boolean",
 								"example": true
+							},
+							"intermediate_certificate": {
+								"$ref": "../../../../components/certificate-info.json"
 							}
 						}
 					}

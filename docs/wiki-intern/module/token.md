@@ -27,6 +27,12 @@ Jede API-Anfrage an das Backend erfordert eine Authentifizierung. Dieses Modul h
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Authentifizierung vor der Berechtigungsprüfung
+
+`backend/lib/access.js` prüft bereits bei `Access.load()` das signierte Token, den aktuellen aktiven Benutzer und dessen zulässige Scopes. Damit ist ein Konto auch dann geprüft, wenn eine Route anschließend nur auf die Benutzer-ID zugreift. Eine ausstehende zweite Faktorprüfung gilt nicht als vollständige Anmeldung. Explizit freigegebene interne Zugriffe ohne Token bleiben für interne Abläufe verfügbar.
+
+Regressionstest: `backend/test/lib/access-authentication.spec.js`.
+
 ## Verwandte Seiten
 
 - [Benutzer & Auth](./benutzer-auth.md)

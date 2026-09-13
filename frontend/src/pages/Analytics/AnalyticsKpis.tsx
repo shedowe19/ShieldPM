@@ -10,11 +10,11 @@ interface Props {
 }
 
 const formatBytes = (bytes: number, decimals = 2) => {
-	if (!bytes) return "0 B";
+	if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
 	const k = 1024;
 	const dm = decimals < 0 ? 0 : decimals;
 	const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	const i = Math.min(sizes.length - 1, Math.max(0, Math.floor(Math.log(bytes) / Math.log(k))));
 	return `${Number.parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
 };
 
@@ -77,7 +77,7 @@ export const AnalyticsKpis = ({ dbStats, networkSpeed, summary }: Props) => {
 				<CardContent>
 					<div className="text-2xl font-bold">{formatBytes(dbStats?.size || 0)}</div>
 					<p className="text-xs text-muted-foreground">
-						{dbStats?.engine?.toUpperCase()} • {dbStats?.connections?.open || 1}{" "}
+						{dbStats?.engine?.toUpperCase()} • {dbStats?.connections?.open ?? 0}{" "}
 						<T id="analytics.connections" />
 					</p>
 					<p className="text-xs text-muted-foreground mt-1">

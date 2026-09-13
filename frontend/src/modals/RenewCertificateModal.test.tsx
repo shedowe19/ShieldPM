@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
+import { type PropsWithChildren, StrictMode } from "react";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -109,4 +109,19 @@ describe("RenewCertificateModal", () => {
 		expect(screen.queryByText("Error")).not.toBeInTheDocument();
 		expect(screen.queryByText("Unknown error")).not.toBeInTheDocument();
 	});
+});
+
+it("starts only one renewal when React StrictMode replays effects", async () => {
+	mocks.renewCertificate.mockReturnValue(new Promise(() => undefined));
+	mocks.useCertificate.mockReturnValue({ data: { id: 42 }, error: null, isLoading: false });
+	const { showRenewCertificateModal } = await import("./RenewCertificateModal");
+	showRenewCertificateModal(42);
+	const Modal = mocks.show.mock.calls[0]?.[0];
+	render(
+		<StrictMode>
+			<Modal id={42} remove={mocks.remove} visible />
+		</StrictMode>,
+	);
+	expect(mocks.renewCertificate).toHaveBeenCalledTimes(1);
+	expect(mocks.renewCertificate).toHaveBeenCalledWith(42);
 });

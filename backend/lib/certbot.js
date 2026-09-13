@@ -11,14 +11,22 @@ import utils from "./utils.js";
  * @returns {Promise<Object>}
  */
 const installPlugin = async (pluginKey) => {
-	if (typeof dnsPlugins[pluginKey] === "undefined") {
+	if (!Object.hasOwn(dnsPlugins, pluginKey)) {
 		throw new errs.ItemNotFoundError(pluginKey);
 	}
 
 	const plugin = dnsPlugins[pluginKey];
 	logger.start(`Installing ${pluginKey}...`);
 
-	const result = await utils.execFile("pip", ["install", "--upgrade", "--no-cache-dir", plugin.package_name]);
+	// launch.sh exposes this writable target through PYTHONPATH; the base virtualenv stays root-owned.
+	const result = await utils.execFile("pip", [
+		"install",
+		"--upgrade",
+		"--no-cache-dir",
+		"--target",
+		"/data/certbot-plugins",
+		plugin.package_name,
+	]);
 	logger.complete(`Installed ${pluginKey}`);
 	return result;
 };

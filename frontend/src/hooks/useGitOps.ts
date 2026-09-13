@@ -185,12 +185,8 @@ export const useGitOps = () => {
 	const importConfig = useMutation<gitopsApi.GitOpsImportResult, Error, boolean>({
 		mutationFn: (overwrite = false) => gitopsApi.importGitOpsConfig(overwrite),
 		onSuccess: (result) => {
-			// Invalidate all host queries to reflect imported data
-			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
-			queryClient.invalidateQueries({ queryKey: ["redirection-hosts"] });
-			queryClient.invalidateQueries({ queryKey: ["dead-hosts"] });
-			queryClient.invalidateQueries({ queryKey: ["streams"] });
-			queryClient.invalidateQueries({ queryKey: ["access-lists"] });
+			// Imports can update settings, users and integrations as well as hosts.
+			queryClient.invalidateQueries();
 
 			if (result.success) {
 				toast({

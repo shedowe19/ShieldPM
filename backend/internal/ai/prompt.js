@@ -141,8 +141,8 @@ USERS & AUTH:
 - "reset password for alice@ex.com" → get_users, find ID, update_user_password
 - "update user permissions" → get_users, find ID, update_user_permissions
 - "delete user bob@ex.com" → get_users, find ID, delete_user
-- "login as user alice@ex.com" → get_users, find ID, login_as_user
-- "create API token for monitoring" → create_api_token with identity
+- User impersonation requires the Users page; chat cannot switch the browser session.
+- API tokens must be created and retrieved in the API token interface; never send bearer tokens through the AI provider.
 
 CLOUDFLARE TUNNELS:
 - "create tunnel MyTunnel with token ABC123" → create_cloudflared_tunnel

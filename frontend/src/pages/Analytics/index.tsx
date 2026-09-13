@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Loading } from "src/components";
+import { Alert, AlertDescription } from "src/components/ui/alert";
 import { useHealth, useProxyHosts } from "src/hooks";
 import { intl, T } from "src/locale";
 import { AnalyticsCharts } from "./AnalyticsCharts";
@@ -14,7 +15,7 @@ import { useAnalyticsData } from "./useAnalyticsData";
 import { useAnalyticsLiveMetrics } from "./useAnalyticsLiveMetrics";
 
 const Analytics = () => {
-	const { data: hosts, isLoading: hostsLoading } = useProxyHosts();
+	const { data: hosts, isLoading: hostsLoading, error: hostsError } = useProxyHosts();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const requestedHostId = searchParams.get("host") ?? "";
 	const requestedRange = searchParams.get("range") ?? "";
@@ -22,7 +23,7 @@ const Analytics = () => {
 	const range = analyticsRanges.includes(requestedRange) ? requestedRange : "24h";
 	const health = useHealth();
 	const isDemo = health.data?.demo;
-	const { loading, series, summary } = useAnalyticsData(selectedHostId, range);
+	const { loading, series, summary, error } = useAnalyticsData(selectedHostId, range);
 	const { dbStats, networkSpeed } = useAnalyticsLiveMetrics();
 
 	useEffect(() => {
@@ -63,7 +64,7 @@ const Analytics = () => {
 		URL.revokeObjectURL(url);
 	};
 
-	if ((loading && !summary) || hostsLoading) {
+	if (hostsLoading) {
 		return (
 			<div className="p-8 text-center">
 				<Loading />
@@ -92,6 +93,18 @@ const Analytics = () => {
 					selectedHostId={selectedHostId}
 				/>
 			</div>
+
+			{(error || hostsError) && (
+				<Alert variant="destructive">
+					<AlertDescription>{error || hostsError?.message}</AlertDescription>
+				</Alert>
+			)}
+
+			{loading && !summary && (
+				<div className="p-8 text-center">
+					<Loading />
+				</div>
+			)}
 
 			<AnalyticsKpis dbStats={dbStats} networkSpeed={networkSpeed} summary={summary} />
 

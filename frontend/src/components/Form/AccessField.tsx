@@ -83,7 +83,8 @@ export function AccessField({
 						<Select
 							className="react-select-container"
 							classNamePrefix="react-select"
-							defaultValue={options.find((o) => o.value === field.value) || options[0]}
+							inputId={id}
+							value={options.find((o) => o.value === field.value) || options[0]}
 							options={options}
 							components={{ Option }}
 							styles={{

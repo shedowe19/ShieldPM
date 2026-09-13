@@ -82,10 +82,14 @@ export default function TableWrapper() {
 	};
 
 	const handleDisableToggle = async (id: number, enabled: boolean) => {
-		await toggleUser(id, enabled);
-		queryClient.invalidateQueries({ queryKey: ["users"] });
-		queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id] });
-		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, enabled ? "enabled" : "disabled");
+		try {
+			await toggleUser(id, enabled);
+			queryClient.invalidateQueries({ queryKey: ["users"] });
+			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, id] });
+			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.USER, enabled ? "enabled" : "disabled");
+		} catch (error) {
+			showError(error instanceof Error ? error.message : String(error));
+		}
 	};
 
 	let filtered = null;

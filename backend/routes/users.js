@@ -396,8 +396,9 @@ router
 			sameSite: "strict",
 			maxAge: safeMaxAge,
 		});
+		res.locals.refreshCsrfToken?.(result.token);
 
-		res.status(200).send({ ...result, token: undefined });
+		res.status(200).send({ ...result, token: undefined, csrfToken: res.locals.csrfToken });
 	});
 
 export default router;

@@ -2,11 +2,13 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import * as client from "openid-client";
 import internalToken from "../internal/token.js";
+import { clearAuthCookies, clearDuoCookie, setAuthCookies } from "../lib/auth-cookies.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import errs from "../lib/error.js";
-import jwtdecode from "../lib/express/jwt-decode.js";
 import { oidc as logger } from "../logger.js";
 import settingModel from "../models/setting.js";
+import TokenModel from "../models/token.js";
+import userModel from "../models/user.js";
 
 // Set up rate limiter: for example, 100 requests per 15 minutes per IP
 const oidcRateLimiter = rateLimit({
@@ -27,18 +29,17 @@ router
 		res.sendStatus(204);
 	})
 	.all(oidcRateLimiter)
-	.all(jwtdecode())
 
 	/**
 	 * GET /api/oidc
 	 *
 	 * OAuth Authorization Code flow initialisation
 	 */
-	.get(async (_req, res) => {
+	.get(async (req, res) => {
 		try {
 			const settings = await settingModel.query().where({ id: "oidc-config" }).first();
 			const params = await getInitParams(settings);
-			redirectToAuthorizationURL(res, params);
+			redirectToAuthorizationURL(req, res, params);
 		} catch (err) {
 			redirectWithError(res, err);
 		}
@@ -49,7 +50,6 @@ router
 	.options((_, res) => {
 		res.sendStatus(204);
 	})
-	.all(jwtdecode())
 
 	/**
 	 * GET /api/oidc/callback
@@ -60,7 +60,7 @@ router
 		try {
 			const settings = await settingModel.query().where({ id: "oidc-config" }).first();
 			const token = await validateCallback(req, settings);
-			redirectWithJwtToken(res, token);
+			redirectWithJwtToken(req, res, token);
 		} catch (err) {
 			redirectWithError(res, err);
 		}
@@ -74,21 +74,9 @@ router
 	.all(oidcRateLimiter)
 	.post(async (req, res) => {
 		try {
-			if (!req.headers?.cookie) {
-				throw new errs.AuthError("No cookie provided");
-			}
-
-			let encryptedToken;
-			const cookies = req.headers.cookie.split(";");
-			for (const cookie of cookies) {
-				const [name, value] = cookie.split("=");
-				if (name.trim() === "shieldpm_oidc") {
-					encryptedToken = value;
-					break;
-				}
-			}
-
-			if (!encryptedToken) {
+			assertEnabled(await settingModel.query().where({ id: "oidc-config" }).first());
+			const encryptedToken = req.cookies?.shieldpm_oidc;
+			if (typeof encryptedToken !== "string" || !encryptedToken) {
 				throw new errs.AuthError("No OIDC cookie found");
 			}
 
@@ -105,30 +93,28 @@ router
 				throw new errs.AuthError("Invalid token data in cookie");
 			}
 
-			// Decode token to get user ID (without verification, signature is trusted from encryption)
-			// We can use the global jwt-decode middleware logic? Or just manual decode since we trust the source (our own encrypted cookie)
-			// But better to use library to be safe.
-			// Let's assume we import jsonwebtoken or just rely on the fact we just decrypted it.
-			// For user ID, we need to parse the base64 payload.
-			const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
-
-			// Set Session Cookie
-			res.cookie("shieldpm_jwt", token, {
-				httpOnly: true,
-				secure: req.secure,
-				sameSite: "strict",
-				maxAge: new Date(expires).getTime() - Date.now(),
+			const payload = await TokenModel().load(token);
+			if (!payload.scope?.includes("user") || !Number.isSafeInteger(payload.attrs?.id)) {
+				throw new errs.AuthError("Invalid OIDC token");
+			}
+			const user = await userModel.query().findById(payload.attrs.id).where({ is_deleted: 0, is_disabled: 0 });
+			if (!user) {
+				throw new errs.AuthError("User cannot be loaded for OIDC token");
+			}
+			const pair = await internalToken.issueTokenPair(user, "user", {
+				ip: req.ip,
+				userAgent: req.headers["user-agent"],
 			});
-
-			res.clearCookie("shieldpm_oidc", { secure: true, sameSite: "Strict" });
-
-			// Return user info for AuthStore
-			res.status(200).send({
-				expires,
-				user: { id: payload.attrs.id },
+			setAuthCookies(res, req, {
+				accessToken: pair.access_token,
+				accessExpires: pair.access_expires,
+				refreshToken: pair.refresh_token,
+				refreshExpires: pair.refresh_expires,
 			});
+			res.clearCookie("shieldpm_oidc");
+			res.status(200).send({ expires: pair.access_expires, user: pair.user, csrfToken: res.locals.csrfToken });
 		} catch (err) {
-			res.status(400).send({ error: { message: err.message } });
+			res.status(400).send({ error: { message: err.public ? err.message : "OIDC authentication failed" } });
 		}
 	});
 
@@ -137,7 +123,14 @@ router
  *
  * @param {Setting} settings
  * */
+const assertEnabled = (settings) => {
+	if (settings?.meta?.enabled !== true) {
+		throw new errs.AuthError("OIDC authentication is disabled");
+	}
+};
+
 const getConfig = async (settings) => {
+	assertEnabled(settings);
 	return await client.discovery(new URL(settings.meta.issuerURL), settings.meta.clientID, settings.meta.clientSecret);
 };
 
@@ -172,23 +165,15 @@ const getInitParams = async (settings) => {
  * @return { {String}, {String} } nonce and state
  * */
 const parseValuesFromCookie = (req) => {
-	if (!req.headers?.cookie) {
-		return { nonce: undefined, state: undefined };
+	const raw = req.cookies?.shieldpm_oidc;
+	if (typeof raw !== "string") {
+		throw new errs.AuthError("Missing OIDC login state. Please restart login.");
 	}
-	let nonce;
-	let state;
-	const cookies = req.headers.cookie.split(";");
-	for (const cookie of cookies) {
-		if (cookie.split("=")[0].trim() === "shieldpm_oidc") {
-			const raw = cookie.split("=")[1];
-			const val = raw.split("___");
-			nonce = val[0].trim();
-			state = val[1].trim();
-			break;
-		}
+	const values = raw.split("___");
+	if (values.length !== 2 || !values[0] || !values[1]) {
+		throw new errs.AuthError("Invalid OIDC login state. Please restart login.");
 	}
-
-	return { nonce, state };
+	return { nonce: values[0], state: values[1] };
 };
 
 /**
@@ -199,8 +184,8 @@ const parseValuesFromCookie = (req) => {
  * @return {Promise} a promise resolving to a jwt token
  * */
 const validateCallback = async (req, settings) => {
-	const config = await getConfig(settings);
 	const { nonce, state } = parseValuesFromCookie(req);
+	const config = await getConfig(settings);
 	const currentUrl = new URL(`${req.protocol}://${req.get("host")}${req.originalUrl}`);
 	const tokens = await client.authorizationCodeGrant(config, currentUrl, {
 		expectedNonce: nonce,
@@ -220,21 +205,39 @@ const validateCallback = async (req, settings) => {
 	return internalToken.getTokenFromOAuthClaim({ identity: claims.email.toLowerCase() });
 };
 
-const redirectToAuthorizationURL = (res, params) => {
-	res.cookie("shieldpm_oidc", `${params.nonce}___${params.state}`, { secure: true, sameSite: "Strict" });
+const redirectToAuthorizationURL = (req, res, params) => {
+	res.cookie("shieldpm_oidc", `${params.nonce}___${params.state}`, {
+		httpOnly: true,
+		secure: req.secure,
+		sameSite: "lax",
+		maxAge: 5 * 60 * 1000,
+	});
 	res.redirect(params.url);
 };
 
-const redirectWithJwtToken = (res, token) => {
+const redirectWithJwtToken = (req, res, token) => {
 	const payload = `${token.token}---${token.expires}`;
 	const encrypted = encrypt(payload);
-	res.cookie("shieldpm_oidc", encrypted, { secure: true, sameSite: "Strict" });
-	res.redirect("/login");
+	// The verified OIDC login replaces this browser's previous session. Otherwise
+	// startup refresh would restore the old identity before the claim can run.
+	clearAuthCookies(res);
+	clearDuoCookie(res, req);
+	res.clearCookie("shieldpm_jwt_original");
+	res.cookie("shieldpm_oidc", encrypted, {
+		httpOnly: true,
+		secure: req.secure,
+		sameSite: "lax",
+		maxAge: 5 * 60 * 1000,
+	});
+	res.redirect("/");
 };
 
 const redirectWithError = (res, error) => {
 	logger.error(`Callback error:  ${error.message}`);
-	res.cookie("shieldpm_oidc_error", error.message, { secure: true, sameSite: "Strict" });
+	res.cookie("shieldpm_oidc_error", error.public ? error.message : "OIDC authentication failed", {
+		secure: true,
+		sameSite: "Strict",
+	});
 	res.redirect("/login");
 };
 

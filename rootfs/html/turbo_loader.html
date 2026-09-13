@@ -159,7 +159,8 @@
     const params = new URLSearchParams(window.location.search);
     params.delete('turbo');
     const cleanSearch = params.toString() ? '?' + params.toString() + '&turbo=0' : '?turbo=0';
-    const originUrl = window.location.pathname + cleanSearch;
+    // A path beginning with // must stay on this origin, not become a host URL.
+    const originUrl = window.location.origin + window.location.pathname + cleanSearch;
 
     // IMPORTANT: Web Apps like Synology DSM (File Station), Nextcloud, etc. often initiate
     // downloads by creating a hidden iframe. If the Turbo-Loader UI is loaded inside a 
@@ -170,8 +171,11 @@
         throw new Error("Turbo-Loader is embedded in an iframe. Redirecting to standard download.");
     }
 
-    const filename = decodeURIComponent(window.location.pathname.split('/').pop() || 'downloaded_file');
+    let filename = window.location.pathname.split('/').pop() || 'downloaded_file';
+    try { filename = decodeURIComponent(filename); } catch (_) { /* Keep malformed escapes readable. */ }
     let totalSize = 0;
+    let fileValidator = null;
+    let activeDownload = null;
 
     document.getElementById('filename').textContent = filename;
 
@@ -186,6 +190,12 @@
     const saveBtnEl      = document.getElementById('save-btn');
     const standardBtnEl  = document.getElementById('standard-btn');
 
+    startBtn.disabled = true;
+    window.addEventListener('pagehide', () => {
+        if (activeDownload) activeDownload.abort();
+        if (pendingBlobUrl) URL.revokeObjectURL(pendingBlobUrl);
+    });
+
     standardBtnEl.addEventListener('click', () => { window.location.href = originUrl; });
 
     // Will hold Blob URL when fallback assembles the file
@@ -195,9 +205,14 @@
     saveBtnEl.addEventListener('click', () => {
         if (!pendingBlobUrl) return;
         const a = document.createElement('a');
-        a.href = pendingBlobUrl; a.download = pendingFilename;
+        const savedUrl = pendingBlobUrl;
+        a.href = savedUrl; a.download = pendingFilename;
         document.body.appendChild(a); a.click();
-        setTimeout(() => { URL.revokeObjectURL(pendingBlobUrl); a.remove(); pendingBlobUrl = null; }, 300);
+        setTimeout(() => {
+            URL.revokeObjectURL(savedUrl);
+            a.remove();
+            if (pendingBlobUrl === savedUrl) { pendingBlobUrl = null; saveBtnEl.style.display = 'none'; }
+        }, 300);
     });
 
     // Build per-chunk progress bars
@@ -236,10 +251,12 @@
                 throw new Error(`Server returned HTTP ${res.status}`);
             }
 
-            totalSize = parseInt(res.headers.get('Content-Length') || '0', 10);
+            totalSize = Number(res.headers.get('Content-Length'));
+            const etag = res.headers.get('ETag');
+            fileValidator = etag && !etag.startsWith('W/') ? etag : res.headers.get('Last-Modified');
             const acceptRanges = res.headers.get('Accept-Ranges');
 
-            if (!totalSize || acceptRanges === 'none') {
+            if (!Number.isSafeInteger(totalSize) || totalSize <= 0 || acceptRanges === 'none') {
                 showError('Server does not report a file size or does not support Range requests. Using standard download.');
                 startBtn.textContent = 'Standard Download';
                 startBtn.disabled = false;
@@ -247,6 +264,7 @@
                 return;
             }
 
+            startBtn.disabled = false;
             startBtn.addEventListener('click', startDownload);
         } catch (err) {
             console.error('[TurboLoader] init:', err);
@@ -258,8 +276,11 @@
 
     // ── main download ──────────────────────────────────────────────────────────
     async function startDownload() {
+        if (activeDownload) return;
         startBtn.disabled = true;
         errorMsgEl.style.display = 'none';
+        saveBtnEl.style.display = 'none';
+        if (pendingBlobUrl) { URL.revokeObjectURL(pendingBlobUrl); pendingBlobUrl = null; }
 
         let writableStream = null;
         let isFallback = false;
@@ -334,154 +355,150 @@
         startBtn.textContent = 'Downloading...';
 
         const chunkSize = Math.ceil(totalSize / CHUNK_COUNT);
-        // completedChunks[i] = Uint8Array of that chunk (fallback only)
         const completedChunks = new Array(CHUNK_COUNT).fill(null);
+        const controller = new AbortController();
+        activeDownload = controller;
+        let writeQueue = Promise.resolve();
         let downloadedBytes = 0;
         let lastTime = Date.now();
         let lastBytes = 0;
+        const MAX_ATTEMPTS = 5;
 
-        // ── download one chunk (unlimited retries + byte-range resume) ──────────
-        const RETRY_BASE_MS = 1000; // 1s, 2s, 4s … capped at 30s
+        function fatal(message) {
+            const error = new Error(message);
+            error.permanent = true;
+            return error;
+        }
+
+        function retryDelay(delay) {
+            return new Promise((resolve, reject) => {
+                if (controller.signal.aborted) { reject(new Error('Download cancelled')); return; }
+                const cancel = () => { clearTimeout(timer); reject(new Error('Download cancelled')); };
+                const timer = setTimeout(() => {
+                    controller.signal.removeEventListener('abort', cancel);
+                    resolve();
+                }, delay);
+                controller.signal.addEventListener('abort', cancel, { once: true });
+            });
+        }
+
+        function updateProgress() {
+            const now = Date.now();
+            if (now - lastTime < 400) return;
+            const speed = (downloadedBytes - lastBytes) / ((now - lastTime) / 1000);
+            if (speed > 0) {
+                speedEl.textContent = `${formatBytes(speed)}/s`;
+                const eta = Math.max(0, Math.round((totalSize - downloadedBytes) / speed));
+                etaEl.textContent = `${String(Math.floor(eta / 60)).padStart(2, '0')}:${String(eta % 60).padStart(2, '0')}`;
+            }
+            const percent = (downloadedBytes / totalSize) * 100;
+            percentEl.textContent = `${percent.toFixed(1)}%`;
+            progressEl.style.width = `${percent}%`;
+            lastTime = now;
+            lastBytes = downloadedBytes;
+        }
 
         async function downloadChunk(idx) {
             const start = idx * chunkSize;
-            const end   = Math.min(start + chunkSize - 1, totalSize - 1);
+            const end = Math.min(start + chunkSize - 1, totalSize - 1);
             if (start >= totalSize) return;
-
             const chunkTotal = end - start + 1;
             const fillEl = document.getElementById(`chunk-${idx}`);
+            const pieces = [];
+            let chunkGot = 0;
 
-            // Persistent state across retries for THIS chunk
-            const pieces    = [];   // all received Uint8Arrays (kept across retries)
-            let chunkGot    = 0;    // total bytes received so far for this chunk
-            let flushedIdx  = 0;    // index into pieces[] already written to FSFA stream
-
-            for (let attempt = 0; ; attempt++) {
-                // On retry: visually indicate pause (amber)
+            for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+                if (controller.signal.aborted) throw new Error('Download cancelled');
                 if (attempt > 0) {
                     fillEl.style.background = '#f59e0b';
-                    const delay = Math.min(RETRY_BASE_MS * Math.pow(2, attempt - 1), 30000);
-                    console.warn(`[TurboLoader] Chunk ${idx}: retry #${attempt} in ${delay}ms (no limit)`);    
-                    await new Promise(r => setTimeout(r, delay));
-                    fillEl.style.background = '#38bdf8';
+                    await retryDelay(Math.min(1000 * 2 ** (attempt - 1), 30000));
                 }
-
+                const requestController = new AbortController();
+                const cancelRequest = () => requestController.abort();
+                controller.signal.addEventListener('abort', cancelRequest, { once: true });
+                let timeout = setTimeout(cancelRequest, 60000);
+                let reader;
                 try {
-                    // Resume from where we left off inside this chunk
                     const resumeFrom = start + chunkGot;
-                    const res = await fetch(originUrl, {
-                        headers: { Range: `bytes=${resumeFrom}-${end}` }
-                    });
-
-                    if (!res.ok && res.status !== 206) {
+                    const headers = { Range: `bytes=${resumeFrom}-${end}` };
+                    if (fileValidator) headers['If-Range'] = fileValidator;
+                    const res = await fetch(originUrl, { headers, signal: requestController.signal });
+                    if (res.status !== 206) {
+                        if (res.status === 200 || (res.status >= 400 && res.status < 500 && ![408, 429].includes(res.status))) {
+                            throw fatal(`Server returned HTTP ${res.status} instead of the requested file range. Use Standard Download.`);
+                        }
                         throw new Error(`HTTP ${res.status}`);
                     }
-
-                    // If server ignores Range and returns 200, skip already-got bytes
-                    const isFullResponse = res.status === 200;
-                    let skipBytes = isFullResponse ? chunkGot : 0;
-
-                    const reader = res.body.getReader();
-
+                    const expectedRange = `bytes ${resumeFrom}-${end}/${totalSize}`;
+                    if (res.headers.get('Content-Range') !== expectedRange || !res.body) {
+                        throw fatal('Server returned an unexpected file range. Use Standard Download.');
+                    }
+                    reader = res.body.getReader();
                     while (true) {
                         const { done, value } = await reader.read();
+                        clearTimeout(timeout);
                         if (done) break;
-
-                        let data = value;
-
-                        if (skipBytes > 0) {
-                            if (data.length <= skipBytes) { skipBytes -= data.length; continue; }
-                            data = data.slice(skipBytes);
-                            skipBytes = 0;
+                        timeout = setTimeout(cancelRequest, 60000);
+                        if (chunkGot + value.length > chunkTotal) throw fatal('Server returned too many bytes for a file range.');
+                        if (isFallback) {
+                            pieces.push(value);
+                        } else {
+                            // Await each queued write: memory stays bounded by the active network reads.
+                            const position = start + chunkGot;
+                            writeQueue = writeQueue.then(() => writableStream.write({ type: 'write', position, data: value }));
+                            try { await writeQueue; } catch (error) { throw fatal(`Could not write the download: ${error.message}`); }
                         }
-
-                        pieces.push(data);
-                        chunkGot        += data.length;
-                        downloadedBytes += data.length;
-
-                        fillEl.style.width = `${Math.min(100, (chunkGot / chunkTotal) * 100)}%`;
-
-                        const now = Date.now();
-                        if (now - lastTime > 400) {
-                            const dt = (now - lastTime) / 1000;
-                            const db = downloadedBytes - lastBytes;
-                            if (dt > 0 && db > 0) {
-                                const spd = db / dt;
-                                speedEl.textContent = `${formatBytes(spd)}/s`;
-                                const eta = Math.max(0, Math.round((totalSize - downloadedBytes) / spd));
-                                etaEl.textContent = `${String(Math.floor(eta / 60)).padStart(2,'0')}:${String(eta % 60).padStart(2,'0')}`;
-                            }
-                            const pct = Math.min(100, (downloadedBytes / totalSize) * 100);
-                            percentEl.textContent = `${pct.toFixed(1)}%`;
-                            progressEl.style.width = `${pct}%`;
-                            lastTime  = now;
-                            lastBytes = downloadedBytes;
-                        }
+                        chunkGot += value.length;
+                        downloadedBytes += value.length;
+                        fillEl.style.background = '#38bdf8';
+                        fillEl.style.width = `${(chunkGot / chunkTotal) * 100}%`;
+                        updateProgress();
                     }
-
-                    // Check if the stream exited cleanly but prematurely (drop without error)
-                    if (!isFullResponse && chunkGot < chunkTotal) {
-                        throw new Error(`Stream dropped at ${chunkGot}/${chunkTotal} bytes. Retrying remaining bytes...`);
+                    if (chunkGot !== chunkTotal) throw new Error('File range ended before all bytes arrived.');
+                    if (isFallback) completedChunks[idx] = new Blob(pieces);
+                    return;
+                } catch (error) {
+                    if (error.permanent || controller.signal.aborted || attempt === MAX_ATTEMPTS - 1) throw error;
+                    // A transport error after the last expected byte does not require an invalid extra Range request.
+                    if (chunkGot === chunkTotal) {
+                        if (isFallback) completedChunks[idx] = new Blob(pieces);
+                        return;
                     }
-
-                    // ✓ Chunk stream done — flush to disk or memory
-                    if (!isFallback) {
-                        // FSFA: write only the NEW pieces since last flush
-                        // flushedIdx tracks how many pieces we've already written to stream
-                        let pos = start;
-                        // Compute starting position for new pieces
-                        for (let i = 0; i < flushedIdx; i++) pos += pieces[i].length;
-                        for (let i = flushedIdx; i < pieces.length; i++) {
-                            await writableStream.write({ type: 'write', position: pos, data: pieces[i] });
-                            pos += pieces[i].length;
-                        }
-                        flushedIdx = pieces.length;
-                    } else {
-                        // Blob fallback: merge all pieces for this chunk
-                        const merged = new Uint8Array(chunkGot);
-                        let off = 0;
-                        for (const p of pieces) { merged.set(p, off); off += p.length; }
-                        completedChunks[idx] = merged;
-                    }
-
-                    return; // ✓ success
-
-                } catch (err) {
-                    // log and keep retrying — no limit
-                    console.warn(`[TurboLoader] Chunk ${idx} error (attempt ${attempt}):`, err.message);
+                } finally {
+                    clearTimeout(timeout);
+                    controller.signal.removeEventListener('abort', cancelRequest);
+                    requestController.abort();
+                    if (reader) { try { await reader.cancel(); } catch (_) {} }
                 }
             }
         }
 
-        // ──────────────────────────────────────────────────────────────────────
-
+        const downloads = Array.from({ length: CHUNK_COUNT }, (_, i) => downloadChunk(i));
         try {
-            await Promise.all(Array.from({ length: CHUNK_COUNT }, (_, i) => downloadChunk(i)));
-
+            await Promise.all(downloads);
             if (!isFallback) {
                 await writableStream.close();
             } else {
-                // Build Blob from ordered chunks — DO NOT auto-click (blocked by Brave/popup blockers)
-                // Instead: expose a prominent Save button the user clicks themselves
                 const blob = new Blob(completedChunks.filter(Boolean));
-                pendingBlobUrl  = URL.createObjectURL(blob);
+                pendingBlobUrl = URL.createObjectURL(blob);
                 pendingFilename = filename;
                 saveBtnEl.style.display = 'block';
-                saveBtnEl.textContent   = `💾 Save ${filename} (${formatBytes(blob.size)})`;
+                saveBtnEl.textContent = `💾 Save ${filename} (${formatBytes(blob.size)})`;
             }
-
-            percentEl.textContent   = '100%';
-            progressEl.style.width  = '100%';
-            speedEl.textContent     = 'Completed';
-            etaEl.textContent       = '00:00';
-            startBtn.textContent    = 'Download Complete! 🎉';
-            startBtn.disabled       = false;
-            startBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-
-        } catch (err) {
-            console.error('[TurboLoader] download error:', err);
+            percentEl.textContent = '100%';
+            progressEl.style.width = '100%';
+            speedEl.textContent = 'Completed';
+            etaEl.textContent = '00:00';
+            startBtn.textContent = 'Download Complete! 🎉';
+            startBtn.disabled = false;
+        } catch (error) {
+            controller.abort();
+            await Promise.allSettled(downloads);
             if (writableStream) { try { await writableStream.abort(); } catch (_) {} }
-            showError('Download failed: ' + err.message);
+            standardBtnEl.style.display = 'block';
+            showError('Download failed: ' + error.message);
+        } finally {
+            activeDownload = null;
         }
     }
 

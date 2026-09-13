@@ -45,8 +45,14 @@ describe("DDNS Service", () => {
 
 			const ips = await ddnsService.getWanIps();
 			expect(ips).toEqual({ ipv4: "1.2.3.4", ipv6: "2001:db8::1" });
-			expect(fetchMock).toHaveBeenCalledWith("https://api.ipify.org?format=json");
-			expect(fetchMock).toHaveBeenCalledWith("https://api6.ipify.org?format=json");
+			expect(fetchMock).toHaveBeenCalledWith(
+				"https://api.ipify.org?format=json",
+				expect.objectContaining({ signal: expect.any(AbortSignal) }),
+			);
+			expect(fetchMock).toHaveBeenCalledWith(
+				"https://api6.ipify.org?format=json",
+				expect.objectContaining({ signal: expect.any(AbortSignal) }),
+			);
 		});
 
 		it("should handle partial failures gracefully", async () => {
@@ -64,6 +70,60 @@ describe("DDNS Service", () => {
 	});
 
 	describe("updateProvider", () => {
+		it("keeps query metacharacters inside provider values", async () => {
+			DdnsProvider.query.mockReturnValue({ patchAndFetchById: vi.fn() });
+			fetchMock.mockResolvedValue({ ok: true, text: async () => "OK" });
+			await ddnsService.updateProvider(
+				{
+					id: 1,
+					provider: "duckdns",
+					domains: ["example&clear=true"],
+					config: { token: "token&unexpected=true" },
+				},
+				{ ipv4: "1.2.3.4", ipv6: null },
+			);
+			const url = new URL(fetchMock.mock.calls[0][0]);
+			expect(url.searchParams.get("domains")).toBe("example&clear=true");
+			expect(url.searchParams.get("token")).toBe("token&unexpected=true");
+			expect(url.searchParams.has("clear")).toBe(false);
+		});
+		it("does not let domain query characters change Cloudflare record filters", async () => {
+			DdnsProvider.query.mockReturnValue({ patchAndFetchById: vi.fn() });
+			fetchMock
+				.mockResolvedValueOnce({ json: async () => ({ success: true, result: [] }) })
+				.mockResolvedValueOnce({ json: async () => ({ success: true }) });
+			await ddnsService.updateProvider(
+				{
+					id: 1,
+					provider: "cloudflare",
+					domains: ["example.com&type=AAAA"],
+					config: { token: "token", zone_id: "zone" },
+				},
+				{ ipv4: "1.2.3.4", ipv6: null },
+			);
+			const url = new URL(fetchMock.mock.calls[0][0]);
+			expect(url.searchParams.getAll("type")).toEqual(["A"]);
+			expect(url.searchParams.get("name")).toBe("example.com&type=AAAA");
+		});
+		it("does not send an update or report success when the selected WAN address is unavailable", async () => {
+			const patchAndFetchById = vi.fn().mockResolvedValue({});
+			DdnsProvider.query.mockReturnValue({ patchAndFetchById });
+			const result = await ddnsService.updateProvider(
+				{
+					id: 1,
+					name: "IPv6 only",
+					provider: "duckdns",
+					domains: ["example"],
+					config: { token: "test" },
+					ip_ver: "v6",
+				},
+				{ ipv4: "1.1.1.1", ipv6: null },
+			);
+			expect(result).toEqual({ success: false, error: "No WAN IP available for the selected IP version" });
+			expect(fetchMock).not.toHaveBeenCalled();
+			expect(patchAndFetchById).toHaveBeenCalledWith(1, { last_error: result.error });
+		});
+
 		it("does not request custom URLs targeting the IPv6 loopback address", async () => {
 			const patchAndFetchById = vi.fn().mockResolvedValue({});
 			DdnsProvider.query.mockReturnValue({

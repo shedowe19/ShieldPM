@@ -742,5 +742,6 @@
 	"wireguard.settings.subnet": "Subred VPN",
 	"wireguard.settings.serverAddress": "Dirección del servidor",
 	"wireguard.settings.title": "Ajustes de WireGuard",
-	"wireguard.title": "Túneles WireGuard"
+	"wireguard.title": "Túneles WireGuard",
+	"settings.gitops.save-before-action": "Guarda los cambios de configuración antes de probar la conexión o ejecutar operaciones de Git."
 }

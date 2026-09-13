@@ -17,6 +17,7 @@ import {
 import bcrypt from "bcryptjs";
 import { generateSecret, generateURI, verifySync } from "otplib";
 import qrcode from "qrcode";
+import { getEncryptionKey } from "../lib/config.js";
 import errs from "../lib/error.js";
 import userModel from "../models/user.js";
 import UserTwoFa from "../models/user-2fa.js";
@@ -25,6 +26,15 @@ import UserTwoFaBackupCode from "../models/user-2fa-backup-codes.js";
 const APP_NAME = "ShieldPM";
 const BACKUP_CODE_COUNT = 8;
 const BACKUP_CODE_LENGTH = 10; // chars (alphanumeric)
+const PASSKEY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * @typedef {object} DuoConfig
+ * @property {string} clientId
+ * @property {string} clientSecret
+ * @property {string} apiHost
+ * @property {string} redirectUrl
+ */
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -44,9 +54,6 @@ const generateBackupCode = () =>
  * @returns {Promise<string[]>}
  */
 const regenerateBackupCodes = async (userId) => {
-	// Delete existing unused codes
-	await UserTwoFaBackupCode.query().delete().where({ user_id: userId });
-
 	const codes = Array.from({ length: BACKUP_CODE_COUNT }, generateBackupCode);
 	const rows = await Promise.all(
 		codes.map(async (code) => ({
@@ -55,7 +62,12 @@ const regenerateBackupCodes = async (userId) => {
 		})),
 	);
 
-	await Promise.all(rows.map((row) => UserTwoFaBackupCode.query().insert(row)));
+	await UserTwoFaBackupCode.transaction(async (trx) => {
+		await UserTwoFaBackupCode.query(trx).delete().where({ user_id: userId });
+		for (const row of rows) {
+			await UserTwoFaBackupCode.query(trx).insert(row);
+		}
+	});
 	return codes;
 };
 
@@ -76,10 +88,10 @@ const setupTotp = async (userId, userEmail) => {
 		secret,
 		issuer: APP_NAME,
 		label: userEmail,
-		algorithm: "SHA1",
+		algorithm: "sha1",
 		digits: 6,
 		period: 30,
-		type: "totp",
+		strategy: "totp",
 	});
 	const qrDataUrl = await qrcode.toDataURL(otpauthUrl);
 
@@ -124,13 +136,20 @@ const verifyAndEnableTotp = async (userId, code) => {
  * @returns {Promise<boolean>}
  */
 const verifyTotp = async (userId, code) => {
-	const record = await UserTwoFa.query().findOne({ user_id: userId, type: "totp", is_deleted: 0 });
-	if (!record) {
-		return false;
+	const records = await UserTwoFa.query().where({ user_id: userId, type: "totp", is_verified: 1, is_deleted: 0 });
+	for (const record of records) {
+		const verification = verifySync({ token: code, secret: record.secret });
+		if (!verification.valid || !("timeStep" in verification) || verification.timeStep <= (record.counter || 0))
+			continue;
+
+		// A successful TOTP may only authenticate once. Compare-and-swap also
+		// prevents two simultaneous requests from consuming the same time step.
+		const consumed = await UserTwoFa.query()
+			.patch({ counter: verification.timeStep })
+			.where({ id: record.id, user_id: userId, counter: record.counter, is_verified: 1, is_deleted: 0 });
+		if (consumed === 1) return true;
 	}
-	// Accept code even if is_verified=0 (TOTP was set up but the UI verification
-	// flow was bypassed, e.g. via direct DB seed)
-	return verifySync({ token: code, secret: record.secret }).valid;
+	return false;
 };
 
 // ---------------------------------------------------------------------------
@@ -139,8 +158,9 @@ const verifyTotp = async (userId, code) => {
 
 /**
  * Validate a YubiKey OTP against the Yubico validation API.
- * Requires YUBICO_CLIENT_ID and YUBICO_SECRET_KEY in the environment
- * (or can point to a local validation server via YUBICO_API_URL).
+ * Uses YUBICO_CLIENT_ID and optionally YUBICO_SECRET_KEY to sign requests and
+ * verify responses, or a custom HTTPS server via YUBICO_API_URL.
+ * Protocol: https://developers.yubico.com/OTP/Specifications/OTP_validation_protocol.html
  *
  * @param {string} otp  44-character OTP from the YubiKey
  * @returns {Promise<{ status: string, deviceId: string }>}
@@ -152,6 +172,20 @@ const validateYubikeyOtp = (otp) => {
 
 	const clientId = process.env.YUBICO_CLIENT_ID || "1";
 	const apiUrl = process.env.YUBICO_API_URL || "api.yubico.com";
+	const signingKey = process.env.YUBICO_SECRET_KEY ? Buffer.from(process.env.YUBICO_SECRET_KEY, "base64") : null;
+	// HMAC-SHA1 is required by the Yubico validation protocol; this authenticates
+	// protocol messages and is not a password hash.
+	const sign = (parameters) =>
+		crypto
+			.createHmac("sha1", signingKey)
+			.update(
+				[...parameters]
+					.filter(([key]) => key !== "h")
+					.sort(([a], [b]) => a.localeCompare(b))
+					.map(([key, value]) => `${key}=${value}`)
+					.join("&"),
+			)
+			.digest();
 	const nonce = crypto.randomBytes(16).toString("hex");
 
 	// The device ID is the first 12 characters of the OTP (modhex encoded)
@@ -159,27 +193,47 @@ const validateYubikeyOtp = (otp) => {
 
 	return new Promise((resolve, reject) => {
 		const params = new URLSearchParams({ id: clientId, nonce, otp, sl: "secure", timestamp: "1" });
+		if (signingKey) params.set("h", sign(params).toString("base64"));
 		const path = `/wsapi/2.0/verify?${params.toString()}`;
 
 		const req = https.request({ hostname: apiUrl, path, method: "GET" }, (res) => {
 			let body = "";
+			res.on("error", reject);
 			res.on("data", (chunk) => {
 				body += chunk;
+				if (Buffer.byteLength(body) > 16384) {
+					req.destroy(new errs.ValidationError("Yubico API response is too large"));
+				}
 			});
 			res.on("end", () => {
-				const statusMatch = body.match(/status=(\w+)/);
-				if (!statusMatch) {
-					return reject(new errs.ValidationError("Unexpected Yubico API response"));
+				if (res.statusCode !== 200)
+					return reject(new errs.ValidationError("Yubico API request was unsuccessful"));
+				const values = new Map();
+				for (const line of body.trim().split(/\r?\n/)) {
+					const separator = line.indexOf("=");
+					const key = line.slice(0, separator);
+					if (separator <= 0 || values.has(key))
+						return reject(new errs.ValidationError("Unexpected Yubico API response"));
+					values.set(key, line.slice(separator + 1));
 				}
-				const status = statusMatch[1];
-				if (status !== "OK") {
-					return reject(new errs.ValidationError(`YubiKey validation failed: ${status}`));
+				if (values.get("otp") !== otp || values.get("nonce") !== nonce) {
+					return reject(new errs.ValidationError("Yubico API response does not match the request"));
 				}
+				if (signingKey) {
+					const supplied = Buffer.from(values.get("h") || "", "base64");
+					const expected = sign(values);
+					if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
+						return reject(new errs.ValidationError("Invalid Yubico API response signature"));
+					}
+				}
+				const status = values.get("status");
+				if (status !== "OK") return reject(new errs.ValidationError("YubiKey validation failed"));
 				resolve({ status, deviceId });
 			});
 		});
 
 		req.on("error", (err) => reject(new errs.InternalError(`Yubico API request failed: ${err.message}`)));
+		req.setTimeout(10000, () => req.destroy(new Error("Yubico API request timed out")));
 		req.end();
 	});
 };
@@ -189,7 +243,7 @@ const validateYubikeyOtp = (otp) => {
  * @param {number} userId
  * @param {string} otp
  * @param {string} [label]
- * @returns {Promise<UserTwoFa>}
+ * @returns {Promise<import("objection").ModelObject<UserTwoFa> & {backup_codes?: string[]}>}
  */
 const addYubikey = async (userId, otp, label = "YubiKey") => {
 	const { deviceId } = await validateYubikeyOtp(otp);
@@ -213,8 +267,8 @@ const addYubikey = async (userId, otp, label = "YubiKey") => {
 		is_verified: 1,
 	});
 
-	await ensureBackupCodesExist(userId);
-	return record;
+	const backupCodes = await ensureBackupCodesExist(userId);
+	return { ...record, ...(backupCodes ? { backup_codes: backupCodes } : {}) };
 };
 
 /**
@@ -247,7 +301,7 @@ const PASSKEY_ORIGIN = process.env.PASSKEY_ORIGIN || null; // null = derive dyna
 
 /**
  * Derive rpID and origin from the request when not explicitly configured.
- * @param {object} req  Express request object
+ * @param {import("express").Request} req  Express request object
  * @returns {{ rpID: string, origin: string }}
  */
 const getPasskeyContext = (req) => {
@@ -263,6 +317,22 @@ const getPasskeyContext = (req) => {
 	return { rpID, origin };
 };
 
+const requireFreshChallenge = (record, label = "Passkey") => {
+	if (!record || !Number.isFinite(record.meta?.expiresAt) || record.meta.expiresAt <= Date.now()) {
+		throw new errs.ValidationError(`${label} challenge not found or expired`);
+	}
+	if (!record.meta.challenge) {
+		throw new errs.ValidationError("Invalid challenge record");
+	}
+};
+
+const consumeChallenge = async (record, label = "Passkey") => {
+	const deleted = await UserTwoFa.query().delete().where({ id: record.id, is_verified: 0 });
+	if (deleted !== 1) {
+		throw new errs.ValidationError(`${label} challenge already used or expired`);
+	}
+};
+
 /**
  * Begin passkey registration: generate options and store the challenge.
  * @param {number} userId
@@ -276,7 +346,9 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
 	const excludeCredentials = existingPasskeys.map((pk) => ({
 		id: pk.secret,
 		type: "public-key",
-		transports: pk.transports ? pk.transports.split(",") : [],
+		transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
+			pk.transports ? pk.transports.split(",") : []
+		),
 	}));
 
 	const user = await userModel.query().findById(userId);
@@ -302,7 +374,7 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
 		user_id: userId,
 		type: "passkey_challenge",
 		secret: challengeId,
-		meta: { challenge: options.challenge },
+		meta: { challenge: options.challenge, expiresAt: Date.now() + PASSKEY_CHALLENGE_TTL_MS },
 		is_verified: 0,
 	});
 
@@ -313,7 +385,8 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
  * Complete passkey registration.
  * @param {number} userId
  * @param {string} challengeId
- * @param {object} registrationResponse  Credential from navigator.credentials.create()
+ * @param {import("@simplewebauthn/server").RegistrationResponseJSON} registrationResponse Credential from navigator.credentials.create()
+ * @param {import("express").Request} req
  * @param {string} [label]
  * @returns {Promise<{ backupCodes: string[] }>}
  */
@@ -329,6 +402,7 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 	if (!challengeRecord) {
 		throw new errs.ValidationError("Passkey registration challenge not found or expired");
 	}
+	requireFreshChallenge(challengeRecord);
 
 	const expectedChallenge = challengeRecord.meta?.challenge;
 	if (!expectedChallenge) {
@@ -348,6 +422,7 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 
 	const { credential } = verification.registrationInfo;
 	const transports = registrationResponse.response?.transports?.join(",") || null;
+	await consumeChallenge(challengeRecord);
 
 	// Store the credential
 	await UserTwoFa.query().insert({
@@ -360,9 +435,6 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 		transports,
 		is_verified: 1,
 	});
-
-	// Clean up challenge
-	await UserTwoFa.query().delete().where({ id: challengeRecord.id });
 
 	const backupCodes = await ensureBackupCodesExist(userId);
 	return { backupCodes };
@@ -384,7 +456,9 @@ const beginPasskeyAuthentication = async (userId, req) => {
 	const allowCredentials = passkeys.map((pk) => ({
 		id: pk.secret,
 		type: "public-key",
-		transports: pk.transports ? pk.transports.split(",") : [],
+		transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
+			pk.transports ? pk.transports.split(",") : []
+		),
 	}));
 
 	const options = await generateAuthenticationOptions({
@@ -399,7 +473,7 @@ const beginPasskeyAuthentication = async (userId, req) => {
 		user_id: userId,
 		type: "passkey_auth_challenge",
 		secret: challengeId,
-		meta: { challenge: options.challenge },
+		meta: { challenge: options.challenge, expiresAt: Date.now() + PASSKEY_CHALLENGE_TTL_MS },
 		is_verified: 0,
 	});
 
@@ -410,7 +484,8 @@ const beginPasskeyAuthentication = async (userId, req) => {
  * Complete passkey authentication.
  * @param {number} userId
  * @param {string} challengeId
- * @param {object} authResponse  Credential from navigator.credentials.get()
+ * @param {import("@simplewebauthn/server").AuthenticationResponseJSON} authResponse Credential from navigator.credentials.get()
+ * @param {import("express").Request} req
  * @returns {Promise<boolean>}
  */
 const completePasskeyAuthentication = async (userId, challengeId, authResponse, req) => {
@@ -425,6 +500,7 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 	if (!challengeRecord) {
 		throw new errs.ValidationError("Passkey authentication challenge not found or expired");
 	}
+	requireFreshChallenge(challengeRecord);
 
 	const expectedChallenge = challengeRecord.meta?.challenge;
 	const credentialId = authResponse.id;
@@ -452,19 +528,25 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 			id: passkey.secret,
 			publicKey: new Uint8Array(publicKeyBuffer),
 			counter: passkey.counter,
-			transports: passkey.transports ? passkey.transports.split(",") : [],
+			transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
+				passkey.transports ? passkey.transports.split(",") : []
+			),
 		},
 	});
 
 	if (!verification.verified) {
 		throw new errs.ValidationError("Passkey authentication failed");
 	}
+	await consumeChallenge(challengeRecord);
 
-	// Update counter to prevent replay attacks
-	await UserTwoFa.query().patch({ counter: verification.authenticationInfo.newCounter }).where({ id: passkey.id });
-
-	// Clean up challenge
-	await UserTwoFa.query().delete().where({ id: challengeRecord.id });
+	// The signature was checked against the previously read credential. Do not
+	// overwrite a concurrent counter advance or authenticate a removed method.
+	const updated = await UserTwoFa.query()
+		.patch({ counter: verification.authenticationInfo.newCounter })
+		.where({ id: passkey.id, user_id: userId, counter: passkey.counter, is_verified: 1, is_deleted: 0 });
+	if (updated !== 1) {
+		throw new errs.ValidationError("Passkey changed during authentication. Please retry.");
+	}
 
 	return true;
 };
@@ -497,8 +579,8 @@ const createDuoClient = (duoConfig) => {
 /**
  * Save Duo Security configuration for a user and verify connectivity.
  * @param {number} userId
- * @param {object} config
- * @returns {Promise<UserTwoFa>}
+ * @param {DuoConfig} config
+ * @returns {Promise<import("objection").ModelObject<UserTwoFa> & {backup_codes?: string[]}>}
  */
 const setupDuo = async (userId, config) => {
 	const { clientId, clientSecret, apiHost, redirectUrl } = config;
@@ -510,28 +592,47 @@ const setupDuo = async (userId, config) => {
 	const client = createDuoClient({ clientId, clientSecret, apiHost, redirectUrl });
 	await client.healthCheck();
 
-	// Remove any existing Duo config
-	await UserTwoFa.query().patch({ is_deleted: 1 }).where({ user_id: userId, type: "duo", is_deleted: 0 });
-
-	const record = await UserTwoFa.query().insertAndFetch({
-		user_id: userId,
-		type: "duo",
-		label: "Duo Security",
-		meta: { clientId, clientSecret, apiHost, redirectUrl },
-		is_verified: 1,
+	// A failed replacement must not disable the account's existing second
+	// factor or expose an intermediate state with no active Duo method.
+	const record = await UserTwoFa.transaction(async (trx) => {
+		await UserTwoFa.query(trx).patch({ is_deleted: 1 }).where({ user_id: userId, type: "duo", is_deleted: 0 });
+		return UserTwoFa.query(trx).insertAndFetch({
+			user_id: userId,
+			type: "duo",
+			label: "Duo Security",
+			meta: { clientId, clientSecret, apiHost, redirectUrl },
+			is_verified: 1,
+		});
 	});
 
-	await ensureBackupCodesExist(userId);
-	return record;
+	const backupCodes = await ensureBackupCodesExist(userId);
+	return { ...record, ...(backupCodes ? { backup_codes: backupCodes } : {}) };
 };
 
+// These are uniformly random 256-bit identifiers, not human passwords. Keyed,
+// purpose-separated tags protect database lookups without password-KDF costs.
+const getDuoChallengeTag = (purpose, value) =>
+	crypto
+		.createHmac("sha256", Buffer.from(getEncryptionKey(), "hex"))
+		.update(`shieldpm:duo:${purpose}:v1:`)
+		.update(value)
+		.digest("hex");
+
 /**
- * Begin Duo authentication: generate the Duo auth URL.
+ * Bind a pending login to a short-lived, opaque browser cookie.
  * @param {number} userId
  * @param {string} userEmail
- * @returns {Promise<{ authUrl: string, state: string }>}
+ * @param {string} browserToken Random identifier generated by the HTTP controller
+ * @param {number} expiresAt Deadline bounded by the verified pending JWT
+ * @returns {Promise<string>} Provider authorization URL
  */
-const beginDuoAuthentication = async (userId, userEmail) => {
+const beginDuoAuthentication = async (userId, userEmail, browserToken, expiresAt) => {
+	if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 5 * 60 * 1000) {
+		throw new errs.ValidationError("Pending Duo login is invalid or expired");
+	}
+	if (typeof browserToken !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(browserToken)) {
+		throw new errs.ValidationError("Invalid Duo browser binding");
+	}
 	const duoRecord = await UserTwoFa.query().findOne({ user_id: userId, type: "duo", is_verified: 1, is_deleted: 0 });
 	if (!duoRecord) {
 		throw new errs.ValidationError("Duo Security is not configured for this user");
@@ -540,26 +641,67 @@ const beginDuoAuthentication = async (userId, userEmail) => {
 	const client = createDuoClient(duoRecord.meta);
 	const state = crypto.randomBytes(32).toString("base64url");
 	const authUrl = await client.createAuthUrl(userEmail, state);
+	await UserTwoFa.query().delete().where({ user_id: userId, type: "duo_auth_challenge", is_verified: 0 });
+	await UserTwoFa.query().insert({
+		user_id: userId,
+		type: "duo_auth_challenge",
+		secret: getDuoChallengeTag("binding", browserToken),
+		is_verified: 0,
+		meta: { challenge: getDuoChallengeTag("state", state), expiresAt },
+	});
 
-	return { authUrl, state };
+	return authUrl;
 };
 
 /**
  * Complete Duo authentication by exchanging the authorization code.
- * @param {number} userId
- * @param {string} userEmail
+ * @param {string} browserToken HttpOnly redirect cookie
  * @param {string} duoCode
- * @returns {Promise<boolean>}
+ * @param {string} state Provider callback state
+ * @returns {Promise<object|null>} Active user only after successful Duo verification
  */
-const completeDuoAuthentication = async (userId, userEmail, duoCode) => {
+const completeDuoAuthentication = async (browserToken, duoCode, state) => {
+	if (typeof browserToken !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(browserToken)) {
+		throw new errs.ValidationError("Duo login cookie is missing or invalid");
+	}
+	if (typeof state !== "string" || !state || typeof duoCode !== "string" || !duoCode) {
+		throw new errs.ValidationError("Duo login code and state are required");
+	}
+	const challenge = await UserTwoFa.query().findOne({
+		type: "duo_auth_challenge",
+		secret: getDuoChallengeTag("binding", browserToken),
+		is_verified: 0,
+		is_deleted: 0,
+	});
+	requireFreshChallenge(challenge, "Duo");
+	const expectedStateTag = Buffer.from(challenge.meta.challenge, "hex");
+	const actualStateTag = Buffer.from(getDuoChallengeTag("state", state), "hex");
+	if (
+		expectedStateTag.length !== actualStateTag.length ||
+		!crypto.timingSafeEqual(expectedStateTag, actualStateTag)
+	) {
+		throw new errs.ValidationError("Duo login state does not match");
+	}
+	const userId = challenge.user_id;
+	const user = await userModel.query().findById(userId).where({ is_deleted: 0, is_disabled: 0 });
+	if (!user) {
+		throw new errs.ValidationError("Duo login user is no longer available");
+	}
 	const duoRecord = await UserTwoFa.query().findOne({ user_id: userId, type: "duo", is_verified: 1, is_deleted: 0 });
 	if (!duoRecord) {
 		throw new errs.ValidationError("Duo Security is not configured for this user");
 	}
 
 	const client = createDuoClient(duoRecord.meta);
-	const tokenResult = await client.exchangeAuthorizationCodeFor2FAResult(duoCode, userEmail);
-	return !!tokenResult;
+	// Claim before contacting Duo: concurrent callbacks must never exchange the
+	// same code or issue two sessions, including when an exchange fails.
+	await consumeChallenge(challenge, "Duo");
+	const tokenResult = await client.exchangeAuthorizationCodeFor2FAResult(duoCode, user.email);
+	if (tokenResult?.auth_result?.result !== "allow" || tokenResult.auth_result.status !== "allow") {
+		return null;
+	}
+	requireFreshChallenge(challenge, "Duo");
+	return userModel.query().findById(userId).where({ is_deleted: 0, is_disabled: 0 });
 };
 
 // ---------------------------------------------------------------------------
@@ -605,7 +747,7 @@ const getRemainingBackupCodeCount = async (userId) => {
 
 /**
  * Soft-delete a specific 2FA method.
- * Throws if it's the user's only 2FA method.
+ * Removing the last active method also removes recovery codes.
  * @param {number} userId
  * @param {number} methodId
  */
@@ -615,13 +757,12 @@ const removeTwoFaMethod = async (userId, methodId) => {
 		throw new errs.ItemNotFoundError(`2FA method ${methodId}`);
 	}
 
-	const activeCount = await UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 }).resultSize();
-
 	await UserTwoFa.query().patch({ is_deleted: 1 }).where({ id: methodId });
+	const activeCount = await UserTwoFa.query().where({ user_id: userId, is_verified: 1, is_deleted: 0 }).resultSize();
 
 	// If this was the last active method, 2FA is now disabled.
 	// Clean up backup codes so they don't linger.
-	if (activeCount <= 1) {
+	if (activeCount === 0) {
 		await UserTwoFaBackupCode.query().delete().where({ user_id: userId });
 	}
 };

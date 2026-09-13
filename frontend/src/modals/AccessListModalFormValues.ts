@@ -63,7 +63,7 @@ type AccessListMeta = {
 
 const isAccessListMeta = (value: unknown): value is AccessListMeta => typeof value === "object" && value !== null;
 
-const parseAccessListMeta = (meta: unknown): AccessListMeta => {
+export const parseAccessListMeta = (meta: unknown): AccessListMeta => {
 	if (!meta) return {};
 
 	if (typeof meta === "string") {

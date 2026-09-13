@@ -8,7 +8,6 @@ import {
 	EmptyData,
 	HasPermission,
 	ServiceIcon,
-	TrueFalseFormatter,
 	UserAvatar,
 } from "src/components";
 import { AccessListFormatter } from "src/components/Table/Formatter/AccessListformatter";
@@ -26,6 +25,7 @@ import {
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { HostStatus } from "../HostStatus";
 
 interface Props {
 	data: ProxyHost[];
@@ -110,11 +110,11 @@ export default function Table({
 						return <AccessListFormatter access={info.getValue()} onEdit={onEditAccessList} />;
 					},
 				}),
-				columnHelper.accessor("enabled", {
+				columnHelper.accessor((row) => row, {
 					id: "enabled",
 					header: intl.formatMessage({ id: "column.status" }),
 					cell: (info) => {
-						return <TrueFalseFormatter value={info.getValue()} trueLabel="online" falseLabel="offline" />;
+						return <HostStatus host={info.getValue()} />;
 					},
 				}),
 				columnHelper.display({

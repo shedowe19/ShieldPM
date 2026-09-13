@@ -14,8 +14,8 @@ interface Props {
 	name?: string;
 }
 export function AccessClientFields({ initialValues, name = "clients" }: Props) {
-	const [values, setValues] = useState<AccessListClient[]>(initialValues || []);
-	const { setFieldValue } = useFormikContext();
+	const { values: formValues, setFieldValue } = useFormikContext<Record<string, AccessListClient[]>>();
+	const [values, setValues] = useState<AccessListClient[]>(() => formValues?.[name] || initialValues || []);
 
 	const blankClient: AccessListClient = {
 		directive: ACCESS_DIRECTIVE.ALLOW,
@@ -42,14 +42,8 @@ export function AccessClientFields({ initialValues, name = "clients" }: Props) {
 	};
 
 	const handleChange = (idx: number, field: string, fieldValue: string) => {
-		let finalValue = fieldValue;
-		if (field === "address") {
-			// Only allow numbers, letters a-f A-F, dots, colons, and slashes for IP addresses/CIDR
-			finalValue = finalValue.replace(/[^0-9a-fA-F.:/]/g, "");
-		}
-
 		const newValues = values.map((v: AccessListClient, i: number) =>
-			i === idx ? { ...v, [field]: finalValue } : v,
+			i === idx ? { ...v, [field]: fieldValue } : v,
 		);
 		setValues(newValues);
 		setFormField(newValues);

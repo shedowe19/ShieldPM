@@ -7,6 +7,7 @@ import {
 	updateAccessList,
 } from "src/api/backend";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import { optimisticQueryUpdate } from "./optimisticQueryUpdate";
 
 const fetchAccessList = (id: number | "new", expand: AccessListExpansion[] = ["owner"]) => {
 	if (id === "new") {
@@ -41,15 +42,18 @@ const useSetAccessList = () => {
 			if (!values.id) {
 				return () => {};
 			}
-			const previousObject = queryClient.getQueryData([AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, values.id]);
-			queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, values.id], (old: AccessList) => ({
-				...old,
-				...values,
-			}));
-			return () => queryClient.setQueryData([AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, values.id], previousObject);
+			return optimisticQueryUpdate<AccessList>(
+				queryClient,
+				[AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, values.id],
+				(old) => ({
+					...old,
+					...values,
+				}),
+			);
 		},
 		onError: (_, __, rollback: (() => void) | undefined) => rollback?.(),
-		onSuccess: async ({ id }: AccessList) => {
+		onSettled: (data, _error, values) => {
+			const id = data?.id ?? values.id;
 			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.ACCESS_LIST, id] });
 			queryClient.invalidateQueries({ queryKey: ["access-lists"] });
 			queryClient.invalidateQueries({ queryKey: ["audit-logs"] });

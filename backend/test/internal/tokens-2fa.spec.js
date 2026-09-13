@@ -34,18 +34,14 @@ vi.mock("../../models/user.js", () => ({
 
 vi.mock("../../models/auth.js", () => ({
 	default: {
-		query: vi.fn(() => ({
-			where: vi.fn(() => ({
-				where: vi.fn(() => ({
-					first: vi.fn(() =>
-						Promise.resolve({
-							secret: "hashedpassword",
-							verifyPassword: vi.fn(() => Promise.resolve(true)),
-						}),
-					),
-				})),
-			})),
-		})),
+		query: vi.fn(() => {
+			const query = {
+				where: vi.fn(),
+				first: vi.fn(async () => ({ secret: "hashedpassword", verifyPassword: vi.fn(async () => true) })),
+			};
+			query.where.mockReturnValue(query);
+			return query;
+		}),
 	},
 }));
 

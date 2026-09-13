@@ -28,8 +28,9 @@ import { MANAGE, TOR_ONIONS } from "@/modules/Permissions";
 
 export function TorOnionServices() {
 	const health = useHealth();
-	const { data, isLoading, refetch } = useTorOnions();
+	const { data, isLoading, error, refetch } = useTorOnions();
 	const { remove, start, stop } = useTorOnion();
+	const mutationPending = remove.isPending || start.isPending || stop.isPending;
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [selectedService, setSelectedService] = useState<TorOnion | null>(null);
 	const { toast } = useToast();
@@ -50,11 +51,16 @@ export function TorOnionServices() {
 		setIsModalOpen(true);
 	};
 
-	const handleCopy = (address: string) => {
-		navigator.clipboard.writeText(address);
-		toast({
-			description: <T id="tor.copy_success" />,
-		});
+	const handleCopy = async (address: string) => {
+		try {
+			await navigator.clipboard.writeText(address);
+			toast({ description: <T id="tor.copy_success" /> });
+		} catch (error) {
+			toast({
+				variant: "destructive",
+				description: error instanceof Error ? error.message : intl.formatMessage({ id: "error.unknown" }),
+			});
+		}
 	};
 
 	const getStatusBadge = (status: TorOnionStatus) => {
@@ -161,7 +167,12 @@ export function TorOnionServices() {
 			</CardHeader>
 
 			<CardContent>
-				{!torInfo?.available && (
+				{error && (
+					<Alert variant="destructive" className="mb-4">
+						<AlertDescription>{error.message}</AlertDescription>
+					</Alert>
+				)}
+				{!isLoading && !error && !torInfo?.available && (
 					<Alert variant="destructive" className="mb-4">
 						<AlertCircle className="h-4 w-4" />
 						<AlertDescription>
@@ -205,13 +216,13 @@ export function TorOnionServices() {
 						<TableBody>
 							{isLoading ? (
 								<TableRow>
-									<TableCell colSpan={5} className="text-center py-8">
+									<TableCell colSpan={6} className="text-center py-8">
 										<T id="loading" />
 									</TableCell>
 								</TableRow>
 							) : services.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+									<TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
 										<T id="tor.no_services" />
 									</TableCell>
 								</TableRow>
@@ -250,7 +261,7 @@ export function TorOnionServices() {
 														size="icon"
 														aria-label={intl.formatMessage({ id: "tor.stop" })}
 														onClick={() => stop.mutate(service.id)}
-														disabled={stop.isPending}
+														disabled={mutationPending}
 													>
 														<IconPlayerStop className="h-4 w-4" />
 													</Button>
@@ -260,7 +271,7 @@ export function TorOnionServices() {
 														size="icon"
 														aria-label={intl.formatMessage({ id: "tor.start" })}
 														onClick={() => start.mutate(service.id)}
-														disabled={start.isPending}
+														disabled={mutationPending}
 													>
 														<IconPlayerPlay className="h-4 w-4" />
 													</Button>
@@ -269,6 +280,7 @@ export function TorOnionServices() {
 													variant="ghost"
 													size="icon"
 													aria-label={intl.formatMessage({ id: "tor.edit" })}
+													disabled={mutationPending}
 													onClick={() => handleEdit(service)}
 												>
 													<IconEdit className="h-4 w-4" />
@@ -278,6 +290,7 @@ export function TorOnionServices() {
 													size="icon"
 													className="text-destructive"
 													aria-label={intl.formatMessage({ id: "action.delete" })}
+													disabled={mutationPending}
 													onClick={() => handleDelete(service)}
 												>
 													<IconTrash className="h-4 w-4" />

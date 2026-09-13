@@ -40,6 +40,11 @@ Das Frontend verwendet React 19 mit TypeScript. Die interne Architektur folgt de
 
 ## Custom Hooks (`frontend/src/hooks/`)
 
+`useSetUser` invalidiert nach dem Speichern sowohl die numerische Benutzerabfrage als auch den Alias `"me"`.
+Dadurch aktualisieren sich Kopfzeile und Berechtigungsansichten auch nach Änderungen über eine numerische Route.
+Eine optimistische Aktualisierung des Alias behält die numerische Benutzer-ID im gecachten Objekt bei.
+`useUser.test.tsx` sichert beide Fälle ab.
+
 32 Hooks für Server-State-Management (React Query):
 
 ### CRUD Hooks (Entitäten)
@@ -112,6 +117,24 @@ Pointer-Position, Ziehen verschiebt den Viewport. Dadurch ist die Karte React-19
 Marker, Zoom und Pan.
 `AnalyticsGeography.test.tsx` sichert Titel und Datenweitergabe an Karte und Länderliste ab.
 
+## Formular- und Antwortzustand
+
+- Dynamische Basic-Auth-, Clientregel- und Location-Felder initialisieren sich beim erneuten Mounten aus dem aktuellen Formik-Zustand. Wechsel zwischen Tabs verlieren dadurch keine ungespeicherten Zeilen. DNS- und Access-List-Auswahlen sind ebenfalls an den Formularwert gebunden.
+- Geänderte Pfade verändern keine React-Keys mehr. Location- und Anubis-Eingaben behalten beim Tippen den Fokus. Anubis-Adresslisten bewahren ein gerade eingegebenes Komma bis zum Verlassen des Felds; Zugriffsregeln erlauben auch den vom Backend unterstützten Wert `all`.
+- `ui/form.tsx` rendert den eigentlichen Validierungstext innerhalb von `FormMessage` und verknüpft ihn über `aria-describedby`. Ohne diesen Inhalt waren Fehler zwar im Formularzustand vorhanden, aber unsichtbar.
+- `GitSyncTab` löst mit seiner Synchronisationsaktion keinen Submit des umgebenden Proxy-Host-Formulars aus. Die mobile Sidebar schließt sich bei Navigation und beim Öffnen des KI-Chats.
+- Antworten alter KI-Unterhaltungen, Modellabfragen und WireGuard-Peer-Dialoge dürfen einen inzwischen gewechselten Zustand nicht überschreiben. Der Peer-Konfigurationsdialog entfernt beim Wechsel sofort den alten Inhalt und deaktiviert dessen Download. WireGuard-Formulare bewahren explizit null Sekunden Keepalive und leere DNS-Angaben.
+- Die Hilfeauflösung berücksichtigt alle 13 unterstützten Sprachen einschließlich der vorhandenen spanischen Dokumente. Eine spätere Sprachwahl gewinnt gegenüber einer älteren, langsameren Sprachdatei-Ladung. Service-Icons versuchen nach einem URL-Wechsel erneut zu laden, auch wenn die vorherige URL fehlschlug. Tabellenformatierer verändern keine aus dem Query-Cache übernommenen Arrays.
+- KI-Markdown trennt Inline-Code und Codeblöcke über die tatsächlichen `code`- und `pre`-Elemente. Es verwendet keinen vom Renderer entfernten `inline`-Parameter.
+- DDNS-Neuanlagen verwenden POST; Änderungen benötigen eine numerische ID und erhalten den Aktivierungsstatus. Fehler beim ersten Laden von KI-, DDNS- oder ChatOps-Konfigurationen zeigen einen Fehlerzustand, damit leere Standardwerte keine vorhandene Konfiguration überschreiben.
+- Beim erneuten Versuch eines fehlgeschlagenen Zertifikat-Uploads wird dieselbe bereits erzeugte Zertifikats-ID verwendet. Änderungen am Namen werden vor dem Upload übernommen. Paste-Eingaben akzeptieren PKCS#8-, RSA- und EC-Schlüssel und werden anschließend weiterhin vom Backend geprüft. Die automatische Erneuerung startet auch bei wiederholten StrictMode-Effekten nur einmal.
+- Demo-Metadatenmaskierung erkennt sowohl API-Namen in `camelCase` als auch ältere Namen in `snake_case`. Fehlende optionale Berechtigungsstufen initialisieren sich mit dem gültigen Wert `hidden`; die Sichtbarkeit bleibt ein eigener Wert.
+
+Die Regressionstests verwenden echte Formularzustände, DOM-Interaktionen beziehungsweise kontrolliert verzögerte
+API-Antworten. Der eigenständige [Turbo-Loader](../module/turbo-loader.md) besitzt zusätzlich Tests für Dateiinhalte,
+Teilbereichsantworten, Wiederaufnahme und schrittweises Schreiben auf die Festplatte. Die Wartungsseite bleibt bei
+kleinen Bildschirmen und Zoom scrollbar und stoppt den Countdown beim ersten abgeschlossenen Intervall.
+
 ## React-Kontexte (`frontend/src/context/`)
 
 | Context         | Datei                      | Zweck                                                 |
@@ -122,11 +145,54 @@ Marker, Zoom und Pan.
 
 ## Frontend-Module (`frontend/src/modules/`)
 
-| Modul         | Datei                      | Zweck                            |
-| ------------- | -------------------------- | -------------------------------- |
-| `AuthStore`   | `AuthStore.ts` (1.7 KB)    | Token-Speicherung (localStorage) |
-| `Permissions` | `Permissions.ts` (1.8 KB)  | Berechtigungslogik               |
-| `Validations` | `Validations.tsx` (2.8 KB) | Formular-Validierungsregeln      |
+| Modul         | Datei                      | Zweck                                                                              |
+| ------------- | -------------------------- | ---------------------------------------------------------------------------------- |
+| `AuthStore`   | `AuthStore.ts`             | Sitzungsmetadaten und CSRF-Token im Arbeitsspeicher; Auth-Cookies bleiben HttpOnly |
+| `Permissions` | `Permissions.ts` (1.8 KB)  | Berechtigungslogik                                                                 |
+| `Validations` | `Validations.tsx` (2.8 KB) | Formular-Validierungsregeln                                                        |
+
+`AuthStore` normalisiert ISO-Ablaufdaten der API zu Millisekunden; fehlende oder ungültige Ablaufdaten gelten bei der
+Gültigkeitsprüfung nicht als aktive Tokens. Die periodische Sitzungserneuerung in `AuthContext` verarbeitet abgelehnte
+Promises: Bei einem stillen 401 wechselt die UI zur Anmeldung, vorübergehende Netzwerkfehler lassen den bestehenden
+Auth-Zustand erhalten. Ein nach Abmeldung oder Benutzerwechsel eintreffendes altes Refresh-Ergebnis überschreibt den
+neuen Zustand nicht. `AuthStore.test.ts` und `AuthContext.test.tsx` prüfen Ablauf, Netzfehler und verspätete Ergebnisse.
+
+Der Router wartet bei einer eingerichteten Instanz zusätzlich auf das Ende der anfänglichen Sitzungswiederherstellung,
+bevor er die Login-Seite mountet. Deren OIDC-Claim kann dadurch nicht mit dem Start-Refresh konkurrieren; nach einem
+fehlgeschlagenen Restore erscheint weiterhin die Anmeldung. Der öffentliche Duo-Callback behält seinen eigenen
+Startpfad ohne Refresh. `Router.test.tsx` und `Router.duo.test.tsx` prüfen diese Übergänge.
+
+Nach einem erfolgreichen OIDC-Callback bereinigt das Backend die bisherigen Browser-Auth-Cookies und leitet zu `/`
+weiter. Der dortige Start-Refresh erhält ohne alten Refresh-Cookie den regulären Status 400; anschließend kann die
+Login-Seite den neuen OIDC-Token beanspruchen und direkt das Dashboard anzeigen. `claimOidcToken.ts` sendet dabei den
+vom Health-Aufruf erhaltenen CSRF-Header auch für den anonymen Claim und verwendet `silentAuth`. Ein fehlender
+OIDC-Cookie liefert regulär 400 und lässt den Passwortlogin verfügbar. `Router.oidc.test.tsx` prüft beide Abläufe unter
+StrictMode mit echtem Router, Login, AuthProvider, Store, Query-Client und API-Client. Die Cookie-Bereinigung selbst
+wird durch den HTTP-Regressionsfall des Auth-Backends abgesichert.
+
+Passwort-Login, Impersonation und Administrator-Restore merken sich beim Start die aktuelle Übergangsgeneration.
+Ein neuerer Übergang oder ein Provider-Unmount verwirft ihre verspätete Übernahme in `AuthStore`, UI und Query-Cache.
+Auch ein verspäteter Restore-Fehler darf eine inzwischen neu angemeldete Sitzung weder leeren noch erneut an den
+Logout-Endpunkt senden. Der Restore-Aufruf behandelt einen abgelaufenen Backup-Token als stillen Auth-Fehler, damit
+der verantwortliche `AuthProvider` anschließend die übrigen Cookies über `/tokens/logout` abmelden kann.
+`AuthContext.session-races.test.tsx` prüft diese Fälle mit echtem Store und Query-Client, einschließlich des
+401-Fallbacks über den echten API-Client. Der Schutz betrifft die Zustandsübernahme im Frontend; bereits verarbeitete
+HTTP-`Set-Cookie`-Antworten lassen sich damit nicht rückgängig machen.
+
+`api/backend/refreshToken.ts` teilt parallele Refresh-Anfragen nur innerhalb derselben `AuthStore.sessionRevision`.
+Nach einem Sessionwechsel beginnt ein neuer Aufrufer eine eigene Anfrage; das Ende einer älteren Anfrage kann deren
+laufenden Promise nicht entfernen. `refreshToken.test.ts` prüft Sitzungswechsel, Überschneidung und Wiederholung nach
+Fehlern. Das Unmount-Cleanup des Providers entwertet außerdem noch laufende periodische Refresh-Callbacks.
+
+Bei „Login als Benutzer“ markiert `AuthStore` die Sitzung im Arbeitsspeicher als impersoniert. Der Server ersetzt
+dabei nur den Access-Cookie; der Refresh-Cookie gehört weiterhin dem Administrator. Deshalb überspringt `AuthContext`
+während dieser Sitzung sowohl periodische Refresh-Aufrufe als auch den Start-Refresh nach einem sprachbedingten
+Provider-Remount. Sonst würde der nächste Refresh die Administratoridentität mit dem noch sichtbaren Zielbenutzer-Cache
+kombinieren. Die explizite Rückkehr zum Administrator, eine neue Anmeldung oder das Leeren des Stores entfernen die
+Markierung; danach arbeitet der normale Refresh wieder. Abgelaufene Access-Tokens verwenden weiterhin die zentrale
+401-Abmeldung. `AuthContext.impersonation.test.tsx` prüft diese Übergänge mit dem echten Store. Die Markierung überlebt
+keinen vollständigen Dokument-Reload; dort stellt der bestehende Refresh-Cookie weiterhin die ursprüngliche Sitzung
+wieder her. Eine eigenständige Refresh-Sitzung für den impersonierten Benutzer wird nicht angelegt.
 
 ## Modals (`frontend/src/modals/`)
 
@@ -179,6 +245,13 @@ Kontos lässt es Rollen und Deaktivierungsstatus weiterhin aus, damit sich Benut
 Rolle ändern können. `UserModalSubmission.test.ts` sichert diese Payload-Grenze sowie die Kennzeichnung neuer
 Benutzer.
 
+Avatar-Metadaten werden aus der API als `avatarType` und `avatarValue` gelesen und den bestehenden Formik-Feldern
+zugeordnet. URL- und Gravatar-Auswahl werden beim Anlegen und Bearbeiten mitgesendet. Upload-Dateinamen setzt nur der
+Upload-Endpunkt; der Dialog sendet dafür keine möglicherweise aus einer früheren URL-Auswahl stammenden Werte.
+Nach dem Upload werden Benutzer- und Listenabfragen erneut invalidiert. Falls ein Upload nach erfolgreicher
+Benutzeranlage fehlschlägt, verwendet ein erneuter Speicherversuch die bereits erzeugte ID und erstellt keinen zweiten
+Benutzer. Die Submission- und Dialogtests prüfen diese Übergänge.
+
 `SetPasswordModal.tsx` beschriftet die Icon-Aktionen zum Anzeigen/Verstecken und Generieren eines Passworts über die
 vorhandenen lokalisierten Schlüssel `password.show`, `password.hide` und `password.generate`. Der
 Sichtbarkeitsumschalter veröffentlicht seinen Zustand zusätzlich mit `aria-pressed` und bleibt per Tastatur erreichbar.
@@ -194,7 +267,9 @@ bereits konfigurierte Regeln bleiben erhalten.
 
 Die Terminal-Verbindungsfelder des `ProxyHostModal` liegen in `ProxyHostTerminalFields.tsx`. Die Komponente bleibt ein
 Formik-Kind, erscheint nur für das Forwarding-Schema `terminal` und zeigt abhängig von `terminalAuthType` unverändert
-das Passwort- oder Private-Key-Feld. `ProxyHostTerminalFields.test.tsx` sichert diese drei Zustände ab.
+das Passwort- oder Private-Key-Feld. Gespeicherte Terminal-Secrets werden nicht in den Formularzustand übernommen;
+leere Felder fehlen im Update-Payload und lassen bestehende Zugangsdaten unverändert. Explizit eingegebene neue
+Zugangsdaten werden weiterhin übertragen. Die Terminal- und Submission-Tests sichern diese Zustände ab.
 
 `ProxyHostIconSettings.tsx` kapselt die Symbolauswahl des `ProxyHostModal` als weiteres Formik-Kind. Bei `iconType`
 `custom` bleibt das URL-Feld sichtbar; die Vorschau erhält weiterhin Host, Port, Symboltyp und URL aus dem gemeinsamen
@@ -202,8 +277,9 @@ Formularzustand. `ProxyHostIconSettings.test.tsx` sichert beide Zustände ab.
 
 `ProxyHostPhpSettings.tsx` kapselt die PHP-Hosting-Felder des `ProxyHostModal` als Formik-Kind. Der Bereich bleibt auf
 das Forwarding-Schema `path` begrenzt; nach dem Aktivieren von PHP bleiben Versionswahl und benutzerdefinierte
-`php_override_ini` aus dem gemeinsamen Formularzustand verfügbar. `ProxyHostPhpSettings.test.tsx` sichert diese
-Sichtbarkeits- und Zustandsübergänge ab.
+`phpOverrideIni` aus dem gemeinsamen Formularzustand verfügbar. Der API-Client übernimmt die Umwandlung zu
+`php_override_ini`; vorhandene INI-Werte werden beim Bearbeiten geladen und auch bei Änderungen anderer Host-Felder
+erhalten. Die PHP-Feld-, Formwert- und Submission-Tests sichern diese Übergänge ab.
 
 `ProxyHostAdvancedTab.tsx` kapselt den erweiterten Tab des `ProxyHostModal` als Formik-Kind. Der Turbo-Loader-Schalter
 bleibt an `turboLoader` gebunden; Titel und Erläuterungen verwenden `proxy-host.turbo-loader.*` mit nativen Texten in
@@ -239,10 +315,17 @@ Zusammensetzung und beide Werte gegen Regressionsfehler ab.
 Host-ID werden unverändert an ihre Kinder weitergereicht; Git-Sync bleibt ausschließlich für das Weiterleitungsschema
 `path` sichtbar. `ProxyHostFormTabs.test.tsx` sichert beide Zustände.
 
-`ProxyHostModalSubmission.ts` kapselt die Serialisierung vor dem Speichern eines Proxy-Hosts. Leere Git-Zugangsdaten
-werden weiterhin nicht überschrieben, die UI-Option `crowdsecEnabled` wird in `securityCrowdsec` für die API überführt
-und ungültige Rate-Limit-Werte werden wie zuvor entfernt. `ProxyHostModalSubmission.test.ts` sichert diese
-Payload-Grenzen unabhängig vom Dialog ab.
+`ProxyHostModalSubmission.ts` kapselt die Serialisierung vor dem Speichern eines Proxy-Hosts. Leere Git- und
+Terminal-Zugangsdaten überschreiben gespeicherte Secrets nicht; die UI-Option `crowdsecEnabled` wird in
+`securityCrowdsec` für die API überführt. Explizit geleerte Rate-Limit-Felder werden als `null` übertragen, damit das
+Backend gespeicherte Limits entfernt. Zahlenfelder werden numerisch serialisiert, Nullwerte bleiben erhalten und
+nicht endliche Werte werden ausgelassen. `ProxyHostModalSubmission.test.ts` sichert diese Payload-Grenzen unabhängig
+vom Dialog ab.
+
+`SSLCertificateField` entfernt beim Wechsel von einer neuen zu einer vorhandenen oder keiner Zertifikatsauswahl die
+DNS-Challenge-Daten aus `meta`, einschließlich Zugangsdaten und einer Wartezeit von null Sekunden. Andere Metadaten
+bleiben erhalten. Streams bieten ausschließlich ihre unterstützten TLS-Optionen an; neue Zertifikate benötigen
+Domainnamen und DNS-Verifikation. Siehe [Streams](../module/stream.md).
 
 `AccessListDetailsTab.tsx` kapselt den Details-Tab des `AccessListModal` als Formik-Kind. Name sowie die Optionen
 `satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die

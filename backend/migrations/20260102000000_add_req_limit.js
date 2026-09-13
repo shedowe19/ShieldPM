@@ -47,10 +47,10 @@ const down = (knex) => {
 	logger.info(`[${migrateName}] Migrating Down...`);
 
 	return knex.schema
-		.table("proxy_host", async (table) => {
-			await table.dropColumn("adv_limit_req_rate");
-			await table.dropColumn("adv_limit_req_unit");
-			await table.dropColumn("adv_limit_req_burst");
+		.table("proxy_host", (table) => {
+			table.dropColumn("adv_limit_req_rate");
+			table.dropColumn("adv_limit_req_unit");
+			table.dropColumn("adv_limit_req_burst");
 		})
 		.then(() => {
 			logger.info(`[${migrateName}] proxy_host Table altered`);

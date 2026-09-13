@@ -742,5 +742,6 @@
 	"wireguard.settings.subnet": "VPN 서브넷",
 	"wireguard.settings.serverAddress": "서버 주소",
 	"wireguard.settings.title": "WireGuard 설정",
-	"wireguard.title": "WireGuard 터널"
+	"wireguard.title": "WireGuard 터널",
+	"settings.gitops.save-before-action": "연결을 테스트하거나 Git 작업을 실행하기 전에 구성 변경 사항을 저장하세요."
 }

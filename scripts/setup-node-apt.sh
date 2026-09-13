@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # NodeSource APT repository setup for Node.js 26.
 # Derived from the user-provided NodeSource setup_26.x script and committed so

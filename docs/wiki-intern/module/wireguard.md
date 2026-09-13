@@ -56,11 +56,33 @@ Persistierte, ungültige Einstellungen fallen beim Einlesen sicher auf die Stand
 Beim Start wartet `init()` vor `syncConfig()` auf die Erzeugung der Server-Schlüssel. IPv6-Endpunkte werden bei der
 Client-Konfiguration mit eckigen Klammern formatiert, damit der Port eindeutig bleibt.
 
+Gleichzeitige Erstaufrufe von Initialisierung, Serverstatus und Peer-Erstellung teilen dieselbe laufende Server-Schlüsselerzeugung. Dadurch überschreibt keine zweite Erzeugung die gerade vergebene Serveridentität. Nach einem Fehler bleibt ein späterer Versuch möglich.
+
+Neue Schlüssel werden vollständig in eindeutige temporäre Dateien geschrieben und vor der Veröffentlichung synchronisiert. Ein atomarer harter Link veröffentlicht den privaten Schlüssel mit Modus `0600`, ohne eine bereits vorhandene Identität zu überschreiben. Der öffentliche Schlüssel wird durch atomare Umbenennung veröffentlicht. Schlägt ein Schreibvorgang fehl, bleibt keine unvollständige endgültige Schlüsseldatei zurück; temporäre Dateien werden anschließend entfernt. Fehlt der öffentliche Schlüssel, wird er innerhalb derselben gemeinsamen Initialisierung aus dem vorhandenen privaten Schlüssel abgeleitet. Ein erneuter Versuch nach einem Fehler beim öffentlichen Schlüssel ersetzt daher nicht die private Serveridentität. `fourth-integrations-wireguard-keys.spec.js` prüft parallele Initialisierung, Wiederherstellung, partielle Schreibfehler und den Erhalt einer während der Erzeugung hinzugekommenen privaten Identität.
+
 ## Abhängigkeiten
 
 - `wireguard-tools` — WireGuard-CLI
 - `iproute2` — Netzwerk-Konfiguration
 - `wireguard-go` — Userspace-Implementierung
+
+### Peer-Eingaben
+
+Peer-Namen, DNS-Angaben und Allowed-IPs dürfen keine Steuerzeichen oder Zeilenumbrüche enthalten. Allowed-IPs werden als kommaseparierte CIDRs geprüft; Keepalive-Werte müssen ganzzahlig zwischen 0 und 65535 liegen. Diese Prüfung erfolgt auch intern vor dem Schreiben oder der Konfigurationsgenerierung. Dadurch können Peer-Felder keine zusätzlichen `wg-quick`-Direktiven einschleusen. Bereits gespeicherte Namen werden bei der Ausgabe als Serverkommentar zusätzlich von Zeilenumbrüchen bereinigt.
+
+Ein expliziter Keepalive-Wert `0` bleibt erhalten. Die Adressvergabe reserviert die tatsächlich konfigurierte Serveradresse zusätzlich zu den bereits belegten Peer-Adressen.
+
+### Adressvergabe und Laufzeitzustand
+
+Ein Backend-Neustart aktiviert zuvor deaktivierte Peers nicht. Peer-Erstellungen und Änderungen der Servereinstellungen teilen sich eine Warteschlange einschließlich Schlüsselerzeugung und IP-Auswahl. Gleichzeitige Anfragen vergeben dadurch weder identische Client-Adressen noch Adressen aus einem inzwischen ersetzten Subnetz.
+
+Subnetz und Serveradresse verlangen kanonische IPv4-Adressen mit vier Dezimaloktetten. Eine Änderung darf bestehende Peer-Adressen weder aus dem Subnetz ausschließen noch mit der Serveradresse kollidieren. Bei einer Änderung der Interface-Adresse wird das Interface neu gestartet, weil `wg syncconf` diese Adresse nicht aktualisiert. Schlägt auch der Neustart-Fallback fehl, wird der Fehler weitergegeben. Schlüsselbefehle haben ein Zeitlimit und behandeln geschlossene Standardeingabe-Pipes.
+
+Ändern, Löschen, Aktivieren und Deaktivieren beachten die `permission_visibility` ihrer Capability. Downloads privater Peer-Konfigurationen bleiben auf den jeweiligen Eigentümer begrenzt.
+
+### Reihenfolge aller Konfigurationsänderungen
+
+Auch Peer-Änderung, Löschung, Aktivierung und Deaktivierung nutzen dieselbe Warteschlange wie Peer-Erstellung und Servereinstellungen. Sie umfasst jeweils Datenbankänderung, Schreiben von `wg0.conf` und Anwendung auf dem Interface. Eine langsame ältere Änderung kann damit einen später deaktivierten oder gelöschten Peer nicht wieder in die Laufzeitkonfiguration aufnehmen.
 
 ## Offene Fragen
 

@@ -1,11 +1,15 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import type { ButtonProps } from "src/components/ui/button";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	invalidateQueries: vi.fn(),
+	deleteNote: vi.fn(),
+	showError: vi.fn(),
+	showObjectSuccess: vi.fn(),
 	useDashboardNotes: vi.fn(),
+	permission: "manage",
 }));
 
 vi.mock("@tabler/icons-react", () => ({
@@ -18,14 +22,17 @@ vi.mock("@tanstack/react-query", () => ({
 	useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries }),
 }));
 
-vi.mock("lucide-react", () => ({ Loader2: () => null }));
-vi.mock("src/api/backend", () => ({ deleteDashboardNote: vi.fn() }));
+vi.mock("src/hooks/useUser", () => ({
+	useUser: () => ({ data: { permissions: { dashboardNotes: mocks.permission }, roles: ["user"] }, isLoading: false }),
+}));
+vi.mock("lucide-react", () => ({ AlertCircle: () => null, Loader2: () => null }));
+vi.mock("src/api/backend", () => ({ deleteDashboardNote: mocks.deleteNote }));
 vi.mock("src/hooks/useDashboardNotes", () => ({ useDashboardNotes: mocks.useDashboardNotes }));
 vi.mock("src/locale", () => ({
 	intl: { formatMessage: ({ id }: { id: string }) => id },
 	T: ({ id }: { id: string }) => <>{id}</>,
 }));
-vi.mock("src/notifications", () => ({ showObjectSuccess: vi.fn() }));
+vi.mock("src/notifications", () => ({ showObjectSuccess: mocks.showObjectSuccess, showError: mocks.showError }));
 vi.mock("./lazy", () => ({ showDashboardNoteModal: vi.fn() }));
 
 vi.mock("src/components/ui/button", () => ({
@@ -45,7 +52,8 @@ describe("DashboardNotesWidget", () => {
 	afterEach(cleanup);
 
 	beforeEach(() => {
-		mocks.invalidateQueries.mockClear();
+		vi.clearAllMocks();
+		mocks.permission = "manage";
 		mocks.useDashboardNotes.mockReturnValue({
 			data: [
 				{ id: 1, color: "yellow", content: "Keep this note" },
@@ -95,5 +103,44 @@ describe("DashboardNotesWidget", () => {
 		deleteButton.focus();
 		expect(deleteButton).toHaveFocus();
 		expect(actionContainer).toHaveClass("group-focus-within:opacity-100");
+	});
+
+	it("shows notes without editing controls for read-only users", async () => {
+		mocks.permission = "view";
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		render(<DashboardNotesWidget />);
+		expect(screen.getByText("Keep this note")).toBeInTheDocument();
+		expect(screen.queryByRole("button")).not.toBeInTheDocument();
+	});
+
+	it("does not request notes without view permission", async () => {
+		mocks.permission = "hidden";
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		render(<DashboardNotesWidget />);
+		expect(mocks.useDashboardNotes).not.toHaveBeenCalled();
+		expect(screen.queryByText("dashboard.notes.title")).not.toBeInTheDocument();
+	});
+
+	it("reports a failed query without showing a false empty state", async () => {
+		mocks.useDashboardNotes.mockReturnValue({ error: new Error("Notes unavailable"), isLoading: false });
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		render(<DashboardNotesWidget />);
+		expect(screen.getByRole("alert")).toHaveTextContent("Notes unavailable");
+		expect(screen.queryByText("dashboard.notes.empty")).not.toBeInTheDocument();
+	});
+
+	it("reports a failed deletion without a false success or invalidation", async () => {
+		const { DashboardNotesWidget } = await import("./DashboardNotesWidget");
+		vi.stubGlobal(
+			"confirm",
+			vi.fn(() => true),
+		);
+		mocks.deleteNote.mockRejectedValue(new Error("Deletion failed"));
+		render(<DashboardNotesWidget />);
+		fireEvent.click(screen.getByRole("button", { name: "action.delete Keep this note" }));
+		await waitFor(() => expect(mocks.showError).toHaveBeenCalledWith("Deletion failed"));
+		expect(mocks.showObjectSuccess).not.toHaveBeenCalled();
+		expect(mocks.invalidateQueries).not.toHaveBeenCalled();
+		vi.unstubAllGlobals();
 	});
 });

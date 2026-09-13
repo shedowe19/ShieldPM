@@ -25,7 +25,7 @@ export const AnalyticsFilters = ({
 	range,
 	selectedHostId,
 }: Props) => (
-	<div className="flex items-center space-x-2">
+	<div className="flex flex-wrap items-center gap-2">
 		<Select value={selectedHostId} onValueChange={onSelectedHostIdChange}>
 			<SelectTrigger className="w-[200px]">
 				<IconServer className="mr-2 h-4 w-4 text-muted-foreground" />

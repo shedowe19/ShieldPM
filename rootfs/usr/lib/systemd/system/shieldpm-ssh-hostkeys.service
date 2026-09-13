@@ -1,0 +1,12 @@
+[Unit]
+Description=Generate unique SSH host keys for ShieldPM LXC instances
+Before=ssh.service
+ConditionPathIsDirectory=/etc/ssh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ssh-keygen -A
+RemainAfterExit=yes
+
+[Install]
+WantedBy=ssh.service

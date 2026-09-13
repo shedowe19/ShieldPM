@@ -1,5 +1,6 @@
 import { IconRobot } from "@tabler/icons-react";
 import { createContext, lazy, type PropsWithChildren, Suspense, useContext, useState } from "react";
+import { RouteErrorBoundary } from "src/components/RouteErrorBoundary";
 import { cn } from "src/lib/utils";
 import { T } from "src/locale";
 
@@ -24,15 +25,19 @@ export function AiChatLauncher({ children }: PropsWithChildren) {
 		<AiChatLauncherContext.Provider value={{ isOpen, openChat }}>
 			{children}
 			{isLoaded && (
-				<Suspense fallback={null}>
-					<LazyAiChat open={isOpen} onOpenChange={setIsOpen} />
-				</Suspense>
+				<div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border bg-background px-6 shadow-lg empty:hidden">
+					<RouteErrorBoundary>
+						<Suspense fallback={null}>
+							<LazyAiChat open={isOpen} onOpenChange={setIsOpen} />
+						</Suspense>
+					</RouteErrorBoundary>
+				</div>
 			)}
 		</AiChatLauncherContext.Provider>
 	);
 }
 
-export function AiChatLauncherTrigger() {
+export function AiChatLauncherTrigger({ onClick }: { onClick?: () => void } = {}) {
 	const context = useContext(AiChatLauncherContext);
 
 	if (!context) return null;
@@ -44,7 +49,10 @@ export function AiChatLauncherTrigger() {
 				"group flex w-full items-center rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm font-medium text-purple-400 transition-colors duration-200 hover:bg-purple-500/10 hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 				context.isOpen ? "bg-purple-500/10 text-purple-400" : "transparent",
 			)}
-			onClick={context.openChat}
+			onClick={() => {
+				onClick?.();
+				context.openChat();
+			}}
 			aria-expanded={context.isOpen}
 		>
 			<IconRobot className="mr-2 h-4 w-4" />

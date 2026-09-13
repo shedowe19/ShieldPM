@@ -24,34 +24,21 @@ export function AiMessage({ message }: AiMessageProps) {
 					<ReactMarkdown
 						remarkPlugins={[remarkGfm]}
 						components={{
-							code: ({
-								node,
-								inline,
-								className,
-								children,
-								...props
-							}: {
-								node?: unknown;
-								inline?: boolean;
-								className?: string;
-								children?: React.ReactNode;
-							} & React.HTMLAttributes<HTMLElement>) => {
-								return inline ? (
-									<code
-										className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs"
-										{...props}
-									>
-										{children}
-									</code>
-								) : (
-									<code
-										className="block p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-x-auto"
-										{...props}
-									>
-										{children}
-									</code>
-								);
-							},
+							pre: ({ children }) => (
+								<pre className="p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-x-auto [&_code]:p-0">
+									{children}
+								</pre>
+							),
+							code: ({ children, className }) => (
+								<code
+									className={cn(
+										"px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs",
+										className,
+									)}
+								>
+									{children}
+								</code>
+							),
 							ul: ({ children }) => <ul className="list-disc list-inside space-y-1">{children}</ul>,
 							ol: ({ children }) => <ol className="list-decimal list-inside space-y-1">{children}</ol>,
 							li: ({ children }) => <li className="ml-2">{children}</li>,

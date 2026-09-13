@@ -1,0 +1,16 @@
+.git
+.agent
+**/node_modules
+**/dist
+**/coverage
+**/.cache
+**/*.log
+**/.env
+**/.env.*
+!rootfs/data/.env
+!rootfs/.env.example
+build
+data
+*.tar
+*.tar.gz
+*.zip

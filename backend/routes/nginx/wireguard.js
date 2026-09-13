@@ -14,6 +14,13 @@ const router = express.Router({
 	mergeParams: true,
 });
 
+const getMutablePeer = async (access, id, operation) => {
+	const accessData = await access.can(`wireguard_peers:${operation}`, id);
+	const query = WireguardPeer.query().where("is_deleted", 0).where("id", id);
+	if (accessData.permission_visibility !== "all") query.where("owner_user_id", access.token.getUserId(1));
+	return query.first();
+};
+
 /**
  * Middleware: JWT Decode & Demo Mode Block
  */
@@ -194,12 +201,7 @@ router.post("/", async (req, res, next) => {
  */
 router.put("/:id", async (req, res, next) => {
 	try {
-		await res.locals.access.can("wireguard_peers:update", req.params.id);
-		const peer = await WireguardPeer.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+		const peer = await getMutablePeer(res.locals.access, req.params.id, "update");
 
 		if (!peer) {
 			res.status(404).send({ error: "WireGuard Peer not found" });
@@ -232,12 +234,7 @@ router.put("/:id", async (req, res, next) => {
  */
 router.delete("/:id", async (req, res, next) => {
 	try {
-		await res.locals.access.can("wireguard_peers:delete", req.params.id);
-		const peer = await WireguardPeer.query()
-			.where("owner_user_id", res.locals.access.token.getUserId(1))
-			.andWhere("is_deleted", 0)
-			.where("id", req.params.id)
-			.first();
+		const peer = await getMutablePeer(res.locals.access, req.params.id, "delete");
 
 		if (!peer) {
 			res.status(404).send({ error: "WireGuard Peer not found" });
@@ -267,12 +264,7 @@ router.delete("/:id", async (req, res, next) => {
  * POST /api/nginx/wireguard/:id/enable
  */
 router.post("/:id/enable", async (req, res) => {
-	await res.locals.access.can("wireguard_peers:update", req.params.id);
-	const peer = await WireguardPeer.query()
-		.where("owner_user_id", res.locals.access.token.getUserId(1))
-		.andWhere("is_deleted", 0)
-		.where("id", req.params.id)
-		.first();
+	const peer = await getMutablePeer(res.locals.access, req.params.id, "update");
 
 	if (!peer) {
 		res.status(404).send({ error: "WireGuard Peer not found" });
@@ -296,12 +288,7 @@ router.post("/:id/enable", async (req, res) => {
  * POST /api/nginx/wireguard/:id/disable
  */
 router.post("/:id/disable", async (req, res) => {
-	await res.locals.access.can("wireguard_peers:update", req.params.id);
-	const peer = await WireguardPeer.query()
-		.where("owner_user_id", res.locals.access.token.getUserId(1))
-		.andWhere("is_deleted", 0)
-		.where("id", req.params.id)
-		.first();
+	const peer = await getMutablePeer(res.locals.access, req.params.id, "update");
 
 	if (!peer) {
 		res.status(404).send({ error: "WireGuard Peer not found" });

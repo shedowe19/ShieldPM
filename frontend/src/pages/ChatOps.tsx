@@ -13,6 +13,7 @@ import {
 } from "@/api/backend";
 import type { ChatIntegration } from "@/api/backend/models";
 import { SiteContainer as Container } from "@/components/SiteContainer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -34,7 +35,11 @@ export default function ChatOps() {
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
 
-	const { data: integrations, isLoading } = useQuery({
+	const {
+		data: integrations,
+		isLoading,
+		error,
+	} = useQuery({
 		queryKey: ["chat-integrations"],
 		queryFn: getChatIntegrations,
 	});
@@ -52,10 +57,10 @@ export default function ChatOps() {
 	});
 
 	useEffect(() => {
-		if (existing) {
+		if (existing && !form.formState.isDirty) {
 			form.reset({
 				token: "********", // Don't show real encrypted token
-				allowed_ids: existing.config?.allowed_ids?.join(", ") || "",
+				allowed_ids: existing.config?.allowedIds?.join(", ") || "",
 				enabled: existing.enabled,
 			});
 		}
@@ -64,6 +69,7 @@ export default function ChatOps() {
 	const createMutation = useMutation({
 		mutationFn: createChatIntegration,
 		onSuccess: () => {
+			form.reset({ ...form.getValues(), token: "********" });
 			queryClient.invalidateQueries({ queryKey: ["chat-integrations"] });
 			toast({ title: intl.formatMessage({ id: "notification.success" }) });
 		},
@@ -82,6 +88,7 @@ export default function ChatOps() {
 			return updateChatIntegration(existing.id, data);
 		},
 		onSuccess: () => {
+			form.reset({ ...form.getValues(), token: "********" });
 			queryClient.invalidateQueries({ queryKey: ["chat-integrations"] });
 			toast({ title: intl.formatMessage({ id: "notification.success" }) });
 		},
@@ -101,15 +108,27 @@ export default function ChatOps() {
 			form.reset({ token: "", allowed_ids: "", enabled: true });
 			toast({ title: intl.formatMessage({ id: "notification.success" }) });
 		},
+		onError: (err) => {
+			toast({
+				title: intl.formatMessage({ id: "notification.error" }),
+				description: err.message,
+				variant: "destructive",
+			});
+		},
 	});
+	const isPending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
 	const onSubmit = (values: FormValues) => {
+		if (isPending) return;
 		const payload = {
 			provider: CHAT_PROVIDER.TELEGRAM,
 			token: values.token === "********" ? undefined : values.token, // Don't send masked token
 			enabled: values.enabled,
 			config: {
-				allowed_ids: values.allowed_ids.split(",").map((s) => s.trim()),
+				allowedIds: values.allowed_ids
+					.split(",")
+					.map((s) => s.trim())
+					.filter(Boolean),
 			},
 		};
 
@@ -121,6 +140,12 @@ export default function ChatOps() {
 	};
 
 	if (isLoading) return <Loader2 className="animate-spin" />;
+	if (error)
+		return (
+			<Alert variant="destructive">
+				<AlertDescription>{error.message}</AlertDescription>
+			</Alert>
+		);
 
 	return (
 		<Container>
@@ -144,89 +169,96 @@ export default function ChatOps() {
 					</div>
 
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-							<FormField
-								control={form.control}
-								name="token"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>
-											<T id="chatops.telegram.token" />
-										</FormLabel>
-										<FormControl>
-											<Input placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" {...field} />
-										</FormControl>
-										<FormDescription>
-											<T id="chatops.telegram.help" />
-										</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="allowed_ids"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>
-											<T id="chatops.telegram.allowed_ids" />
-										</FormLabel>
-										<FormControl>
-											<Input placeholder="12345678, 87654321" {...field} />
-										</FormControl>
-										<FormDescription>
-											<T id="chatops.telegram.allowed_ids.desc" />
-										</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="enabled"
-								render={({ field }) => (
-									<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-										<div className="space-y-0.5">
-											<FormLabel className="text-base">
-												<T id="chatops.telegram.enabled" />
+						<form onSubmit={form.handleSubmit(onSubmit)}>
+							<fieldset disabled={isPending} className="space-y-4">
+								<FormField
+									control={form.control}
+									name="token"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>
+												<T id="chatops.telegram.token" />
 											</FormLabel>
+											<FormControl>
+												<Input
+													type="password"
+													autoComplete="new-password"
+													placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+													{...field}
+												/>
+											</FormControl>
 											<FormDescription>
-												<T id="chatops.telegram.enabled.desc" />
+												<T id="chatops.telegram.help" />
 											</FormDescription>
-										</div>
-										<FormControl>
-											<Switch checked={field.value} onCheckedChange={field.onChange} />
-										</FormControl>
-									</FormItem>
-								)}
-							/>
-
-							<div className="flex justify-between">
-								<Button
-									type="submit"
-									disabled={createMutation.isPending || updateMutation.isPending}
-									className="bg-sky-600/90 hover:bg-sky-600 text-white shadow-sm"
-								>
-									{(createMutation.isPending || updateMutation.isPending) && (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											<FormMessage />
+										</FormItem>
 									)}
-									<T id="save" />
-								</Button>
+								/>
 
-								{existing && (
+								<FormField
+									control={form.control}
+									name="allowed_ids"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>
+												<T id="chatops.telegram.allowed_ids" />
+											</FormLabel>
+											<FormControl>
+												<Input placeholder="12345678, 87654321" {...field} />
+											</FormControl>
+											<FormDescription>
+												<T id="chatops.telegram.allowed_ids.desc" />
+											</FormDescription>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="enabled"
+									render={({ field }) => (
+										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+											<div className="space-y-0.5">
+												<FormLabel className="text-base">
+													<T id="chatops.telegram.enabled" />
+												</FormLabel>
+												<FormDescription>
+													<T id="chatops.telegram.enabled.desc" />
+												</FormDescription>
+											</div>
+											<FormControl>
+												<Switch checked={field.value} onCheckedChange={field.onChange} />
+											</FormControl>
+										</FormItem>
+									)}
+								/>
+
+								<div className="flex justify-between">
 									<Button
-										type="button"
-										variant="destructive"
-										onClick={() => deleteMutation.mutate(existing.id)}
-										disabled={deleteMutation.isPending}
+										type="submit"
+										disabled={isPending}
+										className="bg-sky-600/90 hover:bg-sky-600 text-white shadow-sm"
 									>
-										<Trash2 className="mr-2 h-4 w-4" />
-										<T id="action.delete" />
+										{(createMutation.isPending || updateMutation.isPending) && (
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										)}
+										<T id="save" />
 									</Button>
-								)}
-							</div>
+
+									{existing && (
+										<Button
+											type="button"
+											variant="destructive"
+											onClick={() => deleteMutation.mutate(existing.id)}
+											disabled={isPending}
+										>
+											<Trash2 className="mr-2 h-4 w-4" />
+											<T id="action.delete" />
+										</Button>
+									)}
+								</div>
+							</fieldset>
 						</form>
 					</Form>
 				</CardContent>

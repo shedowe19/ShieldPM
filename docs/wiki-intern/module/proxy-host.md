@@ -44,7 +44,7 @@ ist dadurch eine spätere Seite leer, wechselt die Oberfläche zur vorherigen g�
 
 ## Custom Locations
 
-Das Feld `locations` (DB-Feld `custom_locations`, JSON-Array) erlaubt zusätzliche Nginx-`location`-Blöcke pro Host. Jeder Eintrag enthält `path`, `forward_scheme`, `forward_host`, `forward_port`, optional `forward_path` und `advanced_config`.
+Das Feld `locations` (gleichnamiges DB-Feld, JSON-Array) erlaubt zusätzliche Nginx-`location`-Blöcke pro Host. Jeder Eintrag enthält `path`, `forward_scheme`, `forward_host`, `forward_port`, optional `forward_path` und `advanced_config`.
 
 Mechanik in `nginx.js` → `renderLocations(host)`:
 
@@ -53,7 +53,23 @@ Mechanik in `nginx.js` → `renderLocations(host)`:
 3. Enthält `forward_host` einen Slash und beginnt nicht mit `/` oder `unix`, wird nach dem ersten Segment getrennt: erster Teil → `forward_host`, Rest → `forward_path`.
 4. Das Liquid-Template `backend/templates/_proxy_host_custom_location.conf` wird pro Location gerendert.
 5. Alle gerenderten Strings werden konkateniert und als String an das Haupt-Template `proxy_host.conf` übergeben.
-6. Existiert eine Custom-Location mit `path === "/"`, wird die Standard-`/`-Location automatisch deaktiviert (`use_default_location = false`).
+6. Vor dem Ersetzen des Arrays durch den gerenderten String wird eine Custom-Location mit `path === "/"` erkannt. Sie deaktiviert die Standard-`/`-Location (`use_default_location = false`).
+7. Custom-Locations mit abschließendem Slash erhalten den Redirect ohne Slash; statische Ziele mit abschließendem Slash verwenden `alias`.
+
+## Interne Daten und API-Antworten
+
+- Der Objection-Hook `$afterFind()` bildet die geladenen `host_domains` auf `domain_names` ab und normalisiert Wartungszeitpunkte. Der frühere Name `$afterGet()` wurde von Objection nicht aufgerufen. Ein echter SQLite-Graph-Fetch in `tor-host-reassignment.spec.js` prüft die Domainabbildung auch bei JSON-Antworten.
+- Konfigurationsgenerierung und interne Aktualisierung behalten den tatsächlichen Pfad verwalteter Websites. Öffentliche Antworten zeigen für `/data/websites/...` weiterhin `(managed)`; beim Zurücksenden dieses Platzhalters bleibt der bestehende Pfad erhalten.
+- `backend/lib/host-response.js` entfernt Git-/Terminal-Zugangsdaten und Geheimnisse expandierter OAuth-/OIDC-Zugriffslisten aus Antworten und Proxy-Host-Auditdaten. Die Konfigurationsgenerierung erhält intern die erforderlichen Originaldaten.
+- Leere Terminal-Passwort-/Private-Key-Felder bei Updates behalten vorhandene Zugangsdaten. Neue Git-Zugangsdaten werden bereits beim Erstellen verschlüsselt.
+- Aktivieren lädt auch `access_list.clients` und `access_list.items`, damit bestehende Regeln erhalten bleiben.
+- `backend/test/internal/host-update-regressions.spec.js` prüft diese Abläufe mit gemockten Datenbank- und Nginx-Aufrufen.
+
+## Atomare Speicherung der Domains
+
+Erstellung und Aktualisierung schreiben den Proxy-Host und seine normalisierten Domainzeilen gemeinsam in einer Datenbanktransaktion. Objections `insertGraphAndFetch()` und `upsertGraphAndFetch()` bestehen aus mehreren SQL-Anweisungen und starten selbst keine Transaktion. Scheitert eine Domain-Einfügung, bleibt daher weder ein unvollständiger neuer Host zurück noch verliert ein vorhandener Host seine bisherigen Domains. Nginx-Generierung und Audit folgen erst nach dem Commit.
+
+`backend/test/internal/fifth-proxy-graph-transactions.spec.js` prüft beide Fehlerpfade mit den echten Modellen, SQLite und einem ablehnenden Datenbanktrigger sowie erfolgreiche Erstellung und Änderung.
 
 ## Abhängigkeiten
 
@@ -80,3 +96,13 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Git-Deploy](./git-deploy.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
+
+## Ergänzungen der zweiten Codeprüfung
+
+Beim Löschen und Deaktivieren von Proxy-, Redirect-, 404-Hosts und Streams laufen Datenbankflag, Config-Entfernung und Reload in der Nginx-Warteschlange. Die Datenbankänderung bleibt bis zum erfolgreichen Reload in einer Transaktion. Ein Fehler beim Schreiben, Entfernen oder Reload setzt das Flag zurück und stellt eine zuvor vorhandene Konfiguration wieder her; anschließend wird diese erneut geladen. Audit-Einträge, GitOps und das Beenden des Proxy-Pollings folgen erst nach erfolgreichem Abschluss. Eine alte Sicherung wird nicht als aktive Konfiguration wiederbelebt, wenn vor der Änderung keine Config-Datei existierte. Bereits wartende Konfigurationsgenerierungen können dadurch nicht nachträglich die gerade entfernte Datei wiederherstellen.
+
+`backend/test/internal/host-removal-rollback.spec.js` prüft alle acht Lösch-/Deaktivierungspfade mit SQLite und temporären Konfigurationsdateien, einschließlich Schreib-, Datei- und Reloadfehlern. Nginx-Prozessaufrufe werden dabei simuliert.
+
+DNS-Zugangsdaten verbleiben ausschließlich im Zertifikatskontext. Für verwaltete Git-Websites sperrt die generierte Nginx-Konfiguration Symlinks und für statische Hosts den Zugriff auf Git-Metadaten. Details zu mTLS, OIDC und Limits stehen unter [Nginx-Templates](./nginx-templates.md).
+
+Neue Zertifikats- und Access-List-Zuordnungen unterliegen den eigenständigen Berechtigungs- und Eigentümerprüfungen der [Host-Hilfslogik](./host.md).

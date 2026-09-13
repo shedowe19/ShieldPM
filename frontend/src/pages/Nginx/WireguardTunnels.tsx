@@ -19,6 +19,7 @@ import type { WireguardPeer } from "@/api/backend";
 import { HasPermission } from "@/components/HasPermission";
 import { WireguardConfigModal } from "@/components/Nginx/WireguardConfigModal";
 import { WireguardPeerModal } from "@/components/Nginx/WireguardPeerModal";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,17 +33,18 @@ import { MANAGE, WIREGUARD_PEERS } from "@/modules/Permissions";
 dayjs.extend(relativeTime);
 
 function formatBytes(bytes: number): string {
-	if (bytes === 0) return "0 B";
+	if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
 	const k = 1024;
 	const sizes = ["B", "KB", "MB", "GB", "TB"];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	const i = Math.min(sizes.length - 1, Math.max(0, Math.floor(Math.log(bytes) / Math.log(k))));
 	return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
 }
 
 export function WireguardTunnels() {
 	const health = useHealth();
-	const { data, isLoading, refetch } = useWireguardPeers();
+	const { data, isLoading, error, refetch } = useWireguardPeers();
 	const { remove, enable, disable } = useWireguardPeer();
+	const mutationPending = remove.isPending || enable.isPending || disable.isPending;
 	const [isPeerModalOpen, setIsPeerModalOpen] = useState(false);
 	const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 	const [selectedPeer, setSelectedPeer] = useState<WireguardPeer | null>(null);
@@ -130,7 +132,7 @@ export function WireguardTunnels() {
 							</TooltipTrigger>
 							<TooltipContent className="max-w-md">
 								<p className="font-mono text-xs whitespace-pre-wrap">
-									{(meta?.last_error as string) || "No error details available."}
+									{((meta?.lastError ?? meta?.last_error) as string) || "No error details available."}
 								</p>
 							</TooltipContent>
 						</Tooltip>
@@ -166,6 +168,11 @@ export function WireguardTunnels() {
 
 	return (
 		<>
+			{error && (
+				<Alert variant="destructive" className="mt-4">
+					<AlertDescription>{error.message}</AlertDescription>
+				</Alert>
+			)}
 			{/* Server Status Card */}
 			{server && (
 				<Card className="mt-4 border-t-4 border-purple-500/30">
@@ -360,6 +367,7 @@ export function WireguardTunnels() {
 														aria-label={intl.formatMessage({
 															id: peer.status === 0 ? "action.enable" : "action.disable",
 														})}
+														disabled={mutationPending}
 														onClick={() => handleToggle(peer)}
 													>
 														{peer.status === 0 ? (
@@ -372,6 +380,7 @@ export function WireguardTunnels() {
 														variant="ghost"
 														size="icon"
 														aria-label={intl.formatMessage({ id: "wireguard.edit" })}
+														disabled={mutationPending}
 														onClick={() => handleEdit(peer)}
 													>
 														<IconEdit className="h-4 w-4" />
@@ -381,6 +390,7 @@ export function WireguardTunnels() {
 														size="icon"
 														className="text-destructive"
 														aria-label={intl.formatMessage({ id: "action.delete" })}
+														disabled={mutationPending}
 														onClick={() => handleDelete(peer)}
 													>
 														<IconTrash className="h-4 w-4" />

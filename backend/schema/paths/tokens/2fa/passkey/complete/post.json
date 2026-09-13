@@ -65,7 +65,11 @@
 									"id": 1,
 									"email": "me@example.com",
 									"name": "John Doe",
-									"role": "admin"
+									"nickname": "John",
+									"avatar": "",
+									"roles": [
+										"admin"
+									]
 								},
 								"csrfToken": "csrf-token-value-here"
 							}
@@ -82,7 +86,7 @@
 			"content": {
 				"application/json": {
 					"schema": {
-						"$ref": "../../../../../components/error-object.json"
+						"$ref": "../../../../../components/error.json"
 					}
 				}
 			}
@@ -92,7 +96,7 @@
 			"content": {
 				"application/json": {
 					"schema": {
-						"$ref": "../../../../../components/error-object.json"
+						"$ref": "../../../../../components/error.json"
 					}
 				}
 			}

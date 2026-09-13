@@ -1,8 +1,9 @@
 import { IconLock, IconPhoto, IconShield, IconUser } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Form, Formik, type FormikHelpers } from "formik";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { type User, uploadUserAvatar } from "src/api/backend";
 import { Loading } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -30,10 +31,12 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 	const { data, isLoading, error } = useUser(id);
 	const { data: currentUser, isLoading: currentIsLoading } = useUser("me");
 	const { mutate: setUser } = useSetUser();
+	const queryClient = useQueryClient();
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const selectedFileUrl = useObjectUrl(selectedFile);
+	const createdUserId = useRef<number | null>(null);
 
 	const onSubmit = async (values: UserDetailsFormValues, { setSubmitting }: FormikHelpers<UserDetailsFormValues>) => {
 		if (isSubmitting) return;
@@ -41,7 +44,7 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 		setErrorMsg(null);
 
 		const payload = createUserPayload({
-			id,
+			id: createdUserId.current ?? id,
 			isCurrentUser: data?.id === currentUser?.id,
 			values,
 		});
@@ -53,10 +56,18 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 				setSubmitting(false);
 			},
 			onSuccess: async (newUser) => {
-				// Assuming hooks/useSetUser returns the user object on success
+				// A retry after a failed upload must update the user that was already created.
+				if (id === "new") {
+					createdUserId.current = newUser.id;
+				}
 				if (values.avatar_type === AVATAR_TYPE.UPLOAD && selectedFile) {
 					try {
 						await uploadUserAvatar({ id: newUser.id, file: selectedFile });
+						await Promise.all([
+							queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, newUser.id] }),
+							queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.USER, "me"] }),
+							queryClient.invalidateQueries({ queryKey: ["users"] }),
+						]);
 					} catch (err) {
 						setErrorMsg(err instanceof Error ? err.message : intl.formatMessage({ id: "error.unknown" }));
 						setIsSubmitting(false);
@@ -139,8 +150,8 @@ const UserModal = EasyModal.create(({ id, visible, remove }: Props) => {
 							email: data?.email || "",
 							isAdmin: data?.roles?.includes(USER_ROLE.ADMIN) || false,
 							isDisabled: data?.isDisabled || false,
-							avatar_type: data?.avatar_type || AVATAR_TYPE.GRAVATAR,
-							avatar_value: data?.avatar_value || "",
+							avatar_type: data?.avatarType || AVATAR_TYPE.GRAVATAR,
+							avatar_value: data?.avatarValue || "",
 						}}
 						onSubmit={onSubmit}
 					>

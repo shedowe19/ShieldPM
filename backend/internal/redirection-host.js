@@ -1,6 +1,8 @@
+import fs from "node:fs";
 import _ from "lodash";
 import errs from "../lib/error.js";
 import { castJsonIfNeed } from "../lib/helpers.js";
+import { sanitizeHostMeta } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
 import redirectionHostModel from "../models/redirection_host.js";
 import internalAuditLog from "./audit-log.js";
@@ -42,6 +44,8 @@ const internalRedirectionHost = {
 		}
 
 		await access.can("redirection_hosts:create", thisData);
+		await internalHost.validateReferences(access, thisData);
+		internalHost.validateDomainNames(thisData.domain_names);
 
 		// Get a list of the domain names and check each of them against existing records
 		const domain_name_check_promises = [];
@@ -66,10 +70,12 @@ const internalRedirectionHost = {
 		// Fix for db field not having a default value
 		// for this optional field.
 		if (typeof data.advanced_config === "undefined") {
-			data.advanced_config = "";
+			thisData.advanced_config = "";
 		}
 
-		let row = await redirectionHostModel.query().insertAndFetch(/** @type {any} */ (thisData));
+		let row = await redirectionHostModel
+			.query()
+			.insertAndFetch(/** @type {any} */ ({ ...thisData, meta: sanitizeHostMeta(thisData.meta) }));
 		row = utils.omitRow(omissions())(row);
 
 		if (createCertificate) {
@@ -92,7 +98,7 @@ const internalRedirectionHost = {
 		});
 
 		// Configure nginx
-		await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+		row.meta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
 
 		thisData.meta = _.assign({}, thisData.meta || {}, row.meta);
 
@@ -101,7 +107,7 @@ const internalRedirectionHost = {
 			action: "created",
 			object_type: "redirection-host",
 			object_id: row.id,
-			meta: thisData,
+			meta: { ...thisData, meta: sanitizeHostMeta(thisData.meta) },
 		});
 
 		// Trigger GitOps auto-push
@@ -139,6 +145,7 @@ const internalRedirectionHost = {
 
 		await access.can("redirection_hosts:update", thisData.id);
 		let row = await internalRedirectionHost.get(access, { id: thisData.id });
+		await internalHost.validateReferences(access, thisData, row);
 
 		if (row.id !== thisData.id) {
 			throw new errs.InternalValidationError(
@@ -150,6 +157,7 @@ const internalRedirectionHost = {
 		const domain_name_check_promises = [];
 
 		if (typeof thisData.domain_names !== "undefined") {
+			internalHost.validateDomainNames(thisData.domain_names);
 			thisData.domain_names.map((domain_name) => {
 				domain_name_check_promises.push(internalHost.isHostnameTaken(domain_name, "redirection", thisData.id));
 				return true;
@@ -184,6 +192,8 @@ const internalRedirectionHost = {
 
 		thisData = internalHost.cleanSslHstsData(createCertificate, thisData, row);
 
+		thisData.meta = sanitizeHostMeta(thisData.meta);
+
 		const _saved_row = await redirectionHostModel
 			.query()
 			.patchAndFetchById(thisData.id, /** @type {any} */ (thisData))
@@ -194,7 +204,7 @@ const internalRedirectionHost = {
 			action: "updated",
 			object_type: "redirection-host",
 			object_id: row.id,
-			meta: thisData,
+			meta: { ...thisData, meta: sanitizeHostMeta(thisData.meta) },
 		});
 
 		row = await internalRedirectionHost.get(access, {
@@ -271,13 +281,24 @@ const internalRedirectionHost = {
 			throw new errs.ItemNotFoundError(data.id);
 		}
 
-		await redirectionHostModel.query().where("id", row.id).patch({
-			is_deleted: 1,
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("redirection_host", row.id));
+			await internalNginx.backupConfig("redirection_host", row);
+			try {
+				await redirectionHostModel.transaction(async (trx) => {
+					await redirectionHostModel.query(trx).where("id", row.id).patch({ is_deleted: 1 });
+					await internalNginx.deleteConfig("redirection_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("redirection_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("redirection_host", row);
 		});
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("redirection_host", row);
-		await internalNginx.reload();
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -326,7 +347,7 @@ const internalRedirectionHost = {
 			);
 
 		// Configure nginx
-		await internalNginx.configure(redirectionHostModel, "redirection_host", row);
+		row.meta = await internalNginx.configure(redirectionHostModel, "redirection_host", row);
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -359,18 +380,24 @@ const internalRedirectionHost = {
 
 		row.enabled = 0;
 
-		await redirectionHostModel
-			.query()
-			.where("id", row.id)
-			.patch(
-				/** @type {any} */ ({
-					enabled: 0,
-				}),
-			);
-
-		// Delete Nginx Config
-		await internalNginx.deleteConfig("redirection_host", row);
-		await internalNginx.reload();
+		await internalNginx.withConfigurationLock(async () => {
+			const hadConfig = fs.existsSync(internalNginx.getConfigName("redirection_host", row.id));
+			await internalNginx.backupConfig("redirection_host", row);
+			try {
+				await redirectionHostModel.transaction(async (trx) => {
+					await redirectionHostModel.query(trx).where("id", row.id).patch({ enabled: 0 });
+					await internalNginx.deleteConfig("redirection_host", row);
+					await internalNginx.reload();
+				});
+			} catch (error) {
+				// The database transaction has rolled back. Restore the listener
+				// before releasing the shared configuration lock.
+				if (hadConfig) await internalNginx.restoreConfig("redirection_host", row);
+				await internalNginx.reload();
+				throw error;
+			}
+			await internalNginx.deleteBackupConfig("redirection_host", row);
+		});
 
 		// Add to audit log
 		await internalAuditLog.add(access, {
@@ -419,11 +446,7 @@ const internalRedirectionHost = {
 		let rows = await query;
 		rows = utils.omitRows(omissions())(rows);
 
-		if (typeof expand !== "undefined" && expand !== null && expand.indexOf("certificate") !== -1) {
-			return internalHost.cleanAllRowsCertificateMeta(rows);
-		}
-
-		return rows;
+		return internalHost.cleanAllRowsCertificateMeta(rows);
 	},
 
 	/**

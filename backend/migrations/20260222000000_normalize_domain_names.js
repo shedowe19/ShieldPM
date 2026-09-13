@@ -69,7 +69,7 @@ const up = async (knex) => {
 	}
 
 	// Note: We purposely leave the JSON array 'domain_names' column in proxy_host
-	// so the rollback down() function can simply drop the new table if needed.
+	// so down() can restore current domain relations before dropping the new table.
 	// The objection models will ignore it if we overwrite it locally, ensuring a
 	// safe migration path until we fully deprecate it in a future major version.
 };
@@ -82,6 +82,15 @@ const up = async (knex) => {
  */
 const down = async (knex) => {
 	logger.info(`[${migrateName}] Migrating Down... Dropping host_domain table`);
+	// The legacy JSON is stale after creates/renames performed with this schema.
+	// Preserve the current relation before removing it during a rollback.
+	const hosts = await knex("proxy_host").select("id");
+	for (const host of hosts) {
+		const domains = await knex("host_domain").where("proxy_host_id", host.id).orderBy("id").pluck("domain_name");
+		await knex("proxy_host")
+			.where("id", host.id)
+			.update({ domain_names: JSON.stringify(domains) });
+	}
 	await knex.schema.dropTableIfExists("host_domain");
 	logger.info(`[${migrateName}] Dropped host_domain table.`);
 };

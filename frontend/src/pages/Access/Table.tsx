@@ -90,13 +90,14 @@ export default function Table({ data, isFetching, isFiltered, onEdit, onDelete, 
 											data={{ id: info.row.original.id }}
 										/>
 									</DropdownMenuLabel>
-									<DropdownMenuItem
-										onClick={() => info.row.original.id && onEdit?.(info.row.original.id)}
-									>
-										<IconEdit className="mr-2 h-4 w-4" />
-										<T id="action.edit" />
-									</DropdownMenuItem>
+
 									<HasPermission section={ACCESS_LISTS} permission={MANAGE} hideError>
+										<DropdownMenuItem
+											onClick={() => info.row.original.id && onEdit?.(info.row.original.id)}
+										>
+											<IconEdit className="mr-2 h-4 w-4" />
+											<T id="action.edit" />
+										</DropdownMenuItem>
 										<DropdownMenuSeparator />
 										<DropdownMenuItem
 											className="text-red-600 focus:text-red-500"

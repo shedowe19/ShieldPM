@@ -20,6 +20,14 @@
 			"type": "string",
 			"description": "The version string",
 			"example": "..."
+		},
+		"demo": {
+			"type": "boolean",
+			"description": "Whether demo restrictions are enabled"
+		},
+		"csrfToken": {
+			"type": "string",
+			"description": "CSRF token for subsequent browser requests"
 		}
 	}
 }

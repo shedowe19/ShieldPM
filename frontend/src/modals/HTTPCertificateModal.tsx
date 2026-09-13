@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import EasyModal, { type InnerModalProps } from "ez-modal-react";
 import { Form, Formik, type FormikHelpers } from "formik";
 import { Loader2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { type Certificate, createCertificate, testHttpCertificate } from "src/api/backend";
 import { DomainNamesField } from "src/components";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
@@ -30,6 +30,7 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 	const [domains, setDomains] = useState([] as string[]);
 	const [isTesting, setIsTesting] = useState(false);
 	const [testResults, setTestResults] = useState(null as Record<string, string> | null);
+	const testRequest = useRef(0);
 
 	const onSubmit = async (values: HTTPCertificateValues, { setSubmitting }: FormikHelpers<HTTPCertificateValues>) => {
 		if (isSubmitting) return;
@@ -49,16 +50,17 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 	};
 
 	const handleTest = async () => {
+		const request = ++testRequest.current;
 		setIsTesting(true);
 		setErrorMsg(null);
 		setTestResults(null);
 		try {
 			const result = await testHttpCertificate(domains);
-			setTestResults(result);
+			if (request === testRequest.current) setTestResults(result);
 		} catch (err: unknown) {
-			if (err instanceof Error) setErrorMsg(<T id={err.message} />);
+			if (request === testRequest.current && err instanceof Error) setErrorMsg(<T id={err.message} />);
 		}
-		setIsTesting(false);
+		if (request === testRequest.current) setIsTesting(false);
 	};
 
 	const parseTestResults = () => {
@@ -139,6 +141,8 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 
 										<DomainNamesField
 											onChange={(doms) => {
+												testRequest.current += 1;
+												setIsTesting(false);
 												setDomains(doms);
 												setTestResults(null);
 											}}

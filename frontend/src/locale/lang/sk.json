@@ -742,5 +742,6 @@
 	"wireguard.settings.subnet": "Sieť VPN",
 	"wireguard.settings.serverAddress": "Adresa servera",
 	"wireguard.settings.title": "Nastavenia WireGuard",
-	"wireguard.title": "Tunely WireGuard"
+	"wireguard.title": "Tunely WireGuard",
+	"settings.gitops.save-before-action": "Pred testovaním pripojenia alebo vykonaním operácií Git uložte zmeny konfigurácie."
 }

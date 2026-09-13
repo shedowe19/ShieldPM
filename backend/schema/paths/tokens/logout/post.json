@@ -8,31 +8,8 @@
 	"security": [],
 	"parameters": [],
 	"responses": {
-		"200": {
-			"description": "Logout successful. Cookies cleared and session revoked.",
-			"content": {
-				"application/json": {
-					"schema": {
-						"type": "object",
-						"properties": {
-							"success": {
-								"type": "boolean",
-								"example": true
-							}
-						}
-					}
-				}
-			}
-		},
-		"401": {
-			"description": "No valid session to revoke",
-			"content": {
-				"application/json": {
-					"schema": {
-						"$ref": "../../../components/error-object.json"
-					}
-				}
-			}
+		"204": {
+			"description": "Auth cookies cleared; the matching refresh-token family is revoked when present."
 		}
 	}
 }

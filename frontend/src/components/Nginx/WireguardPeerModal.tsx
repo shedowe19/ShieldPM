@@ -47,8 +47,8 @@ export function WireguardPeerModal({ open, onOpenChange, peer, onCreated }: Wire
 				name: peer?.name || "",
 				description: peer?.description || "",
 				allowed_ips: peer?.allowedIps || "10.8.0.0/24",
-				persistent_keepalive: peer?.persistentKeepalive || 25,
-				dns: peer?.dns || "1.1.1.1",
+				persistent_keepalive: peer?.persistentKeepalive ?? 25,
+				dns: peer?.dns ?? "1.1.1.1",
 			});
 		}
 	}, [open, peer, form]);

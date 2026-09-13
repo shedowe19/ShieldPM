@@ -143,7 +143,7 @@ const AccessListSsoTab = () => {
 						<div className="text-xs text-muted-foreground">Must be 16, 24, or 32 bytes.</div>
 					</div>
 
-					{values.oauth2Provider === "oidc" && (
+					{(values.oauth2Provider === "oidc" || values.oauth2Provider === "keycloak-oidc") && (
 						<div className="space-y-2">
 							<Label htmlFor="oauth2OidcIssuerUrl">OIDC Issuer URL</Label>
 							<Field name="oauth2OidcIssuerUrl">

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../lib/error.js", () => ({ default: {} }));
+vi.mock("../../lib/config.js", () => ({ isSqlite: () => false }));
 vi.mock("../../lib/helpers.js", () => ({ castJsonIfNeed: mocks.castJsonIfNeed }));
 vi.mock("../../models/audit-log.js", () => ({ default: { query: mocks.query } }));
 

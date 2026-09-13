@@ -6,7 +6,7 @@ Dokumentation der zentralen Nginx-Konfigurationsengine.
 
 ## Kontext
 
-Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, rendert EJS-Templates und schreibt `.conf`-Dateien.
+Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, rendert Liquid-Templates und schreibt `.conf`-Dateien.
 
 ## Wichtige Dateien
 
@@ -25,7 +25,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 1. `nginx.js` wird getriggert bei CRUD-Operationen auf Hosts
 2. Liest aktuelle Daten aus der Datenbank
-3. Rendert EJS-Templates mit Host-Daten
+3. Rendert Liquid-Templates mit Host-Daten
 4. Schreibt `.conf`-Dateien nach `/data/nginx/`
 5. Führt `nginx -s reload` aus (Debouncing passiert in `docker.js`, nicht hier)
 
@@ -33,9 +33,18 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 - `nginx -t` wird **aktiv** vor dem Reload ausgeführt via `test()` Methode (`nginx -tq`)
 - Reload ist **nicht** debounced in `nginx.js` — Debouncing passiert in `docker.js`
-- Templates verwenden EJS-Syntax mit Liquid-Fallback
+- Templates verwenden ausschließlich Liquid-Syntax (LiquidJS)
+- Eigene Unix-Sockets liegen unter `/run/shieldpm/`: Backend, PHP, GoAccess, Anubis, OAuth2 und HTTP-Ersatzlistener. Die Startskripte vergeben nur diesem Laufzeitverzeichnis Schreibrechte; fremde Host-Sockets unter `/run` bleiben unverändert. Templateänderungen erzwingen die Neuerzeugung gespeicherter Hosts beim Start.
+- Die editierbare Default-Konfiguration einschließlich Sicherungen liegt unter `/data/nginx/default.conf`. Ein festes Include unter `/usr/local/nginx/conf/conf.d/default.conf` bindet sie ein; der Backendprozess benötigt dort keine Schreibrechte mehr.
 
 ## Erweiterte Methoden
+
+### Gleichzeitige Änderungen
+
+- `configure()` stellt Host-Änderungen in eine gemeinsame Promise-Warteschlange. Schreiben, Testen und Zurückrollen überlappen dadurch nicht zwischen gleichzeitigen API-Anfragen.
+- `backupConfig()` und `restoreConfig()` ignorieren nur fehlende Dateien. Andere Dateisystemfehler brechen die Operation ab, statt einen erfolgreichen Wechsel vorzutäuschen.
+- Fehlgeschlagene Generierung legt auch bei neuen Hosts eine `.conf.err` ab, bevor eine vorhandene Sicherung wiederhergestellt wird.
+- Fehler beim Löschen einer aktiven Konfiguration werden an den Aufrufer weitergegeben.
 
 ### Config-Backup/Restore
 
@@ -49,7 +58,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ### Bulk-Operationen
 
-- `bulkGenerateConfigs(model, host_type, hosts)` — Generiert mehrere Host-Configs am Stück (ohne Reload) für GitOps oder Massen-Reload-Szenarien. Setzt `skip_reload: true` pro Host und wartet auf alle Promises.
+- `bulkGenerateConfigs(model, host_type, hosts)` — Generiert Host-Konfigurationen nacheinander ohne einzelnen Reload. Setzt `skip_reload: true`; ein anschließender gemeinsamer Reload liegt beim Aufrufer. Die Reihenfolge verhindert, dass `nginx -t` eine andere Konfiguration während eines Schreibvorgangs prüft.
 
 ### Config-Parsing
 
@@ -57,7 +66,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ### Anubis-Integration
 
-Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren.
+Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **asynchron** aufgerufen (non-blocking). Dies aktualisiert die Anubis-Sicherheitspolicy basierend auf der neuen Nginx-Konfiguration, ohne den Configure-Flow zu blockieren. Fehler werden separat protokolliert und rollen eine bereits akzeptierte Nginx-Konfiguration nicht zurück.
 
 ## Abhängigkeiten
 
@@ -67,6 +76,10 @@ Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **
 - `internal/access-list.js` — wird in den Templates referenziert
 - `internal/anubis.js` — `generatePolicy()` wird nach erfolgreichem Configure asynchron aufgerufen
 - Externes Binary `nginx` (für `nginx -s reload`)
+
+## Regressionstests
+
+- `backend/test/internal/nginx-render-regressions.spec.js`: echte Liquid-Ausgabe für Custom-Root, Alias und interne Stream-Zertifikate; Warteschlange und Dateisystemfehler mit gemockten Systemoperationen.
 
 ## Offene Fragen
 
@@ -82,3 +95,21 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Host (gemeinsame Logik)](./host.md)
 - [IP-Ranges](./ip-ranges.md)
 - [Modulübersicht](./README.md)
+
+## Aktivierung und gemeinsame Dateisperre
+
+Die Sicherung bleibt bis zum erfolgreichen Reload erhalten. Scheitert die Aktivierung, wird die vorige Konfiguration wiederhergestellt und neu geladen; die Antwort enthält `nginx_online: false`. Der Rollback-Reload erfolgt vor dem Schreiben der Fehlermetadaten, damit ein Datenbankausfall ihn nicht überspringen kann. `withConfigurationLock(callback)` stellt auch Zertifikatsaktivierungen, Default-Site-Wechsel sowie Löschen/Deaktivieren von Hosts in dieselbe Warteschlange. Der Callback darf `test()` und `reload()`, aber nicht erneut `configure()` aufrufen.
+
+Vor der Verarbeitung eines gespeicherten Hostzustands lädt `configureHost()` innerhalb der Konfigurationssperre den vollständigen aktuellen Datensatz einschließlich Zertifikat erneut; bei Proxy-Hosts auch Domains und die vollständige Access-List. Vorab geladene Sammelaufträge können dadurch keine inzwischen geänderten Upstreams, Domains oder neu aktivierte Authentifizierung/TLS durch ihre alten Snapshots ersetzen. Inzwischen deaktivierte, gelöschte oder entfernte Hosts erhalten weiterhin keine aktiven Listener. Die zurückgegebenen und gespeicherten Nginx-Metadaten entfernen auch dabei alte DNS-Zugangsdaten.
+
+Auch während eines langsamen Tests oder Reloads können andere Aufrufe Host-Metadaten speichern. Die Statusaktualisierung liest deshalb erst danach die aktuellen Metadaten in einer kurzen Datenbanktransaktion mit `forUpdate()` und ergänzt ausschließlich die Nginx-Statusfelder. PostgreSQL/MySQL sperren dabei die Hostzeile; SQLite verwendet seine Transaktionsserialisierung. Kein Datenbanklock wird über den Nginx-Prozessaufruf gehalten. Das gilt auch für den Fehlerstatus nach dem Rollback-Reload. `sixth-nginx-current-state.spec.js` prüft beide Rennen und die Geheimnisbereinigung mit echten SQLite- und PostgreSQL/PGlite-Modellen, Liquid-Rendering und temporären Dateien; die Prozessaufrufe sind simuliert.
+
+Das Lesen interner Nginx-Logs prüft die vorhandene Berechtigung `settings:get`. Die Regressionstests prüfen außerdem den Reload-Fehlerpfad und die Reihenfolge der Warteschlange.
+
+Auch die abschließenden Reloads von Access-List-, Wartungs- und Tor-Sammelläufen sowie Zertifikatserneuerungen werden eingereiht. Der IP-Range-Abruf lädt externe Daten vorab und schützt anschließend Schreiben und Reload gemeinsam. So lädt kein Hintergrundauftrag eine gerade teilweise erzeugte Hostkonfiguration.
+
+## Dritte Nachprüfung: Sicherungen und Validierungsaufwand
+
+Fehlt vor einer Konfigurationsänderung die aktive Datei, entfernt `backupConfig()` eine eventuell veraltete `.bak`-Datei. Ein späterer Generierungsfehler kann damit keinen zuvor inaktiven Listener wiederherstellen. Deaktivierte oder inzwischen gelöschte Hosts erhalten auch nach erfolgreichem Rendern `nginx_online: false`.
+
+Ein Einzelwechsel prüft die Gesamtkonfiguration einmal innerhalb von `reload()`, bevor das Reloadsignal gesendet wird. Die zuvor unmittelbar davor ausgeführte identische Prüfung entfällt. `skip_reload` prüft weiterhin jede geschriebene Konfiguration; der abschließende Sammel-Reload validiert erneut. `third-proxy-nginx.spec.js` deckt diese Pfade mit temporären Dateien und gemockten Prozessaufrufen ab.

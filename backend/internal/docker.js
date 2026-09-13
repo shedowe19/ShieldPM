@@ -3,6 +3,7 @@ import { SYSTEM_USER_ID } from "../lib/constants.js";
 import { global as logger } from "../logger.js";
 import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
+import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 
 /**
@@ -34,9 +35,22 @@ const mockAccess = {
 class DockerService {
 	constructor() {
 		this.clients = [];
+		this.initialized = false;
+		this.initializationPromise = null;
 	}
 
 	async init() {
+		if (this.initialized) return;
+		if (this.initializationPromise) return this.initializationPromise;
+		this.initializationPromise = this.initialize();
+		try {
+			await this.initializationPromise;
+		} finally {
+			this.initializationPromise = null;
+		}
+	}
+
+	async initialize() {
 		try {
 			this.clients = [];
 
@@ -78,7 +92,8 @@ class DockerService {
 			await this.sync();
 
 			// Start Watching
-			this.watch();
+			await this.watch();
+			this.initialized = this.clients.some((client) => client.isConnected);
 		} catch (err) {
 			logger.warn("Docker Auto-Discovery: Initialization failed.", err.message);
 		}
@@ -169,9 +184,11 @@ class DockerService {
 
 					logger.info(`Docker Auto-Discovery [${client.name}]: Listening for Docker events...`);
 
-					stream.on("data", async (chunk) => {
+					let buffer = "";
+					let pendingEvent = Promise.resolve();
+					const handleEvent = async (line) => {
 						try {
-							const event = JSON.parse(chunk.toString());
+							const event = JSON.parse(line);
 							const containerId = event.Actor.ID;
 
 							if (["start", "unpause", "rename"].includes(event.Action)) {
@@ -187,7 +204,20 @@ class DockerService {
 						} catch (e) {
 							logger.error(`Docker Auto-Discovery [${client.name}]: Error parsing event`, e);
 						}
+					};
+					stream.setEncoding("utf8");
+					stream.on("data", (chunk) => {
+						buffer += chunk;
+						while (buffer.includes("\n")) {
+							const newline = buffer.indexOf("\n");
+							const line = buffer.slice(0, newline);
+							buffer = buffer.slice(newline + 1);
+							if (line.trim()) pendingEvent = pendingEvent.then(() => handleEvent(line));
+						}
 					});
+					stream.on("error", (streamError) =>
+						logger.error(`Docker event stream failed [${client.name}]`, streamError),
+					);
 				},
 			);
 		}
@@ -219,15 +249,12 @@ class DockerService {
 		try {
 			const host = await ProxyHost.query()
 				.findById(hostId)
-				.withGraphFetched("[owner,access_list,certificate]")
+				.withGraphFetched("[owner,access_list.[items,clients],certificate,host_domains]")
 				.where("is_deleted", 0);
 
-			if (host?.enabled) {
-				// This generates the config file on disk
-				await internalNginx.generateConfig("proxy_host", host);
-			} else if (host) {
-				// If disabled, delete config
-				await internalNginx.deleteConfig("proxy_host", host);
+			if (host) {
+				// Validate each generated file and restore its backup before batching activation.
+				await internalNginx.configure(ProxyHost, "proxy_host", host, { skip_reload: true });
 			}
 
 			// Always trigger the debounced reload
@@ -303,6 +330,15 @@ class DockerService {
 
 			if (bindings && bindings.length > 0) {
 				forwardPort = Number.parseInt(bindings[0].HostPort, 10);
+			} else if (
+				Array.isArray(container.Ports) &&
+				container.Ports.some(
+					(port) => port.PrivatePort === internalPort && port.Type === "tcp" && port.PublicPort,
+				)
+			) {
+				forwardPort = container.Ports.find(
+					(port) => port.PrivatePort === internalPort && port.Type === "tcp" && port.PublicPort,
+				).PublicPort;
 			} else {
 				logger.warn(
 					`Docker Auto-Discovery [${client.name}]: Container ${container.Name} does not map internal port ${internalPort}/tcp to host. Routing might fail.`,
@@ -310,7 +346,7 @@ class DockerService {
 				forwardPort = internalPort;
 			}
 		} else {
-			const networks = container.NetworkSettings ? container.NetworkSettings.Networks : {};
+			const networks = container.NetworkSettings?.Networks || {};
 			const firstNetName = Object.keys(networks)[0];
 			if (firstNetName && networks[firstNetName].IPAddress) {
 				forwardHost = networks[firstNetName].IPAddress;
@@ -326,31 +362,47 @@ class DockerService {
 		);
 
 		try {
-			const allHosts = await ProxyHost.query().where("is_deleted", 0);
-			let existingHost = null;
-			let collisionHost = null;
-
-			for (const h of allHosts) {
-				if (h.meta?.auto_discovered && h.meta.docker_container_id === container.Id) {
-					existingHost = h;
-					break;
-				}
-
-				if (!existingHost) {
-					const intersect = h.domain_names.filter((d) => domains.includes(d));
-					if (intersect.length > 0) {
-						if (h.meta?.auto_discovered) {
-							existingHost = h;
-						} else {
-							collisionHost = h;
-						}
-					}
-				}
+			internalHost.validateDomainNames(domains);
+			if (!["http", "https", "grpc", "grpcs"].includes(scheme))
+				throw new Error("Invalid Docker forwarding scheme");
+			if (
+				!Number.isInteger(forwardPort) ||
+				forwardPort < 1 ||
+				forwardPort > 65535 ||
+				(portLabel && !/^\d+$/.test(portLabel))
+			) {
+				throw new Error("Invalid Docker forwarding port");
 			}
-
-			if (collisionHost && !existingHost) {
+			if (bandwidthLimit && !/^\d+(?:\.\d+)?[km]?$/i.test(bandwidthLimit))
+				throw new Error("Invalid Docker bandwidth limit");
+			if (forwardQuery && /["\\\r\n\0]/.test(forwardQuery)) throw new Error("Invalid Docker forward query");
+			if (limitUnit && !["s", "m", "second", "minute"].includes(limitUnit))
+				throw new Error("Invalid Docker rate limit unit");
+			for (const [value, maximum] of [
+				[limitRate, 100000],
+				[limitBurst, 100000],
+				[accessListId, Number.MAX_SAFE_INTEGER],
+			]) {
+				if (value && (!/^\d+$/.test(value) || Number(value) > maximum))
+					throw new Error("Invalid Docker numeric label");
+			}
+			const allHosts = await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains");
+			const existingHost =
+				allHosts.find((host) => host.meta?.auto_discovered && host.meta.docker_container_id === container.Id) ||
+				allHosts.find(
+					(host) =>
+						host.meta?.auto_discovered && host.domain_names.some((domain) => domains.includes(domain)),
+				);
+			// Inspect every host, even when the matching container appears first in the result.
+			const collisionHost = allHosts.find(
+				(host) =>
+					host.id !== existingHost?.id &&
+					!host.meta?.auto_discovered &&
+					host.domain_names.some((domain) => domains.includes(domain)),
+			);
+			if (collisionHost) {
 				logger.error(
-					`Docker Auto-Discovery: Collision detected! Domains [${domains.join(", ")}] are already used by Manual Host #${collisionHost.id}. Skipping.`,
+					`Docker Auto-Discovery: Domains [${domains.join(", ")}] collide with manual host #${collisionHost.id}. Skipping.`,
 				);
 				return;
 			}
@@ -391,7 +443,7 @@ class DockerService {
 			}
 
 			const payload = {
-				domain_names: domains,
+				host_domains: domains.map((domain_name) => ({ domain_name })),
 				forward_scheme: scheme,
 				forward_host: forwardHost,
 				forward_port: forwardPort,
@@ -428,7 +480,7 @@ class DockerService {
 			// Handle Rate Limiting
 			if (limitRate) {
 				payload.adv_limit_req_rate = Number.parseInt(limitRate, 10);
-				payload.adv_limit_req_unit = limitUnit || "second";
+				payload.adv_limit_req_unit = ["m", "minute"].includes(limitUnit) ? "m" : "s";
 				if (limitBurst) payload.adv_limit_req_burst = Number.parseInt(limitBurst, 10);
 			}
 
@@ -439,7 +491,7 @@ class DockerService {
 				// SECURITY: Whitelist approach — only allow known-safe directives
 				// Block anything not explicitly allowed (blocklist is always incomplete)
 				const allowedDirectives =
-					/^(server_name|listen|ssl_certificate|ssl_certificate_key|ssl_protocols|ssl_ciphers|proxy_pass|return|rewrite|try_files|gzip|expires|add_header|proxy_set_header|proxy_hide_header|include|allow|deny|proxy_read_timeout|proxy_connect_timeout|proxy_send_timeout|client_max_body_size|keepalive_timeout|send_timeout)\s/im;
+					/^(server_name|listen|ssl_certificate|ssl_certificate_key|ssl_protocols|ssl_ciphers|proxy_pass|return|rewrite|try_files|gzip|expires|add_header|proxy_set_header|proxy_hide_header|allow|deny|proxy_read_timeout|proxy_connect_timeout|proxy_send_timeout|client_max_body_size|keepalive_timeout|send_timeout)\s+[^;{}]+;\s*$/i;
 				const lines = cleanAdvancedConfig.split("\n");
 				const safeLines = lines.filter((line) => {
 					const trimmed = line.trim();
@@ -457,7 +509,7 @@ class DockerService {
 
 			if (existingHost) {
 				// Update
-				const updatedHost = await ProxyHost.query().patchAndFetchById(existingHost.id, payload);
+				const updatedHost = await ProxyHost.query().upsertGraphAndFetch({ id: existingHost.id, ...payload });
 				// RELOAD NGINX via Helper
 				await this.configureNginx(updatedHost.id);
 				logger.info(`Docker Auto-Discovery: Updated host #${existingHost.id}`);
@@ -466,7 +518,7 @@ class DockerService {
 				payload.owner_user_id = SYSTEM_USER_ID;
 				payload.locations = [];
 
-				const newHost = await ProxyHost.query().insertAndFetch(payload);
+				const newHost = await ProxyHost.query().insertGraphAndFetch(payload);
 				// RELOAD NGINX via Helper
 				await this.configureNginx(newHost.id);
 				logger.info(`Docker Auto-Discovery: Created host #${newHost.id}`);

@@ -6,7 +6,7 @@
 	],
 	"security": [
 		{
-			"BearerAuth": [
+			"bearerAuth": [
 				"certificates.manage"
 			]
 		}
@@ -33,7 +33,7 @@
 					"type": "object",
 					"additionalProperties": false,
 					"required": [
-						"provider"
+						"id"
 					],
 					"properties": {
 						"id": {

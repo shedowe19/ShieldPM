@@ -17,8 +17,8 @@ interface Props {
 }
 
 export function LocationsFields({ initialValues, name = "locations" }: Props) {
-	const [values, setValues] = useState<ProxyLocation[]>(initialValues || []);
-	const { setFieldValue } = useFormikContext();
+	const { values: formValues, setFieldValue } = useFormikContext<Record<string, ProxyLocation[]>>();
+	const [values, setValues] = useState<ProxyLocation[]>(() => formValues?.[name] || initialValues || []);
 	const [advVisible, setAdvVisible] = useState<number[]>([]);
 
 	const blankItem: ProxyLocation = {
@@ -74,7 +74,7 @@ export function LocationsFields({ initialValues, name = "locations" }: Props) {
 	return (
 		<div className="space-y-4">
 			{values.map((item: ProxyLocation, idx: number) => (
-				<Card key={`${item.path}-${idx}`}>
+				<Card key={idx}>
 					<CardContent className="p-4 space-y-4">
 						<div className="flex items-start gap-4">
 							<div className="flex-1">

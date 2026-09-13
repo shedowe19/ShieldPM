@@ -3,25 +3,13 @@ import { migrate as logger } from "../logger.js";
 const migrateName = "fix_req_limit_columns";
 
 const addColumnSafe = async (knex, columnName, columnTypeCallback) => {
-	try {
-		await knex.schema.table("proxy_host", (table) => {
-			columnTypeCallback(table);
-		});
-		logger.info(`[${migrateName}] Added column ${columnName}`);
-	} catch (err) {
-		// ER_DUP_FIELDNAME is MySQL error 1060
-		// SQLITE_ERROR generic with "duplicate column name" message for SQLite
-		if (
-			err.code === "ER_DUP_FIELDNAME" ||
-			err.errno === 1060 ||
-			err.errno === 1060 ||
-			err.message?.includes("duplicate column name")
-		) {
-			logger.info(`[${migrateName}] Column ${columnName} already exists. Skipping.`);
-		} else {
-			throw err;
-		}
+	// PostgreSQL aborts the transaction on duplicate DDL, even if JS catches it.
+	if (await knex.schema.hasColumn("proxy_host", columnName)) {
+		logger.info(`[${migrateName}] Column ${columnName} already exists. Skipping.`);
+		return;
 	}
+	await knex.schema.table("proxy_host", columnTypeCallback);
+	logger.info(`[${migrateName}] Added column ${columnName}`);
 };
 
 /**

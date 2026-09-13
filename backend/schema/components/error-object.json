@@ -14,6 +14,15 @@
 		"message": {
 			"type": "string",
 			"example": "Bad Request"
+		},
+		"message_i18n": {
+			"type": "string",
+			"description": "Optional translation key"
+		},
+		"reason": {
+			"type": "string",
+			"enum": ["EBADCSRFTOKEN"],
+			"description": "Present only when CSRF middleware rejected the request before route execution"
 		}
 	}
 }

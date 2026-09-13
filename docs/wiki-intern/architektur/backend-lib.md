@@ -72,6 +72,10 @@ Siehe auch: [Express-Middleware](./express-middleware.md)
 
 Enthält RBAC-Regeln pro Ressource (ca. 3.3 KB gesamt).
 
+### Konfigurations-Fingerabdruck
+
+`environment-hash.js` enthält die von Shell-Startprüfung und Backend gemeinsam verwendete SHA-512-Berechnung. Sie erfasst Vorlageninhalte, Namen und Werte der darin verwendeten Umgebungsvariablen sowie `TV`. `utils.writeHash()` speichert das Ergebnis erst nach abgewarteter Host-Neuerzeugung im konfigurierten Datenverzeichnis. Siehe [Instanzkonfiguration](../konfiguration/config-dateien.md#persistente-instanzkonfiguration).
+
 ## Verhalten
 
 - `access.js` wird von **allen** `internal/`-Modulen über den `access`-Parameter verwendet

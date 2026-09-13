@@ -9,7 +9,7 @@
       function filterItems(item, filter) {
         return !item.querySelector("td").textContent.trim().toLowerCase().includes(filter);
       }
-      input.addEventListener("keyup", function () {
+      input.addEventListener("input", function () {
         items.forEach((item) => {
           item.hidden = false;
         });
@@ -28,6 +28,7 @@
       var headers = document.querySelectorAll("th");
       headers.forEach((header) => {
         var links = header.querySelectorAll("a");
+        if (links.length < 2) return;
         var ascendingLink = document.createElement("a");
         ascendingLink.innerHTML = "&nbsp;↑&nbsp;";
         ascendingLink.href = links[0].href;

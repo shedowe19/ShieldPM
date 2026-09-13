@@ -206,9 +206,6 @@
 			}
 		},
 		"/nginx/certificates/{certID}": {
-			"get": {
-				"$ref": "./paths/nginx/certificates/certID/get.json"
-			},
 			"put": {
 				"$ref": "./paths/nginx/certificates/certID/put.json"
 			},
@@ -499,7 +496,7 @@
 				},
 				"security": [
 					{
-						"jwt": []
+						"bearerAuth": []
 					}
 				]
 			},
@@ -531,6 +528,11 @@
 			},
 			"delete": {
 				"$ref": "./paths/chat/integrationID/delete.json"
+			}
+		},
+		"/nginx/certificates/retrieve": {
+			"post": {
+				"$ref": "./paths/nginx/certificates/retrieve/post.json"
 			}
 		}
 	}

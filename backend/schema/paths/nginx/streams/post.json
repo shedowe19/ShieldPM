@@ -43,6 +43,9 @@
 						"proxy_protocol_forwarding": {
 							"$ref": "../../../components/stream-object.json#/properties/proxy_protocol_forwarding"
 						},
+						"domain_names": {
+							"$ref": "../../../components/certificate-request.json#/properties/domain_names"
+						},
 						"certificate_id": {
 							"$ref": "../../../components/stream-object.json#/properties/certificate_id"
 						},

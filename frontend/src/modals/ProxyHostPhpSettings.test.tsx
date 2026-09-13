@@ -82,7 +82,7 @@ describe("ProxyHostPhpSettings", () => {
 			forwardScheme: FORWARD_SCHEME.PATH,
 			phpEnabled: false,
 			phpVersion: PHP_VERSION.PHP83,
-			php_override_ini: "memory_limit=256M",
+			phpOverrideIni: "memory_limit=256M",
 		});
 
 		const enabled = screen.getByLabelText("proxy-host.php-enabled");
