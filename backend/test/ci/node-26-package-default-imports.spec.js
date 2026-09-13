@@ -67,6 +67,31 @@ const hasDefaultBinding = (importPrefix) => {
 	);
 };
 
+const getStaticImport = (source, moduleRequest) => {
+	// es-module-lexer 3 renamed its import record fields. Support both the
+	// 2.x and 3.x shapes so this compatibility check can test dependency
+	// upgrades before they are merged.
+	const isStaticImport = moduleRequest.type === "static" || moduleRequest.d === -1;
+	const specifier = moduleRequest.specifier ?? moduleRequest.n;
+	const importStart = moduleRequest.importStart ?? moduleRequest.ss;
+	const specifierStart = moduleRequest.start ?? moduleRequest.s;
+
+	if (
+		!isStaticImport ||
+		typeof specifier !== "string" ||
+		typeof importStart !== "number" ||
+		typeof specifierStart !== "number"
+	) {
+		return null;
+	}
+
+	return {
+		importPrefix: source.slice(importStart, specifierStart),
+		line: source.slice(0, importStart).split("\n").length,
+		specifier,
+	};
+};
+
 const collectPackageDefaultImports = async () => {
 	await init;
 	const consumers = [];
@@ -77,14 +102,15 @@ const collectPackageDefaultImports = async () => {
 		const [imports] = parse(source);
 
 		for (const moduleRequest of imports) {
-			if (moduleRequest.d !== -1 || !moduleRequest.n || !isBarePackage(moduleRequest.n)) continue;
-			if (!hasDefaultBinding(source.slice(moduleRequest.ss, moduleRequest.s))) continue;
+			const staticImport = getStaticImport(source, moduleRequest);
+			if (!staticImport || !isBarePackage(staticImport.specifier)) continue;
+			if (!hasDefaultBinding(staticImport.importPrefix)) continue;
 
 			consumers.push({
 				consumerPath: relativePath,
 				consumerUrl: pathToFileURL(absolutePath).href,
-				line: source.slice(0, moduleRequest.ss).split("\n").length,
-				specifier: moduleRequest.n,
+				line: staticImport.line,
+				specifier: staticImport.specifier,
 			});
 		}
 	}
@@ -133,12 +159,10 @@ describe("Node 26 package default-import compatibility", () => {
 		`;
 		const [imports] = parse(source);
 
-		const defaultBoundSpecifiers = imports
-			.filter(
-				(moduleRequest) =>
-					moduleRequest.d === -1 && hasDefaultBinding(source.slice(moduleRequest.ss, moduleRequest.s)),
-			)
-			.map((moduleRequest) => moduleRequest.n);
+		const defaultBoundSpecifiers = imports.flatMap((moduleRequest) => {
+			const staticImport = getStaticImport(source, moduleRequest);
+			return staticImport && hasDefaultBinding(staticImport.importPrefix) ? [staticImport.specifier] : [];
+		});
 
 		expect(defaultBoundSpecifiers).toEqual([
 			"default-only",

@@ -72,6 +72,12 @@ jobs:
           echo "Installing updated backend dependencies to update yarn.lock..."
           npx --yes --package yarn@1.22.22 yarn install
 
+          echo "Deduplicating compatible backend lockfile entries..."
+          npx --yes --package yarn-deduplicate@6.0.2 yarn-deduplicate --strategy highest yarn.lock
+
+          echo "Reinstalling the deduplicated backend lockfile..."
+          npx --yes --package yarn@1.22.22 yarn install --frozen-lockfile
+
       - name: Check for Direct Dependency Updates
         id: check_changes
         run: |
