@@ -157,7 +157,7 @@ const internalProxyHost = {
 export default internalProxyHost;
 ```
 
-- Öffentliche, berechtigungsabhängige Methoden nehmen `access` als ersten Parameter; reine interne Helfer benötigen ihn nicht.
+- Public, authorization-sensitive methods take `access` as their first parameter; purely internal helpers do not need it.
 - Services call other services (e.g., `internalNginx.configure()`) — never reach into DB directly from routes.
 
 ### Frontend Patterns
@@ -176,8 +176,8 @@ export default internalProxyHost;
 4. ❌ **Never use raw `fetch`** in React components — use React Query hooks.
 5. ❌ **Never store dynamic data outside `/data/`** — all persistent state must reside there.
 6. ❌ **Never skip `$beforeInsert`/`$beforeUpdate`** lifecycle hooks when creating Objection models.
-7. ✅ **Maintain JSON Schemas** für veröffentlichte API-Verträge; Handler ohne Schema müssen im Laufzeit-Endpunkt-Katalog sichtbar bleiben.
-8. ✅ **Always use `internalNginx.reload()`** — never call `nginx -s reload` directly. Debounce nur dort, wo ein automatischer Auslöser sie benötigt.
+7. ✅ **Maintain JSON Schemas** for published API contracts; handlers without a schema must remain visible in the runtime endpoint catalog.
+8. ✅ **Always use `internalNginx.reload()`** — never call `nginx -s reload` directly. Debounce only where an automatic trigger needs it.
 9. ✅ **Use `access` first** for public, authorization-sensitive internal service methods.
 10. ✅ **Always add translations** for new UI text in `frontend/src/locale/lang/en.json` at minimum.
 
