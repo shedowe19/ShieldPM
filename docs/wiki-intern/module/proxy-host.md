@@ -84,7 +84,7 @@ Erstellung und Aktualisierung schreiben den Proxy-Host und seine normalisierten 
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Nginx-Engine](./nginx-engine.md)
 - [Redirection-Host](./redirection-host.md)
@@ -106,3 +106,9 @@ Beim Löschen und Deaktivieren von Proxy-, Redirect-, 404-Hosts und Streams lauf
 DNS-Zugangsdaten verbleiben ausschließlich im Zertifikatskontext. Für verwaltete Git-Websites sperrt die generierte Nginx-Konfiguration Symlinks und für statische Hosts den Zugriff auf Git-Metadaten. Details zu mTLS, OIDC und Limits stehen unter [Nginx-Templates](./nginx-templates.md).
 
 Neue Zertifikats- und Access-List-Zuordnungen unterliegen den eigenständigen Berechtigungs- und Eigentümerprüfungen der [Host-Hilfslogik](./host.md).
+
+## Verwandte Seiten
+
+- [Nginx-Engine](./nginx-engine.md)
+- [Access-Lists](./access-lists.md)
+- [Datenmodell](../daten/datenmodell.md)

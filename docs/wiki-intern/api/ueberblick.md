@@ -39,7 +39,11 @@ Die API wird durch Express.js bereitgestellt. Schema-Validierung erfolgt über A
 
 ## Authentifizierung
 
-Alle Endpunkte (außer `/api/tokens`) erfordern ein JWT-Token im `Authorization: Bearer`-Header.
+Die JWT-Middleware übernimmt ein Bearer-Token oder das Cookie `shieldpm_jwt` zunächst nur nach
+`res.locals.token`. Öffentliche Bootstrap-, Dokumentations-, Login- und OIDC-Flows bleiben bewusst ohne vollständige
+Sitzung erreichbar. Fachliche Routen erzwingen die aktuelle Anmeldung und Berechtigung über ihren Access-Layer; die
+exakte Ausnahme oder Methode steht deshalb im jeweiligen Handler und im
+[Laufzeit-Endpunkt-Katalog](./endpunkt-katalog.md).
 
 ## Swagger/OpenAPI
 
@@ -50,8 +54,12 @@ Schema-Dateien unter `backend/schema/`:
 - `components/` — Wiederverwendbare Schemas
 - `paths/` — Endpunkt-Definitionen
 
+Die OpenAPI-Spezifikation ist nicht für jeden Express-Handler vollständig. Der verbindliche Abgleich aller aktuell
+gemounteten Pfade steht im [Laufzeit-Endpunkt-Katalog](./endpunkt-katalog.md).
+
 ## Verwandte Seiten
 
 - [Routen](./routen.md)
 - [Schemas](./schemas.md)
+- [Laufzeit-Endpunkt-Katalog](./endpunkt-katalog.md)
 - [Architektur-Module](../architektur/module.md)

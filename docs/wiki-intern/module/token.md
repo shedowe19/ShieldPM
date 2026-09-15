@@ -6,7 +6,9 @@ Verwaltung von JWT (JSON Web Tokens) für die API-Authentifizierung.
 
 ## Kontext
 
-Jede API-Anfrage an das Backend erfordert eine Authentifizierung. Dieses Modul handhabt die Erzeugung, Validierung und Verwaltung dieser JWT-Tokens.
+Authentifizierte API-Aufrufe verwenden JWTs. Bootstrap, Login, OIDC und Dokumentation enthalten bewusst öffentliche
+Teilflüsse; die Access-Schicht entscheidet pro fachlicher Operation über die vollständige Anmeldung und Berechtigung.
+Dieses Modul handhabt Erzeugung, Validierung und Verwaltung der JWT-Tokens.
 
 ## Wichtige Dateien
 
@@ -15,7 +17,7 @@ Jede API-Anfrage an das Backend erfordert eine Authentifizierung. Dieses Modul h
 
 ## Verhalten
 
-- Liest/Erstellt Schlüssel unter `/data/keys.json` zur Signierung.
+- Liest/erstellt Schlüssel unter `/data/shieldpm/keys.json` zur Signierung.
 - Verifiziert eingehende Tokens (Middlewares).
 - Enthält Berechtigungen und User-ID im Payload.
 

@@ -96,11 +96,13 @@ EJS-Templates für Nginx-Konfigurationsdateien.
 
 Wiederverwendbare UI-Komponenten basierend auf shadcn/ui (Radix UI).
 
-### 3. API Hooks
+### 3. API-Transport und Hooks
 
-**Pfad**: `frontend/src/api/backend/`
+**Transport**: `frontend/src/api/backend/`
 
-React Query Hooks für API-Aufrufe.
+Die Dateien bilden HTTP-Aufrufe, Typen und die zentrale Cookie-/CSRF-Behandlung ab. React-Query-Queries und Mutations
+liegen dagegen unter `frontend/src/hooks/`. Details: [Frontend API-Client](../ui/api-client.md) und
+[Frontend API-Hooks](../ui/api-hooks.md).
 
 ## Verwandte Seiten
 

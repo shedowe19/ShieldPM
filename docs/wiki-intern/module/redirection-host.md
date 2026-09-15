@@ -38,7 +38,7 @@ Redirection-Hosts werden verwendet, um eingehende Anfragen z. B. von alten Domai
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Proxy-Host](./proxy-host.md)
 - [Dead-Host](./dead-host.md)
@@ -49,3 +49,9 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 ## Aktualisierung und Fehlerstatus
 
 Die Erstellungsantwort übernimmt den aktuellen Nginx-Status, einschließlich fehlgeschlagener Konfiguration. DNS-Zugangsdaten für neue Zertifikate werden weder in Host-Metadaten noch im Audit gespeichert. Löschen und Deaktivieren teilen die Warteschlange der [Nginx-Engine](./nginx-engine.md).
+
+## Verwandte Seiten
+
+- [Nginx-Engine](./nginx-engine.md)
+- [Host-Hilfslogik](./host.md)
+- [Datenmodell](../daten/datenmodell.md)

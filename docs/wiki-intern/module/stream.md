@@ -52,7 +52,7 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Nginx-Engine](./nginx-engine.md)
 - [Proxy-Host](./proxy-host.md)
@@ -60,3 +60,9 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Datenmodell](../daten/datenmodell.md)
 
 Die Erstellungsantwort enthält den aktuellen Nginx-Status. Neue Zertifikatsdomains verwenden das getrennte Request-Schema für Zertifikate; DNS-Credentials werden ausschließlich im Zertifikatskontext aufbewahrt. Löschen und Deaktivieren sind mit der Konfigurationsgenerierung serialisiert.
+
+## Verwandte Seiten
+
+- [Nginx-Engine](./nginx-engine.md)
+- [Zertifikate](./zertifikate.md)
+- [Datenmodell](../daten/datenmodell.md)

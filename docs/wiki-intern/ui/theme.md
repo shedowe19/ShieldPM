@@ -6,7 +6,7 @@ Beschreibung des Styling-Systems.
 
 ## Technologie
 
-- **Tailwind CSS** v3.4 — Utility-first CSS
+- **Tailwind CSS** v4.3 — Utility-first CSS
 - **shadcn/ui** (Radix UI) — Accessible UI-Primitives
 - **Framer Motion** — Animationen
 - **CSS Modules** — Für spezifische Styles (`.module.css`)

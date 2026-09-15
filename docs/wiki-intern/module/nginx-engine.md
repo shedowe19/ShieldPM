@@ -85,7 +85,7 @@ Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Datenfluss](../architektur/datenfluss.md)
 - [Proxy-Host](./proxy-host.md)
@@ -113,3 +113,9 @@ Auch die abschließenden Reloads von Access-List-, Wartungs- und Tor-Sammelläuf
 Fehlt vor einer Konfigurationsänderung die aktive Datei, entfernt `backupConfig()` eine eventuell veraltete `.bak`-Datei. Ein späterer Generierungsfehler kann damit keinen zuvor inaktiven Listener wiederherstellen. Deaktivierte oder inzwischen gelöschte Hosts erhalten auch nach erfolgreichem Rendern `nginx_online: false`.
 
 Ein Einzelwechsel prüft die Gesamtkonfiguration einmal innerhalb von `reload()`, bevor das Reloadsignal gesendet wird. Die zuvor unmittelbar davor ausgeführte identische Prüfung entfällt. `skip_reload` prüft weiterhin jede geschriebene Konfiguration; der abschließende Sammel-Reload validiert erneut. `third-proxy-nginx.spec.js` deckt diese Pfade mit temporären Dateien und gemockten Prozessaufrufen ab.
+
+## Verwandte Seiten
+
+- [Nginx-Templates](./nginx-templates.md)
+- [Rootfs-Referenz](../konfiguration/rootfs.md)
+- [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)

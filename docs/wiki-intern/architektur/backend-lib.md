@@ -12,43 +12,50 @@ Die `lib/`-Dateien stellen grundlegende Infrastruktur bereit, die von den `inter
 
 ### Kern-Infrastruktur
 
-| Datei          | Größe  | Zweck                                                   |
-| -------------- | ------ | ------------------------------------------------------- |
-| `access.js`    | 7.8 KB | Berechtigungsprüfung (Rollen, CRUD-Rechte)              |
-| `config.js`    | 6.6 KB | Zentrale Konfigurationslogik (Umgebungsvariablen laden) |
-| `error.js`     | 3.1 KB | Fehlerklassen (ItemNotFound, PermissionError, etc.)     |
-| `helpers.js`   | 1.5 KB | Allgemeine Hilfsfunktionen                              |
-| `utils.js`     | 3 KB   | Utility-Funktionen                                      |
-| `constants.js` | 140 B  | Globale Konstanten                                      |
-| `types.js`     | 533 B  | Typ-Definitionen                                        |
+| Datei                 | Zweck                                                                     |
+| --------------------- | ------------------------------------------------------------------------- |
+| `access.js`           | Berechtigungsprüfung (Rollen, CRUD-Rechte).                               |
+| `config.js`           | Zentrale Datenbank- und Laufzeitkonfiguration.                            |
+| `constants.js`        | Globale Konstanten.                                                       |
+| `environment-hash.js` | Gemeinsamer Konfigurations-/Template-Fingerabdruck von Shell und Backend. |
+| `error.js`            | Fehlerklassen (ItemNotFound, PermissionError usw.).                       |
+| `helpers.js`          | Allgemeine Hilfsfunktionen.                                               |
+| `utils.js`            | Utility-Funktionen und persistierter Umgebungsfingerabdruck.              |
+| `types.js`            | JSDoc-Typdefinitionen.                                                    |
 
 ### Authentifizierung
 
-| Datei                   | Größe  | Zweck                      |
-| ----------------------- | ------ | -------------------------- |
-| `auth-cookies.js`       | 1.5 KB | Cookie-basierte Auth-Logik |
-| `auth-session-token.js` | 687 B  | Session-Token-Handling     |
+| Datei                   | Zweck                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `auth-cookies.js`       | Cookie-basierte Auth-Logik.                                                                                              |
+| `auth-password.js`      | Validiert lokale Passwort-Authentifizierung und die Länge vor dem Persistieren (mindestens 8, höchstens 72 UTF-8-Bytes). |
+| `auth-session-token.js` | Session-Token-Handling.                                                                                                  |
 
 ### Datenbank
 
-| Datei                 | Größe  | Zweck                                       |
-| --------------------- | ------ | ------------------------------------------- |
-| `db-migrate.js`       | 4.2 KB | Migrations-Verwaltung (custom Knex-Wrapper) |
-| `migrate_template.js` | 1.2 KB | Template für neue Migrationen               |
+| Datei                 | Zweck                                         |
+| --------------------- | --------------------------------------------- |
+| `db-migrate.js`       | Migrations-Verwaltung (eigener Knex-Wrapper). |
+| `migrate_template.js` | Vorlage für neue Migrationen.                 |
 
 ### Sicherheit
 
-| Datei           | Größe  | Zweck                            |
-| --------------- | ------ | -------------------------------- |
-| `encryption.js` | 1 KB   | Verschlüsselungs-Hilfsfunktionen |
-| `certbot.js`    | 1.3 KB | Certbot-Hilfsfunktionen          |
+| Datei           | Zweck                             |
+| --------------- | --------------------------------- |
+| `encryption.js` | Verschlüsselungs-Hilfsfunktionen. |
+| `certbot.js`    | Certbot-Hilfsfunktionen.          |
 
 ### Spezial
 
-| Datei                | Größe  | Zweck                                      |
-| -------------------- | ------ | ------------------------------------------ |
-| `service-icons.js`   | 9.3 KB | Service-Icon-Erkennung (Favicon-Detection) |
-| `validate-schema.js` | 493 B  | AJV JSON-Schema-Validierung                |
+| Datei                | Zweck                                                       |
+| -------------------- | ----------------------------------------------------------- |
+| `gitops-files.js`    | Sichere Pfad- und Dateihilfe für GitOps-Import und -Export. |
+| `host-response.js`   | Gemeinsame Bereinigung und Formung von Host-Antworten.      |
+| `service-icons.js`   | Service-Icon-Erkennung (Favicon-Detection).                 |
+| `terminal-access.js` | Zugriffsprüfung für Terminal-Sitzungen.                     |
+
+Die AJV-Schema-Prüfung liegt nicht unter `lib/`, sondern in `backend/validate-schema.js`; sie wird in
+[API-Schemas](../api/schemas.md) beschrieben.
 
 ### Unterordner `express/`
 
@@ -67,10 +74,6 @@ Siehe auch: [Express-Middleware](./express-middleware.md)
 | ---------- | ------ | ------------------------ |
 | `api.js`   | 1.4 KB | API-Request-Validierung  |
 | `index.js` | 922 B  | Validator-Einstiegspunkt |
-
-### Unterordner `access/`
-
-Enthält RBAC-Regeln pro Ressource (ca. 3.3 KB gesamt).
 
 ### Konfigurations-Fingerabdruck
 

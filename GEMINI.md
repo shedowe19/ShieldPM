@@ -1,14 +1,13 @@
 # ShieldPM Agent Context
 
-> [!IMPORTANT]
-> **This document is the SOURCE OF TRUTH for any AI Agent working on this project.**
-> It must be kept identical to `GEMINI.md`.
+> [!IMPORTANT] > **This document is the SOURCE OF TRUTH for any AI Agent working on this project.**
+> Keep it aligned with the versioned manifests, the internal wiki and the current repository layout.
 >
 > **Also read these companion files:**
 >
 > - **`.cursorrules`** — Coding standards, naming conventions, critical rules, and anti-patterns.
-> - **`AGENTS.md`** — Dynamic skill discovery (via `.agent/skills/CATALOG.md`), common code patterns, and project constraints.
-> - **`.agent/skills/CATALOG.md`** — Full catalog of 950+ AI skills. Search by keyword before starting any task.
+> - **`AGENTS.md`** — Runtime skill discovery, common code patterns, and project constraints. Its optional local
+>   catalog is not versioned in this repository.
 
 ## 1. Project Identity & Purpose
 
@@ -17,7 +16,8 @@
 * **Base**: Advanced fork of Nginx Proxy Manager (NPM).
 * **Core Function**: Web UI for managing Nginx Reverse Proxies with heavy emphasis on security (WAF, IPS), modern protocols (HTTP/3, QUIC), and native performance.
 * **Current Version**: `v4.3.2`
-* **Primary Output**: Docker Image (`shedowe19/shieldpm:latest`) & Native Installer Script (`install.sh`).
+* **Primary Output**: Docker Image (`ghcr.io/shedowe19/shieldpm:develop` in the standard Compose files) and Native
+  Installer Script (`scripts/install.sh`).
 
 ### Key Features
 
@@ -40,9 +40,9 @@ The Agent must be aware of these specific versions and libraries:
 * **Framework**: Express.js `v5.2`
 * **ORM**: Objection.js `v3.1` / Knex.js `v3.1`
 * **Database**:
-  - **Development**: SQLite (`better-sqlite3` v12.6)
+  - **Development**: SQLite (`better-sqlite3` v13.0)
   - **Production**: MySQL (`mysql2`) or PostgreSQL (`pg`)
-* **AI Integration**: `@google/generative-ai` (Gemini), `node-fetch` (Ollama/OpenAI Compatible)
+* **AI Integration**: `@google/generative-ai` (Gemini) und die Node-26-Fetch-API für Ollama/OpenAI-kompatible Anbieter.
 * **Management**: `dockerode` (Docker API), `isomorphic-git` (GitOps), `telegraf` (ChatOps/Telegram), `ssh2` (Remote), `ws` (WebSockets)
 * **Path**: `/backend`
 
@@ -50,10 +50,10 @@ The Agent must be aware of these specific versions and libraries:
 
 - **Runtime**: Node.js `v26+`
 
-* **Build Tool**: Vite `v7.3`
-* **Framework**: React `v19.2` (TypeScript)
-* **State Management**: React Query `v5.90`
-* **Styling**: Tailwind CSS `v3.4`, shadcn/ui (Radix UI)
+* **Build Tool**: Vite `v8.3`
+* **Framework**: React `v19.3` (TypeScript)
+* **State Management**: React Query `v5.102`
+* **Styling**: Tailwind CSS `v4.3`, shadcn/ui (Radix UI)
 * **Path**: `/frontend`
 
 ### Infrastructure & Nginx Core
@@ -75,8 +75,7 @@ The Agent must be aware of these specific versions and libraries:
 
 This project relies on **TWO** distinct repositories. The Agent must know which one to modify.
 
-> [!CAUTION]
-> **DO NOT confuse these repositories.** Modifications to the wrong repo will be lost or ineffective.
+> [!CAUTION] > **DO NOT confuse these repositories.** Modifications to the wrong repo will be lost or ineffective.
 
 ### A. `ShieldPM` (This Repository) - Application Logic
 
@@ -134,10 +133,10 @@ cd frontend
 yarn install
 yarn dev # Vite dev server
 
-# Backend
+# Backend (Entwicklungsstart ohne eigenes package.json-Script)
 cd backend
 yarn install
-yarn dev # Nodemon
+node index-dev.js
 ```
 
 ## 5. Security Architecture & Integrations

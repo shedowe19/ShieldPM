@@ -14,6 +14,12 @@
 
 - TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen — der Auth-Typ ist parallel zu oauth2-proxy verfügbar, ein konkretes Setup-Beispiel fehlt aber noch.
 - TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
+- TODO: Den optionalen globalen Analytics-Fallback im Frontend entscheiden: `getAnalyticsSeries.ts` und
+  `getAnalyticsSummary.ts` bilden ohne Host-ID `/api/nginx/analytics/global` beziehungsweise
+  `/summary`, während der Backend-Router nur `/api/nginx/analytics/:hostId` und
+  `:hostId/summary` mountet. Die Analytics-Seite ruft derzeit mit einer Host-ID ab. Entweder den Fallback auf
+  `/api/analytics` abbilden oder die nicht gemounteten Pfade entfernen/implementieren
+  ([Analytics](./module/analytics.md), [Laufzeit-Endpunkt-Katalog](./api/endpunkt-katalog.md)).
 
 ## Gelöste Fragen
 
@@ -31,7 +37,8 @@
 - ~~`backend/lib/`~~ → Dokumentiert in [Backend-Lib](./architektur/backend-lib.md).
 - ~~`frontend/src/modules/`~~ → 3 Module: AuthStore, Permissions, Validations → [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`frontend/src/modals/`~~ → 21 Modals (19 + index + DeleteConfirm) → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/hooks/`~~ → 32 Custom-Hooks → [Frontend-Internas](./ui/frontend-internas.md).
+- ~~`frontend/src/hooks/`~~ → React-Query-, UI- und Polling-Hooks einschließlich ihrer Barrel- und Policy-Dateien →
+  [Frontend-Internas](./ui/frontend-internas.md) und [Frontend API-Hooks](./ui/api-hooks.md).
 - ~~`frontend/src/context/`~~ → AuthContext, LocaleContext, ThemeContext → [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`frontend/src/types/`~~ → `enums.ts` (8 KB) → [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`rootfs/usr/local/bin/`~~ → 9 Scripts dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).

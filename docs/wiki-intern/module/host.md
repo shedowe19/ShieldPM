@@ -39,7 +39,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 `isHostnameTaken()` und `getHostsWithDomains()` laden die normalisierte `host_domains`-Relation. Das alte JSON-Feld ist nach Änderungen nicht mehr zuverlässig. Auch PostgreSQL-Vorfilter suchen ohne Unterscheidung von Groß-/Kleinschreibung; anschließend wird exakt verglichen. Die Auswahl mehrerer Domains verwendet ein Set und liefert jeden Host nur einmal.
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Proxy-Host](./proxy-host.md)
 - [Redirection-Host](./redirection-host.md)
@@ -58,3 +58,9 @@ DNS-Provider-Credentials aus einer Zertifikatsanforderung werden für die Beantr
 Beim Erstellen und Aktualisieren prüfen Proxy-, Redirect-, Dead-Hosts und Streams neue Zertifikatszuordnungen über `internalCertificate.get()`. Proxy-Hosts prüfen neue Zugriffslisten über `internalAccessList.get()`. Die Ressourcen benötigen ihre eigene Leseberechtigung und müssen im Eigentümer-Sichtbereich liegen; gelöschte oder fehlende IDs werden vor einer Hoständerung abgewiesen. Unveränderte, bereits bestehende Zuordnungen können weiter bearbeitet und mit `0` entfernt werden. `"new"` bleibt der eigene Ausstellungsablauf.
 
 Regressionen: `third-proxy-references.spec.js` prüft sämtliche Create-/Update-Aufrufer; `third-proxy-reference-ownership.spec.js` prüft die tatsächlichen Services mit SQLite für eigene, fremde, gelöschte und global sichtbare Ressourcen.
+
+## Verwandte Seiten
+
+- [Proxy-Host](./proxy-host.md)
+- [Redirection-Host](./redirection-host.md)
+- [Datenmodell](../daten/datenmodell.md)

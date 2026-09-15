@@ -44,7 +44,7 @@ Dead-Hosts werden eingesetzt, um bekannte Domains "abzufangen" (z. B. nicht genu
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Proxy-Host](./proxy-host.md)
 - [Redirection-Host](./redirection-host.md)
@@ -53,3 +53,9 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Datenmodell](../daten/datenmodell.md)
 
 Auch die Erstellungsantwort übernimmt jetzt den von Nginx ermittelten Status. DNS-Zugangsdaten werden aus Host-Metadaten und Auditdaten entfernt; für Zertifikatsanforderungen stehen sie weiterhin zur Verfügung. Löschen und Deaktivieren verwenden dieselbe Nginx-Warteschlange wie Konfigurationsänderungen.
+
+## Verwandte Seiten
+
+- [Proxy-Host](./proxy-host.md)
+- [Host-Hilfslogik](./host.md)
+- [Datenmodell](../daten/datenmodell.md)

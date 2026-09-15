@@ -99,6 +99,15 @@ frontend/src/
 | `gitops.ts`  | GitOps-Operationen          |
 | `gitSync.ts` | Git-Sync für einzelne Hosts |
 
+### Gemeinsame Polling- und Exportgrenzen
+
+| Datei                      | Beschreibung                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| `index.ts`                 | Öffentlicher Barrel-Export der Hooks.                                               |
+| `pollingPolicy.ts`         | Reine Intervallentscheidung mit Sichtbarkeits-, Online- und Fehler-Backoff-Regeln.  |
+| `usePollingEnvironment.ts` | Bindet die Polling-Policy an Browser-Sichtbarkeit sowie Online-/Offline-Ereignisse. |
+| `useAnalyticsTopHosts.ts`  | React-Query-Cache für die globale Top-Hosts-Analytics-Abfrage.                      |
+
 ## Pattern
 
 API-Funktionen übernehmen ausschließlich den Transport; Hooks legen die Cache-Schlüssel und Invalidierungen fest.

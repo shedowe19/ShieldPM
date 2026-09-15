@@ -14,6 +14,14 @@ Beschreibung der OpenAPI/Swagger Schema-Struktur.
 | `backend/schema/components/`  | Wiederverwendbare Schema-Komponenten |
 | `backend/schema/paths/`       | Endpunkt-Pfad-Definitionen           |
 
+## Vollständigkeitsstand
+
+Der Prüfstand vom 2026-09-15 umfasst **143 Dateien** unter `backend/schema/`: drei Wurzeldokumente
+(`swagger.json`, `common.json`, `index.js`), 36 wiederverwendbare Komponenten und 104 Pfaddefinitionen. Die
+Pfadstruktur folgt den API-Segmenten; die vollständige, zur Laufzeit gemountete Gegenliste steht im
+[Laufzeit-Endpunkt-Katalog](./endpunkt-katalog.md). Damit bleibt klar, dass ein Handler ohne OpenAPI-Datei trotzdem
+existieren kann und im Katalog sichtbar sein muss.
+
 ## Schema-Validierung
 
 Die API verwendet `ajv` (Another JSON Schema Validator) zur Validierung eingehender Requests gegen die definierten Schemas.
@@ -40,3 +48,4 @@ CSRF-Ablehnungen vor der Routenausführung enthalten bei HTTP 403 zusätzlich `e
 
 - [API-Überblick](./ueberblick.md)
 - [API-Routen](./routen.md)
+- [Laufzeit-Endpunkt-Katalog](./endpunkt-katalog.md)

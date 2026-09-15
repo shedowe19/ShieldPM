@@ -35,17 +35,18 @@ ShieldPM besteht aus **zwei** getrennten Repositories:
 
 ## Wichtige Dateien
 
-| Datei                       | Beschreibung                                   |
-| --------------------------- | ---------------------------------------------- |
-| `backend/internal/nginx.js` | Nginx-Konfigurationsengine ("Das Gehirn")      |
-| `backend/templates/*.conf`  | EJS-Templates für Nginx-Konfigurationen        |
-| `backend/migrations/`       | Knex.js Migrationen (74 Dateien, ESM)          |
-| `frontend/src/Router.tsx`   | React-Routing (Lazy-Loading)                   |
-| `frontend/src/api/`         | React Query Hooks                              |
-| `scripts/install.sh`        | Native/LXC-Installer                           |
-| `rootfs/`                   | Docker-Image-Overlay-Dateien                   |
-| `Dockerfile`                | Multi-Stage Build (Frontend → Backend → Final) |
-| `.version`                  | Versionsdatei (aktuell: 4.3.2)                 |
+| Datei                       | Beschreibung                                       |
+| --------------------------- | -------------------------------------------------- |
+| `backend/internal/nginx.js` | Nginx-Konfigurationsengine ("Das Gehirn")          |
+| `backend/templates/*.conf`  | EJS-Templates für Nginx-Konfigurationen            |
+| `backend/migrations/`       | Knex.js Migrationen (74 Dateien, ESM)              |
+| `frontend/src/Router.tsx`   | React-Routing (Lazy-Loading)                       |
+| `frontend/src/api/backend/` | HTTP-Transportfunktionen, Modelle und Antworttypen |
+| `frontend/src/hooks/`       | React-Query-, Polling- und UI-Hooks                |
+| `scripts/install.sh`        | Native/LXC-Installer                               |
+| `rootfs/`                   | Docker-Image-Overlay-Dateien                       |
+| `Dockerfile`                | Multi-Stage Build (Frontend → Backend → Final)     |
+| `.version`                  | Versionsdatei (aktuell: 4.3.2)                     |
 
 ## Verwandte Seiten
 
