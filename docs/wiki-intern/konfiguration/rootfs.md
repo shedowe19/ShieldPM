@@ -99,7 +99,9 @@ Kann das Backend seinen Unix-Socket nicht binden, protokolliert es den Fehler un
 
 ## Umgebungsvariablen (`rootfs/.env.example`)
 
-Referenz-Datei für alle verfügbaren Umgebungsvariablen (2.9 KB). Wird als Vorlage für native Installationen verwendet.
+Versionierte Referenz-Datei für die konfigurierbaren Instanzvariablen. Sie wird als Vorlage für native Installationen
+verwendet; die vollständige Semantik und interne Testwerte stehen unter
+[Umgebungsvariablen](./umgebungsvariablen.md).
 
 Die gleiche Datei existiert als `rootfs/data/.env` für den Container.
 

@@ -62,7 +62,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 Regressionstest: `backend/test/internal/access-list.spec.js` prüft reale Service-Aufrufe einschließlich Schreibreihenfolge, Rollback, mTLS, Geheimnisbereinigung und Eingabevalidierung.
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Proxy-Host](./proxy-host.md)
 - [Zertifikate](./zertifikate.md)
@@ -81,3 +81,9 @@ Die htpasswd-Datei wird vollständig in einer temporären Datei vorbereitet und 
 Neugenerierung nach Änderungen lädt `host_domains`, Zertifikate und komplette Zugriffsregeln. Auch beim Löschen der Liste bleibt dadurch die TLS-Zuordnung der Hosts erhalten. Expandierte Proxy-Hosts durchlaufen dieselbe Geheimnisbereinigung wie die Host-API; interne Aufrufe behalten die tatsächlichen Websitepfade. Authentik-URLs und OAuth2-Präfixe werden vor der Nginx-Ausgabe auf sichere Syntax geprüft.
 
 Tests: `access-list.spec.js` und `access-list-files.spec.js`, einschließlich echter temporärer Dateien und fehlgeschlagener Dateiersetzung.
+
+## Verwandte Seiten
+
+- [Proxy-Host](./proxy-host.md)
+- [Zertifikate](./zertifikate.md)
+- [Modulübersicht](./README.md)

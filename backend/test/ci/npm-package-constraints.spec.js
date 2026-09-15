@@ -9,7 +9,7 @@ const readManifest = (directory) => JSON.parse(fs.readFileSync(join(repoRoot, di
 describe("npm and Yarn dependency constraints", () => {
 	it("pins only remaining vulnerable backend transitive paths and removes obsolete frontend overrides", () => {
 		expect(readManifest("backend").resolutions).toEqual({
-			"@apidevtools/swagger-parser/**/js-yaml": "4.3.1",
+			"@apidevtools/swagger-parser/**/js-yaml": "4.3.2",
 			"@duosecurity/duo_universal/axios": "1.18.0",
 			"ajv/fast-uri": "3.1.6",
 			"archiver/**/brace-expansion": "5.0.9",

@@ -69,7 +69,7 @@ yarn test
 - `backend/test/ci/js-yaml-esm-compatibility.spec.js` sichert, dass die Anubis- und GitOps-Module unter Node 26 ausschließlich die benannten ESM-Exporte von `js-yaml` verwenden; `dump()` und `load()` werden dabei gegen den tatsächlich exportierten Namespace geprüft.
 - `backend/test/ci/node-26-package-default-imports.spec.js` inventarisiert alle statischen Default-Binding-Formen in produktiven Backend-Imports externer Pakete. Für jeden tatsächlichen Consumer löst ein Node-26-ESM-Subprozess den Paketpfad mit dessen Modul-URL als Parent auf und prüft den resultierenden Export-Namespace; Node-Built-ins und relative Module sind bewusst ausgenommen. Der dafür verwendete Parser `es-module-lexer` ist explizit als Backend-Dev-Dependency deklariert, damit der Test nicht implizit von Vitests transitive Abhängigkeit abhängt. Ein Paket ohne passenden `default`-Export blockiert die CI vor dem Containerstart.
 - `backend/test/ci/archiver-esm-compatibility.spec.js` sichert für `archiver` 8 die benannte `ZipArchive`-API in der Zertifikats-Downloadlogik und erzeugt dafür einen echten temporären ZIP-Export.
-- CI-Regressionstests unter `backend/test/ci/` prüfen Runtime-, Installations-, Workflow- und Paketverträge einschließlich Node 26, eingefrorener Yarn-Installationen, Update-Recovery, Notice-Generierung und Versionsdokumentation. Der Dependency-Updater aktualisiert die Manifeste auf aktuelle Paketversionen, prüft Tests und Build und synchronisiert anschließend die verifizierten Tool-Versionen. Gezielte transitive Sicherheitsauflösungen bleiben im Lockfile erhalten. <!-- verified-vite-baseline:start -->Vite und Vitest verwenden gemeinsam Vite 8.2.2/Rolldown 1.2.6.<!-- verified-vite-baseline:end --> Ergebnisse der aktuellen Sicherheitsprüfung stehen unter [Externe Abhängigkeiten](../architektur/externe-abhaengigkeiten.md).
+- CI-Regressionstests unter `backend/test/ci/` prüfen Runtime-, Installations-, Workflow- und Paketverträge einschließlich Node 26, eingefrorener Yarn-Installationen, Update-Recovery, Notice-Generierung und Versionsdokumentation. Der Dependency-Updater aktualisiert die Manifeste auf aktuelle Paketversionen, prüft Tests und Build und synchronisiert anschließend die verifizierten Tool-Versionen. Gezielte transitive Sicherheitsauflösungen bleiben im Lockfile erhalten. <!-- verified-vite-baseline:start -->Vite und Vitest verwenden gemeinsam Vite 8.3.0/Rolldown 1.2.8.<!-- verified-vite-baseline:end --> Ergebnisse der aktuellen Sicherheitsprüfung stehen unter [Externe Abhängigkeiten](../architektur/externe-abhaengigkeiten.md).
 - `backend/test/migrations/full-schema.spec.js` baut die komplette Migrationskette in einer Transaktion auf SQLite und PostgreSQL auf. `@electric-sql/pglite` ist hierfür eine explizite Dev-Dependency: Der Adapter verwendet Knexs PostgreSQL-Dialekt und die tatsächliche eingebettete PostgreSQL-Engine. SQL-Abfragen, Bindings, Fehler und Transaktionsabbrüche werden wirklich ausgeführt; externe Nginx-Prozessaktionen sind gemockt. Netzwerkprotokoll, Serverbetrieb und Mehrverbindungsrennen werden damit nicht geprüft.
 - `backend/test/migrations/data-preservation.spec.js` prüft geänderte Domain- und mTLS-Werte bei Rollback sowie vollständig abgewartete Schemaänderungen in beiden Engines. `backend/test/lib/password-reset.spec.js` und `test/internal/audit-log-sqlite-dates.spec.js` testen atomaren Notfall-Reset und UTC-Grenzen gegen echte SQLite-Dateien beziehungsweise Tabellen.
 
@@ -96,7 +96,9 @@ Prüflauf mit Node.js 26.8.1 und den versionierten Yarn-Lockfiles:
 - Frontend: 172 Testdateien mit 485 bestandenen Tests; TypeScript-Prüfung und Vite-Produktionsbuild bestanden.
 - Backend: 115 Testdateien mit 793 bestandenen Tests; Details und Grenzen im [Prüfbericht](./code-audit-2026-09.md).
 - Infrastruktur: 24 Python-Regressionstests für Migration, AIO, Update und Betriebsdateien sowie ShellCheck und Shell-Syntaxprüfung bestanden.
-- Beide Codebereiche werden vollständig mit Biome geprüft. Die bisherigen Schema-/Deprecated-Hinweise der Biome-Konfigurationsdateien sind Informationsmeldungen.
+- Beide Codebereiche werden vollständig mit Biome geprüft. Die Konfiguration wurde anschließend auf das Schema von
+  Biome 2.5.13 migriert; Schema- oder Deprecated-Hinweise dieser Konfiguration sind daher nicht als erwartetes Ergebnis
+  zu behandeln.
 - Paketprüfung: Backend und Frontend jeweils ohne gemeldete `yarn audit`-Befunde nach gezielter Remediation.
 
 Ausführen: `cd backend && yarn test --run`; `cd frontend && yarn test --run && yarn build`; `python3 -m unittest discover -s scripts/tests -v` im Repository-Root. Für automatische Einmalläufe ist `--run` erforderlich, weil `yarn test` sonst im Beobachtungsmodus starten kann.
@@ -139,7 +141,42 @@ Echte HTTP-, RSA-, Cookie- und CSRF-Verträge sichern alle Sitzungsübergänge u
 
 Weitere Tests verwenden Telegrafs tatsächlich installierte Legacy-Abbruchsignale, erzeugen echte Express-Portkonflikte und prüfen die automatische GeoIP-Auswahl durch den Validator im Kindprozess. Der Workflow prüft Backend-JSDoc-Typen vor den Tests. Alle Abdeckungszahlen, Nachweise und verbleibenden Betriebsgrenzen stehen im [Prüfbericht](./code-audit-2026-09.md).
 
+## Infrastruktur- und Dokumentationswerkzeuge
+
+Die Python-Suite im Repository-Root wird mit
+`python3 -m unittest discover -s scripts/tests -v` ausgeführt. Sie ergänzt Vitest und startet keine produktive
+Installation:
+
+| Datei                           | Geprüfter Bereich                                                                      |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| `test_docker_smoke.py`          | Offline-Docker-Smoke für root und unprivilegierte UID, Fehlerdiagnostik und Aufräumen. |
+| `test_fourth_infrastructure.py` | Installer-Preflight, bestehende Dienste, OpenAppSec-Fehler und Datenbankwechsel.       |
+| `test_infrastructure.py`        | Datenmigration, Besitz-/Symlink-Grenzen, Certbot-Recovery, AIO und Shell-Parsing.      |
+| `test_python_tools.py`          | Wiki-Graph-Ausgabe sowie CrowdSec-Hilfswerkzeuge ohne externe Requests.                |
+| `test_runtime_config.py`        | Wiederholbare Nginx-, Zertifikats-, Listener-, Modul- und GoAccess-Konfiguration.      |
+| `test_runtime_namespace.py`     | ShieldPM-eigene Runtime-Pfade, Sockets, Rechte und Default-Konfigurationsmigration.    |
+| `test_update_preflight.py`      | Vorprüfung und Selbstupdate des nativen Updaters.                                      |
+
+`scripts/sync-verified-dependency-docs.js` wird nach der Installation von Frontend-Abhängigkeiten ausgeführt. Es
+vergleicht die tatsächlich aufgelöste Vite-Version und die von Vitest verwendete Vite-Instanz mit
+`frontend/package.json`; erst dann aktualisiert es den markierten Satz in dieser Seite. Es ist damit keine
+Versionsquelle, sondern ein Schutz gegen irreführende, nur aus dem Manifest abgeleitete Angaben.
+
+## Dokumentationsnachkontrolle 2026-09-15
+
+Der erneute Quellenabgleich zum PR-Head `8bfad91d99ad3b96ae1a638c1ed00c4c8e43ac06` verknüpft alle 27 Route-Dateien
+mit den API-Seiten, dokumentiert die 111 zur Laufzeit gemounteten API-Pfade im
+[Laufzeit-Endpunkt-Katalog](../api/endpunkt-katalog.md) und zählt 77 Migrationen sowie 143 Schema-Dateien
+(3 Wurzeldokumente, 36 Komponenten, 104 Pfaddefinitionen). Die vollständige Navigations- und
+Abdeckungsregel steht unter [Quellabdeckung](./quellabdeckung.md).
+
+Die Nachkontrolle validiert außerdem die beiden Beispiel-.env-Dateien als identische Vorlagen, alle internen
+Markdown-Links, JSON/YAML-Syntax, Shell-Syntax und den aktuellen transitive Sicherheitsfix für `js-yaml`. Eine
+einzige fachliche Abweichung bleibt bewusst als TODO sichtbar: Die optionale globale Analytics-Transportfunktion
+adressiert keinen aktuell gemounteten Backend-Pfad. Details stehen in [Offene Fragen](../offene-fragen.md).
+
 ## Verwandte Seiten
 
 - [Setup](./setup.md)
 - [Build](./build.md)
+- [Quellabdeckung](./quellabdeckung.md)

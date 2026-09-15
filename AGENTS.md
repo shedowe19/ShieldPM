@@ -3,26 +3,26 @@
 > **Read `.cursorrules` first** for detailed coding standards and architecture reference.  
 > **Read `GEMINI.md` for** the authoritative project context (versions, paths, integrations).
 
-> [!CAUTION]
-> **`agent.md` ist PFLICHTLEKTÜRE!** Diese Datei enthält die verbindlichen Regeln für das interne LLM-Wiki (`docs/wiki-intern/`).
+> [!CAUTION] > **`agent.md` ist PFLICHTLEKTÜRE!** Diese Datei enthält die verbindlichen Regeln für das interne LLM-Wiki (`docs/wiki-intern/`).
 > Jeder Agent **MUSS** `agent.md` vor jeder Arbeitssitzung lesen und die darin definierten Wiki-Pflichtprüfungen (vor und nach jeder Aufgabe) einhalten.
 > Bei Nichtbeachtung wird die Wiki-Wissensbasis veralten und unbrauchbar.
 
 ## 🎯 Available Skills
 
-> [!IMPORTANT]
-> **Skills are constantly updated!** Before any task:
+> [!IMPORTANT] > **Skills are runtime-provided.** Before any task:
 >
-> 1. Open `.agent/skills/CATALOG.md`
-> 2. Search for skills matching your current task
-> 3. Read the relevant `SKILL.md` files
-> 4. Follow the best practices described
+> 1. Inspect the skills available in the active agent environment.
+> 2. If the optional project-local `.agent/skills/CATALOG.md` exists, search it as an additional source.
+> 3. Read the relevant `SKILL.md` files.
+> 4. Follow the applicable instructions.
+>
+> The local catalog is not versioned in this repository; its absence must not block a task.
 
 ### How to Find Skills
 
-1. **By keyword search**: Search CATALOG.md for relevant terms
-2. **By category**: Browse the categorized skill list
-3. **By trigger**: Look at the "Triggers" column for matching keywords
+1. **By keyword search**: Search the runtime catalog and, if present, CATALOG.md for relevant terms.
+2. **By category**: Browse the available categorized skills.
+3. **By trigger**: Check the relevant skill instructions for matching triggers.
 
 ### Helpful Keywords for This Project
 
@@ -62,7 +62,8 @@ ShieldPM is a security-focused Nginx Proxy Manager fork (v4.3.2). It manages rev
 | `backend/templates/*.conf`       | Liquid templates for Nginx vhosts                                         |
 | `backend/migrations/`            | Knex.js migration files (ESM)                                             |
 | `frontend/src/Router.tsx`        | React routing (lazy-loaded pages)                                         |
-| `frontend/src/api/`              | React Query hooks for API calls                                           |
+| `frontend/src/api/backend/`      | HTTP-Transportfunktionen, API-Modelle und Antworttypen                    |
+| `frontend/src/hooks/`            | React-Query-Hooks sowie Polling- und UI-Hooks                             |
 | `frontend/src/components/`       | Reusable UI (shadcn/ui based)                                             |
 | `frontend/src/locale/`           | i18n translation files                                                    |
 | `scripts/install.sh`             | Native/LXC installer script                                               |
@@ -103,21 +104,21 @@ export default internalMyFeature;
 ### Frontend: Adding a New API Hook
 
 ```typescript
-// frontend/src/api/my-feature.ts
+// frontend/src/hooks/use-my-feature.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "src/api/backend";
+import { createMyFeature, getMyFeatures } from "src/api/backend";
 
 export function useMyFeatures() {
   return useQuery({
     queryKey: ["my-features"],
-    queryFn: () => api.get("/api/my-features"),
+    queryFn: getMyFeatures,
   });
 }
 
 export function useCreateMyFeature() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data) => api.post("/api/my-features", data),
+    mutationFn: createMyFeature,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["my-features"] }),
   });
 }

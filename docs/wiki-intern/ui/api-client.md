@@ -27,6 +27,17 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 - Der Client-Zertifikatsdialog nutzt `downloadPost` für `/nginx/certificates/internal/client`; damit erhält auch dieser passwortgeschützte `.p12`-Download die zentrale Cookie-/CSRF-Übergabe und Fehlerbehandlung statt eines eigenen `fetch`-Aufrufs.
 - `getDbStats.ts` delegiert an den zentralen GET-Client statt einen eigenen `fetch`-Aufruf zu verwenden. Analytics-Datenbankstatistiken erhalten damit dieselbe Cookie-/CSRF-Übergabe, Schlüsselkonvertierung und 401-Behandlung wie andere API-Aufrufe.
 
+## Fundament und Typen
+
+| Datei              | Aufgabe                                                                          |
+| ------------------ | -------------------------------------------------------------------------------- |
+| `base.ts`          | Zentraler HTTP-Transport, Cookie-/CSRF-Übergabe, Fehlerbehandlung und Downloads. |
+| `helpers.ts`       | Gemeinsame Query- und Payload-Hilfen der Transportfunktionen.                    |
+| `expansions.ts`    | Gemeinsame Expand-Parameter für Ressourcenabfragen.                              |
+| `models.ts`        | Frontend-Modelle für API-Nutzlasten.                                             |
+| `responseTypes.ts` | Typen für API-Antworten.                                                         |
+| `index.ts`         | Öffentlicher Barrel-Export der API-Funktionen.                                   |
+
 ## API-Dateien nach Entität
 
 ### Proxy-Hosts
@@ -47,7 +58,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Zertifikate
 
-`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getDnsProviders.ts`, `getCertificateDNSProviders.ts`, `downloadCertificate.ts`, `downloadRootCa.ts`, `testHttpCertificate.ts`
+`createCertificate.ts`, `getCertificate.ts`, `getCertificates.ts`, `deleteCertificate.ts`, `renewCertificate.ts`, `uploadCertificate.ts`, `validateCertificate.ts`, `getCertificateDNSProviders.ts`, `downloadCertificate.ts`, `downloadRootCa.ts`, `testHttpCertificate.ts`
 
 ### Access-Lists
 
@@ -59,7 +70,7 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 ### Cloudflare Tunnels
 
-`createCloudflaredTunnel.ts`, `getCloudflaredTunnel.ts`, `getCloudflaredTunnels.ts`, `updateCloudflaredTunnel.ts`, `deleteCloudflaredTunnel.ts`
+`createCloudflaredTunnel.ts`, `getCloudflaredTunnels.ts`, `updateCloudflaredTunnel.ts`, `deleteCloudflaredTunnel.ts`
 
 ### Tor Onion
 
@@ -101,21 +112,13 @@ Jede Datei repräsentiert einen einzelnen API-Aufruf. Die Hooks in `frontend/src
 
 `gitops.ts`, `gitSync.ts`
 
-### Analytics
+### Analytics und Status
 
-`getAnalyticsSeries.ts`, `getAnalyticsSummary.ts`
+`getAnalyticsSeries.ts`, `getAnalyticsSummary.ts`, `getAnalyticsStatus.ts`, `getAnalyticsTopHosts.ts`, `getDbStats.ts`
 
 ### Audit-Log
 
 `getAuditLog.ts`, `getAuditLogs.ts`
-
-### Docker
-
-`getDockerContainers.ts`
-
-### Permissions
-
-`setUserPermissions.ts`
 
 ## Abhängigkeiten
 

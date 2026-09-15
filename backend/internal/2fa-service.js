@@ -337,7 +337,7 @@ const consumeChallenge = async (record, label = "Passkey") => {
  * Begin passkey registration: generate options and store the challenge.
  * @param {number} userId
  * @param {string} userEmail
- * @returns {Promise<{ options: PublicKeyCredentialCreationOptionsJSON, challengeId: string }>}
+ * @returns {Promise<{ options: import("@simplewebauthn/server").PublicKeyCredentialCreationOptionsJSON, challengeId: string }>}
  */
 const beginPasskeyRegistration = async (userId, userEmail, req) => {
 	const { rpID } = getPasskeyContext(req);
@@ -346,9 +346,7 @@ const beginPasskeyRegistration = async (userId, userEmail, req) => {
 	const excludeCredentials = existingPasskeys.map((pk) => ({
 		id: pk.secret,
 		type: "public-key",
-		transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
-			pk.transports ? pk.transports.split(",") : []
-		),
+		transports: pk.transports ? pk.transports.split(",") : [],
 	}));
 
 	const user = await userModel.query().findById(userId);
@@ -443,7 +441,7 @@ const completePasskeyRegistration = async (userId, challengeId, registrationResp
 /**
  * Begin passkey authentication: generate options with a challenge.
  * @param {number} userId
- * @returns {Promise<{ options: PublicKeyCredentialRequestOptionsJSON, challengeId: string }>}
+ * @returns {Promise<{ options: import("@simplewebauthn/server").PublicKeyCredentialRequestOptionsJSON, challengeId: string }>}
  */
 const beginPasskeyAuthentication = async (userId, req) => {
 	const { rpID } = getPasskeyContext(req);
@@ -456,9 +454,7 @@ const beginPasskeyAuthentication = async (userId, req) => {
 	const allowCredentials = passkeys.map((pk) => ({
 		id: pk.secret,
 		type: "public-key",
-		transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
-			pk.transports ? pk.transports.split(",") : []
-		),
+		transports: pk.transports ? pk.transports.split(",") : [],
 	}));
 
 	const options = await generateAuthenticationOptions({
@@ -528,9 +524,7 @@ const completePasskeyAuthentication = async (userId, challengeId, authResponse, 
 			id: passkey.secret,
 			publicKey: new Uint8Array(publicKeyBuffer),
 			counter: passkey.counter,
-			transports: /** @type {import("@simplewebauthn/server").AuthenticatorTransportFuture[]} */ (
-				passkey.transports ? passkey.transports.split(",") : []
-			),
+			transports: passkey.transports ? passkey.transports.split(",") : [],
 		},
 	});
 

@@ -59,7 +59,7 @@ Die automatisch erzeugte `grpc_pass`-Zieladresse erhält keinen angehängten `$r
 
 Explizite URI-Anteile im gRPC-Ziel bleiben vom Nginx-Modul nicht unterstützt; die Korrektur führt keine neue Rewrite- oder Präfixersetzungssemantik ein. `fifth-grpc-upstream-address.spec.js` prüft die tatsächliche Liquid-Ausgabe. Der Docker-Smoke startet zusätzlich einen isolierten Nginx-Prozess und einen lokalen Node-HTTP/2-Echodienst; zwei über die Image-Templates erzeugte gRPC-Weiterleitungen müssen POST, Methodenpfad, Query und gerahmten Body vollständig übertragen. Dieser Test benötigt keine externen Provider.
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Nginx-Engine](../module/nginx-engine.md)
 - [Proxy-Host](../module/proxy-host.md)
@@ -79,3 +79,9 @@ Explizite URI-Anteile im gRPC-Ziel bleiben vom Nginx-Modul nicht unterstützt; d
 Auch statische Custom-Locations blockieren `.git` und sperren bei verwalteten Websitewurzeln Symlinks. Das gilt ebenso, wenn die Standard-Location einen HTTP-Upstream verwendet. Der Renderer berücksichtigt den exakten Wartungsbeginn einschließlich des Startzeitpunkts.
 
 Die Lua-Logphase vermindert den Verbindungszähler nur für Anfragen, denen die Access-Phase tatsächlich Bandbreite zugeteilt hat. Frühe Redirects oder Ablehnungen ohne Zuteilung verändern laufende Übertragungen nicht mehr. Dies gilt im Standardserver sowie im öffentlichen Anubis-Server. Die Gegenprüfung mit Lua 5.4 reproduzierte das Fehlverhalten beider bisherigen Logblöcke und bestätigte anschließend sowohl den unveränderten Zähler ohne Zuteilung als auch die korrekte Freigabe einer zugeteilten Übertragung.
+
+## Verwandte Seiten
+
+- [Nginx-Engine](./nginx-engine.md)
+- [Proxy-Host](./proxy-host.md)
+- [Stream](./stream.md)

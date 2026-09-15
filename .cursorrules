@@ -1,4 +1,4 @@
-# Project Rules: ShieldPM v4.1.0
+# Project Rules: ShieldPM v4.3.2
 
 ## Project Overview
 
@@ -17,13 +17,13 @@ modern protocols (HTTP/3, QUIC), and native performance.
 | **ORM** | Objection.js `v3.1` / Knex.js `v3.1` |
 | **Database (Dev)** | SQLite (`better-sqlite3`) |
 | **Database (Prod)** | MySQL (`mysql2`) or PostgreSQL (`pg`) |
-| **Frontend Framework** | React `v19.2` (TypeScript) |
-| **Build Tool** | Vite `v7.3` |
-| **Styling** | Tailwind CSS `v3.4`, shadcn/ui (Radix UI) |
-| **State Management** | React Query `v5.90` |
+| **Frontend Framework** | React `v19.3` (TypeScript) |
+| **Build Tool** | Vite `v8.3` |
+| **Styling** | Tailwind CSS `v4.3`, shadcn/ui (Radix UI) |
+| **State Management** | React Query `v5.102` |
 | **i18n** | i18next / react-i18next |
-| **Linter/Formatter** | Biome `v2.4` (both frontend & backend) |
-| **Tests** | Vitest `v4.0` (both frontend & backend) |
+| **Linter/Formatter** | Biome `v2.5` (both frontend & backend) |
+| **Tests** | Vitest `v5.0` (both frontend & backend) |
 | **Web Server** | OpenResty-based custom Nginx |
 | **Package Manager** | Yarn |
 
@@ -44,7 +44,7 @@ ShieldPM/
 │   └── app.js              # Express app setup
 ├── frontend/               # React SPA (TypeScript)
 │   └── src/
-│       ├── api/            # API client hooks (React Query)
+│       ├── api/            # HTTP-Transportfunktionen und API-Typen
 │       ├── components/     # Reusable UI components (shadcn/ui)
 │       ├── context/        # React context (auth, theme)
 │       ├── hooks/          # Custom React hooks
@@ -130,8 +130,10 @@ throw new errs.PermissionError("Not allowed");
 ### Async Patterns
 
 - **Backend**: Use `async/await` with try/catch. Return Promises from service methods.
-- **Frontend**: Use React Query (`useQuery`, `useMutation`) for all API calls. Never use raw `fetch` in components.
-- **Nginx operations**: Are async with debounced reload (2s delay) to avoid CPU spikes.
+- **Frontend**: Use React Query (`useQuery`, `useMutation`) for cached Server-State; Transportfunktionen liegen in
+  `src/api/backend/`. Keine eigenen rohen `fetch`-Aufrufe in Komponenten.
+- **Nginx operations**: Are async and go through `internalNginx.reload()`, which validates before signalling Nginx.
+  The Docker Auto-Discovery is the caller that debounces its automatic reload by two seconds.
 
 ### Database Patterns (Objection.js)
 
@@ -155,7 +157,7 @@ const internalProxyHost = {
 export default internalProxyHost;
 ```
 
-- First parameter is always `access` (contains user identity + permissions).
+- Public, authorization-sensitive methods take `access` as their first parameter; purely internal helpers do not need it.
 - Services call other services (e.g., `internalNginx.configure()`) — never reach into DB directly from routes.
 
 ### Frontend Patterns
@@ -174,9 +176,9 @@ export default internalProxyHost;
 4. ❌ **Never use raw `fetch`** in React components — use React Query hooks.
 5. ❌ **Never store dynamic data outside `/data/`** — all persistent state must reside there.
 6. ❌ **Never skip `$beforeInsert`/`$beforeUpdate`** lifecycle hooks when creating Objection models.
-7. ✅ **Always validate with JSON Schema** before accepting API input (see `backend/schema/`).
-8. ✅ **Always debounce Nginx reloads** — never call `nginx -s reload` directly; use `internalNginx.reload()`.
-9. ✅ **Always use `access` parameter** as the first argument in internal service methods.
+7. ✅ **Maintain JSON Schemas** for published API contracts; handlers without a schema must remain visible in the runtime endpoint catalog.
+8. ✅ **Always use `internalNginx.reload()`** — never call `nginx -s reload` directly. Debounce only where an automatic trigger needs it.
+9. ✅ **Use `access` first** for public, authorization-sensitive internal service methods.
 10. ✅ **Always add translations** for new UI text in `frontend/src/locale/lang/en.json` at minimum.
 
 ## Code Smells to Avoid

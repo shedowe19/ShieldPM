@@ -43,10 +43,16 @@ IPv4- und IPv6-CIDRs werden mit `ipaddr.js` vollständig geprüft. Leere Listen,
 
 Die neue Liste wird vollständig in einer eindeutigen temporären Datei im selben Verzeichnis geschrieben und anschließend per Rename veröffentlicht. Schreibfehler wie ein voller Datenträger oder ein fehlgeschlagener Dateiaustausch lassen die bisherige vollständige Trust-Liste erhalten. Temporäre Dateien werden im `finally`-Block entfernt. `fourth-ip-ranges-files.spec.js` prüft diese Fehlerpfade mit echten temporären Dateien und die erfolgreiche Veröffentlichung beider Adressfamilien.
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Nginx-Engine](./nginx-engine.md)
 - [Cloudflare Tunnels](./cloudflared.md)
 - [Modulübersicht](./README.md)
 
 `IPRT` muss eine ganze Zahl von 1 bis 99 sein. Andere Werte verwenden den Sechs-Stunden-Standard. Dadurch führen negative, zu große oder nichtnumerische Werte nicht zu überlaufenden Node-Timern mit Wiederholung im Millisekundentakt.
+
+## Verwandte Seiten
+
+- [Nginx-Engine](./nginx-engine.md)
+- [Cloudflare Tunnels](./cloudflared.md)
+- [Umgebungsvariablen](../konfiguration/umgebungsvariablen.md)

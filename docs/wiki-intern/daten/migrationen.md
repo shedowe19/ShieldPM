@@ -90,6 +90,90 @@ export { up, down };
 
 - `20260907000000_fix_analytics_log_created_at` — numerischer Standardwert für `analytics_logs.created_at`; gültige alte SQLite-Zeitstempeltexte werden in Unix-Millisekunden umgerechnet. Neue Logeinträge setzen den tatsächlichen Erfassungszeitpunkt im Dienst. Die ursprüngliche Tabellenmigration verwendet ebenfalls den kompatiblen numerischen Standardwert, damit PostgreSQL-Neuinstallationen funktionieren.
 
++## Vollständige Dateiliste (Prüfstand 2026-09-15)
+
+- +Die Auswahl oben erklärt die fachlichen Meilensteine. Diese Pfadliste enthält alle 77 versionierten Migrationen und ist
+  +der direkte Abgleichspunkt für LLMs und Reviews:
+-
+- backend/migrations/20180618015850_initial.js
+  backend/migrations/20180929054513_websockets.js
+  backend/migrations/20181019052346_forward_host.js
+  backend/migrations/20181113041458_http2_support.js
+  backend/migrations/20181213013211_forward_scheme.js
+  backend/migrations/20190104035154_disabled.js
+  backend/migrations/20190215115310_customlocations.js
+  backend/migrations/20190218060101_hsts.js
+  backend/migrations/20190227065017_settings.js
+  backend/migrations/20200410143839_access_list_client.js
+  backend/migrations/20200410143840_access_list_client_fix.js
+  backend/migrations/20201014143841_pass_auth.js
+  backend/migrations/20210210154702_redirection_scheme.js
+  backend/migrations/20210210154703_redirection_status_code.js
+  backend/migrations/20210423103500_stream_domain.js
+  backend/migrations/20211108145214_regenerate_default_host.js
+  backend/migrations/20240427161436_stream_ssl.js
+  backend/migrations/20240711144745_change_incoming_port_to_string.js
+  backend/migrations/20240921100301_regenerate_default_host.js
+  backend/migrations/20241230192345_change_forwarding_port_to_string.js
+  backend/migrations/20250123132545_allow_empty_forwarding_port.js
+  backend/migrations/20250518142020_allow_empty_stream_forwarding_port.js
+  backend/migrations/20250627140440_stream_proxy_protocol_forwarding.js
+  backend/migrations/20251111090000_redirect_auto_scheme.js
+  backend/migrations/20251212000000_add_bandwidth_limit.js
+  backend/migrations/20251213000000_add_forward_query.js
+  backend/migrations/20251225000000_add_maintenance_failure.js
+  backend/migrations/20251229000000_add_req_limit.js
+  backend/migrations/20251230000000_add_disable_buffering.js
+  backend/migrations/20251231000000_analytics.js
+  backend/migrations/20251231000000_analytics_logs.js
+  backend/migrations/20260101000000_extend_analytics_path.js
+  backend/migrations/20260102000000_add_req_limit.js
+  backend/migrations/20260103000000_add_access_list_mtls.js
+  backend/migrations/20260104000000_fix_req_limit_columns.js
+  backend/migrations/20260105000000_add_access_list_mtls.js
+  backend/migrations/20260106000000_add_access_list_mtls_internal.js
+  backend/migrations/20260107000000_add_maintenance_schedule.js
+  backend/migrations/20260108000000_add_cloudflared_tunnel.js
+  backend/migrations/20260109000000_add_ai_config.js
+  backend/migrations/20260110000000_reset_ai_system_prompt.js
+  backend/migrations/20260111000000_add_ai_num_ctx.js
+  backend/migrations/20260112000000_add_ai_num_batch.js
+  backend/migrations/20260113000000_add_ai_advanced_options.js
+  backend/migrations/20260114000000_update_ai_options.js
+  backend/migrations/20260115000000_add_system_prompt.js
+  backend/migrations/20260116000000_hash_access_list_passwords.js
+  backend/migrations/20260118000000_add_gitops_config.js
+  backend/migrations/20260119000000_add_git_sync.js
+  backend/migrations/20260119000000_add_php_ini_override.js
+  backend/migrations/20260119000000_add_php_mode.js
+  backend/migrations/20260121000000_add_ddns.js
+  backend/migrations/20260121000000_add_service_icon.js
+  backend/migrations/20260122000000_add_ddns_ip_ver.js
+  backend/migrations/20260122100000_add_tor_onion.js
+  backend/migrations/20260122200000_add_terminal_host.js
+  backend/migrations/20260123000000_add_user_permission_analytics.js
+  backend/migrations/20260123000000_terminal_on_proxy_host.js
+  backend/migrations/20260124000000_add_security_crowdsec.js
+  backend/migrations/20260126000000_add_host_notes.js
+  backend/migrations/20260126010000_add_dashboard_notes.js
+  backend/migrations/20260126020000_add_index_file.js
+  backend/migrations/20260127000000_add_chat_integration.js
+  backend/migrations/20260127000000_add_user_avatar.js
+  backend/migrations/20260128000000_add_analytic_count_composite_index.js
+  backend/migrations/20260129000000_add_anubis.js
+  backend/migrations/20260219120000_add_anubis_rules.js
+  backend/migrations/20260221220000_add_core_indexes.js
+  backend/migrations/20260222000000_normalize_domain_names.js
+  backend/migrations/20260302223641_add_missing_permissions.js
+  backend/migrations/20260316122700_add_auth_sessions.js
+  backend/migrations/20260319000001_add_user_2fa.js
+  backend/migrations/20260407000000_add_wireguard_tunnel.js
+  backend/migrations/20260409000000_add_turbo_loader.js
+  backend/migrations/20260505130000_add_user_permission_chat.js
+  backend/migrations/20260712000000_fix_analytic_count_aggregation_key.js
+  backend/migrations/20260907000000_fix_analytics_log_created_at.js
+-
+
 ## Datenintegrität bei Migrationen
 
 Die Schemaänderungen werden innerhalb der Knex-Callbacks vollständig registriert; nachgelagerte Datenänderungen werden erst nach Abschluss der Schemaänderung ausgeführt und vollständig abgewartet. Einzelne historische Callbacks sind als `async` deklariert, registrieren ihre Schemaoperationen aber vor dem ersten `await`; neue Callbacks sollen synchron bleiben. Bereits vorhandene Rate-Limit-Spalten werden vor DDL geprüft, weil ein abgefangener Duplicate-Column-Fehler die PostgreSQL-Transaktion trotzdem abbrechen würde. JSON-Metadaten werden sowohl als Zeichenkette als auch als natives Treiberobjekt verarbeitet; der AI-Prompt-Reset erhält alle übrigen Konfigurationswerte.

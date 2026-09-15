@@ -72,9 +72,15 @@ Jedes Modul folgt dem gleichen Pattern: Es exportiert ein Objekt mit `create`, `
 | [Report](../verwaltung/report.md)               | `report.js` (1 KB)         | System-Reports      |
 | Remote-Version                                  | `remote-version.js` (2 KB) | Versionsprüfung     |
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Architektur-Überblick](../architektur/ueberblick.md)
 - [Einzelne Modul-Dokumentationen](./nginx-engine.md)
 
 _Hinweis:_ Planungsdokumente (z.B. AI-Agent-Checklisten) befinden sich unter `docs/planning/`.
+
+## Verwandte Seiten
+
+- [Architektur-Überblick](../architektur/ueberblick.md)
+- [Backend-Hilfsbibliotheken](../architektur/backend-lib.md)
+- [Laufzeit-Endpunkt-Katalog](../api/endpunkt-katalog.md)

@@ -41,7 +41,11 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 | `ddns_providers.js`    | `/api/nginx/ddns-providers`      |
 | `analytics.js`         | `/api/nginx/analytics`           |
 
+Die Tabellen zählen alle 27 Router-Dateien. Für Methoden und jede konkret gemountete Laufzeit-URL ist der
+[Laufzeit-Endpunkt-Katalog](./endpunkt-katalog.md) maßgeblich; OpenAPI-Dateien decken nicht jeden Handler ab.
+
 ## Verwandte Seiten
 
 - [API-Überblick](./ueberblick.md)
 - [Schemas](./schemas.md)
+- [Laufzeit-Endpunkt-Katalog](./endpunkt-katalog.md)

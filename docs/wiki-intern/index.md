@@ -33,6 +33,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Setup-Interna](./entwicklung/setup-intern.md)
 - [Lokale Entwicklung](./entwicklung/lokale-entwicklung.md)
 - [Tests](./entwicklung/tests.md)
+- [Quellabdeckung](./entwicklung/quellabdeckung.md)
 - [Build](./entwicklung/build.md)
 - [Deployment](./entwicklung/deployment.md)
 
@@ -97,6 +98,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 
 - [API-Überblick](./api/ueberblick.md)
 - [Routen](./api/routen.md)
+- [Laufzeit-Endpunkt-Katalog](./api/endpunkt-katalog.md)
 - [Nginx-Analytics Routes](./api/nginx-analytics.md)
 - [DDNS-Provider Routes](./api/nginx-ddns-providers.md)
 - [Schemas](./api/schemas.md)
@@ -161,7 +163,7 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 - **openappsec.js** → WAF-Modul (nginx-Modul + Docker/native)
 - **anubis.js** → externer Anubis-Service (PoW-Gate)
 
-- **analytics.js** → nutzt recharts, lokale world-atlas-Topologie, GoAccess
+- **analytics.js** → Backend-Analyse von Zählern und Logs; die Frontend-Analytics-Seite nutzt Recharts und lokale world-atlas-Topologie
 
 ### API-Routen (Überblick)
 
@@ -205,9 +207,9 @@ Ein ShieldPM-Modul steht selten allein. Diese Übersicht zeigt die wichtigsten A
 
 ---
 
-_Zuletzt aktualisiert: 2026-09-08_
+_Zuletzt aktualisiert: 2026-09-15_
 
-## Verwandte Seiten
+## Weiterführende Links
 
 - [Projektüberblick](./projekt/ueberblick.md)
 - [Architektur-Überblick](./architektur/ueberblick.md)
@@ -218,3 +220,9 @@ _Zuletzt aktualisiert: 2026-09-08_
 ## Codeprüfung
 
 - [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md) — Änderungen, Validierung und Betriebsgrenzen einschließlich des sechsten vollständigen Durchgangs in PR #139.
+
+## Verwandte Seiten
+
+- [Quellabdeckung](./entwicklung/quellabdeckung.md)
+- [Codeprüfung September 2026](./entwicklung/code-audit-2026-09.md)
+- [Offene Fragen](./offene-fragen.md)
