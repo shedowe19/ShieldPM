@@ -20,8 +20,12 @@ class FourthInfrastructureTests(unittest.TestCase):
         source = (REPO / "rootfs/usr/local/bin/launch.sh").read_text()
         programs = [line.rstrip(" &") for line in source.splitlines()
                     if line.startswith('if [ "$PHP') and "then while true;" in line]
-        goaccess = source.split('if [ "$GOA" = "true" ]; then while true;', 1)[1].split('\nwhile true; do nginx', 1)[0]
-        programs.append(('if [ "$GOA" = "true" ]; then while true;' + goaccess).rstrip(" &"))
+        source_lines = source.splitlines()
+        goaccess_start = next(index for index, line in enumerate(source_lines)
+                            if line.startswith('if [ "$GOA" = "true" ]; then while true;'))
+        goaccess_end = next(index for index in range(goaccess_start, len(source_lines))
+                           if source_lines[index].rstrip().endswith("fi &"))
+        programs.append("\n".join(source_lines[goaccess_start:goaccess_end + 1]).rstrip(" &"))
         log_file = self.root / "access.log"
         log_file.touch()
         executable = self.root / "bin"

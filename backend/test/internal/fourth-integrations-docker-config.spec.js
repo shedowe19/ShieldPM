@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ hosts: [] }));
 vi.mock("dockerode", () => ({ default: class {} }));
+vi.mock("../../db.js", () => ({ default: () => ({}) }));
 vi.mock("../../models/proxy_host.js", () => ({
 	default: {
 		query: () => {
