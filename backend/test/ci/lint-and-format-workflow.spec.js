@@ -121,13 +121,21 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).not.toContain("node --input-type=module <<'NODE'");
 	});
 
-	it("runs every MariaDB migration integration test with its dynamic service port in step scope", () => {
+	it("discovers and executes every MariaDB migration test from the backend directory", () => {
+		const suite = workflow
+			.split("      - name: Run complete MariaDB migration suite\n")[1]
+			.split("\n\n  frontend-e2e:")[0];
+		expect(suite).toContain('cd "$GITHUB_WORKSPACE/backend"');
+		expect(suite).toContain("find test/migrations -maxdepth 1 -type f -name 'mariadb-*.spec.js' -print");
+		expect(suite).toContain('test --run "${migration_tests[@]}"');
+	});
+
+	it("passes the dynamic service port only to the MariaDB suite step", () => {
 		expect(workflow).toContain("mariadb:");
 		expect(workflow).toContain("mariadb:11.8.3");
 		expect(workflow).toContain('SHIELDPM_TEST_MARIADB: "1"');
-		expect(workflow).toContain("test/migrations/mariadb-*.spec.js");
 		expect(workflow).toMatch(
-			/Run complete MariaDB migration suite\n {8}env:\n {10}SHIELDPM_TEST_MARIADB_PORT: \$\{\{ job\.services\.mariadb\.ports\['3306'\] \}\}/,
+			/Run complete MariaDB migration suite\n {8}shell: bash\n {8}env:\n {10}SHIELDPM_TEST_MARIADB_PORT: \$\{\{ job\.services\.mariadb\.ports\['3306'\] \}\}/,
 		);
 		expect(workflow).not.toMatch(/^ {4}env:\n(?:.*\n)*? {6}SHIELDPM_TEST_MARIADB_PORT:/m);
 	});

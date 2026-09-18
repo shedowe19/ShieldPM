@@ -135,9 +135,14 @@ jobs:
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" install --frozen-lockfile
 
       - name: Run complete MariaDB migration suite
+        shell: bash
         env:
           SHIELDPM_TEST_MARIADB_PORT: ${{ job.services.mariadb.ports['3306'] }}
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" test --run test/migrations/mariadb-*.spec.js
+        run: |
+          cd "$GITHUB_WORKSPACE/backend"
+          mapfile -d '' migration_tests < <(find test/migrations -maxdepth 1 -type f -name 'mariadb-*.spec.js' -print0 | sort -z)
+          ((${#migration_tests[@]}))
+          npx --yes --package yarn@1.22.22 yarn test --run "${migration_tests[@]}"
 
   frontend-e2e:
     name: Frontend browser smoke
