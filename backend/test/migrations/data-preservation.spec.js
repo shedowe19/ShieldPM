@@ -56,6 +56,9 @@ describe("migration data preservation", () => {
 					]);
 
 					await zstd.up(db);
+					// A failed previous migration may have created the column before Knex recorded it.
+					// Retrying must therefore complete rather than fail with a duplicate-column error.
+					await zstd.up(db);
 					expect((await db("proxy_host").orderBy("id").pluck("zstd_enabled")).map(Number)).toEqual([0, 0]);
 					await db("proxy_host").where("id", 1).update({ zstd_enabled: true });
 					expect(Number((await db("proxy_host").where("id", 1).first()).zstd_enabled)).toBe(1);
