@@ -127,7 +127,8 @@ describe("lint-and-format workflow", () => {
 			.split("\n\n  frontend-e2e:")[0];
 		expect(suite).toContain('cd "$GITHUB_WORKSPACE/backend"');
 		expect(suite).toContain("find test/migrations -maxdepth 1 -type f -name 'mariadb-*.spec.js' -print");
-		expect(suite).toContain('test --run "${migration_tests[@]}"');
+		const migrationTestsExpansion = ["$", "{migration_tests[@]}"].join("");
+		expect(suite).toContain(`test --run "${migrationTestsExpansion}"`);
 	});
 
 	it("passes the dynamic service port only to the MariaDB suite step", () => {

@@ -1,22 +1,15 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import knex from "knex";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { runMigrations } from "../../migrate.js";
 import { backendSourcePath } from "../helpers/source-path.js";
 
-vi.mock("../../internal/nginx.js", () => ({
-	default: {
-		deleteConfig: vi.fn().mockResolvedValue(true),
-		generateConfig: vi.fn().mockResolvedValue(true),
-		reload: vi.fn().mockResolvedValue(true),
-		test: vi.fn().mockResolvedValue(true),
-	},
-}));
-vi.mock("../../logger.js", () => ({ migrate: { info: vi.fn(), warn: vi.fn() } }));
-
 const shouldRunMariaDb = process.env.SHIELDPM_TEST_MARIADB === "1";
 const databases = [];
+const temporaryDirectories = [];
 const migrationDirectory = backendSourcePath("migrations");
 const migrationNames = fs
 	.readdirSync(migrationDirectory)
@@ -38,7 +31,28 @@ afterEach(async () => {
 			await admin.destroy();
 		}
 	}
+	for (const directory of temporaryDirectories.splice(0)) {
+		fs.rmSync(directory, { force: true, recursive: true });
+	}
 });
+
+const createMigrationDirectory = () => {
+	const root = fs.mkdtempSync(join(tmpdir(), "shieldpm-mariadb-full-migrations-"));
+	const directory = join(root, "migrations");
+	temporaryDirectories.push(root);
+	fs.mkdirSync(directory);
+	fs.mkdirSync(join(root, "internal"));
+	fs.symlinkSync(backendSourcePath("node_modules"), join(root, "node_modules"), "dir");
+	fs.writeFileSync(join(root, "logger.js"), "export const migrate = { info() {}, warn() {} };\n");
+	fs.writeFileSync(
+		join(root, "internal", "nginx.js"),
+		"export default { deleteConfig: async () => true, generateConfig: async () => true, reload: async () => true, test: async () => true };\n",
+	);
+	for (const migrationName of migrationNames) {
+		fs.copyFileSync(join(migrationDirectory, migrationName), join(directory, migrationName));
+	}
+	return directory;
+};
 
 const mariaDb = shouldRunMariaDb ? describe : describe.skip;
 
@@ -51,8 +65,9 @@ mariaDb("complete MariaDB migration chain", () => {
 		try {
 			await admin.raw("CREATE DATABASE ??", [databaseName]);
 			database = knex({ client: "mysql2", connection: { ...connection, database: databaseName } });
+			const migrationRunDirectory = createMigrationDirectory();
 
-			await runMigrations(database);
+			await runMigrations(database, migrationRunDirectory);
 
 			const appliedMigrations = (await database("migrations").select("name").orderBy("id"))
 				.map(({ name }) => name)
@@ -65,7 +80,7 @@ mariaDb("complete MariaDB migration chain", () => {
 			expect(await database.schema.hasColumn("auth_sessions", "replaced_by_session_id")).toBe(true);
 			expect(await database("setting").where("id", "ai-config").first()).toBeTruthy();
 
-			await expect(runMigrations(database)).resolves.toBeTruthy();
+			await expect(runMigrations(database, migrationRunDirectory)).resolves.toBeTruthy();
 			expect(await database("migrations").count({ count: "id" }).first()).toMatchObject({
 				count: migrationNames.length,
 			});
