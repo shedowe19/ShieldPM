@@ -33,6 +33,7 @@ const boolFields = [
 	"git_sync_enabled",
 	"anubis_enabled",
 	"turbo_loader",
+	"upload_relay_enabled",
 ];
 
 class ProxyHost extends Model {
@@ -152,6 +153,20 @@ class ProxyHost extends Model {
 	terminal_password;
 	/** @type {string|null} */
 	terminal_private_key;
+	/** @type {number} */
+	upload_relay_enabled;
+	/** @type {number} */
+	upload_relay_chunk_size;
+	/** @type {number} */
+	upload_relay_cleanup_hours;
+	/** @type {number} */
+	upload_relay_max_file_size;
+	/** @type {number} */
+	upload_relay_max_pending_bytes;
+	/** @type {string} */
+	upload_relay_path;
+	/** @type {string} */
+	upload_relay_target_path;
 
 	$beforeInsert() {
 		this.created_on = /** @type {any} */ (now());

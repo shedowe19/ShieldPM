@@ -58,6 +58,7 @@ ShieldPM bietet eine breite Palette an Features. Diese Seite dient als Einstiegs
 | Dashboard-Notizen         | [Modulübersicht](../module/README.md)   | Aktiv    |
 | PHP-Hosting (8.2/8.3/8.4) | [Modulübersicht](../module/README.md)   | Optional |
 | Turbo-Loader              | [Modulübersicht](../module/README.md)   | Aktiv    |
+| Resumable Upload Relay    | [Upload Relay](../module/upload-relay.md) | Optional |
 
 ## Offene Fragen
 

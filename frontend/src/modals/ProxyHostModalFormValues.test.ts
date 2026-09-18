@@ -55,6 +55,13 @@ describe("createProxyHostInitialValues", () => {
 			terminalPrivateKey: "",
 			terminalUsername: "",
 			turboLoader: false,
+			uploadRelayChunkSize: 80 * 1024 * 1024,
+			uploadRelayCleanupHours: 24,
+			uploadRelayEnabled: false,
+			uploadRelayMaxFileSize: 10 * 1024 * 1024 * 1024,
+			uploadRelayMaxPendingBytes: 20 * 1024 * 1024 * 1024,
+			uploadRelayPath: "/_shieldpm-upload",
+			uploadRelayTargetPath: "/",
 			zstdEnabled: false,
 		});
 	});
@@ -117,6 +124,13 @@ describe("createProxyHostInitialValues", () => {
 			terminalPrivateKey: "private-key",
 			terminalUsername: "deploy",
 			turboLoader: true,
+			uploadRelayChunkSize: 90 * 1024 * 1024,
+			uploadRelayCleanupHours: 72,
+			uploadRelayEnabled: true,
+			uploadRelayMaxFileSize: 20 * 1024 * 1024 * 1024,
+			uploadRelayMaxPendingBytes: 40 * 1024 * 1024 * 1024,
+			uploadRelayPath: "/relay",
+			uploadRelayTargetPath: "/api/import",
 			zstdEnabled: true,
 		} satisfies Partial<ProxyHost>;
 
@@ -178,6 +192,13 @@ describe("createProxyHostInitialValues", () => {
 			terminalPrivateKey: "",
 			terminalUsername: "deploy",
 			turboLoader: true,
+			uploadRelayChunkSize: 90 * 1024 * 1024,
+			uploadRelayCleanupHours: 72,
+			uploadRelayEnabled: true,
+			uploadRelayMaxFileSize: 20 * 1024 * 1024 * 1024,
+			uploadRelayMaxPendingBytes: 40 * 1024 * 1024 * 1024,
+			uploadRelayPath: "/relay",
+			uploadRelayTargetPath: "/api/import",
 			zstdEnabled: true,
 		});
 	});

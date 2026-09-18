@@ -17,7 +17,17 @@ const mocks = vi.hoisted(() => {
 					if (pruneError.value) return Promise.reject(pruneError.value);
 					return Promise.resolve([]);
 				},
-				findById: async (id) => (rows[name] || []).find((row) => row.id === id),
+				findById: (id) => {
+					const row = (rows[name] || []).find((entry) => entry.id === id);
+					const result = Promise.resolve(row);
+					result.withGraphFetched = () => result;
+					result.patch = async (data) => {
+						writes.push({ name, data });
+						Object.assign(row, data);
+						return row;
+					};
+					return result;
+				},
 				insert: async (data) => {
 					writes.push({ name, data });
 					return data;
@@ -134,6 +144,18 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(mocks.prunes).toEqual([]);
 		expect(mocks.writes).toEqual([]);
 	});
+	it.each(["all ", "0.0.0.0/00", "0.0.0.0/000"])(
+		"rejects Access List client rules that Nginx would normalize into a public allow: %s",
+		(address) => {
+			expect(() =>
+				gitops.sanitizeImportData("AccessList", {
+					clients: [{ address, directive: "allow" }],
+					id: 7,
+					items: [{ username: "upload" }],
+				}),
+			).toThrow("client addresses");
+		},
+	);
 	it("restores normalized host domains, SSL and configuration fields", async () => {
 		file("proxy-hosts", {
 			id: 9,
@@ -156,6 +178,46 @@ describe("GitOps import sanitization and safe restore", () => {
 		});
 		expect(mocks.writes[0].data).not.toHaveProperty("domain_names");
 		expect(mocks.writes[0].data).not.toHaveProperty("unknown");
+	});
+	it("rejects an enabled-by-default relay import before an unchecked path reaches Nginx", async () => {
+		mocks.rows.AccessList = [{ clients: [], id: 7, items: [{ username: "upload" }], meta: {} }];
+		file("proxy-hosts", {
+			access_list_id: 7,
+			forward_host: "upstream.test",
+			forward_port: 8080,
+			forward_scheme: "http",
+			id: 9,
+			upload_relay_enabled: true,
+			upload_relay_path: "/relay; return 200;",
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors).toHaveLength(1);
+		expect(mocks.writes).toEqual([]);
+	});
+	it("fails closed when an imported Access List would make an existing relay public", async () => {
+		mocks.rows.ProxyHost = [
+			{
+				access_list: {
+					clients: [{ address: "all", directive: "allow" }],
+					items: [{ username: "upload" }],
+					meta: {},
+					satisfy_any: true,
+				},
+				access_list_id: 7,
+				forward_host: "upstream.test",
+				forward_port: 8080,
+				forward_scheme: "http",
+				id: 9,
+				upload_relay_enabled: true,
+				upload_relay_max_file_size: 1024 * 1024 * 1024,
+				upload_relay_max_pending_bytes: 2 * 1024 * 1024 * 1024,
+			},
+		];
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(result.errors[0]).toMatch(/Upload relay disabled/);
+		expect(mocks.writes).toContainEqual({ name: "ProxyHost", data: { upload_relay_enabled: 0 } });
 	});
 	it("restores DDNS without inserting a nonexistent is_deleted column", async () => {
 		file("ddns-providers", {

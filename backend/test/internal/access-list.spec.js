@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ items: [], clients: [], config: {}, events: [], fail: false, audit: vi.fn() }));
+const state = vi.hoisted(() => ({
+	clients: [],
+	config: {},
+	events: [],
+	fail: false,
+	items: [],
+	proxyPatches: [],
+	audit: vi.fn(),
+}));
 vi.mock("bcryptjs", () => ({ default: { hash: async (value) => `$2b$hashed-${value}` } }));
 vi.mock("../../models/access_list.js", () => ({
 	default: {
@@ -61,7 +69,17 @@ vi.mock("../../models/access_list_client.js", () => ({
 		}),
 	},
 }));
-vi.mock("../../models/proxy_host.js", () => ({ default: {} }));
+vi.mock("../../models/proxy_host.js", () => ({
+	default: {
+		query: () => {
+			const query = {
+				patch: async (data) => state.proxyPatches.push(data),
+				where: () => query,
+			};
+			return query;
+		},
+	},
+}));
 vi.mock("../../models/now_helper.js", () => ({ default: () => "now" }));
 vi.mock("../../internal/audit-log.js", () => ({ default: { add: state.audit } }));
 vi.mock("../../internal/nginx.js", () => ({
@@ -88,6 +106,7 @@ describe("access list credential updates", () => {
 		];
 		state.clients = [];
 		state.config = { name: "Original" };
+		state.proxyPatches = [];
 		state.audit.mockClear();
 		vi.spyOn(service, "get").mockImplementation(async () => ({
 			id: 1,
@@ -110,6 +129,47 @@ describe("access list credential updates", () => {
 		expect(result.id).toBe(1);
 		expect(state.items).toEqual([]);
 		expect(state.clients).toEqual([expect.objectContaining({ address: "all", directive: "deny" })]);
+	});
+
+	it("disables an attached upload relay before regenerating hosts after its Access List is deleted", async () => {
+		service.get.mockResolvedValueOnce({
+			id: 1,
+			proxy_hosts: [{ access_list_id: 1, id: 42, upload_relay_enabled: true }],
+		});
+		await service.delete(access, { id: 1 });
+		expect(state.proxyPatches).toContainEqual({ access_list_id: 0, upload_relay_enabled: 0 });
+	});
+
+	it("rejects an Access List update that would make an attached relay public", async () => {
+		service.get.mockResolvedValueOnce({
+			clients: [],
+			id: 1,
+			items: [{ username: "upload" }],
+			meta: {},
+			proxy_hosts: [
+				{
+					access_list_id: 1,
+					enabled: true,
+					forward_host: "10.0.17.4",
+					forward_port: 8080,
+					forward_scheme: "http",
+					id: 42,
+					upload_relay_chunk_size: 80 * 1024 * 1024,
+					upload_relay_enabled: true,
+					upload_relay_max_file_size: 1024 * 1024 * 1024,
+					upload_relay_max_pending_bytes: 2 * 1024 * 1024 * 1024,
+				},
+			],
+			satisfy_any: false,
+		});
+		await expect(
+			service.update(access, {
+				clients: [{ address: "all", directive: "allow" }],
+				id: 1,
+				satisfy_any: true,
+			}),
+		).rejects.toThrow("enforcing authentication or IP policy");
+		expect(state.config).toEqual({ name: "Original" });
 	});
 
 	it("rolls back list creation when credential insertion fails", async () => {
@@ -214,6 +274,8 @@ describe("access list credential updates", () => {
 	it.each([
 		"127.0.0.1; include /tmp/injected.conf",
 		"all; deny all",
+		"0.0.0.0/00",
+		"10.0.0.0/000",
 		"10.0.0.0/33",
 		"::1/129",
 		"example.com",

@@ -206,6 +206,12 @@ app.use(async (req, res, next) => {
 	const isLoginRequest = method === "POST" && (path === "/api/tokens" || path === "/tokens");
 	const isTokenRefresh = method === "POST" && (path === "/api/tokens/refresh" || path === "/tokens/refresh");
 	const isTokenLogout = method === "POST" && (path === "/api/tokens/logout" || path === "/tokens/logout");
+	// The upload relay is a public per-host protocol endpoint. Its host ID is
+	// pinned by the generated Nginx location, while host-level access controls
+	// and the private upstream own caller authorization; it is not an admin API.
+	const isUploadRelayRequest =
+		["POST", "PATCH", "DELETE"].includes(method) &&
+		/^\/(?:api\/)?nginx\/proxy-hosts\/\d+\/upload-relay(?:\/|$)/.test(path);
 
 	// Duo creates and consumes a browser-bound cookie, so both endpoints also
 	// require the anonymous CSRF token supplied by the health bootstrap.
@@ -221,6 +227,7 @@ app.use(async (req, res, next) => {
 		isLoginRequest ||
 		isTokenRefresh ||
 		isTokenLogout ||
+		isUploadRelayRequest ||
 		is2FaVerify ||
 		isDocsRequest
 	) {

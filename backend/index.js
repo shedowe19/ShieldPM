@@ -24,6 +24,7 @@ import internalNginx from "./internal/nginx.js";
 import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
+import internalUploadRelay from "./internal/upload-relay.js";
 import internalWireguard from "./internal/wireguard.js";
 import migrateFromSqliteToNewDb from "./lib/db-migrate.js";
 import { global as logger } from "./logger.js";
@@ -38,6 +39,7 @@ async function appStart() {
 		await migrateFromSqliteToNewDb();
 		await migrateUp();
 		await analyticsService.init();
+		internalUploadRelay.init();
 		await setup();
 		await getCompiledSchema();
 
@@ -81,6 +83,7 @@ async function appStart() {
 				logger.info(`PID ${process.pid} received SIGTERM`);
 				server.close(async () => {
 					await analyticsService.stop();
+					await internalUploadRelay.stop();
 					logger.info("Stopping.");
 					process.exit(0);
 				});

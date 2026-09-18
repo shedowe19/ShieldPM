@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { isIP } from "node:net";
 import path from "node:path";
 import git from "isomorphic-git";
 import http from "isomorphic-git/http/node";
@@ -20,6 +21,7 @@ import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
 import User from "../models/user.js";
 import internalNginx from "./nginx.js";
+import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.js";
 
 const GITOPS_DIR = "/data/gitops";
 const CONFIG_SUBDIR = "shieldpm-config";
@@ -116,6 +118,13 @@ const ALLOWED_IMPORT_FIELDS = {
 		"terminal_password",
 		"terminal_private_key",
 		"turbo_loader",
+		"upload_relay_enabled",
+		"upload_relay_path",
+		"upload_relay_target_path",
+		"upload_relay_chunk_size",
+		"upload_relay_max_file_size",
+		"upload_relay_max_pending_bytes",
+		"upload_relay_cleanup_hours",
 		"is_deleted",
 	],
 	RedirectionHost: [
@@ -187,6 +196,33 @@ const ALLOWED_IMPORT_FIELDS = {
 	Setting: ["id", "name", "description", "value", "meta"],
 };
 
+const validateImportedAccessList = (accessList) => {
+	for (const item of accessList.items || []) {
+		if (typeof item.username !== "string" || !/^[^:\r\n\0]+$/.test(item.username)) {
+			throw new errs.ValidationError(
+				"Imported Access List usernames cannot be empty or contain colons or line breaks",
+			);
+		}
+	}
+	for (const client of accessList.clients || []) {
+		if (!["allow", "deny"].includes(client.directive) || typeof client.address !== "string") {
+			throw new errs.ValidationError("Imported Access List client rules are invalid");
+		}
+		if (client.address === "all") continue;
+		const [address, prefix, ...rest] = client.address.split("/");
+		const family = isIP(address);
+		if (
+			!family ||
+			rest.length > 0 ||
+			(prefix !== undefined && (!/^(0|[1-9]\d*)$/.test(prefix) || Number(prefix) > (family === 4 ? 32 : 128)))
+		) {
+			throw new errs.ValidationError(
+				"Imported Access List client addresses must be IP addresses, CIDR ranges, or all",
+			);
+		}
+	}
+};
+
 /**
  * Sanitize data object by picking only allowed fields.
  * @param {string} modelName - Model name (key in ALLOWED_IMPORT_FIELDS)
@@ -227,6 +263,7 @@ const sanitizeImportData = (modelName, data) => {
 			if (Array.isArray(result[relation]))
 				result[relation] = result[relation].map((item) => _.pick(item, fields));
 		}
+		validateImportedAccessList(result);
 	}
 	return result;
 };
@@ -1048,9 +1085,10 @@ const internalGitOps = {
 									throw new errs.ValidationError("Imported objects require a positive integer ID");
 								}
 
+								let existing;
 								if (existingId) {
 									importedIds.push(existingId);
-									const existing = await modelClass.query().findById(existingId);
+									existing = await modelClass.query().findById(existingId);
 									if (existing && !options.overwrite) {
 										skipped++;
 										return;
@@ -1069,6 +1107,12 @@ const internalGitOps = {
 								// Ensure owner_user_id is valid
 								if (itemData.owner_user_id) {
 									// Check if user exists, if not set to current user to avoid constraint error
+								}
+
+								if (modelClass === ProxyHost) {
+									const relayCandidate = _.assign({}, existing || {}, itemData);
+									if (relayCandidate.upload_relay_enabled)
+										await validateRelayConfigForHost(relayCandidate);
 								}
 
 								if (options.overwrite && existingId) {
@@ -1164,6 +1208,24 @@ const internalGitOps = {
 			await importModel(Stream, "streams", "stream");
 			await importModel(CloudflaredTunnel, "cloudflared-tunnels");
 			await importModel(DdnsProvider, "ddns-providers");
+
+			// Access Lists can be changed independently of their attached Proxy Hosts.
+			// Fail closed before rendering: a GitOps import must never leave an enabled
+			// relay behind an Access List that now permits unauthenticated access.
+			for (const host of await ProxyHost.query()
+				.where("is_deleted", 0)
+				.withGraphFetched("access_list.[items, clients]")) {
+				if (!host.upload_relay_enabled) continue;
+				try {
+					relayConfigForHost(host);
+				} catch (err) {
+					await ProxyHost.query().findById(host.id).patch({ upload_relay_enabled: 0 });
+					host.upload_relay_enabled = 0;
+					errors.push(
+						`proxy-hosts/${host.id}: Upload relay disabled because its Access List is no longer enforcing (${err.message})`,
+					);
+				}
+			}
 
 			// 5. Import Settings
 			const settingsDir = path.join(configDir, "settings");

@@ -71,6 +71,27 @@
 						"zstd_enabled": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/zstd_enabled"
 						},
+						"upload_relay_enabled": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upload_relay_enabled"
+						},
+						"upload_relay_path": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upload_relay_path"
+						},
+						"upload_relay_target_path": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upload_relay_target_path"
+						},
+						"upload_relay_chunk_size": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upload_relay_chunk_size"
+						},
+						"upload_relay_max_file_size": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upload_relay_max_file_size"
+						},
+						"upload_relay_max_pending_bytes": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upload_relay_max_pending_bytes"
+						},
+						"upload_relay_cleanup_hours": {
+							"$ref": "../../../components/proxy-host-object.json#/properties/upload_relay_cleanup_hours"
+						},
 						"allow_websocket_upgrade": {
 							"$ref": "../../../components/proxy-host-object.json#/properties/allow_websocket_upgrade"
 						},

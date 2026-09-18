@@ -16,6 +16,7 @@ import internalAuditLog from "./audit-log.js";
 import internalGitOps from "./gitops.js";
 import internalNginx from "./nginx.js";
 import internalOAuth2Proxy from "./oauth2-proxy.js";
+import { validateRelayConfigForHost } from "./upload-relay.js";
 
 const omissions = () => {
 	return ["is_deleted"];
@@ -91,7 +92,7 @@ const validateListInput = (data) => {
 		if (
 			!family ||
 			parts.length > 2 ||
-			(parts.length === 2 && (!/^\d+$/.test(parts[1]) || Number(parts[1]) > (family === 4 ? 32 : 128)))
+			(parts.length === 2 && (!/^(0|[1-9]\d*)$/.test(parts[1]) || Number(parts[1]) > (family === 4 ? 32 : 128)))
 		) {
 			throw new errs.ValidationError("Access-list client addresses must be IP addresses, CIDR ranges, or all");
 		}
@@ -223,12 +224,29 @@ const internalAccessList = {
 	update: async (access, data) => {
 		await access.can("access_lists:update", data);
 		validateListInput(data);
-		const row = await internalAccessList.get(access, { id: data.id });
+		const row = await internalAccessList.get(
+			access,
+			{
+				id: data.id,
+				expand: ["items", "clients", "proxy_hosts.[host_domains,certificate]"],
+			},
+			true,
+		);
 		if (row.id !== data.id) {
 			// Sanity check that something crazy hasn't happened
 			throw new errs.InternalValidationError(
 				`Access List could not be updated, IDs do not match: ${row.id} !== ${data.id}`,
 			);
+		}
+		const relayAccessListCandidate = {
+			...row,
+			..._.pick(data, ["satisfy_any", "pass_auth", "mtls_enabled", "meta"]),
+			clients: Array.isArray(data.clients) ? data.clients : row.clients,
+			items: Array.isArray(data.items) ? data.items : row.items,
+		};
+		for (const proxyHost of row.proxy_hosts || []) {
+			if (!proxyHost.upload_relay_enabled) continue;
+			await validateRelayConfigForHost({ ...proxyHost, access_list: relayAccessListCandidate });
 		}
 
 		// Keep configuration, credentials and client rules consistent on failure.
@@ -419,12 +437,16 @@ const internalAccessList = {
 
 		// 2. update any proxy hosts that were using it (ignoring permissions)
 		if (row.proxy_hosts) {
-			await proxyHostModel.query().where("access_list_id", "=", row.id).patch({ access_list_id: 0 });
+			await proxyHostModel
+				.query()
+				.where("access_list_id", "=", row.id)
+				.patch({ access_list_id: 0, upload_relay_enabled: 0 });
 
 			// 3. reconfigure those hosts, then reload nginx
 			// set the access_list_id to zero for these items
 			row.proxy_hosts.map((_val, idx) => {
 				row.proxy_hosts[idx].access_list_id = 0;
+				row.proxy_hosts[idx].upload_relay_enabled = 0;
 				return true;
 			});
 

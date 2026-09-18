@@ -77,6 +77,17 @@ mariaDb("complete MariaDB migration chain", () => {
 			expect(await database.schema.hasTable("user_2fa")).toBe(true);
 			expect(await database.schema.hasColumn("proxy_host", "adv_limit_req_burst")).toBe(true);
 			expect(await database.schema.hasColumn("proxy_host", "zstd_enabled")).toBe(true);
+			for (const column of [
+				"upload_relay_enabled",
+				"upload_relay_chunk_size",
+				"upload_relay_cleanup_hours",
+				"upload_relay_max_file_size",
+				"upload_relay_max_pending_bytes",
+				"upload_relay_path",
+				"upload_relay_target_path",
+			]) {
+				expect(await database.schema.hasColumn("proxy_host", column)).toBe(true);
+			}
 			expect(await database.schema.hasColumn("auth_sessions", "replaced_by_session_id")).toBe(true);
 			expect(await database("setting").where("id", "ai-config").first()).toBeTruthy();
 

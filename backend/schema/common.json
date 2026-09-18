@@ -143,6 +143,58 @@
 			"default": false,
 			"example": false
 		},
+		"upload_relay_enabled": {
+			"description": "Enable the resumable direct upload relay for this Proxy Host",
+			"type": "boolean",
+			"default": false,
+			"example": false
+		},
+		"upload_relay_path": {
+			"description": "Public resumable upload path",
+			"type": "string",
+			"pattern": "^/[A-Za-z0-9._~-]+(?:/[A-Za-z0-9._~-]+)*$",
+			"default": "/_shieldpm-upload",
+			"example": "/_shieldpm-upload"
+		},
+		"upload_relay_target_path": {
+			"description": "Private upstream path that receives the completed raw upload",
+			"type": "string",
+			"pattern": "^/(?!/)[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$",
+			"default": "/",
+			"example": "/api/import"
+		},
+		"upload_relay_chunk_size": {
+			"description": "Maximum resumable upload chunk size in bytes",
+			"type": "integer",
+			"minimum": 5242880,
+			"maximum": 94371840,
+			"default": 83886080,
+			"example": 83886080
+		},
+		"upload_relay_max_file_size": {
+			"description": "Maximum completed file size in bytes",
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991,
+			"default": 10737418240,
+			"example": 10737418240
+		},
+		"upload_relay_max_pending_bytes": {
+			"description": "Maximum bytes reserved by incomplete uploads for this Proxy Host",
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 9007199254740991,
+			"default": 21474836480,
+			"example": 21474836480
+		},
+		"upload_relay_cleanup_hours": {
+			"description": "Hours before incomplete uploads are removed",
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 720,
+			"default": 24,
+			"example": 24
+		},
 		"email": {
 			"description": "Email address",
 			"type": "string",

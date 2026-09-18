@@ -165,6 +165,13 @@ export interface ProxyHost {
 	advancedConfig: string;
 	bandwidthLimit: string;
 	turboLoader?: boolean;
+	uploadRelayEnabled?: boolean;
+	uploadRelayPath?: string;
+	uploadRelayTargetPath?: string;
+	uploadRelayChunkSize?: number;
+	uploadRelayMaxFileSize?: number;
+	uploadRelayMaxPendingBytes?: number;
+	uploadRelayCleanupHours?: number;
 	meta: Record<string, unknown>;
 	maintenanceOnFailure: boolean;
 	advLimitReqRate?: number;

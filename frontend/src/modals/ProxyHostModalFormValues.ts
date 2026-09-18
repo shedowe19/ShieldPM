@@ -57,6 +57,14 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 	maintenanceStart: formatMaintenanceDateTime(data.maintenanceStart),
 	maintenanceEnd: formatMaintenanceDateTime(data.maintenanceEnd),
 	maintenanceReason: data.maintenanceReason || "",
+	// Upload relay
+	uploadRelayEnabled: data.uploadRelayEnabled || false,
+	uploadRelayPath: data.uploadRelayPath || "/_shieldpm-upload",
+	uploadRelayTargetPath: data.uploadRelayTargetPath || "/",
+	uploadRelayChunkSize: data.uploadRelayChunkSize || 80 * 1024 * 1024,
+	uploadRelayMaxFileSize: data.uploadRelayMaxFileSize || 10 * 1024 * 1024 * 1024,
+	uploadRelayMaxPendingBytes: data.uploadRelayMaxPendingBytes || 20 * 1024 * 1024 * 1024,
+	uploadRelayCleanupHours: data.uploadRelayCleanupHours || 24,
 	// Git Sync
 	gitRepoUrl: data.gitRepoUrl || "",
 	gitBranch: data.gitBranch || "main",

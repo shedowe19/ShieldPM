@@ -7,6 +7,7 @@ import { Switch } from "src/components/ui/switch";
 import { TabsContent } from "src/components/ui/tabs";
 import { T } from "src/locale";
 import { PROXY_HOST_TAB } from "src/types/enums";
+import ProxyHostUploadRelay from "./ProxyHostUploadRelay";
 
 const ProxyHostAdvancedTab = () => (
 	<TabsContent value={PROXY_HOST_TAB.ADVANCED} className="mt-0 space-y-4">
@@ -39,6 +40,8 @@ const ProxyHostAdvancedTab = () => (
 				)}
 			</Field>
 		</div>
+
+		<ProxyHostUploadRelay />
 
 		<NginxConfigField />
 	</TabsContent>

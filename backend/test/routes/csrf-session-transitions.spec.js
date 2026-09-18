@@ -67,6 +67,8 @@ vi.mock("../../routes/main.js", async () => {
 		next(error);
 	});
 	router.post("/api/anonymous-action", (_req, res) => res.sendStatus(204));
+	router.post("/api/nginx/proxy-hosts/:hostId/upload-relay", (_req, res) => res.sendStatus(204));
+	router.post("/api/nginx/proxy-hosts/:hostId", (_req, res) => res.sendStatus(204));
 	router.use("/api/tokens", tokens);
 	router.use("/api/users", users);
 	router.use("/api/oidc", oidc);
@@ -198,6 +200,14 @@ afterAll(async () => {
 });
 
 describe("CSRF follows the response's session cookies without an extra health request", () => {
+	it("permits only public upload-relay writes without a ShieldPM CSRF token", async () => {
+		const relay = await fetch(`${origin}/api/nginx/proxy-hosts/42/upload-relay`, { method: "POST" });
+		expect(relay.status).toBe(204);
+
+		const admin = await fetch(`${origin}/api/nginx/proxy-hosts/42`, { method: "POST" });
+		expect(admin.status).toBe(403);
+	});
+
 	it("recovers an anonymous health response arriving after startup refresh without repeating a write", async () => {
 		const pair = await sessions.issueTokenPair(await User.query().findById(2));
 		const client = browser();

@@ -40,6 +40,24 @@ Optionen verfügbar. `backend/test/internal/zstd-proxy-host-compression.spec.js`
 Verträge; die Frontend-Formtests prüfen Default und Roundtrip. GitOps erhält den Wert über seine explizite
 Proxy-Host-Import-Whitelist.
 
+## Resumable Upload Relay
+
+Das optionale `upload_relay_enabled` aktiviert je Host einen tus-kompatiblen Uploadpfad. Der Nginx-Renderer leitet
+`upload_relay_path` (Standard `/_shieldpm-upload`) mit deaktiviertem Request-Buffering an den lokalen Backend-Socket weiter;
+dieser speichert fortsetzbare Teile unter `${DATA_PATH}/upload-relay/`. Der letzte öffentliche Chunk wird nach dem dauerhaften
+Setzen des Zustands `queued` sofort beantwortet; ein einzelner lokaler Finalizer streamt die Datei anschließend direkt an den
+konfigurierten privaten HTTP(S)-Upstream `upload_relay_target_path`. Dadurch blockiert ein langsamer Origin-Transfer die
+Cloudflare-Verbindung nicht bis zum 524-Timeout. Pro Host sind Chunkgröße (5 bis 90 MiB), maximale
+Dateigröße, reserviertes Gesamtbudget offener Uploads und Bereinigungszeit konfigurierbar. Eine bestehende Access-List ist
+beim Aktivieren verpflichtend; bei `pass_auth: false` bleibt deren Basic-Authorization vom Origin getrennt. Die Datenbankmigration `20260919000000_add_proxy_host_upload_relay` legt
+die zugehörigen persistenten Spalten mit sicheren Defaults an; GitOps und die Create-/Update-Schemas führen sie mit.
+
+Der öffentliche Relay-Namespace `/nginx/proxy-hosts/<id>/upload-relay` ist von der ShieldPM-Admin-CSRF-Prüfung ausgenommen,
+damit Browser-Uploader tus sprechen können. Die Ausnahme ist auf genau diesen Host-ID-Pfad und `POST`, `PATCH` sowie
+`DELETE` begrenzt; normale Proxy-Host-Verwaltungswrites bleiben CSRF-geschützt. Die regulären Host-Access-Lists und die
+authentifizierende private Origin-API bleiben für den Uploadpfad wirksam. Details des Protokolls, der Persistenz und der
+Wiederaufnahme stehen unter [Resumable Upload Relay](./upload-relay.md).
+
 ## Listen-Paginierung
 
 `GET /api/nginx/proxy-hosts` bleibt ohne Paginierungsparameter abwärtskompatibel und liefert weiterhin das bestehende

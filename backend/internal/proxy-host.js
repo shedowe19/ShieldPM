@@ -13,6 +13,7 @@ import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 import internalOAuth2Proxy from "./oauth2-proxy.js";
+import { validateRelayConfigForHost } from "./upload-relay.js";
 
 const omissions = () => {
 	return ["is_deleted", "owner.is_deleted"];
@@ -134,6 +135,7 @@ const internalProxyHost = {
 		if (typeof thisData.advanced_config === "undefined") {
 			thisData.advanced_config = "";
 		}
+		if (thisData.upload_relay_enabled) await validateRelayConfigForHost(thisData);
 
 		// Encrypt terminal credentials if present
 		if (thisData.git_credentials) {
@@ -305,6 +307,8 @@ const internalProxyHost = {
 		);
 
 		thisData = internalHost.cleanSslHstsData(create_certificate, thisData, row);
+		const relayCandidate = _.assign({}, row, thisData);
+		if (relayCandidate.upload_relay_enabled) await validateRelayConfigForHost(relayCandidate);
 
 		if (data.git_credentials) {
 			thisData.git_credentials = encrypt(data.git_credentials);
@@ -500,6 +504,7 @@ const internalProxyHost = {
 		if (row.enabled) {
 			throw new errs.ValidationError("Host is already enabled");
 		}
+		if (row.upload_relay_enabled) await validateRelayConfigForHost(row);
 
 		row.enabled = 1;
 
