@@ -17,11 +17,7 @@ Im Proxy-Host-Dialog unter **Erweitert → Fortsetzbares Upload-Relay** aktivier
 | Reservierter temporärer Speicher | `21474836480` (20 GiB) | Pro Host reservierbares Gesamtbudget offener Uploads; höchstens 32 Sessions sind gleichzeitig offen. |
 | Bereinigung                      |                 `24` h | Abgelaufene unvollständige Uploads werden beim Start und anschließend stündlich entfernt.            |
 
-Eine Proxy-Host-Access-List ist beim Aktivieren verpflichtend; ohne sie wird die Konfiguration abgewiesen, bevor ein
-anonymer Client Speicher reservieren kann. Deren IP-/Basic-/SSO-Regeln gelten unverändert für den Uploadpfad. Eine
-`satisfy any`-Liste mit `allow all` gilt dabei als öffentlich und kann kein Relay schützen. Bei `pass_auth: false`
-wird ein Basic-`Authorization`-Header ausdrücklich nicht zum Origin weitergereicht. Das Relay ist standardmäßig
-deaktiviert.
+Eine Proxy-Host-Access-List ist **optional**. Falls eine Liste gesetzt ist, gelten ihre IP-/Basic-/SSO-Regeln unverändert für den Uploadpfad; eine `satisfy any`-Liste mit `allow all` gilt dabei als öffentlich und kann kein Relay schützen. Ohne Access List ist der Uploadpfad öffentlich erreichbar; deshalb sollten die Speicher- und Dateilimits bewusst gewählt und bei Bedarf eine vorgeschaltete Zugriffskontrolle (z. B. Cloudflare Access) eingesetzt werden. Bei `pass_auth: false` wird ein Basic-`Authorization`-Header ausdrücklich nicht zum Origin weitergereicht. Das Relay ist standardmäßig deaktiviert.
 
 ## Protokoll
 

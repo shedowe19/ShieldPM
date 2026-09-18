@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createUploadRelay, relayConfigForHost } from "../../internal/upload-relay.js";
+import { createUploadRelay, relayConfigForHost, validateRelayConfigForHost } from "../../internal/upload-relay.js";
 
 const temporaryDirectories = [];
 
@@ -110,15 +110,21 @@ describe("Upload relay", () => {
 		expect(await relay.get(42, upload.id)).toMatchObject({ offset: 3 });
 	});
 
-	it("requires a Proxy Host access list before reserving persistent upload storage", async () => {
+	it("allows a relay without a Proxy Host access list while retaining its storage limits", async () => {
+		const noAccessListHost = host({ access_list: undefined, access_list_id: 0 });
+		await expect(validateRelayConfigForHost(noAccessListHost)).resolves.toMatchObject({
+			origin: "http://10.0.17.4:8080/api/import",
+			path: "/_shieldpm-upload",
+		});
 		const relay = createUploadRelay({
 			fetchImpl: vi.fn(),
-			getHost: async () => host({ access_list_id: 0 }),
+			getHost: async () => noAccessListHost,
 			root: createTempRoot(),
 		});
-		await expect(relay.create(42, { filename: "anonymous.bin", length: 5 * 1024 * 1024 })).rejects.toThrow(
-			"requires a Proxy Host access list",
-		);
+		await expect(relay.create(42, { filename: "anonymous.bin", length: 5 * 1024 * 1024 })).resolves.toMatchObject({
+			offset: 0,
+			path: "/_shieldpm-upload",
+		});
 	});
 
 	it("requires an Access List that actually enforces an upload authorization policy", () => {

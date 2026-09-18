@@ -90,26 +90,27 @@ const canonicalizePolicyValue = (value) => {
 };
 
 const accessPolicyFingerprint = (accessList, accessListId) => {
+	const list = accessList || {};
 	const policy = {
-		clients: (accessList.clients || [])
+		clients: (list.clients || [])
 			.map((client) => ({
 				address: typeof client.address === "string" ? client.address.trim().toLowerCase() : client.address,
 				directive: client.directive,
 			}))
 			.sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
-		id: accessList.id || accessListId,
-		items: (accessList.items || [])
+		id: list.id || accessListId,
+		items: (list.items || [])
 			.map((item) => ({
 				password: item.password,
 				username: typeof item.username === "string" ? item.username : "",
 			}))
 			.sort((left, right) => left.username.localeCompare(right.username)),
-		meta: accessList.meta || {},
-		mtls_certificate: accessList.mtls_certificate,
-		mtls_enabled: accessList.mtls_enabled,
-		mtls_use_internal: accessList.mtls_use_internal,
-		pass_auth: accessList.pass_auth,
-		satisfy_any: accessList.satisfy_any,
+		meta: list.meta || {},
+		mtls_certificate: list.mtls_certificate,
+		mtls_enabled: list.mtls_enabled,
+		mtls_use_internal: list.mtls_use_internal,
+		pass_auth: list.pass_auth,
+		satisfy_any: list.satisfy_any,
 	};
 	return crypto
 		.createHash("sha256")
@@ -121,10 +122,11 @@ const relayConfigForHost = (host, accessList = host?.access_list) => {
 	if (!host || host.is_deleted || !host.upload_relay_enabled) {
 		throw new errs.ItemNotFoundError("upload relay");
 	}
-	if (!Number.isSafeInteger(Number(host.access_list_id)) || Number(host.access_list_id) < 1) {
-		throw new errs.ValidationError("Upload relay requires a Proxy Host access list");
+	const accessListId = Number(host.access_list_id || 0);
+	if (!Number.isSafeInteger(accessListId) || accessListId < 0) {
+		throw new errs.ValidationError("Upload relay Access List ID must be valid when configured");
 	}
-	if (!accessListEnforcesUploadAuthorization(accessList)) {
+	if (accessListId > 0 && !accessListEnforcesUploadAuthorization(accessList)) {
 		throw new errs.ValidationError(
 			"Upload relay requires an Access List with enforcing authentication or IP policy",
 		);
@@ -165,7 +167,7 @@ const relayConfigForHost = (host, accessList = host?.access_list) => {
 	);
 	const hostname = normalizeHostname(host.forward_host);
 	const port = asPositiveInteger(host.forward_port, "Upload relay upstream port", 443, 65535);
-	const forwardAuthorization = !(accessList.pass_auth === false || accessList.pass_auth === 0);
+	const forwardAuthorization = !(accessList?.pass_auth === false || accessList?.pass_auth === 0);
 	const origin = `${host.forward_scheme}://${hostname}:${port}${safeTargetPath(host.upload_relay_target_path)}`;
 	const policyFingerprint = accessPolicyFingerprint(accessList, host.access_list_id);
 	return {
@@ -183,9 +185,10 @@ const relayConfigForHost = (host, accessList = host?.access_list) => {
 
 const validateRelayConfigForHost = async (host) => {
 	let accessList = host?.access_list;
-	if (!accessList) {
+	const accessListId = Number(host?.access_list_id || 0);
+	if (!accessList && Number.isSafeInteger(accessListId) && accessListId > 0) {
 		const { default: AccessList } = await import("../models/access_list.js");
-		accessList = await AccessList.query().findById(host?.access_list_id).withGraphFetched("[items, clients]");
+		accessList = await AccessList.query().findById(accessListId).withGraphFetched("[items, clients]");
 	}
 	return relayConfigForHost(host, accessList);
 };
