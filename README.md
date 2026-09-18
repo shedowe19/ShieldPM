@@ -97,14 +97,18 @@ Die interne Entwicklerdokumentation für Entwickler und AI-Agenten befindet sich
 ## 🔨 Development
 
 ```bash
+# Required toolchain: Node.js 26+ and Yarn Classic 1.22.22
+npm install --global --allow-scripts=yarn yarn@1.22.22
+
 # Frontend
-cd frontend && yarn install && yarn dev
+cd frontend && yarn install --frozen-lockfile && yarn dev
 
 # Backend
-cd backend && npm install && npm run dev
+cd ../backend && yarn install --frozen-lockfile && yarn dev
 
-# Tests
-npm test
+# Verification
+cd ../backend && yarn test --run
+cd ../frontend && yarn test --run && yarn build
 ```
 
 ---

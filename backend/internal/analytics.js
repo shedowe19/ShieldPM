@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import dayjs from "dayjs";
 import { Tail } from "tail";
+import { resolveAnalyticsRange } from "../lib/analytics-range.js";
 import errs from "../lib/error.js";
 import { analytics as logger } from "../logger.js";
 import AnalyticCount from "../models/analytic_count.js";
@@ -10,9 +11,13 @@ import ProxyHost from "../models/proxy_host.js";
 const LOG_FILE = "/data/nginx/json_access.log";
 const FLUSH_INTERVAL_MS = 10 * 1000; // 10 seconds flush
 const RETENTION_INTERVAL_MS = 60 * 60 * 1000; // 1 hour check
-const RETENTION_HOURS = 24; // Default retention
+const DETAILED_RETENTION_HOURS = Number.parseInt(process.env.ANALYTICS_DETAILED_RETENTION_HOURS || "24", 10);
+const AGGREGATION_RETENTION_DAYS = Number.parseInt(process.env.ANALYTICS_AGGREGATION_RETENTION_DAYS || "35", 10);
+const SUMMARY_CACHE_TTL_MS = FLUSH_INTERVAL_MS;
 const DETAILED_LOG_BUFFER_LIMIT = 1000;
 const AGGREGATION_BUFFER_LIMIT = 500;
+const PENDING_LINE_BUFFER_LIMIT = 2000;
+const PROCESS_LINE_BATCH_SIZE = 250;
 const INSERT_CHUNK_SIZE = 250;
 const DROP_LOG_INTERVAL_MS = 60 * 1000;
 
@@ -37,6 +42,10 @@ export class AnalyticsService {
 		this.initializationPromise = null;
 		this.isInitialized = false;
 		this.lastDropLogAt = 0;
+		this.lineQueue = [];
+		this.lineDrainScheduled = false;
+		this.droppedLineCount = 0;
+		this.summaryCache = new Map();
 	}
 
 	async init() {
@@ -75,10 +84,7 @@ export class AnalyticsService {
 		// Tail the log file
 		try {
 			this.tail = new Tail(this.logFile);
-			this.tail.on("line", (line) => {
-				// Prevent event loop blocking under high load by deferring processing
-				setImmediate(() => this.processLine(line));
-			});
+			this.tail.on("line", (line) => this.enqueueLine(line));
 			this.tail.on("error", (error) => logger.error(`Tail error: ${error}`));
 		} catch (err) {
 			logger.error(`Failed to initialize tail: ${err.message}`);
@@ -115,6 +121,47 @@ export class AnalyticsService {
 		} catch (err) {
 			logger.error("Failed to load domains for analytics:", err);
 		}
+	}
+
+	getStatus() {
+		return {
+			detailedBufferSize: this.detailedLogBuffer.length,
+			droppedLineCount: this.droppedLineCount,
+			lineQueueSize: this.lineQueue.length,
+			aggregationBufferSize: this.aggregationBuffer.size,
+		};
+	}
+
+	enqueueLine(line) {
+		if (this.lineQueue.length >= PENDING_LINE_BUFFER_LIMIT) {
+			this.droppedLineCount++;
+			this.logDroppedAnalyticsData({ detailedLogsDropped: 1, aggregationsDropped: 0 });
+			return;
+		}
+		this.lineQueue.push(line);
+		if (this.lineDrainScheduled) return;
+		this.lineDrainScheduled = true;
+		setImmediate(() => this.drainLineQueue());
+	}
+
+	drainLineQueue() {
+		this.lineDrainScheduled = false;
+		for (const line of this.lineQueue.splice(0, PROCESS_LINE_BATCH_SIZE)) this.processLine(line);
+		if (this.lineQueue.length > 0) {
+			this.lineDrainScheduled = true;
+			setImmediate(() => this.drainLineQueue());
+		}
+	}
+
+	async stop() {
+		clearInterval(this.flushTimer);
+		clearInterval(this.retentionTimer);
+		this.tail?.unwatch?.();
+		this.tail = null;
+		this.lineDrainScheduled = false;
+		for (const line of this.lineQueue.splice(0)) this.processLine(line);
+		await this.flush();
+		this.isInitialized = false;
 	}
 
 	processLine(line) {
@@ -367,16 +414,23 @@ export class AnalyticsService {
 		try {
 			await this.flushPromise;
 		} finally {
+			this.summaryCache.clear();
 			this.flushPromise = null;
 		}
 	}
 
 	async runRetention() {
 		try {
-			const cutoff = dayjs().subtract(RETENTION_HOURS, "hour").toISOString();
-			const deleted = await AnalyticsLogs.query().where("time", "<", cutoff).delete();
-			if (deleted > 0) {
-				logger.info(`Analytics Retention: Cleaned up ${deleted} old log entries.`);
+			const detailedCutoff = dayjs().subtract(DETAILED_RETENTION_HOURS, "hour").toISOString();
+			const aggregateCutoff = dayjs().subtract(AGGREGATION_RETENTION_DAYS, "day").toISOString();
+			const [deletedDetailed, deletedAggregates] = await Promise.all([
+				AnalyticsLogs.query().where("time", "<", detailedCutoff).delete(),
+				AnalyticCount.query().where("timestamp", "<", aggregateCutoff).delete(),
+			]);
+			if (deletedDetailed > 0 || deletedAggregates > 0) {
+				logger.info(
+					`Analytics retention: removed ${deletedDetailed} detailed rows and ${deletedAggregates} aggregate rows.`,
+				);
 			}
 		} catch (err) {
 			logger.error(`Failed to run retention: ${err.message}`);
@@ -411,28 +465,12 @@ export class AnalyticsService {
 		return host;
 	}
 
-	async getHostSummary(access, hostId, range) {
+	async getHostSummary(access, hostId, requestedRange) {
 		await this.assertHostAccess(access, hostId);
-
-		let since;
-		const now = dayjs();
-		switch (range) {
-			case "1h":
-				since = now.subtract(1, "hour");
-				break;
-			case "24h":
-				since = now.subtract(24, "hour");
-				break;
-			case "7d":
-				since = now.subtract(7, "day");
-				break;
-			case "30d":
-				since = now.subtract(30, "day");
-				break;
-			default:
-				since = now.subtract(24, "hour");
-				break;
-		}
+		const { range, since } = resolveAnalyticsRange(requestedRange, dayjs());
+		const cacheKey = `${hostId}:${range}`;
+		const cached = this.summaryCache.get(cacheKey);
+		if (cached && cached.expiresAt > Date.now()) return cached.value;
 
 		const sinceIso = since.toISOString();
 		const knex = AnalyticsLogs.knex();
@@ -519,7 +557,7 @@ export class AnalyticsService {
 			return 0;
 		};
 
-		return {
+		const summary = {
 			range,
 			since: sinceIso,
 			stats: {
@@ -536,6 +574,8 @@ export class AnalyticsService {
 			top_paths: topPaths,
 			recent_requests: recent,
 		};
+		this.summaryCache.set(cacheKey, { expiresAt: Date.now() + SUMMARY_CACHE_TTL_MS, value: summary });
+		return summary;
 	}
 }
 

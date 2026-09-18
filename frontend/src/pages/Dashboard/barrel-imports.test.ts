@@ -20,11 +20,12 @@ describe("dashboard route dependencies", () => {
 		}
 	});
 
-	it("includes the investigation and bandwidth controls on the landing route", () => {
+	it("loads one selectable host ranking on the landing route instead of five parallel queries", () => {
 		const source = readFileSync(resolve(process.cwd(), "src/pages/Dashboard/index.tsx"), "utf8");
 
-		expect(source).toContain('<TopHostsWidget sort="bytes" />');
-		expect(source).toContain('<TopHostsWidget sort="client_errors" />');
-		expect(source).toContain('<TopHostsWidget sort="response_time" />');
+		expect(source).toContain("<TopHostsRankingsWidget />");
+		expect(source).not.toContain('<TopHostsWidget sort="bytes" />');
+		expect(source).not.toContain('<TopHostsWidget sort="client_errors" />');
+		expect(source).not.toContain('<TopHostsWidget sort="response_time" />');
 	});
 });

@@ -1,8 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TopHostsWidget } from "./TopHostsWidget";
+import { TopHostsRankingsWidget, TopHostsWidget } from "./TopHostsWidget";
 
 const mocks = vi.hoisted(() => ({
 	useAnalyticsTopHosts: vi.fn(),
@@ -140,5 +140,17 @@ describe("TopHostsWidget", () => {
 		expect(mocks.useAnalyticsTopHosts).toHaveBeenCalledWith("response_time");
 		expect(screen.getByRole("heading", { name: "Slowest Proxy Hosts" })).toBeInTheDocument();
 		expect(screen.getByTestId("formatted-number-1825")).toHaveAttribute("data-unit", "millisecond");
+	});
+
+	it("fetches only the selected ranking until an administrator switches tabs", () => {
+		render(
+			<MemoryRouter>
+				<TopHostsRankingsWidget />
+			</MemoryRouter>,
+		);
+
+		expect(mocks.useAnalyticsTopHosts).toHaveBeenCalledWith("requests");
+		fireEvent.click(screen.getByRole("tab", { name: "Top Bandwidth Consumers" }));
+		expect(mocks.useAnalyticsTopHosts).toHaveBeenLastCalledWith("bytes");
 	});
 });

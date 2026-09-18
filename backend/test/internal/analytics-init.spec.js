@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+	analyticCountQuery: vi.fn(),
 	analyticsLogsQuery: vi.fn(),
 	closeSync: vi.fn(),
 	openSync: vi.fn(),
@@ -29,7 +30,7 @@ vi.mock("tail", () => ({
 	},
 }));
 
-vi.mock("../../models/analytic_count.js", () => ({ default: {} }));
+vi.mock("../../models/analytic_count.js", () => ({ default: { query: mocks.analyticCountQuery } }));
 
 vi.mock("../../models/analytics_logs.js", () => ({
 	default: {
@@ -52,6 +53,9 @@ const configureDatabaseMocks = () => {
 		where: () => ({ select: () => ({ withGraphFetched: vi.fn().mockResolvedValue([]) }) }),
 	});
 	mocks.analyticsLogsQuery.mockReturnValue({
+		where: () => ({ delete: vi.fn().mockResolvedValue(0) }),
+	});
+	mocks.analyticCountQuery.mockReturnValue({
 		where: () => ({ delete: vi.fn().mockResolvedValue(0) }),
 	});
 };

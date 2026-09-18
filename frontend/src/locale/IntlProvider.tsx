@@ -1,4 +1,5 @@
 import { createIntl, createIntlCache } from "react-intl";
+import { useLocaleRevision } from "../context/LocaleContext";
 import langEn from "./lang/en.json";
 import langList from "./lang/lang-list.json";
 
@@ -126,6 +127,7 @@ const T = ({
 	data?: Record<string, string | number | undefined>;
 	tData?: Record<string, string>;
 }) => {
+	useLocaleRevision();
 	const translatedData: Record<string, string> = {};
 	if (tData) {
 		// iterate over tData and translate each value

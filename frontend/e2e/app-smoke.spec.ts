@@ -136,15 +136,20 @@ test("keeps login, top-host analytics, route fallback, a11y, keyboard focus, and
 
 	await signIn(page);
 	await expect(page.getByRole("heading", { name: "Top Proxy Hosts" })).toBeVisible();
+	await expect.poll(() => api.topHostSorts).toEqual(["requests"]);
+	await page.getByRole("tab", { name: "Top Bandwidth Consumers" }).click();
 	await expect(page.getByRole("heading", { name: "Top Bandwidth Consumers" })).toBeVisible();
-	await expect(page.getByRole("heading", { name: "Top Server Errors" })).toBeVisible();
-	await expect.poll(() => api.topHostSorts).toEqual(expect.arrayContaining(["requests", "bytes", "server_errors"]));
+	await expect.poll(() => api.topHostSorts).toEqual(["requests", "bytes"]);
 	await expect(page.getByTestId("dashboard-top-bandwidth")).toContainText(/1\.5\s?kB/);
-	await expect(page.getByTestId("dashboard-top-hosts").getByRole("link", { name: "api.e2e.test" })).toHaveAttribute(
-		"href",
-		"/analytics?host=7&range=24h",
-	);
+	await page.getByRole("tab", { name: "Top Server Errors" }).click();
+	await expect(page.getByRole("heading", { name: "Top Server Errors" })).toBeVisible();
+	await expect.poll(() => api.topHostSorts).toEqual(["requests", "bytes", "server_errors"]);
+	await expect(
+		page.getByTestId("dashboard-top-server-errors").getByRole("link", { name: "api.e2e.test" }),
+	).toHaveAttribute("href", "/analytics?host=7&range=24h");
 
+	await page.goto("/");
+	await expect(page.getByTestId("app-content")).toBeVisible();
 	const skipLink = page.getByRole("link", { name: "Skip to main content" });
 	await page.keyboard.press("Tab");
 	await expect(skipLink).toBeFocused();

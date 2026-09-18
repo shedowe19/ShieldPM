@@ -2,7 +2,7 @@ import { IconArrowsCross, IconBolt, IconBoltOff, IconDisc } from "@tabler/icons-
 import { m } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FormattedNumber } from "react-intl";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { HasPermission } from "src/components/HasPermission";
 import { Card, CardContent } from "src/components/ui/card";
 import { useHostReport } from "src/hooks/useHostReport";
@@ -12,7 +12,7 @@ import AuthStore from "src/modules/AuthStore";
 import { DEAD_HOSTS, PROXY_HOSTS, REDIRECTION_HOSTS, STREAMS, VIEW } from "src/modules/Permissions";
 import { CertificateExpiryWidget } from "./CertificateExpiryWidget";
 import { DashboardNotesWidget } from "./DashboardNotesWidget";
-import { TopHostsWidget } from "./TopHostsWidget";
+import { TopHostsRankingsWidget } from "./TopHostsWidget";
 
 const MotionCard = m(Card);
 const container = {
@@ -32,7 +32,6 @@ const item = {
 
 const Dashboard = () => {
 	const { data: hostReport } = useHostReport();
-	const navigate = useNavigate();
 	const [userId, setUserId] = useState<number>(0);
 	const { data: userData } = useUser(userId, { enabled: userId !== 0 });
 
@@ -67,115 +66,127 @@ const Dashboard = () => {
 
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 				<HasPermission section={PROXY_HOSTS} permission={VIEW} hideError>
-					<MotionCard
-						variants={item}
-						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-green-500/10 to-transparent dark:from-green-500/20"
-						onClick={() => navigate("/nginx/proxy")}
-						whileHover={{ scale: 1.02 }}
-						whileTap={{ scale: 0.98 }}
+					<Link
+						to="/nginx/proxy"
+						className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between space-x-4">
-								<div className="space-y-1">
-									<p className="text-sm font-medium text-muted-foreground">
-										<T id="proxy_hosts.count_label" />
-									</p>
-									<div className="text-4xl font-bold text-green-500">
-										<FormattedNumber value={hostReport?.proxy || 0} />
+						<MotionCard
+							variants={item}
+							className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-green-500/10 to-transparent dark:from-green-500/20"
+							whileHover={{ scale: 1.02 }}
+							whileTap={{ scale: 0.98 }}
+						>
+							<CardContent className="p-6">
+								<div className="flex items-center justify-between space-x-4">
+									<div className="space-y-1">
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="proxy_hosts.count_label" />
+										</p>
+										<div className="text-4xl font-bold text-green-500">
+											<FormattedNumber value={hostReport?.proxy || 0} />
+										</div>
+									</div>
+									<div className="p-3 bg-green-500/20 rounded-xl text-green-500">
+										<IconBolt className="h-8 w-8" />
 									</div>
 								</div>
-								<div className="p-3 bg-green-500/20 rounded-xl text-green-500">
-									<IconBolt className="h-8 w-8" />
-								</div>
-							</div>
-						</CardContent>
-					</MotionCard>
+							</CardContent>
+						</MotionCard>
+					</Link>
 				</HasPermission>
 				<HasPermission section={REDIRECTION_HOSTS} permission={VIEW} hideError>
-					<MotionCard
-						variants={item}
-						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-yellow-500/10 to-transparent dark:from-yellow-500/20"
-						onClick={() => navigate("/nginx/redirection")}
-						whileHover={{ scale: 1.02 }}
-						whileTap={{ scale: 0.98 }}
+					<Link
+						to="/nginx/redirection"
+						className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between space-x-4">
-								<div className="space-y-1">
-									<p className="text-sm font-medium text-muted-foreground">
-										<T id="redirection_hosts.count_label" />
-									</p>
-									<div className="text-4xl font-bold text-yellow-500">
-										<FormattedNumber value={hostReport?.redirection || 0} />
+						<MotionCard
+							variants={item}
+							className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-yellow-500/10 to-transparent dark:from-yellow-500/20"
+							whileHover={{ scale: 1.02 }}
+							whileTap={{ scale: 0.98 }}
+						>
+							<CardContent className="p-6">
+								<div className="flex items-center justify-between space-x-4">
+									<div className="space-y-1">
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="redirection_hosts.count_label" />
+										</p>
+										<div className="text-4xl font-bold text-yellow-500">
+											<FormattedNumber value={hostReport?.redirection || 0} />
+										</div>
+									</div>
+									<div className="p-3 bg-yellow-500/20 rounded-xl text-yellow-500">
+										<IconArrowsCross className="h-8 w-8" />
 									</div>
 								</div>
-								<div className="p-3 bg-yellow-500/20 rounded-xl text-yellow-500">
-									<IconArrowsCross className="h-8 w-8" />
-								</div>
-							</div>
-						</CardContent>
-					</MotionCard>
+							</CardContent>
+						</MotionCard>
+					</Link>
 				</HasPermission>
 				<HasPermission section={STREAMS} permission={VIEW} hideError>
-					<MotionCard
-						variants={item}
-						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-blue-500/10 to-transparent dark:from-blue-500/20"
-						onClick={() => navigate("/nginx/stream")}
-						whileHover={{ scale: 1.02 }}
-						whileTap={{ scale: 0.98 }}
+					<Link
+						to="/nginx/stream"
+						className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between space-x-4">
-								<div className="space-y-1">
-									<p className="text-sm font-medium text-muted-foreground">
-										<T id="streams.count_label" />
-									</p>
-									<div className="text-4xl font-bold text-blue-500">
-										<FormattedNumber value={hostReport?.stream || 0} />
+						<MotionCard
+							variants={item}
+							className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-blue-500/10 to-transparent dark:from-blue-500/20"
+							whileHover={{ scale: 1.02 }}
+							whileTap={{ scale: 0.98 }}
+						>
+							<CardContent className="p-6">
+								<div className="flex items-center justify-between space-x-4">
+									<div className="space-y-1">
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="streams.count_label" />
+										</p>
+										<div className="text-4xl font-bold text-blue-500">
+											<FormattedNumber value={hostReport?.stream || 0} />
+										</div>
+									</div>
+									<div className="p-3 bg-blue-500/20 rounded-xl text-blue-500">
+										<IconDisc className="h-8 w-8" />
 									</div>
 								</div>
-								<div className="p-3 bg-blue-500/20 rounded-xl text-blue-500">
-									<IconDisc className="h-8 w-8" />
-								</div>
-							</div>
-						</CardContent>
-					</MotionCard>
+							</CardContent>
+						</MotionCard>
+					</Link>
 				</HasPermission>
 				<HasPermission section={DEAD_HOSTS} permission={VIEW} hideError>
-					<MotionCard
-						variants={item}
-						className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-red-500/10 to-transparent dark:from-red-500/20"
-						onClick={() => navigate("/nginx/404")}
-						whileHover={{ scale: 1.02 }}
-						whileTap={{ scale: 0.98 }}
+					<Link
+						to="/nginx/404"
+						className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
-						<CardContent className="p-6">
-							<div className="flex items-center justify-between space-x-4">
-								<div className="space-y-1">
-									<p className="text-sm font-medium text-muted-foreground">
-										<T id="dead_hosts.count_label" />
-									</p>
-									<div className="text-4xl font-bold text-red-500">
-										<FormattedNumber value={hostReport?.dead || 0} />
+						<MotionCard
+							variants={item}
+							className="cursor-pointer hover:shadow-md transition-all border-none bg-gradient-to-br from-red-500/10 to-transparent dark:from-red-500/20"
+							whileHover={{ scale: 1.02 }}
+							whileTap={{ scale: 0.98 }}
+						>
+							<CardContent className="p-6">
+								<div className="flex items-center justify-between space-x-4">
+									<div className="space-y-1">
+										<p className="text-sm font-medium text-muted-foreground">
+											<T id="dead_hosts.count_label" />
+										</p>
+										<div className="text-4xl font-bold text-red-500">
+											<FormattedNumber value={hostReport?.dead || 0} />
+										</div>
+									</div>
+									<div className="p-3 bg-red-500/20 rounded-xl text-red-500">
+										<IconBoltOff className="h-8 w-8" />
 									</div>
 								</div>
-								<div className="p-3 bg-red-500/20 rounded-xl text-red-500">
-									<IconBoltOff className="h-8 w-8" />
-								</div>
-							</div>
-						</CardContent>
-					</MotionCard>
+							</CardContent>
+						</MotionCard>
+					</Link>
 				</HasPermission>
 			</div>
 
 			<div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
 				<CertificateExpiryWidget />
 				<DashboardNotesWidget />
-				<TopHostsWidget />
-				<TopHostsWidget sort="bytes" />
-				<TopHostsWidget sort="client_errors" />
-				<TopHostsWidget sort="response_time" />
-				<TopHostsWidget sort="server_errors" />
+				<TopHostsRankingsWidget />
 			</div>
 		</m.div>
 	);

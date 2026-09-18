@@ -58,7 +58,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ### Bulk-Operationen
 
-- `bulkGenerateConfigs(model, host_type, hosts)` — Generiert Host-Konfigurationen nacheinander ohne einzelnen Reload. Setzt `skip_reload: true`; ein anschließender gemeinsamer Reload liegt beim Aufrufer. Die Reihenfolge verhindert, dass `nginx -t` eine andere Konfiguration während eines Schreibvorgangs prüft.
+- `bulkGenerateConfigs(model, host_type, hosts)` delegiert an `bulkGenerateConfigGroups(groups)`. Alle Hosts und Hosttypen eines Gruppenlaufs werden zunächst mit Sicherungen gestaged, dann genau einmal mit `nginx -tq` geprüft und erst anschließend atomar übernommen. Scheitert Rendern oder Validierung, werden alle bereits gestagten Dateien als `.err` gesichert und auf den vorherigen Zustand zurückgesetzt. Ein gemeinsamer Reload liegt weiter beim Aufrufer.
 
 ### Config-Parsing
 
@@ -112,4 +112,4 @@ Auch die abschließenden Reloads von Access-List-, Wartungs- und Tor-Sammelläuf
 
 Fehlt vor einer Konfigurationsänderung die aktive Datei, entfernt `backupConfig()` eine eventuell veraltete `.bak`-Datei. Ein späterer Generierungsfehler kann damit keinen zuvor inaktiven Listener wiederherstellen. Deaktivierte oder inzwischen gelöschte Hosts erhalten auch nach erfolgreichem Rendern `nginx_online: false`.
 
-Ein Einzelwechsel prüft die Gesamtkonfiguration einmal innerhalb von `reload()`, bevor das Reloadsignal gesendet wird. Die zuvor unmittelbar davor ausgeführte identische Prüfung entfällt. `skip_reload` prüft weiterhin jede geschriebene Konfiguration; der abschließende Sammel-Reload validiert erneut. `third-proxy-nginx.spec.js` deckt diese Pfade mit temporären Dateien und gemockten Prozessaufrufen ab.
+Ein Einzelwechsel prüft die Gesamtkonfiguration einmal innerhalb von `reload()`, bevor das Reloadsignal gesendet wird. Die zuvor unmittelbar davor ausgeführte identische Prüfung entfällt. Ein Sammellauf validiert alle gestagten Dateien genau einmal vor ihrem Commit; der abschließende Sammel-Reload validiert unverändert erneut. `third-proxy-nginx.spec.js` und `sixth-nginx-current-state.spec.js` decken den Einzel-, Batch- und Rollback-Pfad mit temporären Dateien und gemockten Prozessaufrufen ab.

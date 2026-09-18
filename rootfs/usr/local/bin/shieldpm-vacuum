@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+DATA_PATH="${DATA_PATH:-/data}"
+DATABASE_PATH="$DATA_PATH/shieldpm/database.sqlite"
+
+if [ ! -s "$DATABASE_PATH" ]; then
+    echo "ShieldPM SQLite database not found at $DATABASE_PATH" >&2
+    exit 1
+fi
+
+echo "Running explicit SQLite VACUUM for $DATABASE_PATH..."
+exec sqlite-vaccum.js

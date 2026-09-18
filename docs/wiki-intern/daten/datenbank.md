@@ -59,10 +59,10 @@ Während des Datenbankwechsels darf keine weitere ShieldPM-Instanz in die Quelld
 
 Datei: `backend/sqlite-vaccum.js`
 
-Führt `VACUUM` auf der vorhandenen SQLite-Datenbank unter `${DATA_PATH:-/data}/shieldpm/database.sqlite` aus. Eine fehlende Datei wird nicht stillschweigend als leere Datenbank angelegt.
+Führt `VACUUM` auf der vorhandenen SQLite-Datenbank unter `${DATA_PATH:-/data}/shieldpm/database.sqlite` aus. Eine fehlende Datei wird nicht stillschweigend als leere Datenbank angelegt. Diese vollständige Umschreibung ist bewusst **keine** Startoperation: `start.sh` führt nur den normalen Startpfad aus. Wartung wird explizit und in einem geplanten Wartungsfenster ausgelöst.
 
 ```bash
-node /usr/local/bin/sqlite-vaccum.js
+/usr/local/bin/shieldpm-vacuum
 ```
 
 ## Wichtige Hinweise

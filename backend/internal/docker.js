@@ -37,6 +37,7 @@ class DockerService {
 		this.clients = [];
 		this.initialized = false;
 		this.initializationPromise = null;
+		this.pendingHostIds = new Set();
 	}
 
 	async init() {
@@ -232,36 +233,33 @@ class DockerService {
 	triggerReload() {
 		if (this.reloadTimer) clearTimeout(this.reloadTimer);
 		this.reloadTimer = setTimeout(async () => {
+			this.reloadTimer = null;
+			const hostIds = [...this.pendingHostIds];
+			this.pendingHostIds.clear();
 			try {
+				if (hostIds.length > 0) {
+					logger.info(`Docker Auto-Discovery: Validating ${hostIds.length} queued host update(s)...`);
+					const hosts = await ProxyHost.query()
+						.whereIn("id", hostIds)
+						.where("is_deleted", 0)
+						.withGraphFetched("[owner,access_list.[items,clients],certificate,host_domains]");
+					await internalNginx.bulkGenerateConfigs(ProxyHost, "proxy_host", hosts);
+				}
 				logger.info("Docker Auto-Discovery: Triggering batched Nginx reload...");
 				await internalNginx.reload();
 			} catch (err) {
-				logger.error("Docker Auto-Discovery: Reload failed", err);
+				logger.error("Docker Auto-Discovery: Batch configuration or reload failed", err);
 			}
-		}, 2000); // 2 seconds debounce
+		}, 2000);
 	}
 
 	/**
-	 * Configure Nginx for a specific host (Internal - just updates DB, does NOT reload immediately)
+	 * Queue a changed host for a debounced Nginx batch.
 	 * @param {number} hostId
 	 */
 	async configureNginx(hostId) {
-		try {
-			const host = await ProxyHost.query()
-				.findById(hostId)
-				.withGraphFetched("[owner,access_list.[items,clients],certificate,host_domains]")
-				.where("is_deleted", 0);
-
-			if (host) {
-				// Validate each generated file and restore its backup before batching activation.
-				await internalNginx.configure(ProxyHost, "proxy_host", host, { skip_reload: true });
-			}
-
-			// Always trigger the debounced reload
-			this.triggerReload();
-		} catch (err) {
-			logger.error(`Docker Auto-Discovery: Error configuring Nginx for host #${hostId}`, err);
-		}
+		this.pendingHostIds.add(hostId);
+		this.triggerReload();
 	}
 
 	/**

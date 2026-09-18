@@ -1,4 +1,5 @@
 import { IconAlertTriangle, IconChartBar, IconClock } from "@tabler/icons-react";
+import { useState } from "react";
 import { FormattedNumber } from "react-intl";
 import { Link } from "react-router-dom";
 import type { AnalyticsTopHostsSort } from "src/api/backend";
@@ -159,3 +160,37 @@ export const TopHostsWidget = ({ sort }: TopHostsWidgetProps) => (
 		<TopHostsContent sort={sort ?? "requests"} />
 	</HasPermission>
 );
+
+const rankingOptions: Array<[AnalyticsTopHostsSort, string]> = [
+	["requests", "dashboard.top-hosts"],
+	["bytes", "dashboard.top-bandwidth"],
+	["client_errors", "dashboard.top-client-errors"],
+	["response_time", "dashboard.top-response-time"],
+	["server_errors", "dashboard.top-server-errors"],
+];
+
+export const TopHostsRankingsWidget = () => {
+	const [sort, setSort] = useState<AnalyticsTopHostsSort>("requests");
+	return (
+		<HasPermission section={ANALYTICS} permission={VIEW} hideError>
+			<div className="space-y-2">
+				<div className="flex flex-wrap gap-1" role="tablist">
+					{rankingOptions.map(([value, label]) => (
+						<button
+							key={value}
+							type="button"
+							role="tab"
+							aria-selected={sort === value}
+							className="rounded-md px-2 py-1 text-xs font-medium hover:bg-muted data-[active=true]:bg-muted"
+							data-active={sort === value}
+							onClick={() => setSort(value)}
+						>
+							<T id={label} />
+						</button>
+					))}
+				</div>
+				<TopHostsContent sort={sort} />
+			</div>
+		</HasPermission>
+	);
+};

@@ -83,6 +83,10 @@ const internalNginx = {
 			throw err;
 		}
 
+		if (options.defer_validation) {
+			return { host, host_type, model };
+		}
+
 		try {
 			// 3. Test nginx configuration
 			// reload() already validates the complete configuration before signalling Nginx.
@@ -120,6 +124,24 @@ const internalNginx = {
 			});
 		}
 		return combined_meta;
+	},
+
+	commitStagedConfig: async ({ host, host_type, model }) => {
+		const meta = await updateHostStatus(model, host, {
+			nginx_online: Boolean(host.enabled),
+			nginx_err: null,
+		});
+		await internalNginx.deleteBackupConfig(host_type, host);
+		return meta;
+	},
+
+	rollbackStagedConfig: async ({ host, host_type, model }, err) => {
+		await internalNginx.renameConfigAsError(host_type, host);
+		await internalNginx.restoreConfig(host_type, host);
+		return await updateHostStatus(model, host, {
+			nginx_online: false,
+			nginx_err: `[Rolled back] Configuration failed: ${err.message}`,
+		});
 	},
 
 	/**
@@ -462,12 +484,39 @@ const internalNginx = {
 	 * @param   {Array}   hosts
 	 * @returns {Promise}
 	 */
-	bulkGenerateConfigs: async (model, hostType, hosts) => {
-		// nginx -t validates every host, so another host must not be halfway through a write or rollback.
-		for (const host of hosts) {
-			await internalNginx.configure(model, hostType, host, { skip_reload: true });
-		}
-	},
+	bulkGenerateConfigs: async (model, hostType, hosts) =>
+		internalNginx.bulkGenerateConfigGroups([{ hostType, hosts, model }]),
+
+	/**
+	 * Render multiple host types into one atomic validation batch.
+	 * @param {Array<{model: object, hostType: string, hosts: Array<object>}>} groups
+	 * @returns {Promise<Array<object>>}
+	 */
+	bulkGenerateConfigGroups: async (groups) =>
+		internalNginx.withConfigurationLock(async () => {
+			/** @type {Array<{host: object, host_type: string, model: object}>} */
+			const stages = [];
+			try {
+				for (const { model, hostType, hosts } of groups) {
+					for (const host of hosts) {
+						const stage = await internalNginx.configureHost(model, hostType, host, {
+							defer_validation: true,
+							skip_reload: true,
+						});
+						stages.push(/** @type {{host: object, host_type: string, model: object}} */ (stage));
+					}
+				}
+				await internalNginx.test();
+				const statuses = await Promise.all(stages.map((stage) => internalNginx.commitStagedConfig(stage)));
+				Promise.resolve()
+					.then(() => internalAnubis.generatePolicy())
+					.catch((err) => logger.error(`Anubis policy generation failed: ${err.message}`));
+				return statuses;
+			} catch (err) {
+				logger.error(`Nginx batch test failed: ${err.message}`);
+				return await Promise.all(stages.map((stage) => internalNginx.rollbackStagedConfig(stage, err)));
+			}
+		}),
 
 	/**
 	 * @param   {string}  cfg

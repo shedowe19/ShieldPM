@@ -63,6 +63,19 @@ describe("analytics input and transaction resilience", () => {
 		expect(service.detailedLogBuffer).toHaveLength(1000);
 		expect(service.aggregationBuffer.size).toBe(500);
 	});
+	it("bounds pending tail callbacks before a burst can consume unbounded memory", () => {
+		const setImmediateSpy = vi.spyOn(globalThis, "setImmediate").mockImplementation(() => /** @type {any} */ (0));
+		try {
+			const service = new AnalyticsService();
+			const line = JSON.stringify({ status: 200, time_iso8601: "2026-09-01T12:00:00.000Z" });
+			for (let i = 0; i < 2_500; i++) service.enqueueLine(line);
+
+			expect(service.lineQueue).toHaveLength(2_000);
+			expect(service.droppedLineCount).toBe(500);
+		} finally {
+			setImmediateSpy.mockRestore();
+		}
+	});
 	it("rolls back earlier chunks if a later aggregation chunk fails, so retry cannot double count", async () => {
 		const committed = [];
 		mocks.transaction.mockImplementation(async (callback) => {

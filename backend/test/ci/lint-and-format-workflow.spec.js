@@ -121,15 +121,25 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).not.toContain("node --input-type=module <<'NODE'");
 	});
 
-	it("runs the MariaDB migration-recovery integration test in an isolated database service", () => {
+	it("runs the MariaDB migration-recovery integration test with its dynamic service port in step scope", () => {
 		expect(workflow).toContain("mariadb:");
 		expect(workflow).toContain("mariadb:11.8.3");
 		expect(workflow).toContain('SHIELDPM_TEST_MARIADB: "1"');
 		expect(workflow).toContain("mariadb-interrupted-zstd-runner.spec.js");
+		expect(workflow).toMatch(
+			/Run MariaDB interrupted-migration recovery test\n {8}env:\n {10}SHIELDPM_TEST_MARIADB_PORT: \$\{\{ job\.services\.mariadb\.ports\['3306'\] \}\}/,
+		);
+		expect(workflow).not.toMatch(/^ {4}env:\n(?:.*\n)*? {6}SHIELDPM_TEST_MARIADB_PORT:/m);
 	});
 
 	it("enforces the compressed frontend bundle budget after producing the build", () => {
 		expect(workflow).toContain("check-bundle-budget.cjs");
 		expect(workflow.indexOf("check-bundle-budget.cjs")).toBeGreaterThan(workflow.indexOf("Build frontend"));
+	});
+
+	it("runs the browser smoke test against the built frontend in a dedicated Chromium job", () => {
+		expect(workflow).toContain("frontend-e2e:");
+		expect(workflow).toContain("node node_modules/@playwright/test/cli.js install --with-deps chromium");
+		expect(workflow).toContain("test:e2e:ci");
 	});
 });

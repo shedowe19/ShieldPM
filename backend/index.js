@@ -79,7 +79,8 @@ async function appStart() {
 
 			process.on("SIGTERM", () => {
 				logger.info(`PID ${process.pid} received SIGTERM`);
-				server.close(() => {
+				server.close(async () => {
+					await analyticsService.stop();
 					logger.info("Stopping.");
 					process.exit(0);
 				});

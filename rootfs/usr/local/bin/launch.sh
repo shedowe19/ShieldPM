@@ -71,7 +71,8 @@ if ! nginx -tq; then
     done
     echo "Retesting Nginx configuration..."
     if ! nginx -tq; then
-        echo "Nginx configuration STILL fails. Continuing anyway..."
+        echo "Nginx configuration STILL fails. Exiting."
+        exit 1
     fi
 fi
 if [ "$PHP82" = "true" ]; then
@@ -143,9 +144,37 @@ if [ "$GOA" = "true" ]; then while true; do if [ -f /data/nginx/json_access.log 
                     --date-format="%d/%b/%Y" --log-format='[%d:%t %^] %v %h %T "%r" %s %b %b "%R" "%u"' --unix-socket=/run/shieldpm/goaccess.sock --log-file=- \
                     --real-time-html --output=/run/shieldpm/goa/index.html --persist --restore --db-path=/data/goaccess/data \
                     --browsers-file=/etc/goaccess/browsers.list --browsers-file=/etc/goaccess/podcast.list $GOACLA; sleep 1; else sleep 10s; fi; done; fi &
-while true; do nginx -e stderr; sleep 1; done &
-while true; do
-  cd /app || exit 1
-  node index.js
-  sleep 1
-done
+nginx -e stderr &
+nginx_pid=$!
+
+cd /app || exit 1
+node index.js &
+backend_pid=$!
+
+stop_critical_children() {
+    kill "$nginx_pid" "$backend_pid" 2>/dev/null || true
+    wait "$nginx_pid" "$backend_pid" 2>/dev/null || true
+}
+
+trap 'stop_critical_children; exit 0' INT TERM
+
+wait_for_critical_children() {
+    while kill -0 "$nginx_pid" 2>/dev/null && kill -0 "$backend_pid" 2>/dev/null; do
+        sleep 1
+    done
+
+    if ! kill -0 "$nginx_pid" 2>/dev/null; then
+        wait "$nginx_pid"
+        status=$?
+        echo "Nginx exited with status $status; stopping container."
+    else
+        wait "$backend_pid"
+        status=$?
+        echo "ShieldPM backend exited with status $status; stopping container."
+    fi
+
+    stop_critical_children
+    return "$status"
+}
+
+wait_for_critical_children

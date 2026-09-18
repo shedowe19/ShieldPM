@@ -170,11 +170,6 @@ migrate_legacy_directory /data/npm /data/shieldpm /data/shieldpm/migration-backu
 
 migrate_legacy_sqlite /data/database.sqlite /data/shieldpm/database.sqlite /data/shieldpm/migration-backups || exit 1
 
-if [ -s /data/shieldpm/database.sqlite ]; then
-    sqlite-vaccum.js
-fi
-
-
 if [ -s /data/keys.json ]; then
     mv -vn /data/keys.json /data/shieldpm/keys.json
 fi

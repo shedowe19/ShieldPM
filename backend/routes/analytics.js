@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import express from "express";
+import analyticsService from "../internal/analytics.js";
 import jwtdecode from "../lib/express/jwt-decode.js";
 import AnalyticCount from "../models/analytic_count.js";
 import AnalyticsLogs from "../models/analytics_logs.js";
@@ -228,6 +229,7 @@ router.get("/status", async (_req, res) => {
 		const rx = net.reduce((acc, iface) => acc + (iface.rx_sec || 0), 0);
 		const tx = net.reduce((acc, iface) => acc + (iface.tx_sec || 0), 0);
 		res.json({
+			ingestion: analyticsService.getStatus(),
 			rx_sec: rx,
 			tx_sec: tx,
 			total_sec: rx + tx,

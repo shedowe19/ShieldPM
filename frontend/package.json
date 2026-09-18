@@ -5,6 +5,7 @@
   "author": "ShieldPM Contributors (based on work by Jamie Curnow and ZoeyVid)",
   "license": "UNLICENSED",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "type": "module",
   "engines": {
     "node": ">=26"

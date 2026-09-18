@@ -1365,23 +1365,21 @@ const internalGitOps = {
 				}
 			}
 
-			// 7. Regenerate Nginx Configs
-			await internalNginx.bulkGenerateConfigs(
-				ProxyHost,
-				"proxy_host",
-				await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
-			);
-			await internalNginx.bulkGenerateConfigs(
-				RedirectionHost,
-				"redirection_host",
-				await RedirectionHost.query().where("is_deleted", 0),
-			);
-			await internalNginx.bulkGenerateConfigs(
-				DeadHost,
-				"dead_host",
-				await DeadHost.query().where("is_deleted", 0),
-			);
-			await internalNginx.bulkGenerateConfigs(Stream, "stream", await Stream.query().where("is_deleted", 0));
+			// 7. Regenerate all affected configurations as one validated batch.
+			await internalNginx.bulkGenerateConfigGroups([
+				{
+					model: ProxyHost,
+					hostType: "proxy_host",
+					hosts: await ProxyHost.query().where("is_deleted", 0).withGraphFetched("host_domains"),
+				},
+				{
+					model: RedirectionHost,
+					hostType: "redirection_host",
+					hosts: await RedirectionHost.query().where("is_deleted", 0),
+				},
+				{ model: DeadHost, hostType: "dead_host", hosts: await DeadHost.query().where("is_deleted", 0) },
+				{ model: Stream, hostType: "stream", hosts: await Stream.query().where("is_deleted", 0) },
+			]);
 
 			await internalNginx.reload();
 

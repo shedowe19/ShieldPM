@@ -75,7 +75,12 @@ vi.mock("../../lib/config.js", () => ({ isDemoMode: () => false }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn(), decrypt: vi.fn() }));
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("../../internal/nginx.js", () => ({
-	default: { bulkGenerateConfigs: vi.fn(), reload: vi.fn(), deleteConfig: vi.fn() },
+	default: {
+		bulkGenerateConfigGroups: vi.fn(),
+		bulkGenerateConfigs: vi.fn(),
+		reload: vi.fn(),
+		deleteConfig: vi.fn(),
+	},
 }));
 
 import gitops from "../../internal/gitops.js";

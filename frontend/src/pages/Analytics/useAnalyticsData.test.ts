@@ -172,4 +172,27 @@ describe("useAnalyticsData", () => {
 		expect(result.current.summary).toEqual({ count: 55 });
 		expect(result.current.series).toHaveLength(1);
 	});
+
+	it("polls historical ranges less frequently than live ranges", async () => {
+		vi.useFakeTimers();
+		vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+		vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+		renderHook(() => useAnalyticsData("42", "30d"));
+		await act(async () => {});
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(10_000);
+		});
+		expect(getAnalyticsSummary).toHaveBeenCalledTimes(1);
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(50_000);
+		});
+		expect(getAnalyticsSummary).toHaveBeenCalledTimes(2);
+	});
+
+	it("uses date-aware labels for downsampled historical series", async () => {
+		const { result } = renderHook(() => useAnalyticsData("42", "30d"));
+		await waitFor(() => expect(result.current.loading).toBe(false));
+		expect(result.current.series[0]?.timeDisplay).toBe("Jan 1");
+	});
 });

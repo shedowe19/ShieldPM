@@ -8,6 +8,13 @@ type ChartSeriesPoint = TimeSeriesPoint & { timeDisplay: string };
 const canPoll = () =>
 	isPollingAllowed({ isDocumentVisible: document.visibilityState === "visible", isOnline: navigator.onLine });
 
+const formatSeriesTime = (timestamp: string | undefined, range: string) => {
+	const time = dayjs(timestamp);
+	if (range === "30d") return time.format("MMM D");
+	if (range === "7d") return time.format("ddd HH:mm");
+	return time.format("HH:mm");
+};
+
 export const useAnalyticsData = (selectedHostId: string, range: string) => {
 	const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
 	const [series, setSeries] = useState<ChartSeriesPoint[]>([]);
@@ -46,7 +53,7 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 				setSeries(
 					seriesData.map((point) => ({
 						...point,
-						timeDisplay: dayjs(point.timestamp).format("HH:mm"),
+						timeDisplay: formatSeriesTime(point.timestamp, range),
 					})),
 				);
 				return true;
@@ -64,7 +71,7 @@ export const useAnalyticsData = (selectedHostId: string, range: string) => {
 		const scheduleNextFetch = (failureCount: number) => {
 			clearScheduledFetch();
 			const interval = getPollingInterval({
-				baseIntervalMs: 10_000,
+				baseIntervalMs: ["7d", "30d"].includes(range) ? 60_000 : 10_000,
 				failureCount,
 				isDocumentVisible: document.visibilityState === "visible",
 				isOnline: navigator.onLine,

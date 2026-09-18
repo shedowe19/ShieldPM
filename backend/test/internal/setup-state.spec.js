@@ -8,7 +8,7 @@ vi.mock("../../db.js", async () => {
 });
 vi.mock("../../lib/config.js", () => ({ isSqlite: () => true }));
 vi.mock("../../internal/nginx.js", () => ({
-	default: { generateConfig: state.generate, bulkGenerateConfigs: state.bulk },
+	default: { generateConfig: state.generate, bulkGenerateConfigGroups: state.bulk, bulkGenerateConfigs: state.bulk },
 }));
 vi.mock("../../lib/certbot.js", () => ({ installPlugins: vi.fn() }));
 vi.mock("../../lib/utils.js", () => ({ default: { writeHash: state.writeHash } }));
@@ -150,7 +150,9 @@ describe("startup preserves persisted setup state", () => {
 		state.hosts = [{ id: 7, domain_names: ["dead.example.test"] }];
 		vi.stubEnv("REGENERATE_ALL", "true");
 		await regenerateAllHosts();
-		expect(state.bulk).toHaveBeenCalledWith(expect.anything(), "dead_host", state.hosts);
+		expect(state.bulk).toHaveBeenCalledWith([
+			{ model: expect.anything(), hostType: "dead_host", hosts: state.hosts },
+		]);
 	});
 	it("keeps startup pending until the regenerated configuration fingerprint is persisted", async () => {
 		vi.stubEnv("REGENERATE_ALL", "true");

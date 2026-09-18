@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
+	analyticsStop: vi.fn(async () => {}),
 	port: 0,
 	servers: [],
 	completed: false,
@@ -27,7 +28,7 @@ vi.mock("../../app.js", async () => {
 		},
 	};
 });
-vi.mock("../../internal/analytics.js", () => ({ default: { init: async () => {} } }));
+vi.mock("../../internal/analytics.js", () => ({ default: { init: async () => {}, stop: state.analyticsStop } }));
 vi.mock("../../internal/certificate.js", () => ({ default: { initTimer: async () => {} } }));
 vi.mock("../../internal/chat.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/cloudflared.js", () => ({ default: { init: async () => {} } }));
@@ -108,6 +109,7 @@ describe("backend listener lifecycle", () => {
 		expect(handlers).toHaveLength(1);
 		handlers[0]();
 		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
+		expect(state.analyticsStop).toHaveBeenCalledOnce();
 		expect(server.listening).toBe(false);
 	});
 });

@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { RawIntlProvider } from "react-intl";
 import { useLocaleState } from "src/context";
 import { intl } from "src/locale";
@@ -12,7 +12,7 @@ function LocaleRefreshBoundary({ children }: Props) {
 
 	return (
 		<RawIntlProvider value={intl}>
-			<Fragment key={locale}>{children}</Fragment>
+			<div data-locale={locale}>{children}</div>
 		</RawIntlProvider>
 	);
 }

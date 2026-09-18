@@ -23,4 +23,9 @@ describe("analytics startup order", () => {
 			expect(analyticsInitIndex).toBeGreaterThan(migrationIndex);
 		});
 	}
+
+	it("flushes queued analytics before the production process exits on SIGTERM", () => {
+		const startupSource = readBackendSource("index.js");
+		expect(startupSource).toMatch(/server\.close\(async \(\) => \{[\s\S]*?await analyticsService\.stop\(\)/);
+	});
 });

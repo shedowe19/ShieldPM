@@ -9,6 +9,7 @@ export interface LocaleContextType {
 
 const initalValue = null;
 const LocaleContext = createContext<LocaleContextType | null>(initalValue);
+const LocaleRevisionContext = createContext("");
 
 // Provider
 interface Props {
@@ -23,7 +24,11 @@ function LocaleProvider({ children }: Props) {
 
 	const value = { locale, setLocale };
 
-	return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
+	return (
+		<LocaleContext.Provider value={value}>
+			<LocaleRevisionContext.Provider value={locale}>{children}</LocaleRevisionContext.Provider>
+		</LocaleContext.Provider>
+	);
 }
 
 function useLocaleState() {
@@ -34,5 +39,9 @@ function useLocaleState() {
 	return context;
 }
 
-export { LocaleProvider, useLocaleState };
+function useLocaleRevision() {
+	return useContext(LocaleRevisionContext);
+}
+
+export { LocaleProvider, useLocaleRevision, useLocaleState };
 export default LocaleContext;

@@ -115,6 +115,23 @@ describe.each(["sqlite", "postgres"])("queued Nginx jobs use current persisted h
 		expect((await currentHost()).meta).toMatchObject({ revision: "new", nginx_online: true });
 	});
 
+	it("validates a multi-host batch once after every staged configuration is rendered", async () => {
+		await state.db("proxy_host").insert({
+			id: 8,
+			forward_host: "second-upstream.test",
+			forward_scheme: "http",
+			forward_port: 8080,
+			meta: JSON.stringify({}),
+		});
+		await state.db("host_domain").insert({ proxy_host_id: 8, domain_name: "second.example.test" });
+		const snapshots = [await currentHost(), await ProxyHost.query().findById(8).withGraphFetched(graph)];
+
+		await nginx.bulkGenerateConfigs(ProxyHost, "proxy_host", snapshots);
+
+		expect(utils.execFile).toHaveBeenCalledTimes(1);
+		expect(utils.execFile).toHaveBeenCalledWith("nginx", ["-tq"]);
+	});
+
 	it("does not return legacy DNS credentials while refreshing the stored render graph", async () => {
 		await ProxyHost.query()
 			.findById(7)

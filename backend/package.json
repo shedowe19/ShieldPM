@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "private": true,
   "main": "index.js",
+  "packageManager": "yarn@1.22.22",
   "type": "module",
   "engines": {
     "node": ">=26"
@@ -73,6 +74,7 @@
     "vitest": "^4.1.11"
   },
   "scripts": {
-    "test": "vitest"
+  "dev": "node index-dev.js",
+  "test": "vitest"
   }
 }
