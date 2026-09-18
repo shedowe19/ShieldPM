@@ -59,6 +59,12 @@ Die automatisch erzeugte `grpc_pass`-Zieladresse erhält keinen angehängten `$r
 
 Explizite URI-Anteile im gRPC-Ziel bleiben vom Nginx-Modul nicht unterstützt; die Korrektur führt keine neue Rewrite- oder Präfixersetzungssemantik ein. `fifth-grpc-upstream-address.spec.js` prüft die tatsächliche Liquid-Ausgabe. Der Docker-Smoke startet zusätzlich einen isolierten Nginx-Prozess und einen lokalen Node-HTTP/2-Echodienst; zwei über die Image-Templates erzeugte gRPC-Weiterleitungen müssen POST, Methodenpfad, Query und gerahmten Body vollständig übertragen. Dieser Test benötigt keine externen Provider.
 
+## TCP-Listener-Resilienz
+
+Die HTTP-, HTTPS- und TCP-Stream-Templates verwenden für TCP kein `reuseport`. Mit `reuseport` erhält jeder Nginx-Worker einen eigenen TCP-Listening-Socket. Ein fehlerhafter Worker kann dadurch weiter neue Verbindungen zugeteilt bekommen, ohne sie zu bedienen. Geteilte TCP-Listener erlauben den verbleibenden gesunden Workern, neue Verbindungen weiter anzunehmen.
+
+`deferred` und `so_keepalive=on` bleiben für TCP erhalten. UDP-Streams und QUIC/HTTP/3 behalten `reuseport`, weil diese UDP-Pfade andere Socket-Semantiken benötigen. Der Regressionstest `backend/test/internal/tcp-listener-stability.spec.js` schützt diese Trennung.
+
 ## Verwandte Seiten
 
 - [Nginx-Engine](../module/nginx-engine.md)
