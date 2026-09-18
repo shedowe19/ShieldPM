@@ -96,6 +96,13 @@ const internalProxyHost = {
 	 * @param   {string}  [data.terminal_password]
 	 * @param   {string}  [data.terminal_private_key]
 	 * @param   {Array<Object>} [data.host_domains]
+	 * @param   {boolean|number} [data.upload_relay_enabled]
+	 * @param   {number} [data.upload_relay_chunk_size]
+	 * @param   {number} [data.upload_relay_max_file_size]
+	 * @param   {number} [data.upload_relay_max_pending_bytes]
+	 * @param   {number} [data.upload_relay_cleanup_hours]
+	 * @param   {string} [data.upload_relay_path]
+	 * @param   {string} [data.upload_relay_target_path]
 	 * @returns {Promise}
 	 */
 	create: async (access, data) => {

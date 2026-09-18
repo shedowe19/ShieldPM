@@ -638,6 +638,10 @@ const createUploadRelay = ({
 	};
 
 	return {
+		/**
+		 * @param {number} hostId
+		 * @param {{filename?: string, length?: number, mediaType?: string}} [upload]
+		 */
 		async create(hostId, { filename, length, mediaType } = {}) {
 			return await withLock(`${hostId}:create`, async () => {
 				const config = await getConfig(hostId);
