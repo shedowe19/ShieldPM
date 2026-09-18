@@ -68,7 +68,7 @@ Führt `VACUUM` auf der vorhandenen SQLite-Datenbank unter `${DATA_PATH:-/data}/
 ## Wichtige Hinweise
 
 - SQLite ist die Standard-Engine; MySQL/MariaDB und PostgreSQL werden ebenfalls unterstützt.
-- Die vollständige Migrationskette wird mit SQLite und der eingebetteten PostgreSQL-Engine PGlite ausgeführt. Zusätzlich führt der CI-Job `mariadb-migration` den Unterbrechungsfall der Zstd-Migration gegen MariaDB 11.8.3 über den echten Knex-Migrationsrunner aus; eine vollständige MariaDB-Matrix für jede historische Migration besteht weiterhin nicht.
+- Die vollständige Migrationskette wird mit SQLite, der eingebetteten PostgreSQL-Engine PGlite und einer frischen MariaDB-11.8.3-Datenbank ausgeführt. Der CI-Job `mariadb-migration` lässt jede Datei aus `backend/migrations/` über den produktiven Knex-Runner laufen, verifiziert die komplette Migrationsregistrierung und prüft anschließend einen wiederholten leeren Lauf. Zusätzlich bleibt der Zstd-Unterbrechungs-Recovery-Fall auf MariaDB abgedeckt.
 - Boolean-Felder werden sowohl aus SQLite-/MySQL-Integerwerten als auch aus nativen PostgreSQL-Booleans korrekt gelesen.
 
 ## Verwandte Seiten

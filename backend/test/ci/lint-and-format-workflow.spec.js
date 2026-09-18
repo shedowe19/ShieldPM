@@ -121,13 +121,13 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).not.toContain("node --input-type=module <<'NODE'");
 	});
 
-	it("runs the MariaDB migration-recovery integration test with its dynamic service port in step scope", () => {
+	it("runs every MariaDB migration integration test with its dynamic service port in step scope", () => {
 		expect(workflow).toContain("mariadb:");
 		expect(workflow).toContain("mariadb:11.8.3");
 		expect(workflow).toContain('SHIELDPM_TEST_MARIADB: "1"');
-		expect(workflow).toContain("mariadb-interrupted-zstd-runner.spec.js");
+		expect(workflow).toContain("test/migrations/mariadb-*.spec.js");
 		expect(workflow).toMatch(
-			/Run MariaDB interrupted-migration recovery test\n {8}env:\n {10}SHIELDPM_TEST_MARIADB_PORT: \$\{\{ job\.services\.mariadb\.ports\['3306'\] \}\}/,
+			/Run complete MariaDB migration suite\n {8}env:\n {10}SHIELDPM_TEST_MARIADB_PORT: \$\{\{ job\.services\.mariadb\.ports\['3306'\] \}\}/,
 		);
 		expect(workflow).not.toMatch(/^ {4}env:\n(?:.*\n)*? {6}SHIELDPM_TEST_MARIADB_PORT:/m);
 	});

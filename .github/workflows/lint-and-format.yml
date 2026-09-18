@@ -103,7 +103,7 @@ jobs:
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/frontend" audit --level high
 
   mariadb-migration:
-    name: MariaDB migration recovery
+    name: MariaDB migrations
     runs-on: ubuntu-latest
     services:
       mariadb:
@@ -134,10 +134,10 @@ jobs:
       - name: Install backend dependencies
         run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" install --frozen-lockfile
 
-      - name: Run MariaDB interrupted-migration recovery test
+      - name: Run complete MariaDB migration suite
         env:
           SHIELDPM_TEST_MARIADB_PORT: ${{ job.services.mariadb.ports['3306'] }}
-        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" test --run test/migrations/mariadb-interrupted-zstd-runner.spec.js
+        run: cd /tmp && npx --yes --package yarn@1.22.22 yarn --cwd "$GITHUB_WORKSPACE/backend" test --run test/migrations/mariadb-*.spec.js
 
   frontend-e2e:
     name: Frontend browser smoke
