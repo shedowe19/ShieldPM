@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Bandbreitenbegrenzung",
 	"blockExploits": "Exploits blockieren",
 	"cachingEnabled": "Caching aktiviert",
+	"zstdEnabled": "Zstd-Komprimierung",
 	"cancel": "Abbrechen",
 	"certificate": "Zertifikat",
 	"certificate.custom": "Benutzerdefiniertes Zertifikat",

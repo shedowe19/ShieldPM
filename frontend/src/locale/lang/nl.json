@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Bandbreedte Limiet",
 	"blockExploits": "Exploits Blokkeren",
 	"cachingEnabled": "Caching Ingeschakeld",
+	"zstdEnabled": "Zstd-compressie",
 	"cancel": "Annuleren",
 	"certificate": "Certificaat",
 	"certificate.custom": "Aangepast Certificaat",

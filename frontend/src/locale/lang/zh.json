@@ -194,6 +194,7 @@
 	"bandwidthLimit": "带宽限制",
 	"blockExploits": "阻止漏洞利用",
 	"cachingEnabled": "已启用缓存",
+	"zstdEnabled": "Zstd 压缩",
 	"cancel": "取消",
 	"certificate": "证书",
 	"certificate.custom": "自定义证书",

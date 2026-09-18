@@ -194,6 +194,7 @@
 	"bandwidthLimit": "대역폭 제한",
 	"blockExploits": "익스플로잇 차단",
 	"cachingEnabled": "캐싱 활성화됨",
+	"zstdEnabled": "Zstd 압축",
 	"cancel": "취소",
 	"certificate": "인증서",
 	"certificate.custom": "사용자 지정 인증서",

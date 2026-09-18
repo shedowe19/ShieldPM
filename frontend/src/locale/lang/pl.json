@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Limit przepustowości",
 	"blockExploits": "Blokuj exploity",
 	"cachingEnabled": "Buforowanie włączone",
+	"zstdEnabled": "Kompresja Zstd",
 	"cancel": "Anuluj",
 	"certificate": "Certyfikat",
 	"certificate.custom": "Certyfikat własny",

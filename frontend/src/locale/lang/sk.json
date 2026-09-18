@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Limit šírky pásma",
 	"blockExploits": "Blokovať exploity",
 	"cachingEnabled": "Ukladanie do vyrovnávacej pamäte povolené",
+	"zstdEnabled": "Kompresia Zstd",
 	"cancel": "Zrušiť",
 	"certificate": "Certifikát",
 	"certificate.custom": "Vlastný certifikát",

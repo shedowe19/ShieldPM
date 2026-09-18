@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Giới hạn băng thông",
 	"blockExploits": "Chặn các lỗ hổng",
 	"cachingEnabled": "Đã bật bộ nhớ đệm",
+	"zstdEnabled": "Nén Zstd",
 	"cancel": "Hủy",
 	"certificate": "Chứng chỉ",
 	"certificate.custom": "Chứng chỉ tùy chỉnh",

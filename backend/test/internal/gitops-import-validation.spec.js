@@ -136,6 +136,7 @@ describe("GitOps import sanitization and safe restore", () => {
 			forward_host: "upstream",
 			certificate_id: 4,
 			ssl_forced: true,
+			zstd_enabled: true,
 			advanced_config: "add_header X-Test true;",
 			unknown: "remove",
 		});
@@ -146,6 +147,7 @@ describe("GitOps import sanitization and safe restore", () => {
 			host_domains: [{ domain_name: "example.com" }],
 			certificate_id: 4,
 			ssl_forced: true,
+			zstd_enabled: true,
 		});
 		expect(mocks.writes[0].data).not.toHaveProperty("domain_names");
 		expect(mocks.writes[0].data).not.toHaveProperty("unknown");

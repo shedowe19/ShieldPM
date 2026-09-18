@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Лимит пропускной способности",
 	"blockExploits": "Блокировать эксплойты",
 	"cachingEnabled": "Кэширование включено",
+	"zstdEnabled": "Сжатие Zstd",
 	"cancel": "Отменить",
 	"certificate": "Сертификат",
 	"certificate.custom": "Свой сертификат",

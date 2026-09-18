@@ -68,6 +68,7 @@ const ALLOWED_IMPORT_FIELDS = {
 		"certificate_id",
 		"ssl_forced",
 		"caching_enabled",
+		"zstd_enabled",
 		"block_exploits",
 		"security_crowdsec",
 		"anubis_enabled",

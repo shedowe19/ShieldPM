@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Лимит на честотната лента",
 	"blockExploits": "Блокирай експлойти",
 	"cachingEnabled": "Кеширането е активирано",
+	"zstdEnabled": "Zstd компресия",
 	"cancel": "Отказ",
 	"certificate": "Сертификат",
 	"certificate.custom": "Потребителски сертификат",

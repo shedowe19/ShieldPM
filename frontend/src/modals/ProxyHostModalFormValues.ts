@@ -28,6 +28,7 @@ export const createProxyHostInitialValues = (data: Partial<ProxyHost> = {}): Pro
 
 	accessListId: data.accessListId || 0,
 	cachingEnabled: data.cachingEnabled || false,
+	zstdEnabled: data.zstdEnabled || false,
 	disableBuffering: data.disableBuffering || false,
 	blockExploits: data.blockExploits || false,
 	allowWebsocketUpgrade: data.allowWebsocketUpgrade || false,

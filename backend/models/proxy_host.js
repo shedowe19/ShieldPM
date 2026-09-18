@@ -18,6 +18,7 @@ const boolFields = [
 	"is_deleted",
 	"ssl_forced",
 	"caching_enabled",
+	"zstd_enabled",
 	"block_exploits",
 	"allow_websocket_upgrade",
 	"http2_support",
@@ -67,6 +68,8 @@ class ProxyHost extends Model {
 	ssl_forced;
 	/** @type {number} */
 	caching_enabled;
+	/** @type {number} */
+	zstd_enabled;
 	/** @type {number} */
 	block_exploits;
 	/** @type {number} */

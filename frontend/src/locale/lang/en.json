@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Bandwidth Limit",
 	"blockExploits": "Block Exploits",
 	"cachingEnabled": "Caching Enabled",
+	"zstdEnabled": "Zstd Compression",
 	"cancel": "Cancel",
 	"certificate": "Certificate",
 	"certificate.custom": "Custom Certificate",

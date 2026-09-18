@@ -76,6 +76,9 @@
 						"caching_enabled": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/caching_enabled"
 						},
+						"zstd_enabled": {
+							"$ref": "../../../../components/proxy-host-object.json#/properties/zstd_enabled"
+						},
 						"allow_websocket_upgrade": {
 							"$ref": "../../../../components/proxy-host-object.json#/properties/allow_websocket_upgrade"
 						},
@@ -213,6 +216,7 @@
 								"certificate_id": 0,
 								"ssl_forced": false,
 								"caching_enabled": false,
+								"zstd_enabled": false,
 								"block_exploits": false,
 								"advanced_config": "",
 								"meta": {

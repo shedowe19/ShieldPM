@@ -59,6 +59,7 @@ describe("ProxyHostOptions", () => {
 					cachingEnabled: true,
 					disableBuffering: false,
 					maintenanceOnFailure: true,
+					zstdEnabled: false,
 				}}
 				onSubmit={vi.fn()}
 			>
@@ -74,9 +75,11 @@ describe("ProxyHostOptions", () => {
 		expect(screen.getByRole("switch", { name: "blockExploits" })).toHaveAttribute("aria-checked", "true");
 		expect(screen.getByRole("switch", { name: "allowWebsocketUpgrade" })).toHaveAttribute("aria-checked", "false");
 		expect(screen.getByRole("switch", { name: "maintenanceOnFailure" })).toHaveAttribute("aria-checked", "true");
+		expect(screen.getByRole("switch", { name: "zstdEnabled" })).toHaveAttribute("aria-checked", "false");
 
 		fireEvent.click(screen.getByRole("switch", { name: "disableBuffering" }));
 		fireEvent.click(screen.getByRole("switch", { name: "allowWebsocketUpgrade" }));
+		fireEvent.click(screen.getByRole("switch", { name: "zstdEnabled" }));
 
 		expect(getFormState()).toMatchObject({
 			allowWebsocketUpgrade: true,
@@ -84,6 +87,7 @@ describe("ProxyHostOptions", () => {
 			cachingEnabled: true,
 			disableBuffering: true,
 			maintenanceOnFailure: true,
+			zstdEnabled: true,
 		});
 	});
 });

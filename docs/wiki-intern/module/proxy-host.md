@@ -26,6 +26,20 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+## Zstd-Komprimierung pro Proxy-Host
+
+`zstd_enabled` ist eine persistierte, standardmäßig deaktivierte Boolean-Option je Proxy-Host. Das Template schreibt
+in jedem generierten Serverblock — einschließlich des internen Anubis-Upstreams — explizit `zstd off;` und
+`zstd_static off;`, solange die Option deaktiviert ist;
+damit überschreibt der Host eine globale Zstd-Voreinstellung. Bei bewusstem Opt-in rendert es `zstd on;` und
+`zstd_static on;`. Dies isoliert fehlerhafte Zstd-Modulbuilds auf geprüfte Hosts, während gzip und Brotli unverändert
+verfügbar bleiben.
+
+Die Option ist über die Create-/Update-OpenAPI-Verträge und den Schalter **Zstd-Komprimierung** in den Proxy-Host-
+Optionen verfügbar. `backend/test/internal/zstd-proxy-host-compression.spec.js` prüft beide Renderpfade sowie die API-
+Verträge; die Frontend-Formtests prüfen Default und Roundtrip. GitOps erhält den Wert über seine explizite
+Proxy-Host-Import-Whitelist.
+
 ## Listen-Paginierung
 
 `GET /api/nginx/proxy-hosts` bleibt ohne Paginierungsparameter abwärtskompatibel und liefert weiterhin das bestehende

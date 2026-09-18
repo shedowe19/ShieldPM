@@ -29,6 +29,7 @@ const proxyHost: ProxyHost = {
 	bandwidthLimit: "",
 	blockExploits: true,
 	cachingEnabled: false,
+	zstdEnabled: false,
 	certificateId: 0,
 	createdOn: "2026-01-01T00:00:00Z",
 	disableBuffering: false,

@@ -194,6 +194,7 @@
 	"bandwidthLimit": "Limite di larghezza di banda",
 	"blockExploits": "Blocca exploit",
 	"cachingEnabled": "Cache abilitata",
+	"zstdEnabled": "Compressione Zstd",
 	"cancel": "Annulla",
 	"certificate": "Certificato",
 	"certificate.custom": "Certificato Personalizzato",

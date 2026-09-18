@@ -4,6 +4,7 @@ import * as redirect from "../../migrations/20251111090000_redirect_auto_scheme.
 import * as limits from "../../migrations/20260102000000_add_req_limit.js";
 import * as mtls from "../../migrations/20260105000000_add_access_list_mtls.js";
 import * as domains from "../../migrations/20260222000000_normalize_domain_names.js";
+import * as zstd from "../../migrations/20260918000000_add_proxy_host_zstd_compression.js";
 import { createPostgres } from "../helpers/postgres.js";
 
 vi.mock("../../logger.js", () => ({ migrate: { info: vi.fn(), warn: vi.fn() } }));
@@ -53,6 +54,13 @@ describe("migration data preservation", () => {
 						["renamed.example.test"],
 						["new.example.test"],
 					]);
+
+					await zstd.up(db);
+					expect((await db("proxy_host").orderBy("id").pluck("zstd_enabled")).map(Number)).toEqual([0, 0]);
+					await db("proxy_host").where("id", 1).update({ zstd_enabled: true });
+					expect(Number((await db("proxy_host").where("id", 1).first()).zstd_enabled)).toBe(1);
+					await zstd.down(db);
+					expect(await db.schema.hasColumn("proxy_host", "zstd_enabled")).toBe(false);
 
 					await db.schema.createTable("access_list", (table) => {
 						table.increments("id");

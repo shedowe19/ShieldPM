@@ -26,6 +26,20 @@ const ProxyHostOptions = () => (
 					</Field>
 				</div>
 				<div className="flex items-center justify-between">
+					<Label htmlFor="zstdEnabled" className="flex-1 cursor-pointer">
+						<T id="zstdEnabled" />
+					</Label>
+					<Field name="zstdEnabled" type="checkbox">
+						{({ field, form }: FieldProps) => (
+							<Switch
+								id="zstdEnabled"
+								checked={field.checked}
+								onCheckedChange={(checked: boolean) => form.setFieldValue("zstdEnabled", checked)}
+							/>
+						)}
+					</Field>
+				</div>
+				<div className="flex items-center justify-between">
 					<Label htmlFor="disableBuffering" className="flex-1 cursor-pointer">
 						<T id="disableBuffering" />
 					</Label>

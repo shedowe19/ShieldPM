@@ -55,6 +55,7 @@ describe("createProxyHostInitialValues", () => {
 			terminalPrivateKey: "",
 			terminalUsername: "",
 			turboLoader: false,
+			zstdEnabled: false,
 		});
 	});
 
@@ -116,6 +117,7 @@ describe("createProxyHostInitialValues", () => {
 			terminalPrivateKey: "private-key",
 			terminalUsername: "deploy",
 			turboLoader: true,
+			zstdEnabled: true,
 		} satisfies Partial<ProxyHost>;
 
 		expect(createProxyHostInitialValues(host)).toMatchObject({
@@ -176,6 +178,7 @@ describe("createProxyHostInitialValues", () => {
 			terminalPrivateKey: "",
 			terminalUsername: "deploy",
 			turboLoader: true,
+			zstdEnabled: true,
 		});
 	});
 

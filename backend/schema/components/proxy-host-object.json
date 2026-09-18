@@ -13,6 +13,7 @@
 		"certificate_id",
 		"ssl_forced",
 		"caching_enabled",
+		"zstd_enabled",
 		"block_exploits",
 		"advanced_config",
 		"meta",
@@ -69,6 +70,9 @@
 		},
 		"caching_enabled": {
 			"$ref": "../common.json#/properties/caching_enabled"
+		},
+		"zstd_enabled": {
+			"$ref": "../common.json#/properties/zstd_enabled"
 		},
 		"block_exploits": {
 			"$ref": "../common.json#/properties/block_exploits"

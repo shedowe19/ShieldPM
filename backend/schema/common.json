@@ -137,6 +137,12 @@
 			"type": "boolean",
 			"example": true
 		},
+		"zstd_enabled": {
+			"description": "Enable Zstd compression for this Proxy Host",
+			"type": "boolean",
+			"default": false,
+			"example": false
+		},
 		"email": {
 			"description": "Email address",
 			"type": "string",
