@@ -66,6 +66,20 @@ yarn vite build   # Produktions-Build
 Alias-Pfade aus `frontend/tsconfig.json` (`src/*`, `@/*` und `test/*`) im Entwicklungsserver, in Vitest und im
 Produktions-Build ohne das zusätzliche Plugin `vite-tsconfig-paths`.
 
+### Komprimiertes Bundle-Budget
+
+Nach jedem Frontend-Build prüft `frontend/scripts/ci/check-bundle-budget.cjs` die mit zlib bei höchster Stufe
+komprimierten JavaScript- und CSS-Assets. Die versionierte Datei `frontend/performance-budget.json` begrenzt den
+größten JavaScript-Chunk, alle JavaScript-Chunks zusammen und alle Stylesheets zusammen. Das Quality-Gate führt die
+Prüfung nach `yarn build` aus. Ein lokaler Lauf lautet:
+
+```bash
+node scripts/ci/check-bundle-budget.cjs --dist dist --budget performance-budget.json
+```
+
+Die Budgets sind keine Core-Web-Vitals-Messung; sie verhindern reproduzierbar Größenregressionen. Änderungen an ihnen
+erfordern eine gemessene neue Baseline und eine begründete Anpassung.
+
 ## Native / LXC Build
 
 Vor dem Export des LXC-Rootfs entfernt der Workflow SSH-Hostkeys und leert die Maschinen-ID. Ein aktivierter Systemd-Dienst erzeugt fehlende SSH-Hostkeys vor dem SSH-Start pro Instanz. Bereinigungs-Globs werden innerhalb des Builder-Containers ausgewertet, damit sie dessen Dateisystem erfassen.

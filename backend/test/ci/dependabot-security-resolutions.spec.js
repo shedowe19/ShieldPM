@@ -54,7 +54,7 @@ describe("Dependabot security resolutions", () => {
 		assertPatched("backend/yarn.lock", "fast-uri", "3.1.6");
 		assertPatched("backend/yarn.lock", "qs", "6.16.0");
 		assertPatched("backend/yarn.lock", "nanoid", "3.3.18");
-		assertPatched("backend/yarn.lock", "js-yaml", "4.3.1");
+		assertPatched("backend/yarn.lock", "js-yaml", "4.3.2");
 		assertPatched("frontend/yarn.lock", "d3-color", "3.1.0");
 	});
 });

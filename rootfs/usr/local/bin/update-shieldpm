@@ -205,6 +205,80 @@ wait_for_backend_health() {
     return 1
 }
 
+confirm_database_recovery_checkpoint() {
+    local checkpoint="$UPDATE_RUN_DIR/database-backup-checkpoint"
+    local data_path="${DATA_PATH:-/data}"
+    local sqlite_source="$data_path/shieldpm/database.sqlite"
+    local sqlite_snapshot="$UPDATE_RUN_DIR/database-backup.sqlite"
+    local external_database=false
+    local original_umask
+    local reply
+
+    original_umask="$(umask)"
+
+    if grep -qsE '^[[:space:]]*(export[[:space:]]+)?DB_(MYSQL|POSTGRES)_HOST=' "$data_path/.env"; then
+        external_database=true
+    elif [ -f "$data_path/shieldpm/default.json" ] && DATA_PATH="$data_path" node --input-type=module -e '
+        import fs from "node:fs";
+        const dataPath = process.env.DATA_PATH;
+        try {
+            const engine = JSON.parse(fs.readFileSync(`${dataPath}/shieldpm/default.json`, "utf8"))?.database?.engine;
+            process.exit(["mysql", "mysql2", "pg"].includes(engine) ? 0 : 1);
+        } catch {
+            process.exit(1);
+        }
+    '; then
+        external_database=true
+    fi
+
+    umask 077
+    if [ "$external_database" = true ]; then
+        echo "    ! An external database backup is required before files are swapped."
+        read -r -p "    ? Confirm a current external database backup exists [y/N] " -n 1 reply
+        echo ""
+        if [[ ! $reply =~ ^[Yy]$ ]]; then
+            umask "$original_umask"
+            echo "    ! Update aborted before replacing application files."
+            return 1
+        fi
+        printf 'database_kind=external\nbackup_confirmed_at=%s\n' "$(date -Is)" > "$checkpoint"
+        umask "$original_umask"
+        echo "    - External database backup checkpoint recorded."
+        return 0
+    fi
+
+    if [ -s "$sqlite_source" ]; then
+        if ! python3 - "$sqlite_source" "$sqlite_snapshot" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+source_path, target_path = sys.argv[1:]
+source = sqlite3.connect(f"{Path(source_path).resolve().as_uri()}?mode=ro", uri=True)
+target = sqlite3.connect(target_path)
+try:
+    source.backup(target)
+finally:
+    target.close()
+    source.close()
+PY
+        then
+            umask "$original_umask"
+            echo "    ! SQLite recovery snapshot failed; no application files were replaced."
+            return 1
+        fi
+        chmod 600 "$sqlite_snapshot"
+        printf 'database_kind=sqlite\nsnapshot=%s\ncreated_at=%s\n' "$sqlite_snapshot" "$(date -Is)" > "$checkpoint"
+        umask "$original_umask"
+        echo "    - SQLite recovery snapshot created."
+        return 0
+    fi
+
+    printf 'database_kind=none\ncreated_at=%s\n' "$(date -Is)" > "$checkpoint"
+    umask "$original_umask"
+    echo "    - No local database snapshot was required."
+}
+
 install_node_26() {
     local NODE_MAJOR=26
     local NODESOURCE_KEYRING="/etc/apt/keyrings/nodesource.gpg"
@@ -301,6 +375,10 @@ cd "$TEMP_DIR/frontend"
 # LXC compatible: Run as root
 yarn install --frozen-lockfile --production=false --silent
 yarn run build
+
+if ! confirm_database_recovery_checkpoint; then
+    exit 1
+fi
 
 echo "--> [5/9] Swapping files..."
 # Preserve a recoverable copy before stopping the service. Rollback is disabled

@@ -68,7 +68,7 @@ node /usr/local/bin/sqlite-vaccum.js
 ## Wichtige Hinweise
 
 - SQLite ist die Standard-Engine; MySQL/MariaDB und PostgreSQL werden ebenfalls unterstützt.
-- Die vollständige Migrationskette wird mit SQLite und der eingebetteten PostgreSQL-Engine PGlite ausgeführt. Ein echter MySQL/MariaDB-Server ist durch diesen Test nicht abgedeckt.
+- Die vollständige Migrationskette wird mit SQLite und der eingebetteten PostgreSQL-Engine PGlite ausgeführt. Zusätzlich führt der CI-Job `mariadb-migration` den Unterbrechungsfall der Zstd-Migration gegen MariaDB 11.8.3 über den echten Knex-Migrationsrunner aus; eine vollständige MariaDB-Matrix für jede historische Migration besteht weiterhin nicht.
 - Boolean-Felder werden sowohl aus SQLite-/MySQL-Integerwerten als auch aus nativen PostgreSQL-Booleans korrekt gelesen.
 
 ## Verwandte Seiten

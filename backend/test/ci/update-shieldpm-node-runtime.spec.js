@@ -6,12 +6,16 @@ import { afterEach, describe, expect, it } from "vitest";
 import { backendSourcePath } from "../helpers/source-path.js";
 
 const nodePackageVersionVariable = "$" + "{NODE_PACKAGE_VERSION}";
+const dataPathVariable = "$" + "{DATA_PATH:-/data}";
 const updater = fs.readFileSync(backendSourcePath("..", "rootfs", "usr", "local", "bin", "update-shieldpm"), "utf8");
 const nativeInstaller = fs.readFileSync(backendSourcePath("..", "scripts", "install.sh"), "utf8");
 const nodePackageVersionAssignment = updater
 	.split("\n")
 	.find((line) => line.includes('NODE_PACKAGE_VERSION="$(apt-cache madison nodejs'));
 const backendHealthCheck = updater.match(/wait_for_backend_health\(\) \{[\s\S]*?^\}/m)?.[0];
+const databaseRecoveryCheckpoint = updater.match(
+	/confirm_database_recovery_checkpoint\(\) \{[\s\S]*?^\}(?=\n\ninstall_node_26)/m,
+)?.[0];
 const temporaryDirectories = [];
 
 if (!nodePackageVersionAssignment) {
@@ -20,6 +24,10 @@ if (!nodePackageVersionAssignment) {
 
 if (!backendHealthCheck) {
 	throw new Error("The updater must define the native backend health check.");
+}
+
+if (!databaseRecoveryCheckpoint) {
+	throw new Error("The updater must define the database recovery checkpoint.");
 }
 
 const createAptCacheFixture = () => {
@@ -198,5 +206,77 @@ wait_for_backend_health
 		expect(nativeInstaller).toContain('VERSION="1.27.0"');
 		expect(nativeInstaller).toContain('OAUTH2_VERSION="7.15.3"');
 		expect(nativeInstaller).not.toContain("SHOULD_UPDATE_OAUTH2");
+	});
+
+	it("requires a database recovery checkpoint before replacing application files", () => {
+		expect(updater).toContain("confirm_database_recovery_checkpoint()");
+		expect(updater).toContain(`local data_path="${dataPathVariable}"`);
+		expect(updater).toContain("external database backup");
+		expect(updater).toContain("database-backup-checkpoint");
+		expect(updater.indexOf("confirm_database_recovery_checkpoint")).toBeLessThan(
+			updater.indexOf('echo "--> [5/9] Swapping files..."'),
+		);
+	});
+
+	it("uses a custom DATA_PATH for recovery detection without exposing its external database details", () => {
+		const directory = fs.mkdtempSync(join(tmpdir(), "shieldpm-update-custom-data-path-"));
+		temporaryDirectories.push(directory);
+		const dataPath = join(directory, "private-data");
+		const updateRunDirectory = join(directory, "update-run");
+		fs.mkdirSync(join(dataPath, "shieldpm"), { recursive: true });
+		fs.mkdirSync(updateRunDirectory);
+		fs.writeFileSync(
+			join(dataPath, "shieldpm", "default.json"),
+			JSON.stringify({ database: { engine: "mysql2", host: "private-db.example.test" } }),
+		);
+		const script = `set -euo pipefail
+${databaseRecoveryCheckpoint}
+umask 0022
+DATA_PATH=${JSON.stringify(dataPath)} UPDATE_RUN_DIR=${JSON.stringify(updateRunDirectory)} confirm_database_recovery_checkpoint <<< "y"
+test "$(umask)" = "0022"
+grep -Fx 'database_kind=external' ${JSON.stringify(join(updateRunDirectory, "database-backup-checkpoint"))}`;
+		const result = spawnSync("bash", ["-c", script], { encoding: "utf8" });
+
+		expect(result.status, result.stderr).toBe(0);
+		expect(`${result.stdout}\n${result.stderr}`).not.toContain("private-db.example.test");
+	});
+
+	it("creates a data-preserving snapshot from a custom SQLite DATA_PATH containing URI delimiters", () => {
+		const directory = fs.mkdtempSync(join(tmpdir(), "shieldpm-update-custom-sqlite-"));
+		temporaryDirectories.push(directory);
+		const dataPath = join(directory, "private?data");
+		const updateRunDirectory = join(directory, "update-run");
+		const databasePath = join(dataPath, "shieldpm", "database.sqlite");
+		fs.mkdirSync(join(dataPath, "shieldpm"), { recursive: true });
+		fs.mkdirSync(updateRunDirectory);
+		const script = `set -euo pipefail
+python3 - ${JSON.stringify(databasePath)} <<'PY'
+import sqlite3
+import sys
+connection = sqlite3.connect(sys.argv[1])
+connection.execute("CREATE TABLE proof (value TEXT)")
+connection.execute("INSERT INTO proof VALUES ('preserved')")
+connection.commit()
+connection.close()
+PY
+${databaseRecoveryCheckpoint}
+umask 0022
+DATA_PATH=${JSON.stringify(dataPath)} UPDATE_RUN_DIR=${JSON.stringify(updateRunDirectory)} confirm_database_recovery_checkpoint
+test "$(umask)" = "0022"
+test -s ${JSON.stringify(join(updateRunDirectory, "database-backup.sqlite"))}
+python3 - ${JSON.stringify(join(updateRunDirectory, "database-backup.sqlite"))} <<'PY'
+import sqlite3
+import sys
+connection = sqlite3.connect(sys.argv[1])
+try:
+    value = connection.execute("SELECT value FROM proof").fetchone()[0]
+    assert value == "preserved", value
+finally:
+    connection.close()
+PY
+grep -Fx 'database_kind=sqlite' ${JSON.stringify(join(updateRunDirectory, "database-backup-checkpoint"))}`;
+		const result = spawnSync("bash", ["-c", script], { encoding: "utf8" });
+
+		expect(result.status, result.stderr).toBe(0);
 	});
 });

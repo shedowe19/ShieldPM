@@ -89,6 +89,7 @@ export { up, down };
 - `20260712000000_fix_analytic_count_aggregation_key` — versionierter, nicht-nullbarer Aggregationsschlüssel für robuste Analytics-Upserts auf SQLite, MySQL und PostgreSQL
 
 - `20260907000000_fix_analytics_log_created_at` — numerischer Standardwert für `analytics_logs.created_at`; gültige alte SQLite-Zeitstempeltexte werden in Unix-Millisekunden umgerechnet. Neue Logeinträge setzen den tatsächlichen Erfassungszeitpunkt im Dienst. Die ursprüngliche Tabellenmigration verwendet ebenfalls den kompatiblen numerischen Standardwert, damit PostgreSQL-Neuinstallationen funktionieren.
+- `20260918000000_add_proxy_host_zstd_compression` — ergänzt die pro Proxy-Host gespeicherte Zstd-Option. Das Up prüft vor dem DDL, ob die Spalte bereits aus einem zuvor abgebrochenen Versuch vorhanden ist. Der Knex-Runner kann diesen Zustand daher registrieren, ohne die Spalte erneut anzulegen.
 
 ## Datenintegrität bei Migrationen
 
@@ -100,7 +101,7 @@ Die Access-List-Passwortmigration erkennt vollständige bcrypt- und APR1-Hashes.
 
 Die Terminalmigration bewahrt den ursprünglichen Namen, Typ und die Metadaten. Ihr Rollback übernimmt aktuelle Zugangsdaten in `terminal_host`, verwendet für verschlüsselte Passwörter und SSH-Schlüssel Textspalten und entfernt erfolgreich zurückkopierte Terminal-Proxyzeilen. Dadurch entstehen bei einem anschließenden Upgrade keine doppelten aktiven Hosts mit verlorenen Zugangsdaten. Gewöhnliche HTTP-Proxyzeilen bleiben erhalten. Verweisen noch Tor-Dienste, Analytics oder Domainrelationen auf einen betroffenen Terminalhost, bricht der Rollback vor Schemaänderungen ab, um referenzierte Daten zu erhalten. `backend/test/migrations/third-database-credentials.spec.js` prüft diese Up-/Down-/Up-Abläufe einschließlich langer Schlüssel und Tor-Referenzen mit SQLite und PGlite.
 
-Die Tests `backend/test/migrations/full-schema.spec.js` und `data-preservation.spec.js` führen diese Abläufe mit SQLite und der echten PostgreSQL-Engine in PGlite aus. Dabei werden nur die externen Nginx-Aktionen gemockt. Änderungen historischer Migrationen wirken auf noch nicht ausgeführte Upgrades und auf Rollbacks; bereits durch frühere Versionen verlorene Werte lassen sich daraus nicht automatisch rekonstruieren.
+Die Tests `backend/test/migrations/full-schema.spec.js` und `data-preservation.spec.js` führen diese Abläufe mit SQLite und der echten PostgreSQL-Engine in PGlite aus. Der separate CI-Job `mariadb-migration` startet MariaDB 11.8.3 und führt `mariadb-interrupted-zstd-runner.spec.js` aus: Er bildet eine bereits vorhandene Spalte ohne Eintrag in `migrations` nach, verwendet den produktiven `runMigrations()`-Runner und prüft die nachträgliche Knex-Registrierung. Dabei werden nur die externen Nginx-Aktionen gemockt. Änderungen historischer Migrationen wirken auf noch nicht ausgeführte Upgrades und auf Rollbacks; bereits durch frühere Versionen verlorene Werte lassen sich daraus nicht automatisch rekonstruieren.
 
 ## Wechsel der Datenbank-Engine
 

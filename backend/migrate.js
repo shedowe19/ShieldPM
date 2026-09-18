@@ -6,13 +6,15 @@ import { migrate as logger } from "./logger.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const migrateUp = async () => {
-	const version = await db().migrate.currentVersion();
+const runMigrations = async (database, directory = path.join(__dirname, "migrations")) => {
+	const version = await database.migrate.currentVersion();
 	logger.info("Current database version:", version);
-	return await db().migrate.latest({
+	return await database.migrate.latest({
 		tableName: "migrations",
-		directory: path.join(__dirname, "migrations"),
+		directory,
 	});
 };
 
-export { migrateUp };
+const migrateUp = async () => runMigrations(db());
+
+export { migrateUp, runMigrations };

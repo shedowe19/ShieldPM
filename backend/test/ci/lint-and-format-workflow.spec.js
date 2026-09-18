@@ -120,4 +120,16 @@ describe("lint-and-format workflow", () => {
 		expect(workflow).toContain("node backend/scripts/ci/scan-added-diff-secrets.js");
 		expect(workflow).not.toContain("node --input-type=module <<'NODE'");
 	});
+
+	it("runs the MariaDB migration-recovery integration test in an isolated database service", () => {
+		expect(workflow).toContain("mariadb:");
+		expect(workflow).toContain("mariadb:11.8.3");
+		expect(workflow).toContain('SHIELDPM_TEST_MARIADB: "1"');
+		expect(workflow).toContain("mariadb-interrupted-zstd-runner.spec.js");
+	});
+
+	it("enforces the compressed frontend bundle budget after producing the build", () => {
+		expect(workflow).toContain("check-bundle-budget.cjs");
+		expect(workflow.indexOf("check-bundle-budget.cjs")).toBeGreaterThan(workflow.indexOf("Build frontend"));
+	});
 });
