@@ -222,7 +222,7 @@ confirm_database_recovery_checkpoint() {
         import fs from "node:fs";
         const dataPath = process.env.DATA_PATH;
         try {
-            const engine = JSON.parse(fs.readFileSync(`${dataPath}/shieldpm/default.json`, "utf8"))?.database?.engine;
+            const engine = JSON.parse(fs.readFileSync(dataPath + "/shieldpm/default.json", "utf8"))?.database?.engine;
             process.exit(["mysql", "mysql2", "pg"].includes(engine) ? 0 : 1);
         } catch {
             process.exit(1);
