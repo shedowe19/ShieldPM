@@ -10,11 +10,11 @@ ShieldPM erhöht für den Host die öffentliche Request-Grenze auf die konfiguri
 
 Im Proxy-Host-Dialog unter **Erweitert → Upload-Relay** aktivieren. Die Anwendung bestimmt den Zielort aus ihrem Upload-Protokoll; ShieldPM verwendet nur den bereits vorhandenen privaten Upstream des Proxy Hosts:
 
-| Einstellung           |                   Standard | Bedeutung                                                                           |
-| --------------------- | -------------------------: | ----------------------------------------------------------------------------------- |
-| Optionaler tus-Pfad   |        `/_shieldpm-upload` | Ein tus-fähiger Upstream bedient diesen Originalpfad transparent selbst.            |
-| Nextcloud-WebDAV-Pfad | `/remote.php/dav/uploads/` | Automatisch erkannt: URI und `Destination` gehen unverändert zum privaten Upstream. |
-| Chunk-Größe           |        `83886080` (80 MiB) | Öffentliche Obergrenze je Request; zwischen 5 MiB und 90 MiB.                       |
+| Einstellung           |                   Standard | Bedeutung                                                                                                                            |
+| --------------------- | -------------------------: | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Optionaler tus-Pfad   |        `/_shieldpm-upload` | Ein tus-fähiger Upstream bedient diesen Originalpfad transparent selbst.                                                             |
+| Nextcloud-WebDAV-Pfad | `/remote.php/dav/uploads/` | Automatisch erkannt: URI und `Destination` gehen unverändert zum privaten Upstream; akzeptiert Nextcloud-Standardchunks bis 100 MiB. |
+| Chunk-Größe           |        `83886080` (80 MiB) | Öffentliche Obergrenze je Request; zwischen 5 MiB und 90 MiB.                                                                        |
 
 Eine Proxy-Host-Access-List ist **optional**. Falls eine Liste gesetzt ist, gelten ihre IP-/Basic-/SSO-Regeln unverändert für den Uploadpfad; eine `satisfy any`-Liste mit `allow all` gilt dabei als öffentlich und kann kein Relay schützen. Ohne Access List ist der Uploadpfad öffentlich erreichbar; deshalb sollten die Speicher- und Dateilimits bewusst gewählt und bei Bedarf eine vorgeschaltete Zugriffskontrolle (z. B. Cloudflare Access) eingesetzt werden. Bei `pass_auth: false` wird ein Basic-`Authorization`-Header ausdrücklich nicht zum Origin weitergereicht. Das Relay ist standardmäßig deaktiviert.
 

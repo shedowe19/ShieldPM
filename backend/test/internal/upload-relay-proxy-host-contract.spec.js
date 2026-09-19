@@ -73,8 +73,9 @@ describe("Proxy Host upload relay contract", () => {
 			rendered.indexOf("location ^~ /remote.php/dav/uploads/"),
 			rendered.indexOf("location = /_shieldpm-upload"),
 		);
-		expect(nextcloudUploadLocation).toContain("modsecurity_rules 'SecRequestBodyLimit 83886080';");
-		expect(nextcloudUploadLocation).toContain("modsecurity_rules 'SecRequestBodyNoFilesLimit 83886080';");
+		expect(nextcloudUploadLocation).toContain("client_max_body_size 104857600;");
+		expect(nextcloudUploadLocation).toContain("modsecurity_rules 'SecRequestBodyLimit 104857600';");
+		expect(nextcloudUploadLocation).toContain("modsecurity_rules 'SecRequestBodyNoFilesLimit 104857600';");
 		expect(nextcloudUploadLocation).toContain("proxy_request_buffering off;");
 		expect(nextcloudUploadLocation).toContain("proxy_pass https://10.0.17.80:443$request_uri;");
 		expect(nextcloudUploadLocation).toContain('proxy_set_header Authorization "";');
