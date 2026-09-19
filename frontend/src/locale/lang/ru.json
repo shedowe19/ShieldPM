@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Включить многочастную вставку",
 	"proxy-host.turbo-loader.multi-part.description": "Преобразует выбранные файлы (например, .mp4 или .zip) в ускоренную HTML-страницу загрузки.",
 	"proxy-host.upload-relay.title": "Возобновляемый шлюз загрузки",
-	"proxy-host.upload-relay.description": "Локально сохраняет части возобновляемой загрузки и отправляет готовый файл напрямую на приватный upstream этого прокси-хоста.",
+	"proxy-host.upload-relay.description": "Прозрачно передаёт запросы загрузки на приватный upstream этого прокси-хоста без отдельного пути назначения.",
 	"proxy-host.upload-relay.enabled": "Включить возобновляемый шлюз загрузки",
 	"proxy-host.upload-relay.path": "Публичный путь загрузки",
 	"proxy-host.upload-relay.target-path": "Целевой путь приватного upstream",

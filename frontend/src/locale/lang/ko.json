@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "다중 부분 삽입 사용",
 	"proxy-host.turbo-loader.multi-part.description": "선택한 파일(.mp4 또는 .zip 등)을 가속된 HTML 다운로드 페이지로 변환합니다.",
 	"proxy-host.upload-relay.title": "재개 가능한 업로드 릴레이",
-	"proxy-host.upload-relay.description": "재개 가능한 업로드 조각을 로컬에 저장하고 완료된 파일을 이 프록시 호스트의 비공개 업스트림으로 직접 전송합니다.",
+	"proxy-host.upload-relay.description": "별도의 대상 경로 없이 업로드 요청을 이 프록시 호스트의 비공개 업스트림으로 투명하게 전달합니다.",
 	"proxy-host.upload-relay.enabled": "재개 가능한 업로드 릴레이 활성화",
 	"proxy-host.upload-relay.path": "공개 업로드 경로",
 	"proxy-host.upload-relay.target-path": "비공개 업스트림 대상 경로",

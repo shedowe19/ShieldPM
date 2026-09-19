@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Activar la inyección multiparte",
 	"proxy-host.turbo-loader.multi-part.description": "Convierte los archivos seleccionados (como .mp4 o .zip) en una página de descarga HTML acelerada.",
 	"proxy-host.upload-relay.title": "Relay de carga reanudable",
-	"proxy-host.upload-relay.description": "Guarda localmente partes de carga reanudables y envía el archivo completado directamente al origen privado de este host proxy.",
+	"proxy-host.upload-relay.description": "Reenvía las solicitudes de carga de forma transparente al origen privado de este host proxy sin una ruta de destino independiente.",
 	"proxy-host.upload-relay.enabled": "Activar relay de carga reanudable",
 	"proxy-host.upload-relay.path": "Ruta pública de carga",
 	"proxy-host.upload-relay.target-path": "Ruta de destino del origen privado",

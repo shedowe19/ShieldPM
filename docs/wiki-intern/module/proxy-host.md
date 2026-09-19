@@ -42,21 +42,9 @@ Proxy-Host-Import-Whitelist.
 
 ## Resumable Upload Relay
 
-Das optionale `upload_relay_enabled` aktiviert je Host einen tus-kompatiblen Uploadpfad. Der Nginx-Renderer leitet
-`upload_relay_path` (Standard `/_shieldpm-upload`) mit deaktiviertem Request-Buffering an den lokalen Backend-Socket weiter;
-dieser speichert fortsetzbare Teile unter `${DATA_PATH}/upload-relay/`. Der letzte öffentliche Chunk wird nach dem dauerhaften
-Setzen des Zustands `queued` sofort beantwortet; ein einzelner lokaler Finalizer streamt die Datei anschließend direkt an den
-konfigurierten privaten HTTP(S)-Upstream `upload_relay_target_path`. Dadurch blockiert ein langsamer Origin-Transfer die
-Cloudflare-Verbindung nicht bis zum 524-Timeout. Pro Host sind Chunkgröße (5 bis 90 MiB), maximale
-Dateigröße, reserviertes Gesamtbudget offener Uploads und Bereinigungszeit konfigurierbar. Eine bestehende Access-List ist
-beim Aktivieren verpflichtend; bei `pass_auth: false` bleibt deren Basic-Authorization vom Origin getrennt. Die Datenbankmigration `20260919000000_add_proxy_host_upload_relay` legt
-die zugehörigen persistenten Spalten mit sicheren Defaults an; GitOps und die Create-/Update-Schemas führen sie mit.
+Das optionale `upload_relay_enabled` aktiviert je Host transparentes Upload-Passthrough. Der Nginx-Renderer verwendet den vorhandenen privaten HTTP(S)-Upstream und erhält Request-URI, Methode und Upload-Header; ein getrennt konfigurierter Zielpfad ist nicht nötig. Der generische `upload_relay_path` (Standard `/_shieldpm-upload`) wird an denselben URI des Upstreams weitergereicht, sodass ein tus-fähiger Dienst seine eigenen Sessions und Ziele verwaltet. Nextcloud-WebDAV-Uploads unter `/remote.php/dav/uploads/` erkennt ShieldPM automatisch; `Destination` bleibt erhalten. Für die bekannten Upload-Namensräume wird Request-Buffering deaktiviert und nur das ModSecurity-Request-Body-Limit auf die konfigurierbare Chunk-Größe (5 bis 90 MiB) angehoben; die übrigen WAF-Regeln bleiben aktiv. Bei Anubis-Hosts passieren die öffentlichen Upload-Requests weiterhin Anubis und gehen erst danach zum privaten Upstream. Eine bestehende Access List bleibt wirksam, ist aber optional; bei `pass_auth: false` wird Basic-Authorization auch in speziellen Upload-Locations nicht weitergereicht. Die Migration führt ältere lokale tus-Kompatibilitätsfelder weiter, aber sie sind nicht Teil des normalen UI-Workflows.
 
-Der öffentliche Relay-Namespace `/nginx/proxy-hosts/<id>/upload-relay` ist von der ShieldPM-Admin-CSRF-Prüfung ausgenommen,
-damit Browser-Uploader tus sprechen können. Die Ausnahme ist auf genau diesen Host-ID-Pfad und `POST`, `PATCH` sowie
-`DELETE` begrenzt; normale Proxy-Host-Verwaltungswrites bleiben CSRF-geschützt. Die regulären Host-Access-Lists und die
-authentifizierende private Origin-API bleiben für den Uploadpfad wirksam. Details des Protokolls, der Persistenz und der
-Wiederaufnahme stehen unter [Resumable Upload Relay](./upload-relay.md).
+Die routenspezifischen Upload-Location-Blöcke bleiben von ShieldPMs Admin-CSRF-Prüfung getrennt, weil sie ausschließlich als Nginx-Passthrough zwischen öffentlichem Proxy Host und dessen privatem Upstream arbeiten. Normale Proxy-Host-Verwaltungswrites bleiben CSRF-geschützt. Details zu Transparenz, Protokollgrenzen und Nextcloud-WebDAV stehen unter [Upload-Relay](./upload-relay.md).
 
 ## Listen-Paginierung
 

@@ -79,15 +79,7 @@ const ProxyHostUploadRelay = () => (
 				field.value && (
 					<div className="grid gap-4 md:grid-cols-2">
 						<TextField id="uploadRelayPath" />
-						<TextField id="uploadRelayTargetPath" />
 						<NumericField id="uploadRelayChunkSize" max={90 * 1024 * 1024} min={5 * 1024 * 1024} />
-						<NumericField id="uploadRelayMaxFileSize" max={Number.MAX_SAFE_INTEGER} min={5 * 1024 * 1024} />
-						<NumericField
-							id="uploadRelayMaxPendingBytes"
-							max={Number.MAX_SAFE_INTEGER}
-							min={5 * 1024 * 1024}
-						/>
-						<NumericField id="uploadRelayCleanupHours" max={720} min={1} />
 					</div>
 				)
 			}

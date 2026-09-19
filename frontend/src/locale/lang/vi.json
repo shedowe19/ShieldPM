@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Bật chèn nhiều phần",
 	"proxy-host.turbo-loader.multi-part.description": "Chuyển các tệp đã chọn (như .mp4 hoặc .zip) thành trang tải xuống HTML tăng tốc.",
 	"proxy-host.upload-relay.title": "Chuyển tiếp tải lên có thể tiếp tục",
-	"proxy-host.upload-relay.description": "Lưu cục bộ các phần tải lên có thể tiếp tục và gửi tệp hoàn tất trực tiếp tới upstream riêng tư của proxy host này.",
+	"proxy-host.upload-relay.description": "Chuyển tiếp minh bạch các yêu cầu tải lên tới upstream riêng tư của proxy host này mà không cần đường dẫn đích riêng.",
 	"proxy-host.upload-relay.enabled": "Bật chuyển tiếp tải lên có thể tiếp tục",
 	"proxy-host.upload-relay.path": "Đường dẫn tải lên công khai",
 	"proxy-host.upload-relay.target-path": "Đường dẫn đích upstream riêng tư",

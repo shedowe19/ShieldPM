@@ -36,7 +36,7 @@ describe("Proxy Host upload relay contract", () => {
 		vi.unstubAllEnvs();
 	});
 
-	it("routes only an opted-in public upload path to the local relay without buffering the chunk", async () => {
+	it("routes only an opted-in public upload path to the original upstream without buffering the chunk", async () => {
 		await internalNginx.generateConfig("proxy_host", host());
 		const rendered = fs.promises.writeFile.mock.calls.at(-1)[1];
 		expect(rendered).toContain("location = /_shieldpm-upload");
@@ -54,10 +54,30 @@ describe("Proxy Host upload relay contract", () => {
 			rendered.indexOf("# --- Turbo-Loader Interception ---"),
 		);
 		expect(exactRelayLocation).toContain('proxy_set_header Authorization "";');
+		expect(exactRelayLocation).toContain("modsecurity_rules 'SecRequestBodyLimit 83886080';");
+		expect(exactRelayLocation).toContain("modsecurity_rules 'SecRequestBodyNoFilesLimit 83886080';");
 		expect(prefixedRelayLocation).toContain('proxy_set_header Authorization "";');
-		expect(rendered).toContain(
-			"proxy_pass http://unix:/run/shieldpm/shieldpm.sock:/nginx/proxy-hosts/74/upload-relay/",
+		expect(prefixedRelayLocation).toContain("modsecurity_rules 'SecRequestBodyLimit 83886080';");
+		expect(rendered).not.toContain("modsecurity off;");
+		expect(rendered).toContain("proxy_pass http://10.0.17.4:8080$request_uri;");
+		expect(rendered).not.toContain("/nginx/proxy-hosts/74/upload-relay");
+	});
+
+	it("preserves the Nextcloud WebDAV request target and Destination header without a configured target path", async () => {
+		await internalNginx.generateConfig(
+			"proxy_host",
+			host({ forward_host: "10.0.17.80", forward_port: 443, forward_scheme: "https" }),
 		);
+		const rendered = fs.promises.writeFile.mock.calls.at(-1)[1];
+		const nextcloudUploadLocation = rendered.slice(
+			rendered.indexOf("location ^~ /remote.php/dav/uploads/"),
+			rendered.indexOf("location = /_shieldpm-upload"),
+		);
+		expect(nextcloudUploadLocation).toContain("modsecurity_rules 'SecRequestBodyLimit 83886080';");
+		expect(nextcloudUploadLocation).toContain("modsecurity_rules 'SecRequestBodyNoFilesLimit 83886080';");
+		expect(nextcloudUploadLocation).toContain("proxy_request_buffering off;");
+		expect(nextcloudUploadLocation).toContain("proxy_pass https://10.0.17.80:443$request_uri;");
+		expect(nextcloudUploadLocation).toContain('proxy_set_header Authorization "";');
 	});
 
 	it("honors pass_auth=false in every relay location for an IP-only Access List", async () => {
@@ -84,21 +104,25 @@ describe("Proxy Host upload relay contract", () => {
 		expect(prefixedRelayLocation).toContain('proxy_set_header Authorization "";');
 	});
 
-	it("keeps the public Anubis server on the same protected, unbuffered relay path", async () => {
+	it("passes public upload paths through Anubis before the private upstream", async () => {
 		await internalNginx.generateConfig("proxy_host", host({ anubis_enabled: true }));
 		const rendered = fs.promises.writeFile.mock.calls.at(-1)[1];
 		const publicServer = rendered.slice(0, rendered.indexOf("# --- Backend Server (Internal) ---"));
+		const internalServer = rendered.slice(rendered.indexOf("# --- Backend Server (Internal) ---"));
 		expect(publicServer).toContain("location = /_shieldpm-upload");
 		expect(publicServer).toContain("location ^~ /_shieldpm-upload/");
+		expect(publicServer).toContain("location ^~ /remote.php/dav/uploads/");
 		expect(publicServer).toContain("client_max_body_size 83886080;");
 		expect(publicServer).toContain("proxy_buffering off;");
 		expect(publicServer).toContain("proxy_request_buffering off;");
 		expect(publicServer).toContain("proxy_read_timeout 10m;");
 		expect(publicServer).toContain("proxy_send_timeout 10m;");
 		expect(publicServer).toContain('proxy_set_header Authorization "";');
-		expect(publicServer).toContain(
-			"proxy_pass http://unix:/run/shieldpm/shieldpm.sock:/nginx/proxy-hosts/74/upload-relay/",
-		);
+		expect(publicServer).toContain("proxy_set_header X-ShieldPM-Host $host;");
+		expect(publicServer).toContain("proxy_pass http://unix:/run/shieldpm/anubis.sock;");
+		expect(publicServer).not.toContain("proxy_pass http://10.0.17.4:8080$request_uri;");
+		expect(internalServer).toContain("proxy_pass http://10.0.17.4:8080$request_uri;");
+		expect(publicServer).not.toContain("/nginx/proxy-hosts/74/upload-relay");
 	});
 
 	it("exposes the full per-host relay configuration through the Proxy Host API contracts", () => {

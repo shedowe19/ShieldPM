@@ -49,7 +49,7 @@ const formState = () => JSON.parse(screen.getByTestId("form-state").textContent 
 describe("ProxyHostUploadRelay", () => {
 	afterEach(cleanup);
 
-	it("defaults to an 80 MiB resumable endpoint and exposes its private completion target only after opt-in", () => {
+	it("defaults to an 80 MiB resumable endpoint and uses the original request target after opt-in", () => {
 		render(
 			<Formik
 				initialValues={{
@@ -77,9 +77,11 @@ describe("ProxyHostUploadRelay", () => {
 		fireEvent.click(screen.getByRole("switch", { name: "uploadRelayEnabled" }));
 
 		expect(screen.getByLabelText("proxy-host.upload-relay.path")).toHaveValue("/_shieldpm-upload");
-		expect(screen.getByLabelText("proxy-host.upload-relay.target-path")).toHaveValue("/api/import");
+		expect(screen.queryByLabelText("proxy-host.upload-relay.target-path")).not.toBeInTheDocument();
 		expect(screen.getByLabelText("proxy-host.upload-relay.chunk-size")).toHaveValue(80 * 1024 * 1024);
-		expect(screen.getByLabelText("proxy-host.upload-relay.max-pending-bytes")).toHaveValue(20 * 1024 * 1024 * 1024);
+		expect(screen.queryByLabelText("proxy-host.upload-relay.max-file-size")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("proxy-host.upload-relay.max-pending-bytes")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("proxy-host.upload-relay.cleanup-hours")).not.toBeInTheDocument();
 		expect(formState()).toMatchObject({ uploadRelayEnabled: true });
 	});
 });

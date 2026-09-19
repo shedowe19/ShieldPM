@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Enable multipart injection",
 	"proxy-host.turbo-loader.multi-part.description": "Converts selected files (such as .mp4 or .zip) into an accelerated HTML download page.",
 	"proxy-host.upload-relay.title": "Resumable Upload Relay",
-	"proxy-host.upload-relay.description": "Stores resumable upload chunks locally and sends the completed file directly to this Proxy Host's private upstream.",
+	"proxy-host.upload-relay.description": "Forwards upload requests transparently to this Proxy Host's private upstream without a separate target path.",
 	"proxy-host.upload-relay.enabled": "Enable resumable upload relay",
 	"proxy-host.upload-relay.path": "Public upload path",
 	"proxy-host.upload-relay.target-path": "Private upstream target path",

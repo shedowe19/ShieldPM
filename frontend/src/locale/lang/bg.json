@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Включване на многокомпонентно вмъкване",
 	"proxy-host.turbo-loader.multi-part.description": "Преобразува избраните файлове (например .mp4 или .zip) в ускорена HTML страница за изтегляне.",
 	"proxy-host.upload-relay.title": "Възобновяемо реле за качване",
-	"proxy-host.upload-relay.description": "Съхранява локално части от възобновяемо качване и изпраща готовия файл директно към частния upstream на този proxy host.",
+	"proxy-host.upload-relay.description": "Препраща заявките за качване прозрачно към частния upstream на този proxy host без отделен целеви път.",
 	"proxy-host.upload-relay.enabled": "Активиране на възобновяемо реле за качване",
 	"proxy-host.upload-relay.path": "Публичен път за качване",
 	"proxy-host.upload-relay.target-path": "Целеви път на частния upstream",

@@ -14,6 +14,7 @@ const MAX_PENDING_UPLOADS = 32;
 const MAX_CONCURRENT_FINALIZERS = 1;
 const ORIGIN_TIMEOUT_MS = 10 * 60 * 1000;
 const DEFAULT_PATH = "/_shieldpm-upload";
+const NEXTCLOUD_UPLOAD_PATH = "/remote.php/dav/uploads";
 const METADATA_FILE = "upload.json";
 const FORWARDED_REQUEST_HEADERS = ["authorization", "cookie", "x-api-key", "x-upload-token", "x-request-id"];
 const CALLER_CREDENTIAL_HEADERS = ["authorization", "cookie", "x-api-key", "x-upload-token"];
@@ -30,6 +31,9 @@ const safeUploadPath = (value) => {
 	const normalized = typeof value === "string" && value ? value : DEFAULT_PATH;
 	if (!/^\/[A-Za-z0-9._~-]+(?:\/[A-Za-z0-9._~-]+)*$/.test(normalized)) {
 		throw new errs.ValidationError("Upload relay path must be an absolute path without query strings or traversal");
+	}
+	if (normalized === NEXTCLOUD_UPLOAD_PATH || normalized.startsWith(`${NEXTCLOUD_UPLOAD_PATH}/`)) {
+		throw new errs.ValidationError("Upload relay path is reserved for automatic Nextcloud uploads");
 	}
 	return normalized;
 };

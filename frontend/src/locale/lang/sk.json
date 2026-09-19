@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Povoliť viacdielne vkladanie",
 	"proxy-host.turbo-loader.multi-part.description": "Premení vybrané súbory (napríklad .mp4 alebo .zip) na zrýchlenú HTML stránku sťahovania.",
 	"proxy-host.upload-relay.title": "Obnoviteľné odovzdávacie relé",
-	"proxy-host.upload-relay.description": "Lokálne ukladá obnoviteľné časti odovzdávania a dokončený súbor odošle priamo na súkromný upstream tohto proxy hostiteľa.",
+	"proxy-host.upload-relay.description": "Transparentne preposiela požiadavky na odovzdanie do súkromného upstreamu tohto proxy hostiteľa bez samostatnej cieľovej cesty.",
 	"proxy-host.upload-relay.enabled": "Povoliť obnoviteľné odovzdávacie relé",
 	"proxy-host.upload-relay.path": "Verejná cesta odovzdávania",
 	"proxy-host.upload-relay.target-path": "Cieľová cesta súkromného upstreamu",

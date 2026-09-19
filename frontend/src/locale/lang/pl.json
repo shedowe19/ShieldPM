@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Włącz wstrzykiwanie wieloczęściowe",
 	"proxy-host.turbo-loader.multi-part.description": "Przekształca wybrane pliki (takie jak .mp4 lub .zip) w przyspieszoną stronę pobierania HTML.",
 	"proxy-host.upload-relay.title": "Wznawialny przekaźnik wysyłania",
-	"proxy-host.upload-relay.description": "Lokalnie zapisuje wznawialne części wysyłania i przesyła ukończony plik bezpośrednio do prywatnego upstreamu tego hosta proxy.",
+	"proxy-host.upload-relay.description": "Przezroczyście przekazuje żądania wysyłania do prywatnego upstreamu tego hosta proxy bez oddzielnej ścieżki docelowej.",
 	"proxy-host.upload-relay.enabled": "Włącz wznawialny przekaźnik wysyłania",
 	"proxy-host.upload-relay.path": "Publiczna ścieżka wysyłania",
 	"proxy-host.upload-relay.target-path": "Docelowa ścieżka prywatnego upstreamu",

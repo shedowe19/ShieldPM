@@ -169,6 +169,15 @@ describe("Upload relay", () => {
 		).toThrow("enforcing authentication or IP policy");
 	});
 
+	it("reserves the automatic Nextcloud upload namespace from generic relay paths", () => {
+		expect(() => relayConfigForHost(host({ upload_relay_path: "/remote.php/dav/uploads" }))).toThrow(
+			"reserved for automatic Nextcloud uploads",
+		);
+		expect(() => relayConfigForHost(host({ upload_relay_path: "/remote.php/dav/uploads/custom" }))).toThrow(
+			"reserved for automatic Nextcloud uploads",
+		);
+	});
+
 	it("validates relay configuration even while a Proxy Host is disabled", () => {
 		expect(() => relayConfigForHost(host({ enabled: false }))).not.toThrow();
 	});

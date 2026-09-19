@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "Meerdelige injectie inschakelen",
 	"proxy-host.turbo-loader.multi-part.description": "Zet geselecteerde bestanden (zoals .mp4 of .zip) om naar een versnelde HTML-downloadpagina.",
 	"proxy-host.upload-relay.title": "Hervatbare uploadrelay",
-	"proxy-host.upload-relay.description": "Slaat hervatbare uploaddelen lokaal op en stuurt het voltooide bestand rechtstreeks naar de privé-upstream van deze proxyhost.",
+	"proxy-host.upload-relay.description": "Stuurt uploadverzoeken zonder afzonderlijk doelpad transparant door naar de privé-upstream van deze proxyhost.",
 	"proxy-host.upload-relay.enabled": "Hervatbare uploadrelay inschakelen",
 	"proxy-host.upload-relay.path": "Openbaar uploadpad",
 	"proxy-host.upload-relay.target-path": "Doelpad van privé-upstream",

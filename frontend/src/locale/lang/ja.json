@@ -498,7 +498,7 @@
 	"proxy-host.turbo-loader.multi-part": "マルチパート挿入を有効にする",
 	"proxy-host.turbo-loader.multi-part.description": "選択したファイル（.mp4 や .zip など）を高速な HTML ダウンロードページに変換します。",
 	"proxy-host.upload-relay.title": "再開可能なアップロードリレー",
-	"proxy-host.upload-relay.description": "再開可能なアップロード片をローカルに保存し、完了したファイルをこのプロキシホストのプライベートアップストリームへ直接送信します。",
+	"proxy-host.upload-relay.description": "個別の送信先パスを指定せず、アップロード要求をこのプロキシホストのプライベートアップストリームへ透過的に転送します。",
 	"proxy-host.upload-relay.enabled": "再開可能なアップロードリレーを有効化",
 	"proxy-host.upload-relay.path": "公開アップロードパス",
 	"proxy-host.upload-relay.target-path": "プライベートアップストリームの送信先パス",
