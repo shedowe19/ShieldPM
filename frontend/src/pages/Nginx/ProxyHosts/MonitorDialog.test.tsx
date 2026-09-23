@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { changeLocale } from "src/locale";
+import { changeLocale, intl } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonitorDialog } from "./MonitorDialog";
 
@@ -73,7 +73,9 @@ describe("Host monitor settings", () => {
 				onClose={vi.fn()}
 			/>,
 		);
-		fireEvent.change(screen.getByLabelText("Intervall (Sekunden)"), { target: { value: "15" } });
+		fireEvent.change(screen.getByLabelText(intl.formatMessage({ id: "proxy-host.monitor.interval" })), {
+			target: { value: "15" },
+		});
 		fireEvent.change(screen.getByLabelText("Zeitlimit (Millisekunden)"), { target: { value: "15000" } });
 		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
