@@ -1,6 +1,10 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import internalGitDeploy from "../../internal/git-deploy.js";
 import internalProxyHost from "../../internal/proxy-host.js";
+import internalProxyHostDiagnostics from "../../internal/proxy-host-diagnostics.js";
+import internalProxyHostMonitor from "../../internal/proxy-host-monitor.js";
+import internalProxyHostPreview from "../../internal/proxy-host-preview.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
@@ -11,6 +15,80 @@ const router = express.Router({
 	strict: true,
 	mergeParams: true,
 });
+
+const diagnosisLimiter = rateLimit({
+	windowMs: 60 * 1000,
+	limit: 6,
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: { error: { code: 429, message: "Too many diagnostics. Please try again shortly." } },
+	validate: { trustProxy: false },
+});
+
+const parseMonitorHostId = async (raw) => {
+	const data = await validator(
+		{
+			type: "object",
+			required: ["id"],
+			additionalProperties: false,
+			properties: { id: { $ref: "common#/properties/id" } },
+		},
+		{ id: raw },
+	);
+	return Number(data.id);
+};
+
+// Manual probes consume network resources. Background checks have a separate concurrency cap.
+const manualMonitorLimit = rateLimit({
+	windowMs: 60_000,
+	limit: 10,
+	standardHeaders: true,
+	legacyHeaders: false,
+	validate: { trustProxy: false },
+});
+
+router
+	.route("/monitors/status")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.get(async (req, res) => {
+		const ids = await validator(
+			{
+				type: "object",
+				required: ["ids"],
+				additionalProperties: false,
+				properties: {
+					ids: { type: "array", maxItems: 100, uniqueItems: true, items: { type: "integer", minimum: 1 } },
+				},
+			},
+			{ ids: typeof req.query.ids === "string" && req.query.ids ? req.query.ids.split(",") : [] },
+		);
+		res.status(200).send(await internalProxyHostMonitor.listStatus(res.locals.access, ids.ids));
+	});
+
+router
+	.route("/:host_id/monitor")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.get(async (req, res) => {
+		const id = await parseMonitorHostId(req.params.host_id);
+		res.status(200).send(await internalProxyHostMonitor.get(res.locals.access, id));
+	})
+	.put(async (req, res) => {
+		const id = await parseMonitorHostId(req.params.host_id);
+		const data = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/monitor", "put"), req.body);
+		res.status(200).send(await internalProxyHostMonitor.update(res.locals.access, id, data));
+	});
+
+router
+	.route("/:host_id/monitor/check")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.post(manualMonitorLimit, async (req, res) => {
+		const id = await parseMonitorHostId(req.params.host_id);
+		await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/monitor/check", "post"), req.body ?? {});
+		res.status(200).send(await internalProxyHostMonitor.check(res.locals.access, id));
+	});
 
 /**
  * /api/nginx/proxy-hosts
@@ -75,6 +153,37 @@ router
 		const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts", "post"), req.body);
 		const result = await internalProxyHost.create(res.locals.access, payload);
 		res.status(201).send(result);
+	});
+
+/** Render an unsaved host without changing the database or live Nginx. */
+router
+	.route("/preview")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.post(async (req, res) => {
+		const payload = await apiValidator(getValidationSchema("/nginx/proxy-hosts/preview", "post"), req.body);
+		res.status(200).send(await internalProxyHostPreview.preview(res.locals.access, payload));
+	});
+
+/** Render proposed changes for an authorized host and compare with its active config. */
+router
+	.route("/:host_id/preview")
+	.options((_, res) => res.sendStatus(204))
+	.all(jwtdecode())
+	.post(async (req, res) => {
+		const { host_id } = await validator(
+			{
+				required: ["host_id"],
+				additionalProperties: false,
+				properties: { host_id: { $ref: "common#/properties/id" } },
+			},
+			{ host_id: req.params.host_id },
+		);
+		const payload = await apiValidator(
+			getValidationSchema("/nginx/proxy-hosts/{hostID}/preview", "post"),
+			req.body,
+		);
+		res.status(200).send(await internalProxyHostPreview.preview(res.locals.access, payload, Number(host_id)));
 	});
 
 /**
@@ -186,6 +295,30 @@ router
 			id: Number.parseInt(req.params.host_id, 10),
 		});
 		res.status(200).send(result);
+	});
+
+/** On-demand diagnosis of a configured proxy host (no caller-supplied target). */
+router
+	.route("/:host_id/diagnostics")
+	.options((_, res) => {
+		res.sendStatus(204);
+	})
+	.all(jwtdecode())
+	.post(diagnosisLimiter, async (req, res) => {
+		const params = await validator(
+			{
+				required: ["host_id"],
+				additionalProperties: false,
+				properties: { host_id: { $ref: "common#/properties/id" } },
+			},
+			{ host_id: req.params.host_id },
+		);
+		await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/diagnostics", "post"), req.body ?? {});
+		const diagnosis = await internalProxyHostDiagnostics.diagnose(res.locals.access, {
+			id: params.host_id,
+			websocket_path: req.body?.websocket_path,
+		});
+		res.status(200).send(diagnosis);
 	});
 
 /**

@@ -16,6 +16,7 @@ export * from "./useGitSync";
 export * from "./useHealth";
 export * from "./useHostReport";
 export * from "./useProxyHost";
+export * from "./useProxyHostDiagnostics";
 export * from "./useProxyHosts";
 export * from "./useRedirectionHost";
 export * from "./useRedirectionHosts";

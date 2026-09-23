@@ -1,9 +1,17 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type React from "react";
 import type { ProxyHost } from "src/api/backend";
 import { changeLocale } from "src/locale";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Table from "./Table";
+
+const monitorMocks = vi.hoisted(() => ({
+	useProxyHostMonitorStatuses: vi.fn(),
+}));
+
+vi.mock("src/hooks/useProxyHostMonitor", () => ({
+	useProxyHostMonitorStatuses: monitorMocks.useProxyHostMonitorStatuses,
+}));
 
 vi.mock("src/components", () => ({
 	CertificateFormatter: () => null,
@@ -53,6 +61,7 @@ const proxyHost: ProxyHost = {
 
 describe("Proxy hosts table", () => {
 	beforeEach(async () => {
+		monitorMocks.useProxyHostMonitorStatuses.mockReturnValue({ data: [], isPending: false, isError: false });
 		await changeLocale("de");
 	});
 
@@ -69,6 +78,16 @@ describe("Proxy hosts table", () => {
 			"Aktionsmenü öffnen",
 		);
 	});
+	it("offers both one-time diagnostics and continuous monitoring in the same host menu", () => {
+		render(<Table data={[proxyHost]} onEditAccessList={vi.fn()} />);
+		fireEvent.pointerDown(screen.getByRole("button", { name: "Aktionsmenü öffnen" }), {
+			button: 0,
+			ctrlKey: false,
+		});
+
+		expect(screen.getByRole("menuitem", { name: "Host diagnostizieren" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Host-Überwachung" })).toBeInTheDocument();
+	});
 	it("reports an enabled proxy with failed Nginx activation as offline", () => {
 		render(
 			<Table
@@ -78,5 +97,18 @@ describe("Proxy hosts table", () => {
 		);
 		expect(screen.getByText("reported-offline")).toBeInTheDocument();
 		expect(screen.getByTitle("Invalid directive")).toBeInTheDocument();
+	});
+	it("shows active service checks separately from the Nginx activation state", () => {
+		monitorMocks.useProxyHostMonitorStatuses.mockReturnValue({
+			data: [{ hostId: 1, state: "down", checkedAt: "2026-01-01T00:00:00Z", responseMs: 96 }],
+			isPending: false,
+			isError: false,
+		});
+		render(<Table data={[proxyHost]} onEditAccessList={vi.fn()} />);
+
+		expect(monitorMocks.useProxyHostMonitorStatuses).toHaveBeenCalledWith([1]);
+		expect(screen.getByText("reported-online")).toBeInTheDocument();
+		expect(screen.getByText("Nicht erreichbar")).toBeInTheDocument();
+		expect(screen.getByText("96 ms")).toBeInTheDocument();
 	});
 });

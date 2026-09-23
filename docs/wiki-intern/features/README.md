@@ -12,14 +12,17 @@ ShieldPM bietet eine breite Palette an Features. Diese Seite dient als Einstiegs
 
 ### Kern-Features
 
-| Feature                             | Modul-Dokumentation                       | Status |
-| ----------------------------------- | ----------------------------------------- | ------ |
-| Reverse Proxy (HTTP/HTTPS/HTTP3)    | [Proxy-Host](../module/proxy-host.md)     | Aktiv  |
-| TCP/UDP Streams                     | [Modulübersicht](../module/README.md)     | Aktiv  |
-| Redirections                        | [Modulübersicht](../module/README.md)     | Aktiv  |
-| 404-Hosts (Dead Hosts)              | [Modulübersicht](../module/README.md)     | Aktiv  |
-| SSL-Zertifikate (Let's Encrypt)     | [Zertifikate](../module/zertifikate.md)   | Aktiv  |
-| Access-Lists (Basic Auth, IP, mTLS) | [Access-Lists](../module/access-lists.md) | Aktiv  |
+| Feature                             | Modul-Dokumentation                                                          | Status |
+| ----------------------------------- | ---------------------------------------------------------------------------- | ------ |
+| Reverse Proxy (HTTP/HTTPS/HTTP3)    | [Proxy-Host](../module/proxy-host.md)                                        | Aktiv  |
+| Proxy-Host-Konfigurationsvorschau   | [Vorschau](../module/proxy-host.md#konfigurationsvorschau-vor-dem-speichern) | Aktiv  |
+| Proxy-Host-Überwachung              | [Überwachung](../module/proxy-host-monitor.md)                               | Aktiv  |
+| Proxy-Host-Diagnose                 | [Diagnose](./proxy-host-diagnostics.md)                                      | Aktiv  |
+| TCP/UDP Streams                     | [Modulübersicht](../module/README.md)                                        | Aktiv  |
+| Redirections                        | [Modulübersicht](../module/README.md)                                        | Aktiv  |
+| 404-Hosts (Dead Hosts)              | [Modulübersicht](../module/README.md)                                        | Aktiv  |
+| SSL-Zertifikate (Let's Encrypt)     | [Zertifikate](../module/zertifikate.md)                                      | Aktiv  |
+| Access-Lists (Basic Auth, IP, mTLS) | [Access-Lists](../module/access-lists.md)                                    | Aktiv  |
 
 ### Sicherheits-Features
 
@@ -44,20 +47,20 @@ ShieldPM bietet eine breite Palette an Features. Diese Seite dient als Einstiegs
 
 ### Tool-Features
 
-| Feature                   | Modul-Dokumentation                     | Status   |
-| ------------------------- | --------------------------------------- | -------- |
-| AI-Assistent              | [AI-Agent](../module/ai-agent.md)       | Aktiv    |
-| ChatOps (Telegram)        | [ChatOps](../module/chatops.md)         | Aktiv    |
-| GitOps                    | [GitOps](../module/gitops.md)           | Aktiv    |
-| **Swagger UI (API-Docs)** | [Swagger UI](../features/swagger-ui.md) | Aktiv    |
-| Docker Auto-Discovery     | [Docker](../module/docker.md)           | Aktiv    |
-| Web-Terminal (SSH)        | [Terminal](../module/terminal.md)       | Aktiv    |
-| Analytics (GoAccess)      | [Analytics](../module/analytics.md)     | Aktiv    |
-| Maintenance-Windows       | [Maintenance](../module/maintenance.md) | Aktiv    |
-| Service-Icons             | [Modulübersicht](../module/README.md)   | Aktiv    |
-| Dashboard-Notizen         | [Modulübersicht](../module/README.md)   | Aktiv    |
-| PHP-Hosting (8.2/8.3/8.4) | [Modulübersicht](../module/README.md)   | Optional |
-| Turbo-Loader              | [Modulübersicht](../module/README.md)   | Aktiv    |
+| Feature                   | Modul-Dokumentation                       | Status   |
+| ------------------------- | ----------------------------------------- | -------- |
+| AI-Assistent              | [AI-Agent](../module/ai-agent.md)         | Aktiv    |
+| ChatOps (Telegram)        | [ChatOps](../module/chatops.md)           | Aktiv    |
+| GitOps                    | [GitOps](../module/gitops.md)             | Aktiv    |
+| **Swagger UI (API-Docs)** | [Swagger UI](../features/swagger-ui.md)   | Aktiv    |
+| Docker Auto-Discovery     | [Docker](../module/docker.md)             | Aktiv    |
+| Web-Terminal (SSH)        | [Terminal](../module/terminal.md)         | Aktiv    |
+| Analytics (GoAccess)      | [Analytics](../module/analytics.md)       | Aktiv    |
+| Maintenance-Windows       | [Maintenance](../module/maintenance.md)   | Aktiv    |
+| Service-Icons             | [Modulübersicht](../module/README.md)     | Aktiv    |
+| Dashboard-Notizen         | [Modulübersicht](../module/README.md)     | Aktiv    |
+| PHP-Hosting (8.2/8.3/8.4) | [Modulübersicht](../module/README.md)     | Optional |
+| Turbo-Loader              | [Modulübersicht](../module/README.md)     | Aktiv    |
 | Resumable Upload Relay    | [Upload Relay](../module/upload-relay.md) | Optional |
 
 ## Offene Fragen

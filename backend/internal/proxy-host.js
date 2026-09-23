@@ -13,6 +13,7 @@ import internalGitOps from "./gitops.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
 import internalOAuth2Proxy from "./oauth2-proxy.js";
+import internalProxyHostMonitor from "./proxy-host-monitor.js";
 import { validateRelayConfigForHost } from "./upload-relay.js";
 
 const omissions = () => {
@@ -294,6 +295,13 @@ const internalProxyHost = {
 				`Proxy Host could not be updated, IDs do not match: ${row.id} !== ${thisData.id}`,
 			);
 		}
+		const previousUpstream = _.pick(row, [
+			"forward_scheme",
+			"forward_host",
+			"forward_port",
+			"terminal_host",
+			"terminal_port",
+		]);
 
 		if (create_certificate) {
 			const cert = await internalCertificate.createQuickCertificate(access, {
@@ -371,6 +379,9 @@ const internalProxyHost = {
 			// Configure nginx
 			const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
 			row.meta = new_meta;
+		}
+		if (!_.isEqual(previousUpstream, _.pick(row, Object.keys(previousUpstream)))) {
+			await internalProxyHostMonitor.resetHost(row.id);
 		}
 
 		// Trigger GitOps auto-push
@@ -480,6 +491,13 @@ const internalProxyHost = {
 
 		// Stop Git Deploy polling
 		internalGitDeploy.stopPolling(data.id);
+		// The host has been deleted after a validated reload; failed monitoring cleanup
+		// must not turn that successful host deletion into an API error.
+		try {
+			await internalProxyHostMonitor.removeHost(data.id);
+		} catch (error) {
+			console.error(`[Monitor] Could not clear history for deleted host #${data.id}:`, error);
+		}
 
 		// Stop OAuth2 Proxy if this was the last host using it
 		await _cleanupOAuth2Proxy(row.access_list_id);

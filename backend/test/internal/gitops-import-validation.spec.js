@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => {
 		query: () => {
 			const query = {
 				where: () => query,
+				findOne: (filter) =>
+					Promise.resolve(
+						(rows[name] || []).find((entry) =>
+							Object.entries(filter).every(([field, value]) => entry[field] === value),
+						),
+					),
 				withGraphFetched: () => query,
 				whereNotIn: (_field, ids) => {
 					prunes.push({ name, ids });
@@ -70,6 +76,7 @@ vi.mock("../../models/user.js", () => ({ default: mocks.makeModel("User") }));
 vi.mock("../../models/certificate.js", () => ({ default: mocks.makeModel("Certificate") }));
 vi.mock("../../models/access_list.js", () => ({ default: mocks.makeModel("AccessList") }));
 vi.mock("../../models/proxy_host.js", () => ({ default: mocks.makeModel("ProxyHost") }));
+vi.mock("../../models/proxy_host_monitor.js", () => ({ default: mocks.makeModel("ProxyHostMonitor") }));
 vi.mock("../../models/redirection_host.js", () => ({ default: mocks.makeModel("RedirectionHost") }));
 vi.mock("../../models/dead_host.js", () => ({ default: mocks.makeModel("DeadHost") }));
 vi.mock("../../models/stream.js", () => ({ default: mocks.makeModel("Stream") }));
@@ -92,8 +99,14 @@ vi.mock("../../internal/nginx.js", () => ({
 		deleteConfig: vi.fn(),
 	},
 }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({
+	assertMonitorConfig: vi.fn((data) => data),
+	default: { update: vi.fn(), removeHost: vi.fn(), resetHost: vi.fn() },
+}));
 
 import gitops from "../../internal/gitops.js";
+import monitor from "../../internal/proxy-host-monitor.js";
+import { assertNoSymlinkPath } from "../../lib/gitops-files.js";
 
 const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 1 } };
 const file = (directory, data) =>
@@ -101,6 +114,7 @@ const file = (directory, data) =>
 
 describe("GitOps import sanitization and safe restore", () => {
 	beforeEach(() => {
+		vi.clearAllMocks();
 		mocks.files.clear();
 		mocks.writes.length = 0;
 		mocks.prunes.length = 0;
@@ -178,6 +192,20 @@ describe("GitOps import sanitization and safe restore", () => {
 		});
 		expect(mocks.writes[0].data).not.toHaveProperty("domain_names");
 		expect(mocks.writes[0].data).not.toHaveProperty("unknown");
+	});
+	it("invalidates previous monitor measurements when GitOps changes a proxy host's upstream", async () => {
+		mocks.rows.ProxyHost = [{ id: 1, forward_scheme: "http", forward_host: "old.test", forward_port: 8080 }];
+		file("proxy-hosts", { id: 1, forward_host: "new.test" });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(monitor.resetHost).toHaveBeenCalledExactlyOnceWith(1);
+	});
+	it("keeps monitor history when GitOps only changes unrelated proxy host fields", async () => {
+		mocks.rows.ProxyHost = [{ id: 1, forward_scheme: "http", forward_host: "same.test", forward_port: 8080 }];
+		file("proxy-hosts", { id: 1, forward_host: "same.test", advanced_config: "add_header X-Test yes;" });
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(monitor.resetHost).not.toHaveBeenCalled();
 	});
 	it("rejects an enabled-by-default relay import before an unchecked path reaches Nginx", async () => {
 		mocks.rows.AccessList = [{ clients: [], id: 7, items: [{ username: "upload" }], meta: {} }];
@@ -258,5 +286,37 @@ describe("GitOps import sanitization and safe restore", () => {
 		const result = await gitops.importConfig(access);
 		expect(result.success).toBe(true);
 		expect(mocks.writes[0].data.id).toBe(40);
+	});
+	it("restores monitor settings only after checking the tracked file path", async () => {
+		file("proxy-hosts", { id: 1, domain_names: ["example.test"] });
+		file("proxy-host-monitors", {
+			host_id: 1,
+			enabled: true,
+			type: "http",
+			path: "/health",
+			interval_seconds: 60,
+			timeout_ms: 5000,
+			expected_status: 200,
+			alert_enabled: false,
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(assertNoSymlinkPath).toHaveBeenCalledWith(
+			"/data/gitops",
+			"/data/gitops/shieldpm-config/proxy-host-monitors/1.yaml",
+		);
+		expect(monitor.update).toHaveBeenCalledWith(
+			access,
+			1,
+			expect.objectContaining({ enabled: true, path: "/health" }),
+			{ skipAutoPush: true },
+		);
+	});
+	it("does not prune monitor settings after a failed proxy host import", async () => {
+		file("proxy-hosts", { id: "invalid" });
+		mocks.files.set("/data/gitops/shieldpm-config/proxy-host-monitors/.gitkeep", "");
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(false);
+		expect(mocks.prunes.some(({ name }) => name === "ProxyHostMonitor")).toBe(false);
 	});
 });

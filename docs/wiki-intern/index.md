@@ -42,6 +42,8 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Nginx-Engine](./module/nginx-engine.md)
 - [Nginx-Templates](./module/nginx-templates.md)
 - [Proxy-Host](./module/proxy-host.md)
+- [Proxy-Host-Konfigurationsvorschau](./module/proxy-host.md#konfigurationsvorschau-vor-dem-speichern)
+- [Proxy-Host-Überwachung](./module/proxy-host-monitor.md)
 - [Redirection-Host](./module/redirection-host.md)
 - [Dead-Host (404)](./module/dead-host.md)
 - [Stream (TCP/UDP)](./module/stream.md)
@@ -96,6 +98,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 ### API
 
 - [API-Überblick](./api/ueberblick.md)
+- [Proxy-Host-Diagnose](./features/proxy-host-diagnostics.md)
 - [Routen](./api/routen.md)
 - [Nginx-Analytics Routes](./api/nginx-analytics.md)
 - [DDNS-Provider Routes](./api/nginx-ddns-providers.md)

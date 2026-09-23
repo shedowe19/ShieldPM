@@ -63,6 +63,11 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 ### Config-Parsing
 
 - `advancedConfigHasDefaultLocation(advanced_config)` — Parst das `advanced_config`-Feld und prüft, ob ein `location /` Block definiert ist. Gibt `true` zurück, wenn vorhanden. Beeinflusst, ob der Default-Location-Block hinzugefügt wird.
+- `renderConfig(host_type, host_row, options)` — Gemeinsamer reiner Liquid-Renderpfad für
+  `generateConfig()` und die Proxy-Host-Vorschau. Bei `{ preview: true }` wird der Terminal-Token
+  vor dem Rendern durch einen Platzhalter ersetzt; damit muss eine Vorschau keinen Signierschlüssel
+  lesen. `generateConfig()` schreibt das Ergebnis und startet danach optional `nginxbeautifier`.
+  Der Vorschau-Diff normalisiert nur Einrückung und Leerzeilen; erst das Speichern führt `nginx -tq` aus.
 
 ### Anubis-Integration
 

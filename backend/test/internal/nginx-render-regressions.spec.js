@@ -6,6 +6,7 @@ vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: vi.fn()
 
 import internalAnubis from "../../internal/anubis.js";
 import internalNginx from "../../internal/nginx.js";
+import { getTerminalAccessToken } from "../../lib/terminal-access.js";
 
 const host = (overrides = {}) => ({
 	id: 12,
@@ -24,11 +25,29 @@ const host = (overrides = {}) => ({
 describe("Nginx configuration regressions", () => {
 	beforeEach(() => {
 		vi.stubEnv("DISABLE_NGINX_BEAUTIFIER", "true");
+		vi.mocked(getTerminalAccessToken).mockClear();
 		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();
 		vi.unstubAllEnvs();
+	});
+
+	it("uses the same non-writing render output when installing a host config", async () => {
+		const source = host();
+		const rendered = await internalNginx.renderConfig("proxy_host", source);
+		expect(fs.promises.writeFile).not.toHaveBeenCalled();
+		await internalNginx.generateConfig("proxy_host", source);
+		expect(fs.promises.writeFile.mock.calls[0][1]).toBe(rendered);
+	});
+
+	it("renders terminal previews without loading a signing key or emitting a usable handoff token", async () => {
+		const rendered = await internalNginx.renderConfig("proxy_host", host({ forward_scheme: "terminal" }), {
+			preview: true,
+		});
+		expect(getTerminalAccessToken).not.toHaveBeenCalled();
+		expect(rendered).toContain('X-ShieldPM-Terminal-Token "[REDACTED]"');
+		expect(fs.promises.writeFile).not.toHaveBeenCalled();
 	});
 
 	it("renders one root location when a custom root replaces the default", async () => {

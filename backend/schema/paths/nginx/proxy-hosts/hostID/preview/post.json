@@ -1,0 +1,20 @@
+{
+	"operationId": "previewProxyHostUpdate",
+	"summary": "Preview the rendered configuration before updating a proxy host",
+	"description": "Read-only render and diff against this host's active config with sensitive values redacted; nginx -t is performed only during the actual save.",
+	"tags": ["proxy-hosts"],
+	"security": [{ "bearerAuth": ["proxy_hosts.manage"] }],
+	"parameters": [{
+		"in": "path",
+		"name": "hostID",
+		"required": true,
+		"schema": { "type": "integer", "minimum": 1 }
+	}],
+	"requestBody": { "$ref": "../put.json#/requestBody" },
+	"responses": {
+		"200": {
+			"description": "Rendered config and full line diff against the active config",
+			"content": { "application/json": { "schema": { "$ref": "../../../../../components/proxy-host-preview.json" } } }
+		}
+	}
+}

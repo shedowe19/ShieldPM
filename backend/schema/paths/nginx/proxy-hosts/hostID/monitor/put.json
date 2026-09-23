@@ -1,0 +1,36 @@
+{
+	"operationId": "updateProxyHostMonitor",
+	"summary": "Configure a per-host upstream monitor",
+	"tags": ["proxy-hosts"],
+	"security": [{ "bearerAuth": ["proxy_hosts.update"] }],
+	"parameters": [
+		{ "in": "path", "name": "hostID", "required": true, "schema": { "type": "integer", "minimum": 1 } }
+	],
+	"requestBody": {
+		"required": true,
+		"content": {
+			"application/json": {
+				"schema": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["enabled", "type", "path", "interval_seconds", "timeout_ms", "expected_status", "alert_enabled"],
+					"properties": {
+						"enabled": { "type": "boolean" },
+						"type": { "type": "string", "enum": ["http", "tcp"] },
+						"path": { "type": "string", "maxLength": 255, "pattern": "^/(?!/)[A-Za-z0-9/_~.!$&'()*+,;=:-]*$" },
+						"interval_seconds": { "type": "integer", "minimum": 15, "maximum": 3600 },
+						"timeout_ms": { "type": "integer", "minimum": 500, "maximum": 15000 },
+						"expected_status": { "type": "integer", "minimum": 100, "maximum": 599 },
+						"alert_enabled": { "type": "boolean" }
+					}
+				}
+			}
+		}
+	},
+	"responses": {
+		"200": {
+			"description": "Updated monitor detail",
+			"content": { "application/json": { "schema": { "$ref": "./get.json#/responses/200/content/application~1json/schema" } } }
+		}
+	}
+}
