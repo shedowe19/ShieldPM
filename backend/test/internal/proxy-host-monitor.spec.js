@@ -138,6 +138,9 @@ describe("proxy host upstream monitor", () => {
 			),
 		).toThrow();
 		expect(() => assertMonitorConfig(settings({ upstream_ca: "x".repeat(65_537) }))).toThrow();
+		expect(() =>
+			assertMonitorConfig(settings({ upstream_ca: `-----BEGIN CERTIFICATE----- ${"\t".repeat(50_000)}` })),
+		).toThrow();
 		expect(() => assertMonitorConfig(settings({ upstream_server_name: "../other" }))).toThrow();
 		expect(() => assertMonitorConfig(settings({ upstream_server_name: "backend.example.test." }))).toThrow();
 		await state

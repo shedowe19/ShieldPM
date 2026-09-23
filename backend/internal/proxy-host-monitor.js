@@ -18,7 +18,8 @@ const ALERT_COOLDOWN_MS = 5 * 60 * 1000;
 const SAFE_PATH = /^\/(?!\/)[A-Za-z0-9/_~.!$&'()*+,;=:-]*$/;
 // MySQL TEXT stores at most 65,535 bytes, including PEM line breaks.
 const MAX_CA_BYTES = 65_535;
-const CERTIFICATE_BLOCK = /-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----/g;
+const PEM_START = "-----BEGIN CERTIFICATE-----";
+const PEM_END = "-----END CERTIFICATE-----";
 const TLS_CERTIFICATE_ERRORS = new Set([
 	"CERT_HAS_EXPIRED",
 	"CERT_NOT_YET_VALID",
@@ -38,6 +39,46 @@ const active = new Map();
 let timer = null;
 let scanning = false;
 let lastCleanupAt = 0;
+
+const pemWhitespace = (code) => code === 9 || code === 10 || code === 13 || code === 32;
+const pemBase64 = (code) =>
+	(code >= 65 && code <= 90) ||
+	(code >= 97 && code <= 122) ||
+	(code >= 48 && code <= 57) ||
+	code === 43 ||
+	code === 47 ||
+	code === 61;
+
+/** Parse a bounded PEM bundle in one pass. The X.509 parser validates each certificate. */
+const validCertificateBundle = (pem) => {
+	let position = 0;
+	let count = 0;
+	while (position < pem.length) {
+		while (position < pem.length && pemWhitespace(pem.charCodeAt(position))) position++;
+		if (position === pem.length) break;
+		if (count === 8 || !pem.startsWith(PEM_START, position)) return false;
+		const start = position;
+		position += PEM_START.length;
+		const end = pem.indexOf(PEM_END, position);
+		if (end === -1) return false;
+		let hasBase64 = false;
+		for (; position < end; position++) {
+			const code = pem.charCodeAt(position);
+			if (pemWhitespace(code)) continue;
+			if (!pemBase64(code)) return false;
+			hasBase64 = true;
+		}
+		if (!hasBase64) return false;
+		try {
+			new X509Certificate(pem.slice(start, end + PEM_END.length));
+		} catch {
+			return false;
+		}
+		position = end + PEM_END.length;
+		count++;
+	}
+	return count > 0;
+};
 
 /** HTTP GET discards the response body and never follows redirects or sends credentials. */
 export function probeHttp(host, config, signal) {
@@ -191,20 +232,11 @@ export function assertMonitorConfig(data) {
 	if (data.timeout_ms >= data.interval_seconds * 1000)
 		throw new errs.ValidationError("Timeout must be shorter than the interval");
 	const ca = data.upstream_ca ?? null;
-	if (ca !== null) {
-		const certificates =
-			typeof ca === "string" && Buffer.byteLength(ca, "utf8") <= MAX_CA_BYTES
-				? ca.match(CERTIFICATE_BLOCK)
-				: null;
-		if (!certificates || certificates.length > 8 || ca.replace(CERTIFICATE_BLOCK, "").trim()) {
-			throw new errs.ValidationError("Invalid upstream CA certificate");
-		}
-		try {
-			for (const certificate of certificates) new X509Certificate(certificate);
-		} catch {
-			throw new errs.ValidationError("Invalid upstream CA certificate");
-		}
-	}
+	if (
+		ca !== null &&
+		(typeof ca !== "string" || Buffer.byteLength(ca, "utf8") > MAX_CA_BYTES || !validCertificateBundle(ca))
+	)
+		throw new errs.ValidationError("Invalid upstream CA certificate");
 	const serverName = data.upstream_server_name ?? null;
 	if (
 		serverName !== null &&
