@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { promises as filePromises, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
@@ -18,6 +18,48 @@ import schema from "../../schema/paths/nginx/proxy-hosts/hostID/diagnostics/post
 const open = (server) => new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const close = (server) => new Promise((resolve) => server.close(resolve));
 const check = (diagnosis, key) => diagnosis.checks.find((entry) => entry.key === key);
+const selfSignedCertificate = (directory, name) => {
+	const keyPath = join(directory, `${name}.key`);
+	const certPath = join(directory, `${name}.pem`);
+	const created = spawnSync(
+		"openssl",
+		[
+			"req",
+			"-x509",
+			"-nodes",
+			"-newkey",
+			"rsa:2048",
+			"-keyout",
+			keyPath,
+			"-out",
+			certPath,
+			"-days",
+			"2",
+			"-subj",
+			"/CN=localhost",
+			"-addext",
+			"subjectAltName=DNS:localhost",
+		],
+		{ stdio: "ignore" },
+	);
+	if (created.status !== 0) throw new Error("Failed to create a test certificate");
+	return { key: readFileSync(keyPath), cert: readFileSync(certPath) };
+};
+
+const configuredCertificate = (pem) => {
+	const certificatePath = "/data/tls/custom/npm-4/fullchain.pem";
+	const open = filePromises.open.bind(filePromises);
+	const spy = vi.spyOn(filePromises, "open").mockImplementation((path, ...args) => {
+		if (String(path) !== certificatePath) return open(path, ...args);
+		if (!pem) return Promise.reject(Object.assign(new Error("Missing test certificate"), { code: "ENOENT" }));
+		return Promise.resolve({
+			stat: async () => ({ isFile: () => true, size: pem.length }),
+			readFile: async () => pem.toString("utf8"),
+			close: async () => {},
+		});
+	});
+	return { certificatePath, spy };
+};
 
 describe("proxy host diagnostics", () => {
 	let listener;
@@ -62,7 +104,10 @@ describe("proxy host diagnostics", () => {
 
 	it("distinguishes a reachable upstream from the protected local route without forwarding credentials", async () => {
 		const result = await diagnostics.diagnose(access, { id: 7, url: "http://unrelated.invalid" });
-		expect(internalProxyHost.get).toHaveBeenCalledWith(access, { id: 7, expand: ["access_list", "host_domains"] });
+		expect(internalProxyHost.get).toHaveBeenCalledWith(access, {
+			id: 7,
+			expand: ["access_list", "host_domains", "certificate"],
+		});
 		expect(result.hostId).toBe(7);
 		expect(result.checks.map(({ key }) => key)).toEqual(["dns", "tls", "route", "upstream", "auth", "websocket"]);
 		expect(check(result, "route")).toMatchObject({ status: "pass", message: "route.redirect", detail: "302" });
@@ -154,42 +199,17 @@ describe("proxy host diagnostics", () => {
 	});
 
 	it.skipIf(spawnSync("openssl", ["version"]).status !== 0)(
-		"checks local HTTPS certificate and preserves an expected SSO redirect",
+		"reports system-untrusted local HTTPS certificates but probes a pinned self-signed certificate",
 		async () => {
 			const certDir = mkdtempSync(join(tmpdir(), "shieldpm-diagnostics-"));
 			let secureListener;
 			try {
-				spawnSync(
-					"openssl",
-					[
-						"req",
-						"-x509",
-						"-nodes",
-						"-newkey",
-						"rsa:2048",
-						"-keyout",
-						join(certDir, "key.pem"),
-						"-out",
-						join(certDir, "cert.pem"),
-						"-days",
-						"2",
-						"-subj",
-						"/CN=localhost",
-						"-addext",
-						"subjectAltName=DNS:localhost",
-					],
-					{ stdio: "ignore" },
-				);
-				secureListener = https.createServer(
-					{
-						key: readFileSync(join(certDir, "key.pem")),
-						cert: readFileSync(join(certDir, "cert.pem")),
-					},
-					(_req, res) => {
-						res.writeHead(302, { Location: "/signin" });
-						res.end();
-					},
-				);
+				const certificate = selfSignedCertificate(certDir, "configured");
+				const { certificatePath, spy } = configuredCertificate(certificate.cert);
+				secureListener = https.createServer(certificate, (_req, res) => {
+					res.writeHead(302, { Location: "/signin" });
+					res.end();
+				});
 				secureListener.on("upgrade", (_req, socket) =>
 					socket.end("HTTP/1.1 302 Found\r\nLocation: /signin\r\nConnection: close\r\n\r\n"),
 				);
@@ -199,9 +219,11 @@ describe("proxy host diagnostics", () => {
 				vi.mocked(internalProxyHost.get).mockResolvedValueOnce({
 					...host,
 					certificate_id: 4,
+					certificate: { id: 4, provider: "other" },
 					ssl_forced: true,
 				});
 				const result = await diagnostics.diagnose(access, { id: 7 });
+				expect(spy).toHaveBeenCalledWith(certificatePath, "r");
 				expect(check(result, "tls")).toMatchObject({ status: "warn", message: "tls.untrusted" });
 				expect(check(result, "route")).toMatchObject({
 					status: "pass",
@@ -209,7 +231,78 @@ describe("proxy host diagnostics", () => {
 					detail: "302",
 				});
 				expect(check(result, "auth")).toMatchObject({ status: "pass", message: "auth.challenge" });
+				expect(check(result, "websocket")).toMatchObject({
+					status: "warn",
+					message: "websocket.authProtected",
+				});
 			} finally {
+				vi.restoreAllMocks();
+				if (secureListener?.listening) await close(secureListener);
+				rmSync(certDir, { recursive: true, force: true });
+			}
+		},
+	);
+
+	it.skipIf(spawnSync("openssl", ["version"]).status !== 0)(
+		"refuses local HTTPS route and WebSocket probes when the saved certificate does not match the served certificate",
+		async () => {
+			const certDir = mkdtempSync(join(tmpdir(), "shieldpm-diagnostics-mismatch-"));
+			let secureListener;
+			try {
+				const served = selfSignedCertificate(certDir, "served");
+				const configured = selfSignedCertificate(certDir, "configured");
+				configuredCertificate(configured.cert);
+				const requests = vi.fn();
+				secureListener = https.createServer(served, requests);
+				secureListener.on("upgrade", requests);
+				await open(secureListener);
+				vi.stubEnv("HTTPS_PORT", String(secureListener.address().port));
+				const host = await internalProxyHost.get();
+				vi.mocked(internalProxyHost.get).mockResolvedValueOnce({
+					...host,
+					certificate_id: 4,
+					certificate: { id: 4, provider: "other" },
+				});
+				const result = await diagnostics.diagnose(access, { id: 7 });
+				expect(check(result, "tls").status).not.toBe("pass");
+				expect(check(result, "route").status).toBe("fail");
+				expect(check(result, "websocket").status).toBe("fail");
+				expect(requests).not.toHaveBeenCalled();
+			} finally {
+				vi.restoreAllMocks();
+				if (secureListener?.listening) await close(secureListener);
+				rmSync(certDir, { recursive: true, force: true });
+			}
+		},
+	);
+
+	it.skipIf(spawnSync("openssl", ["version"]).status !== 0)(
+		"refuses local HTTPS route and WebSocket probes when the saved private certificate cannot be opened",
+		async () => {
+			const certDir = mkdtempSync(join(tmpdir(), "shieldpm-diagnostics-missing-cert-"));
+			let secureListener;
+			try {
+				const served = selfSignedCertificate(certDir, "served");
+				const { spy, certificatePath } = configuredCertificate(null);
+				const requests = vi.fn();
+				secureListener = https.createServer(served, requests);
+				secureListener.on("upgrade", requests);
+				await open(secureListener);
+				vi.stubEnv("HTTPS_PORT", String(secureListener.address().port));
+				const host = await internalProxyHost.get();
+				vi.mocked(internalProxyHost.get).mockResolvedValueOnce({
+					...host,
+					certificate_id: 4,
+					certificate: { id: 4, provider: "other" },
+				});
+				const result = await diagnostics.diagnose(access, { id: 7 });
+				expect(spy).toHaveBeenCalledWith(certificatePath, "r");
+				expect(check(result, "tls").status).toBe("fail");
+				expect(check(result, "route").status).toBe("fail");
+				expect(check(result, "websocket").status).toBe("fail");
+				expect(requests).not.toHaveBeenCalled();
+			} finally {
+				vi.restoreAllMocks();
 				if (secureListener?.listening) await close(secureListener);
 				rmSync(certDir, { recursive: true, force: true });
 			}

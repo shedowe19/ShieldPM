@@ -1,5 +1,6 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual, X509Certificate } from "node:crypto";
 import { resolve4, resolve6 } from "node:dns/promises";
+import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
@@ -10,6 +11,15 @@ import internalProxyHost from "./proxy-host.js";
 
 const PROBE_TIMEOUT_MS = 3000;
 const WARNING_DAYS = 14;
+const MAX_CERTIFICATE_BYTES = 256 * 1024;
+const UNTRUSTED_CERTIFICATE_CODES = new Set([
+	"CERT_UNTRUSTED",
+	"DEPTH_ZERO_SELF_SIGNED_CERT",
+	"SELF_SIGNED_CERT_IN_CHAIN",
+	"UNABLE_TO_GET_ISSUER_CERT",
+	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+]);
 
 const result = (key, status, message, detail) => ({
 	key,
@@ -58,6 +68,13 @@ const failureCode = (error) => {
 	return "unreachable";
 };
 
+const tlsFailureCode = (error) => {
+	if (error?.code === "CERT_HAS_EXPIRED") return "tls.expired";
+	if (error?.code === "ERR_TLS_CERT_ALTNAME_INVALID") return "tls.hostnameMismatch";
+	if (UNTRUSTED_CERTIFICATE_CODES.has(error?.code)) return "tls.untrusted";
+	return `tls.${failureCode(error)}`;
+};
+
 const validDomain = (name) => {
 	if (typeof name !== "string" || name.startsWith("*.")) return null;
 	const ascii = domainToASCII(name);
@@ -103,54 +120,113 @@ const resolveDns = async (domain) => {
 		: result("dns", "fail", "dns.unresolved");
 };
 
-const connectTls = (listener, domain) =>
+/** Only trust the certificate selected by this host, using the same provider paths as the Nginx template. */
+const getConfiguredTrust = async (host) => {
+	const id = host.certificate_id;
+	if (!Number.isSafeInteger(id) || id < 1 || host.certificate?.id !== id) return null;
+	const directory = {
+		letsencrypt: "certbot/live",
+		internal: "internal",
+		other: "custom",
+	}[host.certificate.provider];
+	if (!directory) return null;
+	let handle;
+	try {
+		handle = await fs.promises.open(`/data/tls/${directory}/npm-${id}/fullchain.pem`, "r");
+		const info = await handle.stat();
+		if (!info.isFile() || info.size === 0 || info.size > MAX_CERTIFICATE_BYTES) return null;
+		const pem = await handle.readFile("utf8");
+		const fingerprint = createHash("sha256").update(new X509Certificate(pem).raw).digest();
+		return { pem, fingerprint };
+	} catch {
+		return null;
+	} finally {
+		await handle?.close();
+	}
+};
+
+/** Node calls this only after verifying the chain against the configured CA. */
+const checkPinnedIdentity = (expected) => (domain, certificate) => {
+	const identityError = tls.checkServerIdentity(domain, certificate);
+	if (identityError) return identityError;
+	const actual = certificate.raw && createHash("sha256").update(certificate.raw).digest();
+	if (actual && timingSafeEqual(actual, expected)) return undefined;
+	return Object.assign(new Error("The served certificate differs from the configured certificate"), {
+		code: "CERT_PIN_MISMATCH",
+	});
+};
+
+const verifiedTlsOptions = (pin) => ({
+	rejectUnauthorized: true,
+	...(pin
+		? {
+				ca: pin.pem,
+				allowPartialTrustChain: true,
+				checkServerIdentity: checkPinnedIdentity(pin.fingerprint),
+			}
+		: {}),
+});
+
+const connectTls = (listener, domain, pin = null) =>
 	new Promise((resolve, reject) => {
 		const socket = tls.connect({
 			host: listener.hostname,
 			port: listener.port,
 			servername: domain,
-			rejectUnauthorized: false,
+			...verifiedTlsOptions(pin),
 		});
 		socket.setTimeout(PROBE_TIMEOUT_MS, () =>
 			socket.destroy(Object.assign(new errs.InternalError("Probe timeout"), { code: "ETIMEDOUT" })),
 		);
 		socket.once("secureConnect", () => {
 			const cert = socket.getPeerCertificate();
-			const authorized = socket.authorized;
 			const identityError = cert?.raw ? tls.checkServerIdentity(domain, cert) : null;
 			socket.destroy();
-			resolve({ cert, authorized, identityError });
+			resolve({ cert, identityError });
 		});
 		socket.once("error", reject);
 	});
 
 const checkTls = async (host, listener, domain) => {
-	if (!host.certificate_id) return result("tls", "skip", "tls.notConfigured");
-	if (!host.enabled) return result("tls", "skip", "host.disabled");
-	if (!domain) return result("tls", "skip", "dns.noExactDomain");
-	if (!listener) return result("tls", "skip", "listener.proxyProtocol");
+	const checked = (check, pin = null) => ({ check, pin });
+	if (!host.certificate_id) return checked(result("tls", "skip", "tls.notConfigured"));
+	if (!host.enabled) return checked(result("tls", "skip", "host.disabled"));
+	if (!domain) return checked(result("tls", "skip", "dns.noExactDomain"));
+	if (!listener) return checked(result("tls", "skip", "listener.proxyProtocol"));
+	let pin = null;
+	let publiclyTrusted = true;
 	try {
-		const { cert, authorized, identityError } = await connectTls(listener, domain);
+		let connection;
+		try {
+			connection = await connectTls(listener, domain);
+		} catch (error) {
+			if (!UNTRUSTED_CERTIFICATE_CODES.has(error?.code)) throw error;
+			pin = await getConfiguredTrust(host);
+			if (!pin) throw error;
+			connection = await connectTls(listener, domain, pin);
+			publiclyTrusted = false;
+		}
+		const { cert, identityError } = connection;
 		const expires = Date.parse(cert?.valid_to);
 		const starts = Date.parse(cert?.valid_from);
 		if (!cert?.raw || !Number.isFinite(expires) || !Number.isFinite(starts)) {
-			return result("tls", "fail", "tls.noCertificate");
+			return checked(result("tls", "fail", "tls.noCertificate"));
 		}
-		if (starts > Date.now() || expires <= Date.now()) return result("tls", "fail", "tls.expired");
-		if (identityError) return result("tls", "fail", "tls.hostnameMismatch");
+		if (starts > Date.now() || expires <= Date.now()) return checked(result("tls", "fail", "tls.expired"));
+		if (identityError) return checked(result("tls", "fail", "tls.hostnameMismatch"));
 		const days = Math.ceil((expires - Date.now()) / 86400000);
-		if (!authorized) return result("tls", "warn", "tls.untrusted", days);
+		if (!publiclyTrusted) return checked(result("tls", "warn", "tls.untrusted", days), pin);
 		return days <= WARNING_DAYS
-			? result("tls", "warn", "tls.expiring", days)
-			: result("tls", "pass", "tls.valid", days);
+			? checked(result("tls", "warn", "tls.expiring", days))
+			: checked(result("tls", "pass", "tls.valid", days));
 	} catch (error) {
-		return result("tls", "fail", `tls.${failureCode(error)}`);
+		return checked(result("tls", "fail", tlsFailureCode(error)));
 	}
 };
 
 // The route probe contacts only ShieldPM's local listener, never the DNS answer.
 // Do not follow redirects, forward browser cookies, or read response bodies.
-const requestLocal = (listener, domain, websocket = false, websocketPath = "/") =>
+const requestLocal = (listener, domain, websocket = false, websocketPath = "/", pin = null) =>
 	new Promise((resolve, reject) => {
 		const client = listener.scheme === "https" ? https : http;
 		const request = client.request(
@@ -159,7 +235,8 @@ const requestLocal = (listener, domain, websocket = false, websocketPath = "/") 
 				method: websocket ? "GET" : "HEAD",
 				path: websocket ? websocketPath : "/",
 				servername: domain,
-				rejectUnauthorized: false,
+				agent: false,
+				...(listener.scheme === "https" ? verifiedTlsOptions(pin) : {}),
 				headers: {
 					Host: domain,
 					Connection: websocket ? "Upgrade" : "close",
@@ -228,12 +305,12 @@ const checkUpstream = async (host) => {
 	}
 };
 
-const checkRoute = async (host, listener, domain) => {
+const checkRoute = async (host, listener, domain, pin) => {
 	if (!host.enabled) return result("route", "skip", "host.disabled");
 	if (!domain) return result("route", "skip", "dns.noExactDomain");
 	if (!listener) return result("route", "skip", "listener.proxyProtocol");
 	try {
-		const status = await requestLocal(listener, domain);
+		const status = await requestLocal(listener, domain, false, "/", pin);
 		if (status >= 500) return result("route", "fail", "route.serverError", status);
 		if (status >= 300 && status < 400) return result("route", "pass", "route.redirect", status);
 		if (status === 401 || status === 403) return result("route", "warn", "route.protected", status);
@@ -255,13 +332,13 @@ const checkAuth = (host, route) => {
 	return result("auth", "warn", "auth.unexpectedResponse", status);
 };
 
-const checkWebsocket = async (host, listener, domain, websocketPath) => {
+const checkWebsocket = async (host, listener, domain, websocketPath, pin) => {
 	if (!host.allow_websocket_upgrade) return result("websocket", "skip", "websocket.notConfigured");
 	if (!host.enabled) return result("websocket", "skip", "host.disabled");
 	if (!domain) return result("websocket", "skip", "dns.noExactDomain");
 	if (!listener) return result("websocket", "skip", "listener.proxyProtocol");
 	try {
-		const status = await requestLocal(listener, domain, true, websocketPath);
+		const status = await requestLocal(listener, domain, true, websocketPath, pin);
 		if (status === 101) return result("websocket", "pass", "websocket.upgraded", status);
 		if ((status >= 300 && status < 400) || status === 401 || status === 403) {
 			return result("websocket", "warn", "websocket.authProtected", status);
@@ -283,17 +360,17 @@ const internalProxyHostDiagnostics = {
 	 * @returns {Promise<{hostId: number, domain: string|null, checkedAt: string, checks: object[]}>}
 	 */
 	diagnose: async (access, data) => {
-		const host = await internalProxyHost.get(access, { id: data.id, expand: ["access_list", "host_domains"] });
+		const host = await internalProxyHost.get(access, {
+			id: data.id,
+			expand: ["access_list", "host_domains", "certificate"],
+		});
 		const websocketPath = validateWebsocketPath(data.websocket_path ?? "/");
 		const domain = host.domain_names?.map(validDomain).find(Boolean) || null;
 		const listener = listenerFor(host);
 		const dns = await resolveDns(domain);
-		const [tlsCheck, upstream, route] = await Promise.all([
-			checkTls(host, listener, domain),
-			checkUpstream(host),
-			checkRoute(host, listener, domain),
-		]);
-		const websocket = await checkWebsocket(host, listener, domain, websocketPath);
+		const { check: tlsCheck, pin } = await checkTls(host, listener, domain);
+		const [upstream, route] = await Promise.all([checkUpstream(host), checkRoute(host, listener, domain, pin)]);
+		const websocket = await checkWebsocket(host, listener, domain, websocketPath, pin);
 		return {
 			hostId: host.id,
 			domain,

@@ -229,6 +229,8 @@ Choose **Diagnose host** from a proxy host's action menu to check its stored con
 
 You need permission to view the host. The checks do not follow redirects or send credentials. With OIDC, OAuth2 or Basic authentication, a redirect or 401/403 response can be expected. Enter your app's WebSocket endpoint as a relative path (for example `/api/ws`); the default is `/`. This tests only that path and cannot verify a signed-in user's reconnect. The routing probe runs on the ShieldPM instance and cannot verify an external CDN, public firewall or DNS from another network.
 
+For HTTPS hosts, ShieldPM verifies the local Nginx certificate before sending the route or WebSocket probe. If the certificate is self-signed or issued by a private authority that the system does not trust, ShieldPM can still test the local route when the served certificate matches the certificate configured for that host and its hostname is valid. The TLS result continues to warn that clients may not trust the certificate. If this local verification needs a configured certificate and that certificate is missing, does not match the one served by Nginx, or has the wrong hostname, the HTTPS route and WebSocket checks fail without sending HTTP requests. A successful local route check does not prove that browsers trust the certificate.
+
 ---
 
 ## Related pages
