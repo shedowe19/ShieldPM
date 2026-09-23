@@ -6,13 +6,13 @@ Tipps und Hinweise für die tägliche Entwicklungsarbeit.
 
 ## Backend-Einstiegspunkte
 
-| Datei          | Zweck                                                                                          |
-| -------------- | ---------------------------------------------------------------------------------------------- |
-| `index.js`     | Produktion: führt Migrationen aus, initialisiert danach Analytics und startet den HTTPS-Server |
-| `index-dev.js` | Entwicklung: führt Migrationen aus, initialisiert danach Analytics und startet den HTTP-Server |
-| `app.js`       | Express-App-Konfiguration (Middleware, Routen)                                                 |
+| Datei          | Zweck                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| `index.js`     | Produktion: führt Migrationen aus, initialisiert danach Analytics und startet den Unix-Socket-Server |
+| `index-dev.js` | Entwicklung: führt Migrationen aus, initialisiert danach Analytics und startet den HTTP-Server       |
+| `app.js`       | Express-App-Konfiguration (Middleware, Routen)                                                       |
 
-`index-dev.js` setzt fehlende lokale Umgebungswerte vor den dynamischen Imports, damit Datenbank und Konfiguration denselben `DATA_PATH` verwenden. Bereits gesetzte Werte bleiben erhalten. Der Entwicklungsserver lauscht auf `127.0.0.1:3000`; das Startprotokoll gibt kein Administratorpasswort aus.
+`index-dev.js` setzt fehlende lokale Umgebungswerte vor den dynamischen Imports, damit Datenbank und Konfiguration denselben `DATA_PATH` verwenden. Bereits gesetzte Werte bleiben erhalten. Der Entwicklungsserver lauscht auf `127.0.0.1:3000`; das Startprotokoll gibt kein Administratorpasswort aus. Nach erfolgreichem Listen startet auch hier der Proxy-Host-Monitor-Scheduler. Bei `SIGINT` oder `SIGTERM` stoppt er vor dem Schließen des Servers; danach wird Analytics beendet.
 
 ## Entwicklungs-Workflow
 

@@ -10,6 +10,8 @@ export interface ProxyHostMonitorConfig {
 	timeoutMs: number;
 	expectedStatus: number;
 	alertEnabled: boolean;
+	upstreamCa: string | null;
+	upstreamServerName: string | null;
 }
 
 export interface ProxyHostMonitorStatus {

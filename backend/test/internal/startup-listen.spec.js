@@ -67,7 +67,10 @@ describe("backend listener lifecycle", () => {
 		state.port = 0;
 		state.completed = false;
 		listeners = new Map(
-			["SIGTERM", "uncaughtException", "unhandledRejection"].map((event) => [event, process.listeners(event)]),
+			["SIGINT", "SIGTERM", "uncaughtException", "unhandledRejection"].map((event) => [
+				event,
+				process.listeners(event),
+			]),
 		);
 	});
 	afterEach(async () => {
@@ -101,6 +104,7 @@ describe("backend listener lifecycle", () => {
 		expect(state.monitorStart).not.toHaveBeenCalled();
 		expect(state.monitorStop).not.toHaveBeenCalled();
 		expect(process.listeners("SIGTERM")).toEqual(listeners.get("SIGTERM"));
+		expect(process.listeners("SIGINT")).toEqual(listeners.get("SIGINT"));
 	});
 	it("initializes the terminal only after listening and closes the server on SIGTERM", async () => {
 		await import("../../index.js");
@@ -120,5 +124,20 @@ describe("backend listener lifecycle", () => {
 		expect(state.analyticsStop).toHaveBeenCalledOnce();
 		expect(state.monitorStop).toHaveBeenCalledOnce();
 		expect(server.listening).toBe(false);
+	});
+	it.each(["SIGINT", "SIGTERM"])("runs development monitoring after listen and stops it on %s", async (signal) => {
+		await import("../../index-dev.js");
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+		const server = state.servers[0];
+		expect(state.monitorStart).toHaveBeenCalledOnce();
+		const handlers = process.listeners(signal).filter((listener) => !listeners.get(signal).includes(listener));
+		expect(handlers).toHaveLength(1);
+		handlers[0]();
+		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
+		expect(state.monitorStop).toHaveBeenCalledOnce();
+		expect(state.analyticsStop).toHaveBeenCalledOnce();
+		expect(server.listening).toBe(false);
+		expect(process.listeners("SIGINT")).toEqual(listeners.get("SIGINT"));
+		expect(process.listeners("SIGTERM")).toEqual(listeners.get("SIGTERM"));
 	});
 });

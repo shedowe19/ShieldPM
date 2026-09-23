@@ -15,6 +15,7 @@ import {
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
+import { Textarea } from "src/components/ui/textarea";
 import {
 	useCheckProxyHostMonitor,
 	useProxyHostMonitor,
@@ -22,7 +23,7 @@ import {
 } from "src/hooks/useProxyHostMonitor";
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
-import { formatMonitorTime, MonitorStatus } from "./MonitorStatus";
+import { formatMonitorTime, MonitorStatus, monitorMessage } from "./MonitorStatus";
 
 const defaultConfig: ProxyHostMonitorConfig = {
 	enabled: true,
@@ -32,7 +33,31 @@ const defaultConfig: ProxyHostMonitorConfig = {
 	timeoutMs: 5000,
 	expectedStatus: 200,
 	alertEnabled: false,
+	upstreamCa: null,
+	upstreamServerName: null,
 };
+
+const certificateStart = "-----BEGIN CERTIFICATE-----";
+const certificateEnd = "-----END CERTIFICATE-----";
+const dnsLabel = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+
+function validCertificateBundle(pem: string): boolean {
+	let remaining = pem.trim();
+	let count = 0;
+	while (remaining) {
+		if (!remaining.startsWith(certificateStart) || count === 8) return false;
+		remaining = remaining.slice(certificateStart.length);
+		const end = remaining.indexOf(certificateEnd);
+		if (end < 0 || !/^[A-Za-z0-9+/=\s]+$/.test(remaining.slice(0, end))) return false;
+		remaining = remaining.slice(end + certificateEnd.length).trim();
+		count++;
+	}
+	return count > 0;
+}
+
+function validDnsName(name: string): boolean {
+	return name.length <= 253 && name.split(".").every((label) => label.length <= 63 && dnsLabel.test(label));
+}
 
 interface Props {
 	hostId: number;
@@ -63,6 +88,7 @@ function MonitorSettings({
 	const [error, setError] = useState("");
 	const update = useUpdateProxyHostMonitor(hostId);
 	const check = useCheckProxyHostMonitor(hostId);
+	const usesUpstreamTls = config.type === "http" && forwardScheme === "https";
 
 	const submit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -75,9 +101,22 @@ function MonitorSettings({
 			setError(intl.formatMessage({ id: "proxy-host.monitor.path-error" }));
 			return;
 		}
-		update.mutate(config, {
-			onError: (reason) => setError(reason.message),
-		});
+		const upstreamCa = usesUpstreamTls ? config.upstreamCa?.trim() || null : null;
+		const upstreamServerName = usesUpstreamTls ? config.upstreamServerName?.trim() || null : null;
+		if (upstreamCa && (upstreamCa.length > 65_535 || !validCertificateBundle(upstreamCa))) {
+			setError(intl.formatMessage({ id: "proxy-host.monitor.upstream-ca-error" }));
+			return;
+		}
+		if (upstreamServerName && !validDnsName(upstreamServerName)) {
+			setError(intl.formatMessage({ id: "proxy-host.monitor.upstream-server-name-error" }));
+			return;
+		}
+		update.mutate(
+			{ ...config, upstreamCa, upstreamServerName },
+			{
+				onError: (reason) => setError(reason.message),
+			},
+		);
 	};
 
 	const runCheck = () => {
@@ -191,6 +230,46 @@ function MonitorSettings({
 						</>
 					)}
 				</div>
+				{usesUpstreamTls && (
+					<div className="space-y-4 rounded-md border p-4">
+						<div className="space-y-2">
+							<Label htmlFor="monitor-upstream-server-name">
+								<T id="proxy-host.monitor.upstream-server-name" />
+							</Label>
+							<Input
+								id="monitor-upstream-server-name"
+								type="text"
+								maxLength={253}
+								placeholder="service.example.test"
+								value={config.upstreamServerName ?? ""}
+								onChange={(event) =>
+									setConfig((old) => ({ ...old, upstreamServerName: event.target.value }))
+								}
+							/>
+							<p className="text-xs text-muted-foreground">
+								<T id="proxy-host.monitor.upstream-server-name-description" />
+							</p>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="monitor-upstream-ca">
+								<T id="proxy-host.monitor.upstream-ca" />
+							</Label>
+							<Textarea
+								id="monitor-upstream-ca"
+								rows={5}
+								maxLength={65_535}
+								spellCheck={false}
+								className="font-mono text-xs"
+								placeholder="-----BEGIN CERTIFICATE-----"
+								value={config.upstreamCa ?? ""}
+								onChange={(event) => setConfig((old) => ({ ...old, upstreamCa: event.target.value }))}
+							/>
+							<p className="text-xs text-muted-foreground">
+								<T id="proxy-host.monitor.upstream-ca-description" />
+							</p>
+						</div>
+					</div>
+				)}
 				<div className="flex items-center justify-between gap-4">
 					<div>
 						<Label htmlFor="monitor-alert">
@@ -250,7 +329,9 @@ function MonitorMeasurements({ detail }: { detail: ProxyHostMonitorDetail }) {
 							<T id="proxy-host.monitor.last-checked" />: {formatMonitorTime(detail.status.checkedAt)}
 							{detail.status.statusCode != null ? ` · HTTP ${detail.status.statusCode}` : ""}
 						</p>
-						{detail.status.message && <p className="break-words text-sm">{detail.status.message}</p>}
+						{detail.status.message && (
+							<p className="break-words text-sm">{monitorMessage(detail.status.message)}</p>
+						)}
 					</>
 				)}
 			</div>
@@ -278,7 +359,9 @@ function MonitorMeasurements({ detail }: { detail: ProxyHostMonitorDetail }) {
 									{formatMonitorTime(item.checkedAt)}
 									{item.statusCode != null ? ` · HTTP ${item.statusCode}` : ""}
 								</div>
-								{item.message && <p className="w-full break-words text-xs">{item.message}</p>}
+								{item.message && (
+									<p className="w-full break-words text-xs">{monitorMessage(item.message)}</p>
+								)}
 							</li>
 						))}
 					</ul>

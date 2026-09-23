@@ -71,6 +71,33 @@ describe("protected proxy-host monitor routes", () => {
 		expect(invalidConfig.status).toBe(400);
 		expect(state.update).not.toHaveBeenCalled();
 	});
+	it("accepts optional HTTPS trust settings and rejects invalid DNS names", async () => {
+		const payload = {
+			enabled: true,
+			type: "http",
+			path: "/health",
+			interval_seconds: 60,
+			timeout_ms: 5000,
+			expected_status: 200,
+			alert_enabled: false,
+			upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
+			upstream_server_name: "service.internal.example",
+		};
+		const send = (data) =>
+			fetch(`${origin}/nginx/proxy-hosts/12/monitor`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(data),
+			});
+		expect((await send(payload)).status).toBe(200);
+		expect(state.update).toHaveBeenCalledWith(state.access, 12, payload);
+		expect((await send({ ...payload, upstream_ca: null, upstream_server_name: null })).status).toBe(200);
+		expect((await send({ ...payload, upstream_ca: undefined, upstream_server_name: undefined })).status).toBe(200);
+		expect((await send({ ...payload, upstream_server_name: "bad..name" })).status).toBe(400);
+		expect((await send({ ...payload, upstream_ca: "a".repeat(65_535) })).status).toBe(200);
+		expect((await send({ ...payload, upstream_ca: "a".repeat(65_536) })).status).toBe(400);
+		expect(state.update).toHaveBeenCalledTimes(4);
+	});
 
 	it("validates 100-ID batch limits and propagates permission denial on details", async () => {
 		const tooMany = await fetch(

@@ -1,3 +1,4 @@
+import * as yaml from "js-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
@@ -11,6 +12,8 @@ const mocks = vi.hoisted(() => {
 		query: () => {
 			const query = {
 				where: () => query,
+				whereIn: () => query,
+				whereNot: () => query,
 				findOne: (filter) =>
 					Promise.resolve(
 						(rows[name] || []).find((entry) =>
@@ -63,6 +66,7 @@ vi.mock("node:fs", () => ({
 		existsSync: (path) =>
 			mocks.files.has(path) || [...mocks.files.keys()].some((key) => key.startsWith(`${path}/`)),
 		promises: {
+			mkdir: vi.fn(),
 			readdir: async (path) =>
 				[...mocks.files.keys()]
 					.filter((key) => key.startsWith(`${path}/`))
@@ -106,7 +110,7 @@ vi.mock("../../internal/proxy-host-monitor.js", () => ({
 
 import gitops from "../../internal/gitops.js";
 import monitor from "../../internal/proxy-host-monitor.js";
-import { assertNoSymlinkPath } from "../../lib/gitops-files.js";
+import { assertNoSymlinkPath, writeConfigFile } from "../../lib/gitops-files.js";
 
 const access = { can: vi.fn().mockResolvedValue(true), token: { getUserId: () => 1 } };
 const file = (directory, data) =>
@@ -198,7 +202,7 @@ describe("GitOps import sanitization and safe restore", () => {
 		file("proxy-hosts", { id: 1, forward_host: "new.test" });
 		const result = await gitops.importConfig(access, { overwrite: true });
 		expect(result.success).toBe(true);
-		expect(monitor.resetHost).toHaveBeenCalledExactlyOnceWith(1);
+		expect(monitor.resetHost).toHaveBeenCalledExactlyOnceWith(1, { disableUnsupported: true });
 	});
 	it("keeps monitor history when GitOps only changes unrelated proxy host fields", async () => {
 		mocks.rows.ProxyHost = [{ id: 1, forward_scheme: "http", forward_host: "same.test", forward_port: 8080 }];
@@ -311,6 +315,64 @@ describe("GitOps import sanitization and safe restore", () => {
 			expect.objectContaining({ enabled: true, path: "/health" }),
 			{ skipAutoPush: true },
 		);
+	});
+	it("restores a monitor's custom CA and HTTPS server name from GitOps", async () => {
+		file("proxy-hosts", { id: 1, domain_names: ["example.test"] });
+		file("proxy-host-monitors", {
+			host_id: 1,
+			enabled: true,
+			type: "http",
+			path: "/health",
+			interval_seconds: 60,
+			timeout_ms: 5000,
+			expected_status: 200,
+			alert_enabled: false,
+			upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
+			upstream_server_name: "service.internal.example",
+		});
+		const result = await gitops.importConfig(access, { overwrite: true });
+		expect(result.success).toBe(true);
+		expect(monitor.update).toHaveBeenCalledWith(
+			access,
+			1,
+			expect.objectContaining({
+				upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
+				upstream_server_name: "service.internal.example",
+			}),
+			{ skipAutoPush: true },
+		);
+	});
+	it("exports optional HTTPS trust settings alongside a proxy host monitor", async () => {
+		mocks.rows.ProxyHost = [{ id: 1, domain_names: ["example.test"] }];
+		mocks.rows.ProxyHostMonitor = [
+			{
+				host_id: 1,
+				enabled: true,
+				type: "http",
+				path: "/health",
+				interval_seconds: 60,
+				timeout_ms: 5000,
+				expected_status: 200,
+				alert_enabled: false,
+				upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
+				upstream_server_name: "service.internal.example",
+			},
+		];
+		const initialize = vi.spyOn(gitops, "initRepo").mockResolvedValue();
+		const certificates = vi.spyOn(gitops, "exportCertificateFiles").mockResolvedValue();
+		try {
+			expect(await gitops.exportConfig()).toContain("/data/gitops/shieldpm-config/proxy-host-monitors/1.yaml");
+			const output = vi
+				.mocked(writeConfigFile)
+				.mock.calls.find(([, filename]) => filename.endsWith("/proxy-host-monitors/1.yaml"));
+			expect(yaml.load(output[2])).toMatchObject({
+				upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
+				upstream_server_name: "service.internal.example",
+			});
+		} finally {
+			initialize.mockRestore();
+			certificates.mockRestore();
+		}
 	});
 	it("does not prune monitor settings after a failed proxy host import", async () => {
 		file("proxy-hosts", { id: "invalid" });

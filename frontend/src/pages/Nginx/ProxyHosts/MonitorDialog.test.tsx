@@ -26,7 +26,22 @@ const savedConfig = {
 	timeoutMs: 5000,
 	expectedStatus: 200,
 	alertEnabled: false,
+	upstreamCa: null,
+	upstreamServerName: null,
 };
+
+function renderMonitor(forwardScheme = "https") {
+	return render(
+		<MonitorDialog
+			hostId={7}
+			domain="app.example.test"
+			forwardScheme={forwardScheme}
+			hostEnabled
+			targetSupported
+			onClose={vi.fn()}
+		/>,
+	);
+}
 
 describe("Host monitor settings", () => {
 	beforeEach(async () => {
@@ -60,6 +75,103 @@ describe("Host monitor settings", () => {
 			expect.any(Object),
 		);
 		expect(mocks.check).not.toHaveBeenCalled();
+		expect(screen.queryByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)")).not.toBeInTheDocument();
+	});
+
+	it("saves and restores the public CA and SNI name for an HTTPS monitor", () => {
+		const publicCert = "-----BEGIN CERTIFICATE-----\nAQID\n-----END CERTIFICATE-----";
+		mocks.query.mockReturnValue({
+			data: {
+				config: { ...savedConfig, upstreamCa: publicCert, upstreamServerName: "backend.example.test" },
+				status: null,
+				history: [],
+			},
+			isLoading: false,
+		});
+		renderMonitor();
+
+		const caField = screen.getByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)");
+		const nameField = screen.getByLabelText("TLS-Servername des Zielservers");
+		expect(caField).toHaveValue(publicCert);
+		expect(caField).toHaveAttribute("maxLength", "65535");
+		expect(nameField).toHaveValue("backend.example.test");
+		fireEvent.change(nameField, { target: { value: "new.example.test" } });
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+		expect(mocks.update).toHaveBeenCalledWith(
+			{ ...savedConfig, upstreamCa: publicCert, upstreamServerName: "new.example.test" },
+			expect.any(Object),
+		);
+	});
+
+	it("clears the optional TLS settings using null and does not apply them to a TCP check", () => {
+		const publicCert = "-----BEGIN CERTIFICATE-----\nAQID\n-----END CERTIFICATE-----";
+		mocks.query.mockReturnValue({
+			data: {
+				config: { ...savedConfig, upstreamCa: publicCert, upstreamServerName: "backend.example.test" },
+				status: null,
+				history: [],
+			},
+			isLoading: false,
+		});
+		renderMonitor();
+		fireEvent.change(screen.getByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)"), {
+			target: { value: "" },
+		});
+		fireEvent.change(screen.getByLabelText("TLS-Servername des Zielservers"), { target: { value: "" } });
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		expect(mocks.update).toHaveBeenLastCalledWith(
+			{ ...savedConfig, upstreamCa: null, upstreamServerName: null },
+			expect.any(Object),
+		);
+
+		fireEvent.change(screen.getByLabelText("Prüfart"), { target: { value: "tcp" } });
+		expect(screen.queryByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)")).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		expect(mocks.update).toHaveBeenLastCalledWith(
+			{ ...savedConfig, type: "tcp", upstreamCa: null, upstreamServerName: null },
+			expect.any(Object),
+		);
+	});
+
+	it("rejects private keys and invalid DNS names before saving an HTTPS check", () => {
+		renderMonitor();
+		fireEvent.change(screen.getByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)"), {
+			target: { value: "-----BEGIN PRIVATE KEY-----\nAQID\n-----END PRIVATE KEY-----" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		expect(screen.getByRole("alert")).toHaveTextContent("private Schlüssel sind nicht erlaubt");
+		expect(mocks.update).not.toHaveBeenCalled();
+
+		fireEvent.change(screen.getByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)"), {
+			target: { value: "" },
+		});
+		fireEvent.change(screen.getByLabelText("TLS-Servername des Zielservers"), {
+			target: { value: "invalid_hostname.example.test" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		expect(screen.getByRole("alert")).toHaveTextContent("gültigen DNS-Namen");
+		expect(mocks.update).not.toHaveBeenCalled();
+	});
+
+	it("explains an unverifiable HTTPS check in the current status and history", () => {
+		const tlsFailure = {
+			state: "unknown",
+			checkedAt: "2026-09-23T12:00:00Z",
+			responseMs: 20,
+			message: "TLS certificate could not be verified",
+		};
+		mocks.query.mockReturnValue({
+			data: {
+				config: savedConfig,
+				status: tlsFailure,
+				history: [{ ...tlsFailure, id: 1, transition: false }],
+			},
+			isLoading: false,
+		});
+		renderMonitor();
+		expect(screen.getAllByText("Nicht prüfbar")).toHaveLength(2);
+		expect(screen.getAllByText("TLS-Zertifikat nicht verifizierbar")).toHaveLength(2);
 	});
 
 	it("rejects a timeout greater than or equal to the interval", () => {
@@ -132,6 +244,14 @@ describe("Host monitor settings", () => {
 	});
 
 	it("does not offer a monitor for file-system upstreams", () => {
+		mocks.query.mockReturnValue({
+			data: {
+				config: { ...savedConfig, enabled: false },
+				status: { state: "paused", checkedAt: null, responseMs: null },
+				history: [],
+			},
+			isLoading: false,
+		});
 		render(
 			<MonitorDialog
 				hostId={7}
@@ -143,6 +263,8 @@ describe("Host monitor settings", () => {
 			/>,
 		);
 		expect(screen.getByText(/Dateisystem/)).toBeInTheDocument();
+		expect(screen.getByText(/automatisch deaktiviert/)).toBeInTheDocument();
+		expect(screen.getByText("Pausiert")).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Speichern" })).not.toBeInTheDocument();
 	});
 });

@@ -87,10 +87,13 @@ The **Service check** column in **Proxy Hosts** shows whether the upstream servi
 1. Open **Host monitoring** from the action menu.
 2. Select **Enable monitoring** and choose **HTTP(S)** or **TCP**. HTTP(S) is available for HTTP and HTTPS upstreams; TCP checks the configured upstream host and port.
 3. For HTTP(S), enter an **HTTP path** starting with `/` and an **Expected HTTP status**. The path is on the already configured upstream. Full URLs and query strings are not accepted.
-4. Set an **Interval** of 15–3600 seconds and a **Timeout** of 500–15000 milliseconds. The timeout must be shorter than the interval.
-5. Optionally enable **Notify on status changes** and save. The host's owner needs an enabled Telegram integration with permitted recipient IDs. Choose **Check now** to run an immediate check.
+4. For HTTPS upstreams, you can optionally set an **Upstream TLS server name** and a **Custom upstream CA (PEM)**. The DNS name is used for SNI and certificate name verification when the upstream address differs from its certificate name (for example, when connecting to an IP address). It does not change the connection target. With no name set, the certificate must match the configured upstream host. Paste only public PEM certificates in the CA field (up to eight certificates and 65,535 bytes); never paste a private key. When set, the custom CA bundle replaces the system trust store for this check. Leave it blank to trust system CAs.
+5. Set an **Interval** of 15–3600 seconds and a **Timeout** of 500–15000 milliseconds. The timeout must be shorter than the interval.
+6. Optionally enable **Notify on status changes** and save. The host's owner needs an enabled Telegram integration with permitted recipient IDs. Choose **Check now** to run an immediate check.
 
-The column shows **Available**, **Unavailable**, **Waiting for first check** or **Paused**, with response time when a check has run. Open **Host monitoring** to see the last check and recent history, including status changes. The list refreshes the results periodically. Disabled monitoring does not run checks. A running Nginx server does not guarantee that the upstream service is available.
+The column shows **Available**, **Unavailable**, **Waiting for first check**, **Not verifiable** or **Paused**, with response time when a check has run. An HTTPS check with an untrusted or mismatched upstream certificate is **Not verifiable** (state `unknown`), not **Unavailable**; it sends no outage alert. Configure the correct public upstream CA and, if needed, the DNS server name so TLS verification can succeed and the HTTP health response can be checked. Open **Host monitoring** to see the last check and recent history, including status changes. The list refreshes the results periodically. Disabled monitoring does not run checks. A running Nginx server does not guarantee that the upstream service is available.
+
+When a monitored host is changed to a file-system or Unix socket target, the monitor is disabled automatically. Change back to a network upstream before re-enabling it. The dialog shows the previous status but does not offer monitoring settings for unsupported targets.
 
 > [!NOTE]
 > HTTP checks do not send credentials. Use an unauthenticated health endpoint for protected services, or choose a TCP check.

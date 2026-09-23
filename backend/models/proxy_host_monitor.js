@@ -14,6 +14,8 @@ class ProxyHostMonitor extends Model {
 	/** @type {number} */ timeout_ms;
 	/** @type {number} */ expected_status;
 	/** @type {boolean} */ alert_enabled;
+	/** @type {string | null} */ upstream_ca;
+	/** @type {string | null} */ upstream_server_name;
 	/** @type {number} */ version;
 	/** @type {string} */ state;
 	/** @type {string | null} */ checked_at;

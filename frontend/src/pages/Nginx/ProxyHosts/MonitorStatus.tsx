@@ -15,15 +15,23 @@ export function formatMonitorTime(value: string | null | undefined) {
 	return Number.isNaN(date.getTime()) ? "–" : date.toLocaleString();
 }
 
+export function monitorMessage(message: string | null | undefined): string | null {
+	if (message === "TLS certificate could not be verified") {
+		return intl.formatMessage({ id: "proxy-host.monitor.tls-unverified" });
+	}
+	return message ?? null;
+}
+
 export function MonitorStatus({ status }: { status: ProxyHostMonitorStatus | null | undefined }) {
 	const state = status?.state ?? "unknown";
+	const label = state === "unknown" && status?.checkedAt ? "proxy-host.monitor.unverifiable" : monitorLabels[state];
 	return (
-		<span className="inline-flex flex-wrap items-center gap-2" title={status?.message ?? undefined}>
+		<span className="inline-flex flex-wrap items-center gap-2" title={monitorMessage(status?.message) ?? undefined}>
 			<Badge
 				variant={state === "up" ? "success" : state === "down" ? "destructive" : "secondary"}
 				className="whitespace-nowrap"
 			>
-				<T id={monitorLabels[state]} />
+				<T id={label} />
 			</Badge>
 			{typeof status?.responseMs === "number" && state !== "paused" && (
 				<span className="text-xs text-muted-foreground">{Math.round(status.responseMs)} ms</span>

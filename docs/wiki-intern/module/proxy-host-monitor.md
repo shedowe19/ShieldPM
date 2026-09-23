@@ -10,8 +10,9 @@ Zustands an die für den Besitzer aktivierten ChatOps-Integrationen.
 
 `backend/internal/proxy-host-monitor.js` startet nach dem Start des API-Servers. Ein Polling-Takt von 10 Sekunden
 lädt fällige Hosts und führt insgesamt höchstens fünf Checks gleichzeitig aus. Das nächste Fälligkeitsdatum wird
-gespeichert; ein Neustart erzeugt deshalb keine unbeschränkte Reihe gleichzeitiger Prüfungen. SIGTERM beendet den
-Timer und bricht laufende Sockets ab. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
+gespeichert; ein Neustart erzeugt deshalb keine unbeschränkte Reihe gleichzeitiger Prüfungen. Bei `SIGTERM` in
+Produktion und bei `SIGINT` oder `SIGTERM` in der Entwicklung wird der Timer beendet und laufende Sockets werden
+abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
 
 ## Wichtige Dateien
 
@@ -19,6 +20,7 @@ Timer und bricht laufende Sockets ab. Ausgeschaltete und gelöschte Hosts werden
 - `backend/models/proxy_host_monitor.js` — Einstellungen und zuletzt gemessener Zustand
 - `backend/models/proxy_host_monitor_check.js` — einzelne, zeitlich sortierte Messergebnisse
 - `backend/migrations/20260923000000_add_proxy_host_monitor.js` — DB-Schema
+- `backend/migrations/20260923000001_add_proxy_host_monitor_tls_options.js` — TLS-Vertrauensanker und Servername
 - `backend/routes/nginx/proxy_hosts.js` — geschützte HTTP-Routen
 - `backend/schema/paths/nginx/proxy-hosts/hostID/monitor/` — OpenAPI- und Eingabeverträge
 - `backend/internal/chat.js` — Telegram-Nachricht an konfigurierte erlaubte IDs des Host-Besitzers
@@ -32,15 +34,23 @@ Timer und bricht laufende Sockets ab. Ausgeschaltete und gelöschte Hosts werden
 - Die Anwendung nimmt keine beliebigen vollständigen URLs entgegen. Nur bestehende Proxy-Hosts mit Berechtigung
   `proxy_hosts:update` dürfen ihre Monitor-Konfiguration ändern. Dateibasierte Ziele und Unix-Sockets werden
   abgelehnt. HTTP-Probes verwenden weder Sitzungs-Cookies noch Redirects; der Response-Body wird verworfen.
+- HTTPS-Probes prüfen das Upstream-Zertifikat und den Servernamen. Optional kann `upstream_ca` ein PEM-Bundle
+  mit höchstens 65.535 Bytes und acht Zertifikaten als Vertrauensbasis festlegen. Dieses Bundle ersetzt die
+  standardmäßigen Node.js-Vertrauensanker; ohne Bundle gelten die Node.js-Standardeinstellungen.
+  `upstream_server_name` überschreibt den für TLS verwendeten DNS-Namen, wenn Verbindungsadresse und
+  Zertifikatsname verschieden sind. Bei einem Zertifikatsfehler lautet der Status `unknown`, ohne einen
+  Ausfallalarm auszulösen.
 - Der HTTP-Status muss exakt dem konfigurierten Code entsprechen. Ein fehlgeschlagener Verbindungsaufbau, Timeout
-  oder anderer Status setzt den Zustand auf `down`. `unknown` bezeichnet noch nicht geprüfte Hosts; deaktivierte
-  Monitore und Hosts erscheinen als `paused`, ohne den letzten gespeicherten Check zu verfälschen.
+  oder anderer Status setzt den Zustand auf `down`. `unknown` bezeichnet ungeprüfte oder wegen eines
+  Zertifikatsfehlers nicht prüfbare Hosts; deaktivierte Monitore und Hosts erscheinen als `paused`, ohne den letzten
+  gespeicherten Check zu verfälschen.
 - Die Konfiguration begrenzt Intervalle auf 15–3600 Sekunden und Timeouts auf 500–15000 Millisekunden; der Timeout
   muss kürzer als das Intervall sein. Manuelle Checks teilen sich die Begrenzung auf fünf Verbindungen und sind
   zusätzlich auf zehn Aufrufe je Minute und IP begrenzt.
 - Pro Host bleiben höchstens 100 Check-Einträge und höchstens 30 Tage erhalten. Das Löschen des Hosts entfernt
   Einstellungen und Verlauf. Eine Änderung von Prüftyp, Pfad oder erwartetem Status beginnt eine neue Historie;
-  die Änderung von Intervall, Timeout oder Benachrichtigung erhält bisherige Messungen.
+  ebenso ein geändertes `upstream_ca` oder `upstream_server_name`. Dabei wird auch der Alarmstatus zurückgesetzt.
+  Die Änderung von Intervall, Timeout oder Benachrichtigung erhält bisherige Messungen.
 - Ein täglicher Cleanup entfernt auch bei pausierten Monitoren Einträge nach 30 Tagen und beseitigt Konfigurationen,
   deren Proxy-Host inzwischen gelöscht wurde (höchstens 200 verwaiste Hosts pro Durchgang).
 - Die erste erfolgreiche Messung erzeugt keinen Telegram-Alarm; ein erster Fehler und spätere Up-/Down-Wechsel
@@ -49,6 +59,12 @@ Timer und bricht laufende Sockets ab. Ausgeschaltete und gelöschte Hosts werden
   nach Ablauf der Wartezeit gesendet, sofern der neue Zustand dann noch gilt. Der Check-Verlauf bleibt lückenlos
   innerhalb der Aufbewahrungsgrenze. Ein Telegram-Fehler ändert das gespeicherte Messergebnis nicht.
 - Wenn sich das Upstream-Ziel des Hosts ändert, werden der letzte Status und alte Messergebnisse zurückgesetzt.
+  Wechselt der Host dabei zu einem für den Prüftyp nicht unterstützten Ziel (etwa Datei oder Unix-Socket), wird
+  der Monitor deaktiviert; der Scheduler erzeugt dadurch keine scheinbaren Ausfälle. Die Einstellungen bleiben
+  erhalten und können nach einem Wechsel zurück zu einem geeigneten Netzwerkziel wieder aktiviert werden.
+  Bei einem nicht unterstützten Ziel zeigt die Oberfläche den pausierten Zustand; die Einstellungen sind dort erst
+  nach einem Wechsel zurück zu einem Netzwerkziel wieder bearbeitbar. Die API akzeptiert auch dann deaktivierte
+  Einstellungen, damit bestehende Integrationen den Monitor ausschalten können.
   GitOps exportiert nur Monitor-Einstellungen und keine historischen Messergebnisse. Backups vor Einführung dieses
   Features besitzen keinen Monitor-Ordner; ihr Import lässt lokal vorhandene Monitore unberührt.
 

@@ -558,6 +558,8 @@ const internalGitOps = {
 				timeout_ms: monitor.timeout_ms,
 				expected_status: monitor.expected_status,
 				alert_enabled: !!monitor.alert_enabled,
+				upstream_ca: monitor.upstream_ca ?? null,
+				upstream_server_name: monitor.upstream_server_name ?? null,
 			};
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(data, { indent: 2 }));
 			exportedFiles.push(filePath);
@@ -1167,7 +1169,10 @@ const internalGitOps = {
 											await modelClass.query().insert(itemData);
 										}
 									}
-									if (upstreamChanged) await internalProxyHostMonitor.resetHost(existingId);
+									if (upstreamChanged)
+										await internalProxyHostMonitor.resetHost(existingId, {
+											disableUnsupported: true,
+										});
 								} else {
 									if (modelClass !== User && !itemData.owner_user_id)
 										itemData.owner_user_id = access.token.getUserId(1);

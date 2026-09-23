@@ -374,14 +374,16 @@ const internalProxyHost = {
 			},
 			{ preserveManagedPath: true },
 		);
+		if (!_.isEqual(previousUpstream, _.pick(row, Object.keys(previousUpstream)))) {
+			// Reconcile before configuring Nginx so a due check cannot record an
+			// unsupported new target as an outage while the configuration is running.
+			await internalProxyHostMonitor.resetHost(row.id, { disableUnsupported: true });
+		}
 
 		if (!options.skip_configure) {
 			// Configure nginx
 			const new_meta = await internalNginx.configure(proxyHostModel, "proxy_host", row);
 			row.meta = new_meta;
-		}
-		if (!_.isEqual(previousUpstream, _.pick(row, Object.keys(previousUpstream)))) {
-			await internalProxyHostMonitor.resetHost(row.id);
 		}
 
 		// Trigger GitOps auto-push

@@ -1,3 +1,4 @@
+import { X509Certificate } from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
@@ -15,7 +16,24 @@ const RETENTION_DAYS = 30;
 const RETENTION_CLEANUP_MS = 24 * 60 * 60 * 1000;
 const ALERT_COOLDOWN_MS = 5 * 60 * 1000;
 const SAFE_PATH = /^\/(?!\/)[A-Za-z0-9/_~.!$&'()*+,;=:-]*$/;
-/** @typedef {{ enabled: boolean, type: "http" | "tcp", path: string, interval_seconds: number, timeout_ms: number, expected_status: number, alert_enabled: boolean }} MonitorSettings */
+// MySQL TEXT stores at most 65,535 bytes, including PEM line breaks.
+const MAX_CA_BYTES = 65_535;
+const CERTIFICATE_BLOCK = /-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----/g;
+const TLS_CERTIFICATE_ERRORS = new Set([
+	"CERT_HAS_EXPIRED",
+	"CERT_NOT_YET_VALID",
+	"CERT_REVOKED",
+	"CERT_UNTRUSTED",
+	"DEPTH_ZERO_SELF_SIGNED_CERT",
+	"ERR_TLS_CERT_ALTNAME_INVALID",
+	"INVALID_CA",
+	"INVALID_PURPOSE",
+	"SELF_SIGNED_CERT_IN_CHAIN",
+	"UNABLE_TO_GET_ISSUER_CERT",
+	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+]);
+/** @typedef {{ enabled: boolean, type: "http" | "tcp", path: string, interval_seconds: number, timeout_ms: number, expected_status: number, alert_enabled: boolean, upstream_ca?: string | null, upstream_server_name?: string | null }} MonitorSettings */
 const active = new Map();
 let timer = null;
 let scanning = false;
@@ -45,6 +63,13 @@ export function probeHttp(host, config, signal) {
 					path: config.path,
 					method: "GET",
 					agent: false,
+					...(host.forward_scheme === "https"
+						? {
+								rejectUnauthorized: true,
+								...(config.upstream_ca ? { ca: config.upstream_ca, allowPartialTrustChain: true } : {}),
+								...(config.upstream_server_name ? { servername: config.upstream_server_name } : {}),
+							}
+						: {}),
 					headers: { "User-Agent": "ShieldPM-Monitor/1", Accept: "*/*" },
 				},
 				(response) => {
@@ -58,7 +83,14 @@ export function probeHttp(host, config, signal) {
 					response.destroy();
 				},
 			);
-			request.on("error", () => finish({ state: "down", status_code: null, message: "Connection failed" }));
+			request.on("error", (error) => {
+				const unverifiable = TLS_CERTIFICATE_ERRORS.has(error.code);
+				finish({
+					state: unverifiable ? "unknown" : "down",
+					status_code: null,
+					message: unverifiable ? "TLS certificate could not be verified" : "Connection failed",
+				});
+			});
 			signal?.addEventListener("abort", abort, { once: true });
 			timeout = setTimeout(() => {
 				finish({ state: "down", status_code: null, message: "Timed out" });
@@ -120,19 +152,20 @@ function resolveTarget(host, config) {
 	if (!hostname || !Number.isInteger(port) || port < 1 || port > 65535) return null;
 	const path = basePath ? `${basePath}${config.path === "/" ? "" : config.path}` : config.path;
 	if (!SAFE_PATH.test(path) || path.length > 255) return null;
-	return { forward_host: hostname, forward_port: port, path };
+	return { forward_scheme: host.forward_scheme, forward_host: hostname, forward_port: port, path };
 }
 
 /** Validate imported settings as strictly as the API request schema (without coercion). */
 /** @param {any} data @returns {MonitorSettings} */
 export function assertMonitorConfig(data) {
-	const keys = ["enabled", "type", "path", "interval_seconds", "timeout_ms", "expected_status", "alert_enabled"];
+	const required = ["enabled", "type", "path", "interval_seconds", "timeout_ms", "expected_status", "alert_enabled"];
+	const optional = ["upstream_ca", "upstream_server_name"];
 	if (
 		!data ||
 		typeof data !== "object" ||
 		Array.isArray(data) ||
-		Object.keys(data).length !== keys.length ||
-		keys.some((key) => !Object.hasOwn(data, key))
+		Object.keys(data).some((key) => !required.includes(key) && !optional.includes(key)) ||
+		required.some((key) => !Object.hasOwn(data, key))
 	) {
 		throw new errs.ValidationError("Invalid monitor settings");
 	}
@@ -157,12 +190,43 @@ export function assertMonitorConfig(data) {
 	}
 	if (data.timeout_ms >= data.interval_seconds * 1000)
 		throw new errs.ValidationError("Timeout must be shorter than the interval");
-	return data;
+	const ca = data.upstream_ca ?? null;
+	if (ca !== null) {
+		const certificates =
+			typeof ca === "string" && Buffer.byteLength(ca, "utf8") <= MAX_CA_BYTES
+				? ca.match(CERTIFICATE_BLOCK)
+				: null;
+		if (!certificates || certificates.length > 8 || ca.replace(CERTIFICATE_BLOCK, "").trim()) {
+			throw new errs.ValidationError("Invalid upstream CA certificate");
+		}
+		try {
+			for (const certificate of certificates) new X509Certificate(certificate);
+		} catch {
+			throw new errs.ValidationError("Invalid upstream CA certificate");
+		}
+	}
+	const serverName = data.upstream_server_name ?? null;
+	if (
+		serverName !== null &&
+		(typeof serverName !== "string" ||
+			serverName.length > 253 ||
+			!serverName
+				.split(".")
+				.every(
+					(part) => part.length > 0 && part.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(part),
+				))
+	) {
+		throw new errs.ValidationError("Invalid upstream TLS server name");
+	}
+	return { ...data, upstream_ca: ca, upstream_server_name: serverName };
 }
 
 /** Persist the last announced state so recoveries delayed by cooldown still get sent. */
 export function decideAlert(current, nextState, checkedAt) {
 	if (!current.alert_enabled) return { send: false, last_alert_state: null, last_alert_at: null };
+	if (nextState === "unknown") {
+		return { send: false, last_alert_state: current.last_alert_state, last_alert_at: current.last_alert_at };
+	}
 	if (!current.last_alert_state && nextState === "up") {
 		return { send: false, last_alert_state: "up", last_alert_at: null };
 	}
@@ -184,6 +248,8 @@ const publicConfig = (row) =>
 		timeout_ms: row.timeout_ms,
 		expected_status: row.expected_status,
 		alert_enabled: !!row.alert_enabled,
+		upstream_ca: row.upstream_ca ?? null,
+		upstream_server_name: row.upstream_server_name ?? null,
 	};
 
 const publicStatus = (row, host) =>
@@ -229,11 +295,11 @@ const internalProxyHostMonitor = {
 	/** @param {import("../lib/types.js").Access} access @param {number} hostId @param {MonitorSettings} data */
 	async update(access, hostId, data, options = {}) {
 		const host = await getHost(access, hostId, "update");
-		assertMonitorConfig(data);
-		if (data.type === "http" && !["http", "https"].includes(host.forward_scheme)) {
+		const config = assertMonitorConfig(data);
+		if (config.enabled && config.type === "http" && !["http", "https"].includes(host.forward_scheme)) {
 			throw new errs.ValidationError("HTTP checks require an HTTP or HTTPS upstream");
 		}
-		if (!resolveTarget(host, data)) {
+		if (config.enabled && !resolveTarget(host, config)) {
 			throw new errs.ValidationError(
 				"Monitoring requires a TCP upstream; file and Unix socket targets are unsupported",
 			);
@@ -241,16 +307,19 @@ const internalProxyHostMonitor = {
 		const existing = await ProxyHostMonitor.query().findOne({ host_id: hostId });
 		active.get(hostId)?.abort();
 		const measurementChanged =
-			!existing || ["type", "path", "expected_status"].some((field) => existing[field] !== data[field]);
-		const restart = measurementChanged || existing.enabled !== data.enabled;
+			!existing ||
+			["type", "path", "expected_status", "upstream_ca", "upstream_server_name"].some(
+				(field) => existing[field] !== config[field],
+			);
+		const restart = measurementChanged || existing.enabled !== config.enabled;
 		const next = {
-			...data,
+			...config,
 			version: (existing?.version ?? 0) + 1,
 			next_check_at: null,
 			...(restart
 				? { state: "unknown", checked_at: null, response_ms: null, status_code: null, message: null }
 				: {}),
-			...(restart || existing.alert_enabled !== data.alert_enabled
+			...(restart || existing.alert_enabled !== config.alert_enabled
 				? { last_alert_at: null, last_alert_state: null }
 				: {}),
 		};
@@ -423,12 +492,17 @@ const internalProxyHostMonitor = {
 	},
 
 	/** Invalidate a measurement when the host's actual upstream changes. */
-	async resetHost(hostId) {
+	async resetHost(hostId, options = {}) {
 		active.get(hostId)?.abort();
 		await ProxyHostMonitor.transaction(async (trx) => {
 			const monitor = await ProxyHostMonitor.query(trx).findOne({ host_id: hostId });
 			if (!monitor) return;
+			const host = options.disableUnsupported
+				? await proxyHostModel.query(trx).findById(hostId).where("is_deleted", 0)
+				: null;
+			const unsupported = options.disableUnsupported && (!host || !resolveTarget(host, monitor));
 			await ProxyHostMonitor.query(trx).patchAndFetchById(monitor.id, {
+				...(unsupported ? { enabled: false } : {}),
 				version: monitor.version + 1,
 				state: "unknown",
 				checked_at: null,

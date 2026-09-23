@@ -36,7 +36,7 @@
 - ~~`frontend/src/types/`~~ → `enums.ts` (8 KB) → [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`rootfs/usr/local/bin/`~~ → 9 Scripts dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).
 - ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` importiert, EJS ist der Standard für Nginx-Templates.
-- ~~Backend-`dev`-Script~~ → Es gibt kein dediziertes `yarn dev` im `package.json`, `node index-dev.js` wird direkt gestartet.
+- ~~Backend-`dev`-Script~~ → `backend/package.json` definiert `yarn dev` als `node index-dev.js`; Scheduler und Analytics werden im Entwicklungsmodus gestartet und bei `SIGINT` oder `SIGTERM` beendet. Siehe [lokale Entwicklung](./entwicklung/lokale-entwicklung.md).
 - ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
 - ~~Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?~~ → `rootfs/usr/local/bin/entrypoint.sh` prüft, ob `/data/npmplus` existiert und `/data/shieldpm` fehlt, und führt dann ein `mv` aus.
 

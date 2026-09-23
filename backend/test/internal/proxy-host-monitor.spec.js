@@ -1,5 +1,10 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import http from "node:http";
+import https from "node:https";
 import net from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ db: null, alerts: vi.fn(), autoPush: vi.fn() }));
@@ -19,6 +24,7 @@ vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: state.a
 import internalChat from "../../internal/chat.js";
 import monitor, { assertMonitorConfig, decideAlert, probeHttp, probeTcp } from "../../internal/proxy-host-monitor.js";
 import { up } from "../../migrations/20260923000000_add_proxy_host_monitor.js";
+import { up as addTlsOptions } from "../../migrations/20260923000001_add_proxy_host_monitor_tls_options.js";
 import ProxyHostMonitor from "../../models/proxy_host_monitor.js";
 
 const access = {
@@ -54,6 +60,7 @@ describe("proxy host upstream monitor", () => {
 			table.integer("terminal_port");
 		});
 		await up(state.db);
+		await addTlsOptions(state.db);
 		server = http.createServer((req, res) => {
 			seenRequests.push({ path: req.url, cookie: req.headers.cookie });
 			res.statusCode = req.url === "/base/health" ? responseStatus : 302;
@@ -125,6 +132,14 @@ describe("proxy host upstream monitor", () => {
 		expect(() => assertMonitorConfig(settings({ path: "//remote.example.test/" }))).toThrow();
 		expect(() => assertMonitorConfig(settings({ path: "/health?secret=1" }))).toThrow();
 		expect(() => assertMonitorConfig(settings({ interval_seconds: 15, timeout_ms: 15000 }))).toThrow();
+		expect(() =>
+			assertMonitorConfig(
+				settings({ upstream_ca: "-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----" }),
+			),
+		).toThrow();
+		expect(() => assertMonitorConfig(settings({ upstream_ca: "x".repeat(65_537) }))).toThrow();
+		expect(() => assertMonitorConfig(settings({ upstream_server_name: "../other" }))).toThrow();
+		expect(() => assertMonitorConfig(settings({ upstream_server_name: "backend.example.test." }))).toThrow();
 		await state
 			.db("proxy_host")
 			.where("id", 11)
@@ -166,7 +181,96 @@ describe("proxy host upstream monitor", () => {
 		expect(pending).toMatchObject({ send: false, last_alert_state: "down" });
 		const recovery = decideAlert({ alert_enabled: true, ...pending }, "up", "2026-09-23T12:05:00.000Z");
 		expect(recovery).toMatchObject({ send: true, last_alert_state: "up" });
+		const unverifiable = decideAlert({ alert_enabled: true, ...initial }, "unknown", "2026-09-23T12:10:00.000Z");
+		expect(unverifiable).toEqual({ send: false, last_alert_state: "down", last_alert_at: start });
+		expect(
+			decideAlert({ alert_enabled: true, last_alert_state: null, last_alert_at: null }, "unknown", start),
+		).toEqual({ send: false, last_alert_state: null, last_alert_at: null });
 	});
+
+	it.skipIf(spawnSync("openssl", ["version"]).status !== 0)(
+		"records unverifiable HTTPS as unknown without alerts, then uses an explicit CA and DNS identity",
+		async () => {
+			const directory = mkdtempSync(join(tmpdir(), "shieldpm-monitor-tls-"));
+			let secureServer;
+			try {
+				const keyPath = join(directory, "upstream.key");
+				const certPath = join(directory, "upstream.pem");
+				const generated = spawnSync(
+					"openssl",
+					[
+						"req",
+						"-x509",
+						"-nodes",
+						"-newkey",
+						"rsa:2048",
+						"-keyout",
+						keyPath,
+						"-out",
+						certPath,
+						"-days",
+						"2",
+						"-subj",
+						"/CN=private.example.test",
+						"-addext",
+						"subjectAltName=DNS:private.example.test",
+					],
+					{ stdio: "ignore" },
+				);
+				if (generated.status !== 0) throw new Error("Failed to generate HTTPS test certificate");
+				const ca = readFileSync(certPath, "utf8");
+				const largestPem = ca + " ".repeat(65_535 - Buffer.byteLength(ca, "utf8"));
+				expect(assertMonitorConfig(settings({ upstream_ca: largestPem })).upstream_ca).toBe(largestPem);
+				expect(() => assertMonitorConfig(settings({ upstream_ca: `${largestPem} ` }))).toThrow();
+				const requests = vi.fn((_req, res) => {
+					res.writeHead(200);
+					res.end();
+				});
+				secureServer = https.createServer({ key: readFileSync(keyPath), cert: ca }, requests);
+				await new Promise((resolve) => secureServer.listen(0, "127.0.0.1", resolve));
+				await state.db("proxy_host").where("id", 11).update({
+					forward_scheme: "https",
+					forward_host: "127.0.0.1",
+					forward_port: secureServer.address().port,
+				});
+				await monitor.update(access, 11, settings());
+				const untrusted = await monitor.run(11);
+				expect(untrusted).toMatchObject({ state: "unknown", message: "TLS certificate could not be verified" });
+				expect(requests).not.toHaveBeenCalled();
+				expect(state.alerts).not.toHaveBeenCalled();
+				expect((await monitor.get(access, 11)).history).toHaveLength(1);
+
+				await monitor.update(access, 11, settings({ upstream_ca: ca }));
+				expect(await monitor.run(11)).toMatchObject({ state: "unknown" });
+				expect(requests).not.toHaveBeenCalled();
+
+				await monitor.update(
+					access,
+					11,
+					settings({ upstream_ca: ca, upstream_server_name: "private.example.test" }),
+				);
+				expect(await monitor.run(11)).toMatchObject({ state: "up", status_code: 200 });
+				expect(requests).toHaveBeenCalledTimes(1);
+				expect(state.alerts).not.toHaveBeenCalled();
+				expect((await monitor.get(access, 11)).history).toHaveLength(1);
+
+				await monitor.update(
+					access,
+					11,
+					settings({ upstream_ca: ca, upstream_server_name: "other.example.test" }),
+				);
+				expect(await monitor.run(11)).toMatchObject({
+					state: "unknown",
+					message: "TLS certificate could not be verified",
+				});
+				expect(requests).toHaveBeenCalledTimes(1);
+				expect(state.alerts).not.toHaveBeenCalled();
+			} finally {
+				if (secureServer?.listening) await new Promise((resolve) => secureServer.close(resolve));
+				rmSync(directory, { recursive: true, force: true });
+			}
+		},
+	);
 });
 
 describe("network probes", () => {

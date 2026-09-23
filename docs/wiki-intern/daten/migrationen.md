@@ -91,6 +91,8 @@ export { up, down };
 - `20260907000000_fix_analytics_log_created_at` — numerischer Standardwert für `analytics_logs.created_at`; gültige alte SQLite-Zeitstempeltexte werden in Unix-Millisekunden umgerechnet. Neue Logeinträge setzen den tatsächlichen Erfassungszeitpunkt im Dienst. Die ursprüngliche Tabellenmigration verwendet ebenfalls den kompatiblen numerischen Standardwert, damit PostgreSQL-Neuinstallationen funktionieren.
 - `20260918000000_add_proxy_host_zstd_compression` — ergänzt die pro Proxy-Host gespeicherte Zstd-Option. Das Up prüft vor dem DDL, ob die Spalte bereits aus einem zuvor abgebrochenen Versuch vorhanden ist. Der Knex-Runner kann diesen Zustand daher registrieren, ohne die Spalte erneut anzulegen.
 - `20260919000000_add_proxy_host_upload_relay` — ergänzt die persistente, standardmäßig deaktivierte Upload-Relay-Konfiguration pro Proxy-Host: öffentlicher Pfad, privater Zielpfad, Chunk- und Gesamtgrößenlimit sowie Ablaufzeit unvollständiger Uploads. Das Up prüft die Spalten einzeln, damit ein unterbrochener DDL-Lauf sicher wieder aufgenommen werden kann.
+- `20260923000000_add_proxy_host_monitor` — legt die Monitor-Konfiguration und den Verlauf von Upstream-Prüfungen pro Proxy-Host an.
+- `20260923000001_add_proxy_host_monitor_tls_options` — ergänzt die optionalen Felder `upstream_ca` (PEM-Zertifikatskette) und `upstream_server_name` (DNS-Name) an vorhandenen Monitor-Konfigurationen. Bestehende Zeilen erhalten `NULL`; die einzeln geprüften Spalten erlauben den erneuten Lauf nach einer unterbrochenen Schemaänderung.
 
 ## Datenintegrität bei Migrationen
 
