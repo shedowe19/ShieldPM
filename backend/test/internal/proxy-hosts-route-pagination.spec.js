@@ -31,6 +31,9 @@ vi.mock("express", () => ({
 }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: { getAll: mocks.getAll } }));
+vi.mock("../../internal/proxy-host-preview.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-diagnostics.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: {} }));
 vi.mock("../../lib/express/jwt-decode.js", () => ({ default: () => () => undefined }));
 vi.mock("../../lib/validator/api.js", () => ({ default: vi.fn() }));
 vi.mock("../../lib/validator/index.js", () => ({ default: mocks.validator }));

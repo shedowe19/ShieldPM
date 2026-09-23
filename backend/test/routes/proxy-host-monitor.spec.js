@@ -16,6 +16,8 @@ vi.mock("../../lib/express/jwt-decode.js", () => ({
 }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-preview.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-diagnostics.js", () => ({ default: {} }));
 vi.mock("../../internal/proxy-host-monitor.js", () => ({
 	default: { get: state.get, update: state.update, listStatus: state.listStatus, check: state.check },
 }));
