@@ -5,6 +5,7 @@ import internalProxyHost from "../../internal/proxy-host.js";
 import internalProxyHostDiagnostics from "../../internal/proxy-host-diagnostics.js";
 import internalProxyHostMonitor from "../../internal/proxy-host-monitor.js";
 import internalProxyHostPreview from "../../internal/proxy-host-preview.js";
+import errs from "../../lib/error.js";
 import jwtdecode from "../../lib/express/jwt-decode.js";
 import apiValidator from "../../lib/validator/api.js";
 import validator from "../../lib/validator/index.js";
@@ -76,6 +77,14 @@ router
 	})
 	.put(async (req, res) => {
 		const id = await parseMonitorHostId(req.params.host_id);
+		// The shared API validator coerces strings and null to booleans. This security-sensitive
+		// opt-in must be an explicit JSON boolean before any schema coercion takes place.
+		if (
+			Object.hasOwn(req.body ?? {}, "skip_certificate_verification") &&
+			typeof req.body.skip_certificate_verification !== "boolean"
+		) {
+			throw new errs.ValidationError("Skipping certificate verification requires a boolean");
+		}
 		const data = await apiValidator(getValidationSchema("/nginx/proxy-hosts/{hostID}/monitor", "put"), req.body);
 		res.status(200).send(await internalProxyHostMonitor.update(res.locals.access, id, data));
 	});

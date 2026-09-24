@@ -10,6 +10,7 @@ export interface ProxyHostMonitorConfig {
 	timeoutMs: number;
 	expectedStatus: number;
 	alertEnabled: boolean;
+	skipCertificateVerification: boolean;
 	upstreamCa: string | null;
 	upstreamServerName: string | null;
 }

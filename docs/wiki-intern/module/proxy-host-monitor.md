@@ -21,6 +21,7 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
 - `backend/models/proxy_host_monitor_check.js` — einzelne, zeitlich sortierte Messergebnisse
 - `backend/migrations/20260923000000_add_proxy_host_monitor.js` — DB-Schema
 - `backend/migrations/20260923000001_add_proxy_host_monitor_tls_options.js` — TLS-Vertrauensanker und Servername
+- `backend/migrations/20260924000000_add_proxy_host_monitor_skip_certificate_verification.js` — optionale Zertifikatsprüfung
 - `backend/routes/nginx/proxy_hosts.js` — geschützte HTTP-Routen
 - `backend/schema/paths/nginx/proxy-hosts/hostID/monitor/` — OpenAPI- und Eingabeverträge
 - `backend/internal/chat.js` — Telegram-Nachricht an konfigurierte erlaubte IDs des Host-Besitzers
@@ -40,6 +41,14 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
   `upstream_server_name` überschreibt den für TLS verwendeten DNS-Namen, wenn Verbindungsadresse und
   Zertifikatsname verschieden sind. Bei einem Zertifikatsfehler lautet der Status `unknown`, ohne einen
   Ausfallalarm auszulösen.
+- Nur für HTTPS kann der Benutzer `skip_certificate_verification` ausdrücklich aktivieren. Dann bleibt die
+  Verbindung TLS-verschlüsselt, aber Zertifikatskette und Serveridentität werden nicht geprüft: Auch fremde,
+  selbstsignierte oder abgelaufene Zertifikate werden akzeptiert. Das konfigurierte CA-Bundle wird für diesen
+  Check nicht verwendet; ein `upstream_server_name` dient weiterhin nur als SNI zur Auswahl des virtuellen
+  Upstreams. Der Monitor wertet danach dessen HTTP-Status aus. Ein Angreifer zwischen Monitor und Upstream könnte
+  diesen Status verfälschen. Die Probe sendet weiterhin keine Cookies oder Zugangsdaten. Für reines HTTP oder TCP
+  gibt es keine TLS-Zertifikatsprüfung. Ohne den Schalter bleibt die strikte Prüfung aktiv. Ein Wechsel des
+  Upstream-Ziels setzt diese Ausnahme zurück und verlangt ein erneutes ausdrückliches Aktivieren.
 - Der HTTP-Status muss exakt dem konfigurierten Code entsprechen. Ein fehlgeschlagener Verbindungsaufbau, Timeout
   oder anderer Status setzt den Zustand auf `down`. `unknown` bezeichnet ungeprüfte oder wegen eines
   Zertifikatsfehlers nicht prüfbare Hosts; deaktivierte Monitore und Hosts erscheinen als `paused`, ohne den letzten
@@ -49,7 +58,8 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
   zusätzlich auf zehn Aufrufe je Minute und IP begrenzt.
 - Pro Host bleiben höchstens 100 Check-Einträge und höchstens 30 Tage erhalten. Das Löschen des Hosts entfernt
   Einstellungen und Verlauf. Eine Änderung von Prüftyp, Pfad oder erwartetem Status beginnt eine neue Historie;
-  ebenso ein geändertes `upstream_ca` oder `upstream_server_name`. Dabei wird auch der Alarmstatus zurückgesetzt.
+  ebenso ein geändertes `upstream_ca`, `upstream_server_name` oder `skip_certificate_verification`. Dabei wird auch
+  der Alarmstatus zurückgesetzt.
   Die Änderung von Intervall, Timeout oder Benachrichtigung erhält bisherige Messungen.
 - Ein täglicher Cleanup entfernt auch bei pausierten Monitoren Einträge nach 30 Tagen und beseitigt Konfigurationen,
   deren Proxy-Host inzwischen gelöscht wurde (höchstens 200 verwaiste Hosts pro Durchgang).

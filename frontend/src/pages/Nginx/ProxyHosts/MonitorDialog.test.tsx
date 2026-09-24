@@ -26,6 +26,7 @@ const savedConfig = {
 	timeoutMs: 5000,
 	expectedStatus: 200,
 	alertEnabled: false,
+	skipCertificateVerification: false,
 	upstreamCa: null,
 	upstreamServerName: null,
 };
@@ -76,6 +77,7 @@ describe("Host monitor settings", () => {
 		);
 		expect(mocks.check).not.toHaveBeenCalled();
 		expect(screen.queryByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("Zertifikatsprüfung für HTTPS-Monitor überspringen")).not.toBeInTheDocument();
 	});
 
 	it("saves and restores the public CA and SNI name for an HTTPS monitor", () => {
@@ -127,11 +129,76 @@ describe("Host monitor settings", () => {
 
 		fireEvent.change(screen.getByLabelText("Prüfart"), { target: { value: "tcp" } });
 		expect(screen.queryByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("Zertifikatsprüfung für HTTPS-Monitor überspringen")).not.toBeInTheDocument();
 		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 		expect(mocks.update).toHaveBeenLastCalledWith(
 			{ ...savedConfig, type: "tcp", upstreamCa: null, upstreamServerName: null },
 			expect.any(Object),
 		);
+	});
+
+	it("explicitly skips certificate verification only for HTTPS while preserving CA and SNI configuration", () => {
+		const publicCert = "-----BEGIN CERTIFICATE-----\nAQID\n-----END CERTIFICATE-----";
+		mocks.query.mockReturnValue({
+			data: {
+				config: { ...savedConfig, upstreamCa: publicCert, upstreamServerName: "backend.example.test" },
+				status: null,
+				history: [],
+			},
+			isLoading: false,
+		});
+		renderMonitor();
+		const skip = screen.getByLabelText("Zertifikatsprüfung für HTTPS-Monitor überspringen");
+		const caField = screen.getByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)");
+		expect(skip).not.toBeChecked();
+		fireEvent.click(skip);
+		expect(caField).toBeDisabled();
+		expect(caField).toHaveValue(publicCert);
+		expect(screen.getByText(/Verbindung bleibt verschlüsselt/)).toBeInTheDocument();
+		expect(screen.getByText(/nicht mit dem Zertifikat verglichen/)).toBeInTheDocument();
+		fireEvent.change(screen.getByLabelText("TLS-Servername des Zielservers"), {
+			target: { value: "virtual.example.test" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		expect(mocks.update).toHaveBeenCalledWith(
+			{
+				...savedConfig,
+				skipCertificateVerification: true,
+				upstreamCa: publicCert,
+				upstreamServerName: "virtual.example.test",
+			},
+			expect.any(Object),
+		);
+		fireEvent.change(screen.getByLabelText("Prüfart"), { target: { value: "tcp" } });
+		expect(screen.queryByLabelText("Zertifikatsprüfung für HTTPS-Monitor überspringen")).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		expect(mocks.update).toHaveBeenLastCalledWith(
+			{
+				...savedConfig,
+				type: "tcp",
+				upstreamCa: null,
+				upstreamServerName: null,
+			},
+			expect.any(Object),
+		);
+	});
+
+	it("restores an explicitly enabled skip switch from persisted settings", () => {
+		mocks.query.mockReturnValue({
+			data: {
+				config: { ...savedConfig, skipCertificateVerification: true },
+				status: null,
+				history: [],
+			},
+			isLoading: false,
+		});
+		renderMonitor();
+		const skip = screen.getByLabelText("Zertifikatsprüfung für HTTPS-Monitor überspringen");
+		expect(skip).toBeChecked();
+		fireEvent.click(skip);
+		expect(screen.getByLabelText("Benutzerdefinierte CA für den Zielserver (PEM)")).not.toBeDisabled();
+		fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+		expect(mocks.update).toHaveBeenCalledWith(savedConfig, expect.any(Object));
 	});
 
 	it("rejects private keys and invalid DNS names before saving an HTTPS check", () => {
@@ -171,7 +238,9 @@ describe("Host monitor settings", () => {
 		});
 		renderMonitor();
 		expect(screen.getAllByText("Nicht prüfbar")).toHaveLength(2);
-		expect(screen.getAllByText("TLS-Zertifikat nicht verifizierbar")).toHaveLength(2);
+		expect(
+			screen.getAllByText(/TLS-Zertifikat nicht verifizierbar.*Zertifikatsprüfung bewusst überspringen/),
+		).toHaveLength(2);
 	});
 
 	it("rejects a timeout greater than or equal to the interval", () => {

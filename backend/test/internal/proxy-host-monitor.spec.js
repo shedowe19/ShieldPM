@@ -25,6 +25,7 @@ import internalChat from "../../internal/chat.js";
 import monitor, { assertMonitorConfig, decideAlert, probeHttp, probeTcp } from "../../internal/proxy-host-monitor.js";
 import { up } from "../../migrations/20260923000000_add_proxy_host_monitor.js";
 import { up as addTlsOptions } from "../../migrations/20260923000001_add_proxy_host_monitor_tls_options.js";
+import { up as addSkipCertificateVerification } from "../../migrations/20260924000000_add_proxy_host_monitor_skip_certificate_verification.js";
 import ProxyHostMonitor from "../../models/proxy_host_monitor.js";
 
 const access = {
@@ -61,6 +62,7 @@ describe("proxy host upstream monitor", () => {
 		});
 		await up(state.db);
 		await addTlsOptions(state.db);
+		await addSkipCertificateVerification(state.db);
 		server = http.createServer((req, res) => {
 			seenRequests.push({ path: req.url, cookie: req.headers.cookie });
 			res.statusCode = req.url === "/base/health" ? responseStatus : 302;
@@ -143,11 +145,37 @@ describe("proxy host upstream monitor", () => {
 		).toThrow();
 		expect(() => assertMonitorConfig(settings({ upstream_server_name: "../other" }))).toThrow();
 		expect(() => assertMonitorConfig(settings({ upstream_server_name: "backend.example.test." }))).toThrow();
+		expect(() => assertMonitorConfig(settings({ skip_certificate_verification: null }))).toThrow();
+		expect(() => assertMonitorConfig(settings({ skip_certificate_verification: "true" }))).toThrow();
+		expect(assertMonitorConfig(settings()).skip_certificate_verification).toBe(false);
+		await expect(monitor.update(access, 11, settings({ skip_certificate_verification: true }))).rejects.toThrow(
+			"HTTPS upstream",
+		);
+		await expect(
+			monitor.update(access, 11, settings({ type: "tcp", skip_certificate_verification: true })),
+		).rejects.toThrow("HTTPS upstream");
 		await state
 			.db("proxy_host")
 			.where("id", 11)
 			.update({ forward_scheme: "path", forward_host: "/data/websites/a" });
 		await expect(monitor.update(access, 11, settings({ type: "tcp" }))).rejects.toThrow("unsupported");
+	});
+
+	it("clears the HTTPS certificate exception for every new upstream, including HTTPS", async () => {
+		await state.db("proxy_host").where("id", 11).update({ forward_scheme: "https" });
+		await monitor.update(access, 11, settings({ skip_certificate_verification: true }));
+		expect((await monitor.get(access, 11)).config.skip_certificate_verification).toBe(true);
+		await state.db("proxy_host").where("id", 11).update({ forward_host: "other.internal.test" });
+		await monitor.resetHost(11, { disableUnsupported: true });
+		expect((await monitor.get(access, 11)).config.skip_certificate_verification).toBe(false);
+		await monitor.update(access, 11, settings({ skip_certificate_verification: true }));
+		expect((await monitor.get(access, 11)).config.skip_certificate_verification).toBe(true);
+		await state.db("proxy_host").where("id", 11).update({ forward_scheme: "http" });
+		await monitor.resetHost(11, { disableUnsupported: true });
+		expect((await monitor.get(access, 11)).config.skip_certificate_verification).toBe(false);
+		await state.db("proxy_host").where("id", 11).update({ forward_scheme: "https" });
+		await monitor.resetHost(11, { disableUnsupported: true });
+		expect((await monitor.get(access, 11)).config.skip_certificate_verification).toBe(false);
 	});
 
 	it("bounds persisted check history per host and purges it on deletion", async () => {
@@ -242,10 +270,28 @@ describe("proxy host upstream monitor", () => {
 				expect(requests).not.toHaveBeenCalled();
 				expect(state.alerts).not.toHaveBeenCalled();
 				expect((await monitor.get(access, 11)).history).toHaveLength(1);
+				expect((await monitor.get(access, 11)).config.skip_certificate_verification).toBe(false);
+
+				await monitor.update(
+					access,
+					11,
+					settings({ skip_certificate_verification: true, upstream_server_name: "other.example.test" }),
+				);
+				expect((await monitor.get(access, 11)).history).toHaveLength(0);
+				const accepted = await monitor.run(11);
+				expect(accepted).toMatchObject({ state: "up", status_code: 200 });
+				expect(requests).toHaveBeenCalledTimes(1);
+				expect((await monitor.get(access, 11)).config.skip_certificate_verification).toBe(true);
+				expect(state.alerts).not.toHaveBeenCalled();
+
+				await monitor.update(access, 11, settings());
+				expect((await monitor.get(access, 11)).history).toHaveLength(0);
+				expect(await monitor.run(11)).toMatchObject({ state: "unknown" });
+				expect(requests).toHaveBeenCalledTimes(1);
 
 				await monitor.update(access, 11, settings({ upstream_ca: ca }));
 				expect(await monitor.run(11)).toMatchObject({ state: "unknown" });
-				expect(requests).not.toHaveBeenCalled();
+				expect(requests).toHaveBeenCalledTimes(1);
 
 				await monitor.update(
 					access,
@@ -253,7 +299,7 @@ describe("proxy host upstream monitor", () => {
 					settings({ upstream_ca: ca, upstream_server_name: "private.example.test" }),
 				);
 				expect(await monitor.run(11)).toMatchObject({ state: "up", status_code: 200 });
-				expect(requests).toHaveBeenCalledTimes(1);
+				expect(requests).toHaveBeenCalledTimes(2);
 				expect(state.alerts).not.toHaveBeenCalled();
 				expect((await monitor.get(access, 11)).history).toHaveLength(1);
 
@@ -266,7 +312,7 @@ describe("proxy host upstream monitor", () => {
 					state: "unknown",
 					message: "TLS certificate could not be verified",
 				});
-				expect(requests).toHaveBeenCalledTimes(1);
+				expect(requests).toHaveBeenCalledTimes(2);
 				expect(state.alerts).not.toHaveBeenCalled();
 			} finally {
 				if (secureServer?.listening) await new Promise((resolve) => secureServer.close(resolve));

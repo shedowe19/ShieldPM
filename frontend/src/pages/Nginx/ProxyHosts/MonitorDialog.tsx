@@ -33,6 +33,7 @@ const defaultConfig: ProxyHostMonitorConfig = {
 	timeoutMs: 5000,
 	expectedStatus: 200,
 	alertEnabled: false,
+	skipCertificateVerification: false,
 	upstreamCa: null,
 	upstreamServerName: null,
 };
@@ -89,6 +90,7 @@ function MonitorSettings({
 	const update = useUpdateProxyHostMonitor(hostId);
 	const check = useCheckProxyHostMonitor(hostId);
 	const usesUpstreamTls = config.type === "http" && forwardScheme === "https";
+	const skipCertificateVerification = usesUpstreamTls && config.skipCertificateVerification;
 
 	const submit = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -112,7 +114,7 @@ function MonitorSettings({
 			return;
 		}
 		update.mutate(
-			{ ...config, upstreamCa, upstreamServerName },
+			{ ...config, skipCertificateVerification, upstreamCa, upstreamServerName },
 			{
 				onError: (reason) => setError(reason.message),
 			},
@@ -232,6 +234,30 @@ function MonitorSettings({
 				</div>
 				{usesUpstreamTls && (
 					<div className="space-y-4 rounded-md border p-4">
+						<div className="flex items-center justify-between gap-4">
+							<div>
+								<Label htmlFor="monitor-skip-certificate-verification">
+									<T id="proxy-host.monitor.skip-certificate-verification" />
+								</Label>
+								<p className="text-xs text-muted-foreground">
+									<T id="proxy-host.monitor.skip-certificate-verification-description" />
+								</p>
+							</div>
+							<Switch
+								id="monitor-skip-certificate-verification"
+								checked={config.skipCertificateVerification}
+								onCheckedChange={(skipCertificateVerification) =>
+									setConfig((old) => ({ ...old, skipCertificateVerification }))
+								}
+							/>
+						</div>
+						{skipCertificateVerification && (
+							<Alert>
+								<AlertDescription>
+									<T id="proxy-host.monitor.skip-certificate-verification-warning" />
+								</AlertDescription>
+							</Alert>
+						)}
 						<div className="space-y-2">
 							<Label htmlFor="monitor-upstream-server-name">
 								<T id="proxy-host.monitor.upstream-server-name" />
@@ -247,7 +273,11 @@ function MonitorSettings({
 								}
 							/>
 							<p className="text-xs text-muted-foreground">
-								<T id="proxy-host.monitor.upstream-server-name-description" />
+								{skipCertificateVerification ? (
+									<T id="proxy-host.monitor.upstream-server-name-sni-only" />
+								) : (
+									<T id="proxy-host.monitor.upstream-server-name-description" />
+								)}
 							</p>
 						</div>
 						<div className="space-y-2">
@@ -258,6 +288,7 @@ function MonitorSettings({
 								id="monitor-upstream-ca"
 								rows={5}
 								maxLength={65_535}
+								disabled={skipCertificateVerification}
 								spellCheck={false}
 								className="font-mono text-xs"
 								placeholder="-----BEGIN CERTIFICATE-----"
@@ -265,7 +296,11 @@ function MonitorSettings({
 								onChange={(event) => setConfig((old) => ({ ...old, upstreamCa: event.target.value }))}
 							/>
 							<p className="text-xs text-muted-foreground">
-								<T id="proxy-host.monitor.upstream-ca-description" />
+								{skipCertificateVerification ? (
+									<T id="proxy-host.monitor.upstream-ca-ignored" />
+								) : (
+									<T id="proxy-host.monitor.upstream-ca-description" />
+								)}
 							</p>
 						</div>
 					</div>

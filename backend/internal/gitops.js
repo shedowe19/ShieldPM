@@ -560,6 +560,7 @@ const internalGitOps = {
 				alert_enabled: !!monitor.alert_enabled,
 				upstream_ca: monitor.upstream_ca ?? null,
 				upstream_server_name: monitor.upstream_server_name ?? null,
+				skip_certificate_verification: !!monitor.skip_certificate_verification,
 			};
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(data, { indent: 2 }));
 			exportedFiles.push(filePath);

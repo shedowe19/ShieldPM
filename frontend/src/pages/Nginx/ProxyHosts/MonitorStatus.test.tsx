@@ -29,6 +29,9 @@ describe("Monitor summary", () => {
 		const badge = screen.getByText("Nicht prüfbar").closest("div");
 		expect(badge).toHaveClass("bg-secondary");
 		expect(badge).not.toHaveClass("bg-destructive");
-		expect(badge?.parentElement).toHaveAttribute("title", "TLS-Zertifikat nicht verifizierbar");
+		expect(badge?.parentElement).toHaveAttribute(
+			"title",
+			"TLS-Zertifikat nicht verifizierbar. Unter Host-Überwachung eine CA hinterlegen oder die Zertifikatsprüfung bewusst überspringen.",
+		);
 	});
 });

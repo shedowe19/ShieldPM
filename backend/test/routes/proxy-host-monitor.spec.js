@@ -82,6 +82,7 @@ describe("protected proxy-host monitor routes", () => {
 			alert_enabled: false,
 			upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
 			upstream_server_name: "service.internal.example",
+			skip_certificate_verification: true,
 		};
 		const send = (data) =>
 			fetch(`${origin}/nginx/proxy-hosts/12/monitor`, {
@@ -96,7 +97,10 @@ describe("protected proxy-host monitor routes", () => {
 		expect((await send({ ...payload, upstream_server_name: "bad..name" })).status).toBe(400);
 		expect((await send({ ...payload, upstream_ca: "a".repeat(65_535) })).status).toBe(200);
 		expect((await send({ ...payload, upstream_ca: "a".repeat(65_536) })).status).toBe(400);
-		expect(state.update).toHaveBeenCalledTimes(4);
+		expect((await send({ ...payload, skip_certificate_verification: "true" })).status).toBe(400);
+		expect((await send({ ...payload, skip_certificate_verification: null })).status).toBe(400);
+		expect((await send({ ...payload, skip_certificate_verification: undefined })).status).toBe(200);
+		expect(state.update).toHaveBeenCalledTimes(5);
 	});
 
 	it("validates 100-ID batch limits and propagates permission denial on details", async () => {

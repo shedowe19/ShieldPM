@@ -23,6 +23,11 @@
 						"expected_status": { "type": "integer", "minimum": 100, "maximum": 599 },
 						"alert_enabled": { "type": "boolean" },
 						"upstream_ca": { "type": ["string", "null"], "maxLength": 65535 },
+						"skip_certificate_verification": {
+							"type": "boolean",
+							"default": false,
+							"description": "Explicit HTTPS upstream monitor opt-in to accept certificates without verification. Does not affect HTTP or TCP checks."
+						},
 						"upstream_server_name": {
 							"type": ["string", "null"],
 							"maxLength": 253,

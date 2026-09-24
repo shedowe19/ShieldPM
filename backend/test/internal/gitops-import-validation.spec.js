@@ -302,6 +302,7 @@ describe("GitOps import sanitization and safe restore", () => {
 			timeout_ms: 5000,
 			expected_status: 200,
 			alert_enabled: false,
+			skip_certificate_verification: true,
 		});
 		const result = await gitops.importConfig(access, { overwrite: true });
 		expect(result.success).toBe(true);
@@ -312,7 +313,7 @@ describe("GitOps import sanitization and safe restore", () => {
 		expect(monitor.update).toHaveBeenCalledWith(
 			access,
 			1,
-			expect.objectContaining({ enabled: true, path: "/health" }),
+			expect.objectContaining({ enabled: true, path: "/health", skip_certificate_verification: true }),
 			{ skipAutoPush: true },
 		);
 	});
@@ -329,6 +330,7 @@ describe("GitOps import sanitization and safe restore", () => {
 			alert_enabled: false,
 			upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
 			upstream_server_name: "service.internal.example",
+			skip_certificate_verification: true,
 		});
 		const result = await gitops.importConfig(access, { overwrite: true });
 		expect(result.success).toBe(true);
@@ -338,6 +340,7 @@ describe("GitOps import sanitization and safe restore", () => {
 			expect.objectContaining({
 				upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
 				upstream_server_name: "service.internal.example",
+				skip_certificate_verification: true,
 			}),
 			{ skipAutoPush: true },
 		);
@@ -356,6 +359,7 @@ describe("GitOps import sanitization and safe restore", () => {
 				alert_enabled: false,
 				upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
 				upstream_server_name: "service.internal.example",
+				skip_certificate_verification: true,
 			},
 		];
 		const initialize = vi.spyOn(gitops, "initRepo").mockResolvedValue();
@@ -368,6 +372,7 @@ describe("GitOps import sanitization and safe restore", () => {
 			expect(yaml.load(output[2])).toMatchObject({
 				upstream_ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
 				upstream_server_name: "service.internal.example",
+				skip_certificate_verification: true,
 			});
 		} finally {
 			initialize.mockRestore();

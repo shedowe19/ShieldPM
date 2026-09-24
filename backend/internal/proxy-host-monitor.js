@@ -34,7 +34,7 @@ const TLS_CERTIFICATE_ERRORS = new Set([
 	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
 	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
 ]);
-/** @typedef {{ enabled: boolean, type: "http" | "tcp", path: string, interval_seconds: number, timeout_ms: number, expected_status: number, alert_enabled: boolean, upstream_ca?: string | null, upstream_server_name?: string | null }} MonitorSettings */
+/** @typedef {{ enabled: boolean, type: "http" | "tcp", path: string, interval_seconds: number, timeout_ms: number, expected_status: number, alert_enabled: boolean, upstream_ca?: string | null, upstream_server_name?: string | null, skip_certificate_verification?: boolean }} MonitorSettings */
 const active = new Map();
 let timer = null;
 let scanning = false;
@@ -106,8 +106,14 @@ export function probeHttp(host, config, signal) {
 					agent: false,
 					...(host.forward_scheme === "https"
 						? {
-								rejectUnauthorized: true,
-								...(config.upstream_ca ? { ca: config.upstream_ca, allowPartialTrustChain: true } : {}),
+								// Explicit per-host opt-in: accept any upstream certificate for this health probe.
+								// This disables chain and hostname verification; do not send credentials.
+								rejectUnauthorized: config.skip_certificate_verification !== true,
+								...(config.skip_certificate_verification === true
+									? {}
+									: config.upstream_ca
+										? { ca: config.upstream_ca, allowPartialTrustChain: true }
+										: {}),
 								...(config.upstream_server_name ? { servername: config.upstream_server_name } : {}),
 							}
 						: {}),
@@ -125,7 +131,10 @@ export function probeHttp(host, config, signal) {
 				},
 			);
 			request.on("error", (error) => {
-				const unverifiable = TLS_CERTIFICATE_ERRORS.has(error.code);
+				const unverifiable =
+					host.forward_scheme === "https" &&
+					config.skip_certificate_verification !== true &&
+					TLS_CERTIFICATE_ERRORS.has(error.code);
 				finish({
 					state: unverifiable ? "unknown" : "down",
 					status_code: null,
@@ -200,7 +209,7 @@ function resolveTarget(host, config) {
 /** @param {any} data @returns {MonitorSettings} */
 export function assertMonitorConfig(data) {
 	const required = ["enabled", "type", "path", "interval_seconds", "timeout_ms", "expected_status", "alert_enabled"];
-	const optional = ["upstream_ca", "upstream_server_name"];
+	const optional = ["upstream_ca", "upstream_server_name", "skip_certificate_verification"];
 	if (
 		!data ||
 		typeof data !== "object" ||
@@ -213,6 +222,7 @@ export function assertMonitorConfig(data) {
 	if (
 		typeof data.enabled !== "boolean" ||
 		typeof data.alert_enabled !== "boolean" ||
+		(data.skip_certificate_verification !== undefined && typeof data.skip_certificate_verification !== "boolean") ||
 		!["http", "tcp"].includes(data.type) ||
 		typeof data.path !== "string" ||
 		data.path.length > 255 ||
@@ -250,7 +260,12 @@ export function assertMonitorConfig(data) {
 	) {
 		throw new errs.ValidationError("Invalid upstream TLS server name");
 	}
-	return { ...data, upstream_ca: ca, upstream_server_name: serverName };
+	return {
+		...data,
+		upstream_ca: ca,
+		upstream_server_name: serverName,
+		skip_certificate_verification: data.skip_certificate_verification ?? false,
+	};
 }
 
 /** Persist the last announced state so recoveries delayed by cooldown still get sent. */
@@ -282,6 +297,7 @@ const publicConfig = (row) =>
 		alert_enabled: !!row.alert_enabled,
 		upstream_ca: row.upstream_ca ?? null,
 		upstream_server_name: row.upstream_server_name ?? null,
+		skip_certificate_verification: !!row.skip_certificate_verification,
 	};
 
 const publicStatus = (row, host) =>
@@ -328,6 +344,9 @@ const internalProxyHostMonitor = {
 	async update(access, hostId, data, options = {}) {
 		const host = await getHost(access, hostId, "update");
 		const config = assertMonitorConfig(data);
+		if (config.skip_certificate_verification && (config.type !== "http" || host.forward_scheme !== "https")) {
+			throw new errs.ValidationError("Skipping certificate verification requires an HTTPS upstream check");
+		}
 		if (config.enabled && config.type === "http" && !["http", "https"].includes(host.forward_scheme)) {
 			throw new errs.ValidationError("HTTP checks require an HTTP or HTTPS upstream");
 		}
@@ -340,9 +359,14 @@ const internalProxyHostMonitor = {
 		active.get(hostId)?.abort();
 		const measurementChanged =
 			!existing ||
-			["type", "path", "expected_status", "upstream_ca", "upstream_server_name"].some(
-				(field) => existing[field] !== config[field],
-			);
+			[
+				"type",
+				"path",
+				"expected_status",
+				"upstream_ca",
+				"upstream_server_name",
+				"skip_certificate_verification",
+			].some((field) => existing[field] !== config[field]);
 		const restart = measurementChanged || existing.enabled !== config.enabled;
 		const next = {
 			...config,
@@ -533,8 +557,10 @@ const internalProxyHostMonitor = {
 				? await proxyHostModel.query(trx).findById(hostId).where("is_deleted", 0)
 				: null;
 			const unsupported = options.disableUnsupported && (!host || !resolveTarget(host, monitor));
+			// A new upstream target must never inherit the previous target's certificate exception.
 			await ProxyHostMonitor.query(trx).patchAndFetchById(monitor.id, {
 				...(unsupported ? { enabled: false } : {}),
+				skip_certificate_verification: false,
 				version: monitor.version + 1,
 				state: "unknown",
 				checked_at: null,

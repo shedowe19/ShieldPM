@@ -16,6 +16,7 @@ class ProxyHostMonitor extends Model {
 	/** @type {boolean} */ alert_enabled;
 	/** @type {string | null} */ upstream_ca;
 	/** @type {string | null} */ upstream_server_name;
+	/** @type {boolean} */ skip_certificate_verification;
 	/** @type {number} */ version;
 	/** @type {string} */ state;
 	/** @type {string | null} */ checked_at;
@@ -42,11 +43,17 @@ class ProxyHostMonitor extends Model {
 	}
 
 	$parseDatabaseJson(json) {
-		return convertIntFieldsToBool(super.$parseDatabaseJson(json), ["enabled", "alert_enabled"]);
+		return convertIntFieldsToBool(super.$parseDatabaseJson(json), [
+			"enabled",
+			"alert_enabled",
+			"skip_certificate_verification",
+		]);
 	}
 
 	$formatDatabaseJson(json) {
-		return super.$formatDatabaseJson(convertBoolFieldsToInt(json, ["enabled", "alert_enabled"]));
+		return super.$formatDatabaseJson(
+			convertBoolFieldsToInt(json, ["enabled", "alert_enabled", "skip_certificate_verification"]),
+		);
 	}
 }
 
