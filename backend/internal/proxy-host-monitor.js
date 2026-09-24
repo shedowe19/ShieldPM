@@ -34,6 +34,20 @@ const TLS_CERTIFICATE_ERRORS = new Set([
 	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
 	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
 ]);
+const NETWORK_ERRORS = {
+	ENOTFOUND: "DNS lookup failed (ENOTFOUND)",
+	EAI_AGAIN: "DNS lookup failed (EAI_AGAIN)",
+	ECONNREFUSED: "Connection refused (ECONNREFUSED)",
+	EHOSTUNREACH: "Host unreachable (EHOSTUNREACH)",
+	ENETUNREACH: "Network unreachable (ENETUNREACH)",
+	ECONNRESET: "Connection reset (ECONNRESET)",
+	EPROTO: "TLS handshake failed (EPROTO)",
+	ERR_SSL_WRONG_VERSION_NUMBER: "TLS handshake failed (ERR_SSL_WRONG_VERSION_NUMBER)",
+};
+export const networkMessage = (code, isHttps = false) => {
+	if ((code === "EPROTO" || code === "ERR_SSL_WRONG_VERSION_NUMBER") && !isHttps) return "Connection failed";
+	return Object.hasOwn(NETWORK_ERRORS, code) ? NETWORK_ERRORS[code] : "Connection failed";
+};
 /** @typedef {{ enabled: boolean, type: "http" | "tcp", path: string, interval_seconds: number, timeout_ms: number, expected_status: number, alert_enabled: boolean, upstream_ca?: string | null, upstream_server_name?: string | null, skip_certificate_verification?: boolean }} MonitorSettings */
 const active = new Map();
 let timer = null;
@@ -85,6 +99,7 @@ export function probeHttp(host, config, signal) {
 	const started = performance.now();
 	return new Promise((resolve) => {
 		const client = host.forward_scheme === "https" ? https : http;
+		let phase = net.isIP(host.forward_host) ? "connecting" : "resolving";
 		let settled = false;
 		let request;
 		let timeout;
@@ -130,6 +145,17 @@ export function probeHttp(host, config, signal) {
 					response.destroy();
 				},
 			);
+			request.once("socket", (socket) => {
+				socket.once("lookup", () => {
+					phase = "connecting";
+				});
+				socket.once("connect", () => {
+					phase = host.forward_scheme === "https" ? "tls" : "headers";
+				});
+				socket.once("secureConnect", () => {
+					phase = "headers";
+				});
+			});
 			request.on("error", (error) => {
 				const unverifiable =
 					host.forward_scheme === "https" &&
@@ -138,12 +164,14 @@ export function probeHttp(host, config, signal) {
 				finish({
 					state: unverifiable ? "unknown" : "down",
 					status_code: null,
-					message: unverifiable ? "TLS certificate could not be verified" : "Connection failed",
+					message: unverifiable
+						? "TLS certificate could not be verified"
+						: networkMessage(error.code, host.forward_scheme === "https"),
 				});
 			});
 			signal?.addEventListener("abort", abort, { once: true });
 			timeout = setTimeout(() => {
-				finish({ state: "down", status_code: null, message: "Timed out" });
+				finish({ state: "down", status_code: null, message: `Timed out during ${phase}` });
 				request.destroy();
 			}, config.timeout_ms);
 			if (signal?.aborted) abort();
@@ -159,6 +187,7 @@ export function probeHttp(host, config, signal) {
 export function probeTcp(host, config, signal) {
 	const started = performance.now();
 	return new Promise((resolve) => {
+		let phase = net.isIP(host.forward_host) ? "connecting" : "resolving";
 		let settled = false;
 		let socket;
 		let timeout;
@@ -173,10 +202,13 @@ export function probeTcp(host, config, signal) {
 		const abort = () => finish("down", "Stopped");
 		try {
 			socket = net.connect({ host: host.forward_host, port: Number(host.forward_port) });
+			socket.once("lookup", () => {
+				phase = "connecting";
+			});
 			socket.once("connect", () => finish("up", "TCP connected"));
-			socket.once("error", () => finish("down", "Connection failed"));
+			socket.once("error", (error) => finish("down", networkMessage(error.code)));
 			signal?.addEventListener("abort", abort, { once: true });
-			timeout = setTimeout(() => finish("down", "Timed out"), config.timeout_ms);
+			timeout = setTimeout(() => finish("down", `Timed out during ${phase}`), config.timeout_ms);
 			if (signal?.aborted) abort();
 		} catch {
 			finish("down", "Invalid upstream");
@@ -284,6 +316,160 @@ export function decideAlert(current, nextState, checkedAt) {
 		return { send: true, last_alert_state: nextState, last_alert_at: checkedAt };
 	}
 	return { send: false, last_alert_state: current.last_alert_state, last_alert_at: current.last_alert_at };
+}
+
+/** Keep Telegram plaintext on one line even if an imported hostname or domain is malformed. */
+const alertLabel = (value, maxLength) =>
+	typeof value === "string"
+		? value
+				.replace(/\p{Cc}/gu, " ")
+				.trim()
+				.slice(0, maxLength)
+		: "";
+
+const alertPath = (path) => {
+	if (typeof path !== "string" || !SAFE_PATH.test(path) || path.length > 255) return "";
+	const parts = path.split("/");
+	return parts
+		.map((part, index) => {
+			const previous = parts[index - 1] ?? "";
+			if (
+				/^(?:token|secret|api[-_]?key|password|passwd|auth|authorization|jwt|bearer|session)$/i.test(
+					previous,
+				) ||
+				/(?:token|secret|key|password|passwd|auth|jwt|session)=/i.test(part) ||
+				part.length > 32
+			) {
+				return "[redigiert]";
+			}
+			return part;
+		})
+		.join("/");
+};
+
+const alertTarget = (target, config) => {
+	if (!target) return "kein unterstütztes Netzwerkziel";
+	const hostname = target.forward_host;
+	if (typeof hostname !== "string" || (!net.isIP(hostname) && !/^[a-z0-9._-]{1,253}$/i.test(hostname))) {
+		return "ungültiger Zielname";
+	}
+	const address = net.isIP(hostname) === 6 ? `[${hostname}]` : hostname;
+	const port = Number(target.forward_port);
+	if (!Number.isInteger(port) || port < 1 || port > 65535) return "ungültiger Zielport";
+	const path = config.type === "http" ? alertPath(target.path) : "";
+	return `${config.type === "http" ? `${target.forward_scheme}://` : ""}${address}:${port}${path}`;
+};
+
+/** Explain the observed check result; never interpolate raw socket errors, response bodies or headers. */
+const alertDiagnosis = (result, expectedStatus) => {
+	if (result.status_code != null) {
+		const hint = [301, 302, 303, 307, 308].includes(result.status_code)
+			? "Weiterleitung wird nicht verfolgt; Prüfpfad und erwarteten Status prüfen."
+			: [401, 403].includes(result.status_code)
+				? "Der Prüfpfad verlangt möglicherweise eine Anmeldung oder sperrt den Zugriff."
+				: result.status_code === 404
+					? "Pfad des Health-Endpunkts prüfen."
+					: [502, 503, 504].includes(result.status_code)
+						? "Dienst hinter dem Proxy und dessen Logs prüfen."
+						: "Antwort des Dienstes und erwarteten Status prüfen.";
+		return {
+			cause: `Der Upstream antwortete mit HTTP ${result.status_code} statt HTTP ${expectedStatus}.`,
+			hint,
+		};
+	}
+	const descriptions = {
+		"Timed out during resolving": [
+			"Zeitlimit bei der DNS-Auflösung erreicht.",
+			"DNS-Auflösung und Nameserver des ShieldPM-Servers prüfen.",
+		],
+		"Timed out during connecting": [
+			"TCP-Verbindung kam innerhalb des Zeitlimits nicht zustande.",
+			"Erreichbarkeit, Firewall und Zielport prüfen.",
+		],
+		"Timed out during tls": [
+			"TCP verbunden; TLS-Handshake nicht innerhalb des Zeitlimits abgeschlossen.",
+			"HTTPS am Zielport und TLS-Konfiguration prüfen.",
+		],
+		"Timed out during headers": [
+			"Verbindung hergestellt; keine HTTP-Antwortheader innerhalb des Zeitlimits.",
+			"Health-Endpunkt und Anwendung prüfen.",
+		],
+		"DNS lookup failed (ENOTFOUND)": [
+			"DNS konnte den Zielnamen nicht auflösen (ENOTFOUND).",
+			"Hostname und DNS-Einträge vom ShieldPM-Server aus prüfen.",
+		],
+		"DNS lookup failed (EAI_AGAIN)": [
+			"DNS-Auflösung vorübergehend fehlgeschlagen (EAI_AGAIN).",
+			"DNS-Server und Verbindung des ShieldPM-Servers prüfen.",
+		],
+		"Connection refused (ECONNREFUSED)": [
+			"TCP-Verbindung zum Zielport wurde abgelehnt (ECONNREFUSED).",
+			"Prüfen, ob der Dienst auf diesem Host und Port lauscht.",
+		],
+		"Host unreachable (EHOSTUNREACH)": [
+			"Zielhost über das Netzwerk nicht erreichbar (EHOSTUNREACH).",
+			"Routing, Netzwerk und Firewall prüfen.",
+		],
+		"Network unreachable (ENETUNREACH)": [
+			"Netzwerk zum Ziel nicht erreichbar (ENETUNREACH).",
+			"Routing und Netzwerkverbindung prüfen.",
+		],
+		"Connection reset (ECONNRESET)": [
+			"Verbindung wurde vor der Antwort zurückgesetzt (ECONNRESET).",
+			"Logs des Dienstes und eventuelle Zwischenproxies prüfen.",
+		],
+		"TLS handshake failed (EPROTO)": [
+			"TLS-Handshake fehlgeschlagen (EPROTO).",
+			"Zielprotokoll und Port prüfen: Eventuell spricht der Port HTTP statt HTTPS.",
+		],
+		"TLS handshake failed (ERR_SSL_WRONG_VERSION_NUMBER)": [
+			"TLS-Handshake wegen unpassender Protokollversion fehlgeschlagen.",
+			"Zielprotokoll und Port prüfen: Eventuell spricht der Port HTTP statt HTTPS.",
+		],
+		"Invalid upstream": ["Upstream-Ziel ist ungültig.", "Zieladresse und Port des Proxy-Hosts prüfen."],
+		"Unsupported upstream": [
+			"Der konfigurierte Prüftyp unterstützt dieses Upstream-Ziel nicht.",
+			"Prüftyp und Upstream-Ziel des Proxy-Hosts prüfen.",
+		],
+	};
+	const [cause, hint] = Object.hasOwn(descriptions, result.message)
+		? descriptions[result.message]
+		: ["Verbindung zum Upstream ist fehlgeschlagen.", "Erreichbarkeit, Zielport und Dienstlogs prüfen."];
+	return { cause, hint };
+};
+
+/** Plaintext Telegram alert, bounded below Telegram's message limit and independent of UI locale. */
+export function formatHostMonitorAlert(hostId, config, target, result, previous, domains, checkedAt) {
+	const domainNames = domains
+		.map((domain) => alertLabel(domain.domain_name, 253))
+		.filter((domain) => /^[*a-z0-9._-]{1,253}$/i.test(domain))
+		.slice(0, 3);
+	const lines = [`ShieldPM: Proxy-Host #${hostId} ist ${result.state.toUpperCase()}`];
+	if (domainNames.length) lines.push(`Domain: ${domainNames.join(", ")}`);
+	lines.push(`Ziel: ${alertTarget(target, config)}`);
+	if (config.type === "http") {
+		lines.push(`Prüfung: ${target?.forward_scheme === "https" ? "HTTPS" : "HTTP"} GET`);
+		lines.push(`HTTP-Status: ${result.status_code ?? "keine Antwort"} (erwartet ${config.expected_status})`);
+		if (target?.forward_scheme === "https") {
+			lines.push(
+				`TLS-Zertifikat: ${config.skip_certificate_verification ? "Prüfung deaktiviert" : "Prüfung aktiv"}`,
+			);
+		}
+	} else {
+		lines.push("Prüfung: TCP-Verbindung");
+	}
+	lines.push(`Dauer: ${result.response_ms} ms (Zeitlimit: ${config.timeout_ms} ms)`);
+	lines.push(`Zeitpunkt (UTC): ${checkedAt}`);
+	if (result.state === "up") {
+		lines.push("Diagnose: Der Upstream antwortet wieder wie erwartet.");
+		if (previous.state === "down") {
+			lines.push(`Vorheriger Befund: ${alertDiagnosis(previous, config.expected_status).cause}`);
+		}
+	} else {
+		const { cause, hint } = alertDiagnosis(result, config.expected_status);
+		lines.push(`Diagnose: ${cause}`, `Hinweis: ${hint}`);
+	}
+	return lines.join("\n");
 }
 
 const publicConfig = (row) =>
@@ -471,11 +657,34 @@ const internalProxyHostMonitor = {
 			if (!persisted) return null;
 			await pruneHistory(hostId);
 			if (alert.send) {
+				let domains = [];
+				/** @type {ProxyHostMonitor | ProxyHostMonitorCheck} */
+				let previous = current;
+				try {
+					domains = await currentHost
+						.$relatedQuery("host_domains")
+						.select("domain_name")
+						.orderBy("id")
+						.limit(3);
+				} catch (error) {
+					logger.warn(`[Monitor] Could not load domains for host #${hostId}: ${error.message}`);
+				}
+				if (result.state === "up" && current.state !== "down" && current.last_alert_state === "down") {
+					try {
+						previous =
+							(await ProxyHostMonitorCheck.query()
+								.where({ host_id: hostId, state: "down" })
+								.orderBy("checked_at", "desc")
+								.first()) ?? current;
+					} catch (error) {
+						logger.warn(`[Monitor] Could not load previous check for host #${hostId}: ${error.message}`);
+					}
+				}
 				// A failed notification must never change the persisted health result.
 				try {
 					await internalChat.sendHostMonitorAlert(
 						currentHost.owner_user_id,
-						`ShieldPM: Proxy host #${hostId} is ${result.state.toUpperCase()} (${result.message}).`,
+						formatHostMonitorAlert(hostId, config, target, result, previous, domains, checkedAt),
 					);
 				} catch (error) {
 					logger.warn(`[Monitor] Could not deliver alert for host #${hostId}: ${error.message}`);

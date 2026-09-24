@@ -67,7 +67,15 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
   werden an aktivierte Telegram-Integrationen desselben Besitzers gesendet. Zwischen Nachrichten für denselben
   Host liegen mindestens fünf Minuten. Ein währenddessen zurückgehaltener Wechsel wird bei einem späteren Check
   nach Ablauf der Wartezeit gesendet, sofern der neue Zustand dann noch gilt. Der Check-Verlauf bleibt lückenlos
-  innerhalb der Aufbewahrungsgrenze. Ein Telegram-Fehler ändert das gespeicherte Messergebnis nicht.
+  innerhalb der Aufbewahrungsgrenze. Ein Telegram-Fehler ändert das gespeicherte Messergebnis nicht. Die
+  Klartextnachricht nennt Host-ID, falls vorhanden zugeordnete Domains, geprüftes Upstream-Ziel, Prüfart, Soll-
+  und Ist-Status, Messdauer, Zeitlimit und UTC-Zeit. Sie unterscheidet HTTP-Statusabweichungen sowie bekannte DNS-,
+  Netzwerk- und TLS-Fehlercodes. Bei einem Timeout nennt sie die zuletzt erreichte Phase: Namensauflösung,
+  TCP-Verbindung, TLS-Handshake oder Warten auf HTTP-Antwortheader. Dazu schlägt sie einen Prüfschritt vor.
+  Dies ist eine Beobachtung der Monitor-Probe, keine nachträglich ermittelte definitive Ursache: Eine langsame
+  Antwort kann mehrere Gründe haben. Auffällige Geheimwerte in Pfadsegmenten werden für Telegram maskiert;
+  CA-Daten, Rohtexte von Socket-Fehlern, Antwortinhalte und Authentifizierungsheader werden nicht versendet.
+  Ein Genesungsalarm kennzeichnet die wieder erfolgreiche Prüfung und gegebenenfalls den vorherigen Messbefund.
 - Wenn sich das Upstream-Ziel des Hosts ändert, werden der letzte Status und alte Messergebnisse zurückgesetzt.
   Wechselt der Host dabei zu einem für den Prüftyp nicht unterstützten Ziel (etwa Datei oder Unix-Socket), wird
   der Monitor deaktiviert; der Scheduler erzeugt dadurch keine scheinbaren Ausfälle. Die Einstellungen bleiben
