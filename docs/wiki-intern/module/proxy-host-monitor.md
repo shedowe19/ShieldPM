@@ -75,7 +75,12 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
   Dies ist eine Beobachtung der Monitor-Probe, keine nachträglich ermittelte definitive Ursache: Eine langsame
   Antwort kann mehrere Gründe haben. Auffällige Geheimwerte in Pfadsegmenten werden für Telegram maskiert;
   CA-Daten, Rohtexte von Socket-Fehlern, Antwortinhalte und Authentifizierungsheader werden nicht versendet.
-  Ein Genesungsalarm kennzeichnet die wieder erfolgreiche Prüfung und gegebenenfalls den vorherigen Messbefund.
+  Ein Genesungsalarm nennt den Befund der Prüfung beim ausgelösten DOWN-Alarm und, falls vorhanden, einen
+  späteren letzten fehlgeschlagenen Check vor der Erholung jeweils mit UTC-Zeit. So werden Fehlerwechsel während der
+  fünfminütigen Alarmsperre nicht dem ursprünglichen Alarm zugeschrieben. Falls die ursprüngliche Prüfung bereits
+  aus dem begrenzten Verlauf entfernt wurde, wird nur der letzte Check ausdrücklich als solcher bezeichnet.
+  Sind beide Einträge nicht mehr vorhanden, meldet die Nachricht, dass frühere Ausfallbefunde fehlen.
+  Der Abstand zwischen DOWN- und UP-Nachricht belegt wegen der Alarmsperre keine durchgehende Ausfalldauer.
 - Wenn sich das Upstream-Ziel des Hosts ändert, werden der letzte Status und alte Messergebnisse zurückgesetzt.
   Wechselt der Host dabei zu einem für den Prüftyp nicht unterstützten Ziel (etwa Datei oder Unix-Socket), wird
   der Monitor deaktiviert; der Scheduler erzeugt dadurch keine scheinbaren Ausfälle. Die Einstellungen bleiben

@@ -439,7 +439,7 @@ const alertDiagnosis = (result, expectedStatus) => {
 };
 
 /** Plaintext Telegram alert, bounded below Telegram's message limit and independent of UI locale. */
-export function formatHostMonitorAlert(hostId, config, target, result, previous, domains, checkedAt) {
+export function formatHostMonitorAlert(hostId, config, target, result, priorFindings, domains, checkedAt) {
 	const domainNames = domains
 		.map((domain) => alertLabel(domain.domain_name, 253))
 		.filter((domain) => /^[*a-z0-9._-]{1,253}$/i.test(domain))
@@ -462,8 +462,20 @@ export function formatHostMonitorAlert(hostId, config, target, result, previous,
 	lines.push(`Zeitpunkt (UTC): ${checkedAt}`);
 	if (result.state === "up") {
 		lines.push("Diagnose: Der Upstream antwortet wieder wie erwartet.");
-		if (previous.state === "down") {
-			lines.push(`Vorheriger Befund: ${alertDiagnosis(previous, config.expected_status).cause}`);
+		if (priorFindings.initialFailure?.state === "down") {
+			const original = priorFindings.initialFailure;
+			lines.push(
+				`Befund beim DOWN-Alarm (UTC ${original.checked_at}): ${alertDiagnosis(original, config.expected_status).cause}`,
+			);
+		}
+		if (priorFindings.lastFailedCheck?.state === "down") {
+			const latest = priorFindings.lastFailedCheck;
+			lines.push(
+				`Letzter fehlgeschlagener Check (UTC ${latest.checked_at}): ${alertDiagnosis(latest, config.expected_status).cause}`,
+			);
+		}
+		if (!priorFindings.initialFailure && !priorFindings.lastFailedCheck) {
+			lines.push("Frühere Ausfallbefunde sind im Verlauf nicht mehr verfügbar.");
 		}
 	} else {
 		const { cause, hint } = alertDiagnosis(result, config.expected_status);
@@ -658,8 +670,7 @@ const internalProxyHostMonitor = {
 			await pruneHistory(hostId);
 			if (alert.send) {
 				let domains = [];
-				/** @type {ProxyHostMonitor | ProxyHostMonitorCheck} */
-				let previous = current;
+				const priorFindings = { initialFailure: null, lastFailedCheck: null };
 				try {
 					domains = await currentHost
 						.$relatedQuery("host_domains")
@@ -669,22 +680,32 @@ const internalProxyHostMonitor = {
 				} catch (error) {
 					logger.warn(`[Monitor] Could not load domains for host #${hostId}: ${error.message}`);
 				}
-				if (result.state === "up" && current.state !== "down" && current.last_alert_state === "down") {
+				if (result.state === "up" && current.last_alert_state === "down") {
 					try {
-						previous =
-							(await ProxyHostMonitorCheck.query()
-								.where({ host_id: hostId, state: "down" })
-								.orderBy("checked_at", "desc")
-								.first()) ?? current;
+						if (current.last_alert_at) {
+							priorFindings.initialFailure = await ProxyHostMonitorCheck.query()
+								.where({ host_id: hostId, checked_at: current.last_alert_at, state: "down" })
+								.orderBy("id", "asc")
+								.first();
+						}
+						const latestQuery = ProxyHostMonitorCheck.query().where({ host_id: hostId, state: "down" });
+						if (current.last_alert_at) latestQuery.where("checked_at", ">=", current.last_alert_at);
+						const latest = await latestQuery.orderBy("checked_at", "desc").orderBy("id", "desc").first();
+						// The bounded history may have lost its last row before this recovery.
+						const lastFailure = latest ?? (current.state === "down" ? current : null);
+						if (lastFailure && (!latest || latest.id !== priorFindings.initialFailure?.id)) {
+							priorFindings.lastFailedCheck = lastFailure;
+						}
 					} catch (error) {
-						logger.warn(`[Monitor] Could not load previous check for host #${hostId}: ${error.message}`);
+						logger.warn(`[Monitor] Could not load outage checks for host #${hostId}: ${error.message}`);
+						if (current.state === "down") priorFindings.lastFailedCheck = current;
 					}
 				}
 				// A failed notification must never change the persisted health result.
 				try {
 					await internalChat.sendHostMonitorAlert(
 						currentHost.owner_user_id,
-						formatHostMonitorAlert(hostId, config, target, result, previous, domains, checkedAt),
+						formatHostMonitorAlert(hostId, config, target, result, priorFindings, domains, checkedAt),
 					);
 				} catch (error) {
 					logger.warn(`[Monitor] Could not deliver alert for host #${hostId}: ${error.message}`);

@@ -49,6 +49,15 @@ const settings = (overrides = {}) => ({
 	alert_enabled: true,
 	...overrides,
 });
+const backdateDownAlert = async (checkedAt) => {
+	const earlier = new Date(Date.now() - 6 * 60 * 1000).toISOString();
+	await state
+		.db("proxy_host_monitor_check")
+		.where({ host_id: 11, checked_at: checkedAt })
+		.update({ checked_at: earlier });
+	await state.db("proxy_host_monitor").where("host_id", 11).update({ last_alert_at: earlier });
+	return earlier;
+};
 let server;
 let port;
 let responseStatus = 200;
@@ -167,23 +176,110 @@ describe("proxy host upstream monitor", () => {
 		}
 	});
 
-	it("reports the last failed measurement when a recovery alert waits out the cooldown", async () => {
+	it("reports the original failed measurement when a recovery alert waits out the cooldown", async () => {
 		await monitor.update(access, 11, settings());
 		await monitor.run(11);
 		responseStatus = 503;
-		await monitor.run(11);
+		const failed = await monitor.run(11);
 		expect(state.alerts).toHaveBeenCalledTimes(1);
 		responseStatus = 200;
 		await monitor.run(11);
 		expect(state.alerts).toHaveBeenCalledTimes(1);
-		await state
-			.db("proxy_host_monitor")
-			.where("host_id", 11)
-			.update({ last_alert_at: new Date(Date.now() - 6 * 60 * 1000).toISOString() });
+		const outageAt = await backdateDownAlert(failed.checked_at);
 		await monitor.run(11);
 		expect(state.alerts).toHaveBeenCalledTimes(2);
 		expect(state.alerts.mock.calls[1][1]).toContain("Proxy-Host #11 ist UP");
-		expect(state.alerts.mock.calls[1][1]).toContain("Vorheriger Befund: Der Upstream antwortete mit HTTP 503");
+		expect(state.alerts.mock.calls[1][1]).toContain(
+			`Befund beim DOWN-Alarm (UTC ${outageAt}): Der Upstream antwortete mit HTTP 503`,
+		);
+		expect(state.alerts.mock.calls[1][1]).not.toContain("Letzter fehlgeschlagener Check");
+	});
+
+	it("separates a DOWN timeout from a later network failure on recovery", async () => {
+		const stalled = http.createServer(() => {});
+		await new Promise((resolve) => stalled.listen(0, "127.0.0.1", resolve));
+		try {
+			await state.db("proxy_host").where("id", 11).update({ forward_port: stalled.address().port });
+			await monitor.update(access, 11, settings({ timeout_ms: 500 }));
+			const timeout = await monitor.run(11);
+			expect(timeout).toMatchObject({ state: "down", message: "Timed out during headers" });
+			const networkAt = new Date().toISOString();
+			await state.db("proxy_host_monitor_check").insert({
+				host_id: 11,
+				checked_at: networkAt,
+				state: "down",
+				response_ms: 9,
+				status_code: null,
+				message: "Host unreachable (EHOSTUNREACH)",
+				transition: 0,
+			});
+			await state.db("proxy_host_monitor").where("host_id", 11).update({
+				checked_at: networkAt,
+				state: "down",
+				response_ms: 9,
+				status_code: null,
+				message: "Host unreachable (EHOSTUNREACH)",
+			});
+			await state.db("proxy_host").where("id", 11).update({ forward_port: port });
+			const suppressed = await monitor.run(11);
+			expect(suppressed.state).toBe("up");
+			expect(state.alerts).toHaveBeenCalledTimes(1);
+			const outageAt = await backdateDownAlert(timeout.checked_at);
+			const recovery = await monitor.run(11);
+			expect(recovery.state).toBe("up");
+			expect(state.alerts).toHaveBeenCalledTimes(2);
+			const alert = state.alerts.mock.calls[1][1];
+			expect(alert).toContain(
+				`Befund beim DOWN-Alarm (UTC ${outageAt}): Verbindung hergestellt; keine HTTP-Antwortheader innerhalb des Zeitlimits.`,
+			);
+			expect(alert).toContain(
+				`Letzter fehlgeschlagener Check (UTC ${networkAt}): Zielhost über das Netzwerk nicht erreichbar (EHOSTUNREACH).`,
+			);
+			expect(alert).not.toContain("Vorheriger Befund:");
+		} finally {
+			stalled.closeAllConnections();
+			await new Promise((resolve) => stalled.close(resolve));
+		}
+	});
+
+	it("labels a recent failure accurately when the original DOWN alert check is no longer retained", async () => {
+		await monitor.update(access, 11, settings());
+		responseStatus = 503;
+		const original = await monitor.run(11);
+		await backdateDownAlert(original.checked_at);
+		responseStatus = 502;
+		const latest = await monitor.run(11);
+		await state
+			.db("proxy_host_monitor_check")
+			.where({ host_id: 11, state: "down" })
+			.whereNot("checked_at", latest.checked_at)
+			.delete();
+		responseStatus = 200;
+		await monitor.run(11);
+		expect(state.alerts).toHaveBeenCalledTimes(2);
+		const alert = state.alerts.mock.calls[1][1];
+		expect(alert).toContain(
+			`Letzter fehlgeschlagener Check (UTC ${latest.checked_at}): Der Upstream antwortete mit HTTP 502`,
+		);
+		expect(alert).not.toContain("Befund beim DOWN-Alarm");
+		expect(alert).not.toContain("HTTP 503");
+	});
+
+	it("falls back to the last measured failure when all outage history has been pruned", async () => {
+		await monitor.update(access, 11, settings());
+		responseStatus = 503;
+		const original = await monitor.run(11);
+		await backdateDownAlert(original.checked_at);
+		responseStatus = 502;
+		const latest = await monitor.run(11);
+		await state.db("proxy_host_monitor_check").where({ host_id: 11, state: "down" }).delete();
+		responseStatus = 200;
+		await monitor.run(11);
+		const alert = state.alerts.mock.calls[1][1];
+		expect(alert).toContain(
+			`Letzter fehlgeschlagener Check (UTC ${latest.checked_at}): Der Upstream antwortete mit HTTP 502`,
+		);
+		expect(alert).not.toContain("Befund beim DOWN-Alarm");
 	});
 
 	it("enforces owner visibility and never probes disabled hosts", async () => {
@@ -290,14 +386,24 @@ describe("proxy host upstream monitor", () => {
 			settings({ type: "tcp", timeout_ms: 1000 }),
 			{ forward_scheme: "terminal", forward_host: "127.0.0.1", forward_port: 22 },
 			{ state: "up", message: "TCP connected", status_code: null, response_ms: 12 },
-			{ state: "down", message: "Connection refused (ECONNREFUSED)", status_code: null },
+			{
+				initialFailure: {
+					state: "down",
+					message: "Connection refused (ECONNREFUSED)",
+					status_code: null,
+					checked_at: "2026-09-24T09:56:00.000Z",
+				},
+				lastFailedCheck: null,
+			},
 			[{ domain_name: "web.example.test\nShieldPM: forged alert" }],
 			"2026-09-24T10:00:00.000Z",
 		);
 		expect(message).toContain("Proxy-Host #52 ist UP");
 		expect(message).toContain("Ziel: 127.0.0.1:22");
 		expect(message).toContain("Prüfung: TCP-Verbindung");
-		expect(message).toContain("Vorheriger Befund: TCP-Verbindung zum Zielport wurde abgelehnt");
+		expect(message).toContain(
+			"Befund beim DOWN-Alarm (UTC 2026-09-24T09:56:00.000Z): TCP-Verbindung zum Zielport wurde abgelehnt",
+		);
 		expect(message).not.toContain("Domain:");
 		expect(message).not.toContain("Dauer des Ausfalls");
 		expect(message.length).toBeLessThan(4096);
@@ -310,15 +416,7 @@ describe("proxy host upstream monitor", () => {
 		const target = { forward_scheme: "https", forward_host: "127.0.0.1", forward_port: 81, path: "/health" };
 		const result = (message) => ({ state: "down", message, response_ms: 130, status_code: null });
 		const formatted = (reason) =>
-			formatHostMonitorAlert(
-				52,
-				settings(),
-				target,
-				result(reason),
-				{ state: "up" },
-				[],
-				"2026-09-24T10:00:00.000Z",
-			);
+			formatHostMonitorAlert(52, settings(), target, result(reason), {}, [], "2026-09-24T10:00:00.000Z");
 		expect(formatted("DNS lookup failed (ENOTFOUND)")).toContain("DNS konnte den Zielnamen nicht auflösen");
 		expect(formatted("Connection refused (ECONNREFUSED)")).toContain("Dienst auf diesem Host und Port lauscht");
 		expect(formatted("TLS handshake failed (EPROTO)")).toContain("Eventuell spricht der Port HTTP statt HTTPS");
@@ -341,7 +439,7 @@ describe("proxy host upstream monitor", () => {
 				path: "/health/token/shortsecret/key=exposed/0123456789abcdefghijklmnopqrstuvw",
 			},
 			{ state: "down", message: "Timed out during headers", status_code: null, response_ms: 500 },
-			{ state: "up" },
+			{},
 			[],
 			"2026-09-24T10:00:00.000Z",
 		);
