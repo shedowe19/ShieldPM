@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createUploadRelay, relayConfigForHost, validateRelayConfigForHost } from "../../internal/upload-relay.js";
@@ -247,5 +247,171 @@ describe("Upload relay", () => {
 
 		await expect(relay.cleanupExpired()).resolves.toBe(1);
 		await expect(relay.get(42, upload.id)).rejects.toThrow("Not Found");
+	});
+
+	it("rejects null upload metadata and cleans up only the corrupt session", async () => {
+		const root = createTempRoot();
+		const outside = createTempRoot();
+		const canary = join(outside, "canary");
+		fs.writeFileSync(canary, "outside");
+		const relay = createUploadRelay({ fetchImpl: vi.fn(), getHost: async () => host(), root });
+		const corrupt = await relay.create(42, { filename: "corrupt.bin", length: 3 });
+		const intact = await relay.create(42, { filename: "intact.bin", length: 3 });
+		const corruptDirectory = join(root, "host-42", corrupt.id);
+		const intactDirectory = join(root, "host-42", intact.id);
+		fs.writeFileSync(join(corruptDirectory, "upload.json"), "null");
+
+		await expect(relay.get(42, corrupt.id)).rejects.toMatchObject({ status: 404 });
+		await expect(relay.recoverInterruptedFinalizations()).resolves.toBe(0);
+		await expect(relay.cleanupExpired()).resolves.toBe(1);
+		expect(fs.existsSync(corruptDirectory)).toBe(false);
+		expect(fs.existsSync(intactDirectory)).toBe(true);
+		expect(await relay.get(42, intact.id)).toMatchObject({ offset: 0 });
+		expect(fs.readFileSync(canary, "utf8")).toBe("outside");
+	});
+
+	it("rejects unsafe upload IDs before reading, writing or deleting relay storage", async () => {
+		const root = createTempRoot();
+		const relay = createUploadRelay({ fetchImpl: vi.fn(), getHost: async () => host(), root });
+		const upload = await relay.create(42, { filename: "safe.bin", length: 3 });
+		for (const id of ["../outside", "..%2foutside", "../../outside", "a".repeat(36), "x".repeat(37)]) {
+			await expect(relay.get(42, id)).rejects.toThrow();
+			await expect(
+				relay.append(42, id, {
+					contentLength: 3,
+					headers: {},
+					offset: 0,
+					stream: Readable.from([Buffer.from("bad")]),
+				}),
+			).rejects.toThrow();
+			await expect(relay.finalize(42, id, {})).rejects.toThrow();
+			await expect(relay.remove(42, id)).rejects.toThrow();
+		}
+		expect(fs.readdirSync(join(root, "host-42"))).toEqual([upload.id]);
+		expect(await relay.get(42, upload.id)).toMatchObject({ offset: 0 });
+	});
+
+	it("rejects invalid host IDs even when the host lookup itself succeeds", async () => {
+		const root = createTempRoot();
+		const outside = createTempRoot();
+		const canary = join(outside, "canary");
+		fs.writeFileSync(canary, "outside");
+		const relay = createUploadRelay({ fetchImpl: vi.fn(), getHost: async () => host(), root });
+		for (const hostId of [`42/../../${basename(outside)}`, 0, -1, Number.MAX_SAFE_INTEGER + 1]) {
+			await expect(relay.create(hostId, { filename: "unsafe.bin", length: 3 })).rejects.toThrow();
+		}
+		expect(fs.readdirSync(outside)).toEqual(["canary"]);
+		expect(fs.readFileSync(canary, "utf8")).toBe("outside");
+	});
+
+	it("rejects a symlinked host directory without writing outside the relay root", async () => {
+		const root = createTempRoot();
+		const outside = createTempRoot();
+		fs.symlinkSync(outside, join(root, "host-42"), "dir");
+		const relay = createUploadRelay({ fetchImpl: vi.fn(), getHost: async () => host(), root });
+
+		await expect(relay.create(42, { filename: "escape.bin", length: 3 })).rejects.toThrow();
+		expect(fs.readdirSync(outside)).toEqual([]);
+	});
+
+	it("rejects symlinked upload directories and metadata files before reading or appending", async () => {
+		const root = createTempRoot();
+		const outside = createTempRoot();
+		const relay = createUploadRelay({ fetchImpl: vi.fn(), getHost: async () => host(), root });
+		const upload = await relay.create(42, { filename: "safe.bin", length: 3 });
+		const directory = join(root, "host-42", upload.id);
+		const moved = join(outside, "moved-upload");
+		fs.renameSync(directory, moved);
+		fs.symlinkSync(moved, directory, "dir");
+
+		await expect(relay.get(42, upload.id)).rejects.toThrow();
+		await expect(
+			relay.append(42, upload.id, {
+				contentLength: 3,
+				headers: {},
+				offset: 0,
+				stream: Readable.from([Buffer.from("bad")]),
+			}),
+		).rejects.toThrow();
+		expect(fs.readdirSync(moved)).toEqual(["upload.json"]);
+		expect(JSON.parse(fs.readFileSync(join(moved, "upload.json"), "utf8")).offset).toBe(0);
+
+		fs.unlinkSync(directory);
+		fs.mkdirSync(directory);
+		fs.symlinkSync(join(moved, "upload.json"), join(directory, "upload.json"));
+		await expect(relay.get(42, upload.id)).rejects.toThrow();
+		expect(JSON.parse(fs.readFileSync(join(moved, "upload.json"), "utf8")).offset).toBe(0);
+	});
+
+	it("never forwards or deletes an out-of-root file named by a corrupted chunk offset", async () => {
+		const root = createTempRoot();
+		const outside = createTempRoot();
+		const canary = join(outside, "canary.part");
+		fs.writeFileSync(canary, "BAD");
+		const scheduled = [];
+		const fetchImpl = vi.fn(async (_url, init) => {
+			await readBody(init.body);
+			return new Response(null, { status: 201 });
+		});
+		const relay = createUploadRelay({
+			fetchImpl,
+			getHost: async () => host(),
+			root,
+			schedule: (task) => scheduled.push(task),
+		});
+		const upload = await relay.create(42, { filename: "chunk.bin", length: 3 });
+		await relay.append(42, upload.id, {
+			contentLength: 3,
+			headers: {},
+			offset: 0,
+			stream: Readable.from([Buffer.from("abc")]),
+		});
+		const metadataPath = join(root, "host-42", upload.id, "upload.json");
+		const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
+		metadata.chunks[0].offset = `../../../${basename(outside)}/canary`;
+		fs.writeFileSync(metadataPath, JSON.stringify(metadata));
+
+		expect(scheduled).toHaveLength(1);
+		scheduled.shift()();
+		await relay.stop();
+		expect(JSON.parse(fs.readFileSync(metadataPath, "utf8")).state).toBe("queued");
+		expect(fetchImpl).not.toHaveBeenCalled();
+		expect(fs.readFileSync(canary, "utf8")).toBe("BAD");
+	});
+
+	it("never forwards the contents of a symlinked chunk file", async () => {
+		const root = createTempRoot();
+		const outside = createTempRoot();
+		const canary = join(outside, "canary.part");
+		fs.writeFileSync(canary, "BAD");
+		const scheduled = [];
+		const fetchImpl = vi.fn(async (_url, init) => {
+			await readBody(init.body);
+			return new Response(null, { status: 201 });
+		});
+		const relay = createUploadRelay({
+			fetchImpl,
+			getHost: async () => host(),
+			root,
+			schedule: (task) => scheduled.push(task),
+		});
+		const upload = await relay.create(42, { filename: "chunk.bin", length: 3 });
+		await relay.append(42, upload.id, {
+			contentLength: 3,
+			headers: {},
+			offset: 0,
+			stream: Readable.from([Buffer.from("abc")]),
+		});
+		const directory = join(root, "host-42", upload.id);
+		const chunkPath = join(directory, "00000000000000000000.part");
+		fs.unlinkSync(chunkPath);
+		fs.symlinkSync(canary, chunkPath);
+
+		expect(scheduled).toHaveLength(1);
+		scheduled.shift()();
+		await relay.stop();
+		expect(JSON.parse(fs.readFileSync(join(directory, "upload.json"), "utf8")).state).toBe("failed");
+		expect(fetchImpl).not.toHaveBeenCalled();
+		expect(fs.readFileSync(canary, "utf8")).toBe("BAD");
 	});
 });

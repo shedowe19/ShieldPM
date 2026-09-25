@@ -28,6 +28,12 @@ ShieldPM ermittelt den Transportweg ohne ein zusätzliches Formularfeld:
 
 Bekannte, ausdrücklich aktivierte Upload-Namensräume erhalten zusätzlich `proxy_buffering off`, `proxy_request_buffering off`, einen langen Origin-Timeout sowie ein auf die konfigurierte Chunk-Größe angehobenes ModSecurity-Request-Body-Limit. Die übrigen ModSecurity-Regeln bleiben aktiv. Access List, TLS und die gesamte sonstige Proxy-Host-Konfiguration bleiben ebenfalls wirksam.
 
+## Lokale Backend-tus-API
+
+Getrennt vom öffentlichen Nginx-Passthrough steht die Backend-API unter `/api/nginx/proxy-hosts/:hostId/upload-relay` für persistente tus-Sitzungen zur Verfügung. Der öffentliche Uploadpfad wird von Nginx direkt an den privaten Upstream weitergeleitet; er verwendet diese Backend-API nicht.
+
+Lokale Sitzungen liegen unter `<DATA_PATH>/upload-relay/host-<hostId>/<uploadId>/` (`DATA_PATH` ist standardmäßig `/data`). Die Host-ID muss gültig sein, die Upload-ID eine UUID. Beim Zugriff auf gespeicherte Metadaten und Chunks werden Dateinamen und Chunk-Angaben geprüft; symbolische Links an den betroffenen Datei- und Verzeichnispfaden sind unzulässig. Lesezugriffe (`GET`, `HEAD`) benötigen `proxy_hosts:get`, schreibende Zugriffe `proxy_hosts:update` und einen gültigen CSRF-Token.
+
 ## Grenzen
 
 Ein Reverse Proxy kann eine beliebige einzelne Browser-Formularanfrage nicht transparent in kleinere Anfragen zerlegen: Das Zielsystem bestimmt dabei Feldnamen, Authentifizierung, Checksumme und Abschlusssemantik. Für Dateien oberhalb eines CDN-Request-Limits muss der Client bzw. der Upstream daher ein eigenes Chunking-Protokoll wie Nextcloud-WebDAV oder tus verwenden. ShieldPM transportiert dieses Protokoll ohne Zielpfad-Doppelpflege und verhindert selbst keine Anwendungsspezifika.
