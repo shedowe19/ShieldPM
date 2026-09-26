@@ -53,6 +53,12 @@ abgebrochen. Ausgeschaltete und gelöschte Hosts werden nicht geprüft.
   oder anderer Status setzt den Zustand auf `down`. `unknown` bezeichnet ungeprüfte oder wegen eines
   Zertifikatsfehlers nicht prüfbare Hosts; deaktivierte Monitore und Hosts erscheinen als `paused`, ohne den letzten
   gespeicherten Check zu verfälschen.
+- Die Proxy-Host-Tabelle zeigt den Monitorzustand in der Spalte „Dienstprüfung“ und unmittelbar daneben die
+  eigenständige Spalte „Latenz“. Sie zeigt `response_ms` des letzten Checks in Millisekunden, auch wenn der Check
+  fehlgeschlagen ist. Bei noch ausstehender Prüfung, deaktivierter Überwachung oder nicht verfügbaren Monitordaten
+  erscheint „–“. Bei einem Timeout beschreibt der Wert die Dauer der fehlgeschlagenen Probe bis zum Abbruch und
+  keine bestätigte Netzwerklatenz. Im Dialog „Host-Überwachung“ bleibt die Antwortzeit beim letzten Check und im
+  Verlauf sichtbar.
 - Die Konfiguration begrenzt Intervalle auf 15–3600 Sekunden und Timeouts auf 500–15000 Millisekunden; der Timeout
   muss kürzer als das Intervall sein. Manuelle Checks teilen sich die Begrenzung auf fünf Verbindungen und sind
   zusätzlich auf zehn Aufrufe je Minute und IP begrenzt.

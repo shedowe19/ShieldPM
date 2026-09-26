@@ -649,6 +649,8 @@
 	"proxy-host.monitor.history": "Recent checks",
 	"proxy-host.monitor.interval": "Interval (seconds)",
 	"proxy-host.monitor.last-checked": "Last checked",
+	"proxy-host.monitor.latency-column": "Latenza",
+	"proxy-host.monitor.latency-description": "Durata dell'ultimo controllo; include l'attesa fino al timeout per i controlli non riusciti",
 	"proxy-host.monitor.loading": "Loading checks…",
 	"proxy-host.monitor.no-history": "No checks recorded yet.",
 	"proxy-host.monitor.not-configured": "Not configured",

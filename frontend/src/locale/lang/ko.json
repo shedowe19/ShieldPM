@@ -649,6 +649,8 @@
 	"proxy-host.monitor.history": "Recent checks",
 	"proxy-host.monitor.interval": "Interval (seconds)",
 	"proxy-host.monitor.last-checked": "Last checked",
+	"proxy-host.monitor.latency-column": "지연 시간",
+	"proxy-host.monitor.latency-description": "마지막 검사에 걸린 시간입니다. 실패한 검사에서는 시간 초과까지의 대기 시간도 포함됩니다.",
 	"proxy-host.monitor.loading": "Loading checks…",
 	"proxy-host.monitor.no-history": "No checks recorded yet.",
 	"proxy-host.monitor.not-configured": "Not configured",

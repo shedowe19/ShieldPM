@@ -649,6 +649,8 @@
 	"proxy-host.monitor.history": "Recent checks",
 	"proxy-host.monitor.interval": "Interval (seconds)",
 	"proxy-host.monitor.last-checked": "Last checked",
+	"proxy-host.monitor.latency-column": "レイテンシ",
+	"proxy-host.monitor.latency-description": "直近のチェックにかかった時間。失敗したチェックではタイムアウトまでの待機時間も含みます。",
 	"proxy-host.monitor.loading": "Loading checks…",
 	"proxy-host.monitor.no-history": "No checks recorded yet.",
 	"proxy-host.monitor.not-configured": "Not configured",

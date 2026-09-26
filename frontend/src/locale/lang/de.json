@@ -649,6 +649,8 @@
 	"proxy-host.monitor.history": "Letzte Prüfungen",
 	"proxy-host.monitor.interval": "Intervall (Sekunden)",
 	"proxy-host.monitor.last-checked": "Letzte Prüfung",
+	"proxy-host.monitor.latency-column": "Latenz",
+	"proxy-host.monitor.latency-description": "Dauer der letzten Prüfung; bei Fehlern einschließlich Zeitüberschreitung",
 	"proxy-host.monitor.loading": "Prüfungen werden geladen…",
 	"proxy-host.monitor.no-history": "Noch keine Prüfungen gespeichert.",
 	"proxy-host.monitor.not-configured": "Nicht eingerichtet",

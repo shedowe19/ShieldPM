@@ -35,7 +35,7 @@ import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { HostStatus } from "../HostStatus";
 import { MonitorDialog } from "./MonitorDialog";
-import { MonitorSummary } from "./MonitorStatus";
+import { MonitorLatency, MonitorSummary } from "./MonitorStatus";
 import { ProxyHostDiagnosticsDialog } from "./ProxyHostDiagnosticsDialog";
 
 interface Props {
@@ -150,6 +150,18 @@ export default function Table({
 							error={monitorError}
 						/>
 					),
+				}),
+				columnHelper.accessor((row) => row, {
+					id: "latency",
+					header: intl.formatMessage({ id: "proxy-host.monitor.latency-column" }),
+					cell: (info) => (
+						<MonitorLatency
+							status={statusByHost.get(info.getValue().id)}
+							loading={monitorLoading && !monitorError}
+							error={monitorError}
+						/>
+					),
+					meta: { className: "whitespace-nowrap" },
 				}),
 				columnHelper.display({
 					id: "id",
