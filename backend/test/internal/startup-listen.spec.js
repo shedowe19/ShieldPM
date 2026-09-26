@@ -9,6 +9,8 @@ const state = vi.hoisted(() => ({
 	info: vi.fn(),
 	error: vi.fn(),
 	terminal: vi.fn(),
+	monitorStart: vi.fn(),
+	monitorStop: vi.fn(),
 }));
 vi.mock("../../app.js", async () => {
 	const { default: express } = await import("express");
@@ -40,6 +42,9 @@ vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));
 vi.mock("../../internal/maintenance.js", () => ({ default: { initTimer: () => {} } }));
 vi.mock("../../internal/nginx.js", () => ({ default: { reload: async () => {} } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { init: async () => {} } }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({
+	default: { init: state.monitorStart, stop: state.monitorStop },
+}));
 vi.mock("../../internal/terminal.js", () => ({ default: { init: state.terminal } }));
 vi.mock("../../internal/tor.js", () => ({ default: { init: async () => {} } }));
 vi.mock("../../internal/wireguard.js", () => ({ default: { init: async () => {} } }));
@@ -62,7 +67,10 @@ describe("backend listener lifecycle", () => {
 		state.port = 0;
 		state.completed = false;
 		listeners = new Map(
-			["SIGTERM", "uncaughtException", "unhandledRejection"].map((event) => [event, process.listeners(event)]),
+			["SIGINT", "SIGTERM", "uncaughtException", "unhandledRejection"].map((event) => [
+				event,
+				process.listeners(event),
+			]),
 		);
 	});
 	afterEach(async () => {
@@ -93,13 +101,17 @@ describe("backend listener lifecycle", () => {
 		);
 		expect(state.info.mock.calls.flat().join(" ")).not.toContain("listening");
 		expect(state.terminal).not.toHaveBeenCalled();
+		expect(state.monitorStart).not.toHaveBeenCalled();
+		expect(state.monitorStop).not.toHaveBeenCalled();
 		expect(process.listeners("SIGTERM")).toEqual(listeners.get("SIGTERM"));
+		expect(process.listeners("SIGINT")).toEqual(listeners.get("SIGINT"));
 	});
 	it("initializes the terminal only after listening and closes the server on SIGTERM", async () => {
 		await import("../../index.js");
 		await vi.waitFor(() => expect(state.completed).toBe(true));
 		const server = state.servers[0];
 		expect(state.terminal).toHaveBeenCalledExactlyOnceWith(server);
+		expect(state.monitorStart).toHaveBeenCalledOnce();
 		expect(process.exit).not.toHaveBeenCalled();
 		const response = await fetch(`http://127.0.0.1:${server.address().port}/`);
 		expect(await response.json()).toEqual({ status: "OK" });
@@ -110,6 +122,22 @@ describe("backend listener lifecycle", () => {
 		handlers[0]();
 		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
 		expect(state.analyticsStop).toHaveBeenCalledOnce();
+		expect(state.monitorStop).toHaveBeenCalledOnce();
 		expect(server.listening).toBe(false);
+	});
+	it.each(["SIGINT", "SIGTERM"])("runs development monitoring after listen and stops it on %s", async (signal) => {
+		await import("../../index-dev.js");
+		await vi.waitFor(() => expect(state.completed).toBe(true));
+		const server = state.servers[0];
+		expect(state.monitorStart).toHaveBeenCalledOnce();
+		const handlers = process.listeners(signal).filter((listener) => !listeners.get(signal).includes(listener));
+		expect(handlers).toHaveLength(1);
+		handlers[0]();
+		await vi.waitFor(() => expect(process.exit).toHaveBeenCalledExactlyOnceWith(0));
+		expect(state.monitorStop).toHaveBeenCalledOnce();
+		expect(state.analyticsStop).toHaveBeenCalledOnce();
+		expect(server.listening).toBe(false);
+		expect(process.listeners("SIGINT")).toEqual(listeners.get("SIGINT"));
+		expect(process.listeners("SIGTERM")).toEqual(listeners.get("SIGTERM"));
 	});
 });

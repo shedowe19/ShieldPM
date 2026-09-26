@@ -16,11 +16,13 @@ import CloudflaredTunnel from "../models/cloudflared_tunnel.js";
 import DdnsProvider from "../models/ddns_provider.js";
 import DeadHost from "../models/dead_host.js";
 import ProxyHost from "../models/proxy_host.js";
+import ProxyHostMonitor from "../models/proxy_host_monitor.js";
 import RedirectionHost from "../models/redirection_host.js";
 import settingModel from "../models/setting.js";
 import Stream from "../models/stream.js";
 import User from "../models/user.js";
 import internalNginx from "./nginx.js";
+import internalProxyHostMonitor, { assertMonitorConfig } from "./proxy-host-monitor.js";
 import { relayConfigForHost, validateRelayConfigForHost } from "./upload-relay.js";
 
 const GITOPS_DIR = "/data/gitops";
@@ -509,6 +511,7 @@ const internalGitOps = {
 		// Create subdirectories
 		const dirs = [
 			"proxy-hosts",
+			"proxy-host-monitors",
 			"redirection-hosts",
 			"dead-hosts",
 			"streams",
@@ -538,6 +541,28 @@ const internalGitOps = {
 			const filePath = path.join(configDir, "proxy-hosts", filename);
 			const exportData = internalGitOps.sanitizeForExport(host, ["is_deleted"]);
 			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(exportData, { indent: 2 }));
+			exportedFiles.push(filePath);
+		}
+		const monitors = await ProxyHostMonitor.query().whereIn(
+			"host_id",
+			proxyHosts.map((host) => host.id),
+		);
+		for (const monitor of monitors) {
+			const filePath = path.join(configDir, "proxy-host-monitors", `${monitor.host_id}.yaml`);
+			const data = {
+				host_id: monitor.host_id,
+				enabled: !!monitor.enabled,
+				type: monitor.type,
+				path: monitor.path,
+				interval_seconds: monitor.interval_seconds,
+				timeout_ms: monitor.timeout_ms,
+				expected_status: monitor.expected_status,
+				alert_enabled: !!monitor.alert_enabled,
+				upstream_ca: monitor.upstream_ca ?? null,
+				upstream_server_name: monitor.upstream_server_name ?? null,
+				skip_certificate_verification: !!monitor.skip_certificate_verification,
+			};
+			await writeConfigFile(GITOPS_DIR, filePath, yaml.dump(data, { indent: 2 }));
 			exportedFiles.push(filePath);
 		}
 
@@ -1094,6 +1119,19 @@ const internalGitOps = {
 										return;
 									}
 								}
+								const upstreamChanged =
+									modelClass === ProxyHost &&
+									existing &&
+									[
+										"forward_scheme",
+										"forward_host",
+										"forward_port",
+										"terminal_host",
+										"terminal_port",
+									].some(
+										(field) =>
+											Object.hasOwn(itemData, field) && existing[field] !== itemData[field],
+									);
 
 								// Ensure item is not marked as deleted upon restore
 								if (modelClass !== DdnsProvider) itemData.is_deleted = 0;
@@ -1132,6 +1170,10 @@ const internalGitOps = {
 											await modelClass.query().insert(itemData);
 										}
 									}
+									if (upstreamChanged)
+										await internalProxyHostMonitor.resetHost(existingId, {
+											disableUnsupported: true,
+										});
 								} else {
 									if (modelClass !== User && !itemData.owner_user_id)
 										itemData.owner_user_id = access.token.getUserId(1);
@@ -1202,7 +1244,60 @@ const internalGitOps = {
 			await importModel(AccessList, "access-lists", null, "[items, clients]");
 
 			// 4. Import Hosts & Streams
+			const errorsBeforeHostImport = errors.length;
 			await importModel(ProxyHost, "proxy-hosts", "proxy_host", "host_domains");
+			const monitorDir = path.join(configDir, "proxy-host-monitors");
+			// An older GitOps backup has no monitor directory; preserve local settings in that case.
+			if (fs.existsSync(monitorDir)) {
+				await assertNoSymlinkPath(GITOPS_DIR, monitorDir);
+				const importedHostIds = [];
+				let failed = false;
+				const files = await fs.promises.readdir(monitorDir);
+				for (const file of files.filter((name) => name.endsWith(".yaml"))) {
+					try {
+						if (!/^[1-9]\d*\.yaml$/.test(file)) throw new errs.ValidationError("Invalid monitor filename");
+						const filePath = path.join(monitorDir, file);
+						await assertNoSymlinkPath(GITOPS_DIR, filePath);
+						const data = yaml.load(await fs.promises.readFile(filePath, "utf8"));
+						const hostId = Number(file.slice(0, -5));
+						if (!data || typeof data !== "object" || Array.isArray(data))
+							throw new errs.ValidationError("Invalid monitor object");
+						const parsed = /** @type {Record<string, any>} */ (data);
+						if (!Number.isSafeInteger(hostId) || parsed.host_id !== hostId)
+							throw new errs.ValidationError("Monitor host ID mismatch");
+						const settings = { ...parsed };
+						delete settings.host_id;
+						const validSettings = assertMonitorConfig(settings);
+						const exists = await ProxyHostMonitor.query().findOne({ host_id: hostId });
+						if (exists && !options.overwrite) {
+							importedHostIds.push(hostId);
+							skipped++;
+							continue;
+						}
+						await internalProxyHostMonitor.update(access, hostId, validSettings, { skipAutoPush: true });
+						importedHostIds.push(hostId);
+						imported++;
+					} catch (err) {
+						failed = true;
+						errors.push(
+							`proxy-host-monitors/${file}: ${err instanceof Error ? err.message : "Invalid monitor"}`,
+						);
+					}
+				}
+				if (
+					options.overwrite &&
+					!failed &&
+					errors.length === errorsBeforeHostImport &&
+					fs.existsSync(path.join(configDir, "proxy-hosts")) &&
+					(files.some((file) => file.endsWith(".yaml")) || files.includes(".gitkeep"))
+				) {
+					const removed = await ProxyHostMonitor.query().whereNotIn("host_id", importedHostIds);
+					for (const monitor of removed) {
+						await internalProxyHostMonitor.removeHost(monitor.host_id);
+						deleted++;
+					}
+				}
+			}
 			await importModel(RedirectionHost, "redirection-hosts", "redirection_host");
 			await importModel(DeadHost, "dead-hosts", "dead_host");
 			await importModel(Stream, "streams", "stream");

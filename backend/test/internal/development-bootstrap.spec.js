@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ importedPath: null, listen: vi.fn(), log: vi.fn() }));
+const state = vi.hoisted(() => ({ importedPath: null, listen: vi.fn(), log: vi.fn(), monitorStart: vi.fn() }));
 vi.mock("../../app.js", () => {
 	state.importedPath = process.env.DATA_PATH;
 	return { default: { listen: state.listen } };
@@ -9,6 +9,7 @@ vi.mock("../../internal/analytics.js", () => ({ default: { init: vi.fn() } }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/ip_ranges.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { init: state.monitorStart, stop: vi.fn() } }));
 vi.mock("../../lib/utils.js", () => ({ default: { execFile: vi.fn() } }));
 vi.mock("../../logger.js", () => ({ global: { info: state.log, error: state.log } }));
 vi.mock("../../migrate.js", () => ({ migrateUp: vi.fn() }));
@@ -16,22 +17,32 @@ vi.mock("../../schema/index.js", () => ({ getCompiledSchema: vi.fn() }));
 vi.mock("../../setup.js", () => ({ default: vi.fn() }));
 
 describe("development bootstrap isolation", () => {
+	let signalListeners;
 	beforeEach(() => {
 		vi.resetModules();
 		vi.clearAllMocks();
+		signalListeners = new Map(["SIGINT", "SIGTERM"].map((event) => [event, process.listeners(event)]));
 		vi.stubEnv("DATA_PATH", "");
 		vi.stubEnv("INITIAL_ADMIN_EMAIL", "");
 		vi.stubEnv("INITIAL_ADMIN_PASSWORD", "");
 		vi.stubEnv("INITIAL_DEFAULT_PAGE", "");
 		state.listen.mockImplementation((_port, _host, ready) => ready());
 	});
-	afterEach(() => vi.unstubAllEnvs());
+	afterEach(() => {
+		for (const [event, existing] of signalListeners) {
+			for (const listener of process.listeners(event)) {
+				if (!existing.includes(listener)) process.removeListener(event, listener);
+			}
+		}
+		vi.unstubAllEnvs();
+	});
 
 	it("sets local storage before application imports and binds development access to loopback", async () => {
 		await import("../../index-dev.js");
 		await vi.waitFor(() => expect(state.listen).toHaveBeenCalled());
 		expect(state.importedPath).toBe(`${process.cwd()}/data`);
 		expect(state.listen).toHaveBeenCalledWith(3000, "127.0.0.1", expect.any(Function));
+		expect(state.monitorStart).toHaveBeenCalledOnce();
 		expect(state.log.mock.calls.flat().join(" ")).not.toContain("changeme");
 	});
 

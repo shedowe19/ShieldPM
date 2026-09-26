@@ -1,0 +1,11 @@
+{
+	"type": "object",
+	"properties": {
+		"state": { "type": "string", "enum": ["up", "down", "unknown", "paused"] },
+		"checked_at": { "type": ["string", "null"] },
+		"response_ms": { "type": ["integer", "null"] },
+		"status_code": { "type": ["integer", "null"] },
+		"message": { "type": ["string", "null"] },
+		"transition": { "type": "boolean" }
+	}
+}

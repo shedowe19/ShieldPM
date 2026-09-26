@@ -12,16 +12,17 @@ Jedes Modul folgt dem gleichen Pattern: Es exportiert ein Objekt mit `create`, `
 
 ### Kern-Proxy-Verwaltung
 
-| Modul                                     | Datei                         | Beschreibung                         |
-| ----------------------------------------- | ----------------------------- | ------------------------------------ |
-| [Nginx-Engine](./nginx-engine.md)         | `nginx.js` (12 KB)            | Konfigurationsgenerierung und Reload |
-| [Nginx-Templates](./nginx-templates.md)   | `templates/` (9 Dateien)      | EJS-Templates für Nginx-Configs      |
-| [Proxy-Host](./proxy-host.md)             | `proxy-host.js` (19 KB)       | CRUD für Reverse-Proxy-Hosts         |
-| [Resumable Upload Relay](./upload-relay.md) | `upload-relay.js`              | Persistente tus-Uploads zum privaten Upstream |
-| [Redirection-Host](./redirection-host.md) | `redirection-host.js` (13 KB) | CRUD für Umleitungen                 |
-| [Dead-Host](./dead-host.md)               | `dead-host.js` (11 KB)        | CRUD für 404-Hosts                   |
-| [Stream](./stream.md)                     | `stream.js` (12 KB)           | CRUD für TCP/UDP-Streams             |
-| [Host (gemeinsame Logik)](./host.md)      | `host.js` (6 KB)              | Gemeinsame Host-Logik                |
+| Modul                                             | Datei                         | Beschreibung                                  |
+| ------------------------------------------------- | ----------------------------- | --------------------------------------------- |
+| [Nginx-Engine](./nginx-engine.md)                 | `nginx.js` (12 KB)            | Konfigurationsgenerierung und Reload          |
+| [Nginx-Templates](./nginx-templates.md)           | `templates/` (9 Dateien)      | EJS-Templates für Nginx-Configs               |
+| [Proxy-Host](./proxy-host.md)                     | `proxy-host.js` (19 KB)       | CRUD für Reverse-Proxy-Hosts                  |
+| [Proxy-Host-Überwachung](./proxy-host-monitor.md) | `proxy-host-monitor.js`       | HTTP-/TCP-Zustandsprüfungen je Host           |
+| [Resumable Upload Relay](./upload-relay.md)       | `upload-relay.js`             | Persistente tus-Uploads zum privaten Upstream |
+| [Redirection-Host](./redirection-host.md)         | `redirection-host.js` (13 KB) | CRUD für Umleitungen                          |
+| [Dead-Host](./dead-host.md)                       | `dead-host.js` (11 KB)        | CRUD für 404-Hosts                            |
+| [Stream](./stream.md)                             | `stream.js` (12 KB)           | CRUD für TCP/UDP-Streams                      |
+| [Host (gemeinsame Logik)](./host.md)              | `host.js` (6 KB)              | Gemeinsame Host-Logik                         |
 
 ### Sicherheit
 

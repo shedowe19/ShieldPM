@@ -5,6 +5,7 @@ import ProxyHost from "../models/proxy_host.js";
 import internalCertificate from "./certificate.js";
 import internalHost from "./host.js";
 import internalNginx from "./nginx.js";
+import internalProxyHostMonitor from "./proxy-host-monitor.js";
 
 /**
  * @typedef {Object} AccessToken
@@ -507,7 +508,16 @@ class DockerService {
 
 			if (existingHost) {
 				// Update
+				const upstreamChanged =
+					existingHost.forward_scheme !== payload.forward_scheme ||
+					existingHost.forward_host !== payload.forward_host ||
+					Number(existingHost.forward_port) !== payload.forward_port;
 				const updatedHost = await ProxyHost.query().upsertGraphAndFetch({ id: existingHost.id, ...payload });
+				if (upstreamChanged) {
+					// A previous health result belongs to the old target. Disable HTTP
+					// monitoring if the new scheme cannot be probed by that monitor.
+					await internalProxyHostMonitor.resetHost(updatedHost.id, { disableUnsupported: true });
+				}
 				// RELOAD NGINX via Helper
 				await this.configureNginx(updatedHost.id);
 				logger.info(`Docker Auto-Discovery: Updated host #${existingHost.id}`);

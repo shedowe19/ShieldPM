@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ insert: vi.fn(), upsert: vi.fn(), hosts: [] }));
+const mocks = vi.hoisted(() => ({ insert: vi.fn(), upsert: vi.fn(), resetHost: vi.fn(), hosts: [] }));
 vi.mock("../../db.js", () => ({ default: () => ({}) }));
 vi.mock("dockerode", () => ({ default: class {} }));
 vi.mock("../../models/proxy_host.js", () => ({
@@ -15,6 +15,7 @@ vi.mock("../../models/proxy_host.js", () => ({
 }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: mocks.resetHost } }));
 vi.mock("../../logger.js", () => ({ global: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import docker from "../../internal/docker.js";
@@ -24,6 +25,8 @@ describe("Docker discovery", () => {
 		vi.clearAllMocks();
 		mocks.hosts = [];
 		mocks.insert.mockResolvedValue({ id: 1 });
+		mocks.upsert.mockResolvedValue({ id: 7 });
+		mocks.resetHost.mockResolvedValue();
 		vi.spyOn(docker, "configureNginx").mockResolvedValue();
 	});
 	it("creates normalized domain relations and uses published ports from listContainers", async () => {
@@ -86,6 +89,54 @@ describe("Docker discovery", () => {
 		);
 		expect(mocks.insert).not.toHaveBeenCalled();
 		expect(mocks.upsert).not.toHaveBeenCalled();
+	});
+	it("invalidates an existing monitor before reconfiguring when Docker changes the upstream scheme", async () => {
+		mocks.hosts = [
+			{
+				id: 7,
+				meta: { auto_discovered: true, docker_container_id: "abc123" },
+				domain_names: ["example.com"],
+				forward_scheme: "http",
+				forward_host: "10.1.1.2",
+				forward_port: 8080,
+			},
+		];
+		await docker.processContainer(
+			{
+				Id: "abc123",
+				Labels: { "shieldpm.hostname": "example.com", "shieldpm.scheme": "grpc", "shieldpm.port": "80" },
+				Ports: [{ PrivatePort: 80, PublicPort: 8080, Type: "tcp" }],
+			},
+			{ isRemote: true, hostIp: "10.1.1.2", name: "remote" },
+		);
+		expect(mocks.upsert).toHaveBeenCalledOnce();
+		expect(mocks.resetHost).toHaveBeenCalledExactlyOnceWith(7, { disableUnsupported: true });
+		expect(mocks.upsert.mock.invocationCallOrder[0]).toBeLessThan(mocks.resetHost.mock.invocationCallOrder[0]);
+		expect(mocks.resetHost.mock.invocationCallOrder[0]).toBeLessThan(
+			docker.configureNginx.mock.invocationCallOrder[0],
+		);
+	});
+	it("preserves monitor history when Docker rediscovers an unchanged upstream", async () => {
+		mocks.hosts = [
+			{
+				id: 7,
+				meta: { auto_discovered: true, docker_container_id: "abc123" },
+				domain_names: ["example.com"],
+				forward_scheme: "http",
+				forward_host: "10.1.1.2",
+				forward_port: 8080,
+			},
+		];
+		await docker.processContainer(
+			{
+				Id: "abc123",
+				Labels: { "shieldpm.hostname": "example.com", "shieldpm.port": "80" },
+				Ports: [{ PrivatePort: 80, PublicPort: 8080, Type: "tcp" }],
+			},
+			{ isRemote: true, hostIp: "10.1.1.2", name: "remote" },
+		);
+		expect(mocks.upsert).toHaveBeenCalledOnce();
+		expect(mocks.resetHost).not.toHaveBeenCalled();
 	});
 	it.each([
 		["shieldpm.hostname", "example.com;include /tmp/config;"],

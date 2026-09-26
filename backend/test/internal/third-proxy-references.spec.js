@@ -8,6 +8,7 @@ vi.mock("../../internal/nginx.js", () => ({ default: {} }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: {} }));
 vi.mock("../../internal/gitops.js", () => ({ default: {} }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: {} }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../models/proxy_host.js", () => ({ default: { query: mocks.query } }));
 vi.mock("../../models/dead_host.js", () => ({ default: { query: mocks.query } }));

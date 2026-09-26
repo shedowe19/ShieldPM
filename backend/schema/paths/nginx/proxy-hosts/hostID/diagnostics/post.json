@@ -1,0 +1,60 @@
+{
+	"operationId": "diagnoseProxyHost",
+	"summary": "Run bounded, on-demand proxy host diagnostics",
+	"description": "Checks stored DNS, local Nginx TLS and routing, configured upstream TCP reachability, access response and unauthenticated WebSocket handshake at an optional relative path on the same host. No arbitrary target URL or credentials are accepted. Redirects are not followed.",
+	"tags": ["proxy-hosts"],
+	"security": [{ "bearerAuth": ["proxy_hosts.view"] }],
+	"parameters": [{
+		"in": "path",
+		"name": "hostID",
+		"required": true,
+		"schema": { "type": "integer", "minimum": 1 }
+	}],
+	"requestBody": {
+		"required": false,
+		"content": { "application/json": { "schema": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"websocket_path": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 256,
+					"pattern": "^/(?!/)[A-Za-z0-9._~!$&'()+,;=:@/-]*$",
+					"description": "Optional same-host path for unauthenticated WebSocket handshake (default /); raw query strings and encoded escapes are not accepted"
+				}
+			}
+		} } }
+	},
+	"responses": {
+		"200": {
+			"description": "Ordered check results; messages are stable localization codes and details never include raw network errors",
+			"content": { "application/json": { "schema": {
+				"type": "object",
+				"required": ["hostId", "domain", "checkedAt", "checks"],
+				"properties": {
+					"hostId": { "type": "integer" },
+					"domain": { "type": ["string", "null"] },
+					"checkedAt": { "type": "string", "format": "date-time" },
+					"checks": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"required": ["key", "status", "message"],
+							"properties": {
+								"key": { "type": "string", "enum": ["dns", "tls", "route", "upstream", "auth", "websocket"] },
+								"status": { "type": "string", "enum": ["pass", "warn", "fail", "skip"] },
+								"message": { "type": "string" },
+								"detail": { "type": "string" }
+							}
+						}
+					}
+				}
+			} } }
+		},
+		"400": { "description": "Invalid host ID or request body" },
+		"403": { "description": "Insufficient host permission" },
+		"404": { "description": "Host is not visible or does not exist" },
+		"429": { "description": "Diagnosis rate limit reached" }
+	}
+}

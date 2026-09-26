@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import errs from "../lib/error.js";
@@ -239,6 +239,67 @@ const createUploadRelay = ({
 	schedule = setImmediate,
 } = {}) => {
 	if (typeof fetchImpl !== "function") throw new TypeError("Upload relay needs a fetch implementation");
+	const storageRoot = resolve(root);
+	const safeHostId = (hostId) => {
+		if (!Number.isSafeInteger(hostId) || hostId < 1) throw new errs.ItemNotFoundError("upload relay");
+		return hostId;
+	};
+	const isUploadId = (uploadId) =>
+		typeof uploadId === "string" &&
+		uploadId.length === 36 &&
+		/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(uploadId);
+	const safeUploadId = (uploadId) => {
+		if (!isUploadId(uploadId)) throw new errs.ItemNotFoundError("upload relay");
+		return uploadId;
+	};
+	const safeChunkOffset = (offset) => {
+		if (!Number.isSafeInteger(offset) || offset < 0) throw new errs.ItemNotFoundError("upload relay");
+		return offset;
+	};
+	const storagePath = (...parts) => {
+		const filename = resolve(storageRoot, ...parts);
+		const withinRoot = relative(storageRoot, filename);
+		if (!withinRoot || withinRoot === ".." || withinRoot.startsWith(`..${sep}`) || isAbsolute(withinRoot)) {
+			throw new errs.ItemNotFoundError("upload relay");
+		}
+		return filename;
+	};
+	const hostDirectoryPath = (hostId) => storagePath(`host-${safeHostId(hostId)}`);
+	const uploadDirectory = (hostId, uploadId) => storagePath(`host-${safeHostId(hostId)}`, safeUploadId(uploadId));
+	const metadataPath = (hostId, uploadId) => join(uploadDirectory(hostId, uploadId), METADATA_FILE);
+	const chunkPath = (hostId, uploadId, offset) =>
+		join(uploadDirectory(hostId, uploadId), `${String(safeChunkOffset(offset)).padStart(20, "0")}.part`);
+	const requireDirectory = async (directory, create = false) => {
+		if (create) {
+			try {
+				await fs.promises.mkdir(directory, { mode: 0o700 });
+			} catch (error) {
+				if (error.code !== "EEXIST") throw error;
+			}
+		}
+		const stat = await fs.promises.lstat(directory);
+		if (!stat.isDirectory() || stat.isSymbolicLink()) throw new errs.ItemNotFoundError("upload relay");
+	};
+	const requireStorageDirectories = async (hostId, uploadId, create = false) => {
+		if (create) await fs.promises.mkdir(storageRoot, { mode: 0o700, recursive: true });
+		await requireDirectory(storageRoot);
+		if (hostId !== undefined) await requireDirectory(hostDirectoryPath(hostId), create);
+		if (uploadId !== undefined) await requireDirectory(uploadDirectory(hostId, uploadId), create);
+	};
+	const removeUploadDirectory = async (hostId, uploadId) => {
+		await requireStorageDirectories(hostId, uploadId);
+		await fs.promises.rm(uploadDirectory(hostId, uploadId), { force: true, recursive: true });
+	};
+	const readRegularFile = async (filename) => {
+		const file = await fs.promises.open(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+		try {
+			const stat = await file.stat();
+			if (!stat.isFile()) throw new errs.ItemNotFoundError("upload relay");
+			return await file.readFile("utf8");
+		} finally {
+			await file.close();
+		}
+	};
 	const resolveHost =
 		getHost ||
 		(async (hostId) => {
@@ -249,12 +310,8 @@ const createUploadRelay = ({
 				.withGraphFetched("access_list.[items, clients]");
 		});
 	const locks = new Map();
-	const uploadDirectory = (hostId, uploadId) => join(root, `host-${hostId}`, uploadId);
-	const metadataPath = (hostId, uploadId) => join(uploadDirectory(hostId, uploadId), METADATA_FILE);
-	const chunkPath = (hostId, uploadId, offset) =>
-		join(uploadDirectory(hostId, uploadId), `${String(offset).padStart(20, "0")}.part`);
 	const syncFile = async (filename) => {
-		const file = await fs.promises.open(filename, "r");
+		const file = await fs.promises.open(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
 		try {
 			await file.sync();
 		} finally {
@@ -262,7 +319,10 @@ const createUploadRelay = ({
 		}
 	};
 	const syncDirectory = async (directory) => {
-		const folder = await fs.promises.open(directory, "r");
+		const folder = await fs.promises.open(
+			directory,
+			fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW,
+		);
 		try {
 			await folder.sync();
 		} finally {
@@ -284,7 +344,7 @@ const createUploadRelay = ({
 	const writeMetadata = async (hostId, uploadId, metadata) => {
 		const filename = metadataPath(hostId, uploadId);
 		const temporary = `${filename}.${process.pid}.${crypto.randomUUID()}.tmp`;
-		await fs.promises.mkdir(dirname(filename), { mode: 0o700, recursive: true });
+		await requireStorageDirectories(hostId, uploadId, true);
 		try {
 			await fs.promises.writeFile(temporary, JSON.stringify(metadata), { flag: "wx", flush: true, mode: 0o600 });
 			await fs.promises.rename(temporary, filename);
@@ -295,13 +355,49 @@ const createUploadRelay = ({
 	};
 
 	const loadMetadata = async (hostId, uploadId) => {
-		if (!/^[0-9a-f-]{36}$/i.test(uploadId)) throw new errs.ItemNotFoundError(uploadId);
+		safeUploadId(uploadId);
 		try {
-			const metadata = JSON.parse(await fs.promises.readFile(metadataPath(hostId, uploadId), "utf8"));
+			await requireStorageDirectories(hostId, uploadId);
+			const metadata = JSON.parse(await readRegularFile(metadataPath(hostId, uploadId)));
+			if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+				throw new errs.ItemNotFoundError(uploadId);
+			}
 			if (metadata.hostId !== hostId || metadata.id !== uploadId) throw new errs.ItemNotFoundError(uploadId);
+			if (
+				!Number.isSafeInteger(metadata.length) ||
+				metadata.length < 1 ||
+				!Number.isSafeInteger(metadata.offset) ||
+				metadata.offset < 0 ||
+				metadata.offset > metadata.length ||
+				!metadata.config ||
+				typeof metadata.config !== "object" ||
+				Array.isArray(metadata.config) ||
+				!Array.isArray(metadata.chunks)
+			) {
+				throw new errs.ItemNotFoundError(uploadId);
+			}
+			let nextOffset = 0;
+			for (const chunk of metadata.chunks) {
+				if (
+					!chunk ||
+					!Number.isSafeInteger(chunk.offset) ||
+					chunk.offset !== nextOffset ||
+					!Number.isSafeInteger(chunk.size) ||
+					chunk.size < 1 ||
+					chunk.size > metadata.length - nextOffset
+				) {
+					throw new errs.ItemNotFoundError(uploadId);
+				}
+				nextOffset += chunk.size;
+			}
+			if (nextOffset !== metadata.offset && !(metadata.state === "completed" && metadata.chunks.length === 0)) {
+				throw new errs.ItemNotFoundError(uploadId);
+			}
 			return metadata;
 		} catch (err) {
-			if (err.code === "ENOENT" || err instanceof SyntaxError) throw new errs.ItemNotFoundError(uploadId);
+			if (err.code === "ENOENT" || err.code === "ELOOP" || err instanceof SyntaxError) {
+				throw new errs.ItemNotFoundError(uploadId);
+			}
 			throw err;
 		}
 	};
@@ -309,7 +405,8 @@ const createUploadRelay = ({
 	const pendingUploadStats = async (hostId) => {
 		let entries;
 		try {
-			entries = await fs.promises.readdir(join(root, `host-${hostId}`), { withFileTypes: true });
+			await requireStorageDirectories(hostId);
+			entries = await fs.promises.readdir(hostDirectoryPath(hostId), { withFileTypes: true });
 		} catch (err) {
 			if (err.code === "ENOENT") return { count: 0, reservedBytes: 0 };
 			throw err;
@@ -346,7 +443,8 @@ const createUploadRelay = ({
 	const cleanupExpired = async (now = Date.now()) => {
 		let hostDirectories;
 		try {
-			hostDirectories = await fs.promises.readdir(root, { withFileTypes: true });
+			await requireStorageDirectories();
+			hostDirectories = await fs.promises.readdir(storageRoot, { withFileTypes: true });
 		} catch (err) {
 			if (err.code === "ENOENT") return 0;
 			throw err;
@@ -355,10 +453,13 @@ const createUploadRelay = ({
 		for (const hostDirectory of hostDirectories) {
 			if (!hostDirectory.isDirectory() || !/^host-\d+$/.test(hostDirectory.name)) continue;
 			const hostId = Number(hostDirectory.name.slice("host-".length));
-			const directory = join(root, hostDirectory.name);
+			if (!Number.isSafeInteger(hostId) || hostId < 1 || `host-${hostId}` !== hostDirectory.name) continue;
+			const directory = hostDirectoryPath(hostId);
+			await requireStorageDirectories(hostId);
 			for (const uploadDirectoryEntry of await fs.promises.readdir(directory, { withFileTypes: true })) {
 				if (!uploadDirectoryEntry.isDirectory()) continue;
 				const uploadId = uploadDirectoryEntry.name;
+				if (!isUploadId(uploadId)) continue;
 				const wasRemoved = await withLock(`${hostId}:${uploadId}`, async () => {
 					try {
 						const metadata = await loadMetadata(hostId, uploadId);
@@ -366,11 +467,11 @@ const createUploadRelay = ({
 						const expiresAt =
 							Date.parse(metadata.createdAt) + metadata.config.cleanupHours * 60 * 60 * 1000;
 						if (!Number.isFinite(expiresAt) || expiresAt > now) return false;
-						await fs.promises.rm(uploadDirectory(hostId, uploadId), { force: true, recursive: true });
+						await removeUploadDirectory(hostId, uploadId);
 						return true;
 					} catch (err) {
 						if (!(err instanceof errs.ItemNotFoundError)) throw err;
-						await fs.promises.rm(uploadDirectory(hostId, uploadId), { force: true, recursive: true });
+						await removeUploadDirectory(hostId, uploadId);
 						return true;
 					}
 				});
@@ -382,9 +483,30 @@ const createUploadRelay = ({
 
 	const finish = async (hostId, metadata, config, requestHeaders, signal) => {
 		const chunks = [...metadata.chunks].sort((a, b) => a.offset - b.offset);
+		await requireStorageDirectories(hostId, metadata.id);
+		for (const chunk of chunks) {
+			const stat = await fs.promises.lstat(chunkPath(hostId, metadata.id, chunk.offset));
+			if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== chunk.size) {
+				throw new errs.ItemNotFoundError("upload relay chunk");
+			}
+		}
 		const body = Readable.from(
 			(async function* () {
-				for (const chunk of chunks) yield* fs.createReadStream(chunkPath(hostId, metadata.id, chunk.offset));
+				for (const chunk of chunks) {
+					const file = await fs.promises.open(
+						chunkPath(hostId, metadata.id, chunk.offset),
+						fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW,
+					);
+					try {
+						const stat = await file.stat();
+						if (!stat.isFile() || stat.size !== chunk.size) {
+							throw new errs.ItemNotFoundError("upload relay chunk");
+						}
+						yield* file.createReadStream({ autoClose: false });
+					} finally {
+						await file.close();
+					}
+				}
 			})(),
 		);
 		const headers = {
@@ -411,6 +533,7 @@ const createUploadRelay = ({
 	};
 
 	const removeChunks = async (hostId, metadata) => {
+		await requireStorageDirectories(hostId, metadata.id);
 		await Promise.all(
 			(metadata.chunks || []).map(async (chunk) => {
 				await fs.promises.rm(chunkPath(hostId, metadata.id, chunk.offset), { force: true });
@@ -493,7 +616,7 @@ const createUploadRelay = ({
 			await withLock(key, async () => {
 				const metadata = await loadMetadata(hostId, uploadId);
 				if (metadata.state === "cancelled") {
-					await fs.promises.rm(uploadDirectory(hostId, uploadId), { force: true, recursive: true });
+					await removeUploadDirectory(hostId, uploadId);
 					return;
 				}
 				if (metadata.state !== "forwarding" || metadata.leaseId !== prepared.leaseId) return;
@@ -530,7 +653,7 @@ const createUploadRelay = ({
 				throw err;
 			}
 			if (metadata.state === "cancelled") {
-				await fs.promises.rm(uploadDirectory(hostId, uploadId), { force: true, recursive: true });
+				await removeUploadDirectory(hostId, uploadId);
 				return;
 			}
 			if (metadata.state !== "forwarding" || metadata.leaseId !== prepared.leaseId) return;
@@ -578,7 +701,8 @@ const createUploadRelay = ({
 		let recovered = 0;
 		let hostDirectories;
 		try {
-			hostDirectories = await fs.promises.readdir(root, { withFileTypes: true });
+			await requireStorageDirectories();
+			hostDirectories = await fs.promises.readdir(storageRoot, { withFileTypes: true });
 		} catch (err) {
 			if (err.code === "ENOENT") return recovered;
 			throw err;
@@ -586,8 +710,11 @@ const createUploadRelay = ({
 		for (const hostDirectory of hostDirectories) {
 			if (!hostDirectory.isDirectory() || !/^host-\d+$/.test(hostDirectory.name)) continue;
 			const hostId = Number(hostDirectory.name.slice("host-".length));
-			for (const entry of await fs.promises.readdir(join(root, hostDirectory.name), { withFileTypes: true })) {
+			if (!Number.isSafeInteger(hostId) || hostId < 1 || `host-${hostId}` !== hostDirectory.name) continue;
+			await requireStorageDirectories(hostId);
+			for (const entry of await fs.promises.readdir(hostDirectoryPath(hostId), { withFileTypes: true })) {
 				if (!entry.isDirectory()) continue;
+				if (!isUploadId(entry.name)) continue;
 				await withLock(`${hostId}:${entry.name}`, async () => {
 					let metadata;
 					try {
@@ -597,7 +724,7 @@ const createUploadRelay = ({
 						throw err;
 					}
 					if (metadata.state === "cancelled") {
-						await fs.promises.rm(uploadDirectory(hostId, metadata.id), { force: true, recursive: true });
+						await removeUploadDirectory(hostId, metadata.id);
 						return;
 					}
 					if (!["queued", "forwarding"].includes(metadata.state)) return;
@@ -651,6 +778,7 @@ const createUploadRelay = ({
 		 */
 		async create(hostId, { filename, length, mediaType } = {}) {
 			return await withLock(`${hostId}:create`, async () => {
+				safeHostId(hostId);
 				const config = await getConfig(hostId);
 				const normalizedLength = asPositiveInteger(length, "Upload length", undefined, config.maxFileSize);
 				const pending = await pendingUploadStats(hostId);
@@ -726,11 +854,11 @@ const createUploadRelay = ({
 				const directory = uploadDirectory(hostId, uploadId);
 				const finalChunk = chunkPath(hostId, uploadId, metadata.offset);
 				const temporaryChunk = `${finalChunk}.${process.pid}.${crypto.randomUUID()}.tmp`;
-				await fs.promises.mkdir(directory, { mode: 0o700, recursive: true });
+				await requireStorageDirectories(hostId, uploadId);
 				try {
 					await pipeline(stream, fs.createWriteStream(temporaryChunk, { flags: "wx", mode: 0o600 }));
-					const stat = await fs.promises.stat(temporaryChunk);
-					if (stat.size !== normalizedLength)
+					const stat = await fs.promises.lstat(temporaryChunk);
+					if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== normalizedLength)
 						throw new errs.ValidationError("Chunk length does not match Content-Length");
 					await syncFile(temporaryChunk);
 					await fs.promises.rename(temporaryChunk, finalChunk);
@@ -768,7 +896,7 @@ const createUploadRelay = ({
 					activeFinalizationControllers.get(`${hostId}:${uploadId}`)?.abort();
 					return;
 				}
-				await fs.promises.rm(uploadDirectory(hostId, uploadId), { force: true, recursive: true });
+				await removeUploadDirectory(hostId, uploadId);
 			});
 		},
 

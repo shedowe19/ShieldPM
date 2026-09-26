@@ -20,6 +20,9 @@ ChatOps ermöglicht die Steuerung von ShieldPM über einen Telegram-Bot. Der Bot
 - Authentifizierung über Whitelist von Telegram User-IDs (`allowed_ids`)
 - Bot-Caching in `bots{}` Map — jede Integration wird als `Telegraf`-Instanz gecached, um Doppelstarts zu vermeiden
 - Leitet Nachrichten an den AI-Agenten weiter
+- Zustandsalarme der Proxy-Host-Überwachung gehen als begrenzter Klartext nur an aktivierte Telegram-Integrationen
+  des Host-Besitzers und deren erlaubte IDs. Die fachliche Diagnose zu Ziel, Messwert, Fehlerphase und nächstem
+  Prüfschritt entsteht im Monitor; die Zustellung in `sendHostMonitorAlert()` wertet keinen Markdown-Code aus.
 
 ### smartEscape() — MarkdownV2-Escaping
 

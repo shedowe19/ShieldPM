@@ -23,10 +23,10 @@ yarn dev     # Startet Vite Dev-Server
 ```bash
 cd backend
 yarn install
-yarn dev     # Startet Nodemon (Annahme: basierend auf index-dev.js)
+yarn dev     # Startet backend/index-dev.js auf 127.0.0.1:3000
 ```
 
-Annahme: Der `dev`-Script ist nicht explizit in `package.json` definiert. Das Backend könnte über `node index-dev.js` gestartet werden.
+Der `dev`-Script in `backend/package.json` führt `node index-dev.js` aus. Nach dem Listen startet der Proxy-Host-Monitor-Scheduler; beim Beenden per `SIGINT` oder `SIGTERM` wird er gestoppt.
 
 ## Tests ausführen
 

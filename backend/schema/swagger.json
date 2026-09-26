@@ -236,6 +236,16 @@
 				"$ref": "./paths/nginx/proxy-hosts/post.json"
 			}
 		},
+		"/nginx/proxy-hosts/preview": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/preview/post.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/preview": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/preview/post.json"
+			}
+		},
 		"/nginx/proxy-hosts/{hostID}": {
 			"get": {
 				"$ref": "./paths/nginx/proxy-hosts/hostID/get.json"
@@ -257,6 +267,11 @@
 				"$ref": "./paths/nginx/proxy-hosts/hostID/disable/post.json"
 			}
 		},
+		"/nginx/proxy-hosts/{hostID}/diagnostics": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/diagnostics/post.json"
+			}
+		},
 		"/nginx/proxy-hosts/{hostID}/git-sync": {
 			"post": {
 				"$ref": "./paths/nginx/proxy-hosts/hostID/git-sync/post.json"
@@ -268,6 +283,24 @@
 			},
 			"put": {
 				"$ref": "./paths/nginx/proxy-hosts/hostID/git-status/put.json"
+			}
+		},
+		"/nginx/proxy-hosts/monitors/status": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/monitors/status/get.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/monitor": {
+			"get": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/monitor/get.json"
+			},
+			"put": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/monitor/put.json"
+			}
+		},
+		"/nginx/proxy-hosts/{hostID}/monitor/check": {
+			"post": {
+				"$ref": "./paths/nginx/proxy-hosts/hostID/monitor/check/post.json"
 			}
 		},
 		"/nginx/redirection-hosts": {

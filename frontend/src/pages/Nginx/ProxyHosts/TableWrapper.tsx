@@ -39,6 +39,7 @@ export default function TableWrapper() {
 
 	const handleDelete = async (id: number) => {
 		await deleteProxyHost(id);
+		queryClient.invalidateQueries({ queryKey: ["proxy-host-monitors"] });
 		showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, "deleted");
 	};
 
@@ -47,6 +48,7 @@ export default function TableWrapper() {
 			await toggleProxyHost(id, enabled);
 			queryClient.invalidateQueries({ queryKey: ["proxy-hosts"] });
 			queryClient.invalidateQueries({ queryKey: [AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, id] });
+			queryClient.invalidateQueries({ queryKey: ["proxy-host-monitors"] });
 			showObjectSuccess(AUDIT_LOG_OBJECT_TYPE.PROXY_HOST, enabled ? "enabled" : "disabled");
 		} catch (error) {
 			showError(error instanceof Error ? error.message : String(error));
