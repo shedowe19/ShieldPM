@@ -13,6 +13,7 @@ import { T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
+import ProxyHostConfigPreview from "./ProxyHostConfigPreview";
 import ProxyHostFormTabs from "./ProxyHostFormTabs";
 import { createProxyHostInitialValues, type ProxyHostFormValues } from "./ProxyHostModalFormValues";
 import { createProxyHostPayload } from "./ProxyHostModalSubmission";
@@ -96,6 +97,10 @@ const ProxyHostModal = EasyModal.create(({ id, visible, remove }: Props) => {
 									hostId={typeof id === "number" ? id : null}
 									locations={data?.locations || []}
 								/>
+
+								<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
+									<ProxyHostConfigPreview id={id} />
+								</HasPermission>
 
 								<DialogFooter className="px-6 py-4 border-t">
 									<Button variant="outline" onClick={() => remove()} type="button">

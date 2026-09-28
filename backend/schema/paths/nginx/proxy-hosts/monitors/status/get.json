@@ -1,0 +1,24 @@
+{
+	"operationId": "listProxyHostMonitorStatus",
+	"summary": "List monitor states for up to 100 visible proxy hosts",
+	"tags": ["proxy-hosts"],
+	"security": [{ "bearerAuth": ["proxy_hosts.view"] }],
+	"parameters": [
+		{ "in": "query", "name": "ids", "required": true, "schema": { "type": "string", "example": "1,2,3" } }
+	],
+	"responses": {
+		"200": {
+			"description": "Configured monitor states",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "array",
+						"items": {
+							"allOf": [{ "$ref": "./../../../../../components/proxy-host-monitor-status.json" }, { "type": "object", "properties": { "host_id": { "type": "integer" } } }]
+						}
+					}
+				}
+			}
+		}
+	}
+}

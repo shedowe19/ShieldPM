@@ -22,6 +22,7 @@ import internalIpRanges from "./internal/ip_ranges.js";
 import internalMaintenance from "./internal/maintenance.js";
 import internalNginx from "./internal/nginx.js";
 import internalOAuth2Proxy from "./internal/oauth2-proxy.js";
+import internalProxyHostMonitor from "./internal/proxy-host-monitor.js";
 import internalTerminal from "./internal/terminal.js";
 import internalTor from "./internal/tor.js";
 import internalUploadRelay from "./internal/upload-relay.js";
@@ -75,12 +76,14 @@ async function appStart() {
 				return;
 			}
 			logger.info(`Backend PID ${process.pid} listening on unix socket...`);
+			internalProxyHostMonitor.init();
 
 			// Initialize Terminal WebSocket (needs server instance)
 			internalTerminal.init(server);
 
 			process.on("SIGTERM", () => {
 				logger.info(`PID ${process.pid} received SIGTERM`);
+				internalProxyHostMonitor.stop();
 				server.close(async () => {
 					await analyticsService.stop();
 					await internalUploadRelay.stop();

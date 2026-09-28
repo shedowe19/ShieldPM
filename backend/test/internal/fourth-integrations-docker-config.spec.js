@@ -20,6 +20,7 @@ vi.mock("../../models/proxy_host.js", () => ({
 	},
 }));
 vi.mock("../../internal/certificate.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: vi.fn() } }));
 vi.mock("../../internal/anubis.js", () => ({ default: { generatePolicy: vi.fn() } }));
 vi.mock("../../lib/terminal-access.js", () => ({ getTerminalAccessToken: vi.fn() }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));

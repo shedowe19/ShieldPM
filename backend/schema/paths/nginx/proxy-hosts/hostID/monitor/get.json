@@ -1,0 +1,32 @@
+{
+	"operationId": "getProxyHostMonitor",
+	"summary": "Retrieve monitor settings, current state and recent checks",
+	"tags": ["proxy-hosts"],
+	"security": [{ "bearerAuth": ["proxy_hosts.view"] }],
+	"parameters": [
+		{ "in": "path", "name": "hostID", "required": true, "schema": { "type": "integer", "minimum": 1 } }
+	],
+	"responses": {
+		"200": {
+			"description": "Current settings, state and up to 100 recent checks",
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"config": {
+								"anyOf": [{ "$ref": "./put.json#/requestBody/content/application~1json/schema" }, { "type": "null" }]
+							},
+							"status": { "anyOf": [{ "$ref": "../../../../../components/proxy-host-monitor-status.json" }, { "type": "null" }] },
+							"history": {
+								"type": "array",
+								"items": { "$ref": "../../../../../components/proxy-host-monitor-status.json" }
+							}
+						},
+						"required": ["config", "status", "history"]
+					}
+				}
+			}
+		}
+	}
+}

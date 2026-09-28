@@ -34,6 +34,27 @@ const smartEscape = (text) => {
 };
 
 const internalChat = {
+	/** Send a host state change only to an enabled integration owned by that host's owner. */
+	async sendHostMonitorAlert(ownerUserId, text) {
+		const integrations = await ChatIntegrationModel.query()
+			.where("user_id", ownerUserId)
+			.where("provider", "telegram")
+			.where("enabled", 1);
+		const deliveries = [];
+		for (const integration of integrations) {
+			const bot = bots[integration.id];
+			if (!bot) continue;
+			for (const id of new Set((integration.config?.allowed_ids || []).slice(0, 50).map(String))) {
+				if (/^\d{1,20}$/.test(id)) deliveries.push(bot.telegram.sendMessage(id, text));
+			}
+		}
+		const results = await Promise.allSettled(deliveries);
+		for (const result of results) {
+			if (result.status === "rejected")
+				logger.warn(`[ChatOps] Monitor alert delivery failed: ${result.reason?.message}`);
+		}
+		return results.filter((result) => result.status === "fulfilled").length;
+	},
 	/**
 	 * Initialize all enabled chat integrations
 	 */

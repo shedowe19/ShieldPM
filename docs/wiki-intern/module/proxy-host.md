@@ -26,6 +26,28 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 4. `nginx.js` rendert Template und schreibt `.conf`
 5. Nginx wird neu geladen
 
+## Konfigurationsvorschau vor dem Speichern
+
+Das Erstellen und Bearbeiten bietet über `ProxyHostConfigPreview.tsx` eine Vorschau der aktuellen Formulardaten.
+`POST /api/nginx/proxy-hosts/preview` akzeptiert den normalen Create-Payload;
+`POST /api/nginx/proxy-hosts/:host_id/preview` den normalen Update-Payload. Beide Routen benötigen
+Proxy-Host-Verwaltungsrechte, die Update-Route prüft zusätzlich die Berechtigung und Sichtbarkeit der
+konkreten Host-ID. Domains sowie neue Zertifikats-/Access-List-Referenzen werden wie beim Speichern geprüft.
+
+`internal/proxy-host-preview.js` lädt die Render-Relationen des berechtigten Hosts, verwendet
+`nginx.renderConfig()` und liest für Änderungen ausschließlich dessen aktive numerische `.conf` (ohne
+Symlinks zu folgen). Der Diff vergleicht Zeilen nach Entfernen von Einrückung und Leerzeilen, damit
+`nginxbeautifier` keine scheinbaren Direktivenänderungen verursacht. Die vollständige Vorschau gibt
+den gerenderten Entwurf **vor** der kosmetischen Formatierung zurück. OIDC-Client-Secrets,
+Terminal-Handoff-Token und bekannte geheime Direktiven werden in Ausgabe und Diff maskiert.
+
+Der Aufruf schreibt weder Host-Datenbankeinträge noch Konfigurationsdateien, legt keine Zertifikate an,
+ruft keinen Nginx-Test oder Reload auf und ist **kein** Syntax- oder Laufzeittest. Erst der reguläre
+Speichervorgang prüft die Gesamtkonfiguration mit `nginx -tq` und aktiviert sie. Ein neuer Host erhält
+in der Vorschau die Platzhalter-ID `0`; ID-abhängige Direktiven ändern sich nach der tatsächlichen
+ID-Vergabe. Wenn ein neues Zertifikat angefordert wurde (`certificate_id: "new"`), fehlt dessen
+noch nicht erstellter TLS-Block im Entwurf. Der UI-Hinweis erklärt beide Einschränkungen.
+
 ## Zstd-Komprimierung pro Proxy-Host
 
 `zstd_enabled` ist eine persistierte, standardmäßig deaktivierte Boolean-Option je Proxy-Host. Das Template schreibt
@@ -45,6 +67,10 @@ Proxy-Host-Import-Whitelist.
 Das optionale `upload_relay_enabled` aktiviert je Host transparentes Upload-Passthrough. Der Nginx-Renderer verwendet den vorhandenen privaten HTTP(S)-Upstream und erhält Request-URI, Methode und Upload-Header; ein getrennt konfigurierter Zielpfad ist nicht nötig. Der generische `upload_relay_path` (Standard `/_shieldpm-upload`) wird an denselben URI des Upstreams weitergereicht, sodass ein tus-fähiger Dienst seine eigenen Sessions und Ziele verwaltet. Nextcloud-WebDAV-Uploads unter `/remote.php/dav/uploads/` erkennt ShieldPM automatisch; `Destination` bleibt erhalten. Für die bekannten Upload-Namensräume wird Request-Buffering deaktiviert und nur das ModSecurity-Request-Body-Limit auf die konfigurierbare Chunk-Größe (5 bis 90 MiB) angehoben; die übrigen WAF-Regeln bleiben aktiv. Bei Anubis-Hosts passieren die öffentlichen Upload-Requests weiterhin Anubis und gehen erst danach zum privaten Upstream. Eine bestehende Access List bleibt wirksam, ist aber optional; bei `pass_auth: false` wird Basic-Authorization auch in speziellen Upload-Locations nicht weitergereicht. Die Migration führt ältere lokale tus-Kompatibilitätsfelder weiter, aber sie sind nicht Teil des normalen UI-Workflows.
 
 Die routenspezifischen Upload-Location-Blöcke bleiben von ShieldPMs Admin-CSRF-Prüfung getrennt, weil sie ausschließlich als Nginx-Passthrough zwischen öffentlichem Proxy Host und dessen privatem Upstream arbeiten. Normale Proxy-Host-Verwaltungswrites bleiben CSRF-geschützt. Details zu Transparenz, Protokollgrenzen und Nextcloud-WebDAV stehen unter [Upload-Relay](./upload-relay.md).
+
+## Proxy-Host-Diagnose
+
+Die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md) kann aus der Liste für einen sichtbaren Host gestartet werden. Ihre Netzwerkprüfungen lesen die gespeicherte Konfiguration ohne Änderung der Host-Einstellungen.
 
 ## Listen-Paginierung
 
@@ -93,6 +119,7 @@ Erstellung und Aktualisierung schreiben den Proxy-Host und seine normalisierten 
 
 ## Abhängigkeiten
 
+- [Proxy-Host-Überwachung](./proxy-host-monitor.md) — optionaler aktiver Upstream-Check, Zustand und Verlauf
 - `internal/nginx.js` — Config-Generierung und Reload
 - `internal/certificate.js` — SSL-Zertifikat-Zuordnung
 - `internal/access-list.js` — Zugriffslisten

@@ -13,6 +13,7 @@ const [
 	{ default: internalCertificate },
 	{ default: internalIpRanges },
 	{ default: internalNginx },
+	{ default: internalProxyHostMonitor },
 	{ default: utils },
 	{ global: logger },
 	{ migrateUp },
@@ -24,6 +25,7 @@ const [
 	import("./internal/certificate.js"),
 	import("./internal/ip_ranges.js"),
 	import("./internal/nginx.js"),
+	import("./internal/proxy-host-monitor.js"),
 	import("./lib/utils.js"),
 	import("./logger.js"),
 	import("./migrate.js"),
@@ -85,13 +87,29 @@ async function start() {
 		await getCompiledSchema();
 
 		const port = 3000;
-		app.listen(port, "127.0.0.1", (err) => {
+		const server = app.listen(port, "127.0.0.1", (err) => {
 			if (err) {
 				logger.error("Backend failed to listen:", err);
 				process.exit(1);
 				return;
 			}
 			logger.info(`Backend listening on port ${port}`);
+			internalProxyHostMonitor.init();
+
+			let shuttingDown = false;
+			const shutdown = () => {
+				if (shuttingDown) return;
+				shuttingDown = true;
+				process.removeListener("SIGINT", shutdown);
+				process.removeListener("SIGTERM", shutdown);
+				internalProxyHostMonitor.stop();
+				server.close(async () => {
+					await analyticsService.stop();
+					process.exit(0);
+				});
+			};
+			process.on("SIGINT", shutdown);
+			process.on("SIGTERM", shutdown);
 		});
 	} catch (err) {
 		logger.error("Startup Error", err);

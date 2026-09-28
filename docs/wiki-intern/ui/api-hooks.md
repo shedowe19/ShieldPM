@@ -43,7 +43,7 @@ frontend/src/
 
 | Kategorie    | Operationen                                                                                                         |
 | ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Proxy Hosts  | getProxyHost(s), createProxyHost, updateProxyHost, deleteProxyHost, toggleProxyHost                                 |
+| Proxy Hosts  | getProxyHost(s), createProxyHost, updateProxyHost, deleteProxyHost, toggleProxyHost, diagnoseProxyHost              |
 | Redirection  | getRedirectionHost(s), createRedirectionHost, updateRedirectionHost, deleteRedirectionHost, toggleRedirectionHost   |
 | Dead Hosts   | getDeadHost(s), createDeadHost, updateDeadHost, deleteDeadHost, toggleDeadHost                                      |
 | Streams      | getStream(s), createStream, updateStream, deleteStream, toggleStream                                                |
@@ -102,6 +102,14 @@ frontend/src/
 ## Pattern
 
 API-Funktionen übernehmen ausschließlich den Transport; Hooks legen die Cache-Schlüssel und Invalidierungen fest.
+`diagnoseProxyHost({id, websocketPath})` sendet `POST /api/nginx/proxy-hosts/:id/diagnostics` ohne vom Browser gewählte
+Ziel-URL; nur der optionale WebSocket-Pfad wird als `websocket_path` übermittelt. Der Frontend-Dialog prüft die
+Pfadsyntax (führendes `/`, höchstens 256 ASCII-Zeichen, keine doppelten Slashes, `.`-/`..`-Segmente, Query-/Fragment-Zeichen, Backslashes oder `%`);
+der Server validiert erneut. `useProxyHostDiagnostics()` ist eine React-Query-Mutation: Der Diagnose-Dialog führt sie
+erst beim Öffnen und danach nur bei „Erneut prüfen“ aus. Ergebnisse werden nicht als persistenter Host-Status
+gespeichert. Die Antwort enthält `hostId`, `domain` (bei Wildcards eventuell `null`), `checkedAt` und die
+Einzelergebnisse mit `key`, `status`, `message` (stabiler Übersetzungscode) und optionalem `detail`.
+Die Oberfläche übersetzt die Codes und stellt HTTP-Status sowie TLS-Resttage mit Einheiten dar.
 Die sieben schreibenden Detail-Hooks für Access Lists, Proxy-/Redirect-/Dead-Hosts, Streams, Benutzer und Einstellungen
 verwenden `optimisticQueryUpdate.ts`. Der Helfer bricht laufende Detailabfragen vor dem Update ab und verändert nur
 bereits geladene Cache-Einträge, einschließlich vorhandener Access-List-Expansionen. Ein fehlgeschlagenes Speichern

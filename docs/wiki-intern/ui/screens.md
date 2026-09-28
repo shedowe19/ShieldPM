@@ -35,6 +35,9 @@
 | `Nginx/TorOnionServices.tsx`   | Tor-Service-Verwaltung       |
 | `Nginx/WireguardTunnels.tsx`   | WireGuard-Verwaltung         |
 
+Die Proxy-Host-Tabelle zeigt den letzten Upstream-Check aus einer auf die sichtbare Seite begrenzten Statusabfrage.
+Die Aktion „Überwachung“ öffnet Einstellungen, manuelle Prüfung und den begrenzten Verlauf.
+
 ## Detail: Settings-Tabs
 
 | Datei                      | Zweck                      |
@@ -67,6 +70,13 @@ Viele Seiten folgen einem dreistufigen Pattern:
   die Fehlerdetails stehen am Status. Fehlgeschlagene Aktivierungsaktionen zeigen eine Fehlermeldung.
   Nach dem Löschen eines Dead-Hosts wird die Liste neu geladen. Leere, inzwischen ungültige Ergebnisseiten
   bei Proxy-Hosts und Audit-Logs werden auf die letzte verfügbare Seite zurückgesetzt.
+- In der Proxy-Host-Tabelle öffnet „Host diagnostizieren“ im Aktionsmenü einen Dialog für eine einmalige Prüfung.
+  Der Dialog zeigt DNS, TLS, Proxy-Route, Upstream, Authentifizierung und WebSocket mit Ergebnisstatus, einer
+  übersetzten Erklärung, optionalen technischen Details sowie dem Prüfzeitpunkt. „Erneut prüfen“ löst eine neue
+  Prüfung aus; währenddessen ist die Aktion gesperrt. Fehler der Diagnose stehen im Dialog, ohne den
+  gespeicherten Host- oder Nginx-Status zu verändern. Für den WebSocket-Handshake kann ein Endpunktpfad angegeben
+  werden (Standard `/`); die Oberfläche kennzeichnet den tatsächlich ohne Zugangsdaten geprüften Pfad. Ein anderer
+  Pfad muss separat geprüft werden. Bei geschütztem Endpunkt kann die erwartete SSO-Antwort `302` oder `401` sein.
 - Die Zertifikatstabelle bietet ACME-Erneuerung nur für Let's-Encrypt-Zertifikate mit Verwaltungsrecht an.
   Fehler beim Root-CA-Download werden angezeigt. Das Ablauf-Widget erkennt auch Zertifikate, die erst
   innerhalb des aktuellen Tages abgelaufen sind. Fehlgeschlagene Notizlöschungen werden gemeldet.

@@ -41,6 +41,26 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 | `ddns_providers.js`    | `/api/nginx/ddns-providers`      |
 | `analytics.js`         | `/api/nginx/analytics`           |
 
+### Proxy-Host-Konfigurationsvorschau
+
+`POST /api/nginx/proxy-hosts/preview` (Create-Body) und
+`POST /api/nginx/proxy-hosts/:host_id/preview` (Update-Body) rendern nach Berechtigungs- und
+Referenzprüfung einen Entwurf ohne Speicherung. Die Antwort enthält `config`, `diff`, `hasCurrent`,
+`nginxValidated: false` und `limitations` (`render-only`, bei neuen Hosts `id-pending`, bei noch
+auszustellenden Zertifikaten `certificate-pending`). Die gerenderte Konfiguration ist vor der optionalen
+Formatierung und maskiert bekannte Geheimnisse; der Diff vergleicht mit der aktiven Konfiguration nur
+des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolgt erst beim Speichern.
+
+### Proxy-Host-Diagnose
+
+`POST /api/nginx/proxy-hosts/:host_id/diagnostics` startet die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md). Die Route akzeptiert keine frei wählbaren Netzwerkziele.
+
+### Aktive Proxy-Host-Überwachung
+
+Die Proxy-Host-Route bietet außerdem `/monitors/status?ids=…` für sichtbare Zustände und
+`/:host_id/monitor` (GET/PUT) sowie `/:host_id/monitor/check` (POST) für die
+[aktive Host-Überwachung](../module/proxy-host-monitor.md).
+
 ## Verwandte Seiten
 
 - [API-Überblick](./ueberblick.md)

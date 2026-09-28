@@ -37,6 +37,11 @@ describe("complete database migration chain", () => {
 				expect(await database.schema.hasTable("user_2fa")).toBe(true);
 				expect(await database.schema.hasColumn("proxy_host", "adv_limit_req_burst")).toBe(true);
 				expect(await database.schema.hasColumn("auth_sessions", "replaced_by_session_id")).toBe(true);
+				expect(await database.schema.hasColumn("proxy_host_monitor", "upstream_ca")).toBe(true);
+				expect(await database.schema.hasColumn("proxy_host_monitor", "upstream_server_name")).toBe(true);
+				expect(await database.schema.hasColumn("proxy_host_monitor", "skip_certificate_verification")).toBe(
+					true,
+				);
 				const meta = (await database("setting").where("id", "ai-config").first()).meta;
 				expect((typeof meta === "string" ? JSON.parse(meta) : meta).num_ctx).toBe(8192);
 			} finally {

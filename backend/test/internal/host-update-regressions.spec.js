@@ -26,6 +26,7 @@ vi.mock("../../internal/certificate.js", () => ({
 vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn() } }));
 vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn() } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: vi.fn(), removeHost: vi.fn() } }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: mocks.encrypt }));
 vi.mock("../../lib/config.js", () => ({ isPostgres: () => false }));
 

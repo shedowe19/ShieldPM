@@ -1,0 +1,15 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["config", "diff", "hasCurrent", "nginxValidated", "limitations"],
+	"properties": {
+		"config": { "type": "string", "description": "Rendered host config with credential lines redacted" },
+		"diff": { "type": "string", "description": "Line diff comparing the active config and proposed config; indentation and empty lines are omitted" },
+		"hasCurrent": { "type": "boolean", "description": "Whether a current host config exists on disk" },
+		"nginxValidated": { "type": "boolean", "enum": [false] },
+		"limitations": {
+			"type": "array",
+			"items": { "type": "string", "enum": ["render-only", "id-pending", "certificate-pending"] }
+		}
+	}
+}

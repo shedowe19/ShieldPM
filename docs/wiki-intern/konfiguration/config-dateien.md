@@ -45,7 +45,7 @@ Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private tempo
 
 | Datei                    | Zweck                                                           |
 | ------------------------ | --------------------------------------------------------------- |
-| `.version`               | Versionsdatei (aktuell: 4.3.2)                                  |
+| `.version`               | Versionsdatei (aktuell: 4.4.0)                                  |
 | `renovate.json`          | Dependency-Update-Bot-Konfiguration                             |
 | `.gitignore`             | Git-Ignore-Regeln                                               |
 | `.gitattributes`         | Git-Attribut-Regeln (Line-Endings, Linguist)                    |
@@ -86,7 +86,7 @@ Siehe [Rootfs-Referenz](./rootfs.md) für vollständige Auflistung.
 | `.gitignore`             | Git-Ignorierliste                                                    |
 | `.gitattributes`         | Git-Attribute (z.B. linguististische Erkennung)                      |
 | `.imgbotconfig`          | ImgBot-Konfiguration für automatische Bildoptimierung                |
-| `.version`               | ShieldPM Version (z.B. `v4.3.2`) — synchron mit package.json-Dateien |
+| `.version`               | ShieldPM Version (z.B. `4.4.0`) — synchron mit package.json-Dateien  |
 
 ## Agent-spezifische Dateien
 

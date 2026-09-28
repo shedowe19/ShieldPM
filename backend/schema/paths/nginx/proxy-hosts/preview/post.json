@@ -1,0 +1,14 @@
+{
+	"operationId": "previewNewProxyHost",
+	"summary": "Preview the rendered configuration for a new proxy host",
+	"description": "Read-only render with sensitive values redacted; does not run nginx -t or reserve a host ID. A newly requested certificate is not created in the preview.",
+	"tags": ["proxy-hosts"],
+	"security": [{ "bearerAuth": ["proxy_hosts.manage"] }],
+	"requestBody": { "$ref": "../post.json#/requestBody" },
+	"responses": {
+		"200": {
+			"description": "Rendered config and line diff against an empty config",
+			"content": { "application/json": { "schema": { "$ref": "../../../../components/proxy-host-preview.json" } } }
+		}
+	}
+}

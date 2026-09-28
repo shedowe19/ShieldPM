@@ -200,9 +200,10 @@ afterAll(async () => {
 });
 
 describe("CSRF follows the response's session cookies without an extra health request", () => {
-	it("permits only public upload-relay writes without a ShieldPM CSRF token", async () => {
+	it("rejects upload-relay and other proxy-host writes without a ShieldPM CSRF token", async () => {
 		const relay = await fetch(`${origin}/api/nginx/proxy-hosts/42/upload-relay`, { method: "POST" });
-		expect(relay.status).toBe(204);
+		expect(relay.status).toBe(403);
+		expect((await relay.json()).error).toMatchObject({ code: 403, reason: "EBADCSRFTOKEN" });
 
 		const admin = await fetch(`${origin}/api/nginx/proxy-hosts/42`, { method: "POST" });
 		expect(admin.status).toBe(403);

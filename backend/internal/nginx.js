@@ -255,18 +255,19 @@ const internalNginx = {
 	},
 
 	/**
+	 * Render a host configuration without writing it. The same output is used by generateConfig().
 	 * @param   {String}  host_type
 	 * @param   {Object}  host_row
-	 * @returns {Promise}
+	 * @param   {{preview?: boolean}} [options]
+	 * @returns {Promise<string>}
 	 */
-	generateConfig: async (host_type, host_row) => {
+	renderConfig: async (host_type, host_row, options = {}) => {
 		// Prevent modifying the original object:
 		const host = JSON.parse(JSON.stringify(host_row));
 		if (host.is_deleted) host.enabled = false;
 		const nice_host_type = internalNginx.getFileFriendlyHostType(host_type);
 
 		const renderEngine = utils.getRenderEngine();
-		const filename = internalNginx.getConfigName(nice_host_type, host.id);
 		const templatePath = `${__dirname}/../templates/${nice_host_type}.conf`;
 
 		// Manipulate the data a bit before sending it to the template
@@ -316,7 +317,8 @@ const internalNginx = {
 			host.access_list.meta.oauth2_proxy_prefix = host.access_list.meta.oauth2_proxy_prefix.replace(/\/?$/, "/");
 		}
 		if (host.forward_scheme === "terminal") {
-			host.terminal_access_token = getTerminalAccessToken(host.id);
+			// The preview hides this value; avoid reading or initializing signing keys for an unsaved draft.
+			host.terminal_access_token = options.preview ? "[REDACTED]" : getTerminalAccessToken(host.id);
 		}
 		host.managed_web_root = host.forward_scheme === "path" && host.forward_host?.startsWith("/data/websites/");
 
@@ -345,8 +347,19 @@ const internalNginx = {
 			}
 		}
 
+		return await renderEngine.renderFile(templatePath, host);
+	},
+
+	/**
+	 * Render through the same template path used by previews, then install the host config.
+	 * @param {string} host_type
+	 * @param {{id: number}} host_row
+	 * @returns {Promise<boolean>}
+	 */
+	generateConfig: async (host_type, host_row) => {
+		const filename = internalNginx.getConfigName(host_type, host_row.id);
 		try {
-			const config_text = await renderEngine.renderFile(templatePath, host);
+			const config_text = await internalNginx.renderConfig(host_type, host_row);
 			await fs.promises.writeFile(filename, config_text, { encoding: "utf8" });
 			debug(logger, "Wrote config:", filename);
 		} catch (err) {

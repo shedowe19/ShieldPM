@@ -51,6 +51,7 @@ vi.mock("src/hooks", () => ({
 }));
 
 vi.mock("./ProxyHostAdvancedTab", () => ({ default: () => null }));
+vi.mock("./ProxyHostConfigPreview", () => ({ default: () => null }));
 vi.mock("./ProxyHostDetailsTab", async () => {
 	const { Field } = await import("formik");
 	return { default: () => <Field name="forwardHost" aria-label="forward host" /> };

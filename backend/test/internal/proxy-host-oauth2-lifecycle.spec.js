@@ -20,6 +20,7 @@ vi.mock("../../internal/nginx.js", () => ({
 	},
 }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: { start: mocks.start, stop: mocks.stop } }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: vi.fn(), removeHost: vi.fn() } }));
 vi.mock("../../lib/encryption.js", () => ({ encrypt: vi.fn() }));
 vi.mock("../../lib/utils.js", () => ({ default: {} }));
 vi.mock("../../models/access_list.js", () => ({

@@ -41,6 +41,8 @@ Die API wird durch Express.js bereitgestellt. Schema-Validierung erfolgt über A
 
 Alle Endpunkte (außer `/api/tokens`) erfordern ein JWT-Token im `Authorization: Bearer`-Header.
 
+Die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md) ist als `POST /api/nginx/proxy-hosts/:host_id/diagnostics` nur für sichtbare Hosts zugänglich. Ihr einziger optionaler Body-Wert `websocket_path` legt einen relativen Pfad desselben Hosts fest.
+
 ## Swagger/OpenAPI
 
 Schema-Dateien unter `backend/schema/`:

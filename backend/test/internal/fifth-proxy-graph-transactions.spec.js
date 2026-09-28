@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ db: null, configure: vi.fn(), audit: vi.fn() }));
+const state = vi.hoisted(() => ({ db: null, configure: vi.fn(), audit: vi.fn(), resetMonitor: vi.fn() }));
 vi.mock("../../db.js", async () => {
 	const { default: knex } = await import("knex");
 	state.db = knex({ client: "better-sqlite3", connection: { filename: ":memory:" }, useNullAsDefault: true });
@@ -17,6 +17,7 @@ vi.mock("../../internal/gitops.js", () => ({ default: { triggerAutoPush: vi.fn()
 vi.mock("../../internal/git-deploy.js", () => ({ default: { startPollingForHost: vi.fn() } }));
 vi.mock("../../internal/oauth2-proxy.js", () => ({ default: {} }));
 vi.mock("../../internal/nginx.js", () => ({ default: { configure: state.configure } }));
+vi.mock("../../internal/proxy-host-monitor.js", () => ({ default: { resetHost: state.resetMonitor } }));
 
 import host from "../../internal/host.js";
 import proxy from "../../internal/proxy-host.js";
@@ -121,5 +122,24 @@ describe("atomic proxy host and normalized domain writes", () => {
 		]);
 		expect(state.configure).toHaveBeenCalledTimes(2);
 		expect(state.configure.mock.calls[1][2].note).toBe("changed");
+	});
+
+	it("marks a changed upstream for monitor reconciliation after saving the host", async () => {
+		const created = await proxy.create(access, input());
+		await proxy.update(access, { id: created.id, note: "same upstream" });
+		expect(state.resetMonitor).not.toHaveBeenCalled();
+
+		await proxy.update(access, {
+			id: created.id,
+			forward_scheme: "path",
+			forward_host: "/data/websites/landing",
+			forward_port: 8080,
+		});
+		expect(state.resetMonitor).toHaveBeenCalledOnce();
+		expect(state.resetMonitor).toHaveBeenCalledWith(created.id, { disableUnsupported: true });
+		expect(state.resetMonitor.mock.invocationCallOrder[0]).toBeLessThan(
+			state.configure.mock.invocationCallOrder.at(-1),
+		);
+		expect((await ProxyHost.query().findById(created.id)).forward_scheme).toBe("path");
 	});
 });

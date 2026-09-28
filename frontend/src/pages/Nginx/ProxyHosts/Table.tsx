@@ -1,7 +1,14 @@
-import { IconDotsVertical, IconEdit, IconPower, IconTrash } from "@tabler/icons-react";
+import {
+	IconActivityHeartbeat,
+	IconDotsVertical,
+	IconEdit,
+	IconPower,
+	IconStethoscope,
+	IconTrash,
+} from "@tabler/icons-react";
 import { createColumnHelper, useTable } from "@tanstack/react-table";
-import { useMemo } from "react";
-import type { ProxyHost } from "src/api/backend";
+import { useMemo, useState } from "react";
+import type { ProxyHost, ProxyHostMonitorSummary } from "src/api/backend";
 import {
 	CertificateFormatter,
 	DomainsFormatter,
@@ -22,10 +29,14 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "src/components/ui/dropdown-menu";
+import { useProxyHostMonitorStatuses } from "src/hooks/useProxyHostMonitor";
 import { intl, T } from "src/locale";
 import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { HostStatus } from "../HostStatus";
+import { MonitorDialog } from "./MonitorDialog";
+import { MonitorLatency, MonitorSummary } from "./MonitorStatus";
+import { ProxyHostDiagnosticsDialog } from "./ProxyHostDiagnosticsDialog";
 
 interface Props {
 	data: ProxyHost[];
@@ -47,6 +58,18 @@ export default function Table({
 	onNew,
 	isFiltered,
 }: Props) {
+	const [diagnosticsHost, setDiagnosticsHost] = useState<{ id: number; domain: string } | null>(null);
+	const [monitorHost, setMonitorHost] = useState<ProxyHost | null>(null);
+	const ids = useMemo(() => data.map((host) => host.id), [data]);
+	const {
+		data: monitorStatuses,
+		isPending: monitorLoading,
+		isError: monitorError,
+	} = useProxyHostMonitorStatuses(ids);
+	const statusByHost = useMemo(
+		() => new Map<number, ProxyHostMonitorSummary>(monitorStatuses?.map((status) => [status.hostId, status])),
+		[monitorStatuses],
+	);
 	const columnHelper = createColumnHelper<typeof shieldTableFeatures, ProxyHost>();
 	const columns = useMemo(
 		() =>
@@ -117,6 +140,29 @@ export default function Table({
 						return <HostStatus host={info.getValue()} />;
 					},
 				}),
+				columnHelper.accessor((row) => row, {
+					id: "monitor",
+					header: intl.formatMessage({ id: "proxy-host.monitor.column" }),
+					cell: (info) => (
+						<MonitorSummary
+							status={statusByHost.get(info.getValue().id)}
+							loading={monitorLoading && !monitorError}
+							error={monitorError}
+						/>
+					),
+				}),
+				columnHelper.accessor((row) => row, {
+					id: "latency",
+					header: intl.formatMessage({ id: "proxy-host.monitor.latency-column" }),
+					cell: (info) => (
+						<MonitorLatency
+							status={statusByHost.get(info.getValue().id)}
+							loading={monitorLoading && !monitorError}
+							error={monitorError}
+						/>
+					),
+					meta: { className: "whitespace-nowrap" },
+				}),
 				columnHelper.display({
 					id: "id",
 					cell: (info) => {
@@ -139,6 +185,22 @@ export default function Table({
 											data={{ id: info.row.original.id }}
 										/>
 									</DropdownMenuLabel>
+									<DropdownMenuItem
+										onClick={() =>
+											setDiagnosticsHost({
+												id: info.row.original.id,
+												domain: info.row.original.domainNames?.[0] || "",
+											})
+										}
+									>
+										<IconStethoscope className="mr-2 h-4 w-4" />
+										<T id="proxy-host.diagnostics.title" />
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => setMonitorHost(info.row.original)}>
+										<IconActivityHeartbeat className="mr-2 h-4 w-4" />
+										<T id="proxy-host.monitor.title" />
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
 									<HasPermission section={PROXY_HOSTS} permission={MANAGE} hideError>
 										<DropdownMenuItem onClick={() => onEdit?.(info.row.original.id)}>
 											<IconEdit className="mr-2 h-4 w-4" />
@@ -171,7 +233,7 @@ export default function Table({
 					},
 				}),
 			]),
-		[columnHelper, onEditAccessList, onEdit, onDisableToggle, onDelete],
+		[columnHelper, onEditAccessList, onEdit, onDisableToggle, onDelete, monitorLoading, monitorError, statusByHost],
 	);
 
 	const tableInstance = useTable({
@@ -184,18 +246,43 @@ export default function Table({
 	});
 
 	return (
-		<TableLayout
-			tableInstance={tableInstance}
-			emptyState={
-				<EmptyData
-					object={AUDIT_LOG_OBJECT_TYPE.PROXY_HOST}
-					objects="proxy-hosts"
-					onNew={onNew}
-					isFiltered={isFiltered}
-					color="lime"
-					permissionSection={PROXY_HOSTS}
+		<>
+			<TableLayout
+				tableInstance={tableInstance}
+				emptyState={
+					<EmptyData
+						object={AUDIT_LOG_OBJECT_TYPE.PROXY_HOST}
+						objects="proxy-hosts"
+						onNew={onNew}
+						isFiltered={isFiltered}
+						color="lime"
+						permissionSection={PROXY_HOSTS}
+					/>
+				}
+			/>
+			{diagnosticsHost && (
+				<ProxyHostDiagnosticsDialog
+					key={diagnosticsHost.id}
+					hostId={diagnosticsHost.id}
+					domain={diagnosticsHost.domain}
+					onClose={() => setDiagnosticsHost(null)}
 				/>
-			}
-		/>
+			)}
+			{monitorHost && (
+				<MonitorDialog
+					key={monitorHost.id}
+					hostId={monitorHost.id}
+					domain={monitorHost.domainNames?.join(", ") || `#${monitorHost.id}`}
+					forwardScheme={monitorHost.forwardScheme}
+					hostEnabled={monitorHost.enabled}
+					targetSupported={
+						monitorHost.forwardScheme !== "path" &&
+						(monitorHost.forwardScheme === "terminal" ||
+							(!monitorHost.forwardHost.startsWith("unix") && !monitorHost.forwardHost.startsWith("/")))
+					}
+					onClose={() => setMonitorHost(null)}
+				/>
+			)}
+		</>
 	);
 }

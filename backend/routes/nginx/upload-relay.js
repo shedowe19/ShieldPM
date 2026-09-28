@@ -1,6 +1,7 @@
 import express from "express";
 import internalUploadRelay from "../../internal/upload-relay.js";
 import errs from "../../lib/error.js";
+import jwtdecode from "../../lib/express/jwt-decode.js";
 
 const TUS_VERSION = "1.0.0";
 
@@ -87,6 +88,20 @@ const createUploadRelayRouter = (relay = internalUploadRelay) => {
 	router.options("/:uploadId/finalize", (_req, res) => {
 		setTusHeaders(res);
 		res.sendStatus(204);
+	});
+	// This backend API is separate from the public Nginx upload location, which
+	// forwards directly to the origin. Only users allowed to access this host
+	// may inspect uploads; writes require the host update permission.
+	router.use(jwtdecode());
+	router.use(async (req, res, next) => {
+		try {
+			const hostId = parseHostId(req.params.hostId);
+			const permission = req.method === "GET" || req.method === "HEAD" ? "get" : "update";
+			await res.locals.access.can(`proxy_hosts:${permission}`, hostId);
+			next();
+		} catch (error) {
+			next(error);
+		}
 	});
 
 	router.post("/", async (req, res, next) => {
