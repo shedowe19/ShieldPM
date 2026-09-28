@@ -12,6 +12,7 @@ describe("Docker publication workflow", () => {
 		);
 		expect(workflow).toContain(`RELEASE_TAG: v${releaseVersionExpression}`);
 		expect(workflow).toContain('echo "publish=false" >> "$GITHUB_OUTPUT"');
+		expect(workflow).toContain('git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git"');
 		expect(workflow).toContain("if: steps.version_release.outputs.publish == 'true'");
 		expect(workflow).toContain("target_commitish: ${{ github.sha }}");
 		expect(workflow).toContain("group: shieldpm-release-v${{ needs.prepare.outputs.version }}");

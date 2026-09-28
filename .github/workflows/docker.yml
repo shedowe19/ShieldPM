@@ -411,19 +411,21 @@ jobs:
             exit 0
           fi
 
-          tag_ref=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.type + " " + .object.sha' 2>/dev/null) || true
-          if [ -n "$tag_ref" ]; then
-            read -r tag_type tag_target <<< "$tag_ref"
-            if [ "$tag_type" = tag ]; then
-              tag_target=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_target" --jq '.object.sha')
-            elif [ "$tag_type" != commit ]; then
-              echo "Unsupported object type for $RELEASE_TAG: $tag_type" >&2
-              exit 1
+          # ls-remote returns no lines when the tag is absent and dereferences annotated tags.
+          tag_refs=$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}")
+          tag_target=""
+          while IFS=$'\t' read -r sha ref; do
+            if [ "$ref" = "refs/tags/$RELEASE_TAG^{}" ]; then
+              tag_target="$sha"
+              break
             fi
-            if [ "$tag_target" != "$GITHUB_SHA" ]; then
-              echo "$RELEASE_TAG already points to a different commit; bump .version before publishing." >&2
-              exit 1
+            if [ "$ref" = "refs/tags/$RELEASE_TAG" ]; then
+              tag_target="$sha"
             fi
+          done <<< "$tag_refs"
+          if [ -n "$tag_target" ] && [ "$tag_target" != "$GITHUB_SHA" ]; then
+            echo "$RELEASE_TAG already points to a different commit; bump .version before publishing." >&2
+            exit 1
           fi
 
           echo "publish=true" >> "$GITHUB_OUTPUT"
