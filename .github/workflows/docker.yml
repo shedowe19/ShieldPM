@@ -387,57 +387,94 @@ jobs:
     name: "📦 Upload Release Artifacts"
     needs: [prepare, build, merge]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository_owner == 'shedowe19' }}
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v')) && github.repository_owner == 'shedowe19' }}
+    concurrency:
+      group: shieldpm-release-v${{ needs.prepare.outputs.version }}
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
-      - name: Verify release tag has not been published
+      - name: Check version release
+        id: version_release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v${{ needs.prepare.outputs.version }}
         run: |
-          if gh release view "v${{ needs.prepare.outputs.version }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release v${{ needs.prepare.outputs.version }} already exists; create a new version before publishing artifacts." >&2
+          if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "$RELEASE_TAG" ]]; then
+            echo "Pushed tag $GITHUB_REF_NAME does not match .version ($RELEASE_TAG)." >&2
             exit 1
           fi
 
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; leaving its assets and tag unchanged."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          tag_ref=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.type + " " + .object.sha' 2>/dev/null) || true
+          if [ -n "$tag_ref" ]; then
+            read -r tag_type tag_target <<< "$tag_ref"
+            if [ "$tag_type" = tag ]; then
+              tag_target=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_target" --jq '.object.sha')
+            elif [ "$tag_type" != commit ]; then
+              echo "Unsupported object type for $RELEASE_TAG: $tag_type" >&2
+              exit 1
+            fi
+            if [ "$tag_target" != "$GITHUB_SHA" ]; then
+              echo "$RELEASE_TAG already points to a different commit; bump .version before publishing." >&2
+              exit 1
+            fi
+          fi
+
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
       - name: Create Release Assets Directory
+        if: steps.version_release.outputs.publish == 'true'
         run: mkdir -p release-assets
 
       - name: Download LXC Template (x86_64)
+        if: steps.version_release.outputs.publish == 'true'
         uses: actions/download-artifact@v8.0.1
         with:
           name: shieldpm-lxc-template-x86_64
           path: release-assets
 
       - name: Download LXC Template (aarch64)
+        if: steps.version_release.outputs.publish == 'true'
         uses: actions/download-artifact@v8.0.1
         with:
           name: shieldpm-lxc-template-aarch64
           path: release-assets
 
       - name: Download Native Installer (x86_64)
+        if: steps.version_release.outputs.publish == 'true'
         uses: actions/download-artifact@v8.0.1
         with:
           name: shieldpm-install-linux-x86_64
           path: release-assets
 
       - name: Download Native Installer (aarch64)
+        if: steps.version_release.outputs.publish == 'true'
         uses: actions/download-artifact@v8.0.1
         with:
           name: shieldpm-install-linux-aarch64
           path: release-assets
 
       - name: List Release Assets
+        if: steps.version_release.outputs.publish == 'true'
         run: ls -la release-assets/
 
       - name: Create Release
+        if: steps.version_release.outputs.publish == 'true'
         uses: softprops/action-gh-release@v3.0.2
         with:
           tag_name: "v${{ needs.prepare.outputs.version }}"
+          target_commitish: ${{ github.sha }}
           name: "ShieldPM v${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.docker_tag_base }}-${{ needs.prepare.outputs.version_hash }})"
           prerelease: false
           make_latest: true
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: release-assets/*
           body: |
             ## 🛡️ ShieldPM ${{ needs.prepare.outputs.docker_tag_base }}

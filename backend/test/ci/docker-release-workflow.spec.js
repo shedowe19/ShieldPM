@@ -6,11 +6,15 @@ const workflow = fs.readFileSync(backendSourcePath("..", ".github", "workflows",
 const releaseVersionExpression = "$" + "{{ needs.prepare.outputs.version }}";
 
 describe("Docker publication workflow", () => {
-	it("publishes immutable numbered release assets only from version tags", () => {
+	it("publishes a version once from develop or the matching version tag", () => {
 		expect(workflow).toMatch(
-			/release:[\s\S]*?if: \$\{\{ github\.event_name == 'push' && startsWith\(github\.ref, 'refs\/tags\/v'\) && github\.repository_owner == 'shedowe19' \}\}/,
+			/release:[\s\S]*?if: \$\{\{ github\.event_name == 'push' && \(github\.ref == 'refs\/heads\/develop' \|\| startsWith\(github\.ref, 'refs\/tags\/v'\)\) && github\.repository_owner == 'shedowe19' \}\}/,
 		);
-		expect(workflow).toContain(`gh release view "v${releaseVersionExpression}"`);
+		expect(workflow).toContain(`RELEASE_TAG: v${releaseVersionExpression}`);
+		expect(workflow).toContain('echo "publish=false" >> "$GITHUB_OUTPUT"');
+		expect(workflow).toContain("if: steps.version_release.outputs.publish == 'true'");
+		expect(workflow).toContain("target_commitish: ${{ github.sha }}");
+		expect(workflow).toContain("group: shieldpm-release-v${{ needs.prepare.outputs.version }}");
 	});
 
 	it("smoke-tests the exact image before packaging deployment artifacts", () => {
