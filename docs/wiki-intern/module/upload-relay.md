@@ -47,6 +47,6 @@ Ein Reverse Proxy kann eine beliebige einzelne Browser-Formularanfrage nicht tra
 
 ## Verwandte Seiten
 
-- [Proxy Host](proxy-host.md)
-- [Nginx Engine](nginx-engine.md)
+- [Proxy Host](./proxy-host.md)
+- [Nginx Engine](./nginx-engine.md)
 - [Datenbank-Migrationen](../daten/migrationen.md)

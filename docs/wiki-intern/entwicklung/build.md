@@ -93,7 +93,7 @@ sudo bash install.sh
 
 ## Build-Artefakte
 
-Die aktuelle Version wird in `.version` gespeichert (Plain Text, z.B. `v4.3.2`). Diese Version synchronisiert sich mit `backend/package.json` und `frontend/package.json`.
+Die aktuelle Version wird in `.version` gespeichert (Plain Text, z.B. `4.4.0` ohne `v`). Diese Version synchronisiert sich mit `backend/package.json` und `frontend/package.json`.
 
 | Artefakt            | Pfad                          | Beschreibung           |
 | ------------------- | ----------------------------- | ---------------------- |
