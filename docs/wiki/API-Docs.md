@@ -50,6 +50,22 @@ The per-host analytics `range` values are `1h`, `24h`, `7d` and `30d` (invalid v
 
 These four fields are required. Optional fields such as `certificate_id`, `ssl_forced`, `access_list_id`, `block_exploits`, `caching_enabled`, `allow_websocket_upgrade` and `locations` are described in the live OpenAPI schema. `GET /api/nginx/proxy-hosts` returns an array by default, or an `items` plus `pagination` object when `page` or `limit` is provided; `expand` requests permitted relations.
 
+### Certificate profile example
+
+**POST** `/api/nginx/certificates` requests a new HTTP-challenge Short-lived certificate:
+
+```json
+{
+  "provider": "letsencrypt",
+  "domain_names": ["example.com"],
+  "meta": {
+    "letsencrypt_profile": "shortlived"
+  }
+}
+```
+
+`meta.letsencrypt_profile` accepts `standard` or `shortlived`; omitting it preserves Standard behavior. DNS-challenge requests use the same field together with their DNS-provider metadata. Inline host requests with `certificate_id: "new"` also accept the profile in `meta`; streams require DNS validation. Short-lived requests allow at most 25 domain names. The profile is returned in certificate metadata, retained for renewal, and cannot be changed through the certificate update endpoint. See [SSL Certificates](SSL-Certificates) for lifetime and global ACME configuration behavior.
+
 Most API errors use an `error` object with a numeric `code` and public `message`. A CSRF rejection before route execution responds with HTTP 403 and `error.reason: "EBADCSRFTOKEN"`. Some analytics routes return a shorter `error` string for host-not-found or forbidden responses; check the endpoint's response contract when handling errors.
 
 ---

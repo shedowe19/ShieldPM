@@ -96,7 +96,7 @@ services:
 #      - "LOGROTATIONS=7" # Set how often the json_access.log should be rotated until it is deleted, default 3
 #      - "SKIP_IP_RANGES=false" # Skip fetching/whitelisting ip ranges from cloudflare, default true
 #      - "IPRT=3" # Multiplier for the 6-hour Cloudflare IP range refresh, default 1; ignored when SKIP_IP_RANGES=true
-#      - "CRT=72" # Set how many hours should be between certbot trying to renew your certs, default 23
+#      - "CRT=12" # Configure hours between renewal checks; values above 12 are capped at runtime
 #      - "GOA=true" # Enables goaccess (and overrides LOGROTATE to true), default false --- if you download the GeoLite2-Country.mmdb, GeoLite2-City.mmdb AND GeoLite2-ASN.mmdb file from MaxMind and place them in /opt/shieldpm/goaccess/geoip it will automatically enable GeoIP in goaccess after restarting ShieldPM (no need to change GOACLA below), you may also enable the geoipupdate container below (please change the timezone)
 #      - "GOACLA=--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=2 --keep-last=7 --with-output-resolver --no-query-string" # Arguments that should be passed to goaccess, default: --agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string
 #      - "PHP82=true" # Activate PHP82, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container

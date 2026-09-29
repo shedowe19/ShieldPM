@@ -99,12 +99,12 @@ ShieldPM runs schema migrations for the **selected** database on startup. When y
 | `ACME_EAB_HMAC_KEY`      | External Account Binding HMAC Key                                                                         | —                        |
 | `ACME_MUST_STAPLE`       | Enable OCSP Must-Staple extension                                                                         | `false`                  |
 | `ACME_OCSP_STAPLING`     | Enable OCSP Stapling                                                                                      | `false`                  |
-| `ACME_PROFILE`           | Optional ACME profile name                                                                                | `none`                   |
+| `ACME_PROFILE`           | Global ACME profile for legacy certificates; individual Standard/Short-lived selections override it       | `none`                   |
 | `ACME_KEY_TYPE`          | Key type: `rsa` or `ecdsa`                                                                                | `ecdsa`                  |
 | `ACME_SERVER_TLS_VERIFY` | Verify the ACME server TLS certificate                                                                    | `true`                   |
 | `CUSTOM_OCSP_STAPLING`   | Enable OCSP Stapling for custom certificates                                                              | `false`                  |
 | `DEFAULT_CERT_ID`        | Default certificate ID for otherwise unmatched hosts (`0` uses the dummy certificate)                     | `0`                      |
-| `CRT`                    | Hours between certificate renewal checks                                                                  | `23`                     |
+| `CRT`                    | Configured hours between renewal checks; runtime caps the effective interval at 12 hours                  | `23` (effective: `12`)   |
 
 > [!WARNING]
 > Set `ACME_EMAIL` for account notices and to use providers that require it. For Let's Encrypt, the runtime can register without an email; ZeroSSL requires one, and EAB settings must include an email.

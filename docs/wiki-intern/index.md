@@ -50,6 +50,7 @@ Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur,
 - [Stream (TCP/UDP)](./module/stream.md)
 - [Host (gemeinsame Logik)](./module/host.md)
 - [Zertifikate](./module/zertifikate.md)
+- [ACME-Profile (Standard/Short-lived)](./module/zertifikate.md#acme-profile)
 - [Certbot](./module/certbot.md)
 - [Interne PKI](./module/pki.md)
 - [Access-Lists](./module/access-lists.md)

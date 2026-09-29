@@ -181,6 +181,13 @@ yarn dev # Nodemon
 - **Active checks**: `backend/internal/proxy-host-monitor.js` schedules bounded HTTP(S)/TCP checks per host, stores status and limited history, and optionally sends status changes through the owner's configured Telegram integration. See [monitoring internals](./docs/wiki-intern/module/proxy-host-monitor.md).
 - **On-demand diagnostics**: `backend/internal/proxy-host-diagnostics.js` checks a stored host's DNS, local TLS and route, upstream connectivity, and applicable authentication or WebSocket behavior. Results are not stored. See [diagnostics internals](./docs/wiki-intern/features/proxy-host-diagnostics.md).
 
+### 6.1b ACME Certificate Profiles
+
+- **Selection**: New HTTP/DNS certificates and inline host requests accept `meta.letsencrypt_profile: "standard" | "shortlived"`; new requests without it are saved as Standard. Legacy rows without the field retain their previous Certbot/global configuration. Existing profiles are changed by issuing and assigning a new certificate.
+- **Strict Short-lived**: Certbot issuance and manual renewal pass `--required-profile shortlived`. Let's Encrypt's Short-lived profile lasts 160 hours (6 days and 16 hours) and permits at most 25 domain names. Unsupported profiles fail without a silent fallback.
+- **Standard configuration**: When global `ACME_PROFILE` is configured, explicit Standard passes empty `--required-profile` and `--preferred-profile` arguments so the CA selects its default. Otherwise Standard adds no profile flags and retains compatibility with older Certbot versions. Short-lived requires Certbot 4.0 or newer.
+- **Renewal**: Startup and timer call `certbot renew` separately for each managed certificate, reapplying its explicit profile without `--force-renewal`; Certbot decides when it is due. Failures are isolated by certificate. The effective `CRT` check interval is capped at 12 hours; smaller valid settings remain effective. See [certificate internals](./docs/wiki-intern/module/zertifikate.md) and [Certbot internals](./docs/wiki-intern/module/certbot.md).
+
 ### 6.2 AI Core (`backend/internal/ai/`)
 
 - **Orchestrator**: `executor.js` manages the chat loop.

@@ -1,0 +1,172 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { Form, Formik, useFormikContext } from "formik";
+import type { PropsWithChildren } from "react";
+import { CertificateProfileField } from "src/components/Form/CertificateProfileField";
+import { SSLOptionsFields } from "src/components/Form/SSLOptionsFields";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({ show: vi.fn(), createCertificate: vi.fn() }));
+
+vi.mock("ez-modal-react", () => ({
+	default: { create: <T,>(Component: T) => Component, show: mocks.show },
+}));
+vi.mock("src/api/backend", () => ({ createCertificate: mocks.createCertificate, testHttpCertificate: vi.fn() }));
+vi.mock("src/components", () => ({
+	DomainNamesField: () => {
+		const { setFieldValue } = useFormikContext();
+		return (
+			<button type="button" onClick={() => setFieldValue("domainNames", ["example.test"])}>
+				Add domain
+			</button>
+		);
+	},
+	DNSProviderFields: () => {
+		const { setFieldValue } = useFormikContext();
+		return (
+			<button
+				type="button"
+				onClick={() => {
+					setFieldValue("meta.dnsProvider", "cloudflare");
+					setFieldValue("meta.dnsProviderCredentials", "synthetic-test-token");
+				}}
+			>
+				Set DNS credentials
+			</button>
+		);
+	},
+}));
+vi.mock("src/components/ui/select", () => ({
+	Select: ({
+		value,
+		onValueChange,
+		disabled,
+	}: PropsWithChildren<{ value: string; onValueChange: (value: string) => void; disabled?: boolean }>) => (
+		<select
+			aria-label="Certificate profile"
+			value={value}
+			disabled={disabled}
+			onChange={(event) => onValueChange(event.target.value)}
+		>
+			<option value="standard">Standard</option>
+			<option value="shortlived">Short-lived</option>
+		</select>
+	),
+	SelectContent: () => null,
+	SelectItem: () => null,
+	SelectTrigger: () => null,
+	SelectValue: () => null,
+}));
+vi.mock("src/locale", () => ({ T: ({ id }: { id: string }) => <>{id}</> }));
+vi.mock("src/notifications", () => ({ showObjectSuccess: vi.fn() }));
+
+const FormState = () => {
+	const { values } = useFormikContext();
+	return <output data-testid="form-state">{JSON.stringify(values)}</output>;
+};
+
+afterEach(() => {
+	cleanup();
+	vi.clearAllMocks();
+});
+
+describe("certificate profiles", () => {
+	it("defaults to standard without discarding other certificate metadata", async () => {
+		render(
+			<Formik initialValues={{ meta: { dnsChallenge: true } }} onSubmit={vi.fn()}>
+				<Form>
+					<CertificateProfileField />
+					<FormState />
+				</Form>
+			</Formik>,
+		);
+		await waitFor(() => {
+			expect(JSON.parse(screen.getByTestId("form-state").textContent || "{}").meta).toEqual({
+				dnsChallenge: true,
+				letsencryptProfile: "standard",
+			});
+		});
+		expect(screen.getByRole("combobox")).toHaveValue("standard");
+		expect(screen.getByText("certificates.profile.standard-description")).toBeInTheDocument();
+	});
+
+	it.each(["HTTP", "DNS"])("submits a selected short-lived profile for standalone %s issuance", async (challenge) => {
+		const remove = vi.fn();
+		mocks.createCertificate.mockResolvedValue({ id: 1 });
+		if (challenge === "HTTP") {
+			const { showHTTPCertificateModal } = await import("./HTTPCertificateModal");
+			showHTTPCertificateModal();
+		} else {
+			const { showDNSCertificateModal } = await import("./DNSCertificateModal");
+			showDNSCertificateModal();
+		}
+		const Modal = mocks.show.mock.calls[0][0];
+		render(
+			<QueryClientProvider client={new QueryClient()}>
+				<Modal visible remove={remove} />
+			</QueryClientProvider>,
+		);
+
+		expect(screen.getByRole("combobox")).toHaveValue("standard");
+		fireEvent.click(screen.getByRole("button", { name: "Add domain" }));
+		fireEvent.change(screen.getByRole("combobox"), { target: { value: "shortlived" } });
+		if (challenge === "DNS") {
+			fireEvent.click(screen.getByRole("button", { name: "Set DNS credentials" }));
+		}
+		expect(screen.getByText("certificates.profile.shortlived-description")).toBeInTheDocument();
+		fireEvent.click(screen.getByRole("button", { name: "save" }));
+
+		await waitFor(() => expect(mocks.createCertificate).toHaveBeenCalledOnce());
+		expect(mocks.createCertificate.mock.calls[0][0]).toMatchObject({
+			provider: "letsencrypt",
+			domainNames: ["example.test"],
+			meta: {
+				letsencryptProfile: "shortlived",
+				...(challenge === "DNS"
+					? { dnsChallenge: true, dnsProvider: "cloudflare", dnsProviderCredentials: "synthetic-test-token" }
+					: {}),
+			},
+		});
+		expect(remove).toHaveBeenCalledOnce();
+	});
+
+	it("preserves the profile when switching inline host issuance between HTTP and DNS challenges", async () => {
+		const submit = vi.fn();
+		render(
+			<Formik initialValues={{ certificateId: "new", meta: {} }} onSubmit={submit}>
+				<Form>
+					<SSLOptionsFields />
+					<button type="submit">Issue certificate</button>
+				</Form>
+			</Formik>,
+		);
+		fireEvent.change(screen.getByRole("combobox"), { target: { value: "shortlived" } });
+		fireEvent.click(screen.getByRole("switch", { name: "domains.use-dns" }));
+		fireEvent.click(screen.getByRole("button", { name: "Set DNS credentials" }));
+		fireEvent.click(screen.getByRole("switch", { name: "domains.use-dns" }));
+		fireEvent.click(screen.getByRole("button", { name: "Issue certificate" }));
+
+		await waitFor(() => expect(submit).toHaveBeenCalledOnce());
+		expect(submit.mock.calls[0][0]).toEqual({
+			certificateId: "new",
+			meta: {
+				letsencryptProfile: "shortlived",
+				dnsChallenge: false,
+				dnsProvider: undefined,
+				dnsProviderCredentials: undefined,
+				propagationSeconds: undefined,
+			},
+		});
+	});
+
+	it.each([0, 42])("does not offer a profile switch for the existing certificate selection %s", (certificateId) => {
+		render(
+			<Formik initialValues={{ certificateId, meta: {} }} onSubmit={vi.fn()}>
+				<Form>
+					<SSLOptionsFields />
+				</Form>
+			</Formik>,
+		);
+		expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+	});
+});

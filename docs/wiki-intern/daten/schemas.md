@@ -39,6 +39,10 @@ Die Objection.js-Modelle verwenden folgende Lifecycle-Hooks:
 - Migrationen verwenden ESM (`export { up, down }`)
 - `login_attempts` wird bei Bedarf durch `backend/routes/tokens.js` angelegt und nicht durch eine Datei unter `backend/migrations/`. Der SQLite-Import entdeckt Anwendungstabellen aus dem Schema und berücksichtigt sie beim Datenbankwechsel.
 
+### Zertifikatsprofil
+
+Die Tabelle `certificate` speichert die ACME-Auswahl im vorhandenen JSON-Feld `meta.letsencrypt_profile` (`standard` oder `shortlived`); es gibt keine zusätzliche Spalte oder Migration. Neue Erstellungsanfragen ohne Profil werden mit `standard` gespeichert. Bestehende Datensätze ohne Feld behalten dagegen ihre bisherige Certbot-Konfiguration. Certbot persistiert die Ausstellungsoptionen zusätzlich je Lineage in `/data/tls/certbot/renewal/npm-<id>.conf`. ShieldPM wendet explizite Profile bei jeder Erneuerung pro Zertifikat erneut an, damit eine globale INI-Vorgabe diese Einstellungen nicht überschreibt. Siehe [Zertifikate](../module/zertifikate.md).
+
 ## Abhängigkeiten
 
 - Knex.js für Schema-Definition

@@ -322,10 +322,18 @@ Backend gespeicherte Limits entfernt. Zahlenfelder werden numerisch serialisiert
 nicht endliche Werte werden ausgelassen. `ProxyHostModalSubmission.test.ts` sichert diese Payload-Grenzen unabhängig
 vom Dialog ab.
 
+`Form/CertificateProfileField.tsx` bietet in den HTTP-/DNS-Zertifikatsdialogen und über `SSLOptionsFields` bei
+`certificateId: "new"` die Auswahl Standard oder Short-lived an. Das Formik-Feld heißt
+`meta.letsencryptProfile`; der API-Client überführt es zu `meta.letsencrypt_profile`. Fehlende Werte werden auf
+`standard` gesetzt. Ein vorhandenes Zertifikat bietet keinen Profilwechsel an; die Zertifikatsliste zeigt das
+explizit gespeicherte Profil für Let's-Encrypt-Zertifikate als Badge. Alte Datensätze ohne Profilfeld bekommen
+keinen Badge, weil ihre bisherige globale Profilkonfiguration daraus nicht hervorgeht. Details zur Laufzeit und Erneuerung stehen unter
+[Zertifikate](../module/zertifikate.md).
+
 `SSLCertificateField` entfernt beim Wechsel von einer neuen zu einer vorhandenen oder keiner Zertifikatsauswahl die
-DNS-Challenge-Daten aus `meta`, einschließlich Zugangsdaten und einer Wartezeit von null Sekunden. Andere Metadaten
-bleiben erhalten. Streams bieten ausschließlich ihre unterstützten TLS-Optionen an; neue Zertifikate benötigen
-Domainnamen und DNS-Verifikation. Siehe [Streams](../module/stream.md).
+Profilwahl und DNS-Challenge-Daten aus `meta`, einschließlich Zugangsdaten und einer Wartezeit von null Sekunden.
+Andere Metadaten bleiben erhalten. Streams bieten ausschließlich ihre unterstützten TLS-Optionen an; neue
+Zertifikate benötigen Domainnamen und DNS-Verifikation. Siehe [Streams](../module/stream.md).
 
 `AccessListDetailsTab.tsx` kapselt den Details-Tab des `AccessListModal` als Formik-Kind. Name sowie die Optionen
 `satisfyAny` und `passAuth` bleiben an denselben Formularzustand gebunden; `AccessListDetailsTab.test.tsx` sichert die
@@ -403,3 +411,4 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 - [Komponenten](./komponenten.md)
 - [Screens & Pages](./screens.md)
 - [Theme & Styling](./theme.md)
+- [Zertifikate](../module/zertifikate.md)

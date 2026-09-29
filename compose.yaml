@@ -85,7 +85,7 @@ services:
       # - "ACME_SERVER_TLS_VERIFY=false"           # Verify ACME server TLS cert
       # - "DEFAULT_CERT_ID=1"                      # Use cert ID instead of dummy certs
       # - "CUSTOM_OCSP_STAPLING=true"              # OCSP stapling for custom certs
-      # - "CRT=72"                                 # Hours between cert renewal checks, default: 23
+      # - "CRT=12"                                 # Hours between renewal checks; effective maximum: 12 (configured default: 23)
 
       # ── Logging & Analytics ────────────────────────────────────────────────
       # - "LOGROTATE=true"                         # Enable access logs + daily rotation

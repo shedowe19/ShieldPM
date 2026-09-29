@@ -18,6 +18,11 @@
 			"application/json": {
 				"schema": {
 					"type": "object",
+					"allOf": [
+						{
+							"$ref": "../../../components/letsencrypt-host-profile-constraints.json"
+						}
+					],
 					"additionalProperties": false,
 					"required": [
 						"domain_names",

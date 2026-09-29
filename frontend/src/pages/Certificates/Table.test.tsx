@@ -49,4 +49,17 @@ describe("certificate renewal availability", () => {
 		render(<Table data={[{ ...certificate, provider: "letsencrypt" }]} />);
 		expect(screen.getByText("action.renew")).toBeInTheDocument();
 	});
+	it.each(["standard", "shortlived"] as const)("shows the saved certificate profile %s", (profile) => {
+		render(<Table data={[{ ...certificate, provider: "letsencrypt", meta: { letsencryptProfile: profile } }]} />);
+		expect(
+			screen.getByText(
+				profile === "shortlived" ? "certificates.profile.shortlived" : "certificates.profile.standard",
+			),
+		).toBeInTheDocument();
+	});
+	it("does not infer an old certificate's issuance profile when no profile was stored", () => {
+		render(<Table data={[{ ...certificate, provider: "letsencrypt" }]} />);
+		expect(screen.queryByText("certificates.profile.standard")).not.toBeInTheDocument();
+		expect(screen.queryByText("certificates.profile.shortlived")).not.toBeInTheDocument();
+	});
 });

@@ -49,6 +49,7 @@ describe("SSLCertificateField", () => {
 							dnsProvider: "cloudflare",
 							dnsProviderCredentials: "synthetic-test-token",
 							propagationSeconds: 0,
+							letsencryptProfile: "shortlived",
 							nginxOnline: true,
 						},
 					}}

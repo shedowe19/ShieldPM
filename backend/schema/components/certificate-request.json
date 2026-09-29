@@ -31,6 +31,9 @@
 			"type": "object",
 			"additionalProperties": false,
 			"properties": {
+				"letsencrypt_profile": {
+					"$ref": "../common.json#/properties/letsencrypt_profile"
+				},
 				"certificate": {
 					"type": "string",
 					"minLength": 1
@@ -65,6 +68,58 @@
 		}
 	},
 	"allOf": [
+		{
+			"if": {
+				"required": [
+					"meta"
+				],
+				"properties": {
+					"meta": {
+						"required": [
+							"letsencrypt_profile"
+						],
+						"properties": {
+							"letsencrypt_profile": {
+								"const": "shortlived"
+							}
+						}
+					}
+				}
+			},
+			"then": {
+				"properties": {
+					"domain_names": {
+						"maxItems": 25
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"required": [
+					"provider"
+				],
+				"properties": {
+					"provider": {
+						"enum": [
+							"other",
+							"internal"
+						]
+					}
+				}
+			},
+			"then": {
+				"properties": {
+					"meta": {
+						"not": {
+							"required": [
+								"letsencrypt_profile"
+							]
+						}
+					}
+				}
+			}
+		},
 		{
 			"if": {
 				"properties": {

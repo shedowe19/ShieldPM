@@ -10,6 +10,7 @@ import punycode from "node:punycode";
 import { ProxyAgent } from "proxy-agent";
 import dnsPlugins from "../certbot/dns-plugins.json" with { type: "json" };
 import { installPlugin } from "../lib/certbot.js";
+import { getCertificateProfileArgs } from "../lib/certificate-profile.js";
 import errs from "../lib/error.js";
 import utils from "../lib/utils.js";
 import { ssl as logger } from "../logger.js";
@@ -58,6 +59,7 @@ export const requestCertbot = async (certificate) => {
 		process.env.ACME_SERVER,
 		"--authenticator",
 		"webroot",
+		...getCertificateProfileArgs(certificate),
 	]);
 	logger.success(result);
 	return result;
@@ -112,6 +114,7 @@ export const requestCertbotWithDnsChallenge = async (certificate) => {
 				: []),
 			"--server",
 			process.env.ACME_SERVER,
+			...getCertificateProfileArgs(certificate),
 		],
 		async () => {
 			// Installing/upgrading plugins and replacing credentials must not race a running renewal.
@@ -144,6 +147,7 @@ export const renewCertbot = async (certificate) => {
 		"--cert-name",
 		`npm-${certificate.id}`,
 		"--force-renewal",
+		...getCertificateProfileArgs(certificate),
 	]);
 	logger.info(renewResult);
 	return renewResult;
@@ -175,6 +179,7 @@ export const renewCertbotWithDnsChallenge = async (certificate) => {
 		"--cert-name",
 		`npm-${certificate.id}`,
 		"--force-renewal",
+		...getCertificateProfileArgs(certificate),
 	]);
 	logger.info(renewResult);
 	return renewResult;

@@ -32,6 +32,7 @@ vi.mock("node:https", async () => {
 import {
 	isProcessing,
 	renewCertbot,
+	renewCertbotWithDnsChallenge,
 	requestCertbot,
 	requestCertbotWithDnsChallenge,
 	revokeCertbot,
@@ -47,7 +48,88 @@ describe("Certbot process coordination", () => {
 		vi.clearAllMocks();
 		mocks.requests.length = 0;
 	});
-	afterEach(() => vi.restoreAllMocks());
+	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
+	});
+
+	it.each([requestCertbot, renewCertbot, renewCertbotWithDnsChallenge])(
+		"requires the selected shortlived profile for %s",
+		async (operation) => {
+			vi.stubEnv("ACME_PROFILE", "classic");
+			mocks.execFile.mockResolvedValue("issued");
+			await operation({
+				...certificate,
+				meta: { letsencrypt_profile: "shortlived", dns_provider: "cloudflare" },
+			});
+			const args = mocks.execFile.mock.calls[0][1];
+			expect(args.slice(args.indexOf("--required-profile"))).toEqual(["--required-profile", "shortlived"]);
+			expect(args).not.toContain("--preferred-profile");
+		},
+	);
+	it("retains existing ACME configuration for legacy requests", async () => {
+		vi.stubEnv("ACME_PROFILE", "shortlived");
+		mocks.execFile.mockResolvedValue("issued");
+		await requestCertbot(certificate);
+		expect(mocks.execFile.mock.calls[0][1]).not.toContain("--required-profile");
+	});
+	it.each([requestCertbot, renewCertbot, renewCertbotWithDnsChallenge])(
+		"clears both global profile settings for explicit standard in %s",
+		async (operation) => {
+			vi.stubEnv("ACME_PROFILE", "shortlived");
+			mocks.execFile.mockResolvedValue("issued");
+			await operation({ ...certificate, meta: { letsencrypt_profile: "standard", dns_provider: "cloudflare" } });
+			const args = mocks.execFile.mock.calls[0][1];
+			expect(args.slice(args.indexOf("--required-profile"))).toEqual([
+				"--required-profile",
+				"",
+				"--preferred-profile",
+				"",
+			]);
+		},
+	);
+	it.each([undefined, "none"])(
+		"keeps standard compatible with older Certbot when ACME_PROFILE=%s",
+		async (profile) => {
+			vi.stubEnv("ACME_PROFILE", profile);
+			mocks.execFile.mockResolvedValue("issued");
+			await requestCertbot({ ...certificate, meta: { letsencrypt_profile: "standard" } });
+			expect(mocks.execFile.mock.calls[0][1]).not.toContain("--required-profile");
+		},
+	);
+	it("passes shortlived to DNS issuance while retaining plugin options", async () => {
+		vi.spyOn(fs.promises, "mkdir").mockResolvedValue();
+		vi.spyOn(fs.promises, "writeFile").mockResolvedValue();
+		vi.spyOn(fs.promises, "chmod").mockResolvedValue();
+		mocks.execFile.mockResolvedValue("issued");
+		await requestCertbotWithDnsChallenge({
+			...certificate,
+			meta: {
+				letsencrypt_profile: "shortlived",
+				dns_provider: "cloudflare",
+				dns_provider_credentials: "synthetic-credential",
+			},
+		});
+		expect(mocks.execFile.mock.calls[0][1]).toEqual(expect.arrayContaining(["--required-profile", "shortlived"]));
+	});
+	it("rejects unknown profiles before running Certbot or installing plugins", async () => {
+		await expect(requestCertbot({ ...certificate, meta: { letsencrypt_profile: "unknown" } })).rejects.toThrow(
+			"Certificate profile must be",
+		);
+		await expect(
+			requestCertbotWithDnsChallenge({
+				...certificate,
+				meta: {
+					letsencrypt_profile: "unknown",
+					dns_provider: "cloudflare",
+					dns_provider_credentials: "synthetic-credential",
+				},
+			}),
+		).rejects.toThrow("Certificate profile must be");
+		expect(mocks.execFile).not.toHaveBeenCalled();
+		expect(installPlugin).not.toHaveBeenCalled();
+		expect(isProcessing()).toBe(false);
+	});
 
 	it("serializes requests and manual or scheduled renewal through one lock", async () => {
 		let release;

@@ -5,6 +5,7 @@ import { ZipArchive } from "archiver";
 import dayjs from "dayjs";
 import _ from "lodash";
 import tempWrite from "temp-write";
+import { getCertificateProfile, getCertificateProfileArgs } from "../lib/certificate-profile.js";
 import error from "../lib/error.js";
 import { sanitizeProxyHost } from "../lib/host-response.js";
 import utils from "../lib/utils.js";
@@ -135,10 +136,10 @@ const internalCertificate = {
 
 	initTimer: async () => {
 		// Defer CRT env var parsing to runtime so NaN is never set at module load time.
-		// Falls back to 72 hours if CRT is unset or not a valid integer.
+		// Check at least twice daily, including certificates created after this timer starts.
 		const crtHours = Number(process.env.CRT);
 		const validInterval = Number.isInteger(crtHours) && crtHours > 0 && crtHours <= 596;
-		const intervalTimeout = 1000 * 60 * 60 * (validInterval ? crtHours : 72);
+		const intervalTimeout = 1000 * 60 * 60 * Math.min(validInterval ? crtHours : 12, 12);
 		logger.info(`Certbot Renewal Timer initialized (interval: ${intervalTimeout / 1000 / 60 / 60}h)`);
 		clearInterval(internalCertificate.interval);
 		internalCertificate.interval = setInterval(internalCertificate.processExpiringHosts, intervalTimeout);
@@ -165,28 +166,35 @@ const internalCertificate = {
 			logger.info("Renewing Certbot TLS certs close to expiry...");
 
 			try {
-				const result = await certbot.runCertbot([
-					"--config",
-					"/etc/certbot.ini",
-					"renew",
-					"--server",
-					process.env.ACME_SERVER,
-					"--quiet",
-				]);
-
-				if (result) {
-					logger.info(`Renew Result: ${result}`);
+				const certificates = await certificateModel
+					.query()
+					.where("is_deleted", 0)
+					.andWhere("provider", "letsencrypt");
+				// A profile in certbot.ini overrides saved lineage options, so renew each managed
+				// certificate with its own selection. Certbot still decides whether it is due.
+				for (const certificate of certificates || []) {
+					try {
+						const result = await certbot.runCertbot([
+							"--config",
+							"/etc/certbot.ini",
+							"renew",
+							"--server",
+							process.env.ACME_SERVER,
+							"--cert-name",
+							`npm-${certificate.id}`,
+							"--quiet",
+							...getCertificateProfileArgs(certificate),
+						]);
+						if (result) logger.info(`Renew Result for Cert #${certificate.id}: ${result}`);
+					} catch (err) {
+						logger.error(`Renewal failed for Cert #${certificate.id}: ${err.message}`);
+					}
 				}
 
 				await internalNginx.withConfigurationLock(() => internalNginx.reload());
 				logger.info("Renew Complete");
 
-				// Now go and fetch all the certbot certs from the db and query the files and update expiry times
-				const certificates = await certificateModel
-					.query()
-					.where("is_deleted", 0)
-					.andWhere("provider", "letsencrypt");
-
+				// Read the certificate files after renewal and update the displayed expiry times.
 				if (certificates && certificates.length > 0) {
 					const promises = certificates.map(async (certificate) => {
 						try {
@@ -232,11 +240,19 @@ const internalCertificate = {
 		const thisData = /** @type {any} */ (_.cloneDeep(data));
 		await access.can("certificates:create", thisData);
 		thisData.owner_user_id = access.token.getUserId(1);
+		if (thisData.provider === "letsencrypt") {
+			thisData.meta = { ...thisData.meta, letsencrypt_profile: getCertificateProfile(thisData.meta) };
+		} else if (thisData.meta?.letsencrypt_profile !== undefined) {
+			throw new error.ValidationError("Certificate profiles are only available for Let's Encrypt certificates");
+		}
 		if (thisData.provider === "letsencrypt" || thisData.provider === "internal") {
 			if (!Array.isArray(thisData.domain_names) || thisData.domain_names.length === 0) {
 				throw new error.ValidationError("At least one domain name is required for certificate creation");
 			}
 			thisData.nice_name = thisData.domain_names.join(", ");
+		}
+		if (thisData.meta?.letsencrypt_profile === "shortlived" && thisData.domain_names.length > 25) {
+			throw new error.ValidationError("Short-lived certificates support at most 25 domain names");
 		}
 
 		const certificate = await certificateModel.query().insertAndFetch(thisData);

@@ -54,6 +54,15 @@ auszustellenden Zertifikaten `certificate-pending`). Die gerenderte Konfiguratio
 Formatierung und maskiert bekannte Geheimnisse; der Diff vergleicht mit der aktiven Konfiguration nur
 des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolgt erst beim Speichern.
 
+### Zertifikatsprofile
+
+`POST /api/nginx/certificates` akzeptiert bei `provider: "letsencrypt"` das optionale Feld
+`meta.letsencrypt_profile` (`standard` oder `shortlived`, fehlend entspricht `standard`). Dieselbe
+Auswahl wird bei Host-Erstellung oder -Aktualisierung mit `certificate_id: "new"` an die Ausstellung
+weitergereicht; Streams benötigen hierfür DNS-Verifikation. Die bestehenden Renew-Routen behalten
+das gespeicherte Profil bei. Der Update-Endpunkt eines vorhandenen Zertifikats erlaubt keinen
+Profilwechsel. Details und Grenzen stehen unter [Zertifikate](../module/zertifikate.md).
+
 ### Proxy-Host-Diagnose
 
 `POST /api/nginx/proxy-hosts/:host_id/diagnostics` startet die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md). Die Route akzeptiert keine frei wählbaren Netzwerkziele.

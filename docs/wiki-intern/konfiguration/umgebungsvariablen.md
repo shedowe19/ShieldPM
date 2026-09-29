@@ -73,20 +73,22 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## SSL & ACME
 
-| Variable                 | Standard      | Beschreibung                                                                                                                                  |
-| ------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ACME_EMAIL`             | —             | E-Mail für Zertifikate                                                                                                                        |
-| `ACME_SERVER`            | Let's Encrypt | ACME-Server-URL                                                                                                                               |
-| `ACME_EAB_KID`           | —             | External Account Binding Key                                                                                                                  |
-| `ACME_EAB_HMAC_KEY`      | —             | External Account Binding HMAC. Wert nicht dokumentieren.                                                                                      |
-| `ACME_MUST_STAPLE`       | `false`       | Must-Staple Extension                                                                                                                         |
-| `ACME_OCSP_STAPLING`     | `false`       | OCSP Stapling                                                                                                                                 |
-| `ACME_KEY_TYPE`          | `ecdsa`       | Schlüsseltyp                                                                                                                                  |
-| `ACME_PROFILE`           | `none`        | Optionales Profil des gewählten ACME-Servers; `none` deaktiviert die Profilauswahl. Andere Profile werden gegen das ACME-Verzeichnis geprüft. |
-| `ACME_SERVER_TLS_VERIFY` | `true`        | TLS-Zertifikat des ACME-Servers verifizieren                                                                                                  |
-| `CUSTOM_OCSP_STAPLING`   | `false`       | Eigenes OCSP-Stapling aktivieren                                                                                                              |
-| `CRT`                    | `23`          | Stunden zwischen Renewal-Checks                                                                                                               |
-| `DEFAULT_CERT_ID`        | `0`           | Standard-Zertifikat-ID für neue Hosts                                                                                                         |
+| Variable                 | Standard      | Beschreibung                                                                                                                                                                 |
+| ------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACME_EMAIL`             | —             | E-Mail für Zertifikate                                                                                                                                                       |
+| `ACME_SERVER`            | Let's Encrypt | ACME-Server-URL                                                                                                                                                              |
+| `ACME_EAB_KID`           | —             | External Account Binding Key                                                                                                                                                 |
+| `ACME_EAB_HMAC_KEY`      | —             | External Account Binding HMAC. Wert nicht dokumentieren.                                                                                                                     |
+| `ACME_MUST_STAPLE`       | `false`       | Must-Staple Extension                                                                                                                                                        |
+| `ACME_OCSP_STAPLING`     | `false`       | OCSP Stapling                                                                                                                                                                |
+| `ACME_KEY_TYPE`          | `ecdsa`       | Schlüsseltyp                                                                                                                                                                 |
+| `ACME_PROFILE`           | `none`        | Globales CA-Profil für Altzertifikate ohne Profilfeld; individuelle Standard-/Short-lived-Auswahl überschreibt es. Andere Profile werden gegen das ACME-Verzeichnis geprüft. |
+| `ACME_SERVER_TLS_VERIFY` | `true`        | TLS-Zertifikat des ACME-Servers verifizieren                                                                                                                                 |
+| `CUSTOM_OCSP_STAPLING`   | `false`       | Eigenes OCSP-Stapling aktivieren                                                                                                                                             |
+| `CRT`                    | `23`          | Konfigurierte Stunden zwischen Renewal-Checks; tatsächlich höchstens 12 Stunden, kleinere gültige Werte bleiben erhalten.                                                    |
+| `DEFAULT_CERT_ID`        | `0`           | Standard-Zertifikat-ID für neue Hosts                                                                                                                                        |
+
+Die Profilwahl eines einzelnen Zertifikats steht in `meta.letsencrypt_profile` und benötigt keine neue Umgebungsvariable. `shortlived` verlangt das gleichnamige Profil, explizites `standard` leert bei konfiguriertem `ACME_PROFILE` globale erforderliche und bevorzugte Profile für diesen Auftrag. Ausstellung sowie manuelle und automatische Erneuerung wenden diese Auswahl erneut an. Ältere gespeicherte Zertifikate ohne Profilfeld behalten dagegen ihre bestehende Konfiguration einschließlich globalem `ACME_PROFILE`; Details stehen unter [Certbot](../module/certbot.md).
 
 ## Analytics & Logging
 

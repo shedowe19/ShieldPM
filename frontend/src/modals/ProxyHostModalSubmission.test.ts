@@ -8,6 +8,14 @@ const createValues = (overrides: Partial<ProxyHostFormValues> = {}): ProxyHostFo
 });
 
 describe("createProxyHostPayload", () => {
+	it("retains a selected certificate profile and DNS metadata when submitting a proxy host", () => {
+		const meta = { letsencryptProfile: "shortlived", dnsChallenge: true, dnsProvider: "cloudflare" };
+		const payload = createProxyHostPayload({
+			id: "new",
+			values: { ...createProxyHostInitialValues({ meta }), certificateId: "new" as unknown as number },
+		});
+		expect(payload.meta).toEqual(meta);
+	});
 	it("serializes local maintenance times as absolute timestamps and clears an empty end", () => {
 		const payload = createProxyHostPayload({
 			id: 73,

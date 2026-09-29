@@ -67,6 +67,7 @@ export function SSLCertificateField({
 				dnsProvider: __,
 				dnsProviderCredentials: ___,
 				propagationSeconds: ____,
+				letsencryptProfile: _____,
 				...rest
 			} = meta;
 			setFieldValue("meta", rest);

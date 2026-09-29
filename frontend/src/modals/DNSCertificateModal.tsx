@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { type Certificate, createCertificate } from "src/api/backend";
 import { DNSProviderFields, DomainNamesField } from "src/components";
+import { CertificateProfileField } from "src/components/Form/CertificateProfileField";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent } from "src/components/ui/card";
@@ -66,6 +67,7 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 							provider: CERTIFICATE_PROVIDER.LETSENCRYPT,
 							meta: {
 								dnsChallenge: true,
+								letsencryptProfile: "standard",
 							},
 						} as DNSCertificateValues
 					}
@@ -99,6 +101,7 @@ const DNSCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPro
 								<Card className="border-dashed">
 									<CardContent className="p-4 space-y-4">
 										<DomainNamesField isWildcardPermitted dnsProviderWildcardSupported />
+										<CertificateProfileField />
 										<DNSProviderFields />
 									</CardContent>
 								</Card>

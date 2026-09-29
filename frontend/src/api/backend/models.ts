@@ -105,6 +105,8 @@ export type AccessListClient = {
 	meta?: Record<string, unknown>;
 };
 
+export type CertificateProfile = "standard" | "shortlived";
+
 export interface Certificate {
 	id: number;
 	createdOn: string;
@@ -114,7 +116,7 @@ export interface Certificate {
 	niceName: string;
 	domainNames: string[];
 	expiresOn: string;
-	meta: Record<string, unknown> & { years?: number };
+	meta: Record<string, unknown> & { years?: number; letsencryptProfile?: CertificateProfile };
 	owner?: User;
 	proxyHosts?: ProxyHost[];
 	deadHosts?: DeadHost[];

@@ -29,8 +29,9 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 1. Create or edit a Proxy Host
 2. Go to the **SSL** tab
 3. Select **Request a New SSL Certificate**
-4. Check **Force SSL** (recommended)
-5. Click Save
+4. Choose the **Certificate profile**: **Standard** or **Short-lived**
+5. Check **Force SSL** (recommended)
+6. Click Save
 
 > [!IMPORTANT]
 > `ACME_EMAIL` is recommended so your ACME provider can contact you. ShieldPM can register without an email for providers that allow it; ZeroSSL's automatic registration and any EAB configuration require an email. See [Configuration](Configuration).
@@ -46,8 +47,24 @@ ShieldPM makes managing SSL/TLS certificates easy with built-in support for **Le
 
 1. Go to **SSL Certificates** → **Add SSL Certificate** → **Let's Encrypt via DNS**
 2. Enter domain names (e.g., `*.example.com`)
-3. Select your DNS provider from the dropdown
-4. Enter the required API credentials, then save
+3. Choose the **Certificate profile**: **Standard** or **Short-lived**
+4. Select your DNS provider from the dropdown
+5. Enter the required API credentials, then save
+
+### Standard or Short-lived
+
+The profile selection is available for both HTTP and DNS certificate creation, including **Request a New SSL Certificate** in host dialogs. The certificate list displays explicitly saved profiles for Let's Encrypt certificates; older records without profile metadata have no profile badge.
+
+| Selection              | Behavior                                                                                                                 |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------------------- |
+| **Standard** (default) | Requests the CA's default profile and lifetime, overriding any global `ACME_PROFILE` for this certificate.               |
+| **Short-lived**        | Requires the ACME profile `shortlived`. Let's Encrypt issues certificates valid for **160 hours (6 days and 16 hours)**. |
+
+See the [Let's Encrypt profile documentation](https://letsencrypt.org/docs/profiles/) for the CA's current profile rules. Short-lived certificates are limited to **25 domain names** per certificate and require **Certbot 4.0 or newer** and an ACME server offering `shortlived`. If the client or CA does not support the requested profile, issuance fails; ShieldPM does not silently obtain a Standard certificate instead. Standard requests without a global `ACME_PROFILE` retain compatibility with older Certbot versions.
+
+The selection is saved with the certificate and reapplied during automatic and manual renewal. Existing certificates without a saved selection retain their previous Certbot configuration, including any global `ACME_PROFILE`. New requests that omit the selection use Standard. To change an existing certificate to another profile, request a new certificate with that profile and assign it to the host.
+
+Standard and Short-lived certificates can coexist on the same instance, including when a global `ACME_PROFILE` is set. This selection does not add support for requesting IP-address certificates in ShieldPM.
 
 ### DNS Provider Examples
 
@@ -103,15 +120,15 @@ ShieldPM validates the PEM data and checks that the certificate matches the priv
 
 Fine-tune certificate behavior via environment variables:
 
-| Variable             | Description                                                                                    | Default                                                                         |
-| :------------------- | :--------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------ |
-| `ACME_EMAIL`         | Registration email (recommended; required for ZeroSSL's email registration and when using EAB) | —                                                                               |
-| `ACME_SERVER`        | Custom ACME server URL                                                                         | Let's Encrypt Production                                                        |
-| `ACME_KEY_TYPE`      | `ecdsa` or `rsa`                                                                               | `ecdsa`                                                                         |
-| `ACME_MUST_STAPLE`   | Request OCSP Must-Staple extension                                                             | `false`                                                                         |
-| `ACME_OCSP_STAPLING` | Enable OCSP Stapling                                                                           | `false` (automatically enabled if `ACME_MUST_STAPLE=true`)                      |
-| `CRT`                | Interval in hours between renewal checks                                                       | `23` after environment validation; internal fallback `72` if missing or invalid |
-| `DEFAULT_CERT_ID`    | Default cert ID for unconfigured hosts                                                         | `0` (none)                                                                      |
+| Variable             | Description                                                                                    | Default                                                    |
+| :------------------- | :--------------------------------------------------------------------------------------------- | :--------------------------------------------------------- |
+| `ACME_EMAIL`         | Registration email (recommended; required for ZeroSSL's email registration and when using EAB) | —                                                          |
+| `ACME_SERVER`        | Custom ACME server URL                                                                         | Let's Encrypt Production                                   |
+| `ACME_KEY_TYPE`      | `ecdsa` or `rsa`                                                                               | `ecdsa`                                                    |
+| `ACME_MUST_STAPLE`   | Request OCSP Must-Staple extension                                                             | `false`                                                    |
+| `ACME_OCSP_STAPLING` | Enable OCSP Stapling                                                                           | `false` (automatically enabled if `ACME_MUST_STAPLE=true`) |
+| `CRT`                | Configured hours between renewal checks; effective interval is capped at **12 hours**          | `23` configured; **12 hours** effective                    |
+| `DEFAULT_CERT_ID`    | Default cert ID for unconfigured hosts                                                         | `0` (none)                                                 |
 
 ### Alternative ACME Providers
 
@@ -144,7 +161,7 @@ Buypass [discontinued TLS/SSL and ACME certificate issuance](https://www.buypass
 
 ### "Certificate not renewing"
 
-ShieldPM invokes `certbot renew` at startup and then every `CRT` hours (normally 23). Certbot decides which certificate is due for renewal; `CRT` does not set the expiry threshold. If renewal fails:
+ShieldPM checks its managed Let's Encrypt certificates at startup and then at most every **12 hours**, calling `certbot renew` separately for each certificate with its saved profile. A valid `CRT` below 12 shortens that interval; a larger or invalid value still results in a 12-hour interval. Certbot decides when each certificate is due. A check does not force a new certificate; `CRT` does not set the expiry threshold. A failed renewal is logged without preventing checks of the other certificates. Keep HTTP challenge access or DNS credentials working for automatic Short-lived renewal. If renewal fails:
 
 ```bash
 # Check certificate status

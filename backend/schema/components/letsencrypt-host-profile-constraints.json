@@ -1,0 +1,32 @@
+{
+	"type": "object",
+	"description": "The shortlived profile supports at most 25 names when issuing a new inline Let's Encrypt certificate",
+	"if": {
+		"required": [
+			"certificate_id",
+			"meta"
+		],
+		"properties": {
+			"certificate_id": {
+				"const": "new"
+			},
+			"meta": {
+				"required": [
+					"letsencrypt_profile"
+				],
+				"properties": {
+					"letsencrypt_profile": {
+						"const": "shortlived"
+					}
+				}
+			}
+		}
+	},
+	"then": {
+		"properties": {
+			"domain_names": {
+				"maxItems": 25
+			}
+		}
+	}
+}

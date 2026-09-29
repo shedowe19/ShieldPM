@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { type Certificate, createCertificate, testHttpCertificate } from "src/api/backend";
 import { DomainNamesField } from "src/components";
+import { CertificateProfileField } from "src/components/Form/CertificateProfileField";
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardFooter } from "src/components/ui/card";
@@ -21,6 +22,7 @@ const showHTTPCertificateModal = () => {
 interface HTTPCertificateValues {
 	domainNames: string[];
 	provider: string;
+	meta: Certificate["meta"];
 }
 
 const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalProps) => {
@@ -106,6 +108,7 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 						{
 							domainNames: [] as string[],
 							provider: CERTIFICATE_PROVIDER.LETSENCRYPT,
+							meta: { letsencryptProfile: "standard" },
 						} as HTTPCertificateValues
 					}
 					onSubmit={onSubmit}
@@ -147,6 +150,7 @@ const HTTPCertificateModal = EasyModal.create(({ visible, remove }: InnerModalPr
 												setTestResults(null);
 											}}
 										/>
+										<CertificateProfileField />
 									</CardContent>
 									{testResults && (
 										<CardFooter className="flex-col items-start bg-muted/50 p-4 border-t">

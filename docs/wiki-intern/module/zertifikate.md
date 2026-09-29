@@ -20,9 +20,17 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 ## Verhalten
 
 - Zertifikate werden über ACME (Let's Encrypt) automatisch beantragt
-- `CRT` steuert das Intervall zwischen `certbot renew`-Prüfungen, nicht die verbleibende Zertifikatslaufzeit. `validate-env.cjs` setzt bei normalen Starts standardmäßig **23 Stunden**. Fehlt die Variable beim direkten Backend-Aufruf oder ist sie ungültig, verwendet `certificate.js` **72 Stunden** als interne Rückfallebene. Gültig sind ganze Werte von 1 bis 596 Stunden; erneute Initialisierung ersetzt den vorhandenen Timer.
+- `CRT` steuert das konfigurierte Intervall zwischen `certbot renew`-Prüfungen, nicht die verbleibende Zertifikatslaufzeit. `validate-env.cjs` setzt bei normalen Starts standardmäßig **23 Stunden**; gültig sind ganze Werte von 1 bis 596. `certificate.js` begrenzt das tatsächliche Intervall unabhängig davon auf **höchstens 12 Stunden**, auch bei einem fehlenden oder ungültigen Wert. Kleinere gültige Werte bleiben erhalten. Beim Start erfolgt sofort eine Prüfung; erneute Initialisierung ersetzt den vorhandenen Timer. Die Begrenzung gilt auch für Standard-Zertifikate, damit später angelegte Short-lived-Zertifikate ohne Neustart regelmäßig geprüft werden.
 - Zertifikate werden unter `/data/tls/` gespeichert
 - Unterstützt ECDSA und RSA Schlüsseltypen
+
+## ACME-Profile
+
+- Bei einer neuen Let's-Encrypt-Ausstellung wird `meta.letsencrypt_profile` als `standard` oder `shortlived` gespeichert. Fehlende Angaben in neuen API-Anfragen werden auf `standard` normalisiert. Alte Datensätze ohne Profil behalten ihre bisherige Certbot-Konfiguration einschließlich globalem `ACME_PROFILE`; eine Datenbankmigration ist nicht erforderlich.
+- `shortlived` verlangt strikt das gleichnamige CA-Profil, benötigt Certbot ab Version 4.0 und erlaubt höchstens **25 Domainnamen** pro Zertifikat. Bei Let's Encrypt beträgt dessen Laufzeit **160 Stunden (6 Tage und 16 Stunden)**. Explizites `standard` leert bei einem konfigurierten `ACME_PROFILE` globale erforderliche und bevorzugte Certbot-Profile, sodass die CA ihren Standard und dessen Laufzeit wählt. Ohne globales Profil bleibt der Standard-Ablauf mit älteren Certbot-Versionen kompatibel. Beide Auswahlen können trotz eines globalen `ACME_PROFILE` gemeinsam genutzt werden.
+- Die Auswahl steht in HTTP-/DNS-Zertifikatsdialogen sowie beim Anfordern eines neuen Zertifikats aus Host-Dialogen zur Verfügung. Host-Anfragen mit `certificate_id: "new"` reichen das Profil an die Zertifikatsausstellung weiter. Bereits zugewiesene Zertifikate werden durch Änderungen an Host-Metadaten nicht umgestellt.
+- Das Profil eines bestehenden Zertifikats wird nicht über die Bearbeitung gewechselt. Ein Wechsel erfolgt durch eine neue Ausstellung und die anschließende Host-Zuordnung. Interne und hochgeladene Zertifikate verwenden diese ACME-Auswahl nicht.
+- Manuelle und automatische Erneuerung übernehmen die explizite Profilwahl jedes gespeicherten Zertifikats. Die automatische Prüfung ruft `certbot renew` ohne erzwungene Erneuerung pro Zertifikat auf, damit globale Profile die individuelle Wahl nicht überschreiben. Ein Fehler stoppt die Prüfungen der übrigen Zertifikate nicht. Details stehen unter [Certbot](./certbot.md).
 
 ## Sicherheits- und Lebenszyklusregeln
 
@@ -44,7 +52,7 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 
 ## Regressionstests
 
-- `backend/test/internal/certificate-lifecycle.spec.js`
+- `backend/test/internal/certificate-lifecycle.spec.js` — einschließlich Profilpersistenz, maximaler Short-lived-Domainanzahl, gemischter Erneuerung, Fehlerisolation und Timergrenzen
 - `backend/test/routes/certificate-issuance-permissions.spec.js`
 - `backend/test/schema/certificate-validation.spec.js`
 
@@ -60,6 +68,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 ## Verwandte Seiten
 
 - [Proxy-Host](./proxy-host.md)
+- [Certbot](./certbot.md)
 - [Interne PKI](./pki.md)
 - [Access-Lists](./access-lists.md)
 - [Secrets & Sicherheit](../konfiguration/secrets-und-sicherheit.md)

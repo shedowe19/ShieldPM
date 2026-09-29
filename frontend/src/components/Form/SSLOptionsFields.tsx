@@ -4,6 +4,7 @@ import { DNSProviderFields, DomainNamesField } from "src/components";
 import { Label } from "src/components/ui/label";
 import { Switch } from "src/components/ui/switch";
 import { T } from "src/locale";
+import { CertificateProfileField } from "./CertificateProfileField";
 
 interface Props {
 	forHttp?: boolean; // the sslForced, http2Support, hstsEnabled, hstsSubdomains fields
@@ -142,6 +143,7 @@ export function SSLOptionsFields({ forHttp = true, forceDNSForNew, requireDomain
 			{forHttp ? getHttpOptions() : null}
 			{newCertificate ? (
 				<div className="space-y-4">
+					<CertificateProfileField />
 					<Field name="meta.dnsChallenge">
 						{({ field }: FieldProps) => (
 							<div className="flex items-center space-x-2 mt-4 mb-2">

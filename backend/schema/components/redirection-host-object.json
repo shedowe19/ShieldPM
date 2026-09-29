@@ -93,6 +93,11 @@
 		},
 		"meta": {
 			"type": "object",
+			"properties": {
+				"letsencrypt_profile": {
+					"$ref": "../common.json#/properties/letsencrypt_profile"
+				}
+			},
 			"example": {
 				"nginx_online": true,
 				"nginx_err": null
