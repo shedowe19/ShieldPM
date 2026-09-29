@@ -13,6 +13,8 @@ if [ ! -r /etc/os-release ]; then
     echo "ERROR: Cannot identify the operating system." >&2
     exit 1
 fi
+# The host provides this file; it is not part of the source tree.
+# shellcheck disable=SC1091
 . /etc/os-release
 if [ "${ID:-}" != "debian" ] || [ "${VERSION_ID:-}" != "13" ]; then
     echo "ERROR: The native open-appsec agent package is supported here only on Debian 13 (Trixie)." >&2
