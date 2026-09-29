@@ -6,7 +6,7 @@ import {
 	IconStethoscope,
 	IconTrash,
 } from "@tabler/icons-react";
-import { createColumnHelper, useTable } from "@tanstack/react-table";
+import { type ColumnVisibilityState, createColumnHelper, useTable } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import type { ProxyHost, ProxyHostMonitorSummary } from "src/api/backend";
 import {
@@ -40,6 +40,7 @@ import { ProxyHostDiagnosticsDialog } from "./ProxyHostDiagnosticsDialog";
 
 interface Props {
 	data: ProxyHost[];
+	columnVisibility?: ColumnVisibilityState;
 	isFiltered?: boolean;
 	isFetching?: boolean;
 	onEditAccessList: (id: number) => void;
@@ -48,8 +49,25 @@ interface Props {
 	onDisableToggle?: (id: number, enabled: boolean) => void;
 	onNew?: () => void;
 }
+
+// Keep the chooser in the same order as the columns in the table.
+export const proxyHostColumns = [
+	{ id: "icon", labelId: "proxy-host.column-icon" },
+	{ id: "owner", labelId: "proxy-host.column-owner" },
+	{ id: "domainNames", labelId: "column.source" },
+	{ id: "forwardHost", labelId: "column.destination" },
+	{ id: "certificate", labelId: "column.ssl" },
+	{ id: "accessList", labelId: "column.access" },
+	{ id: "enabled", labelId: "column.status" },
+	{ id: "monitor", labelId: "proxy-host.monitor.column" },
+	{ id: "latency", labelId: "proxy-host.monitor.latency-column" },
+] as const;
+
+const defaultColumnVisibility: ColumnVisibilityState = {};
+
 export default function Table({
 	data,
+	columnVisibility = defaultColumnVisibility,
 	isFetching,
 	onEditAccessList,
 	onEdit,
@@ -165,6 +183,7 @@ export default function Table({
 				}),
 				columnHelper.display({
 					id: "id",
+					enableHiding: false,
 					cell: (info) => {
 						return (
 							<DropdownMenu>
@@ -240,6 +259,7 @@ export default function Table({
 		features: shieldTableFeatures,
 		columns,
 		data,
+		state: { columnVisibility },
 		meta: {
 			isFetching,
 		},

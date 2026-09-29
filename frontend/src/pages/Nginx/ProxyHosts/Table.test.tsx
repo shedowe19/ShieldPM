@@ -79,6 +79,23 @@ describe("Proxy hosts table", () => {
 			"Aktionsmenü öffnen",
 		);
 	});
+	it("hides individually selected data columns while retaining host actions", () => {
+		render(
+			<Table
+				data={[proxyHost]}
+				columnVisibility={{ certificate: false, latency: false, forwardHost: false }}
+				onEditAccessList={vi.fn()}
+			/>,
+		);
+
+		const headers = screen.getAllByRole("columnheader");
+		expect(headers.map((header) => header.textContent)).not.toContain("SSL");
+		expect(headers.map((header) => header.textContent)).not.toContain("Latenz");
+		expect(headers.map((header) => header.textContent)).not.toContain("Ziel");
+		expect(headers.map((header) => header.textContent)).toContain("Quelle");
+		expect(within(screen.getAllByRole("row")[1]).getAllByRole("cell")).toHaveLength(headers.length);
+		expect(screen.getByRole("button", { name: "Aktionsmenü öffnen" })).toBeInTheDocument();
+	});
 	it("offers both one-time diagnostics and continuous monitoring in the same host menu", () => {
 		render(<Table data={[proxyHost]} onEditAccessList={vi.fn()} />);
 		fireEvent.pointerDown(screen.getByRole("button", { name: "Aktionsmenü öffnen" }), {

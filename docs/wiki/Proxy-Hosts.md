@@ -80,6 +80,12 @@ The preview hides known sensitive values. It does not save the host, issue a cer
 
 ---
 
+## Table columns
+
+The table's **Columns** control sits on the right above the Proxy Hosts list. Its checkboxes independently show or hide the icon, owner, source, destination, SSL, access, status, service check, and latency columns. All nine are visible by default. Your selection is stored in this browser and survives a reload. The row actions menu remains available. Hiding a column only changes the list display; it does not modify a host or stop its monitoring.
+
+---
+
 ## 📈 Host monitoring
 
 The **Service check** column in **Proxy Hosts** shows whether the upstream service is reachable, separately from the Nginx configuration status. The adjacent **Latency** column shows the latest check duration in milliseconds. **Not configured** means no periodic check has been set up. Choose **Host monitoring** from a host's action menu to view its settings, current status and recent checks.
