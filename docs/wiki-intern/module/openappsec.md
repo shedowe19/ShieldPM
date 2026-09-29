@@ -22,7 +22,7 @@ Alle Container sind in `compose.yaml` auskommentiert. Für die lokale Management
 
 ### Nginx-Modul
 
-Das OpenAppSec Nginx-Attachment-Modul ist **bereits in ShieldPMs Nginx-Binary integriert** (kompiliert), auch bei Native/LXC. Aktivierung:
+Das OpenAppSec Nginx-Attachment liegt als **passend kompiliertes dynamisches Modul** neben ShieldPMs eigenem Nginx, auch bei Native/LXC. Aktivierung:
 
 ```bash
 # In /data/.env

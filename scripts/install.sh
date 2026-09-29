@@ -700,7 +700,7 @@ echo ""
 echo "=== OpenAppSec WAF (Optional) ==="
 echo "OpenAppSec is an AI-based Web Application Firewall (WAF) that protects"
 echo "against OWASP Top 10 threats using machine learning."
-echo "The Nginx attachment module is already built-in."
+echo "The matching Nginx attachment module is already bundled."
 echo ""
 read -r -p "Install OpenAppSec Agent? [y/N] (Default: N): " oas_choice
 

@@ -6,10 +6,10 @@
 
 OpenAppSec has two components:
 
-| Component                   | Description                                         |   Status in ShieldPM   |
-| :-------------------------- | :-------------------------------------------------- | :--------------------: |
-| **Nginx Attachment Module** | Plugin loaded by Nginx to intercept traffic         | ✅ Already compiled in |
-| **Agent** (`cp-nano-agent`) | ML engine that analyzes traffic and makes decisions | ❌ Needs installation  |
+| Component                   | Description                                         |    Status in ShieldPM    |
+| :-------------------------- | :-------------------------------------------------- | :----------------------: |
+| **Nginx Attachment Module** | Plugin loaded by Nginx to intercept traffic         | ✅ Bundled with ShieldPM |
+| **Agent** (`cp-nano-agent`) | ML engine that analyzes traffic and makes decisions |  ❌ Needs installation   |
 
 ```
   ┌──────────┐       ┌──────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ OpenAppSec has two components:
 
 **Key Points:**
 
-- The **Attachment Module** is compiled into Nginx and intercepts all HTTP traffic
+- The **Attachment Module** is shipped as a matching dynamic module and intercepts HTTP traffic when loaded by Nginx
 - The **Agent** runs as a separate process and uses **machine learning** for threat detection
 - Communication between Nginx and Agent uses **shared memory (IPC)** for minimal latency
 - Can be managed locally via `local_policy.yaml` or centrally via the Cloud Portal
@@ -96,7 +96,7 @@ Path to optional Advanced Model .tgz (leave empty to skip):
 - **With Token:** Agent connects to the Cloud Portal for centralized management. The prompt hides the token; do not put it on a command line.
 - **Without Token:** The installer creates and applies a [v1beta1 local policy](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced) in **detect-learn** mode if no policy exists. An existing policy is preserved. Inspect the active policy and logs before relying on WAF enforcement.
 
-ShieldPM's Nginx binary under `/usr/local/nginx` already includes the attachment. ShieldPM installs the agent directly from OpenAppSec's architecture-specific archive, without installing another Nginx package, and enables its own attachment setting after checking the installation. The upstream `open-appsec-install --auto` wrapper searches for a package-managed Nginx and reports `NGINX is not installed` for this layout; do not use that wrapper for ShieldPM native/LXC deployments. The helper supports Debian 13 x86_64 and aarch64, but ARM64 installation currently stops with a clear download error because its upstream archive returns HTTP 403.
+ShieldPM ships a matching dynamic attachment module alongside its Nginx binary under `/usr/local/nginx`. ShieldPM installs the agent directly from OpenAppSec's architecture-specific archive, without installing another Nginx package, and enables its own attachment setting after checking the installation. The upstream `open-appsec-install --auto` wrapper searches for a package-managed Nginx and reports `NGINX is not installed` for this layout; do not use that wrapper for ShieldPM native/LXC deployments. The helper supports Debian 13 x86_64 and aarch64, but ARM64 installation currently stops with a clear download error because its upstream archive returns HTTP 403.
 
 ### Option B: Add the Agent to an Existing Native/LXC Installation
 
