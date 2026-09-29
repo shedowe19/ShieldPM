@@ -31,7 +31,20 @@ import { MANAGE, PROXY_HOSTS } from "src/modules/Permissions";
 import { showError, showObjectSuccess } from "src/notifications";
 import { AUDIT_LOG_OBJECT_TYPE } from "src/types/enums";
 import { showAccessListModal, showDeleteConfirmModal, showHelpModal, showProxyHostModal } from "./lazy";
-import Table, { proxyHostColumns } from "./Table";
+import Table from "./Table";
+
+// Keep this chooser in the same order as the data columns defined in Table.tsx.
+const proxyHostColumns = [
+	{ id: "icon", labelId: "proxy-host.column-icon" },
+	{ id: "owner", labelId: "proxy-host.column-owner" },
+	{ id: "domainNames", labelId: "column.source" },
+	{ id: "forwardHost", labelId: "column.destination" },
+	{ id: "certificate", labelId: "column.ssl" },
+	{ id: "accessList", labelId: "column.access" },
+	{ id: "enabled", labelId: "column.status" },
+	{ id: "monitor", labelId: "proxy-host.monitor.column" },
+	{ id: "latency", labelId: "proxy-host.monitor.latency-column" },
+] as const;
 
 const columnVisibilityStorageKey = "shieldpm.proxy-host-columns";
 const availableColumnIds = new Set<string>(proxyHostColumns.map(({ id }) => id));

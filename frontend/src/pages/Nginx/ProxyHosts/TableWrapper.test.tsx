@@ -47,17 +47,6 @@ vi.mock("./lazy", () => ({
 	showProxyHostModal: vi.fn(),
 }));
 vi.mock("./Table", () => ({
-	proxyHostColumns: [
-		{ id: "icon", labelId: "proxy-host.column-icon" },
-		{ id: "owner", labelId: "proxy-host.column-owner" },
-		{ id: "domainNames", labelId: "column.source" },
-		{ id: "forwardHost", labelId: "column.destination" },
-		{ id: "certificate", labelId: "column.ssl" },
-		{ id: "accessList", labelId: "column.access" },
-		{ id: "enabled", labelId: "column.status" },
-		{ id: "monitor", labelId: "proxy-host.monitor.column" },
-		{ id: "latency", labelId: "proxy-host.monitor.latency-column" },
-	],
 	default: (props: unknown) => {
 		mocks.tableProps = props;
 		const tableProps = props as { data: { id: number }[] };

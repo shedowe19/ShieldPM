@@ -50,19 +50,6 @@ interface Props {
 	onNew?: () => void;
 }
 
-// Keep the chooser in the same order as the columns in the table.
-export const proxyHostColumns = [
-	{ id: "icon", labelId: "proxy-host.column-icon" },
-	{ id: "owner", labelId: "proxy-host.column-owner" },
-	{ id: "domainNames", labelId: "column.source" },
-	{ id: "forwardHost", labelId: "column.destination" },
-	{ id: "certificate", labelId: "column.ssl" },
-	{ id: "accessList", labelId: "column.access" },
-	{ id: "enabled", labelId: "column.status" },
-	{ id: "monitor", labelId: "proxy-host.monitor.column" },
-	{ id: "latency", labelId: "proxy-host.monitor.latency-column" },
-] as const;
-
 const defaultColumnVisibility: ColumnVisibilityState = {};
 
 export default function Table({
