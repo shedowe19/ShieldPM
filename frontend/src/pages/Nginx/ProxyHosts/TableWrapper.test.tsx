@@ -68,6 +68,7 @@ const createPage = (items: { domainNames: string[]; id: number }[], page: number
 describe("Proxy host table pagination", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		window.localStorage.clear();
 		mocks.deleteProxyHost.mockResolvedValue(true);
 		mocks.useProxyHosts.mockReturnValue({
 			data: createHosts(1000),
@@ -84,6 +85,51 @@ describe("Proxy host table pagination", () => {
 	});
 
 	afterEach(cleanup);
+
+	it("lets a viewer toggle each data column and restores the choice on remount", () => {
+		const view = render(<TableWrapper />);
+		const openColumns = () =>
+			fireEvent.pointerDown(screen.getByRole("button", { name: /proxy-host\.columns/ }), {
+				button: 0,
+				ctrlKey: false,
+			});
+
+		openColumns();
+		expect(screen.getAllByRole("menuitemcheckbox")).toHaveLength(9);
+		const ssl = screen.getByRole("menuitemcheckbox", { name: /column\.ssl/ });
+		expect(ssl).toHaveAttribute("aria-checked", "true");
+		fireEvent.click(ssl);
+		expect(ssl).toHaveAttribute("aria-checked", "false");
+		const latency = screen.getByRole("menuitemcheckbox", { name: /latency-column/ });
+		fireEvent.click(latency);
+		expect(latency).toHaveAttribute("aria-checked", "false");
+		expect((mocks.tableProps as { columnVisibility: Record<string, boolean> }).columnVisibility.certificate).toBe(
+			false,
+		);
+		expect((mocks.tableProps as { columnVisibility: Record<string, boolean> }).columnVisibility.latency).toBe(
+			false,
+		);
+		expect(JSON.parse(window.localStorage.getItem("shieldpm.proxy-host-columns") ?? "{}")).toMatchObject({
+			certificate: false,
+			latency: false,
+		});
+
+		view.unmount();
+		render(<TableWrapper />);
+		openColumns();
+		expect(screen.getByRole("menuitemcheckbox", { name: /column\.ssl/ })).toHaveAttribute("aria-checked", "false");
+		expect(screen.getByRole("menuitemcheckbox", { name: /latency-column/ })).toHaveAttribute(
+			"aria-checked",
+			"false",
+		);
+		expect((mocks.tableProps as { columnVisibility: Record<string, boolean> }).columnVisibility.certificate).toBe(
+			false,
+		);
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /column\.ssl/ }));
+		expect((mocks.tableProps as { columnVisibility: Record<string, boolean> }).columnVisibility.certificate).toBe(
+			true,
+		);
+	});
 
 	it("renders only the first 100 of 1,000 hosts and exposes next-page navigation", () => {
 		render(<TableWrapper />);

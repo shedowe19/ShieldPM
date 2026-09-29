@@ -6,7 +6,7 @@ import {
 	IconStethoscope,
 	IconTrash,
 } from "@tabler/icons-react";
-import { createColumnHelper, useTable } from "@tanstack/react-table";
+import { type ColumnVisibilityState, createColumnHelper, useTable } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import type { ProxyHost, ProxyHostMonitorSummary } from "src/api/backend";
 import {
@@ -40,6 +40,7 @@ import { ProxyHostDiagnosticsDialog } from "./ProxyHostDiagnosticsDialog";
 
 interface Props {
 	data: ProxyHost[];
+	columnVisibility?: ColumnVisibilityState;
 	isFiltered?: boolean;
 	isFetching?: boolean;
 	onEditAccessList: (id: number) => void;
@@ -48,8 +49,12 @@ interface Props {
 	onDisableToggle?: (id: number, enabled: boolean) => void;
 	onNew?: () => void;
 }
+
+const defaultColumnVisibility: ColumnVisibilityState = {};
+
 export default function Table({
 	data,
+	columnVisibility = defaultColumnVisibility,
 	isFetching,
 	onEditAccessList,
 	onEdit,
@@ -165,6 +170,7 @@ export default function Table({
 				}),
 				columnHelper.display({
 					id: "id",
+					enableHiding: false,
 					cell: (info) => {
 						return (
 							<DropdownMenu>
@@ -240,6 +246,7 @@ export default function Table({
 		features: shieldTableFeatures,
 		columns,
 		data,
+		state: { columnVisibility },
 		meta: {
 			isFetching,
 		},

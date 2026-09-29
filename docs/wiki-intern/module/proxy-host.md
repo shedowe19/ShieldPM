@@ -72,6 +72,14 @@ Die routenspezifischen Upload-Location-Blöcke bleiben von ShieldPMs Admin-CSRF-
 
 Die [Proxy-Host-Diagnose](../features/proxy-host-diagnostics.md) kann aus der Liste für einen sichtbaren Host gestartet werden. Ihre Netzwerkprüfungen lesen die gespeicherte Konfiguration ohne Änderung der Host-Einstellungen.
 
+## Tabellenansicht und Spaltenauswahl
+
+Die Proxy-Host-Tabelle bietet rechts oberhalb der Liste eine Spaltenauswahl. `TableWrapper.tsx` stellt den Schalter
+bereit; `Table.tsx` zeigt je nach Auswahl die neun Datenspalten Symbol, Eigentümer, Quelle, Ziel, SSL, Zugriff,
+Status, Dienstprüfung und Latenz. Jede ist einzeln ausblendbar, standardmäßig sind alle sichtbar. Die Auswahl wird
+im Browser über `localStorage` für erneutes Laden gespeichert. Das Zeilen-Aktionsmenü bleibt unabhängig von der
+Auswahl erreichbar. Die Spaltenauswahl verändert keine API-Daten, Host-Konfiguration oder Monitor-Ausführung.
+
 ## Listen-Paginierung
 
 `GET /api/nginx/proxy-hosts` bleibt ohne Paginierungsparameter abwärtskompatibel und liefert weiterhin das bestehende

@@ -6,6 +6,10 @@ Er bietet optionale SSL-Terminierung für Ihren Dienst, der möglicherweise kein
 
 Proxy-Hosts sind die häufigste Verwendung für den ShieldPM.
 
+## Spalten der Tabelle
+
+Öffnen Sie rechts oberhalb der Proxy-Host-Tabelle **Spalten**. Mit den Kontrollkästchen lassen sich Symbol, Eigentümer, Quelle, Ziel, SSL, Zugriff, Status, Dienstprüfung und Latenz einzeln ein- oder ausblenden. Die Auswahl bleibt in diesem Browser nach einem Neuladen erhalten. Das Aktionsmenü jeder Zeile bleibt sichtbar. Das Ausblenden ändert keine Host-Einstellungen und beendet keine Dienstprüfung.
+
 ## Host-Überwachung
 
 Die Spalte **Dienstprüfung** zeigt, ob der konfigurierte Zielserver antwortet. Sie ist unabhängig vom Nginx-Status. Die benachbarte Spalte **Latenz** zeigt die Dauer der letzten Prüfung in Millisekunden, auch bei Fehlern. Bei einem Timeout ist das die Zeit bis zum Abbruch; ohne Messung oder bei pausierter Überwachung steht dort „–“.
