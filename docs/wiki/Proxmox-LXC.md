@@ -92,7 +92,7 @@ If you want to use **MySQL** or **PostgreSQL** (instead of the default SQLite):
 > - **OpenAppSec** (can be installed natively — see [OpenAppSec Guide](OpenAppSec))
 > - **GeoIP Update** (can be installed natively via the [Native Installer](Installation))
 >
-> You must install/host these services yourself (e.g., in another LXC container, VM, or managed service) if you require them.
+> You must set up optional services you require. On Debian 13, the OpenAppSec agent can be installed inside this container as `root` with `shieldpm-openappsec-agent-install` after updating ShieldPM to a release that includes the helper. Its prompt accepts a Cloud Portal token without echoing it, or an empty entry for local policy management; do not put the token in a shell command. ShieldPM already includes the Nginx attachment, so the upstream `open-appsec-install --auto` wrapper will incorrectly report that Nginx is missing. The helper also attempts ARM64 installation, but the upstream Debian 13 ARM64 archive currently returns HTTP 403, so this path cannot complete on ARM64 until the archive becomes available. See the [OpenAppSec Guide](OpenAppSec) for setup and verification.
 
 1.  Enable `DB_MYSQL_` or `DB_POSTGRES_` variables in `/data/.env`.
 2.  Ensure the container can reach your database IP.

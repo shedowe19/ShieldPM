@@ -10,20 +10,21 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 
 ## Startup-Scripts (`rootfs/usr/local/bin/`)
 
-| Datei                | Zweck                                                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `entrypoint.sh`      | Docker-Einstieg: Datenverzeichnis-Migration und optionale Prerun-Skripte; ruft `envs.sh` auf                        |
-| `envs.sh`            | Lädt `/data/.env`, validiert Umgebungswerte und prüft den Vorlagenfingerabdruck                                     |
-| `migration.sh`       | Übergibt an `start.sh`                                                                                              |
-| `start.sh`           | Konfiguriert Nginx, Module, Zertifikate, Dienste und Berechtigungen; ruft `launch.sh` auf                           |
-| `migrate-data.sh`    | Funktionen für die Migration historischer Datenpfade und Certbot-Dateien                                            |
-| `runtime-config.sh`  | Passt Nginx-, GoAccess- und Certbot-Dateien an aktuelle Laufzeitpfade und Umgebungswerte an                         |
-| `launch.sh`          | Startet Backend-Prozess und optionale Hilfsdienste; beendet den Container, wenn Nginx oder Backend unerwartet endet |
-| `healthcheck.sh`     | Docker-Healthcheck der lokalen HTTPS-UI (`/api/`) und gegebenenfalls GoAccess-/PHP-Dienste                          |
-| `aio.sh`             | Richtet den Nextcloud-AIO-Proxy-Host einschließlich TLS-Zertifikat einmalig ein                                     |
-| `update-shieldpm`    | Updater für native Installationen; erstellt vor dem Austausch einen Recovery-Checkpoint                             |
-| `npm-reset-password` | Passwort-Reset-Wrapper                                                                                              |
-| `shieldpm-vacuum`    | Führt eine ausdrücklich angeforderte SQLite-`VACUUM`-Wartung aus; nie im Startpfad                                  |
+| Datei                               | Zweck                                                                                                                                                     |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entrypoint.sh`                     | Docker-Einstieg: Datenverzeichnis-Migration und optionale Prerun-Skripte; ruft `envs.sh` auf                                                              |
+| `envs.sh`                           | Lädt `/data/.env`, validiert Umgebungswerte und prüft den Vorlagenfingerabdruck                                                                           |
+| `migration.sh`                      | Übergibt an `start.sh`                                                                                                                                    |
+| `start.sh`                          | Konfiguriert Nginx, Module, Zertifikate, Dienste und Berechtigungen; ruft `launch.sh` auf                                                                 |
+| `migrate-data.sh`                   | Funktionen für die Migration historischer Datenpfade und Certbot-Dateien                                                                                  |
+| `runtime-config.sh`                 | Passt Nginx-, GoAccess- und Certbot-Dateien an aktuelle Laufzeitpfade und Umgebungswerte an                                                               |
+| `launch.sh`                         | Startet Backend-Prozess und optionale Hilfsdienste; beendet den Container, wenn Nginx oder Backend unerwartet endet                                       |
+| `healthcheck.sh`                    | Docker-Healthcheck der lokalen HTTPS-UI (`/api/`) und gegebenenfalls GoAccess-/PHP-Dienste                                                                |
+| `aio.sh`                            | Richtet den Nextcloud-AIO-Proxy-Host einschließlich TLS-Zertifikat einmalig ein                                                                           |
+| `update-shieldpm`                   | Updater für native Installationen; erstellt vor dem Austausch einen Recovery-Checkpoint                                                                   |
+| `shieldpm-openappsec-agent-install` | Installiert den OpenAppSec-Agent auf Debian 13 für x86_64/aarch64 ohne ein zweites Nginx; prüft das Upstream-Archiv und fragt den Cloud-Token verdeckt ab |
+| `npm-reset-password`                | Passwort-Reset-Wrapper                                                                                                                                    |
+| `shieldpm-vacuum`                   | Führt eine ausdrücklich angeforderte SQLite-`VACUUM`-Wartung aus; nie im Startpfad                                                                        |
 
 ## Datenmigration und Dateirechte
 

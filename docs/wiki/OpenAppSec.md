@@ -84,41 +84,29 @@ OpenAppSec can run in two management modes:
 
 ### Option A: During Installation (Recommended)
 
-The ShieldPM installer offers OpenAppSec as an optional step:
+The ShieldPM native installer offers OpenAppSec as an optional step on **Debian 13 (Trixie)**. Agent archive availability depends on the architecture; the upstream ARM64 archive currently returns HTTP 403:
 
 ```
 === OpenAppSec WAF (Optional) ===
-Install OpenAppSec Agent? [y/N]: y
-Enter AGENT_TOKEN (leave empty for local-only mode):
+Install OpenAppSec Agent? [y/N] (Default: N): y
+Cloud Portal deployment token (leave empty for local policy):
+Path to optional Advanced Model .tgz (leave empty to skip):
 ```
 
-- **With Token:** Agent connects to the Cloud Portal for centralized management.
-- **Without Token:** The installer writes a `local_policy.yaml` with **detect-learn** selected. Its current inline practice/trigger structure does not match OpenAppSec's documented v1beta1 or v1beta2 schema. Replace or correct the file using the [official local policy schema](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced), then apply it and verify the agent's active policy before relying on WAF enforcement.
+- **With Token:** Agent connects to the Cloud Portal for centralized management. The prompt hides the token; do not put it on a command line.
+- **Without Token:** The installer creates and applies a [v1beta1 local policy](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced) in **detect-learn** mode if no policy exists. An existing policy is preserved. Inspect the active policy and logs before relying on WAF enforcement.
 
-Both options automatically enable the Nginx attachment module.
+ShieldPM's Nginx binary under `/usr/local/nginx` already includes the attachment. ShieldPM installs the agent directly from OpenAppSec's architecture-specific archive, without installing another Nginx package, and enables its own attachment setting after checking the installation. The upstream `open-appsec-install --auto` wrapper searches for a package-managed Nginx and reports `NGINX is not installed` for this layout; do not use that wrapper for ShieldPM native/LXC deployments. The helper supports Debian 13 x86_64 and aarch64, but ARM64 installation currently stops with a clear download error because its upstream archive returns HTTP 403.
 
-### Option B: Manual Installation
+### Option B: Add the Agent to an Existing Native/LXC Installation
 
 ```bash
-# 1. Download and run installer
-cd /tmp
-wget https://downloads.openappsec.io/open-appsec-install && chmod +x open-appsec-install
-
-# With Cloud Portal:
-./open-appsec-install --auto --token YOUR_AGENT_TOKEN
-
-# Without Cloud Portal (local-only):
-./open-appsec-install --auto
-
-# 2. Enable the module in ShieldPM
-echo "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" >> /data/.env
-
-# 3. Restart ShieldPM
-systemctl restart shieldpm
+shieldpm-openappsec-agent-install
 ```
 
-> [!TIP]
-> Get your `AGENT_TOKEN` from [my.openappsec.io](https://my.openappsec.io) → Create Deployment Profile → Copy Token.
+Run this command as `root` inside the native host or LXC. The helper prompts for the Cloud Portal deployment token without echoing it. Leave the prompt empty for local management. It then offers an optional Advanced Model `.tgz` path, enables the Nginx attachment setting in `/data/.env` after installation checks, and restarts an already running ShieldPM service. For the native installation flow, ShieldPM starts the service after this step. Check `open-appsec-ctl --status`, `open-appsec-ctl --list-policies` and the Nginx status after installation.
+
+Get a deployment token from [my.openappsec.io](https://my.openappsec.io) if you choose Cloud Portal management. Do not paste it into shell commands: command arguments may appear in shell history and process listings. If this helper is missing, install/update ShieldPM from a release containing it first.
 
 ---
 
@@ -154,12 +142,7 @@ individual `.tgz` file to that path, provided the host file already exists;
 otherwise Docker may create a directory in its place and the container will
 fail to start.
 
-**Native / LXC:** ShieldPM's installer copies a selected archive to `/etc/cp/conf/open-appsec-advanced-model.tgz`. For an existing agent, verify the agent's model-loading procedure for your installed OpenAppSec version and confirm activation in its status/logs; copying the archive alone does not establish that the advanced model was loaded.
-
-```bash
-# This mirrors the file-copy step in scripts/install.sh; check agent status afterward.
-cp open-appsec-advanced-model.tgz /etc/cp/conf/open-appsec-advanced-model.tgz
-```
+**Native / LXC:** Enter the path to the `.tgz` file when the ShieldPM agent helper prompts for it. The helper validates and copies it to `/advanced-model/open-appsec-advanced-model.tgz`, then stops the agent, extracts the model into `/etc/cp/conf/waap`, and starts the agent. These steps follow [OpenAppSec's Linux embedded procedure](https://docs.openappsec.io/getting-started/using-the-advanced-machine-learning-model). Verify the active model type and version with `open-appsec-ctl --status` after installation.
 
 ---
 

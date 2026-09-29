@@ -1,0 +1,306 @@
+#!/bin/bash
+set +x
+set -euo pipefail
+
+# ShieldPM ships its own NGINX and attachment. Only install the open-appsec agent;
+# the upstream open-appsec-install wrapper expects an APT-managed NGINX package.
+if [ "$EUID" -ne 0 ]; then
+    echo "ERROR: Run this command as root." >&2
+    exit 1
+fi
+
+if [ ! -r /etc/os-release ]; then
+    echo "ERROR: Cannot identify the operating system." >&2
+    exit 1
+fi
+. /etc/os-release
+if [ "${ID:-}" != "debian" ] || [ "${VERSION_ID:-}" != "13" ]; then
+    echo "ERROR: The native open-appsec agent package is supported here only on Debian 13 (Trixie)." >&2
+    exit 1
+fi
+
+case "$(uname -m)" in
+    x86_64) agent_arch=x86_64 ;;
+    aarch64) agent_arch=aarch64 ;;
+    *)
+        echo "ERROR: No open-appsec Debian 13 agent archive is available for this architecture." >&2
+        exit 1
+        ;;
+esac
+
+nginx_binary=/usr/local/nginx/sbin/nginx
+nginx_config=/usr/local/nginx/conf/nginx.conf
+env_file=/data/.env
+policy_template=/usr/local/share/shieldpm/openappsec-local-policy.yaml
+if [ ! -x "$nginx_binary" ] || [ ! -r "$nginx_config" ]; then
+    echo "ERROR: ShieldPM's NGINX binary or configuration is missing." >&2
+    exit 1
+fi
+if [ ! -f "$policy_template" ]; then
+    echo "ERROR: ShieldPM's local open-appsec policy template is missing." >&2
+    exit 1
+fi
+
+# The base image includes this exact attachment. Do not substitute a precompiled
+# module for a different distribution or NGINX build.
+module_line=$(grep -Em1 '^[[:space:]]*#?[[:space:]]*load_module[[:space:]]+[^;]*libngx_module[.]so;' "$nginx_config") || {
+    echo "ERROR: ShieldPM's open-appsec attachment is not declared in nginx.conf." >&2
+    exit 1
+}
+module_path=$(printf '%s\n' "$module_line" | sed -E 's/^[[:space:]]*#?[[:space:]]*load_module[[:space:]]+([^;]+);.*$/\1/')
+case "$module_path" in
+    /*) module_file=$module_path ;;
+    *) module_file=/usr/local/nginx/$module_path ;;
+esac
+if [ ! -f "$module_file" ]; then
+    echo "ERROR: ShieldPM's open-appsec attachment is missing: $module_file" >&2
+    exit 1
+fi
+
+echo "=== Install open-appsec Agent for ShieldPM ==="
+echo "The NGINX attachment is already supplied by ShieldPM."
+read -r -s -p "Cloud Portal deployment token (leave empty for local policy): " agent_token
+echo
+cloud_mode=false
+if [ -n "$agent_token" ]; then
+    cloud_mode=true
+fi
+read -r -p "Path to optional Advanced Model .tgz (leave empty to skip): " model_path
+if [ -n "$model_path" ] && { [ ! -f "$model_path" ] || [ ! -r "$model_path" ]; }; then
+    echo "ERROR: Advanced Model archive is not readable: $model_path" >&2
+    exit 1
+fi
+
+work_dir=$(mktemp -d /tmp/shieldpm-openappsec.XXXXXX)
+env_backup=
+cleanup() {
+    unset agent_token
+    rm -rf -- "$work_dir"
+    if [ -n "$env_backup" ]; then
+        rm -f -- "$env_backup"
+    fi
+}
+trap cleanup EXIT
+
+archive_url="https://downloads.openappsec.io/packages/agent/${agent_arch}/debian/trixie/openappsec-trixie.tar.gz"
+echo "--> Downloading the official Debian 13 agent package..."
+if ! curl -fL --proto '=https' --tlsv1.2 --retry 3 --connect-timeout 15 --max-time 300 \
+    -o "$work_dir/openappsec.tar.gz" "$archive_url"; then
+    echo "ERROR: The open-appsec Debian 13 agent archive is unavailable for $agent_arch." >&2
+    exit 1
+fi
+
+# Reject links, device nodes and path traversal before extracting as root.
+if ! python3 - "$work_dir/openappsec.tar.gz" <<'PY'
+from pathlib import PurePosixPath
+import sys
+import tarfile
+
+with tarfile.open(sys.argv[1], "r:gz") as archive:
+    for member in archive:
+        parts = PurePosixPath(member.name).parts
+        if (
+            not parts
+            or parts[0] != "openappsec"
+            or ".." in parts
+            or len(parts) > 2
+            or (len(parts) == 1 and not member.isdir())
+            or (len(parts) == 2 and not member.isfile())
+        ):
+            raise SystemExit(1)
+PY
+then
+    echo "ERROR: The downloaded agent archive contains unexpected paths." >&2
+    exit 1
+fi
+tar -xzf "$work_dir/openappsec.tar.gz" -C "$work_dir" --no-same-owner
+agent_dir=$work_dir/openappsec
+for installer in install-cp-nano-agent.sh install-cp-nano-service-http-transaction-handler.sh \
+    install-cp-nano-attachment-registration-manager.sh; do
+    if [ ! -x "$agent_dir/$installer" ]; then
+        echo "ERROR: The agent archive is missing $installer." >&2
+        exit 1
+    fi
+done
+
+if [ -n "$model_path" ]; then
+    if ! python3 - "$model_path" <<'PY'
+from pathlib import PurePosixPath
+import sys
+import tarfile
+
+with tarfile.open(sys.argv[1], "r:gz") as archive:
+    for member in archive:
+        name = member.name
+        parts = PurePosixPath(name).parts
+        if name.startswith("/") or ".." in parts or not (member.isfile() or member.isdir()):
+            raise SystemExit(1)
+PY
+    then
+        echo "ERROR: The Advanced Model archive is invalid or contains unsafe entries." >&2
+        exit 1
+    fi
+    mkdir -p /advanced-model
+    install -m 644 "$model_path" /advanced-model/open-appsec-advanced-model.tgz
+fi
+
+echo "--> Installing the open-appsec agent (the NGINX build is untouched)..."
+if [ -n "$agent_token" ]; then
+    if ! "$agent_dir/install-cp-nano-agent.sh" --install --token "$agent_token" --server 'NGINX Server' >/dev/null 2>&1; then
+        echo "ERROR: The open-appsec agent installation failed. The NGINX setting was not changed." >&2
+        exit 1
+    fi
+else
+    if ! "$agent_dir/install-cp-nano-agent.sh" --install --hybrid_mode --server 'NGINX Server' >/dev/null 2>&1; then
+        echo "ERROR: The open-appsec agent installation failed. The NGINX setting was not changed." >&2
+        exit 1
+    fi
+fi
+unset agent_token
+
+if ! "$agent_dir/install-cp-nano-service-http-transaction-handler.sh" --install >/dev/null 2>&1; then
+    echo "ERROR: The open-appsec transaction handler installation failed. The NGINX setting was not changed." >&2
+    exit 1
+fi
+if ! "$agent_dir/install-cp-nano-attachment-registration-manager.sh" --install >/dev/null 2>&1; then
+    echo "ERROR: The open-appsec registration manager installation failed. The NGINX setting was not changed." >&2
+    exit 1
+fi
+
+if ! command -v open-appsec-ctl >/dev/null 2>&1; then
+    echo "ERROR: The open-appsec control tool was not installed. The NGINX setting was not changed." >&2
+    exit 1
+fi
+
+if [ -n "$model_path" ]; then
+    echo "--> Activating the Advanced Model with the embedded agent..."
+    if ! open-appsec-ctl --stop-agent >/dev/null 2>&1; then
+        echo "ERROR: Could not stop the open-appsec agent to activate the Advanced Model." >&2
+        exit 1
+    fi
+    mkdir -p /etc/cp/conf/waap
+    if ! tar -xzf /advanced-model/open-appsec-advanced-model.tgz -C /etc/cp/conf/waap --no-same-owner; then
+        open-appsec-ctl --start-agent >/dev/null 2>&1 || true
+        echo "ERROR: Could not extract the Advanced Model; the old agent was restarted." >&2
+        exit 1
+    fi
+    if ! open-appsec-ctl --start-agent >/dev/null 2>&1; then
+        echo "ERROR: Could not restart the open-appsec agent after installing the Advanced Model." >&2
+        exit 1
+    fi
+    echo "--> Advanced Model stored in /advanced-model/open-appsec-advanced-model.tgz."
+fi
+
+if [ "$cloud_mode" = false ]; then
+    if [ ! -f /etc/cp/conf/local_policy.yaml ]; then
+        mkdir -p /etc/cp/conf
+        install -m 644 "$policy_template" /etc/cp/conf/local_policy.yaml
+        echo "--> Created the official v1beta1 detect-learn local policy."
+    fi
+    if ! open-appsec-ctl --apply-policy >/dev/null 2>&1; then
+        echo "ERROR: The local open-appsec policy could not be applied. The NGINX setting was not changed." >&2
+        exit 1
+    fi
+fi
+
+agent_ready=false
+for ((attempt = 0; attempt < 30; attempt++)); do
+    if agent_status=$(open-appsec-ctl --status 2>/dev/null) && \
+        printf '%s\n' "$agent_status" | grep -Eq 'Status:[[:space:]]*(Running|Ready)'; then
+        agent_ready=true
+        break
+    fi
+    sleep 2
+done
+if [ "$agent_ready" != true ]; then
+    echo "ERROR: The open-appsec agent did not report a running service. The NGINX setting was not changed." >&2
+    exit 1
+fi
+
+echo "--> Checking that ShieldPM's existing attachment loads in NGINX..."
+probe_config=$work_dir/nginx-probe.conf
+printf 'load_module %s;\nevents {}\nhttp {}\n' "$module_path" > "$probe_config"
+if ! "$nginx_binary" -tq -p /usr/local/nginx/ -c "$probe_config"; then
+    echo "ERROR: ShieldPM's existing open-appsec attachment failed the NGINX configuration test." >&2
+    exit 1
+fi
+
+# Copy the complete existing environment before changing it. A failed service
+# restart restores the original file and attempts to recover the old service.
+if [ -f "$env_file" ]; then
+    env_backup=$(mktemp /data/.env.openappsec-backup.XXXXXX)
+    cp -- "$env_file" "$env_backup"
+    chmod 600 "$env_backup"
+fi
+
+python3 - "$env_file" <<'PY'
+import os
+from pathlib import Path
+import re
+import tempfile
+import sys
+
+path = Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+pattern = re.compile(r"^\s*(?:#\s*)?(?:export\s+)?NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE\s*=")
+existing = path.stat() if path.exists() else None
+lines = path.read_text().splitlines() if path.exists() else []
+lines = [line for line in lines if not pattern.match(line)]
+lines.append("NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true")
+descriptor, temporary = tempfile.mkstemp(prefix=".shieldpm-env-", dir=path.parent)
+try:
+    if existing is not None:
+        os.fchown(descriptor, existing.st_uid, existing.st_gid)
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write("\n".join(lines) + "\n")
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+
+if systemctl is-active --quiet shieldpm.service; then
+    echo "--> Restarting ShieldPM to activate the attachment..."
+    healthy=false
+    if systemctl restart shieldpm.service; then
+        for ((attempt = 0; attempt < 60; attempt++)); do
+            if systemctl is-active --quiet shieldpm.service && "$nginx_binary" -tq && \
+                curl --fail --silent --max-time 2 --unix-socket /run/shieldpm/shieldpm.sock \
+                    http://localhost/ | jq -e '.status == "OK"' >/dev/null 2>&1; then
+                healthy=true
+                break
+            fi
+            sleep 2
+        done
+    fi
+    if [ "$healthy" != true ]; then
+        if [ -n "$env_backup" ]; then
+            mv -f -- "$env_backup" "$env_file"
+            env_backup=
+        else
+            rm -f -- "$env_file"
+        fi
+        recovered=false
+        if systemctl restart shieldpm.service; then
+            for ((attempt = 0; attempt < 60; attempt++)); do
+                if systemctl is-active --quiet shieldpm.service && "$nginx_binary" -tq && \
+                    curl --fail --silent --max-time 2 --unix-socket /run/shieldpm/shieldpm.sock \
+                        http://localhost/ | jq -e '.status == "OK"' >/dev/null 2>&1; then
+                    recovered=true
+                    break
+                fi
+                sleep 2
+            done
+        fi
+        if [ "$recovered" != true ]; then
+            echo "WARNING: The previous ShieldPM service did not recover. Check journalctl -u shieldpm." >&2
+        fi
+        echo "ERROR: ShieldPM did not become healthy with open-appsec; the previous /data/.env was restored." >&2
+        exit 1
+    fi
+    echo "--> ShieldPM is healthy with the open-appsec attachment enabled."
+else
+    echo "--> OpenAppSec is configured. Start ShieldPM to load the attachment."
+fi
+
+echo "OpenAppSec agent installed. Check its status with open-appsec-ctl --status."

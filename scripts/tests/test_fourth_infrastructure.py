@@ -1,8 +1,10 @@
 """Exercise native reinstall and optional installer failures in isolated fixtures."""
 
+import io
 import os
 from pathlib import Path
 import subprocess
+import tarfile
 import tempfile
 import unittest
 
@@ -85,20 +87,155 @@ cp() { [ "$active" = false ] || { echo "service still serving old code" >&2; ret
         result = subprocess.run(["bash", "-e", "-c", fixture + program], cwd=self.root, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_openappsec_failure_does_not_continue_as_success(self):
-        branch = self.installer.split("    # Run installer", 1)[1].split("    # Ask about Advanced ML Model", 1)[0]
-        branch = "    # Run installer" + branch
-        branch = branch.replace("/etc/cp", str(self.root / "configuration"))
-        executable = self.root / "open-appsec-install"
-        executable.write_text("#!/bin/sh\necho call >> calls\nexit 43\n")
+    def test_native_installer_uses_agent_helper_and_stops_on_failure(self):
+        branch = self.installer.split("# 15. OpenAppSec WAF (Optional)", 1)[1].split(
+            'echo "=== Starting ShieldPM ==="', 1)[0]
+        executable = self.root / "shieldpm-openappsec-agent-install"
+        executable.write_text("#!/bin/sh\necho invoked > helper-called\nexit 43\n")
         executable.chmod(0o700)
-        for token in ("", "test-token"):
-            with self.subTest(cloud=bool(token)):
-                result = subprocess.run(["bash", "-e", "-c", branch], cwd=self.root,
-                                        env={**os.environ, "OAS_AGENT_TOKEN": token}, capture_output=True, text=True)
+        branch = branch.replace("/usr/local/bin/shieldpm-openappsec-agent-install", str(executable))
+        result = subprocess.run(["bash", "-e", "-c", branch], cwd=self.root, input="y\n",
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 43, result.stdout + result.stderr)
+        self.assertTrue((self.root / "helper-called").exists())
+        self.assertNotIn("open-appsec-install --auto", branch)
+
+    def make_agent_fixture(self):
+        """Execute the actual helper with disposable paths and inert command shims."""
+        source = (REPO / "rootfs/usr/local/bin/shieldpm-openappsec-agent-install").read_text()
+        nginx_root = self.root / "native-nginx"
+        nginx_binary = nginx_root / "sbin/nginx"
+        nginx_binary.parent.mkdir(parents=True)
+        nginx_binary.write_text("#!/bin/sh\necho nginx >> \"$OAS_TEST_LOG\"\nexit ${OAS_NGINX_EXIT:-0}\n")
+        nginx_binary.chmod(0o700)
+        nginx_conf = nginx_root / "conf/nginx.conf"
+        nginx_conf.parent.mkdir(parents=True)
+        module = self.root / "libngx_module.so"
+        module.write_bytes(b"fixture")
+        nginx_conf.write_text(f"#load_module {module};\nevents {{}}\nhttp {{}}\n")
+        policy_template = self.root / "policy-template.yaml"
+        policy_template.write_text("version: v1beta1\n")
+        (self.root / "os-release").write_text('ID=debian\nVERSION_ID="13"\n')
+        env_file = self.root / "data/.env"
+        env_file.parent.mkdir()
+        env_file.write_text("TZ=UTC\nNGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false\n")
+        substitutions = {
+            'if [ "$EUID" -ne 0 ]; then': 'if false; then',
+            "/etc/os-release": str(self.root / "os-release"),
+            "/usr/local/nginx/": f"{nginx_root}/",
+            "/data/.env": str(env_file),
+            "/usr/local/share/shieldpm/openappsec-local-policy.yaml": str(policy_template),
+            "/etc/cp/conf": str(self.root / "cp/conf"),
+            "/advanced-model": str(self.root / "advanced-model"),
+        }
+        for old, new in substitutions.items():
+            self.assertIn(old, source)
+            source = source.replace(old, new)
+        helper = self.root / "agent-helper"
+        helper.write_text(source)
+        helper.chmod(0o700)
+
+        archive = self.root / "upstream.tar.gz"
+        names = ("install-cp-nano-agent.sh", "install-cp-nano-service-http-transaction-handler.sh",
+                 "install-cp-nano-attachment-registration-manager.sh")
+        with tarfile.open(archive, "w:gz") as bundle:
+            for name in names:
+                payload = ("#!/bin/sh\n"
+                           'printf "%s|%s\\n" "' + name + '" "$*" >> "$OAS_TEST_LOG"\n'
+                           '[ "${OAS_FAIL_COMPONENT:-}" != "' + name + '" ]\n').encode()
+                info = tarfile.TarInfo(f"openappsec/{name}")
+                info.mode = 0o755
+                info.size = len(payload)
+                bundle.addfile(info, io.BytesIO(payload))
+
+        shim_dir = self.root / "bin"
+        shim_dir.mkdir()
+        curl_shim = shim_dir / "curl"
+        curl_shim.write_text('#!/bin/bash\n'
+                             'printf "curl %s\\n" "$*" >> "$OAS_TEST_LOG"\n'
+                             'while [ "$#" -gt 0 ]; do\n'
+                             '  if [ "$1" = "-o" ]; then cp "$OAS_ARCHIVE" "$2"; exit 0; fi\n'
+                             '  shift\n'
+                             'done\nexit 44\n')
+        curl_shim.chmod(0o700)
+        systemctl_shim = shim_dir / "systemctl"
+        systemctl_shim.write_text('#!/bin/sh\nprintf "systemctl %s\\n" "$*" >> "$OAS_TEST_LOG"\n'
+                                   '[ "$1" = "is-active" ] && [ "${OAS_SYSTEMCTL_ACTIVE:-}" = 1 ] && exit 0\n'
+                                   '[ "$1" = "is-active" ] && exit 3\n'
+                                   '[ "$1" = "restart" ] && exit ${OAS_RESTART_EXIT:-0}\n'
+                                   'exit 45\n')
+        systemctl_shim.chmod(0o700)
+        ctl_shim = shim_dir / "open-appsec-ctl"
+        ctl_shim.write_text('#!/bin/sh\nprintf "ctl %s\\n" "$*" >> "$OAS_TEST_LOG"\n'
+                            '[ "$1" = "--status" ] && printf "Status: Running\\n"\n'
+                            'exit ${OAS_CTL_EXIT:-0}\n')
+        ctl_shim.chmod(0o700)
+        apt_shim = shim_dir / "apt-get"
+        apt_shim.write_text('#!/bin/sh\necho "apt-get $*" >> "$OAS_TEST_LOG"\nexit 46\n')
+        apt_shim.chmod(0o700)
+        uname_shim = shim_dir / "uname"
+        uname_shim.write_text('#!/bin/sh\nprintf "x86_64\\n"\n')
+        uname_shim.chmod(0o700)
+        log = self.root / "calls"
+        env = {**os.environ, "PATH": f"{shim_dir}:{os.environ['PATH']}",
+               "OAS_TEST_LOG": str(log), "OAS_ARCHIVE": str(archive)}
+        return helper, env_file, log, env, names
+
+    def test_openappsec_component_failure_keeps_attachment_disabled(self):
+        helper, env_file, log, env, names = self.make_agent_fixture()
+        for failed in (names[0], names[2]):
+            with self.subTest(failed=failed):
+                env_file.write_text("TZ=UTC\nNGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false\n")
+                log.unlink(missing_ok=True)
+                result = subprocess.run([str(helper)], cwd=self.root, input="\n\n", timeout=10,
+                                        env={**env, "OAS_FAIL_COMPONENT": failed},
+                                        capture_output=True, text=True)
                 self.assertNotEqual(result.returncode, 0, result.stdout)
-                self.assertNotIn("Connected to Cloud Portal", result.stdout)
-                self.assertFalse((self.root / "configuration/conf/local_policy.yaml").exists())
+                self.assertIn("NGINX setting was not changed", result.stderr)
+                self.assertIn("NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false", env_file.read_text())
+                self.assertNotIn("NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true", env_file.read_text())
+                self.assertEqual([line.split("|", 1)[0] for line in log.read_text().splitlines()
+                                  if line.split("|", 1)[0] in names],
+                                 list(names[:names.index(failed) + 1]))
+
+    def test_openappsec_agent_only_flow_runs_three_installers_without_apt_nginx(self):
+        helper, env_file, log, env, names = self.make_agent_fixture()
+        result = subprocess.run([str(helper)], cwd=self.root, input="\n\n", timeout=10,
+                                env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lines = log.read_text().splitlines()
+        self.assertEqual([line.split("|", 1)[0] for line in lines if line.split("|", 1)[0] in names],
+                         list(names))
+        self.assertIn("--hybrid_mode", next(line for line in lines if line.startswith(names[0])))
+        self.assertIn("ctl --apply-policy", lines)
+        self.assertIn("nginx", lines)
+        self.assertFalse(any(line.startswith("apt-get") for line in lines), lines)
+        self.assertEqual(env_file.read_text().count("NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true"), 1)
+        self.assertNotIn("NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=false", env_file.read_text())
+
+    def test_openappsec_cloud_flow_skips_local_policy(self):
+        helper, env_file, log, env, names = self.make_agent_fixture()
+        result = subprocess.run([str(helper)], cwd=self.root, input="fixture-token\n\n", timeout=10,
+                                env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lines = log.read_text().splitlines()
+        self.assertEqual([line.split("|", 1)[0] for line in lines if line.split("|", 1)[0] in names],
+                         list(names))
+        self.assertIn("--token fixture-token", next(line for line in lines if line.startswith(names[0])))
+        self.assertNotIn("ctl --apply-policy", lines)
+        self.assertFalse((self.root / "cp/conf/local_policy.yaml").exists())
+        self.assertIn("NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true", env_file.read_text())
+
+    def test_openappsec_failed_service_restart_restores_previous_setting(self):
+        helper, env_file, log, env, _ = self.make_agent_fixture()
+        original = env_file.read_bytes()
+        result = subprocess.run([str(helper)], cwd=self.root, input="\n\n", timeout=10,
+                                env={**env, "OAS_SYSTEMCTL_ACTIVE": "1", "OAS_RESTART_EXIT": "47"},
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("previous configuration was restored", result.stderr)
+        self.assertEqual(env_file.read_bytes(), original)
+        self.assertEqual(log.read_text().count("systemctl restart shieldpm.service"), 2)
 
     def test_database_selection_disables_exported_previous_provider(self):
         # Execute the actual configuration part of each case, with server setup excluded.

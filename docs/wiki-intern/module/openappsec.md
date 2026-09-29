@@ -6,7 +6,7 @@ OpenAppSec ist ein AI-basierter WAF (Web Application Firewall), der Schwachstell
 
 ## Architektur
 
-OpenAppSec läuft als **Multi-Container-Architektur** mit 5 Services:
+Die **Docker/Compose-Variante** verwendet fünf Services; Native/LXC installiert den Agent als lokalen Dienst neben ShieldPMs eigenem Nginx:
 
 | Container                   | Rolle                                                               |
 | --------------------------- | ------------------------------------------------------------------- |
@@ -22,7 +22,7 @@ Alle Container sind in `compose.yaml` auskommentiert. Für die lokale Management
 
 ### Nginx-Modul
 
-Das OpenAppSec Nginx-Attachment-Modul ist **bereits in ShieldPMs Nginx-Image integriert** (kompiliert). Aktivierung:
+Das OpenAppSec Nginx-Attachment-Modul ist **bereits in ShieldPMs Nginx-Binary integriert** (kompiliert), auch bei Native/LXC. Aktivierung:
 
 ```bash
 # In /data/.env
@@ -43,7 +43,7 @@ Die Modulaktivierung erfolgt durch die Laufzeitkonfiguration von Nginx. Dabei we
 | **Cloud Portal** | Docker: `AGENT_TOKEN` beim Agent-Dienst in `compose.yaml`; Native/LXC: Token beim Installieren angeben → Verwaltung über https://my.openappsec.io |
 | **Lokal**        | Docker: `/opt/openappsec/localconf/local_policy.yaml` (im Agent `/ext/appsec`); Native/LXC: `/etc/cp/conf/local_policy.yaml`                      |
 
-Der native Installer legt ohne Cloud-Token bei Bedarf eine Policy mit Modus **detect-learn** an. Die dort aktuell geschriebenen Inline-Practices und -Trigger entsprechen jedoch weder dem dokumentierten [v1beta1-Schema](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced) (Referenzen auf benannte `practices` und `log-triggers`) noch v1beta2. Policy vor Einsatz anhand der installierten Agent-Version korrigieren und die aktive Konfiguration nach `open-appsec-ctl --apply-policy` prüfen; allein der Modus in der YAML-Datei belegt keine aktive Erkennung. Ob der Docker-Agent bereits eine Policy hat, hängt vom gemounteten Konfigurationsverzeichnis ab. Erst nach Prüfung von Logs/Policy auf `prevent-learn` wechseln, um aktiv zu blockieren.
+Der native Agent-Helfer übernimmt bei lokaler Verwaltung nur dann eine [v1beta1-Policy](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced) aus `rootfs/usr/local/share/shieldpm/openappsec-local-policy.yaml` nach `/etc/cp/conf/local_policy.yaml`, wenn dort noch keine Datei existiert. Die Vorlage beginnt mit **detect-learn** und verweist auf benannte Practices und Log-Trigger. Der Helfer wendet die Policy mit `open-appsec-ctl --apply-policy` an und prüft den Agent-Status. Weitere Änderungen erneut anwenden und die aktive Konfiguration sowie Erkennungslogs prüfen; allein der Modus in der YAML-Datei belegt keine aktive Erkennung. Bei Cloud-Token wird keine lokale Policy erstellt oder angewendet. Ob der Docker-Agent bereits eine Policy hat, hängt vom gemounteten Konfigurationsverzeichnis ab. Erst nach Prüfung von Logs/Policy auf `prevent-learn` wechseln, um aktiv zu blockieren.
 
 ## Installation
 
@@ -59,20 +59,18 @@ Für das optionale Advanced-Modell bindet `compose.yaml` das Host-Verzeichnis `/
 
 ### Native / LXC (install.sh)
 
-Interaktiver Installer in `scripts/install.sh` (Abschnitt 15):
+Der native Installer `scripts/install.sh` (Abschnitt 15) ruft den mitgelieferten Helfer `/usr/local/bin/shieldpm-openappsec-agent-install` interaktiv auf. Auf einem bestehenden Debian-13-LXC oder einer bestehenden nativen Installation kann man denselben Helfer nach einem ShieldPM-Update aufrufen:
 
 ```bash
-# Im ShieldPM Installationsdialog "OpenAppSec Agent installieren" wählen
-# AGENT_TOKEN eingeben für Cloud Portal (oder leer lassen für local_policy.yaml)
-# Optional: Pfad zum Advanced ML Model (.tgz) angeben
+shieldpm-openappsec-agent-install
 ```
 
-Der Installer nutzt `https://downloads.openappsec.io/open-appsec-install` und kann mit `--auto` oder `--manual` ausgeführt werden.
+Der Aufruf erfolgt als `root`. Der Helfer fragt den Cloud-Token verdeckt ab (leer für lokale Verwaltung) und danach optional nach einem Pfad zum Advanced-Modell als `.tgz`. Den Token nicht selbst als Kommandoargument übergeben: Argumente können in der Prozessliste und Shell-History erscheinen. Er bezieht das Agent-Archiv direkt von `downloads.openappsec.io/packages/agent/<arch>/debian/trixie/openappsec-trixie.tar.gz` (`<arch>` ist `x86_64` oder `aarch64`) und führt die darin enthaltenen OpenAppSec-Agent-Installationsskripte aus. Das separate Upstream-Programm `open-appsec-install --auto` erkennt ShieldPMs eigenständig installiertes `/usr/local/nginx` nicht als Paket-Nginx und beendet sich mit `NGINX is not installed`; es darf für ShieldPM nicht als manueller Nachinstallationsschritt empfohlen werden. Das ARM64-Archiv liefert derzeit HTTP 403, daher bricht der Helfer auf ARM64 mit einem Downloadfehler ab. Der Helfer prüft Agent-Status, Nginx-Modul und Konfiguration, setzt `NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true` in `/data/.env` erst nach erfolgreicher Installation und startet einen vorher laufenden ShieldPM-Dienst erneut. Bei Startfehlern stellt er die vorige `.env` wieder her. Beim Erstinstaller startet `scripts/install.sh` den Dienst anschließend regulär. Fehler vor Abschluss sollen nicht als aktivierter WAF gemeldet werden.
 
 ## Konfigurationsdateien
 
 - **`/etc/cp/conf/local_policy.yaml`** — Lokale Policy (detect-learn / prevent-learn)
-- **`/etc/cp/conf/open-appsec-advanced-model.tgz`** — Kopierziel des Native/LXC-Installers für das optionale ML-Archiv; der Installer prüft nicht, ob der laufende Agent das Modell tatsächlich geladen hat.
+- **`/advanced-model/open-appsec-advanced-model.tgz`** — Ablage des optionalen ML-Archivs bei Native/LXC; der Helfer stoppt den Agent, entpackt es nach `/etc/cp/conf/waap`, startet den Agent neu und prüft seinen Status. Den tatsächlich aktiven Modelltyp nach der Installation mit `open-appsec-ctl --status` prüfen.
 - **`/opt/openappsec/conf`** — Nginx-Agent-Konfiguration (Volume)
 - **`/opt/openappsec/data`** — Agent-Daten (Volume)
 - **`/opt/openappsec/logs`** — Logs (Volume)
@@ -82,6 +80,8 @@ Der Installer nutzt `https://downloads.openappsec.io/open-appsec-install` und ka
 
 - `compose.yaml` — Container-Definitionen (auskommentiert)
 - `scripts/install.sh` — Native Installer
+- `rootfs/usr/local/bin/shieldpm-openappsec-agent-install` — Native/LXC-Agent-Installation ohne Nginx-Paketinstallation
+- `rootfs/usr/local/share/shieldpm/openappsec-local-policy.yaml` — v1beta1-Vorlage für lokale Verwaltung
 - `rootfs/usr/local/bin/runtime-config.sh` — Nginx-Modulaktivierung zur Laufzeit
 - `backend/templates/_proxy_logic.conf` — Proxy-Routing ( falls relevant )
 

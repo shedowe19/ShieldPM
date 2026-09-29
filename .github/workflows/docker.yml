@@ -508,7 +508,7 @@ jobs:
 
             ### 🖥️ Proxmox LXC Template
             > **Based on Debian 13 (Trixie).**
-            > All ShieldPM features (including CrowdSec, WAF, etc.) are pre-installed and ready to use.
+            > ShieldPM includes the Nginx WAF attachments. Optional agents such as OpenAppSec must be installed separately; see the OpenAppSec guide for native/LXC setup.
 
             Download the appropriate LXC template for your architecture:
             - **AMD64:** `shieldpm-${{ needs.prepare.outputs.docker_tag_base }}-lxc_amd64.tar.gz`
