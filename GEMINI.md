@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > **This document is the SOURCE OF TRUTH for any AI Agent working on this project.**
-> It must be kept identical to `GEMINI.md`.
+> Keep dependency versions aligned with `backend/package.json` and `frontend/package.json`.
 >
 > **Also read these companion files:**
 >
@@ -40,11 +40,11 @@ The Agent must be aware of these specific versions and libraries:
 - **Runtime**: Node.js `v26+` (Debian Trixie via NodeSource APT)
 
 * **Framework**: Express.js `v5.2`
-* **ORM**: Objection.js `v3.1` / Knex.js `v3.1`
+* **ORM**: Objection.js `v3.1` / Knex.js `v3.3`
 * **Database**:
-  - **Development**: SQLite (`better-sqlite3` v12.6)
+  - **Development**: SQLite (`better-sqlite3` v13)
   - **Production**: MySQL (`mysql2`) or PostgreSQL (`pg`)
-* **AI Integration**: `@google/generative-ai` (Gemini), `node-fetch` (Ollama/OpenAI Compatible)
+* **AI Integration**: `@google/generative-ai` (Gemini), native `fetch` (Ollama/OpenAI Compatible)
 * **Management**: `dockerode` (Docker API), `isomorphic-git` (GitOps), `telegraf` (ChatOps/Telegram), `ssh2` (Remote), `ws` (WebSockets)
 * **Path**: `/backend`
 
@@ -52,10 +52,10 @@ The Agent must be aware of these specific versions and libraries:
 
 - **Runtime**: Node.js `v26+`
 
-* **Build Tool**: Vite `v7.3`
-* **Framework**: React `v19.2` (TypeScript)
-* **State Management**: React Query `v5.90`
-* **Styling**: Tailwind CSS `v3.4`, shadcn/ui (Radix UI)
+* **Build Tool**: Vite `v8.3`
+* **Framework**: React `v19.3` (TypeScript)
+* **State Management**: React Query `v5.104`
+* **Styling**: Tailwind CSS `v4.3`, shadcn/ui (Radix UI)
 * **Path**: `/frontend`
 
 ### Infrastructure & Nginx Core
@@ -212,7 +212,7 @@ yarn dev # Nodemon
 | `/backend/internal/nginx.js` | **Configuration Engine** | The "Brain". Orchestrates config generation.                   |
 | `/backend/internal/ai/`      | **AI Agent**             | AI Logic, Providers, Tools.                                    |
 | `/backend/internal/chat.js`  | **ChatOps**              | Telegram Bot logic.                                            |
-| `/backend/templates/*.conf`  | **Config Templates**     | EJS files defining Nginx vhosts.                               |
+| `/backend/templates/*.conf`  | **Config Templates**     | Liquid files defining Nginx vhosts.                            |
 | `/backend/migrations/*.js`   | **Database Schema**      | Source of Truth for DB structure.                              |
 | `/frontend/src/pages/`       | **UI Views**             | React components for specific pages.                           |
 | `/rootfs/usr/local/bin/`     | **Startup Scripts**      | `launch.sh`, `start.sh`. Run inside container/service on boot. |
