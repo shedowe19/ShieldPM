@@ -139,12 +139,20 @@ OpenAppSec uses machine learning models for threat detection. Two models are ava
 Path to Advanced Model .tgz (leave empty to skip): /path/to/open-appsec-advanced-model.tgz
 ```
 
-**Docker:** Mount as a volume in `compose.yaml`:
+**Docker:** Save the downloaded archive on the Docker host as
+`/opt/openappsec/open-appsec-advanced-model.tgz` before starting the agent. The
+`openappsec-agent` service in `compose.yaml` mounts this directory:
 
 ```yaml
 volumes:
-  - "/opt/openappsec/open-appsec-advanced-model.tgz:/advanced-model/open-appsec-advanced-model.tgz"
+  - "/opt/openappsec:/advanced-model"
 ```
+
+The agent then sees the archive at
+`/advanced-model/open-appsec-advanced-model.tgz`. You can also bind-mount the
+individual `.tgz` file to that path, provided the host file already exists;
+otherwise Docker may create a directory in its place and the container will
+fail to start.
 
 **Native / LXC (manually):**
 

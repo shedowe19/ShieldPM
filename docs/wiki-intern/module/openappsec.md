@@ -55,6 +55,8 @@ Container in `compose.yaml` einkommentieren und starten:
 docker compose up -d openappsec-agent openappsec-smartsync openappsec-shared-storage openappsec-tuning-svc openappsec-db
 ```
 
+Für das optionale Advanced-Modell bindet `compose.yaml` das Host-Verzeichnis `/opt/openappsec` nach `/advanced-model` im Agent ein. Die Datei `/opt/openappsec/open-appsec-advanced-model.tgz` muss vor dem Start vorhanden sein; im Container liegt sie dann unter `/advanced-model/open-appsec-advanced-model.tgz`. Ein direkter Datei-Mount ist ebenfalls möglich, setzt aber eine bereits vorhandene Host-Datei voraus.
+
 ### Native / LXC (install.sh)
 
 Interactive Installer in `scripts/install.sh` (Abschnitt 15, Zeile 527–626):
@@ -74,6 +76,7 @@ Der Installer nutzt `https://downloads.openappsec.io/open-appsec-install` und ka
 - **`/opt/openappsec/conf`** — Nginx-Agent-Konfiguration (Volume)
 - **`/opt/openappsec/data`** — Agent-Daten (Volume)
 - **`/opt/openappsec/logs`** — Logs (Volume)
+- **`/opt/openappsec/open-appsec-advanced-model.tgz`** — Optionales Advanced-Modell für Docker; im Agent unter `/advanced-model/open-appsec-advanced-model.tgz`
 
 ## Wichtige Dateien
 
