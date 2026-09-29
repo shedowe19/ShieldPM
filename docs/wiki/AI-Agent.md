@@ -11,13 +11,13 @@ An administrator opens **Settings → AI Agent**, enables the feature, and selec
 - **Google Gemini:** Enter an API key and choose a model. The model field accepts an ID directly, or **Fetch Models** can request available Gemini models. The current fallback model in the code is `gemini-1.5-flash`; select a model that is actually available to your account.
 - **Local / OpenAI-compatible:** Enter the base URL, optional API key, and model ID. A base URL on port `11434` without `/v1` uses Ollama's native `/api/chat` endpoint. Other URLs use the OpenAI-compatible chat endpoint. For a container deployment, `localhost` means the ShieldPM container, so enter an address reachable **from ShieldPM**.
 
-| Setting | Scope | Behavior |
-| --- | --- | --- |
-| Enabled | Both providers | Disabled agents reject chat requests |
-| API key | Gemini required; local provider as needed | Stored encrypted; use a key required by the configured endpoint |
-| Base URL | Local / compatible | HTTP(S) address of the model server as seen from the ShieldPM backend |
-| Model | Both providers | Model identifier selected from the list or entered manually |
-| System prompt | Both providers | A custom prompt replaces the built-in default prompt |
+| Setting       | Scope                                     | Behavior                                                              |
+| ------------- | ----------------------------------------- | --------------------------------------------------------------------- |
+| Enabled       | Both providers                            | Disabled agents reject chat requests                                  |
+| API key       | Gemini required; local provider as needed | Stored encrypted; use a key required by the configured endpoint       |
+| Base URL      | Local / compatible                        | HTTP(S) address of the model server as seen from the ShieldPM backend |
+| Model         | Both providers                            | Model identifier selected from the list or entered manually           |
+| System prompt | Both providers                            | A custom prompt replaces the built-in default prompt                  |
 
 **Fetch Models** queries the configured provider. For local providers, the model-list request uses the compatible `v1/models` endpoint; the endpoint must support that API for the list to appear. A model can also be entered manually. The local provider controls `num_ctx` (default `8192`), `num_batch` (`512`), `num_thread` (`4`), and `keep_alive` (`5m`). These options are sent with Ollama native requests and are not sent with OpenAI-compatible requests.
 
@@ -29,14 +29,14 @@ The system prompt may be customized in the settings. Provider credentials are en
 
 Depending on permissions, the current tool set covers:
 
-| Area | Available examples |
-| --- | --- |
-| Hosts | List, create, update, delete, enable, disable proxy, redirection, 404 hosts, and streams; toggle a proxy host's maintenance mode |
-| Security | Manage access lists, manage certificates, request an internal client certificate, inspect certificate details |
-| Connections | Manage DDNS providers, Cloudflare tunnels, and Tor onion services |
-| Accounts | List, create, update, delete users; change passwords and resource permissions |
-| Observability | Read host counts, analytics summary/series, selected Nginx access/error logs, and the audit log |
-| System | Read selected settings, update a setting, test or reload Nginx, refresh IP ranges |
+| Area          | Available examples                                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Hosts         | List, create, update, delete, enable, disable proxy, redirection, 404 hosts, and streams; toggle a proxy host's maintenance mode |
+| Security      | Manage access lists, manage certificates, request an internal client certificate, inspect certificate details                    |
+| Connections   | Manage DDNS providers, Cloudflare tunnels, and Tor onion services                                                                |
+| Accounts      | List, create, update, delete users; change passwords and resource permissions                                                    |
+| Observability | Read host counts, analytics summary/series, selected Nginx access/error logs, and the audit log                                  |
+| System        | Read selected settings, update a setting, test or reload Nginx, refresh IP ranges                                                |
 
 Individual tools expose specific fields and operations; for example, access-list tools cover basic credentials, client rules, and mTLS fields, but do not expose all OAuth/SSO settings. The status tool returns network-traffic information from the analytics service; it is not a CPU-and-memory health monitor. A list or update of another user's resource is still subject to the applicable owner scope.
 

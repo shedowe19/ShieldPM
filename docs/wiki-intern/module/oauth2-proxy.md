@@ -19,7 +19,7 @@ Während ShieldPM selbst per OIDC Login-fähig ist (siehe [Benutzer & Auth](./be
 
 - ShieldPM startet/konfiguriert oauth2-proxy als verwalteten Subprozess pro verwendeter Access-List. Das Docker-Image enthält das Binary; der native Installer bietet dessen Installation optional an.
 - Pro Proxy-Host kann SSO aktiviert werden; Nginx prüft Cookies und weist anonyme Anfragen zur Login-Seite des Providers.
-- Nach erfolgreicher Anmeldung erhält der Backend-Host Identity-Header (`X-Auth-Request-Email`, `X-Auth-Request-User`).
+- Nach erfolgreicher Anmeldung liefert oauth2-proxy `X-Auth-Request-Email` und `X-Auth-Request-User` an den Nginx-Auth-Subrequest. Nginx übernimmt diese Werte und sendet an die Backend-Anwendung `X-Email` und `X-User` (zusätzlich `X-Groups`, `X-Preferred-Username` und `X-Access-Token`, sofern vorhanden).
 - Die TOML-Konfiguration maskiert Zeichenketten und schreibt Listen als jeweils einen Array-Wert. Absolute Login-Weiterleitungen werden ausschließlich für Domains der zugeordneten, aktivierten Proxy-Hosts zugelassen; E-Mail-Domains sind davon unabhängig. Ohne solche Hosts ist die Weiterleitungsliste leer, statt den nicht ausgewerteten Nginx-Ausdruck `$host` zu enthalten.
 - Konfigurationsdateien mit Client- und Cookie-Secrets erhalten Modus `0600`. Für `keycloak-oidc` wird wie für `oidc` die Issuer-URL geschrieben.
 - Abstürze lösen maximal drei verzögerte Startversuche aus. Stoppen und Ersetzen eines Prozesses verwirft alte Startversuche; verspätete Exit-Ereignisse alter Prozesse können einen Ersatzprozess nicht aus der Verwaltung entfernen. Ein Stopp während asynchroner Vorbereitung verhindert dessen anschließenden Start.

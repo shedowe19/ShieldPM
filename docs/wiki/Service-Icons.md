@@ -5,6 +5,7 @@ ShieldPM supports service icons in the Proxy Hosts table. This feature makes it 
 ## Overview
 
 The feature offers three modes for icon handling:
+
 1.  **Auto (Default):** Automatically detects the service based on the target port and hostname.
 2.  **Custom:** Allows you to specify a custom icon URL.
 3.  **None:** Disables the icon for the host.
@@ -16,33 +17,39 @@ The feature offers three modes for icon handling:
 You can configure the icon settings in the **"Details"** tab of the Proxy Host dialog, right below the "Forward Host/Port" section.
 
 ### 1. Auto-Detection
+
 This is the default mode. The frontend maintains a list of known self-hosted services and their usual ports.
 
 **Detection Logic:**
+
 1.  **Port + Hostname Match:** First, it checks if both the port and the hostname match a known service (e.g., Port `3000` + Hostname containing `grafana`).
 2.  **Port Match:** If no specific hostname match is found, it falls back to checking just the port (e.g., Port `8123` → Home Assistant).
 
 **Supported Services (Examples):**
-| Port | Service |
-| :--- | :--- |
-| `8123` | Home Assistant |
-| `8096` | Jellyfin |
-| `32400` | Plex |
-| `9000` | Portainer |
-| `9090` | Prometheus |
-| `11000` | Nextcloud |
-| `8384` | Syncthing |
-| `8989` | Sonarr |
-| `7878` | Radarr |
+
+| Port    | Service        |
+| :------ | :------------- |
+| `8123`  | Home Assistant |
+| `8096`  | Jellyfin       |
+| `32400` | Plex           |
+| `9000`  | Portainer      |
+| `9090`  | Prometheus     |
+| `11000` | Nextcloud      |
+| `8384`  | Syncthing      |
+| `8989`  | Sonarr         |
+| `7878`  | Radarr         |
 
 > 💡 **Note:** The icons are sourced from the [Homarr Labs Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) repository (SVG format).
 
 ### 2. Custom Icons
+
 Select **"Custom"** from the Icon Type dropdown to provide your own icon.
-*   **Input:** Enter a direct URL to an image file (SVG, PNG, JPG).
-*   **Preview:** A live preview of the icon will appear in the dialog.
+
+- **Input:** Enter a direct URL to an image file (SVG, PNG, JPG).
+- **Preview:** A live preview of the icon will appear in the dialog.
 
 ### 3. No Icon
+
 Select **"No Icon"** to display nothing in the icon column for this host.
 
 ---
@@ -50,9 +57,10 @@ Select **"No Icon"** to display nothing in the icon column for this host.
 ## 🧩 Troubleshooting
 
 **My icon is not showing up?**
-*   Check if the **port** matches the standard port for the service.
-*   If using **Custom**, verify that the URL is reachable and returns a valid image.
-*   If using **Auto**, the service might not be in our database yet. You can switch to **Custom** and provide the URL manually.
+
+- Check if the **port** matches the standard port for the service.
+- If using **Custom**, verify that the URL is reachable and returns a valid image.
+- If using **Auto**, the service might not be in the built-in frontend list. You can switch to **Custom** and provide the URL manually.
 
 ## Related pages
 

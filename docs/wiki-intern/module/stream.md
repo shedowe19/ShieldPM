@@ -12,7 +12,7 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 
 - `backend/internal/stream.js` — Business-Logik
 - `backend/models/stream.js` — Objection.js-Modell
-- `backend/templates/stream.conf` — Liquid-Template für `stream { server { ... } }`
+- `backend/templates/stream.conf` — Liquid-Template für TCP-/UDP-`server`-Blöcke im umgebenden Nginx-`stream`-Kontext
 - `backend/routes/nginx/streams.js` — REST-API-Routen unter `/api/nginx/streams`
 - `backend/lib/access/streams-*.json` — RBAC-Regeln
 - `frontend/src/pages/Nginx/Streams/` — UI-Tabelle

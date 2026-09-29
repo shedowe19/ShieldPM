@@ -79,7 +79,7 @@ Check the application's backend logs for detailed sync information:
 
 ```bash
 # Docker
-docker logs -f shieldpm 2>&1 | grep "git-deploy"
+docker compose logs -f shieldpm 2>&1 | grep "git-deploy" # use app for the Installation Quick Start
 
 # Native / LXC
 journalctl -u shieldpm -f | grep "git-deploy"

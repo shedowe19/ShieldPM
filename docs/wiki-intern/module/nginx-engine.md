@@ -13,6 +13,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 - `backend/internal/nginx.js` — Hauptlogik
 - `backend/templates/proxy_host.conf` — Proxy-Host-Template
 - `backend/templates/_proxy_logic.conf` — Gemeinsame Proxy-Logik
+- `backend/templates/_upload_relay.conf` — Spezielle Upload-Locations für Proxy-Hosts mit aktiviertem Relay
 - `backend/templates/_proxy_host_custom_location.conf` — Partial für `custom_locations` (Liquid-Syntax, eingebettet in `proxy_host.conf`)
 - `backend/templates/_common.conf` — Gemeinsame Konfiguration
 - `backend/templates/stream.conf` — Stream-Template

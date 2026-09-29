@@ -59,7 +59,7 @@ Die Datenbankstruktur wird durch Knex.js-Migrationen definiert. Objection.js-Mod
 
 ## Gotchas
 
-- `domain_names` auf `ProxyHost` ist kein DB-Feld — es wird im `$afterGet()` aus `host_domains` berechnet.
+- `domain_names` auf `ProxyHost` ist kein DB-Feld — es wird im `$afterFind()` aus `host_domains` berechnet.
 - Boolean-Felder in SQLite werden als `0`/`1` gespeichert. Die Konvertierung erfolgt im Model.
 - Die frühen Basismigrationen legen `created_on` und `modified_on` als `dateTime` an. Spätere Tabellen können andere Typen verwenden; maßgeblich ist die jeweilige Migration.
 

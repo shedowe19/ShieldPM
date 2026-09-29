@@ -122,12 +122,12 @@ In the **SSL** tab, configure how ShieldPM handles HTTPS:
 
 ### SSL Options
 
-| Option              | Description                                        |
-| :------------------ | :------------------------------------------------- |
-| **Force SSL**       | Redirect HTTP requests to HTTPS (308 redirect)     |
-| **HTTP/2**          | Enable HTTP/2 protocol support                     |
-| **HSTS**            | Add `Strict-Transport-Security` header             |
-| **HSTS Subdomains** | Include subdomains in HSTS                         |
+| Option              | Description                                    |
+| :------------------ | :--------------------------------------------- |
+| **Force SSL**       | Redirect HTTP requests to HTTPS (308 redirect) |
+| **HTTP/2**          | Enable HTTP/2 protocol support                 |
+| **HSTS**            | Add `Strict-Transport-Security` header         |
+| **HSTS Subdomains** | Include subdomains in HSTS                     |
 
 > [!IMPORTANT]
 > The HTTP-01 Let's Encrypt challenge requires the domain to reach ShieldPM on port 80. If you choose a supported DNS challenge instead, configure that DNS provider's credentials and follow its requirements; a public port 80 is not required for DNS-01.

@@ -12,12 +12,10 @@ Dokumentation des Test-Setups und der Test-Strategien.
 
 ```bash
 # Backend
-cd backend
-yarn test
+(cd backend && yarn test --run)
 
 # Frontend
-cd frontend
-yarn test
+(cd frontend && yarn test --run)
 ```
 
 ## Frontend-Tests

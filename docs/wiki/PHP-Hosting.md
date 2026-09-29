@@ -69,9 +69,15 @@ Mount your webroot and enable the PHP version. Place `extra_hosts` at the **serv
 services:
   shieldpm:
     image: ghcr.io/shedowe19/shieldpm:latest
+    container_name: shieldpm
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+      - "443:443/udp"
     volumes:
       - ./data:/data
-      - /srv/www:/var/www:ro
+      - /srv/www:/var/www
     environment:
       TZ: Europe/Berlin
       PHP84: "true"
@@ -95,7 +101,7 @@ apc.enable_cli = 1
 
 ### 3. Permissions
 
-The startup script launches PHP-FPM with the configured service identity (`PUID`/`PGID`; root by default). Grant that identity read access to the webroot and explicit write access only where your application needs it. Do not run `chown -R` against a bind-mounted application without checking the host-side ownership.
+The startup script launches PHP-FPM with the configured service identity (`PUID`/`PGID`; root by default). Grant that identity read access to the webroot and explicit write access only where your application needs it. The example mounts `/srv/www` read-write because application maintenance commands may need to write there; use a read-only mount if your application never writes to its webroot. Do not run `chown -R` against a bind-mounted application without checking the host-side ownership.
 
 ### 4. Application CLI Commands
 

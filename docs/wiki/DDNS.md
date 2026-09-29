@@ -6,7 +6,7 @@ ShieldPM can update DNS records when the public address seen by its backend chan
 
 | Provider   | Configuration                                                             | Update behavior                                                                                |
 | ---------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Cloudflare | Zone ID, API token with permission to edit DNS in that zone, domain names | Updates existing A and/or AAAA records for each configured name.                               |
+| Cloudflare | Zone ID, API token with permission to edit DNS in that zone, domain names | Updates existing A and/or AAAA records, or creates missing records for configured names.       |
 | DuckDNS    | DuckDNS token and domain names                                            | Sends the selected public IPv4/IPv6 addresses to DuckDNS.                                      |
 | Custom URL | HTTP(S) update URL and domain names                                       | Sends a GET to a publicly routable URL; replaces `{IP}` or `{IPv4}`, `{IPv6}`, and `{DOMAIN}`. |
 

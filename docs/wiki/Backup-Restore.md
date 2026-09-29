@@ -38,7 +38,7 @@ tar -czvf shieldpm-backup-$(date +%F).tar.gz ./data ./compose.yaml
 docker compose up -d
 ```
 
-If you use the repository's `compose.yaml`, replace `./data` with `/opt/shieldpm` in the archive command. Store the archive with restricted access: it contains database contents, private keys and possibly Compose credentials.
+If you use the repository's `compose.yaml`, replace `./data` with `/opt/shieldpm` in the archive command. Its absolute path is archived as `opt/shieldpm`, so follow the separate restore instructions below. Store the archive with restricted access: it contains database contents, private keys and possibly Compose credentials.
 
 ### Native / LXC
 
@@ -100,6 +100,11 @@ Schedule the stop/archive/start procedure above, or use SQLite's `.backup` comma
    # Docker: archive was created from ./data and ./compose.yaml
    tar -xzvf shieldpm-backup-2026-01-15.tar.gz -C /path/to/your/compose-directory/
 
+   # Docker: repository compose.yaml uses /opt/shieldpm:/data;
+   # extract each member to its original location
+   tar -xzvf shieldpm-backup-2026-01-15.tar.gz -C / opt/shieldpm
+   tar -xzvf shieldpm-backup-2026-01-15.tar.gz -C /path/to/your/compose-directory/ ./compose.yaml
+
    # Native / LXC
    tar -xzvf shieldpm-backup-2026-01-15.tar.gz -C /
    ```
@@ -122,11 +127,11 @@ Schedule the stop/archive/start procedure above, or use SQLite's `.backup` comma
 
    ```bash
    # Check logs for errors
-   docker compose logs -f shieldpm   # Docker
+   docker compose logs -f shieldpm   # Docker (use app for the Quick Start example)
    journalctl -u shieldpm -f         # Native / LXC
    ```
 
-6. **Check generated Nginx configuration** after startup with `docker exec shieldpm nginx -t` (Docker) or `nginx -t` (native/LXC). If you intentionally need to regenerate host files, set `REGENERATE_ALL=true` for a single startup, then remove it and restart. `FULLCLEAN` controls cleanup of other runtime data; there is no `fullclean` CLI command.
+6. **Check generated Nginx configuration** after startup with `docker compose exec shieldpm nginx -t` (Docker; use `app` for the Quick Start) or `nginx -t` (native/LXC). If you intentionally need to regenerate host files, set `REGENERATE_ALL=true` for a single startup, then remove it and restart. `FULLCLEAN` controls cleanup of other runtime data; there is no `fullclean` CLI command.
 
 ### Restoring an External Database
 

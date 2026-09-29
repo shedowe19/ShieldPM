@@ -43,7 +43,7 @@ Die Modulaktivierung erfolgt durch die Laufzeitkonfiguration von Nginx. Dabei we
 | **Cloud Portal** | Docker: `AGENT_TOKEN` beim Agent-Dienst in `compose.yaml`; Native/LXC: Token beim Installieren angeben → Verwaltung über https://my.openappsec.io |
 | **Lokal**        | Docker: `/opt/openappsec/localconf/local_policy.yaml` (im Agent `/ext/appsec`); Native/LXC: `/etc/cp/conf/local_policy.yaml`                      |
 
-Der native Installer legt ohne Cloud-Token bei Bedarf eine Policy in **detect-learn** (nur Logging, kein Blockieren) an. Ob der Docker-Agent bereits eine Policy hat, hängt vom gemounteten Konfigurationsverzeichnis ab. Erst nach Prüfung von Logs/Policy auf `prevent-learn` wechseln, um aktiv zu blockieren.
+Der native Installer legt ohne Cloud-Token bei Bedarf eine Policy mit Modus **detect-learn** an. Die dort aktuell geschriebenen Inline-Practices und -Trigger entsprechen jedoch weder dem dokumentierten [v1beta1-Schema](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced) (Referenzen auf benannte `practices` und `log-triggers`) noch v1beta2. Policy vor Einsatz anhand der installierten Agent-Version korrigieren und die aktive Konfiguration nach `open-appsec-ctl --apply-policy` prüfen; allein der Modus in der YAML-Datei belegt keine aktive Erkennung. Ob der Docker-Agent bereits eine Policy hat, hängt vom gemounteten Konfigurationsverzeichnis ab. Erst nach Prüfung von Logs/Policy auf `prevent-learn` wechseln, um aktiv zu blockieren.
 
 ## Installation
 

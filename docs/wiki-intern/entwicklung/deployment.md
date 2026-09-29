@@ -8,7 +8,7 @@ Dokumentation der Deployment-Optionen.
 
 ```bash
 # compose.yaml herunterladen
-curl -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
+curl -fL -o compose.yaml https://raw.githubusercontent.com/shedowe19/ShieldPM/refs/heads/develop/compose.yaml
 
 # Anpassen: TZ, ACME_EMAIL, etc.
 # Starten
@@ -24,6 +24,8 @@ docker compose up -d
 ## Native / LXC (Proxmox)
 
 ```bash
+curl -fL -o shieldpm-install-linux-amd64.tar.gz \
+  https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz
 tar -xzf shieldpm-install-linux-amd64.tar.gz
 sudo bash install.sh
 ```
@@ -39,7 +41,7 @@ Der Aufruf erfolgt im entpackten Release-Paket (für ARM64 entsprechend `shieldp
 
 Der Installer sucht seine Paketdateien neben `install.sh`, unabhängig vom aktuellen Arbeitsverzeichnis. Fehlende Anwendungsdateien, Nginx-Binaries oder Rootfs-Helfer werden vor Paketinstallationen erkannt. Vor dem Austausch vorhandener Binär- und Anwendungsdateien stoppt er einen aktiven ShieldPM-Dienst; der abschließende Start lädt dadurch den neuen Code. Ein späterer Installationsfehler lässt den Dienst angehalten, bis die Installation repariert oder erneut ausgeführt wird.
 
-Die Datenbankauswahl berücksichtigt auch eingerückte Zuweisungen und `export DB_…` in `/data/.env`. Nicht ausgewählte Provider werden deaktiviert; beim Zurückschalten auf SQLite wird ein vorhandener eigener `DB_SQLITE_FILE` wieder aktiviert. Die Umschaltung kopiert keine Daten zwischen Datenbankservern. Scheitern sowohl automatische als auch manuelle OpenAppSec-Installation, bricht der Installer ab, bevor er das Nginx-Modul aktiviert oder Erfolg meldet.
+Die Datenbankauswahl berücksichtigt auch eingerückte Zuweisungen und `export DB_…` in `/data/.env`. Nicht ausgewählte Provider werden deaktiviert. Beim Zurückschalten auf SQLite aktiviert der Installer auch einen vorhandenen `DB_SQLITE_FILE`-Alteintrag; die aktuelle Laufzeit ignoriert diesen Wert und verwendet fest `/data/shieldpm/database.sqlite`. Die Umschaltung kopiert keine Daten zwischen Datenbankservern. Scheitern sowohl automatische als auch manuelle OpenAppSec-Installation, bricht der Installer ab, bevor er das Nginx-Modul aktiviert oder Erfolg meldet.
 
 Nach dem ersten Dienststart wartet der Installer bis zu 180 Sekunden auf `status: "OK"` über den Backend-Unix-Socket. Ein pauschaler Neustart nach 20 Sekunden entfällt, damit laufende Migrationen nicht unterbrochen werden. Die nativen Laufzeitpakete enthalten außerdem `sqlite3`, `netcat-openbsd` und `libfcgi-bin` für Wartung, Socket-Helfer und FastCGI sowie `wireguard-tools`, `wireguard-go`, `iproute2`, `iptables` und `procps` für WireGuard.
 
@@ -51,14 +53,14 @@ Die lokale Datenbankauswahl verwendet weiterhin die im Installer angebotenen Sta
 
 ## Nativen Updater einer Altinstallation erneuern
 
-Endet `update -b …` direkt nach `Checking for application updates...`, kann noch die alte Versionsprüfung mit `grep | head` installiert sein. Diese kann bei einer großen GitHub-Antwort unter `pipefail` lautlos abbrechen, bevor das Selbstupdate erreicht wird. Der Ziel-Branch muss bereits den korrigierten Updater enthalten. Für PR #139 ist dies `codex/comprehensive-code-audit`.
+Endet `update -b …` direkt nach `Checking for application updates...`, kann noch die alte Versionsprüfung mit `grep | head` installiert sein. Diese kann bei einer großen GitHub-Antwort unter `pipefail` lautlos abbrechen, bevor das Selbstupdate erreicht wird. Der Ziel-Branch muss bereits den korrigierten Updater enthalten; `develop` enthält die vollständige GitHub-Antwortverarbeitung.
 
-Als root lässt sich der aktuelle Updater dieses Branches zunächst in eine private temporäre Datei laden, syntaktisch prüfen und dann starten:
+Als root lässt sich der aktuelle Updater von `develop` zunächst in eine private temporäre Datei laden, syntaktisch prüfen und dann starten:
 
 ```bash
 (
   set -e
-  branch='codex/comprehensive-code-audit'
+  branch='develop'
   updater_file=$(mktemp /tmp/shieldpm-updater.XXXXXX)
   trap 'rm -f "$updater_file"' EXIT
   curl -fL --connect-timeout 10 --max-time 60 \

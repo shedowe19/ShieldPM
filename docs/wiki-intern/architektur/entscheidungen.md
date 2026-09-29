@@ -20,7 +20,7 @@ Backend und Frontend verwenden ESM. Backend-Module verwenden `import/export`-Syn
 
 SQLite (`better-sqlite3`) ist die Standard-Datenbank auch für einfache produktive Installationen. MySQL/MariaDB und PostgreSQL sind ebenfalls unterstützt. Die Migrationskette wird für alle drei Engines getestet.
 
-**Gotcha**: Boolean-Felder in SQLite werden als `0`/`1` gespeichert. Das Objection.js-Modell konvertiert im `$afterGet()`.
+**Gotcha**: Boolean-Felder in SQLite werden als `0`/`1` gespeichert. Die betreffenden Objection.js-Modelle konvertieren sie in `$parseDatabaseJson()` und `$formatDatabaseJson()`.
 
 ### E4: Nginx-Validierung aktiviert
 
@@ -30,13 +30,13 @@ SQLite (`better-sqlite3`) ist die Standard-Datenbank auch für einfache produkti
 
 Der reguläre Nginx-Reload wird ohne globale Verzögerung ausgelöst. Das Docker-Auto-Discovery-Modul sammelt seine eigenen Hoständerungen kurzzeitig und führt dann eine gemeinsame Konfiguration und einen validierten Reload aus. Die Nginx-Engine selbst serialisiert Konfigurationsänderungen.
 
-### E6: Objection.js statt Raw SQL
+### E6: Objection.js und gezielte direkte SQL-Abfragen
 
 Modelle verwenden Objection.js und Knex. Einzelne Funktionen benötigen direkte Knex-/SQL-Abfragen, etwa Datenbankstatistiken, Aggregationen und den SQLite-Import. Diese Abfragen sind auf die jeweilige Datenbank-Engine abgestimmt.
 
 ### E7: `domain_names` ist abgeleitet
 
-Das Feld `domain_names` auf Proxy-Hosts wird im `$afterGet()` aus der `host_domains`-Relation berechnet. Direktes Schreiben in die DB ist nicht möglich.
+Das Feld `domain_names` auf Proxy-Hosts wird im `$afterFind()` aus der `host_domains`-Relation berechnet. Direktes Schreiben in die DB ist nicht möglich.
 
 ### E8: Daten-Vertrag: `/data/`
 

@@ -28,6 +28,8 @@ Requires Docker Engine and Docker Compose.
          - "81:81"
          - "443:443"
          - "443:443/udp" # HTTP/3 (QUIC)
+       environment:
+         TZ: Europe/Berlin # Required; choose your local IANA time zone
        volumes:
          - ./data:/data
    ```

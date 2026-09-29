@@ -18,7 +18,7 @@ Dateien: `backend/lib/config.js` und `backend/db.js`. `backend/knexfile.js` stel
 
 Die Datenbank-Auswahl erfolgt über Umgebungsvariablen:
 
-Eine gültige persistierte Datenbankkonfiguration unter `${DATA_PATH:-/data}/shieldpm/default.json` hat Vorrang vor diesen Variablen. Ist die Datei vorhanden, aber nicht lesbar oder fehlerhaft, bricht der Start ab, statt still auf eine andere Datenbank umzuschalten.
+Eine persistierte Konfiguration mit `database` unter `${DATA_PATH:-/data}/shieldpm/default.json` hat Vorrang vor diesen Variablen. Kann die vorhandene Datei nicht gelesen oder als JSON geparst werden, bricht der Start ab. Lesbares JSON ohne `database` fällt auf die Umgebungsvariablen beziehungsweise SQLite zurück; unvollständige Werte unter `database` können später beim Verbindungsaufbau scheitern.
 
 - **SQLite** (Standard): Keine Konfiguration nötig, Datei unter `${DATA_PATH:-/data}/shieldpm/database.sqlite`
 - **MySQL**: `DB_MYSQL_HOST`, `DB_MYSQL_PORT`, `DB_MYSQL_USER`, `DB_MYSQL_PASSWORD`, `DB_MYSQL_NAME`

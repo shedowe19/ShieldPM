@@ -2,10 +2,10 @@
 
 ShieldPM is configured via **Environment Variables**. No config file editing is required for basic setup — just set the variables and restart.
 
-- **Docker:** Set them in `compose.yaml` under the configured service's `environment:` (`shieldpm` in the repository's sample, `app` in `docker-compose.demo.yaml`). The repository samples use host networking; with bridge networking, publish the required ports, including `443/udp` for HTTP/3.
+- **Docker:** Set them in `compose.yaml` under the configured service's `environment:` (`shieldpm` in the main repository samples, `app` in `docker-compose.demo.yaml`). The main samples use host networking; the demo and other bridge deployments must publish the required ports, including `443/udp` for HTTP/3.
 - **Native / LXC:** Edit the file `/data/.env`.
 
-Set `TZ` to a valid timezone; startup validation rejects a missing or invalid value. Docker Compose environment values take precedence over values loaded from `/data/.env`.
+Set `TZ` to a valid timezone; startup validation rejects a missing or invalid value. At container startup, `/data/.env` is sourced after the Compose environment. If the same variable is set in both places, the value in `/data/.env` takes precedence. Keep each setting in one place to avoid surprises.
 
 ---
 

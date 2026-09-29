@@ -76,7 +76,7 @@ größten JavaScript-Chunk, alle JavaScript-Chunks zusammen und alle Stylesheets
 Prüfung nach `yarn build` aus. Ein lokaler Lauf lautet:
 
 ```bash
-node scripts/ci/check-bundle-budget.cjs --dist dist --budget performance-budget.json
+(cd frontend && node scripts/ci/check-bundle-budget.cjs --dist dist --budget performance-budget.json)
 ```
 
 Die Budgets sind keine Core-Web-Vitals-Messung; sie verhindern reproduzierbar Größenregressionen. Änderungen an ihnen

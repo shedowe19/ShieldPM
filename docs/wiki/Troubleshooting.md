@@ -2,6 +2,8 @@
 
 Stuck? Here are solutions to the most common problems, organized by category.
 
+Docker commands below use the Compose service name `shieldpm`; use `app` with the [Installation Quick Start](Installation).
+
 ---
 
 ## 🔑 Login Issues
@@ -12,7 +14,7 @@ Stuck? Here are solutions to the most common problems, organized by category.
 
 ```bash
 # Docker
-docker exec -it shieldpm npm-reset-password 'admin@example.com' 'your-new-password'
+docker compose exec shieldpm npm-reset-password 'admin@example.com' 'your-new-password'
 
 # Native / LXC
 sudo npm-reset-password 'admin@example.com' 'your-new-password'
@@ -37,15 +39,15 @@ sudo npm-reset-password 'admin@example.com' 'your-new-password'
 
 The most common error — Nginx cannot reach the upstream service.
 
-| Cause                         | Fix                                                    |
-| :---------------------------- | :----------------------------------------------------- |
-| Backend service is down       | Start the service and verify it's running              |
-| Wrong Forward Host            | Check the IP/hostname in the Proxy Host config         |
-| Docker network isolation      | Use container name (bridge) or `127.0.0.1` (host mode) |
-| Container not on same network | Run `docker network connect <network> shieldpm`        |
+| Cause                         | Fix                                                                                                                    |
+| :---------------------------- | :--------------------------------------------------------------------------------------------------------------------- |
+| Backend service is down       | Start the service and verify it's running                                                                              |
+| Wrong Forward Host            | Check the IP/hostname in the Proxy Host config                                                                         |
+| Docker network isolation      | Use container name (bridge) or `127.0.0.1` (host mode)                                                                 |
+| Container not on same network | For bridge networking, attach both services to a common Compose network; host networking does not join bridge networks |
 
 > [!TIP]
-> Quick test: `docker exec shieldpm curl -s http://<forward_host>:<forward_port>` — if this fails, the problem is networking, not ShieldPM.
+> Quick test: `docker compose exec shieldpm curl -s http://<forward_host>:<forward_port>` (use `app` for the Installation Quick Start) — if this fails, check the upstream address, port and networking.
 
 ### 504 Gateway Timeout
 
@@ -125,7 +127,7 @@ If you're seeing "Your connection is not private" on internal services:
 
 ```bash
 # Check for startup errors:
-docker logs shieldpm
+docker compose logs shieldpm
 
 # Common causes:
 # - Port already in use → Change ports in compose.yaml
@@ -162,10 +164,10 @@ If config changes aren't taking effect:
 
 ```bash
 # Test the Nginx config manually:
-docker exec shieldpm nginx -t
+docker compose exec shieldpm nginx -t
 
 # Check recent application diagnostics before retrying the change:
-docker logs --tail 100 shieldpm
+docker compose logs --tail 100 shieldpm
 ```
 
 ---

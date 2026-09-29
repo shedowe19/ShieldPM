@@ -66,7 +66,7 @@ Restrict access to the Admin UI (port 81) from the public internet:
 
 ```bash
 # Docker — Stop, backup, restart
-docker compose stop shieldpm
+docker compose stop shieldpm # use `app` for the Installation Quick Start
 tar -czvf shieldpm-backup-$(date +%F).tar.gz /path/to/data
 docker compose up -d
 

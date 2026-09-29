@@ -32,12 +32,10 @@ Der `dev`-Script in `backend/package.json` führt `node index-dev.js` aus. Nach 
 
 ```bash
 # Backend
-cd backend
-yarn test    # vitest
+(cd backend && yarn test --run) # Vitest einmalig ausführen
 
 # Frontend
-cd frontend
-yarn test    # vitest
+(cd frontend && yarn test --run) # Vitest einmalig ausführen
 ```
 
 Für die Infrastrukturregressionen wird zusätzlich Python 3 benötigt:

@@ -40,7 +40,7 @@ ShieldPM supports **Docker Auto-Discovery**, a feature that allows you to automa
 
 ### Prerequisites
 
-- Docker Socket mounted (`/var/run/docker.sock`).
+- Docker Socket mounted into the ShieldPM container (`/var/run/docker.sock:/var/run/docker.sock`). The repository's Compose examples do not mount it by default; add this line under the ShieldPM service's `volumes:`.
 - Optional: `DOCKER_HOSTS` for _additional_ remote hosts. ShieldPM always attempts the local socket, but it can monitor it only if that socket exists and is accessible.
 
 ### Multiple Docker Hosts
@@ -63,6 +63,18 @@ To expose a container, add the `shieldpm.hostname` label. All other labels are o
 
 ```yaml
 services:
+  shieldpm:
+    image: ghcr.io/shedowe19/shieldpm:latest
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
   whoami:
     image: traefik/whoami
     labels:
@@ -164,7 +176,7 @@ Remote `tcp://` Docker hosts require secure network controls; port 2375 commonly
 
 ### Troubleshooting
 
-- **Logs**: Check `docker logs shieldpm` for "Docker Auto-Discovery" messages.
+- **Logs**: Check `docker compose logs shieldpm` for "Docker Auto-Discovery" messages (from the directory containing your Compose file).
 
 * **Collision**: If you see a domain collision with a manually created host, ShieldPM skips the discovered host instead of overwriting it.
 * **"Welcome to Nginx"**: If you see the default page, check logs. It might be that the configuration failed to reload. (Fixed in recent versions).

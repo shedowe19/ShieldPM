@@ -16,20 +16,20 @@ An administrator can edit, disable, delete, or sign in as another enabled accoun
 
 Open a user's row menu and select **Permissions**. Each resource offers **Hidden**, **View**, or **Manage**, subject to the permissions of the account making the request:
 
-| Resource | What it controls |
-| --- | --- |
-| Proxy hosts | Reverse-proxy hosts |
-| Redirection hosts | Redirect rules |
-| 404 hosts | Dead-host pages |
-| Streams | TCP/UDP streams |
-| Access lists | Access control definitions |
-| SSL certificates | Certificate records and actions |
-| Cloudflare tunnels | Cloudflared integrations |
-| DDNS providers | Dynamic DNS integrations |
-| Tor onion services | Onion-service integrations |
-| Analytics | Traffic views |
-| Dashboard notes | Shared notes on the dashboard |
-| ChatOps | Telegram integration management |
+| Resource           | What it controls                |
+| ------------------ | ------------------------------- |
+| Proxy hosts        | Reverse-proxy hosts             |
+| Redirection hosts  | Redirect rules                  |
+| 404 hosts          | Dead-host pages                 |
+| Streams            | TCP/UDP streams                 |
+| Access lists       | Access control definitions      |
+| SSL certificates   | Certificate records and actions |
+| Cloudflare tunnels | Cloudflared integrations        |
+| DDNS providers     | Dynamic DNS integrations        |
+| Tor onion services | Onion-service integrations      |
+| Analytics          | Traffic views                   |
+| Dashboard notes    | Shared notes on the dashboard   |
+| ChatOps            | Telegram integration management |
 
 **Visibility** independently selects **All** or **Own** for resources that use ownership. Administrator accounts have full access. The permission editor automatically grants at least view access to related access lists or certificates when a dependent host type is made visible. There is no separate permission toggle for the audit log or global settings; those require administrator access.
 
@@ -49,7 +49,22 @@ Administrators can temporarily **Sign in as** a user from the Users table. The o
 
 ## Sign in to ShieldPM with OIDC
 
-ShieldPM has an OIDC flow for signing in to **the ShieldPM admin interface**. This is separate from the OAuth2-Proxy access-list feature for sites behind a proxy host. An administrator can configure the `oidc-config` setting through the settings API with `enabled`, `name`, `issuerURL`, `clientID`, `clientSecret`, and `redirectURL` (the callback URL is `https://<your-shieldpm-host>/api/oidc/callback`). The current login screen has no OIDC launch button; start the configured flow at `/api/oidc`.
+ShieldPM has an OIDC flow for signing in to **the ShieldPM admin interface**. This is separate from the OAuth2-Proxy access-list feature for sites behind a proxy host. An administrator configures the existing setting with an authenticated `PUT /api/settings/oidc-config` request. Send `enabled`, `name`, `issuerURL`, `clientID`, `clientSecret`, and `redirectURL` inside `meta`, for example:
+
+```json
+{
+  "meta": {
+    "enabled": true,
+    "name": "Company SSO",
+    "issuerURL": "https://identity.example.com/realms/company",
+    "clientID": "shieldpm",
+    "clientSecret": "your-client-secret",
+    "redirectURL": "https://shieldpm.example.com/api/oidc/callback"
+  }
+}
+```
+
+Register the same `redirectURL` with the identity provider. Each `PUT` replaces the entire `meta` object, so include every field again when updating it. The current login screen has no OIDC launch button; start the configured flow at `/api/oidc`.
 
 The identity provider must return a verified email address matching an existing enabled ShieldPM user; this flow does not create users. After the callback, the browser claims a short-lived handoff cookie and establishes its normal ShieldPM session. Keep the client secret private. The public `GET /api/settings/oidc-config` response only exposes the provider name and whether the flow is ready, not the stored credentials.
 

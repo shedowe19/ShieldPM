@@ -12,11 +12,12 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 
 ### Proxy-Hosts
 
-| Datei                              | Zweck                                        |
-| ---------------------------------- | -------------------------------------------- |
-| `proxy_host.conf`                  | Haupt-Template für Proxy-Hosts               |
-| `_proxy_logic.conf`                | Gemeinsame Proxy-Logik (eingebettet)         |
-| `_proxy_host_custom_location.conf` | Partial für Custom-Locations (Liquid-Syntax) |
+| Datei                              | Zweck                                                 |
+| ---------------------------------- | ----------------------------------------------------- |
+| `proxy_host.conf`                  | Haupt-Template für Proxy-Hosts                        |
+| `_proxy_logic.conf`                | Gemeinsame Proxy-Logik (eingebettet)                  |
+| `_proxy_host_custom_location.conf` | Partial für Custom-Locations (Liquid-Syntax)          |
+| `_upload_relay.conf`               | Upload-Locations für generische und Nextcloud-Uploads |
 
 ### Spezial-Hosts
 

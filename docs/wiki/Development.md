@@ -69,10 +69,10 @@ The project uses **Vitest** for unit and integration testing. Run these commands
 
 ```bash
 # Backend Tests
-cd backend && yarn test --run
+(cd backend && yarn test --run)
 
 # Frontend Tests
-cd frontend && yarn test --run
+(cd frontend && yarn test --run)
 ```
 
 ## 🐳 Building the Docker Image

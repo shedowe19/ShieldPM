@@ -10,7 +10,7 @@
 
 **Pfad**: `backend/routes/`
 
-Express-Routen definieren die REST-API-Endpunkte. Sie validieren bei schreibenden Requests die Eingaben gegen JSON-Schemas, prüfen die Zugriffsrechte und delegieren an die Internal-Schicht.
+Express-Routen definieren die REST-API-Endpunkte und delegieren an die Internal-Schicht. Viele JSON-Endpunkte verwenden AJV-Schemas; andere Eingaben wie TUS-Upload-Header werden direkt validiert. Die Berechtigungsprüfung liegt je nach Endpunkt in der Route oder im internen Dienst.
 
 | Datei                        | Endpunkte                                     |
 | ---------------------------- | --------------------------------------------- |
@@ -44,7 +44,7 @@ Express-Routen definieren die REST-API-Endpunkte. Sie validieren bei schreibende
 
 **Pfad**: `backend/internal/`
 
-Enthält die gesamte Business-Logik. Jedes Modul prüft Berechtigungen, führt Operationen durch und triggert Nebeneffekte (Nginx-Reload, Audit-Log).
+Enthält die Fachlogik für Hostkonfiguration, Zertifikate und Integrationen. Dienste mit Benutzerkontext prüfen die erforderlichen Berechtigungen; technische Helfer wie die Nginx-Engine werden von bereits autorisierten Aufrufern oder Startprozessen verwendet. Operationen können Nebeneffekte wie Nginx-Reloads und Audit-Einträge auslösen.
 
 | Datei          | Beschreibung                                                |
 | -------------- | ----------------------------------------------------------- |
@@ -55,13 +55,13 @@ Enthält die gesamte Business-Logik. Jedes Modul prüft Berechtigungen, führt O
 | `gitops.js`    | GitOps-Auto-Push                                            |
 | `ai/`          | AI-Agent                                                    |
 | `token.js`     | JWT-Token-Erzeugung                                         |
-| `dns.js`       | DNS-Challenge für Let's Encrypt                             |
+| `certbot.js`   | Let's-Encrypt-Ausstellung und DNS-Challenge                 |
 
 ### 3. Models (Datenzugriff)
 
 **Pfad**: `backend/models/`
 
-Objection.js Modelle definieren Tabellen, Relationen und Hooks (`$beforeInsert`, `$afterGet`).
+Objection.js Modelle definieren Tabellen, Relationen und Hooks (`$beforeInsert`, `$afterFind`, `$parseDatabaseJson`, `$formatDatabaseJson`).
 
 ### 4. Templates (Konfiguration)
 

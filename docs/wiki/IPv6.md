@@ -31,15 +31,15 @@ If you use `network_mode: host`, ShieldPM shares the host's network stack:
 ```yaml
 services:
   app:
-    image: 'ghcr.io/shedowe19/shieldpm:latest'
+    image: "ghcr.io/shedowe19/shieldpm:latest"
     network_mode: host
 ```
 
-| Pros | Cons |
-| :--- | :--- |
-| ✅ IPv6 works immediately | ⚠️ No network isolation |
-| ✅ Real client IPs visible | ⚠️ No port mapping (use env vars to change ports) |
-| ✅ No extra configuration needed | |
+| Pros                                                      | Cons                                              |
+| :-------------------------------------------------------- | :------------------------------------------------ |
+| ✅ Uses the host's existing IPv6 connectivity and routing | ⚠️ No network isolation                           |
+| ✅ Real client IPs visible                                | ⚠️ No port mapping (use env vars to change ports) |
+| ✅ No separate Docker IPv6 network needed                 |                                                   |
 
 ### Option 2: Bridge Network with IPv6 (Recommended for Security)
 
@@ -66,12 +66,12 @@ sudo systemctl restart docker
 ```yaml
 services:
   app:
-    image: 'ghcr.io/shedowe19/shieldpm:latest'
+    image: "ghcr.io/shedowe19/shieldpm:latest"
     ports:
-      - '80:80'
-      - '81:81'
-      - '443:443'
-      - '443:443/udp'
+      - "80:80"
+      - "81:81"
+      - "443:443"
+      - "443:443/udp"
     networks:
       - shieldpm
 
@@ -92,7 +92,7 @@ The ULA in this example is for container-to-container connectivity. To serve ext
 
 ## 📦 Native / LXC & IPv6
 
-Native and LXC installations use the host's network stack directly. If your server has IPv6, ShieldPM will automatically listen on both IPv4 and IPv6.
+Native and LXC installations use their own network stack directly. With a working IPv6 address and `DISABLE_IPV6=false`, ShieldPM listens on both IPv4 and IPv6.
 
 **Proxmox LXC users:** Ensure your container has an IPv6 address assigned in the network configuration.
 
@@ -102,12 +102,12 @@ Native and LXC installations use the host's network stack directly. If your serv
 
 Control how ShieldPM listens on IPv6 via `compose.yaml` or `/data/.env`:
 
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `IPV6_BINDING` | Bind to a specific IPv6 address | `[::]` (all) |
-| `NPM_IPV6_BINDING` | Bind Admin UI to specific IPv6 address | `[::]` (all) |
-| `GOA_IPV6_BINDING` | Bind Analytics to specific IPv6 address | `[::]` (all) |
-| `DISABLE_IPV6` | Disable the generated Nginx IPv6 listeners, including hosts, streams, admin UI and GoAccess | `false` |
+| Variable           | Description                                                                                 | Default      |
+| :----------------- | :------------------------------------------------------------------------------------------ | :----------- |
+| `IPV6_BINDING`     | Bind to a specific IPv6 address                                                             | `[::]` (all) |
+| `NPM_IPV6_BINDING` | Bind Admin UI to specific IPv6 address                                                      | `[::]` (all) |
+| `GOA_IPV6_BINDING` | Bind Analytics to specific IPv6 address                                                     | `[::]` (all) |
+| `DISABLE_IPV6`     | Disable the generated Nginx IPv6 listeners, including hosts, streams, admin UI and GoAccess | `false`      |
 
 > [!TIP]
 > Set `DISABLE_IPV6=true` if the environment cannot bind IPv6 listeners. This does not disable IPv6 DNS answers or fix outbound IPv6 routing to upstreams.

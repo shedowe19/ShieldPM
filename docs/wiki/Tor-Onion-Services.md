@@ -12,7 +12,7 @@ ShieldPM can publish a local TCP service through a Tor v3 `.onion` address witho
 
 1. Go to **Hosts → Tor Onion** and choose **Add Onion Service**.
 2. Enter a name, **Virtual Port** (on the onion address, default `80`), and **Target Port** (the local service port). You can optionally associate an existing Proxy Host.
-3. Save. ShieldPM asks Tor to generate an ED25519 v3 identity, stores the resulting onion address and encrypted private key, and starts the service.
+3. Save. ShieldPM asks Tor to generate an ED25519 v3 identity. On success it stores the resulting onion address and encrypted private key and starts the service. If Tor cannot create it, the saved entry remains in an **error** state; fix Tor availability and retry from the service list.
 
 For example, to publish the HTTP listener of ShieldPM's included host-network installation, use virtual port `80` and target port `80`. When a Proxy Host is associated, ShieldPM also adds the generated onion address to that host's domain list and regenerates its Nginx configuration. The associated host must still have an appropriate local HTTP listener and routing configuration.
 

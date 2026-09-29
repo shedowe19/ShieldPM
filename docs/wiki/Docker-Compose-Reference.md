@@ -7,6 +7,7 @@ This is an annotated example using host networking. The repository's checked-in 
 > [!NOTE]
 > This example contains optional services and settings; uncomment only those you use. Keep `/data` persistent. The repository's [`compose.easy.yaml`](https://github.com/shedowe19/ShieldPM/blob/develop/compose.easy.yaml) is a smaller starting point. Do not add `ports:` alongside `network_mode: host`; Docker publishes ports directly on the host in that mode.
 
+<!-- prettier-ignore -->
 ```yaml
 services:
   shieldpm:
@@ -27,6 +28,10 @@ services:
 #      - 94.140.15.16 # Public AdGuard DNS
 #      - 2a10:50c0::bad1:ff # Public AdGuard DNS
 #      - 2a10:50c0::bad2:ff # Public AdGuard DNS
+#    depends_on: # optional, when you enable one of the db services below
+#      db:
+#        condition: service_started
+#        required: false
     volumes:
       - "/opt/shieldpm:/data"
 #      - "/var/www:/var/www" # optional, if you want to use ShieldPM directly as a webserver for html/php
@@ -34,10 +39,6 @@ services:
 #      - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
     environment:
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
-#    depends_on:
-#      db:
-#        condition: service_started
-#        required: false
 #      - "DB_MYSQL_HOST=127.0.0.1" # MySQL/MariaDB Host
 #      - "DB_MYSQL_PORT=3306" # MySQL/MariaDB Port
 #      - "DB_MYSQL_USER=npm" # MySQL/MariaDB User
@@ -59,7 +60,7 @@ services:
 #      - "ACME_OCSP_STAPLING=true" # enables ocsp stapling, default false, I recommend enabling this if your CA supports it, supported by zerossl and google public ca
 #      - "ACME_PROFILE=shortlived" # optional ACME profile, default none; the selected server must advertise this profile
 #      - "ACME_KEY_TYPE=rsa" # which key type to use ecdsa or rsa, default and recommended: ecdsa
-#      - "ACME_SERVER_TLS_VERIFY=false" # enables checking if ACME_SERVER has a valid TLS cert, default and recommended true
+#      - "ACME_SERVER_TLS_VERIFY=false" # disables ACME server TLS certificate verification; default and recommended: true
 #      - "CUSTOM_OCSP_STAPLING=true" # enables ocsp stapling for custom certs, default false, I recommend enabling this if your custom certs support it
 #      - "PUID=1000" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
 #      - "PGID=1000" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID

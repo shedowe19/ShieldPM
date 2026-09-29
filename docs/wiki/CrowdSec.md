@@ -152,7 +152,7 @@ Selecting **Y** will automatically:
 5. Configure the built-in Nginx Bouncer (`/data/crowdsec/crowdsec.conf`)
 6. Enable and start the `crowdsec` systemd service
 
-**No further configuration needed** — CrowdSec will be fully operational after the installer completes.
+After the installer completes, edit each Proxy Host that should enforce CrowdSec decisions and turn on **CrowdSec IPS** in its **Security** tab. The agent and global bouncer configuration alone do not enable the per-host Nginx check. Verify the API key and agent status if bouncer key generation failed during installation.
 
 ### Option B: Manual Installation (Existing Systems)
 
