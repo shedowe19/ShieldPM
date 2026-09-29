@@ -45,7 +45,7 @@ Die Schlüsseldatei `shieldpm/keys.json` wird vollständig in eine private tempo
 
 | Datei                    | Zweck                                                           |
 | ------------------------ | --------------------------------------------------------------- |
-| `.version`               | Versionsdatei (aktuell: 4.4.0)                                  |
+| `.version`               | Versionsdatei (aktuell: 4.4.1)                                  |
 | `renovate.json`          | Dependency-Update-Bot-Konfiguration                             |
 | `.gitignore`             | Git-Ignore-Regeln                                               |
 | `.gitattributes`         | Git-Attribut-Regeln (Line-Endings, Linguist)                    |
@@ -76,17 +76,17 @@ Siehe [Rootfs-Referenz](./rootfs.md) für vollständige Auflistung.
 
 ## Projekt-Dateien
 
-| Datei                    | Zweck                                                                |
-| ------------------------ | -------------------------------------------------------------------- |
-| `README.md`              | Projekt-Dokumentation — öffentlicher Einstiegspunkt                  |
-| `LICENSE`                | GPL-3.0 Lizenz — Urheberrechtsinformationen                          |
-| `THIRD-PARTY-NOTICES.md` | Generierte Lizenz-Attribution für NPM-Drittabhängigkeiten            |
-| `pentest_crowdsec.py`    | Pentest-Skript für CrowdSec-Integrationstests                        |
-| `renovate.json`          | Renovate-Bot Konfiguration für automatische Dependency-Updates       |
-| `.gitignore`             | Git-Ignorierliste                                                    |
-| `.gitattributes`         | Git-Attribute (z.B. linguististische Erkennung)                      |
-| `.imgbotconfig`          | ImgBot-Konfiguration für automatische Bildoptimierung                |
-| `.version`               | ShieldPM Version (z.B. `4.4.0`) — synchron mit package.json-Dateien  |
+| Datei                    | Zweck                                                               |
+| ------------------------ | ------------------------------------------------------------------- |
+| `README.md`              | Projekt-Dokumentation — öffentlicher Einstiegspunkt                 |
+| `LICENSE`                | GPL-3.0 Lizenz — Urheberrechtsinformationen                         |
+| `THIRD-PARTY-NOTICES.md` | Generierte Lizenz-Attribution für NPM-Drittabhängigkeiten           |
+| `pentest_crowdsec.py`    | Pentest-Skript für CrowdSec-Integrationstests                       |
+| `renovate.json`          | Renovate-Bot Konfiguration für automatische Dependency-Updates      |
+| `.gitignore`             | Git-Ignorierliste                                                   |
+| `.gitattributes`         | Git-Attribute (z.B. linguististische Erkennung)                     |
+| `.imgbotconfig`          | ImgBot-Konfiguration für automatische Bildoptimierung               |
+| `.version`               | ShieldPM Version (z.B. `4.4.1`) — synchron mit package.json-Dateien |
 
 ## Agent-spezifische Dateien
 

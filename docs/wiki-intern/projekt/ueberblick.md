@@ -7,7 +7,7 @@ ShieldPM (Shedowe's Shield Proxy Manager) ist ein sicherheitsfokussierter Fork v
 ## Kontext
 
 - **Basis**: Fork von NPMplus (ZoeyVid), welches selbst ein Fork von Nginx Proxy Manager (Jamie Curnow) ist.
-- **Aktuelle Version**: `v4.4.0`
+- **Aktuelle Version**: `v4.4.1`
 - **Lizenz**: UNLICENSED (Proprietär)
 - **Primäre Ausgabe**: Docker Image (`ghcr.io/shedowe19/shieldpm:latest`) und Native Installer (`scripts/install.sh`).
 
@@ -45,7 +45,7 @@ ShieldPM besteht aus **zwei** getrennten Repositories:
 | `scripts/install.sh`        | Native/LXC-Installer                           |
 | `rootfs/`                   | Docker-Image-Overlay-Dateien                   |
 | `Dockerfile`                | Multi-Stage Build (Frontend → Backend → Final) |
-| `.version`                  | Versionsdatei (aktuell: 4.4.0)                 |
+| `.version`                  | Versionsdatei (aktuell: 4.4.1)                 |
 
 ## Verwandte Seiten
 

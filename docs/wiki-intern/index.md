@@ -1,6 +1,6 @@
 # ShieldPM — Internes LLM-Wiki
 
-Willkommen im internen Entwickler-Wiki von **ShieldPM** (v4.4.0).
+Willkommen im internen Entwickler-Wiki von **ShieldPM** (v4.4.1).
 
 Dieses Wiki dient als Langzeitgedächtnis des Projekts. Es erklärt Architektur, Module, Entscheidungen und Zusammenhänge — für Entwickler, neue Teammitglieder und LLM-Agenten.
 
