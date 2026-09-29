@@ -82,6 +82,11 @@ Prüfung nach `yarn build` aus. Ein lokaler Lauf lautet:
 Die Budgets sind keine Core-Web-Vitals-Messung; sie verhindern reproduzierbar Größenregressionen. Änderungen an ihnen
 erfordern eine gemessene neue Baseline und eine begründete Anpassung.
 
+Nach dem Dependency-Update in PR #144 maß der CI-Build 1.246.277 Byte für alle
+gzip-komprimierten JavaScript-Assets zusammen. Das Gesamtbudget wurde dafür von 1.242.000 auf 1.255.000 Byte
+angepasst; der neue Grenzwert lässt rund 8,7 KB Spielraum über der gemessenen Baseline. Die Limits für den größten
+JavaScript-Chunk und die Stylesheets blieben unverändert.
+
 ## Native / LXC Build
 
 Vor dem Export des LXC-Rootfs entfernt der Workflow SSH-Hostkeys und leert die Maschinen-ID. Ein aktivierter Systemd-Dienst erzeugt fehlende SSH-Hostkeys vor dem SSH-Start pro Instanz. Bereinigungs-Globs werden innerhalb des Builder-Containers ausgewertet, damit sie dessen Dateisystem erfassen.
