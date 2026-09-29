@@ -56,14 +56,14 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 
 | Technologie          | Version | Zweck                   |
 | -------------------- | ------- | ----------------------- |
-| React                | v19.2   | UI-Framework            |
+| React                | v19.3   | UI-Framework            |
 | TypeScript           | v7.0    | Typsicherheit           |
-| Vite                 | v8.2    | Build-Tool              |
-| TanStack React Query | v5.102  | Server-State-Management |
+| Vite                 | v8.3    | Build-Tool              |
+| TanStack React Query | v5.104  | Server-State-Management |
 | Tailwind CSS         | v4.3    | Styling                 |
 | shadcn/ui (Radix)    | aktuell | UI-Komponenten          |
 | react-router-dom     | v7.18   | Routing                 |
-| Framer Motion        | v13.1   | Animationen             |
+| Framer Motion        | v13.4   | Animationen             |
 | i18next              | v26.4   | Internationalisierung   |
 
 ### Infrastruktur
