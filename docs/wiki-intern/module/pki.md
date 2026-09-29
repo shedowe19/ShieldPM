@@ -11,14 +11,14 @@ Die interne PKI dient u. a.:
 - Internen Diensten ohne Public-DNS (Lab-/Homelab-Hosts)
 - mTLS-Authentifizierung (Access-Lists)
 - Self-Signed-Zertifikaten für interne Aufrufe (z. B. Cloudflared, Backend-zu-Backend)
-- Optional: Post-Quantum-fähigen Schlüsseln (ML-KEM / Kyber Hybrid Mode)
+- Der TLS-Schlüsselaustausch hängt vom ausgelieferten Nginx-/OpenSSL-Build und Client ab; die interne CA stellt klassische ECDSA-Zertifikate aus.
 
 Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeichert.
 
 ## Wichtige Dateien
 
 - `backend/internal/pki.js` (~321 Zeilen) — Business-Logik (Erzeugung Root-CA, Server-Cert, Client-Cert)
-- `backend/lib/encryption.js` — kryptografische Helfer
+- `node:crypto` und OpenSSL CLI — Zufallswerte, ECDSA-Schlüssel, X.509-Zertifikate und PKCS#12-Export
 - `backend/internal/certificate.js` — bindet PKI-Zertifikate ans Zertifikatsmodell
 - `frontend/src/api/backend/downloadRootCa.ts` — UI-Download der Root-CA
 - `frontend/src/modals/InternalCertificateModal.tsx` — UI für interne Server- und Client-Zertifikate
@@ -29,7 +29,7 @@ Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeiche
 - Server-/Client-Zertifikate werden mit der Root-CA signiert (`openssl req` + `openssl x509 -CA …`).
 - Root-CA kann als `.crt`/`.pem` heruntergeladen werden, um in Browsern oder Clients vertraut zu werden (Frontend-API: `frontend/src/api/backend/downloadRootCa.ts`).
 - Client-Zertifikate werden als `.p12` über den zentralen POST-Download-Client abgerufen. Dieser übernimmt Cookie-/CSRF-Übergabe, Fehlerbehandlung und die Freigabe der temporären Blob-URL.
-- Hosts mit `certificate.provider === "internal"` bekommen in `nginx.js` das Flag `host.use_ml_kem = true` gesetzt. Die tatsächliche ML-KEM-/Hybrid-Aktivierung passiert auf Nginx-/OpenSSL-Seite (`shieldpm-nginx`-Image, OpenSSL ≥ 3.5 mit X25519MLKEM768 bzw. oqs-Provider). Die Liste der unterstützten Hybrid-Modi wird durch die Build-Variante des `shieldpm-nginx`-Images bestimmt — siehe Repository [`shieldpm-nginx`](https://github.com/shedowe19/shieldpm-nginx).
+- Hosts mit `certificate.provider === "internal"` bekommen in `nginx.js` derzeit das Flag `host.use_ml_kem = true` gesetzt. **Keines der Templates in diesem Repository liest dieses Flag**; daraus darf keine garantierte ML-KEM-Aktivierung abgeleitet werden. Ob Hybrid-TLS angeboten und ausgehandelt wird, bestimmt der ausgelieferte Nginx-/OpenSSL-Build und der Client. Die Signaturen von Root und Leaf bleiben ECDSA — siehe Repository [`shieldpm-nginx`](https://github.com/shedowe19/shieldpm-nginx).
 
 ## Sicherheit
 
@@ -40,7 +40,7 @@ Die Root-CA und ihre Schlüssel werden im persistenten `/data/`-Volume gespeiche
 ## Abhängigkeiten
 
 - Node-Crypto (`node:crypto`) für klassische Algorithmen
-- Optional OpenSSL CLI im Backend-Image für ML-KEM-Hybrid (Annahme: nur in `shieldpm-nginx`-Build aktiviert)
+- OpenSSL CLI im Backend-Image für ECDSA-Zertifikatserstellung und PKCS#12-Export
 
 ## Offene Fragen
 

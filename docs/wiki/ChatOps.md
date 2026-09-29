@@ -1,111 +1,45 @@
-# ChatOps (Telegram Bot)
+# ChatOps (Telegram)
 
-ShieldPM includes a **ChatOps** integration that allows you to manage your server through a **Telegram Bot**. Messages sent to the bot are processed by the built-in [AI Agent](AI-Agent), giving you full administrative control from your phone or desktop via Telegram.
+ChatOps connects a Telegram bot to ShieldPM's [AI Agent](AI-Agent). An enabled integration receives text messages through the backend's Telegraf polling client. Authorized messages are sent to the configured AI provider; structured tool calls use the permissions of the ShieldPM account that owns the integration.
 
-## Features
-
-* **Natural Language Management:** Send messages like "Create a proxy host for app.example.com pointing to 192.168.1.50:3000" and the AI Agent executes the task.
-* **Permission-Aware:** The Telegram bot inherits the permissions of the ShieldPM user who created the integration.
-* **Access Control:** Restrict which Telegram users can interact with the bot via allowed User IDs.
-* **Encrypted Tokens:** Bot tokens are stored using **AES-256-GCM** encryption.
-* **Markdown Support:** Responses are formatted with Telegram MarkdownV2 for readability.
-
-## 🏗️ Architecture
-
-```
-  ┌──────────────┐       ┌─────────────────┐       ┌──────────────────────┐
-  │   Telegram    │──────▶│  Telegram API    │──────▶│      ShieldPM        │
-  │   (User)      │◀──────│  (Bot Server)    │◀──────│                      │
-  └──────────────┘       └─────────────────┘       │  ┌────────────────┐  │
-                                                   │  │  Telegraf Bot   │  │
-                                                   │  │  (Listener)     │  │
-                                                   │  └───────┬────────┘  │
-                                                   │          │           │
-                                                   │          ▼           │
-                                                   │  ┌────────────────┐  │
-                                                   │  │  AI Agent      │  │
-                                                   │  │  (Gemini/LLM)  │  │
-                                                   │  └───────┬────────┘  │
-                                                   │          │           │
-                                                   │          ▼           │
-                                                   │  ┌────────────────┐  │
-                                                   │  │  ShieldPM API  │  │
-                                                   │  │  (Tools/CRUD)  │  │
-                                                   │  └────────────────┘  │
-                                                   └──────────────────────┘
-```
-
-**Key Points:**
-* Messages from unauthorized Telegram users are **silently ignored**
-* The bot generates a temporary JWT token (`ctx.shieldAccess`) for authenticated API access
-* All actions are logged in the Audit Log under the integration owner's account
+The bot runs in the ShieldPM backend process and polls Telegram for messages. It handles text messages; other Telegram message types are not routed to the AI chat. The web UI can save, update, or delete the account's integration and masks the previously saved bot token rather than displaying it.
 
 ## Setup
 
-### 1. Create a Telegram Bot
+1. Create a bot with [@BotFather](https://t.me/BotFather) and copy its token.
+2. Get the numeric Telegram user IDs you want to authorize.
+3. Configure and enable **Settings → AI Agent** first. ChatOps cannot process requests while the AI Agent is disabled.
+4. Open **ChatOps**, enter the bot token, add the allowed Telegram IDs separated by commas, enable the integration, and save.
 
-1. Open [Telegram](https://telegram.org/) and search for **@BotFather**.
-2. Send `/newbot` and follow the prompts to create your bot.
-3. **Copy the Bot Token** (e.g., `123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`).
+You can obtain your numeric Telegram ID from a Telegram ID bot or another trusted method. Enter user IDs rather than Telegram usernames; the allowlist compares each incoming sender ID as a string. The UI requires at least one ID before saving. Saving an enabled integration starts its bot; disabling or deleting it stops the polling client. Replacing the token restarts the integration with the new token.
 
-### 2. Find Your Telegram User ID
+The page currently edits the first Telegram integration belonging to your account. A missing allowlist denies all incoming users. A sender whose Telegram ID is not listed gets no reply; the backend writes an unauthorized-attempt warning to its logs.
 
-To restrict access to only your account:
+The integration's token is encrypted in the database with AES-256-GCM. Access to the ChatOps configuration is governed by the owner's ChatOps permissions and ownership checks; integrations are not shared across accounts in the management API.
 
-1. Search for **@userinfobot** on Telegram.
-2. Send it any message — it will reply with your **User ID** (a number like `12345678`).
+## Usage and access
 
-### 3. Configure in ShieldPM
+For example, you can ask the bot to list proxy hosts or check traffic analytics if the integration owner has the corresponding permissions. The bot creates a short-lived, five-minute access token bound to that ShieldPM account for each accepted message. **Every Telegram ID on the allowlist acts with the same ShieldPM permissions as the integration owner**; IDs are not mapped to separate ShieldPM users.
 
-1. Navigate to **ChatOps** in the sidebar.
-2. **Bot Token:** Paste the token from @BotFather.
-3. **Allowed User IDs:** Enter your Telegram User ID(s), comma-separated if multiple (e.g., `12345678, 87654321`).
-4. **Enabled:** Toggle on.
-5. Click **Save**.
+Examples of requests that depend on the owner's permissions:
 
-The bot starts immediately and begins listening for messages.
+- “List my proxy hosts.”
+- “Show the traffic summary.”
+- “Create a proxy host for `app.example.com` pointing to `192.0.2.10:3000`.”
+- “Check the Nginx configuration.”
 
-## Usage Examples
+The AI must return a structured tool call for a change to occur. An ordinary text reply alone does not perform an operation, and the provider can return an error or decline a request. Check the relevant ShieldPM page after a sensitive change.
 
-Once configured, you can send messages to your bot like:
+Replies use escaped Telegram MarkdownV2 outside inline code and code blocks. If Telegram rejects the formatting, the bot retries as plain text. The backend also sends configured proxy-host monitoring state alerts as plain text to up to 50 distinct valid allowed IDs per matching enabled integration belonging to the host owner. A failed delivery is logged without preventing delivery to other recipients. Keep the bot token private and rotate it with BotFather if exposed.
 
-* "List all proxy hosts"
-* "Create a proxy host for grafana.example.com → 192.168.1.10:3000 with SSL"
-* "Show me the last 50 nginx access logs"
-* "What's the system health?"
-* "Renew all certificates"
-
-The AI Agent processes these requests using the same tools available in the web UI's AI chat.
-
-## Security
-
-* **Unauthorized users are silently ignored** — they receive no response.
-* **Permissions are inherited** from the ShieldPM user who created the integration. A restricted user cannot perform admin actions via the bot.
-* **All actions are logged** in the Audit Log under the integration owner's account.
-
-> [!WARNING]
-> The Telegram Bot Token grants full access to your bot. Keep it private. If compromised, revoke it via @BotFather (`/revoke`) and create a new one.
+Chat requests themselves are not guaranteed to appear as audit entries. Individual operations are recorded only where the underlying service writes an audit event. Errors and authorization failures are best investigated in backend logs and by checking the current state in ShieldPM.
 
 ## Troubleshooting
 
-### Bot Not Responding
+- Confirm that both the ChatOps integration and AI Agent are enabled and that the selected model and provider work.
+- Check the bot token and the sender's numeric Telegram ID in the allowlist.
+- Inspect backend logs (`docker compose logs -f shieldpm` for the corresponding Compose service, or `journalctl -u shieldpm -f` for a native installation) for `[ChatOps]` messages.
+- If the bot starts but cannot answer a request, verify the AI provider model and that the integration owner can perform that action in ShieldPM. Use the UI to check whether an attempted change actually happened.
+- When rotating the token, update it in ShieldPM and save. Telegram may need a moment to end the previous polling request and start the replacement instance.
 
-* Verify the Bot Token is correct (create a new one via @BotFather if unsure).
-* Check that the **Enabled** toggle is on.
-* Confirm your Telegram User ID is in the **Allowed User IDs** list.
-* Check backend logs:
-
-    ```bash
-    # Docker
-    docker compose logs -f shieldpm | grep "ChatOps"
-
-    # Native / LXC
-    journalctl -u shieldpm -f | grep "ChatOps"
-    ```
-
-### "Unauthorized access attempt" in Logs
-
-A Telegram user not in your Allowed User IDs tried to message the bot. This is expected behavior — they are silently blocked.
-
----
-[🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)
+[🏠 Home](Home) | [🤖 AI Agent](AI-Agent) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

@@ -1,227 +1,51 @@
 # Tor Onion Services
 
-ShieldPM includes native support for **Tor Onion Services** (Hidden Services), allowing you to expose your proxied services over the Tor network. This is ideal for:
+ShieldPM can publish a local TCP service through a Tor v3 `.onion` address without an inbound public port. Visitors need Tor Browser or another Tor client. The feature uses the local Tor daemon's authenticated control port to create and manage detached onion services.
 
-- **Privacy**: Hide your server's IP address from visitors
-- **CGNAT Bypass**: Expose services without port forwarding
-- **Censorship Resistance**: Access your services from anywhere
+## Prerequisites
 
-## 🧅 How It Works
+- Tor must be available on the ShieldPM instance. `TOR_ENABLED=true` is the default; the Docker startup scripts configure the local control port and start the daemon when enabled.
+- The service you publish must accept traffic on `127.0.0.1` at the **Target Port** from the ShieldPM/Tor network namespace. With the included Docker Compose host network, a host-local service is reachable there. For custom container networking, check that the target is actually reachable at that loopback address.
+- To associate the onion address with an existing Proxy Host, you also need permission to update that host.
 
-Tor Onion Services work by creating a `.onion` address that is only accessible via the Tor network (using Tor Browser or a Tor proxy). Unlike regular web hosting, onion services:
+## Create a service
 
-- Don't require a public IP or open ports
-- Encrypt all traffic end-to-end
-- Provide anonymity for both server and client
+1. Go to **Hosts → Tor Onion** and choose **Add Onion Service**.
+2. Enter a name, **Virtual Port** (on the onion address, default `80`), and **Target Port** (the local service port). You can optionally associate an existing Proxy Host.
+3. Save. ShieldPM asks Tor to generate an ED25519 v3 identity. On success it stores the resulting onion address and encrypted private key and starts the service. If Tor cannot create it, the saved entry remains in an **error** state; fix Tor availability and retry from the service list.
 
+For example, to publish the HTTP listener of ShieldPM's included host-network installation, use virtual port `80` and target port `80`. When a Proxy Host is associated, ShieldPM also adds the generated onion address to that host's domain list and regenerates its Nginx configuration. The associated host must still have an appropriate local HTTP listener and routing configuration.
+
+The service list shows the assigned onion address, port mapping and state (**stopped**, **starting**, **running**, or **error**). You can edit the service's name, associated Proxy Host and ports. Reassigning it moves the onion domain between authorized Proxy Hosts; changing ports restarts the Tor service. A Proxy Host must retain at least one domain when an onion address is removed. Access to a service and its linked host follows the corresponding management permissions and owner visibility.
+
+Tor's control port is `127.0.0.1:9051`; it is not an externally published listener. The control password is generated at startup and kept under `/data/shieldpm/tor-control-password`. The Tor state directory and log are `/data/tor/` and `/data/tor/tor.log`. The private service identity is encrypted in the ShieldPM database using the instance's persistent encryption key. Back up **both** `/data` and the database when migrating instances so the onion identity can be recovered.
+
+The Docker startup script writes `/etc/tor/torrc` from its template when Tor is enabled. It binds the control port to loopback, disables the SOCKS proxy, and logs to `/data/tor/tor.log`. On a native/LXC installation, check the Tor service and its configuration there instead of assuming the container startup script runs.
+
+## Start, stop, and delete
+
+- **Stop** removes the active Tor service while retaining its saved identity, so starting it again can restore the same address.
+- **Delete** stops and removes the service record. Without a backup of its identity, that address cannot be recreated.
+- When Tor is unavailable or a control command fails, inspect service status and the Tor log; a failed operation is reported instead of silently treating it as started or stopped.
+
+In Demo Mode, the page explains that changes are disabled. Read requests may still return service and Tor availability information; write requests return HTTP 403.
+
+## HTTP and HTTPS
+
+An onion address authenticates its service within Tor and encrypts the Tor connection. HTTP on a virtual port such as 80 can therefore be appropriate for an onion-only service. HTTPS may still be needed for application behavior or for the transport between Tor's local target and a separate backend; configure the target listener and certificate accordingly. Normal browser certificate checks apply if you use HTTPS.
+
+## Troubleshooting
+
+```bash
+# Docker; use pgrep tor directly on Native/LXC
+docker exec shieldpm pgrep tor
+docker exec shieldpm tail -n 80 /data/tor/tor.log
 ```
-  ┌──────────────┐     ┌─────────────────────┐     ┌─────────────────────────┐
-  │  Tor Browser  │────▶│     Tor Network      │────▶│       ShieldPM          │
-  │  (Client)     │     │  (3-hop encrypted    │     │                         │
-  └──────────────┘     │   relay circuit)     │     │  ┌───────────────────┐  │
-                       └─────────────────────┘     │  │   Tor Daemon      │  │
-                                                   │  │  (Hidden Service) │  │
-                                                   │  │  *.onion:80/443   │  │
-                                                   │  └────────┬──────────┘  │
-                                                   │           │             │
-                                                   │           ▼             │
-                                                   │  ┌───────────────────┐  │
-                                                   │  │  Nginx (Proxy)    │  │
-                                                   │  │  Access Lists,    │  │
-                                                   │  │  WAF, Caching     │  │
-                                                   │  └────────┬──────────┘  │
-                                                   └───────────┼─────────────┘
-                                                               ▼
-                                                   ┌───────────────────────┐
-                                                   │   Backend Service     │
-                                                   └───────────────────────┘
-```
 
-ShieldPM manages Onion Services by communicating with the Tor daemon via the **Control Port** (localhost:9051).
+Allow time for Tor to establish circuits after creating a service, verify the full `.onion` address, and confirm that a service accepts connections on the configured target port. Do not print or share the Tor control password or private service key when collecting logs.
 
-## 📋 Prerequisites
+## Related pages
 
-- **Tor Enabled**: Ensure `TOR_ENABLED=true` (default) in your environment
-- **Tor Daemon**: Automatically started by ShieldPM
-- **Tor Browser**: Clients need Tor Browser to access `.onion` addresses
-
-## 🚀 Creating an Onion Service
-
-1. Navigate to **Hosts → Tor Onion** in the sidebar
-2. Click **Add Onion Service**
-3. Configure:
-   - **Name**: A friendly name for your service
-   - **Virtual Port**: The port exposed on the `.onion` address (usually `80` or `443`)
-   - **Target Port**: The local port to forward to (e.g., `80` for HTTP, `443` for HTTPS)
-4. Click **Save**
-
-ShieldPM will:
-
-- Generate a new **ED25519-V3** keypair
-- Create a unique `.onion` address (56 characters)
-- Start the Hidden Service immediately
-
-## 🔧 Configuration Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| **Name** | - | A friendly identifier for the service |
-| **Virtual Port** | 80 | Port exposed on the `.onion` address |
-| **Target Port** | 80 | Local port traffic is forwarded to |
-
-### Example Configuration
-
-| Use Case | Virtual Port | Target Port |
-|----------|--------------|-------------|
-| HTTP website | 80 | 80 |
-| HTTPS website | 443 | 443 |
-| Custom app | 8080 | 3000 |
-
-## ⚙️ Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TOR_ENABLED` | `true` | Enable/disable the Tor daemon |
-
-## 🔐 Security
-
-### Private Key Storage
-
-Onion Service private keys are **encrypted at rest** using AES-256-GCM. The encryption key is derived from your ShieldPM instance's master key stored in `/data/shieldpm/keys.json`.
-
-### Control Port Authentication
-
-The Tor Control Port is:
-
-- Only accessible from `127.0.0.1` (localhost)
-- Protected by an auto-generated password stored in `/data/shieldpm/tor-control-password`
-- Never exposed to the network
-
-### Demo Mode
-
-Tor Onion Services are **completely disabled** in Demo Mode for security reasons. The menu item is hidden and all API endpoints return 403 errors.
-
-## 📂 File Locations
-
-| Path | Description |
-|------|-------------|
-| `/data/tor/` | Tor data directory |
-| `/data/shieldpm/tor-control-password` | Control Port password |
-| `/data/tor/tor.log` | Tor daemon logs |
-| `/etc/tor/torrc` | Tor configuration file |
-
-## 🔄 Service Lifecycle
-
-### Starting a Service
-
-1. **First time**: A new keypair and `.onion` address are generated
-2. **Subsequent starts**: The existing keypair is used to restore the same `.onion` address
-
-### Stopping a Service
-
-- The service is removed from Tor's memory
-- The keypair remains encrypted in the database
-- Restarting will restore the same `.onion` address
-
-### Deleting a Service
-
-- The service is stopped
-- The keypair is permanently deleted
-- The `.onion` address is lost forever
-
-> ⚠️ **Warning**: Keep a backup of your database if you need to preserve `.onion` addresses!
-
-## 🔐 HTTPS vs. HTTP over Tor
-
-A common question is whether you need HTTPS (SSL/TLS) for an Onion Service.
-
-### Short Answer: No
-
-Onion Services provide **end-to-end encryption and authentication** natively by the Tor protocol. When you connect to a `.onion` address, the Tor circuit itself ensures that:
-
-- The connection is encrypted
-- You are talking to the correct server (the address is a hash of the public key)
-
-Because of this, **Port 80 (HTTP) is completely safe** for sensitive content over Tor.
-
-### When to use HTTPS (Port 443)?
-
-You should only use HTTPS over Tor if:
-
-1. **Frontend Requirements**: Your backend application *enforces* HTTPS and won't work without it.
-2. **Double Encryption**: You want an extra layer of security (e.g., from the browser process to the app container).
-3. **EV Certificates**: You have an expensive Extended Validation certificate for your onion address (rare).
-
-> 💡 **Tip**: Using self-signed certificates for Onion addresses will still trigger browser warnings, even though Tor is already secure. For 99% of use cases, standard HTTP (Port 80) is the recommended way.
-
-## ⚖️ Legal & Ethical Use
-
-**Important Note**: The Tor Onion Services feature in ShieldPM is designed to empower users with **privacy**, **censorship resistance**, and **secure remote access** to legitimate self-hosted services (e.g., Nextcloud, Home Assistant, personal blogs) without exposing public IP addresses or requiring complex port forwarding.
-
-This feature is **not** intended to facilitate illegal activities, the hosting of illicit content, or the operation of "Dark Web" marketplaces. ShieldPM provides this technology to foster a freer and more secure internet for everyone. Users are responsible for complying with all applicable laws and regulations in their jurisdiction regarding the content they host.
-
-## 🔍 Troubleshooting
-
-### Tor Not Available
-
-If you see "Tor daemon is not available":
-
-1. Check if Tor is running:
-
-   ```bash
-   # Docker
-   docker exec shieldpm pgrep tor
-
-   # Native / LXC
-   pgrep tor
-   ```
-
-2. Check Tor logs:
-
-   ```bash
-   # Docker
-   docker exec shieldpm cat /data/tor/tor.log
-
-   # Native / LXC
-   cat /data/tor/tor.log
-   ```
-
-3. Ensure `TOR_ENABLED` is not set to `false`
-
-### Onion Service Not Accessible
-
-1. Wait 30-60 seconds after creation (circuit establishment takes time)
-2. Verify the `.onion` address is correct (56 characters + `.onion`)
-3. Ensure you're using Tor Browser
-4. Check that the target service is running on the configured port
-
-### Control Port Connection Failed
-
-1. Verify password file exists:
-
-   ```bash
-   # Docker
-   docker exec shieldpm cat /data/shieldpm/tor-control-password
-
-   # Native / LXC
-   cat /data/shieldpm/tor-control-password
-   ```
-
-2. Check Tor configuration:
-
-   ```bash
-   # Docker
-   docker exec shieldpm cat /etc/tor/torrc
-
-   # Native / LXC
-   cat /etc/tor/torrc
-   ```
-
-## 📖 Further Reading
-
-- [Tor Project: Onion Services](https://community.torproject.org/onion-services/)
-- [Tor Hidden Service Protocol](https://spec.torproject.org/rend-spec-v3.html)
-- [Security Best Practices](Security)
-
----
-[🏠 Home](Home) | [🔒 Security](Security) | [☁️ Cloudflare Tunnels](Cloudflared-Tunnels)
+- [Proxy Hosts](./Proxy-Hosts.md)
+- [Cloudflare Tunnels](./Cloudflared-Tunnels.md)
+- [WireGuard Tunnels](./WireGuard-Tunnels.md)

@@ -2,15 +2,17 @@
 
 ## Zweck
 
-Kleines Notiz-/Memo-Modul, das Notizen direkt im Dashboard von ShieldPM ablegt. Ideal für Hinweise an andere Admins, ToDo-Listen oder kurzlebige Reminder.
+Kleines Notiz-/Memo-Modul, das Notizen direkt im Dashboard von ShieldPM ablegt.
 
 ## Kontext
 
-Notizen sind pro Benutzer/Team verfügbar und werden im Dashboard prominent angezeigt. Sie ersetzen keinen Wissensspeicher, sondern dienen als "Sticky Notes" für die Tagespraxis.
+Notizen werden für berechtigte Benutzer derselben Instanz gemeinsam angezeigt. Die Tabelle hat keine Besitzer-ID und
+trennt Notizen daher nicht nach Benutzer oder Team. Das Widget erscheint nur mit `dashboard_notes:view`;
+Schreibaktionen benötigen `dashboard_notes:manage`.
 
 ## Wichtige Dateien
 
-- `backend/internal/dashboard_note.js` (~103 Zeilen) — Business-Logik (CRUD)
+- `backend/internal/dashboard_note.js` — Business-Logik (CRUD)
 - `backend/models/dashboard_note.js` — Objection.js-Modell
 - `backend/routes/dashboard.js` — REST-API unter `/api/dashboard`
 - `backend/lib/access/dashboard_notes-*.json` — RBAC-Regeln
@@ -20,9 +22,10 @@ Notizen sind pro Benutzer/Team verfügbar und werden im Dashboard prominent ange
 
 ## Verhalten
 
-- Benutzer mit entsprechender Berechtigung können Notizen anlegen, bearbeiten und löschen.
-- Notizen werden als Liste im Dashboard angezeigt (Widget).
-- Felder: Titel, Text (Markdown), Farbe/Status (sofern unterstützt), Timestamps.
+- Berechtigte Benutzer können Notizen anlegen, bearbeiten und löschen; das Widget liest die Liste sortiert nach `position`.
+- Das Schema enthält `content` (Pflichtfeld), `color` (gelb, blau, grün, rot, lila oder grau), `position` sowie Erstellungs- und Änderungszeitstempel. Ein Titel- oder Statusfeld existiert nicht.
+- Die Oberfläche zeigt den Inhalt als reinen Text mit erhaltenen Zeilenumbrüchen an; Markdown wird nicht gerendert.
+- Anlegen, Ändern und Löschen erzeugen Audit-Einträge vom Objekttyp `dashboard_note`.
 
 ## Abhängigkeiten
 

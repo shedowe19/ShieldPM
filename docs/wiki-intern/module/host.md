@@ -9,14 +9,14 @@ Gemeinsame Hilfslogik, die von Proxy-, Redirection- und Dead-Hosts geteilt wird 
 Mehrere Host-Typen (Proxy-, Redirection-, Dead-Host) teilen Verhalten wie:
 
 - Validierung der `domain_names` (Konflikt-Erkennung über alle Host-Typen hinweg)
-- Verwaltung der `host_domains`-Relation
+- Verwaltung der `host_domains`-Relation für Proxy-Hosts; Redirect- und Dead-Hosts speichern ihre Domains als JSON-Liste
 - Helper für die Auflösung verknüpfter Modelle
 
 Dieses Modul bündelt die wiederverwendbare Logik, sodass die einzelnen Host-Module konsistent bleiben.
 
 ## Wichtige Dateien
 
-- `backend/internal/host.js` (~232 Zeilen) — Hilfsfunktionen, Domain-Konflikt-Prüfung
+- `backend/internal/host.js` — Hilfsfunktionen, Domain-Konflikt-Prüfung
 - `backend/models/host_domain.js` — Modell für die Verknüpfungs-Tabelle `host_domain`
 - `backend/lib/utils.js` — `castJsonIfNeed`, allgemeine Helfer
 
@@ -37,15 +37,7 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Korrekturen der Domain-Auflösung
 
-`isHostnameTaken()` und `getHostsWithDomains()` laden die normalisierte `host_domains`-Relation. Das alte JSON-Feld ist nach Änderungen nicht mehr zuverlässig. Auch PostgreSQL-Vorfilter suchen ohne Unterscheidung von Groß-/Kleinschreibung; anschließend wird exakt verglichen. Die Auswahl mehrerer Domains verwendet ein Set und liefert jeden Host nur einmal.
-
-## Verwandte Seiten
-
-- [Proxy-Host](./proxy-host.md)
-- [Redirection-Host](./redirection-host.md)
-- [Dead-Host](./dead-host.md)
-- [Modulübersicht](./README.md)
-- [Datenmodell](../daten/datenmodell.md)
+`isHostnameTaken()` und `getHostsWithDomains()` laden für Proxy-Hosts die normalisierte `host_domains`-Relation. Redirect- und Dead-Hosts verwenden weiterhin ihr JSON-Feld `domain_names`. Die PostgreSQL-Vorfilter suchen ohne Unterscheidung von Groß-/Kleinschreibung; anschließend wird der vollständige Domainname exakt, aber ebenfalls ohne Beachtung der Groß-/Kleinschreibung, verglichen. Die Auswahl mehrerer Domains verwendet ein Set und liefert jeden Host nur einmal.
 
 ## Eingaben und Zertifikatsmetadaten
 
@@ -58,3 +50,11 @@ DNS-Provider-Credentials aus einer Zertifikatsanforderung werden für die Beantr
 Beim Erstellen und Aktualisieren prüfen Proxy-, Redirect-, Dead-Hosts und Streams neue Zertifikatszuordnungen über `internalCertificate.get()`. Proxy-Hosts prüfen neue Zugriffslisten über `internalAccessList.get()`. Die Ressourcen benötigen ihre eigene Leseberechtigung und müssen im Eigentümer-Sichtbereich liegen; gelöschte oder fehlende IDs werden vor einer Hoständerung abgewiesen. Unveränderte, bereits bestehende Zuordnungen können weiter bearbeitet und mit `0` entfernt werden. `"new"` bleibt der eigene Ausstellungsablauf.
 
 Regressionen: `third-proxy-references.spec.js` prüft sämtliche Create-/Update-Aufrufer; `third-proxy-reference-ownership.spec.js` prüft die tatsächlichen Services mit SQLite für eigene, fremde, gelöschte und global sichtbare Ressourcen.
+
+## Verwandte Seiten
+
+- [Proxy-Host](./proxy-host.md)
+- [Redirection-Host](./redirection-host.md)
+- [Dead-Host](./dead-host.md)
+- [Modulübersicht](./README.md)
+- [Datenmodell](../daten/datenmodell.md)

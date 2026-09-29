@@ -25,21 +25,24 @@ Detaillierte Auflistung aller API-Routen-Dateien.
 | `routes/schema.js`    | `/api/schema`             | OpenAPI Schema          |
 | `routes/version.js`   | `/api/version`            | Versionsinformation     |
 
+`GET /api` gibt Health-, Setup-, Demo- und Versionsstatus sowie einen anfänglichen CSRF-Token zurück. `GET /api/schema` liefert die kompilierte, derzeit nur teilweise vollständige OpenAPI-Definition. Die Swagger-Oberfläche wird in `backend/app.js` unter `/docs` registriert und über den UI-Proxy als `/api/docs` erreicht.
+
 ### Nginx-Subrouten (`routes/nginx/`)
 
-| Datei                  | Pfad                             |
-| ---------------------- | -------------------------------- |
-| `proxy_hosts.js`       | `/api/nginx/proxy-hosts`         |
-| `redirection_hosts.js` | `/api/nginx/redirection-hosts`   |
-| `dead_hosts.js`        | `/api/nginx/dead-hosts`          |
-| `streams.js`           | `/api/nginx/streams`             |
-| `certificates.js`      | `/api/nginx/certificates`        |
-| `access_lists.js`      | `/api/nginx/access-lists`        |
-| `cloudflared.js`       | `/api/nginx/cloudflared-tunnels` |
-| `tor_onion.js`         | `/api/nginx/tor-onion`           |
-| `wireguard.js`         | `/api/nginx/wireguard`           |
-| `ddns_providers.js`    | `/api/nginx/ddns-providers`      |
-| `analytics.js`         | `/api/nginx/analytics`           |
+| Datei                  | Pfad                                          |
+| ---------------------- | --------------------------------------------- |
+| `proxy_hosts.js`       | `/api/nginx/proxy-hosts`                      |
+| `redirection_hosts.js` | `/api/nginx/redirection-hosts`                |
+| `dead_hosts.js`        | `/api/nginx/dead-hosts`                       |
+| `streams.js`           | `/api/nginx/streams`                          |
+| `certificates.js`      | `/api/nginx/certificates`                     |
+| `access_lists.js`      | `/api/nginx/access-lists`                     |
+| `cloudflared.js`       | `/api/nginx/cloudflared-tunnels`              |
+| `tor_onion.js`         | `/api/nginx/tor-onion`                        |
+| `wireguard.js`         | `/api/nginx/wireguard`                        |
+| `ddns_providers.js`    | `/api/nginx/ddns-providers`                   |
+| `analytics.js`         | `/api/nginx/analytics`                        |
+| `upload-relay.js`      | `/api/nginx/proxy-hosts/:hostId/upload-relay` |
 
 ### Proxy-Host-Konfigurationsvorschau
 
@@ -60,6 +63,10 @@ des berechtigten Hosts. Ein `nginx -tq` der vorgeschlagenen Konfiguration erfolg
 Die Proxy-Host-Route bietet außerdem `/monitors/status?ids=…` für sichtbare Zustände und
 `/:host_id/monitor` (GET/PUT) sowie `/:host_id/monitor/check` (POST) für die
 [aktive Host-Überwachung](../module/proxy-host-monitor.md).
+
+Die Nginx-Analytics-Zeitreihe liegt unter `GET /api/nginx/analytics/:hostId` (ohne `/series`),
+die Zusammenfassung unter `GET /api/nginx/analytics/:hostId/summary`. Die DDNS-Routen
+bieten zusätzlich `POST /api/nginx/ddns-providers/:id/test`.
 
 ## Verwandte Seiten
 

@@ -10,18 +10,20 @@ Das `rootfs/`-Verzeichnis enthält Dateien, die direkt ins Dateisystem des Conta
 
 ## Startup-Scripts (`rootfs/usr/local/bin/`)
 
-| Datei                | Größe  | Zweck                                                                                                                                                                                                                                                                                         |
-| -------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start.sh`           | 27 KB  | **Haupt-Startup-Script**: Konfiguriert Nginx, Umgebungsvariablen, Module, Berechtigungen                                                                                                                                                                                                      |
-| `launch.sh`          | 7 KB   | Startet Backend-Prozess und optionale Hilfsdienste; beendet den Container, wenn Nginx oder das Backend unerwartet endet |
-| `shieldpm-vacuum`    | 350 B  | Führt eine ausdrücklich angeforderte SQLite-`VACUUM`-Wartung aus; nie im Startpfad |
-| `entrypoint.sh`      | 839 B  | Entrypoint: Führt Prerun und anschließend `envs.sh` → `migration.sh` → `start.sh` → `launch.sh` aus                                                                                                                                                                                           |
-| `healthcheck.sh`     | 1 KB   | Docker-Healthcheck: Prüft API-Erreichbarkeit                                                                                                                                                                                                                                                  |
-| `envs.sh`            | 2 KB   | Lädt und exportiert Umgebungsvariablen                                                                                                                                                                                                                                                        |
-| `aio.sh`             | 1.5 KB | Richtet den Nextcloud-AIO-Proxy-Host einschließlich TLS-Zertifikat einmalig ein                                                                                                                                                                                                               |
-| `update-shieldpm`    | 16 KB  | Update-Script für native Installationen; richtet NodeSource APT ein, installiert/verifiziert Node.js 26 sowie Yarn Classic 1.22.22, aktiviert den System-CA-Store für Node-Netzwerkzugriffe und räumt beim Node-Majorwechsel ausschließlich verwaiste Corepack-Shims vor dem npm-Fallback auf |
-| `npm-reset-password` | 45 B   | Passwort-Reset-Wrapper                                                                                                                                                                                                                                                                        |
-| `migration.sh`       | 34 B   | Migrations-Wrapper                                                                                                                                                                                                                                                                            |
+| Datei                | Zweck                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `entrypoint.sh`      | Docker-Einstieg: Datenverzeichnis-Migration und optionale Prerun-Skripte; ruft `envs.sh` auf                        |
+| `envs.sh`            | Lädt `/data/.env`, validiert Umgebungswerte und prüft den Vorlagenfingerabdruck                                     |
+| `migration.sh`       | Übergibt an `start.sh`                                                                                              |
+| `start.sh`           | Konfiguriert Nginx, Module, Zertifikate, Dienste und Berechtigungen; ruft `launch.sh` auf                           |
+| `migrate-data.sh`    | Funktionen für die Migration historischer Datenpfade und Certbot-Dateien                                            |
+| `runtime-config.sh`  | Passt Nginx-, GoAccess- und Certbot-Dateien an aktuelle Laufzeitpfade und Umgebungswerte an                         |
+| `launch.sh`          | Startet Backend-Prozess und optionale Hilfsdienste; beendet den Container, wenn Nginx oder Backend unerwartet endet |
+| `healthcheck.sh`     | Docker-Healthcheck der lokalen HTTPS-UI (`/api/`) und gegebenenfalls GoAccess-/PHP-Dienste                          |
+| `aio.sh`             | Richtet den Nextcloud-AIO-Proxy-Host einschließlich TLS-Zertifikat einmalig ein                                     |
+| `update-shieldpm`    | Updater für native Installationen; erstellt vor dem Austausch einen Recovery-Checkpoint                             |
+| `npm-reset-password` | Passwort-Reset-Wrapper                                                                                              |
+| `shieldpm-vacuum`    | Führt eine ausdrücklich angeforderte SQLite-`VACUUM`-Wartung aus; nie im Startpfad                                  |
 
 ## Datenmigration und Dateirechte
 

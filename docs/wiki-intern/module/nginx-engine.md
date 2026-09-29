@@ -10,12 +10,13 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ## Wichtige Dateien
 
-- `backend/internal/nginx.js` (12 KB) — Hauptlogik
-- `backend/templates/proxy_host.conf` (16 KB) — Proxy-Host-Template
-- `backend/templates/_proxy_logic.conf` (17 KB) — Gemeinsame Proxy-Logik
+- `backend/internal/nginx.js` — Hauptlogik
+- `backend/templates/proxy_host.conf` — Proxy-Host-Template
+- `backend/templates/_proxy_logic.conf` — Gemeinsame Proxy-Logik
+- `backend/templates/_upload_relay.conf` — Spezielle Upload-Locations für Proxy-Hosts mit aktiviertem Relay
 - `backend/templates/_proxy_host_custom_location.conf` — Partial für `custom_locations` (Liquid-Syntax, eingebettet in `proxy_host.conf`)
-- `backend/templates/_common.conf` (3 KB) — Gemeinsame Konfiguration
-- `backend/templates/stream.conf` (3 KB) — Stream-Template
+- `backend/templates/_common.conf` — Gemeinsame Konfiguration
+- `backend/templates/stream.conf` — Stream-Template
 - `backend/templates/redirection_host.conf` — Redirect-Template
 - `backend/templates/dead_host.conf` — 404-Template
 - `backend/templates/default.conf` — Default-Server
@@ -27,12 +28,12 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 2. Liest aktuelle Daten aus der Datenbank
 3. Rendert Liquid-Templates mit Host-Daten
 4. Schreibt `.conf`-Dateien nach `/data/nginx/`
-5. Führt `nginx -s reload` aus (Debouncing passiert in `docker.js`, nicht hier)
+5. Prüft die gesamte Konfiguration mit `nginx -tq` und signalisiert danach unmittelbar `nginx -s reload`
 
 ## Wichtige Hinweise
 
 - `nginx -t` wird **aktiv** vor dem Reload ausgeführt via `test()` Methode (`nginx -tq`)
-- Reload ist **nicht** debounced in `nginx.js` — Debouncing passiert in `docker.js`
+- Der normale Reload in `nginx.js` ist **nicht** verzögert. Nur bestimmte Aufrufer, etwa Docker Auto-Discovery in `docker.js`, sammeln Änderungen vor einem gemeinsamen Reload.
 - Templates verwenden ausschließlich Liquid-Syntax (LiquidJS)
 - Eigene Unix-Sockets liegen unter `/run/shieldpm/`: Backend, PHP, GoAccess, Anubis, OAuth2 und HTTP-Ersatzlistener. Die Startskripte vergeben nur diesem Laufzeitverzeichnis Schreibrechte; fremde Host-Sockets unter `/run` bleiben unverändert. Templateänderungen erzwingen die Neuerzeugung gespeicherter Hosts beim Start.
 - Die editierbare Default-Konfiguration einschließlich Sicherungen liegt unter `/data/nginx/default.conf`. Ein festes Include unter `/usr/local/nginx/conf/conf.d/default.conf` bindet sie ein; der Backendprozess benötigt dort keine Schreibrechte mehr.
@@ -58,7 +59,7 @@ Die Nginx-Engine ist das "Gehirn" von ShieldPM. Sie liest den Datenbankzustand, 
 
 ### Bulk-Operationen
 
-- `bulkGenerateConfigs(model, host_type, hosts)` delegiert an `bulkGenerateConfigGroups(groups)`. Alle Hosts und Hosttypen eines Gruppenlaufs werden zunächst mit Sicherungen gestaged, dann genau einmal mit `nginx -tq` geprüft und erst anschließend atomar übernommen. Scheitert Rendern oder Validierung, werden alle bereits gestagten Dateien als `.err` gesichert und auf den vorherigen Zustand zurückgesetzt. Ein gemeinsamer Reload liegt weiter beim Aufrufer.
+- `bulkGenerateConfigs(model, host_type, hosts)` delegiert an `bulkGenerateConfigGroups(groups)`. Alle Hosts und Hosttypen eines Gruppenlaufs werden zunächst mit Sicherungen geschrieben und dann genau einmal mit `nginx -tq` geprüft. Bei einem Fehler werden die bereits geschriebenen Dateien als `.err` gesichert und auf den vorherigen Zustand zurückgesetzt; nach erfolgreicher Prüfung werden Status und Sicherungen abgeschlossen. Ein gemeinsamer Reload liegt beim Aufrufer. Die Dateiverarbeitung ist serialisiert, aber die einzelnen Schreibvorgänge sind kein atomarer Dateisystem-Commit.
 
 ### Config-Parsing
 
@@ -90,17 +91,6 @@ Nach einem erfolgreichen `configure()` wird `internalAnubis.generatePolicy()` **
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
-## Verwandte Seiten
-
-- [Datenfluss](../architektur/datenfluss.md)
-- [Proxy-Host](./proxy-host.md)
-- [Redirection-Host](./redirection-host.md)
-- [Dead-Host](./dead-host.md)
-- [Stream](./stream.md)
-- [Host (gemeinsame Logik)](./host.md)
-- [IP-Ranges](./ip-ranges.md)
-- [Modulübersicht](./README.md)
-
 ## Aktivierung und gemeinsame Dateisperre
 
 Die Sicherung bleibt bis zum erfolgreichen Reload erhalten. Scheitert die Aktivierung, wird die vorige Konfiguration wiederhergestellt und neu geladen; die Antwort enthält `nginx_online: false`. Der Rollback-Reload erfolgt vor dem Schreiben der Fehlermetadaten, damit ein Datenbankausfall ihn nicht überspringen kann. `withConfigurationLock(callback)` stellt auch Zertifikatsaktivierungen, Default-Site-Wechsel sowie Löschen/Deaktivieren von Hosts in dieselbe Warteschlange. Der Callback darf `test()` und `reload()`, aber nicht erneut `configure()` aufrufen.
@@ -118,3 +108,14 @@ Auch die abschließenden Reloads von Access-List-, Wartungs- und Tor-Sammelläuf
 Fehlt vor einer Konfigurationsänderung die aktive Datei, entfernt `backupConfig()` eine eventuell veraltete `.bak`-Datei. Ein späterer Generierungsfehler kann damit keinen zuvor inaktiven Listener wiederherstellen. Deaktivierte oder inzwischen gelöschte Hosts erhalten auch nach erfolgreichem Rendern `nginx_online: false`.
 
 Ein Einzelwechsel prüft die Gesamtkonfiguration einmal innerhalb von `reload()`, bevor das Reloadsignal gesendet wird. Die zuvor unmittelbar davor ausgeführte identische Prüfung entfällt. Ein Sammellauf validiert alle gestagten Dateien genau einmal vor ihrem Commit; der abschließende Sammel-Reload validiert unverändert erneut. `third-proxy-nginx.spec.js` und `sixth-nginx-current-state.spec.js` decken den Einzel-, Batch- und Rollback-Pfad mit temporären Dateien und gemockten Prozessaufrufen ab.
+
+## Verwandte Seiten
+
+- [Datenfluss](../architektur/datenfluss.md)
+- [Proxy-Host](./proxy-host.md)
+- [Redirection-Host](./redirection-host.md)
+- [Dead-Host](./dead-host.md)
+- [Stream](./stream.md)
+- [Host (gemeinsame Logik)](./host.md)
+- [IP-Ranges](./ip-ranges.md)
+- [Modulübersicht](./README.md)

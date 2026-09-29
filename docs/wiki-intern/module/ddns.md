@@ -10,16 +10,18 @@ Unterstützt Cloudflare, DuckDNS und benutzerdefinierte URLs als DDNS-Provider.
 
 ## Wichtige Dateien
 
-- `backend/internal/ddns.js` (8 KB) — DDNS-Update-Logik
-- `backend/internal/ddns-provider.js` (4 KB) — Provider-Verwaltung
-- `backend/models/ddns_provider.js` (2 KB) — Objection.js-Modell
-- `backend/routes/nginx/ddns_providers.js` (3 KB) — API-Routen
+- `backend/internal/ddns.js` — DDNS-Update-Logik
+- `backend/internal/ddns-provider.js` — Provider-Verwaltung
+- `backend/models/ddns_provider.js` — Objection.js-Modell
+- `backend/routes/nginx/ddns_providers.js` — API-Routen
 
 ## Verhalten
 
 - Periodische Prüfung der öffentlichen IP
 - Aktualisiert DNS-Einträge bei Änderung
 - Unterstützt IPv4 und IPv6
+- Die WAN-Adresse wird über `api.ipify.org?format=json` beziehungsweise `api6.ipify.org?format=json` ermittelt. Nur eine tatsächlich als IPv6 erkannte Antwort wird als IPv6 übernommen; es gibt keinen zweiten Echo-Dienst als Fallback.
+- Der 60-Sekunden-Timer vergleicht jede IP-Version mit dem zuletzt erfolgreich gespeicherten Wert des jeweiligen Providers. Ein gespeicherter Fehler löst einen erneuten Versuch aus.
 - Benutzerdefinierte Update-URLs werden vor dem Abruf gegen SSRF geprüft; IPv6-Literale werden dabei ohne URL-Klammern geprüft, damit die Loopback-Adresse `::1` zuverlässig blockiert wird.
 
 ## Abhängigkeiten
@@ -31,6 +33,10 @@ Unterstützt Cloudflare, DuckDNS und benutzerdefinierte URLs als DDNS-Provider.
 Benutzerdefinierte URLs dürfen ausschließlich öffentliche HTTP(S)-Ziele erreichen. IPv4, IPv6 und IPv4-gemappte IPv6-Adressen werden geprüft. DNS wird erst beim Verbindungsaufbau aufgelöst; enthält die Antwort private oder reservierte Adressen, scheitert der Abruf. Der Socket verwendet ausschließlich die geprüften Adressen, wodurch eine zweite DNS-Auflösung zwischen Prüfung und Verbindung entfällt. Redirects werden nicht verfolgt. Netzwerkabrufe haben ein Zeitlimit von zehn Sekunden.
 
 Ohne WAN-Adresse der gewählten IP-Version wird kein Provider-Update versendet. `updateProvider()` liefert zusätzlich zum persistierten Fehlerstatus ein strukturiertes Erfolg-/Fehlerergebnis. Die Testfunktion übernimmt diesen Status und meldet fehlgeschlagene Updates nicht mehr als Erfolg.
+
+### GitOps-Geheimnisse
+
+`internal/gitops.js` exportiert DDNS-Einträge einschließlich `config` nach `ddns-providers/*.yaml`. Bei Cloudflare und DuckDNS enthält dieses Objekt API-Token im Klartext; eine benutzerdefinierte URL kann ebenfalls Zugangsdaten enthalten. Die private Repository-Freigabe und der Schutz von Backups sind erforderlich. `sanitizeForExport()` entfernt nur ausdrücklich angegebene Felder und verschlüsselt diese Werte nicht.
 
 ### Kodierung von Provider-Parametern
 

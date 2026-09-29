@@ -10,7 +10,7 @@ Das DDNS-Modul nutzt Provider-spezifische Logik, um IP-Adressen zu aktualisieren
 
 ## Wichtige Dateien
 
-- `backend/internal/ddns-provider.js` (4 KB) — Provider-Verwaltung
+- `backend/internal/ddns-provider.js` — Provider-Verwaltung
 - `backend/internal/ddns.js` — Hauptlogik, die die Provider aufruft
 
 ## Verhalten
@@ -27,7 +27,7 @@ Löschen fremder Provider. Erst nach erfolgreicher autorisierter Löschung werde
 
 ## Abhängigkeiten
 
-- Keine direkten (nutzt Node.js interne Module für Requests)
+- `internal/ddns.js` führt die Provider-HTTP-Aufrufe aus; `internal/audit-log.js` protokolliert Änderungen, `internal/gitops.js` kann sie exportieren. Das Provider-Modul selbst verwendet das Objection-Modell und `lodash`, nicht direkt Node-HTTP für Updates.
 
 ### Änderung und Test
 

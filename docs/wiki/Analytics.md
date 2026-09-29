@@ -1,32 +1,26 @@
 # Advanced Analytics
 
-ShieldPM includes a powerful, privacy-friendly analytics dashboard directly integrated into the interface. This feature provides real-time insights into your proxy traffic without relying on third-party services.
+ShieldPM includes a built-in traffic dashboard. The backend parses local Nginx JSON access logs and stores request details and aggregates in the configured application database. Request details include client IPs, paths and user agents; treat that database and its backups as sensitive.
 
 ---
 
 ## 🏗️ Architecture
 
-```
-  ┌──────────┐     ┌──────────────┐     ┌──────────────────────┐
-  │  Nginx    │────▶│  Access Logs │────▶│  ShieldPM Backend    │
-  │  (Traffic)│     │  (per host)  │     │  (Analytics Engine)  │
-  └──────────┘     └──────────────┘     └──────────┬───────────┘
-                                                   │
-                          ┌────────────────────────┤
-                          ▼                        ▼
-                   ┌──────────────┐     ┌──────────────────────┐
-                   │  GoAccess    │     │  React Dashboard     │
-                   │  (Port 91)   │     │  (Built-in UI)       │
-                   │  Deep HTML   │     │  Charts, Tables,     │
-                   │  Reports     │     │  GeoIP, Status Codes │
-                   └──────────────┘     └──────────────────────┘
+```mermaid
+flowchart TD
+  N["Nginx traffic"] --> L["JSON access log"]
+  L --> B["Backend analytics tailer"]
+  L --> G["GoAccess (optional)"]
+  B --> D["Application database"]
+  D --> A["Analytics API"]
+  A --> R["React dashboard"]
 ```
 
 ---
 
 ## Key Features
 
-- **Real-time Traffic Overview:** visualizes bandwidth usage and request counts.
+- **Traffic Overview:** displays recently ingested request counts and the live network throughput of the server. Aggregates flush approximately every 10 seconds.
 - **Requests Over Time:** Area chart showing traffic trends over the last 1h, 24h, 7d, or 30d.
 - **Status Codes:** Bar chart breakdown of HTTP response codes (2xx, 3xx, 4xx, 5xx).
 - **Top Lists:**
@@ -36,26 +30,22 @@ ShieldPM includes a powerful, privacy-friendly analytics dashboard directly inte
   - **Paths:** Most requested URL paths.
   - **User Agents:** Breakdown of browsers and devices.
 - **Recent Requests:** Detailed table of the latest requests with method, status, path, IP, and duration.
-- **Database Statistics:** Real-time database metrics including:
+- **Database Statistics:** engine-dependent metrics including:
   - **Database Size:** Current size of the application database.
   - **Engine Type:** Shows SQLite, MySQL, or PostgreSQL.
   - **Connections:** Number of active database connections.
   - **Read/Write I/O:** Cumulative read and write operations:
-    - **SQLite:** Uses `PRAGMA cache_stats` (if available).
+    - **SQLite:** Attempts `PRAGMA cache_stats`; when unavailable, I/O counters remain zero.
     - **MySQL:** Uses `Handler_read_rnd_next` and `Handler_write` status variables.
     - **PostgreSQL:** Uses `blks_read`, `blks_hit`, and tuple statistics from `pg_stat_database`.
 
 ## Privacy
 
-The analytics feature is designed with privacy in mind:
-
-- **No Third-Party Cookies:** Everything is stored locally in your database.
-- **Data Retention:** Logs are automatically rotated to manage database size.
-- **Anonymization:** _(Future feature)_ IP anonymization settings are planned.
+The built-in analytics service does not need a third-party analytics provider. It stores IP addresses and other request details locally. By default, detailed database rows are deleted after 24 hours and minute aggregates after 35 days; the retention job runs on startup and hourly. Set `ANALYTICS_DETAILED_RETENTION_HOURS` and `ANALYTICS_AGGREGATION_RETENTION_DAYS` to change those periods. Nginx log-file rotation is a separate mechanism. GoAccess can be configured independently with its own `GOACLA` options, including IP anonymization.
 
 ## Configuration
 
-Analytics are enabled by default. No additional configuration is required for the basic functionality.
+Built-in analytics are enabled by default. GoAccess is **off** by default (`GOA=false`); enable it with `GOA=true` to use its separate dashboard on `GOA_PORT` (default `91`). Per-host analytics is limited to hosts the user can view according to server-side permission checks; global analytics requires the `analytics:list` permission.
 
 ### Enabling GeoIP (Country Statistics)
 
@@ -66,19 +56,19 @@ To enable the country breakdown in the analytics dashboard, you need to provide 
 **🐳 Docker:** Uncomment the `geoipupdate` service in your `compose.yaml`. You will need a free account from [MaxMind](https://www.maxmind.com/en/geolite2/signup).
 
 ```yaml
-  geoipupdate:
-    container_name: shieldpm-geoipupdate
-    image: ghcr.io/maxmind/geoipupdate:latest
-    restart: always
-    network_mode: bridge
-    environment:
-      - "TZ=Europe/Berlin"
-      - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City" # GeoLite2-ASN is optional
-      - "GEOIPUPDATE_ACCOUNT_ID=<your-account-id>"
-      - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>"
-      - "GEOIPUPDATE_FREQUENCY=24"
-    volumes:
-      - "/opt/shieldpm/nginx:/usr/share/GeoIP"
+geoipupdate:
+  container_name: shieldpm-geoipupdate
+  image: ghcr.io/maxmind/geoipupdate:latest
+  restart: always
+  network_mode: bridge
+  environment:
+    - "TZ=Europe/Berlin"
+    - "GEOIPUPDATE_EDITION_IDS=GeoLite2-Country GeoLite2-City" # GeoLite2-ASN is optional
+    - "GEOIPUPDATE_ACCOUNT_ID=<your-account-id>"
+    - "GEOIPUPDATE_LICENSE_KEY=<your-license-key>"
+    - "GEOIPUPDATE_FREQUENCY=24"
+  volumes:
+    - "/opt/shieldpm/nginx:/usr/share/GeoIP"
 ```
 
 > [!IMPORTANT]
@@ -105,8 +95,8 @@ Set `NGINX_LOAD_GEOIP2_MODULE=true`:
 
 ```yaml
 # Docker (compose.yaml)
-    environment:
-      - "NGINX_LOAD_GEOIP2_MODULE=true"
+environment:
+  - "NGINX_LOAD_GEOIP2_MODULE=true"
 ```
 
 ```bash

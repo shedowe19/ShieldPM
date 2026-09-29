@@ -32,12 +32,10 @@ Der `dev`-Script in `backend/package.json` führt `node index-dev.js` aus. Nach 
 
 ```bash
 # Backend
-cd backend
-yarn test    # vitest
+(cd backend && yarn test --run) # Vitest einmalig ausführen
 
 # Frontend
-cd frontend
-yarn test    # vitest
+(cd frontend && yarn test --run) # Vitest einmalig ausführen
 ```
 
 Für die Infrastrukturregressionen wird zusätzlich Python 3 benötigt:
@@ -62,7 +60,7 @@ Die Tests prüfen Datenmigration, Certbot-Verknüpfungen, Shell-Syntax, unverän
 
 ## Datenbank (Entwicklung)
 
-SQLite wird automatisch verwendet. Die Datei wird unter `/data/database.sqlite` erstellt. Migrationen laufen beim Start automatisch.
+SQLite wird automatisch verwendet. Die Datei wird bei lokalem Start unter `backend/data/shieldpm/database.sqlite` angelegt (`DATA_PATH` ist standardmäßig `${process.cwd()}/data`). Im Container liegt sie unter `/data/shieldpm/database.sqlite`. Migrationen laufen beim Start automatisch.
 
 ## Code-Qualität
 

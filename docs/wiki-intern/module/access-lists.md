@@ -33,6 +33,7 @@ Access-Lists können an Proxy-Hosts gebunden werden, um den Zugriff einzuschrän
   Formik-Formularzustand des Dialogs. `AccessListDetailsTab.test.tsx` sichert diese Wertebindung.
 - Der SSO-Tab bindet Provider und dessen Authentik-, OAuth2-Proxy- oder OIDC-Felder direkt an denselben
   Formik-Formularzustand. `AccessListSsoTab.test.tsx` sichert Provider- und Authentik-Host-Wertebindung.
+- Der integrierte Typ `oidc` nutzt `resty.openidc` mit `oidc_discovery_url` und dem Redirect-Pfad `/_oauth2_callback`. Der eigenständige Typ `oauth2_proxy` verwendet den verwalteten Subprozess und standardmäßig `/oauth2/callback`; beide Endpunkte dürfen in Provider-Konfigurationen nicht verwechselt werden.
 - Die gemeinsame Tab-Navigation leitet die unveränderten Basic-Auth- und Client-Regeln an die jeweiligen Untertabs
   weiter und sperrt sie bei aktivem SSO weiterhin über den aus demselben Formik-Status abgeleiteten Wert.
 - Die Submission-Serialisierung übernimmt die aktive Authentifizierungsart in `meta`, entfernt ungenutzte OAuth2- bzw.

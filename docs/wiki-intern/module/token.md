@@ -6,7 +6,7 @@ Verwaltung von JWT (JSON Web Tokens) für die API-Authentifizierung.
 
 ## Kontext
 
-Jede API-Anfrage an das Backend erfordert eine Authentifizierung. Dieses Modul handhabt die Erzeugung, Validierung und Verwaltung dieser JWT-Tokens.
+Geschützte API-Anfragen benötigen Authentifizierung; öffentliche Anmelde- und Statusendpunkte sind ausgenommen. Dieses Modul handhabt die Erzeugung und Validierung von JWTs; Refresh-Sitzungen verwaltet [Auth-Session-Service](./auth-session-service.md).
 
 ## Wichtige Dateien
 
@@ -15,7 +15,7 @@ Jede API-Anfrage an das Backend erfordert eine Authentifizierung. Dieses Modul h
 
 ## Verhalten
 
-- Liest/Erstellt Schlüssel unter `/data/keys.json` zur Signierung.
+- `backend/lib/config.js` liest/erstellt die Signaturschlüssel unter `/data/shieldpm/keys.json`; `start.sh` verschiebt gegebenenfalls eine ältere `/data/keys.json` an diesen Pfad.
 - Verifiziert eingehende Tokens (Middlewares).
 - Enthält Berechtigungen und User-ID im Payload.
 
@@ -35,5 +35,6 @@ Regressionstest: `backend/test/lib/access-authentication.spec.js`.
 
 ## Verwandte Seiten
 
+- [Auth-Session-Service](./auth-session-service.md)
 - [Benutzer & Auth](./benutzer-auth.md)
 - [Modulübersicht](./README.md)

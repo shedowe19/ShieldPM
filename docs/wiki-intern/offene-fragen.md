@@ -12,8 +12,11 @@
 
 ## Offene Fragen
 
+- TODO: Die vom nativen Installer in `scripts/install.sh` erzeugte OpenAppSec-`local_policy.yaml` an das Schema der installierten Agent-Version anpassen: Derzeit stehen Inline-Objekte in `policies.default.practices` und `triggers`; das dokumentierte v1beta1-Schema erwartet dort Verweise auf separat definierte Practices und Log-Trigger. Anschließend `open-appsec-ctl --apply-policy`, aktive Policy und Erkennung mit dem Agent prüfen ([OpenAppSec](./module/openappsec.md)).
+- TODO: Den Native/LXC-Pfad für das optionale OpenAppSec-Advanced-Modell im Installer überprüfen und funktionsfähig machen. `scripts/install.sh` kopiert das Archiv derzeit nur nach `/etc/cp/conf/open-appsec-advanced-model.tgz` und bestätigt die Modellaktivierung nicht; die OpenAppSec-Anleitung für Linux Embedded beschreibt eine Bereitstellung unter `/advanced-model` sowie Entpacken und einen Agent-Neustart für bestehende Installationen. Die Aktivierung am laufenden Agent nachweisen ([OpenAppSec](./module/openappsec.md)).
 - TODO: End-to-End-Beispiel mit Authentik (Auth-Typ `AUTHENTIK_PROXY`) für [OAuth2-Proxy](./module/oauth2-proxy.md) ergänzen — der Auth-Typ ist parallel zu oauth2-proxy verfügbar, ein konkretes Setup-Beispiel fehlt aber noch.
 - TODO: IP-Ranges-Quellen für andere CDNs (z. B. Fastly, Akamai) prüfen ([IP-Ranges](./module/ip-ranges.md)).
+- TODO: `backend/schema/swagger.json` um die vorhandenen Analytics-, OIDC-, GitOps- und Upload-Relay-Routen ergänzen. Die generierte OpenAPI/Swagger-Ansicht bildet derzeit nicht alle Express-Endpunkte ab ([API-Schemas](./api/schemas.md)).
 
 ## Gelöste Fragen
 
@@ -30,12 +33,12 @@
 
 - ~~`backend/lib/`~~ → Dokumentiert in [Backend-Lib](./architektur/backend-lib.md).
 - ~~`frontend/src/modules/`~~ → 3 Module: AuthStore, Permissions, Validations → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/modals/`~~ → 21 Modals (19 + index + DeleteConfirm) → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/hooks/`~~ → 32 Custom-Hooks → [Frontend-Internas](./ui/frontend-internas.md).
+- ~~`frontend/src/modals/`~~ → Dokumentiert in [Frontend-Internas](./ui/frontend-internas.md).
+- ~~`frontend/src/hooks/`~~ → Dokumentiert in [Frontend-Internas](./ui/frontend-internas.md).
 - ~~`frontend/src/context/`~~ → AuthContext, LocaleContext, ThemeContext → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`frontend/src/types/`~~ → `enums.ts` (8 KB) → [Frontend-Internas](./ui/frontend-internas.md).
-- ~~`rootfs/usr/local/bin/`~~ → 9 Scripts dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).
-- ~~Wird `liquidjs` parallel zu EJS für Templates verwendet oder nur als Fallback?~~ → Wird nur in `backend/lib/utils.js` importiert, EJS ist der Standard für Nginx-Templates.
+- ~~`frontend/src/types/`~~ → Dokumentiert in [Frontend-Internas](./ui/frontend-internas.md).
+- ~~`rootfs/usr/local/bin/`~~ → Dokumentiert in [Rootfs-Referenz](./konfiguration/rootfs.md).
+- ~~Welche Template-Engine rendert die Nginx-Konfiguration?~~ → `backend/lib/utils.js` erzeugt eine LiquidJS-Instanz; `backend/internal/nginx.js` rendert damit die Templates unter `backend/templates/`.
 - ~~Backend-`dev`-Script~~ → `backend/package.json` definiert `yarn dev` als `node index-dev.js`; Scheduler und Analytics werden im Entwicklungsmodus gestartet und bei `SIGINT` oder `SIGTERM` beendet. Siehe [lokale Entwicklung](./entwicklung/lokale-entwicklung.md).
 - ~~Umfang der Backend-Tests in `backend/test/`~~ → Ordner existiert und enthält Tests für `lib/`, `internal/` und Integrationen via Vitest.
 - ~~Wie funktioniert die Migration von NPMplus-Daten beim ersten Start?~~ → `rootfs/usr/local/bin/entrypoint.sh` prüft, ob `/data/npmplus` existiert und `/data/shieldpm` fehlt, und führt dann ein `mv` aus.

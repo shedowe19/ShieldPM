@@ -71,6 +71,12 @@ Pfad: `frontend/src/components/ui/`
 | `Nginx/`     | Nginx-spezifische UI       |
 | `Table/`     | Tabellen-Komponenten       |
 
+Die Proxy-Host-Seite hält die Spaltenauswahl in `pages/Nginx/ProxyHosts/TableWrapper.tsx`; sie übergibt
+`columnVisibility` an `pages/Nginx/ProxyHosts/Table.tsx`, das TanStack Table für die neun auswählbaren Datenspalten
+und die dauerhaft sichtbare Aktionsspalte konfiguriert. Die allgemeinen Komponenten `Table/TableHeader.tsx`,
+`Table/TableBody.tsx` und `Table/TableLayout.tsx` rendern den daraus berechneten Tabellenzustand. Andere Tabellen
+erhalten durch dieses Feature keine eigene Spaltenauswahl. Siehe [Screens & Pages](./screens.md).
+
 ## Fehlerbehandlung bei Git-Sync und WireGuard
 
 - `GitSyncTab.tsx` verlangt eine Repository-URL nur bei aktivierter automatischer Synchronisierung. Ein lokal

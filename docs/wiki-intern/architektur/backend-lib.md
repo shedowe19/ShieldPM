@@ -2,97 +2,37 @@
 
 ## Zweck
 
-Dokumentation der Backend-Hilfsbibliotheken in `backend/lib/`.
-
-## Kontext
-
-Die `lib/`-Dateien stellen grundlegende Infrastruktur bereit, die von den `internal/`-Modulen und `routes/` verwendet wird.
+`backend/lib/` bündelt wiederverwendbare Funktionen für Express-Routen, interne Dienste, Datenbank, Sicherheit und Nginx-Konfiguration. Nicht jede Datei wird von jedem Dienst importiert.
 
 ## Wichtige Dateien
 
-### Kern-Infrastruktur
+| Datei                                           | Zweck                                                                                                                            |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `access.js` und `access/*.json`                 | Laden und Prüfen der Berechtigungen für Ressourcenaktionen                                                                       |
+| `config.js`                                     | Datenbankauswahl, Schlüssel und Konfiguration aus `/data/shieldpm/default.json` beziehungsweise Umgebungsvariablen               |
+| `error.js`                                      | Strukturierte Fehlertypen                                                                                                        |
+| `auth-cookies.js`, `auth-session-token.js`      | Authentifizierungs-Cookies und Sitzungs-Token-Hilfen                                                                             |
+| `db-migrate.js`                                 | Schema-geprüfter SQLite-Import in eine neue MySQL-/PostgreSQL-Datenbank; der Knex-Migrationsrunner liegt in `backend/migrate.js` |
+| `migrate_template.js`                           | Vorlage für neue Migrationen                                                                                                     |
+| `encryption.js`                                 | Verschlüsselung mit persistentem Schlüssel                                                                                       |
+| `certbot.js`                                    | Certbot-Aufrufe und deren Synchronisierung                                                                                       |
+| `service-icons.js`                              | Service-Icon-Erkennung                                                                                                           |
+| `analytics-range.js`, `analytics-response.js`   | Bereichsauswahl und Serialisierung für Host-Analytics                                                                            |
+| `nginx-preview.js`, `host-response.js`          | Konfigurationsvorschau und Bereinigung von Host-Antworten                                                                        |
+| `gitops-files.js`, `terminal-access.js`         | GitOps-Dateiverarbeitung und Terminal-Zugriffshelfer                                                                             |
+| `helpers.js`, `constants.js`, `types.js`        | Konvertierungsfunktionen, gemeinsame Konstanten und Typreferenzen                                                                |
+| `environment-hash.js`                           | SHA-512-Fingerabdruck aus Vorlagen, referenzierten Umgebungsvariablen und `TV`                                                   |
+| `utils.js`                                      | Prozessaufrufe, LiquidJS-Renderengine und Schreiben des Fingerabdrucks                                                           |
+| `validator/api.js`, `validator/index.js`        | API-/AJV-Validierung                                                                                                             |
+| `express/jwt.js`, `express/jwt-decode.js`       | Bearer- oder Cookie-JWT übernehmen und aktuelle Berechtigungen laden                                                             |
+| `express/demo.js`, `express/user-id-from-me.js` | Demo-Beschränkungen und `me`-Pfadauflösung                                                                                       |
 
-| Datei          | Größe  | Zweck                                                   |
-| -------------- | ------ | ------------------------------------------------------- |
-| `access.js`    | 7.8 KB | Berechtigungsprüfung (Rollen, CRUD-Rechte)              |
-| `config.js`    | 6.6 KB | Zentrale Konfigurationslogik (Umgebungsvariablen laden) |
-| `error.js`     | 3.1 KB | Fehlerklassen (ItemNotFound, PermissionError, etc.)     |
-| `helpers.js`   | 1.5 KB | Allgemeine Hilfsfunktionen                              |
-| `utils.js`     | 3 KB   | Utility-Funktionen                                      |
-| `constants.js` | 140 B  | Globale Konstanten                                      |
-| `types.js`     | 533 B  | Typ-Definitionen                                        |
+Dateigrößen sind bewusst nicht angegeben: Sie ändern sich bei regulärer Wartung, ohne die Funktion der Bibliothek zu ändern. Die Regeln unter `access/*.json` werden pro Aktion geladen; nicht jede interne Funktion hat denselben Berechtigungsvertrag. Die Routen validieren JSON-Body-Eingaben mit `validator/api.js`, während `backend/schema/index.js` die OpenAPI-Definition kompiliert und zwischenspeichert.
 
-### Authentifizierung
-
-| Datei                   | Größe  | Zweck                      |
-| ----------------------- | ------ | -------------------------- |
-| `auth-cookies.js`       | 1.5 KB | Cookie-basierte Auth-Logik |
-| `auth-session-token.js` | 687 B  | Session-Token-Handling     |
-
-### Datenbank
-
-| Datei                 | Größe  | Zweck                                       |
-| --------------------- | ------ | ------------------------------------------- |
-| `db-migrate.js`       | 4.2 KB | Migrations-Verwaltung (custom Knex-Wrapper) |
-| `migrate_template.js` | 1.2 KB | Template für neue Migrationen               |
-
-### Sicherheit
-
-| Datei           | Größe  | Zweck                            |
-| --------------- | ------ | -------------------------------- |
-| `encryption.js` | 1 KB   | Verschlüsselungs-Hilfsfunktionen |
-| `certbot.js`    | 1.3 KB | Certbot-Hilfsfunktionen          |
-
-### Spezial
-
-| Datei                | Größe  | Zweck                                      |
-| -------------------- | ------ | ------------------------------------------ |
-| `service-icons.js`   | 9.3 KB | Service-Icon-Erkennung (Favicon-Detection) |
-| `validate-schema.js` | 493 B  | AJV JSON-Schema-Validierung                |
-
-### Unterordner `express/`
-
-| Datei                | Größe  | Zweck                                      |
-| -------------------- | ------ | ------------------------------------------ |
-| `demo.js`            | 5.8 KB | Demo-Modus-Middleware (read-only Zugriff)  |
-| `jwt-decode.js`      | 553 B  | JWT-Token aus Request dekodieren           |
-| `jwt.js`             | 352 B  | JWT-Authentifizierungs-Middleware          |
-| `user-id-from-me.js` | 337 B  | Ersetzt `me` in URL durch aktuelle User-ID |
-
-Siehe auch: [Express-Middleware](./express-middleware.md)
-
-### Unterordner `validator/`
-
-| Datei      | Größe  | Zweck                    |
-| ---------- | ------ | ------------------------ |
-| `api.js`   | 1.4 KB | API-Request-Validierung  |
-| `index.js` | 922 B  | Validator-Einstiegspunkt |
-
-### Unterordner `access/`
-
-Enthält RBAC-Regeln pro Ressource (ca. 3.3 KB gesamt).
-
-### Konfigurations-Fingerabdruck
-
-`environment-hash.js` enthält die von Shell-Startprüfung und Backend gemeinsam verwendete SHA-512-Berechnung. Sie erfasst Vorlageninhalte, Namen und Werte der darin verwendeten Umgebungsvariablen sowie `TV`. `utils.writeHash()` speichert das Ergebnis erst nach abgewarteter Host-Neuerzeugung im konfigurierten Datenverzeichnis. Siehe [Instanzkonfiguration](../konfiguration/config-dateien.md#persistente-instanzkonfiguration).
-
-## Verhalten
-
-- `access.js` wird von **allen** `internal/`-Modulen über den `access`-Parameter verwendet
-- `config.js` liest Umgebungsvariablen und stellt sie als Konfigurationsobjekt bereit
-- `error.js` definiert strukturierte Fehlertypen für konsistente API-Fehlermeldungen
-
-## Abhängigkeiten
-
-- Wird von `backend/internal/`, `backend/routes/` und `backend/app.js` importiert
-- Keine Abhängigkeit auf `internal/`-Module (uni-direktional)
-
-## Offene Fragen
-
-Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
+`utils.writeHash()` schreibt erst nach abgewarteter Host-Neuerzeugung. Die Startprüfung und die Backend-Berechnung teilen sich den Algorithmus aus `environment-hash.js`; Details stehen unter [Instanzkonfiguration](../konfiguration/config-dateien.md#persistente-instanzkonfiguration).
 
 ## Verwandte Seiten
 
 - [Express-Middleware](./express-middleware.md)
-- [Modulübersicht](../module/README.md)
-- [Architektur-Module](../architektur/module.md)
+- [API-Schemas](../api/schemas.md)
+- [Datenbank](../daten/datenbank.md)

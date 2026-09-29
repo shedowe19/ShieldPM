@@ -79,16 +79,16 @@ Dokumentation aller wesentlichen externen Abhängigkeiten und deren Zweck.
 | `topojson-client`           | ^3.1.0        | TopoJSON-Umwandlung für die Analytics-Weltkarte  |
 | `world-atlas`               | ^2.0.2        | Lokal gebündelte Länder-Topologie für Analytics  |
 
-## Entwicklungsabhängigkeiten
+## Entwicklungsabhängigkeiten (Auswahl)
 
-| Paket                    | Zweck                                                                   |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `@biomejs/biome`         | ^2.5.11                                                                 |
-| `vitest`                 | 4.1.11                                                                  |
-| `@testing-library/react` | ^16.3.3                                                                 |
-| `typescript`             | 7.0.2                                                                   |
-| `@electric-sql/pglite`   | 0.5.8, ausschließlich Backend-Tests mit eingebetteter PostgreSQL-Engine |
-| `vite`                   | 8.2.2                                                                   |
+| Paket                    | Version / Einsatz                                            |
+| ------------------------ | ------------------------------------------------------------ |
+| `@biomejs/biome`         | ^2.5.11, JS/TS-Lint und Formatierung                         |
+| `vitest`                 | Backend ^4.1.11, Frontend 4.1.11; Tests                      |
+| `@testing-library/react` | ^16.3.3 im Frontend; Komponententests                        |
+| `typescript`             | ^7.0.2 im Backend, 7.0.2 im Frontend; Typsicherheit          |
+| `@electric-sql/pglite`   | 0.5.8; Backend-Tests mit eingebetteter PostgreSQL-Engine     |
+| `vite`                   | ^8.1.5 im Backend, 8.2.2 im Frontend; Build und Testumgebung |
 
 ## Sicherheitsprüfung September 2026
 

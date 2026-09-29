@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Traffic-Analyse und Echtzeit-Statistiken für Proxy-Hosts.
+Traffic-Analyse und regelmäßig aktualisierte Statistiken für Proxy-Hosts.
 
 ## Kontext
 
@@ -27,10 +27,10 @@ Bietet detaillierte Einblicke in den Datenverkehr mit Statuscode-Verteilung, Wel
 ## Verhalten
 
 - Sammelt Traffic-Daten pro Host (Requests, Status-Codes)
-- Speichert aggregierte Zähler in `analytic_count`-Tabelle. Die Live-Upserts verwenden den nicht-nullbaren, versionierten Konfliktschlüssel aus `aggregation_key`, `aggregation_timestamp` und `aggregation_generation`; globale Zähler behalten dabei `proxy_host_id = NULL`, erhalten aber den Schlüssel `global`.
+- Speichert aggregierte Zähler in `analytic_count`. Die Live-Upserts verwenden den nicht-nullbaren, versionierten Konfliktschlüssel aus `aggregation_key`, `aggregation_timestamp` und `aggregation_generation`; nicht zuordenbare Requests erhalten `proxy_host_id = NULL` und den Schlüssel `global`. Dieser Schlüssel bezeichnet nur nicht zugeordnete Requests, nicht eine zusätzliche Kopie aller Host-Zähler.
 - Bestehende Analytics-Zeilen bleiben bei der Migration in einer eigenen `legacy:<id>`-Generation erhalten. Dadurch kollidieren sie nicht mit den fortlaufenden Live-Upserts und ihre Zähler werden nicht bei der Schemaumstellung verändert.
 - `app.js` bleibt für Analytics nebenwirkungsfrei. Beide Backend-Einstiegspunkte führen zuerst die Datenbankmigrationen aus und initialisieren den Analytics-Tailer erst danach, damit Live-Flushing niemals auf ein vor-migriertes `analytic_count`-Schema schreibt. Die Initialisierung ist idempotent: ein Startup-Retry erzeugt keine weiteren Tailer oder Intervalle; nach einem tatsächlichen Initialisierungsfehler bleibt ein späterer Retry möglich.
-- GoAccess für erweiterte Analyse auf Port `:91`
+- Optionales GoAccess (`GOA=true`) für separate Reports auf `GOA_PORT` (Standard `91`); ohne Aktivierung läuft nur das eingebaute Dashboard
 - Beim Start erkennt GoAccess die GeoLite2-Datenbanken für City, Country und ASN einzeln: Eine nicht leere Datei unter `/data/goaccess/geoip` hat Vorrang; andernfalls verwendet es dieselbe Datei unter `/data/nginx`, die Installer und Compose-GeoIP-Updater bereitstellen. Eine explizite `--geoip-database`-Angabe in `GOACLA` bleibt unverändert. Nginx verwendet weiterhin `/data/nginx`.
 - Der Platzhalter der Hostauswahl verwendet die zentrale Locale-Schicht und ist in allen 13 unterstützten Sprachen übersetzt.
 - Die Spaltenüberschriften der Tabelle „Letzte Anfragen“ werden ebenfalls über die zentrale Locale-Schicht in allen 13 unterstützten Sprachen ausgegeben.
@@ -82,9 +82,9 @@ Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
 ## Robuste Erfassung und Speicherung
 
-Die Domainzuordnung lädt `host_domains` und normalisiert Groß-/Kleinschreibung sowie den Port im HTTP-Host-Fallback. Ungültige JSON-Werte und ungültige Zeitstempel verändern keine Zähler. Detailzeilen erhalten `created_at` als Unix-Millisekunden.
+Die Domainzuordnung lädt `host_domains` und normalisiert Groß-/Kleinschreibung sowie den Port im HTTP-Host-Fallback. Ungültige JSON-Werte und ungültige Zeitstempel verändern keine Zähler. Detailzeilen erhalten `created_at` als Unix-Millisekunden. Der Tailer liest `/data/nginx/json_access.log`; der zehnsekündliche Flush lässt kurzzeitige Verzögerungen zwischen Request und Dashboard zu. Detailzeilen enthalten personenbezogene IP-Adressen und Pfade und sind entsprechend zu schützen.
 
-Alle Chunks eines Detail- oder Aggregationsbatches werden jeweils in einer Transaktion geschrieben. Bei einem Fehler in einem späteren Chunk bleiben frühere Chunks ungeschrieben; der Wiederholungsversuch zählt sie deshalb nicht doppelt. Die Tail-Ingestion nimmt höchstens 2.000 noch unverarbeitete Zeilen an und drainiert sie in festen 200er-Batches pro Event-Loop-Runde. Überlauf wird gezählt und begrenzt protokolliert, statt ungebunden `setImmediate`-Callbacks anzusammeln. Während langsamer Datenbankzugriffe bleiben die Folgepuffer auf 1.000 Detailzeilen und 500 Aggregationsschlüssel begrenzt. Detailzeilen werden standardmäßig nach 24 Stunden und Minutenaggregate nach 35 Tagen entfernt; `ANALYTICS_DETAILED_RETENTION_HOURS` sowie `ANALYTICS_AGGREGATION_RETENTION_DAYS` erlauben eine explizite Betriebsanpassung. Die API akzeptiert nur `1h`, `24h`, `7d` und `30d`; sie liefert Minutenpunkte bis 24 Stunden, Stundenpunkte für sieben Tage und Tagespunkte für 30 Tage. Dadurch bleiben Antwortgrößen begrenzt und Langzeit-Charts klar lesbar.
+Alle Chunks eines Detail- oder Aggregationsbatches werden jeweils in einer Transaktion geschrieben. Bei einem Fehler in einem späteren Chunk bleiben frühere Chunks ungeschrieben; der Wiederholungsversuch zählt sie deshalb nicht doppelt. Die Tail-Ingestion nimmt höchstens 2.000 noch unverarbeitete Zeilen an und drainiert sie in festen 250er-Batches pro Event-Loop-Runde. Überlauf wird gezählt und begrenzt protokolliert, statt ungebunden `setImmediate`-Callbacks anzusammeln. Während langsamer Datenbankzugriffe bleiben die Folgepuffer auf 1.000 Detailzeilen und 500 Aggregationsschlüssel begrenzt. Detailzeilen werden standardmäßig nach 24 Stunden und Minutenaggregate nach 35 Tagen entfernt; `ANALYTICS_DETAILED_RETENTION_HOURS` sowie `ANALYTICS_AGGREGATION_RETENTION_DAYS` erlauben eine explizite Betriebsanpassung. Die API akzeptiert nur `1h`, `24h`, `7d` und `30d`; sie liefert Minutenpunkte bis 24 Stunden, Stundenpunkte für sieben Tage und Tagespunkte für 30 Tage. Dadurch bleiben Antwortgrößen begrenzt und Langzeit-Charts klar lesbar.
 
 ## Verwandte Seiten
 

@@ -37,6 +37,10 @@
 
 Die Proxy-Host-Tabelle zeigt den letzten Upstream-Check aus einer auf die sichtbare Seite begrenzten Statusabfrage.
 Die Aktion „Überwachung“ öffnet Einstellungen, manuelle Prüfung und den begrenzten Verlauf.
+Rechts in der Kopfzeile wählt das Menü „Spalten“ die Sichtbarkeit von Symbol, Besitzer, Quelle, Ziel,
+SSL, Zugriff, Status, Überwachung und Latenz einzeln. Die Zeilenaktionen bleiben sichtbar.
+`Nginx/ProxyHosts/TableWrapper.tsx` speichert die Auswahl unter `shieldpm.proxy-host-columns` im lokalen Browser-Speicher;
+unbekannte oder beschädigte Einträge werden ignoriert. Die Einstellung gilt für diesen Browser, nicht serverweit.
 
 ## Detail: Settings-Tabs
 
@@ -48,6 +52,11 @@ Die Aktion „Überwachung“ öffnet Einstellungen, manuelle Prüfung und den b
 | `Settings/Layout.tsx`      | Settings-Layout            |
 
 ## Detail: Dashboard-Widgets
+
+Das Dashboard zeigt vier navigierbare Host-Zähler (`proxy`, `redirection`, `stream`, `dead`) aus
+`useHostReport()`; jede Kachel erscheint nur mit Leserecht für ihren Hosttyp. Außerdem rendert es die drei Widgets
+unten, jeweils mit ihren eigenen Daten- und Berechtigungsgrenzen. Der Bericht zählt Hosts entsprechend der
+Sichtbarkeit des angemeldeten Benutzers.
 
 | Datei                                   | Zweck                                                                                                                                                                                   |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

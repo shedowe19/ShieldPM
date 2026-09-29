@@ -1,116 +1,51 @@
-# AI Agent (Administrator)
+# AI Agent
 
-**ShieldPM** introduces a powerful embedded AI Agent that acts as a co-administrator for your server. It allows you to manage your Nginx Proxy Manager instance using natural language commands.
+ShieldPM's optional AI chat accepts natural-language requests in the web interface and through [ChatOps](ChatOps). When the selected model returns a structured tool call, the backend can carry out the corresponding ShieldPM operation using the caller's permissions.
 
----
+The web chat opens from the sidebar. Its conversation is kept in the current browser component and sent as history with later messages; it is not a persistent server-side conversation. ChatOps starts each received message with an empty conversation history.
 
-## 🏗️ Architecture
+## Configure the agent
 
-```
-  ┌──────────────┐      ┌──────────────────────────────────────┐
-  │  User         │─────▶│           ShieldPM AI Agent           │
-  │  (Chat UI /   │      │                                      │
-  │   Telegram)   │      │  ┌──────────────────────────────┐    │
-  └──────────────┘      │  │     AI Provider               │    │
-                        │  │  ┌────────┐  ┌──────────────┐ │    │
-                        │  │  │ Gemini │  │ Local LLM    │ │    │
-                        │  │  │ (Cloud)│  │ (Ollama etc.)│ │    │
-                        │  │  └────────┘  └──────────────┘ │    │
-                        │  └──────────┬───────────────────┘    │
-                        │             │ Tool Calls              │
-                        │             ▼                        │
-                        │  ┌──────────────────────────────┐    │
-                        │  │  ShieldPM API (Internal)     │    │
-                        │  │  Hosts, SSL, Users, Nginx    │    │
-                        │  │  Logs, Analytics, Tunnels    │    │
-                        │  └──────────────────────────────┘    │
-                        └──────────────────────────────────────┘
-```
+An administrator opens **Settings → AI Agent**, enables the feature, and selects a provider:
 
-**Key Points:**
+- **Google Gemini:** Enter an API key and choose a model. The model field accepts an ID directly, or **Fetch Models** can request available Gemini models. The current fallback model in the code is `gemini-1.5-flash`; select a model that is actually available to your account.
+- **Local / OpenAI-compatible:** Enter the base URL, optional API key, and model ID. A base URL on port `11434` without `/v1` uses Ollama's native `/api/chat` endpoint. Other URLs use the OpenAI-compatible chat endpoint. For a container deployment, `localhost` means the ShieldPM container, so enter an address reachable **from ShieldPM**.
 
-- The AI has **direct access** to ShieldPM's internal API
-- All actions respect the **user's permissions** (RBAC)
-- All actions are logged in the **Audit Log**
-- API keys are stored **encrypted** (AES-256-GCM)
+| Setting       | Scope                                     | Behavior                                                              |
+| ------------- | ----------------------------------------- | --------------------------------------------------------------------- |
+| Enabled       | Both providers                            | Disabled agents reject chat requests                                  |
+| API key       | Gemini required; local provider as needed | Stored encrypted; use a key required by the configured endpoint       |
+| Base URL      | Local / compatible                        | HTTP(S) address of the model server as seen from the ShieldPM backend |
+| Model         | Both providers                            | Model identifier selected from the list or entered manually           |
+| System prompt | Both providers                            | A custom prompt replaces the built-in default prompt                  |
 
----
+**Fetch Models** queries the configured provider. For local providers, the model-list request uses the compatible `v1/models` endpoint; the endpoint must support that API for the list to appear. A model can also be entered manually. The local provider controls `num_ctx` (default `8192`), `num_batch` (`512`), `num_thread` (`4`), and `keep_alive` (`5m`). These options are sent with Ollama native requests and are not sent with OpenAI-compatible requests.
 
-![AI Agent Interface](/images/wiki/ai-chat.png)
+`num_ctx` controls the Ollama context window, `num_batch` its prompt-processing batch, and `num_thread` its CPU-thread setting. `keep_alive` controls how long Ollama keeps the model loaded after a request. For example, `5m`, `1h`, and `-1` express a duration or an indefinite stay according to the Ollama API. Choose values supported by your model server and hardware. Model discovery has a ten-second timeout; chat requests to local or compatible providers have a two-minute timeout.
 
-## Features
+The system prompt may be customized in the settings. Provider credentials are encrypted in stored settings using AES-256-GCM.
 
-The AI Agent is not just a chatbot; it has **direct access** to the ShieldPM internals and can perform the following actions for you:
+## Available operations
 
-- **Hosts Management**:
-  - **Proxy Hosts**: Create, Update, Delete, Enable, Disable, List, Search.
-  - **Redirection Hosts**: Manage redirects.
-  - **Dead Hosts**: Manage 404 responses.
-  - **Streams**: Manage TCP/UDP streams.
-- **Security & Access**:
-  - **Access Lists**: Create/Update Access Lists (Basic Auth, OAuth, mTLS).
-  - **Certificates**: Create (Let's Encrypt), Renew, Delete, View details.
-- **Connectivity**:
-  - **Cloudflare Tunnels**: Manage tunnels and tokens.
-- **System & Monitoring**:
-  - **Nginx Logs**: Read Access and Error logs directly.
-  - **Analytics**: Analyze traffic summary and trends.
-  - **Audit Log**: Review system actions.
-  - **System Health**: Check CPU, Memory, and Network status.
-- **User Management**: Create/Update users, Reset passwords, Manage permissions.
+Depending on permissions, the current tool set covers:
 
-## Configuration
+| Area          | Available examples                                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Hosts         | List, create, update, delete, enable, disable proxy, redirection, 404 hosts, and streams; toggle a proxy host's maintenance mode |
+| Security      | Manage access lists, manage certificates, request an internal client certificate, inspect certificate details                    |
+| Connections   | Manage DDNS providers, Cloudflare tunnels, and Tor onion services                                                                |
+| Accounts      | List, create, update, delete users; change passwords and resource permissions                                                    |
+| Observability | Read host counts, analytics summary/series, selected Nginx access/error logs, and the audit log                                  |
+| System        | Read selected settings, update a setting, test or reload Nginx, refresh IP ranges                                                |
 
-To enable and configure the AI Agent, go to **Settings** -> **AI Agent**.
+Individual tools expose specific fields and operations; for example, access-list tools cover basic credentials, client rules, and mTLS fields, but do not expose all OAuth/SSO settings. The status tool returns network-traffic information from the analytics service; it is not a CPU-and-memory health monitor. A list or update of another user's resource is still subject to the applicable owner scope.
 
-### Providers
+The assistant does **not** have a tool to create a standalone API token or sign in as another user. It cannot directly carry out arbitrary commands. Sensitive tools are withheld unless the caller has the required capability; other tool definitions may still be visible to the model, but their underlying services check access before carrying out an operation. Some operations are restricted further in demo mode. The agent only executes structured provider tool calls; text that looks like a command is not treated as an executable tool call.
 
-You can choose between two backend providers:
+For example, `test_nginx_config`, `force_nginx_reload`, and IP-range renewal require the settings-update capability; reading audit entries requires audit-log access; generating an internal client certificate requires certificate-create access. For a regular user, AI operations remain limited by that user's resource permissions. A Telegram allowlisted sender acts with the permissions of the integration owner, so grant ChatOps access carefully.
 
-#### 1. Google Gemini (Cloud)
+## Verify changes
 
-* **API Key**: Requires a valid API Key from [Google AI Studio](https://aistudio.google.com/).
-- **Model**: Defaults to `gemini-1.5-flash`. Supports `gemini-1.5-pro` and other variants.
-- **Note**: Very fast and reliable for general administration tasks.
+The backend runs up to five tool-call rounds per chat request. A model may make mistakes, and an attempted operation can fail. Check the returned result and the relevant page after a sensitive change. Service operations create audit entries only where their implementation calls the audit service; the audit record has no dedicated AI-origin field. There is no guarantee that **every** chat message or tool attempt is recorded as an audit entry.
 
-#### 2. Local LLM / OpenAI Compatible (Self-Hosted)
-
-Connects to any OpenAI-compatible API (e.g., Ollama, LocalAI, LM Studio) or your own OpenAI endpoints.
-
-- **Base URL**: The URL of your LLM server.
-  - *Examples*: `http://localhost:11434` (Ollama), `http://proserver:8080/v1` (LocalAI).
-  - **Smart Ollama Support**: If you provide an Ollama URL (port 11434) without `/v1` suffix, ShieldPM automatically uses the **Ollama Native API** (`/api/chat`). This enables advanced features like precise context window control.
-- **API Key**: Optional. Required if your local server enables auth, or if using real OpenAI APIs (`sk-...`).
-- **Model**: The name of the model to use (e.g., `llama3`, `mistral`, `deepseek-coder`).
-  - *Tip*: Use the **"Fetch Models"** button to list available models from your server.
-
-### Advanced Settings (Local LLM)
-
-**These settings are designed specifically for Ollama and may not work with OpenAI-compatible endpoints.**
-
-When using Ollama (port 11434), ShieldPM automatically detects the native API and applies these performance tuning options:
-
-- **Context Window (`num_ctx`)** (Default: `8192`):
-  - Determines how much "memory" the AI has. Increase for complex tasks if hardware permits.
-  - **Ollama only** - ignored by OpenAI-compatible servers.
-- **Batch Size (`num_batch`)** (Default: `512`):
-  - Controls parallel token processing.
-  - **Ollama only** - ignored by OpenAI-compatible servers.
-- **CPU Threads (`num_thread`)** (Default: `4`):
-  - Number of CPU threads to use for inference.
-  - **Ollama only** - ignored by OpenAI-compatible servers.
-- **Keep Alive (`keep_alive`)** (Default: `5m`):
-  - Controls how long the model stays loaded in VRAM after a request.
-  - **Values**: `5m` (5 minutes), `1h` (1 hour), `-1` (Indefinitely).
-  - **Impact**: Enables **Context Caching** in Ollama, speeding up subsequent requests significantly.
-  - **Ollama only** - ignored by OpenAI-compatible servers.
-
-### System Prompt
-
-You can customize the **System Prompt** to change how the AI behaves. The default prompt is optimized for a helpful "AI Administrator" persona that prioritizes executing tools over chatting.
-
-## Security
-
-- **Permissions**: The AI Agent respects the permissions of the user invoking it. A user without "Hosts" permission cannot ask the AI to delete a host.
-- **Encryption**: API Keys are stored **encrypted** (AES-256) in the database.
-- **Audit**: All actions performed by the AI are logged in the **Audit Log** under the user's account, clearly marked as AI-initiated.
+[🏠 Home](Home) | [🤖 ChatOps](ChatOps) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

@@ -1,18 +1,18 @@
 # Disable Buffering
 
-The **Disable Buffering** feature allows you to selectively disable Nginx's proxy buffering for specific Proxy Hosts. This is useful for streaming applications or large file transfers where buffering causes high disk I/O, latency, or timeouts.
+The **Disable Buffering** option disables both Nginx response buffering (`proxy_buffering`) and request buffering (`proxy_request_buffering`) for a Proxy Host. This can help streaming responses or large uploads avoid proxy buffering and temporary files.
 
 ---
 
 ## 🏗️ How it Works
 
 ```
-  Buffered (Default):
+  Buffered response (Default):
   ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
-  │  Backend  │────▶│  Nginx   │────▶│  Disk    │────▶│  Client   │
+  │  Backend  │────▶│  Nginx   │────▶│  Buffer  │────▶│  Client   │
   └──────────┘     │  Buffer  │     │  Cache   │     └──────────┘
                    └──────────┘     └──────────┘
-                   (Stores response in temp file first)
+                   (May use a temporary file for larger responses)
 
   Unbuffered:
   ┌──────────┐     ┌──────────┐     ┌──────────┐
@@ -25,14 +25,14 @@ The **Disable Buffering** feature allows you to selectively disable Nginx's prox
 
 ### When to Enable
 
-| Application | Buffering | Why |
-| :--- | :--- | :--- |
-| Static websites | ✅ On (default) | Nginx handles slow clients efficiently |
-| APIs | ✅ On (default) | Small responses benefit from buffering |
-| **Jellyfin / Plex** | ❌ **Off** | Large media streams cause disk I/O |
-| **Emby / Tautulli** | ❌ **Off** | Video streaming needs direct passthrough |
-| **WebSocket apps** | ❌ **Off** | Real-time data needs low latency |
-| **Large file downloads** | ❌ **Off** | Prevents temp file bloat |
+| Application                  | Buffering       | Why                                                 |
+| :--------------------------- | :-------------- | :-------------------------------------------------- |
+| Static websites              | ✅ On (default) | Nginx handles slow clients efficiently              |
+| APIs                         | ✅ On (default) | Small responses benefit from buffering              |
+| **Jellyfin / Plex**          | ❌ **Off**      | Large media streams cause disk I/O                  |
+| **Emby / Tautulli**          | ❌ **Off**      | Video streaming needs direct passthrough            |
+| **Streaming HTTP responses** | ❌ **Off**      | Reduces buffering before sending data to the client |
+| **Large file downloads**     | ❌ **Off**      | Prevents temp file bloat                            |
 
 ## Use Cases
 
@@ -40,16 +40,16 @@ The **Disable Buffering** feature allows you to selectively disable Nginx's prox
 
 Applications like **Jellyfin**, **Plex**, **Emby**, or **Tautulli** often stream large media files. If Nginx tries to buffer these streams:
 
-1. **Disk I/O**: It writes the stream to a temporary file on disk (`/var/lib/nginx/body` or similar).
+1. **Disk I/O**: A buffered upstream response may spill to an Nginx proxy temporary file. Request bodies use separate temporary files.
 2. **Latency**: It may wait for a buffer to fill before sending data.
 3. **Warnings**: You might see warnings in your logs like:
-    > *an upstream response is buffered to a temporary file /var/cache/nginx/...*
+   > _an upstream response is buffered to a temporary file /var/cache/nginx/..._
 
 Enabling "Disable Buffering" resolves these issues by allowing the stream to pass through directly.
 
 ### Real-time Applications
 
-Applications that require low-latency, real-time data flow (e.g., certain WebSocket implementations or live dashboards) may also benefit from disabled buffering.
+Applications that send incremental HTTP responses, such as event streams or live dashboards, may benefit from disabled buffering. WebSocket upgrade support is a separate Proxy Host option; disabling proxy buffering is not a substitute for enabling WebSockets.
 
 ## Configuration
 
@@ -63,4 +63,9 @@ To enable this feature:
 6. Click **Save**.
 
 > [!NOTE]
-> Disabling buffering removes the ability for Nginx to handle slow clients efficiently. For standard web pages or static assets, keeping buffering **enabled** (default) is generally recommended for better performance.
+> Disabling response buffering can make slow clients hold upstream connections longer. Disabling request buffering also changes how uploads are sent to the origin. For ordinary pages and small requests, leave the option at its default unless you need streaming behavior.
+
+## Related pages
+
+- [Proxy Hosts](./Proxy-Hosts.md)
+- [Cookbook](./Cookbook.md)

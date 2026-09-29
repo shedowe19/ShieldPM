@@ -122,15 +122,15 @@ In the **SSL** tab, configure how ShieldPM handles HTTPS:
 
 ### SSL Options
 
-| Option              | Description                                        |
-| :------------------ | :------------------------------------------------- |
-| **Force SSL**       | Redirect all HTTP requests to HTTPS (301 redirect) |
-| **HTTP/2**          | Enable HTTP/2 protocol support                     |
-| **HSTS**            | Add `Strict-Transport-Security` header             |
-| **HSTS Subdomains** | Include subdomains in HSTS                         |
+| Option              | Description                                    |
+| :------------------ | :--------------------------------------------- |
+| **Force SSL**       | Redirect HTTP requests to HTTPS (308 redirect) |
+| **HTTP/2**          | Enable HTTP/2 protocol support                 |
+| **HSTS**            | Add `Strict-Transport-Security` header         |
+| **HSTS Subdomains** | Include subdomains in HSTS                     |
 
 > [!IMPORTANT]
-> For Let's Encrypt to work, port 80 must be reachable from the internet and the domain must point to your ShieldPM server's IP address.
+> The HTTP-01 Let's Encrypt challenge requires the domain to reach ShieldPM on port 80. If you choose a supported DNS challenge instead, configure that DNS provider's credentials and follow its requirements; a public port 80 is not required for DNS-01.
 
 ---
 
@@ -148,9 +148,9 @@ Dynamically throttle bandwidth for clients:
 
 Append additional query parameters to every request forwarded to the backend:
 
-- Enter: `api_key=secret123&internal=true`
+- Enter: `source=proxy&internal=true`
 - Client query parameters are always preserved — this field **adds** extra ones
-- Useful for passing API keys or internal routing flags
+- Useful for internal routing flags. Avoid secrets in URLs or query strings because they can appear in browser history and logs.
 
 ### Rate Limiting
 
@@ -164,6 +164,16 @@ Protect individual hosts from abuse:
 
 > [!TIP]
 > See [Request Rate Limiting](./Request-Rate-Limiting.md) for a detailed guide.
+
+---
+
+## Resumable Upload Relay
+
+For an upstream that already understands chunked uploads (for example, Nextcloud WebDAV or tus), open the Proxy Host's **Advanced** tab and enable **Upload Relay**. The optional **Upload path** defaults to `/_shieldpm-upload`. Set the **Chunk size** in **bytes** between 5 and 90 MiB (default: 83,886,080 bytes, or 80 MiB). The path must be handled by your upstream application; ShieldPM does not create a file storage endpoint there.
+
+When enabled, ShieldPM gives the chosen upload path and its subpaths longer upstream timeouts, disables request and response buffering, and raises the request body and ModSecurity limits for each chunk. Nextcloud's `/remote.php/dav/uploads/` namespace is detected separately and accepts chunks up to 100 MiB. Requests retain their original method, URI and upload headers; WebDAV's `Destination` header stays available to the application. The Proxy Host's regular access list and other security settings still apply. Without an access list or another access control layer, the upload path is publicly accessible.
+
+The public upload path goes from Nginx to the host's existing private HTTP(S) upstream. A separate authenticated backend tus API at `/api/nginx/proxy-hosts/:hostId/upload-relay` exists for integrations and stores sessions under `/data/upload-relay/`; enabling the toggle does not route public uploads through that API. ShieldPM does not split an arbitrary single browser form upload into chunks or bypass limits imposed by a CDN or your application. Your client and upstream must support the same chunked upload protocol. Keep each request below every intermediary's limit.
 
 ---
 
@@ -232,7 +242,7 @@ proxy_buffering off;
 ```
 
 > [!WARNING]
-> Invalid Nginx syntax in the Advanced config will prevent Nginx from reloading. If your host stops working after saving, check the advanced config for errors.
+> Invalid Nginx syntax fails validation; ShieldPM records the error and restores the previous generated configuration. Check the host error status and the advanced directives before trying again.
 
 ---
 

@@ -10,9 +10,9 @@ ChatOps ermöglicht die Steuerung von ShieldPM über einen Telegram-Bot. Der Bot
 
 ## Wichtige Dateien
 
-- `backend/internal/chat.js` (7 KB) — Telegram-Bot-Logik
-- `backend/models/chat_integration.js` (1.5 KB) — Konfigurationsmodell
-- `backend/routes/chat.js` (3 KB) — API-Routen
+- `backend/internal/chat.js` — Telegram-Bot-Logik und Monitor-Benachrichtigungen
+- `backend/models/chat_integration.js` — Konfigurationsmodell
+- `backend/routes/chat.js` — API-Routen
 
 ## Verhalten
 
@@ -20,6 +20,9 @@ ChatOps ermöglicht die Steuerung von ShieldPM über einen Telegram-Bot. Der Bot
 - Authentifizierung über Whitelist von Telegram User-IDs (`allowed_ids`)
 - Bot-Caching in `bots{}` Map — jede Integration wird als `Telegraf`-Instanz gecached, um Doppelstarts zu vermeiden
 - Leitet Nachrichten an den AI-Agenten weiter
+- Jede erlaubte Textnachricht ruft `ai.chat(ctx.shieldAccess, message, [])` ohne vorherige Telegram-Konversation auf.
+  Die erlaubten Telegram-IDs teilen sich die ShieldPM-Rechte des Integrationsbesitzers; keine eigene Zuordnung zu
+  ShieldPM-Benutzerkonten.
 - Zustandsalarme der Proxy-Host-Überwachung gehen als begrenzter Klartext nur an aktivierte Telegram-Integrationen
   des Host-Besitzers und deren erlaubte IDs. Die fachliche Diagnose zu Ziel, Messwert, Fehlerphase und nächstem
   Prüfschritt entsteht im Monitor; die Zustellung in `sendHostMonitorAlert()` wertet keinen Markdown-Code aus.
@@ -43,7 +46,7 @@ const smartEscape = (text) => {
 
 ### ctx.shieldAccess — Automatische JWT-Synthese
 
-Der ChatOps-Bot synthetisiert einen temporären JWT-Token für jeden eingehenden Request:
+Der ChatOps-Bot synthetisiert für jede Nachricht von einer erlaubten Telegram-ID ein temporäres JWT-Zugriffsobjekt. Nicht erlaubte IDs erhalten keines:
 
 ```javascript
 const generatedToken = jwt.sign(

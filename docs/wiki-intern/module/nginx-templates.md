@@ -12,11 +12,12 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 
 ### Proxy-Hosts
 
-| Datei                              | Zweck                                        |
-| ---------------------------------- | -------------------------------------------- |
-| `proxy_host.conf` (16 KB)          | Haupt-Template für Proxy-Hosts               |
-| `_proxy_logic.conf` (17 KB)        | Gemeinsame Proxy-Logik (eingebettet)         |
-| `_proxy_host_custom_location.conf` | Partial für Custom-Locations (Liquid-Syntax) |
+| Datei                              | Zweck                                                 |
+| ---------------------------------- | ----------------------------------------------------- |
+| `proxy_host.conf`                  | Haupt-Template für Proxy-Hosts                        |
+| `_proxy_logic.conf`                | Gemeinsame Proxy-Logik (eingebettet)                  |
+| `_proxy_host_custom_location.conf` | Partial für Custom-Locations (Liquid-Syntax)          |
+| `_upload_relay.conf`               | Upload-Locations für generische und Nextcloud-Uploads |
 
 ### Spezial-Hosts
 
@@ -28,11 +29,11 @@ Die Templates werden von `nginx.js` gerendert und nach `/data/nginx/` geschriebe
 
 ### System
 
-| Datei            | Zweck                                 |
-| ---------------- | ------------------------------------- |
-| `_common.conf`   | Gemeinsame Konfiguration (Logs, etc.) |
-| `default.conf`   | Default-Server (unbekannte Hosts)     |
-| `ip_ranges.conf` | Cloudflare IP-Ranges (GeoIP)          |
+| Datei            | Zweck                                                   |
+| ---------------- | ------------------------------------------------------- |
+| `_common.conf`   | Gemeinsame Listener, TLS-, HSTS- und ACME-Konfiguration |
+| `default.conf`   | Default-Server (unbekannte Hosts)                       |
+| `ip_ranges.conf` | `set_real_ip_from` für konfigurierte Proxy-IP-Bereiche  |
 
 ## Template-Engine
 
@@ -65,12 +66,6 @@ Die HTTP-, HTTPS- und TCP-Stream-Templates verwenden für TCP kein `reuseport`. 
 
 `deferred` und `so_keepalive=on` bleiben für TCP erhalten. UDP-Streams und QUIC/HTTP/3 behalten `reuseport`, weil diese UDP-Pfade andere Socket-Semantiken benötigen. Der Regressionstest `backend/test/internal/tcp-listener-stability.spec.js` schützt diese Trennung.
 
-## Verwandte Seiten
-
-- [Nginx-Engine](../module/nginx-engine.md)
-- [Proxy-Host](../module/proxy-host.md)
-- [Stream](../module/stream.md)
-
 ## Authentifizierung und Grenzfälle
 
 - OIDC-Discovery-URL, Client-ID und Client-Secret werden als korrekt maskierte Lua-Zeichenketten ausgegeben. Anführungszeichen, Backslashes und Steuerzeichen bleiben Daten.
@@ -85,3 +80,9 @@ Die HTTP-, HTTPS- und TCP-Stream-Templates verwenden für TCP kein `reuseport`. 
 Auch statische Custom-Locations blockieren `.git` und sperren bei verwalteten Websitewurzeln Symlinks. Das gilt ebenso, wenn die Standard-Location einen HTTP-Upstream verwendet. Der Renderer berücksichtigt den exakten Wartungsbeginn einschließlich des Startzeitpunkts.
 
 Die Lua-Logphase vermindert den Verbindungszähler nur für Anfragen, denen die Access-Phase tatsächlich Bandbreite zugeteilt hat. Frühe Redirects oder Ablehnungen ohne Zuteilung verändern laufende Übertragungen nicht mehr. Dies gilt im Standardserver sowie im öffentlichen Anubis-Server. Die Gegenprüfung mit Lua 5.4 reproduzierte das Fehlverhalten beider bisherigen Logblöcke und bestätigte anschließend sowohl den unveränderten Zähler ohne Zuteilung als auch die korrekte Freigabe einer zugeteilten Übertragung.
+
+## Verwandte Seiten
+
+- [Nginx-Engine](../module/nginx-engine.md)
+- [Proxy-Host](../module/proxy-host.md)
+- [Stream](../module/stream.md)

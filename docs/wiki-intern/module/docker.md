@@ -10,15 +10,16 @@ Automatische Erkennung und Registrierung von Docker-Containern als Proxy-Hosts.
 
 ## Wichtige Dateien
 
-- `backend/internal/docker.js` (15 KB) — Business-Logik
-- `backend/routes/services.js` (1 KB) — API-Routen
+- `backend/internal/docker.js` — Label-Auswertung, Docker-Ereignisse und Host-Synchronisierung
+- `backend/index.js` — Initialisierung bei Backend-Start
 
 ## Verhalten
 
-- Verbindet sich über `dockerode` mit der Docker-API
-- Scannt laufende Container
+- Verbindet sich über `dockerode` mit der Docker-API; der lokale Socket `/var/run/docker.sock` wird versucht, ist in `compose.yaml` aber standardmäßig nicht gemountet. Für lokale Discovery muss er bewusst bereitgestellt werden.
+- Scannt laufende Container und verarbeitet nur solche mit dem Pflichtlabel `shieldpm.hostname` (kommagetrennte Domains)
 - Unterstützt mehrere Docker-Hosts über `DOCKER_HOSTS` Umgebungsvariable
-- Erkennt exponierte Ports und erstellt Proxy-Einträge
+- Wertet `shieldpm.scheme` (`http`, `https`, `grpc`, `grpcs`) und `shieldpm.port` aus. Lokal wird die Container-IP und der interne Port verwendet; bei entfernten Docker-Hosts bevorzugt die Portwahl das veröffentlichte Host-Port-Binding. Ein nicht veröffentlichter Remote-Port kann zu einem unerreichbaren Upstream führen.
+- Erstellt oder aktualisiert Proxy-Hosts unter dem Systembenutzer; `die`- und `pause`-Ereignisse deaktivieren den zugehörigen Host.
 
 ## Abhängigkeiten
 

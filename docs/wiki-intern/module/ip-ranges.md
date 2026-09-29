@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Aktualisiert regelmäßig die offiziellen [Cloudflare-IP-Ranges](https://www.cloudflare.com/ips/) und stellt sie Nginx als `set_real_ip_from`-Liste zur Verfügung. So sieht Nginx auch hinter Cloudflare die echte Client-IP.
+Lädt bei Aktivierung regelmäßig die offiziellen [Cloudflare-IP-Ranges](https://www.cloudflare.com/ips/) und stellt sie Nginx als `set_real_ip_from`-Liste zur Verfügung. **Standardmäßig ist der Abruf deaktiviert** (`SKIP_IP_RANGES=true`); für den automatischen Abruf `SKIP_IP_RANGES=false` setzen.
 
 ## Kontext
 
@@ -23,6 +23,7 @@ Wenn ShieldPM hinter Cloudflare betrieben wird (Proxy-Modus), kommen Anfragen au
 ## Konfiguration
 
 - **Update-Intervall**: `interval_timeout = 6h × IPRT` (Umgebungsvariable `IPRT`, ganze Zahl). Ist `IPRT` z. B. `4`, läuft die Aktualisierung alle 24 Stunden.
+- **Aktivierung**: `backend/index.js` startet Timer und ersten Abruf nur bei `SKIP_IP_RANGES=false`; die Standardvorgabe in `backend/validate-env.cjs` ist `true`.
 - **Manueller Trigger**: AI-Tool `renew_ip_ranges` (siehe `backend/internal/ai/tools.js`) ruft `internalIpRanges.fetch()` direkt auf.
 
 ## Abhängigkeiten

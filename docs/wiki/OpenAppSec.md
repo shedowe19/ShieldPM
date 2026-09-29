@@ -6,10 +6,10 @@
 
 OpenAppSec has two components:
 
-| Component | Description | Status in ShieldPM |
-|:---|:---|:---:|
-| **Nginx Attachment Module** | Plugin loaded by Nginx to intercept traffic | ✅ Already compiled in |
-| **Agent** (`cp-nano-agent`) | ML engine that analyzes traffic and makes decisions | ❌ Needs installation |
+| Component                   | Description                                         |   Status in ShieldPM   |
+| :-------------------------- | :-------------------------------------------------- | :--------------------: |
+| **Nginx Attachment Module** | Plugin loaded by Nginx to intercept traffic         | ✅ Already compiled in |
+| **Agent** (`cp-nano-agent`) | ML engine that analyzes traffic and makes decisions | ❌ Needs installation  |
 
 ```
   ┌──────────┐       ┌──────────────────────────────────────────────┐
@@ -63,13 +63,13 @@ Uncomment the `openappsec-agent` service in your `compose.yaml` (see [Docker Com
      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true"
    ```
 
-2. **Enable IPC and shared memory volume** for the ShieldPM service.
+2. **Enable IPC and shared memory:** uncomment `ipc: host` and `shm-volume:/dev/shm/check-point` on the ShieldPM service, plus the corresponding `shm-volume` definition at the bottom of `compose.yaml`. The agent service already includes `ipc: host` and the same volume once uncommented.
 
-3. **Configure `local_policy.yaml`** at `/opt/openappsec/localconf/local_policy.yaml`.
+3. **For local management**, configure `local_policy.yaml` at `/opt/openappsec/localconf/local_policy.yaml` on the host. The agent mounts `/opt/openappsec/localconf` at `/ext/appsec`; the native/LXC policy path below is different.
 
 4. **Without Cloud Portal:** Uncomment the additional containers (`smartsync`, `shared-storage`, `tuning-svc`, `openappsec-db`).
 
-5. **With Cloud Portal:** Set `AGENT_TOKEN` from [my.openappsec.io](https://my.openappsec.io) instead.
+5. **With Cloud Portal:** Set `AGENT_TOKEN` from [my.openappsec.io](https://my.openappsec.io). Configure credentials and bind-mounted directories before bringing up the service.
 
 ---
 
@@ -77,10 +77,10 @@ Uncomment the `openappsec-agent` service in your `compose.yaml` (see [Docker Com
 
 OpenAppSec can run in two management modes:
 
-| Mode | Description |
-|:---|:---|
+| Mode             | Description                                                                          |
+| :--------------- | :----------------------------------------------------------------------------------- |
 | **Cloud Portal** | Managed via [my.openappsec.io](https://my.openappsec.io). Requires an `AGENT_TOKEN`. |
-| **Local-only** | Managed via `local_policy.yaml` file. No cloud account needed. |
+| **Local-only**   | Managed via `local_policy.yaml` file. No cloud account needed.                       |
 
 ### Option A: During Installation (Recommended)
 
@@ -93,7 +93,7 @@ Enter AGENT_TOKEN (leave empty for local-only mode):
 ```
 
 - **With Token:** Agent connects to the Cloud Portal for centralized management.
-- **Without Token:** A default `local_policy.yaml` is created in **detect-learn** mode.
+- **Without Token:** The installer writes a `local_policy.yaml` with **detect-learn** selected. Its current inline practice/trigger structure does not match OpenAppSec's documented v1beta1 or v1beta2 schema. Replace or correct the file using the [official local policy schema](https://docs.openappsec.io/getting-started/start-with-linux/local-policy-file-advanced), then apply it and verify the agent's active policy before relying on WAF enforcement.
 
 Both options automatically enable the Nginx attachment module.
 
@@ -126,10 +126,10 @@ systemctl restart shieldpm
 
 OpenAppSec uses machine learning models for threat detection. Two models are available:
 
-| Model | Detection Quality | Access |
-|:---|:---|:---|
-| **Basic** | Standard detection, included by default | ✅ Free |
-| **Advanced** | Higher accuracy, fewer false positives | 🔑 Download from [my.openappsec.io](https://my.openappsec.io) |
+| Model        | Detection Quality                       | Access                                                        |
+| :----------- | :-------------------------------------- | :------------------------------------------------------------ |
+| **Basic**    | Standard detection, included by default | ✅ Free                                                       |
+| **Advanced** | Higher accuracy, fewer false positives  | 🔑 Download from [my.openappsec.io](https://my.openappsec.io) |
 
 ### Installation
 
@@ -139,60 +139,74 @@ OpenAppSec uses machine learning models for threat detection. Two models are ava
 Path to Advanced Model .tgz (leave empty to skip): /path/to/open-appsec-advanced-model.tgz
 ```
 
-**Docker:** Mount as a volume in `compose.yaml`:
+**Docker:** Save the downloaded archive on the Docker host as
+`/opt/openappsec/open-appsec-advanced-model.tgz` before starting the agent. The
+`openappsec-agent` service in `compose.yaml` mounts this directory:
 
 ```yaml
 volumes:
-  - "/opt/openappsec/open-appsec-advanced-model.tgz:/advanced-model/open-appsec-advanced-model.tgz"
+  - "/opt/openappsec:/advanced-model"
 ```
 
-**Native / LXC (manually):**
+The agent then sees the archive at
+`/advanced-model/open-appsec-advanced-model.tgz`. You can also bind-mount the
+individual `.tgz` file to that path, provided the host file already exists;
+otherwise Docker may create a directory in its place and the container will
+fail to start.
+
+**Native / LXC:** ShieldPM's installer copies a selected archive to `/etc/cp/conf/open-appsec-advanced-model.tgz`. For an existing agent, verify the agent's model-loading procedure for your installed OpenAppSec version and confirm activation in its status/logs; copying the archive alone does not establish that the advanced model was loaded.
 
 ```bash
+# This mirrors the file-copy step in scripts/install.sh; check agent status afterward.
 cp open-appsec-advanced-model.tgz /etc/cp/conf/open-appsec-advanced-model.tgz
-open-appsec-ctl --apply-policy
 ```
 
 ---
 
 ## ⚙️ Configuration (`local_policy.yaml`)
 
-The policy file is located at `/etc/cp/conf/local_policy.yaml`. It controls what OpenAppSec detects and blocks.
+For **Native / LXC**, edit `/etc/cp/conf/local_policy.yaml`. For **Docker**, edit `/opt/openappsec/localconf/local_policy.yaml` on the host (mounted at `/ext/appsec/local_policy.yaml` in the agent). These are local management files; the policy controls what OpenAppSec detects and blocks. The example below uses the documented **v1beta1** schema; deployments using v1beta2 require a different structure.
 
 ### Modes
 
-| Mode | Behavior |
-|:---|:---|
-| `detect-learn` | **Default.** Logs threats but does **not** block. Use for initial tuning. |
-| `prevent-learn` | Blocks threats **and** continues learning. Recommended for production. |
-| `prevent` | Blocks threats, no learning. |
-| `inactive` | Disabled. |
+| Mode            | Behavior                                                                  |
+| :-------------- | :------------------------------------------------------------------------ |
+| `detect-learn`  | **Default.** Logs threats but does **not** block. Use for initial tuning. |
+| `prevent-learn` | Blocks threats **and** continues learning. Recommended for production.    |
+| `prevent`       | Alias for `prevent-learn` in the v1beta1 schema.                          |
+| `inactive`      | Disabled.                                                                 |
 
-### Example Policy
+### Example v1beta1 Policy
+
+The policy references named practice and log-trigger entries. Keep the practice's `override-mode: as-top-level` if you want changing the policy mode to affect enforcement.
 
 ```yaml
 policies:
   default:
     mode: detect-learn
     practices:
-      - web-attacks:
-          override-mode: detect-learn
-          minimum-confidence: medium
-      - anti-bot:
-          override-mode: detect-learn
-          injected-URIs: []
-          validated-URIs: []
+      - shieldpm-web
     triggers:
-      - log:
-          verbosity: standard
-          extendedLogging: true
-          logToAgent: true
-          logToCloud: false
+      - shieldpm-log
+practices:
+  - name: shieldpm-web
+    web-attacks:
+      override-mode: as-top-level
+      minimum-confidence: medium
+log-triggers:
+  - name: shieldpm-log
+    appsec-logging:
+      detect-events: true
+      prevent-events: true
+    log-destination:
+      cloud: false
+      stdout:
+        format: json
 ```
 
 ### Switching to Active Blocking
 
-Change `detect-learn` → `prevent-learn` and apply:
+Change `detect-learn` → `prevent-learn` after checking the active policy and logs, then apply the change. For Native / LXC:
 
 ```bash
 # Edit the policy
@@ -201,6 +215,8 @@ nano /etc/cp/conf/local_policy.yaml
 # Apply changes
 open-appsec-ctl --apply-policy
 ```
+
+For Docker, edit the host file at `/opt/openappsec/localconf/local_policy.yaml` and run `docker exec openappsec-agent open-appsec-ctl --apply-policy` (or use the configured `autoPolicyLoad=true`).
 
 > [!WARNING]
 > Always start in **detect-learn** mode to observe what traffic would be blocked. Review logs before switching to **prevent-learn** to avoid false positives.
@@ -223,10 +239,10 @@ open-appsec-ctl --list-policies       # Show active policies
 
 ## 📊 Logs
 
-| Deployment | Log Location |
-|:---|:---|
-| **Docker** | `/opt/openappsec/logs/` |
-| **Native/LXC** | `/var/log/nano_agent/` |
+| Deployment     | Log Location            |
+| :------------- | :---------------------- |
+| **Docker**     | `/opt/openappsec/logs/` |
+| **Native/LXC** | `/var/log/nano_agent/`  |
 
 ---
 
@@ -237,4 +253,5 @@ open-appsec-ctl --list-policies       # Show active policies
 - [GitHub Repository](https://github.com/openappsec/openappsec)
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

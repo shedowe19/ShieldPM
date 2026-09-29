@@ -10,7 +10,7 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 
 ## Wichtige Dateien
 
-- `backend/internal/setting.js` (3 KB) — Business-Logik für Einstellungen
+- `backend/internal/setting.js` — Business-Logik für Einstellungen
 - `backend/models/setting.js` — Einstellungs-Modell
 - `backend/routes/settings.js` — REST-API unter `/api/settings`
 - `frontend/src/pages/Settings/` — UI mit Tabs (DefaultSite, Ai, GitOps, Layout)
@@ -19,7 +19,8 @@ Die Anwendung benötigt globale Konfigurationswerte, die in der Datenbank gespei
 
 - `setting.js` ermöglicht das Lesen und Aktualisieren von Systemeinstellungen.
 - Einzelne Settings werden per Key gespeichert (z. B. `default-site`, `oidc-config`).
-- Nach einer Änderung wird ggf. ein Nginx-Reload oder ein Service-Restart ausgelöst.
+- Die OIDC-Anmeldung verwendet den vorhandenen Datensatz `oidc-config` (Initialwert `metadata`). Ein Administrator aktualisiert ihn mit `PUT /api/settings/oidc-config` und einem Request-Body der Form `{ "meta": { "enabled": true, "name": "...", "issuerURL": "...", "clientID": "...", "clientSecret": "...", "redirectURL": "..." } }`. `redirectURL` bezeichnet `/api/oidc/callback` an der öffentlichen ShieldPM-Adresse und muss beim Identity Provider registriert sein. Das Metadatenobjekt wird bei jedem Update vollständig ersetzt; die öffentliche GET-Antwort enthält nur Name und Aktivierungsstatus und kann die übrigen Felder nicht für ein späteres Update rekonstruieren. Die Login-Seite zeigt derzeit keinen OIDC-Startknopf; der Flow beginnt über `GET /api/oidc`.
+- Änderungen an `default-site` erzeugen und prüfen Nginx-Konfiguration und laden Nginx neu. Andere Schlüssel werden als Datenbankwerte aktualisiert; abhängige Module lesen sie bei Bedarf. `setting.js` startet keinen generischen Service-Neustart.
 - Die Default-Site-Variante mit eigenem HTML zeigt Validierungsfehler direkt unter dem beschrifteten Editor an und verknüpft sie über `aria-describedby`; ein leerer Inhalt kann nicht gespeichert werden. Regression: `frontend/src/pages/Settings/DefaultSite.test.tsx`.
 - Ein fehlgeschlagenes Nachladen der Default-Site-Einstellung zeigt bei bereits vorhandenen Daten einen Fehler im weiterhin geöffneten Formular. Ungespeichertes HTML bleibt auch bei anschließender Wiederherstellung der Verbindung erhalten. Scheitert das erste Laden ohne Daten, wird kein Formular mit Ersatzwerten angeboten.
 - AI-Modelllisten gelten nur für die Verbindung, mit der sie angefordert wurden. Änderungen an Provider, Base-URL oder API-Key verwerfen geladene Optionen und ausstehende Antworten einschließlich deren Fehlern. Auch ein Wechsel zurück zum vorherigen Wert reaktiviert keine ältere Anfrage. Regression: `frontend/src/pages/Settings/Ai.test.tsx`.

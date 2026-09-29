@@ -19,6 +19,9 @@ Anubis agiert als Gatekeeper vor bestimmten Proxy-Routen und fordert von Clients
 - Wenn aktiviert (Umgebungsvariable `ANUBIS_ENABLED`), leitet Nginx (Frontend) Anfragen an den Anubis-Service weiter.
 - Anubis validiert den Client. Wenn die Validierung fehlschlägt, wird eine PoW-Challenge gesendet.
 - Bei erfolgreicher Lösung leitet Anubis die Anfrage an das Nginx-Backend weiter ("Sandwich"-Architektur).
+- Die Frontend- und Upstream-Unix-Sockets liegen unter `/run/shieldpm/anubis.sock` bzw. `/run/shieldpm/anubis-upstream.sock` (`launch.sh`, `proxy_host.conf`). Der Start setzt sowohl `ANUBIS_ENABLED=true` (Standard bei vorhandenem Binary) als auch ein ausführbares Anubis-Binary voraus.
+- `internal/anubis.js` übernimmt Regeln aktivierter, nicht gelöschter Hosts mit `anubis_enabled=1` und bindet sie über `X-ShieldPM-Host` an ihre Domains. Ohne Regeln erzeugt es lediglich den eng passenden `shieldpm-placeholder` für `AnubisPlaceholderBot`; ein automatisch angelegtes Crawler-Blockierprofil existiert nicht.
+- Die Policy-Datei `/data/anubis/policy.yaml` wird nach einer zweisekündigen Entprellung neu geschrieben und der Prozess per `SIGHUP` benachrichtigt. Manuelle Änderungen sind dadurch nicht dauerhaft.
 
 ## Abhängigkeiten
 

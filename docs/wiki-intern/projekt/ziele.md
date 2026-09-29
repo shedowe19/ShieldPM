@@ -20,16 +20,16 @@ Abgeleitet aus README.md, GEMINI.md und der Projektstruktur.
 
 5. **Erweiterbarkeit**: Plugin-ähnliche Integration neuer Dienste (Cloudflare, WireGuard, Tor, DDNS) ohne Kern-Refactoring.
 
-6. **Internationalisierung**: UI in 13+ Sprachen (bg, de, en, es, it, ja, ko, nl, pl, ru, sk, vi, zh).
+6. **Internationalisierung**: UI in 13 Sprachen (bg, de, en, es, it, ja, ko, nl, pl, ru, sk, vi, zh).
 
 7. **Automatisierung**: Docker Auto-Discovery, GitOps-Sync, ChatOps via Telegram, DDNS-Updates.
 
 ## Designprinzipien
 
-- **Code ist ESM**: Das gesamte Projekt verwendet ES-Module. Kein `require()`.
+- **Code ist überwiegend ESM**: Backend und Frontend verwenden ES-Module; explizite `.cjs`-Dateien wie `backend/validate-env.cjs` sind Ausnahmen.
 - **Daten unter `/data/`**: Alle dynamischen Daten müssen unter `/data/` liegen (Docker-Volume-Vertrag).
-- **Objection.js statt Raw SQL**: Datenbankzugriffe nur über den Query-Builder.
-- **Debounced Reload**: Nginx wird mit 2s Verzögerung neu geladen, um CPU-Spitzen zu vermeiden.
+- **Objection.js als Standard**: Fachmodule nutzen überwiegend Objection.js/Knex; gezielte parametrisierte SQL-Ausdrücke werden unter anderem für Analytics-Aggregate und Datenbankmetriken verwendet.
+- **Validierter Reload**: `backend/internal/nginx.js` prüft die Konfiguration mit `nginx -tq` vor dem Reload. Docker Auto-Discovery bündelt eigene Änderungen über einen 2-Sekunden-Timer.
 
 ## Verwandte Seiten
 

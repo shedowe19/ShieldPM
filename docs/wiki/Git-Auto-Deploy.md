@@ -4,11 +4,10 @@ ShieldPM allows you to automatically deploy and update static websites or applic
 
 ## 🚀 Features
 
-*   **Auto-Sync**: Automatically pulls changes from your remote repository.
-*   **Polling**: Configurable check interval (Seconds, Minutes, Hours).
-*   **Secure**: Supports private repositories with encrypted credentials (PAT/Password).
-*   **Auto-Reload**: Nginx automatically reloads if the webroot structure changes.
-*   **Zero-Downtime**: Updates are pulled in place; Nginx serves the latest file immediately.
+- **Auto-Sync**: Automatically pulls changes from your remote repository.
+- **Polling**: Configurable check interval (Seconds, Minutes, Hours).
+- **Secure**: Supports private repositories with encrypted credentials (PAT/Password).
+- **Webroot Update**: The first successful clone sets the host's document root and triggers an Nginx config validation/reload. Subsequent pulls update files in that directory; a changed branch or repository is cloned into a temporary directory before replacing the checkout.
 
 ---
 
@@ -18,17 +17,18 @@ To enable Git Auto-Deploy, create or edit a **Proxy Host**.
 
 1.  **Tab "Details"**: Set **Forward Scheme** to **`path`**.
 2.  **Tab "Git Sync"** (New tab appears):
-    *   **Repository URL**: `https://github.com/username/repo.git`
-    *   **Branch**: `main` (Default)
-    *   **Credentials**: Optional. Use a **Personal Access Token (PAT)** for GitHub/GitLab private repos.
-    *   **Auto Sync**: Enable to start the polling service.
-    *   **Interval**: Set how often ShieldPM checks for updates (min. **10s**).
+    - **Repository URL**: `https://github.com/username/repo.git`
+    - **Branch**: `main` (Default)
+    - **Credentials**: Optional. Use a **Personal Access Token (PAT)** for GitHub/GitLab private repos.
+    - **Auto Sync**: Enable to start the polling service.
+    - **Interval**: Set how often ShieldPM checks for updates (min. **10s**).
 
 ### 🔐 Authentication
 
 ShieldPM encrypts your Git credentials using **AES-256-GCM** before storing them in the database.
-*   **Public Repos**: Leave credentials empty.
-*   **Private Repos**: Enter your Username and Password/Token.
+
+- **Public Repos**: Leave credentials empty.
+- **Private Repos**: Enter an HTTPS Personal Access Token. The Git service uses `git` as the HTTP username and the stored credential as the password; it does not use a separately entered username or native SSH Git transport.
 
 > [!TIP]
 > For GitHub, use a fine-grained **Personal Access Token (PAT)** with **Read-Only** access to the repository contents.
@@ -47,6 +47,7 @@ The `forward_host` path in your Proxy Host config is automatically updated to po
 ## 🛠️ Usage Examples
 
 ### Static Website (HTML/JS)
+
 1.  Create Proxy Host (`example.com`).
 2.  Scheme: `path`.
 3.  Git Repo: `https://github.com/my/website.git`.
@@ -54,6 +55,7 @@ The `forward_host` path in your Proxy Host config is automatically updated to po
 5.  ShieldPM clones the repo -> Website is live.
 
 ### PHP Application
+
 1.  Enable **PHP Support** in the "Details" tab.
 2.  Select PHP Version (e.g., 8.3).
 3.  Configure Git Sync as above.
@@ -64,17 +66,23 @@ The `forward_host` path in your Proxy Host config is automatically updated to po
 ## ❓ Troubleshooting
 
 ### "Sync Failed" Status
+
 Hover over the error icon in the Git Sync tab to see the detailed error message. Common causes:
-*   **Authentication**: Invalid Token/Password.
-*   **Branch**: The specified branch (`main`/`master`) does not exist.
-*   **Network**: ShieldPM cannot reach the Git server (DNS/Firewall).
+
+- **Authentication**: Invalid Token/Password.
+- **Branch**: The specified branch (`main`/`master`) does not exist.
+- **Network**: ShieldPM cannot reach the Git server (DNS/Firewall).
 
 ### Logs
-Check the backend logs for detailed sync information:
+
+Check the application's backend logs for detailed sync information:
+
 ```bash
 # Docker
-docker compose logs -f backend | grep "git-deploy"
+docker compose logs -f shieldpm 2>&1 | grep "git-deploy" # use app for the Installation Quick Start
 
 # Native / LXC
 journalctl -u shieldpm -f | grep "git-deploy"
 ```
+
+Git Auto-Deploy is disabled in `DEMO_MODE=true`. The target site must have a **Path** scheme and a reachable HTTPS repository URL.

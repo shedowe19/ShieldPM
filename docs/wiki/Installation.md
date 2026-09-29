@@ -2,11 +2,11 @@
 
 ShieldPM offers three deployment methods to suit your environment:
 
-| Method | Best For | Update Method |
-| :--- | :--- | :--- |
-| 🐳 **Docker** (Recommended) | Most users — easy updates, isolated environment | `docker compose pull` |
-| 📦 **Native Installer** | Bare-metal Debian 13 (Trixie) servers | `update-shieldpm` |
-| 🖥️ **Proxmox LXC** | Proxmox users — pre-configured container template | `update` |
+| Method                      | Best For                                          | Update Method         |
+| :-------------------------- | :------------------------------------------------ | :-------------------- |
+| 🐳 **Docker** (Recommended) | Most users — easy updates, isolated environment   | `docker compose pull` |
+| 📦 **Native Installer**     | Bare-metal Debian 13 (Trixie) servers             | `update-shieldpm`     |
+| 🖥️ **Proxmox LXC**          | Proxmox users — pre-configured container template | `update`              |
 
 ---
 
@@ -18,29 +18,31 @@ Requires Docker Engine and Docker Compose.
 
 1. **Create a `compose.yaml` file:**
 
-    ```yaml
-    services:
-      app:
-        image: 'ghcr.io/shedowe19/shieldpm:latest'
-        restart: unless-stopped
-        ports:
-          - '80:80'
-          - '81:81'
-          - '443:443'
-        volumes:
-          - ./data:/data
-          - ./letsencrypt:/etc/letsencrypt
-    ```
+   ```yaml
+   services:
+     app:
+       image: "ghcr.io/shedowe19/shieldpm:latest"
+       restart: unless-stopped
+       ports:
+         - "80:80"
+         - "81:81"
+         - "443:443"
+         - "443:443/udp" # HTTP/3 (QUIC)
+       environment:
+         TZ: Europe/Berlin # Required; choose your local IANA time zone
+       volumes:
+         - ./data:/data
+   ```
 
 2. **Start ShieldPM:**
 
-    ```bash
-    docker compose up -d
-    ```
+   ```bash
+   docker compose up -d
+   ```
 
 3. **Access the Admin Panel:**
-    Open `http://<your-ip>:81` in your browser.
-    The **Setup Wizard** will guide you through creating your admin account.
+   Open `http://<your-ip>:81` in your browser.
+   The **Setup Wizard** will guide you through creating your admin account.
 
 > [!TIP]
 > There are no default credentials — you create your own admin user during the initial setup.
@@ -55,7 +57,7 @@ docker compose up -d
 ```
 
 > [!TIP]
-> Your data is stored in the mounted `/data` volume. Pulling a new image and recreating the container does **not** delete your configuration, certificates, or database.
+> Your data, including certificates, is stored in the mounted `/data` volume. Pulling a new image and recreating the container does **not** delete it. If you selected MySQL or PostgreSQL, back up that database separately.
 
 ---
 
@@ -71,32 +73,30 @@ This method installs ShieldPM directly onto a fresh Debian 13 system. It include
 ### Installation
 
 1. **Download the Installer:**
-    Get the latest `shieldpm-install-linux-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
+   Get the latest `shieldpm-install-linux-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
 
-    *Example (for AMD64):*
+   _Example (for AMD64):_
 
-    ```bash
-    wget https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz
-    ```
+   ```bash
+   wget https://github.com/shedowe19/ShieldPM/releases/latest/download/shieldpm-install-linux-amd64.tar.gz
+   ```
 
 2. **Extract and Run:**
 
-    ```bash
-    tar -xzf shieldpm-install-linux-amd64.tar.gz
-    sudo ./install.sh
-    ```
+   ```bash
+   tar -xzf shieldpm-install-linux-amd64.tar.gz
+   sudo ./install.sh
+   ```
 
 3. **Access:**
-    Open `http://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
+   Open `http://<your-ip>:81`. The Setup Wizard will guide you through creating your admin account.
 
 ### Updating (Native)
 
 ShieldPM includes a self-updating utility. Run:
 
 ```bash
-update-shieldpm
-# OR simply
-update
+sudo update-shieldpm
 ```
 
 This command will:
@@ -107,6 +107,8 @@ This command will:
 4. Offer updates for installed Nginx, Anubis and OAuth2 Proxy binaries.
 5. Restart or start ShieldPM, apply pending database migrations and verify the backend health endpoint before reporting success.
 
+Run `update-shieldpm` with root privileges on native installations. Back up `/data` and any external database before upgrading.
+
 ---
 
 ## 3. 🖥️ Proxmox LXC
@@ -116,15 +118,15 @@ For Proxmox users, we provide a pre-built LXC template based on Debian 13.
 ### Installation
 
 1. **Download Template:**
-    Get `shieldpm-lxc-template-<arch>.tar.gz` from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
+   Get `shieldpm-<release-tag>-lxc_<arch>.tar.gz` (for example, `shieldpm-v4.4.1-lxc_amd64.tar.gz`) from [GitHub Releases](https://github.com/shedowe19/ShieldPM/releases).
 2. **Upload to Proxmox:**
-    Go to `local (pve) > CT Templates > Upload`.
+   Go to `local (pve) > CT Templates > Upload`.
 3. **Create CT:**
-    Create a new container using this template.
+   Create a new container using this template. SQLite works without an additional database; MariaDB and PostgreSQL require separate setup.
 4. **Important Setting:**
-    In the container **Options**, enable **Nesting**.
+   In the container **Options**, enable **Nesting**.
 5. **Start:**
-    Boot the container. Access `http://<IP>:81` — the Setup Wizard will create your admin account.
+   Boot the container. Access `http://<IP>:81` — the Setup Wizard will create your admin account.
 
 ### Updating (LXC)
 
@@ -148,7 +150,7 @@ After installation, you may want to:
 
 1. **[Configure Environment Variables](Configuration)** — Customize ports, database, SSL, and more
 2. **[Create Your First Proxy Host](Proxy-Hosts)** — Set up a reverse proxy for your first service
-3. **[Enable Let's Encrypt](SSL-Certificates)** — Set `ACME_EMAIL` to enable automatic SSL
+3. **[Enable Let's Encrypt](SSL-Certificates)** — Configure your domain and certificate request; setting `ACME_EMAIL` is recommended for account notices
 4. **[Enable CrowdSec](CrowdSec)** — Protect against brute force and malicious bots
 5. **[Review Best Practices](Best-Practices)** — Security hardening and performance tips
 

@@ -10,17 +10,18 @@ Ermöglicht Zugriff auf Proxy-Hosts über `.onion`-Adressen. Nützlich für Priv
 
 ## Wichtige Dateien
 
-- `backend/internal/tor.js` (11 KB) — Business-Logik
-- `backend/models/tor_onion.js` (3 KB) — Objection.js-Modell
-- `backend/routes/nginx/tor_onion.js` (8 KB) — API-Routen
+- `backend/internal/tor.js` — Business-Logik
+- `backend/models/tor_onion.js` — Objection.js-Modell
+- `backend/routes/nginx/tor_onion.js` — API-Routen
 - `frontend/src/pages/Nginx/TorOnionServices.tsx` — Verwaltungsansicht für Onion-Dienste
 
 ## Verhalten
 
-- Steuert den Tor-Prozess über `tor-control-port`
+- Verwaltet dynamische Onion-Dienste des separat gestarteten Tor-Daemons über dessen lokalen Control Port (`127.0.0.1:9051`)
 - Erzeugt laufende Onion-Dienste über `ADD_ONION` und stoppt sie über `DEL_ONION`
 - Speichert Onion-Adresse und verschlüsselten privaten Service-Schlüssel in der Datenbank
 - Aktivierung über Umgebungsvariable `TOR_ENABLED`
+- Die Control-Port-Anmeldung liest `<DATA_PATH>/shieldpm/tor-control-password`. Der Docker-Start erzeugt aus `rootfs/etc/tor/torrc.tpl` eine `/etc/tor/torrc` und schreibt Tor-Status nach `/data/tor/tor.log`; Docker-Datenverzeichnis und persistenter Verschlüsselungsschlüssel müssen mit der Datenbank gesichert werden, um dieselbe Onion-Identität wiederherzustellen.
 - Die Icon-Aktionen für Aktualisieren, Hilfe, Adresse kopieren, Starten/Stoppen, Bearbeiten und Löschen haben
   lokalisierte zugängliche Namen. `TorOnionServices.test.tsx` prüft diese Namen mit der deutschen Locale.
 

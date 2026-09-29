@@ -10,14 +10,14 @@ Ermöglicht SSH-Verbindungen direkt über die ShieldPM Web-UI.
 
 ## Wichtige Dateien
 
-- `backend/internal/terminal.js` (4 KB) — Business-Logik
-- `rootfs/html/terminal/index.html` — Browser-Terminal mit xterm.js
+- `backend/internal/terminal.js` — WebSocket- und SSH-Verbindung
+- `rootfs/html/terminal/index.html` — ausgelieferte eigenständige Terminal-Seite mit xterm.js
 
 ## Verhalten
 
 - WebSocket-basierte Verbindung zwischen Browser und Backend
 - Backend verbindet sich via `ssh2` zum Zielhost
-- Terminal-Emulation über `@xterm/xterm` im Frontend
+- Terminal-Emulation in der statischen HTML-Seite mit xterm.js 5.3.0; sie lädt Skripte und CSS bei Aufruf von jsDelivr. Ohne Zugriff auf dieses CDN lädt die Terminal-Emulation nicht.
 
 Terminal-Hosts werden über die regulären Proxy-Host-Routen mit `forward_scheme: "terminal"` verwaltet. Ein eigenständiger REST-Bereich `terminal-hosts` und eigene `terminal_hosts`-Capabilities existieren nicht; veraltete, unreferenzierte Schemadateien dafür wurden entfernt.
 
@@ -25,9 +25,7 @@ Terminal-Hosts werden über die regulären Proxy-Host-Routen mit `forward_scheme
 
 - `ssh2` — SSH-Client
 - `ws` — WebSocket-Server
-- `@xterm/xterm` — Terminal-Emulator
-- `@xterm/addon-fit` — Terminal-Größenanpassung
-- `@xterm/addon-web-links` — Klickbare Links
+- `xterm`, `xterm-addon-fit`, `xterm-addon-web-links` — von `rootfs/html/terminal/index.html` zur Laufzeit über jsDelivr geladen; die ebenfalls in `frontend/package.json` aufgeführten `@xterm/*`-Pakete werden von dieser HTML-Seite nicht importiert.
 
 ### Zugriff und Verbindungsgrenzen
 

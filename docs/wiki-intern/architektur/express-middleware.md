@@ -1,45 +1,30 @@
-# Express Middleware
+# Express-Middleware
 
 ## Zweck
 
-Dokumentation der Express-Middleware in `backend/lib/express/`.
-
-## Kontext
-
-Diese Middleware wird von `backend/app.js` verwendet und bildet die HTTP-Request-Verarbeitungsschicht.
+Die Middleware in `backend/app.js` und `backend/lib/express/` schützt und verarbeitet HTTP-Anfragen vor den eigentlichen API-Routen.
 
 ## Middleware-Dateien
 
-| Datei                | Größe | Zweck                                      |
-| -------------------- | ----- | ------------------------------------------ |
-| `jwt.js`             | 352 B | JWT-Authentifizierungs-Middleware          |
-| `jwt-decode.js`      | 553 B | JWT-Token aus Request dekodieren           |
-| `demo.js`            | 5.8KB | Demo-Modus-Middleware (read-only Zugriff)  |
-| `user-id-from-me.js` | 337 B | Ersetzt `me` in URL durch aktuelle User-ID |
+| Datei                | Zweck                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| `jwt.js`             | Bearer-Token oder `shieldpm_jwt`-Cookie nach `res.locals.token` übernehmen                            |
+| `jwt-decode.js`      | `Access` mit Token-, Kontostatus- und Scope-Prüfung laden und unter `res.locals.access` bereitstellen |
+| `demo.js`            | Demo-Modus-Beschränkungen für Änderungen und Netzwerkziele anwenden                                   |
+| `user-id-from-me.js` | `:user_id=me` durch die ID des authentifizierten Benutzers ersetzen                                   |
 
-## Verhalten
+## Reihenfolge in `app.js`
 
-### jwt.js
+1. Helmet und das globale IP-Limit laufen vor Datenbankabfragen, CSRF-Erzeugung und Body-Parsing.
+2. Cookie-Parser und `jwt.js` übernehmen Authentifizierungsdaten. Die Routen verwenden `jwt-decode.js` bei geschützten Endpunkten für die eigentliche Berechtigungsprüfung.
+3. Die Double-Submit-CSRF-Middleware prüft schreibende Anfragen. Eine Ausnahme für die Erstregistrierung gibt es nur für `POST /users` beziehungsweise `POST /api/users`, solange keine Benutzer existieren. Login, Refresh, Logout und bestimmte 2FA-Prüfungen haben gezielte Ausnahmen; die Duo-Browserübergabe benötigt CSRF.
+4. Der Health-Endpunkt liefert einen anonymen CSRF-Token; nach Login oder Refresh wird ein zur neuen Identität passender Token ausgegeben. Danach folgen Body-Parser, Demo-Middleware, Swagger und die Routen.
+5. Die zentrale Fehlerbehandlung formatiert Fehler unter `error`. Sie kennzeichnet nur eine CSRF-Ablehnung vor Routenausführung mit `error.reason: "EBADCSRFTOKEN"`.
 
-Übernimmt einen Bearer-Token aus dem Authorization-Header oder das `shieldpm_jwt`-Cookie nach `res.locals.token`. Die eigentliche Prüfung erfolgt im Access-Layer.
-
-### jwt-decode.js
-
-Erzeugt und lädt `Access`, einschließlich Token-, Kontostatus- und Scope-Prüfung, und stellt ihn als `res.locals.access` bereit.
-
-### demo.js
-
-Wendet bei aktivem Demo-Modus die Sperren für Benutzeränderungen, kritische Einstellungen, Integrationen und interne Weiterleitungsziele an. Einzelne Demo-Hostaktionen bleiben gemäß den Prüfregeln zulässig.
-
-### Reihenfolge in app.js
-
-Das globale IP-Limit läuft nach Helmet und vor Authentifizierung, Datenbankabfragen, CSRF-Erzeugung und Body-Parsing. Die CSRF-Middleware liest den Setup-Status nur für `POST /users` beziehungsweise `POST /api/users`, weil ausschließlich dort eine Ausnahme für die Ersteinrichtung möglich ist. Der Health-Endpunkt liest den Status weiterhin selbst. Der Konfigurations-Fingerprint wird bei der Hostregeneration vollständig geschrieben, bevor der Start als abgeschlossen gilt.
-
-### user-id-from-me.js
-
-Ersetzt `:me` in URL-Parametern durch die ID des aktuell authentifizierten Benutzers.
+Der Konfigurations-Fingerabdruck wird bei der Hostregeneration vollständig geschrieben, bevor der Start als abgeschlossen gilt; das ist keine Express-Middleware.
 
 ## Verwandte Seiten
 
 - [Backend-Hilfsbibliotheken](./backend-lib.md)
 - [Benutzer & Auth](../module/benutzer-auth.md)
+- [API-Überblick](../api/ueberblick.md)

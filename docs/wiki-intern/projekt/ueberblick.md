@@ -38,8 +38,8 @@ ShieldPM besteht aus **zwei** getrennten Repositories:
 | Datei                       | Beschreibung                                   |
 | --------------------------- | ---------------------------------------------- |
 | `backend/internal/nginx.js` | Nginx-Konfigurationsengine ("Das Gehirn")      |
-| `backend/templates/*.conf`  | EJS-Templates für Nginx-Konfigurationen        |
-| `backend/migrations/`       | Knex.js Migrationen (74 Dateien, ESM)          |
+| `backend/templates/*.conf`  | LiquidJS-Templates für Nginx-Konfigurationen   |
+| `backend/migrations/`       | Knex.js Migrationen (ESM)                      |
 | `frontend/src/Router.tsx`   | React-Routing (Lazy-Loading)                   |
 | `frontend/src/api/`         | React Query Hooks                              |
 | `scripts/install.sh`        | Native/LXC-Installer                           |

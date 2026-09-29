@@ -6,16 +6,16 @@ ShieldPM natively integrates with [OAuth2-Proxy](https://github.com/oauth2-proxy
 
 ## Supported Providers
 
-| Provider | Config Value | OIDC Issuer URL Required |
-|:---|:---|:---|
-| Google | `google` | No (built-in) |
-| GitHub | `github` | No (built-in) |
-| GitLab | `gitlab` | No (built-in) |
-| Azure AD | `azure` | No (built-in) |
-| Keycloak | `keycloak-oidc` | Yes |
-| Authentik | `oidc` | Yes |
-| Authelia | `oidc` | Yes |
-| Any OIDC Provider | `oidc` | Yes |
+| Provider          | Config Value    | OIDC Issuer URL Required |
+| :---------------- | :-------------- | :----------------------- |
+| Google            | `google`        | No (built-in)            |
+| GitHub            | `github`        | No (built-in)            |
+| GitLab            | `gitlab`        | No (built-in)            |
+| Azure AD          | `azure`         | No (built-in)            |
+| Keycloak          | `keycloak-oidc` | Yes                      |
+| Authentik         | `oidc`          | Yes                      |
+| Authelia          | `oidc`          | Yes                      |
+| Any OIDC Provider | `oidc`          | Yes                      |
 
 > **Tip:** If your identity provider supports OpenID Connect, you can use it with the generic `oidc` provider type by supplying the Issuer URL.
 
@@ -34,19 +34,19 @@ ShieldPM natively integrates with [OAuth2-Proxy](https://github.com/oauth2-proxy
    - **Client ID**: From your identity provider.
    - **Client Secret**: From your identity provider.
    - **Cookie Secret**: A secret to encrypt session cookies (see below).
-   - **OIDC Issuer URL**: *(Only for OIDC/Keycloak)* The discovery endpoint base URL.
+   - **OIDC Issuer URL**: _(Only for OIDC/Keycloak)_ The discovery endpoint base URL.
 6. Click **Save**.
 
 ### 2. Generate a Cookie Secret
 
-The cookie secret **must** be exactly 16, 24, or 32 bytes long. Generate one with:
+Generate 32 random bytes and encode them as URL-safe Base64 for the **Cookie Secret** field. OAuth2-Proxy accepts this encoding and decodes it to a valid 32-byte secret; copy the entire output without shortening it:
 
 ```bash
-# 32-byte secret (recommended)
-openssl rand -base64 32 | head -c 32
+# 32 random bytes, URL-safe Base64 encoded
+openssl rand -base64 32 | tr -d '\n' | tr '+/' '-_'
 
 # Or using Python
-python3 -c "import os, base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode()[:32])"
+python3 -c "import os, base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
 ```
 
 ### 3. Assign to a Proxy Host
@@ -77,7 +77,7 @@ ShieldPM will automatically:
    - **Name**: `ShieldPM OAuth2 Proxy`
    - **Authorization Flow**: Select your default authorization flow
    - **Client Type**: `Confidential`
-   - **Redirect URIs**: `https://your-domain.example.com/oauth2/callback` (one per protected domain, or use Regex mode with `.*`)
+   - **Redirect URIs**: Explicitly register `https://your-domain.example.com/oauth2/callback` for each protected domain (adjust the prefix if changed).
    - **Signing Key**: ⚠️ **Select an RSA key** (e.g. `authentik Self-signed Certificate`). **Do NOT leave this empty** — without a signing key, Authentik uses HS256 which is incompatible with OAuth2-Proxy.
    - **Scopes**: `openid`, `email`, `profile`
 
@@ -88,14 +88,14 @@ ShieldPM will automatically:
 
 #### Step 3: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `oidc` |
-| Client ID | *(from Authentik provider)* |
-| Client Secret | *(from Authentik provider)* |
-| Cookie Secret | *(generated with openssl)* |
-| OIDC Issuer URL | `https://auth.example.com/application/o/your-provider-slug/` |
-| Allowed Email Domains | `example.com` *(or `*` for all)* |
+| Field                 | Value                                                        |
+| :-------------------- | :----------------------------------------------------------- |
+| Provider              | `oidc`                                                       |
+| Client ID             | _(from Authentik provider)_                                  |
+| Client Secret         | _(from Authentik provider)_                                  |
+| Cookie Secret         | _(generated with openssl)_                                   |
+| OIDC Issuer URL       | `https://auth.example.com/application/o/your-provider-slug/` |
+| Allowed Email Domains | `example.com` _(or `*` for all)_                             |
 
 > **⚠️ Important:** The OIDC Issuer URL must match the `issuer` field in the `.well-known/openid-configuration` response. For Authentik, this is `https://auth.example.com/application/o/<slug>/` — note the **trailing slash**.
 
@@ -120,14 +120,14 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `oidc` |
-| Client ID | `shieldpm-oauth2` |
-| Client Secret | *(from Keycloak Credentials tab)* |
-| Cookie Secret | *(generated with openssl)* |
-| OIDC Issuer URL | `https://keycloak.example.com/realms/your-realm` |
-| Allowed Email Domains | `*` |
+| Field                 | Value                                            |
+| :-------------------- | :----------------------------------------------- |
+| Provider              | `oidc`                                           |
+| Client ID             | `shieldpm-oauth2`                                |
+| Client Secret         | _(from Keycloak Credentials tab)_                |
+| Cookie Secret         | _(generated with openssl)_                       |
+| OIDC Issuer URL       | `https://keycloak.example.com/realms/your-realm` |
+| Allowed Email Domains | `*`                                              |
 
 ---
 
@@ -143,13 +143,13 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `google` |
-| Client ID | *(from Google Console)* |
-| Client Secret | *(from Google Console)* |
-| Cookie Secret | *(generated with openssl)* |
-| Allowed Email Domains | `example.com` *(or `*` for all Google accounts)* |
+| Field                 | Value                                            |
+| :-------------------- | :----------------------------------------------- |
+| Provider              | `google`                                         |
+| Client ID             | _(from Google Console)_                          |
+| Client Secret         | _(from Google Console)_                          |
+| Cookie Secret         | _(generated with openssl)_                       |
+| Allowed Email Domains | `example.com` _(or `*` for all Google accounts)_ |
 
 > **Note:** No OIDC Issuer URL required — Google's endpoints are built into OAuth2-Proxy.
 
@@ -168,15 +168,15 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `github` |
-| Client ID | *(from GitHub)* |
-| Client Secret | *(from GitHub)* |
-| Cookie Secret | *(generated with openssl)* |
-| Allowed Emails | `user@example.com` *(specific users)* |
+| Field          | Value                                 |
+| :------------- | :------------------------------------ |
+| Provider       | `github`                              |
+| Client ID      | _(from GitHub)_                       |
+| Client Secret  | _(from GitHub)_                       |
+| Cookie Secret  | _(generated with openssl)_            |
+| Allowed Emails | `user@example.com` _(specific users)_ |
 
-> **Note:** GitHub uses usernames, not email domains, for access control. Use **Allowed Emails** to restrict access to specific GitHub accounts, or **Allowed Groups** for GitHub organizations/teams.
+> **Note:** If you use Allowed Emails or Allowed Groups, check that the GitHub account and OAuth app expose the required verified email address or group information. Provider-specific claims and scopes can affect these filters.
 
 ---
 
@@ -193,13 +193,13 @@ ShieldPM will automatically:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `gitlab` |
-| Client ID | *(Application ID)* |
-| Client Secret | *(Secret)* |
-| Cookie Secret | *(generated with openssl)* |
-| Allowed Email Domains | `*` |
+| Field                 | Value                      |
+| :-------------------- | :------------------------- |
+| Provider              | `gitlab`                   |
+| Client ID             | _(Application ID)_         |
+| Client Secret         | _(Secret)_                 |
+| Cookie Secret         | _(generated with openssl)_ |
+| Allowed Email Domains | `*`                        |
 
 > **Note:** For self-hosted GitLab, you may need to set the OIDC Issuer URL to `https://gitlab.example.com`.
 
@@ -219,7 +219,7 @@ identity_providers:
     clients:
       - client_id: shieldpm-oauth2
         client_name: ShieldPM
-        client_secret: '$pbkdf2-sha512$...'  # hashed secret
+        client_secret: "$pbkdf2-sha512$..." # hashed secret
         redirect_uris:
           - https://your-domain.example.com/oauth2/callback
         scopes:
@@ -232,12 +232,12 @@ identity_providers:
 
 #### Step 2: Configure in ShieldPM
 
-| Field | Value |
-|:---|:---|
-| Provider | `oidc` |
-| Client ID | `shieldpm-oauth2` |
-| Client Secret | *(unhashed secret)* |
-| Cookie Secret | *(generated with openssl)* |
+| Field           | Value                      |
+| :-------------- | :------------------------- |
+| Provider        | `oidc`                     |
+| Client ID       | `shieldpm-oauth2`          |
+| Client Secret   | _(unhashed secret)_        |
+| Cookie Secret   | _(generated with openssl)_ |
 | OIDC Issuer URL | `https://auth.example.com` |
 
 ---
@@ -246,13 +246,13 @@ identity_providers:
 
 You can restrict who can access a protected host by configuring:
 
-| Field | Description | Example |
-|:---|:---|:---|
-| **Allowed Emails** | Comma-separated email addresses | `admin@example.com,user@example.com` |
-| **Allowed Email Domains** | Comma-separated domains | `example.com,corp.com` |
-| **Allowed Groups** | Comma-separated groups (provider-specific) | `admins,devops` |
+| Field                     | Description                                | Example                              |
+| :------------------------ | :----------------------------------------- | :----------------------------------- |
+| **Allowed Emails**        | Comma-separated email addresses            | `admin@example.com,user@example.com` |
+| **Allowed Email Domains** | Comma-separated domains                    | `example.com,corp.com`               |
+| **Allowed Groups**        | Comma-separated groups (provider-specific) | `admins,devops`                      |
 
-- **All three are optional.** If none are set, `email_domains = ["*"]` is used (any authenticated user).
+- If no email-domain or individual-email restriction is set, ShieldPM writes `email_domains = ["*"]` (any authenticated user). If **Allowed Emails** alone is set, the email-domain list stays empty; an explicitly configured domain list is additional to the individual-email filter.
 - **Groups** are provider-dependant. Authentik exposes groups via the `groups` claim. Keycloak requires a mapper.
 
 ---
@@ -269,7 +269,7 @@ Some providers require additional scopes. Set them in the **Scopes** field (e.g.
 
 ### PKCE (Proof Key for Code Exchange)
 
-OAuth2-Proxy will automatically detect if your provider supports PKCE (`S256`) and will display a warning if it's not enabled. For maximum security, enable it via the provider settings. ShieldPM does not currently expose a UI toggle for this — it relies on the provider's OIDC Discovery to advertise support.
+ShieldPM does not expose a PKCE toggle or its own PKCE warning in the Access List UI. Check your identity provider and the installed oauth2-proxy version when configuring this behavior.
 
 ---
 
@@ -306,7 +306,7 @@ When you apply an Access List with OAuth2-Proxy to a Proxy Host, ShieldPM does t
 1. **Spawns a Process**: A dedicated `oauth2-proxy` process per Access List, listening on a Unix socket (`/run/shieldpm/oauth2-proxy-<id>.sock`).
 2. **Generates Config**: Creates `oauth2-proxy.cfg` dynamically based on your settings.
 3. **Configures Nginx**: Adds `auth_request` directives to intercept and validate every request.
-4. **Lifecycle Management**: The process is only started when the Access List is actually assigned to a Proxy Host. It's automatically stopped when unassigned or when the last Proxy Host using it is deleted.
+4. **Lifecycle Management**: The process starts only when the Access List is assigned to at least one enabled Proxy Host. It stops when there are no enabled, non-deleted assigned hosts.
 
 ---
 
@@ -314,15 +314,15 @@ When you apply an Access List with OAuth2-Proxy to a Proxy Host, ShieldPM does t
 
 ### `failed to verify id_token signature`
 
-**Cause:** Your OIDC provider is using HS256 (symmetric) instead of RS256 (asymmetric) for token signing.
+**Possible cause:** Your OIDC provider signs tokens with HS256 while OAuth2-Proxy expects a public signing key. A mismatched issuer, key set, or provider configuration can also cause signature verification to fail.
 
-**Fix:** Configure your provider to use an **RSA signing key**. In Authentik, go to the Provider settings and select a key under **Signaturschlüssel** (Signing Key). Do **not** leave it empty.
+**Check:** Compare the configured issuer URL and the signing keys in its discovery document with your provider settings. If Authentik uses HS256, select an **RSA signing key** under **Signaturschlüssel** (Signing Key) and retry.
 
 ### Redirect Loop (`/oauth2/sign_in?rd=...` repeating)
 
-**Cause:** The `auth_request` directive is being applied to the `/oauth2/` paths themselves.
+**Possible cause:** The `auth_request` directive is also being applied to the OAuth2 callback/login paths. Cookie, redirect URL, and provider settings can cause loops as well.
 
-**Fix:** This is handled automatically by ShieldPM — `auth_request off;` is set on all `/oauth2/` locations. If you see this after a manual Nginx config edit, ensure these locations are excluded.
+**Check:** ShieldPM sets `auth_request off;` on its managed OAuth2 locations. If you edited the Nginx config manually, exclude these paths from authentication. Otherwise, check the configured prefix/callback URL, provider redirect URI, and browser cookies.
 
 ### `OIDC Discovery: 404 Not Found`
 

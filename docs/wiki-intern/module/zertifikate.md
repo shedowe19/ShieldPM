@@ -20,7 +20,7 @@ ShieldPM automatisiert die Zertifikatsverwaltung über Let's Encrypt (ACME) und 
 ## Verhalten
 
 - Zertifikate werden über ACME (Let's Encrypt) automatisch beantragt
-- Renewal-Check alle `CRT` Stunden (Standard: 72); gültig sind ganze Werte von 1 bis 596 Stunden. Andere Werte fallen auf den Standard zurück, damit Node.js-Timer nicht überlaufen. Erneute Initialisierung ersetzt den vorhandenen Timer.
+- `CRT` steuert das Intervall zwischen `certbot renew`-Prüfungen, nicht die verbleibende Zertifikatslaufzeit. `validate-env.cjs` setzt bei normalen Starts standardmäßig **23 Stunden**. Fehlt die Variable beim direkten Backend-Aufruf oder ist sie ungültig, verwendet `certificate.js` **72 Stunden** als interne Rückfallebene. Gültig sind ganze Werte von 1 bis 596 Stunden; erneute Initialisierung ersetzt den vorhandenen Timer.
 - Zertifikate werden unter `/data/tls/` gespeichert
 - Unterstützt ECDSA und RSA Schlüsseltypen
 

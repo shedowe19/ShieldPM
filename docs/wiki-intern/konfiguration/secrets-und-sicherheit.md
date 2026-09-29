@@ -8,13 +8,13 @@ Dokumentation geheimer Werte und Sicherheitsmechanismen.
 
 ## Geheime Variablen
 
-| Variable                 | Beschreibung                        |
-| ------------------------ | ----------------------------------- |
-| `CSRF_SECRET`            | CSRF-Token-Secret (min. 32 Zeichen) |
-| `DB_MYSQL_PASSWORD`      | MySQL-Passwort                      |
-| `DB_POSTGRES_PASSWORD`   | PostgreSQL-Passwort                 |
-| `ACME_EAB_HMAC_KEY`      | ACME HMAC-Key                       |
-| `INITIAL_ADMIN_PASSWORD` | Initiales Admin-Passwort            |
+| Variable                 | Beschreibung                                                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `CSRF_SECRET`            | Stabiler CSRF-Token-Secret (mindestens 32 zufällige Zeichen empfohlen); ohne Wert je Prozessstart neu generiert |
+| `DB_MYSQL_PASSWORD`      | MySQL-Passwort                                                                                                  |
+| `DB_POSTGRES_PASSWORD`   | PostgreSQL-Passwort                                                                                             |
+| `ACME_EAB_HMAC_KEY`      | ACME HMAC-Key                                                                                                   |
+| `INITIAL_ADMIN_PASSWORD` | Initiales Admin-Passwort                                                                                        |
 
 ## Interne Secrets
 
@@ -45,10 +45,6 @@ Die Schlüsseldatei wird mit Modus `0600` geladen und über vollständig geschri
 
 Details: [Benutzer & Auth](../module/benutzer-auth.md), [2FA-Service](../module/2fa-service.md), [Session-Verwaltung](../module/auth-session-service.md), [Access-Lists](../module/access-lists.md).
 
-## Verwandte Seiten
-
-- [Umgebungsvariablen](./umgebungsvariablen.md)
-
 ## API-Limits und Demo-Modus
 
 Das globale Limit von 500 Anfragen je IP in 15 Minuten gilt für die tatsächlichen Backendpfade wie `/users` und `/tokens`; der vorgeschaltete Nginx entfernt den äußeren `/api`-Präfix. Die engeren Limits für Authentifizierungsrouten gelten zusätzlich.
@@ -56,3 +52,8 @@ Das globale Limit von 500 Anfragen je IP in 15 Minuten gilt für die tatsächlic
 Der Demo-Modus sperrt alle schreibenden Benutzeraktionen einschließlich 2FA, Avatar und kodierter ID-Pfade sowie `PUT`-Änderungen globaler Einstellungen. Bei gesperrten internen Weiterleitungszielen werden auch Groß-/Kleinschreibung, abschließender DNS-Punkt und geklammerte IPv6-Adressen berücksichtigt. REST und KI prüfen bei Streams das tatsächliche Feld `forwarding_host`. Diese Prüfung ersetzt keine Netzwerktrennung des Demo-Systems und keine DNS-Auflösungskontrolle.
 
 Regressionstests: `backend/test/routes/api-rate-limit.spec.js` prüft das echte Express-Limit über 501 Anfragen an einen unpräfigierten Backendpfad; `backend/test/lib/demo-mode.spec.js` prüft die tatsächlich verwendeten Methoden und Pfadvarianten.
+
+## Verwandte Seiten
+
+- [Umgebungsvariablen](./umgebungsvariablen.md)
+- [Instanzkonfiguration](./config-dateien.md)

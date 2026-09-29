@@ -12,12 +12,12 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## System
 
-| Variable      | Standard        | Beschreibung                                                   |
-| ------------- | --------------- | -------------------------------------------------------------- |
-| `TZ`          | `Europe/Berlin` | Zeitzone                                                       |
-| `PUID`        | `0`             | User-ID (≥99 oder 0)                                           |
-| `PGID`        | `0`             | Group-ID (≥99 oder 0)                                          |
-| `CSRF_SECRET` | —               | CSRF-Token Secret (min. 32 Zeichen). Wert nicht dokumentieren. |
+| Variable      | Standard                                   | Beschreibung                                                                                                                                         |
+| ------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TZ`          | Pflicht (Compose-Vorlage: `Europe/Berlin`) | Zeitzone; ohne gültigen Wert bricht die Startvalidierung ab                                                                                          |
+| `PUID`        | `0`                                        | Numerische User-ID für den Dienst                                                                                                                    |
+| `PGID`        | `0`                                        | Numerische Group-ID für den Dienst; bei abweichendem PUID setzen                                                                                     |
+| `CSRF_SECRET` | zufällig je Start, falls nicht gesetzt     | Stabiler CSRF-Token-Secret (Beispiel: mindestens 32 Zeichen). Ohne eigenen Wert werden CSRF-Tokens beim Neustart ungültig. Wert nicht dokumentieren. |
 
 ## Netzwerk & Ports
 
@@ -59,7 +59,7 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 | `DB_MYSQL_NAME`                    | —        | MySQL-Datenbankname                       |
 | `DB_MYSQL_SSL`                     | `false`  | SSL aktivieren                            |
 | `DB_MYSQL_SSL_REJECT_UNAUTHORIZED` | `true`   | SSL: Unautorisierte Zertifikate ablehnen  |
-| `DB_MYSQL_SSL_VERIFY_IDENTITY`     | `false`  | SSL: Server-Identität verifizieren        |
+| `DB_MYSQL_SSL_VERIFY_IDENTITY`     | `true`   | SSL: Server-Identität verifizieren        |
 
 ### PostgreSQL
 
@@ -73,20 +73,20 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## SSL & ACME
 
-| Variable                 | Standard      | Beschreibung                                             |
-| ------------------------ | ------------- | -------------------------------------------------------- |
-| `ACME_EMAIL`             | —             | E-Mail für Zertifikate                                   |
-| `ACME_SERVER`            | Let's Encrypt | ACME-Server-URL                                          |
-| `ACME_EAB_KID`           | —             | External Account Binding Key                             |
-| `ACME_EAB_HMAC_KEY`      | —             | External Account Binding HMAC. Wert nicht dokumentieren. |
-| `ACME_MUST_STAPLE`       | `false`       | Must-Staple Extension                                    |
-| `ACME_OCSP_STAPLING`     | `false`       | OCSP Stapling                                            |
-| `ACME_KEY_TYPE`          | `ecdsa`       | Schlüsseltyp                                             |
-| `ACME_PROFILE`           | `standard`    | ACME-Profil (`standard` oder `vip`)                      |
-| `ACME_SERVER_TLS_VERIFY` | `true`        | TLS-Zertifikat des ACME-Servers verifizieren             |
-| `CUSTOM_OCSP_STAPLING`   | `false`       | Eigenes OCSP-Stapling aktivieren                         |
-| `CRT`                    | `23`          | Stunden zwischen Renewal-Checks                          |
-| `DEFAULT_CERT_ID`        | `0`           | Standard-Zertifikat-ID für neue Hosts                    |
+| Variable                 | Standard      | Beschreibung                                                                                                                                  |
+| ------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACME_EMAIL`             | —             | E-Mail für Zertifikate                                                                                                                        |
+| `ACME_SERVER`            | Let's Encrypt | ACME-Server-URL                                                                                                                               |
+| `ACME_EAB_KID`           | —             | External Account Binding Key                                                                                                                  |
+| `ACME_EAB_HMAC_KEY`      | —             | External Account Binding HMAC. Wert nicht dokumentieren.                                                                                      |
+| `ACME_MUST_STAPLE`       | `false`       | Must-Staple Extension                                                                                                                         |
+| `ACME_OCSP_STAPLING`     | `false`       | OCSP Stapling                                                                                                                                 |
+| `ACME_KEY_TYPE`          | `ecdsa`       | Schlüsseltyp                                                                                                                                  |
+| `ACME_PROFILE`           | `none`        | Optionales Profil des gewählten ACME-Servers; `none` deaktiviert die Profilauswahl. Andere Profile werden gegen das ACME-Verzeichnis geprüft. |
+| `ACME_SERVER_TLS_VERIFY` | `true`        | TLS-Zertifikat des ACME-Servers verifizieren                                                                                                  |
+| `CUSTOM_OCSP_STAPLING`   | `false`       | Eigenes OCSP-Stapling aktivieren                                                                                                              |
+| `CRT`                    | `23`          | Stunden zwischen Renewal-Checks                                                                                                               |
+| `DEFAULT_CERT_ID`        | `0`           | Standard-Zertifikat-ID für neue Hosts                                                                                                         |
 
 ## Analytics & Logging
 
@@ -99,15 +99,15 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 
 ## PHP
 
-| Variable     | Standard | Beschreibung                                                |
-| ------------ | -------- | ----------------------------------------------------------- |
-| `PHP82`      | `false`  | PHP 8.2 aktivieren                                          |
-| `PHP83`      | `false`  | PHP 8.3 aktivieren                                          |
-| `PHP84`      | `false`  | PHP 8.4 aktivieren                                          |
-| `PHP82_APKS` | —        | Zusätzliche Alpine-Pakete für PHP 8.2                       |
-| `PHP83_APKS` | —        | Zusätzliche Alpine-Pakete für PHP 8.3                       |
-| `PHP84_APKS` | —        | Zusätzliche Alpine-Pakete für PHP 8.4                       |
-| `PHP8X_APKS` | —        | Zusätzliche PHP-Pakete (veraltet, einzelne PHP-Vars nutzen) |
+| Variable     | Standard | Beschreibung                                                      |
+| ------------ | -------- | ----------------------------------------------------------------- |
+| `PHP82`      | `false`  | PHP 8.2 aktivieren                                                |
+| `PHP83`      | `false`  | PHP 8.3 aktivieren                                                |
+| `PHP84`      | `false`  | PHP 8.4 aktivieren                                                |
+| `PHP82_APKS` | —        | Zusätzliche Debian-APT-Pakete für PHP 8.2; aktiviert auch `PHP82` |
+| `PHP83_APKS` | —        | Zusätzliche Debian-APT-Pakete für PHP 8.3; aktiviert auch `PHP83` |
+| `PHP84_APKS` | —        | Zusätzliche Debian-APT-Pakete für PHP 8.4; aktiviert auch `PHP84` |
+| `PHP_APKS`   | —        | Weitere APT-Pakete; mindestens eine PHP-Version muss aktiv sein   |
 
 ## Nginx (Erweitert)
 
@@ -116,16 +116,14 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 | `SKIP_IP_RANGES`                | `true`       | Cloudflare IP-Ranges nicht automatisch aktualisieren                        |
 | `FULLCLEAN`                     | `false`      | Volles Cleanup bei Nginx-Reload aktivieren                                  |
 | `IPRT`                          | `1`          | Multiplikator für IP-Ranges-Aktualisierungsintervall                        |
-| `DEFAULT_CERT_ID`               | `0`          | Standard-Zertifikat-ID für neue Hosts                                       |
 | `NC_AIO`                        | —            | Nextcloud AIO-Modus aktivieren                                              |
 | `NC_DOMAIN`                     | —            | Nextcloud AIO Domain (erforderlich wenn NC_AIO=true)                        |
-| `PHP_APKS`                      | —            | Zusätzliche PHP-Pakete (veraltet, einzelne PHP-Vars nutzen)                 |
 | `NGINX_404_REDIRECT`            | `false`      | 404-Anfragen auf Standard-Site umleiten                                     |
 | `NGINX_HSTS_SUBDOMAINS`         | `true`       | HSTS-Header für Subdomains einschließen                                     |
 | `NGINX_LOG_NOT_FOUND`           | `false`      | 404-Fehler (Not Found) in Nginx-Logs protokollieren                         |
 | `NGINX_WORKER_PROCESSES`        | `auto`       | Anzahl der Nginx-Worker-Prozesse                                            |
 | `NGINX_WORKER_CONNECTIONS`      | `512`        | Anzahl der Verbindungen pro Worker                                          |
-| `X_FRAME_OPTIONS`               | `SAMEORIGIN` | X-Frame-Options Header-Wert                                                 |
+| `X_FRAME_OPTIONS`               | `sameorigin` | Header-Wert: `none`, `sameorigin` oder `deny` (kleingeschrieben)            |
 | `DISABLE_NGINX_BEAUTIFIER`      | `false`      | Nginx Config Beautifier deaktivieren (Config wird unformatiert geschrieben) |
 | `NGINX_DISABLE_PROXY_BUFFERING` | `false`      | Proxy-Buffering global für alle Proxy-Verbindungen deaktivieren             |
 
@@ -149,12 +147,16 @@ Umgebungsvariablen werden in `backend/validate-env.cjs` validiert.
 | `INITIAL_DEFAULT_PAGE`   | Standard-Seite: `404`, `444`, `redirect`, `congratulations` oder `html` |
 | `ENABLE_PRERUN`          | Pre-Run-Scripts aktivieren                                              |
 
+Ohne explizite Admin-Variablen führt das Frontend durch den Einrichtungsassistenten. `ENABLE_PRERUN=true` führt Shell-Skripte aus `/data/prerun/*.sh` vor der Umgebungsvalidierung aus.
+
 ## Sonstiges
 
-| Variable       | Beschreibung                    |
-| -------------- | ------------------------------- |
-| `TOR_ENABLED`  | Tor-Services aktivieren         |
-| `DOCKER_HOSTS` | Zusätzliche Docker-Remote-Hosts |
+| Variable         | Beschreibung                                                                                                                     |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `TOR_ENABLED`    | Tor-Dienst starten (Standard: `true`, falls installiert)                                                                         |
+| `DOCKER_HOSTS`   | Kommagetrennte zusätzliche Docker-Remote-Hosts; der lokale Socket wird zusätzlich versucht                                       |
+| `DATA_PATH`      | Datenbasis des Backends (im Container `/data`, beim lokalen `index-dev.js` standardmäßig `backend/data`)                         |
+| `REGENERATE_ALL` | Bei Start durch `envs.sh` auf `true` gesetzt, wenn der Vorlagen-/Umgebungsfingerabdruck abweicht; regeneriert aktive Nginx-Hosts |
 
 ## Verwandte Seiten
 

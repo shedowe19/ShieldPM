@@ -1,13 +1,13 @@
 # Docker Compose Reference
 
-This is the full reference `compose.yaml` file for ShieldPM. You can use this to understand all available configuration options.
+This is an annotated example using host networking. The repository's checked-in [`compose.yaml`](https://github.com/shedowe19/ShieldPM/blob/develop/compose.yaml) uses the `shieldpm:develop` image; use `:latest` below for the latest released image. The [Configuration](Configuration) page explains runtime defaults, and [OpenAppSec](OpenAppSec) covers the optional agent setup.
 
 ## 📝 compose.yaml
 
 > [!NOTE]
-> This is a comprehensive reference file containing all available `compose.yaml` options. You do not need to use all of them. Use the [Installation Guide](Installation) for a standard setup.
+> This example contains optional services and settings; uncomment only those you use. Keep `/data` persistent. The repository's [`compose.easy.yaml`](https://github.com/shedowe19/ShieldPM/blob/develop/compose.easy.yaml) is a smaller starting point. Do not add `ports:` alongside `network_mode: host`; Docker publishes ports directly on the host in that mode.
 
-
+<!-- prettier-ignore -->
 ```yaml
 services:
   shieldpm:
@@ -28,6 +28,10 @@ services:
 #      - 94.140.15.16 # Public AdGuard DNS
 #      - 2a10:50c0::bad1:ff # Public AdGuard DNS
 #      - 2a10:50c0::bad2:ff # Public AdGuard DNS
+#    depends_on: # optional, when you enable one of the db services below
+#      db:
+#        condition: service_started
+#        required: false
     volumes:
       - "/opt/shieldpm:/data"
 #      - "/var/www:/var/www" # optional, if you want to use ShieldPM directly as a webserver for html/php
@@ -35,14 +39,10 @@ services:
 #      - "shm-volume:/dev/shm/check-point" # required if you want to use the openappsec attachment module, also enable this volume at the end of this compose.yaml
     environment:
       - "TZ=Europe/Berlin" # set timezone, required, set it to one of the values from the "TZ identifier" https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
-#    depends_on:
-#      db:
-#        condition: service_started
-#        required: false
 #      - "DB_MYSQL_HOST=127.0.0.1" # MySQL/MariaDB Host
 #      - "DB_MYSQL_PORT=3306" # MySQL/MariaDB Port
 #      - "DB_MYSQL_USER=npm" # MySQL/MariaDB User
-#      - "DB_MYSQL_PASSWORD=npm" # MySQL/MariaDB Password
+#      - "DB_MYSQL_PASSWORD=<match-MYSQL_PASSWORD>" # MySQL/MariaDB Password
 #      - "DB_MYSQL_NAME=npm" # MySQL/MariaDB Database Name
 #      - "DB_MYSQL_SSL=false" # Enable SSL for MySQL/MariaDB? default false
 #      - "DB_MYSQL_SSL_REJECT_UNAUTHORIZED=true" # Reject unauthorized SSL certificates? default true
@@ -50,17 +50,17 @@ services:
 #      - "DB_POSTGRES_HOST=127.0.0.1" # Postgres Host
 #      - "DB_POSTGRES_PORT=5432" # Postgres Port
 #      - "DB_POSTGRES_USER=npm" # Postgres User
-#      - "DB_POSTGRES_PASSWORD=npm" # Postgres Password
+#      - "DB_POSTGRES_PASSWORD=<match-POSTGRES_PASSWORD>" # Postgres Password
 #      - "DB_POSTGRES_NAME=npm" # Postgres Database Name
 #      - "ACME_EMAIL=your-email" # email address to use for acme, currently optional, may be required in the future, so I recommend entering your email here, optional for letsencrypt, but required for zerossl and google public ca
-#      - "ACME_SERVER=https://dv.acme-v02.api.pki.goog/directory (google public ca) / https://acme.zerossl.com/v2/DV90 (zerossl)" # acme server used when requesting/renewing certs using certbot, default: https://acme-v02.api.letsencrypt.org/directory (letsencrypt)
+#      - "ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory" # set exactly one ACME directory URL; this is the default
 #      - "ACME_EAB_KID=123456789abcdef" # Key Identifier for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
 #      - "ACME_EAB_HMAC_KEY=123456789abcdef" # HMAC key for External Account Binding for the acme server, not supported by letsencrypt, optional for zerossl (Login on their site => Developer), but required for google public ca: https://cloud.google.com/certificate-manager/docs/public-ca-tutorial?hl=de#request-key-hmac
-#      - "ACME_MUST_STAPLE=true" # enables must-staple, default false, I recommend enabling this if your CA supports it, supported by zerossl, google public ca ignores this, unsupported by letsencrypt (will fail), overrides ACME_OCSP_STAPLING to true
+#      - "ACME_MUST_STAPLE=true" # enables must-staple, default false; verify CA support, also enables ACME_OCSP_STAPLING
 #      - "ACME_OCSP_STAPLING=true" # enables ocsp stapling, default false, I recommend enabling this if your CA supports it, supported by zerossl and google public ca
-#      - "ACME_PROFILE=shortlived" # sets the profile to be used from the acme server, defaults to "none" (the default profile), supported by letsencrypt (https://letsencrypt.org/docs/profiles), if you use letsencrypt I would recommend the "shortlived" profile, until it is public you should use the "tlsserver" profile, note: both are limited to 25 domains per cert instead of 100 like the "classic" (default) profile
+#      - "ACME_PROFILE=shortlived" # optional ACME profile, default none; the selected server must advertise this profile
 #      - "ACME_KEY_TYPE=rsa" # which key type to use ecdsa or rsa, default and recommended: ecdsa
-#      - "ACME_SERVER_TLS_VERIFY=false" # enables checking if ACME_SERVER has a valid TLS cert, default and recommended true
+#      - "ACME_SERVER_TLS_VERIFY=false" # disables ACME server TLS certificate verification; default and recommended: true
 #      - "CUSTOM_OCSP_STAPLING=true" # enables ocsp stapling for custom certs, default false, I recommend enabling this if your custom certs support it
 #      - "PUID=1000" # set user id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root)
 #      - "PGID=1000" # set group id, needs to be a number greater or equal to 99, or equal to 0, default 0 (root), requires non-zero PUID
@@ -95,21 +95,21 @@ services:
 #      - "LOGROTATE=true" # Enables writing http access logs to /opt/shieldpm/nginx/json_access.log, stream access logs to /opt/shieldpm/nginx/stream.log and enables daily logrotation, default false
 #      - "LOGROTATIONS=7" # Set how often the json_access.log should be rotated until it is deleted, default 3
 #      - "SKIP_IP_RANGES=false" # Skip fetching/whitelisting ip ranges from cloudflare, default true
-#      - "IPRT=3" # Set how many hours should be between updating ip ranges from aws and cloudflare, default 1, ignored when SKIP_IP_RANGES is true
+#      - "IPRT=3" # Multiplier for the 6-hour Cloudflare IP range refresh, default 1; ignored when SKIP_IP_RANGES=true
 #      - "CRT=72" # Set how many hours should be between certbot trying to renew your certs, default 23
 #      - "GOA=true" # Enables goaccess (and overrides LOGROTATE to true), default false --- if you download the GeoLite2-Country.mmdb, GeoLite2-City.mmdb AND GeoLite2-ASN.mmdb file from MaxMind and place them in /opt/shieldpm/goaccess/geoip it will automatically enable GeoIP in goaccess after restarting ShieldPM (no need to change GOACLA below), you may also enable the geoipupdate container below (please change the timezone)
 #      - "GOACLA=--agent-list --real-os --double-decode --anonymize-ip --anonymize-level=2 --keep-last=7 --with-output-resolver --no-query-string" # Arguments that should be passed to goaccess, default: --agent-list --real-os --double-decode --anonymize-ip --anonymize-level=1 --keep-last=30 --with-output-resolver --no-query-string
 #      - "PHP82=true" # Activate PHP82, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
-#      - "PHP82_APKS=php8.2-curl php8.2-openssl" # Add php extensions, also enables PHP82, see available packages here: https://packages.debian.org/search?keywords=php8.2-*, default none, requires PHP82
+#      - "PHP82_APKS=php8.2-curl" # Example optional package; verify availability in the image's APT sources, also enables PHP82
 #      - "PHP83=true" # Activate PHP83, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
-#      - "PHP83_APKS=php8.3-curl php8.3-openssl" # Add php extensions, also enables PHP83, see available packages here: https://packages.debian.org/search?keywords=php8.3-*, default none, requires PHP83
+#      - "PHP83_APKS=php8.3-curl" # Example optional package; verify availability in the image's APT sources, also enables PHP83
 #      - "PHP84=true" # Activate PHP84, default false, supported, but not recommended, you should prefer to use a dedicated php-fpm container
-#      - "PHP84_APKS=php8.4-curl php8.4-openssl" # Add php extensions, also enables PHP84, see available packages here: https://packages.debian.org/search?keywords=php8.4-*, default none, requires PHP84
+#      - "PHP84_APKS=php8.4-curl php8.4-gd" # Example optional packages; verify availability in the image's APT sources, also enables PHP84
 #      - "PHP_APKS=php-apcu php-redis" # Add php extensions, see available packages here: https://packages.debian.org/search?keywords=php-*, default none, requires PHP82, PHP83 and/or PHP84, not recommended, please use PHP82_APKS, PHP83_APKS or PHP84_APKS
-#      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # email to use instead of admin@example.org on first start of ShieldPM for the initial user
-#      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # password to use instead of a random password which is logged on first start of ShieldPM for the initial user
+#      - "INITIAL_ADMIN_EMAIL=<initial@email.tld>" # with INITIAL_ADMIN_PASSWORD, creates the first admin instead of using the setup wizard
+#      - "INITIAL_ADMIN_PASSWORD=<initial-password>" # required with INITIAL_ADMIN_EMAIL; do not commit real passwords to a Compose file
 #      - "INITIAL_DEFAULT_PAGE=444" # default page to set on first start of ShieldPM for the initial user, default congratulations, can be one of: 404, 444, redirect, congratulations or html
-#      - "ENABLE_PRERUN=true" # see readme, default off
+#      - "ENABLE_PRERUN=true" # run /data/prerun/*.sh at startup, default false
 #      - "NGINX_LOAD_OPENAPPSEC_ATTACHMENT_MODULE=true" # loads the openappsec attachment module, you must also set ipc and enable the shm-volume for ShieldPM in this compose file, this will fully disable brotli, default false
 #      - "NGINX_LOAD_GEOIP2_MODULE=true" # loads the geoip2 module, requires manual configuration, default false
 #      - "NGINX_LOAD_NJS_MODULE=true" # loads the njs module (nginx JavaScript module), requires manual configuration, default false
@@ -143,12 +143,12 @@ services:
 #    restart: always
 #    network_mode: bridge
 #    environment:
-#      - "MYSQL_ROOT_PASSWORD=npm"
+#      - "MYSQL_ROOT_PASSWORD=<set-a-unique-root-password>"
 #      - "MYSQL_DATABASE=npm"
 #      - "MYSQL_USER=npm"
-#      - "MYSQL_PASSWORD=npm"
+#      - "MYSQL_PASSWORD=<match-DB_MYSQL_PASSWORD>"
 #    ports:
-#      - "3306:3306"
+#      - "127.0.0.1:3306:3306"
 #    volumes:
 #      - "db_data:/var/lib/mysql"
 
@@ -161,9 +161,9 @@ services:
 #    environment:
 #      - "POSTGRES_DB=npm"
 #      - "POSTGRES_USER=npm"
-#      - "POSTGRES_PASSWORD=npm"
+#      - "POSTGRES_PASSWORD=<match-DB_POSTGRES_PASSWORD>"
 #    ports:
-#      - "5432:5432"
+#      - "127.0.0.1:5432:5432"
 #    volumes:
 #      - "/opt/shieldpm/postgres:/var/lib/postgresql/data"
 
@@ -194,7 +194,7 @@ services:
 #      - "/opt/openappsec/data:/etc/cp/data"
 #      - "/opt/openappsec/logs:/var/log/nano_agent"
 #      - "/opt/openappsec/localconf:/ext/appsec" # if you don't set AGENT_TOKEN, then please put a local_policy.yaml in the /opt/openappsec/localconf folder before deploying
-#      - "/opt/openappsec/open-appsec-advanced-model.tgz:/advanced-model/open-appsec-advanced-model.tgz" # optional, if you want to use a different model
+#      - "/opt/openappsec:/advanced-model" # optional; place open-appsec-advanced-model.tgz in /opt/openappsec on the host first
 #    environment:
 #      - "TZ=your-timezone" # needs to be changed
 #      - "autoPolicyLoad=true"
@@ -273,4 +273,5 @@ services:
 ```
 
 ---
+
 [🏠 Home](Home) | [🐞 Report a Bug](https://github.com/shedowe19/ShieldPM/issues)

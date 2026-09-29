@@ -20,6 +20,7 @@ Um Administratoren auf neue Versionen hinzuweisen, ruft das Backend regelmäßig
 - HTTP-Fehler, unterbrochene Antworten, mehr als 1 MiB Daten und eine Gesamtdauer über zehn Sekunden führen zum Fehler. Proxy-Verbindungen und Zeitgeber werden beim Schließen aufgeräumt.
 - Der Versionsvergleich berücksichtigt numerische Hauptversionen, Vorabversionen und Build-Metadaten.
 - Gibt `current`, `latest` und `update_available` (Boolean) zurück.
+- Wenn der GitHub-Abruf oder die Versionsprüfung fehlschlägt, antwortet `GET /api/version/check` bewusst mit HTTP 200 und `{ "current": null, "latest": null, "update_available": false }`, damit der Client keinen Fehler-Refresh-Loop startet. Der Fehler wird protokolliert und nicht als gültige Cache-Antwort gespeichert.
 - Nutzt `proxy-agent`, falls ein Corporate Proxy konfiguriert ist.
 
 ## Abhängigkeiten

@@ -10,11 +10,11 @@ Proxy-Hosts leiten eingehende HTTP/HTTPS-Anfragen an Upstream-Server weiter. Sie
 
 ## Wichtige Dateien
 
-- `backend/internal/proxy-host.js` (19 KB) — Business-Logik
-- `backend/models/proxy_host.js` (7 KB) — Objection.js-Modell
-- `backend/templates/proxy_host.conf` (16 KB) — Nginx-Template
-- `backend/templates/_proxy_logic.conf` (17 KB) — Gemeinsame Proxy-Logik
-- `backend/routes/nginx/proxy_hosts.js` (6 KB) — API-Routen
+- `backend/internal/proxy-host.js` — Business-Logik
+- `backend/models/proxy_host.js` — Objection.js-Modell
+- `backend/templates/proxy_host.conf` — Nginx-Template
+- `backend/templates/_proxy_logic.conf` — Gemeinsame Proxy-Logik
+- `backend/routes/nginx/proxy_hosts.js` — API-Routen
 - `frontend/src/modals/ProxyHostForwardingFields.tsx` — Formularbereich für Schema, Zielhost, Zielport und Index-Datei
 - `frontend/src/modals/ProxyHostPhpSettings.tsx` — Formularbereich für PHP-Hosting bei `path`-Forwarding
 
@@ -64,7 +64,7 @@ Proxy-Host-Import-Whitelist.
 
 ## Resumable Upload Relay
 
-Das optionale `upload_relay_enabled` aktiviert je Host transparentes Upload-Passthrough. Der Nginx-Renderer verwendet den vorhandenen privaten HTTP(S)-Upstream und erhält Request-URI, Methode und Upload-Header; ein getrennt konfigurierter Zielpfad ist nicht nötig. Der generische `upload_relay_path` (Standard `/_shieldpm-upload`) wird an denselben URI des Upstreams weitergereicht, sodass ein tus-fähiger Dienst seine eigenen Sessions und Ziele verwaltet. Nextcloud-WebDAV-Uploads unter `/remote.php/dav/uploads/` erkennt ShieldPM automatisch; `Destination` bleibt erhalten. Für die bekannten Upload-Namensräume wird Request-Buffering deaktiviert und nur das ModSecurity-Request-Body-Limit auf die konfigurierbare Chunk-Größe (5 bis 90 MiB) angehoben; die übrigen WAF-Regeln bleiben aktiv. Bei Anubis-Hosts passieren die öffentlichen Upload-Requests weiterhin Anubis und gehen erst danach zum privaten Upstream. Eine bestehende Access List bleibt wirksam, ist aber optional; bei `pass_auth: false` wird Basic-Authorization auch in speziellen Upload-Locations nicht weitergereicht. Die Migration führt ältere lokale tus-Kompatibilitätsfelder weiter, aber sie sind nicht Teil des normalen UI-Workflows.
+Das optionale `upload_relay_enabled` aktiviert je Host transparentes Upload-Passthrough. Der Nginx-Renderer verwendet den vorhandenen privaten HTTP(S)-Upstream und erhält Request-URI, Methode und Upload-Header; ein getrennt konfigurierter Zielpfad ist nicht nötig. Der generische `upload_relay_path` (Standard `/_shieldpm-upload`) wird an denselben URI des Upstreams weitergereicht, sodass ein tus-fähiger Dienst seine eigenen Sessions und Ziele verwaltet. Nextcloud-WebDAV-Uploads unter `/remote.php/dav/uploads/` erkennt ShieldPM automatisch; `Destination` bleibt erhalten. In diesen speziellen Upload-Locations werden Request- und Response-Buffering deaktiviert sowie `client_max_body_size` und die beiden ModSecurity-Request-Body-Limits angehoben: beim generischen Pfad auf die konfigurierbare Chunk-Größe (5 bis 90 MiB), bei Nextcloud fest auf 100 MiB. Die übrigen WAF-Regeln bleiben aktiv; andere Host-Pfade behalten ihre bisherigen Limits. Bei Anubis-Hosts passieren die öffentlichen Upload-Requests weiterhin Anubis und gehen erst danach zum privaten Upstream. Eine bestehende Access List bleibt wirksam, ist aber optional; bei `pass_auth: false` wird Basic-Authorization auch in speziellen Upload-Locations nicht weitergereicht. Die Migration führt ältere lokale tus-Kompatibilitätsfelder weiter, aber sie sind nicht Teil des normalen UI-Workflows.
 
 Die routenspezifischen Upload-Location-Blöcke bleiben von ShieldPMs Admin-CSRF-Prüfung getrennt, weil sie ausschließlich als Nginx-Passthrough zwischen öffentlichem Proxy Host und dessen privatem Upstream arbeiten. Normale Proxy-Host-Verwaltungswrites bleiben CSRF-geschützt. Details zu Transparenz, Protokollgrenzen und Nextcloud-WebDAV stehen unter [Upload-Relay](./upload-relay.md).
 
@@ -79,6 +79,12 @@ bereit; `Table.tsx` zeigt je nach Auswahl die neun Datenspalten Symbol, Eigentü
 Status, Dienstprüfung und Latenz. Jede ist einzeln ausblendbar, standardmäßig sind alle sichtbar. Die Auswahl wird
 im Browser über `localStorage` für erneutes Laden gespeichert. Das Zeilen-Aktionsmenü bleibt unabhängig von der
 Auswahl erreichbar. Die Spaltenauswahl verändert keine API-Daten, Host-Konfiguration oder Monitor-Ausführung.
+
+`frontend/src/lib/serviceIcons.ts` ordnet bekannte Hostnamen und Forward-Ports lokal einem Icon aus dem
+Homarr-Dashboard-Icons-CDN zu; zuerst wird ein passender Hostname **mit** Port versucht, dann ein reiner
+Port-Treffer. Die Formularoptionen `iconType` (`auto`, `custom`, `none`) und `iconUrl` steuern die Darstellung über
+`ServiceIcon.tsx`. Eine eigene URL wird nur bei `custom` verwendet; ohne Treffer erscheint das Fallback-Symbol.
+Die Icon-Spalte lässt sich unabhängig von den übrigen Datenspalten ausblenden.
 
 ## Listen-Paginierung
 

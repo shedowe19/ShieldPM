@@ -22,7 +22,7 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 │  Express.js 5 + Objection.js/Knex.js                         │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
 │  │ Routes   │  │ Internal │  │ Models   │  │ Templates│    │
-│  │ (API)    │→ │ (Logic)  │→ │ (ORM)    │  │ (EJS)    │    │
+│  │ (API)    │→ │ (Logic)  │→ │ (ORM)    │  │(LiquidJS)│    │
 │  └──────────┘  └─────┬────┘  └──────────┘  └──────────┘    │
 │                       │                                      │
 │              ┌────────▼────────┐                             │
@@ -34,7 +34,7 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 ┌───────────────────────▼─────────────────────────────────────┐
 │                     Nginx (OpenResty)                         │
 │  HTTP/3 + ModSecurity + CrowdSec (Lua) + OpenAppSec          │
-│  /data/nginx/*.conf                                          │
+│  /data/nginx/<host-type>/*.conf                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -42,29 +42,29 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 
 ### Backend
 
-| Technologie    | Version | Zweck                              |
-| -------------- | ------- | ---------------------------------- |
-| Node.js        | v26+    | Runtime                            |
-| Express.js     | v5.2    | Web-Framework                      |
-| Objection.js   | v3.1    | ORM                                |
-| Knex.js        | v3.2    | Query-Builder / Migrationen        |
-| better-sqlite3 | v12.9   | SQLite-Treiber (Entwicklung)       |
-| mysql2         | v3.22   | MySQL/MariaDB-Treiber (Produktion) |
-| pg             | v8.20   | PostgreSQL-Treiber (Produktion)    |
+| Technologie    | Version | Zweck                       |
+| -------------- | ------- | --------------------------- |
+| Node.js        | v26+    | Runtime                     |
+| Express.js     | v5.2    | Web-Framework               |
+| Objection.js   | v3.1    | ORM                         |
+| Knex.js        | v3.3    | Query-Builder / Migrationen |
+| better-sqlite3 | v13     | SQLite-Treiber (Standard)   |
+| mysql2         | v3.24   | MySQL/MariaDB-Treiber       |
+| pg             | v8.23   | PostgreSQL-Treiber          |
 
 ### Frontend
 
 | Technologie          | Version | Zweck                   |
 | -------------------- | ------- | ----------------------- |
 | React                | v19.2   | UI-Framework            |
-| TypeScript           | v5.9    | Typsicherheit           |
-| Vite                 | v8.0    | Build-Tool              |
-| TanStack React Query | v5.100  | Server-State-Management |
-| Tailwind CSS         | v3.4    | Styling                 |
+| TypeScript           | v7.0    | Typsicherheit           |
+| Vite                 | v8.2    | Build-Tool              |
+| TanStack React Query | v5.102  | Server-State-Management |
+| Tailwind CSS         | v4.3    | Styling                 |
 | shadcn/ui (Radix)    | aktuell | UI-Komponenten          |
-| react-router-dom     | v7.14   | Routing                 |
-| Framer Motion        | v12.38  | Animationen             |
-| i18next              | v25.10  | Internationalisierung   |
+| react-router-dom     | v7.18   | Routing                 |
+| Framer Motion        | v13.1   | Animationen             |
+| i18next              | v26.4   | Internationalisierung   |
 
 ### Infrastruktur
 
@@ -82,18 +82,18 @@ ShieldPM ist eine klassische 3-Schichten-Webanwendung mit einer Nginx-Konfigurat
 ```
 ShieldPM/
 ├── backend/              # Node.js Backend
-│   ├── internal/         # Business-Logik (36+ Module)
+│   ├── internal/         # Business-Logik
 │   │   └── ai/          # AI-Agent (executor, providers, tools, prompt)
-│   ├── models/           # Objection.js Modelle (27 Dateien)
-│   ├── routes/           # Express-Routen (16 Dateien + nginx/)
-│   ├── migrations/       # Knex-Migrationen (74 Dateien)
-│   ├── templates/        # EJS Nginx-Templates (9 Dateien)
+│   ├── models/           # Objection.js Modelle
+│   ├── routes/           # Express-Routen einschließlich nginx/
+│   ├── migrations/       # Knex-Migrationen
+│   ├── templates/        # LiquidJS-Vorlagen für Nginx
 │   ├── schema/           # OpenAPI/Swagger Schemas
 │   ├── lib/              # Hilfsbibliotheken
 │   └── test/             # Tests
 ├── frontend/             # React Frontend
 │   └── src/
-│       ├── pages/        # Seiten (13 Bereiche)
+│       ├── pages/        # Seiten
 │       ├── components/   # Wiederverwendbare Komponenten
 │       ├── api/          # React Query Hooks
 │       ├── locale/       # i18n (13 Sprachen)

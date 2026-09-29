@@ -14,19 +14,19 @@ Der AI-Agent ermöglicht natürlichsprachliche Interaktion mit ShieldPM — sowo
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `frontend/src/components/AiChat/AiChatLauncher.tsx` | Gemeinsamer Sidebar-Trigger und bedarfsorientierter Loader für genau eine Chat-Instanz                       |
 | `frontend/src/components/AiChat/AiChat.tsx`         | Seitlicher KI-Chat-Dialog mit lokalisierten Screenreader-Labels; wird erst nach einer Trigger-Aktion geladen |
-| `backend/internal/ai.js` (14 KB)                    | AI-Verwaltung und Chat-Loop                                                                                  |
-| `backend/internal/ai/executor.js` (33 KB)           | Ausführung strukturierter Tool-Aufrufe                                                                       |
-| `backend/internal/ai/providers.js` (9 KB)           | Provider-Abstraktion (Gemini, Ollama, OpenAI)                                                                |
-| `backend/internal/ai/tools.js` (27 KB)              | Ausführbare Funktionen für den AI-Agent                                                                      |
-| `backend/internal/ai/prompt.js` (10 KB)             | System-Prompt                                                                                                |
+| `backend/internal/ai.js`                            | AI-Konfiguration und Chat-Loop                                                                               |
+| `backend/internal/ai/executor.js`                   | Ausführung strukturierter Tool-Aufrufe                                                                       |
+| `backend/internal/ai/providers.js`                  | Provider-Abstraktion (Gemini, Ollama, OpenAI-kompatibel)                                                     |
+| `backend/internal/ai/tools.js`                      | Tool-Definitionen und Vorauswahl privilegierter Funktionen                                                   |
+| `backend/internal/ai/prompt.js`                     | System-Prompt                                                                                                |
 
 ## Provider
 
-| Provider          | Paket                   | Beschreibung                         |
-| ----------------- | ----------------------- | ------------------------------------ |
-| Google Gemini     | `@google/generative-ai` | Cloud-AI                             |
-| Ollama            | HTTP API (node-fetch)   | Lokale LLMs                          |
-| OpenAI-kompatibel | HTTP API                | Beliebiger OpenAI-kompatibler Server |
+| Provider          | Paket                   | Beschreibung                                 |
+| ----------------- | ----------------------- | -------------------------------------------- |
+| Google Gemini     | `@google/generative-ai` | Cloud-AI                                     |
+| Ollama            | HTTP API (`fetch`)      | Native `/api/chat` bei Port 11434 ohne `/v1` |
+| OpenAI-kompatibel | HTTP API (`fetch`)      | Server mit Chat-Completions-Endpunkt         |
 
 ## Tools
 
@@ -73,8 +73,8 @@ protokolliert. Administratoren mit Sichtbarkeit `all` behalten die Möglichkeit,
 
 ## Verhalten
 
-1. UI oder ChatOps schickt eine Nachricht an `routes/ai.js`.
-2. `internal/ai.js` startet den Chat-Loop: System-Prompt aus `prompt.js`, History des Threads, aktueller User-Input.
+1. Die Web-UI sendet an `routes/ai.js`; ChatOps ruft `internal/ai.js` direkt auf.
+2. `internal/ai.js` startet den Chat-Loop: System-Prompt aus `prompt.js`, vom Aufrufer mitgesendete History und aktueller User-Input. ChatOps übergibt für jede Nachricht eine leere History.
 3. Der Provider (`providers.js`) ruft das LLM (Gemini, Ollama oder OpenAI-kompatibel) und liefert ggf. Tool-Calls zurück.
 4. Tool-Calls werden anhand der Definitionen in `tools.js` durch `executor.js` gegen die internen ShieldPM-Module ausgeführt; das Ergebnis wandert zurück in den Loop.
 5. Final-Antwort wird zurück an Frontend/Telegram geschickt.
@@ -100,8 +100,8 @@ fehlgeschlagenen Chunk-Import und die weiterhin verfügbare Anwendung ab.
 - `@google/generative-ai` — Gemini-SDK
 - HTTP-Client für Ollama und OpenAI-kompatible APIs
 - `internal/setting.js` — speichert Provider-Konfiguration (Provider, Model, API-Key, Base-URL)
-- `internal/token.js` — kurzlebige Tokens für Tool-Aufrufe
-- `internal/audit-log.js` — Protokollierung der AI-Aktionen
+- `internal/chat.js`, `lib/access.js` und `lib/config.js` — kurzlebiges Zugriffsobjekt für berechtigte Telegram-Nachrichten
+- `internal/audit-log.js` — Protokollierung durch einzelne Fachservices, sofern die jeweilige Aktion einen Audit-Eintrag schreibt. Die Audit-Tabelle hat keine eigene KI-Kennzeichnung; `access.is_ai` wird dort derzeit nicht gespeichert.
 - Aufgerufen von `routes/ai.js` und `internal/chat.js` (ChatOps)
 
 ### OpenAI-kompatible Provider und Tool-Folgerunden
@@ -118,7 +118,7 @@ Nur strukturierte Tool-Aufrufe des Providers dürfen Aktionen auslösen. JSON-Be
 
 `create_user` übergibt das deklarierte `auth.secret` als lokale Authentifizierung vom Typ `password`. Passwortänderungen übersetzen die Tool-Argumente in den Servicevertrag mit `secret` und gegebenenfalls `current`. Damit greifen Passwort-Hashing und bestehende Berechtigungsprüfungen des Benutzer-Service. Die Browser-Aktionen „als Benutzer anmelden“ und API-Token-Erstellung werden nicht als KI-Tools angeboten, da deren sichere Ausgabe beziehungsweise Sitzungsübernahme eine UI-Interaktion benötigt.
 
-Wartungsmodus-Tools nutzen ausschließlich die Nginx-Konfiguration durch `internalProxyHost.update()` und rendern keine zweite Konfiguration aus einer für öffentliche Antworten bereinigten Host-Kopie. Modelllisten-Anfragen haben zehn Sekunden Zeitlimit. Die Chat-Route protokolliert Nachrichtenlängen statt Nachrichteninhalte.
+Wartungsmodus-Tools nutzen ausschließlich die Nginx-Konfiguration durch `internalProxyHost.update()` und rendern keine zweite Konfiguration aus einer für öffentliche Antworten bereinigten Host-Kopie. Modelllisten-Anfragen haben zehn Sekunden Zeitlimit. Die Chat-Route protokolliert Nachrichtenlängen statt Nachrichteninhalte. Der Chat-Loop führt höchstens fünf Tool-Runden pro Anfrage aus und speichert selbst keine dauerhafte Chat-History.
 
 ### Demo-Grenzen und Tor-Fehler
 

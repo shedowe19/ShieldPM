@@ -2,34 +2,34 @@
 
 Stuck? Here are solutions to the most common problems, organized by category.
 
+Docker commands below use the Compose service name `shieldpm`; use `app` with the [Installation Quick Start](Installation).
+
 ---
 
 ## 🔑 Login Issues
 
 ### I Forgot My Admin Password
 
-**SQLite (Default):**
+**SQLite (Default):** Supply the user's email and a new password; the tool cannot discover/reset an account without those arguments.
 
 ```bash
 # Docker
-docker exec -it shieldpm npm-reset-password
+docker compose exec shieldpm npm-reset-password 'admin@example.com' 'your-new-password'
 
 # Native / LXC
-npm-reset-password
+sudo npm-reset-password 'admin@example.com' 'your-new-password'
 ```
 
-**MySQL / PostgreSQL:**
-
-Connect to the database and update the password manually, or use the reset utility documented above (it works with all database types).
+**MySQL / PostgreSQL:** `npm-reset-password` connects directly to SQLite and cannot reset accounts stored in an external database. Use an existing admin account or the supported authentication/account management flow; avoid direct SQL changes to credential hashes.
 
 ### "Invalid Login Credentials"
 
-| Cause | Fix |
-| :--- | :--- |
-| Wrong email | Check for typos; email is case-sensitive |
-| Account disabled | Ask an admin to re-enable your account |
-| Old browser cache | Clear cookies and try again |
-| CAPS LOCK | Passwords are case-sensitive |
+| Cause             | Fix                                      |
+| :---------------- | :--------------------------------------- |
+| Wrong email       | Check for typos; email is case-sensitive |
+| Account disabled  | Ask an admin to re-enable your account   |
+| Old browser cache | Clear cookies and try again              |
+| CAPS LOCK         | Passwords are case-sensitive             |
 
 ---
 
@@ -39,15 +39,15 @@ Connect to the database and update the password manually, or use the reset utili
 
 The most common error — Nginx cannot reach the upstream service.
 
-| Cause | Fix |
-| :--- | :--- |
-| Backend service is down | Start the service and verify it's running |
-| Wrong Forward Host | Check the IP/hostname in the Proxy Host config |
-| Docker network isolation | Use container name (bridge) or `127.0.0.1` (host mode) |
-| Container not on same network | Run `docker network connect <network> shieldpm` |
+| Cause                         | Fix                                                                                                                    |
+| :---------------------------- | :--------------------------------------------------------------------------------------------------------------------- |
+| Backend service is down       | Start the service and verify it's running                                                                              |
+| Wrong Forward Host            | Check the IP/hostname in the Proxy Host config                                                                         |
+| Docker network isolation      | Use container name (bridge) or `127.0.0.1` (host mode)                                                                 |
+| Container not on same network | For bridge networking, attach both services to a common Compose network; host networking does not join bridge networks |
 
 > [!TIP]
-> Quick test: `docker exec shieldpm curl -s http://<forward_host>:<forward_port>` — if this fails, the problem is networking, not ShieldPM.
+> Quick test: `docker compose exec shieldpm curl -s http://<forward_host>:<forward_port>` (use `app` for the Installation Quick Start) — if this fails, check the upstream address, port and networking.
 
 ### 504 Gateway Timeout
 
@@ -73,12 +73,12 @@ client_max_body_size 10G; # 10 GB limit
 
 ### 403 Forbidden
 
-| Cause | Fix |
-| :--- | :--- |
-| Access List blocking | Check the assigned Access List |
-| ModSecurity rule | Check error log for rule ID, exclude it |
-| CrowdSec ban | Run `cscli decisions list` to check |
-| IP not in allow list | Add your IP to the Access List |
+| Cause                | Fix                                     |
+| :------------------- | :-------------------------------------- |
+| Access List blocking | Check the assigned Access List          |
+| ModSecurity rule     | Check error log for rule ID, exclude it |
+| CrowdSec ban         | Run `cscli decisions list` to check     |
+| IP not in allow list | Add your IP to the Access List          |
 
 ### 429 Too Many Requests
 
@@ -90,12 +90,12 @@ Rate limiting is rejecting your requests. Lower the limits or increase the burst
 
 ### Let's Encrypt Errors
 
-| Error | Fix |
-| :--- | :--- |
-| "Connection refused on port 80" | Check firewall/router, port 80 must be open |
-| "DNS problem: NXDOMAIN" | Domain doesn't point to your server |
-| "Too many requests" | Wait 1 hour, or use Staging server |
-| "ACME email not set" | Set `ACME_EMAIL` in environment |
+| Error                           | Fix                                                                   |
+| :------------------------------ | :-------------------------------------------------------------------- |
+| "Connection refused on port 80" | Check firewall/router, port 80 must be open                           |
+| "DNS problem: NXDOMAIN"         | Domain doesn't point to your server                                   |
+| "Too many requests"             | Check the issuing CA's rate-limit response before retrying            |
+| "ACME email not set"            | Set `ACME_EMAIL` for ZeroSSL or an ACME server requiring an email/EAB |
 
 ### Self-Signed Certificate Warning
 
@@ -109,12 +109,12 @@ If you're seeing "Your connection is not private" on internal services:
 
 ## 📜 Where to Find Logs
 
-| Log Type | Docker | Native / LXC |
-| :--- | :--- | :--- |
-| **Application** | `docker logs -f shieldpm` | `journalctl -u shieldpm -f` |
-| **Nginx Access** | `/data/logs/json_access.log` | `/data/logs/json_access.log` |
-| **Nginx Error** | `/data/logs/error.log` | `/data/logs/error.log` |
-| **CrowdSec** | `docker logs crowdsec` | `journalctl -u crowdsec -f` |
+| Log Type         | Docker                                                           | Native / LXC                  |
+| :--------------- | :--------------------------------------------------------------- | :---------------------------- |
+| **Application**  | `docker logs -f shieldpm`                                        | `journalctl -u shieldpm -f`   |
+| **Nginx Access** | `/data/nginx/json_access.log` (when `LOGROTATE=true`/`GOA=true`) | `/data/nginx/json_access.log` |
+| **Nginx Error**  | `/data/nginx/error.log` (when file logging is enabled)           | `/data/nginx/error.log`       |
+| **CrowdSec**     | `docker logs crowdsec`                                           | `journalctl -u crowdsec -f`   |
 
 > [!TIP]
 > Enable `LOGROTATE=true` to auto-rotate and compress logs daily.
@@ -127,12 +127,12 @@ If you're seeing "Your connection is not private" on internal services:
 
 ```bash
 # Check for startup errors:
-docker logs shieldpm
+docker compose logs shieldpm
 
 # Common causes:
 # - Port already in use → Change ports in compose.yaml
 # - Permission denied → Check volume ownership
-# - Database locked → Remove WAL files: rm /data/database.sqlite-wal
+# - Database locked → Check for concurrent processes and inspect logs; preserve SQLite WAL/SHM files
 ```
 
 ### Port Conflict
@@ -152,10 +152,10 @@ systemctl disable apache2
 
 ### Slow Dashboard / High CPU
 
-| Cause | Fix |
-| :--- | :--- |
-| Too many log entries | Enable `LOGROTATE=true` |
-| SQLite on large deployment | Migrate to MySQL/PostgreSQL |
+| Cause                        | Fix                              |
+| :--------------------------- | :------------------------------- |
+| Too many log entries         | Enable `LOGROTATE=true`          |
+| SQLite on large deployment   | Migrate to MySQL/PostgreSQL      |
 | Many concurrent SSL renewals | Stagger certificate expiry dates |
 
 ### Nginx Not Reloading
@@ -164,10 +164,10 @@ If config changes aren't taking effect:
 
 ```bash
 # Test the Nginx config manually:
-docker exec shieldpm nginx -t
+docker compose exec shieldpm nginx -t
 
-# Force reload:
-docker exec shieldpm nginx -s reload
+# Check recent application diagnostics before retrying the change:
+docker compose logs --tail 100 shieldpm
 ```
 
 ---

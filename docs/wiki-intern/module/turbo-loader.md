@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Turbo-Loader ist ein Download-Beschleuniger, der HTTP Range-Requests nutzt, um Dateien in **8 gleich großen Chunks parallel** herunterzuladen — ohne Zwischenproxys, direkt vom Backend-Server.
+Turbo-Loader ist ein Download-Beschleuniger, der HTTP Range-Requests nutzt, um Dateien in **bis zu 8 Bereichen parallel** herunterzuladen. Der letzte Bereich kann kürzer sein. Die Requests gehen über denselben Proxy Host an dessen Upstream.
 
 ## Kontext
 
@@ -10,7 +10,7 @@ Standard-Browser-Downloads sind Single-Connection, serielle Prozesse. Turbo-Load
 
 ### Voraussetzungen
 
-- Backend-Server muss **HTTP Range-Requests** (`Accept-Ranges: bytes`) unterstützen
+- Backend-Server muss korrekte HTTP-Range-Antworten (`206 Partial Content` mit passendem `Content-Range`) liefern. `Accept-Ranges: bytes` ist hilfreich, wird beim HEAD-Probe aber nicht zwingend vorausgesetzt; `Accept-Ranges: none` löst den Standard-Download aus.
 - Dateien, für die Turbo aktiviert werden soll, müssen einen der bekannten Dateityp-Suffixe haben
 - `turbo_loader`-Flag im Proxy-Host muss aktiv sein
 
@@ -55,7 +55,7 @@ Die Rewrite-Checkpoints:
 Das Frontend `turbo_loader.html` läuft vollständig im Browser:
 
 1. **Initialisierung** — `HEAD`-Request ermittelt Dateigröße und prüft `Accept-Ranges`
-2. **Fallback-Erkennung** — File System Access API verfügbar (Chrome/Edge → Direct-to-Disk) oder Blob-RAM-Fallback (Firefox, Brave Shields etc.)
+2. **Fallback-Erkennung** — File System Access API verfügbar (z. B. Chrome/Edge mit entsprechender Berechtigung → Direct-to-Disk) oder Blob-RAM-Fallback (z. B. Firefox oder blockierter Dateiauswahldialog)
 3. **8 parallele Chunk-Downloads** — Jeder Chunk wird als `bytes=START-END` Range-Request geladen
 4. **Fehlerresilienz** — Pro Chunk höchstens fünf Versuche mit exponentiellem Backoff; nach 60 Sekunden ohne Fortschritt wird die Anfrage abgebrochen
 5. **Direktes Schreiben** — Bei File System Access API wird jedes empfangene Datenstück über eine gemeinsame Schreibwarteschlange sofort auf Disk geschrieben; die Netzwerkleser warten auf den Schreibabschluss
@@ -63,11 +63,11 @@ Das Frontend `turbo_loader.html` läuft vollständig im Browser:
 
 ### 3. Speichermodi
 
-| Modus          | Browser                                  | Limit                             | Verhalten                                                      |
-| -------------- | ---------------------------------------- | --------------------------------- | -------------------------------------------------------------- |
-| Direct-to-Disk | Chrome/Edge (mit File System Access API) | Keins                             | Jeder Chunk wird sofort auf Disk geschrieben                   |
-| Blob-RAM       | Firefox, Brave Shields, Safari           | ~512 MB warnt, >1.2 GB hard block | Datei wird komplett im RAM gepuffert, dann "Save"-Button       |
-| Iframe-Schutz  | Alle                                     | —                                 | Erkennt Einbettung in Hidden-Iframe → sofort Standard-Download |
+| Modus          | Browser                            | Limit                             | Verhalten                                                       |
+| -------------- | ---------------------------------- | --------------------------------- | --------------------------------------------------------------- |
+| Direct-to-Disk | Browser mit File System Access API | Kein implementiertes Größenlimit  | Ankommende Datenstücke werden mit Rückstaukontrolle geschrieben |
+| Blob-RAM       | Firefox, Brave Shields, Safari     | ~512 MB warnt, >1.2 GB hard block | Datei wird komplett im RAM gepuffert, dann "Save"-Button        |
+| Iframe-Schutz  | Alle                               | —                                 | Erkennt Einbettung in Hidden-Iframe → sofort Standard-Download  |
 
 ### 4. Edge Cases
 

@@ -10,9 +10,9 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 
 ## Wichtige Dateien
 
-- `backend/internal/stream.js` (~451 Zeilen) — Business-Logik
+- `backend/internal/stream.js` — Business-Logik
 - `backend/models/stream.js` — Objection.js-Modell
-- `backend/templates/stream.conf` — Liquid-Template für `stream { server { ... } }`
+- `backend/templates/stream.conf` — Liquid-Template für TCP-/UDP-`server`-Blöcke im umgebenden Nginx-`stream`-Kontext
 - `backend/routes/nginx/streams.js` — REST-API-Routen unter `/api/nginx/streams`
 - `backend/lib/access/streams-*.json` — RBAC-Regeln
 - `frontend/src/pages/Nginx/Streams/` — UI-Tabelle
@@ -22,8 +22,8 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 ## Verhalten
 
 1. Benutzer definiert einen Stream mit eingehendem Port (TCP/UDP), Forward-Host, Forward-Port und Protokoll.
-2. Optional: TLS-Termination mit Zertifikat, Proxy-Protocol, Bandwidth-Limit.
-3. `internal/stream.js` schreibt eine `.conf`-Datei unter `/data/nginx/stream/`, die Nginx im Stream-Kontext lädt.
+2. Optional: TLS-Terminierung für TCP mit Zertifikat und Weitergabe des PROXY-Protokolls (API-Konfiguration).
+3. `internal/stream.js` lässt über die Nginx-Engine eine `.conf`-Datei unter `/data/nginx/stream/` erzeugen, die Nginx im Stream-Kontext lädt.
 4. Nginx reload erfolgt nach erfolgreicher Konfigurationsprüfung.
 
 ## Felder (relevant)
@@ -38,6 +38,7 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 - POST und PUT akzeptieren `domain_names` ausschließlich für die Beantragung eines neuen Zertifikats (`certificate_id: "new"`). Dafür ist mindestens eine Domain erforderlich. Streams speichern dieses Feld nicht in der Datenbank.
 - Bei Teilupdates nutzt die Port-Kollisionsprüfung nicht übermittelte Ports und Protokoll-Flags aus dem vorhandenen Datensatz. Zertifikatsänderungen funktionieren dadurch ohne erneute Angabe aller Routing-Felder.
 - Die Kollisionsprüfung erkennt auch überlappende Portbereiche, einschließlich ihrer Grenzen. TCP und UDP dürfen denselben Port getrennt verwenden. Eingehende Ports müssen zwischen 1 und 65535 liegen; Bereiche müssen aufsteigend sein.
+- Der API-Vertrag erlaubt Portbereiche als String (`"8000-8005"`). Das aktuelle UI wandelt das Feld vor dem Senden mit `Number()` um und unterstützt damit praktisch nur einzelne Ports; Bereiche müssen derzeit über die API konfiguriert werden.
 - TLS mit dem Anbieter `internal` verwendet `/data/tls/internal/npm-ID/`; eigene importierte Zertifikate verbleiben unter `/data/tls/custom/npm-ID/`.
 - Regressionen: `backend/test/internal/host-update-regressions.spec.js` und `backend/test/internal/nginx-render-regressions.spec.js`.
 
@@ -52,11 +53,13 @@ Streams werden für Dienste verwendet, die nicht über HTTP laufen, z. B. SSH, M
 
 Siehe zentrale Sammelseite [Offene Fragen](../offene-fragen.md).
 
+## Erstellungsstatus und Konfigurationssperre
+
+Die Erstellungsantwort enthält den aktuellen Nginx-Status. Neue Zertifikatsdomains verwenden das getrennte Request-Schema für Zertifikate; DNS-Credentials werden ausschließlich im Zertifikatskontext aufbewahrt. Löschen und Deaktivieren sind mit der Konfigurationsgenerierung serialisiert.
+
 ## Verwandte Seiten
 
 - [Nginx-Engine](./nginx-engine.md)
 - [Proxy-Host](./proxy-host.md)
 - [Modulübersicht](./README.md)
 - [Datenmodell](../daten/datenmodell.md)
-
-Die Erstellungsantwort enthält den aktuellen Nginx-Status. Neue Zertifikatsdomains verwenden das getrennte Request-Schema für Zertifikate; DNS-Credentials werden ausschließlich im Zertifikatskontext aufbewahrt. Löschen und Deaktivieren sind mit der Konfigurationsgenerierung serialisiert.

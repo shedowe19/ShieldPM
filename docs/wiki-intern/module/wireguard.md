@@ -10,9 +10,9 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 
 ## Wichtige Dateien
 
-- `backend/internal/wireguard.js` (19 KB) — Business-Logik
-- `backend/models/wireguard_peer.js` (4 KB) — Peer-Modell
-- `backend/routes/nginx/wireguard.js` (9 KB) — API-Routen
+- `backend/internal/wireguard.js` — Business-Logik
+- `backend/models/wireguard_peer.js` — Peer-Modell
+- `backend/routes/nginx/wireguard.js` — API-Routen
 - `frontend/src/components/Nginx/WireguardConfigModal.tsx` — Dialog für Peer-Konfiguration und QR-Code
 - `frontend/src/pages/Nginx/WireguardSettingsCard.tsx` — gekapselte Servereinstellungen mit Query-Invalidierung
 
@@ -33,6 +33,7 @@ WireGuard-Tunnels ermöglichen es, Heimserver über einen VPS mit öffentlicher 
 - Benötigt `NET_ADMIN` und `NET_RAW` Capabilities
 - Benötigt `/dev/net/tun` Device-Mount
 - IP-Forwarding muss aktiviert sein (`net.ipv4.ip_forward=1`)
+- Die beigelegte `compose.yaml` nutzt `network_mode: host`. Die für Routing benötigten Kernelparameter (`net.ipv4.ip_forward`, bei Bedarf `net.ipv4.conf.all.src_valid_mark`) werden deshalb am Docker-Host gesetzt; Service-`sysctls` im Compose-Eintrag funktionieren mit Host-Netzwerk nicht.
 
 ### Firewall-Isolation
 
@@ -42,6 +43,10 @@ dem erneuten Anlegen der benötigten Regeln. `PostDown` entfernt nur die zugehö
 Direkte Regeln älterer Versionen bleiben bei einem Update bewusst unangetastet: Ohne eindeutige Markierung sind sie
 nicht sicher von gleichartigen Regeln anderer Firewall-Verwaltungen zu unterscheiden. Built-in-Chains wie `FORWARD`
 oder `POSTROUTING` und darin enthaltene fremde Regeln werden weder geleert noch gelöscht.
+
+Die Chain-Namen isolieren ausschließlich ShieldPMs Regelverwaltung von fremden Firewall-Regeln. `INPUT` aus `wg0` und `FORWARD` von `wg0` werden akzeptiert; eine Trennung zwischen Peers oder zu sonstigen Diensten des Servers ist damit **nicht** implementiert. `allowed_ips` im heruntergeladenen Client-Profil legt die über den Tunnel zu routenden Zielnetze fest und ist keine serverseitige Zugriffsregel.
+
+Die aktuelle NAT-Regel verwendet fest `-o eth0`. Auf Hosts ohne dieses ausgehende Interface müssen NAT und Routing für einen IPv4-Full-Tunnel separat geprüft werden; im mitgelieferten Docker-Host-Netzwerk ist der Host-Interfacename entscheidend. Die Servereinstellungen und Peer-Adressvergabe sind IPv4-basiert, eine Client-Route `::/0` erzeugt weder ein IPv6-Servernetz noch ein IPv6-Gateway.
 
 ### Härtung der Servereinstellungen
 
