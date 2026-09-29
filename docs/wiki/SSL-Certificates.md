@@ -124,8 +124,9 @@ You can use any ACME-compatible provider by setting `ACME_SERVER`:
 | **Let's Encrypt** (default) | `https://acme-v02.api.letsencrypt.org/directory` |
 | **Let's Encrypt Staging** | `https://acme-staging-v02.api.letsencrypt.org/directory` |
 | **ZeroSSL** | `https://acme.zerossl.com/v2/DV90` |
-| **Buypass** | `https://api.buypass.com/acme/directory` |
 | **Google Trust Services** | `https://dv.acme-v02.api.pki.goog/directory` |
+
+Buypass [discontinued TLS/SSL and ACME certificate issuance](https://www.buypass.com/products/tls-ssl-certificates/discontinues-issuance-of-tls-ssl-certificates) in October 2025. If an existing installation uses its ACME directory in `ACME_SERVER`, switch to an issuing provider and obtain a replacement certificate before the existing one expires.
 
 > [!TIP]
 > Use **Let's Encrypt Staging** for testing to avoid hitting rate limits during development.
